@@ -1,10 +1,13 @@
+import { useAuthStore } from '@/core/stores/auth'
+
 export const setupGuards = router => {
   router.beforeEach(to => {
     // Public routes — always accessible
     if (to.meta.public)
       return
 
-    const isLoggedIn = !!(useCookie('userData').value && useCookie('accessToken').value)
+    const auth = useAuthStore()
+    const isLoggedIn = auth.isLoggedIn
 
     // Unauthenticated-only routes (login, register) — redirect home if logged in
     if (to.meta.unauthenticatedOnly) {
@@ -14,6 +17,8 @@ export const setupGuards = router => {
         return undefined
     }
 
-    // TODO: Add Passport/Sanctum auth guard here
+    // Protected routes — redirect to login if not logged in
+    if (!isLoggedIn)
+      return { path: '/login', query: { redirect: to.fullPath } }
   })
 }

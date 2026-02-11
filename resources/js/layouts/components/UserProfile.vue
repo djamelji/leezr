@@ -1,14 +1,14 @@
 <script setup>
+import { useAuthStore } from '@/core/stores/auth'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const router = useRouter()
+const auth = useAuthStore()
 
-// TODO: Get type from backend
-const userData = useCookie('userData')
+const userData = computed(() => auth.user)
 
 const logout = async () => {
-  useCookie('accessToken').value = null
-  userData.value = null
+  await auth.logout()
   await router.push('/login')
 }
 
@@ -16,48 +16,14 @@ const userProfileList = [
   { type: 'divider' },
   {
     type: 'navItem',
-    icon: 'tabler-user',
-    title: 'Profile',
-    to: {
-      name: 'apps-user-view-id',
-      params: { id: 21 },
-    },
-  },
-  {
-    type: 'navItem',
     icon: 'tabler-settings',
     title: 'Settings',
     to: {
-      name: 'pages-account-settings-tab',
+      name: 'account-settings-tab',
       params: { tab: 'account' },
     },
   },
-  {
-    type: 'navItem',
-    icon: 'tabler-file-dollar',
-    title: 'Billing Plan',
-    to: {
-      name: 'pages-account-settings-tab',
-      params: { tab: 'billing-plans' },
-    },
-    badgeProps: {
-      color: 'error',
-      content: '4',
-    },
-  },
   { type: 'divider' },
-  {
-    type: 'navItem',
-    icon: 'tabler-currency-dollar',
-    title: 'Pricing',
-    to: { name: 'pages-pricing' },
-  },
-  {
-    type: 'navItem',
-    icon: 'tabler-question-mark',
-    title: 'FAQ',
-    to: { name: 'pages-faq' },
-  },
 ]
 </script>
 
@@ -123,10 +89,10 @@ const userProfileList = [
 
               <div>
                 <h6 class="text-h6 font-weight-medium">
-                  {{ userData.fullName || userData.username }}
+                  {{ userData.name }}
                 </h6>
                 <VListItemSubtitle class="text-capitalize text-disabled">
-                  {{ userData.role }}
+                  {{ auth.currentCompany?.role || '' }}
                 </VListItemSubtitle>
               </div>
             </div>

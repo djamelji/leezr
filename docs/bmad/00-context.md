@@ -52,15 +52,16 @@ Premier vertical concret : **Logistique**. Ce vertical sert à valider la sépar
 - Structure BMAD initialisée
 - Audit BMAD de l'intention produit : **validé** (2026-02-11)
 - Audit BMAD "Présence en ligne & Domaines" : **réalisé** (2026-02-11) — couche Public Serving documentée, ADR-012 à ADR-016 créées
-- Décisions structurantes enregistrées (ADR-006 à ADR-016)
+- Décisions structurantes enregistrées (ADR-006 à ADR-020)
 - Premier vertical choisi : **Logistique**
 - Aucun code métier encore
 
 ## Prochaines étapes
 
 1. ~~Définir les besoins métier (`01-business.md`)~~ — cadre posé, détail Logistique à compléter
-2. Modéliser le domaine (`02-domain.md`) — concepts invariants + concepts Logistique
-3. Mettre à jour l'architecture technique (`03-architecture.md`) — multi-tenant, modules, jobdomain
-4. ~~Documenter les décisions (`04-decisions.md`)~~ — fait (ADR-006 à ADR-011)
-5. Extraire les presets UI nécessaires pour le vertical Logistique
-6. Implémenter le premier vertical
+2. ~~Modéliser le domaine (`02-domain.md`)~~ — LOT 1 Core SaaS documenté (Identity, Tenancy, Governance)
+3. ~~Mettre à jour l'architecture technique (`03-architecture.md`)~~ — scopes Platform/Company, Sanctum, tenancy documentés
+4. ~~Documenter les décisions (`04-decisions.md`)~~ — fait (ADR-006 à ADR-020)
+5. **LOT 1 — Core SaaS** : implémenter le socle (auth, tenancy, governance) — EN COURS
+6. Extraire les presets UI nécessaires pour le vertical Logistique
+7. Implémenter le premier vertical (Logistique)

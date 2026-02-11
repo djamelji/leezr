@@ -6,6 +6,13 @@ import { registerPlugins } from '@core/utils/plugins'
 import '@core-scss/template/index.scss'
 import '@styles/styles.scss'
 
+// Unregister any stale MSW service workers
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => registration.unregister())
+  })
+}
+
 // Create vue app
 const app = createApp(App)
 

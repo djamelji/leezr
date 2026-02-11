@@ -36,7 +36,12 @@ Avant toute implémentation :
 ### API
 - Appels via `useApi` composable ou `$api` (ofetch)
 - Base URL : `VITE_API_BASE_URL` ou `/api`
-- Token Bearer automatique via cookies
+- Auth : cookies de session Sanctum (pas de Bearer token)
+- `credentials: 'include'` obligatoire sur toute instance fetch/ofetch
+- Header `Accept: application/json` sur toutes les requêtes
+- Header `X-XSRF-TOKEN` injecté automatiquement (lu depuis le cookie `XSRF-TOKEN`)
+- Header `X-Company-Id` injecté automatiquement pour le contexte tenant
+- Avant login/register : appeler `/sanctum/csrf-cookie` pour obtenir le token CSRF
 
 ## Conventions backend
 
@@ -70,3 +75,6 @@ Avant toute implémentation :
 - Pas de secrets dans le code (utiliser .env)
 - Pas de `console.log` en production
 - Pas de CSS inline pour du layout (utiliser Vuetify grid)
+- Pas de service worker interceptant les requêtes API (incompatible avec Sanctum CSRF)
+- Pas de `credentials: 'same-origin'` pour les requêtes API — toujours `'include'`
+- Pas de MSW (Mock Service Worker) en dev — le fake-api est désactivé, l'API Laravel est la seule source de données

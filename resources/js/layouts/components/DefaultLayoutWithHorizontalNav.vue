@@ -1,5 +1,6 @@
 <script setup>
-import navItems from '@/navigation/horizontal'
+import staticNavItems from '@/navigation/horizontal'
+import { useModuleStore } from '@/core/stores/module'
 import { themeConfig } from '@themeConfig'
 
 // Components
@@ -12,6 +13,22 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
+
+const moduleStore = useModuleStore()
+
+const navItems = computed(() => {
+  const moduleNavItems = moduleStore.activeNavItems.map(item => ({
+    title: item.title,
+    to: item.to,
+    icon: { icon: item.icon },
+  }))
+
+  // Insert module items after Dashboard (index 0)
+  const items = [...staticNavItems]
+  items.splice(1, 0, ...moduleNavItems)
+
+  return items
+})
 </script>
 
 <template>

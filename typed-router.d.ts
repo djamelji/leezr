@@ -20,7 +20,15 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     'root': RouteRecordInfo<'root', '/', Record<never, never>, Record<never, never>>,
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
+    'account-settings-tab': RouteRecordInfo<'account-settings-tab', '/account-settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
+    'company-jobdomain': RouteRecordInfo<'company-jobdomain', '/company/jobdomain', Record<never, never>, Record<never, never>>,
+    'company-members': RouteRecordInfo<'company-members', '/company/members', Record<never, never>, Record<never, never>>,
+    'company-modules': RouteRecordInfo<'company-modules', '/company/modules', Record<never, never>, Record<never, never>>,
+    'company-settings': RouteRecordInfo<'company-settings', '/company/settings', Record<never, never>, Record<never, never>>,
+    'company-shipments': RouteRecordInfo<'company-shipments', '/company/shipments', Record<never, never>, Record<never, never>>,
+    'company-shipments-id': RouteRecordInfo<'company-shipments-id', '/company/shipments/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'company-shipments-create': RouteRecordInfo<'company-shipments-create', '/company/shipments/create', Record<never, never>, Record<never, never>>,
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
-    'second-page': RouteRecordInfo<'second-page', '/second-page', Record<never, never>, Record<never, never>>,
+    'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
   }
 }

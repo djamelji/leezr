@@ -1,5 +1,7 @@
 <script setup>
-import AuthProvider from '@/views/pages/authentication/AuthProvider.vue'
+import { useAuthStore } from '@/core/stores/auth'
+import { useJobdomainStore } from '@/core/stores/jobdomain'
+import { useModuleStore } from '@/core/stores/module'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
 import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
@@ -13,9 +15,15 @@ import { themeConfig } from '@themeConfig'
 definePage({
   meta: {
     layout: 'blank',
-    public: true,
+    unauthenticatedOnly: true,
   },
 })
+
+const auth = useAuthStore()
+const jobdomainStore = useJobdomainStore()
+const moduleStore = useModuleStore()
+const router = useRouter()
+const route = useRoute()
 
 const form = ref({
   email: '',
@@ -24,19 +32,55 @@ const form = ref({
 })
 
 const isPasswordVisible = ref(false)
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+const handleLogin = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    await auth.login({
+      email: form.value.email,
+      password: form.value.password,
+    })
+
+    // Fetch jobdomain and modules for navigation (non-blocking)
+    try {
+      await Promise.all([
+        jobdomainStore.fetchJobdomain(),
+        moduleStore.fetchModules(),
+      ])
+    }
+    catch {
+      // Non-blocking — fallback to defaults
+    }
+
+    const redirect = route.query.redirect || jobdomainStore.landingRoute || '/'
+
+    await router.push(redirect)
+  }
+  catch (error) {
+    errorMessage.value = error?.data?.message || 'Invalid credentials.'
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
 const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 </script>
 
 <template>
-  <a href="javascript:void(0)">
+  <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="auth-title">
         {{ themeConfig.app.title }}
       </h1>
     </div>
-  </a>
+  </RouterLink>
 
   <VRow
     no-gutters
@@ -80,21 +124,31 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Welcome to <span class="text-capitalize">{{ themeConfig.app.title }}</span>! 👋🏻
+            Welcome to <span class="text-capitalize">{{ themeConfig.app.title }}</span>!
           </h4>
           <p class="mb-0">
-            Please sign-in to your account and start the adventure
+            Please sign-in to your account
           </p>
         </VCardText>
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VAlert
+            v-if="errorMessage"
+            type="error"
+            class="mb-6"
+            closable
+            @click:close="errorMessage = ''"
+          >
+            {{ errorMessage }}
+          </VAlert>
+
+          <VForm @submit.prevent="handleLogin">
             <VRow>
               <!-- email -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
                   autofocus
-                  label="Email or Username"
+                  label="Email"
                   type="email"
                   placeholder="johndoe@email.com"
                 />
@@ -107,7 +161,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                   label="Password"
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
-                  autocomplete="password"
+                  autocomplete="current-password"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
@@ -117,17 +171,12 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                     v-model="form.remember"
                     label="Remember me"
                   />
-                  <a
-                    class="text-primary"
-                    href="javascript:void(0)"
-                  >
-                    Forgot Password?
-                  </a>
                 </div>
 
                 <VBtn
                   block
                   type="submit"
+                  :loading="isLoading"
                 >
                   Login
                 </VBtn>
@@ -141,29 +190,12 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 <span class="d-inline-block">
                   New on our platform?
                 </span>
-                <a
+                <RouterLink
                   class="text-primary ms-1 d-inline-block text-body-1"
-                  href="javascript:void(0)"
+                  to="/register"
                 >
                   Create an account
-                </a>
-              </VCol>
-
-              <VCol
-                cols="12"
-                class="d-flex align-center"
-              >
-                <VDivider />
-                <span class="mx-4">or</span>
-                <VDivider />
-              </VCol>
-
-              <!-- auth providers -->
-              <VCol
-                cols="12"
-                class="text-center"
-              >
-                <AuthProvider />
+                </RouterLink>
               </VCol>
             </VRow>
           </VForm>
