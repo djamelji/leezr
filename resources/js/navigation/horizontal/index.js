@@ -1,13 +1,27 @@
 /**
  * Static horizontal nav items.
- * Module-driven items injected dynamically by the layout.
+ * Core items serve as fallback. Module items replace/augment dynamically.
  */
+export const coreNavItems = [
+  {
+    title: 'Members',
+    to: { name: 'company-members' },
+    icon: { icon: 'tabler-users' },
+  },
+  {
+    title: 'Settings',
+    to: { name: 'company-settings' },
+    icon: { icon: 'tabler-building' },
+  },
+]
+
 export default [
   {
     title: 'Dashboard',
     to: { name: 'root' },
     icon: { icon: 'tabler-smart-home' },
   },
+  ...coreNavItems,
   {
     title: 'Modules',
     to: { name: 'company-modules' },

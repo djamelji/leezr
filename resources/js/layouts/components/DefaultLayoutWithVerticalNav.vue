@@ -1,5 +1,5 @@
 <script setup>
-import staticNavItems from '@/navigation/vertical'
+import staticNavItems, { coreNavItems } from '@/navigation/vertical'
 import { useModuleStore } from '@/core/stores/module'
 import { themeConfig } from '@themeConfig'
 
@@ -24,33 +24,50 @@ onMounted(async () => {
       await moduleStore.fetchModules()
     }
     catch {
-      // Non-blocking — nav will show static items only
+      // Non-blocking — nav will show static items with core fallbacks
     }
   }
 })
 
+// Route names from core fallback items (for deduplication)
+const coreRouteNames = new Set(coreNavItems.map(i => i.to?.name).filter(Boolean))
+
 /**
- * Merge static nav with dynamic module nav items.
- * Module items are inserted after the "Company" heading.
+ * Build nav: static base + module items.
+ * Before modules load: core fallback items are visible (Members, Settings).
+ * After modules load: replace core fallbacks with module-driven items,
+ * which may include additional items (Shipments, etc.).
  */
 const navItems = computed(() => {
-  const items = [...staticNavItems]
   const moduleNavItems = moduleStore.activeNavItems.map(item => ({
     title: item.title,
     to: item.to,
     icon: { icon: item.icon },
   }))
 
-  // Find the "Company" heading and insert module items after it
-  const companyHeadingIndex = items.findIndex(i => i.heading === 'Company')
-  if (companyHeadingIndex !== -1) {
-    items.splice(companyHeadingIndex + 1, 0, ...moduleNavItems)
-  }
-  else {
-    items.push(...moduleNavItems)
+  // If modules loaded, filter out static core items that modules now provide
+  if (moduleStore._loaded && moduleNavItems.length > 0) {
+    const moduleRouteNames = new Set(moduleNavItems.map(i => i.to?.name).filter(Boolean))
+
+    const items = staticNavItems.filter(item => {
+      if (!item.to?.name) return true
+
+      // Keep static item unless a module provides it
+      return !moduleRouteNames.has(item.to.name)
+    })
+
+    // Insert module items after "Company" heading
+    const companyIdx = items.findIndex(i => i.heading === 'Company')
+    if (companyIdx !== -1)
+      items.splice(companyIdx + 1, 0, ...moduleNavItems)
+    else
+      items.push(...moduleNavItems)
+
+    return items
   }
 
-  return items
+  // Fallback: static items as-is (includes core Members/Settings)
+  return [...staticNavItems]
 })
 </script>
 

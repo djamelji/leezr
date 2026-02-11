@@ -69,7 +69,7 @@ class Shipment extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
-    // --- Business logic ---
+    // --- Domain queries ---
 
     public function canTransitionTo(string $newStatus): bool
     {

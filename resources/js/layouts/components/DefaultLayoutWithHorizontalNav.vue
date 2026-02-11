@@ -23,11 +23,23 @@ const navItems = computed(() => {
     icon: { icon: item.icon },
   }))
 
-  // Insert module items after Dashboard (index 0)
-  const items = [...staticNavItems]
-  items.splice(1, 0, ...moduleNavItems)
+  if (moduleStore._loaded && moduleNavItems.length > 0) {
+    const moduleRouteNames = new Set(moduleNavItems.map(i => i.to?.name).filter(Boolean))
 
-  return items
+    // Filter out core fallback items that modules now provide
+    const items = staticNavItems.filter(item => {
+      if (!item.to?.name) return true
+
+      return !moduleRouteNames.has(item.to.name)
+    })
+
+    // Insert after Dashboard (index 0)
+    items.splice(1, 0, ...moduleNavItems)
+
+    return items
+  }
+
+  return [...staticNavItems]
 })
 </script>
 

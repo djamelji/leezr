@@ -18,12 +18,21 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        // Admin owner (also platform admin)
-        $admin = User::create([
-            'name' => 'Djamel',
-            'email' => 'admin@leezr.test',
+        // ─── Platform scope ───────────────────────────────────
+        // Platform admin — NO company membership (scope Platform only)
+        User::create([
+            'name' => 'Platform Admin',
+            'email' => 'platform@leezr.test',
             'password' => 'password',
             'is_platform_admin' => true,
+        ]);
+
+        // ─── Company scope ────────────────────────────────────
+        // Company owner (scope Company only, not platform admin)
+        $owner = User::create([
+            'name' => 'Djamel',
+            'email' => 'owner@leezr.test',
+            'password' => 'password',
         ]);
 
         $company = Company::create([
@@ -32,23 +41,23 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $company->memberships()->create([
-            'user_id' => $admin->id,
+            'user_id' => $owner->id,
             'role' => 'owner',
         ]);
 
-        // Second user (member)
-        $member = User::create([
+        // Admin member
+        $admin = User::create([
             'name' => 'Alice Martin',
-            'email' => 'alice@leezr.test',
+            'email' => 'admin@leezr.test',
             'password' => 'password',
         ]);
 
         $company->memberships()->create([
-            'user_id' => $member->id,
+            'user_id' => $admin->id,
             'role' => 'admin',
         ]);
 
-        // Third user (simple user)
+        // Simple user
         $user = User::create([
             'name' => 'Bob Dupont',
             'email' => 'bob@leezr.test',
@@ -60,10 +69,9 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
         ]);
 
-        // Sync module catalog from registry
+        // ─── Module & Jobdomain setup ─────────────────────────
         ModuleRegistry::sync();
 
-        // Activate all modules for the test company
         foreach (ModuleRegistry::definitions() as $key => $definition) {
             CompanyModule::create([
                 'company_id' => $company->id,
@@ -72,16 +80,13 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Sync jobdomain catalog from registry
         JobdomainRegistry::sync();
-
-        // Assign "logistique" jobdomain to the test company
         JobdomainGate::assignToCompany($company, 'logistique');
 
-        // Sample shipments
+        // ─── Sample shipments ─────────────────────────────────
         Shipment::create([
             'company_id' => $company->id,
-            'created_by_user_id' => $admin->id,
+            'created_by_user_id' => $owner->id,
             'reference' => Shipment::generateReference($company->id),
             'status' => Shipment::STATUS_DRAFT,
             'origin_address' => '12 Rue de Paris, 75001 Paris',
@@ -92,7 +97,7 @@ class DatabaseSeeder extends Seeder
 
         Shipment::create([
             'company_id' => $company->id,
-            'created_by_user_id' => $admin->id,
+            'created_by_user_id' => $owner->id,
             'reference' => Shipment::generateReference($company->id),
             'status' => Shipment::STATUS_PLANNED,
             'origin_address' => '8 Boulevard Haussmann, 75009 Paris',
@@ -102,7 +107,7 @@ class DatabaseSeeder extends Seeder
 
         Shipment::create([
             'company_id' => $company->id,
-            'created_by_user_id' => $member->id,
+            'created_by_user_id' => $admin->id,
             'reference' => Shipment::generateReference($company->id),
             'status' => Shipment::STATUS_IN_TRANSIT,
             'origin_address' => '3 Place Bellecour, 69002 Lyon',
@@ -112,7 +117,7 @@ class DatabaseSeeder extends Seeder
 
         Shipment::create([
             'company_id' => $company->id,
-            'created_by_user_id' => $admin->id,
+            'created_by_user_id' => $owner->id,
             'reference' => Shipment::generateReference($company->id),
             'status' => Shipment::STATUS_DELIVERED,
             'origin_address' => '1 Rue du Port, 44000 Nantes',
