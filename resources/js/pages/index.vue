@@ -2,7 +2,7 @@
   <div>
     <VCard
       class="mb-6"
-      title="KickL start your project 🚀"
+      title="Kick start your project 🚀"
     >
       <VCardText>All the best for your new project.</VCardText>
       <VCardText>
