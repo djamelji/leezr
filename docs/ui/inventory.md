@@ -1,6 +1,6 @@
 # Inventaire UI - Vue globale du stock
 
-> Référence rapide. Pour le détail complet, voir `VUEXY-UI-INVENTORY.md` à la racine.
+> Référence rapide du stock UI Vuexy disponible.
 
 ## Stock disponible
 

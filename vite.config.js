@@ -41,7 +41,7 @@ export default defineConfig({
     laravel({
       input: ['resources/js/main.js'],
       refresh: true,
-      detectTls: 'leezr',
+      detectTls: true,
     }),
     vueJsx(), // Docs: https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin
     vuetify({

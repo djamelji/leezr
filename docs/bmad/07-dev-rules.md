@@ -11,7 +11,7 @@ Avant toute implémentation :
 2. Vérifier que le domaine est modélisé dans `02-domain.md`
 3. Vérifier que l'architecture couvre le cas dans `03-architecture.md`
 4. Documenter toute décision nouvelle dans `04-decisions.md`
-5. Vérifier l'UI dans `VUEXY-UI-INVENTORY.md`
+5. Vérifier l'UI dans `docs/ui/inventory.md` et `resources/ui/presets/`
 6. Seulement alors : coder
 
 ## Conventions frontend

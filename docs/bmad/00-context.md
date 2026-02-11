@@ -48,7 +48,7 @@ Premier vertical concret : **Logistique**. Ce vertical sert à valider la sépar
 ## État actuel
 
 - Infrastructure technique en place (Laravel 12, Vue 3.5, Vuexy, Vite)
-- Inventaire UI Vuexy complet (`VUEXY-UI-INVENTORY.md`)
+- Inventaire UI Vuexy complet (`docs/ui/inventory.md`)
 - Structure BMAD initialisée
 - Audit BMAD de l'intention produit : **validé** (2026-02-11)
 - Audit BMAD "Présence en ligne & Domaines" : **réalisé** (2026-02-11) — couche Public Serving documentée, ADR-012 à ADR-016 créées

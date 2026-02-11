@@ -31,5 +31,5 @@
 
 ### Inventaire UI Vuexy
 - [x] 893 fichiers analysés
-- [x] `VUEXY-UI-INVENTORY.md` créé (référence exhaustive)
+- [x] Inventaire UI réalisé (référence dans `docs/ui/inventory.md`)
 - [x] 144+ pages, 526 views, 80+ composants, 20 dialogs, 45+ endpoints fake API

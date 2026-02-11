@@ -11,7 +11,7 @@
 ## Source
 
 - Source unique : `resources/ui/presets/` et `resources/js/` (extrait de Vuexy Full v9.5.0)
-- Inventaire : `VUEXY-UI-INVENTORY.md`
+- Inventaire : `docs/ui/inventory.md` (vue globale) + `resources/ui/presets/` (code)
 - Presets extraits : `resources/ui/presets/`
 
 ## Règles
@@ -33,7 +33,7 @@
 ## Workflow d'extraction d'un preset
 
 1. Identifier le besoin UI
-2. Chercher dans `VUEXY-UI-INVENTORY.md`
+2. Chercher dans `docs/ui/inventory.md` et `resources/ui/presets/`
 3. Localiser le composant dans `resources/ui/presets/{catégorie}/`
 4. Renommer si nécessaire (suffixe `.preset.vue` optionnel)
 5. Documenter dans `docs/ui/presets/{catégorie}.md`

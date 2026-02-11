@@ -20,7 +20,7 @@ Il applique strictement la méthodologie BMAD et la politique UI Vuexy.
 ### Politique UI — LOI DU PROJET
 - **Vuexy est une librairie interne stratégique, pas un thème**
 - L'UI est un **stock fini** — tout vient exclusivement de `resources/ui/presets/`
-- Consulter `VUEXY-UI-INVENTORY.md` avant de créer toute UI
+- Consulter `resources/ui/presets/` et `docs/ui/` avant de créer toute UI
 - **Interdit** d'inventer un composant, layout ou interaction
 - **Autorisé** : sélectionner, assembler, configurer, composer
 - Si une UI manque : signaler et consigner dans `docs/bmad/06-ui-policy.md`
@@ -56,9 +56,9 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 3. Format : Date, Contexte, Décision, Conséquences
 
 ## Comment consommer un preset UI
-1. Vérifier dans `VUEXY-UI-INVENTORY.md` qu'il existe
-2. Vérifier dans `resources/ui/presets/` qu'il est extrait
-3. Si non extrait : copier depuis `resources/ui/presets/`, documenter dans `docs/ui/presets/`
+1. Vérifier dans `resources/ui/presets/` et `docs/ui/` qu'il existe
+2. Si non trouvé : chercher dans les presets par catégorie
+3. Si trouvé : documenter dans `docs/ui/` si pas encore fait
 4. Importer le preset dans la page métier
 5. Adapter les props/données — ne jamais modifier le preset lui-même
 
@@ -72,7 +72,8 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 - Template : Vuexy v9.5.0
 - State : Pinia 3 | Auth : Passport/Sanctum (à venir) | Icons : Tabler (Iconify)
 - Package manager : pnpm
-- Dev : `pnpm dev:all` (Vite + Laravel serve)
+- Dev : `pnpm dev:all` (Vite uniquement, Laravel servi par Valet)
+- URL locale : `https://leezr.test` (Valet HTTPS)
 
 ## Conventions de code
 - Pages auto-routées via `unplugin-vue-router` depuis `resources/js/pages/`
