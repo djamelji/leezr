@@ -491,4 +491,42 @@ definePage({
 
 ---
 
+## ADR-036 : Deployment Discipline — seeders et migrations
+
+- **Date** : 2026-02-12
+- **Contexte** : Le déploiement distant (webhook → `deploy-leezr.sh`) exécute `migrate --force` mais ne seed pas. Les seeders contenaient des `create()` non idempotents nécessitant `migrate:fresh`. La migration 500002 utilisait `dropIfExists` (perte de données). Il faut un système de déploiement safe et automatisable.
+- **Décision** : Discipline stricte de déploiement :
+
+  **Seeders — séparation SystemSeeder / DevSeeder** :
+  - `SystemSeeder` : données système (RBAC, modules, jobdomains). 100% idempotent (`updateOrCreate`). Safe en prod.
+  - `DevSeeder` : données de demo (users test, company, shipments). Idempotent aussi, mais **jamais exécuté hors local**.
+  - `DatabaseSeeder` : dispatch — appelle `SystemSeeder` toujours, `DevSeeder` uniquement si `APP_ENV=local`.
+  - Le script de déploiement distant exécute `php artisan db:seed --class=SystemSeeder --force`.
+
+  **Migrations — règles non négociables** :
+  - `migrate:fresh` interdit en staging/production.
+  - `migrate --force` est le seul mode d'exécution distant.
+  - Toute migration doit être **non destructive** : pas de `dropIfExists` sur des tables avec données.
+  - Les migrations de transition (changement de FK, renommage) utilisent : ajout colonne → migration data → suppression ancienne colonne.
+  - Toute migration doit être **idempotente** (guards `Schema::hasColumn` si nécessaire).
+
+  **Pipeline de déploiement** :
+  ```
+  push → webhook.php → deploy-leezr.sh
+    ├── git pull
+    ├── composer install --no-dev
+    ├── php artisan migrate --force
+    ├── php artisan db:seed --class=SystemSeeder --force
+    ├── pnpm install && pnpm build
+    └── php artisan optimize
+  ```
+
+- **Conséquences** :
+  - Les données système (permissions, rôles, modules, jobdomains, super_admin) sont garanties après chaque déploiement.
+  - Les données de demo n'existent qu'en local.
+  - Aucune migration ne peut casser la production.
+  - Le `PermissionCatalog` est la source de vérité — les permissions retirées du catalog sont nettoyées par `SystemSeeder`.
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
