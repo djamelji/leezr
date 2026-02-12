@@ -2,6 +2,8 @@
 import { useAuthStore } from '@/core/stores/auth'
 import { useShipmentStore } from '@/core/stores/shipment'
 
+definePage({ meta: { module: 'logistics_shipments' } })
+
 const auth = useAuthStore()
 const shipmentStore = useShipmentStore()
 const router = useRouter()

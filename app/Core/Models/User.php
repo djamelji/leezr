@@ -18,7 +18,6 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
-        'is_platform_admin',
     ];
 
     protected $hidden = [
@@ -31,7 +30,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_platform_admin' => 'boolean',
         ];
     }
 
@@ -70,10 +68,5 @@ class User extends Authenticatable
     public function isAdminOf(Company $company): bool
     {
         return in_array($this->roleIn($company), ['owner', 'admin']);
-    }
-
-    public function isPlatformAdmin(): bool
-    {
-        return $this->is_platform_admin === true;
     }
 }

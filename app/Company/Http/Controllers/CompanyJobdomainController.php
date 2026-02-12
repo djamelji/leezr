@@ -6,6 +6,7 @@ use App\Core\Jobdomains\JobdomainCatalogReadModel;
 use App\Core\Jobdomains\JobdomainGate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CompanyJobdomainController
 {
@@ -34,7 +35,16 @@ class CompanyJobdomainController
 
         $company = $request->attributes->get('company');
 
+        $oldKey = $company->jobdomain?->key;
+
         $jobdomain = JobdomainGate::assignToCompany($company, $request->input('key'));
+
+        Log::info('jobdomain.changed', [
+            'company_id' => $company->id,
+            'user_id' => $request->user()->id,
+            'from' => $oldKey,
+            'to' => $request->input('key'),
+        ]);
 
         return response()->json(
             ['message' => 'Jobdomain assigned.']

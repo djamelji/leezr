@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Platform\Auth;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
+
+class PlatformAuthController extends Controller
+{
+    public function login(Request $request): JsonResponse
+    {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if (!Auth::guard('platform')->attempt($credentials)) {
+            return response()->json([
+                'message' => 'Invalid credentials.',
+            ], 401);
+        }
+
+        $request->session()->regenerate();
+
+        $user = Auth::guard('platform')->user();
+        $user->load('roles.permissions');
+
+        $permissions = $user->roles
+            ->flatMap->permissions
+            ->pluck('key')
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'user' => $user,
+            'roles' => $user->roles->pluck('key'),
+            'permissions' => $permissions,
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user('platform');
+        $user->load('roles.permissions');
+
+        $permissions = $user->roles
+            ->flatMap->permissions
+            ->pluck('key')
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'user' => $user,
+            'roles' => $user->roles->pluck('key'),
+            'permissions' => $permissions,
+        ]);
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        Auth::guard('platform')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'message' => 'Logged out.',
+        ]);
+    }
+}

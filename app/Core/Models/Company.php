@@ -14,6 +14,7 @@ class Company extends Model
     protected $fillable = [
         'name',
         'slug',
+        'status',
     ];
 
     public function memberships(): HasMany
@@ -55,5 +56,15 @@ class Company extends Model
     public function owner(): ?User
     {
         return $this->users()->wherePivot('role', 'owner')->first();
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
     }
 }

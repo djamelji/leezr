@@ -1,4 +1,5 @@
 import { ofetch } from 'ofetch'
+import { useAppToast } from '@/composables/useAppToast'
 
 function getXsrfToken() {
   const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
@@ -10,6 +11,13 @@ function getXsrfToken() {
 
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
+}
+
+async function refreshCsrf() {
+  await fetch('/sanctum/csrf-cookie', {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
 }
 
 export const $api = ofetch.create({
@@ -41,6 +49,43 @@ export const $api = ofetch.create({
       else {
         options.headers['X-Company-Id'] = String(companyId)
       }
+    }
+  },
+  async onResponseError({ request, response, options }) {
+    const status = response.status
+    const { toast } = useAppToast()
+
+    // 401 Unauthenticated — session expired, redirect to login
+    if (status === 401) {
+      useCookie('userData').value = null
+      useCookie('currentCompanyId').value = null
+
+      const currentPath = window.location.pathname
+      if (currentPath !== '/login') {
+        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+      }
+
+      return
+    }
+
+    // 419 CSRF token mismatch — refresh token and retry once
+    if (status === 419 && !options._retried) {
+      await refreshCsrf()
+      options._retried = true
+
+      return $api(request, options)
+    }
+
+    // 403 Forbidden
+    if (status === 403) {
+      toast(response._data?.message || 'Unauthorized action.', 'error')
+
+      return
+    }
+
+    // 500+ Server errors
+    if (status >= 500) {
+      toast('An unexpected error occurred. Please try again.', 'error')
     }
   },
 })

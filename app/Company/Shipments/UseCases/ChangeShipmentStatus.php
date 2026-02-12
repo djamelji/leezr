@@ -4,6 +4,7 @@ namespace App\Company\Shipments\UseCases;
 
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;
+use Illuminate\Support\Facades\Log;
 
 class ChangeShipmentStatus
 {
@@ -23,8 +24,17 @@ class ChangeShipmentStatus
             );
         }
 
+        $oldStatus = $shipment->status;
+
         $shipment->update(['status' => $newStatus]);
         $shipment->load('createdBy:id,name');
+
+        Log::info('shipment.status.changed', [
+            'shipment_id' => $shipment->id,
+            'company_id' => $company->id,
+            'from' => $oldStatus,
+            'to' => $newStatus,
+        ]);
 
         return $shipment;
     }

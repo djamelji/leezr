@@ -43,6 +43,16 @@ Le jobdomain est un profil déclaratif qui personnalise l'UX d'une company (ADR-
 | **JobdomainAssignment** | Assignation 1:1 company ↔ jobdomain (via pivot) |
 | **JobdomainProfile** | Résolution déclarative : landing route, nav profile, default modules |
 
+### LOT 6 — Platform Backoffice & RBAC
+
+Le Control Plane SaaS : RBAC platform par table de rôles (distinct du RBAC company), gestion des companies (suspension), backoffice UI (ADR-029, ADR-030).
+
+| Domaine | Description |
+|---|---|
+| **PlatformRBAC** | Rôles plateforme distincts des rôles company, many-to-many PlatformUser ↔ PlatformRole (ADR-031, ADR-033) |
+| **CompanyLifecycle** | Statut de company (active/suspended), enforcement dans le middleware |
+| **PlatformIdentity** | Identité platform séparée dans `platform_users`, guard `auth:platform` (ADR-031, ADR-032) |
+
 ## Agrégats
 
 ### User (Identity)
@@ -72,6 +82,7 @@ Company
 ├── id (PK)
 ├── name
 ├── slug (unique)
+├── status (string: active, suspended — default active)
 ├── created_at
 └── updated_at
 ```
@@ -102,6 +113,8 @@ Membership
 | `CompanyModule` | ModuleActivation | Activation d'un module pour une company |
 | `Jobdomain` | JobdomainCatalog | Profil déclaratif (logistique, coiffure…) |
 | `Shipment` | Shipment (LOT 4) | Expédition scopée par company, workflow de statuts |
+| `PlatformUser` | PlatformIdentity (LOT 6B) | Employé platform (admin SaaS), table séparée de `users` |
+| `PlatformRole` | PlatformRBAC (LOT 6) | Rôle plateforme (super_admin, future: support, ops) |
 
 ### PlatformModule (ModuleCatalog)
 
@@ -205,12 +218,54 @@ canceled  canceled   canceled
 
 Format : `SHP-YYYYMMDD-XXXX` (XXXX = compteur séquentiel par jour et par company).
 
+### PlatformUser (PlatformIdentity — LOT 6B)
+
+Employé platform (admin SaaS). Table séparée de `users` (ADR-031). Authentifié via guard `auth:platform`.
+
+```
+PlatformUser
+├── id (PK)
+├── name
+├── email (unique)
+├── password
+├── remember_token
+├── created_at
+└── updated_at
+```
+
+### PlatformRole (PlatformRBAC — LOT 6)
+
+Rôle plateforme. Distinct des rôles company (`memberships.role`). Many-to-many avec PlatformUser via `platform_role_user` (ADR-033).
+
+```
+PlatformRole
+├── id (PK)
+├── key (unique, ex: "super_admin")
+├── name (ex: "Super Admin")
+├── created_at
+└── updated_at
+
+platform_role_user (pivot)
+├── id (PK)
+├── platform_user_id (FK → platform_users)
+├── platform_role_id (FK → platform_roles)
+├── created_at
+├── updated_at
+└── UNIQUE(platform_user_id, platform_role_id)
+```
+
+Rôles prévus :
+- `super_admin` — accès total au Control Plane
+- `support` (futur) — accès lecture + actions support
+- `ops` (futur) — accès monitoring + infrastructure
+
 ## Value Objects
 
 | Value Object | Description | Valeurs |
 |---|---|---|
 | `CompanyRole` | Rôle d'un user dans une company | `owner`, `admin`, `user` |
 | `ShipmentStatus` | Statut d'une expédition | `draft`, `planned`, `in_transit`, `delivered`, `canceled` |
+| `CompanyStatus` | Statut d'une company | `active`, `suspended` |
 
 ## Relations
 
@@ -236,6 +291,9 @@ PlatformModule (standalone, no FK — catalogue global)
 Shipment ──belongsTo──→ Company (via company_id)
 Shipment ──belongsTo──→ User (via created_by_user_id)
 Company ──hasMany──→ Shipment
+
+PlatformUser ──belongsToMany──→ PlatformRole (via platform_role_user)
+PlatformRole ──belongsToMany──→ PlatformUser (via platform_role_user)
 ```
 
 ## Règles métier invariantes
@@ -260,10 +318,11 @@ Company ──hasMany──→ Shipment
 | `owner` | Company | `memberships.role` | Scope Company uniquement |
 | `admin` | Company | `memberships.role` | Scope Company uniquement |
 | `user` | Company | `memberships.role` | Scope Company uniquement |
-| `platform_admin` | Platform | `users.is_platform_admin` | Scope Platform uniquement |
+| `platform (super_admin, etc.)` | Platform | `platform_role_user` (PlatformUser ↔ PlatformRole) | Scope Platform uniquement |
 
-- Un user **peut** être platform_admin ET membre d'une company (scopes indépendants)
-- Un platform_admin **n'est jamais** dans les memberships en tant que tel
+- Les identités sont séparées : `users` (company) vs `platform_users` (platform) — ADR-031
+- Un PlatformUser **n'a jamais** de company membership
+- Un User **n'a jamais** de platform_roles
 - Les rôles company ne polluent pas le scope Platform et vice versa
 - **Aucun `if (is_platform_admin)` dans les controllers Company**
 

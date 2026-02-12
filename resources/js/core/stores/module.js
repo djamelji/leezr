@@ -28,6 +28,13 @@ export const useModuleStore = defineStore('module', {
         .filter(m => m.is_active)
         .flatMap(m => m.capabilities?.route_names || [])
     },
+
+    /**
+     * Check if a module is active by key.
+     */
+    isActive: state => key => {
+      return state._modules.some(m => m.key === key && m.is_active)
+    },
   },
 
   actions: {

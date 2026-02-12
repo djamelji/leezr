@@ -1,0 +1,178 @@
+<script setup>
+import { usePlatformStore } from '@/core/stores/platform'
+import { useAppToast } from '@/composables/useAppToast'
+
+definePage({
+  meta: {
+    layout: 'platform',
+    platform: true,
+    permission: 'manage_companies',
+  },
+})
+
+const platformStore = usePlatformStore()
+const { toast } = useAppToast()
+const isLoading = ref(true)
+const actionLoading = ref(null)
+
+onMounted(async () => {
+  try {
+    await platformStore.fetchCompanies()
+  }
+  finally {
+    isLoading.value = false
+  }
+})
+
+const headers = [
+  { title: 'Name', key: 'name' },
+  { title: 'Slug', key: 'slug' },
+  { title: 'Status', key: 'status', align: 'center', width: '120px' },
+  { title: 'Members', key: 'memberships_count', align: 'center', width: '100px' },
+  { title: 'Created', key: 'created_at', width: '140px' },
+  { title: 'Actions', key: 'actions', align: 'center', width: '160px', sortable: false },
+]
+
+const suspend = async company => {
+  if (!confirm(`Suspend "${company.name}"? All company members will lose access.`))
+    return
+
+  actionLoading.value = company.id
+
+  try {
+    await platformStore.suspendCompany(company.id)
+    toast('Company suspended.', 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to suspend company.', 'error')
+  }
+  finally {
+    actionLoading.value = null
+  }
+}
+
+const reactivate = async company => {
+  actionLoading.value = company.id
+
+  try {
+    await platformStore.reactivateCompany(company.id)
+    toast('Company reactivated.', 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to reactivate company.', 'error')
+  }
+  finally {
+    actionLoading.value = null
+  }
+}
+
+const onPageChange = async page => {
+  isLoading.value = true
+
+  try {
+    await platformStore.fetchCompanies(page)
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+const formatDate = dateStr => {
+  if (!dateStr)
+    return '—'
+
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+</script>
+
+<template>
+  <div>
+    <VCard>
+      <VCardTitle class="d-flex align-center">
+        <VIcon
+          icon="tabler-building"
+          class="me-2"
+        />
+        Companies
+      </VCardTitle>
+      <VCardSubtitle>
+        Manage all companies on the platform.
+      </VCardSubtitle>
+
+      <VDataTable
+        :headers="headers"
+        :items="platformStore.companies"
+        :loading="isLoading"
+        :items-per-page="-1"
+        hide-default-footer
+      >
+        <!-- Status -->
+        <template #item.status="{ item }">
+          <VChip
+            :color="item.status === 'active' ? 'success' : 'error'"
+            size="small"
+          >
+            {{ item.status }}
+          </VChip>
+        </template>
+
+        <!-- Members count -->
+        <template #item.memberships_count="{ item }">
+          {{ item.memberships_count ?? '—' }}
+        </template>
+
+        <!-- Created at -->
+        <template #item.created_at="{ item }">
+          {{ formatDate(item.created_at) }}
+        </template>
+
+        <!-- Actions -->
+        <template #item.actions="{ item }">
+          <VBtn
+            v-if="item.status === 'active'"
+            color="warning"
+            variant="tonal"
+            size="small"
+            :loading="actionLoading === item.id"
+            @click="suspend(item)"
+          >
+            Suspend
+          </VBtn>
+          <VBtn
+            v-else
+            color="success"
+            variant="tonal"
+            size="small"
+            :loading="actionLoading === item.id"
+            @click="reactivate(item)"
+          >
+            Reactivate
+          </VBtn>
+        </template>
+
+        <!-- Empty state -->
+        <template #no-data>
+          <div class="text-center pa-4 text-disabled">
+            No companies found.
+          </div>
+        </template>
+      </VDataTable>
+
+      <!-- Pagination -->
+      <VCardText
+        v-if="platformStore.companiesPagination.last_page > 1"
+        class="d-flex justify-center"
+      >
+        <VPagination
+          :model-value="platformStore.companiesPagination.current_page"
+          :length="platformStore.companiesPagination.last_page"
+          @update:model-value="onPageChange"
+        />
+      </VCardText>
+    </VCard>
+  </div>
+</template>

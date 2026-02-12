@@ -29,6 +29,13 @@ declare module 'vue-router/auto-routes' {
     'company-shipments-id': RouteRecordInfo<'company-shipments-id', '/company/shipments/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-shipments-create': RouteRecordInfo<'company-shipments-create', '/company/shipments/create', Record<never, never>, Record<never, never>>,
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
+    'platform': RouteRecordInfo<'platform', '/platform', Record<never, never>, Record<never, never>>,
+    'platform-companies': RouteRecordInfo<'platform-companies', '/platform/companies', Record<never, never>, Record<never, never>>,
+    'platform-company-users': RouteRecordInfo<'platform-company-users', '/platform/company/users', Record<never, never>, Record<never, never>>,
+    'platform-login': RouteRecordInfo<'platform-login', '/platform/login', Record<never, never>, Record<never, never>>,
+    'platform-modules': RouteRecordInfo<'platform-modules', '/platform/modules', Record<never, never>, Record<never, never>>,
+    'platform-roles': RouteRecordInfo<'platform-roles', '/platform/roles', Record<never, never>, Record<never, never>>,
+    'platform-users': RouteRecordInfo<'platform-users', '/platform/users', Record<never, never>, Record<never, never>>,
     'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
   }
 }

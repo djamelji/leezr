@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('api')
                 ->group(base_path('routes/company.php'));
 
-            Route::middleware(['api', 'auth:sanctum', 'platform.admin'])
+            Route::middleware(['api'])
                 ->prefix('api/platform')
                 ->group(base_path('routes/platform.php'));
         },
@@ -25,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'company.context' => \App\Company\Http\Middleware\SetCompanyContext::class,
             'company.role' => \App\Company\Http\Middleware\EnsureRole::class,
-            'platform.admin' => \App\Platform\Http\Middleware\EnsurePlatformAdmin::class,
+            'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
             'module.active' => \App\Core\Modules\EnsureModuleActive::class,
         ]);
 

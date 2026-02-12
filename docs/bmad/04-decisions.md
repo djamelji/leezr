@@ -343,6 +343,152 @@
   - Le jobdomain "logistique" inclut ce module dans ses `default_modules`
   - Pattern réutilisable pour tous les modules métier futurs
 
+## ADR-027 : Frontend Module Guards — protection des routes par module
+
+- **Date** : 2026-02-11
+- **Contexte** : Le backend protège les routes module via `module.active:{key}` middleware, et la navigation dynamique n'affiche que les modules actifs. Cependant, un utilisateur peut accéder manuellement à une URL de module inactif (ex: `/company/shipments`), ce qui provoque un 403 backend disgracieux. Le frontend doit être aligné avec le backend.
+- **Décision** : Implémenter un **guard global dans le router Vue** qui bloque les routes de modules inactifs :
+  - Chaque page liée à un module déclare `meta.module` via `definePage()` (ex: `{ meta: { module: 'logistics_shipments' } }`)
+  - Le guard `beforeEach` vérifie `route.meta.module` via `moduleStore.isActive(key)`
+  - Si le module est inactif : redirection vers `/`, toast "Module not available"
+  - Aucun appel API n'est déclenché si le module est inactif côté frontend
+  - Un composable `useAppToast` fournit le système de feedback (VSnackbar dans App.vue)
+- **Conséquences** :
+  - Navigation et router parfaitement alignés : le menu n'affiche que les modules actifs, le router les bloque aussi
+  - Pas de 403 backend visible par l'utilisateur
+  - Pattern déclaratif : tout nouveau module ajoute `meta.module` à ses pages
+  - Aucun changement backend nécessaire
+
+## ADR-028 : LOT 5 — Hardening, Isolation & Production Readiness
+
+- **Date** : 2026-02-11
+- **Contexte** : Le SaaS est fonctionnel (LOTs 1-4.5) mais présente des failles de sécurité (CORS ouvert, pas de rate limiting) et des lacunes d'observabilité (pas de logging structuré, pas d'événements module). Le frontend manque de gestion d'erreurs API globale et de résilience au changement de company en cours de session.
+- **Décision** : Implémenter un LOT de hardening qui ne rajoute aucun module métier mais renforce l'architecture existante :
+  - **CORS** : restreindre `allowed_origins` aux domaines explicites via env `CORS_ALLOWED_ORIGINS`, restreindre `allowed_methods` et `allowed_headers`
+  - **Rate limiting** : `throttle:5,1` sur `/api/login` et `/api/register`
+  - **Module lifecycle events** : `ModuleEnabled` et `ModuleDisabled` dispatchés lors de l'activation/désactivation (audit trail, futur billing)
+  - **Structured logging** : `Log::info` sur module enable/disable, jobdomain change, shipment status change
+  - **Frontend API error handler** : interception globale des erreurs HTTP (401→login, 403→toast, 419→CSRF retry, 500→toast)
+  - **Frontend company switch resilience** : watch `currentCompanyId`, re-fetch modules automatique, redirection si route module inactive
+- **Conséquences** :
+  - Aucun endpoint exposé sans guard
+  - Aucun module accessible hors activation
+  - Aucun accès cross-company possible
+  - Erreurs API proprement gérées côté frontend
+  - Observabilité suffisante pour debug et futur audit trail
+
+## ADR-029 : Platform RBAC — table de rôles, pas boolean
+
+- **Date** : 2026-02-11
+- **Contexte** : L'accès Platform est contrôlé par un simple boolean `is_platform_admin` sur le model User. C'est trop grossier pour la gouvernance future (support, billing admin, ops). Le Platform RBAC doit être structurellement séparé du Company RBAC (`memberships.role`).
+- **Décision** : Créer une table `platform_roles` (id, key unique, name, timestamps) et un pivot `platform_role_user` (user_id FK, platform_role_id FK, UNIQUE(user_id, platform_role_id)). Le model User gagne `hasPlatformRole($key)` et `isSuperAdmin()` qui interrogent la table de rôles. Le boolean legacy `is_platform_admin` reste en DB mais ne pilote plus l'accès. Un nouveau middleware `EnsurePlatformRole` remplace `EnsurePlatformAdmin` et accepte un paramètre rôle (ex: `platform.role:super_admin`).
+- **Conséquences** :
+  - L'alias middleware `platform.admin` est remplacé par `platform.role`
+  - Toutes les routes platform utilisent `platform.role:super_admin`
+  - Les futurs rôles platform (support, billing_admin) peuvent être ajoutés sans migration
+  - Le bool `is_platform_admin` est conservé pour backward compat mais effectivement déprécié
+
+## ADR-030 : Platform Backoffice comme Control Plane SaaS
+
+- **Date** : 2026-02-11
+- **Contexte** : Le scope Platform existe structurellement (ADR-020) mais n'a pas de backoffice UI. Les admins platform doivent gérer les companies (suspendre/réactiver), les users (assigner rôles platform), et les modules (toggle global). L'endpoint `/me` doit exposer les platform_roles pour que le frontend enforce l'accès.
+- **Décision** : Construire un Platform Backoffice avec 4 pages (dashboard, companies, users, modules). Les pages platform vivent dans `resources/js/pages/platform/` et utilisent un layout dédié `platform.vue` avec une navigation spécifique. Un `platformGuard` dans le router bloque les routes `/platform/*` pour les non-super_admin. L'API retourne `platform_roles` dans les réponses `/me` et `/login`. La suspension company est enforced dans le middleware `SetCompanyContext` (ajout d'un check status après Company::find, avant isMemberOf). Ajout d'une colonne `status` (active|suspended) à la table companies.
+- **Conséquences** :
+  - Platform et Company UIs physiquement séparées (répertoires pages distincts, configs nav distinctes)
+  - Le auth store expose un getter `isPlatformAdmin`
+  - Company suspendue → 403 sur toutes routes company-scoped (aucun module métier impacté)
+  - Aucun `if(is_platform_admin)` dans les controllers Company
+
+## ADR-031 : Platform Identity Split — table séparée `platform_users`
+
+- **Date** : 2026-02-11
+- **Contexte** : LOT 6 stockait les admins platform dans la table `users` (company users). Le model User portait des méthodes platform (`platformRoles()`, `hasPlatformRole()`, `isSuperAdmin()`), créant un couplage architectural entre les deux identités. Les platform employees n'ont rien à faire dans la table `users`.
+- **Décision** : Créer une table **`platform_users`** séparée avec son propre model `PlatformUser extends Authenticatable`. Le pivot `platform_role_user` référence `platform_user_id` FK → `platform_users` (et non plus `user_id` FK → `users`). Le model `User` est nettoyé de toute référence platform. La colonne `is_platform_admin` reste en DB (dead data, pas de migration destructive) mais ne pilote plus rien.
+- **Conséquences** :
+  - Deux identités physiquement séparées : company users dans `users`, platform employees dans `platform_users`
+  - Aucun User n'a de platform_roles, aucun PlatformUser n'a de company membership
+  - Les deux auth systems sont complètement indépendants
+
+## ADR-032 : Platform auth endpoints + guard `auth:platform`
+
+- **Date** : 2026-02-11
+- **Contexte** : LOT 6 utilisait `auth:sanctum` pour les routes platform (resolves against `users` table). Avec la séparation, platform auth doit utiliser son propre guard.
+- **Décision** : Créer un guard `platform` (driver session, provider `platform_users`) dans `config/auth.php`. Les endpoints platform auth sont `/api/platform/login`, `/api/platform/me`, `/api/platform/logout` via `PlatformAuthController`. `config/sanctum.php` reste inchangé (`guard: ['web']`), garantissant que `auth:sanctum` ne résout jamais un platform user.
+- **Conséquences** :
+  - `auth:platform` pour les routes platform, `auth:sanctum` pour les routes company
+  - Sessions distinctes par guard (Laravel gère nativement le multi-guard session)
+  - Cross-scope impossible : company session → platform routes = 401, platform session → company routes = pas de company context
+
+## ADR-033 : Platform RBAC sur `platform_users`
+
+- **Date** : 2026-02-11
+- **Contexte** : Le pivot `platform_role_user` référençait `user_id`. Avec ADR-031, il doit référencer `platform_user_id`.
+- **Décision** : Drop et recréer `platform_role_user` avec `platform_user_id` FK → `platform_users`, `platform_role_id` FK → `platform_roles`, UNIQUE(platform_user_id, platform_role_id). Le model `PlatformUser` porte `roles()`, `hasRole()`, `isSuperAdmin()`.
+- **Conséquences** :
+  - Le middleware `EnsurePlatformRole` utilise `$request->user('platform')?->hasRole($role)`
+  - Aucune dépendance vers le model User
+
+## ADR-034 : Platform Backoffice pages — arborescence par domaine
+
+- **Date** : 2026-02-11
+- **Contexte** : Le backoffice platform LOT 6 avait une seule page `users.vue` qui gérait les company users + roles. Avec la séparation, il faut distinguer CRUD PlatformUser et supervision company users.
+- **Décision** : Structure pages platform par domaine :
+  - `platform/index.vue` → Dashboard
+  - `platform/companies.vue` → Companies management
+  - `platform/users.vue` → CRUD PlatformUser (employees SaaS)
+  - `platform/company/users.vue` → Read-only supervision des company users
+  - `platform/roles.vue` → CRUD PlatformRole
+  - `platform/modules.vue` → Module catalog management
+  - `platform/login.vue` → Platform login (blank layout, platformAuth store)
+- **Conséquences** :
+  - Auto-route names : `platform-users` (PlatformUser CRUD), `platform-company-users` (readonly), `platform-roles`
+  - Stores séparés : `platformAuth.js` (auth platform), `platform.js` (CRUD platform)
+  - API client séparé : `$platformApi` (baseURL `/api/platform`, pas de `X-Company-Id`)
+
+## ADR-035 : Platform RBAC Permissions Layer
+
+- **Date** : 2026-02-12
+- **Contexte** : LOT 6B a instauré un RBAC basé sur des rôles uniquement (`PlatformUser → roles`). Le seul contrôle d'accès est `platform.role:super_admin`, ce qui est trop grossier pour des rôles futurs (support, billing_admin, ops). Il faut une couche de permissions granulaires sans casser l'identity split.
+- **Décision** : Ajouter une entité **`PlatformPermission`** (key, label) et une relation many-to-many `PlatformRole ↔ PlatformPermission` via pivot `platform_role_permission`. Le contrôle d'accès aux routes platform est piloté par un middleware `platform.permission:{key}` qui vérifie `PlatformUser → roles → permissions`. Le rôle `super_admin` bypass automatiquement toute vérification de permission. Les permissions initiales sont : `manage_companies`, `view_company_users`, `manage_platform_users`, `manage_roles`, `manage_modules`. Le middleware `platform.role` est conservé uniquement si nécessaire (bootstrap), les routes utilisent `platform.permission` pour le contrôle d'accès granulaire.
+- **Conséquences** :
+  - Nouvelle table `platform_permissions` (id, key unique, label, timestamps)
+  - Nouveau pivot `platform_role_permission` (platform_role_id FK, platform_permission_id FK, UNIQUE)
+  - `PlatformRole` gagne `permissions()` et `hasPermission()`
+  - `PlatformUser.hasPermission()` : `isSuperAdmin() → true`, sinon check via `roles→permissions`
+  - Nouveau middleware `platform.permission` enregistré dans `bootstrap/app.php`
+  - Routes platform utilisent `platform.permission:{key}` au lieu de `platform.role:super_admin`
+  - Le CRUD `PlatformRole` accepte `permissions[]` dans store/update avec `sync()`
+  - Le frontend expose les permissions dans le store et les utilise pour la navigation conditionnelle
+  - Aucun impact sur le scope Company — isolation totale maintenue
+
+### LOT 6C.1 — RBAC Hardening (2026-02-12)
+
+**Invariants** :
+- Toutes les routes `api/platform/*` (hors login) → `auth:platform`
+- Toute route métier platform → protégée par `platform.permission:{key}`
+- Les rôles ne protègent jamais directement une route — les permissions sont la seule unité d'autorisation
+- `super_admin` bypass uniquement côté backend via `PlatformUser::hasPermission()`
+- `/api/platform/me` retourne `{ user, roles, permissions }` — source de vérité frontend
+- `PermissionCatalog` (`app/Platform/RBAC/PermissionCatalog.php`) = source unique de vérité pour les permissions
+- Le middleware `platform.role` est supprimé — seul `platform.permission` subsiste
+- Le menu platform est filtré dynamiquement par `platformAuth.hasPermission()`
+
+**Convention pages platform** (obligatoire, hors dashboard/login) :
+```js
+definePage({
+  meta: {
+    layout: 'platform',
+    platform: true,
+    permission: 'permission_key',
+  },
+})
+```
+
+**Protection super_admin** :
+- Impossible de retirer le rôle `super_admin` au dernier super_admin → 409 Conflict
+- Impossible de supprimer le dernier super_admin → 409 Conflict
+- Aucune logique JS pour ça — backend est autorité finale
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

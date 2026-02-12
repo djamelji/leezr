@@ -9,6 +9,8 @@ use App\Core\Models\Shipment;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleRegistry;
+use App\Platform\Models\PlatformRole;
+use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,17 +20,25 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        // ─── Platform RBAC (LOT 6B) ──────────────────────────
+        $this->call(PlatformSeeder::class);
+
         // ─── Platform scope ───────────────────────────────────
-        // Platform admin — NO company membership (scope Platform only)
-        User::create([
+        // Platform admin — in platform_users, NO company membership
+        $platformUser = PlatformUser::create([
             'name' => 'Platform Admin',
             'email' => 'platform@leezr.test',
             'password' => 'password',
-            'is_platform_admin' => true,
         ]);
 
+        // Attach admin role (modules only) to test platform user
+        $adminRole = PlatformRole::where('key', 'admin')->first();
+        if ($adminRole) {
+            $platformUser->roles()->attach($adminRole->id);
+        }
+
         // ─── Company scope ────────────────────────────────────
-        // Company owner (scope Company only, not platform admin)
+        // Company owner (scope Company only)
         $owner = User::create([
             'name' => 'Djamel',
             'email' => 'owner@leezr.test',

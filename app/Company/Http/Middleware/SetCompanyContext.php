@@ -27,6 +27,12 @@ class SetCompanyContext
             ], 404);
         }
 
+        if ($company->isSuspended()) {
+            return response()->json([
+                'message' => 'This company is currently suspended.',
+            ], 403);
+        }
+
         if (!$request->user()->isMemberOf($company)) {
             return response()->json([
                 'message' => 'You are not a member of this company.',

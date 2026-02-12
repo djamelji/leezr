@@ -7,6 +7,7 @@ import {
   useConfigStore,
 } from '@core/stores/config'
 import { hexToRgb } from '@core/utils/colorConverter'
+import { useAppToast } from '@/composables/useAppToast'
 
 const { global } = useTheme()
 
@@ -15,6 +16,7 @@ initCore()
 initConfigStore()
 
 const configStore = useConfigStore()
+const { state: toastState } = useAppToast()
 </script>
 
 <template>
@@ -24,6 +26,15 @@ const configStore = useConfigStore()
       <RouterView />
 
       <ScrollToTop />
+
+      <VSnackbar
+        v-model="toastState.show"
+        :color="toastState.color"
+        :timeout="4000"
+        location="top end"
+      >
+        {{ toastState.message }}
+      </VSnackbar>
     </VApp>
   </VLocaleProvider>
 </template>

@@ -49,9 +49,12 @@ APP
 │   ├── Auth/       (AuthController, Form Requests)
 │   └── Tenancy/    (scoping, helpers d'isolation)
 │
-├── Platform   ← SaaS Leezr (global) — vide en LOT 1
-│   ├── Http/Controllers/
-│   ├── Http/Middleware/  (EnsurePlatformAdmin)
+├── Platform   ← SaaS Leezr (global) — Control Plane (LOT 6/6B)
+│   ├── Auth/              (PlatformAuthController — login/me/logout via auth:platform)
+│   ├── Http/Controllers/  (PlatformModuleController, PlatformCompanyController, PlatformUserController, PlatformCompanyUserController, PlatformRoleController)
+│   ├── Http/Middleware/   (EnsurePlatformPermission — uses auth:platform guard)
+│   ├── Models/            (PlatformUser, PlatformRole, PlatformPermission)
+│   ├── RBAC/              (PermissionCatalog — source unique de vérité permissions)
 │   └── Routes/platform.php
 │
 └── Company    ← Tenant (multi-company)
@@ -71,7 +74,7 @@ APP
 - `statefulApi()` activé dans `bootstrap/app.php`
 - Cookie-based SPA auth (pas de JWT, pas de token dans localStorage)
 - Le frontend appelle `/sanctum/csrf-cookie` avant login/register
-- Guard : `auth:sanctum` sur toutes les routes protégées
+- Guard : `auth:sanctum` sur les routes company, `auth:platform` sur les routes platform (ADR-032)
 
 #### Configuration requise (backend)
 
@@ -312,7 +315,7 @@ Enregistrement dans `bootstrap/app.php` :
 |---|---|---|---|
 | `routes/api.php` | `/api` | `api` | Auth (register, login, logout, me) |
 | `routes/company.php` | `/api` | `api`, `auth:sanctum`, `company.context` | Scope Company |
-| `routes/platform.php` | `/api/platform` | `api`, `auth:sanctum`, `platform.admin` | Scope Platform |
+| `routes/platform.php` | `/api/platform` | `api` (login public), `auth:platform` + `platform.permission:{key}` (backoffice) | Scope Platform (ADR-032, ADR-035) |
 
 Middleware supplémentaire LOT 2 :
 - `module.active:{key}` — vérifie qu'un module est actif pour la company courante (scope Company uniquement)

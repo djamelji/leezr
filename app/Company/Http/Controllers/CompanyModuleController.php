@@ -2,12 +2,15 @@
 
 namespace App\Company\Http\Controllers;
 
+use App\Core\Events\ModuleDisabled;
+use App\Core\Events\ModuleEnabled;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleCatalogReadModel;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\PlatformModule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CompanyModuleController
 {
@@ -41,6 +44,14 @@ class CompanyModuleController
             ['is_enabled_for_company' => true],
         );
 
+        Log::info('module.enabled', [
+            'module_key' => $key,
+            'company_id' => $company->id,
+            'user_id' => $request->user()->id,
+        ]);
+
+        ModuleEnabled::dispatch($company, $key);
+
         return response()->json([
             'message' => 'Module enabled.',
             'modules' => ModuleCatalogReadModel::forCompany($company),
@@ -66,6 +77,14 @@ class CompanyModuleController
             ['company_id' => $company->id, 'module_key' => $key],
             ['is_enabled_for_company' => false],
         );
+
+        Log::info('module.disabled', [
+            'module_key' => $key,
+            'company_id' => $company->id,
+            'user_id' => $request->user()->id,
+        ]);
+
+        ModuleDisabled::dispatch($company, $key);
 
         return response()->json([
             'message' => 'Module disabled.',

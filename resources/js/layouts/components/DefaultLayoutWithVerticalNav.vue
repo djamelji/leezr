@@ -1,5 +1,6 @@
 <script setup>
 import staticNavItems, { coreNavItems } from '@/navigation/vertical'
+import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { themeConfig } from '@themeConfig'
 
@@ -15,7 +16,10 @@ import NavBarI18n from '@core/components/I18n.vue'
 // @layouts plugin
 import { VerticalNavLayout } from '@layouts'
 
+const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+const router = useRouter()
+const route = useRoute()
 
 // Fetch modules on layout mount if not already loaded (e.g., page refresh)
 onMounted(async () => {
@@ -25,6 +29,24 @@ onMounted(async () => {
     }
     catch {
       // Non-blocking — nav will show static items with core fallbacks
+    }
+  }
+})
+
+// Re-fetch modules when company changes (via switcher)
+watch(() => authStore.currentCompanyId, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    moduleStore.reset()
+    try {
+      await moduleStore.fetchModules()
+    }
+    catch {
+      // fallback to static nav
+    }
+
+    // If current route requires a module that's no longer active, redirect
+    if (route.meta.module && !moduleStore.isActive(route.meta.module)) {
+      router.push('/')
     }
   }
 })

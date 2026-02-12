@@ -1,5 +1,6 @@
 <script setup>
 import staticNavItems from '@/navigation/horizontal'
+import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { themeConfig } from '@themeConfig'
 
@@ -14,7 +15,28 @@ import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
+const authStore = useAuthStore()
 const moduleStore = useModuleStore()
+const router = useRouter()
+const route = useRoute()
+
+// Re-fetch modules when company changes (via switcher)
+watch(() => authStore.currentCompanyId, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    moduleStore.reset()
+    try {
+      await moduleStore.fetchModules()
+    }
+    catch {
+      // fallback to static nav
+    }
+
+    // If current route requires a module that's no longer active, redirect
+    if (route.meta.module && !moduleStore.isActive(route.meta.module)) {
+      router.push('/')
+    }
+  }
+})
 
 const navItems = computed(() => {
   const moduleNavItems = moduleStore.activeNavItems.map(item => ({
