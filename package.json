@@ -11,8 +11,7 @@
     "mailpit": "open http://localhost:8025",
     "lint": "eslint . -c .eslintrc.cjs --fix --ext .ts,.js,.cjs,.vue,.tsx,.jsx",
     "build:icons": "tsx resources/js/plugins/iconify/build-icons.js",
-    "msw:init": "msw init public/ --save",
-    "postinstall": "npm run build:icons && npm run msw:init"
+    "postinstall": "npm run build:icons"
   },
   "dependencies": {
     "@floating-ui/dom": "1.6.8",
@@ -93,9 +92,10 @@
     "eslint-plugin-vue": "9.33.0",
     "figlet": "^1.10.0",
     "laravel-vite-plugin": "2.0.0",
-    "msw": "2.6.8",
+
     "postcss-html": "1.8.0",
     "postcss-scss": "4.0.9",
+    "rollup-plugin-visualizer": "^6.0.5",
     "sass": "1.76.0",
     "shiki": "1.29.2",
     "stylelint": "16.8.0",
@@ -121,13 +121,9 @@
     "postcss": "^8",
     "@tiptap/core": "^2"
   },
-  "msw": {
-    "workerDirectory": "public"
-  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "msw",
       "unrs-resolver",
       "vue-demi"
     ]
