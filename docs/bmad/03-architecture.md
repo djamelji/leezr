@@ -94,7 +94,7 @@ APP
 
 #### Contrainte : pas de service worker
 
-Les service workers (ex: MSW) interfèrent avec le flow `Set-Cookie` de Sanctum. Le fichier `mockServiceWorker.js` a été désactivé et un nettoyage automatique est en place dans `main.js`. **Aucun service worker ne doit intercepter les requêtes API.**
+Les service workers interfèrent avec le flow `Set-Cookie` de Sanctum. **Aucun service worker ne doit intercepter les requêtes API.** Le système MSW/fake-api Vuexy a été entièrement supprimé.
 
 ### Session Security (ADR-037)
 

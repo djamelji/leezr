@@ -59,9 +59,6 @@ dist-ssr
 # iconify dist files
 resources/js/plugins/iconify/icons.css
 
-# Ignore MSW script
-public/mockServiceWorker.js
-
 # Vuexy Full source (extracted to resources/ui/presets/)
 /full/
 

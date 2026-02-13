@@ -44,7 +44,6 @@
 
 - Guards navigation dans `plugins/1.router/guards.js`
 - Cookies : `accessToken`, `userData`
-- Fake API login : `plugins/fake-api/handlers/auth/`
 
 ## Extraits
 

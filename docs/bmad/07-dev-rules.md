@@ -97,4 +97,4 @@ Avant toute implémentation :
 - Pas de CSS inline pour du layout (utiliser Vuetify grid)
 - Pas de service worker interceptant les requêtes API (incompatible avec Sanctum CSRF)
 - Pas de `credentials: 'same-origin'` pour les requêtes API — toujours `'include'`
-- Pas de MSW (Mock Service Worker) en dev — le fake-api est désactivé, l'API Laravel est la seule source de données
+- Pas de mock API (MSW/fake-api supprimés) — l'API Laravel est la seule source de données
