@@ -13,12 +13,18 @@ class Jobdomain extends Model
         'label',
         'description',
         'is_active',
+        'default_modules',
+        'default_fields',
+        'allow_custom_fields',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'default_modules' => 'array',
+            'default_fields' => 'array',
+            'allow_custom_fields' => 'boolean',
         ];
     }
 

@@ -61,6 +61,26 @@ Avant toute implémentation :
 - Filtres via query params
 - Réponses cohérentes : `{ data, total }` pour les listes
 
+## Dev tooling
+
+### Commandes npm scripts
+
+| Commande | Description |
+|---|---|
+| `pnpm dev` | Vite seul (HMR) |
+| `pnpm dev:all` | Alias de `pnpm dev` (Vite seul, Valet gère PHP) |
+| `pnpm dev:leezr` | Vite + Mailpit en parallèle (`concurrently -k`) |
+| `pnpm build` | Build production Vite |
+| `pnpm mailpit` | Ouvre l'UI Mailpit (`http://localhost:8025`) |
+
+### Mailpit (test email local)
+
+- **SMTP** : `127.0.0.1:1025`
+- **UI** : `http://localhost:8025`
+- Installé via `brew install mailpit` (pas dockerisé)
+- Démarré automatiquement par `pnpm dev:leezr`, pas par `pnpm dev:all`
+- `pnpm mailpit` ouvre uniquement l'UI dans le navigateur
+
 ## Git
 
 - Commits conventionnels : `feat:`, `fix:`, `docs:`, `refactor:`

@@ -5,7 +5,7 @@ namespace App\Core\Jobdomains;
 /**
  * Declarative registry of all jobdomain profiles.
  * Single source of truth for what a jobdomain provides.
- * The DB table (jobdomains) stores metadata; this class stores the profile logic.
+ * The DB table (jobdomains) stores metadata + presets; this class seeds them.
  */
 class JobdomainRegistry
 {
@@ -21,6 +21,13 @@ class JobdomainRegistry
                 'landing_route' => '/',
                 'nav_profile' => 'logistique',
                 'default_modules' => ['core.members', 'core.settings', 'logistics_shipments'],
+                'default_fields' => [
+                    ['code' => 'siret', 'required' => true, 'order' => 0],
+                    ['code' => 'vat_number', 'required' => false, 'order' => 1],
+                    ['code' => 'legal_form', 'required' => false, 'order' => 2],
+                    ['code' => 'phone', 'required' => false, 'order' => 3],
+                    ['code' => 'job_title', 'required' => false, 'order' => 4],
+                ],
             ],
         ];
     }
@@ -35,6 +42,7 @@ class JobdomainRegistry
 
     /**
      * Sync definitions to the jobdomains DB table.
+     * Persists default_modules and default_fields to DB columns.
      */
     public static function sync(): void
     {
@@ -44,6 +52,8 @@ class JobdomainRegistry
                 [
                     'label' => $definition['label'],
                     'description' => $definition['description'] ?? null,
+                    'default_modules' => $definition['default_modules'] ?? [],
+                    'default_fields' => $definition['default_fields'] ?? [],
                 ],
             );
         }

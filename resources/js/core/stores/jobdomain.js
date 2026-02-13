@@ -7,6 +7,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
     _jobdomain: null,
     _profile: null,
     _available: [],
+    _allowCustomFields: false,
     _loaded: false,
   }),
 
@@ -15,6 +16,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
     jobdomain: state => state._jobdomain,
     profile: state => state._profile,
     available: state => state._available,
+    allowCustomFields: state => state._allowCustomFields,
 
     /**
      * Landing route from the jobdomain profile. Fallback to '/'.
@@ -35,6 +37,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
       this._jobdomain = data.jobdomain
       this._profile = data.profile
       this._available = data.available || []
+      this._allowCustomFields = data.allow_custom_fields || false
       this._loaded = true
 
       return data
@@ -49,6 +52,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
       this._assigned = data.assigned
       this._jobdomain = data.jobdomain
       this._profile = data.profile
+      this._allowCustomFields = data.allow_custom_fields || false
 
       return data
     },
@@ -58,6 +62,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
       this._jobdomain = null
       this._profile = null
       this._available = []
+      this._allowCustomFields = false
       this._loaded = false
     },
   },

@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Core\Fields\FieldActivation;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldValue;
 use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;
@@ -96,6 +99,51 @@ class DevSeeder extends Seeder
 
         // ─── Jobdomain assignment ────────────────────────────────
         JobdomainGate::assignToCompany($company, 'logistique');
+
+        // ─── Field activations for demo company ──────────────────
+        $companyFields = FieldDefinition::whereNull('company_id')
+            ->where('scope', FieldDefinition::SCOPE_COMPANY)->get();
+        foreach ($companyFields as $index => $field) {
+            FieldActivation::updateOrCreate(
+                ['company_id' => $company->id, 'field_definition_id' => $field->id],
+                ['enabled' => true, 'required_override' => $field->code === 'siret', 'order' => $index * 10],
+            );
+        }
+
+        $companyUserFields = FieldDefinition::whereNull('company_id')
+            ->where('scope', FieldDefinition::SCOPE_COMPANY_USER)->get();
+        foreach ($companyUserFields as $index => $field) {
+            FieldActivation::updateOrCreate(
+                ['company_id' => $company->id, 'field_definition_id' => $field->id],
+                ['enabled' => true, 'required_override' => false, 'order' => $index * 10],
+            );
+        }
+
+        $platformUserFields = FieldDefinition::whereNull('company_id')
+            ->where('scope', FieldDefinition::SCOPE_PLATFORM_USER)->get();
+        foreach ($platformUserFields as $index => $field) {
+            FieldActivation::updateOrCreate(
+                ['company_id' => null, 'field_definition_id' => $field->id],
+                ['enabled' => true, 'required_override' => false, 'order' => $index * 10],
+            );
+        }
+
+        // ─── Sample field values ───────────────────────────────
+        $siret = FieldDefinition::where('code', 'siret')->first();
+        if ($siret) {
+            FieldValue::updateOrCreate(
+                ['field_definition_id' => $siret->id, 'model_type' => 'company', 'model_id' => $company->id],
+                ['value' => '12345678901234'],
+            );
+        }
+
+        $phone = FieldDefinition::where('code', 'phone')->first();
+        if ($phone) {
+            FieldValue::updateOrCreate(
+                ['field_definition_id' => $phone->id, 'model_type' => 'user', 'model_id' => $owner->id],
+                ['value' => '+33 6 12 34 56 78'],
+            );
+        }
 
         // ─── Sample shipments (stable references for idempotency) ─
         Shipment::updateOrCreate(

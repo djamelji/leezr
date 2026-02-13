@@ -35,4 +35,16 @@ export default [
     icon: { icon: 'tabler-puzzle' },
     permission: 'manage_modules',
   },
+  {
+    title: 'Job Domains',
+    to: { name: 'platform-jobdomains' },
+    icon: { icon: 'tabler-briefcase' },
+    permission: 'manage_jobdomains',
+  },
+  {
+    title: 'Custom Fields',
+    to: { name: 'platform-fields' },
+    icon: { icon: 'tabler-forms' },
+    permission: 'manage_field_definitions',
+  },
 ]

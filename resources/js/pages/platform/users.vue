@@ -1,4 +1,5 @@
 <script setup>
+import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { usePlatformStore } from '@/core/stores/platform'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
@@ -29,6 +30,11 @@ const showSetPasswordFields = ref(false)
 const setPasswordForm = ref({ password: '', password_confirmation: '' })
 const setPasswordLoading = ref(false)
 const resetPasswordLoading = ref(false)
+
+// Dynamic fields (edit mode)
+const dynamicFieldDefs = ref([])
+const dynamicForm = ref({})
+const profileLoading = ref(false)
 
 // Confirm dialog
 const isConfirmDialogVisible = ref(false)
@@ -86,7 +92,7 @@ const openCreateDrawer = () => {
   isDrawerOpen.value = true
 }
 
-const openEditDrawer = user => {
+const openEditDrawer = async user => {
   isEditMode.value = true
   editingUser.value = user
   drawerForm.value = {
@@ -99,7 +105,26 @@ const openEditDrawer = user => {
   }
   showSetPasswordFields.value = false
   setPasswordForm.value = { password: '', password_confirmation: '' }
+  dynamicFieldDefs.value = []
+  dynamicForm.value = {}
   isDrawerOpen.value = true
+
+  // Fetch profile with dynamic fields
+  profileLoading.value = true
+  try {
+    const profile = await platformStore.fetchPlatformUserProfile(user.id)
+
+    dynamicFieldDefs.value = profile.dynamic_fields || []
+
+    const df = {}
+    for (const field of profile.dynamic_fields || []) {
+      df[field.code] = field.value
+    }
+    dynamicForm.value = df
+  }
+  finally {
+    profileLoading.value = false
+  }
 }
 
 const handleDrawerSubmit = async () => {
@@ -111,6 +136,10 @@ const handleDrawerSubmit = async () => {
         name: drawerForm.value.name,
         email: drawerForm.value.email,
         roles: drawerForm.value.roles,
+      }
+
+      if (dynamicFieldDefs.value.length > 0) {
+        payload.dynamic_fields = { ...dynamicForm.value }
       }
 
       const data = await platformStore.updatePlatformUser(editingUser.value.id, payload)
@@ -386,6 +415,28 @@ const onPageChange = async page => {
                 closable-chips
               />
             </VCol>
+
+            <!-- Dynamic fields (edit mode) -->
+            <template v-if="isEditMode && dynamicFieldDefs.length">
+              <VCol cols="12">
+                <VDivider class="mb-2" />
+                <div class="text-body-2 font-weight-medium mb-2">
+                  Custom Fields
+                </div>
+              </VCol>
+              <DynamicFormRenderer
+                v-model="dynamicForm"
+                :fields="dynamicFieldDefs"
+                :disabled="profileLoading"
+                :cols="12"
+              />
+            </template>
+
+            <template v-if="isEditMode && profileLoading">
+              <VCol cols="12">
+                <VProgressLinear indeterminate />
+              </VCol>
+            </template>
 
             <!-- Credential mode (create only, if permission) -->
             <template v-if="!isEditMode && canManageCredentials">

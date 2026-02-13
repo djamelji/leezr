@@ -2,6 +2,8 @@
 
 namespace App\Company\Http\Requests;
 
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldValidationService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +16,7 @@ class UpdateProfileRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $fixedRules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -24,5 +26,12 @@ class UpdateProfileRequest extends FormRequest
                 Rule::unique('users')->ignore($this->user()->id),
             ],
         ];
+
+        $company = $this->attributes->get('company');
+
+        return array_merge(
+            $fixedRules,
+            FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id),
+        );
     }
 }

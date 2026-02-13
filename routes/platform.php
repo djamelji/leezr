@@ -4,6 +4,9 @@ use App\Platform\Auth\PlatformAuthController;
 use App\Platform\Auth\PlatformPasswordResetController;
 use App\Platform\Http\Controllers\PlatformCompanyController;
 use App\Platform\Http\Controllers\PlatformCompanyUserController;
+use App\Platform\Http\Controllers\PlatformFieldActivationController;
+use App\Platform\Http\Controllers\PlatformFieldDefinitionController;
+use App\Platform\Http\Controllers\PlatformJobdomainController;
 use App\Platform\Http\Controllers\PlatformModuleController;
 use App\Platform\Http\Controllers\PlatformPermissionController;
 use App\Platform\Http\Controllers\PlatformRoleController;
@@ -66,5 +69,30 @@ Route::middleware('auth:platform')->group(function () {
     Route::middleware('platform.permission:manage_modules')->group(function () {
         Route::get('/modules', [PlatformModuleController::class, 'index']);
         Route::put('/modules/{key}/toggle', [PlatformModuleController::class, 'toggle']);
+    });
+
+    // Field Definitions + Activations
+    Route::middleware('platform.permission:manage_field_definitions')->group(function () {
+        Route::get('/field-definitions', [PlatformFieldDefinitionController::class, 'index']);
+        Route::post('/field-definitions', [PlatformFieldDefinitionController::class, 'store']);
+        Route::put('/field-definitions/{id}', [PlatformFieldDefinitionController::class, 'update']);
+        Route::delete('/field-definitions/{id}', [PlatformFieldDefinitionController::class, 'destroy']);
+
+        Route::get('/field-activations', [PlatformFieldActivationController::class, 'index']);
+        Route::post('/field-activations', [PlatformFieldActivationController::class, 'upsert']);
+    });
+
+    // Platform user profile (show with dynamic fields)
+    Route::middleware('platform.permission:manage_platform_users')->group(function () {
+        Route::get('/platform-users/{id}', [PlatformUserController::class, 'show']);
+    });
+
+    // Job Domains (CRUD)
+    Route::middleware('platform.permission:manage_jobdomains')->group(function () {
+        Route::get('/jobdomains', [PlatformJobdomainController::class, 'index']);
+        Route::get('/jobdomains/{id}', [PlatformJobdomainController::class, 'show']);
+        Route::post('/jobdomains', [PlatformJobdomainController::class, 'store']);
+        Route::put('/jobdomains/{id}', [PlatformJobdomainController::class, 'update']);
+        Route::delete('/jobdomains/{id}', [PlatformJobdomainController::class, 'destroy']);
     });
 });

@@ -1,4 +1,5 @@
 <script setup>
+import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyStore } from '@/core/stores/company'
 
@@ -9,6 +10,7 @@ const form = ref({
   name: '',
 })
 
+const dynamicForm = ref({})
 const isLoading = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
@@ -18,9 +20,22 @@ const canEdit = computed(() => {
   return role === 'owner' || role === 'admin'
 })
 
+const dynamicFields = computed(() => {
+  return companyStore.company?.dynamic_fields || []
+})
+
 onMounted(async () => {
   await companyStore.fetchCompany()
-  form.value.name = companyStore.company?.name || ''
+
+  const data = companyStore.company
+  form.value.name = data?.base_fields?.name || ''
+
+  // Build dynamic form values from resolved fields
+  const df = {}
+  for (const field of data?.dynamic_fields || []) {
+    df[field.code] = field.value
+  }
+  dynamicForm.value = df
 })
 
 const handleSave = async () => {
@@ -29,7 +44,14 @@ const handleSave = async () => {
   errorMessage.value = ''
 
   try {
-    await companyStore.updateCompany({ name: form.value.name })
+    const payload = { name: form.value.name }
+
+    // Only include dynamic_fields if there are any
+    if (dynamicFields.value.length > 0) {
+      payload.dynamic_fields = { ...dynamicForm.value }
+    }
+
+    await companyStore.updateCompany(payload)
 
     // Update the company name in auth store too
     await auth.fetchMyCompanies()
@@ -45,7 +67,14 @@ const handleSave = async () => {
 }
 
 const resetForm = () => {
-  form.value.name = companyStore.company?.name || ''
+  const data = companyStore.company
+  form.value.name = data?.base_fields?.name || ''
+
+  const df = {}
+  for (const field of data?.dynamic_fields || []) {
+    df[field.code] = field.value
+  }
+  dynamicForm.value = df
 }
 </script>
 
@@ -87,6 +116,14 @@ const resetForm = () => {
                 :disabled="!canEdit"
               />
             </VCol>
+
+            <!-- Dynamic fields -->
+            <DynamicFormRenderer
+              v-if="dynamicFields.length"
+              v-model="dynamicForm"
+              :fields="dynamicFields"
+              :disabled="!canEdit"
+            />
 
             <VCol
               v-if="canEdit"

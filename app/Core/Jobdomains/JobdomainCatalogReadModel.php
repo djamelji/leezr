@@ -36,6 +36,7 @@ class JobdomainCatalogReadModel
             return [
                 'assigned' => false,
                 'jobdomain' => null,
+                'allow_custom_fields' => false,
                 'profile' => [
                     'landing_route' => '/',
                     'nav_profile' => null,
@@ -53,6 +54,7 @@ class JobdomainCatalogReadModel
                 'label' => $jobdomain->label,
                 'description' => $jobdomain->description,
             ],
+            'allow_custom_fields' => (bool) $jobdomain->allow_custom_fields,
             'profile' => [
                 'landing_route' => $definition['landing_route'] ?? '/',
                 'nav_profile' => $definition['nav_profile'] ?? null,

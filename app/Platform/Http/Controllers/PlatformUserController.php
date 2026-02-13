@@ -3,6 +3,10 @@
 namespace App\Platform\Http\Controllers;
 
 use App\Core\Auth\PasswordPolicy;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldValidationService;
+use App\Core\Fields\FieldWriteService;
+use App\Platform\Fields\ReadModels\PlatformUserProfileReadModel;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Http\JsonResponse;
@@ -63,16 +67,26 @@ class PlatformUserController
         ], 201);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $user = PlatformUser::with('roles')->findOrFail($id);
+
+        return response()->json(PlatformUserProfileReadModel::get($user));
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         $user = PlatformUser::findOrFail($id);
 
-        $validated = $request->validate([
+        $fixedRules = [
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:platform_users,email,' . $user->id,
             'roles' => 'sometimes|array',
             'roles.*' => 'integer|exists:platform_roles,id',
-        ]);
+        ];
+
+        $dynamicRules = FieldValidationService::rules(FieldDefinition::SCOPE_PLATFORM_USER);
+        $validated = $request->validate(array_merge($fixedRules, $dynamicRules));
 
         $fields = array_intersect_key($validated, array_flip(['name', 'email']));
         if (!empty($fields)) {
@@ -97,6 +111,14 @@ class PlatformUserController
             }
 
             $user->roles()->sync($validated['roles']);
+        }
+
+        if (isset($validated['dynamic_fields'])) {
+            FieldWriteService::upsert(
+                $user,
+                $validated['dynamic_fields'],
+                FieldDefinition::SCOPE_PLATFORM_USER,
+            );
         }
 
         return response()->json([

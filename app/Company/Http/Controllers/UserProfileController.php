@@ -2,8 +2,11 @@
 
 namespace App\Company\Http\Controllers;
 
+use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Company\Http\Requests\UpdatePasswordRequest;
 use App\Company\Http\Requests\UpdateProfileRequest;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldWriteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -12,18 +15,28 @@ class UserProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        return response()->json([
-            'user' => $request->user(),
-        ]);
+        $company = $request->attributes->get('company');
+
+        return response()->json(CompanyUserProfileReadModel::get($request->user(), $company));
     }
 
     public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $request->user()->update($request->validated());
+        $company = $request->attributes->get('company');
+        $validated = $request->validated();
 
-        return response()->json([
-            'user' => $request->user()->fresh(),
-        ]);
+        $request->user()->update(array_intersect_key($validated, array_flip(['name', 'email'])));
+
+        if (isset($validated['dynamic_fields'])) {
+            FieldWriteService::upsert(
+                $request->user(),
+                $validated['dynamic_fields'],
+                FieldDefinition::SCOPE_COMPANY_USER,
+                $company->id,
+            );
+        }
+
+        return response()->json(CompanyUserProfileReadModel::get($request->user()->fresh(), $company));
     }
 
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse

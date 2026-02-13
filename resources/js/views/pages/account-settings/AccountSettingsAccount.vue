@@ -1,4 +1,5 @@
 <script setup>
+import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { $api } from '@/utils/api'
 
@@ -9,11 +10,37 @@ const form = ref({
   email: auth.user?.email || '',
 })
 
+const dynamicFields = ref([])
+const dynamicForm = ref({})
+
 const isLoading = ref(false)
+const profileLoading = ref(true)
 const successMessage = ref('')
 const errorMessage = ref('')
 const refInputEl = ref()
 const avatarPreview = ref(auth.user?.avatar || null)
+
+// Fetch profile with dynamic fields on mount
+onMounted(async () => {
+  try {
+    const data = await $api('/profile')
+
+    form.value.name = data.base_fields?.name || ''
+    form.value.email = data.base_fields?.email || ''
+    avatarPreview.value = data.base_fields?.avatar || null
+    dynamicFields.value = data.dynamic_fields || []
+
+    // Build dynamic form from resolved fields (keyed by code)
+    const df = {}
+    for (const field of data.dynamic_fields || []) {
+      df[field.code] = field.value ?? null
+    }
+    dynamicForm.value = df
+  }
+  finally {
+    profileLoading.value = false
+  }
+})
 
 const handleSave = async () => {
   isLoading.value = true
@@ -26,11 +53,20 @@ const handleSave = async () => {
       body: {
         name: form.value.name,
         email: form.value.email,
+        dynamic_fields: { ...dynamicForm.value },
       },
     })
 
-    auth._persistUser(data.user)
+    auth._persistUser(data.base_fields)
     successMessage.value = 'Profile updated successfully.'
+
+    // Refresh dynamic fields from response
+    dynamicFields.value = data.dynamic_fields || []
+    const df = {}
+    for (const field of data.dynamic_fields || []) {
+      df[field.code] = field.value ?? null
+    }
+    dynamicForm.value = df
   }
   catch (error) {
     errorMessage.value = error?.data?.message || 'Failed to update profile.'
@@ -180,6 +216,22 @@ const resetForm = () => {
                   type="email"
                 />
               </VCol>
+
+              <!-- Dynamic fields (company_user scope) -->
+              <template v-if="dynamicFields.length && !profileLoading">
+                <VCol cols="12">
+                  <VDivider />
+                </VCol>
+                <VCol cols="12">
+                  <h6 class="text-h6">
+                    Additional Information
+                  </h6>
+                </VCol>
+                <DynamicFormRenderer
+                  v-model="dynamicForm"
+                  :fields="dynamicFields"
+                />
+              </template>
 
               <VCol
                 cols="12"

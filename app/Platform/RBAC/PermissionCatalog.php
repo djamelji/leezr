@@ -18,6 +18,8 @@ class PermissionCatalog
             ['key' => 'manage_platform_user_credentials', 'label' => 'Manage Platform User Credentials'],
             ['key' => 'manage_roles', 'label' => 'Manage Roles'],
             ['key' => 'manage_modules', 'label' => 'Manage Modules'],
+            ['key' => 'manage_field_definitions', 'label' => 'Manage Field Definitions'],
+            ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],
         ];
     }
 

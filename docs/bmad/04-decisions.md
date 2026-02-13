@@ -632,8 +632,106 @@ definePage({
   - Les pages reset-password (company + platform) affichent un VProgressLinear + checklist de règles sous le champ password.
   - Les pages forgot-password (company + platform) désactivent le bouton submit après succès pour empêcher la double soumission.
   - Mailpit est l'outil de test email en dev local (SMTP `127.0.0.1:1025`, UI `http://localhost:8025`).
-  - Mailpit n'est pas démarré automatiquement par `pnpm dev:all` — démarrage manuel uniquement.
+  - Mailpit n'est pas démarré par `pnpm dev:all` (Vite seul). `pnpm dev:leezr` lance Vite + Mailpit en parallèle via `concurrently`.
   - La configuration mail prod n'est pas impactée (`.env.production.example` non modifié).
+
+---
+
+## ADR-039 : Dynamic Field System (Champs dynamiques multi-scope)
+
+- **Date** : 2026-02-13
+- **Contexte** : Les profils company, user et platform user ont besoin de champs extensibles sans modification de schéma. Le système doit supporter des champs définis par la plateforme, activés par company, et remplis par entité. Aucun pattern de champs dynamiques n'existait dans le codebase.
+- **Décision** : Architecture EAV (Entity-Attribute-Value) en trois couches :
+  - **FieldDefinition** (catalogue) : code unique, scope (enum DB : `platform_user`, `company`, `company_user`), type (enum DB : `string`, `number`, `boolean`, `date`, `select`, `json`), validation_rules, options. `code`/`scope`/`type` immutables après création.
+  - **FieldActivation** (par company) : company_id (nullable pour platform_user scope), enabled, required_override, order. Max 50 activations par scope par company.
+  - **FieldValue** (par entité, morph) : field_definition_id + model_type/model_id (morphMap enforced), value (JSON). Unique constraint (definition, model_type, model_id).
+  - **Services** : `FieldResolverService` (3 queries max, pas de N+1), `FieldValidationService` (retourne des règles, ne mutate pas), `FieldWriteService` (transactional, vérifie activation avant écriture).
+  - **ReadModels** : `CompanyProfileReadModel`, `CompanyUserProfileReadModel`, `PlatformUserProfileReadModel` — seuls points de lecture des dynamic_fields (jamais dans les controllers directement). Uniquement sur les endpoints show/profile, pas sur les index.
+  - **FieldDefinitionCatalog** : registry des champs système (siret, vat_number, legal_form, phone, job_title, internal_note). `sync()` idempotent, ne modifie jamais scope/type des champs existants.
+  - **Frontend** : `DynamicFormRenderer.vue` générique (type → App* wrapper). Aucune logique métier frontend.
+  - **Permission** : `manage_field_definitions` dans PermissionCatalog.
+  - **MorphMap** : `user` → User, `company` → Company, `platform_user` → PlatformUser (enforced globalement).
+- **Conséquences** :
+  - Aucune modification des schémas existants (users, companies, platform_users)
+  - Les champs système (`is_system = true`) ne peuvent pas être supprimés
+  - Cross-tenant write impossible (activation vérifiée avant écriture)
+  - Partial update ne wipe pas les valeurs EAV existantes
+  - Extensible à de futurs scopes (clients, fournisseurs) sans migration
+  - Aucun eager loading de dynamic_fields dans les endpoints de liste
+
+---
+
+## ADR-040 : JobDomain × Fields — Presets de champs par métier
+
+- **Date** : 2026-02-13
+- **Contexte** : ADR-039 a instauré le Dynamic Field System avec FieldDefinition → FieldActivation → FieldValue. Le système fonctionne mais chaque company démarre avec zéro champ activé. Il n'existe aucun lien entre le jobdomain (profil métier) et les champs dynamiques. Une company "Logistique" devrait avoir ses champs métier pré-activés dès l'assignation du jobdomain.
+- **Décision** : Étendre le `JobdomainRegistry` avec un champ `default_fields` (liste structurée `[{code, required, order}]`). Lors de `JobdomainGate::assignToCompany()`, après l'activation des modules par défaut, les champs listés dans `default_fields` sont automatiquement activés pour la company :
+  - Pour chaque entrée dans `default_fields`, une `FieldActivation` est créée (`updateOrCreate` idempotent)
+  - Le scope est lu depuis la `FieldDefinition` — seuls `company` et `company_user` sont applicables
+  - Les activations de scope `platform_user` sont ignorées (filtrage `whereIn`)
+  - `enabled = true`, `required_override` et `order` proviennent du preset structuré
+  - L'activation est idempotente : si le champ est déjà activé, rien ne change
+  - Le guard max 50 n'est pas vérifié lors de l'assignation jobdomain (les presets sont supposés raisonnables)
+- **Conséquences** :
+  - Ajouter un jobdomain = ajouter default_modules + default_fields dans le Registry
+  - L'expérience onboarding est cohérente : jobdomain → modules + champs en une opération
+  - Les presets sont persistés en DB (via Registry::sync()) et éditables via l'admin platform
+  - Le mécanisme est extensible à de futurs jobdomains sans migration
+  - L'isolation est maintenue : seuls les scopes company/company_user sont activés, jamais platform_user
+
+---
+
+## ADR-041 : Platform JobDomain Administration
+
+- **Date** : 2026-02-13
+- **Contexte** : Les jobdomains étaient définis exclusivement en code (`JobdomainRegistry`). Les platform admins ne pouvaient ni en créer de nouveaux, ni modifier les presets (modules, champs) sans intervention développeur. ADR-040 a introduit les field presets mais ils restaient hardcodés.
+- **Décision** : Créer une surface d'administration Platform pour les jobdomains avec CRUD + gestion des presets :
+  - **Migration** : colonnes `default_modules` (json) et `default_fields` (json) ajoutées à la table `jobdomains`
+  - **Source de vérité runtime** : les presets sont lus depuis la DB (colonnes `default_modules`/`default_fields`), pas depuis le Registry. Le Registry reste la seed initiale (`JobdomainRegistry::sync()` persiste les presets en DB).
+  - **CRUD API** : `GET/POST/PUT/DELETE /api/platform/jobdomains` + `GET /api/platform/jobdomains/{id}`, protégé par `platform.permission:manage_jobdomains`
+  - **Immutabilité** : le `key` est immutable après création (non accepté en update)
+  - **Suppression gardée** : impossible si le jobdomain est assigné à ≥ 1 company (422)
+  - **Format default_fields structuré** : `[{code, required, order}, ...]` — chaque preset contient le code du champ, un booléen `required` (required_override lors de l'activation), et un entier `order` (ordre d'affichage). Remplace le format flat `['siret', 'phone']` initial.
+  - **Validation default_fields** : les codes doivent exister dans `field_definitions` et ne doivent PAS être de scope `platform_user`
+  - **Séparation stricte Presets vs Activations** :
+    - Les presets (`default_modules`, `default_fields`) sont des templates — ils ne touchent JAMAIS les activations existantes des companies
+    - Les presets sont appliqués uniquement lors de `JobdomainGate::assignToCompany()` (moment de l'assignation)
+    - Modifier un preset APRÈS assignation n'a aucun effet rétroactif sur les companies déjà assignées
+    - Chaque company prend le contrôle total de ses `FieldActivation` et `CompanyModule` après assignation
+  - **Frontend** : deux pages distinctes (pas de drawer) :
+    - **Page liste** `platform/jobdomains/index.vue` : VDataTable (Key, Name, Companies, Actions) + bouton "Manage" → profil + VDialog pour création
+    - **Page profil** `platform/jobdomains/[id].vue` : Header + 3 tabs (Overview, Default Modules, Default Fields). Tab Fields : groupé par scope (company/company_user), colonnes Enabled/Required/Order par champ, badge `system`. Badges "Preset Only" + alertes de non-rétroactivité.
+  - **Permission** : `manage_jobdomains` ajoutée au `PermissionCatalog`
+- **Conséquences** :
+  - Les platform admins peuvent créer des jobdomains et configurer leurs presets sans code
+  - La séparation Definitions → Presets → Activations est formalisée et testée
+  - Pas de sync rétroactif — les companies sont autonomes après assignation
+  - Le `JobdomainRegistry` reste la seed source mais la DB est l'autorité runtime
+  - Le format structuré des presets permet un contrôle granulaire (required/order) par jobdomain
+  - Extensible : ajouter un jobdomain = créer via l'UI + configurer modules/champs
+
+---
+
+## ADR-042 : Company Custom Fields gated by JobDomain
+
+- **Date** : 2026-02-13
+- **Contexte** : ADR-039 a instauré le Dynamic Field System mais seuls les platform admins peuvent créer des FieldDefinitions. Certains métiers nécessitent que les companies puissent créer leurs propres champs (ex: un transporteur veut un champ "Permis CACES" pour ses membres). Ce droit doit être contrôlé par jobdomain car tous les métiers n'en ont pas besoin.
+- **Décision** : Introduire un flag `jobdomains.allow_custom_fields` (boolean, default false) qui gate la capacité d'une company à créer des FieldDefinitions custom. Architecture :
+  - **Isolation multi-tenant** : `field_definitions.company_id` (nullable FK → companies, cascadeOnDelete). Platform-owned = `company_id IS NULL`, company-owned = `company_id = current company`. Toute lecture/écriture custom filtre par `company_id` courant.
+  - **Unicité des codes** : contrainte composite `UNIQUE(company_id, code)`. Pour les champs platform (`company_id IS NULL`), l'unicité est enforced au niveau applicatif (updateOrCreate dans FieldDefinitionCatalog::sync(), validation `unique` dans PlatformFieldDefinitionController). SQLite et MySQL traitent `NULL != NULL` dans les unique constraints, ce qui requiert cette double protection.
+  - **Scopes autorisés custom** : `company` et `company_user` uniquement (jamais `platform_user`). Validé dans CompanyFieldDefinitionController::store().
+  - **Immutabilité** : `code`, `scope`, `type` immutables après création (cohérent ADR-039).
+  - **Suppression protégée** : un custom field ne peut pas être supprimé s'il a au moins une FieldValue liée (`used_count > 0`). Désactivation (enabled=false) toujours possible. Les valeurs persistent et réapparaissent à la réactivation.
+  - **Limite anti-explosion** : max 20 custom fields par company (toutes scopes confondues). 422 si dépassement.
+  - **Non-rétroactivité** : changer `allow_custom_fields` sur un jobdomain n'affecte pas les custom fields déjà créés par les companies assignées. Le flag gate uniquement la permission de création/modification/suppression.
+  - **API Company** : CRUD via `CompanyFieldDefinitionController` (GET index, POST store, PUT update, DELETE destroy). Routes protégées par `company.role:admin`.
+  - **Frontend** : intégré au drawer "Member Fields Settings" de `members.vue`. Section "Create Custom Field" visible uniquement si `allow_custom_fields = true`. Dialog de création avec code, label, scope, type. Aucune nouvelle page — zero code mort.
+- **Conséquences** :
+  - Les companies autonomes en matière de champs custom, sous contrôle du jobdomain
+  - Isolation stricte : aucun accès cross-tenant aux custom fields
+  - Le catalogue platform reste séparé et protégé
+  - Les custom fields s'intègrent au système existant (activations, values, ReadModels)
+  - Extensible sans migration : ajouter un jobdomain avec `allow_custom_fields: true` suffit
 
 ---
 

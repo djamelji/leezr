@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\Models\PlatformPermission;
@@ -28,6 +29,9 @@ class SystemSeeder extends Seeder
 
         // ─── Jobdomain catalog ───────────────────────────────────
         JobdomainRegistry::sync();
+
+        // ─── Field definitions catalog ─────────────────────────
+        FieldDefinitionCatalog::sync();
 
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();

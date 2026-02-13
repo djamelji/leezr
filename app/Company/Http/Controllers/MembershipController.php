@@ -2,6 +2,7 @@
 
 namespace App\Company\Http\Controllers;
 
+use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Company\Http\Requests\StoreMemberRequest;
 use App\Company\Http\Requests\UpdateMemberRequest;
 use App\Core\Models\Membership;
@@ -29,6 +30,24 @@ class MembershipController extends Controller
 
         return response()->json([
             'members' => $members,
+        ]);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $membership = $company->memberships()->with('user')->findOrFail($id);
+
+        $profile = CompanyUserProfileReadModel::get($membership->user, $company);
+
+        return response()->json([
+            'member' => [
+                'id' => $membership->id,
+                'role' => $membership->role,
+                'created_at' => $membership->created_at,
+            ],
+            'base_fields' => $profile['base_fields'],
+            'dynamic_fields' => $profile['dynamic_fields'],
         ]);
     }
 

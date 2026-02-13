@@ -1,6 +1,8 @@
 <?php
 
 use App\Company\Http\Controllers\CompanyController;
+use App\Company\Http\Controllers\CompanyFieldActivationController;
+use App\Company\Http\Controllers\CompanyFieldDefinitionController;
 use App\Company\Http\Controllers\CompanyJobdomainController;
 use App\Company\Http\Controllers\CompanyModuleController;
 use App\Company\Http\Controllers\MembershipController;
@@ -19,6 +21,7 @@ Route::put('/company', [CompanyController::class, 'update'])
 
 // Members management
 Route::get('/company/members', [MembershipController::class, 'index']);
+Route::get('/company/members/{id}', [MembershipController::class, 'show']);
 Route::post('/company/members', [MembershipController::class, 'store'])
     ->middleware('company.role:admin');
 Route::put('/company/members/{id}', [MembershipController::class, 'update'])
@@ -47,6 +50,20 @@ Route::middleware('module.active:logistics_shipments')->group(function () {
     Route::put('/shipments/{id}/status', [ShipmentController::class, 'changeStatus'])
         ->middleware('company.role:admin');
 });
+
+// Field activations (company + company_user scopes)
+Route::get('/company/field-activations', [CompanyFieldActivationController::class, 'index']);
+Route::post('/company/field-activations', [CompanyFieldActivationController::class, 'upsert'])
+    ->middleware('company.role:admin');
+
+// Custom field definitions (company-owned, gated by jobdomain.allow_custom_fields)
+Route::get('/company/field-definitions', [CompanyFieldDefinitionController::class, 'index']);
+Route::post('/company/field-definitions', [CompanyFieldDefinitionController::class, 'store'])
+    ->middleware('company.role:admin');
+Route::put('/company/field-definitions/{id}', [CompanyFieldDefinitionController::class, 'update'])
+    ->middleware('company.role:admin');
+Route::delete('/company/field-definitions/{id}', [CompanyFieldDefinitionController::class, 'destroy'])
+    ->middleware('company.role:admin');
 
 // User profile (scoped to company context but personal data)
 Route::get('/profile', [UserProfileController::class, 'show']);
