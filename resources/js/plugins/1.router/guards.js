@@ -2,6 +2,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
+import { safeRedirect } from '@/utils/safeRedirect'
 
 export const setupGuards = router => {
   router.beforeEach(async to => {
@@ -12,6 +13,11 @@ export const setupGuards = router => {
     // ─── Platform scope ─────────────────────────────────
     if (to.meta.platform) {
       const platformAuth = usePlatformAuthStore()
+
+      // Hydrate session on first navigation (cookie = cache, server = truth)
+      if (!platformAuth._hydrated && platformAuth.isLoggedIn) {
+        await platformAuth.fetchMe()
+      }
 
       // Platform unauthenticated-only routes (platform login)
       if (to.meta.unauthenticatedOnly) {
@@ -39,6 +45,17 @@ export const setupGuards = router => {
 
     // ─── Company scope ──────────────────────────────────
     const auth = useAuthStore()
+
+    // Hydrate session on first navigation (cookie = cache, server = truth)
+    if (!auth._hydrated && auth.isLoggedIn) {
+      await auth.fetchMe()
+
+      // Session was stale — server says not authenticated
+      if (!auth.isLoggedIn) {
+        return { path: '/login', query: { redirect: safeRedirect(to.fullPath) } }
+      }
+    }
+
     const isLoggedIn = auth.isLoggedIn
 
     // Unauthenticated-only routes (login, register) — redirect to home if logged in
@@ -51,7 +68,7 @@ export const setupGuards = router => {
 
     // Protected routes — redirect to login if not logged in
     if (!isLoggedIn)
-      return { path: '/login', query: { redirect: to.fullPath } }
+      return { path: '/login', query: { redirect: safeRedirect(to.fullPath) } }
 
     // Module guard — block access to inactive module routes
     if (to.meta.module) {
@@ -63,8 +80,12 @@ export const setupGuards = router => {
           await moduleStore.fetchModules()
         }
         catch {
-          // If fetch fails, allow navigation (layout will retry)
-          return
+          // Fail-closed: if fetch fails, block access to module route
+          const { toast } = useAppToast()
+
+          toast('Unable to verify module access. Please try again.', 'error')
+
+          return '/'
         }
       }
 

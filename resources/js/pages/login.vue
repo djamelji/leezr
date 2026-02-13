@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/core/stores/auth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
 import { useModuleStore } from '@/core/stores/module'
+import { safeRedirect } from '@/utils/safeRedirect'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
 import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
@@ -28,7 +29,6 @@ const route = useRoute()
 const form = ref({
   email: '',
   password: '',
-  remember: false,
 })
 
 const isPasswordVisible = ref(false)
@@ -56,7 +56,7 @@ const handleLogin = async () => {
       // Non-blocking — fallback to defaults
     }
 
-    const redirect = route.query.redirect || jobdomainStore.landingRoute || '/'
+    const redirect = safeRedirect(route.query.redirect, jobdomainStore.landingRoute || '/')
 
     await router.push(redirect)
   }
@@ -166,11 +166,13 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
 
-                <div class="d-flex align-center flex-wrap justify-space-between my-6">
-                  <VCheckbox
-                    v-model="form.remember"
-                    label="Remember me"
-                  />
+                <div class="d-flex align-center justify-end my-6">
+                  <RouterLink
+                    class="text-primary text-body-2"
+                    to="/forgot-password"
+                  >
+                    Forgot Password?
+                  </RouterLink>
                 </div>
 
                 <VBtn

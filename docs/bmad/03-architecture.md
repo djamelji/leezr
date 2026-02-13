@@ -96,6 +96,42 @@ APP
 
 Les service workers (ex: MSW) interfèrent avec le flow `Set-Cookie` de Sanctum. Le fichier `mockServiceWorker.js` a été désactivé et un nettoyage automatique est en place dans `main.js`. **Aucun service worker ne doit intercepter les requêtes API.**
 
+### Session Security (ADR-037)
+
+- Session régénérée systématiquement après `Auth::login()` (login ET register)
+- Session invalidée + token régénéré sur logout
+- Dual-guard sessions : `web` (company users via Sanctum), `platform` (platform_users via session)
+- Les deux guards ont des sessions indépendantes (Laravel multi-guard natif)
+
+#### Frontend Session Hydration
+
+- Stores `auth.js` et `platformAuth.js` exposent un flag `_hydrated`
+- Le guard router appelle `fetchMe()` sur la première navigation si `!_hydrated`
+- Cookie = cache rapide, `fetchMe()` = source de vérité serveur
+- 401 intercepté → flag `_sessionExpired` + `router.push('/login')` (jamais `window.location`)
+
+#### CSRF (centralisé)
+
+- Module unique `resources/js/utils/csrf.js` (plus de duplication entre api.js et platformApi.js)
+- `ensureCsrf()` : appelle `/sanctum/csrf-cookie` si token absent
+- `getCsrfToken()` : lit `XSRF-TOKEN` depuis `document.cookie`, URL-décodé
+- Consommé par `api.js` et `platformApi.js` via import
+
+#### Redirect Policy
+
+- `resources/js/utils/safeRedirect.js` : valide que `redirect` query param est same-origin
+- Jamais de redirection vers une URL absolue externe
+- Utilisé dans `login.vue` et `guards.js`
+
+### Password Lifecycle (ADR-037 — LOT-AUTH-5)
+
+- **Invitation-first** : les users sont créés sans password (nullable)
+- **Password Broker** : token envoyé par mail, expiry 60 minutes
+- **PasswordPolicy** centralisée : `App\Core\Auth\PasswordPolicy` — `min:8|mixedCase|numbers|symbols|uncompromised`
+- **Dual-scope** : broker `users` (table `password_reset_tokens`) + broker `platform_users` (table `platform_password_reset_tokens`)
+- **Credential management** : endpoint dédié protégé par `platform.permission:manage_platform_user_credentials`
+- **Pages frontend** : presets Vuexy `forgot-password-v2.vue` et `reset-password-v2.vue`
+
 ### Contexte company (résolution)
 
 - Header `X-Company-Id` sur chaque requête API Company

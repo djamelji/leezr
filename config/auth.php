@@ -100,6 +100,12 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+        'platform_users' => [
+            'provider' => 'platform_users',
+            'table' => 'platform_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 
     /*

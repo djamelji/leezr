@@ -2,10 +2,12 @@
 
 namespace App\Platform\Http\Controllers;
 
+use App\Core\Auth\PasswordPolicy;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
 
 class PlatformUserController
 {
@@ -20,26 +22,43 @@ class PlatformUserController
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $invite = $request->boolean('invite', true);
+
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:platform_users,email',
-            'password' => 'required|string|min:8',
+            'invite' => 'sometimes|boolean',
             'roles' => 'sometimes|array',
             'roles.*' => 'integer|exists:platform_roles,id',
-        ]);
+        ];
+
+        if (!$invite) {
+            $rules['password'] = ['required', 'confirmed', PasswordPolicy::rules()];
+        }
+
+        $validated = $request->validate($rules);
 
         $user = PlatformUser::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'],
+            'password' => $invite ? null : $validated['password'],
         ]);
 
         if (isset($validated['roles'])) {
             $user->roles()->sync($validated['roles']);
         }
 
+        if ($invite) {
+            $token = Password::broker('platform_users')->createToken($user);
+            $user->sendPasswordResetNotification($token);
+        }
+
+        $message = $invite
+            ? 'Platform user created. Invitation sent.'
+            : 'Platform user created with password.';
+
         return response()->json([
-            'message' => 'Platform user created.',
+            'message' => $message,
             'user' => $user->load('roles'),
         ], 201);
     }
@@ -51,12 +70,11 @@ class PlatformUserController
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:platform_users,email,' . $user->id,
-            'password' => 'sometimes|string|min:8',
             'roles' => 'sometimes|array',
             'roles.*' => 'integer|exists:platform_roles,id',
         ]);
 
-        $fields = array_intersect_key($validated, array_flip(['name', 'email', 'password']));
+        $fields = array_intersect_key($validated, array_flip(['name', 'email']));
         if (!empty($fields)) {
             $user->update($fields);
         }
@@ -87,6 +105,24 @@ class PlatformUserController
         ]);
     }
 
+    public function setPassword(Request $request, int $id): JsonResponse
+    {
+        $user = PlatformUser::findOrFail($id);
+
+        $request->validate([
+            'password' => ['required', 'confirmed', PasswordPolicy::rules()],
+        ]);
+
+        $user->forceFill([
+            'password' => $request->input('password'),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Password set for ' . $user->name . '.',
+            'user' => $user->load('roles'),
+        ]);
+    }
+
     public function destroy(int $id): JsonResponse
     {
         $user = PlatformUser::with('roles')->findOrFail($id);
@@ -107,5 +143,4 @@ class PlatformUserController
             'message' => 'Platform user deleted.',
         ]);
     }
-
 }

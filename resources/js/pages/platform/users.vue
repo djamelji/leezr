@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -11,6 +12,7 @@ definePage({
 })
 
 const platformStore = usePlatformStore()
+const platformAuthStore = usePlatformAuthStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const actionLoading = ref(null)
@@ -19,8 +21,33 @@ const actionLoading = ref(null)
 const isDrawerOpen = ref(false)
 const isEditMode = ref(false)
 const editingUser = ref(null)
-const drawerForm = ref({ name: '', email: '', password: '', roles: [] })
+const drawerForm = ref({ name: '', email: '', roles: [], credentialMode: 'invite', password: '', password_confirmation: '' })
 const drawerLoading = ref(false)
+
+// Credential management (edit mode)
+const showSetPasswordFields = ref(false)
+const setPasswordForm = ref({ password: '', password_confirmation: '' })
+const setPasswordLoading = ref(false)
+const resetPasswordLoading = ref(false)
+
+// Confirm dialog
+const isConfirmDialogVisible = ref(false)
+const confirmAction = ref(null)
+
+// Permission check
+const canManageCredentials = computed(() =>
+  platformAuthStore.hasPermission('manage_platform_user_credentials'),
+)
+
+// Edited user guards for credential section visibility
+const showCredentialSection = computed(() => {
+  if (!isEditMode.value || !editingUser.value) return false
+  if (!canManageCredentials.value) return false
+  if (editingUser.value.roles?.some(r => r.key === 'super_admin')) return false
+  if (editingUser.value.id === platformAuthStore.user?.id) return false
+
+  return true
+})
 
 // Roles options for VSelect
 const roleOptions = computed(() =>
@@ -42,6 +69,7 @@ onMounted(async () => {
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Email', key: 'email' },
+  { title: 'Status', key: 'status', width: '140px' },
   { title: 'Roles', key: 'roles', sortable: false },
   { title: 'Actions', key: 'actions', align: 'center', width: '120px', sortable: false },
 ]
@@ -53,7 +81,8 @@ const hasRole = (user, key) => {
 const openCreateDrawer = () => {
   isEditMode.value = false
   editingUser.value = null
-  drawerForm.value = { name: '', email: '', password: '', roles: [] }
+  drawerForm.value = { name: '', email: '', roles: [], credentialMode: 'invite', password: '', password_confirmation: '' }
+  showSetPasswordFields.value = false
   isDrawerOpen.value = true
 }
 
@@ -63,9 +92,13 @@ const openEditDrawer = user => {
   drawerForm.value = {
     name: user.name,
     email: user.email,
-    password: '',
     roles: user.roles?.map(r => r.id) || [],
+    credentialMode: 'invite',
+    password: '',
+    password_confirmation: '',
   }
+  showSetPasswordFields.value = false
+  setPasswordForm.value = { password: '', password_confirmation: '' }
   isDrawerOpen.value = true
 }
 
@@ -80,20 +113,24 @@ const handleDrawerSubmit = async () => {
         roles: drawerForm.value.roles,
       }
 
-      if (drawerForm.value.password)
-        payload.password = drawerForm.value.password
-
       const data = await platformStore.updatePlatformUser(editingUser.value.id, payload)
 
       toast(data.message, 'success')
     }
     else {
-      const data = await platformStore.createPlatformUser({
+      const payload = {
         name: drawerForm.value.name,
         email: drawerForm.value.email,
-        password: drawerForm.value.password,
         roles: drawerForm.value.roles,
-      })
+      }
+
+      if (canManageCredentials.value && drawerForm.value.credentialMode === 'password') {
+        payload.invite = false
+        payload.password = drawerForm.value.password
+        payload.password_confirmation = drawerForm.value.password_confirmation
+      }
+
+      const data = await platformStore.createPlatformUser(payload)
 
       toast(data.message, 'success')
     }
@@ -104,6 +141,53 @@ const handleDrawerSubmit = async () => {
   }
   finally {
     drawerLoading.value = false
+  }
+}
+
+const confirmForceReset = () => {
+  confirmAction.value = 'forceReset'
+  isConfirmDialogVisible.value = true
+}
+
+const handleConfirmDialog = async confirmed => {
+  if (!confirmed || confirmAction.value !== 'forceReset') return
+
+  resetPasswordLoading.value = true
+
+  try {
+    const data = await platformStore.resetPlatformUserPassword(editingUser.value.id)
+
+    toast(data.message, 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to send reset email.', 'error')
+  }
+  finally {
+    resetPasswordLoading.value = false
+  }
+}
+
+const handleSetPassword = async () => {
+  setPasswordLoading.value = true
+
+  try {
+    const data = await platformStore.setPlatformUserPassword(editingUser.value.id, {
+      password: setPasswordForm.value.password,
+      password_confirmation: setPasswordForm.value.password_confirmation,
+    })
+
+    toast(data.message, 'success')
+    showSetPasswordFields.value = false
+    setPasswordForm.value = { password: '', password_confirmation: '' }
+
+    // Update editingUser status
+    editingUser.value = data.user
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to set password.', 'error')
+  }
+  finally {
+    setPasswordLoading.value = false
   }
 }
 
@@ -183,6 +267,16 @@ const onPageChange = async page => {
           </div>
         </template>
 
+        <!-- Status -->
+        <template #item.status="{ item }">
+          <VChip
+            :color="item.status === 'invited' ? 'warning' : 'success'"
+            size="small"
+          >
+            {{ item.status === 'invited' ? 'Invitation pending' : 'Active' }}
+          </VChip>
+        </template>
+
         <!-- Roles -->
         <template #item.roles="{ item }">
           <VChip
@@ -215,6 +309,7 @@ const onPageChange = async page => {
               <VIcon icon="tabler-pencil" />
             </VBtn>
             <VBtn
+              v-if="!hasRole(item, 'super_admin')"
               icon
               variant="text"
               size="small"
@@ -281,14 +376,6 @@ const onPageChange = async page => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
-                v-model="drawerForm.password"
-                label="Password"
-                type="password"
-                :placeholder="isEditMode ? 'Leave blank to keep current' : 'Min 8 characters'"
-              />
-            </VCol>
-            <VCol cols="12">
               <AppSelect
                 v-model="drawerForm.roles"
                 :items="roleOptions"
@@ -299,6 +386,63 @@ const onPageChange = async page => {
                 closable-chips
               />
             </VCol>
+
+            <!-- Credential mode (create only, if permission) -->
+            <template v-if="!isEditMode && canManageCredentials">
+              <VCol cols="12">
+                <VDivider class="mb-2" />
+                <div class="text-body-2 font-weight-medium mb-2">
+                  Credentials
+                </div>
+                <VRadioGroup
+                  v-model="drawerForm.credentialMode"
+                  inline
+                >
+                  <VRadio
+                    label="Send invitation link"
+                    value="invite"
+                  />
+                  <VRadio
+                    label="Set password now"
+                    value="password"
+                  />
+                </VRadioGroup>
+              </VCol>
+
+              <template v-if="drawerForm.credentialMode === 'password'">
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="drawerForm.password"
+                    label="Password"
+                    type="password"
+                    placeholder="Min 8 characters"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="drawerForm.password_confirmation"
+                    label="Confirm Password"
+                    type="password"
+                    placeholder="Repeat password"
+                  />
+                </VCol>
+              </template>
+            </template>
+
+            <!-- Invitation info (create, no permission) -->
+            <VCol
+              v-if="!isEditMode && !canManageCredentials"
+              cols="12"
+            >
+              <VAlert
+                type="info"
+                variant="tonal"
+                density="compact"
+              >
+                An invitation email will be sent to set their password.
+              </VAlert>
+            </VCol>
+
             <VCol cols="12">
               <VBtn
                 type="submit"
@@ -317,7 +461,113 @@ const onPageChange = async page => {
             </VCol>
           </VRow>
         </VForm>
+
+        <!-- Credential management section (edit mode only) -->
+        <template v-if="showCredentialSection">
+          <VDivider class="my-4" />
+          <div class="text-body-2 font-weight-medium mb-3">
+            Credential Management
+          </div>
+
+          <div class="d-flex flex-column gap-3">
+            <VBtn
+              prepend-icon="tabler-mail-forward"
+              variant="outlined"
+              color="warning"
+              :loading="resetPasswordLoading"
+              @click="confirmForceReset"
+            >
+              Force Password Reset
+            </VBtn>
+
+            <VBtn
+              v-if="!showSetPasswordFields"
+              prepend-icon="tabler-key"
+              variant="outlined"
+              color="info"
+              @click="showSetPasswordFields = true"
+            >
+              Set Password Manually
+            </VBtn>
+
+            <template v-if="showSetPasswordFields">
+              <AppTextField
+                v-model="setPasswordForm.password"
+                label="New Password"
+                type="password"
+                placeholder="Min 8 characters"
+              />
+              <AppTextField
+                v-model="setPasswordForm.password_confirmation"
+                label="Confirm Password"
+                type="password"
+                placeholder="Repeat password"
+              />
+              <div class="d-flex gap-2">
+                <VBtn
+                  color="info"
+                  :loading="setPasswordLoading"
+                  @click="handleSetPassword"
+                >
+                  Save Password
+                </VBtn>
+                <VBtn
+                  variant="tonal"
+                  color="secondary"
+                  @click="showSetPasswordFields = false; setPasswordForm = { password: '', password_confirmation: '' }"
+                >
+                  Cancel
+                </VBtn>
+              </div>
+            </template>
+          </div>
+        </template>
       </VCardText>
     </VNavigationDrawer>
+
+    <!-- Confirm Dialog for Force Reset -->
+    <VDialog
+      v-model="isConfirmDialogVisible"
+      max-width="500"
+    >
+      <VCard class="text-center px-10 py-6">
+        <VCardText>
+          <VBtn
+            icon
+            variant="outlined"
+            color="warning"
+            class="my-4"
+            style="block-size: 88px; inline-size: 88px; pointer-events: none;"
+          >
+            <span class="text-5xl">!</span>
+          </VBtn>
+
+          <h6 class="text-lg font-weight-medium">
+            Send a password reset email to {{ editingUser?.name }}?
+          </h6>
+          <p class="text-body-2 text-disabled mt-2">
+            This will invalidate any previous reset tokens.
+          </p>
+        </VCardText>
+
+        <VCardText class="d-flex align-center justify-center gap-2">
+          <VBtn
+            variant="elevated"
+            color="warning"
+            @click="isConfirmDialogVisible = false; handleConfirmDialog(true)"
+          >
+            Confirm
+          </VBtn>
+
+          <VBtn
+            color="secondary"
+            variant="tonal"
+            @click="isConfirmDialogVisible = false; handleConfirmDialog(false)"
+          >
+            Cancel
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>

@@ -97,6 +97,25 @@ export const usePlatformStore = defineStore('platform', {
       return data
     },
 
+    async resetPlatformUserPassword(id) {
+      const data = await $platformApi(`/platform-users/${id}/reset-password`, {
+        method: 'POST',
+      })
+
+      return data
+    },
+
+    async setPlatformUserPassword(id, payload) {
+      const data = await $platformApi(`/platform-users/${id}/password`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      this._updatePlatformUserInList(data.user)
+
+      return data
+    },
+
     // ─── Company Users (read-only) ──────────────────────
     async fetchCompanyUsers(page = 1) {
       const data = await $platformApi('/company-users', { params: { page } })

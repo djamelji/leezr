@@ -75,6 +75,14 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 - Dev : `pnpm dev:all` (Vite uniquement, Laravel servi par Valet)
 - URL locale : `https://leezr.test` (Valet HTTPS)
 
+## Mail Testing (Dev)
+
+- Install Mailpit: `brew install mailpit`
+- Start Mailpit manually: `brew services start mailpit` or `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`
+- SMTP: `127.0.0.1:1025`
+- Web UI: `http://localhost:8025`
+- Open UI: `pnpm mailpit`
+
 ## Conventions de code
 - Pages auto-routées via `unplugin-vue-router` depuis `resources/js/pages/`
 - Form elements : wrappers App* (AppTextField, AppSelect, etc.)

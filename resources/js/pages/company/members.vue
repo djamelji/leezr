@@ -111,6 +111,7 @@ const roleColor = role => {
             <tr>
               <th>User</th>
               <th>Email</th>
+              <th>Status</th>
               <th>Role</th>
               <th v-if="canManage">
                 Actions
@@ -142,6 +143,14 @@ const roleColor = role => {
                 </div>
               </td>
               <td>{{ member.user.email }}</td>
+              <td>
+                <VChip
+                  :color="member.user.status === 'active' ? 'success' : 'warning'"
+                  size="small"
+                >
+                  {{ member.user.status === 'active' ? 'Active' : 'Invitation pending' }}
+                </VChip>
+              </td>
               <td>
                 <template v-if="editingMember === member.id && member.role !== 'owner'">
                   <div class="d-flex align-center gap-2">

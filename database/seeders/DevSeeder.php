@@ -44,6 +44,7 @@ class DevSeeder extends Seeder
             [
                 'name' => 'Djamel',
                 'password' => 'password',
+                'password_set_at' => now(),
             ],
         );
 
@@ -62,6 +63,7 @@ class DevSeeder extends Seeder
             [
                 'name' => 'Alice Martin',
                 'password' => 'password',
+                'password_set_at' => now(),
             ],
         );
 
@@ -75,6 +77,7 @@ class DevSeeder extends Seeder
             [
                 'name' => 'Bob Dupont',
                 'password' => 'password',
+                'password_set_at' => now(),
             ],
         );
 

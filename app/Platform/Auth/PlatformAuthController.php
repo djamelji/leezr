@@ -22,7 +22,9 @@ class PlatformAuthController extends Controller
             ], 401);
         }
 
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         $user = Auth::guard('platform')->user();
         $user->load('roles.permissions');
@@ -62,8 +64,10 @@ class PlatformAuthController extends Controller
     {
         Auth::guard('platform')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json([
             'message' => 'Logged out.',

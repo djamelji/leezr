@@ -1,19 +1,5 @@
 import { ofetch } from 'ofetch'
-
-function getXsrfToken() {
-  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
-  if (!match)
-    return null
-
-  return decodeURIComponent(match[1])
-}
-
-async function refreshCsrf() {
-  await fetch('/sanctum/csrf-cookie', {
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
-  })
-}
+import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 
 export const $platformApi = ofetch.create({
   baseURL: '/api/platform',
@@ -22,8 +8,6 @@ export const $platformApi = ofetch.create({
     Accept: 'application/json',
   },
   async onRequest({ options }) {
-    options.credentials = 'include'
-
     const xsrfToken = getXsrfToken()
     if (xsrfToken) {
       options.headers = options.headers || {}
@@ -42,6 +26,7 @@ export const $platformApi = ofetch.create({
     if (status === 401) {
       useCookie('platformUserData').value = null
       useCookie('platformRoles').value = null
+      useCookie('platformPermissions').value = null
 
       const currentPath = window.location.pathname
       if (currentPath !== '/platform/login') {

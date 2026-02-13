@@ -362,6 +362,10 @@
     "whenever": true,
     "useAbility": true,
     "useAppToast": true,
-    "$platformApi": true
+    "$platformApi": true,
+    "getXsrfToken": true,
+    "refreshCsrf": true,
+    "safeRedirect": true,
+    "usePasswordStrength": true
   }
 }

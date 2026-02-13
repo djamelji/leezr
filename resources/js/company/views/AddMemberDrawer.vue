@@ -75,6 +75,14 @@ const handleClose = () => {
             {{ errorMessage }}
           </VAlert>
 
+          <VAlert
+            type="info"
+            variant="tonal"
+            class="mb-4"
+          >
+            If the email is not already registered, an invitation will be sent automatically.
+          </VAlert>
+
           <VForm @submit.prevent="handleSubmit">
             <VRow>
               <VCol cols="12">

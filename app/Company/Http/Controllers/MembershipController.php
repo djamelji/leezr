@@ -9,6 +9,7 @@ use App\Core\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Password;
 
 class MembershipController extends Controller
 {
@@ -17,11 +18,11 @@ class MembershipController extends Controller
         $company = $request->attributes->get('company');
 
         $members = $company->memberships()
-            ->with('user:id,name,email,avatar')
+            ->with('user:id,name,email,avatar,password_set_at')
             ->get()
             ->map(fn (Membership $m) => [
                 'id' => $m->id,
-                'user' => $m->user,
+                'user' => $m->user->only('id', 'name', 'email', 'avatar', 'status'),
                 'role' => $m->role,
                 'created_at' => $m->created_at,
             ]);
@@ -37,11 +38,15 @@ class MembershipController extends Controller
         $validated = $request->validated();
 
         $user = User::where('email', $validated['email'])->first();
+        $isNewUser = false;
 
         if (!$user) {
-            return response()->json([
-                'message' => 'No user found with this email.',
-            ], 404);
+            $user = User::create([
+                'name' => explode('@', $validated['email'])[0],
+                'email' => $validated['email'],
+                'password' => null,
+            ]);
+            $isNewUser = true;
         }
 
         if ($user->isMemberOf($company)) {
@@ -55,12 +60,18 @@ class MembershipController extends Controller
             'role' => $validated['role'],
         ]);
 
-        $membership->load('user:id,name,email,avatar');
+        $membership->load('user:id,name,email,avatar,password_set_at');
+
+        // Send invitation if user was just created (no password)
+        if ($isNewUser) {
+            $token = Password::broker('users')->createToken($user);
+            $user->sendPasswordResetNotification($token);
+        }
 
         return response()->json([
             'member' => [
                 'id' => $membership->id,
-                'user' => $membership->user,
+                'user' => $membership->user->only('id', 'name', 'email', 'avatar', 'status'),
                 'role' => $membership->role,
                 'created_at' => $membership->created_at,
             ],
@@ -80,10 +91,12 @@ class MembershipController extends Controller
 
         $membership->update($request->validated());
 
+        $membership->load('user:id,name,email,avatar,password_set_at');
+
         return response()->json([
             'member' => [
                 'id' => $membership->id,
-                'user' => $membership->user,
+                'user' => $membership->user->only('id', 'name', 'email', 'avatar', 'status'),
                 'role' => $membership->role,
                 'created_at' => $membership->created_at,
             ],

@@ -15,6 +15,7 @@ class PermissionCatalog
             ['key' => 'manage_companies', 'label' => 'Manage Companies'],
             ['key' => 'view_company_users', 'label' => 'View Company Users'],
             ['key' => 'manage_platform_users', 'label' => 'Manage Platform Users'],
+            ['key' => 'manage_platform_user_credentials', 'label' => 'Manage Platform User Credentials'],
             ['key' => 'manage_roles', 'label' => 'Manage Roles'],
             ['key' => 'manage_modules', 'label' => 'Manage Modules'],
         ];

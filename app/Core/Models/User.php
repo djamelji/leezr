@@ -2,6 +2,8 @@
 
 namespace App\Core\Models;
 
+use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,15 +15,24 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected static function newFactory(): UserFactory
+    {
+        return UserFactory::new();
+    }
+
     protected $fillable = [
         'name',
         'email',
         'password',
+        'password_set_at',
         'avatar',
     ];
 
+    protected $appends = ['status'];
+
     protected $hidden = [
         'password',
+        'password_set_at',
         'remember_token',
     ];
 
@@ -30,7 +41,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_set_at' => 'datetime',
         ];
+    }
+
+    public function getStatusAttribute(): string
+    {
+        return $this->password_set_at ? 'active' : 'invited';
     }
 
     public function memberships(): HasMany
@@ -68,5 +85,12 @@ class User extends Authenticatable
     public function isAdminOf(Company $company): bool
     {
         return in_array($this->roleIn($company), ['owner', 'admin']);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        ResetPassword::createUrlUsing(fn ($notifiable, $token) => url("/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForPasswordReset())));
+
+        $this->notify(new ResetPassword($token));
     }
 }

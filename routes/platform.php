@@ -1,6 +1,7 @@
 <?php
 
 use App\Platform\Auth\PlatformAuthController;
+use App\Platform\Auth\PlatformPasswordResetController;
 use App\Platform\Http\Controllers\PlatformCompanyController;
 use App\Platform\Http\Controllers\PlatformCompanyUserController;
 use App\Platform\Http\Controllers\PlatformModuleController;
@@ -11,6 +12,10 @@ use Illuminate\Support\Facades\Route;
 
 // Platform auth — public (throttled)
 Route::post('/login', [PlatformAuthController::class, 'login'])
+    ->middleware('throttle:5,1');
+Route::post('/forgot-password', [PlatformPasswordResetController::class, 'forgotPassword'])
+    ->middleware('throttle:5,1');
+Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPassword'])
     ->middleware('throttle:5,1');
 
 // Authenticated platform routes
@@ -36,6 +41,12 @@ Route::middleware('auth:platform')->group(function () {
         Route::post('/platform-users', [PlatformUserController::class, 'store']);
         Route::put('/platform-users/{id}', [PlatformUserController::class, 'update']);
         Route::delete('/platform-users/{id}', [PlatformUserController::class, 'destroy']);
+    });
+
+    // Platform user credentials (privileged)
+    Route::middleware('platform.permission:manage_platform_user_credentials')->group(function () {
+        Route::post('/platform-users/{id}/reset-password', [PlatformPasswordResetController::class, 'adminResetPassword']);
+        Route::put('/platform-users/{id}/password', [PlatformUserController::class, 'setPassword']);
     });
 
     // Roles (CRUD)

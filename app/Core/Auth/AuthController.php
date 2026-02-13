@@ -24,6 +24,7 @@ class AuthController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
+                'password_set_at' => now(),
             ]);
 
             $company = Company::create([
@@ -41,6 +42,10 @@ class AuthController extends Controller
 
         Auth::login($result['user']);
 
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+
         return response()->json([
             'user' => $result['user'],
             'company' => $result['company'],
@@ -57,7 +62,9 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         return response()->json([
             'user' => Auth::user(),
@@ -68,8 +75,10 @@ class AuthController extends Controller
     {
         Auth::guard('web')->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json([
             'message' => 'Logged out.',

@@ -31,12 +31,17 @@ return new class extends Migration
         });
 
         // Step 2: migrate data — match users.email → platform_users.email
-        $migrated = DB::update('
-            UPDATE platform_role_user pru
-            JOIN users u ON u.id = pru.user_id
-            JOIN platform_users pu ON pu.email = u.email
-            SET pru.platform_user_id = pu.id
-        ');
+        $rows = DB::table('platform_role_user')
+            ->join('users', 'users.id', '=', 'platform_role_user.user_id')
+            ->join('platform_users', 'platform_users.email', '=', 'users.email')
+            ->select('platform_role_user.id', 'platform_users.id as pu_id')
+            ->get();
+
+        foreach ($rows as $row) {
+            DB::table('platform_role_user')
+                ->where('id', $row->id)
+                ->update(['platform_user_id' => $row->pu_id]);
+        }
 
         $orphaned = DB::table('platform_role_user')->whereNull('platform_user_id')->count();
         if ($orphaned > 0) {
@@ -86,12 +91,17 @@ return new class extends Migration
         });
 
         // Step 2: migrate data back — match platform_users.email → users.email
-        DB::update('
-            UPDATE platform_role_user pru
-            JOIN platform_users pu ON pu.id = pru.platform_user_id
-            JOIN users u ON u.email = pu.email
-            SET pru.user_id = u.id
-        ');
+        $rows = DB::table('platform_role_user')
+            ->join('platform_users', 'platform_users.id', '=', 'platform_role_user.platform_user_id')
+            ->join('users', 'users.email', '=', 'platform_users.email')
+            ->select('platform_role_user.id', 'users.id as user_id')
+            ->get();
+
+        foreach ($rows as $row) {
+            DB::table('platform_role_user')
+                ->where('id', $row->id)
+                ->update(['user_id' => $row->user_id]);
+        }
 
         DB::table('platform_role_user')->whereNull('user_id')->delete();
 

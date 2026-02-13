@@ -1,23 +1,9 @@
 import { ofetch } from 'ofetch'
 import { useAppToast } from '@/composables/useAppToast'
-
-function getXsrfToken() {
-  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
-  if (!match)
-    return null
-
-  return decodeURIComponent(match[1])
-}
+import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
-}
-
-async function refreshCsrf() {
-  await fetch('/sanctum/csrf-cookie', {
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
-  })
 }
 
 export const $api = ofetch.create({
@@ -27,8 +13,6 @@ export const $api = ofetch.create({
     Accept: 'application/json',
   },
   async onRequest({ options }) {
-    options.credentials = 'include'
-
     const xsrfToken = getXsrfToken()
     if (xsrfToken) {
       options.headers = options.headers || {}

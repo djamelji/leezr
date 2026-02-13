@@ -529,4 +529,112 @@ definePage({
 
 ---
 
+## ADR-037 : Auth & Session Hardening + Password Lifecycle
+
+- **Date** : 2026-02-12
+- **Contexte** : L'audit AUTH/SESSIONS/SECURITY a révélé un score SaaS-readiness de 6.5/10. Cinq incohérences critiques : session non régénérée au register (fixation), redirections open-redirect (login + guards), helpers CSRF dupliqués entre `api.js` et `platformApi.js`, absence de hydratation session au boot frontend, et 401 handler qui casse le SPA (`window.location.href`). La couche password n'existe pas (pas d'invitation, pas de reset, politique non centralisée). Plan validé en 6 LOTs.
+- **Décision** : Hardening auth/sessions en **6 LOTs ordonnés** :
+
+  **LOT-AUTH-1 — Session & Middleware Correctness (P0)** :
+  - `AuthController::register()` : ajouter `$request->session()->regenerate()` après `Auth::login()`
+  - Extraire `resources/js/utils/csrf.js` comme module unique (supprime duplication api.js/platformApi.js)
+  - `platformApi.js` : nettoyer `platformPermissions` en plus de `platformRoles` sur 401
+  - Supprimer `options.credentials = 'include'` redondant dans `api.js` (déjà default d'ofetch)
+
+  **LOT-AUTH-2 — Redirect Policy + Guards + Session Hydration (P0)** :
+  - Créer `resources/js/utils/safeRedirect.js` : valide que la destination est same-origin uniquement
+  - Réécrire `guards.js` : appeler `fetchMe()` sur première navigation (flag `_hydrated` dans les stores)
+  - Intercepteur 401 dans `api.js`/`platformApi.js` : flag `_sessionExpired` + `router.push('/login')` (pas `window.location`)
+  - Supprimer la checkbox "Remember me" de `login.vue` (non implémentée)
+  - Module guard : fail-closed (si fetch modules échoue → redirection, pas silent allow)
+
+  **LOT-AUTH-5 — Password Lifecycle & Policy (P0)** :
+  - Classe centralisée `App\Core\Auth\PasswordPolicy` : `min:8|mixedCase|numbers|symbols|uncompromised`
+  - Migrations : `users.password` nullable, `platform_users.password` nullable, table `platform_password_reset_tokens`
+  - Flow d'invitation : création user sans password → token via Password Broker → notification mail avec lien set-password
+  - `MembershipController::store()` : si email inconnu → créer user (password null) + envoyer invitation
+  - `PlatformUserController::store()` : supprimer champ password → créer avec null + envoyer invitation
+  - `PlatformUserController::update()` : supprimer champ password (credential management séparé)
+  - Endpoint dédié `POST /api/platform/users/{id}/reset-password` protégé par `platform.permission:manage_platform_user_credentials`
+  - Nouvelle permission `manage_platform_user_credentials` dans `PermissionCatalog`
+  - Config `auth.php` : broker `platform_users` (provider `platform_users`, table `platform_password_reset_tokens`, expire 60)
+  - Pages frontend depuis presets Vuexy : `forgot-password-v2.vue`, `reset-password-v2.vue`
+  - `PlatformUser` : ajouter trait `Notifiable` + override `sendPasswordResetNotification()`
+
+  **LOT-AUTH-4 — Security Hardening (P1)** :
+  - Créer `.env.production.example` avec les valeurs sécurisées (SESSION_SECURE_COOKIE, SESSION_SAME_SITE, etc.)
+  - Rate limiting : `throttle:5,1` sur login/register endpoints
+  - Navigation platform : filtrer dynamiquement par `platformAuth.hasPermission()` (déjà en place, valider)
+
+  **LOT-DEVX-AUTH — Dev Tooling & Smoke Tests (P2)** :
+  - Feature tests Laravel : login, register, logout, session regeneration, CSRF, 401/403 responses
+  - Tests invitation flow : create user without password, token generation, password set
+  - Documentation Mailpit pour dev local
+  - Smoke test checklist dans `docs/`
+
+- **Conséquences** :
+  - Session fixation éliminée (regenerate systématique)
+  - Open redirect éliminé (safeRedirect same-origin)
+  - CSRF helpers centralisés (un seul module)
+  - Session hydratée au boot (fetchMe obligatoire)
+  - 401 handler SPA-compatible (router.push, pas window.location)
+  - Password lifecycle complet (invitation-first, reset, politique centralisée)
+  - Aucun password en clair dans les controllers (PasswordPolicy seule source de validation)
+  - Dual-scope password reset (users + platform_users, brokers séparés)
+  - Aucun impact sur le scope Company existant (isolation maintenue)
+
+  **UX Alignment (2026-02-12)** :
+
+  **LOT-UX-AUTH-1 — Platform User Drawer Completion** :
+  - `PlatformUser` : accessor `status` (invited/active) via `$appends`, basé sur `is_null(password)`. Aucun hash exposé (password dans `$hidden`).
+  - `PlatformUserController::store()` : accepte `invite` (bool, default true). Si `invite=false`, `password` + `password_confirmation` requis et validés via `PasswordPolicy::rules()`. Pas d'envoi d'invitation si mot de passe fourni.
+  - Nouvel endpoint `PUT /api/platform/platform-users/{id}/password` : permet de définir manuellement un mot de passe (credential management). Protégé par `manage_platform_user_credentials`.
+  - Drawer create : choix radio "Send invitation" / "Set password now" (visible seulement si permission `manage_platform_user_credentials`).
+  - Drawer edit : section Credential Management (force reset + set password manually). Cachée si super_admin ou self.
+  - Bouton delete caché (pas disabled) pour les super_admin.
+
+  **LOT-UX-AUTH-2 — Company Members Status** :
+  - `MembershipController::index()` : eager load `password` côté serveur uniquement, calcul `status` dans le map. Aucun hash envoyé au frontend.
+  - Colonne Status dans VTable (VChip warning "Invitation pending" / success "Active").
+  - AddMemberDrawer : info alert "invitation automatique si email inconnu".
+
+  **LOT-UX-AUTH-3 — Password Pages Polish** :
+  - Composable `usePasswordStrength.js` : règles visuelles matching `PasswordPolicy` (8 chars, majuscule, minuscule, chiffre, caractère spécial).
+  - Pages reset-password (company + platform) : VProgressLinear + checklist de règles sous le champ password.
+  - Pages forgot-password : bouton désactivé après envoi.
+
+---
+
+## ADR-038 : Invitation status via `password_set_at` (pas password null check)
+
+- **Date** : 2026-02-12
+- **Contexte** : LOT-UX-AUTH-1 déterminait le statut d'invitation des `PlatformUser` via `is_null($this->password)`. Pour les company Users, cette approche est architecturalement incorrecte : elle couple le statut métier (invited/active) à un détail d'implémentation (la colonne password). Le password hash ne doit jamais être lu, même côté serveur, pour dériver un statut métier.
+- **Décision** : Introduire un champ dédié `password_set_at` (nullable timestamp) sur la table `users`. Le statut d'invitation est déterminé exclusivement par ce champ :
+  - `password_set_at IS NULL` → statut `invited`
+  - `password_set_at IS NOT NULL` → statut `active`
+  - Le champ est mis à jour (`now()`) dans tous les cas où un mot de passe est défini : self-registration, reset-password, set-password
+  - Un accessor `status` sur le model User expose le statut via `$appends`
+  - Le `MembershipController` retourne `user.status` au frontend — aucun hash exposé, aucun password lu
+  - Migration avec backfill : les users existants avec password non-null reçoivent `password_set_at = created_at`
+- **Conséquences** :
+  - Le statut d'invitation est un concept de domaine premier, pas un dérivé technique
+  - Le frontend affiche un VChip (warning "Invitation pending" / success "Active") dans la table members
+  - Le `AddMemberDrawer` affiche un info alert expliquant l'envoi automatique d'invitation
+  - Pattern réutilisable si `PlatformUser` migre vers la même approche (ADR futur)
+  - Aucun impact sur le scope Platform — isolation maintenue
+
+### UX Password Strength & Dev Mail Alignment (LOT-UX-AUTH-3 + LOT-DEVX-AUTH)
+
+- **Date** : 2026-02-12
+- **Décisions** :
+  - Le composable `usePasswordStrength` reflète exactement les règles de `PasswordPolicy` (min 8, mixedCase, numbers, symbols). Aucune duplication de logique dans les controllers ou les pages.
+  - Le check `uncompromised` (Have I Been Pwned) reste backend-only — pas de simulation côté frontend.
+  - Les pages reset-password (company + platform) affichent un VProgressLinear + checklist de règles sous le champ password.
+  - Les pages forgot-password (company + platform) désactivent le bouton submit après succès pour empêcher la double soumission.
+  - Mailpit est l'outil de test email en dev local (SMTP `127.0.0.1:1025`, UI `http://localhost:8025`).
+  - Mailpit n'est pas démarré automatiquement par `pnpm dev:all` — démarrage manuel uniquement.
+  - La configuration mail prod n'est pas impactée (`.env.production.example` non modifié).
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

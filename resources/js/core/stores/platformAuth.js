@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
+import { refreshCsrf } from '@/utils/csrf'
 
 export const usePlatformAuthStore = defineStore('platformAuth', {
   state: () => ({
     _user: useCookie('platformUserData').value || null,
     _roles: useCookie('platformRoles').value || [],
     _permissions: useCookie('platformPermissions').value || [],
+    _hydrated: false,
   }),
 
   getters: {
@@ -38,15 +40,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       return Array.isArray(this._permissions) && this._permissions.includes(key)
     },
 
-    async fetchCsrf() {
-      await fetch('/sanctum/csrf-cookie', {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      })
-    },
-
     async login({ email, password }) {
-      await this.fetchCsrf()
+      await refreshCsrf()
 
       const data = await $platformApi('/login', {
         method: 'POST',
@@ -80,6 +75,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(data.user)
         this._persistRoles(data.roles || [])
         this._persistPermissions(data.permissions || [])
+        this._hydrated = true
 
         return data.user
       }
@@ -87,6 +83,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(null)
         this._persistRoles([])
         this._persistPermissions([])
+        this._hydrated = true
 
         return null
       }

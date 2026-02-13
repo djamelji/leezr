@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { refreshCsrf } from '@/utils/csrf'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     _user: useCookie('userData').value || null,
     _companies: [],
     _currentCompanyId: useCookie('currentCompanyId').value || null,
+    _hydrated: false,
   }),
 
   getters: {
@@ -27,15 +29,8 @@ export const useAuthStore = defineStore('auth', {
       useCookie('currentCompanyId').value = id
     },
 
-    async fetchCsrf() {
-      await fetch('/sanctum/csrf-cookie', {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      })
-    },
-
     async register({ name, email, password, password_confirmation, company_name }) {
-      await this.fetchCsrf()
+      await refreshCsrf()
 
       const data = await $api('/register', {
         method: 'POST',
@@ -55,7 +50,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async login({ email, password }) {
-      await this.fetchCsrf()
+      await refreshCsrf()
 
       const data = await $api('/login', {
         method: 'POST',
@@ -86,11 +81,13 @@ export const useAuthStore = defineStore('auth', {
         const data = await $api('/me')
 
         this._persistUser(data.user)
+        this._hydrated = true
 
         return data.user
       }
       catch {
         this._persistUser(null)
+        this._hydrated = true
 
         return null
       }

@@ -1,10 +1,9 @@
 <script setup>
-import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import { $api } from '@/utils/api'
+import { refreshCsrf } from '@/utils/csrf'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
-import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
-import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
-import authV2LoginIllustrationDark from '@images/pages/auth-v2-login-illustration-dark.png'
-import authV2LoginIllustrationLight from '@images/pages/auth-v2-login-illustration-light.png'
+import authV2ForgotPasswordIllustrationDark from '@images/pages/auth-v2-forgot-password-illustration-dark.png'
+import authV2ForgotPasswordIllustrationLight from '@images/pages/auth-v2-forgot-password-illustration-light.png'
 import authV2MaskDark from '@images/pages/misc-mask-dark.png'
 import authV2MaskLight from '@images/pages/misc-mask-light.png'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
@@ -13,49 +12,45 @@ import { themeConfig } from '@themeConfig'
 definePage({
   meta: {
     layout: 'blank',
-    platform: true,
     unauthenticatedOnly: true,
   },
 })
 
-const platformAuth = usePlatformAuthStore()
-const router = useRouter()
-
-const form = ref({
-  email: '',
-  password: '',
-})
-
-const isPasswordVisible = ref(false)
+const email = ref('')
 const isLoading = ref(false)
+const successMessage = ref('')
 const errorMessage = ref('')
 
-const handleLogin = async () => {
+const handleSubmit = async () => {
   isLoading.value = true
+  successMessage.value = ''
   errorMessage.value = ''
 
   try {
-    await platformAuth.login({
-      email: form.value.email,
-      password: form.value.password,
+    await refreshCsrf()
+
+    const data = await $api('/forgot-password', {
+      method: 'POST',
+      body: { email: email.value },
     })
 
-    await router.push('/platform')
+    successMessage.value = data.message
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Invalid credentials.'
+    // Always show success (anti-enumeration) — API returns same message
+    successMessage.value = 'If an account exists for this email, a reset link has been sent.'
   }
   finally {
     isLoading.value = false
   }
 }
 
-const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
+const authThemeImg = useGenerateImageVariant(authV2ForgotPasswordIllustrationLight, authV2ForgotPasswordIllustrationDark)
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 </script>
 
 <template>
-  <RouterLink to="/platform">
+  <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="auth-title">
@@ -65,8 +60,8 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   </RouterLink>
 
   <VRow
-    no-gutters
     class="auth-wrapper bg-surface"
+    no-gutters
   >
     <VCol
       md="8"
@@ -75,12 +70,12 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       <div class="position-relative bg-background w-100 me-0">
         <div
           class="d-flex align-center justify-center w-100 h-100"
-          style="padding-inline: 6.25rem;"
+          style="padding-inline: 150px;"
         >
           <VImg
-            max-width="613"
+            max-width="468"
             :src="authThemeImg"
-            class="auth-illustration mt-16 mb-2"
+            class="auth-illustration mt-16 mb-2 flip-in-rtl"
           />
         </div>
 
@@ -106,13 +101,22 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Platform Admin
+            Forgot Password?
           </h4>
           <p class="mb-0">
-            Sign in to the platform backoffice
+            Enter your email and we'll send you instructions to reset your password
           </p>
         </VCardText>
+
         <VCardText>
+          <VAlert
+            v-if="successMessage"
+            type="success"
+            class="mb-6"
+          >
+            {{ successMessage }}
+          </VAlert>
+
           <VAlert
             v-if="errorMessage"
             type="error"
@@ -123,45 +127,41 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
             {{ errorMessage }}
           </VAlert>
 
-          <VForm @submit.prevent="handleLogin">
+          <VForm @submit.prevent="handleSubmit">
             <VRow>
               <VCol cols="12">
                 <AppTextField
-                  v-model="form.email"
+                  v-model="email"
                   autofocus
                   label="Email"
+                  placeholder="johndoe@email.com"
                   type="email"
-                  placeholder="admin@leezr.com"
                 />
               </VCol>
 
               <VCol cols="12">
-                <AppTextField
-                  v-model="form.password"
-                  label="Password"
-                  placeholder="············"
-                  :type="isPasswordVisible ? 'text' : 'password'"
-                  autocomplete="current-password"
-                  :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
-                  @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                />
-
-                <div class="d-flex align-center justify-end my-6">
-                  <RouterLink
-                    class="text-primary text-body-2"
-                    to="/platform/forgot-password"
-                  >
-                    Forgot Password?
-                  </RouterLink>
-                </div>
-
                 <VBtn
                   block
                   type="submit"
                   :loading="isLoading"
+                  :disabled="!!successMessage"
                 >
-                  Login
+                  Send Reset Link
                 </VBtn>
+              </VCol>
+
+              <VCol cols="12">
+                <RouterLink
+                  class="d-flex align-center justify-center"
+                  to="/login"
+                >
+                  <VIcon
+                    icon="tabler-chevron-left"
+                    size="20"
+                    class="me-1 flip-in-rtl"
+                  />
+                  <span>Back to login</span>
+                </RouterLink>
               </VCol>
             </VRow>
           </VForm>
@@ -172,5 +172,5 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 </template>
 
 <style lang="scss">
-@use "@core-scss/template/pages/page-auth";
+@use "@core-scss/template/pages/page-auth.scss";
 </style>
