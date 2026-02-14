@@ -1,5 +1,6 @@
 <script setup>
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
+import AppShellGate from './components/AppShellGate.vue'
 
 const PlatformLayoutWithVerticalNav = defineAsyncComponent(() => import('./components/PlatformLayoutWithVerticalNav.vue'))
 
