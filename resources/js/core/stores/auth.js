@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 import { refreshCsrf } from '@/utils/csrf'
+import { postBroadcast } from '@/core/runtime/broadcast'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -29,12 +30,12 @@ export const useAuthStore = defineStore('auth', {
       useCookie('currentCompanyId').value = id
     },
 
-    async register({ name, email, password, password_confirmation, company_name }) {
+    async register({ first_name, last_name, email, password, password_confirmation, company_name }) {
       await refreshCsrf()
 
       const data = await $api('/register', {
         method: 'POST',
-        body: { name, email, password, password_confirmation, company_name },
+        body: { first_name, last_name, email, password, password_confirmation, company_name },
       })
 
       this._persistUser(data.user)
@@ -74,11 +75,13 @@ export const useAuthStore = defineStore('auth', {
       this._persistUser(null)
       this._companies = []
       this._persistCompanyId(null)
+      this._hydrated = false
+      postBroadcast('logout')
     },
 
     async fetchMe() {
       try {
-        const data = await $api('/me')
+        const data = await $api('/me', { _authCheck: true })
 
         this._persistUser(data.user)
         this._hydrated = true
@@ -93,7 +96,17 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async fetchMyCompanies() {
+    async fetchMyCompanies(options = {}) {
+      // Cache fast-path: hydrate from cached data without API call
+      if (options.cached) {
+        this._companies = options.cached
+        if (!this._currentCompanyId && options.cached.length > 0) {
+          this._persistCompanyId(options.cached[0].id)
+        }
+
+        return options.cached
+      }
+
       const data = await $api('/my-companies')
 
       this._companies = data.companies
@@ -108,6 +121,7 @@ export const useAuthStore = defineStore('auth', {
 
     switchCompany(companyId) {
       this._persistCompanyId(companyId)
+      postBroadcast('company-switch', { companyId })
     },
   },
 })

@@ -16,7 +16,8 @@ class AuthTest extends TestCase
         $this->get('/sanctum/csrf-cookie');
 
         $response = $this->postJson('/api/register', [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
             'password' => 'P@ssw0rd!Strong',
             'password_confirmation' => 'P@ssw0rd!Strong',
@@ -26,7 +27,7 @@ class AuthTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonStructure(['user', 'company']);
 
-        $this->assertDatabaseHas('users', ['email' => 'test@example.com']);
+        $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'first_name' => 'Test', 'last_name' => 'User']);
         $this->assertDatabaseHas('companies', ['name' => 'Test Company']);
     }
 
@@ -35,7 +36,8 @@ class AuthTest extends TestCase
         $this->get('/sanctum/csrf-cookie');
 
         $response = $this->postJson('/api/register', [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
             'password' => 'P@ssw0rd!Strong',
             'password_confirmation' => 'P@ssw0rd!Strong',
@@ -138,7 +140,8 @@ class AuthTest extends TestCase
         $this->get('/sanctum/csrf-cookie');
 
         $response = $this->postJson('/api/register', [
-            'name' => 'Test',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'weak@example.com',
             'password' => 'short',
             'password_confirmation' => 'short',

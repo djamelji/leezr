@@ -8,6 +8,7 @@ use App\Core\Fields\FieldValue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class CompanyFieldDefinitionController extends Controller
@@ -19,6 +20,22 @@ class CompanyFieldDefinitionController extends Controller
         $customDefinitions = FieldDefinition::where('company_id', $company->id)
             ->orderBy('default_order')
             ->get();
+
+        // Compute used_count per definition (single query, no N+1)
+        $defIds = $customDefinitions->pluck('id')->toArray();
+        $usedCounts = [];
+
+        if (!empty($defIds)) {
+            $usedCounts = FieldValue::whereIn('field_definition_id', $defIds)
+                ->groupBy('field_definition_id')
+                ->selectRaw('field_definition_id, COUNT(*) as count')
+                ->pluck('count', 'field_definition_id')
+                ->toArray();
+        }
+
+        $customDefinitions->each(function ($def) use ($usedCounts) {
+            $def->used_count = $usedCounts[$def->id] ?? 0;
+        });
 
         return response()->json([
             'custom_definitions' => $customDefinitions,
@@ -54,9 +71,10 @@ class CompanyFieldDefinitionController extends Controller
             ],
             'label' => ['required', 'string', 'max:100'],
             'scope' => ['required', Rule::in(FieldDefinition::COMPANY_SCOPES)],
-            'type' => ['required', Rule::in(FieldDefinition::TYPES)],
+            'type' => ['required', Rule::in(FieldDefinition::COMPANY_TYPES)],
             'validation_rules' => ['sometimes', 'array'],
-            'options' => ['sometimes', 'array'],
+            'options' => ['required_if:type,select', 'array', 'min:1'],
+            'options.*' => ['string', 'distinct', 'min:1'],
             'default_order' => ['sometimes', 'integer', 'min:0'],
         ]);
 
@@ -115,12 +133,19 @@ class CompanyFieldDefinitionController extends Controller
         $definition = FieldDefinition::where('company_id', $company->id)
             ->findOrFail($id);
 
-        $validated = $request->validate([
+        $rules = [
             'label' => ['sometimes', 'string', 'max:100'],
             'validation_rules' => ['sometimes', 'nullable', 'array'],
             'options' => ['sometimes', 'nullable', 'array'],
             'default_order' => ['sometimes', 'integer', 'min:0'],
-        ]);
+        ];
+
+        if ($definition->type === FieldDefinition::TYPE_SELECT) {
+            $rules['options'] = ['sometimes', 'array', 'min:1'];
+            $rules['options.*'] = ['string', 'distinct', 'min:1'];
+        }
+
+        $validated = $request->validate($rules);
 
         $definition->update($validated);
 
@@ -150,21 +175,18 @@ class CompanyFieldDefinitionController extends Controller
             ], 403);
         }
 
-        // Check if field has values
         $usedCount = FieldValue::where('field_definition_id', $definition->id)->count();
 
-        if ($usedCount > 0) {
-            return response()->json([
-                'message' => "Cannot delete: this field is used by {$usedCount} record(s). You can disable it instead.",
-            ], 422);
-        }
-
-        // Delete activations first, then definition
-        FieldActivation::where('field_definition_id', $definition->id)->delete();
-        $definition->delete();
+        // Cascade delete: values + activations + definition
+        DB::transaction(function () use ($definition) {
+            FieldValue::where('field_definition_id', $definition->id)->delete();
+            FieldActivation::where('field_definition_id', $definition->id)->delete();
+            $definition->delete();
+        });
 
         return response()->json([
             'message' => 'Custom field deleted.',
+            'deleted_values' => $usedCount,
         ]);
     }
 }

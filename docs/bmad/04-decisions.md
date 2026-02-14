@@ -735,4 +735,99 @@ definePage({
 
 ---
 
+## ADR-043 : Profile UX Scaling — first/last name, pages profil, drawers commerciaux
+
+- **Date** : 2026-02-13
+- **Contexte** : Le système EAV est opérationnel (ADR-039). Les profils sont gérés via drawers (read-only company, edit platform). La table `users` et `platform_users` n'ont qu'un champ `name` monolithique. Les profils manquent de pages dédiées pour l'édition approfondie (base fields + dynamic fields). Les drawers de liste doivent rester légers (quick edit commercial).
+
+- **Décision** :
+
+  ### 1. `display_name` accessor (pas override `name`)
+
+  - **Pourquoi pas `getNameAttribute()` ?** L'override de `name` crée une collision silencieuse avec la colonne DB : `$user->name` retournerait la valeur computée au lieu de la colonne réelle, empêchant toute lecture de la valeur legacy. Un accessor explicite et distinct (`display_name`) est préférable pour la clarté et évite toute magie.
+  - Nouvelles colonnes : `first_name`, `last_name` = source de vérité
+  - Accessor : `getDisplayNameAttribute()` = `trim($this->first_name . ' ' . $this->last_name)`, ajouté à `$appends`
+  - **Règle frontend** : toujours `{{ user.display_name }}`, jamais concat inline `{{ user.first_name + ' ' + user.last_name }}` (future-proof middle name, etc.)
+
+  ### 2. Stratégie transition colonne `name`
+
+  - Colonne `name` rendue nullable, jamais écrite, jamais consommée
+  - Absent de `$fillable`, présent dans `$guarded` → mass assignment impossible
+  - **Deprecation timeline** : colonne `name` sera supprimée en v2 (migration destructive après validation que zéro code la consomme)
+  - CI grep guard automatisé : `test_frontend_does_not_use_user_name_property`
+
+  ### 3. UX : liste + drawer commercial + page profil
+
+  | Surface | Usage | Composant |
+  |---|---|---|
+  | Company members list | VDataTableServer | N/A |
+  | Company member drawer | Quick edit commercial (admin) ou read-only (user) | `MemberProfileForm.vue` |
+  | Company member page `/company/members/[id]` | Deep edit (base + dynamic + role) | `MemberProfileForm.vue` |
+  | Platform users list | VDataTable | N/A |
+  | Platform user page `/platform/users/[id]` | Deep edit (overview + custom fields + credentials) | Direct (tabs) |
+  | Platform user drawer | Create only (plus d'edit) | Direct (form) |
+  | Account settings | Self-edit (first/last + dynamic, email readonly) | Direct (form) |
+
+  ### 4. `MemberProfileForm.vue` — composant partagé
+
+  - Props : `member`, `baseFields`, `dynamicFields`, `editable`, `loading`, `roleOptions`
+  - Emit : `save(payload)` avec `{ first_name, last_name, role?, dynamic_fields }`
+  - **Règle stricte** : toute logique formulaire dans ce composant. Ni `[id].vue` ni `index.vue` ne contiennent de logique formulaire inline.
+
+  ### 5. `MembershipController::update()` — 3 blocs distincts
+
+  - **Bloc A** : base fields (`first_name`, `last_name`) → `$membership->user->update()`
+  - **Bloc B** : dynamic fields → `FieldWriteService::upsert()`
+  - **Bloc C** : role → `$membership->update(['role' => ...])` avec guard owner
+  - 3 blocs séparés, testés unitairement séparément. Pas de monstre.
+
+  ### 6. Credential guards (platform)
+
+  - Super admin credentials **ne peuvent pas** être modifiés via la page profil (backend guard 403)
+  - User **ne peut pas** modifier ses propres credentials via le endpoint admin (backend guard 403)
+  - Permission `manage_platform_user_credentials` requise (middleware existant)
+  - Guards enforced backend ET frontend (double protection)
+
+  ### 7. Routes REST — zéro multiplication
+
+  - Company : `GET/PUT /company/members/{id}` enrichis (pas de `/profile`)
+  - Platform : `GET/PUT /platform-users/{id}` déjà complets
+  - Account : `GET/PUT /profile` existant, email rendu optionnel
+  - Zéro endpoint supplémentaire créé
+
+  ### 8. Performance invariant
+
+  - `test_member_profile_query_count_is_constant` vérifie via `DB::enableQueryLog()` que le ReadModel ne génère pas de N+1 (≤ 15 queries)
+
+- **Conséquences** :
+  - L'identité utilisateur est atomique (`first_name` + `last_name`), pas monolithique (`name`)
+  - La colonne `name` est techniquement obsolète, protégée par guards et tests
+  - Les profils sont éditables à deux niveaux (drawer quick edit + page deep edit)
+  - L'EAV est accessible de façon ergonomique sur toutes les surfaces profil
+  - Les controllers restent passifs (ReadModels + FieldWriteService)
+  - Les credentials sont protégées par des guards backend stricts
+
+---
+
+## ADR-044 : UX Alignment Platform vs Company — Widgets & Profiles
+
+- **Date** : 2026-02-13
+- **Contexte** : Après LOT-PROFILES-UX-SCALE (ADR-043), deux incohérences UX :
+  1. Le profil Platform User avait des VTabs (Overview/Custom Fields/Credentials) mais le profil Company Member n'avait qu'un formulaire direct sans onglets
+  2. Les widgets globaux (Search, I18n, Theme, Shortcuts, Notifications, Customizer) étaient dans le layout Company mais absents du layout Platform — inversant la hiérarchie SaaS
+- **Décision** :
+  - **Profils unifiés** : Company Member `[id].vue` restructuré avec VTabs identiques au Platform User (Overview, Custom Fields conditionnel, Credentials conditionnel)
+  - **Credential management symétrique** : `MemberCredentialController` avec les mêmes guards que Platform (owner protégé = super_admin protégé, self interdit). Broker `users` pour company, `platform_users` pour platform.
+  - **Widget migration** : Extraction `NavbarGlobalWidgets.vue` (I18n, ThemeSwitcher, Shortcuts, Notifications). Ajouté au layout Platform avec NavSearchBar et TheCustomizer. Retiré des layouts Company (vertical + horizontal).
+  - **NavbarShortcuts** : Routes Vuexy demo remplacées par routes platform réelles (Dashboard, Users, Companies, Job Domains, Custom Fields, Roles)
+  - **Hiérarchie claire** : Platform = SaaS admin (full control, all global widgets), Company = Client business (minimal, UserProfile only)
+- **Conséquences** :
+  - Les profils ont une structure identique sur les deux scopes (VTabs, mêmes patterns)
+  - Les company layouts ne portent plus de widgets globaux — navbar = IconBtn + VSpacer + UserProfile
+  - Le layout Platform concentre tous les outils SaaS admin
+  - 3 fichiers créés (`MemberCredentialController`, `NavbarGlobalWidgets`, `CompanyMemberCredentialTest`), 8 modifiés
+  - Zéro modification model, zéro migration, zéro modification @core
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

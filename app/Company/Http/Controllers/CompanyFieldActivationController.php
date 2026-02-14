@@ -48,6 +48,7 @@ class CompanyFieldActivationController extends Controller
             })
                 ->whereIn('field_definition_id', $activatedIds)
                 ->whereNotNull('value')
+                ->where('value', '!=', '')
                 ->groupBy('field_definition_id')
                 ->selectRaw('field_definition_id, COUNT(*) as count')
                 ->pluck('count', 'field_definition_id')

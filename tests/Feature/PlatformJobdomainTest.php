@@ -27,7 +27,8 @@ class PlatformJobdomainTest extends TestCase
         FieldDefinitionCatalog::sync();
 
         $this->platformAdmin = PlatformUser::create([
-            'name' => 'Test Admin',
+            'first_name' => 'Test',
+            'last_name' => 'Admin',
             'email' => 'testadmin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -309,7 +310,8 @@ class PlatformJobdomainTest extends TestCase
     public function test_requires_manage_jobdomains_permission(): void
     {
         $unprivileged = PlatformUser::create([
-            'name' => 'No Perms',
+            'first_name' => 'No',
+            'last_name' => 'Perms',
             'email' => 'noperms@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);

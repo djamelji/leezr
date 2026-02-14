@@ -29,7 +29,8 @@ class PlatformUserController
         $invite = $request->boolean('invite', true);
 
         $rules = [
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:platform_users,email',
             'invite' => 'sometimes|boolean',
             'roles' => 'sometimes|array',
@@ -43,7 +44,8 @@ class PlatformUserController
         $validated = $request->validate($rules);
 
         $user = PlatformUser::create([
-            'name' => $validated['name'],
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => $invite ? null : $validated['password'],
         ]);
@@ -79,7 +81,8 @@ class PlatformUserController
         $user = PlatformUser::findOrFail($id);
 
         $fixedRules = [
-            'name' => 'sometimes|string|max:255',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:platform_users,email,' . $user->id,
             'roles' => 'sometimes|array',
             'roles.*' => 'integer|exists:platform_roles,id',
@@ -88,7 +91,7 @@ class PlatformUserController
         $dynamicRules = FieldValidationService::rules(FieldDefinition::SCOPE_PLATFORM_USER);
         $validated = $request->validate(array_merge($fixedRules, $dynamicRules));
 
-        $fields = array_intersect_key($validated, array_flip(['name', 'email']));
+        $fields = array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email']));
         if (!empty($fields)) {
             $user->update($fields);
         }
@@ -131,6 +134,14 @@ class PlatformUserController
     {
         $user = PlatformUser::findOrFail($id);
 
+        if ($user->hasRole('super_admin')) {
+            return response()->json(['message' => 'Cannot modify super admin credentials.'], 403);
+        }
+
+        if ($user->id === $request->user('platform')->id) {
+            return response()->json(['message' => 'Cannot modify your own credentials via this endpoint.'], 403);
+        }
+
         $request->validate([
             'password' => ['required', 'confirmed', PasswordPolicy::rules()],
         ]);
@@ -140,7 +151,7 @@ class PlatformUserController
         ])->save();
 
         return response()->json([
-            'message' => 'Password set for ' . $user->name . '.',
+            'message' => 'Password set for ' . $user->display_name . '.',
             'user' => $user->load('roles'),
         ]);
     }

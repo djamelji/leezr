@@ -1,6 +1,8 @@
 import { ofetch } from 'ofetch'
 import { useAppToast } from '@/composables/useAppToast'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
+import { safeRedirect } from '@/utils/safeRedirect'
+import { getActiveSignal } from '@/core/runtime/abortRegistry'
 
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
@@ -34,19 +36,31 @@ export const $api = ofetch.create({
         options.headers['X-Company-Id'] = String(companyId)
       }
     }
+
+    // Attach runtime abort signal if active and none already set
+    const runtimeSignal = getActiveSignal()
+    if (runtimeSignal && !options.signal) {
+      options.signal = runtimeSignal
+    }
   },
   async onResponseError({ request, response, options }) {
     const status = response.status
     const { toast } = useAppToast()
 
-    // 401 Unauthenticated — session expired, redirect to login
+    // 401 Unauthenticated — session expired
     if (status === 401) {
+      // During auth bootstrap (fetchMe), let the guard handle redirect
+      if (options._authCheck)
+        return
+
       useCookie('userData').value = null
       useCookie('currentCompanyId').value = null
 
-      const currentPath = window.location.pathname
+      const { router } = await import('@/plugins/1.router')
+      const currentPath = router.currentRoute.value.fullPath
+
       if (currentPath !== '/login') {
-        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+        router.push({ path: '/login', query: { redirect: safeRedirect(currentPath) } })
       }
 
       return

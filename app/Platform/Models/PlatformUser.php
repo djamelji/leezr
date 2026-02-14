@@ -2,24 +2,38 @@
 
 namespace App\Platform\Models;
 
+use Database\Factories\PlatformUserFactory;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class PlatformUser extends Authenticatable
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password'];
+    protected static function newFactory(): PlatformUserFactory
+    {
+        return PlatformUserFactory::new();
+    }
+
+    protected $fillable = ['first_name', 'last_name', 'email', 'password'];
+
+    protected $guarded = ['name'];
 
     protected $hidden = ['password', 'remember_token'];
 
-    protected $appends = ['status'];
+    protected $appends = ['status', 'display_name'];
 
     public function getStatusAttribute(): string
     {
         return is_null($this->password) ? 'invited' : 'active';
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
     }
 
     protected function casts(): array

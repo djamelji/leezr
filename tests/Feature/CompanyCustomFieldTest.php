@@ -174,9 +174,9 @@ class CompanyCustomFieldTest extends TestCase
         $response->assertStatus(404);
     }
 
-    // ─── 5) Cannot delete if used ───────────────────────────
+    // ─── 5) Custom field cascade delete even if used ────────
 
-    public function test_cannot_delete_custom_field_if_used(): void
+    public function test_custom_field_cascade_deletes_values(): void
     {
         $this->jobdomain->update(['allow_custom_fields' => true]);
 
@@ -201,20 +201,16 @@ class CompanyCustomFieldTest extends TestCase
             'value' => 'test value',
         ]);
 
-        // Try to delete — should fail
+        // Cascade delete — should succeed and report deleted values
         $response = $this->act()
             ->deleteJson("/api/company/field-definitions/{$field->id}");
 
-        $response->assertStatus(422);
+        $response->assertOk()
+            ->assertJsonPath('deleted_values', 1);
 
-        $this->assertStringContainsString('Cannot delete', $response->json('message'));
-
-        // Without value — should succeed
-        FieldValue::where('field_definition_id', $field->id)->delete();
-
-        $this->act()
-            ->deleteJson("/api/company/field-definitions/{$field->id}")
-            ->assertOk();
+        $this->assertDatabaseMissing('field_definitions', ['id' => $field->id]);
+        $this->assertDatabaseMissing('field_values', ['field_definition_id' => $field->id]);
+        $this->assertDatabaseMissing('field_activations', ['field_definition_id' => $field->id]);
     }
 
     // ─── 6) Custom field scope restricted ───────────────────

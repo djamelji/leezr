@@ -2,19 +2,13 @@
 import { useAuthStore } from '@/core/stores/auth'
 
 const auth = useAuthStore()
-
-onMounted(async () => {
-  if (auth.isLoggedIn && auth.companies.length === 0) {
-    await auth.fetchMyCompanies()
-  }
-})
 </script>
 
 <template>
   <div>
     <VCard class="mb-6">
       <VCardTitle>
-        Welcome, {{ auth.user?.name }}
+        Welcome, {{ auth.user?.display_name }}
       </VCardTitle>
       <VCardText>
         <p v-if="auth.currentCompany">

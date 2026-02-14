@@ -22,7 +22,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_login_with_valid_credentials(): void
     {
         $user = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -41,7 +42,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_login_with_invalid_credentials(): void
     {
         PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -59,7 +61,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_me_returns_user_with_roles_and_permissions(): void
     {
         $user = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -83,7 +86,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_user_created_without_password(): void
     {
         $admin = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -92,7 +96,8 @@ class PlatformAuthTest extends TestCase
         $admin->roles()->attach($superAdmin);
 
         $response = $this->actingAs($admin, 'platform')->postJson('/api/platform/platform-users', [
-            'name' => 'New User',
+            'first_name' => 'New',
+            'last_name' => 'User',
             'email' => 'new@test.com',
         ]);
 
@@ -117,7 +122,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_user_created_with_invite_false_and_password(): void
     {
         $admin = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -126,7 +132,8 @@ class PlatformAuthTest extends TestCase
         $admin->roles()->attach($superAdmin);
 
         $response = $this->actingAs($admin, 'platform')->postJson('/api/platform/platform-users', [
-            'name' => 'Direct User',
+            'first_name' => 'Direct',
+            'last_name' => 'User',
             'email' => 'direct@test.com',
             'invite' => false,
             'password' => 'Xk9#mW4!qZ7pL2v',
@@ -145,7 +152,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_user_created_with_invite_true_has_null_password(): void
     {
         $admin = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -154,7 +162,8 @@ class PlatformAuthTest extends TestCase
         $admin->roles()->attach($superAdmin);
 
         $response = $this->actingAs($admin, 'platform')->postJson('/api/platform/platform-users', [
-            'name' => 'Invited User',
+            'first_name' => 'Invited',
+            'last_name' => 'User',
             'email' => 'invited@test.com',
             'invite' => true,
         ]);
@@ -170,7 +179,8 @@ class PlatformAuthTest extends TestCase
     public function test_set_platform_user_password(): void
     {
         $admin = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -179,7 +189,8 @@ class PlatformAuthTest extends TestCase
         $admin->roles()->attach($superAdmin);
 
         $target = PlatformUser::create([
-            'name' => 'Target',
+            'first_name' => 'Target',
+            'last_name' => '',
             'email' => 'target@test.com',
             'password' => null,
         ]);
@@ -203,7 +214,8 @@ class PlatformAuthTest extends TestCase
     {
         // Create a user with manage_platform_users but NOT manage_platform_user_credentials
         $admin = PlatformUser::create([
-            'name' => 'Limited Admin',
+            'first_name' => 'Limited',
+            'last_name' => 'Admin',
             'email' => 'limited@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -216,7 +228,8 @@ class PlatformAuthTest extends TestCase
         $admin->roles()->attach($role);
 
         $target = PlatformUser::create([
-            'name' => 'Target',
+            'first_name' => 'Target',
+            'last_name' => '',
             'email' => 'target@test.com',
             'password' => null,
         ]);
@@ -232,7 +245,8 @@ class PlatformAuthTest extends TestCase
     public function test_platform_user_json_does_not_expose_password(): void
     {
         $admin = PlatformUser::create([
-            'name' => 'Admin',
+            'first_name' => 'Admin',
+            'last_name' => '',
             'email' => 'admin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);

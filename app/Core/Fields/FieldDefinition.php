@@ -58,6 +58,14 @@ class FieldDefinition extends Model
         self::TYPE_JSON,
     ];
 
+    public const COMPANY_TYPES = [
+        self::TYPE_STRING,
+        self::TYPE_NUMBER,
+        self::TYPE_DATE,
+        self::TYPE_BOOLEAN,
+        self::TYPE_SELECT,
+    ];
+
     public const COMPANY_SCOPES = [
         self::SCOPE_COMPANY,
         self::SCOPE_COMPANY_USER,

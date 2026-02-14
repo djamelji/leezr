@@ -6,7 +6,8 @@ import { $api } from '@/utils/api'
 const auth = useAuthStore()
 
 const form = ref({
-  name: auth.user?.name || '',
+  first_name: auth.user?.first_name || '',
+  last_name: auth.user?.last_name || '',
   email: auth.user?.email || '',
 })
 
@@ -25,7 +26,8 @@ onMounted(async () => {
   try {
     const data = await $api('/profile')
 
-    form.value.name = data.base_fields?.name || ''
+    form.value.first_name = data.base_fields?.first_name || ''
+    form.value.last_name = data.base_fields?.last_name || ''
     form.value.email = data.base_fields?.email || ''
     avatarPreview.value = data.base_fields?.avatar || null
     dynamicFields.value = data.dynamic_fields || []
@@ -51,8 +53,8 @@ const handleSave = async () => {
     const data = await $api('/profile', {
       method: 'PUT',
       body: {
-        name: form.value.name,
-        email: form.value.email,
+        first_name: form.value.first_name,
+        last_name: form.value.last_name,
         dynamic_fields: { ...dynamicForm.value },
       },
     })
@@ -110,7 +112,8 @@ const changeAvatar = async file => {
 }
 
 const resetForm = () => {
-  form.value.name = auth.user?.name || ''
+  form.value.first_name = auth.user?.first_name || ''
+  form.value.last_name = auth.user?.last_name || ''
   form.value.email = auth.user?.email || ''
 }
 </script>
@@ -199,9 +202,20 @@ const resetForm = () => {
                 cols="12"
               >
                 <AppTextField
-                  v-model="form.name"
-                  label="Full Name"
-                  placeholder="John Doe"
+                  v-model="form.first_name"
+                  label="First Name"
+                  placeholder="John"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <AppTextField
+                  v-model="form.last_name"
+                  label="Last Name"
+                  placeholder="Doe"
                 />
               </VCol>
 
@@ -214,6 +228,7 @@ const resetForm = () => {
                   label="Email"
                   placeholder="johndoe@email.com"
                   type="email"
+                  disabled
                 />
               </VCol>
 

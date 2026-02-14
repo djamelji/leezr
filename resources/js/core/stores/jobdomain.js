@@ -30,7 +30,20 @@ export const useJobdomainStore = defineStore('jobdomain', {
   },
 
   actions: {
-    async fetchJobdomain() {
+    async fetchJobdomain(options = {}) {
+      // Cache fast-path: hydrate from cached data without API call
+      if (options.cached) {
+        const data = options.cached
+        this._assigned = data.assigned
+        this._jobdomain = data.jobdomain
+        this._profile = data.profile
+        this._available = data.available || []
+        this._allowCustomFields = data.allow_custom_fields || false
+        this._loaded = true
+
+        return data
+      }
+
       const data = await $api('/company/jobdomain')
 
       this._assigned = data.assigned

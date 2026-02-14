@@ -23,6 +23,7 @@ declare module 'vue-router/auto-routes' {
     'account-settings-tab': RouteRecordInfo<'account-settings-tab', '/account-settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-jobdomain': RouteRecordInfo<'company-jobdomain', '/company/jobdomain', Record<never, never>, Record<never, never>>,
     'company-members': RouteRecordInfo<'company-members', '/company/members', Record<never, never>, Record<never, never>>,
+    'company-members-id': RouteRecordInfo<'company-members-id', '/company/members/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-modules': RouteRecordInfo<'company-modules', '/company/modules', Record<never, never>, Record<never, never>>,
     'company-settings': RouteRecordInfo<'company-settings', '/company/settings', Record<never, never>, Record<never, never>>,
     'company-shipments': RouteRecordInfo<'company-shipments', '/company/shipments', Record<never, never>, Record<never, never>>,
@@ -42,6 +43,7 @@ declare module 'vue-router/auto-routes' {
     'platform-reset-password': RouteRecordInfo<'platform-reset-password', '/platform/reset-password', Record<never, never>, Record<never, never>>,
     'platform-roles': RouteRecordInfo<'platform-roles', '/platform/roles', Record<never, never>, Record<never, never>>,
     'platform-users': RouteRecordInfo<'platform-users', '/platform/users', Record<never, never>, Record<never, never>>,
+    'platform-users-id': RouteRecordInfo<'platform-users-id', '/platform/users/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
     'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
   }

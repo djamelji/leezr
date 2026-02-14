@@ -1,7 +1,6 @@
 <script setup>
 import { useAuthStore } from '@/core/stores/auth'
-import { useJobdomainStore } from '@/core/stores/jobdomain'
-import { useModuleStore } from '@/core/stores/module'
+import { useRuntimeStore } from '@/core/runtime/runtime'
 import { safeRedirect } from '@/utils/safeRedirect'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
@@ -21,8 +20,7 @@ definePage({
 })
 
 const auth = useAuthStore()
-const jobdomainStore = useJobdomainStore()
-const moduleStore = useModuleStore()
+const runtime = useRuntimeStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -45,18 +43,10 @@ const handleLogin = async () => {
       password: form.value.password,
     })
 
-    // Fetch jobdomain and modules for navigation (non-blocking)
-    try {
-      await Promise.all([
-        jobdomainStore.fetchJobdomain(),
-        moduleStore.fetchModules(),
-      ])
-    }
-    catch {
-      // Non-blocking — fallback to defaults
-    }
+    // Reset runtime to cold — the guard will boot('company') on redirect
+    runtime.teardown()
 
-    const redirect = safeRedirect(route.query.redirect, jobdomainStore.landingRoute || '/')
+    const redirect = safeRedirect(route.query.redirect, '/')
 
     await router.push(redirect)
   }

@@ -25,7 +25,7 @@ class UserProfileController extends Controller
         $company = $request->attributes->get('company');
         $validated = $request->validated();
 
-        $request->user()->update(array_intersect_key($validated, array_flip(['name', 'email'])));
+        $request->user()->update(array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email'])));
 
         if (isset($validated['dynamic_fields'])) {
             FieldWriteService::upsert(

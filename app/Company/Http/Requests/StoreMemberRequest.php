@@ -15,6 +15,8 @@ class StoreMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'first_name' => ['sometimes', 'string', 'max:255'],
+            'last_name' => ['sometimes', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'role' => ['required', 'string', Rule::in(['admin', 'user'])],
         ];

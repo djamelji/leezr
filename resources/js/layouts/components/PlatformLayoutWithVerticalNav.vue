@@ -1,11 +1,11 @@
 <script setup>
 import platformNavItems from '@/navigation/platform'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
-import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
-import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
+import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
+import NavbarGlobalWidgets from '@/layouts/components/NavbarGlobalWidgets.vue'
 import PlatformUserProfile from '@/layouts/components/PlatformUserProfile.vue'
 
 // @layouts plugin
@@ -59,9 +59,11 @@ const navItems = computed(() => {
           Platform
         </VChip>
 
+        <NavSearchBar class="ms-lg-n3" />
+
         <VSpacer />
 
-        <NavbarThemeSwitcher />
+        <NavbarGlobalWidgets />
         <PlatformUserProfile />
       </div>
     </template>
@@ -73,5 +75,8 @@ const navItems = computed(() => {
     <template #footer>
       <Footer />
     </template>
+
+    <!-- 👉 Customizer -->
+    <TheCustomizer />
   </VerticalNavLayout>
 </template>

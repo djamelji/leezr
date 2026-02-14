@@ -38,7 +38,15 @@ export const useModuleStore = defineStore('module', {
   },
 
   actions: {
-    async fetchModules() {
+    async fetchModules(options = {}) {
+      // Cache fast-path: hydrate from cached data without API call
+      if (options.cached) {
+        this._modules = options.cached
+        this._loaded = true
+
+        return options.cached
+      }
+
       const data = await $api('/modules')
 
       this._modules = data.modules

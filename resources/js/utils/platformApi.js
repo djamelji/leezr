@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
+import { getActiveSignal } from '@/core/runtime/abortRegistry'
 
 export const $platformApi = ofetch.create({
   baseURL: '/api/platform',
@@ -18,19 +19,31 @@ export const $platformApi = ofetch.create({
         options.headers['X-XSRF-TOKEN'] = xsrfToken
       }
     }
+
+    // Attach runtime abort signal if active and none already set
+    const runtimeSignal = getActiveSignal()
+    if (runtimeSignal && !options.signal) {
+      options.signal = runtimeSignal
+    }
   },
   async onResponseError({ request, response, options }) {
     const status = response.status
 
     // 401 Unauthenticated — redirect to platform login
     if (status === 401) {
+      // During auth bootstrap (fetchMe), let the guard handle redirect
+      if (options._authCheck)
+        return
+
       useCookie('platformUserData').value = null
       useCookie('platformRoles').value = null
       useCookie('platformPermissions').value = null
 
-      const currentPath = window.location.pathname
+      const { router } = await import('@/plugins/1.router')
+      const currentPath = router.currentRoute.value.path
+
       if (currentPath !== '/platform/login') {
-        window.location.href = '/platform/login'
+        router.push('/platform/login')
       }
 
       return

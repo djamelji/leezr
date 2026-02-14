@@ -1,55 +1,14 @@
 <script setup>
 import staticNavItems, { coreNavItems } from '@/navigation/vertical'
-import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
-import { themeConfig } from '@themeConfig'
-
 // Components
 import Footer from '@/layouts/components/Footer.vue'
-import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
-import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
-import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
-import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
-import NavBarI18n from '@core/components/I18n.vue'
 
 // @layouts plugin
 import { VerticalNavLayout } from '@layouts'
 
-const authStore = useAuthStore()
 const moduleStore = useModuleStore()
-const router = useRouter()
-const route = useRoute()
-
-// Fetch modules on layout mount if not already loaded (e.g., page refresh)
-onMounted(async () => {
-  if (!moduleStore._loaded) {
-    try {
-      await moduleStore.fetchModules()
-    }
-    catch {
-      // Non-blocking — nav will show static items with core fallbacks
-    }
-  }
-})
-
-// Re-fetch modules when company changes (via switcher)
-watch(() => authStore.currentCompanyId, async (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    moduleStore.reset()
-    try {
-      await moduleStore.fetchModules()
-    }
-    catch {
-      // fallback to static nav
-    }
-
-    // If current route requires a module that's no longer active, redirect
-    if (route.meta.module && !moduleStore.isActive(route.meta.module)) {
-      router.push('/')
-    }
-  }
-})
 
 // Route names from core fallback items (for deduplication)
 const coreRouteNames = new Set(coreNavItems.map(i => i.to?.name).filter(Boolean))
@@ -109,17 +68,8 @@ const navItems = computed(() => {
           />
         </IconBtn>
 
-        <NavSearchBar class="ms-lg-n3" />
-
         <VSpacer />
 
-        <NavBarI18n
-          v-if="themeConfig.app.i18n.enable && themeConfig.app.i18n.langConfig?.length"
-          :languages="themeConfig.app.i18n.langConfig"
-        />
-        <NavbarThemeSwitcher />
-        <NavbarShortcuts />
-        <NavBarNotifications class="me-1" />
         <UserProfile />
       </div>
     </template>
@@ -132,7 +82,5 @@ const navItems = computed(() => {
       <Footer />
     </template>
 
-    <!-- 👉 Customizer -->
-    <TheCustomizer />
   </VerticalNavLayout>
 </template>

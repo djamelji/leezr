@@ -155,6 +155,17 @@
   "Course Details": "Course Details",
   "Academy": "Academy",
   "Logistics": "Logistics",
+  "Company": "Company",
+  "Members": "Members",
+  "Modules": "Modules",
+  "Industry": "Industry",
+  "Account": "Account",
+  "Management": "Management",
+  "Companies": "Companies",
+  "Company Users": "Company Users",
+  "Platform Users": "Platform Users",
+  "Job Domains": "Job Domains",
+  "Custom Fields": "Custom Fields",
   "Dashboard": "Dashboard",
   "Fleet": "Fleet",
   "Shortcut": "Shortcut",
@@ -232,6 +243,16 @@
       "showVolume": "Show Volume",
       "enterFullscreen": "Enter Fullscreen",
       "volume": "Volume"
+    }
+  },
+  "runtime": {
+    "cold": "Initializing...",
+    "auth": "Verifying your session...",
+    "tenant": "Loading your workspace...",
+    "features": "Preparing your tools...",
+    "error": {
+      "title": "Unable to load the application",
+      "retry": "Try again"
     }
   }
 }

@@ -1,43 +1,40 @@
 <script setup>
 const shortcuts = [
   {
-    icon: 'tabler-calendar',
-    title: 'Calendar',
-    subtitle: 'Appointments',
-    to: { name: 'apps-calendar' },
-  },
-  {
-    icon: 'tabler-file-dollar',
-    title: 'Invoice App',
-    subtitle: 'Manage Accounts',
-    to: { name: 'apps-invoice-list' },
-  },
-  {
-    icon: 'tabler-user',
-    title: 'Users',
-    subtitle: 'Manage Users',
-    to: { name: 'apps-user-list' },
-  },
-  {
-    icon: 'tabler-users',
-    title: 'Role Management',
-    subtitle: 'Permission',
-    to: { name: 'apps-roles' },
-  },
-  {
-    icon: 'tabler-device-desktop-analytics',
+    icon: 'tabler-dashboard',
     title: 'Dashboard',
-    subtitle: 'Dashboard Analytics',
-    to: { name: 'dashboards-analytics' },
+    subtitle: 'Platform overview',
+    to: { name: 'platform' },
   },
   {
-    icon: 'tabler-settings',
-    title: 'Settings',
-    subtitle: 'Account Settings',
-    to: {
-      name: 'pages-account-settings-tab',
-      params: { tab: 'account' },
-    },
+    icon: 'tabler-user-shield',
+    title: 'Users',
+    subtitle: 'Platform Users',
+    to: { name: 'platform-users' },
+  },
+  {
+    icon: 'tabler-building',
+    title: 'Companies',
+    subtitle: 'Manage Companies',
+    to: { name: 'platform-companies' },
+  },
+  {
+    icon: 'tabler-briefcase',
+    title: 'Job Domains',
+    subtitle: 'Domain Management',
+    to: { name: 'platform-jobdomains' },
+  },
+  {
+    icon: 'tabler-forms',
+    title: 'Custom Fields',
+    subtitle: 'Field Definitions',
+    to: { name: 'platform-fields' },
+  },
+  {
+    icon: 'tabler-shield-lock',
+    title: 'Roles',
+    subtitle: 'Role Management',
+    to: { name: 'platform-roles' },
   },
 ]
 </script>

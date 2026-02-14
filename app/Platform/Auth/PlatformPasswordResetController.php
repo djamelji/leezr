@@ -61,6 +61,14 @@ class PlatformPasswordResetController
     {
         $user = \App\Platform\Models\PlatformUser::findOrFail($id);
 
+        if ($user->hasRole('super_admin')) {
+            return response()->json(['message' => 'Cannot modify super admin credentials.'], 403);
+        }
+
+        if ($user->id === $request->user('platform')->id) {
+            return response()->json(['message' => 'Cannot modify your own credentials via this endpoint.'], 403);
+        }
+
         $token = Password::broker('platform_users')->createToken($user);
         $user->sendPasswordResetNotification($token);
 

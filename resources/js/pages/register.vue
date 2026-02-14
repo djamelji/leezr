@@ -21,7 +21,8 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const form = ref({
-  name: '',
+  first_name: '',
+  last_name: '',
   email: '',
   password: '',
   password_confirmation: '',
@@ -40,7 +41,8 @@ const handleRegister = async () => {
 
   try {
     await auth.register({
-      name: form.value.name,
+      first_name: form.value.first_name,
+      last_name: form.value.last_name,
       email: form.value.email,
       password: form.value.password,
       password_confirmation: form.value.password_confirmation,
@@ -136,14 +138,28 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
           <VForm @submit.prevent="handleRegister">
             <VRow>
-              <!-- Name -->
-              <VCol cols="12">
+              <!-- First Name / Last Name -->
+              <VCol
+                cols="12"
+                md="6"
+              >
                 <AppTextField
-                  v-model="form.name"
+                  v-model="form.first_name"
                   autofocus
-                  label="Full Name"
-                  placeholder="John Doe"
-                  :error-messages="errors.name"
+                  label="First Name"
+                  placeholder="John"
+                  :error-messages="errors.first_name"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <AppTextField
+                  v-model="form.last_name"
+                  label="Last Name"
+                  placeholder="Doe"
+                  :error-messages="errors.last_name"
                 />
               </VCol>
 

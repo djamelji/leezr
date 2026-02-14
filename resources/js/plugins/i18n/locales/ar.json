@@ -149,6 +149,17 @@
   "Overview": "نظرة عامة",
   "Academy": "أكاديمية",
   "Logistics": "الخدمات اللوجستية",
+  "Company": "الشركة",
+  "Members": "الأعضاء",
+  "Modules": "الوحدات",
+  "Industry": "القطاع",
+  "Account": "الحساب",
+  "Management": "الإدارة",
+  "Companies": "الشركات",
+  "Company Users": "مستخدمو الشركة",
+  "Platform Users": "مستخدمو المنصة",
+  "Job Domains": "مجالات العمل",
+  "Custom Fields": "الحقول المخصصة",
   "Dashboard": "لوحة القيادة",
   "Fleet": "الأسطول",
   "Editors": "المحررين",
@@ -232,6 +243,16 @@
       "showVolume": "إظهار الحجم",
       "enterFullscreen": "أدخل ملء الشاشة",
       "volume": "مقدار"
+    }
+  },
+  "runtime": {
+    "cold": "جاري التهيئة...",
+    "auth": "التحقق من جلستك...",
+    "tenant": "تحميل مساحة العمل...",
+    "features": "تجهيز أدواتك...",
+    "error": {
+      "title": "تعذر تحميل التطبيق",
+      "retry": "حاول مرة أخرى"
     }
   }
 }

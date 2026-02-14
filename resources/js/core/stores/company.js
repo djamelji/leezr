@@ -46,10 +46,10 @@ export const useCompanyStore = defineStore('company', {
       return data.members
     },
 
-    async addMember({ email, role }) {
+    async addMember({ first_name, last_name, email, role }) {
       const data = await $api('/company/members', {
         method: 'POST',
-        body: { email, role },
+        body: { first_name, last_name, email, role },
       })
 
       this._members.push(data.member)
@@ -65,9 +65,18 @@ export const useCompanyStore = defineStore('company', {
 
       const index = this._members.findIndex(m => m.id === id)
       if (index !== -1)
-        this._members[index] = data.member
+        this._members[index] = { ...this._members[index], role: data.member.role }
 
       return data.member
+    },
+
+    async updateMemberProfile(id, payload) {
+      const data = await $api(`/company/members/${id}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      return data
     },
 
     async removeMember(id) {
@@ -81,6 +90,15 @@ export const useCompanyStore = defineStore('company', {
     // ─── Member Profile (show with dynamic fields) ──────
     async fetchMemberProfile(id) {
       return await $api(`/company/members/${id}`)
+    },
+
+    // ─── Member Credentials (admin-triggered) ──────
+    async resetMemberPassword(id) {
+      return await $api(`/company/members/${id}/reset-password`, { method: 'POST' })
+    },
+
+    async setMemberPassword(id, payload) {
+      return await $api(`/company/members/${id}/password`, { method: 'PUT', body: payload })
     },
 
     // ─── Field Activations (company + company_user scopes) ──

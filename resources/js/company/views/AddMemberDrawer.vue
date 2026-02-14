@@ -13,6 +13,8 @@ const emit = defineEmits(['update:isDrawerOpen', 'memberAdded'])
 const companyStore = useCompanyStore()
 
 const form = ref({
+  first_name: '',
+  last_name: '',
   email: '',
   role: 'user',
 })
@@ -26,11 +28,13 @@ const handleSubmit = async () => {
 
   try {
     await companyStore.addMember({
+      first_name: form.value.first_name,
+      last_name: form.value.last_name,
       email: form.value.email,
       role: form.value.role,
     })
 
-    form.value = { email: '', role: 'user' }
+    form.value = { first_name: '', last_name: '', email: '', role: 'user' }
     emit('memberAdded')
   }
   catch (error) {
@@ -43,7 +47,7 @@ const handleSubmit = async () => {
 
 const handleClose = () => {
   emit('update:isDrawerOpen', false)
-  form.value = { email: '', role: 'user' }
+  form.value = { first_name: '', last_name: '', email: '', role: 'user' }
   errorMessage.value = ''
 }
 </script>
@@ -62,7 +66,9 @@ const handleClose = () => {
       @cancel="handleClose"
     />
 
-    <PerfectScrollbar :options="{ wheelPropagation: false }">
+    <VDivider />
+
+    <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
       <VCard flat>
         <VCardText>
           <VAlert
@@ -85,6 +91,26 @@ const handleClose = () => {
 
           <VForm @submit.prevent="handleSubmit">
             <VRow>
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <AppTextField
+                  v-model="form.first_name"
+                  label="First Name"
+                  placeholder="John"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <AppTextField
+                  v-model="form.last_name"
+                  label="Last Name"
+                  placeholder="Doe"
+                />
+              </VCol>
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
@@ -126,6 +152,6 @@ const handleClose = () => {
           </VForm>
         </VCardText>
       </VCard>
-    </PerfectScrollbar>
+    </div>
   </VNavigationDrawer>
 </template>

@@ -5,6 +5,7 @@ use App\Company\Http\Controllers\CompanyFieldActivationController;
 use App\Company\Http\Controllers\CompanyFieldDefinitionController;
 use App\Company\Http\Controllers\CompanyJobdomainController;
 use App\Company\Http\Controllers\CompanyModuleController;
+use App\Company\Http\Controllers\MemberCredentialController;
 use App\Company\Http\Controllers\MembershipController;
 use App\Company\Http\Controllers\ShipmentController;
 use App\Company\Http\Controllers\UserProfileController;
@@ -27,6 +28,12 @@ Route::post('/company/members', [MembershipController::class, 'store'])
 Route::put('/company/members/{id}', [MembershipController::class, 'update'])
     ->middleware('company.role:admin');
 Route::delete('/company/members/{id}', [MembershipController::class, 'destroy'])
+    ->middleware('company.role:admin');
+
+// Member credentials (admin/owner only)
+Route::post('/company/members/{id}/reset-password', [MemberCredentialController::class, 'resetPassword'])
+    ->middleware('company.role:admin');
+Route::put('/company/members/{id}/password', [MemberCredentialController::class, 'setPassword'])
     ->middleware('company.role:admin');
 
 // Jobdomain

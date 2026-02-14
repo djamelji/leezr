@@ -17,6 +17,11 @@ initConfigStore()
 
 const configStore = useConfigStore()
 const { state: toastState } = useAppToast()
+
+// Dev-only runtime debug panel
+const RuntimeDebugPanel = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('@/core/runtime/RuntimeDebugPanel.vue'))
+  : null
 </script>
 
 <template>
@@ -26,6 +31,12 @@ const { state: toastState } = useAppToast()
       <RouterView />
 
       <ScrollToTop />
+
+      <!-- Dev-only runtime debug panel (Ctrl+Shift+D) -->
+      <component
+        :is="RuntimeDebugPanel"
+        v-if="RuntimeDebugPanel"
+      />
 
       <VSnackbar
         v-model="toastState.show"

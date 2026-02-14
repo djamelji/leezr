@@ -21,14 +21,17 @@ class User extends Authenticatable
     }
 
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'password_set_at',
         'avatar',
     ];
 
-    protected $appends = ['status'];
+    protected $guarded = ['name'];
+
+    protected $appends = ['status', 'display_name'];
 
     protected $hidden = [
         'password',
@@ -48,6 +51,11 @@ class User extends Authenticatable
     public function getStatusAttribute(): string
     {
         return $this->password_set_at ? 'active' : 'invited';
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
     }
 
     public function memberships(): HasMany

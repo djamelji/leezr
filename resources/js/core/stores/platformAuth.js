@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
 import { refreshCsrf } from '@/utils/csrf'
+import { postBroadcast } from '@/core/runtime/broadcast'
 
 export const usePlatformAuthStore = defineStore('platformAuth', {
   state: () => ({
@@ -66,11 +67,13 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistUser(null)
       this._persistRoles([])
       this._persistPermissions([])
+      this._hydrated = false
+      postBroadcast('logout')
     },
 
     async fetchMe() {
       try {
-        const data = await $platformApi('/me')
+        const data = await $platformApi('/me', { _authCheck: true })
 
         this._persistUser(data.user)
         this._persistRoles(data.roles || [])

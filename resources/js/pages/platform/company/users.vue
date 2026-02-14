@@ -22,7 +22,7 @@ onMounted(async () => {
 })
 
 const headers = [
-  { title: 'Name', key: 'name' },
+  { title: 'Name', key: 'display_name' },
   { title: 'Email', key: 'email' },
   { title: 'Companies', key: 'companies', sortable: false },
   { title: 'Created', key: 'created_at' },
@@ -72,17 +72,17 @@ const onPageChange = async page => {
         hide-default-footer
       >
         <!-- Name -->
-        <template #item.name="{ item }">
+        <template #item.display_name="{ item }">
           <div class="d-flex align-center gap-x-3 py-2">
             <VAvatar
               color="primary"
               variant="tonal"
               size="34"
             >
-              <span class="text-sm">{{ item.name?.charAt(0)?.toUpperCase() }}</span>
+              <span class="text-sm">{{ item.display_name?.charAt(0)?.toUpperCase() }}</span>
             </VAvatar>
             <span class="text-body-1 font-weight-medium text-high-emphasis">
-              {{ item.name }}
+              {{ item.display_name }}
             </span>
           </div>
         </template>

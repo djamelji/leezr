@@ -151,6 +151,17 @@
   "Overview": "Aperçu",
   "Academy": "Académie",
   "Logistics": "Logistique",
+  "Company": "Entreprise",
+  "Members": "Membres",
+  "Modules": "Modules",
+  "Industry": "Secteur",
+  "Account": "Compte",
+  "Management": "Gestion",
+  "Companies": "Entreprises",
+  "Company Users": "Utilisateurs entreprise",
+  "Platform Users": "Utilisateurs plateforme",
+  "Job Domains": "Domaines métier",
+  "Custom Fields": "Champs personnalisés",
   "Dashboard": "Tableau de bord",
   "Fleet": "Flotte",
   "Editors": "Éditeurs",
@@ -233,6 +244,16 @@
       "showVolume": "Afficher le volume",
       "enterFullscreen": "Entrer en plein écran",
       "volume": "Volume"
+    }
+  },
+  "runtime": {
+    "cold": "Initialisation...",
+    "auth": "Vérification de votre session...",
+    "tenant": "Chargement de votre espace...",
+    "features": "Préparation de vos outils...",
+    "error": {
+      "title": "Impossible de charger l'application",
+      "retry": "Réessayer"
     }
   }
 }

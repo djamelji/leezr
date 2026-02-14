@@ -63,7 +63,8 @@ class FieldValueTest extends TestCase
 
         // Platform admin
         $this->platformAdmin = PlatformUser::create([
-            'name' => 'Test Admin',
+            'first_name' => 'Test',
+            'last_name' => 'Admin',
             'email' => 'testadmin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);

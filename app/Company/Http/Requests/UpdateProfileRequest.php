@@ -17,9 +17,10 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         $fixedRules = [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => [
-                'required',
+                'sometimes',
                 'string',
                 'email',
                 'max:255',

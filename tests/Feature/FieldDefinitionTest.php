@@ -23,7 +23,8 @@ class FieldDefinitionTest extends TestCase
         FieldDefinitionCatalog::sync();
 
         $this->admin = PlatformUser::create([
-            'name' => 'Test Admin',
+            'first_name' => 'Test',
+            'last_name' => 'Admin',
             'email' => 'testadmin@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
@@ -176,7 +177,8 @@ class FieldDefinitionTest extends TestCase
     public function test_requires_manage_field_definitions_permission(): void
     {
         $limitedUser = PlatformUser::create([
-            'name' => 'Limited',
+            'first_name' => 'Limited',
+            'last_name' => '',
             'email' => 'limited@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);

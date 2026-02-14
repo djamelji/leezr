@@ -50,7 +50,7 @@ const logout = async () => {
 
               <div>
                 <h6 class="text-h6 font-weight-medium">
-                  {{ userData.name }}
+                  {{ userData.display_name }}
                 </h6>
                 <VListItemSubtitle class="text-disabled">
                   Platform Admin

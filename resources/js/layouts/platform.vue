@@ -29,15 +29,17 @@ watch([
   <PlatformLayoutWithVerticalNav v-bind="layoutAttrs">
     <AppLoadingIndicator ref="refLoadingIndicator" />
 
-    <RouterView v-slot="{ Component }">
-      <Suspense
-        :timeout="0"
-        @fallback="isFallbackStateActive = true"
-        @resolve="isFallbackStateActive = false"
-      >
-        <Component :is="Component" />
-      </Suspense>
-    </RouterView>
+    <AppShellGate>
+      <RouterView v-slot="{ Component }">
+        <Suspense
+          :timeout="0"
+          @fallback="isFallbackStateActive = true"
+          @resolve="isFallbackStateActive = false"
+        >
+          <Component :is="Component" />
+        </Suspense>
+      </RouterView>
+    </AppShellGate>
   </PlatformLayoutWithVerticalNav>
 </template>
 

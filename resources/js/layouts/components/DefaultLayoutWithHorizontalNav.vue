@@ -1,42 +1,15 @@
 <script setup>
 import staticNavItems from '@/navigation/horizontal'
-import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
-import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
-import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
-import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
-import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
-import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
-const authStore = useAuthStore()
 const moduleStore = useModuleStore()
-const router = useRouter()
-const route = useRoute()
-
-// Re-fetch modules when company changes (via switcher)
-watch(() => authStore.currentCompanyId, async (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    moduleStore.reset()
-    try {
-      await moduleStore.fetchModules()
-    }
-    catch {
-      // fallback to static nav
-    }
-
-    // If current route requires a module that's no longer active, redirect
-    if (route.meta.module && !moduleStore.isActive(route.meta.module)) {
-      router.push('/')
-    }
-  }
-})
 
 const navItems = computed(() => {
   const moduleNavItems = moduleStore.activeNavItems.map(item => ({
@@ -81,16 +54,6 @@ const navItems = computed(() => {
       </RouterLink>
       <VSpacer />
 
-      <NavSearchBar trigger-btn-class="ms-lg-n3" />
-
-      <NavBarI18n
-        v-if="themeConfig.app.i18n.enable && themeConfig.app.i18n.langConfig?.length"
-        :languages="themeConfig.app.i18n.langConfig"
-      />
-
-      <NavbarThemeSwitcher />
-      <NavbarShortcuts />
-      <NavBarNotifications class="me-2" />
       <UserProfile />
     </template>
 
@@ -102,7 +65,5 @@ const navItems = computed(() => {
       <Footer />
     </template>
 
-    <!-- 👉 Customizer -->
-    <TheCustomizer />
   </HorizontalNavLayout>
 </template>

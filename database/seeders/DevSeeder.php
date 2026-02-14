@@ -31,7 +31,8 @@ class DevSeeder extends Seeder
         $platformUser = PlatformUser::updateOrCreate(
             ['email' => 'platform@leezr.test'],
             [
-                'name' => 'Platform Admin',
+                'first_name' => 'Platform',
+                'last_name' => 'Admin',
                 'password' => 'password',
             ],
         );
@@ -45,7 +46,8 @@ class DevSeeder extends Seeder
         $owner = User::updateOrCreate(
             ['email' => 'owner@leezr.test'],
             [
-                'name' => 'Djamel',
+                'first_name' => 'Djamel',
+                'last_name' => '',
                 'password' => 'password',
                 'password_set_at' => now(),
             ],
@@ -64,7 +66,8 @@ class DevSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => 'admin@leezr.test'],
             [
-                'name' => 'Alice Martin',
+                'first_name' => 'Alice',
+                'last_name' => 'Martin',
                 'password' => 'password',
                 'password_set_at' => now(),
             ],
@@ -78,7 +81,8 @@ class DevSeeder extends Seeder
         $user = User::updateOrCreate(
             ['email' => 'bob@leezr.test'],
             [
-                'name' => 'Bob Dupont',
+                'first_name' => 'Bob',
+                'last_name' => 'Dupont',
                 'password' => 'password',
                 'password_set_at' => now(),
             ],
