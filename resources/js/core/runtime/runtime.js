@@ -5,17 +5,16 @@
  * Scopes: 'company', 'platform', 'public'
  *
  * G1: Validated transitions via stateMachine + event journal
- * G2: Per-job AbortController via JobRunner (replaces _loadResource/_resolveResources)
+ * G2: Per-job AbortController via JobRunner
+ * G3: Single-writer scheduler (replaces _bootId with RunManager)
  */
 
 import { defineStore } from 'pinia'
-import { companyResources, platformResources } from './resources'
-import { abortGroup, abortAll, setActiveGroup } from './abortRegistry'
-import { cacheRemove, cacheClear } from './cache'
+import { cacheRemove } from './cache'
 import { initBroadcast } from './broadcast'
 import { transition } from './stateMachine'
 import { createJournal } from './journal'
-import { JobRunner } from './job'
+import { createScheduler } from './scheduler'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
@@ -24,8 +23,8 @@ import { useModuleStore } from '@/core/stores/module'
 // Module-level journal (non-reactive — accessed via getter + version counter)
 const _journal = createJournal(200)
 
-// Active JobRunner for progress tracking
-let _activeRunner = null
+// Scheduler — initialized lazily after store is created
+let _scheduler = null
 
 // Store factory map — keyed by store id from resource declarations
 const storeFactories = {
@@ -59,9 +58,6 @@ export const useRuntimeStore = defineStore('runtime', {
     /** @type {number} */
     _bootedAt: 0,
 
-    /** @type {number} Boot generation — incremented on each boot/teardown to detect stale boots */
-    _bootId: 0,
-
     /** @type {boolean} */
     _broadcastInitialized: false,
 
@@ -87,10 +83,16 @@ export const useRuntimeStore = defineStore('runtime', {
     /** Progress from the active JobRunner. */
     progress() {
       // eslint-disable-next-line no-unused-expressions
-      this._journalVersion // reactive dependency (bumped after each job completes)
-      if (!_activeRunner) return { total: 0, done: 0, loading: 0, error: 0, pending: 0, cancelled: 0 }
+      this._journalVersion // reactive dependency
+      const runner = _scheduler?.activeRunner
+      if (!runner) return { total: 0, done: 0, loading: 0, error: 0, pending: 0, cancelled: 0 }
 
-      return _activeRunner.progress
+      return runner.progress
+    },
+
+    /** Current run ID (for debug). */
+    currentRunId() {
+      return _scheduler?.currentRunId ?? null
     },
 
     phaseMessage: state => {
@@ -108,7 +110,7 @@ export const useRuntimeStore = defineStore('runtime', {
   },
 
   actions: {
-    // ─── Boot ──────────────────────────────────────────────
+    // ─── Public API (delegates to scheduler) ────────────────
 
     /**
      * Boot the runtime for a given scope.
@@ -118,178 +120,58 @@ export const useRuntimeStore = defineStore('runtime', {
     async boot(scope) {
       if (this._phase !== 'cold') return
 
-      const bootId = ++this._bootId
-
-      this._scope = scope
-      _journal.log('run:start', { runId: bootId, scope })
-      this._journalVersion++
-
-      // Initialize broadcast (once per app lifecycle)
+      this._ensureScheduler()
       this._initBroadcast()
-
-      // Public routes need no hydration
-      if (scope === 'public') {
-        this._transition('ready')
-
-        return
-      }
-
-      const resources = scope === 'platform' ? platformResources : companyResources
-
-      // Phase: auth
-      this._transition('auth')
-      const authResources = resources.filter(r => r.phase === 'auth')
-      const authResult = await this._runJobs(authResources, bootId)
-      if (this._bootId !== bootId) return
-      if (authResult.critical) {
-        this._error = `Failed to load ${authResult.errorKey}.`
-        this._transition('error')
-
-        return
-      }
-
-      // Check auth — if not logged in, stop (guard will redirect)
-      if (scope === 'company') {
-        const auth = resolveStore('auth')
-        if (!auth.isLoggedIn) return
-      }
-      else if (scope === 'platform') {
-        const platformAuth = resolveStore('platformAuth')
-        if (!platformAuth.isLoggedIn) {
-          this._transition('ready') // Let the guard handle redirect
-
-          return
-        }
-      }
-
-      // Phase: tenant (company scope only)
-      if (scope === 'company') {
-        if (this._bootId !== bootId) return
-        this._transition('tenant')
-        const tenantResources = resources.filter(r => r.phase === 'tenant')
-        const tenantResult = await this._runJobs(tenantResources, bootId)
-        if (this._bootId !== bootId) return
-        if (tenantResult.critical) {
-          this._error = `Failed to load ${tenantResult.errorKey}.`
-          this._transition('error')
-
-          return
-        }
-      }
-
-      // Phase: features (company scope only)
-      if (scope === 'company') {
-        if (this._bootId !== bootId) return
-        this._transition('features')
-        const featureResources = resources.filter(r => r.phase === 'features')
-        const featureResult = await this._runJobs(featureResources, bootId)
-        if (this._bootId !== bootId) return
-        if (featureResult.critical) {
-          this._error = `Failed to load ${featureResult.errorKey}.`
-          this._transition('error')
-
-          return
-        }
-      }
-
-      if (this._bootId !== bootId) return
-      this._transition('ready')
-      this._bootedAt = Date.now()
-      _journal.log('run:complete', { runId: bootId, scope })
-      this._journalVersion++
+      await _scheduler.requestBoot(scope)
     },
-
-    // ─── Company switch ────────────────────────────────────
-
-    /**
-     * Re-hydrate tenant + features after a company switch.
-     * Aborts in-flight requests, clears caches, resets stores, re-runs phases.
-     * @param {number|string} companyId
-     */
-    async switchCompany(companyId) {
-      // Cancel active runner jobs
-      if (_activeRunner) {
-        _activeRunner.cancelAll()
-      }
-
-      // Legacy abort as safety net
-      abortGroup('tenant')
-      abortGroup('features')
-
-      // Clear tenant/features cache
-      cacheRemove('auth:companies')
-      cacheRemove('tenant:jobdomain')
-      cacheRemove('features:modules')
-
-      // Reset tenant/features stores
-      const jobdomainStore = resolveStore('jobdomain')
-      const moduleStore = resolveStore('module')
-      jobdomainStore.reset()
-      moduleStore.reset()
-
-      const tenantResources = companyResources.filter(r => r.phase === 'tenant')
-      const featureResources = companyResources.filter(r => r.phase === 'features')
-
-      const bootId = ++this._bootId
-
-      _journal.log('run:start', { runId: bootId, scope: 'switch', companyId })
-      this._journalVersion++
-
-      this._transition('tenant')
-
-      const tenantResult = await this._runJobs(tenantResources, bootId)
-      if (this._bootId !== bootId) return
-      if (tenantResult.critical) {
-        this._error = `Failed to load ${tenantResult.errorKey}.`
-        this._transition('error')
-
-        return
-      }
-
-      this._transition('features')
-      const featureResult = await this._runJobs(featureResources, bootId)
-      if (this._bootId !== bootId) return
-      if (featureResult.critical) {
-        this._error = `Failed to load ${featureResult.errorKey}.`
-        this._transition('error')
-
-        return
-      }
-
-      this._transition('ready')
-      _journal.log('run:complete', { runId: bootId, scope: 'switch' })
-      this._journalVersion++
-    },
-
-    // ─── Teardown ──────────────────────────────────────────
 
     /**
      * Full teardown: abort all, clear cache, reset to cold.
      * Called on logout or before scope switch.
      */
     teardown() {
-      const prevScope = this._scope
+      this._ensureScheduler()
+      _scheduler.requestTeardown()
+    },
 
-      // Cancel active runner
-      if (_activeRunner) {
-        _activeRunner.cancelAll()
-        _activeRunner = null
-      }
+    /**
+     * Re-hydrate tenant + features after a company switch.
+     * @param {number|string} companyId
+     */
+    async switchCompany(companyId) {
+      this._ensureScheduler()
+      await _scheduler.requestSwitch(companyId)
+    },
 
-      abortAll()
-      cacheClear()
-      setActiveGroup(null)
+    /**
+     * Promise that resolves when the auth phase completes.
+     * @returns {Promise<void>}
+     */
+    whenAuthResolved() {
+      this._ensureScheduler()
 
-      this._bootId++ // Invalidate any in-progress boot
-      if (this._phase !== 'cold') {
-        this._transition('cold')
-      }
-      this._scope = null
-      this._resources = {}
-      this._error = null
-      this._bootedAt = 0
-      _journal.log('run:teardown', { scope: prevScope })
-      this._journalVersion++
+      return _scheduler.whenAuthResolved()
+    },
+
+    /**
+     * Promise that resolves when phase reaches 'ready'.
+     * @param {number} [timeout] - Optional timeout in ms
+     * @returns {Promise<void>}
+     */
+    whenReady(timeout) {
+      this._ensureScheduler()
+
+      return _scheduler.whenReady(timeout)
+    },
+
+    /**
+     * Retry failed jobs in the active runner.
+     * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
+     */
+    async retryFailed() {
+      this._ensureScheduler()
+
+      return _scheduler.retryFailed()
     },
 
     // ─── Broadcast handling ────────────────────────────────
@@ -375,41 +257,34 @@ export const useRuntimeStore = defineStore('runtime', {
       this._journalVersion++
     },
 
-    /**
-     * Run a set of resources via JobRunner and sync status back.
-     * @param {import('./resources').ResourceDef[]} resources
-     * @param {number} bootId - Current boot generation
-     * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
-     */
-    async _runJobs(resources, bootId) {
-      const runner = new JobRunner(resources, bootId, {
+    /** Lazily create the scheduler (needs `this` reference). */
+    _ensureScheduler() {
+      if (_scheduler) return
+
+      const self = this
+
+      _scheduler = createScheduler({
         resolveStore,
         journal: _journal,
+        transition: target => self._transition(target),
+        getPhase: () => self._phase,
+        setScope: scope => { self._scope = scope },
+        setError: msg => { self._error = msg },
+        setBootedAt: ts => { self._bootedAt = ts },
+        resetState: () => {
+          self._scope = null
+          self._resources = {}
+          self._error = null
+          self._bootedAt = 0
+        },
+        syncResources: runner => {
+          const status = runner.resourceStatus
+          for (const [key, value] of Object.entries(status)) {
+            self._resources[key] = value
+          }
+          self._journalVersion++ // trigger progress reactivity
+        },
       })
-
-      _activeRunner = runner
-
-      // Sync initial statuses
-      this._syncResources(runner)
-
-      const result = await runner.execute()
-
-      // Sync final statuses
-      this._syncResources(runner)
-      this._journalVersion++ // trigger progress reactivity
-
-      return result
-    },
-
-    /**
-     * Sync resource statuses from JobRunner into reactive state.
-     * @param {JobRunner} runner
-     */
-    _syncResources(runner) {
-      const status = runner.resourceStatus
-      for (const [key, value] of Object.entries(status)) {
-        this._resources[key] = value
-      }
     },
 
     _initBroadcast() {

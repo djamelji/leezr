@@ -1028,6 +1028,25 @@ definePage({
   - `JobRunner.retryFailed()` permet le retry partiel (foundation pour G4 recovery UX)
   - Le cache SWR est préservé (logique déplacée dans Job.run)
 
+## ADR-047c : Run Scheduler (Single-Writer Orchestrator)
+
+- **Date** : 2026-02-14
+- **Contexte** : Le runtime utilisait `_bootId` (compteur générationnel) pour détecter les boots concurrents après chaque await, mais entre deux awaits l'état pouvait être corrompu. Les méthodes boot/switchCompany/teardown contenaient toute la logique d'orchestration mélangée à la gestion d'état réactif du store Pinia.
+- **Décision** :
+  - `scheduler.js` — Factory `createScheduler(deps)` : orchestrateur central avec garantie single-writer.
+  - Un seul run actif à la fois (`_currentRunId` + `_isStale()`). Tout nouveau `requestBoot` annule le précédent.
+  - Promise-based coordination : `whenAuthResolved()` résout après la phase auth, `whenReady(timeout)` résout quand phase === ready.
+  - `requestSwitch(companyId)` : annule tenant/features, relance sans toucher auth.
+  - `retryFailed()` : relance uniquement les jobs en erreur du run actif, transitions adaptées.
+  - `runtime.js` refactoré en façade Pinia : les actions délèguent au scheduler, les getters exposent l'état réactif.
+  - Le scheduler mute l'état du store via des callbacks injectées (`deps.transition`, `deps.setScope`, `deps.setError`, etc.).
+  - Suppression de `_bootId` du state.
+- **Conséquences** :
+  - Single-writer : impossible que deux runs concurrents écrivent `_phase` simultanément
+  - Le store runtime est une façade mince (~300 lignes vs ~450 avant)
+  - Foundation pour G4 : `whenAuthResolved()` permet le guard non-bloquant
+  - Le scheduler est testable indépendamment (pure function factory, pas de couplage Pinia)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
