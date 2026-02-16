@@ -32,19 +32,18 @@ class JobdomainRegistry
                     'admin' => [
                         'name' => 'Administrator',
                         'is_administrative' => true,
-                        'permissions' => [
-                            'members.view', 'members.invite', 'members.manage', 'members.credentials',
-                            'settings.view', 'settings.manage',
-                            'shipments.view', 'shipments.create', 'shipments.manage_status',
-                            'shipments.manage_fields', 'shipments.delete',
+                        'bundles' => [
+                            'members.team_access', 'members.team_management',
+                            'settings.company_info', 'settings.company_management',
+                            'shipments.operations', 'shipments.administration',
                         ],
                     ],
                     'dispatcher' => [
                         'name' => 'Dispatcher',
-                        'permissions' => [
-                            'members.view', 'members.invite',
-                            'settings.view',
-                            'shipments.view', 'shipments.create', 'shipments.manage_status',
+                        'bundles' => [
+                            'members.team_access',
+                            'settings.company_info',
+                            'shipments.operations',
                         ],
                     ],
                     'viewer' => [

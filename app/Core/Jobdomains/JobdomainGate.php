@@ -9,6 +9,7 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Models\Company;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleGate;
+use App\Core\Modules\ModuleRegistry;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -160,8 +161,12 @@ class JobdomainGate
                     ],
                 );
 
-                // Sync permissions with structural validation
-                $permissionIds = CompanyPermission::whereIn('key', $roleDef['permissions'] ?? [])
+                // Resolve bundles → permission keys, then union with direct permissions
+                $bundlePermKeys = ModuleRegistry::resolveBundles($roleDef['bundles'] ?? []);
+                $directPermKeys = $roleDef['permissions'] ?? [];
+                $allPermKeys = array_unique(array_merge($bundlePermKeys, $directPermKeys));
+
+                $permissionIds = CompanyPermission::whereIn('key', $allPermKeys)
                     ->pluck('id')
                     ->toArray();
 

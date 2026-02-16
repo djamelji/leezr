@@ -5,6 +5,7 @@ namespace App\Platform\Http\Controllers;
 use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Jobdomains\Jobdomain;
+use App\Core\Modules\ModuleRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -30,10 +31,35 @@ class PlatformJobdomainController extends Controller
                 FieldDefinition::SCOPE_COMPANY_USER,
             ])->orderBy('default_order')->get();
 
+        // Build module bundles for the platform role template UI
+        $modules = collect(ModuleRegistry::definitions());
+        $moduleBundles = [];
+
+        foreach ($modules as $modKey => $def) {
+            $bundles = [];
+            foreach ($def['bundles'] ?? [] as $bundle) {
+                $bundles[] = [
+                    'key' => $bundle['key'],
+                    'label' => $bundle['label'],
+                    'hint' => $bundle['hint'] ?? '',
+                    'is_admin' => $bundle['is_admin'] ?? false,
+                    'permissions' => $bundle['permissions'],
+                ];
+            }
+
+            $moduleBundles[] = [
+                'module_key' => $modKey,
+                'module_name' => $def['name'],
+                'is_core' => str_starts_with($modKey, 'core.'),
+                'bundles' => $bundles,
+            ];
+        }
+
         return response()->json([
             'jobdomain' => $jobdomain,
             'field_definitions' => $fieldDefinitions,
             'permission_catalog' => CompanyPermissionCatalog::all(),
+            'module_bundles' => $moduleBundles,
         ]);
     }
 
@@ -126,11 +152,12 @@ class PlatformJobdomainController extends Controller
 
     /**
      * Validate default_roles structure.
-     * Expects associative array: key => {name, is_administrative?, permissions?}
+     * Expects associative array: key => {name, is_administrative?, bundles?, permissions?}
      */
     private function validateDefaultRoles(array $roles): void
     {
         $validPermissionKeys = CompanyPermissionCatalog::keys();
+        $validBundleKeys = ModuleRegistry::allBundleKeys();
         $errors = [];
 
         foreach ($roles as $roleKey => $roleDef) {
@@ -141,6 +168,12 @@ class PlatformJobdomainController extends Controller
 
             if (empty($roleDef['name']) || !is_string($roleDef['name'])) {
                 $errors[] = "Role '{$roleKey}' must have a name.";
+            }
+
+            foreach ($roleDef['bundles'] ?? [] as $bundleKey) {
+                if (!in_array($bundleKey, $validBundleKeys, true)) {
+                    $errors[] = "Role '{$roleKey}': unknown capability '{$bundleKey}'.";
+                }
             }
 
             foreach ($roleDef['permissions'] ?? [] as $permKey) {

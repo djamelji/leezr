@@ -1192,6 +1192,43 @@ definePage({
   - Aucun impact sur middleware, RBAC tables, ModuleRegistry, ou JobdomainRegistry
   - Décision UX confirmée : invisible > grisé (cohérent avec ADR-052 pour les permissions admin)
 
+## ADR-054 : Capability Abstraction Layer (Mode Simple / Mode Avancé)
+
+- **Date** : 2026-02-16
+- **Contexte** : La page Company Roles expose des permissions techniques (clés individuelles comme `members.view`, `shipments.manage_status`). Un patron de PME n'a pas besoin de cette granularité. Il veut : "accès équipe", "gestion expéditions". La granularité technique reste nécessaire pour les power users.
+- **Décision** :
+  - Chaque module déclare des **bundles** (regroupements métier de permissions) dans `ModuleRegistry.bundles[]`. Un bundle = key, label, hint, permissions[], is_admin.
+  - Les bundles sont **déclaratifs uniquement** — pas de table en base, pas de migration.
+  - L'API `permissionCatalog` retourne `permissions` (inchangé) + `modules[]` avec `capabilities[]` (bundles résolus avec `permission_ids`).
+  - Le drawer Company Roles offre deux modes : **Simple** (par défaut, checkboxes par capability bundle) et **Advanced** (toggle discret, checkboxes par permission individuelle).
+  - En mode Simple, si les permissions d'un bundle sont partiellement cochées → état **custom** (checkbox indeterminate + badge "Custom").
+  - Les bundles admin sont invisibles pour les rôles Operational (même logique que les permissions admin).
+  - Le backend continue de recevoir et stocker des **permission IDs** — les bundles sont une abstraction UI uniquement.
+  - Nommage interne : `bundles` dans ModuleRegistry (évite le conflit avec `capabilities` Capabilities class existante). Nommage API : `capabilities`.
+- **Conséquences** :
+  - 90% des companies utilisent le mode Simple — jamais exposés aux permissions techniques
+  - Les power users peuvent basculer en Advanced pour fine-tuner
+  - Aucune migration, aucun impact middleware, aucune table nouvelle
+  - Les bundles sont non-overlapping (chaque permission appartient à un seul bundle) pour éviter les conflits de sélection
+
+## ADR-055 : Role Templates Marketplace — Bundles dans les presets jobdomain
+
+- **Date** : 2026-02-16
+- **Contexte** : ADR-054 a introduit les bundles (regroupements métier de permissions) dans ModuleRegistry. Les presets de rôles par jobdomain (`default_roles` dans `JobdomainRegistry`) utilisaient encore des listes de permissions brutes. Le platform UI pour les presets de rôles (`/platform/jobdomains/{id}` tab "Default Roles") exposait des permissions individuelles sans l'abstraction capability.
+- **Décision** :
+  - `default_roles` supporte désormais `bundles` (array de bundle keys) en plus de `permissions` (array de permission keys). Lors du clonage (`JobdomainGate::assignToCompany()`), les bundles sont résolus en permissions via `ModuleRegistry::resolveBundles()`, puis fusionnés avec les permissions directes.
+  - `ModuleRegistry::resolveBundles(array $bundleKeys)` : résout une liste de bundle keys en permission keys uniques. `ModuleRegistry::allBundleKeys()` : retourne toutes les bundle keys valides.
+  - `JobdomainRegistry` : les rôles admin et dispatcher utilisent `bundles` (compacte, métier). Le viewer utilise `permissions` (fallback — les bundles view-only n'existent pas).
+  - Le platform UI (`/platform/jobdomains/{id}`) offre le même mode Simple/Advanced que la page Company Roles : Simple = checkboxes par capability bundle, Advanced = permissions individuelles.
+  - L'API `show()` retourne `module_bundles` (modules avec bundles résolus) pour alimenter le UI capability.
+  - La validation `validateDefaultRoles()` vérifie les bundle keys via `ModuleRegistry::allBundleKeys()` en plus des permission keys via `CompanyPermissionCatalog::keys()`.
+  - Le format stocké en DB : `{ key: { name, is_administrative?, bundles?: [...], permissions?: [...] } }`. Les deux champs sont optionnels et cumulatifs.
+- **Conséquences** :
+  - Les presets de rôles jobdomain utilisent le même vocabulaire capability que les rôles company
+  - Le platform admin configure les rôles presets en mode Simple (bundles) sans connaître les permissions techniques
+  - Backward compatible : les rôles existants avec `permissions` seules continuent de fonctionner
+  - Le clonage résout bundles + permissions → IDs au moment de l'assignation (pas de dépendance runtime aux bundles)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
