@@ -1063,6 +1063,22 @@ definePage({
   - Retry partiel : seuls les jobs échoués sont relancés (pas de full teardown)
   - Timeout visible après 8s avec option de retry
 
+## ADR-048 : Runtime v2 Hardening — Invariants + Stress Harness + Observability
+
+- **Date** : 2026-02-14
+- **Contexte** : Après l'audit critique de G1-G4 et les fixes F1-F5, le runtime v2 fonctionne correctement. Mais il manque des garanties formelles, un moyen de reproduire les scénarios de stress de manière déterministe, et une observabilité suffisante pour le debug en production.
+- **Décision** :
+  - **H1 — Invariants formels** : 14 invariants DEV-only (I1-I14) vérifiés aux points critiques du scheduler via `assertRuntime(snapshot, context)`. Métadonnées de run (`_runMeta`: requiredPhases, executedPhases) pour garantir que toutes les phases requises sont exécutées avant ready. Zero impact PROD (tree-shaken par `import.meta.env.DEV`).
+  - **H2 — Stress harness** : Module `devtools/runtimeStress.js` avec 5 scénarios (S1: 50 navigations rapides, S2: switches concurrents, S3: offline → error, S4: retryFailed → convergence, S5: teardown mid-boot). Fault injection via monkey-patching des store actions. Rapport JSON. Accessible via `window.__runtimeStress()` et bouton RuntimeDebugPanel.
+  - **H3 — Observabilité** : `runtime.getSnapshot()` retourne l'état complet JSON-sérialisable. `journal.toJSON()` pour export. RuntimeDebugPanel enrichi (copy snapshot, export JSON). AppShellGate DEV overlay enrichi (runId, last 3 events).
+- **Conséquences** :
+  - Les invariants attrapent les régressions immédiatement en DEV (throw + journal log)
+  - Le stress harness permet de reproduire et vérifier les scénarios adverses sans backend
+  - L'observabilité permet de capturer l'état exact du runtime pour les bug reports
+  - Aucune nouvelle dépendance NPM, zero impact bundle PROD
+  - Fichiers ajoutés : `invariants.js`, `devtools/runtimeStress.js`
+  - Fichiers modifiés : `scheduler.js`, `runtime.js`, `journal.js`, `RuntimeDebugPanel.vue`, `AppShellGate.vue`, `App.vue`
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
