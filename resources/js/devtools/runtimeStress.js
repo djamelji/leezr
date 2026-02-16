@@ -349,6 +349,10 @@ export async function runStressTests() {
   console.group('[stress] Runtime Stress Harness')
   console.log('Patching store actions with mocks...')
 
+  // Save current scope BEFORE teardown (teardown resets it to null)
+  const originalScope = runtime.scope
+    || (window.location.pathname.startsWith('/platform') ? 'platform' : 'company')
+
   // Clean slate
   runtime.teardown()
   runtime.clearJournal()
@@ -364,48 +368,36 @@ export async function runStressTests() {
     summary: null,
   }
 
-  try {
-    // S1: 50 rapid navigations
-    console.log('S1: 50 rapid navigations...')
-    const s1 = await s1_rapidNavigations(runtime)
-    report.scenarios.push(s1)
-    console.log(s1.pass ? '%c PASS %c S1' : '%c FAIL %c S1',
-      s1.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
-      '', ...(!s1.pass ? [s1.errors.join(', ')] : []))
+  // Run each scenario in isolation — invariant throws don't skip remaining tests
+  async function _run(label, fn) {
+    console.log(`${label}...`)
+    try {
+      const result = await fn()
+      report.scenarios.push(result)
+      console.log(result.pass ? `%c PASS %c ${label}` : `%c FAIL %c ${label}`,
+        result.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
+        '', ...(!result.pass ? [result.errors.join(', ')] : []))
+    }
+    catch (err) {
+      const result = { name: label, pass: false, errors: [err.message], finalPhase: runtime.phase }
+      report.scenarios.push(result)
+      console.log(`%c FAIL %c ${label}`, 'background:#f44336;color:white;padding:1px 4px', '', err.message)
+    }
+  }
 
-    // S2: concurrent switchCompany
-    console.log('S2: concurrent switchCompany...')
+  try {
+    await _run('S1: 50 rapid navigations', () => s1_rapidNavigations(runtime))
+
     runtime.teardown()
     await _delay(10)
-    const s2 = await s2_concurrentSwitch(runtime)
-    report.scenarios.push(s2)
-    console.log(s2.pass ? '%c PASS %c S2' : '%c FAIL %c S2',
-      s2.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
-      '', ...(!s2.pass ? [s2.errors.join(', ')] : []))
+    await _run('S2: concurrent switchCompany', () => s2_concurrentSwitch(runtime))
 
-    // S3: offline → error
-    console.log('S3: offline → error...')
-    const s3 = await s3_offline(runtime)
-    report.scenarios.push(s3)
-    console.log(s3.pass ? '%c PASS %c S3' : '%c FAIL %c S3',
-      s3.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
-      '', ...(!s3.pass ? [s3.errors.join(', ')] : []))
+    await _run('S3: offline → error', () => s3_offline(runtime))
 
-    // S4: retryFailed convergence (continues from S3)
-    console.log('S4: retryFailed convergence...')
-    const s4 = await s4_retryConvergence(runtime)
-    report.scenarios.push(s4)
-    console.log(s4.pass ? '%c PASS %c S4' : '%c FAIL %c S4',
-      s4.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
-      '', ...(!s4.pass ? [s4.errors.join(', ')] : []))
+    // S4 continues from S3's error state
+    await _run('S4: retryFailed convergence', () => s4_retryConvergence(runtime))
 
-    // S5: teardown during boot
-    console.log('S5: teardown during boot...')
-    const s5 = await s5_teardownDuringBoot(runtime)
-    report.scenarios.push(s5)
-    console.log(s5.pass ? '%c PASS %c S5' : '%c FAIL %c S5',
-      s5.pass ? 'background:#4caf50;color:white;padding:1px 4px' : 'background:#f44336;color:white;padding:1px 4px',
-      '', ...(!s5.pass ? [s5.errors.join(', ')] : []))
+    await _run('S5: teardown during boot', () => s5_teardownDuringBoot(runtime))
   }
   finally {
     // Capture final snapshot and journal
@@ -416,6 +408,9 @@ export async function runStressTests() {
     _unpatchAll()
     runtime.teardown()
     runtime.clearJournal()
+
+    // Re-boot with original scope so the page recovers
+    runtime.boot(originalScope)
 
     const passed = report.scenarios.filter(s => s.pass).length
     const total = report.scenarios.length

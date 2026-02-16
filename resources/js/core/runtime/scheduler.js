@@ -144,6 +144,9 @@ export function createScheduler(deps) {
 
     // Determine completed phase from active runner's resources
     const completedPhase = _activeRunner?.jobs[0]?.resource.phase
+    // Mark the retried phase as executed (it wasn't marked during the failed boot)
+    if (completedPhase) _markPhaseExecuted(completedPhase)
+
     const phaseOrder = ['auth', 'tenant', 'features']
     const startIdx = phaseOrder.indexOf(completedPhase)
     const remaining = phaseOrder.slice(startIdx + 1)
