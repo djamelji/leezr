@@ -5,6 +5,22 @@ import { cacheEntries } from './cache'
 const runtime = useRuntimeStore()
 const isOpen = ref(false)
 const cachedItems = ref([])
+const journalFilter = ref('')
+
+const filteredJournal = computed(() => {
+  const entries = runtime.journalEntries
+  const last20 = entries.slice(-20).reverse()
+
+  if (!journalFilter.value) return last20
+
+  return last20.filter(e => e.type.includes(journalFilter.value))
+})
+
+const journalTypes = computed(() => {
+  const types = new Set(runtime.journalEntries.map(e => e.type))
+
+  return ['', ...types]
+})
 
 // Toggle with Ctrl+Shift+D
 const handleKeydown = e => {
@@ -149,23 +165,51 @@ const formatAge = ms => {
             </div>
           </div>
 
-          <!-- Broadcast log -->
-          <div v-if="runtime._broadcastLog.length">
-            <div class="text-caption text-disabled mb-1">
-              Broadcast ({{ runtime._broadcastLog.length }})
+          <!-- Event Journal -->
+          <div v-if="runtime.journalEntries.length">
+            <div class="d-flex align-center justify-space-between mb-1">
+              <span class="text-caption text-disabled">Journal ({{ runtime.journalEntries.length }})</span>
+              <VBtn
+                variant="text"
+                size="x-small"
+                @click="runtime.clearJournal()"
+              >
+                Clear
+              </VBtn>
             </div>
+            <select
+              v-model="journalFilter"
+              class="text-caption mb-2"
+              style="width: 100%; background: transparent; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; padding: 2px 4px;"
+            >
+              <option
+                v-for="t in journalTypes"
+                :key="t"
+                :value="t"
+              >
+                {{ t || 'All events' }}
+              </option>
+            </select>
             <div
-              v-for="(entry, idx) in runtime._broadcastLog.slice(-10).reverse()"
+              v-for="(entry, idx) in filteredJournal"
               :key="idx"
               class="text-caption mb-1"
             >
               <VIcon
-                icon="tabler-broadcast"
+                :icon="entry.type.startsWith('phase') ? 'tabler-arrow-right' : entry.type.startsWith('broadcast') ? 'tabler-broadcast' : 'tabler-point'"
                 size="12"
                 class="me-1"
               />
-              {{ entry.event }}
-              <span class="text-disabled">{{ formatAge(Date.now() - entry.ts) }} ago</span>
+              <span class="font-weight-medium">{{ entry.type }}</span>
+              <span
+                v-if="entry.data.from && entry.data.to"
+                class="text-disabled"
+              > {{ entry.data.from }}→{{ entry.data.to }}</span>
+              <span
+                v-else-if="entry.data.event"
+                class="text-disabled"
+              > {{ entry.data.event }}</span>
+              <span class="text-disabled"> {{ formatAge(Date.now() - entry.ts) }}</span>
             </div>
           </div>
         </div>

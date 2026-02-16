@@ -13,10 +13,15 @@ import { companyResources, platformResources } from './resources'
 import { setActiveGroup, abortGroup, abortAll } from './abortRegistry'
 import { cacheGet, cacheSet, cacheRemove, cacheClear } from './cache'
 import { initBroadcast } from './broadcast'
+import { transition } from './stateMachine'
+import { createJournal } from './journal'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
 import { useModuleStore } from '@/core/stores/module'
+
+// Module-level journal (non-reactive — accessed via getter + version counter)
+const _journal = createJournal(200)
 
 // Store factory map — keyed by store id from resource declarations
 const storeFactories = {
@@ -50,11 +55,14 @@ export const useRuntimeStore = defineStore('runtime', {
     /** @type {number} */
     _bootedAt: 0,
 
+    /** @type {number} Boot generation — incremented on each boot/teardown to detect stale boots */
+    _bootId: 0,
+
     /** @type {boolean} */
     _broadcastInitialized: false,
 
-    /** @type {Array<{ event: string, payload: object, ts: number }>} */
-    _broadcastLog: [],
+    /** @type {number} Bumped on each journal.log() to trigger reactive reads */
+    _journalVersion: 0,
   }),
 
   getters: {
@@ -64,6 +72,13 @@ export const useRuntimeStore = defineStore('runtime', {
     isReady: state => state._phase === 'ready',
     isBooting: state => ['cold', 'auth', 'tenant', 'features'].includes(state._phase),
     resourceStatus: state => state._resources,
+
+    /** Read journal entries (touch _journalVersion for reactivity). */
+    journalEntries() {
+      // eslint-disable-next-line no-unused-expressions
+      this._journalVersion // reactive dependency
+      return _journal.entries()
+    },
 
     phaseMessage: state => {
       const messages = {
@@ -89,6 +104,9 @@ export const useRuntimeStore = defineStore('runtime', {
      */
     async boot(scope) {
       if (this._phase !== 'cold') return
+
+      const bootId = ++this._bootId
+
       this._scope = scope
 
       // Initialize broadcast (once per app lifecycle)
@@ -96,7 +114,7 @@ export const useRuntimeStore = defineStore('runtime', {
 
       // Public routes need no hydration
       if (scope === 'public') {
-        this._phase = 'ready'
+        this._transition('ready')
 
         return
       }
@@ -104,9 +122,10 @@ export const useRuntimeStore = defineStore('runtime', {
       const resources = scope === 'platform' ? platformResources : companyResources
 
       // Phase: auth
-      this._phase = 'auth'
+      this._transition('auth')
       const authResources = resources.filter(r => r.phase === 'auth')
       await this._resolveResources(authResources)
+      if (this._bootId !== bootId) return // Superseded by teardown + new boot
       if (this._phase === 'error') return
 
       // Check auth — if not logged in, stop (guard will redirect)
@@ -117,7 +136,7 @@ export const useRuntimeStore = defineStore('runtime', {
       else if (scope === 'platform') {
         const platformAuth = resolveStore('platformAuth')
         if (!platformAuth.isLoggedIn) {
-          this._phase = 'ready' // Let the guard handle redirect
+          this._transition('ready') // Let the guard handle redirect
 
           return
         }
@@ -125,21 +144,26 @@ export const useRuntimeStore = defineStore('runtime', {
 
       // Phase: tenant (company scope only)
       if (scope === 'company') {
-        this._phase = 'tenant'
+        if (this._bootId !== bootId) return
+        this._transition('tenant')
         const tenantResources = resources.filter(r => r.phase === 'tenant')
         await this._resolveResources(tenantResources)
+        if (this._bootId !== bootId) return
         if (this._phase === 'error') return
       }
 
       // Phase: features (company scope only)
       if (scope === 'company') {
-        this._phase = 'features'
+        if (this._bootId !== bootId) return
+        this._transition('features')
         const featureResources = resources.filter(r => r.phase === 'features')
         await this._resolveResources(featureResources)
+        if (this._bootId !== bootId) return
         if (this._phase === 'error') return
       }
 
-      this._phase = 'ready'
+      if (this._bootId !== bootId) return
+      this._transition('ready')
       this._bootedAt = Date.now()
     },
 
@@ -171,7 +195,9 @@ export const useRuntimeStore = defineStore('runtime', {
       const tenantResources = companyResources.filter(r => r.phase === 'tenant')
       const featureResources = companyResources.filter(r => r.phase === 'features')
 
-      this._phase = 'tenant'
+      const bootId = ++this._bootId
+
+      this._transition('tenant')
 
       // Reset resource statuses for tenant/features
       for (const r of [...tenantResources, ...featureResources]) {
@@ -179,13 +205,15 @@ export const useRuntimeStore = defineStore('runtime', {
       }
 
       await this._resolveResources(tenantResources)
+      if (this._bootId !== bootId) return
       if (this._phase === 'error') return
 
-      this._phase = 'features'
+      this._transition('features')
       await this._resolveResources(featureResources)
+      if (this._bootId !== bootId) return
       if (this._phase === 'error') return
 
-      this._phase = 'ready'
+      this._transition('ready')
     },
 
     // ─── Teardown ──────────────────────────────────────────
@@ -195,15 +223,22 @@ export const useRuntimeStore = defineStore('runtime', {
      * Called on logout or before scope switch.
      */
     teardown() {
+      const prevScope = this._scope
+
       abortAll()
       cacheClear()
       setActiveGroup(null)
 
-      this._phase = 'cold'
+      this._bootId++ // Invalidate any in-progress boot
+      if (this._phase !== 'cold') {
+        this._transition('cold')
+      }
       this._scope = null
       this._resources = {}
       this._error = null
       this._bootedAt = 0
+      _journal.log('run:teardown', { scope: prevScope })
+      this._journalVersion++
     },
 
     // ─── Broadcast handling ────────────────────────────────
@@ -214,13 +249,8 @@ export const useRuntimeStore = defineStore('runtime', {
      * @param {Object} payload
      */
     handleBroadcast(event, payload) {
-      // Dev log
-      if (import.meta.env.DEV) {
-        this._broadcastLog.push({ event, payload, ts: Date.now() })
-        if (this._broadcastLog.length > 50) {
-          this._broadcastLog = this._broadcastLog.slice(-50)
-        }
-      }
+      _journal.log('broadcast:in', { event, payload })
+      this._journalVersion++
 
       switch (event) {
       case 'logout':
@@ -270,6 +300,30 @@ export const useRuntimeStore = defineStore('runtime', {
 
     // ─── Internal ──────────────────────────────────────────
 
+    /**
+     * Validated phase transition with journal logging.
+     * @param {string} target - Target phase
+     * @returns {string} The resulting phase
+     */
+    _transition(target) {
+      const from = this._phase
+      const result = transition(from, target)
+
+      if (result !== from) {
+        this._phase = result
+        _journal.log('phase:transition', { from, to: result })
+        this._journalVersion++
+      }
+
+      return result
+    },
+
+    /** Clear journal entries. */
+    clearJournal() {
+      _journal.clear()
+      this._journalVersion++
+    },
+
     _initBroadcast() {
       if (this._broadcastInitialized) return
       this._broadcastInitialized = true
@@ -309,8 +363,8 @@ export const useRuntimeStore = defineStore('runtime', {
           for (const key of pending) {
             const r = resources.find(res => res.key === key)
             if (r?.critical) {
-              this._phase = 'error'
               this._error = `Unable to load required data (${r.key}).`
+              this._transition('error')
 
               return
             }
@@ -406,8 +460,8 @@ export const useRuntimeStore = defineStore('runtime', {
         this._resources[resource.key] = 'error'
 
         if (resource.critical) {
-          this._phase = 'error'
           this._error = `Failed to load ${resource.key}.`
+          this._transition('error')
         }
       }
     },

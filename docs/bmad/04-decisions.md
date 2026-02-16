@@ -830,4 +830,187 @@ definePage({
 
 ---
 
+## ADR-045a : Auto-import Governance — scopes explicites
+
+- **Date** : 2026-02-14
+- **Contexte** : `unplugin-vue-components` scanne 3 répertoires seulement (`@core/components`, `views/demos`, `components`). Les composants de `layouts/components/` (12 fichiers), `company/components/` (1), `core/components/` (1) ne sont PAS auto-importés. Aucune documentation. Incident AppShellGate (import manquant silencieux).
+- **Décision** : Formaliser les deux régimes d'import :
+  - **Auto-importés** (unplugin-vue-components) : `@core/components/`, `views/demos/`, `components/`
+  - **Import explicite obligatoire** : `layouts/components/`, `company/components/`, `core/components/`
+  - Rationale : les composants structurels (layouts) et les composants scopés (company, core) doivent déclarer explicitement leurs dépendances pour éviter les erreurs silencieuses
+  - Un script CI `pnpm check:imports` vérifie que tout usage d'un composant à import explicite est accompagné d'un import dans le même fichier
+- **Conséquences** : Règle ajoutée dans `07-dev-rules.md`. Script `scripts/check-explicit-imports.sh` ajouté. Tout composant hors des 3 dirs auto-import nécessite un import explicite.
+
+## ADR-045b : Router Base — assets base vs app base
+
+- **Date** : 2026-02-14
+- **Contexte** : `laravel-vite-plugin` set `base: '/build/'` au build. `import.meta.env.BASE_URL` vaut `/build/` en prod. `createWebHistory(import.meta.env.BASE_URL)` crée le routeur avec base `/build/` — c'est faux. `/build/` = base des assets Vite (JS, CSS, images), PAS base du routeur SPA.
+- **Décision** :
+  - **Assets base** = `/build/` (géré par laravel-vite-plugin, ne pas toucher)
+  - **App base (routeur)** = `/` (sauf sous-path explicite)
+  - **Interdit** d'utiliser `import.meta.env.BASE_URL` pour `createWebHistory()` dans un projet laravel-vite-plugin — cette variable contient la base assets, pas la base app
+  - Le catch-all Laravel (`routes/web.php`) sert le shell SPA à toutes les URLs non-API
+- **Conséquences** : Fix 1 ligne dans `resources/js/plugins/1.router/index.js`. Aucun impact sur le build ou les assets.
+
+## ADR-045c : Version Discipline — dual env vars (frontend + backend)
+
+- **Date** : 2026-02-14
+- **Contexte** : `cache.js:10` lit `VITE_APP_VERSION` mais la variable n'existe nulle part. `CACHE_VERSION` vaut toujours `'__dev__'`. Le runtime cache ne s'invalide jamais par version.
+- **Décision** : Séparer frontend et backend versioning :
+  - `VITE_APP_VERSION` = version frontend (injecté à build-time par Vite, lu par `cache.js`)
+  - `APP_BUILD_VERSION` = version backend (lu par Laravel à runtime, exposé via middleware X-Build-Version)
+  - Même valeur (git short hash), injectée par le deploy script : `$(git rev-parse --short HEAD)`
+  - `VITE_APP_VERSION` est build-time (figé dans le bundle JS)
+  - `APP_BUILD_VERSION` est runtime (lu par `config/app.php`)
+- **Conséquences** : `.env.production.example` mis à jour. `config/app.php` expose `build_version`. Le deploy script doit injecter les deux variables.
+
+## ADR-045d : Chunk Resilience — auto-reload on stale chunks
+
+- **Date** : 2026-02-14
+- **Contexte** : Après un deploy, les anciens chunks n'existent plus. `import()` échoue → page blanche. Aucun handler.
+- **Décision** : Intercepter les erreurs de chunk via 2 canaux (`vite:preloadError` + `unhandledrejection` ChunkLoadError) avec logique anti-boucle :
+  - 1er échec : reload silencieux (sessionStorage timestamp)
+  - 2ème échec dans les 10s : overlay utilisateur "Application mise à jour — Veuillez rafraîchir"
+  - Code placé dans `main.js` avant `createApp`
+- **Conséquences** : ~25 lignes dans `main.js`. Réversible en supprimant le bloc. Aucun impact sur le build.
+
+## ADR-045e : Version Handshake — passive header detection
+
+- **Date** : 2026-02-14
+- **Contexte** : Le frontend ne détecte pas un deploy backend mid-session. Risque de mismatch frontend/backend silencieux.
+- **Décision** : Header HTTP passif (zero polling) :
+  - Middleware `AddBuildVersion` ajoute `X-Build-Version` à toutes les réponses API
+  - Les intercepteurs `onResponse` dans `api.js` et `platformApi.js` comparent la version serveur avec `VITE_APP_VERSION`
+  - En cas de mismatch : flag `sessionStorage.lzr:version-mismatch`
+  - Le router guard détecte le flag et reload la page à la prochaine navigation
+- **Conséquences** : Le frontend se met à jour automatiquement après un deploy backend, sans polling. Réversible en supprimant le middleware + hooks.
+
+---
+
+## ADR-046 : Enterprise Runtime Hardening (Backlog)
+
+- **Date** : 2026-02-14
+- **Statut** : **Backlog** — documenté, NON implémenté
+- **Priorité** : Low
+- **Risque** : Faible
+- **Impact** : Observabilité / Robustesse production
+- **Prérequis** : ADR-045 (Production Hardening) implémenté
+
+- **Contexte** : Le runtime SPA est désormais robuste (versioning ADR-045c, handshake ADR-045e, chunk resilience ADR-045d). Il manque 4 briques d'observabilité et de discipline production pour atteindre un niveau enterprise-grade. Ce lot est optionnel, non urgent, mais stratégique pour le passage à l'échelle.
+
+- **Décision** : Créer un LOT F composé de 4 sous-lots indépendants, chacun déployable et réversible séparément :
+
+  ### F1 — API Cache Discipline
+
+  **Problème** : Les endpoints `/api/*` ne forcent pas explicitement la non-mise en cache côté navigateur/proxy. Un proxy ou CDN mal configuré pourrait cacher des réponses API authentifiées.
+
+  **Solution future** :
+  - Middleware `ApiNoCacheHeaders` ajoutant `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` sur toutes les routes API
+  - Enregistrement dans le groupe middleware `api` (comme `AddBuildVersion`)
+
+  **Impact** : Zéro impact métier. Protection contre proxy/CDN mal configuré.
+
+  **Fichiers estimés** :
+  - `app/Http/Middleware/ApiNoCacheHeaders.php` (nouveau, ~10 lignes)
+  - `bootstrap/app.php` (1 ligne — appendToGroup)
+
+  ---
+
+  ### F2 — Global Error Monitoring
+
+  **Problème** : Aucune centralisation des erreurs runtime JS. Les erreurs silencieuses (chunk failures, API errors, mismatch) ne sont pas détectées côté serveur.
+
+  **Solution future** :
+  - Hooks globaux `window.onerror` + `window.addEventListener('unhandledrejection')` (complémentaires au handler chunk ADR-045d)
+  - Envoi d'un payload minimal vers `POST /api/runtime-error` (endpoint dédié, non authentifié, rate-limited)
+  - Payload : `{ build_version, route, message, stack?, user_agent, timestamp }`
+  - Backend : log structuré (`Log::warning`) — pas de table dédiée au départ
+  - Rate limiting strict : `throttle:10,1` sur l'endpoint
+
+  **Impact** : Détection proactive des erreurs chunk, API, mismatch. Traçabilité des incidents runtime.
+
+  **Fichiers estimés** :
+  - `resources/js/utils/errorReporter.js` (nouveau, ~30 lignes)
+  - `resources/js/main.js` (import + init)
+  - `app/Http/Controllers/RuntimeErrorController.php` (nouveau, ~20 lignes)
+  - `routes/api.php` (1 route)
+
+  ---
+
+  ### F3 — Chunk Failure Logging
+
+  **Problème** : Le handler chunk (ADR-045d) reload silencieusement ou affiche un overlay, mais ne trace pas l'événement. Impossible de savoir si un deploy a causé des chunk failures massifs.
+
+  **Solution future** :
+  - Avant le reload (dans `handleChunkError`), envoyer un beacon vers `POST /api/runtime-event`
+  - Payload : `{ type: 'chunk_failure', build_version, asset_url?, route, timestamp }`
+  - Utiliser `navigator.sendBeacon()` (fire-and-forget, survit au reload)
+  - Backend : log structuré — pas de table dédiée
+  - Dépend de F2 pour l'endpoint (ou endpoint séparé si F2 non implémenté)
+
+  **Impact** : Traçabilité des déploiements problématiques. Dashboarding futur possible.
+
+  **Fichiers estimés** :
+  - `resources/js/main.js` (ajout `sendBeacon` dans `handleChunkError`)
+  - `app/Http/Controllers/RuntimeEventController.php` (nouveau si séparé de F2)
+  - `routes/api.php` (1 route si séparé)
+
+  ---
+
+  ### F4 — Health Endpoint
+
+  **Problème** : Aucun endpoint de health check pour le monitoring externe, la vérification CI/CD, ou le debug mismatch en production.
+
+  **Solution future** :
+  - `GET /health` (hors groupe `api`, pas d'auth) retournant :
+    ```json
+    {
+      "status": "ok",
+      "build_version": "abc1234",
+      "environment": "production",
+      "timestamp": "2026-02-14T12:00:00Z"
+    }
+    ```
+  - Laravel fournit déjà `/up` (configuré dans `bootstrap/app.php`) mais il ne retourne que HTTP 200 sans metadata
+  - Le health endpoint enrichi expose `config('app.build_version')` et `config('app.env')`
+  - Pas de check DB/Redis dans la réponse (simplicité, vitesse) — extensible plus tard
+
+  **Usages** :
+  - Monitoring externe (UptimeRobot, Pingdom)
+  - Vérification post-deploy dans le deploy script
+  - Debug mismatch : comparer `X-Build-Version` header vs `/health` response
+  - CI/CD : smoke test après deploy
+
+  **Fichiers estimés** :
+  - `routes/web.php` (1 route) ou controller dédié
+  - Optionnel : `app/Http/Controllers/HealthController.php` (~10 lignes)
+
+- **Conséquences** :
+  - Chaque sous-lot (F1-F4) est indépendant et déployable séparément
+  - F2 et F3 partagent un pattern commun (endpoint runtime events) — à factoriser si les deux sont implémentés
+  - Aucun sous-lot ne modifie le comportement métier existant
+  - Aucun sous-lot ne nécessite de migration DB
+  - L'ordre d'implémentation recommandé : F4 (le plus simple) → F1 → F3 → F2 (le plus complexe)
+  - Ce lot ne sera implémenté que lorsqu'un besoin concret d'observabilité se manifestera (incident en prod, scaling, onboarding monitoring)
+
+---
+
+## ADR-047a : Runtime State Machine + Event Journal
+
+- **Date** : 2026-02-14
+- **Contexte** : Les transitions de phase du runtime SPA étaient des assignments directs (`this._phase = 'auth'`) sans validation. Aucun journal d'événements pour le debug.
+- **Décision** :
+  - `stateMachine.js` — table de transitions autorisées (`cold→auth`, `auth→tenant`, etc.). Toute transition invalide throw en DEV, log + no-op en PROD.
+  - `journal.js` — ring buffer (200 entrées) horodaté. Types : `phase:transition`, `run:teardown`, `broadcast:in`, etc.
+  - `runtime.js` — toutes les mutations de `_phase` passent par `_transition(target)` qui valide via la state machine et log dans le journal.
+  - `_broadcastLog` (ancien) remplacé par le journal.
+  - `RuntimeDebugPanel.vue` — section "Event Journal" avec filtre par type.
+- **Conséquences** :
+  - Zero changement de comportement — même séquence de boot, même API publique
+  - Les transitions invalides sont détectées immédiatement en dev
+  - Le journal centralise tous les événements runtime pour le debug
+  - Foundation pour les LOTs G2-G4 (job system, scheduler, recovery UX)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
