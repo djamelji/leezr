@@ -209,9 +209,9 @@ async function s2_concurrentSwitch(runtime) {
     return { name: 'S2: concurrent switchCompany', pass: false, errors, finalPhase: runtime.phase }
   }
 
-  // Fire 3 rapid switches
-  runtime.switchCompany(100) // fire
-  runtime.switchCompany(200) // fire — cancels 100
+  // Fire 3 rapid switches — catch stale rejections
+  runtime.switchCompany(100).catch(() => {}) // fire
+  runtime.switchCompany(200).catch(() => {}) // fire — cancels 100
   await runtime.switchCompany(300) // await last one
 
   try {

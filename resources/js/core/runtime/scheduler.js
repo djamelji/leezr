@@ -365,7 +365,10 @@ export function createScheduler(deps) {
       const tenantResources = companyResources.filter(r => r.phase === 'tenant')
       const featureResources = companyResources.filter(r => r.phase === 'features')
 
-      deps.transition('tenant')
+      // Transition to tenant — skip if already there (concurrent switch)
+      if (deps.getPhase() !== 'tenant') {
+        deps.transition('tenant')
+      }
 
       const tenantResult = await _runJobs(tenantResources, runId)
       if (_isStale(runId)) return

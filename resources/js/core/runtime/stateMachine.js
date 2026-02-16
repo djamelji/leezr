@@ -18,6 +18,7 @@ const TRANSITIONS = new Set([
   'features→ready',
   'features→error',
   'features→cold',
+  'features→tenant',
   'ready→cold',
   'ready→tenant',
   'error→cold',
