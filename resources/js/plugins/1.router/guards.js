@@ -103,7 +103,7 @@ export const setupGuards = router => {
       }
 
       if (auth.roleLevel === 'operational') {
-        return '/not-found'
+        return { name: 'company-forbidden' }
       }
     }
 
