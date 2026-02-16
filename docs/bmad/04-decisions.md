@@ -1303,22 +1303,24 @@ definePage({
   - Pas de dépendance sur `to.meta` (robuste face aux edge cases de `definePage` + `unplugin-vue-router`)
   - Le Set `STRUCTURE_ROUTES` est facile à auditer et à étendre
 
-## ADR-060 : Forbidden Surface UX — 403 Inside Layout (R3.8.3)
+## ADR-060 : Forbidden Surface UX — 403 Inside Layout + Smart Fallback (R3.8.3)
 
 - **Date** : 2026-02-16
-- **Contexte** : R3.8.2b redirige un Driver vers `/not-found` (page 404 en layout blank). Problèmes : (1) le Driver perd le layout company (navigation invisible) — il semble déconnecté, (2) un 404 est sémantiquement incorrect (la page existe, l'accès est interdit), (3) pas de parcours retour fluide.
+- **Contexte** : R3.8.2b redirige un Driver vers `/not-found` (page 404 en layout blank). Problèmes : (1) le Driver perd le layout company (navigation invisible) — il semble déconnecté, (2) un 404 est sémantiquement incorrect (la page existe, l'accès est interdit), (3) pas de parcours retour fluide, (4) la redirection hardcodée vers `shipments` n'est pas agnostique du jobdomain/modules actifs.
 - **Décision** :
   - Créer `/company/forbidden` — page 403 **dans le layout company** (navigation visible).
   - Contenu : icône lock, titre "Access restricted", texte "This section is reserved for management roles."
-  - Auto-redirect après 5 secondes vers une page autorisée (shipments si permission `shipments.view`, sinon dashboard `/`).
+  - **Fallback jobdomain-agnostic** : la route de redirection est le premier item navigable de la nav filtrée (via `useCompanyNav().firstAccessibleRoute`). Ne jamais hardcoder un module ou une permission.
+  - Factoriser la logique de navigation dans `composables/useCompanyNav.js` — partagé entre `DefaultLayoutWithVerticalNav.vue` et `forbidden.vue` (source unique de vérité).
+  - Auto-redirect après 5 secondes. Boutons "Go back" (router.back()) + "Go to dashboard" (firstAccessibleRoute).
   - Le guard router (`STRUCTURE_ROUTES`) redirige vers `{ name: 'company-forbidden' }` au lieu de `/not-found`.
-  - La page forbidden utilise `meta: { surface: 'operations' }` — accessible à tous les rôles.
+  - La page forbidden a `meta: { surface: 'structure' }` (documentation) mais n'est PAS dans `STRUCTURE_ROUTES` — accessible à tous les rôles.
   - Le middleware backend reste intact — la sécurité réelle est côté serveur.
 - **Conséquences** :
   - Un Driver qui tape `/company/members` voit une page 403 claire dans le layout company
   - La navigation reste visible — le Driver comprend qu'il est connecté mais n'a pas accès
-  - Auto-redirect fluide vers une page de son scope après 5s
-  - Bouton "Go now" pour skip le countdown
+  - Auto-redirect agnostique vers la première page visible de sa nav (fonctionne quel que soit le jobdomain/modules actifs)
+  - La logique nav n'est plus dupliquée entre le layout et la page forbidden
 
 ---
 

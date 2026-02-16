@@ -366,6 +366,7 @@
     "getXsrfToken": true,
     "refreshCsrf": true,
     "safeRedirect": true,
-    "usePasswordStrength": true
+    "usePasswordStrength": true,
+    "useCompanyNav": true
   }
 }

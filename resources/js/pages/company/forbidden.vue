@@ -1,26 +1,20 @@
 <script setup>
-definePage({ meta: { surface: 'operations' } })
+definePage({ meta: { surface: 'structure' } })
 
-import { useAuthStore } from '@/core/stores/auth'
+import { useCompanyNav } from '@/composables/useCompanyNav'
 
 const router = useRouter()
-const auth = useAuthStore()
+const { firstAccessibleRoute } = useCompanyNav()
 
 const countdown = ref(5)
 let timer = null
-
-const redirectTarget = computed(() => {
-  if (auth.hasPermission('shipments.view')) return '/company/shipments'
-
-  return '/'
-})
 
 onMounted(() => {
   timer = setInterval(() => {
     countdown.value--
     if (countdown.value <= 0) {
       clearInterval(timer)
-      router.replace(redirectTarget.value)
+      router.replace(firstAccessibleRoute.value)
     }
   }, 1000)
 })
@@ -67,13 +61,18 @@ onUnmounted(() => {
           Redirecting in {{ countdown }}s...
         </VCardText>
 
-        <VCardActions class="justify-center">
+        <VCardActions class="justify-center gap-2">
+          <VBtn
+            variant="tonal"
+            @click="router.back()"
+          >
+            Go back
+          </VBtn>
           <VBtn
             color="primary"
-            variant="tonal"
-            :to="redirectTarget"
+            :to="firstAccessibleRoute"
           >
-            Go now
+            Go to dashboard
           </VBtn>
         </VCardActions>
       </VCard>
