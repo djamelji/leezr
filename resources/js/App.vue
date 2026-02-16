@@ -22,6 +22,11 @@ const { state: toastState } = useAppToast()
 const RuntimeDebugPanel = import.meta.env.DEV
   ? defineAsyncComponent(() => import('@/core/runtime/RuntimeDebugPanel.vue'))
   : null
+
+// Dev-only stress harness (window.__runtimeStress)
+if (import.meta.env.DEV) {
+  import('@/devtools/runtimeStress')
+}
 </script>
 
 <template>

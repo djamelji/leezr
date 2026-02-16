@@ -6,6 +6,25 @@ const runtime = useRuntimeStore()
 const isOpen = ref(false)
 const cachedItems = ref([])
 const journalFilter = ref('')
+const stressRunning = ref(false)
+const stressResult = ref(null)
+
+async function runStress() {
+  if (stressRunning.value) return
+  stressRunning.value = true
+  stressResult.value = null
+
+  try {
+    const { runStressTests } = await import('@/devtools/runtimeStress')
+    stressResult.value = await runStressTests()
+  }
+  catch (err) {
+    stressResult.value = { summary: { allPass: false }, error: err.message }
+  }
+  finally {
+    stressRunning.value = false
+  }
+}
 
 const filteredJournal = computed(() => {
   const entries = runtime.journalEntries
@@ -210,6 +229,39 @@ const formatAge = ms => {
                 class="text-disabled"
               > {{ entry.data.event }}</span>
               <span class="text-disabled"> {{ formatAge(Date.now() - entry.ts) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stress Tests -->
+        <div class="pa-3 border-t">
+          <div class="d-flex align-center justify-space-between mb-1">
+            <span class="text-caption text-disabled">Stress Harness</span>
+            <VBtn
+              size="x-small"
+              variant="tonal"
+              :color="stressResult?.summary?.allPass ? 'success' : stressResult ? 'error' : 'primary'"
+              :loading="stressRunning"
+              @click="runStress"
+            >
+              Run Stress
+            </VBtn>
+          </div>
+          <div
+            v-if="stressResult?.scenarios"
+            class="mt-1"
+          >
+            <div
+              v-for="s in stressResult.scenarios"
+              :key="s.name"
+              class="d-flex align-center gap-2 mb-1"
+            >
+              <VIcon
+                :icon="s.pass ? 'tabler-check' : 'tabler-x'"
+                :color="s.pass ? 'success' : 'error'"
+                size="14"
+              />
+              <span class="text-caption">{{ s.name }}</span>
             </div>
           </div>
         </div>
