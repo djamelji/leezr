@@ -1229,6 +1229,24 @@ definePage({
   - Backward compatible : les rôles existants avec `permissions` seules continuent de fonctionner
   - Le clonage résout bundles + permissions → IDs au moment de l'assignation (pas de dépendance runtime aux bundles)
 
+## ADR-056 : Logistique Roles Completeness + Clone Role UX
+
+- **Date** : 2026-02-16
+- **Contexte** : Le jobdomain logistique n'avait que 2 rôles (manager + dispatcher) qui ne reflétaient pas les vrais métiers terrain. Le dispatcher était Operational alors qu'il crée des livreurs et attribue des tâches — c'est Management. Il manquait les rôles Driver et Operations Manager. Côté Company, créer un rôle from scratch est lourd : les utilisateurs veulent souvent un rôle dérivé ("Livreur Junior", "Dispatcher Senior").
+- **Décision** :
+  - **4 rôles métier logistique** (suppression définitive du viewer) :
+    - `manager` (Management) — tous les 6 bundles, full control
+    - `dispatcher` (Management) — team_access + team_management + company_info + shipments.operations. Crée des livreurs, attribue des tâches.
+    - `driver` (Operational) — team_access + company_info + permissions directes [shipments.view, shipments.manage_status]. Le bundle shipments.operations inclut `create` qu'un driver ne devrait pas avoir → fallback permissions.
+    - `ops_manager` (Management) — team_access + company_info + shipments.operations + shipments.administration. Gère la config des expéditions sans gérer l'équipe.
+  - **Clone Role UX** : bouton "Clone" dans la colonne Actions de `/company/roles`. Clone ouvre le drawer en mode création pré-rempli (nom = "{original} Copy", même level, mêmes permissions). Utilise le POST existant — aucune nouvelle route.
+- **Conséquences** :
+  - Les rôles logistique sont compréhensibles par un patron de société de transport
+  - Le dispatcher est Management car il gère l'équipe (invite + manage members)
+  - Le driver utilise le fallback `permissions` pour éviter le bundle `shipments.operations` (trop large)
+  - Le clone accélère la personnalisation : 2 clics au lieu de recréer from scratch
+  - Aucune migration, aucune route nouvelle, aucun impact test
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

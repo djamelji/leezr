@@ -138,7 +138,7 @@ const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Level', key: 'level', width: '140px', sortable: false },
   { title: 'Members', key: 'memberships_count', align: 'center', width: '100px' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '150px', sortable: false },
+  { title: 'Actions', key: 'actions', align: 'center', width: '180px', sortable: false },
 ]
 
 // ─── Drawer actions ─────────────────────────────────
@@ -155,6 +155,18 @@ const openEditDrawer = role => {
   editingRole.value = role
   drawerForm.value = {
     name: role.name,
+    is_administrative: role.is_administrative,
+    permissions: role.permissions?.map(p => p.id) || [],
+  }
+  isAdvancedMode.value = false
+  isDrawerOpen.value = true
+}
+
+const cloneRole = role => {
+  isEditMode.value = false
+  editingRole.value = null
+  drawerForm.value = {
+    name: `${role.name} Copy`,
     is_administrative: role.is_administrative,
     permissions: role.permissions?.map(p => p.id) || [],
   }
@@ -305,6 +317,27 @@ const deleteRole = async role => {
               @click="openEditDrawer(item)"
             >
               <VIcon icon="tabler-pencil" />
+              <VTooltip
+                activator="parent"
+                location="top"
+              >
+                Edit
+              </VTooltip>
+            </VBtn>
+            <VBtn
+              icon
+              variant="text"
+              size="small"
+              color="default"
+              @click="cloneRole(item)"
+            >
+              <VIcon icon="tabler-copy" />
+              <VTooltip
+                activator="parent"
+                location="top"
+              >
+                Clone
+              </VTooltip>
             </VBtn>
             <VBtn
               v-if="!item.is_system"
