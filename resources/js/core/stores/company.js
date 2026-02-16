@@ -10,6 +10,7 @@ export const useCompanyStore = defineStore('company', {
     _customFieldDefinitions: [],
     _roles: [],
     _permissionCatalog: [],
+    _permissionModules: [],
   }),
 
   getters: {
@@ -20,6 +21,7 @@ export const useCompanyStore = defineStore('company', {
     customFieldDefinitions: state => state._customFieldDefinitions,
     roles: state => state._roles,
     permissionCatalog: state => state._permissionCatalog,
+    permissionModules: state => state._permissionModules,
   },
 
   actions: {
@@ -194,6 +196,7 @@ export const useCompanyStore = defineStore('company', {
       const data = await $api('/company/permissions')
 
       this._permissionCatalog = data.permissions
+      this._permissionModules = data.modules || []
     },
 
     async createCompanyRole(payload) {

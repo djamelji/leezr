@@ -17,6 +17,7 @@ const isEditMode = ref(false)
 const editingRole = ref(null)
 const drawerForm = ref({ name: '', is_administrative: false, permissions: [] })
 const drawerLoading = ref(false)
+const isAdvancedMode = ref(false)
 
 // Guard: owner-only
 onMounted(async () => {
@@ -37,8 +38,51 @@ onMounted(async () => {
   }
 })
 
-// ─── Permission groups for drawer ───────────────────
-// Group by core vs module, with descriptions
+// ─── Simple mode: Capability bundles per module ─────
+const capabilityModules = computed(() => {
+  const modules = companyStore.permissionModules
+  const isManagement = drawerForm.value.is_administrative
+
+  return modules
+    .filter(m => m.module_active)
+    .map(mod => ({
+      ...mod,
+      capabilities: mod.capabilities
+        .filter(cap => isManagement || !cap.is_admin),
+    }))
+    .filter(m => m.capabilities.length > 0)
+})
+
+const coreModules = computed(() => capabilityModules.value.filter(m => m.is_core))
+const businessModules = computed(() => capabilityModules.value.filter(m => !m.is_core))
+
+// Capability state: 'checked' | 'unchecked' | 'custom'
+const getCapabilityState = cap => {
+  const selected = new Set(drawerForm.value.permissions)
+  const allChecked = cap.permission_ids.every(id => selected.has(id))
+  const noneChecked = cap.permission_ids.every(id => !selected.has(id))
+
+  if (allChecked) return 'checked'
+  if (noneChecked) return 'unchecked'
+
+  return 'custom'
+}
+
+const toggleCapability = cap => {
+  const selected = new Set(drawerForm.value.permissions)
+  const allChecked = cap.permission_ids.every(id => selected.has(id))
+
+  if (allChecked) {
+    cap.permission_ids.forEach(id => selected.delete(id))
+  }
+  else {
+    cap.permission_ids.forEach(id => selected.add(id))
+  }
+
+  drawerForm.value.permissions = [...selected]
+}
+
+// ─── Advanced mode: Permission groups ───────────────
 const permissionGroups = computed(() => {
   const catalog = companyStore.permissionCatalog
   const isManagement = drawerForm.value.is_administrative
@@ -46,10 +90,7 @@ const permissionGroups = computed(() => {
   const moduleGroups = {}
 
   for (const p of catalog) {
-    // Inactive module = invisible
     if (!p.module_active) continue
-
-    // Invisible (not grayed) for operational roles
     if (!isManagement && p.is_admin) continue
 
     const isCore = p.module_key.startsWith('core.')
@@ -67,14 +108,12 @@ const permissionGroups = computed(() => {
     target[p.module_key].permissions.push(p)
   }
 
-  // Core groups first, then module groups
   return [
     ...Object.values(coreGroups),
     ...Object.values(moduleGroups),
   ]
 })
 
-// Has any core groups?
 const hasCoreGroups = computed(() =>
   permissionGroups.value.some(g => g.isCore),
 )
@@ -83,7 +122,7 @@ const hasModuleGroups = computed(() =>
   permissionGroups.value.some(g => !g.isCore),
 )
 
-// Strip sensitive permissions from selection when switching to Operational
+// Strip sensitive permissions when switching to Operational
 watch(() => drawerForm.value.is_administrative, newVal => {
   if (!newVal) {
     const adminIds = new Set(
@@ -107,6 +146,7 @@ const openCreateDrawer = () => {
   isEditMode.value = false
   editingRole.value = null
   drawerForm.value = { name: '', is_administrative: false, permissions: [] }
+  isAdvancedMode.value = false
   isDrawerOpen.value = true
 }
 
@@ -118,6 +158,7 @@ const openEditDrawer = role => {
     is_administrative: role.is_administrative,
     permissions: role.permissions?.map(p => p.id) || [],
   }
+  isAdvancedMode.value = false
   isDrawerOpen.value = true
 }
 
@@ -306,7 +347,7 @@ const deleteRole = async role => {
         <VCardText>
           <VForm @submit.prevent="handleDrawerSubmit">
             <VRow>
-              <!-- Name only — no key field -->
+              <!-- Name -->
               <VCol cols="12">
                 <AppTextField
                   v-model="drawerForm.name"
@@ -315,7 +356,7 @@ const deleteRole = async role => {
                 />
               </VCol>
 
-              <!-- Role Level — radio buttons -->
+              <!-- Role Level -->
               <VCol cols="12">
                 <h6 class="text-h6 mb-3">
                   Role Level
@@ -365,147 +406,317 @@ const deleteRole = async role => {
                 <VDivider />
               </VCol>
 
-              <!-- Capabilities — grouped with section headers -->
+              <!-- Capabilities header + mode toggle -->
               <VCol cols="12">
-                <h6 class="text-h6 mb-4">
-                  Capabilities
-                </h6>
-
-                <!-- Core section -->
-                <template v-if="hasCoreGroups">
-                  <div class="d-flex align-center gap-2 mb-3">
-                    <VIcon
-                      icon="tabler-building"
-                      size="20"
-                      color="primary"
-                    />
-                    <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
-                  </div>
-
-                  <template
-                    v-for="group in permissionGroups.filter(g => g.isCore)"
-                    :key="group.module_key"
+                <div class="d-flex align-center justify-space-between mb-4">
+                  <h6 class="text-h6">
+                    Capabilities
+                  </h6>
+                  <VBtn
+                    variant="text"
+                    size="small"
+                    color="default"
+                    :prepend-icon="isAdvancedMode ? 'tabler-layout-grid' : 'tabler-adjustments'"
+                    @click="isAdvancedMode = !isAdvancedMode"
                   >
-                    <div class="ms-7 mb-4">
-                      <div class="text-body-1 font-weight-medium">
-                        {{ group.name }}
-                      </div>
-                      <div
-                        v-if="group.description"
-                        class="text-body-2 text-disabled mb-2"
-                      >
-                        {{ group.description }}
-                      </div>
-                      <div
-                        v-for="perm in group.permissions"
-                        :key="perm.id"
-                        class="d-flex align-center"
-                      >
-                        <VCheckbox
-                          :model-value="isPermissionChecked(perm.id)"
-                          hide-details
-                          density="compact"
-                          @update:model-value="togglePermission(perm.id)"
-                        >
-                          <template #label>
-                            <span>{{ perm.label }}</span>
-                            <VTooltip
-                              v-if="perm.hint"
-                              location="top"
-                            >
-                              <template #activator="{ props: tp }">
-                                <VIcon
-                                  icon="tabler-info-circle"
-                                  size="14"
-                                  class="ms-1 text-disabled"
-                                  v-bind="tp"
-                                />
-                              </template>
-                              {{ perm.hint }}
-                            </VTooltip>
-                          </template>
-                        </VCheckbox>
-                        <VSpacer />
-                        <VChip
-                          v-if="perm.is_admin"
-                          size="x-small"
-                          color="error"
-                          variant="tonal"
-                        >
-                          Sensitive
-                        </VChip>
-                      </div>
+                    {{ isAdvancedMode ? 'Simple view' : 'Advanced' }}
+                  </VBtn>
+                </div>
+
+                <!-- ═══ SIMPLE MODE ═══ -->
+                <template v-if="!isAdvancedMode">
+                  <!-- Core capabilities -->
+                  <template v-if="coreModules.length">
+                    <div class="d-flex align-center gap-2 mb-3">
+                      <VIcon
+                        icon="tabler-building"
+                        size="20"
+                        color="primary"
+                      />
+                      <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
                     </div>
+
+                    <template
+                      v-for="mod in coreModules"
+                      :key="mod.module_key"
+                    >
+                      <div class="ms-7 mb-4">
+                        <div
+                          v-if="mod.module_description"
+                          class="text-body-2 text-disabled mb-2"
+                        >
+                          {{ mod.module_description }}
+                        </div>
+                        <div
+                          v-for="cap in mod.capabilities"
+                          :key="cap.key"
+                          class="d-flex align-center"
+                        >
+                          <VCheckbox
+                            :model-value="getCapabilityState(cap) === 'checked'"
+                            :indeterminate="getCapabilityState(cap) === 'custom'"
+                            hide-details
+                            density="compact"
+                            @update:model-value="toggleCapability(cap)"
+                          >
+                            <template #label>
+                              <span>{{ cap.label }}</span>
+                              <VTooltip
+                                v-if="cap.hint"
+                                location="top"
+                              >
+                                <template #activator="{ props: tp }">
+                                  <VIcon
+                                    icon="tabler-info-circle"
+                                    size="14"
+                                    class="ms-1 text-disabled"
+                                    v-bind="tp"
+                                  />
+                                </template>
+                                {{ cap.hint }}
+                              </VTooltip>
+                            </template>
+                          </VCheckbox>
+                          <VSpacer />
+                          <VChip
+                            v-if="getCapabilityState(cap) === 'custom'"
+                            size="x-small"
+                            color="warning"
+                            variant="tonal"
+                          >
+                            Custom
+                          </VChip>
+                          <VChip
+                            v-else-if="cap.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            Sensitive
+                          </VChip>
+                        </div>
+                      </div>
+                    </template>
+                  </template>
+
+                  <!-- Business module capabilities -->
+                  <template v-if="businessModules.length">
+                    <VDivider
+                      v-if="coreModules.length"
+                      class="mb-3"
+                    />
+
+                    <template
+                      v-for="mod in businessModules"
+                      :key="mod.module_key"
+                    >
+                      <div class="d-flex align-center gap-2 mb-3">
+                        <VIcon
+                          icon="tabler-package"
+                          size="20"
+                          color="info"
+                        />
+                        <span class="text-body-1 font-weight-medium">{{ mod.module_name }}</span>
+                      </div>
+
+                      <div class="ms-7 mb-4">
+                        <div
+                          v-if="mod.module_description"
+                          class="text-body-2 text-disabled mb-2"
+                        >
+                          {{ mod.module_description }}
+                        </div>
+                        <div
+                          v-for="cap in mod.capabilities"
+                          :key="cap.key"
+                          class="d-flex align-center"
+                        >
+                          <VCheckbox
+                            :model-value="getCapabilityState(cap) === 'checked'"
+                            :indeterminate="getCapabilityState(cap) === 'custom'"
+                            hide-details
+                            density="compact"
+                            @update:model-value="toggleCapability(cap)"
+                          >
+                            <template #label>
+                              <span>{{ cap.label }}</span>
+                              <VTooltip
+                                v-if="cap.hint"
+                                location="top"
+                              >
+                                <template #activator="{ props: tp }">
+                                  <VIcon
+                                    icon="tabler-info-circle"
+                                    size="14"
+                                    class="ms-1 text-disabled"
+                                    v-bind="tp"
+                                  />
+                                </template>
+                                {{ cap.hint }}
+                              </VTooltip>
+                            </template>
+                          </VCheckbox>
+                          <VSpacer />
+                          <VChip
+                            v-if="getCapabilityState(cap) === 'custom'"
+                            size="x-small"
+                            color="warning"
+                            variant="tonal"
+                          >
+                            Custom
+                          </VChip>
+                          <VChip
+                            v-else-if="cap.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            Sensitive
+                          </VChip>
+                        </div>
+                      </div>
+                    </template>
                   </template>
                 </template>
 
-                <!-- Module section(s) -->
-                <template v-if="hasModuleGroups">
-                  <VDivider
-                    v-if="hasCoreGroups"
-                    class="mb-3"
-                  />
-
-                  <template
-                    v-for="group in permissionGroups.filter(g => !g.isCore)"
-                    :key="group.module_key"
-                  >
+                <!-- ═══ ADVANCED MODE ═══ -->
+                <template v-else>
+                  <!-- Core section -->
+                  <template v-if="hasCoreGroups">
                     <div class="d-flex align-center gap-2 mb-3">
                       <VIcon
-                        icon="tabler-package"
+                        icon="tabler-building"
                         size="20"
-                        color="info"
+                        color="primary"
                       />
-                      <span class="text-body-1 font-weight-medium">{{ group.name }}</span>
+                      <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
                     </div>
 
-                    <div class="ms-7 mb-4">
-                      <div
-                        v-if="group.description"
-                        class="text-body-2 text-disabled mb-2"
-                      >
-                        {{ group.description }}
-                      </div>
-                      <div
-                        v-for="perm in group.permissions"
-                        :key="perm.id"
-                        class="d-flex align-center"
-                      >
-                        <VCheckbox
-                          :model-value="isPermissionChecked(perm.id)"
-                          hide-details
-                          density="compact"
-                          @update:model-value="togglePermission(perm.id)"
+                    <template
+                      v-for="group in permissionGroups.filter(g => g.isCore)"
+                      :key="group.module_key"
+                    >
+                      <div class="ms-7 mb-4">
+                        <div class="text-body-1 font-weight-medium">
+                          {{ group.name }}
+                        </div>
+                        <div
+                          v-if="group.description"
+                          class="text-body-2 text-disabled mb-2"
                         >
-                          <template #label>
-                            <span>{{ perm.label }}</span>
-                            <VTooltip
-                              v-if="perm.hint"
-                              location="top"
-                            >
-                              <template #activator="{ props: tp }">
-                                <VIcon
-                                  icon="tabler-info-circle"
-                                  size="14"
-                                  class="ms-1 text-disabled"
-                                  v-bind="tp"
-                                />
-                              </template>
-                              {{ perm.hint }}
-                            </VTooltip>
-                          </template>
-                        </VCheckbox>
-                        <VSpacer />
-                        <VChip
-                          v-if="perm.is_admin"
-                          size="x-small"
-                          color="error"
-                          variant="tonal"
+                          {{ group.description }}
+                        </div>
+                        <div
+                          v-for="perm in group.permissions"
+                          :key="perm.id"
+                          class="d-flex align-center"
                         >
-                          Sensitive
-                        </VChip>
+                          <VCheckbox
+                            :model-value="isPermissionChecked(perm.id)"
+                            hide-details
+                            density="compact"
+                            @update:model-value="togglePermission(perm.id)"
+                          >
+                            <template #label>
+                              <span>{{ perm.label }}</span>
+                              <VTooltip
+                                v-if="perm.hint"
+                                location="top"
+                              >
+                                <template #activator="{ props: tp }">
+                                  <VIcon
+                                    icon="tabler-info-circle"
+                                    size="14"
+                                    class="ms-1 text-disabled"
+                                    v-bind="tp"
+                                  />
+                                </template>
+                                {{ perm.hint }}
+                              </VTooltip>
+                            </template>
+                          </VCheckbox>
+                          <VSpacer />
+                          <VChip
+                            v-if="perm.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            Sensitive
+                          </VChip>
+                        </div>
                       </div>
-                    </div>
+                    </template>
+                  </template>
+
+                  <!-- Module section(s) -->
+                  <template v-if="hasModuleGroups">
+                    <VDivider
+                      v-if="hasCoreGroups"
+                      class="mb-3"
+                    />
+
+                    <template
+                      v-for="group in permissionGroups.filter(g => !g.isCore)"
+                      :key="group.module_key"
+                    >
+                      <div class="d-flex align-center gap-2 mb-3">
+                        <VIcon
+                          icon="tabler-package"
+                          size="20"
+                          color="info"
+                        />
+                        <span class="text-body-1 font-weight-medium">{{ group.name }}</span>
+                      </div>
+
+                      <div class="ms-7 mb-4">
+                        <div
+                          v-if="group.description"
+                          class="text-body-2 text-disabled mb-2"
+                        >
+                          {{ group.description }}
+                        </div>
+                        <div
+                          v-for="perm in group.permissions"
+                          :key="perm.id"
+                          class="d-flex align-center"
+                        >
+                          <VCheckbox
+                            :model-value="isPermissionChecked(perm.id)"
+                            hide-details
+                            density="compact"
+                            @update:model-value="togglePermission(perm.id)"
+                          >
+                            <template #label>
+                              <span>{{ perm.label }}</span>
+                              <VTooltip
+                                v-if="perm.hint"
+                                location="top"
+                              >
+                                <template #activator="{ props: tp }">
+                                  <VIcon
+                                    icon="tabler-info-circle"
+                                    size="14"
+                                    class="ms-1 text-disabled"
+                                    v-bind="tp"
+                                  />
+                                </template>
+                                {{ perm.hint }}
+                              </VTooltip>
+                            </template>
+                          </VCheckbox>
+                          <VSpacer />
+                          <VChip
+                            v-if="perm.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            Sensitive
+                          </VChip>
+                        </div>
+                      </div>
+                    </template>
                   </template>
                 </template>
               </VCol>

@@ -59,7 +59,47 @@ class CompanyRoleController extends Controller
                 ]);
             });
 
-        return response()->json(['permissions' => $permissions]);
+        // Build key→id lookup for resolving bundles
+        $keyToId = $permissions->pluck('id', 'key');
+
+        // Build module list with bundles (capabilities)
+        $moduleList = [];
+        foreach ($modules as $modKey => $def) {
+            $isCore = str_starts_with($modKey, 'core.');
+            $isActive = $isCore || ModuleGate::isActive($company, $modKey);
+
+            $bundles = [];
+            foreach ($def['bundles'] ?? [] as $bundle) {
+                $permissionIds = collect($bundle['permissions'])
+                    ->map(fn ($key) => $keyToId[$key] ?? null)
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                $bundles[] = [
+                    'key' => $bundle['key'],
+                    'label' => $bundle['label'],
+                    'hint' => $bundle['hint'] ?? '',
+                    'is_admin' => $bundle['is_admin'] ?? false,
+                    'permissions' => $bundle['permissions'],
+                    'permission_ids' => $permissionIds,
+                ];
+            }
+
+            $moduleList[] = [
+                'module_key' => $modKey,
+                'module_name' => $moduleNames[$modKey] ?? $modKey,
+                'module_description' => $moduleDescriptions[$modKey] ?? '',
+                'module_active' => $isActive,
+                'is_core' => $isCore,
+                'capabilities' => $bundles,
+            ];
+        }
+
+        return response()->json([
+            'permissions' => $permissions,
+            'modules' => $moduleList,
+        ]);
     }
 
     public function store(Request $request): JsonResponse

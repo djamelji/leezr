@@ -629,7 +629,10 @@ class CompanyPermissionTest extends TestCase
     {
         $response = $this->actAs($this->owner)->getJson('/api/company/permissions');
 
-        $response->assertOk()->assertJsonStructure(['permissions' => [['id', 'key', 'label', 'module_key', 'is_admin', 'module_name', 'module_description', 'hint']]]);
+        $response->assertOk()->assertJsonStructure([
+            'permissions' => [['id', 'key', 'label', 'module_key', 'is_admin', 'module_name', 'module_description', 'hint', 'module_active']],
+            'modules' => [['module_key', 'module_name', 'module_active', 'is_core', 'capabilities']],
+        ]);
     }
 
     public function test_owner_can_delete_non_system_role(): void
