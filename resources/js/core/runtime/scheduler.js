@@ -11,6 +11,7 @@ import { companyResources, platformResources } from './resources'
 import { abortGroup, abortAll } from './abortRegistry'
 import { cacheRemove, cacheClear } from './cache'
 import { JobRunner } from './job'
+import { assertRuntime, buildSnapshot } from './invariants'
 
 /**
  * @typedef {Object} SchedulerDeps
@@ -23,6 +24,7 @@ import { JobRunner } from './job'
  * @property {Function} setScope         - (scope) => set runtime._scope
  * @property {Function} setBootedAt      - (ts) => set runtime._bootedAt
  * @property {Function} resetState       - () => clear _resources, _error, etc.
+ * @property {Function} getStore         - () => runtime store (for invariant snapshots, DEV only)
  */
 
 export function createScheduler(deps) {
@@ -30,6 +32,9 @@ export function createScheduler(deps) {
   let _activeRunner = null
   let _currentRunId = null
   let _currentScope = null
+
+  /** @type {{ runId: number, scope: string, requiredPhases: string[], executedPhases: Set<string> }|null} */
+  let _runMeta = null
 
   // Promise coordination
   let _authResolve = null
@@ -92,6 +97,24 @@ export function createScheduler(deps) {
     return runId !== _currentRunId
   }
 
+  /** DEV-only: assert all invariants at a checkpoint. */
+  function _assert(context) {
+    if (!import.meta.env.DEV) return
+
+    assertRuntime(
+      buildSnapshot(deps.getStore(), { runId: _currentRunId, runMeta: _runMeta }),
+      context,
+      deps.journal,
+    )
+  }
+
+  /** Mark a phase as executed in run metadata. */
+  function _markPhaseExecuted(phase) {
+    if (_runMeta) {
+      _runMeta.executedPhases.add(phase)
+    }
+  }
+
   /**
    * After a successful retry, complete any remaining boot phases.
    * Determines what phase the active runner handled and executes
@@ -140,6 +163,7 @@ export function createScheduler(deps) {
 
         return
       }
+      _markPhaseExecuted(phase)
     }
 
     if (_isStale(runId)) return
@@ -147,6 +171,7 @@ export function createScheduler(deps) {
     deps.setBootedAt(Date.now())
     deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
     _resolveReady()
+    _assert('continueFromPhase:ready')
   }
 
   return {
@@ -158,6 +183,11 @@ export function createScheduler(deps) {
     /** Active JobRunner (for progress). */
     get activeRunner() {
       return _activeRunner
+    },
+
+    /** Run metadata (for invariants + debug). */
+    get runMeta() {
+      return _runMeta
     },
 
     /**
@@ -175,6 +205,13 @@ export function createScheduler(deps) {
       _currentScope = scope
       _resetPromises()
 
+      // Initialize run metadata
+      const requiredPhases = scope === 'company'
+        ? ['auth', 'tenant', 'features']
+        : scope === 'platform' ? ['auth'] : []
+
+      _runMeta = { runId, scope, requiredPhases, executedPhases: new Set() }
+
       deps.setScope(scope)
       deps.journal.log('run:start', { runId, scope })
 
@@ -182,6 +219,7 @@ export function createScheduler(deps) {
       if (scope === 'public') {
         deps.transition('ready')
         _resolveReady()
+        _assert('requestBoot:public-ready')
 
         return
       }
@@ -197,9 +235,12 @@ export function createScheduler(deps) {
         deps.setError(`Failed to load ${authResult.errorKey}.`)
         deps.transition('error')
         _resolveAuth() // unblock waiters even on error
+        _assert('requestBoot:auth-error')
 
         return
       }
+
+      _markPhaseExecuted('auth')
 
       // Signal: auth phase resolved
       _resolveAuth()
@@ -233,9 +274,11 @@ export function createScheduler(deps) {
         if (tenantResult.critical) {
           deps.setError(`Failed to load ${tenantResult.errorKey}.`)
           deps.transition('error')
+          _assert('requestBoot:tenant-error')
 
           return
         }
+        _markPhaseExecuted('tenant')
       }
 
       // Phase: features (company scope only)
@@ -248,9 +291,11 @@ export function createScheduler(deps) {
         if (featureResult.critical) {
           deps.setError(`Failed to load ${featureResult.errorKey}.`)
           deps.transition('error')
+          _assert('requestBoot:features-error')
 
           return
         }
+        _markPhaseExecuted('features')
       }
 
       if (_isStale(runId)) return
@@ -258,6 +303,7 @@ export function createScheduler(deps) {
       deps.setBootedAt(Date.now())
       deps.journal.log('run:complete', { runId, scope })
       _resolveReady()
+      _assert('requestBoot:ready')
     },
 
     /**
@@ -267,6 +313,7 @@ export function createScheduler(deps) {
       _cancelCurrentRun()
       _currentRunId = null
       _currentScope = null
+      _runMeta = null
 
       abortAll()
       cacheClear()
@@ -311,6 +358,8 @@ export function createScheduler(deps) {
       _resetPromises()
       _resolveAuth() // auth is already resolved during switch
 
+      _runMeta = { runId, scope: 'company', requiredPhases: ['tenant', 'features'], executedPhases: new Set() }
+
       deps.journal.log('run:start', { runId, scope: 'switch', companyId })
 
       const tenantResources = companyResources.filter(r => r.phase === 'tenant')
@@ -326,6 +375,7 @@ export function createScheduler(deps) {
 
         return
       }
+      _markPhaseExecuted('tenant')
 
       deps.transition('features')
       const featureResult = await _runJobs(featureResources, runId)
@@ -336,10 +386,12 @@ export function createScheduler(deps) {
 
         return
       }
+      _markPhaseExecuted('features')
 
       deps.transition('ready')
       deps.journal.log('run:complete', { runId, scope: 'switch' })
       _resolveReady()
+      _assert('requestSwitch:ready')
     },
 
     /**
@@ -399,6 +451,7 @@ export function createScheduler(deps) {
 
       if (result.critical) {
         deps.setError(`Failed to load ${result.errorKey}.`)
+        _assert('retryFailed:error')
 
         // Phase is already 'error' — no transition needed
         return result

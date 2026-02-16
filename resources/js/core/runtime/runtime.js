@@ -268,6 +268,7 @@ export const useRuntimeStore = defineStore('runtime', {
         journal: _journal,
         transition: target => self._transition(target),
         getPhase: () => self._phase,
+        getStore: () => self,
         setScope: scope => { self._scope = scope },
         setError: msg => { self._error = msg },
         setBootedAt: ts => { self._bootedAt = ts },
