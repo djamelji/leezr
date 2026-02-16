@@ -216,7 +216,7 @@ export const useRuntimeStore = defineStore('runtime', {
         break
 
       case 'company-switch':
-        if (payload.companyId && this._scope === 'company') {
+        if (payload.companyId && this._scope === 'company' && this._phase === 'ready') {
           const auth = resolveStore('auth')
           auth._persistCompanyId(payload.companyId)
           this.switchCompany(payload.companyId)

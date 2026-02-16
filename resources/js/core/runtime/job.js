@@ -125,8 +125,14 @@ export class Job {
   /** @private */
   async _backgroundRefresh(deps) {
     try {
+      // Guard: don't refresh if job was cancelled/aborted (F3)
+      if (this.status === 'cancelled' || this.controller.signal.aborted) return
+
       const store = deps.resolveStore(this.resource.store)
-      const result = await store[this.resource.action]({})
+      const result = await store[this.resource.action]({ signal: this.controller.signal })
+
+      // Re-check after await — teardown may have cancelled us
+      if (this.status === 'cancelled' || this.controller.signal.aborted) return
 
       if (result !== undefined) {
         cacheSet(this.key, result)

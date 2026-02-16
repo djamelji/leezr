@@ -8,7 +8,7 @@
  */
 
 import { companyResources, platformResources } from './resources'
-import { abortGroup, abortAll, setActiveGroup } from './abortRegistry'
+import { abortGroup, abortAll } from './abortRegistry'
 import { cacheRemove, cacheClear } from './cache'
 import { JobRunner } from './job'
 
@@ -29,6 +29,7 @@ export function createScheduler(deps) {
   let _runId = 0
   let _activeRunner = null
   let _currentRunId = null
+  let _currentScope = null
 
   // Promise coordination
   let _authResolve = null
@@ -74,7 +75,10 @@ export function createScheduler(deps) {
 
     const result = await runner.execute()
 
-    deps.syncResources(runner)
+    // Only sync if this run is still active (F4: prevent stale runner flash)
+    if (!_isStale(runId)) {
+      deps.syncResources(runner)
+    }
 
     return result
   }
@@ -86,6 +90,63 @@ export function createScheduler(deps) {
    */
   function _isStale(runId) {
     return runId !== _currentRunId
+  }
+
+  /**
+   * After a successful retry, complete any remaining boot phases.
+   * Determines what phase the active runner handled and executes
+   * subsequent phases (e.g., tenant retry → run features → ready).
+   */
+  async function _continueFromPhase(runId) {
+    if (_isStale(runId)) return
+
+    // Platform / public: only auth phase → go straight to ready
+    if (_currentScope !== 'company') {
+      deps.transition('ready')
+      deps.setBootedAt(Date.now())
+      deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
+      _resolveReady()
+
+      return
+    }
+
+    // Company scope: check login before continuing
+    const auth = deps.resolveStore('auth')
+    if (!auth.isLoggedIn) {
+      deps.transition('ready')
+      _resolveReady()
+
+      return
+    }
+
+    // Determine completed phase from active runner's resources
+    const completedPhase = _activeRunner?.jobs[0]?.resource.phase
+    const phaseOrder = ['auth', 'tenant', 'features']
+    const startIdx = phaseOrder.indexOf(completedPhase)
+    const remaining = phaseOrder.slice(startIdx + 1)
+
+    for (const phase of remaining) {
+      if (_isStale(runId)) return
+
+      deps.transition(phase)
+
+      const phaseResources = companyResources.filter(r => r.phase === phase)
+      const result = await _runJobs(phaseResources, runId)
+      if (_isStale(runId)) return
+
+      if (result.critical) {
+        deps.setError(`Failed to load ${result.errorKey}.`)
+        deps.transition('error')
+
+        return
+      }
+    }
+
+    if (_isStale(runId)) return
+    deps.transition('ready')
+    deps.setBootedAt(Date.now())
+    deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
+    _resolveReady()
   }
 
   return {
@@ -111,6 +172,7 @@ export function createScheduler(deps) {
       const runId = ++_runId
 
       _currentRunId = runId
+      _currentScope = scope
       _resetPromises()
 
       deps.setScope(scope)
@@ -202,14 +264,12 @@ export function createScheduler(deps) {
      * Full teardown: cancel run, abort all, clear cache, reset to cold.
      */
     requestTeardown() {
-      const prevScope = deps.getPhase() !== 'cold' ? undefined : undefined // unused
-
       _cancelCurrentRun()
       _currentRunId = null
+      _currentScope = null
 
       abortAll()
       cacheClear()
-      setActiveGroup(null)
 
       if (deps.getPhase() !== 'cold') {
         deps.transition('cold')
@@ -319,7 +379,7 @@ export function createScheduler(deps) {
     },
 
     /**
-     * Retry failed jobs in the active runner.
+     * Retry failed jobs in the active runner, then complete remaining phases.
      * Stays in error phase during retry — never transits through cold.
      * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
      */
@@ -344,13 +404,10 @@ export function createScheduler(deps) {
         return result
       }
 
-      // All jobs in active runner succeeded
+      // Active runner succeeded — complete remaining phases (F2)
       const progress = _activeRunner.progress
       if (progress.error === 0 && progress.loading === 0 && progress.pending === 0) {
-        deps.transition('ready')
-        deps.setBootedAt(Date.now())
-        deps.journal.log('run:complete', { runId, recovery: true })
-        _resolveReady()
+        await _continueFromPhase(runId)
       }
 
       return result

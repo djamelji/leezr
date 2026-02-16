@@ -22,6 +22,8 @@ const TRANSITIONS = new Set([
   'ready→tenant',
   'error→cold',
   'error→ready',
+  'error→tenant',
+  'error→features',
 ])
 
 /**
