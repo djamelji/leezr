@@ -1247,6 +1247,28 @@ definePage({
   - Le clone accélère la personnalisation : 2 clics au lieu de recréer from scratch
   - Aucune migration, aucune route nouvelle, aucun impact test
 
+## ADR-057 : Surface Separation Layer (Structure vs Operations)
+
+- **Date** : 2026-02-16
+- **Contexte** : Le Company UI mélange les pages de gouvernance (Settings, Members, Modules, Industry, Roles) avec les pages métier (Shipments, Dashboard). Un livreur (rôle opérationnel) voit des liens de navigation vers des pages qu'il ne devrait pas utiliser. Les permissions RBAC contrôlent les actions mais pas la visibilité des sections.
+- **Décision** :
+  - **Deux surfaces** : `structure` (gouvernance) et `operations` (métier).
+  - Chaque module dans `ModuleRegistry` déclare son `surface` (`core.members` → structure, `core.settings` → structure, `logistics_shipments` → operations).
+  - Le `surface` est propagé dans les `navItems` des Capabilities.
+  - Les items de navigation statiques (Modules, Industry, Roles) sont tagués `surface: 'structure'`.
+  - **`roleLevel` getter** dans `auth.js` : Owner OU `is_administrative` → `'management'`, sinon `'operational'`.
+  - L'API `myCompanies` inclut maintenant `is_administrative` dans `company_role`.
+  - **Triple filtrage nav** : surface → ownerOnly → permission → orphan headings.
+  - Les rôles opérationnels ne voient **jamais** les items `surface: 'structure'`.
+  - **Page guards** sur les 4 pages structure (settings, modules, jobdomain, roles) : redirect si `roleLevel !== 'management'`.
+  - Permissions ≠ Surface : les permissions contrôlent les actions API, le surface contrôle la visibilité UI des sections.
+- **Conséquences** :
+  - Un livreur voit uniquement Dashboard + Shipments + Account Settings
+  - Un dispatcher (Management) voit Members + Settings + Shipments + Dashboard + Account
+  - Le owner voit tout (management + ownerOnly)
+  - Double barrière : navigation masquée + page guard en cas de navigation directe
+  - Les permissions API restent intactes — un driver avec `settings.view` peut toujours lire les settings via API si nécessaire
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -5,6 +5,7 @@ import { useCompanyStore } from '@/core/stores/company'
 
 const auth = useAuthStore()
 const companyStore = useCompanyStore()
+const router = useRouter()
 
 const form = ref({
   name: '',
@@ -22,6 +23,13 @@ const dynamicFields = computed(() => {
 })
 
 onMounted(async () => {
+  // Surface guard: structure pages require management level
+  if (auth.roleLevel !== 'management') {
+    router.push('/')
+
+    return
+  }
+
   await companyStore.fetchCompany()
 
   const data = companyStore.company

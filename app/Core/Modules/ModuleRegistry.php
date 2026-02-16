@@ -19,10 +19,11 @@ class ModuleRegistry
             'core.members' => [
                 'name' => 'Members',
                 'description' => 'Manage company members and roles',
+                'surface' => 'structure',
                 'sort_order' => 10,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users', 'permission' => 'members.view'],
+                        ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users', 'permission' => 'members.view', 'surface' => 'structure'],
                     ],
                     routeNames: ['company-members'],
                     middlewareKey: 'core.members',
@@ -52,10 +53,11 @@ class ModuleRegistry
             'core.settings' => [
                 'name' => 'Company Settings',
                 'description' => 'Company name and configuration',
+                'surface' => 'structure',
                 'sort_order' => 20,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view'],
+                        ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view', 'surface' => 'structure'],
                     ],
                     routeNames: ['company-settings'],
                     middlewareKey: 'core.settings',
@@ -83,10 +85,11 @@ class ModuleRegistry
             'logistics_shipments' => [
                 'name' => 'Shipments',
                 'description' => 'Manage logistics shipments with status workflow',
+                'surface' => 'operations',
                 'sort_order' => 100,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view'],
+                        ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view', 'surface' => 'operations'],
                     ],
                     routeNames: ['company-shipments', 'company-shipments-create', 'company-shipments-id'],
                     middlewareKey: 'logistics_shipments',

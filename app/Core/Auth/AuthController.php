@@ -115,6 +115,7 @@ class AuthController extends Controller
                     'id' => $membership->companyRole->id,
                     'key' => $membership->companyRole->key,
                     'name' => $membership->companyRole->name,
+                    'is_administrative' => (bool) $membership->companyRole->is_administrative,
                     'permissions' => $membership->companyRole->permissions->pluck('key')->values(),
                 ];
             } else {

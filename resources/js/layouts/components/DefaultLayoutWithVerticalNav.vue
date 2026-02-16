@@ -28,6 +28,7 @@ const navItems = computed(() => {
     to: item.to,
     icon: { icon: item.icon },
     permission: item.permission,
+    surface: item.surface,
   }))
 
   let items
@@ -55,9 +56,10 @@ const navItems = computed(() => {
     items = [...staticNavItems]
   }
 
-  // Filter by permission + ownerOnly
+  // Filter by surface → ownerOnly → permission
   return items.filter(item => {
     if (item.heading) return true
+    if (item.surface === 'structure' && auth.roleLevel !== 'management') return false
     if (item.ownerOnly && !auth.isOwner) return false
     if (item.permission && !auth.hasPermission(item.permission)) return false
 

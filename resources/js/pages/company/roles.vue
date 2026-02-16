@@ -19,9 +19,9 @@ const drawerForm = ref({ name: '', is_administrative: false, permissions: [] })
 const drawerLoading = ref(false)
 const isAdvancedMode = ref(false)
 
-// Guard: owner-only
+// Surface guard: structure pages require management level
 onMounted(async () => {
-  if (!auth.isOwner) {
+  if (auth.roleLevel !== 'management') {
     router.push('/')
 
     return
