@@ -15,6 +15,7 @@ import { initBroadcast } from './broadcast'
 import { transition } from './stateMachine'
 import { createJournal } from './journal'
 import { createScheduler } from './scheduler'
+import { buildSnapshot } from './invariants'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
@@ -255,6 +256,22 @@ export const useRuntimeStore = defineStore('runtime', {
     clearJournal() {
       _journal.clear()
       this._journalVersion++
+    },
+
+    /**
+     * Get a JSON-serializable snapshot of the full runtime state.
+     * Includes phase, scope, resources, progress, journal, and run metadata.
+     * @returns {Object}
+     */
+    getSnapshot() {
+      return {
+        ...buildSnapshot(this, {
+          runId: _scheduler?.currentRunId ?? null,
+          runMeta: _scheduler?.runMeta ?? null,
+        }),
+        bootedAt: this._bootedAt,
+        journal: _journal.toJSON(),
+      }
     },
 
     /** Lazily create the scheduler (needs `this` reference). */

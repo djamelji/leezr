@@ -53,5 +53,13 @@ export function createJournal(maxEntries = 200) {
     clear() {
       buffer = []
     },
+
+    /**
+     * Export all entries as a plain JSON-serializable array.
+     * @returns {JournalEntry[]}
+     */
+    toJSON() {
+      return [...buffer]
+    },
   }
 }

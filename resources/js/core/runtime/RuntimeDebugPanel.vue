@@ -88,6 +88,40 @@ const resourceEntries = computed(() => {
   }))
 })
 
+const snapshotCopied = ref(false)
+
+function copySnapshot() {
+  const snapshot = runtime.getSnapshot()
+  const json = JSON.stringify(snapshot, (_key, value) => {
+    // Convert Set to Array for JSON serialization
+    if (value instanceof Set) return [...value]
+
+    return value
+  }, 2)
+
+  navigator.clipboard.writeText(json).then(() => {
+    snapshotCopied.value = true
+    setTimeout(() => { snapshotCopied.value = false }, 2000)
+  })
+}
+
+function exportJournal() {
+  const snapshot = runtime.getSnapshot()
+  const json = JSON.stringify(snapshot, (_key, value) => {
+    if (value instanceof Set) return [...value]
+
+    return value
+  }, 2)
+
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `runtime-snapshot-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 const formatAge = ms => {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60000) return `${Math.round(ms / 1000)}s`
@@ -105,17 +139,54 @@ const formatAge = ms => {
       >
         <div class="d-flex align-center justify-space-between pa-3 bg-surface border-b">
           <span class="text-subtitle-2 font-weight-bold">Runtime Debug</span>
-          <VBtn
-            icon
-            size="x-small"
-            variant="text"
-            @click="isOpen = false"
-          >
-            <VIcon
-              icon="tabler-x"
-              size="16"
-            />
-          </VBtn>
+          <div class="d-flex align-center gap-1">
+            <VBtn
+              icon
+              size="x-small"
+              variant="text"
+              :color="snapshotCopied ? 'success' : undefined"
+              @click="copySnapshot"
+            >
+              <VIcon
+                :icon="snapshotCopied ? 'tabler-check' : 'tabler-copy'"
+                size="16"
+              />
+              <VTooltip
+                activator="parent"
+                location="bottom"
+              >
+                Copy snapshot
+              </VTooltip>
+            </VBtn>
+            <VBtn
+              icon
+              size="x-small"
+              variant="text"
+              @click="exportJournal"
+            >
+              <VIcon
+                icon="tabler-download"
+                size="16"
+              />
+              <VTooltip
+                activator="parent"
+                location="bottom"
+              >
+                Export JSON
+              </VTooltip>
+            </VBtn>
+            <VBtn
+              icon
+              size="x-small"
+              variant="text"
+              @click="isOpen = false"
+            >
+              <VIcon
+                icon="tabler-x"
+                size="16"
+              />
+            </VBtn>
+          </div>
         </div>
 
         <div class="pa-3 overflow-y-auto" style="max-height: 400px;">

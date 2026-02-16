@@ -39,6 +39,14 @@ const retryFull = () => {
   runtime.teardown()
   runtime.boot(scope)
 }
+
+// ─── DEV overlay ────────────────────────────────────────
+const lastEvents = computed(() => {
+  if (!isDev) return []
+  const entries = runtime.journalEntries
+
+  return entries.slice(-3).reverse()
+})
 </script>
 
 <template>
@@ -88,16 +96,30 @@ const retryFull = () => {
         </VBtn>
       </div>
 
-      <!-- Dev: show resource status -->
+      <!-- Dev: show resource status + runId + last events -->
       <div
         v-if="isDev"
         class="text-caption text-disabled mt-4 text-start"
       >
+        <p class="mb-1">
+          Run: {{ runtime.currentRunId ?? '-' }}
+        </p>
         <div
           v-for="(status, key) in runtime.resourceStatus"
           :key="key"
         >
           {{ key }}: {{ status }}
+        </div>
+        <div
+          v-if="lastEvents.length"
+          class="mt-1"
+        >
+          <p
+            v-for="(e, i) in lastEvents"
+            :key="i"
+          >
+            {{ e.type }}<template v-if="e.data.from"> {{ e.data.from }}→{{ e.data.to }}</template><template v-else-if="e.data.key"> {{ e.data.key }}</template>
+          </p>
         </div>
       </div>
     </VCard>
@@ -140,13 +162,24 @@ const retryFull = () => {
       </VBtn>
     </template>
 
-    <!-- Dev: show raw phase + scope + progress -->
+    <!-- Dev: show phase + scope + runId + progress + last 3 events -->
     <div
       v-if="isDev"
       class="text-caption text-disabled mt-4"
     >
-      <p>Phase: {{ runtime.phase }} | Scope: {{ runtime.scope }}</p>
+      <p>Phase: {{ runtime.phase }} | Scope: {{ runtime.scope }} | Run: {{ runtime.currentRunId ?? '-' }}</p>
       <p>Progress: {{ runtime.progress.done }}/{{ runtime.progress.total }} ({{ runtime.progress.loading }} loading, {{ runtime.progress.error }} errors)</p>
+      <div
+        v-if="lastEvents.length"
+        class="mt-1"
+      >
+        <p
+          v-for="(e, i) in lastEvents"
+          :key="i"
+        >
+          {{ e.type }}<template v-if="e.data.from"> {{ e.data.from }}→{{ e.data.to }}</template><template v-else-if="e.data.key"> {{ e.data.key }}</template>
+        </p>
+      </div>
     </div>
   </div>
 </template>
