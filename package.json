@@ -9,6 +9,7 @@
     "dev:leezr": "node scripts/dev-leezr.js",
     "build": "vite build",
     "mailpit": "open http://localhost:8025",
+    "check:imports": "bash scripts/check-explicit-imports.sh",
     "lint": "eslint . -c .eslintrc.cjs --fix --ext .ts,.js,.cjs,.vue,.tsx,.jsx",
     "build:icons": "tsx resources/js/plugins/iconify/build-icons.js",
     "postinstall": "npm run build:icons"

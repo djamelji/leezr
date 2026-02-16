@@ -29,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'module.active' => \App\Core\Modules\EnsureModuleActive::class,
         ]);
 
+        $middleware->appendToGroup('api', \App\Http\Middleware\AddBuildVersion::class);
+
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {

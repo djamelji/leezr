@@ -81,6 +81,24 @@ Avant toute implémentation :
 - Démarré automatiquement par `pnpm dev:leezr`, pas par `pnpm dev:all`
 - `pnpm mailpit` ouvre uniquement l'UI dans le navigateur
 
+## Auto-import policy (ADR-045a)
+
+### Auto-imported (unplugin-vue-components)
+Les composants dans ces répertoires sont résolus automatiquement — pas besoin d'import :
+- `resources/js/@core/components/`
+- `resources/js/views/demos/`
+- `resources/js/components/`
+
+### Import explicite obligatoire
+Les composants dans ces répertoires **doivent** être importés manuellement dans chaque fichier qui les utilise :
+- `resources/js/layouts/components/` (12 composants structurels)
+- `resources/js/company/components/` (composants scopés company)
+- `resources/js/core/components/` (composants scopés core)
+
+**Rationale** : les composants structurels (layouts) et les composants scopés (company, core) doivent déclarer explicitement leurs dépendances pour éviter les erreurs silencieuses (cf. incident AppShellGate).
+
+**Vérification** : `pnpm check:imports` valide que tout usage `<ComponentName` est accompagné d'un `import ComponentName from` dans le même fichier.
+
 ## Git
 
 - Commits conventionnels : `feat:`, `fix:`, `docs:`, `refactor:`

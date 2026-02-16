@@ -1,5 +1,6 @@
 <script setup>
 import { useAuthStore } from '@/core/stores/auth'
+import { useRuntimeStore } from '@/core/runtime/runtime'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2RegisterIllustrationBorderedDark from '@images/pages/auth-v2-register-illustration-bordered-dark.png'
 import authV2RegisterIllustrationBorderedLight from '@images/pages/auth-v2-register-illustration-bordered-light.png'
@@ -18,6 +19,7 @@ definePage({
 })
 
 const auth = useAuthStore()
+const runtime = useRuntimeStore()
 const router = useRouter()
 
 const form = ref({
@@ -48,6 +50,9 @@ const handleRegister = async () => {
       password_confirmation: form.value.password_confirmation,
       company_name: form.value.company_name,
     })
+
+    // Reset runtime to cold — the guard will boot('company') on redirect
+    runtime.teardown()
 
     await router.push('/')
   }

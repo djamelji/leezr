@@ -7,6 +7,15 @@ import { safeRedirect } from '@/utils/safeRedirect'
 
 export const setupGuards = router => {
   router.beforeEach(async to => {
+    // Version mismatch check (ADR-045e)
+    const mismatch = sessionStorage.getItem('lzr:version-mismatch')
+    if (mismatch) {
+      sessionStorage.removeItem('lzr:version-mismatch')
+      window.location.reload()
+
+      return false
+    }
+
     const runtime = useRuntimeStore()
 
     // ─── Public routes ───────────────────────────────────
@@ -26,6 +35,12 @@ export const setupGuards = router => {
       if (runtime.scope && runtime.scope !== scope) {
         runtime.teardown()
       }
+      await runtime.boot(scope)
+    }
+    // ─── Re-boot if stuck in incomplete state ────────────
+    // Handles: register without teardown, 401 during boot, any stale phase
+    else if (!runtime.isReady) {
+      runtime.teardown()
       await runtime.boot(scope)
     }
 

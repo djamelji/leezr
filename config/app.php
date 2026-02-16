@@ -118,6 +118,18 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Build Version (ADR-045c)
+    |--------------------------------------------------------------------------
+    |
+    | Injected by deploy script as git short hash. Used by AddBuildVersion
+    | middleware to expose X-Build-Version header for frontend handshake.
+    |
+    */
+
+    'build_version' => env('APP_BUILD_VERSION', 'dev'),
+
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),

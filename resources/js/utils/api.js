@@ -43,6 +43,17 @@ export const $api = ofetch.create({
       options.signal = runtimeSignal
     }
   },
+  onResponse({ response }) {
+    const serverVersion = response.headers.get('x-build-version')
+    if (!serverVersion || serverVersion === 'dev') return
+
+    const clientVersion = import.meta.env.VITE_APP_VERSION
+    if (!clientVersion || clientVersion === '__dev__') return
+
+    if (serverVersion !== clientVersion) {
+      sessionStorage.setItem('lzr:version-mismatch', serverVersion)
+    }
+  },
   async onResponseError({ request, response, options }) {
     const status = response.status
     const { toast } = useAppToast()
