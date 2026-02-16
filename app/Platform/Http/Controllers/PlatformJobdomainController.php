@@ -50,6 +50,7 @@ class PlatformJobdomainController extends Controller
             $moduleBundles[] = [
                 'module_key' => $modKey,
                 'module_name' => $def['name'],
+                'module_description' => $def['description'] ?? '',
                 'is_core' => str_starts_with($modKey, 'core.'),
                 'bundles' => $bundles,
             ];

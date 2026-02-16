@@ -195,7 +195,7 @@ const defaultRoles = computed(() => {
 const isRoleDrawerOpen = ref(false)
 const isRoleEditMode = ref(false)
 const editingRoleKey = ref(null)
-const roleForm = ref({ key: '', name: '', is_administrative: false, bundles: [], permissions: [] })
+const roleForm = ref({ name: '', is_administrative: false, bundles: [], permissions: [] })
 const roleDrawerLoading = ref(false)
 const isRoleAdvancedMode = ref(false)
 
@@ -230,34 +230,44 @@ const toggleRoleBundle = bundle => {
   }
 }
 
-// ─── Advanced mode: Permission groups for drawer ─────
+// ─── Advanced mode: Permission groups (mirrors Company Roles) ─
 const rolePermissionGroups = computed(() => {
-  const isAdmin = roleForm.value.is_administrative
-  const groups = {}
+  const isManagement = roleForm.value.is_administrative
+  const coreGroups = {}
+  const moduleGroups = {}
 
-  for (const p of permissionCatalog.value) {
-    if (!isAdmin && p.is_admin) continue
-    if (!groups[p.module_key]) {
-      groups[p.module_key] = { name: p.module_key, permissions: [] }
-    }
-    groups[p.module_key].permissions.push(p)
+  // Build module metadata lookup from moduleBundles
+  const modMeta = {}
+  for (const m of moduleBundles.value) {
+    modMeta[m.module_key] = { name: m.module_name, description: '', isCore: m.is_core }
   }
 
-  return Object.values(groups)
-})
-
-const moduleNameMap = computed(() => {
-  const map = {}
   for (const p of permissionCatalog.value) {
-    if (!map[p.module_key]) {
-      const parts = p.module_key.split(/[._]/)
+    if (!isManagement && p.is_admin) continue
 
-      map[p.module_key] = parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1)
+    const meta = modMeta[p.module_key] || { name: p.module_key, description: '', isCore: false }
+    const target = meta.isCore ? coreGroups : moduleGroups
+
+    if (!target[p.module_key]) {
+      target[p.module_key] = {
+        module_key: p.module_key,
+        name: meta.name,
+        description: meta.description,
+        isCore: meta.isCore,
+        permissions: [],
+      }
     }
+    target[p.module_key].permissions.push(p)
   }
 
-  return map
+  return [
+    ...Object.values(coreGroups),
+    ...Object.values(moduleGroups),
+  ]
 })
+
+const hasCorePermGroups = computed(() => rolePermissionGroups.value.some(g => g.isCore))
+const hasModulePermGroups = computed(() => rolePermissionGroups.value.some(g => !g.isCore))
 
 watch(() => roleForm.value.is_administrative, newVal => {
   if (!newVal) {
@@ -277,10 +287,23 @@ watch(() => roleForm.value.is_administrative, newVal => {
   }
 })
 
+const slugify = str =>
+  str.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 50)
+
+const generateRoleKey = name => {
+  const base = slugify(name)
+  if (!base) return ''
+  const current = jobdomain.value?.default_roles || {}
+  if (!current[base]) return base
+  let i = 2
+  while (current[`${base}_${i}`]) i++
+  return `${base}_${i}`
+}
+
 const openRoleCreateDrawer = () => {
   isRoleEditMode.value = false
   editingRoleKey.value = null
-  roleForm.value = { key: '', name: '', is_administrative: false, bundles: [], permissions: [] }
+  roleForm.value = { name: '', is_administrative: false, bundles: [], permissions: [] }
   isRoleAdvancedMode.value = false
   isRoleDrawerOpen.value = true
 }
@@ -289,7 +312,6 @@ const openRoleEditDrawer = role => {
   isRoleEditMode.value = true
   editingRoleKey.value = role.key
   roleForm.value = {
-    key: role.key,
     name: role.name,
     is_administrative: role.is_administrative,
     bundles: [...role.bundles],
@@ -328,12 +350,18 @@ const saveDefaultRoles = async updatedRoles => {
 }
 
 const handleRoleDrawerSubmit = async () => {
+  if (!roleForm.value.name?.trim()) {
+    toast('Role name is required.', 'error')
+
+    return
+  }
+
   roleDrawerLoading.value = true
 
   try {
     const current = { ...(jobdomain.value.default_roles || {}) }
     const roleData = {
-      name: roleForm.value.name,
+      name: roleForm.value.name.trim(),
       is_administrative: roleForm.value.is_administrative,
     }
 
@@ -351,12 +379,13 @@ const handleRoleDrawerSubmit = async () => {
       current[editingRoleKey.value] = roleData
     }
     else {
-      if (current[roleForm.value.key]) {
-        toast(`Role key "${roleForm.value.key}" already exists.`, 'error')
+      const key = generateRoleKey(roleForm.value.name)
+      if (!key) {
+        toast('Could not generate a valid key from the role name.', 'error')
 
         return
       }
-      current[roleForm.value.key] = roleData
+      current[key] = roleData
     }
 
     await saveDefaultRoles(current)
@@ -912,10 +941,7 @@ onMounted(async () => {
                   :key="role.key"
                 >
                   <td>
-                    <div class="d-flex align-center gap-2">
-                      <span class="font-weight-medium">{{ role.name }}</span>
-                      <code class="text-body-2 text-disabled">{{ role.key }}</code>
-                    </div>
+                    <span class="font-weight-medium">{{ role.name }}</span>
                   </td>
                   <td>
                     <VChip
@@ -1010,17 +1036,9 @@ onMounted(async () => {
               <VRow>
                 <VCol cols="12">
                   <AppTextField
-                    v-model="roleForm.key"
-                    label="Key"
-                    placeholder="e.g. dispatcher"
-                    :disabled="isRoleEditMode"
-                  />
-                </VCol>
-                <VCol cols="12">
-                  <AppTextField
                     v-model="roleForm.name"
-                    label="Name"
-                    placeholder="e.g. Dispatcher"
+                    label="Role Name"
+                    placeholder="e.g. Dispatcher, Accountant"
                   />
                 </VCol>
                 <VCol cols="12">
@@ -1048,6 +1066,17 @@ onMounted(async () => {
                       <template #label>
                         <div>
                           <span class="font-weight-medium">Management</span>
+                          <VTooltip location="top">
+                            <template #activator="{ props: tooltipProps }">
+                              <VIcon
+                                icon="tabler-info-circle"
+                                size="16"
+                                class="ms-1 text-disabled"
+                                v-bind="tooltipProps"
+                              />
+                            </template>
+                            Management roles can configure company structure and sensitive settings.
+                          </VTooltip>
                           <div class="text-body-2 text-disabled">
                             Can manage team and company configuration.
                           </div>
@@ -1080,6 +1109,7 @@ onMounted(async () => {
 
                   <!-- ═══ SIMPLE MODE: Capability bundles ═══ -->
                   <template v-if="!isRoleAdvancedMode">
+                    <!-- Core capabilities -->
                     <template v-if="roleCoreModules.length">
                       <div class="d-flex align-center gap-2 mb-3">
                         <VIcon
@@ -1095,6 +1125,12 @@ onMounted(async () => {
                         :key="mod.module_key"
                       >
                         <div class="ms-7 mb-4">
+                          <div
+                            v-if="mod.module_description"
+                            class="text-body-2 text-disabled mb-2"
+                          >
+                            {{ mod.module_description }}
+                          </div>
                           <div
                             v-for="cap in mod.bundles"
                             :key="cap.key"
@@ -1138,6 +1174,7 @@ onMounted(async () => {
                       </template>
                     </template>
 
+                    <!-- Business module capabilities -->
                     <template v-if="roleBusinessModules.length">
                       <VDivider
                         v-if="roleCoreModules.length"
@@ -1158,6 +1195,12 @@ onMounted(async () => {
                         </div>
 
                         <div class="ms-7 mb-4">
+                          <div
+                            v-if="mod.module_description"
+                            class="text-body-2 text-disabled mb-2"
+                          >
+                            {{ mod.module_description }}
+                          </div>
                           <div
                             v-for="cap in mod.bundles"
                             :key="cap.key"
@@ -1204,33 +1247,61 @@ onMounted(async () => {
 
                   <!-- ═══ ADVANCED MODE: Individual permissions ═══ -->
                   <template v-else>
-                    <VTable class="permission-table text-no-wrap">
+                    <!-- Core section -->
+                    <template v-if="hasCorePermGroups">
+                      <div class="d-flex align-center gap-2 mb-3">
+                        <VIcon
+                          icon="tabler-building"
+                          size="20"
+                          color="primary"
+                        />
+                        <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
+                      </div>
+
                       <template
-                        v-for="group in rolePermissionGroups"
-                        :key="group.name"
+                        v-for="group in rolePermissionGroups.filter(g => g.isCore)"
+                        :key="group.module_key"
                       >
-                        <tr>
-                          <td
-                            colspan="2"
-                            class="bg-var-theme-background"
+                        <div class="ms-7 mb-4">
+                          <div class="text-body-1 font-weight-medium">
+                            {{ group.name }}
+                          </div>
+                          <div
+                            v-if="group.description"
+                            class="text-body-2 text-disabled mb-2"
                           >
-                            <span class="text-body-1 font-weight-medium">{{ moduleNameMap[group.name] || group.name }}</span>
-                          </td>
-                        </tr>
-                        <tr
-                          v-for="perm in group.permissions"
-                          :key="perm.key"
-                        >
-                          <td>
+                            {{ group.description }}
+                          </div>
+                          <div
+                            v-for="perm in group.permissions"
+                            :key="perm.key"
+                            class="d-flex align-center"
+                          >
                             <VCheckbox
                               :model-value="isRolePermChecked(perm.key)"
-                              :label="perm.label"
                               hide-details
                               density="compact"
                               @update:model-value="toggleRolePerm(perm.key)"
-                            />
-                          </td>
-                          <td class="text-end">
+                            >
+                              <template #label>
+                                <span>{{ perm.label }}</span>
+                                <VTooltip
+                                  v-if="perm.hint"
+                                  location="top"
+                                >
+                                  <template #activator="{ props: tp }">
+                                    <VIcon
+                                      icon="tabler-info-circle"
+                                      size="14"
+                                      class="ms-1 text-disabled"
+                                      v-bind="tp"
+                                    />
+                                  </template>
+                                  {{ perm.hint }}
+                                </VTooltip>
+                              </template>
+                            </VCheckbox>
+                            <VSpacer />
                             <VChip
                               v-if="perm.is_admin"
                               size="x-small"
@@ -1239,10 +1310,80 @@ onMounted(async () => {
                             >
                               Sensitive
                             </VChip>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       </template>
-                    </VTable>
+                    </template>
+
+                    <!-- Module section(s) -->
+                    <template v-if="hasModulePermGroups">
+                      <VDivider
+                        v-if="hasCorePermGroups"
+                        class="mb-3"
+                      />
+
+                      <template
+                        v-for="group in rolePermissionGroups.filter(g => !g.isCore)"
+                        :key="group.module_key"
+                      >
+                        <div class="d-flex align-center gap-2 mb-3">
+                          <VIcon
+                            icon="tabler-package"
+                            size="20"
+                            color="info"
+                          />
+                          <span class="text-body-1 font-weight-medium">{{ group.name }}</span>
+                        </div>
+
+                        <div class="ms-7 mb-4">
+                          <div
+                            v-if="group.description"
+                            class="text-body-2 text-disabled mb-2"
+                          >
+                            {{ group.description }}
+                          </div>
+                          <div
+                            v-for="perm in group.permissions"
+                            :key="perm.key"
+                            class="d-flex align-center"
+                          >
+                            <VCheckbox
+                              :model-value="isRolePermChecked(perm.key)"
+                              hide-details
+                              density="compact"
+                              @update:model-value="toggleRolePerm(perm.key)"
+                            >
+                              <template #label>
+                                <span>{{ perm.label }}</span>
+                                <VTooltip
+                                  v-if="perm.hint"
+                                  location="top"
+                                >
+                                  <template #activator="{ props: tp }">
+                                    <VIcon
+                                      icon="tabler-info-circle"
+                                      size="14"
+                                      class="ms-1 text-disabled"
+                                      v-bind="tp"
+                                    />
+                                  </template>
+                                  {{ perm.hint }}
+                                </VTooltip>
+                              </template>
+                            </VCheckbox>
+                            <VSpacer />
+                            <VChip
+                              v-if="perm.is_admin"
+                              size="x-small"
+                              color="error"
+                              variant="tonal"
+                            >
+                              Sensitive
+                            </VChip>
+                          </div>
+                        </div>
+                      </template>
+                    </template>
                   </template>
                 </VCol>
 
@@ -1301,19 +1442,3 @@ onMounted(async () => {
   </div>
 </template>
 
-<style lang="scss">
-.permission-table {
-  td {
-    border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    padding-block: 0.25rem;
-
-    .v-checkbox {
-      min-inline-size: 4.75rem;
-    }
-
-    .v-label {
-      white-space: nowrap;
-    }
-  }
-}
-</style>

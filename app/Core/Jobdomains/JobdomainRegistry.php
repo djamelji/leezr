@@ -29,8 +29,8 @@ class JobdomainRegistry
                     ['code' => 'job_title', 'required' => false, 'order' => 4],
                 ],
                 'default_roles' => [
-                    'admin' => [
-                        'name' => 'Administrator',
+                    'manager' => [
+                        'name' => 'Manager',
                         'is_administrative' => true,
                         'bundles' => [
                             'members.team_access', 'members.team_management',
@@ -44,14 +44,6 @@ class JobdomainRegistry
                             'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
-                        ],
-                    ],
-                    'viewer' => [
-                        'name' => 'Viewer',
-                        'permissions' => [
-                            'members.view',
-                            'settings.view',
-                            'shipments.view',
                         ],
                     ],
                 ],
