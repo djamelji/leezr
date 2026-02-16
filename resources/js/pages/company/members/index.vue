@@ -1,4 +1,6 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyStore } from '@/core/stores/company'
 import { useJobdomainStore } from '@/core/stores/jobdomain'

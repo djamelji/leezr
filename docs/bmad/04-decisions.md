@@ -1269,6 +1269,23 @@ definePage({
   - Double barrière : navigation masquée + page guard en cas de navigation directe
   - Les permissions API restent intactes — un driver avec `settings.view` peut toujours lire les settings via API si nécessaire
 
+## ADR-058 : Route-Level Surface Hardening (R3.8.1)
+
+- **Date** : 2026-02-16
+- **Contexte** : R3.8 a introduit le filtrage nav par surface et des guards dans les pages. Mais un utilisateur opérationnel (Driver) pouvait taper directement une URL structure (/company/members, /company/settings) et voir la page avant d'être redirigé. Ce n'est pas acceptable : un utilisateur opérationnel ne doit pas percevoir l'existence des surfaces structure.
+- **Décision** :
+  - **Route meta `surface`** : chaque page company déclare `definePage({ meta: { surface: 'structure' | 'operations' } })`.
+  - **Global router guard** dans `guards.js` : si `to.meta.surface === 'structure'` et `auth.roleLevel === 'operational'` → redirect `/not-found` (404).
+  - Redirection silencieuse vers 404, pas de snackbar, pas de message technique.
+  - Les guards page-level (onMounted) sont supprimés — le router guard global est suffisant et bloque avant le rendu.
+  - Le middleware backend reste intact : la sécurité réelle est côté serveur.
+  - **Triple barrière** : Navigation Filter → Router Surface Guard → Backend Middleware.
+- **Conséquences** :
+  - Un Driver qui tape `/company/members` voit la page 404 standard
+  - Aucune fuite d'information sur l'existence des pages structure
+  - Le guard est centralisé dans le router, pas dispersé dans chaque page
+  - Les pages sont déclaratives via `definePage()` meta — facile à auditer
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

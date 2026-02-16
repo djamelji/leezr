@@ -1,10 +1,11 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import { useAuthStore } from '@/core/stores/auth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
 
 const auth = useAuthStore()
 const jobdomainStore = useJobdomainStore()
-const router = useRouter()
 
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -14,13 +15,6 @@ const errorMessage = ref('')
 const canManage = computed(() => auth.isOwner)
 
 onMounted(async () => {
-  // Surface guard: structure pages require management level
-  if (auth.roleLevel !== 'management') {
-    router.push('/')
-
-    return
-  }
-
   try {
     await jobdomainStore.fetchJobdomain()
   }

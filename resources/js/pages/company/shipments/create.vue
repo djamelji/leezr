@@ -1,7 +1,7 @@
 <script setup>
 import { useShipmentStore } from '@/core/stores/shipment'
 
-definePage({ meta: { module: 'logistics_shipments' } })
+definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
 const shipmentStore = useShipmentStore()
 const router = useRouter()

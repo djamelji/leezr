@@ -1,11 +1,12 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyStore } from '@/core/stores/company'
 import { useAppToast } from '@/composables/useAppToast'
 
 const auth = useAuthStore()
 const companyStore = useCompanyStore()
-const router = useRouter()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -19,14 +20,7 @@ const drawerForm = ref({ name: '', is_administrative: false, permissions: [] })
 const drawerLoading = ref(false)
 const isAdvancedMode = ref(false)
 
-// Surface guard: structure pages require management level
 onMounted(async () => {
-  if (auth.roleLevel !== 'management') {
-    router.push('/')
-
-    return
-  }
-
   try {
     await Promise.all([
       companyStore.fetchCompanyRoles(),

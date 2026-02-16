@@ -1,11 +1,12 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyStore } from '@/core/stores/company'
 
 const auth = useAuthStore()
 const companyStore = useCompanyStore()
-const router = useRouter()
 
 const form = ref({
   name: '',
@@ -23,13 +24,6 @@ const dynamicFields = computed(() => {
 })
 
 onMounted(async () => {
-  // Surface guard: structure pages require management level
-  if (auth.roleLevel !== 'management') {
-    router.push('/')
-
-    return
-  }
-
   await companyStore.fetchCompany()
 
   const data = companyStore.company

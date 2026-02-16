@@ -1,4 +1,6 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyStore } from '@/core/stores/company'

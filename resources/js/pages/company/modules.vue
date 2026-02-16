@@ -1,10 +1,11 @@
 <script setup>
+definePage({ meta: { surface: 'structure' } })
+
 import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 
 const auth = useAuthStore()
 const moduleStore = useModuleStore()
-const router = useRouter()
 
 const isLoading = ref(true)
 const togglingKey = ref(null)
@@ -12,13 +13,6 @@ const togglingKey = ref(null)
 const canManage = computed(() => auth.isOwner)
 
 onMounted(async () => {
-  // Surface guard: structure pages require management level
-  if (auth.roleLevel !== 'management') {
-    router.push('/')
-
-    return
-  }
-
   try {
     await moduleStore.fetchModules()
   }

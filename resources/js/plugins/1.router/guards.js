@@ -79,6 +79,11 @@ export const setupGuards = router => {
       return { path: '/login', query: { redirect: safeRedirect(to.fullPath) } }
     }
 
+    // Surface guard — structure pages require management level
+    if (to.meta.surface === 'structure' && auth.roleLevel === 'operational') {
+      return '/not-found'
+    }
+
     // Module guard — must await ready for module-gated routes
     if (to.meta.module) {
       if (!runtime.isReady) {
