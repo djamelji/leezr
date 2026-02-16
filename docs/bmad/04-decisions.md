@@ -1286,6 +1286,23 @@ definePage({
   - Le guard est centralisé dans le router, pas dispersé dans chaque page
   - Les pages sont déclaratives via `definePage()` meta — facile à auditer
 
+## ADR-059 : Surface Guard After Tenant Hydration (R3.8.2b)
+
+- **Date** : 2026-02-16
+- **Contexte** : Le surface guard de R3.8.1 s'exécutait après `whenAuthResolved()` qui ne couvre que la phase auth (fetchMe). La phase tenant (fetchMyCompanies) n'était pas encore terminée. `roleLevel` dépend de `currentCompany.company_role.is_administrative` — données chargées en phase tenant. Résultat : le guard laissait passer un Driver sur les routes structure car `_companies` n'était pas encore hydraté.
+- **Décision** :
+  - Le surface guard utilise `STRUCTURE_ROUTES` (Set statique de noms de routes) au lieu de `to.meta.surface`.
+  - Avant de vérifier `roleLevel`, le guard attend `runtime.whenReady(5000)` — identique au pattern du module guard.
+  - Fallback de sécurité : si `currentCompany` est null après hydration → redirect `/login`.
+  - Les routes structure sont : `company-members`, `company-members-id`, `company-settings`, `company-modules`, `company-jobdomain`, `company-roles`.
+  - Le `definePage({ meta: { surface } })` reste sur les pages comme documentation déclarative.
+  - **Triple barrière confirmée** : Navigation Filter → Router Guard (post-tenant) → Backend Middleware.
+- **Conséquences** :
+  - Le guard surface s'exécute toujours avec des données company fiables
+  - Un Driver qui tape `/company/members` voit 404 — même en cold boot
+  - Pas de dépendance sur `to.meta` (robuste face aux edge cases de `definePage` + `unplugin-vue-router`)
+  - Le Set `STRUCTURE_ROUTES` est facile à auditer et à étendre
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
