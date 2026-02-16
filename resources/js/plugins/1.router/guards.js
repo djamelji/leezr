@@ -103,7 +103,7 @@ export const setupGuards = router => {
       }
 
       if (auth.roleLevel === 'operational') {
-        return { name: 'company-403' }
+        return { name: 'company403' }
       }
     }
 
