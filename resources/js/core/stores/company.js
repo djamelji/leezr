@@ -8,6 +8,8 @@ export const useCompanyStore = defineStore('company', {
     _fieldActivations: [],
     _availableFieldDefinitions: [],
     _customFieldDefinitions: [],
+    _roles: [],
+    _permissionCatalog: [],
   }),
 
   getters: {
@@ -16,6 +18,8 @@ export const useCompanyStore = defineStore('company', {
     fieldActivations: state => state._fieldActivations,
     availableFieldDefinitions: state => state._availableFieldDefinitions,
     customFieldDefinitions: state => state._customFieldDefinitions,
+    roles: state => state._roles,
+    permissionCatalog: state => state._permissionCatalog,
   },
 
   actions: {
@@ -46,10 +50,10 @@ export const useCompanyStore = defineStore('company', {
       return data.members
     },
 
-    async addMember({ first_name, last_name, email, role }) {
+    async addMember({ first_name, last_name, email, company_role_id }) {
       const data = await $api('/company/members', {
         method: 'POST',
-        body: { first_name, last_name, email, role },
+        body: { first_name, last_name, email, company_role_id },
       })
 
       this._members.push(data.member)
@@ -57,15 +61,15 @@ export const useCompanyStore = defineStore('company', {
       return data.member
     },
 
-    async updateMember(id, { role }) {
+    async updateMember(id, { company_role_id }) {
       const data = await $api(`/company/members/${id}`, {
         method: 'PUT',
-        body: { role },
+        body: { company_role_id },
       })
 
       const index = this._members.findIndex(m => m.id === id)
       if (index !== -1)
-        this._members[index] = { ...this._members[index], role: data.member.role }
+        this._members[index] = { ...this._members[index], company_role: data.member.company_role }
 
       return data.member
     },
@@ -175,6 +179,51 @@ export const useCompanyStore = defineStore('company', {
 
       // Refresh activations to remove the deleted field
       await this.fetchFieldActivations()
+
+      return data
+    },
+
+    // ─── Company Roles (CRUD) ──────────────────────────
+    async fetchCompanyRoles() {
+      const data = await $api('/company/roles')
+
+      this._roles = data.roles
+    },
+
+    async fetchPermissionCatalog() {
+      const data = await $api('/company/permissions')
+
+      this._permissionCatalog = data.permissions
+    },
+
+    async createCompanyRole(payload) {
+      const data = await $api('/company/roles', {
+        method: 'POST',
+        body: payload,
+      })
+
+      this._roles.push(data.role)
+
+      return data
+    },
+
+    async updateCompanyRole(id, payload) {
+      const data = await $api(`/company/roles/${id}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      const idx = this._roles.findIndex(r => r.id === id)
+      if (idx !== -1)
+        this._roles[idx] = data.role
+
+      return data
+    },
+
+    async deleteCompanyRole(id) {
+      const data = await $api(`/company/roles/${id}`, { method: 'DELETE' })
+
+      this._roles = this._roles.filter(r => r.id !== id)
 
       return data
     },

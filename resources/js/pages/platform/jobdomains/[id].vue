@@ -22,6 +22,7 @@ const activeTab = ref('overview')
 // ─── Jobdomain state ───────────────────────────────
 const jobdomain = ref(null)
 const fieldDefinitions = ref([])
+const permissionCatalog = ref([])
 
 // ─── Overview form ──────────────────────────────────
 const overviewForm = ref({ label: '', description: '', allowCustomFields: false })
@@ -175,6 +176,157 @@ const scopeColor = scope => {
   return scope === 'company' ? 'primary' : 'warning'
 }
 
+// ─── Roles — Preset management ──────────────────────
+const defaultRoles = computed(() => {
+  const roles = jobdomain.value?.default_roles || {}
+
+  return Object.entries(roles).map(([key, def]) => ({
+    key,
+    name: def.name,
+    is_administrative: def.is_administrative || false,
+    permissions: def.permissions || [],
+  }))
+})
+
+// Role drawer state
+const isRoleDrawerOpen = ref(false)
+const isRoleEditMode = ref(false)
+const editingRoleKey = ref(null)
+const roleForm = ref({ key: '', name: '', is_administrative: false, permissions: [] })
+const roleDrawerLoading = ref(false)
+
+// Permission groups for drawer checkboxes
+const rolePermissionGroups = computed(() => {
+  const isAdmin = roleForm.value.is_administrative
+  const groups = {}
+
+  for (const p of permissionCatalog.value) {
+    if (!isAdmin && p.is_admin) continue
+    if (!groups[p.module_key]) {
+      groups[p.module_key] = { name: p.module_key, permissions: [] }
+    }
+    groups[p.module_key].permissions.push(p)
+  }
+
+  return Object.values(groups)
+})
+
+// Module name lookup for group headers
+const moduleNameMap = computed(() => {
+  const map = {}
+  for (const p of permissionCatalog.value) {
+    if (!map[p.module_key]) {
+      // Derive a friendly name from module_key: core.members → Members, logistics_shipments → Shipments
+      const parts = p.module_key.split(/[._]/)
+
+      map[p.module_key] = parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1)
+    }
+  }
+
+  return map
+})
+
+watch(() => roleForm.value.is_administrative, newVal => {
+  if (!newVal) {
+    const adminKeys = new Set(
+      permissionCatalog.value.filter(p => p.is_admin).map(p => p.key),
+    )
+
+    roleForm.value.permissions = roleForm.value.permissions.filter(k => !adminKeys.has(k))
+  }
+})
+
+const openRoleCreateDrawer = () => {
+  isRoleEditMode.value = false
+  editingRoleKey.value = null
+  roleForm.value = { key: '', name: '', is_administrative: false, permissions: [] }
+  isRoleDrawerOpen.value = true
+}
+
+const openRoleEditDrawer = role => {
+  isRoleEditMode.value = true
+  editingRoleKey.value = role.key
+  roleForm.value = {
+    key: role.key,
+    name: role.name,
+    is_administrative: role.is_administrative,
+    permissions: [...role.permissions],
+  }
+  isRoleDrawerOpen.value = true
+}
+
+const isRolePermChecked = permKey => {
+  return roleForm.value.permissions.includes(permKey)
+}
+
+const toggleRolePerm = permKey => {
+  const idx = roleForm.value.permissions.indexOf(permKey)
+  if (idx === -1) {
+    roleForm.value.permissions.push(permKey)
+  }
+  else {
+    roleForm.value.permissions.splice(idx, 1)
+  }
+}
+
+const saveDefaultRoles = async updatedRoles => {
+  try {
+    const data = await platformStore.updateJobdomain(jobdomain.value.id, {
+      default_roles: updatedRoles,
+    })
+
+    jobdomain.value = data.jobdomain
+    toast(data.message, 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to update roles.', 'error')
+  }
+}
+
+const handleRoleDrawerSubmit = async () => {
+  roleDrawerLoading.value = true
+
+  try {
+    const current = { ...(jobdomain.value.default_roles || {}) }
+
+    if (isRoleEditMode.value) {
+      current[editingRoleKey.value] = {
+        name: roleForm.value.name,
+        is_administrative: roleForm.value.is_administrative,
+        permissions: roleForm.value.permissions,
+      }
+    }
+    else {
+      if (current[roleForm.value.key]) {
+        toast(`Role key "${roleForm.value.key}" already exists.`, 'error')
+
+        return
+      }
+      current[roleForm.value.key] = {
+        name: roleForm.value.name,
+        is_administrative: roleForm.value.is_administrative,
+        permissions: roleForm.value.permissions,
+      }
+    }
+
+    await saveDefaultRoles(current)
+    isRoleDrawerOpen.value = false
+  }
+  finally {
+    roleDrawerLoading.value = false
+  }
+}
+
+const deletePresetRole = async role => {
+  if (!confirm(`Remove preset role "${role.name}"?`))
+    return
+
+  const current = { ...(jobdomain.value.default_roles || {}) }
+
+  delete current[role.key]
+  await saveDefaultRoles(current)
+}
+
 // ─── Load data ──────────────────────────────────────
 onMounted(async () => {
   try {
@@ -185,6 +337,7 @@ onMounted(async () => {
 
     jobdomain.value = jdData.jobdomain
     fieldDefinitions.value = jdData.field_definitions || []
+    permissionCatalog.value = jdData.permission_catalog || []
     resetOverviewForm()
   }
   catch {
@@ -273,6 +426,19 @@ onMounted(async () => {
             class="ms-2"
           >
             {{ defaultFields.length }}
+          </VChip>
+        </VTab>
+        <VTab value="roles">
+          <VIcon
+            icon="tabler-shield-lock"
+            class="me-1"
+          />
+          Default Roles
+          <VChip
+            size="x-small"
+            class="ms-2"
+          >
+            {{ defaultRoles.length }}
           </VChip>
         </VTab>
       </VTabs>
@@ -645,7 +811,228 @@ onMounted(async () => {
             </VCardText>
           </VCard>
         </VWindowItem>
+
+        <!-- ─── Tab 4: Default Roles ──────────────────── -->
+        <VWindowItem value="roles">
+          <VCard>
+            <VCardTitle class="d-flex align-center">
+              <VIcon
+                icon="tabler-shield-lock"
+                class="me-2"
+              />
+              Default Roles
+              <VSpacer />
+              <VBtn
+                size="small"
+                prepend-icon="tabler-plus"
+                @click="openRoleCreateDrawer"
+              >
+                Add Role
+              </VBtn>
+            </VCardTitle>
+
+            <VAlert
+              type="info"
+              variant="tonal"
+              class="mx-4 mt-2"
+            >
+              These role presets are cloned when assigning this job domain to a company. Existing companies are not affected.
+            </VAlert>
+
+            <VTable
+              v-if="defaultRoles.length"
+              class="text-no-wrap mt-2"
+            >
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th style="width: 120px;">
+                    Type
+                  </th>
+                  <th style="width: 120px;">
+                    Permissions
+                  </th>
+                  <th style="width: 100px;" />
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="role in defaultRoles"
+                  :key="role.key"
+                >
+                  <td>
+                    <div class="d-flex align-center gap-2">
+                      <span class="font-weight-medium">{{ role.name }}</span>
+                      <code class="text-body-2 text-disabled">{{ role.key }}</code>
+                    </div>
+                  </td>
+                  <td>
+                    <VChip
+                      :color="role.is_administrative ? 'error' : 'info'"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ role.is_administrative ? 'Manager' : 'Standard' }}
+                    </VChip>
+                  </td>
+                  <td>
+                    <VChip
+                      size="small"
+                      :color="role.permissions.length > 0 ? 'primary' : 'default'"
+                      variant="tonal"
+                    >
+                      {{ role.permissions.length }}
+                    </VChip>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-1 justify-end">
+                      <VBtn
+                        icon
+                        variant="text"
+                        size="small"
+                        color="default"
+                        @click="openRoleEditDrawer(role)"
+                      >
+                        <VIcon icon="tabler-pencil" />
+                      </VBtn>
+                      <VBtn
+                        icon
+                        variant="text"
+                        size="small"
+                        color="error"
+                        @click="deletePresetRole(role)"
+                      >
+                        <VIcon icon="tabler-trash" />
+                      </VBtn>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
+
+            <VCardText
+              v-else
+              class="text-center text-disabled"
+            >
+              No role presets. Add one to get started.
+            </VCardText>
+          </VCard>
+        </VWindowItem>
       </VWindow>
+
+      <!-- ─── Role Drawer ──────────────────────────────── -->
+      <VNavigationDrawer
+        v-model="isRoleDrawerOpen"
+        temporary
+        location="end"
+        width="500"
+      >
+        <AppDrawerHeaderSection
+          :title="isRoleEditMode ? 'Edit Role Preset' : 'Add Role Preset'"
+          @cancel="isRoleDrawerOpen = false"
+        />
+
+        <VDivider />
+
+        <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
+          <VCardText>
+            <VForm @submit.prevent="handleRoleDrawerSubmit">
+              <VRow>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="roleForm.key"
+                    label="Key"
+                    placeholder="e.g. dispatcher"
+                    :disabled="isRoleEditMode"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="roleForm.name"
+                    label="Name"
+                    placeholder="e.g. Dispatcher"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <VSwitch
+                    v-model="roleForm.is_administrative"
+                    label="Manager role"
+                    color="error"
+                    hide-details
+                  />
+                  <div class="text-body-2 text-disabled mt-1">
+                    Manager roles can receive administrative permissions.
+                  </div>
+                </VCol>
+
+                <!-- Grouped Permissions -->
+                <VCol cols="12">
+                  <h6 class="text-h6 mb-2">
+                    Capabilities
+                  </h6>
+
+                  <VTable class="permission-table text-no-wrap">
+                    <template
+                      v-for="group in rolePermissionGroups"
+                      :key="group.name"
+                    >
+                      <tr>
+                        <td
+                          colspan="2"
+                          class="bg-var-theme-background"
+                        >
+                          <span class="text-body-1 font-weight-medium">{{ moduleNameMap[group.name] || group.name }}</span>
+                        </td>
+                      </tr>
+                      <tr
+                        v-for="perm in group.permissions"
+                        :key="perm.key"
+                      >
+                        <td>
+                          <VCheckbox
+                            :model-value="isRolePermChecked(perm.key)"
+                            :label="perm.label"
+                            hide-details
+                            density="compact"
+                            @update:model-value="toggleRolePerm(perm.key)"
+                          />
+                        </td>
+                        <td class="text-end">
+                          <VChip
+                            v-if="perm.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            Admin
+                          </VChip>
+                        </td>
+                      </tr>
+                    </template>
+                  </VTable>
+                </VCol>
+
+                <VCol cols="12">
+                  <VBtn
+                    type="submit"
+                    class="me-3"
+                    :loading="roleDrawerLoading"
+                  >
+                    {{ isRoleEditMode ? 'Update' : 'Create' }}
+                  </VBtn>
+                  <VBtn
+                    variant="tonal"
+                    color="secondary"
+                    @click="isRoleDrawerOpen = false"
+                  >
+                    Cancel
+                  </VBtn>
+                </VCol>
+              </VRow>
+            </VForm>
+          </VCardText>
+        </div>
+      </VNavigationDrawer>
 
       <!-- ─── Delete Confirmation Dialog ──────────────── -->
       <VDialog
@@ -679,3 +1066,20 @@ onMounted(async () => {
     </template>
   </div>
 </template>
+
+<style lang="scss">
+.permission-table {
+  td {
+    border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    padding-block: 0.25rem;
+
+    .v-checkbox {
+      min-inline-size: 4.75rem;
+    }
+
+    .v-label {
+      white-space: nowrap;
+    }
+  }
+}
+</style>

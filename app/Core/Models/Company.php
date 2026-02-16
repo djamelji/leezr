@@ -2,6 +2,7 @@
 
 namespace App\Core\Models;
 
+use App\Company\RBAC\CompanyRole;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\CompanyModule;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,11 @@ class Company extends Model
         return $this->belongsToMany(User::class, 'memberships')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    public function roles(): HasMany
+    {
+        return $this->hasMany(CompanyRole::class);
     }
 
     public function modules(): HasMany

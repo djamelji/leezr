@@ -15,10 +15,7 @@ const isLoading = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-const canEdit = computed(() => {
-  const role = auth.currentCompany?.role
-  return role === 'owner' || role === 'admin'
-})
+const canEdit = computed(() => auth.hasPermission('settings.manage'))
 
 const dynamicFields = computed(() => {
   return companyStore.company?.dynamic_fields || []

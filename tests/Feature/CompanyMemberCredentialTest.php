@@ -7,11 +7,12 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\SetsUpCompanyRbac;
 use Tests\TestCase;
 
 class CompanyMemberCredentialTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SetsUpCompanyRbac;
 
     private User $owner;
     private User $admin;
@@ -32,8 +33,10 @@ class CompanyMemberCredentialTest extends TestCase
         $this->member = User::factory()->create();
 
         $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $adminRole = $this->setUpCompanyRbac($this->company);
+
         $this->ownerMembership = $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);
-        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'admin']);
+        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'admin', 'company_role_id' => $adminRole->id]);
         $this->memberMembership = $this->company->memberships()->create(['user_id' => $this->member->id, 'role' => 'user']);
     }
 

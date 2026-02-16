@@ -8,10 +8,7 @@ const moduleStore = useModuleStore()
 const isLoading = ref(true)
 const togglingKey = ref(null)
 
-const canManage = computed(() => {
-  const role = auth.currentCompany?.role
-  return role === 'owner' || role === 'admin'
-})
+const canManage = computed(() => auth.isOwner)
 
 onMounted(async () => {
   try {

@@ -26,17 +26,14 @@ const setPasswordLoading = ref(false)
 const resetPasswordLoading = ref(false)
 const isConfirmDialogVisible = ref(false)
 
-const canEdit = computed(() => {
-  const role = auth.currentCompany?.role
-  return role === 'owner' || role === 'admin'
-})
+const canEdit = computed(() => auth.hasPermission('members.manage'))
 
 const isSelf = computed(() =>
   baseFields.value?.id === auth.user?.id,
 )
 
 const showCredentials = computed(() =>
-  canEdit.value && member.value?.role !== 'owner' && !isSelf.value,
+  auth.hasPermission('members.credentials') && member.value?.role !== 'owner' && !isSelf.value,
 )
 
 const applyProfile = data => {
@@ -53,7 +50,10 @@ const applyProfile = data => {
 
 onMounted(async () => {
   try {
-    const data = await companyStore.fetchMemberProfile(route.params.id)
+    const [data] = await Promise.all([
+      companyStore.fetchMemberProfile(route.params.id),
+      companyStore.fetchCompanyRoles().catch(() => {}),
+    ])
 
     applyProfile(data)
   }
@@ -184,11 +184,11 @@ const handleSetPassword = async () => {
             <span class="text-body-2 text-disabled">{{ baseFields.email }}</span>
             <VChip
               v-if="member"
-              :color="member.role === 'owner' ? 'primary' : member.role === 'admin' ? 'warning' : 'info'"
+              :color="member.role === 'owner' ? 'primary' : member.company_role?.key === 'admin' ? 'warning' : 'info'"
               size="x-small"
               class="text-capitalize"
             >
-              {{ member.role }}
+              {{ member.company_role?.name || member.role }}
             </VChip>
             <VChip
               :color="baseFields.status === 'active' ? 'success' : 'warning'"
@@ -252,6 +252,7 @@ const handleSetPassword = async () => {
                 :base-fields="baseFields"
                 :dynamic-fields="[]"
                 :editable="canEdit"
+                :company-roles="companyStore.roles"
                 @save="handleOverviewSave"
               />
             </VCardText>

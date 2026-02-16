@@ -18,7 +18,8 @@ class StoreMemberRequest extends FormRequest
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
-            'role' => ['required', 'string', Rule::in(['admin', 'user'])],
+            'company_role_id' => ['nullable', 'integer', Rule::exists('company_roles', 'id')
+                ->where('company_id', $this->attributes->get('company')?->id)],
         ];
     }
 }

@@ -9,11 +9,12 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\SetsUpCompanyRbac;
 use Tests\TestCase;
 
 class CompanyMemberProfileTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SetsUpCompanyRbac;
 
     private User $owner;
     private User $admin;
@@ -34,8 +35,10 @@ class CompanyMemberProfileTest extends TestCase
         $this->member = User::factory()->create();
 
         $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $adminRole = $this->setUpCompanyRbac($this->company);
+
         $this->ownerMembership = $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);
-        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'admin']);
+        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'admin', 'company_role_id' => $adminRole->id]);
         $this->memberMembership = $this->company->memberships()->create(['user_id' => $this->member->id, 'role' => 'user']);
 
         // Activate company_user fields
@@ -71,6 +74,7 @@ class CompanyMemberProfileTest extends TestCase
                         'id',
                         'user' => ['id', 'first_name', 'last_name', 'display_name', 'email', 'status'],
                         'role',
+                        'company_role',
                         'created_at',
                     ],
                 ],
@@ -142,17 +146,20 @@ class CompanyMemberProfileTest extends TestCase
         $this->assertEquals('+33 1 23 45 67 89', $phoneField['value']);
     }
 
-    // ─── 4) Admin can update role (Bloc C) ────────────────
+    // ─── 4) Admin can update company role (Bloc C) ────────
 
-    public function test_admin_can_update_member_role(): void
+    public function test_admin_can_update_member_company_role(): void
     {
+        $adminRole = \App\Company\RBAC\CompanyRole::where('company_id', $this->company->id)
+            ->where('key', 'admin')->first();
+
         $response = $this->actAs($this->owner)
             ->putJson("/api/company/members/{$this->memberMembership->id}", [
-                'role' => 'admin',
+                'company_role_id' => $adminRole->id,
             ]);
 
         $response->assertOk();
-        $this->assertEquals('admin', $response->json('member.role'));
+        $this->assertEquals('admin', $response->json('member.company_role.key'));
     }
 
     // ─── 5) Non-admin cannot update member profile ────────

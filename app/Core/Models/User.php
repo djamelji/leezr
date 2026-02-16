@@ -95,6 +95,25 @@ class User extends Authenticatable
         return in_array($this->roleIn($company), ['owner', 'admin']);
     }
 
+    /**
+     * Check if the user has a specific company permission.
+     * Owner bypasses all permissions.
+     */
+    public function hasCompanyPermission(Company $company, string $permissionKey): bool
+    {
+        if ($this->isOwnerOf($company)) {
+            return true;
+        }
+
+        $membership = $this->membershipFor($company);
+
+        if (!$membership || !$membership->company_role_id) {
+            return false;
+        }
+
+        return $membership->companyRole->hasPermission($permissionKey);
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         ResetPassword::createUrlUsing(fn ($notifiable, $token) => url("/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForPasswordReset())));

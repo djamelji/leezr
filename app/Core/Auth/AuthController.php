@@ -95,15 +95,34 @@ class AuthController extends Controller
 
     public function myCompanies(Request $request): JsonResponse
     {
-        $companies = $request->user()
-            ->companies()
-            ->get()
-            ->map(fn ($company) => [
-                'id' => $company->id,
-                'name' => $company->name,
-                'slug' => $company->slug,
-                'role' => $company->pivot->role,
-            ]);
+        $user = $request->user();
+
+        // Eager-load memberships with their RBAC role + permissions
+        $memberships = $user->memberships()
+            ->with('companyRole.permissions', 'company')
+            ->get();
+
+        $companies = $memberships->map(function ($membership) {
+            $data = [
+                'id' => $membership->company->id,
+                'name' => $membership->company->name,
+                'slug' => $membership->company->slug,
+                'role' => $membership->role,
+            ];
+
+            if ($membership->companyRole) {
+                $data['company_role'] = [
+                    'id' => $membership->companyRole->id,
+                    'key' => $membership->companyRole->key,
+                    'name' => $membership->companyRole->name,
+                    'permissions' => $membership->companyRole->permissions->pluck('key')->values(),
+                ];
+            } else {
+                $data['company_role'] = null;
+            }
+
+            return $data;
+        });
 
         return response()->json([
             'companies' => $companies,

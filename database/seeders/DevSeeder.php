@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Company\RBAC\CompanyPermissionCatalog;
+use App\Company\RBAC\CompanyRole;
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValue;
@@ -101,8 +103,28 @@ class DevSeeder extends Seeder
             );
         }
 
-        // ─── Jobdomain assignment ────────────────────────────────
+        // ─── Jobdomain assignment (seeds default roles + permissions) ────
+        // Note: CompanyPermissionCatalog::sync() already ran in SystemSeeder
         JobdomainGate::assignToCompany($company, 'logistique');
+
+        // ─── Assign RBAC roles to demo members ──────────────────
+        $adminRole = CompanyRole::where('company_id', $company->id)
+            ->where('key', 'admin')->first();
+
+        if ($adminRole) {
+            $company->memberships()
+                ->where('user_id', $admin->id)
+                ->update(['company_role_id' => $adminRole->id]);
+        }
+
+        $viewerRole = CompanyRole::where('company_id', $company->id)
+            ->where('key', 'viewer')->first();
+
+        if ($viewerRole) {
+            $company->memberships()
+                ->where('user_id', $user->id)
+                ->update(['company_role_id' => $viewerRole->id]);
+        }
 
         // ─── Field activations for demo company ──────────────────
         $companyFields = FieldDefinition::whereNull('company_id')

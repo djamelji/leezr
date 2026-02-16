@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'company.context' => \App\Company\Http\Middleware\SetCompanyContext::class,
             'company.role' => \App\Company\Http\Middleware\EnsureRole::class,
+            'company.permission' => \App\Company\Http\Middleware\EnsureCompanyPermission::class,
             'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
             'module.active' => \App\Core\Modules\EnsureModuleActive::class,
         ]);

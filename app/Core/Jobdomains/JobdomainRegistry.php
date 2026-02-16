@@ -28,6 +28,34 @@ class JobdomainRegistry
                     ['code' => 'phone', 'required' => false, 'order' => 3],
                     ['code' => 'job_title', 'required' => false, 'order' => 4],
                 ],
+                'default_roles' => [
+                    'admin' => [
+                        'name' => 'Administrator',
+                        'is_administrative' => true,
+                        'permissions' => [
+                            'members.view', 'members.invite', 'members.manage', 'members.credentials',
+                            'settings.view', 'settings.manage',
+                            'shipments.view', 'shipments.create', 'shipments.manage_status',
+                            'shipments.manage_fields', 'shipments.delete',
+                        ],
+                    ],
+                    'dispatcher' => [
+                        'name' => 'Dispatcher',
+                        'permissions' => [
+                            'members.view', 'members.invite',
+                            'settings.view',
+                            'shipments.view', 'shipments.create', 'shipments.manage_status',
+                        ],
+                    ],
+                    'viewer' => [
+                        'name' => 'Viewer',
+                        'permissions' => [
+                            'members.view',
+                            'settings.view',
+                            'shipments.view',
+                        ],
+                    ],
+                ],
             ],
         ];
     }
@@ -54,6 +82,7 @@ class JobdomainRegistry
                     'description' => $definition['description'] ?? null,
                     'default_modules' => $definition['default_modules'] ?? [],
                     'default_fields' => $definition['default_fields'] ?? [],
+                    'default_roles' => $definition['default_roles'] ?? [],
                 ],
             );
         }

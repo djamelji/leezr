@@ -12,11 +12,7 @@ const isLoading = ref(true)
 const statusFilter = ref('')
 const searchQuery = ref('')
 
-const canManage = computed(() => {
-  const role = auth.currentCompany?.role
-
-  return role === 'owner' || role === 'admin'
-})
+const canManage = computed(() => auth.hasPermission('shipments.create'))
 
 const headers = [
   { title: 'Reference', key: 'reference' },

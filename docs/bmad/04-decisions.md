@@ -1079,6 +1079,119 @@ definePage({
   - Fichiers ajoutés : `invariants.js`, `devtools/runtimeStress.js`
   - Fichiers modifiés : `scheduler.js`, `runtime.js`, `journal.js`, `RuntimeDebugPanel.vue`, `AppShellGate.vue`, `App.vue`
 
+## ADR-049 : Company RBAC — Permissions modulaires par rôle
+
+- **Date** : 2026-02-14
+- **Contexte** : Le système actuel utilise un enum `role` (owner/admin/user) sur `memberships` pour contrôler l'accès aux routes company. Ce modèle est trop grossier : un admin a accès à tout, un user à rien. Pour être vendable, Leezr a besoin d'un RBAC fin par module — chaque module déclare ses permissions, chaque rôle est une collection de permissions, chaque company peut personnaliser ses rôles.
+- **Décision** :
+
+  **Modèle de données (3 nouvelles tables + 1 modifiée)** :
+  - `company_permissions` : `id`, `key` (unique varchar 50), `label` (varchar 100), `module_key` (varchar 50, indexé). Catalogue global, synchronisé depuis `ModuleRegistry`.
+  - `company_roles` : `id`, `company_id` (FK), `key` (varchar 50), `name` (varchar 100), `is_system` (bool, défaut false), `timestamps`. Unique sur `[company_id, key]`. Rôles par company.
+  - `company_role_permission` : `company_role_id` (FK), `company_permission_id` (FK). Unique sur la paire.
+  - `memberships` : ajout `company_role_id` (FK nullable vers `company_roles`).
+
+  **Principes** :
+  1. Owner est structurel (`memberships.role = 'owner'`), PAS un rôle RBAC. Owner bypass toutes les permissions.
+  2. 1 member = 1 rôle (`company_role_id` FK, pas M:N).
+  3. Permissions = catalogue global, synchronisé depuis `ModuleRegistry` via `CompanyPermissionCatalog::sync()`.
+  4. Rôles = par company. Le jobdomain seed des rôles par défaut (`is_system = true`) à l'assignation.
+  5. Module désactivé → ses permissions sont inactives mais préservées dans les rôles.
+  6. Middleware `company.permission:{key}` remplace `company.role:admin` sur les routes.
+  7. Pas d'héritage, pas de hiérarchie, pas de row-level security, pas de field-level permissions.
+
+  **10 permissions initiales (3 modules)** :
+  - `core.members` : `members.view`, `members.manage`, `members.credentials`
+  - `core.settings` : `settings.view`, `settings.manage`
+  - `logistics_shipments` : `shipments.view`, `shipments.create`, `shipments.manage_status`, `shipments.manage_fields`, `shipments.delete`
+
+  **Rôles par défaut (jobdomain logistique)** :
+  - `admin` (système) : toutes les 10 permissions
+  - `dispatcher` (système) : view members, view settings, toutes shipments sauf delete
+  - `viewer` (système) : view members, view settings, view shipments
+
+  **Implémentation** : 4 LOTs (R1: tables+catalogue+seed, R2: middleware+routes, R3: frontend, R4: advanced view+hardening).
+
+- **Conséquences** :
+  - L'enum `role` sur memberships est conservé pour la compatibilité owner/admin/user, mais `company_role_id` devient la source d'autorisation pour non-owners
+  - Chaque module peut déclarer des permissions dans sa définition `ModuleRegistry`, synchronisées automatiquement
+  - Les companies peuvent créer des rôles custom ou modifier les rôles système seedés par le jobdomain
+  - Le middleware `company.permission` permet un contrôle fin route par route
+  - Pattern identique au Platform RBAC (PlatformRole → PlatformPermission, super_admin bypass)
+
+## ADR-050 : RBAC Hardening — Séparation admin / opérationnel
+
+- **Date** : 2026-02-16
+- **Contexte** : Avec ADR-049, tout rôle peut recevoir n'importe quelle permission via `permissions()->sync()`. Rien n'empêche techniquement un rôle opérationnel (driver, viewer) de recevoir des permissions de gouvernance (settings.manage, members.manage). L'UI ne suffit pas — un appel API direct pourrait contourner la contrainte.
+- **Décision** :
+  - `company_permissions.is_admin` (bool, default false) — marque les permissions de gouvernance. Déclaré dans `ModuleRegistry` par chaque permission, synchronisé via `CompanyPermissionCatalog::sync()`.
+  - `company_roles.is_administrative` (bool, default false) — marque les rôles autorisés à recevoir des permissions admin.
+  - `CompanyRole::syncPermissionsSafe(array $ids)` — valide structurellement : si un rôle `is_administrative = false` reçoit une permission `is_admin = true`, throw `ValidationException`. Pas de fallback silencieux.
+  - `permissions()->sync()` direct reste disponible (pour les migrations, les tests) mais `syncPermissionsSafe()` est le point d'entrée pour tout code applicatif (JobdomainGate, futur API de gestion des rôles).
+  - 5 permissions admin : `members.manage`, `members.credentials`, `settings.manage`, `shipments.manage_fields`, `shipments.delete`.
+  - 5 permissions opérationnelles : `members.view`, `settings.view`, `shipments.view`, `shipments.create`, `shipments.manage_status`.
+  - Le rôle `admin` (jobdomain logistique) est `is_administrative = true`. Les rôles `dispatcher` et `viewer` restent `false`.
+  - Owner bypass inchangé (structurel, pas RBAC).
+  - Aucune hiérarchie, aucun héritage. Séparation binaire explicite.
+- **Conséquences** :
+  - Impossible techniquement d'attribuer des permissions de gouvernance à un rôle opérationnel, même via API directe
+  - Le dispatcher perd `shipments.manage_fields` (permission admin reclassifiée)
+  - Tout nouveau module doit marquer ses permissions `is_admin` dans `ModuleRegistry`
+  - La validation est au niveau modèle, pas middleware — le middleware reste inchangé
+
+## ADR-051 : Frontend RBAC — Permission-based UI gating
+
+- **Date** : 2026-02-16
+- **Contexte** : Le backend RBAC company est complet (R1/R2/R2.5) avec 11 permissions, rôles per-company, owner bypass structurel, et middleware `company.permission:{key}` sur 15 routes. Le frontend utilisait des checks hardcodés `role === 'owner' || role === 'admin'` et n'avait pas de page de gestion des rôles.
+- **Décision** :
+  - **Frontend RBAC** : `auth.hasPermission(key)` avec owner bypass, pas de CASL. Getters `isOwner` et `permissions` dans le auth store, dérivés de `company_role.permissions` dans `/api/my-companies`.
+  - **Navigation** : double filtre `permission` + `ownerOnly` dans `DefaultLayoutWithVerticalNav.vue`. Les navItems statiques et module portent un champ `permission`. Les headings orphelins sont auto-retirés.
+  - **Structure owner-only** : modules, industry, roles = `ownerOnly: true`, pas permission-based. La distinction est structurelle (qui façonne la company) vs opérationnelle (qui travaille dedans).
+  - **`company_role_id` nullable** remplace l'enum `role` dans les requêtes member (`StoreMemberRequest`, `UpdateMemberRequest`). Un membre peut être invité sans rôle, assignable ensuite.
+  - **`membership.role`** = seulement pour owner bypass structurel, jamais dérivé de `is_administrative`. Valeur 'user' pour tout non-owner.
+  - **Nouvelle permission `members.invite`** (opérationnelle, `is_admin: false`) pour POST /company/members — un dispatcher peut inviter, seuls les admins peuvent manage/delete/credentials.
+  - **Roles CRUD** : `CompanyRoleController` (5 routes owner-only via `company.role:owner`), page `/company/roles` avec liste + drawer, permissions taggées admin/standard.
+  - **Pages migrées** : 7 pages passent de `role === 'owner' || role === 'admin'` à `auth.hasPermission(key)` ou `auth.isOwner`.
+- **Conséquences** :
+  - Un viewer (members.view + settings.view + shipments.view) voit les données en lecture seule, sans boutons d'action
+  - Un dispatcher (+ members.invite + shipments.create/manage_status) peut créer des shipments et inviter des membres
+  - Seul le owner voit Modules/Industry/Roles dans la nav et peut gérer la structure
+  - Les rôles sont per-company, éditables par le owner, avec séparation admin/opérationnel enforced par `syncPermissionsSafe()`
+  - `AddMemberDrawer` et `MemberProfileForm` utilisent un select des rôles company au lieu du hardcode admin/user
+
+---
+
+## ADR-052 : Company Roles UX + Platform Jobdomain Role Presets
+
+- **Date** : 2026-02-16
+- **Contexte** : La page Company Roles (ADR-051) exposait les permissions brutes inline dans le tableau (chips avec clés techniques). L'UX ressemblait à un panneau Laravel, pas à un produit. De plus, les presets de rôles par jobdomain (admin, dispatcher, viewer) étaient hardcodés dans `JobdomainRegistry` — aucune UI platform pour les éditer.
+- **Décision** :
+  - **Company Roles UX** : le tableau affiche seulement Name/Type(Manager|Standard)/Members/Actions. Les permissions sont visibles **uniquement dans le drawer**, groupées par module (`module_key` → `module_name` via ModuleRegistry). Les permissions admin sont **invisibles** (pas grisées) pour les rôles non-administratifs. Le label "Admin" change en "Manager".
+  - **Permission grouping** : le backend enrichit `permissionCatalog` avec `module_name` (lookup ModuleRegistry). Le frontend groupe via `computed permissionGroups`, pattern VTable avec checkboxes (miroir Vuexy `AddEditRoleDialog.vue`).
+  - **Platform Jobdomain Role Presets** : colonne `default_roles` JSON ajoutée à la table `jobdomains`. `JobdomainRegistry::sync()` persiste les presets en DB. `JobdomainGate::assignToCompany()` lit depuis le modèle DB (plus depuis le Registry). Le platform admin édite via un 4ème tab "Default Roles" sur `/platform/jobdomains/{id}`.
+  - **Format `default_roles`** : objet associatif `{ key: { name, is_administrative, permissions: [keys] } }`. Les permissions sont stockées comme clés strings (pas IDs) car ce sont des presets — les IDs sont résolus au moment du clonage.
+  - **Validation backend** : `PlatformJobdomainController::update()` valide la structure et vérifie que les clés de permission existent dans le `CompanyPermissionCatalog`.
+- **Conséquences** :
+  - La page Roles company est lisible par un non-technique — permissions groupées par module avec labels métier
+  - Le platform admin peut customiser les rôles presets par jobdomain sans toucher au code
+  - Les companies existantes ne sont jamais impactées par un changement de preset
+  - `default_roles` en DB = source de vérité pour le clonage, Registry = seed initial
+
+## ADR-053 : Module-Aware RBAC UI
+
+- **Date** : 2026-02-16
+- **Contexte** : Les permissions de modules désactivés (par Platform ou par la Company) continuaient d'apparaître dans le drawer de `/company/roles`. Un module désactivé ne doit pas proposer ses permissions dans la configuration des rôles — incohérence UX. La sécurité backend est déjà correcte (ModuleGate bloque l'accès aux routes).
+- **Décision** :
+  - Le backend enrichit `permissionCatalog` avec `module_active` (bool) pour chaque permission, calculé via `ModuleGate::isActive($company, $moduleKey)`. Les modules `core.*` sont toujours actifs.
+  - Le frontend filtre `if (!p.module_active) continue` dans le computed `permissionGroups` — les permissions de modules inactifs sont **invisibles** (pas grisées, pas mentionnées).
+  - Aucune suppression en base : les permissions attribuées à un rôle restent intactes. Seule l'UI est filtrée.
+  - Quand un module est réactivé, ses permissions réapparaissent automatiquement dans le drawer.
+- **Conséquences** :
+  - La page Roles ne montre que les capacités réellement disponibles pour la company
+  - Aucun cleanup destructif — les rôles existants conservent leurs permissions même si un module est temporairement désactivé
+  - Aucun impact sur middleware, RBAC tables, ModuleRegistry, ou JobdomainRegistry
+  - Décision UX confirmée : invisible > grisé (cohérent avec ADR-052 pour les permissions admin)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

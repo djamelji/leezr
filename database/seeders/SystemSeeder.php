@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Company\RBAC\CompanyPermission;
+use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
@@ -30,6 +32,9 @@ class SystemSeeder extends Seeder
         // ─── Jobdomain catalog ───────────────────────────────────
         JobdomainRegistry::sync();
 
+        // ─── Company permission catalog ──────────────────────────
+        CompanyPermissionCatalog::sync();
+
         // ─── Field definitions catalog ─────────────────────────
         FieldDefinitionCatalog::sync();
 
@@ -39,14 +44,24 @@ class SystemSeeder extends Seeder
 
     private function cleanupStalePermissions(): void
     {
-        $catalogKeys = PermissionCatalog::keys();
+        // Platform permissions
+        $platformKeys = PermissionCatalog::keys();
+        $stalePlatform = PlatformPermission::whereNotIn('key', $platformKeys)->get();
 
-        $stale = PlatformPermission::whereNotIn('key', $catalogKeys)->get();
+        if ($stalePlatform->isNotEmpty()) {
+            $keys = $stalePlatform->pluck('key')->toArray();
+            Log::warning('SystemSeeder: removing stale platform permissions', ['keys' => $keys]);
+            PlatformPermission::whereNotIn('key', $platformKeys)->delete();
+        }
 
-        if ($stale->isNotEmpty()) {
-            $keys = $stale->pluck('key')->toArray();
-            Log::warning('SystemSeeder: removing stale permissions not in PermissionCatalog', ['keys' => $keys]);
-            PlatformPermission::whereNotIn('key', $catalogKeys)->delete();
+        // Company permissions
+        $companyKeys = CompanyPermissionCatalog::keys();
+        $staleCompany = CompanyPermission::whereNotIn('key', $companyKeys)->get();
+
+        if ($staleCompany->isNotEmpty()) {
+            $keys = $staleCompany->pluck('key')->toArray();
+            Log::warning('SystemSeeder: removing stale company permissions', ['keys' => $keys]);
+            CompanyPermission::whereNotIn('key', $companyKeys)->delete();
         }
     }
 }

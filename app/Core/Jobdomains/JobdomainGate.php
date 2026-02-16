@@ -2,6 +2,8 @@
 
 namespace App\Core\Jobdomains;
 
+use App\Company\RBAC\CompanyPermission;
+use App\Company\RBAC\CompanyRole;
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Models\Company;
@@ -143,6 +145,27 @@ class JobdomainGate
                         ],
                     );
                 }
+            }
+
+            // Seed default roles from jobdomain (DB, editable via platform UI)
+            $defaultRoles = $jobdomain->default_roles ?? [];
+
+            foreach ($defaultRoles as $roleKey => $roleDef) {
+                $role = CompanyRole::updateOrCreate(
+                    ['company_id' => $company->id, 'key' => $roleKey],
+                    [
+                        'name' => $roleDef['name'],
+                        'is_system' => true,
+                        'is_administrative' => $roleDef['is_administrative'] ?? false,
+                    ],
+                );
+
+                // Sync permissions with structural validation
+                $permissionIds = CompanyPermission::whereIn('key', $roleDef['permissions'] ?? [])
+                    ->pluck('id')
+                    ->toArray();
+
+                $role->syncPermissionsSafe($permissionIds);
             }
 
             // Refresh the relation

@@ -17,6 +17,16 @@ export const useAuthStore = defineStore('auth', {
     companies: state => state._companies,
     currentCompanyId: state => state._currentCompanyId,
     currentCompany: state => state._companies.find(c => c.id === Number(state._currentCompanyId)),
+    isOwner: state => {
+      const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
+
+      return company?.role === 'owner'
+    },
+    permissions: state => {
+      const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
+
+      return company?.company_role?.permissions || []
+    },
   },
 
   actions: {
@@ -28,6 +38,12 @@ export const useAuthStore = defineStore('auth', {
     _persistCompanyId(id) {
       this._currentCompanyId = id
       useCookie('currentCompanyId').value = id
+    },
+
+    hasPermission(key) {
+      if (this.isOwner) return true
+
+      return Array.isArray(this.permissions) && this.permissions.includes(key)
     },
 
     async register({ first_name, last_name, email, password, password_confirmation, company_name }) {
@@ -44,6 +60,7 @@ export const useAuthStore = defineStore('auth', {
         name: data.company.name,
         slug: data.company.slug,
         role: 'owner',
+        company_role: null,
       }]
       this._persistCompanyId(data.company.id)
 

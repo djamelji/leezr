@@ -21,12 +21,13 @@ class MembershipController extends Controller
         $company = $request->attributes->get('company');
 
         $members = $company->memberships()
-            ->with('user:id,first_name,last_name,email,avatar,password_set_at')
+            ->with(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name'])
             ->get()
             ->map(fn (Membership $m) => [
                 'id' => $m->id,
                 'user' => $m->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
                 'role' => $m->role,
+                'company_role' => $m->companyRole ? $m->companyRole->only('id', 'key', 'name') : null,
                 'created_at' => $m->created_at,
             ]);
 
@@ -38,7 +39,7 @@ class MembershipController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $membership = $company->memberships()->with('user')->findOrFail($id);
+        $membership = $company->memberships()->with(['user', 'companyRole:id,key,name'])->findOrFail($id);
 
         $profile = CompanyUserProfileReadModel::get($membership->user, $company);
 
@@ -46,6 +47,7 @@ class MembershipController extends Controller
             'member' => [
                 'id' => $membership->id,
                 'role' => $membership->role,
+                'company_role' => $membership->companyRole ? $membership->companyRole->only('id', 'key', 'name') : null,
                 'created_at' => $membership->created_at,
             ],
             'base_fields' => $profile['base_fields'],
@@ -79,10 +81,11 @@ class MembershipController extends Controller
 
         $membership = $company->memberships()->create([
             'user_id' => $user->id,
-            'role' => $validated['role'],
+            'role' => 'user',
+            'company_role_id' => $validated['company_role_id'] ?? null,
         ]);
 
-        $membership->load('user:id,first_name,last_name,email,avatar,password_set_at');
+        $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name']);
 
         // Send invitation if user was just created (no password)
         if ($isNewUser) {
@@ -95,6 +98,7 @@ class MembershipController extends Controller
                 'id' => $membership->id,
                 'user' => $membership->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
                 'role' => $membership->role,
+                'company_role' => $membership->companyRole ? $membership->companyRole->only('id', 'key', 'name') : null,
                 'created_at' => $membership->created_at,
             ],
         ], 201);
@@ -122,23 +126,25 @@ class MembershipController extends Controller
             );
         }
 
-        // ─── Bloc C — Role (membership pivot) ─────────────────
-        if (isset($validated['role'])) {
+        // ─── Bloc C — Company role (membership pivot) ────────
+        if (array_key_exists('company_role_id', $validated)) {
             if ($membership->isOwner()) {
                 return response()->json([
                     'message' => 'Cannot change the role of the owner.',
                 ], 403);
             }
 
-            $membership->update(['role' => $validated['role']]);
+            $membership->update(['company_role_id' => $validated['company_role_id']]);
         }
 
-        $profile = CompanyUserProfileReadModel::get($membership->user->fresh(), $company);
+        $membership = $membership->fresh(['companyRole:id,key,name']);
+        $profile = CompanyUserProfileReadModel::get($membership->user, $company);
 
         return response()->json([
             'member' => [
                 'id' => $membership->id,
-                'role' => $membership->fresh()->role,
+                'role' => $membership->role,
+                'company_role' => $membership->companyRole ? $membership->companyRole->only('id', 'key', 'name') : null,
                 'created_at' => $membership->created_at,
             ],
             'base_fields' => $profile['base_fields'],

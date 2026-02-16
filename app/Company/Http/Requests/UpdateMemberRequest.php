@@ -19,7 +19,8 @@ class UpdateMemberRequest extends FormRequest
         $fixedRules = [
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
-            'role' => ['sometimes', 'string', Rule::in(['admin', 'user'])],
+            'company_role_id' => ['sometimes', 'nullable', 'integer', Rule::exists('company_roles', 'id')
+                ->where('company_id', $this->attributes->get('company')?->id)],
         ];
 
         $company = $this->attributes->get('company');

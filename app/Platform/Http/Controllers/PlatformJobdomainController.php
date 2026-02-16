@@ -2,6 +2,7 @@
 
 namespace App\Platform\Http\Controllers;
 
+use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Jobdomains\Jobdomain;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,7 @@ class PlatformJobdomainController extends Controller
         return response()->json([
             'jobdomain' => $jobdomain,
             'field_definitions' => $fieldDefinitions,
+            'permission_catalog' => CompanyPermissionCatalog::all(),
         ]);
     }
 
@@ -85,10 +87,15 @@ class PlatformJobdomainController extends Controller
             'default_fields.*.code' => ['required', 'string'],
             'default_fields.*.required' => ['sometimes', 'boolean'],
             'default_fields.*.order' => ['sometimes', 'integer', 'min:0'],
+            'default_roles' => ['sometimes', 'array'],
         ]);
 
         if (isset($validated['default_fields'])) {
             $this->validateDefaultFields($validated['default_fields']);
+        }
+
+        if (isset($validated['default_roles'])) {
+            $this->validateDefaultRoles($validated['default_roles']);
         }
 
         $jobdomain->update($validated);
@@ -115,6 +122,37 @@ class PlatformJobdomainController extends Controller
         return response()->json([
             'message' => 'Job domain deleted.',
         ]);
+    }
+
+    /**
+     * Validate default_roles structure.
+     * Expects associative array: key => {name, is_administrative?, permissions?}
+     */
+    private function validateDefaultRoles(array $roles): void
+    {
+        $validPermissionKeys = CompanyPermissionCatalog::keys();
+        $errors = [];
+
+        foreach ($roles as $roleKey => $roleDef) {
+            if (!is_string($roleKey) || !preg_match('/^[a-z][a-z0-9_]*$/', $roleKey)) {
+                $errors[] = "Invalid role key '{$roleKey}'.";
+                continue;
+            }
+
+            if (empty($roleDef['name']) || !is_string($roleDef['name'])) {
+                $errors[] = "Role '{$roleKey}' must have a name.";
+            }
+
+            foreach ($roleDef['permissions'] ?? [] as $permKey) {
+                if (!in_array($permKey, $validPermissionKeys, true)) {
+                    $errors[] = "Role '{$roleKey}': unknown permission '{$permKey}'.";
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            abort(422, implode(' ', $errors));
+        }
     }
 
     /**

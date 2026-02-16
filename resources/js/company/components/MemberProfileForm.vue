@@ -22,9 +22,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  roleOptions: {
+  companyRoles: {
     type: Array,
-    default: () => ['admin', 'user'],
+    default: () => [],
   },
 })
 
@@ -33,18 +33,22 @@ const emit = defineEmits(['save'])
 const form = ref({
   first_name: '',
   last_name: '',
-  role: '',
+  company_role_id: null,
 })
 
 const dynamicForm = ref({})
 const isSaving = ref(false)
+
+const roleOptions = computed(() =>
+  props.companyRoles.map(r => ({ title: r.name, value: r.id })),
+)
 
 watch(
   () => [props.baseFields, props.member],
   () => {
     form.value.first_name = props.baseFields?.first_name || ''
     form.value.last_name = props.baseFields?.last_name || ''
-    form.value.role = props.member?.role || ''
+    form.value.company_role_id = props.member?.company_role?.id || null
   },
   { immediate: true },
 )
@@ -67,8 +71,10 @@ const handleSave = () => {
     last_name: form.value.last_name,
   }
 
-  if (form.value.role && form.value.role !== props.member?.role) {
-    payload.role = form.value.role
+  // Send company_role_id if it changed
+  const currentRoleId = props.member?.company_role?.id || null
+  if (form.value.company_role_id !== currentRoleId) {
+    payload.company_role_id = form.value.company_role_id
   }
 
   if (props.dynamicFields.length > 0) {
@@ -125,13 +131,15 @@ const handleSave = () => {
       >
         <AppSelect
           v-if="editable && member?.role !== 'owner'"
-          v-model="form.role"
+          v-model="form.company_role_id"
           label="Role"
           :items="roleOptions"
+          clearable
+          placeholder="No role"
         />
         <AppTextField
           v-else
-          :model-value="member?.role || ''"
+          :model-value="member?.company_role?.name || member?.role || ''"
           label="Role"
           disabled
           class="text-capitalize"

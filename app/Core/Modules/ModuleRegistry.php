@@ -22,11 +22,17 @@ class ModuleRegistry
                 'sort_order' => 10,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users'],
+                        ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users', 'permission' => 'members.view'],
                     ],
                     routeNames: ['company-members'],
                     middlewareKey: 'core.members',
                 ),
+                'permissions' => [
+                    ['key' => 'members.view', 'label' => 'View Members', 'hint' => 'See the team member list and profiles.'],
+                    ['key' => 'members.invite', 'label' => 'Invite Members', 'hint' => 'Send invitations to new team members.'],
+                    ['key' => 'members.manage', 'label' => 'Manage Members', 'is_admin' => true, 'hint' => 'Edit profiles, assign roles, and remove members.'],
+                    ['key' => 'members.credentials', 'label' => 'Manage Credentials', 'is_admin' => true, 'hint' => 'Reset passwords and manage login access.'],
+                ],
             ],
             'core.settings' => [
                 'name' => 'Company Settings',
@@ -34,11 +40,15 @@ class ModuleRegistry
                 'sort_order' => 20,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building'],
+                        ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view'],
                     ],
                     routeNames: ['company-settings'],
                     middlewareKey: 'core.settings',
                 ),
+                'permissions' => [
+                    ['key' => 'settings.view', 'label' => 'View Settings', 'hint' => 'See company name and configuration.'],
+                    ['key' => 'settings.manage', 'label' => 'Manage Settings', 'is_admin' => true, 'hint' => 'Change company name, address, and configuration.'],
+                ],
             ],
             'logistics_shipments' => [
                 'name' => 'Shipments',
@@ -46,11 +56,18 @@ class ModuleRegistry
                 'sort_order' => 100,
                 'capabilities' => new Capabilities(
                     navItems: [
-                        ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck'],
+                        ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view'],
                     ],
                     routeNames: ['company-shipments', 'company-shipments-create', 'company-shipments-id'],
                     middlewareKey: 'logistics_shipments',
                 ),
+                'permissions' => [
+                    ['key' => 'shipments.view', 'label' => 'View Shipments', 'hint' => 'See the shipments list and details.'],
+                    ['key' => 'shipments.create', 'label' => 'Create Shipments', 'hint' => 'Add new shipments to the system.'],
+                    ['key' => 'shipments.manage_status', 'label' => 'Manage Shipment Status', 'hint' => 'Update shipment status and workflow.'],
+                    ['key' => 'shipments.manage_fields', 'label' => 'Manage Shipment Fields', 'is_admin' => true, 'hint' => 'Configure custom fields on shipments.'],
+                    ['key' => 'shipments.delete', 'label' => 'Delete Shipments', 'is_admin' => true, 'hint' => 'Permanently remove shipments from the system.'],
+                ],
             ],
         ];
     }

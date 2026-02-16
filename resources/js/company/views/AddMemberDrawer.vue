@@ -6,6 +6,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  companyRoles: {
+    type: Array,
+    default: () => [],
+  },
 })
 
 const emit = defineEmits(['update:isDrawerOpen', 'memberAdded'])
@@ -16,11 +20,15 @@ const form = ref({
   first_name: '',
   last_name: '',
   email: '',
-  role: 'user',
+  company_role_id: null,
 })
 
 const isLoading = ref(false)
 const errorMessage = ref('')
+
+const roleOptions = computed(() =>
+  props.companyRoles.map(r => ({ title: r.name, value: r.id })),
+)
 
 const handleSubmit = async () => {
   isLoading.value = true
@@ -31,10 +39,10 @@ const handleSubmit = async () => {
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       email: form.value.email,
-      role: form.value.role,
+      company_role_id: form.value.company_role_id,
     })
 
-    form.value = { first_name: '', last_name: '', email: '', role: 'user' }
+    form.value = { first_name: '', last_name: '', email: '', company_role_id: null }
     emit('memberAdded')
   }
   catch (error) {
@@ -47,7 +55,7 @@ const handleSubmit = async () => {
 
 const handleClose = () => {
   emit('update:isDrawerOpen', false)
-  form.value = { first_name: '', last_name: '', email: '', role: 'user' }
+  form.value = { first_name: '', last_name: '', email: '', company_role_id: null }
   errorMessage.value = ''
 }
 </script>
@@ -122,12 +130,11 @@ const handleClose = () => {
 
               <VCol cols="12">
                 <AppSelect
-                  v-model="form.role"
+                  v-model="form.company_role_id"
                   label="Role"
-                  :items="[
-                    { title: 'Admin', value: 'admin' },
-                    { title: 'User', value: 'user' },
-                  ]"
+                  :items="roleOptions"
+                  clearable
+                  placeholder="No role"
                 />
               </VCol>
 

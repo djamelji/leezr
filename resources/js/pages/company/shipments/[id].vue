@@ -14,11 +14,7 @@ const isChangingStatus = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const canManage = computed(() => {
-  const role = auth.currentCompany?.role
-
-  return role === 'owner' || role === 'admin'
-})
+const canManage = computed(() => auth.hasPermission('shipments.manage_status'))
 
 const shipment = computed(() => shipmentStore.currentShipment)
 

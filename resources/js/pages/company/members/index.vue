@@ -70,15 +70,16 @@ const isSelectValid = computed(() => {
   return cleaned.length > 0 && cleaned.length === unique.size
 })
 
-const canManage = computed(() => {
-  const role = auth.currentCompany?.role
-  return role === 'owner' || role === 'admin'
-})
+const canInvite = computed(() => auth.hasPermission('members.invite'))
+const canManage = computed(() => auth.hasPermission('members.manage'))
 
 const allowCustomFields = computed(() => jobdomainStore.allowCustomFields)
 
 onMounted(async () => {
-  await companyStore.fetchMembers()
+  await Promise.all([
+    companyStore.fetchMembers(),
+    companyStore.fetchCompanyRoles().catch(() => {}),
+  ])
 })
 
 const handleMemberAdded = () => {
@@ -354,10 +355,11 @@ const typeOptions = [
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
         <span>Team Members</span>
         <div
-          v-if="canManage"
+          v-if="canInvite || canManage"
           class="d-flex gap-2"
         >
           <VBtn
+            v-if="canManage"
             variant="tonal"
             prepend-icon="tabler-forms"
             @click="openFieldsDrawer"
@@ -365,6 +367,7 @@ const typeOptions = [
             Member Fields
           </VBtn>
           <VBtn
+            v-if="canInvite"
             prepend-icon="tabler-plus"
             @click="isDrawerOpen = true"
           >
@@ -401,7 +404,7 @@ const typeOptions = [
               <th>Email</th>
               <th>Status</th>
               <th>Role</th>
-              <th v-if="canManage">
+              <th v-if="canInvite || canManage">
                 Actions
               </th>
             </tr>
@@ -446,14 +449,14 @@ const typeOptions = [
               </td>
               <td>
                 <VChip
-                  :color="roleColor(member.role)"
+                  :color="roleColor(member.company_role?.key || member.role)"
                   size="small"
                   class="text-capitalize"
                 >
-                  {{ member.role }}
+                  {{ member.company_role?.name || member.role }}
                 </VChip>
               </td>
-              <td v-if="canManage">
+              <td v-if="canInvite || canManage">
                 <VBtn
                   icon
                   size="small"
@@ -463,7 +466,7 @@ const typeOptions = [
                 >
                   <VIcon icon="tabler-eye" />
                 </VBtn>
-                <template v-if="member.role !== 'owner'">
+                <template v-if="canManage && member.role !== 'owner'">
                   <VBtn
                     icon
                     size="small"
@@ -492,6 +495,7 @@ const typeOptions = [
 
     <AddMemberDrawer
       :is-drawer-open="isDrawerOpen"
+      :company-roles="companyStore.roles"
       @update:is-drawer-open="isDrawerOpen = $event"
       @member-added="handleMemberAdded"
     />
@@ -549,11 +553,11 @@ const typeOptions = [
 
           <div class="d-flex gap-2 mb-4">
             <VChip
-              :color="roleColor(quickViewMember.role)"
+              :color="roleColor(quickViewMember.company_role?.key || quickViewMember.role)"
               size="small"
               class="text-capitalize"
             >
-              {{ quickViewMember.role }}
+              {{ quickViewMember.company_role?.name || quickViewMember.role }}
             </VChip>
             <VChip
               :color="quickViewMember.user?.status === 'active' ? 'success' : 'warning'"

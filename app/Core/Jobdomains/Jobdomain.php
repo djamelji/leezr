@@ -15,6 +15,7 @@ class Jobdomain extends Model
         'is_active',
         'default_modules',
         'default_fields',
+        'default_roles',
         'allow_custom_fields',
     ];
 
@@ -24,6 +25,7 @@ class Jobdomain extends Model
             'is_active' => 'boolean',
             'default_modules' => 'array',
             'default_fields' => 'array',
+            'default_roles' => 'array',
             'allow_custom_fields' => 'boolean',
         ];
     }

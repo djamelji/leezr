@@ -10,11 +10,7 @@ const isSaving = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-const canManage = computed(() => {
-  const role = auth.currentCompany?.role
-
-  return role === 'owner' || role === 'admin'
-})
+const canManage = computed(() => auth.isOwner)
 
 onMounted(async () => {
   try {
