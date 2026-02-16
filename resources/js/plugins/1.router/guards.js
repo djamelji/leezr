@@ -35,13 +35,14 @@ export const setupGuards = router => {
       if (runtime.scope && runtime.scope !== scope) {
         runtime.teardown()
       }
-      await runtime.boot(scope)
+      runtime.boot(scope)                    // fire (starts full boot)
+      await runtime.whenAuthResolved()       // await auth phase ONLY
     }
-    // ─── Re-boot if stuck in incomplete state ────────────
-    // Handles: register without teardown, 401 during boot, any stale phase
-    else if (!runtime.isReady) {
+    // ─── Re-boot if in error state ─────────────────────
+    else if (runtime.phase === 'error') {
       runtime.teardown()
-      await runtime.boot(scope)
+      runtime.boot(scope)
+      await runtime.whenAuthResolved()
     }
 
     // ─── Platform scope ──────────────────────────────────
@@ -78,23 +79,13 @@ export const setupGuards = router => {
       return { path: '/login', query: { redirect: safeRedirect(to.fullPath) } }
     }
 
-    // Module guard — block access to inactive module routes
+    // Module guard — must await ready for module-gated routes
     if (to.meta.module) {
-      const moduleStore = useModuleStore()
-
-      // Modules should be loaded by runtime, but guard as safety net
-      if (!moduleStore._loaded) {
-        try {
-          await moduleStore.fetchModules()
-        }
-        catch {
-          const { toast } = useAppToast()
-
-          toast('Unable to verify module access. Please try again.', 'error')
-
-          return '/'
-        }
+      if (!runtime.isReady) {
+        await runtime.whenReady(5000)
       }
+
+      const moduleStore = useModuleStore()
 
       if (!moduleStore.isActive(to.meta.module)) {
         const { toast } = useAppToast()

@@ -1047,6 +1047,22 @@ definePage({
   - Foundation pour G4 : `whenAuthResolved()` permet le guard non-bloquant
   - Le scheduler est testable indépendamment (pure function factory, pas de couplage Pinia)
 
+## ADR-047d : Non-blocking Guard + Recovery UX
+
+- **Date** : 2026-02-14
+- **Contexte** : Le guard `beforeEach` bloquait la navigation avec `await runtime.boot(scope)` — attendant auth+tenant+features (~3 API calls). Sur réseau lent, l'utilisateur voyait un écran blanc pendant 2-3s. AppShellGate ne proposait qu'un retry complet (teardown + full reboot) même si un seul job avait échoué.
+- **Décision** :
+  - `guards.js` : `runtime.boot(scope)` fire-and-forget + `await runtime.whenAuthResolved()` — le guard ne bloque que sur auth.
+  - Routes `meta.module` : `await runtime.whenReady(5000)` avant le check module (seul cas qui nécessite la phase features).
+  - Le cas `else if (!runtime.isReady)` remplacé par `else if (runtime.phase === 'error')` — les phases intermédiaires (tenant/features) ne provoquent plus de reboot.
+  - `AppShellGate.vue` : VProgressLinear déterministe (done/total), timeout 8s avec message + retry, error avec retry partiel (`retryFailed()`) + retry complet.
+  - Dev mode : affiche resource status en error, phase/scope/progress en booting.
+- **Conséquences** :
+  - Navigation instantanée après auth — tenant/features se chargent en arrière-plan
+  - AppShellGate montre une barre de progression déterministe au lieu d'un spinner indéterminé
+  - Retry partiel : seuls les jobs échoués sont relancés (pas de full teardown)
+  - Timeout visible après 8s avec option de retry
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
