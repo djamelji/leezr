@@ -1322,6 +1322,27 @@ definePage({
   - Auto-redirect agnostique vers la première page visible de sa nav (fonctionne quel que soit le jobdomain/modules actifs)
   - La logique nav n'est plus dupliquée entre le layout et la page forbidden
 
+## ADR-061 : Unified Company Access Layer — CompanyAccess (R4)
+
+- **Date** : 2026-02-16
+- **Contexte** : L'autorisation company était fragmentée en 3 middlewares séparés (`company.permission`, `company.role`, `module.active`), chacun avec sa propre logique de bypass owner et ses propres messages d'erreur. Pas de service centralisé pour les vérifications d'accès.
+- **Décision** :
+  - Créer `App\Company\Security\CompanyAccess` — service statique avec une méthode unique `can(User, Company, ability, context)`.
+  - 4 abilities : `access-surface` (structure vs operations), `use-module` (module actif), `use-permission` (RBAC), `manage-structure` (rôle administratif requis).
+  - **Owner bypass** : s'applique à toutes les abilities SAUF `use-module` (un module inactif = pas de données, même pour le owner).
+  - Créer `EnsureCompanyAccess` middleware unifié — signature `company.access:{ability},{key?}`.
+  - Migrer toutes les routes company vers `company.access:*`.
+  - `company.role:owner` → `company.access:manage-structure` (ouvre l'accès aux rôles administratifs, pas juste owner).
+  - `company.permission:*` → `company.access:use-permission,*` (même sémantique, owner bypass identique).
+  - `module.active:*` → `company.access:use-module,*` (même sémantique, pas de owner bypass).
+  - Les anciens middlewares (`company.role`, `company.permission`, `module.active`) restent enregistrés mais marqués deprecated.
+- **Conséquences** :
+  - Un seul point d'entrée pour toute vérification d'accès company
+  - Le backend devient la source de vérité unique pour l'autorisation
+  - Les rôles administratifs (pas juste owner) peuvent gérer les roles/permissions
+  - 191 tests passent (18 nouveaux tests CompanyAccessPolicyTest)
+  - Migration progressive possible — les anciens middlewares continuent de fonctionner
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

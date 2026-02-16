@@ -597,7 +597,7 @@ class CompanyPermissionTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // Company Roles CRUD (owner-only)
+    // Company Roles CRUD (manage-structure — owner + administrative)
     // ═══════════════════════════════════════════════════════
 
     public function test_owner_can_list_roles(): void
@@ -607,9 +607,16 @@ class CompanyPermissionTest extends TestCase
         $response->assertOk()->assertJsonStructure(['roles']);
     }
 
-    public function test_admin_cannot_list_roles(): void
+    public function test_administrative_can_list_roles(): void
     {
         $response = $this->actAs($this->admin)->getJson('/api/company/roles');
+
+        $response->assertOk()->assertJsonStructure(['roles']);
+    }
+
+    public function test_operational_cannot_list_roles(): void
+    {
+        $response = $this->actAs($this->viewer)->getJson('/api/company/roles');
 
         $response->assertStatus(403);
     }
