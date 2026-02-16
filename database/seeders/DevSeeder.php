@@ -108,22 +108,22 @@ class DevSeeder extends Seeder
         JobdomainGate::assignToCompany($company, 'logistique');
 
         // ─── Assign RBAC roles to demo members ──────────────────
-        $adminRole = CompanyRole::where('company_id', $company->id)
-            ->where('key', 'admin')->first();
+        $dispatcherRole = CompanyRole::where('company_id', $company->id)
+            ->where('key', 'dispatcher')->first();
 
-        if ($adminRole) {
+        if ($dispatcherRole) {
             $company->memberships()
                 ->where('user_id', $admin->id)
-                ->update(['company_role_id' => $adminRole->id]);
+                ->update(['company_role_id' => $dispatcherRole->id]);
         }
 
-        $viewerRole = CompanyRole::where('company_id', $company->id)
-            ->where('key', 'viewer')->first();
+        $driverRole = CompanyRole::where('company_id', $company->id)
+            ->where('key', 'driver')->first();
 
-        if ($viewerRole) {
+        if ($driverRole) {
             $company->memberships()
                 ->where('user_id', $user->id)
-                ->update(['company_role_id' => $viewerRole->id]);
+                ->update(['company_role_id' => $driverRole->id]);
         }
 
         // ─── Field activations for demo company ──────────────────
