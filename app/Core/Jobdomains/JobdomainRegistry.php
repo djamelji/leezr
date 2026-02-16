@@ -40,10 +40,32 @@ class JobdomainRegistry
                     ],
                     'dispatcher' => [
                         'name' => 'Dispatcher',
+                        'is_administrative' => true,
+                        'bundles' => [
+                            'members.team_access', 'members.team_management',
+                            'settings.company_info',
+                            'shipments.operations',
+                        ],
+                    ],
+                    'driver' => [
+                        'name' => 'Driver',
+                        'bundles' => [
+                            'members.team_access',
+                            'settings.company_info',
+                        ],
+                        'permissions' => [
+                            'shipments.view',
+                            'shipments.manage_status',
+                        ],
+                    ],
+                    'ops_manager' => [
+                        'name' => 'Operations Manager',
+                        'is_administrative' => true,
                         'bundles' => [
                             'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
+                            'shipments.administration',
                         ],
                     ],
                 ],
