@@ -320,32 +320,37 @@ export function createScheduler(deps) {
 
     /**
      * Retry failed jobs in the active runner.
+     * Stays in error phase during retry — never transits through cold.
      * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
      */
     async retryFailed() {
       if (!_activeRunner) return { critical: false, errorKey: null }
 
-      // Clear error state
-      deps.setError(null)
-      if (deps.getPhase() === 'error') {
-        deps.transition('cold')
-      }
+      const runId = _currentRunId
 
+      deps.setError(null)
+
+      // Stay in error phase — do NOT transition to cold
       const result = await _activeRunner.retryFailed()
+
+      if (_isStale(runId)) return { critical: false, errorKey: null }
 
       deps.syncResources(_activeRunner)
 
       if (result.critical) {
         deps.setError(`Failed to load ${result.errorKey}.`)
-        deps.transition('error')
+
+        // Phase is already 'error' — no transition needed
+        return result
       }
-      else {
-        // Check if all jobs are done — if so, move to ready
-        const progress = _activeRunner.progress
-        if (progress.error === 0 && progress.loading === 0 && progress.pending === 0) {
-          deps.transition('ready')
-          _resolveReady()
-        }
+
+      // All jobs in active runner succeeded
+      const progress = _activeRunner.progress
+      if (progress.error === 0 && progress.loading === 0 && progress.pending === 0) {
+        deps.transition('ready')
+        deps.setBootedAt(Date.now())
+        deps.journal.log('run:complete', { runId, recovery: true })
+        _resolveReady()
       }
 
       return result
