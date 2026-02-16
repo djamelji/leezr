@@ -1011,6 +1011,23 @@ definePage({
   - Le journal centralise tous les événements runtime pour le debug
   - Foundation pour les LOTs G2-G4 (job system, scheduler, recovery UX)
 
+## ADR-047b : Job System + Per-job Abort
+
+- **Date** : 2026-02-14
+- **Contexte** : Le runtime utilisait un signal AbortController global (`setActiveGroup`/`getActiveSignal`) partagé entre toutes les requêtes d'un batch. Impossible d'annuler un job individuel. `_loadResource`/`_resolveResources` mélangeaient orchestration et exécution.
+- **Décision** :
+  - `job.js` — Classe `Job` (1 AbortController par ressource) + `JobRunner` (exécution parallèle avec dépendances).
+  - Chaque store action runtime accepte `{ signal }` (optionnel) et le forward à `$api`/`$platformApi`.
+  - `abortRegistry.js` simplifié : `setActiveGroup`/`getActiveSignal` supprimés. `abortAll` gardé comme filet de sécurité.
+  - `api.js`/`platformApi.js` : suppression de la lecture de `getActiveSignal()` dans `onRequest`.
+  - `runtime.js` : `_loadResource`/`_resolveResources`/`_backgroundRefresh` remplacés par `_runJobs` qui crée un `JobRunner`.
+  - Getter `progress` exposé (delegue au JobRunner actif).
+- **Conséquences** :
+  - Chaque ressource est cancellable individuellement
+  - Le signal est explicite (passé par la chaîne store → $api) au lieu de global mutable
+  - `JobRunner.retryFailed()` permet le retry partiel (foundation pour G4 recovery UX)
+  - Le cache SWR est préservé (logique déplacée dans Job.run)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

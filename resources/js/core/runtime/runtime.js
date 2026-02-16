@@ -4,17 +4,18 @@
  * Phases: cold → auth → tenant → features → ready | error
  * Scopes: 'company', 'platform', 'public'
  *
- * Replaces scattered hydration in guards, layouts, and pages
- * with a single orchestrated boot sequence.
+ * G1: Validated transitions via stateMachine + event journal
+ * G2: Per-job AbortController via JobRunner (replaces _loadResource/_resolveResources)
  */
 
 import { defineStore } from 'pinia'
 import { companyResources, platformResources } from './resources'
-import { setActiveGroup, abortGroup, abortAll } from './abortRegistry'
-import { cacheGet, cacheSet, cacheRemove, cacheClear } from './cache'
+import { abortGroup, abortAll, setActiveGroup } from './abortRegistry'
+import { cacheRemove, cacheClear } from './cache'
 import { initBroadcast } from './broadcast'
 import { transition } from './stateMachine'
 import { createJournal } from './journal'
+import { JobRunner } from './job'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useJobdomainStore } from '@/core/stores/jobdomain'
@@ -22,6 +23,9 @@ import { useModuleStore } from '@/core/stores/module'
 
 // Module-level journal (non-reactive — accessed via getter + version counter)
 const _journal = createJournal(200)
+
+// Active JobRunner for progress tracking
+let _activeRunner = null
 
 // Store factory map — keyed by store id from resource declarations
 const storeFactories = {
@@ -80,6 +84,15 @@ export const useRuntimeStore = defineStore('runtime', {
       return _journal.entries()
     },
 
+    /** Progress from the active JobRunner. */
+    progress() {
+      // eslint-disable-next-line no-unused-expressions
+      this._journalVersion // reactive dependency (bumped after each job completes)
+      if (!_activeRunner) return { total: 0, done: 0, loading: 0, error: 0, pending: 0, cancelled: 0 }
+
+      return _activeRunner.progress
+    },
+
     phaseMessage: state => {
       const messages = {
         cold: 'Initializing...',
@@ -108,6 +121,8 @@ export const useRuntimeStore = defineStore('runtime', {
       const bootId = ++this._bootId
 
       this._scope = scope
+      _journal.log('run:start', { runId: bootId, scope })
+      this._journalVersion++
 
       // Initialize broadcast (once per app lifecycle)
       this._initBroadcast()
@@ -124,9 +139,14 @@ export const useRuntimeStore = defineStore('runtime', {
       // Phase: auth
       this._transition('auth')
       const authResources = resources.filter(r => r.phase === 'auth')
-      await this._resolveResources(authResources)
-      if (this._bootId !== bootId) return // Superseded by teardown + new boot
-      if (this._phase === 'error') return
+      const authResult = await this._runJobs(authResources, bootId)
+      if (this._bootId !== bootId) return
+      if (authResult.critical) {
+        this._error = `Failed to load ${authResult.errorKey}.`
+        this._transition('error')
+
+        return
+      }
 
       // Check auth — if not logged in, stop (guard will redirect)
       if (scope === 'company') {
@@ -147,9 +167,14 @@ export const useRuntimeStore = defineStore('runtime', {
         if (this._bootId !== bootId) return
         this._transition('tenant')
         const tenantResources = resources.filter(r => r.phase === 'tenant')
-        await this._resolveResources(tenantResources)
+        const tenantResult = await this._runJobs(tenantResources, bootId)
         if (this._bootId !== bootId) return
-        if (this._phase === 'error') return
+        if (tenantResult.critical) {
+          this._error = `Failed to load ${tenantResult.errorKey}.`
+          this._transition('error')
+
+          return
+        }
       }
 
       // Phase: features (company scope only)
@@ -157,14 +182,21 @@ export const useRuntimeStore = defineStore('runtime', {
         if (this._bootId !== bootId) return
         this._transition('features')
         const featureResources = resources.filter(r => r.phase === 'features')
-        await this._resolveResources(featureResources)
+        const featureResult = await this._runJobs(featureResources, bootId)
         if (this._bootId !== bootId) return
-        if (this._phase === 'error') return
+        if (featureResult.critical) {
+          this._error = `Failed to load ${featureResult.errorKey}.`
+          this._transition('error')
+
+          return
+        }
       }
 
       if (this._bootId !== bootId) return
       this._transition('ready')
       this._bootedAt = Date.now()
+      _journal.log('run:complete', { runId: bootId, scope })
+      this._journalVersion++
     },
 
     // ─── Company switch ────────────────────────────────────
@@ -175,7 +207,12 @@ export const useRuntimeStore = defineStore('runtime', {
      * @param {number|string} companyId
      */
     async switchCompany(companyId) {
-      // Abort in-flight tenant/features requests
+      // Cancel active runner jobs
+      if (_activeRunner) {
+        _activeRunner.cancelAll()
+      }
+
+      // Legacy abort as safety net
       abortGroup('tenant')
       abortGroup('features')
 
@@ -190,30 +227,38 @@ export const useRuntimeStore = defineStore('runtime', {
       jobdomainStore.reset()
       moduleStore.reset()
 
-      // Update company ID (store already persisted to cookie by auth.switchCompany)
-      // Re-hydrate tenant + features
       const tenantResources = companyResources.filter(r => r.phase === 'tenant')
       const featureResources = companyResources.filter(r => r.phase === 'features')
 
       const bootId = ++this._bootId
 
+      _journal.log('run:start', { runId: bootId, scope: 'switch', companyId })
+      this._journalVersion++
+
       this._transition('tenant')
 
-      // Reset resource statuses for tenant/features
-      for (const r of [...tenantResources, ...featureResources]) {
-        this._resources[r.key] = 'pending'
+      const tenantResult = await this._runJobs(tenantResources, bootId)
+      if (this._bootId !== bootId) return
+      if (tenantResult.critical) {
+        this._error = `Failed to load ${tenantResult.errorKey}.`
+        this._transition('error')
+
+        return
       }
 
-      await this._resolveResources(tenantResources)
-      if (this._bootId !== bootId) return
-      if (this._phase === 'error') return
-
       this._transition('features')
-      await this._resolveResources(featureResources)
+      const featureResult = await this._runJobs(featureResources, bootId)
       if (this._bootId !== bootId) return
-      if (this._phase === 'error') return
+      if (featureResult.critical) {
+        this._error = `Failed to load ${featureResult.errorKey}.`
+        this._transition('error')
+
+        return
+      }
 
       this._transition('ready')
+      _journal.log('run:complete', { runId: bootId, scope: 'switch' })
+      this._journalVersion++
     },
 
     // ─── Teardown ──────────────────────────────────────────
@@ -224,6 +269,12 @@ export const useRuntimeStore = defineStore('runtime', {
      */
     teardown() {
       const prevScope = this._scope
+
+      // Cancel active runner
+      if (_activeRunner) {
+        _activeRunner.cancelAll()
+        _activeRunner = null
+      }
 
       abortAll()
       cacheClear()
@@ -324,6 +375,43 @@ export const useRuntimeStore = defineStore('runtime', {
       this._journalVersion++
     },
 
+    /**
+     * Run a set of resources via JobRunner and sync status back.
+     * @param {import('./resources').ResourceDef[]} resources
+     * @param {number} bootId - Current boot generation
+     * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
+     */
+    async _runJobs(resources, bootId) {
+      const runner = new JobRunner(resources, bootId, {
+        resolveStore,
+        journal: _journal,
+      })
+
+      _activeRunner = runner
+
+      // Sync initial statuses
+      this._syncResources(runner)
+
+      const result = await runner.execute()
+
+      // Sync final statuses
+      this._syncResources(runner)
+      this._journalVersion++ // trigger progress reactivity
+
+      return result
+    },
+
+    /**
+     * Sync resource statuses from JobRunner into reactive state.
+     * @param {JobRunner} runner
+     */
+    _syncResources(runner) {
+      const status = runner.resourceStatus
+      for (const [key, value] of Object.entries(status)) {
+        this._resources[key] = value
+      }
+    },
+
     _initBroadcast() {
       if (this._broadcastInitialized) return
       this._broadcastInitialized = true
@@ -333,155 +421,6 @@ export const useRuntimeStore = defineStore('runtime', {
         onCompanySwitch: payload => this.handleBroadcast('company-switch', payload),
         onCacheInvalidate: payload => this.handleBroadcast('cache-invalidate', payload),
       })
-    },
-
-    /**
-     * Resolve a set of resources respecting their dependency order.
-     * Resources with satisfied dependencies run in parallel.
-     * @param {import('./resources').ResourceDef[]} resources
-     */
-    async _resolveResources(resources) {
-      // Initialize statuses
-      for (const r of resources) {
-        if (!this._resources[r.key] || this._resources[r.key] === 'error') {
-          this._resources[r.key] = 'pending'
-        }
-      }
-
-      const pending = new Set(resources.map(r => r.key))
-
-      while (pending.size > 0) {
-        // Find resources whose dependencies are all resolved
-        const runnable = resources.filter(r =>
-          pending.has(r.key)
-          && r.dependsOn.every(dep => this._resources[dep] === 'done'),
-        )
-
-        if (runnable.length === 0) {
-          // Deadlock or all dependencies errored
-          // Mark remaining non-critical as done (skip), critical as error
-          for (const key of pending) {
-            const r = resources.find(res => res.key === key)
-            if (r?.critical) {
-              this._error = `Unable to load required data (${r.key}).`
-              this._transition('error')
-
-              return
-            }
-            this._resources[key] = 'done' // Skip non-critical
-          }
-          break
-        }
-
-        // Set abort group for this batch
-        const group = runnable[0].abortGroup
-        setActiveGroup(group)
-
-        // Run all runnable resources in parallel
-        const results = await Promise.allSettled(
-          runnable.map(r => this._loadResource(r)),
-        )
-
-        setActiveGroup(null)
-
-        // Process results
-        for (let i = 0; i < results.length; i++) {
-          pending.delete(runnable[i].key)
-        }
-
-        // If a critical resource failed, stop
-        if (this._phase === 'error') return
-      }
-    },
-
-    /**
-     * Load a single resource: check cache, call store action, update cache.
-     * @param {import('./resources').ResourceDef} resource
-     */
-    async _loadResource(resource) {
-      this._resources[resource.key] = 'loading'
-
-      // Check cache (if cacheable and has TTL)
-      if (resource.cacheable !== false && resource.ttl > 0) {
-        const cached = cacheGet(resource.key, resource.ttl)
-
-        if (cached && !cached.stale) {
-          // Fresh cache hit — hydrate store from cache, skip API call
-          try {
-            const store = resolveStore(resource.store)
-            await store[resource.action]({ cached: cached.data })
-            this._resources[resource.key] = 'done'
-
-            return
-          }
-          catch {
-            // Cache hydration failed, fall through to normal fetch
-          }
-        }
-
-        if (cached && cached.stale) {
-          // Stale cache — use immediately, refresh in background
-          try {
-            const store = resolveStore(resource.store)
-            await store[resource.action]({ cached: cached.data })
-            this._resources[resource.key] = 'done'
-
-            // Background refresh (fire-and-forget)
-            this._backgroundRefresh(resource)
-
-            return
-          }
-          catch {
-            // Fall through to normal fetch
-          }
-        }
-      }
-
-      // Normal fetch via store action
-      try {
-        const store = resolveStore(resource.store)
-        const result = await store[resource.action]()
-
-        // Cache the result
-        if (resource.cacheable !== false && resource.ttl > 0 && result !== undefined) {
-          cacheSet(resource.key, result)
-        }
-
-        this._resources[resource.key] = 'done'
-      }
-      catch (err) {
-        // AbortError — request was cancelled, not a real error
-        if (err?.name === 'AbortError') {
-          this._resources[resource.key] = 'pending'
-
-          return
-        }
-
-        this._resources[resource.key] = 'error'
-
-        if (resource.critical) {
-          this._error = `Failed to load ${resource.key}.`
-          this._transition('error')
-        }
-      }
-    },
-
-    /**
-     * Background refresh for stale cache entries.
-     * @param {import('./resources').ResourceDef} resource
-     */
-    async _backgroundRefresh(resource) {
-      try {
-        const store = resolveStore(resource.store)
-        const result = await store[resource.action]()
-
-        if (result !== undefined) {
-          cacheSet(resource.key, result)
-        }
-      }
-      catch {
-        // Background refresh failure is silent
-      }
     },
   },
 })

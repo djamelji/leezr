@@ -1,6 +1,5 @@
 import { ofetch } from 'ofetch'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
-import { getActiveSignal } from '@/core/runtime/abortRegistry'
 
 export const $platformApi = ofetch.create({
   baseURL: '/api/platform',
@@ -20,11 +19,6 @@ export const $platformApi = ofetch.create({
       }
     }
 
-    // Attach runtime abort signal if active and none already set
-    const runtimeSignal = getActiveSignal()
-    if (runtimeSignal && !options.signal) {
-      options.signal = runtimeSignal
-    }
   },
   onResponse({ response }) {
     const serverVersion = response.headers.get('x-build-version')

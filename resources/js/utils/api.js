@@ -2,7 +2,6 @@ import { ofetch } from 'ofetch'
 import { useAppToast } from '@/composables/useAppToast'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 import { safeRedirect } from '@/utils/safeRedirect'
-import { getActiveSignal } from '@/core/runtime/abortRegistry'
 
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
@@ -37,11 +36,6 @@ export const $api = ofetch.create({
       }
     }
 
-    // Attach runtime abort signal if active and none already set
-    const runtimeSignal = getActiveSignal()
-    if (runtimeSignal && !options.signal) {
-      options.signal = runtimeSignal
-    }
   },
   onResponse({ response }) {
     const serverVersion = response.headers.get('x-build-version')

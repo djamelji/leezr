@@ -79,9 +79,9 @@ export const useAuthStore = defineStore('auth', {
       postBroadcast('logout')
     },
 
-    async fetchMe() {
+    async fetchMe({ signal } = {}) {
       try {
-        const data = await $api('/me', { _authCheck: true })
+        const data = await $api('/me', { _authCheck: true, signal })
 
         this._persistUser(data.user)
         this._hydrated = true
@@ -107,7 +107,7 @@ export const useAuthStore = defineStore('auth', {
         return options.cached
       }
 
-      const data = await $api('/my-companies')
+      const data = await $api('/my-companies', { signal: options.signal })
 
       this._companies = data.companies
 

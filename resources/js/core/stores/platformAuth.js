@@ -71,9 +71,9 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       postBroadcast('logout')
     },
 
-    async fetchMe() {
+    async fetchMe({ signal } = {}) {
       try {
-        const data = await $platformApi('/me', { _authCheck: true })
+        const data = await $platformApi('/me', { _authCheck: true, signal })
 
         this._persistUser(data.user)
         this._persistRoles(data.roles || [])

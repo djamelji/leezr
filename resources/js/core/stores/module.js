@@ -47,7 +47,7 @@ export const useModuleStore = defineStore('module', {
         return options.cached
       }
 
-      const data = await $api('/modules')
+      const data = await $api('/modules', { signal: options.signal })
 
       this._modules = data.modules
       this._loaded = true
