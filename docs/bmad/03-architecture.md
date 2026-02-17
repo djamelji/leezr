@@ -57,10 +57,16 @@ APP
 │   ├── RBAC/              (PermissionCatalog — source unique de vérité permissions)
 │   └── Routes/platform.php
 │
-└── Company    ← Tenant (multi-company)
-    ├── Http/Controllers/  (CompanyController, MembershipController, UserProfileController)
-    ├── Http/Middleware/    (SetCompanyContext, EnsureRole)
-    ├── Http/Requests/
+├── Modules/   ← Module-specific code (ADR-062)
+│   ├── Core/Members/       (MembersModule, MembershipController, MemberCredentialController)
+│   ├── Core/Settings/      (SettingsModule, CompanyController, CompanyJobdomainController, CompanyFieldControllers)
+│   └── Logistics/Shipments/(ShipmentsModule, ShipmentController, UseCases, ReadModels)
+│
+└── Company    ← Tenant cross-cutting (governance, RBAC, security)
+    ├── Http/Controllers/  (CompanyModuleController, CompanyRoleController, UserProfileController)
+    ├── Http/Middleware/    (SetCompanyContext, EnsureCompanyAccess, EnsureCompanyPermission)
+    ├── RBAC/              (CompanyRole, CompanyPermission, CompanyPermissionCatalog)
+    ├── Security/          (CompanyAccess — unified access layer)
     └── Routes/company.php
 ```
 
@@ -193,15 +199,72 @@ Chaque module expose :
 
 Module actif = `is_enabled_globally AND row exists AND is_enabled_for_company`.
 
-### Module métier (contrat)
+### Module as Folder (ADR-062)
 
-Structure d'un module métier :
-- Ses propres routes API (dans `company.php`, protégées par `module.active:{key}`)
-- Ses propres migrations
-- Ses propres pages Vue (auto-routées depuis `resources/js/pages/`)
-- Ses propres stores Pinia
-- Enregistrement déclaratif dans le `ModuleRegistry` avec capabilities
-- Aucune dépendance vers un autre module (sauf via le core)
+Chaque module vit dans `app/Modules/{Category}/{Name}/` avec son propre manifest, controllers, requests, use cases et read models.
+
+#### Structure physique
+
+```
+app/Modules/
+├── Core/
+│   ├── Members/
+│   │   ├── MembersModule.php          ← implements ModuleDefinition
+│   │   └── Http/
+│   │       ├── MembershipController.php
+│   │       ├── MemberCredentialController.php
+│   │       └── Requests/
+│   └── Settings/
+│       ├── SettingsModule.php
+│       └── Http/
+│           ├── CompanyController.php
+│           ├── CompanyJobdomainController.php
+│           ├── CompanyFieldActivationController.php
+│           ├── CompanyFieldDefinitionController.php
+│           └── Requests/
+└── Logistics/
+    └── Shipments/
+        ├── ShipmentsModule.php
+        ├── Http/
+        │   ├── ShipmentController.php
+        │   └── Requests/
+        ├── UseCases/
+        └── ReadModels/
+```
+
+#### Infrastructure modules (inchangée)
+
+```
+app/Core/Modules/
+├── ModuleManifest.php       # VO typé immutable (key, name, surface, permissions, bundles...)
+├── ModuleDefinition.php     # Interface — contract pour XxxModule.php
+├── ModuleRegistry.php       # Agrégateur — charge les manifests depuis les classes module
+├── ModuleGate.php           # Service — isActive(company, module_key)
+├── Capabilities.php         # Structure des capabilities d'un module
+└── ModuleCatalogReadModel.php
+```
+
+#### Contrat module
+
+Chaque `XxxModule.php` implémente `ModuleDefinition` :
+```php
+interface ModuleDefinition {
+    public static function manifest(): ModuleManifest;
+}
+```
+
+Le `ModuleManifest` VO remplace les tableaux bruts :
+- `key`, `name`, `description`, `surface`, `sortOrder`
+- `capabilities` (nav, routes, middleware)
+- `permissions`, `bundles`
+- `type` (core|addon|internal), `scope` (platform|company), `visibility` (visible|hidden) — typés mais idle, zéro consumer
+
+**Ce qui reste en place (non module-spécifique)** :
+- `app/Company/RBAC/` — gouvernance transverse
+- `app/Company/Security/` — couche autorisation
+- `app/Company/Http/Middleware/` — middleware partagé
+- `app/Core/Models/` — modèles domaine partagés (User, Company, Membership, Shipment)
+- `app/Core/Fields/` — système de champs (infra partagée)
 
 ### Logistics Shipments (LOT 4 — ADR-026)
 
@@ -210,8 +273,9 @@ Premier module métier. CRUD d'expéditions avec workflow de statuts.
 #### Architecture
 
 - **Model** : `app/Core/Models/Shipment.php` (scopé par `company_id`)
-- **Controller** : `app/Company/Http/Controllers/ShipmentController.php`
-- **Form Requests** : `app/Company/Http/Requests/StoreShipmentRequest.php`, `ChangeShipmentStatusRequest.php`
+- **Controller** : `app/Modules/Logistics/Shipments/Http/ShipmentController.php`
+- **Form Requests** : `app/Modules/Logistics/Shipments/Http/Requests/`
+- **Use Cases** : `app/Modules/Logistics/Shipments/UseCases/`
 - **Migration** : `create_shipments_table`
 - **Module key** : `logistics_shipments`
 
@@ -321,26 +385,30 @@ resources/ui/presets/  # Composants Vuexy extraits et documentés
 ```
 app/
 ├── Core/
-│   ├── Models/          # User, Company, Membership
+│   ├── Models/          # User, Company, Membership, Shipment
 │   ├── Auth/            # AuthController, Form Requests
-│   └── Tenancy/         # Scoping, helpers d'isolation
+│   ├── Modules/         # ModuleManifest, ModuleDefinition, ModuleRegistry, ModuleGate
+│   ├── Fields/          # FieldDefinition, FieldActivation, FieldValue (infra partagée)
+│   └── Jobdomains/      # JobdomainRegistry, JobdomainGate
+├── Modules/             # Module-specific code (ADR-062)
+│   ├── Core/Members/    # MembersModule + Http (controllers, requests)
+│   ├── Core/Settings/   # SettingsModule + Http (controllers, requests)
+│   └── Logistics/Shipments/ # ShipmentsModule + Http + UseCases + ReadModels
 ├── Company/
 │   ├── Http/
-│   │   ├── Controllers/ # CompanyController, MembershipController, UserProfileController
-│   │   ├── Middleware/   # SetCompanyContext, EnsureRole
-│   │   └── Requests/    # Form Requests Company
-│   └── Routes/
-│       └── company.php
+│   │   ├── Controllers/ # CompanyModuleController, CompanyRoleController, UserProfileController
+│   │   └── Middleware/   # SetCompanyContext, EnsureCompanyAccess, EnsureCompanyPermission
+│   ├── RBAC/            # CompanyRole, CompanyPermission, CompanyPermissionCatalog
+│   └── Security/        # CompanyAccess (unified access layer)
 ├── Platform/
-│   ├── Http/
-│   │   ├── Controllers/ # Vide en LOT 1
-│   │   ├── Middleware/   # EnsurePlatformAdmin
-│   │   └── Requests/    # Vide en LOT 1
-│   └── Routes/
-│       └── platform.php
-├── Models/              # (legacy, à migrer vers Core/Models)
-├── Services/            # Business logic
-└── Policies/            # Authorization policies
+│   ├── Http/Controllers/ # PlatformModuleController, PlatformJobdomainController, etc.
+│   ├── Http/Middleware/  # EnsurePlatformPermission
+│   ├── Models/           # PlatformUser, PlatformRole, PlatformPermission
+│   └── RBAC/             # PermissionCatalog
+└── routes/
+    ├── api.php           # Auth (register, login, logout, me)
+    ├── company.php       # Scope Company
+    └── platform.php      # Scope Platform
 ```
 
 ### Routes et Middleware (Laravel 12)
@@ -463,25 +531,56 @@ La gestion des domaines est une **responsabilité d'infrastructure du core**, pa
   web                 → current/public    ← document root Apache
 ```
 
-**Pipeline** :
+**Pipeline (10 étapes)** :
 ```
-push → webhook.php → deploy.sh {branch} {base_path}
-  ├── git clone --depth=1 (fresh release)
-  ├── symlink .env + storage → shared/
-  ├── composer install --no-dev
-  ├── php artisan migrate --force
-  ├── php artisan db:seed --class=SystemSeeder --force
-  ├── pnpm install + pnpm build
-  ├── php artisan optimize
-  ├── switch symlink current → new release (atomic)
+push → webhook.php (log trigger + dispatch) → deploy.sh {branch} {base_path}
+  1. flock — verrou anti-double-deploy (par branche)
+  2. git clone --depth=1 (fresh release)
+  3. symlink .env → shared/.env
+  4. symlink storage → shared/storage
+  5. composer install --no-dev
+  6. php artisan migrate --force
+  7. php artisan db:seed --class=SystemSeeder --force
+  8. pnpm install + pnpm build + php artisan optimize
+  9. health check (route:list, migrate:status) — bloque si échoue
+  10. switch symlink current → new release (atomic) — ou SKIP si prod sans --promote
   └── cleanup old releases (keep 3)
 ```
 
+**Production gate (ADR-064)** :
+- `push dev` → staging : build + switch **automatique**
+- `push main` → production : build only, **PAS de switch**
+- `bash deploy.sh main {path} --promote` → switch manuel après vérification
+- Le webhook ne passe jamais `--promote`
+
 **Mapping branches** :
-- `dev` → `/var/www/clients/client1/web3` → `dev.leezr.com`
-- `main` → `/var/www/clients/client1/web2` → `leezr.com`
+- `dev` → `/var/www/clients/client1/web3` → `dev.leezr.com` (auto-deploy)
+- `main` → `/var/www/clients/client1/web2` → `leezr.com` (build auto, promote manuel)
 
 **Rollback** : `ln -sfn releases/{old_timestamp} current` (instantané)
+
+### Configuration serveur
+
+| Élément | Détail |
+|---------|--------|
+| PHP-FPM | `php8.4-fpm`, pools `web2.conf` et `web3.conf` |
+| open_basedir | Doit inclure `releases/` et `shared/` en plus de `web/`, `private/`, `tmp/` |
+| Ownership | releases/ et shared/ doivent appartenir à `web{N}:client1` (pas root) |
+| Permissions | `g+w` + setgid sur `releases/` et `shared/` pour group write |
+| Immutable flag | ISPConfig peut poser `+i` sur les base paths — à désactiver ou configurer |
+| Lock file | `shared/.deploy-{branch}.lock` (pas `/tmp/` pour éviter conflit root/web user) |
+
+**Bootstrap (premier deploy)** :
+```bash
+# Structure atomique
+mkdir -p {base}/releases {base}/shared/storage/{app/public,framework/cache,framework/sessions,framework/views,logs}
+cp .env {base}/shared/.env
+# Premier deploy manuel
+git clone --depth=1 -b {branch} {repo} /tmp/bootstrap
+bash /tmp/bootstrap/deploy.sh {branch} {base} [--promote]
+# Fix ownership
+chown -R web{N}:client1 {base}/releases {base}/shared {base}/current {base}/web
+```
 
 ### Branches et flux Git
 
