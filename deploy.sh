@@ -5,16 +5,13 @@ set -euo pipefail
 # deploy.sh — Leezr atomic release deployment
 #
 # Usage:
-#   bash deploy.sh {branch} {base_path} [--promote]
+#   bash deploy.sh <branch> <base_path>
 #
 # Examples:
-#   bash deploy.sh dev  /var/www/clients/client1/web3             # staging (auto)
-#   bash deploy.sh main /var/www/clients/client1/web2             # prod: build only
-#   bash deploy.sh main /var/www/clients/client1/web2 --promote   # prod: build + switch
+#   bash deploy.sh dev  /var/www/clients/client1/web3   # staging
+#   bash deploy.sh main /var/www/clients/client1/web2   # production
 #
-# Behavior:
-#   dev  → full deploy (build + switch symlink automatically)
-#   main → build release only (no switch). Use --promote to activate.
+# Both branches: full deploy (build + switch symlink automatically)
 #
 # Structure:
 #   {base_path}/
@@ -26,12 +23,8 @@ set -euo pipefail
 #     web               → current/public  (Apache document root)
 # ═══════════════════════════════════════════════════════════════
 
-BRANCH="${1:?Usage: deploy.sh <branch> <base_path> [--promote]}"
-BASE_PATH="${2:?Usage: deploy.sh <branch> <base_path> [--promote]}"
-PROMOTE=false
-if [[ "${3:-}" == "--promote" ]]; then
-    PROMOTE=true
-fi
+BRANCH="${1:?Usage: deploy.sh <branch> <base_path>}"
+BASE_PATH="${2:?Usage: deploy.sh <branch> <base_path>}"
 
 REPO_URL="https://github.com/djamelji/leezr.git"
 KEEP_RELEASES=3
@@ -62,29 +55,17 @@ if ! flock -n 200; then
     exit 1
 fi
 
-# ─── Production gate ─────────────────────────────────────────
-
-if [[ "$BRANCH" == "main" && "$PROMOTE" != true ]]; then
-    echo ""
-    echo "═══════════════════════════════════════════════════════════"
-    echo "  PRODUCTION BUILD: $(date '+%Y-%m-%d %H:%M:%S')"
-    echo "  Release will be prepared but NOT activated."
-    echo "  To promote: bash deploy.sh main $BASE_PATH --promote"
-    echo "═══════════════════════════════════════════════════════════"
-fi
-
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "  DEPLOY START: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  Branch:  $BRANCH"
 echo "  Release: $RELEASE_NAME"
 echo "  Path:    $BASE_PATH"
-echo "  Promote: $PROMOTE"
 echo "═══════════════════════════════════════════════════════════"
 
 # ─── 1. Clone fresh release ──────────────────────────────────
 
-echo "→ [1/10] git clone --depth=1 -b $BRANCH..."
+echo "→ [1/9] git clone --depth=1 -b $BRANCH..."
 git clone --depth=1 -b "$BRANCH" "$REPO_URL" "$RELEASE_DIR"
 cd "$RELEASE_DIR"
 SHORT_HASH=$(git rev-parse --short HEAD)
@@ -92,7 +73,7 @@ echo "  Commit: $SHORT_HASH"
 
 # ─── 2. Link shared .env ─────────────────────────────────────
 
-echo "→ [2/10] link shared .env..."
+echo "→ [2/9] link shared .env..."
 if [ ! -f "$SHARED_DIR/.env" ]; then
     echo "  WARNING: $SHARED_DIR/.env not found — copying .env.production.example"
     cp "$RELEASE_DIR/.env.production.example" "$SHARED_DIR/.env"
@@ -102,69 +83,51 @@ ln -sf "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
 
 # ─── 3. Link shared storage ──────────────────────────────────
 
-echo "→ [3/10] link shared storage..."
+echo "→ [3/9] link shared storage..."
 rm -rf "$RELEASE_DIR/storage"
 ln -sf "$SHARED_DIR/storage" "$RELEASE_DIR/storage"
 
 # ─── 4. Backend dependencies ─────────────────────────────────
 
-echo "→ [4/10] composer install..."
+echo "→ [4/9] composer install..."
 composer install --no-dev --optimize-autoloader --no-interaction --quiet --working-dir="$RELEASE_DIR"
 
 # ─── 5. Database migrations ──────────────────────────────────
 
-echo "→ [5/10] migrate..."
+echo "→ [5/9] migrate..."
 php "$RELEASE_DIR/artisan" migrate --force
 
 # ─── 6. System data ──────────────────────────────────────────
 
-echo "→ [6/10] seed SystemSeeder..."
+echo "→ [6/9] seed SystemSeeder..."
 php "$RELEASE_DIR/artisan" db:seed --class=SystemSeeder --force
 
 # ─── 7. Frontend build ───────────────────────────────────────
 
-echo "→ [7/10] pnpm install + build..."
+echo "→ [7/9] pnpm install + build..."
 cd "$RELEASE_DIR"
 pnpm install --frozen-lockfile
 pnpm build
 
-# ─── 8. Inject version + optimize ────────────────────────────
+# ─── 8. Inject version + optimize + health check ─────────────
 
-echo "→ [8/10] version + optimize..."
+echo "→ [8/9] version + optimize + health check..."
 sed -i "s/^VITE_APP_VERSION=.*/VITE_APP_VERSION=$SHORT_HASH/" "$SHARED_DIR/.env"
 sed -i "s/^APP_BUILD_VERSION=.*/APP_BUILD_VERSION=$SHORT_HASH/" "$SHARED_DIR/.env"
 php "$RELEASE_DIR/artisan" storage:link --force 2>/dev/null || true
 php "$RELEASE_DIR/artisan" optimize
 php "$RELEASE_DIR/artisan" event:cache
 
-# ─── 9. Health check ─────────────────────────────────────────
-
-echo "→ [9/10] health check..."
+# Health check — if any fails, set -e stops the script before symlink switch
 php "$RELEASE_DIR/artisan" config:clear
 php "$RELEASE_DIR/artisan" route:list > /dev/null
 php "$RELEASE_DIR/artisan" migrate:status > /dev/null
 echo "  Health check passed."
-
-# Re-optimize after config:clear
 php "$RELEASE_DIR/artisan" optimize
 
-# ─── 10. Symlink switch (or skip for prod without --promote) ─
+# ─── 9. Switch symlinks ──────────────────────────────────────
 
-if [[ "$BRANCH" == "main" && "$PROMOTE" != true ]]; then
-    echo "→ [10/10] SKIPPED — production release prepared but not activated."
-    echo "  Release ready at: $RELEASE_DIR"
-    echo "  To promote: bash deploy.sh main $BASE_PATH --promote"
-    echo ""
-    echo "═══════════════════════════════════════════════════════════"
-    echo "  BUILD OK (not promoted): $(date '+%Y-%m-%d %H:%M:%S')"
-    echo "  Version:   $SHORT_HASH"
-    echo "  Release:   $RELEASE_NAME"
-    echo "  Duration:  ${SECONDS}s"
-    echo "═══════════════════════════════════════════════════════════"
-    exit 0
-fi
-
-echo "→ [10/10] switch symlinks..."
+echo "→ [9/9] switch symlinks..."
 
 # current → releases/{timestamp}  (atomic via temp + mv)
 ln -sfn "$RELEASE_DIR" "$BASE_PATH/current.tmp"
