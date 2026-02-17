@@ -531,7 +531,7 @@ La gestion des domaines est une **responsabilité d'infrastructure du core**, pa
   web                 → current/public    ← document root Apache
 ```
 
-**Pipeline (10 étapes)** :
+**Pipeline (9 étapes)** :
 ```
 push → webhook.php (log trigger + dispatch) → deploy.sh {branch} {base_path}
   1. flock — verrou anti-double-deploy (par branche)
@@ -541,21 +541,16 @@ push → webhook.php (log trigger + dispatch) → deploy.sh {branch} {base_path}
   5. composer install --no-dev
   6. php artisan migrate --force
   7. php artisan db:seed --class=SystemSeeder --force
-  8. pnpm install + pnpm build + php artisan optimize
-  9. health check (route:list, migrate:status) — bloque si échoue
-  10. switch symlink current → new release (atomic) — ou SKIP si prod sans --promote
+  8. pnpm install + pnpm build + optimize + health check (bloque si échoue)
+  9. switch symlink current → new release (atomic)
   └── cleanup old releases (keep 3)
 ```
 
-**Production gate (ADR-064)** :
-- `push dev` → staging : build + switch **automatique**
-- `push main` → production : build only, **PAS de switch**
-- `bash deploy.sh main {path} --promote` → switch manuel après vérification
-- Le webhook ne passe jamais `--promote`
+**Les deux branches sont 100% auto-deploy** : push → build → switch → live.
 
 **Mapping branches** :
 - `dev` → `/var/www/clients/client1/web3` → `dev.leezr.com` (auto-deploy)
-- `main` → `/var/www/clients/client1/web2` → `leezr.com` (build auto, promote manuel)
+- `main` → `/var/www/clients/client1/web2` → `leezr.com` (auto-deploy)
 
 **Rollback** : `ln -sfn releases/{old_timestamp} current` (instantané)
 
@@ -577,7 +572,7 @@ mkdir -p {base}/releases {base}/shared/storage/{app/public,framework/cache,frame
 cp .env {base}/shared/.env
 # Premier deploy manuel
 git clone --depth=1 -b {branch} {repo} /tmp/bootstrap
-bash /tmp/bootstrap/deploy.sh {branch} {base} [--promote]
+bash /tmp/bootstrap/deploy.sh {branch} {base}
 # Fix ownership
 chown -R web{N}:client1 {base}/releases {base}/shared {base}/current {base}/web
 ```

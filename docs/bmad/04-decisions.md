@@ -1416,31 +1416,30 @@ definePage({
 
 ---
 
-### ADR-064 — Production Deployment Safety Hardening (R4.2.1)
+### ADR-064 — Deployment Safety Hardening (R4.2.1)
 
-- **Date** : 2026-02-16
-- **Statut** : Accepté
+- **Date** : 2026-02-16 (révisé 2026-02-17)
+- **Statut** : Accepté (révisé — production gate retirée)
 - **Contexte** :
-  ADR-063 a mis en place le déploiement atomique (releases + symlinks). En conditions réelles, quatre risques restent ouverts :
-  1. **Double deploy** — deux webhooks simultanés (push rapide) lancent deux `deploy.sh` en parallèle → état incohérent (deux clones, deux symlink switch)
+  ADR-063 a mis en place le déploiement atomique (releases + symlinks). En conditions réelles, trois risques restent ouverts :
+  1. **Double deploy** — deux webhooks simultanés (push rapide) lancent deux `deploy.sh` en parallèle → état incohérent
   2. **Release cassée activée** — le switch symlink se fait avant vérification → si les routes ou migrations sont cassées, le site est down
-  3. **Production accidentelle** — un push sur `main` active immédiatement la nouvelle release sans validation humaine
-  4. **Pas de trace webhook** — seul `deploy.sh` loggue ; le trigger initial (qui a pushé, quel commit) n'est pas tracé
+  3. **Pas de trace webhook** — seul `deploy.sh` loggue ; le trigger initial (qui a pushé, quel commit) n'est pas tracé
 
 - **Décision** :
 
   **1. flock anti-double-deploy** (`deploy.sh`)
   ```bash
-  LOCK_FILE="/tmp/leezr-${BRANCH}.lock"
+  LOCK_FILE="$SHARED_DIR/.deploy-${BRANCH}.lock"
   exec 200>"$LOCK_FILE"
   if ! flock -n 200; then
       echo "BLOCKED — another $BRANCH deploy is running."
       exit 1
   fi
   ```
-  Verrou par branche — deux branches différentes peuvent déployer en parallèle (staging ≠ prod), mais deux deploys de la même branche sont sérialisés. Le lock est automatiquement libéré quand le processus se termine (y compris en cas de crash).
+  Verrou par branche dans `shared/` (pas `/tmp/` — évite conflit root/web user). Deux branches différentes peuvent déployer en parallèle (staging ≠ prod), mais deux deploys de la même branche sont sérialisés. Le lock est automatiquement libéré quand le processus se termine.
 
-  **2. Health check pré-switch** (`deploy.sh`, étape 9/10)
+  **2. Health check pré-switch** (`deploy.sh`, étape 8/9)
   ```
   php artisan config:clear
   php artisan route:list > /dev/null
@@ -1449,25 +1448,27 @@ definePage({
   ```
   Si une de ces commandes échoue (`set -euo pipefail`), le script s'arrête. Le symlink n'est jamais basculé. La release reste dans `releases/` mais `current` pointe toujours l'ancienne version fonctionnelle.
 
-  **3. Production manual gate** (`deploy.sh`, flag `--promote`)
-  - `bash deploy.sh dev {path}` → full deploy (build + switch) automatiquement
-  - `bash deploy.sh main {path}` → build only, PAS de switch symlink
-  - `bash deploy.sh main {path} --promote` → build + switch
-  - Le webhook ne passe jamais `--promote` → un push sur `main` prépare la release mais ne l'active pas
-  - L'opérateur se connecte en SSH et exécute `--promote` après vérification
-
-  **4. Webhook trigger logging** (`public/webhook.php`)
+  **3. Webhook trigger logging** (`public/webhook.php`)
   ```
-  [2026-02-16 14:30:00] WEBHOOK TRIGGER: branch=dev pusher=djamelji commit=abc1234 (fix: button alignment)
+  [2026-02-17 03:00:00] WEBHOOK TRIGGER: branch=dev pusher=djamelji commit=abc1234 (fix: button alignment)
   ```
   Chaque trigger est loggué dans `deploy.log` AVANT le dispatch de `deploy.sh`. Permet de corréler trigger → deploy dans un seul fichier.
+
+  **~~4. Production manual gate~~ — RETIRÉE** (2026-02-17)
+  La gate `--promote` a été retirée. Les deux branches (dev et main) font un auto-deploy complet (build + switch). En phase de développement actif, la friction du promote manuel n'apporte pas de valeur ajoutée. La gate pourra être réintroduite si nécessaire quand le projet aura du trafic réel.
 
 - **Conséquences** :
   - Zéro double deploy possible (flock par branche)
   - Zéro release cassée activée (health check pré-switch, `set -euo pipefail`)
-  - Zéro déploiement production accidentel (gate manuelle)
+  - **Les deux branches sont 100% auto-deploy** (push → build → switch → live)
   - Traçabilité complète dans `deploy.log` (trigger + build + switch)
   - Rollback toujours instantané : `ln -sfn releases/{old} current`
+
+- **Config serveur requise** :
+  - `open_basedir` : inclure `releases/` et `shared/` dans les pools FPM
+  - Ownership : `web{N}:client1` sur `releases/`, `shared/`, symlinks
+  - Permissions : `g+w` + setgid sur `releases/` et `shared/`
+  - ISPConfig : désactiver immutable flag (`+i`) sur les base paths
 
 ---
 
