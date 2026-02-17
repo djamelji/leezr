@@ -50,5 +50,33 @@ class PlatformSeeder extends Seeder
         if (!$user->hasRole('super_admin')) {
             $user->roles()->attach($superAdmin->id);
         }
+
+        // Platform admin — staging test
+        $devAdmin = PlatformUser::updateOrCreate(
+            ['email' => 'dev@leezr.com'],
+            [
+                'first_name' => 'Dev',
+                'last_name' => 'Admin',
+                'password' => 'password',
+            ],
+        );
+
+        if (!$devAdmin->hasRole('admin')) {
+            $devAdmin->roles()->attach($admin->id);
+        }
+
+        // Platform admin — production test
+        $prodAdmin = PlatformUser::updateOrCreate(
+            ['email' => 'prod@leezr.com'],
+            [
+                'first_name' => 'Prod',
+                'last_name' => 'Admin',
+                'password' => 'password',
+            ],
+        );
+
+        if (!$prodAdmin->hasRole('admin')) {
+            $prodAdmin->roles()->attach($admin->id);
+        }
     }
 }
