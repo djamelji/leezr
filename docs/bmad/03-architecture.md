@@ -445,18 +445,43 @@ La gestion des domaines est une **responsabilité d'infrastructure du core**, pa
 - **SSL** : Let's Encrypt (ou à préciser)
 - **Serveur unique** : `dev.leezr.com` et `leezr.com` sur le même VPS (deux vhosts Apache)
 
-### Déploiement
+### Déploiement — Atomic Releases (ADR-063)
 
-- **Méthode** : GitHub webhook → script serveur
-- **Webhook** :
-  - URL : `https://leezr.com/webhook.php`
-  - Content-type : `application/json`
-  - Secret : configuré côté GitHub et côté serveur
-  - Événement : `push` uniquement
-- **Flux** :
-  - Push sur `dev` ou `main` → GitHub envoie un webhook au serveur
-  - `webhook.php` vérifie la signature, identifie la branche, et exécute le déploiement
-  - Pas de CI/CD externe (pas de GitHub Actions)
+- **Méthode** : GitHub webhook → `deploy.sh` → atomic release
+- **Webhook** : `public/webhook.php` (commité, secret lu via `shared/.env`)
+- **Événement** : `push` uniquement, signature HMAC-SHA256
+- **Pas de CI/CD externe** (pas de GitHub Actions)
+
+**Structure serveur (par site)** :
+```
+/var/www/clients/client1/{web2|web3}/
+  releases/           ← releases timestampées
+  shared/
+    .env              ← config persistante
+    storage/          ← storage persistant (logs, cache, uploads)
+  current             → releases/{latest}
+  web                 → current/public    ← document root Apache
+```
+
+**Pipeline** :
+```
+push → webhook.php → deploy.sh {branch} {base_path}
+  ├── git clone --depth=1 (fresh release)
+  ├── symlink .env + storage → shared/
+  ├── composer install --no-dev
+  ├── php artisan migrate --force
+  ├── php artisan db:seed --class=SystemSeeder --force
+  ├── pnpm install + pnpm build
+  ├── php artisan optimize
+  ├── switch symlink current → new release (atomic)
+  └── cleanup old releases (keep 3)
+```
+
+**Mapping branches** :
+- `dev` → `/var/www/clients/client1/web3` → `dev.leezr.com`
+- `main` → `/var/www/clients/client1/web2` → `leezr.com`
+
+**Rollback** : `ln -sfn releases/{old_timestamp} current` (instantané)
 
 ### Branches et flux Git
 

@@ -170,7 +170,7 @@
   - `php artisan serve` n'est plus utilisé
 - **Conséquences** : `APP_URL=https://leezr.test` dans `.env`. Le script `dev:server` est supprimé de `package.json`. `pnpm dev:all` = `pnpm dev` (Vite seul). Valet doit être installé et démarré sur chaque machine de développement.
 
-## ADR-018 : Déploiement — VPS OVH unique, webhook GitHub
+## ADR-018 : Déploiement — VPS OVH unique, webhook GitHub *(supersédé par ADR-063)*
 
 - **Date** : 2026-02-11
 - **Contexte** : Le projet a besoin de deux environnements distants : staging (`dev.leezr.com`) pour valider avant production, et production (`leezr.com`). L'infrastructure doit rester simple et maîtrisée au démarrage.
@@ -491,7 +491,7 @@ definePage({
 
 ---
 
-## ADR-036 : Deployment Discipline — seeders et migrations
+## ADR-036 : Deployment Discipline — seeders et migrations *(pipeline supersédé par ADR-063, règles migration toujours en vigueur)*
 
 - **Date** : 2026-02-12
 - **Contexte** : Le déploiement distant (webhook → `deploy-leezr.sh`) exécute `migrate --force` mais ne seed pas. Les seeders contenaient des `create()` non idempotents nécessitant `migrate:fresh`. La migration 500002 utilisait `dropIfExists` (perte de données). Il faut un système de déploiement safe et automatisable.
@@ -1342,6 +1342,132 @@ definePage({
   - Les rôles administratifs (pas juste owner) peuvent gérer les roles/permissions
   - 191 tests passent (18 nouveaux tests CompanyAccessPolicyTest)
   - Migration progressive possible — les anciens middlewares continuent de fonctionner
+
+## ADR-062 : Module as Folder + Registry as Aggregator (R4.1)
+
+- **Date** : 2026-02-16
+- **Contexte** : Les définitions de modules vivaient en tableaux inline dans `ModuleRegistry::definitions()`. Le code spécifique à chaque module (controllers, requests, use cases, read models) était dispersé dans `app/Company/Http/Controllers/`, `app/Company/Http/Requests/`, `app/Company/Shipments/`. Pas d'isolation physique, pas de typage des définitions — les consumers faisaient du `$def['permissions'] ?? []` fragile.
+- **Décision** :
+  - **ModuleManifest VO** (`app/Core/Modules/ModuleManifest.php`) : objet immutable typé remplaçant les tableaux bruts. Propriétés : `key`, `name`, `description`, `surface`, `sortOrder`, `capabilities`, `permissions`, `bundles`.
+  - **Catégorisation module** : `type` (core|addon|internal), `scope` (platform|company), `visibility` (visible|hidden) = metadata idle dans le VO, aucun consumer, aucune logique de filtrage. Les champs existent pour établir le contrat ; les consumers seront ajoutés quand le premier module caché ou platform-only sera conçu.
+    - `core.members` → type=core, scope=company, visibility=visible
+    - `core.settings` → type=core, scope=company, visibility=visible
+    - `logistics_shipments` → type=addon, scope=company, visibility=visible
+  - **ModuleDefinition interface** (`app/Core/Modules/ModuleDefinition.php`) : contrat `manifest(): ModuleManifest` pour chaque module.
+  - **Module as Folder** : chaque module vit dans `app/Modules/{Category}/{Name}/` avec son propre `XxxModule.php`, `Http/`, `Http/Requests/`, `UseCases/`, `ReadModels/`.
+    - `app/Modules/Core/Members/` — MembersModule + 2 controllers + 2 requests
+    - `app/Modules/Core/Settings/` — SettingsModule + 4 controllers + 1 request
+    - `app/Modules/Logistics/Shipments/` — ShipmentsModule + 1 controller + 2 requests + 2 use cases + 1 read model
+  - **ModuleRegistry comme agrégateur** : charge les manifests depuis les classes Module, avec cache statique. Plus de tableaux inline.
+  - **Infrastructure partagée inchangée** : `app/Core/Models/`, `app/Company/RBAC/`, `app/Company/Security/`, `app/Core/Fields/`, `app/Core/Jobdomains/` restent en place (shared, non module-specific).
+  - 15 fichiers déplacés, namespaces mis à jour, `routes/company.php` mis à jour.
+- **Conséquences** :
+  - Isolation physique des modules — un module = un dossier
+  - Définitions typées — les consumers accèdent aux propriétés typées
+  - Agrégation propre via le registre
+  - Zéro changement comportemental — 191 tests passent, API responses identiques
+  - Les champs idle (type, scope, visibility) seront consommés quand les premiers modules cachés ou platform-only seront conçus
+
+## ADR-063 : Atomic Deployment Architecture — Web Symlink Strategy (R4.2)
+
+- **Date** : 2026-02-16
+- **Contexte** : Le déploiement documenté dans ADR-018 et ADR-036 n'était jamais implémenté — `webhook.php` et `deploy-leezr.sh` n'existaient pas. L'ancien système utilisait `git pull` + `reset --hard` (mutant le code en place, risque de downtime). La branche `main` avait un seul commit initial, 44+ commits sur `dev` jamais déployés.
+- **Décision** : Atomic release deployment avec symlink web.
+
+  **Architecture serveur** (par site) :
+  ```
+  /var/www/clients/client1/{web2|web3}/
+    releases/           ← releases timestampées (git clone --depth=1)
+    shared/
+      .env              ← config persistante + GITHUB_WEBHOOK_SECRET
+      storage/          ← storage persistant (logs, cache, sessions, uploads)
+    current             → releases/{latest}
+    web                 → current/public    ← document root Apache (inchangé)
+  ```
+
+  **Pourquoi releases/** : chaque deploy est un dossier isolé. Pas de mutation in-place, pas de `git pull`, pas de fichiers orphelins d'anciennes versions.
+
+  **Pourquoi current symlink** : bascule atomique (`ln -sfn` + `mv -Tf`). L'ancien code continue de servir les requêtes pendant que le nouveau build se prépare. Seul le switch du symlink est visible.
+
+  **Pourquoi web symlink** : Apache pointe déjà vers `{base}/web`. Au lieu de modifier la config Apache, `web` devient un symlink vers `current/public`. Zéro changement Apache.
+
+  **Pourquoi jamais git pull en prod** : `git pull` mute le répertoire en place → état intermédiaire visible (fichiers supprimés, vendor incomplet, assets absents). Le clone frais garantit un état 100% cohérent à chaque instant.
+
+  **Rollback** : `ln -sfn releases/{old_timestamp} current` — instantané, pas de re-build.
+
+  **Fichiers** :
+  - `deploy.sh` (racine repo, commité) : clone → link shared → composer → migrate → seed → pnpm build → optimize → switch symlinks → cleanup (keep 3).
+  - `public/webhook.php` (commité) : valide signature SHA256, mappe branche → chemin, dispatch `deploy.sh` en background via `nohup`.
+  - Secret lu via `getenv('GITHUB_WEBHOOK_SECRET')` ou fallback parsing `shared/.env`. Jamais hardcodé.
+
+  **Mapping** :
+  - `dev` → `/var/www/clients/client1/web3` → `dev.leezr.com`
+  - `main` → `/var/www/clients/client1/web2` → `leezr.com`
+
+  **Supersède** : ADR-018 (deployment method) et ADR-036 (pipeline definition). Les règles de migration safety d'ADR-036 restent en vigueur.
+
+- **Conséquences** :
+  - Zéro downtime — l'ancien release sert les requêtes jusqu'au switch
+  - Rollback instantané par symlink
+  - 3 releases conservées, les anciennes sont nettoyées automatiquement
+  - Storage persistant (logs, uploads) partagé entre releases
+  - Pas de CI/CD externe — webhook GitHub direct
+  - Le premier deploy est manuel (`bash deploy.sh dev {path}`), les suivants sont automatiques
+
+---
+
+### ADR-064 — Production Deployment Safety Hardening (R4.2.1)
+
+- **Date** : 2026-02-16
+- **Statut** : Accepté
+- **Contexte** :
+  ADR-063 a mis en place le déploiement atomique (releases + symlinks). En conditions réelles, quatre risques restent ouverts :
+  1. **Double deploy** — deux webhooks simultanés (push rapide) lancent deux `deploy.sh` en parallèle → état incohérent (deux clones, deux symlink switch)
+  2. **Release cassée activée** — le switch symlink se fait avant vérification → si les routes ou migrations sont cassées, le site est down
+  3. **Production accidentelle** — un push sur `main` active immédiatement la nouvelle release sans validation humaine
+  4. **Pas de trace webhook** — seul `deploy.sh` loggue ; le trigger initial (qui a pushé, quel commit) n'est pas tracé
+
+- **Décision** :
+
+  **1. flock anti-double-deploy** (`deploy.sh`)
+  ```bash
+  LOCK_FILE="/tmp/leezr-${BRANCH}.lock"
+  exec 200>"$LOCK_FILE"
+  if ! flock -n 200; then
+      echo "BLOCKED — another $BRANCH deploy is running."
+      exit 1
+  fi
+  ```
+  Verrou par branche — deux branches différentes peuvent déployer en parallèle (staging ≠ prod), mais deux deploys de la même branche sont sérialisés. Le lock est automatiquement libéré quand le processus se termine (y compris en cas de crash).
+
+  **2. Health check pré-switch** (`deploy.sh`, étape 9/10)
+  ```
+  php artisan config:clear
+  php artisan route:list > /dev/null
+  php artisan migrate:status > /dev/null
+  php artisan optimize   # re-cache après config:clear
+  ```
+  Si une de ces commandes échoue (`set -euo pipefail`), le script s'arrête. Le symlink n'est jamais basculé. La release reste dans `releases/` mais `current` pointe toujours l'ancienne version fonctionnelle.
+
+  **3. Production manual gate** (`deploy.sh`, flag `--promote`)
+  - `bash deploy.sh dev {path}` → full deploy (build + switch) automatiquement
+  - `bash deploy.sh main {path}` → build only, PAS de switch symlink
+  - `bash deploy.sh main {path} --promote` → build + switch
+  - Le webhook ne passe jamais `--promote` → un push sur `main` prépare la release mais ne l'active pas
+  - L'opérateur se connecte en SSH et exécute `--promote` après vérification
+
+  **4. Webhook trigger logging** (`public/webhook.php`)
+  ```
+  [2026-02-16 14:30:00] WEBHOOK TRIGGER: branch=dev pusher=djamelji commit=abc1234 (fix: button alignment)
+  ```
+  Chaque trigger est loggué dans `deploy.log` AVANT le dispatch de `deploy.sh`. Permet de corréler trigger → deploy dans un seul fichier.
+
+- **Conséquences** :
+  - Zéro double deploy possible (flock par branche)
+  - Zéro release cassée activée (health check pré-switch, `set -euo pipefail`)
+  - Zéro déploiement production accidentel (gate manuelle)
+  - Traçabilité complète dans `deploy.log` (trigger + build + switch)
+  - Rollback toujours instantané : `ln -sfn releases/{old} current`
 
 ---
 
