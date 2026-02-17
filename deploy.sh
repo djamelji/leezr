@@ -26,8 +26,8 @@ set -euo pipefail
 #     web               → current/public  (Apache document root)
 # ═══════════════════════════════════════════════════════════════
 
-BRANCH="${1:?Usage: deploy.sh {branch} {base_path} [--promote]}"
-BASE_PATH="${2:?Usage: deploy.sh {branch} {base_path} [--promote]}"
+BRANCH="${1:?Usage: deploy.sh <branch> <base_path> [--promote]}"
+BASE_PATH="${2:?Usage: deploy.sh <branch> <base_path> [--promote]}"
 PROMOTE=false
 if [[ "${3:-}" == "--promote" ]]; then
     PROMOTE=true
