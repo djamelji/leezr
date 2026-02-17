@@ -51,14 +51,6 @@ const navItems = computed(() => {
           />
         </IconBtn>
 
-        <VChip
-          color="error"
-          size="small"
-          class="ms-2"
-        >
-          Platform
-        </VChip>
-
         <NavSearchBar class="ms-lg-n3" />
 
         <VSpacer />
