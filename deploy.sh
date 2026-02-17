@@ -55,7 +55,7 @@ exec >> "$LOG_FILE" 2>&1
 
 # ─── Flock: prevent concurrent deploys ───────────────────────
 
-LOCK_FILE="/tmp/leezr-${BRANCH}.lock"
+LOCK_FILE="$SHARED_DIR/.deploy-${BRANCH}.lock"
 exec 200>"$LOCK_FILE"
 if ! flock -n 200; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] BLOCKED — another $BRANCH deploy is running. Exiting."
