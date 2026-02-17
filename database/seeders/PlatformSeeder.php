@@ -40,7 +40,8 @@ class PlatformSeeder extends Seeder
         $user = PlatformUser::updateOrCreate(
             ['email' => 'admin@leezr.com'],
             [
-                'name' => 'Super Admin',
+                'first_name' => 'Djamel',
+                'last_name' => 'Ji',
                 'password' => 'password',
             ],
         );

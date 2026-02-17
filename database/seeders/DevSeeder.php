@@ -31,10 +31,10 @@ class DevSeeder extends Seeder
     {
         // ─── Platform scope — demo platform admin ────────────────
         $platformUser = PlatformUser::updateOrCreate(
-            ['email' => 'platform@leezr.test'],
+            ['email' => 'admin@leezr.com'],
             [
-                'first_name' => 'Platform',
-                'last_name' => 'Admin',
+                'first_name' => 'Djamel',
+                'last_name' => 'Ji',
                 'password' => 'password',
             ],
         );
