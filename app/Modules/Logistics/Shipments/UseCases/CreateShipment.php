@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Company\Shipments\UseCases;
+namespace App\Modules\Logistics\Shipments\UseCases;
 
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;

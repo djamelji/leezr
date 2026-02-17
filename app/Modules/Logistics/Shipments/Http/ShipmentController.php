@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Company\Http\Controllers;
+namespace App\Modules\Logistics\Shipments\Http;
 
-use App\Company\Http\Requests\ChangeShipmentStatusRequest;
-use App\Company\Http\Requests\StoreShipmentRequest;
-use App\Company\Shipments\ReadModels\ShipmentReadModel;
-use App\Company\Shipments\UseCases\ChangeShipmentStatus;
-use App\Company\Shipments\UseCases\CreateShipment;
+use App\Modules\Logistics\Shipments\Http\Requests\ChangeShipmentStatusRequest;
+use App\Modules\Logistics\Shipments\Http\Requests\StoreShipmentRequest;
+use App\Modules\Logistics\Shipments\ReadModels\ShipmentReadModel;
+use App\Modules\Logistics\Shipments\UseCases\ChangeShipmentStatus;
+use App\Modules\Logistics\Shipments\UseCases\CreateShipment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

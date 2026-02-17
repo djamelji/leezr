@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Company\Http\Controllers;
+namespace App\Modules\Core\Members\Http;
 
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
-use App\Company\Http\Requests\StoreMemberRequest;
-use App\Company\Http\Requests\UpdateMemberRequest;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
+use App\Modules\Core\Members\Http\Requests\StoreMemberRequest;
+use App\Modules\Core\Members\Http\Requests\UpdateMemberRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;

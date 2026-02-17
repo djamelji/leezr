@@ -20,8 +20,8 @@ class CompanyPermissionCatalog
     {
         $permissions = [];
 
-        foreach (ModuleRegistry::definitions() as $moduleKey => $definition) {
-            foreach ($definition['permissions'] ?? [] as $permission) {
+        foreach (ModuleRegistry::definitions() as $moduleKey => $manifest) {
+            foreach ($manifest->permissions as $permission) {
                 $permissions[] = [
                     'key' => $permission['key'],
                     'label' => $permission['label'],

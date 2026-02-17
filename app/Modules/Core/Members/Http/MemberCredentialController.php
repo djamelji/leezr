@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Company\Http\Controllers;
+namespace App\Modules\Core\Members\Http;
 
 use App\Core\Auth\PasswordPolicy;
 use Illuminate\Http\JsonResponse;

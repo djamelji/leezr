@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Company\Http\Controllers;
+namespace App\Modules\Core\Settings\Http;
 
 use App\Core\Jobdomains\JobdomainCatalogReadModel;
 use App\Core\Jobdomains\JobdomainGate;

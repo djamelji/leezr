@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Company\Http\Controllers;
+namespace App\Modules\Core\Settings\Http;
 
 use App\Company\Fields\ReadModels\CompanyProfileReadModel;
-use App\Company\Http\Requests\UpdateCompanyRequest;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
+use App\Modules\Core\Settings\Http\Requests\UpdateCompanyRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;

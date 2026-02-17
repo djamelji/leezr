@@ -32,13 +32,13 @@ class CompanyRoleController extends Controller
         $company = $request->attributes->get('company');
         $modules = collect(ModuleRegistry::definitions());
 
-        $moduleNames = $modules->mapWithKeys(fn ($def, $key) => [$key => $def['name']]);
-        $moduleDescriptions = $modules->mapWithKeys(fn ($def, $key) => [$key => $def['description'] ?? '']);
+        $moduleNames = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->name]);
+        $moduleDescriptions = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->description]);
 
         // Build hint lookup from ModuleRegistry permission definitions
         $hints = [];
-        foreach ($modules as $modKey => $def) {
-            foreach ($def['permissions'] ?? [] as $perm) {
+        foreach ($modules as $modKey => $manifest) {
+            foreach ($manifest->permissions as $perm) {
                 if (isset($perm['hint'])) {
                     $hints[$perm['key']] = $perm['hint'];
                 }
@@ -64,12 +64,12 @@ class CompanyRoleController extends Controller
 
         // Build module list with bundles (capabilities)
         $moduleList = [];
-        foreach ($modules as $modKey => $def) {
+        foreach ($modules as $modKey => $manifest) {
             $isCore = str_starts_with($modKey, 'core.');
             $isActive = $isCore || ModuleGate::isActive($company, $modKey);
 
             $bundles = [];
-            foreach ($def['bundles'] ?? [] as $bundle) {
+            foreach ($manifest->bundles as $bundle) {
                 $permissionIds = collect($bundle['permissions'])
                     ->map(fn ($key) => $keyToId[$key] ?? null)
                     ->filter()

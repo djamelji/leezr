@@ -1,15 +1,15 @@
 <?php
 
-use App\Company\Http\Controllers\CompanyController;
-use App\Company\Http\Controllers\CompanyFieldActivationController;
-use App\Company\Http\Controllers\CompanyFieldDefinitionController;
-use App\Company\Http\Controllers\CompanyJobdomainController;
 use App\Company\Http\Controllers\CompanyModuleController;
 use App\Company\Http\Controllers\CompanyRoleController;
-use App\Company\Http\Controllers\MemberCredentialController;
-use App\Company\Http\Controllers\MembershipController;
-use App\Company\Http\Controllers\ShipmentController;
 use App\Company\Http\Controllers\UserProfileController;
+use App\Modules\Core\Members\Http\MemberCredentialController;
+use App\Modules\Core\Members\Http\MembershipController;
+use App\Modules\Core\Settings\Http\CompanyController;
+use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
+use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
+use App\Modules\Core\Settings\Http\CompanyJobdomainController;
+use App\Modules\Logistics\Shipments\Http\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
 // Company-scoped routes

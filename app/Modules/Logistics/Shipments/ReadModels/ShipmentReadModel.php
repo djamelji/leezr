@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Company\Shipments\ReadModels;
+namespace App\Modules\Logistics\Shipments\ReadModels;
 
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;

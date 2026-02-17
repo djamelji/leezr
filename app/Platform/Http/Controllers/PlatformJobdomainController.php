@@ -35,9 +35,9 @@ class PlatformJobdomainController extends Controller
         $modules = collect(ModuleRegistry::definitions());
         $moduleBundles = [];
 
-        foreach ($modules as $modKey => $def) {
+        foreach ($modules as $modKey => $manifest) {
             $bundles = [];
-            foreach ($def['bundles'] ?? [] as $bundle) {
+            foreach ($manifest->bundles as $bundle) {
                 $bundles[] = [
                     'key' => $bundle['key'],
                     'label' => $bundle['label'],
@@ -49,8 +49,8 @@ class PlatformJobdomainController extends Controller
 
             $moduleBundles[] = [
                 'module_key' => $modKey,
-                'module_name' => $def['name'],
-                'module_description' => $def['description'] ?? '',
+                'module_name' => $manifest->name,
+                'module_description' => $manifest->description,
                 'is_core' => str_starts_with($modKey, 'core.'),
                 'bundles' => $bundles,
             ];

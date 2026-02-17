@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Company\Http\Requests;
+namespace App\Modules\Core\Settings\Http\Requests;
 
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValidationService;

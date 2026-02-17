@@ -2,122 +2,48 @@
 
 namespace App\Core\Modules;
 
+use App\Modules\Core\Members\MembersModule;
+use App\Modules\Core\Settings\SettingsModule;
+use App\Modules\Logistics\Shipments\ShipmentsModule;
+
 /**
- * Declarative registry of all platform modules and their capabilities.
- * This is the single source of truth for module definitions.
+ * Aggregator loading module manifests from per-module classes.
+ * Single source of truth for module definitions.
  * Modules are seeded into platform_modules via sync().
  */
 class ModuleRegistry
 {
+    /** @var array<class-string<ModuleDefinition>> */
+    private static array $modules = [
+        MembersModule::class,
+        SettingsModule::class,
+        ShipmentsModule::class,
+    ];
+
+    /** @var array<string, ModuleManifest>|null */
+    private static ?array $cache = null;
+
     /**
-     * All module definitions.
-     * Each key is the module_key, value is the definition.
+     * All module definitions, keyed by module key.
+     *
+     * @return array<string, ModuleManifest>
      */
     public static function definitions(): array
     {
-        return [
-            'core.members' => [
-                'name' => 'Members',
-                'description' => 'Manage company members and roles',
-                'surface' => 'structure',
-                'sort_order' => 10,
-                'capabilities' => new Capabilities(
-                    navItems: [
-                        ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users', 'permission' => 'members.view', 'surface' => 'structure'],
-                    ],
-                    routeNames: ['company-members'],
-                    middlewareKey: 'core.members',
-                ),
-                'permissions' => [
-                    ['key' => 'members.view', 'label' => 'View Members', 'hint' => 'See the team member list and profiles.'],
-                    ['key' => 'members.invite', 'label' => 'Invite Members', 'hint' => 'Send invitations to new team members.'],
-                    ['key' => 'members.manage', 'label' => 'Manage Members', 'is_admin' => true, 'hint' => 'Edit profiles, assign roles, and remove members.'],
-                    ['key' => 'members.credentials', 'label' => 'Manage Credentials', 'is_admin' => true, 'hint' => 'Reset passwords and manage login access.'],
-                ],
-                'bundles' => [
-                    [
-                        'key' => 'members.team_access',
-                        'label' => 'Team Access',
-                        'hint' => 'View the team and invite new members.',
-                        'permissions' => ['members.view', 'members.invite'],
-                    ],
-                    [
-                        'key' => 'members.team_management',
-                        'label' => 'Team Management',
-                        'hint' => 'Edit profiles, assign roles, and manage credentials.',
-                        'permissions' => ['members.manage', 'members.credentials'],
-                        'is_admin' => true,
-                    ],
-                ],
-            ],
-            'core.settings' => [
-                'name' => 'Company Settings',
-                'description' => 'Company name and configuration',
-                'surface' => 'structure',
-                'sort_order' => 20,
-                'capabilities' => new Capabilities(
-                    navItems: [
-                        ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view', 'surface' => 'structure'],
-                    ],
-                    routeNames: ['company-settings'],
-                    middlewareKey: 'core.settings',
-                ),
-                'permissions' => [
-                    ['key' => 'settings.view', 'label' => 'View Settings', 'hint' => 'See company name and configuration.'],
-                    ['key' => 'settings.manage', 'label' => 'Manage Settings', 'is_admin' => true, 'hint' => 'Change company name, address, and configuration.'],
-                ],
-                'bundles' => [
-                    [
-                        'key' => 'settings.company_info',
-                        'label' => 'Company Information',
-                        'hint' => 'View company name and configuration.',
-                        'permissions' => ['settings.view'],
-                    ],
-                    [
-                        'key' => 'settings.company_management',
-                        'label' => 'Company Management',
-                        'hint' => 'Change company name, address, and settings.',
-                        'permissions' => ['settings.manage'],
-                        'is_admin' => true,
-                    ],
-                ],
-            ],
-            'logistics_shipments' => [
-                'name' => 'Shipments',
-                'description' => 'Manage logistics shipments with status workflow',
-                'surface' => 'operations',
-                'sort_order' => 100,
-                'capabilities' => new Capabilities(
-                    navItems: [
-                        ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view', 'surface' => 'operations'],
-                    ],
-                    routeNames: ['company-shipments', 'company-shipments-create', 'company-shipments-id'],
-                    middlewareKey: 'logistics_shipments',
-                ),
-                'permissions' => [
-                    ['key' => 'shipments.view', 'label' => 'View Shipments', 'hint' => 'See the shipments list and details.'],
-                    ['key' => 'shipments.create', 'label' => 'Create Shipments', 'hint' => 'Add new shipments to the system.'],
-                    ['key' => 'shipments.manage_status', 'label' => 'Manage Shipment Status', 'hint' => 'Update shipment status and workflow.'],
-                    ['key' => 'shipments.manage_fields', 'label' => 'Manage Shipment Fields', 'is_admin' => true, 'hint' => 'Configure custom fields on shipments.'],
-                    ['key' => 'shipments.delete', 'label' => 'Delete Shipments', 'is_admin' => true, 'hint' => 'Permanently remove shipments from the system.'],
-                ],
-                'bundles' => [
-                    [
-                        'key' => 'shipments.operations',
-                        'label' => 'Shipment Operations',
-                        'hint' => 'View, create, and manage shipment status.',
-                        'permissions' => ['shipments.view', 'shipments.create', 'shipments.manage_status'],
-                    ],
-                    [
-                        'key' => 'shipments.administration',
-                        'label' => 'Shipment Administration',
-                        'hint' => 'Configure custom fields and delete shipments.',
-                        'permissions' => ['shipments.manage_fields', 'shipments.delete'],
-                        'is_admin' => true,
-                    ],
-                ],
-            ],
-        ];
+        if (static::$cache !== null) {
+            return static::$cache;
+        }
+
+        $manifests = [];
+
+        foreach (static::$modules as $class) {
+            $manifest = $class::manifest();
+            $manifests[$manifest->key] = $manifest;
+        }
+
+        static::$cache = $manifests;
+
+        return $manifests;
     }
 
     /**
@@ -125,9 +51,9 @@ class ModuleRegistry
      */
     public static function capabilities(string $key): ?Capabilities
     {
-        $definition = static::definitions()[$key] ?? null;
+        $manifest = static::definitions()[$key] ?? null;
 
-        return $definition ? $definition['capabilities'] : null;
+        return $manifest?->capabilities;
     }
 
     /**
@@ -138,8 +64,8 @@ class ModuleRegistry
     {
         $permissionKeys = [];
 
-        foreach (static::definitions() as $modKey => $def) {
-            foreach ($def['bundles'] ?? [] as $bundle) {
+        foreach (static::definitions() as $manifest) {
+            foreach ($manifest->bundles as $bundle) {
                 if (in_array($bundle['key'], $bundleKeys, true)) {
                     $permissionKeys = array_merge($permissionKeys, $bundle['permissions']);
                 }
@@ -156,8 +82,8 @@ class ModuleRegistry
     {
         $keys = [];
 
-        foreach (static::definitions() as $modKey => $def) {
-            foreach ($def['bundles'] ?? [] as $bundle) {
+        foreach (static::definitions() as $manifest) {
+            foreach ($manifest->bundles as $bundle) {
                 $keys[] = $bundle['key'];
             }
         }
@@ -171,15 +97,23 @@ class ModuleRegistry
      */
     public static function sync(): void
     {
-        foreach (static::definitions() as $key => $definition) {
+        foreach (static::definitions() as $key => $manifest) {
             PlatformModule::updateOrCreate(
                 ['key' => $key],
                 [
-                    'name' => $definition['name'],
-                    'description' => $definition['description'] ?? null,
-                    'sort_order' => $definition['sort_order'] ?? 0,
+                    'name' => $manifest->name,
+                    'description' => $manifest->description,
+                    'sort_order' => $manifest->sortOrder,
                 ],
             );
         }
+    }
+
+    /**
+     * Clear the cached manifests (for testing).
+     */
+    public static function clearCache(): void
+    {
+        static::$cache = null;
     }
 }
