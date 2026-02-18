@@ -1816,4 +1816,43 @@ definePage({
 
 ---
 
+## ADR-077 : Post-deploy Production Fixes — CORS, Auth Redirect, Version Mismatch Loop
+
+- **Date** : 2026-02-18
+- **Contexte** : Après le premier déploiement CI/CD (ADR-076), la plateforme était inutilisable en production et staging : page se rafraîchit à l'infini après login, navigation impossible, redirect en boucle vers login. Fonctionne en local.
+- **Diagnostic** : Trois bugs combinés, tous liés à des différences entre l'environnement local et les serveurs VPS.
+- **Bug 1 — Boucle infinie de reload (cause principale)** :
+  - Le CI build bake `VITE_APP_VERSION = ${{ github.sha }}` (SHA complet, 40 chars) dans le JS frontend.
+  - Le deploy script écrit `git rev-parse --short HEAD` (SHA court, 7 chars) dans `.build-version` → `APP_BUILD_VERSION` dans le `.env` VPS.
+  - Le middleware `AddBuildVersion` envoie le header `x-build-version: abc1234` (7 chars).
+  - L'interceptor `onResponse` compare `serverVersion` (7 chars) avec `clientVersion` (40 chars) → **mismatch permanent**.
+  - Chaque réponse API set `sessionStorage['lzr:version-mismatch']`.
+  - Chaque navigation : le router guard détecte le mismatch → `window.location.reload()`.
+  - Après reload, premier API call → re-set mismatch → prochaine navigation → reload → **boucle infinie**.
+  - **Localement** : `APP_BUILD_VERSION` absent → default `'dev'` → le check fait `return` → pas de boucle.
+  - **Fix** : `.build-version` contient maintenant le SHA complet (`echo "${{ github.sha }}"` au lieu de `git rev-parse --short HEAD`). Les deux côtés (client et serveur) utilisent le même SHA 40 chars.
+- **Bug 2 — CORS rejeté** :
+  - `config/cors.php` avait un fallback hardcodé `'https://leezr.test'`.
+  - Les `.env` VPS n'avaient pas `CORS_ALLOWED_ORIGINS` → le serveur envoyait `access-control-allow-origin: https://leezr.test` pour toutes les réponses.
+  - Le navigateur sur `leezr.com` rejette les réponses API (CORS origin mismatch).
+  - **Fix** : Le fallback CORS est maintenant `env('APP_URL')` au lieu du domaine local hardcodé. Chaque serveur utilise son propre `APP_URL` déjà configuré.
+- **Bug 3 — 500 Route [login] not defined** :
+  - Les requêtes non-JSON (curl brut) vers une route `auth:platform` ou `auth:sanctum` déclenchent le middleware `Authenticate` qui tente `route('login')`.
+  - Aucune route nommée `login` n'existe (SPA API-only).
+  - Le handler d'exceptions Laravel fallback sur `route('login')` même si le middleware override retourne null.
+  - **Fix** : `$middleware->redirectGuestsTo('/login')` dans `bootstrap/app.php` — chemin URL au lieu de route nommée.
+- **Fichiers modifiés** :
+  - `.github/workflows/deploy.yml` — `.build-version` = SHA complet
+  - `config/cors.php` — fallback `APP_URL` au lieu de hardcodé
+  - `bootstrap/app.php` — `redirectGuestsTo('/login')`
+  - `.env.production.example` — documentation CORS mise à jour
+- **Conséquences** :
+  - La boucle de reload infinie est éliminée — les versions client/serveur matchent
+  - CORS fonctionne automatiquement sur tous les serveurs via `APP_URL`
+  - Les requêtes non-JSON reçoivent un redirect 302 au lieu d'un 500
+  - Aucune modification manuelle du `.env` VPS nécessaire
+  - **Leçon** : tout env var qui existe côté client ET serveur doit utiliser la même source (ici `${{ github.sha }}`)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
