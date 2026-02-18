@@ -4,6 +4,7 @@ namespace App\Core\Typography;
 
 use App\Platform\Models\PlatformFontFamily;
 use App\Platform\Models\PlatformSetting;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Resolves typography configuration for a given scope.
@@ -52,7 +53,7 @@ class TypographyResolverService
                 $result['font_faces'] = $family->fonts->map(fn ($font) => [
                     'weight' => $font->weight,
                     'style' => $font->style,
-                    'url' => asset('storage/'.$font->file_path),
+                    'url' => Storage::disk('public')->url($font->file_path),
                     'format' => $font->format,
                 ])->toArray();
             }
