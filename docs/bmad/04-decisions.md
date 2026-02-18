@@ -1659,4 +1659,33 @@ definePage({
 
 ---
 
+## ADR-071 : Deploy Fix — Stale Blade Views + OPcache Invalidation (R4.2.2)
+
+- **Date** : 2026-02-18
+- **Contexte** : Après le push R4.7A, le deploy webhook se déclenchait correctement (200 OK, `deploy_triggered`) et `deploy.sh` créait une nouvelle release avec le bon commit. Pourtant, la prod servait toujours l'ancien bundle Vite (`main-DqECAEzL.js` au lieu de `main-BGyzyRNS.js`). Le manifest Blade et les fichiers étaient corrects sur disque.
+
+  **Cause racine** : les vues Blade compilées dans `shared/storage/framework/views/` hardcodaient le chemin absolu de l'ancienne release (ex: `releases/20260217_025814/resources/views/application.blade.php`). PHP-FPM (pool `web2`, **PHP 8.4** — pas 8.3) gardait ces chemins en OPcache (`revalidate_path=Off`). Résultat : PHP résolvait le manifest Vite de l'ancienne release malgré le switch symlink.
+
+  **Problème secondaire** : une `RewriteRule ^(.*)$ public/$1 [L]` dans les Apache Directives ISPConfig — vestige de l'ancien setup (`web.old` = racine projet). Non bloquante grâce au fallback `.htaccess` Laravel, mais inutile depuis que `web → current/public`.
+
+- **Décision** : Patch `deploy.sh` — ajouter 2 étapes avant le switch symlinks (étape 8/9) :
+
+  ```bash
+  php "$RELEASE_DIR/artisan" view:clear
+  systemctl reload php8.4-fpm
+  ```
+
+  1. **`view:clear`** — purge les vues Blade compilées dans `shared/storage/framework/views/` pour forcer la recompilation avec les chemins de la nouvelle release.
+  2. **`systemctl reload php8.4-fpm`** — vide l'OPcache et le realpath cache de PHP-FPM pour que les nouveaux chemins soient résolus immédiatement.
+
+  **Note** : le pool PHP-FPM du site est géré par **PHP 8.4** (pas 8.3). ISPConfig configure le pool dans `/etc/php/8.4/fpm/pool.d/web2.conf`.
+
+- **Conséquences** :
+  - Chaque deploy purge les vues compilées stale — plus de mismatch manifest Vite
+  - Le reload PHP-FPM est atomique (graceful restart, pas de downtime)
+  - La `RewriteRule public/$1` dans ISPConfig reste à supprimer manuellement (cosmétique, non bloquante)
+  - **Supersède partiellement** ADR-064 (complète le hardening deploy avec le fix OPcache)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
