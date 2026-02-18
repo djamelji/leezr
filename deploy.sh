@@ -125,6 +125,10 @@ php "$RELEASE_DIR/artisan" migrate:status > /dev/null
 echo "  Health check passed."
 php "$RELEASE_DIR/artisan" optimize
 
+# Purge stale Blade views + reload PHP-FPM OPcache
+php "$RELEASE_DIR/artisan" view:clear
+systemctl reload php8.4-fpm
+
 # ─── 9. Switch symlinks ──────────────────────────────────────
 
 echo "→ [9/9] switch symlinks..."
