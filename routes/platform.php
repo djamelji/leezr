@@ -7,6 +7,7 @@ use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
 use App\Modules\Platform\Modules\Http\ModuleController;
 use App\Modules\Platform\Settings\Http\SessionSettingsController;
+use App\Modules\Platform\Settings\Http\TypographyController;
 use App\Modules\Platform\Theme\Http\ThemeController;
 use App\Modules\Platform\Roles\Http\PermissionController;
 use App\Modules\Platform\Roles\Http\RoleController;
@@ -93,6 +94,16 @@ Route::middleware('auth:platform')->group(function () {
     Route::middleware('platform.permission:manage_theme_settings')->group(function () {
         Route::get('/theme', [ThemeController::class, 'show']);
         Route::put('/theme', [ThemeController::class, 'update']);
+    });
+
+    // Typography Settings
+    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+        Route::get('/typography', [TypographyController::class, 'show']);
+        Route::put('/typography', [TypographyController::class, 'update']);
+        Route::post('/font-families', [TypographyController::class, 'createFamily']);
+        Route::post('/font-families/{familyId}/fonts', [TypographyController::class, 'uploadFont']);
+        Route::delete('/font-families/{familyId}/fonts/{fontId}', [TypographyController::class, 'deleteFont']);
+        Route::delete('/font-families/{familyId}', [TypographyController::class, 'deleteFamily']);
     });
 
     // Session Settings

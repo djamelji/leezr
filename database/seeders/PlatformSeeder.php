@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\ThemePayload;
+use App\Core\Typography\TypographyPayload;
+use App\Platform\Models\PlatformFontFamily;
 use App\Platform\Models\PlatformPermission;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformSetting;
@@ -83,7 +85,14 @@ class PlatformSeeder extends Seeder
             PlatformSetting::create([
                 'theme' => ThemePayload::defaults()->toArray(),
                 'session' => SessionSettingsPayload::defaults()->toArray(),
+                'typography' => TypographyPayload::defaults()->toArray(),
             ]);
         }
+
+        // Seed default font family (idempotent)
+        PlatformFontFamily::firstOrCreate(
+            ['slug' => 'public-sans'],
+            ['name' => 'Public Sans', 'source' => 'google', 'is_enabled' => true],
+        );
     }
 }

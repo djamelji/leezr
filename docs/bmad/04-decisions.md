@@ -1688,4 +1688,33 @@ definePage({
 
 ---
 
+## ADR-072 : Font Library System — Self-Hosted First Typography (Backend)
+
+- **Date** : 2026-02-19
+- **Contexte** : L'application utilise "Public Sans" hardcodé via Google Fonts (`webfontloader.js` plugin) et variable SCSS compile-time (`$body-font-family`). Aucun admin ne peut changer la police globale sans déployer du code. Vuetify ne supporte pas le changement de font-family via son API reactive — il faut un mécanisme CSS runtime pour override.
+
+- **Décision** : **Font Library System** avec deux tables dédiées + colonne JSON `typography` sur `platform_settings`.
+
+  **1. DB** : `platform_font_families` (name, slug, source enum local|google, is_enabled) + `platform_fonts` (family_id FK cascade, weight 100-900, style normal|italic, format woff2, file_path, sha256, unique constraint family+weight+style). Colonne JSON `typography` sur `platform_settings`.
+
+  **2. Value Object** : `TypographyPayload` (`app/Core/Typography/`) — même pattern que `ThemePayload`. `defaults()` + `toArray()`. Champs : `active_source`, `active_family_id`, `google_fonts_enabled` (false par défaut), `google_active_family`, `google_weights`, `headings_family_id`, `body_family_id`.
+
+  **3. Resolver** : `TypographyResolverService` — `forPlatform()` résout les font_faces avec URLs publiques pour les polices locales. `forCompany()` délègue (global strict). Guard : si `google_fonts_enabled=false`, force `active_source=local`.
+
+  **4. Controller** : `TypographyController` (6 endpoints) — show, update settings, create family, upload woff2 (upsert variant), delete variant, delete family (409 si active).
+
+  **5. Storage** : fichiers woff2 stockés dans `storage/app/public/fonts/{slug}/` via disque `public`. Symlink `storage:link` déjà en place.
+
+  **6. Self-hosted first** : Google Fonts désactivé par défaut (RGPD-friendly). Toggle admin pour activer. Si OFF, source forcée à local.
+
+- **Conséquences** :
+  - Les admins platform peuvent uploader des polices woff2 et les activer globalement
+  - Google Fonts optionnel — désactivé par défaut
+  - Le défaut reste Public Sans (pas de changement visible sans action admin)
+  - Permission réutilisée : `manage_theme_settings` (typographie = apparence)
+  - Sous-lot backend uniquement — le frontend (UI + runtime) suit dans des sous-lots séparés
+  - ApexCharts avec `fontFamily: 'Public Sans'` hardcodé ne changera pas (tradeoff accepté)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

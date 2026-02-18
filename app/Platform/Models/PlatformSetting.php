@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class PlatformSetting extends Model
 {
-    protected $fillable = ['theme', 'session'];
+    protected $fillable = ['theme', 'session', 'typography'];
 
     protected $casts = [
         'theme' => 'array',
         'session' => 'array',
+        'typography' => 'array',
     ];
 
     /**
