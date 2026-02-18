@@ -80,12 +80,13 @@ const loadSettings = data => {
   Object.assign(form, data)
 }
 
-// Live preview — watch only previewable fields (layout excluded: structural change, applied on save)
+// Live preview — all fields including layout (structural but reactive via configStore)
 const previewPayload = computed(() => ({
   theme: form.theme,
   skin: form.skin,
   primary_color: form.primary_color,
   primary_darken_color: form.primary_darken_color,
+  layout: form.layout,
   semi_dark: form.semi_dark,
   navbar_blur: form.navbar_blur,
   nav_collapsed: form.nav_collapsed,
