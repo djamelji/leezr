@@ -1,3 +1,26 @@
+<script>
+// Module-level state: survives layout-switch remounts.
+// Switching vertical ↔ horizontal swaps the layout component which
+// remounts all children. Without module-level state, onMounted refetches
+// from DB and overwrites the unsaved preview form.
+import { reactive } from 'vue'
+
+const _defaults = {
+  theme: 'system',
+  skin: 'default',
+  primary_color: '#7367F0',
+  primary_darken_color: '#675DD8',
+  layout: 'vertical',
+  nav_collapsed: false,
+  semi_dark: false,
+  navbar_blur: true,
+  content_width: 'boxed',
+}
+
+const _form = reactive({ ..._defaults })
+let _fetched = false
+</script>
+
 <script setup>
 import SettingsTypography from './_SettingsTypography.vue'
 import { usePlatformStore } from '@/core/stores/platform'
@@ -12,28 +35,9 @@ import wideSvg from '@images/customizer-icons/wide-light.svg'
 const platformStore = usePlatformStore()
 const { toast } = useAppToast()
 
-const isSaving = ref(false)
-
-const defaults = {
-  theme: 'system',
-  skin: 'default',
-  primary_color: '#7367F0',
-  primary_darken_color: '#675DD8',
-  layout: 'vertical',
-  nav_collapsed: false,
-  semi_dark: false,
-  navbar_blur: true,
-  content_width: 'boxed',
-}
-
-// Module-level state: survives layout-switch remounts (vertical ↔ horizontal
-// changes the layout component which remounts all children including this page).
-// Without this, onMounted refetches from DB and overwrites unsaved preview state.
-const _form = reactive({ ...defaults })
-let _fetched = false
-
 const form = _form
 const isLoading = ref(!_fetched)
+const isSaving = ref(false)
 
 const presetColors = [
   { main: '#7367F0', darken: '#675DD8' },
@@ -86,7 +90,7 @@ const loadSettings = data => {
   Object.assign(form, data)
 }
 
-// Live preview — all fields including layout (structural but reactive via configStore)
+// Live preview — all fields including layout (reactive via configStore)
 const previewPayload = computed(() => ({
   theme: form.theme,
   skin: form.skin,
@@ -105,7 +109,7 @@ watch(previewPayload, val => {
 })
 
 onMounted(async () => {
-  if (_fetched) return // Already loaded — this is a layout-switch remount
+  if (_fetched) return // Layout-switch remount — form state already loaded
 
   try {
     await platformStore.fetchThemeSettings()
@@ -138,7 +142,7 @@ const save = async () => {
 const resetToDefaults = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateThemeSettings({ ...defaults })
+    const data = await platformStore.updateThemeSettings({ ..._defaults })
 
     toast('Theme reset to defaults.', 'success')
     loadSettings(data.theme)
