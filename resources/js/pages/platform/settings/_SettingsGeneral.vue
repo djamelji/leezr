@@ -1,6 +1,13 @@
 <script setup>
 const appName = import.meta.env.VITE_APP_NAME || 'Leezr'
-const envMode = import.meta.env.MODE
+
+const envLabel = computed(() => {
+  const host = window.location.hostname
+  if (host === 'leezr.com') return 'Production'
+  if (host === 'dev.leezr.com') return 'Developpement'
+
+  return 'Local'
+})
 </script>
 
 <template>
@@ -43,7 +50,7 @@ const envMode = import.meta.env.MODE
                   />
                 </template>
                 <VListItemTitle>Environment</VListItemTitle>
-                <VListItemSubtitle>{{ envMode }}</VListItemSubtitle>
+                <VListItemSubtitle>{{ envLabel }}</VListItemSubtitle>
               </VListItem>
             </VList>
           </VCol>
