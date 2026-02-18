@@ -2,6 +2,9 @@
 
 namespace App\Platform\Auth;
 
+use App\Core\Modules\ModuleManifest;
+use App\Core\Modules\ModuleRegistry;
+use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -39,6 +42,8 @@ class PlatformAuthController extends Controller
             'user' => $user,
             'roles' => $user->roles->pluck('key'),
             'permissions' => $permissions,
+            'platform_modules' => $this->platformModuleNavItems(),
+            'ui_theme' => UIResolverService::forPlatform()->toArray(),
         ]);
     }
 
@@ -57,7 +62,18 @@ class PlatformAuthController extends Controller
             'user' => $user,
             'roles' => $user->roles->pluck('key'),
             'permissions' => $permissions,
+            'platform_modules' => $this->platformModuleNavItems(),
+            'ui_theme' => UIResolverService::forPlatform()->toArray(),
         ]);
+    }
+
+    private function platformModuleNavItems(): array
+    {
+        return collect(ModuleRegistry::forScope('platform'))
+            ->filter(fn (ModuleManifest $m) => $m->visibility === 'visible')
+            ->flatMap(fn (ModuleManifest $m) => $m->capabilities->navItems)
+            ->values()
+            ->all();
     }
 
     public function logout(Request $request): JsonResponse

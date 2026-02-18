@@ -16,7 +16,11 @@ class ModuleCatalogReadModel
      */
     public static function forCompany(Company $company): array
     {
-        $platformModules = PlatformModule::orderBy('sort_order')->get();
+        $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+
+        $platformModules = PlatformModule::whereIn('key', $companyModuleKeys)
+            ->orderBy('sort_order')
+            ->get();
 
         $companyModules = CompanyModule::where('company_id', $company->id)
             ->get()

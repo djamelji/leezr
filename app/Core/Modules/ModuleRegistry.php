@@ -5,6 +5,15 @@ namespace App\Core\Modules;
 use App\Modules\Core\Members\MembersModule;
 use App\Modules\Core\Settings\SettingsModule;
 use App\Modules\Logistics\Shipments\ShipmentsModule;
+use App\Modules\Platform\Billing\BillingModule;
+use App\Modules\Platform\Companies\CompaniesModule;
+use App\Modules\Platform\Settings\PlatformSettingsModule;
+use App\Modules\Platform\Dashboard\DashboardModule;
+use App\Modules\Platform\Fields\FieldsModule;
+use App\Modules\Platform\Jobdomains\JobdomainsModule;
+use App\Modules\Platform\Modules\ModulesModule;
+use App\Modules\Platform\Roles\RolesModule;
+use App\Modules\Platform\Users\UsersModule;
 
 /**
  * Aggregator loading module manifests from per-module classes.
@@ -15,9 +24,21 @@ class ModuleRegistry
 {
     /** @var array<class-string<ModuleDefinition>> */
     private static array $modules = [
+        // Company-scope modules
         MembersModule::class,
         SettingsModule::class,
         ShipmentsModule::class,
+
+        // Platform-scope modules
+        DashboardModule::class,
+        CompaniesModule::class,
+        UsersModule::class,
+        RolesModule::class,
+        ModulesModule::class,
+        JobdomainsModule::class,
+        FieldsModule::class,
+        PlatformSettingsModule::class,
+        BillingModule::class,
     ];
 
     /** @var array<string, ModuleManifest>|null */
@@ -47,6 +68,19 @@ class ModuleRegistry
     }
 
     /**
+     * Module definitions filtered by scope.
+     *
+     * @return array<string, ModuleManifest>
+     */
+    public static function forScope(string $scope): array
+    {
+        return array_filter(
+            static::definitions(),
+            fn (ModuleManifest $m) => $m->scope === $scope,
+        );
+    }
+
+    /**
      * Get capabilities for a given module key.
      */
     public static function capabilities(string $key): ?Capabilities
@@ -57,14 +91,14 @@ class ModuleRegistry
     }
 
     /**
-     * Resolve bundle keys to permission keys.
+     * Resolve bundle keys to permission keys (company-scope only).
      * Returns a unique list of permission keys for the given bundle keys.
      */
     public static function resolveBundles(array $bundleKeys): array
     {
         $permissionKeys = [];
 
-        foreach (static::definitions() as $manifest) {
+        foreach (static::forScope('company') as $manifest) {
             foreach ($manifest->bundles as $bundle) {
                 if (in_array($bundle['key'], $bundleKeys, true)) {
                     $permissionKeys = array_merge($permissionKeys, $bundle['permissions']);
@@ -76,13 +110,13 @@ class ModuleRegistry
     }
 
     /**
-     * All valid bundle keys across all modules.
+     * All valid bundle keys across company-scope modules.
      */
     public static function allBundleKeys(): array
     {
         $keys = [];
 
-        foreach (static::definitions() as $manifest) {
+        foreach (static::forScope('company') as $manifest) {
             foreach ($manifest->bundles as $bundle) {
                 $keys[] = $bundle['key'];
             }
@@ -104,6 +138,7 @@ class ModuleRegistry
                     'name' => $manifest->name,
                     'description' => $manifest->description,
                     'sort_order' => $manifest->sortOrder,
+                    'is_enabled_globally' => PlatformModule::where('key', $key)->value('is_enabled_globally') ?? true,
                 ],
             );
         }

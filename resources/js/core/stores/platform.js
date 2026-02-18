@@ -15,6 +15,8 @@ export const usePlatformStore = defineStore('platform', {
     _fieldDefinitions: [],
     _fieldActivations: [],
     _jobdomains: [],
+    _themeSettings: null,
+    _sessionSettings: null,
   }),
 
   getters: {
@@ -30,6 +32,8 @@ export const usePlatformStore = defineStore('platform', {
     fieldDefinitions: state => state._fieldDefinitions,
     fieldActivations: state => state._fieldActivations,
     jobdomains: state => state._jobdomains,
+    themeSettings: state => state._themeSettings,
+    sessionSettings: state => state._sessionSettings,
   },
 
   actions: {
@@ -306,6 +310,42 @@ export const usePlatformStore = defineStore('platform', {
       const data = await $platformApi(`/jobdomains/${id}`, { method: 'DELETE' })
 
       this._jobdomains = this._jobdomains.filter(j => j.id !== id)
+
+      return data
+    },
+
+    // ─── Theme Settings ────────────────────────────────
+    async fetchThemeSettings() {
+      const data = await $platformApi('/theme')
+
+      this._themeSettings = data.theme
+    },
+
+    async updateThemeSettings(payload) {
+      const data = await $platformApi('/theme', {
+        method: 'PUT',
+        body: payload,
+      })
+
+      this._themeSettings = data.theme
+
+      return data
+    },
+
+    // ─── Session Settings ─────────────────────────────
+    async fetchSessionSettings() {
+      const data = await $platformApi('/session-settings')
+
+      this._sessionSettings = data.session
+    },
+
+    async updateSessionSettings(payload) {
+      const data = await $platformApi('/session-settings', {
+        method: 'PUT',
+        body: payload,
+      })
+
+      this._sessionSettings = data.session
 
       return data
     },

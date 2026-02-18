@@ -15,6 +15,8 @@ import { cookieRef } from '@/@layouts/stores/config'
 import '@core-scss/template/libs/vuetify/index.scss'
 import 'vuetify/styles'
 
+export let vuetifyInstance = null
+
 export default function (app) {
   const cookieThemeValues = {
     defaultTheme: resolveVuetifyTheme(themeConfig.app.theme),
@@ -51,5 +53,6 @@ export default function (app) {
     },
   })
 
+  vuetifyInstance = vuetify
   app.use(vuetify)
 }

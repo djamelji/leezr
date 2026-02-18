@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Roles\Http;
 
 use App\Platform\Models\PlatformPermission;
 use Illuminate\Http\JsonResponse;
 
-class PlatformPermissionController
+class PermissionController
 {
     public function index(): JsonResponse
     {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { applyTheme } from '@/composables/useApplyTheme'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
 
@@ -70,6 +71,7 @@ export const useAuthStore = defineStore('auth', {
         company_role: null,
       }]
       this._persistCompanyId(data.company.id)
+      applyTheme(data.ui_theme)
 
       return data
     },
@@ -83,6 +85,7 @@ export const useAuthStore = defineStore('auth', {
       })
 
       this._persistUser(data.user)
+      applyTheme(data.ui_theme)
       await this.fetchMyCompanies()
 
       return data
@@ -108,6 +111,7 @@ export const useAuthStore = defineStore('auth', {
         const data = await $api('/me', { _authCheck: true, signal })
 
         this._persistUser(data.user)
+        applyTheme(data.ui_theme)
         this._hydrated = true
 
         return data.user

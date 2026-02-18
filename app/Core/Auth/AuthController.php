@@ -6,6 +6,7 @@ use App\Core\Auth\Requests\LoginRequest;
 use App\Core\Auth\Requests\RegisterRequest;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -50,6 +51,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $result['user'],
             'company' => $result['company'],
+            'ui_theme' => UIResolverService::forCompany()->toArray(),
         ], 201);
     }
 
@@ -69,6 +71,7 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => Auth::user(),
+            'ui_theme' => UIResolverService::forCompany()->toArray(),
         ]);
     }
 
@@ -90,6 +93,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'user' => $request->user(),
+            'ui_theme' => UIResolverService::forCompany()->toArray(),
         ]);
     }
 

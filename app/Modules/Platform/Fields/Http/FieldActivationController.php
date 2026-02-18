@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Fields\Http;
 
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class PlatformFieldActivationController
+class FieldActivationController
 {
     private const MAX_ACTIVATIONS_PER_SCOPE = 50;
 

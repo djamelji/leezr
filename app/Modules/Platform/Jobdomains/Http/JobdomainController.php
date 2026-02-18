@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Jobdomains\Http;
 
 use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinition;
@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
-class PlatformJobdomainController extends Controller
+class JobdomainController extends Controller
 {
     public function index(): JsonResponse
     {
@@ -31,8 +31,8 @@ class PlatformJobdomainController extends Controller
                 FieldDefinition::SCOPE_COMPANY_USER,
             ])->orderBy('default_order')->get();
 
-        // Build module bundles for the platform role template UI
-        $modules = collect(ModuleRegistry::definitions());
+        // Build module bundles for the platform role template UI (company-scope only)
+        $modules = collect(ModuleRegistry::forScope('company'));
         $moduleBundles = [];
 
         foreach ($modules as $modKey => $manifest) {

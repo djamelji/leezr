@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Users\Http;
 
 use App\Core\Auth\PasswordPolicy;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValidationService;
 use App\Core\Fields\FieldWriteService;
-use App\Platform\Fields\ReadModels\PlatformUserProfileReadModel;
+use App\Modules\Platform\Users\ReadModels\UserProfileReadModel;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 
-class PlatformUserController
+class UserController
 {
     public function index(): JsonResponse
     {
@@ -73,7 +73,7 @@ class PlatformUserController
     {
         $user = PlatformUser::with('roles')->findOrFail($id);
 
-        return response()->json(PlatformUserProfileReadModel::get($user));
+        return response()->json(UserProfileReadModel::get($user));
     }
 
     public function update(Request $request, int $id): JsonResponse

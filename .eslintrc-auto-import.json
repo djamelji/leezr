@@ -367,6 +367,8 @@
     "refreshCsrf": true,
     "safeRedirect": true,
     "usePasswordStrength": true,
-    "useCompanyNav": true
+    "useCompanyNav": true,
+    "usePlatformNav": true,
+    "applyTheme": true
   }
 }

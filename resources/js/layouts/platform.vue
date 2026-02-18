@@ -1,8 +1,13 @@
 <script setup>
+import { useConfigStore } from '@core/stores/config'
+import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import AppShellGate from './components/AppShellGate.vue'
 
 const PlatformLayoutWithVerticalNav = defineAsyncComponent(() => import('./components/PlatformLayoutWithVerticalNav.vue'))
+const PlatformLayoutWithHorizontalNav = defineAsyncComponent(() => import('./components/PlatformLayoutWithHorizontalNav.vue'))
+
+const configStore = useConfigStore()
 
 switchToVerticalNavOnLtOverlayNavBreakpoint()
 
@@ -27,21 +32,24 @@ watch([
 </script>
 
 <template>
-  <PlatformLayoutWithVerticalNav v-bind="layoutAttrs">
+  <Component
+    v-bind="layoutAttrs"
+    :is="configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? PlatformLayoutWithVerticalNav : PlatformLayoutWithHorizontalNav"
+  >
     <AppLoadingIndicator ref="refLoadingIndicator" />
 
     <AppShellGate>
-      <RouterView v-slot="{ Component }">
+      <RouterView v-slot="{ Component: page }">
         <Suspense
           :timeout="0"
           @fallback="isFallbackStateActive = true"
           @resolve="isFallbackStateActive = false"
         >
-          <Component :is="Component" />
+          <Component :is="page" />
         </Suspense>
       </RouterView>
     </AppShellGate>
-  </PlatformLayoutWithVerticalNav>
+  </Component>
 </template>
 
 <style lang="scss">

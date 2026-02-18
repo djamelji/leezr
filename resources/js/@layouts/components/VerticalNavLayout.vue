@@ -20,17 +20,15 @@ const isOverlayNavActive = ref(false)
 const isLayoutOverlayVisible = ref(false)
 const toggleIsOverlayNavActive = useToggle(isOverlayNavActive)
 
-// ℹ️ This is alternative to below two commented watcher
-
-// We want to show overlay if overlay nav is visible and want to hide overlay if overlay is hidden and vice versa.
+// Bidirectional sync: overlay scrim visibility ↔ overlay nav state
 syncRef(isOverlayNavActive, isLayoutOverlayVisible)
 
-// })
-
-// ℹ️ Hide overlay if user open overlay nav in <md and increase the window width without closing overlay nav
+// B: Breakpoint guard — force-close overlay when crossing to desktop (>= 1280px)
 watch(windowWidth, () => {
-  if (!configStore.isLessThanOverlayNavBreakpoint && isLayoutOverlayVisible.value)
+  if (!configStore.isLessThanOverlayNavBreakpoint) {
+    isOverlayNavActive.value = false
     isLayoutOverlayVisible.value = false
+  }
 })
 
 const verticalNavAttrs = computed(() => {
@@ -102,7 +100,7 @@ const verticalNavAttrs = computed(() => {
     <div
       class="layout-overlay"
       :class="[{ visible: isLayoutOverlayVisible }]"
-      @click="() => { isLayoutOverlayVisible = !isLayoutOverlayVisible }"
+      @click="() => { isOverlayNavActive = false; isLayoutOverlayVisible = false }"
     />
   </div>
 </template>

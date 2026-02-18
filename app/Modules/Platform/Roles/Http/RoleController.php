@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Roles\Http;
 
 use App\Platform\Models\PlatformRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class PlatformRoleController
+class RoleController
 {
     public function index(): JsonResponse
     {

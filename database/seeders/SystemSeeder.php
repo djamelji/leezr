@@ -8,7 +8,7 @@ use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\Models\PlatformPermission;
-use App\Platform\RBAC\PermissionCatalog;
+use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Log;
 
@@ -45,7 +45,7 @@ class SystemSeeder extends Seeder
     private function cleanupStalePermissions(): void
     {
         // Platform permissions
-        $platformKeys = PermissionCatalog::keys();
+        $platformKeys = PlatformPermissionCatalog::keys();
         $stalePlatform = PlatformPermission::whereNotIn('key', $platformKeys)->get();
 
         if ($stalePlatform->isNotEmpty()) {

@@ -176,7 +176,6 @@ class NameSplitTest extends TestCase
         $navFiles = [
             base_path('resources/js/navigation/vertical/index.js'),
             base_path('resources/js/navigation/horizontal/index.js'),
-            base_path('resources/js/navigation/platform.js'),
         ];
 
         $missing = [];

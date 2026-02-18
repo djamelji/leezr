@@ -1,16 +1,18 @@
 <?php
 
+use App\Modules\Platform\Companies\Http\CompanyController;
+use App\Modules\Platform\Companies\Http\CompanyUserController;
+use App\Modules\Platform\Fields\Http\FieldActivationController;
+use App\Modules\Platform\Fields\Http\FieldDefinitionController;
+use App\Modules\Platform\Jobdomains\Http\JobdomainController;
+use App\Modules\Platform\Modules\Http\ModuleController;
+use App\Modules\Platform\Settings\Http\SessionSettingsController;
+use App\Modules\Platform\Theme\Http\ThemeController;
+use App\Modules\Platform\Roles\Http\PermissionController;
+use App\Modules\Platform\Roles\Http\RoleController;
+use App\Modules\Platform\Users\Http\UserController;
 use App\Platform\Auth\PlatformAuthController;
 use App\Platform\Auth\PlatformPasswordResetController;
-use App\Platform\Http\Controllers\PlatformCompanyController;
-use App\Platform\Http\Controllers\PlatformCompanyUserController;
-use App\Platform\Http\Controllers\PlatformFieldActivationController;
-use App\Platform\Http\Controllers\PlatformFieldDefinitionController;
-use App\Platform\Http\Controllers\PlatformJobdomainController;
-use App\Platform\Http\Controllers\PlatformModuleController;
-use App\Platform\Http\Controllers\PlatformPermissionController;
-use App\Platform\Http\Controllers\PlatformRoleController;
-use App\Platform\Http\Controllers\PlatformUserController;
 use Illuminate\Support\Facades\Route;
 
 // Platform auth — public (throttled)
@@ -28,71 +30,83 @@ Route::middleware('auth:platform')->group(function () {
 
     // Companies
     Route::middleware('platform.permission:manage_companies')->group(function () {
-        Route::get('/companies', [PlatformCompanyController::class, 'index']);
-        Route::put('/companies/{id}/suspend', [PlatformCompanyController::class, 'suspend']);
-        Route::put('/companies/{id}/reactivate', [PlatformCompanyController::class, 'reactivate']);
+        Route::get('/companies', [CompanyController::class, 'index']);
+        Route::put('/companies/{id}/suspend', [CompanyController::class, 'suspend']);
+        Route::put('/companies/{id}/reactivate', [CompanyController::class, 'reactivate']);
     });
 
     // Company users (read-only supervision)
     Route::middleware('platform.permission:view_company_users')->group(function () {
-        Route::get('/company-users', [PlatformCompanyUserController::class, 'index']);
+        Route::get('/company-users', [CompanyUserController::class, 'index']);
     });
 
     // Platform users (CRUD)
     Route::middleware('platform.permission:manage_platform_users')->group(function () {
-        Route::get('/platform-users', [PlatformUserController::class, 'index']);
-        Route::post('/platform-users', [PlatformUserController::class, 'store']);
-        Route::put('/platform-users/{id}', [PlatformUserController::class, 'update']);
-        Route::delete('/platform-users/{id}', [PlatformUserController::class, 'destroy']);
+        Route::get('/platform-users', [UserController::class, 'index']);
+        Route::post('/platform-users', [UserController::class, 'store']);
+        Route::put('/platform-users/{id}', [UserController::class, 'update']);
+        Route::delete('/platform-users/{id}', [UserController::class, 'destroy']);
     });
 
     // Platform user credentials (privileged)
     Route::middleware('platform.permission:manage_platform_user_credentials')->group(function () {
         Route::post('/platform-users/{id}/reset-password', [PlatformPasswordResetController::class, 'adminResetPassword']);
-        Route::put('/platform-users/{id}/password', [PlatformUserController::class, 'setPassword']);
+        Route::put('/platform-users/{id}/password', [UserController::class, 'setPassword']);
     });
 
     // Roles (CRUD)
     Route::middleware('platform.permission:manage_roles')->group(function () {
-        Route::get('/roles', [PlatformRoleController::class, 'index']);
-        Route::post('/roles', [PlatformRoleController::class, 'store']);
-        Route::put('/roles/{id}', [PlatformRoleController::class, 'update']);
-        Route::delete('/roles/{id}', [PlatformRoleController::class, 'destroy']);
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::put('/roles/{id}', [RoleController::class, 'update']);
+        Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
     });
 
     // Permissions (read-only)
     Route::middleware('platform.permission:manage_roles')->group(function () {
-        Route::get('/permissions', [PlatformPermissionController::class, 'index']);
+        Route::get('/permissions', [PermissionController::class, 'index']);
     });
 
     // Modules
     Route::middleware('platform.permission:manage_modules')->group(function () {
-        Route::get('/modules', [PlatformModuleController::class, 'index']);
-        Route::put('/modules/{key}/toggle', [PlatformModuleController::class, 'toggle']);
+        Route::get('/modules', [ModuleController::class, 'index']);
+        Route::put('/modules/{key}/toggle', [ModuleController::class, 'toggle']);
     });
 
     // Field Definitions + Activations
     Route::middleware('platform.permission:manage_field_definitions')->group(function () {
-        Route::get('/field-definitions', [PlatformFieldDefinitionController::class, 'index']);
-        Route::post('/field-definitions', [PlatformFieldDefinitionController::class, 'store']);
-        Route::put('/field-definitions/{id}', [PlatformFieldDefinitionController::class, 'update']);
-        Route::delete('/field-definitions/{id}', [PlatformFieldDefinitionController::class, 'destroy']);
+        Route::get('/field-definitions', [FieldDefinitionController::class, 'index']);
+        Route::post('/field-definitions', [FieldDefinitionController::class, 'store']);
+        Route::put('/field-definitions/{id}', [FieldDefinitionController::class, 'update']);
+        Route::delete('/field-definitions/{id}', [FieldDefinitionController::class, 'destroy']);
 
-        Route::get('/field-activations', [PlatformFieldActivationController::class, 'index']);
-        Route::post('/field-activations', [PlatformFieldActivationController::class, 'upsert']);
+        Route::get('/field-activations', [FieldActivationController::class, 'index']);
+        Route::post('/field-activations', [FieldActivationController::class, 'upsert']);
     });
 
     // Platform user profile (show with dynamic fields)
     Route::middleware('platform.permission:manage_platform_users')->group(function () {
-        Route::get('/platform-users/{id}', [PlatformUserController::class, 'show']);
+        Route::get('/platform-users/{id}', [UserController::class, 'show']);
+    });
+
+    // Theme Settings
+    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+        Route::get('/theme', [ThemeController::class, 'show']);
+        Route::put('/theme', [ThemeController::class, 'update']);
+    });
+
+    // Session Settings
+    Route::middleware('platform.permission:manage_session_settings')->group(function () {
+        Route::get('/session-settings', [SessionSettingsController::class, 'show']);
+        Route::put('/session-settings', [SessionSettingsController::class, 'update']);
     });
 
     // Job Domains (CRUD)
     Route::middleware('platform.permission:manage_jobdomains')->group(function () {
-        Route::get('/jobdomains', [PlatformJobdomainController::class, 'index']);
-        Route::get('/jobdomains/{id}', [PlatformJobdomainController::class, 'show']);
-        Route::post('/jobdomains', [PlatformJobdomainController::class, 'store']);
-        Route::put('/jobdomains/{id}', [PlatformJobdomainController::class, 'update']);
-        Route::delete('/jobdomains/{id}', [PlatformJobdomainController::class, 'destroy']);
+        Route::get('/jobdomains', [JobdomainController::class, 'index']);
+        Route::get('/jobdomains/{id}', [JobdomainController::class, 'show']);
+        Route::post('/jobdomains', [JobdomainController::class, 'store']);
+        Route::put('/jobdomains/{id}', [JobdomainController::class, 'update']);
+        Route::delete('/jobdomains/{id}', [JobdomainController::class, 'destroy']);
     });
 });

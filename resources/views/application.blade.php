@@ -5,7 +5,7 @@
   <link rel="icon" href="{{ asset('favicon.ico') }}" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vuexy - Vuejs Admin Dashboard Template</title>
+  <title>Leezr</title>
   <link rel="stylesheet" type="text/css" href="{{ asset('loader.css') }}" />
   @vite(['resources/js/main.js'])
 </head>
@@ -41,11 +41,9 @@
   </div>
   
   <script>
-    const loaderColor = localStorage.getItem('vuexy-initial-loader-bg') || '#FFFFFF'
-    const primaryColor = localStorage.getItem('vuexy-initial-loader-color') || '#7367F0'
+    const loaderColor = localStorage.getItem('Leezr-initial-loader-bg') || '#FFFFFF'
+    const primaryColor = localStorage.getItem('Leezr-initial-loader-color') || '#7367F0'
 
-    if (loaderColor)
-      document.documentElement.style.setProperty('--initial-loader-bg', loaderColor)
     if (loaderColor)
       document.documentElement.style.setProperty('--initial-loader-bg', loaderColor)
 

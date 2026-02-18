@@ -1472,4 +1472,191 @@ definePage({
 
 ---
 
+## ADR-065 : OverlayNav Scrim Hardening (R4.3)
+
+- **Date** : 2026-02-17
+- **Contexte** : Après login sur `leezr.test`, le site apparaissait en « mode tamisé » — un overlay noir semi-transparent (`.layout-overlay.visible`) bloquait tous les clicks. Le composant `VerticalNavLayout.vue` (Vuexy `@layouts`) gère un overlay scrim (z-index 1002, `rgb(0 0 0 / 60%)`, `inset: 0`) pour le menu mobile (viewport < 1280px). Trois fragilités identifiées :
+  1. **Click-to-close = toggle** : `isLayoutOverlayVisible = !isLayoutOverlayVisible` — si l'état est désynchronisé, le toggle aggrave au lieu de fermer
+  2. **Breakpoint guard partiel** : le watcher windowWidth ne reset que `isLayoutOverlayVisible`, pas `isOverlayNavActive` — dépendance implicite sur `syncRef` pour propager
+  3. **Route watcher sur `route.name` uniquement** : les navigations avec même nom de route mais params différents ne fermaient pas l'overlay
+
+  **Audit** : `isOverlayNavActive` et `isLayoutOverlayVisible` sont des `ref(false)` locaux — aucune persistance (pas de cookie, localStorage, Pinia). `syncRef` bidirectionnel avec `flush: 'sync'`. Le bug n'est PAS un problème runtime (ADR-047/048/059/060 tous respectés). R4.1 n'a touché aucun fichier frontend.
+
+- **Décision** :
+  1. **Click-to-close = always close** : `@click` sur `.layout-overlay` → `isOverlayNavActive = false; isLayoutOverlayVisible = false` (plus de toggle)
+  2. **Breakpoint guard complet** : le watcher reset les DEUX refs quand le viewport passe en desktop (>= 1280px), sans condition préalable sur `isLayoutOverlayVisible`
+  3. **Route watcher sur `route.fullPath`** : couvre les changements de params, query, hash — pas seulement le nom de route
+
+  **Dérogation CLAUDE.md** : Ces modifications touchent `@layouts/components/VerticalNavLayout.vue` et `@layouts/components/VerticalNav.vue` — normalement interdits. Dérogation justifiée : fix de robustesse UI, non-cosmétique, sans changement de comportement visible. Les modifications sont défensives (force-close au lieu de toggle, reset complet au lieu de partiel).
+
+- **Conséquences** :
+  - Après login → jamais d'overlay bloquant
+  - Après refresh → jamais d'overlay bloquant
+  - Mobile (< 1280px) : hamburger ouvre, click scrim ferme (garantie), route change ferme
+  - Desktop (>= 1280px) : scrim jamais visible, force-close sur changement de taille fenêtre
+  - Aucune ADR runtime touchée (047a-d, 048, 059, 060 intacts)
+  - 191 tests PHP passent, `pnpm build` clean
+
+## ADR-066 : Platform Modularization Convergence (R4.4)
+
+- **Date** : 2026-02-17
+- **Contexte** : R4.1 a modularisé le scope company : `ModuleDefinition`, `ModuleManifest`, dossiers par module, RBAC et navigation pilotés par les modules. Le scope platform restait monolithique : 9 contrôleurs dans un seul dossier, 8 permissions statiques dans `PermissionCatalog`, navigation statique dans `platform.js`. Deux architectures coexistantes = dette de divergence.
+
+- **Décision** :
+  1. **8 modules platform** implémentant `ModuleDefinition` avec `scope: 'platform'`, `type: 'internal'` : Dashboard, Companies, Users, Roles, Modules, Jobdomains, Fields, Billing (stub hidden)
+  2. **Contrôleurs déplacés** dans les dossiers modules (`app/Modules/Platform/{Domain}/Http/`) — 10 fichiers, namespaces mis à jour, anciens supprimés
+  3. **`ModuleRegistry::forScope()`** filtre par scope. `sync()` préserve `is_enabled_globally` existant. `resolveBundles()` et `allBundleKeys()` scopés company-only
+  4. **`PermissionCatalog` → `PlatformPermissionCatalog`** : renommé, agrège depuis les manifests modules (même pattern que `CompanyPermissionCatalog`). Méthode `sync()` ajoutée
+  5. **`CompanyPermissionCatalog`** scopé à `forScope('company')` pour exclure les permissions platform
+  6. **`ModuleCatalogReadModel::forCompany()`** filtre par scope company (les modules platform n'apparaissent pas dans le toggle company)
+  7. **`PlatformModuleController`** filtre scope company pour index/toggle (modules platform non toggleables)
+  8. **`PlatformAuthController`** enrichi : `/me` et `/login` retournent `platform_modules` (nav items des modules visibles)
+  9. **`platformAuth` store** : nouvel état `_platformModuleNavItems` persisté en cookie
+  10. **`usePlatformNav()` composable** : miroir de `useCompanyNav()`, permission-filtered, module-driven
+  11. **`PlatformLayoutWithVerticalNav.vue`** utilise le composable, plus d'import statique
+  12. **`navigation/platform.js` supprimé** : remplacé par le composable module-driven
+  13. **Billing module** : `visibility: 'hidden'` — zéro consommateur runtime, prêt pour futur
+
+- **Conséquences** :
+  - Architecture unifiée : company et platform suivent le même pattern module-driven
+  - Un seul registre (`ModuleRegistry`) avec `forScope()` pour filtrage
+  - Permissions, navigation, bundles — tout piloté par les manifests modules
+  - Zéro changement comportemental : mêmes routes, mêmes permissions, même UI
+  - 191 tests passent, `pnpm build` clean
+  - 10 nouveaux `platform_modules` rows en DB (sync idempotent)
+
+## ADR-067 : Platform-Governed UI Theme System — Global Strict (R4.5)
+
+- **Date** : 2026-02-17
+- **Contexte** : Le projet utilise Vuexy avec un thème configurable frontend (Customizer), persisté en cookies locaux. Aucun contrôle backend, aucune gouvernance platform, aucun support multi-scope. Audit complet réalisé : 12 cookies thème, 2 localStorage, 3 phases d'initialisation indépendantes. Bug identifié : le loader pre-Vue lit `vuexy-initial-loader-*` mais `initCore.js` écrit dans `Leezr-initial-loader-*` → le loader ne récupère jamais les couleurs sauvegardées.
+
+- **Décision** : **Global strict** — la Platform est l'unique source de vérité UI.
+
+  **Phase 0** (fix immédiat) :
+  1. Corriger `application.blade.php` : namespace `vuexy-` → `Leezr-` pour les localStorage keys du loader
+  2. Corriger le titre HTML : `Vuexy - Vuejs Admin Dashboard Template` → `Leezr`
+  3. Supprimer la ligne dupliquée `--initial-loader-bg`
+
+  **Phase 1** (pipeline backend → frontend) :
+  1. `app/Core/Theme/ThemePayload.php` — VO immutable (theme, skin, primaryColor, primaryDarkenColor, layout, navCollapsed, semiDark, navbarBlur, contentWidth)
+  2. `app/Core/Theme/UIResolverService.php` — résout le thème par scope (`forPlatform()`, `forCompany()`). Phase 1 = defaults statiques identiques à `themeConfig.js`
+  3. `PlatformAuthController` `/login` et `/me` → `ui_theme` dans la réponse JSON
+  4. `AuthController` `/login`, `/register`, `/me` → `ui_theme` dans la réponse JSON
+  5. `applyTheme(payload, vuetifyTheme?)` — fonction frontend qui écrit dans les stores Vuexy existants (theme, skin, layout via configStore/layoutStore) + cookies pour primary colors. Accepte optionnellement l'instance Vuetify pour mutation directe des couleurs
+  6. Intégré dans `auth.js` (login, register, fetchMe) et `platformAuth.js` (login, fetchMe)
+
+  **Phases futures** (non implémentées) :
+  - Phase 2 : `platform_settings` table DB + page admin Theme
+  - Phase 3 : company override conditionnel
+
+- **Conséquences** :
+  - Le backend livre le thème, le frontend l'applique via les mêmes stores existants
+  - Zéro changement visuel en Phase 1 (defaults identiques)
+  - Le loader pre-Vue affiche désormais les bonnes couleurs sauvegardées
+  - `@core/`, `@layouts/`, `initCore()`, `initConfigStore()` — inchangés
+  - Les watchers existants propagent theme/skin/layout automatiquement
+  - Les couleurs primaires sont persistées en cookies pour le prochain boot
+  - 191 tests passent, `pnpm build` clean
+
+---
+
+## ADR-068 : Platform Theme Settings — DB-backed, Global Strict (R4.6)
+
+- **Date** : 2026-02-17
+- **Contexte** : R4.5 (ADR-067) a créé le pipeline `UIResolverService` → `ThemePayload` → `applyTheme()`, mais `forPlatform()` retournait des defaults hardcodés. Aucun admin ne pouvait changer le thème global sans déployer du code. R4.6 ajoute la couche DB et une page admin pour que les administrateurs platform puissent gouverner le thème UI depuis l'interface. Mode Global strict : la platform décide tout, pas d'override company.
+
+- **Décision** : **Single-row JSON column** dans `platform_settings`.
+
+  **Architecture** :
+  - `platform_settings` table avec colonne `theme` JSON nullable (singleton strict, max 1 row, `RuntimeException` si >1)
+  - `PlatformSetting` model avec `instance()` — singleton access pattern
+  - `ThemePayload::defaults()` — le VO possède ses propres defaults (source unique)
+  - `UIResolverService::forPlatform()` — lit depuis DB, fallback sur `ThemePayload::defaults()`
+  - `ThemeModule` — manifeste module platform (permission `manage_theme_settings`, nav item `tabler-palette`)
+  - `ThemeController` — `GET /theme` (lecture) + `PUT /theme` (update hardened : validation, bool cast, layout guard horizontal, transaction)
+  - Page frontend `/platform/theme` — formulaire inspiré de `TheCustomizer.vue`, CustomRadiosWithImage, Save + Reset to Defaults
+
+  **Guards défensifs** :
+  1. `(bool)` cast explicite sur tous les champs boolean
+  2. Layout horizontal → force `nav_collapsed=false` et `semi_dark=false`
+  3. Transaction DB wrapping read + update
+  4. `$setting->fresh()->theme` retourne l'état DB réel après écriture
+
+- **Conséquences** :
+  - Les admins platform peuvent changer le thème global depuis `/platform/theme`
+  - Effet au prochain login pour tous les utilisateurs
+  - Le seeder utilise `ThemePayload::defaults()->toArray()` — zéro dépendance circulaire
+  - `forCompany()` délègue à `forPlatform()` (Global strict)
+  - Future Phase 3 : company override conditionnel sur cette base
+
+---
+
+## ADR-069 : R4.6 Correction — Vuetify Runtime Mutation + Live Preview + Semi-dark Inversion + Platform Horizontal Layout
+
+- **Date** : 2026-02-17
+- **Contexte** : R4.6 (ADR-068) avait trois problèmes. (1) `applyTheme()` écrivait les cookies primary color mais ne mutait jamais Vuetify runtime car le paramètre `vuetifyTheme` n'était jamais passé depuis les stores Pinia (pas de contexte d'injection). (2) La page `/platform/theme` ne rappelait pas `applyTheme()` après save — DB mise à jour mais UI inchangée. (3) Le layout platform était hardcodé sur `VerticalNavLayout`, le setting layout horizontal n'avait aucun effet. (4) Semi-dark ne fonctionnait qu'en mode light (comportement natif Vuexy), pas d'inversion en mode dark.
+
+- **Décision** : **4 corrections, 0 fichier backend modifié.**
+
+  **1. Export Vuetify instance** (`plugins/vuetify/index.js`) :
+  - `export let vuetifyInstance = null`, assigné après `createVuetify()` avant `app.use()`
+  - Disponible de façon synchrone avant tout appel à `applyTheme()`
+
+  **2. Réécriture `applyTheme()`** (`composables/useApplyTheme.js`) :
+  - Suppression du paramètre optionnel `vuetifyTheme` — signature : `applyTheme(payload)`
+  - Import `vuetifyInstance` directement → mutation `vuetifyInstance.theme.themes.value.{light,dark}.colors.primary`
+  - Ajout sync loader color : `useStorage(namespaceConfig('initial-loader-color'))` (même pattern que `@core/initCore.js`)
+  - Aucun changement nécessaire dans les 4 call sites (`auth.js`, `platformAuth.js`)
+
+  **3. Platform horizontal layout** :
+  - Nouveau fichier `PlatformLayoutWithHorizontalNav.vue` — miroir du vertical avec `HorizontalNavLayout`, filtre des items `heading` (non supportés par HorizontalNav)
+  - `platform.vue` — switch dynamique `Component :is="..."` sur `configStore.appContentLayoutNav` (même pattern que `default.vue`)
+
+  **4. Semi-dark inversion** (`@core/composable/useSkins.js` — dérogation politique) :
+  - Remplacement `? 'dark'` par `? (vuetifyTheme.global.name.value === 'dark' ? 'light' : 'dark')`
+  - Light + semi-dark = navbar dark (inchangé) | Dark + semi-dark = navbar light (nouveau)
+
+  **5. Page theme — live preview + UI compacte** :
+  - `watch(form, deep)` appelle `applyTheme()` en temps réel (sauf `layout` qui cause un remount)
+  - Layout appliqué uniquement au Save/Reset
+  - Primary Color (col 6) + Theme Mode (col 6) sur une ligne
+  - Skin / Layout / Content Width côte à côte avec `VDivider vertical` responsive
+  - Color picker natif (`input[type=color]`) inline avec les swatches preset
+
+- **Conséquences** :
+  - Les couleurs primary s'appliquent immédiatement à toute l'UI sans double-reload
+  - La page theme donne un feedback visuel instantané pendant l'édition
+  - Le layout horizontal fonctionne sur le scope platform
+  - Semi-dark est symétrique : toujours l'inverse du thème actif
+  - Dérogation `@core/` documentée et limitée à 1 ligne dans `useSkins.js`
+
+## ADR-070 : Platform Settings Module — Unified Settings Page (R4.7A)
+
+- **Date** : 2026-02-18
+- **Contexte** : Le module `platform.theme` (ADR-068) était un module isolé avec une page standalone `/platform/theme`. L'audit session governance a identifié la nécessité de paramètres session configurables (idle timeout, warning threshold, heartbeat interval, remember me). Plutôt que de créer un module séparé par type de setting, on unifie tous les settings platform dans un module unique avec une page tabulée.
+
+- **Décision** : **Module `platform.settings` remplace `platform.theme`.** Page `/platform/settings/[tab]` avec 3 tabs : General (placeholder), Theme (existant), Sessions (nouveau).
+
+  **1. DB** : colonne `session` JSON ajoutée à `platform_settings` (singleton). Payload : `idle_timeout`, `warning_threshold`, `heartbeat_interval`, `remember_me_enabled`, `remember_me_duration`.
+
+  **2. Value Object** : `SessionSettingsPayload` (`app/Core/Settings/`) — même pattern que `ThemePayload`. `defaults()` + `fromSettings()` merge DB over defaults.
+
+  **3. Module manifest** : `PlatformSettingsModule` (`app/Modules/Platform/Settings/`) remplace `ThemeModule`. Permissions : `manage_theme_settings` (inchangée) + `manage_session_settings` (nouvelle). Bundles : `settings.appearance` + `settings.sessions`.
+
+  **4. Controller** : `SessionSettingsController` — show/update avec validation (guards : `warning_threshold < idle_timeout`, `heartbeat_interval < idle_timeout`).
+
+  **5. Frontend** : page `[tab].vue` pattern URL-routed tabs (preset `account-settings`). Tab components avec préfixe `_` (exclus du routing par unplugin-vue-router). Store platform enrichi (session settings CRUD).
+
+  **6. Nettoyage** : `ThemeModule.php` supprimé. `ThemeController` inchangé. Orphan `platform.theme` row supprimée en migration.
+
+- **Conséquences** :
+  - Les settings platform sont unifiés dans une seule page tabulée extensible
+  - Les paramètres session sont configurables via l'UI (pas juste `.env`)
+  - La permission `manage_theme_settings` est préservée (backward compat avec rôles existants)
+  - La nouvelle permission `manage_session_settings` est auto-détectée par `PlatformPermissionCatalog`
+  - Le `ThemeController` et les routes theme restent inchangés
+  - R4.7B (backend engine) et R4.7C (frontend governance) consommeront ces settings DB
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

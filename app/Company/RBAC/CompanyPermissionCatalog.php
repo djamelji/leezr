@@ -7,7 +7,7 @@ use App\Core\Modules\ModuleRegistry;
 /**
  * Single source of truth for all company-level permissions.
  * Aggregates permissions declared by each module in ModuleRegistry.
- * Mirrors the Platform PermissionCatalog pattern.
+ * Mirrors the PlatformPermissionCatalog pattern.
  */
 class CompanyPermissionCatalog
 {
@@ -20,7 +20,7 @@ class CompanyPermissionCatalog
     {
         $permissions = [];
 
-        foreach (ModuleRegistry::definitions() as $moduleKey => $manifest) {
+        foreach (ModuleRegistry::forScope('company') as $moduleKey => $manifest) {
             foreach ($manifest->permissions as $permission) {
                 $permissions[] = [
                     'key' => $permission['key'],

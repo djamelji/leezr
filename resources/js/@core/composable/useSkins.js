@@ -1,3 +1,4 @@
+import { useTheme } from 'vuetify'
 import { VThemeProvider } from 'vuetify/components/VThemeProvider'
 import { useConfigStore } from '@core/stores/config'
 import { AppContentLayoutNav } from '@layouts/enums'
@@ -5,18 +6,24 @@ import { AppContentLayoutNav } from '@layouts/enums'
 // TODO: Use `VThemeProvider` from dist instead of lib (Using this component from dist causes navbar to loose sticky positioning)
 export const useSkins = () => {
   const configStore = useConfigStore()
+  const vuetifyTheme = useTheme()
 
-  const layoutAttrs = computed(() => ({
-    verticalNavAttrs: {
-      wrapper: h(VThemeProvider, { tag: 'div' }),
-      wrapperProps: {
-        withBackground: true,
-        theme: (configStore.isVerticalNavSemiDark && configStore.appContentLayoutNav === AppContentLayoutNav.Vertical)
-          ? 'dark'
-          : undefined,
+  const layoutAttrs = computed(() => {
+    if (!configStore.isVerticalNavSemiDark || configStore.appContentLayoutNav !== AppContentLayoutNav.Vertical)
+      return { verticalNavAttrs: { wrapper: h(VThemeProvider, { tag: 'div' }), wrapperProps: { withBackground: true } } }
+
+    const oppositeTheme = vuetifyTheme.global.name.value === 'dark' ? 'light' : 'dark'
+
+    return {
+      verticalNavAttrs: {
+        wrapper: h(VThemeProvider, { tag: 'div' }),
+        wrapperProps: {
+          withBackground: true,
+          theme: oppositeTheme,
+        },
       },
-    },
-  }))
+    }
+  })
 
   const injectSkinClasses = () => {
     if (typeof document !== 'undefined') {

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Platform\Fields\ReadModels;
+namespace App\Modules\Platform\Users\ReadModels;
 
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
 use App\Platform\Models\PlatformUser;
 
-class PlatformUserProfileReadModel
+class UserProfileReadModel
 {
     public static function get(PlatformUser $user): array
     {

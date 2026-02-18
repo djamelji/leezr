@@ -1,19 +1,23 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Modules\Http;
 
+use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
-class PlatformModuleController
+class ModuleController
 {
     /**
-     * List all modules in the platform catalog.
+     * List company-scope modules in the platform catalog (toggleable).
      */
     public function index(): JsonResponse
     {
-        $modules = PlatformModule::orderBy('sort_order')->get();
+        $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+
+        $modules = PlatformModule::whereIn('key', $companyModuleKeys)
+            ->orderBy('sort_order')
+            ->get();
 
         return response()->json([
             'modules' => $modules,
@@ -25,6 +29,14 @@ class PlatformModuleController
      */
     public function toggle(string $key): JsonResponse
     {
+        $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+
+        if (!in_array($key, $companyModuleKeys, true)) {
+            return response()->json([
+                'message' => 'Only company-scope modules can be toggled.',
+            ], 422);
+        }
+
         $module = PlatformModule::where('key', $key)->first();
 
         if (!$module) {

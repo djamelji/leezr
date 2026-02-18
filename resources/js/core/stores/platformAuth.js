@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
+import { applyTheme } from '@/composables/useApplyTheme'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
 
@@ -8,6 +9,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     _user: useCookie('platformUserData').value || null,
     _roles: useCookie('platformRoles').value || [],
     _permissions: useCookie('platformPermissions').value || [],
+    _platformModuleNavItems: useCookie('platformModuleNavItems').value || [],
     _hydrated: false,
   }),
 
@@ -16,6 +18,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     isLoggedIn: state => !!state._user,
     roles: state => state._roles,
     permissions: state => state._permissions,
+    platformModuleNavItems: state => state._platformModuleNavItems,
     isSuperAdmin: state => Array.isArray(state._roles) && state._roles.includes('super_admin'),
   },
 
@@ -35,6 +38,11 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       useCookie('platformPermissions').value = permissions
     },
 
+    _persistPlatformModuleNavItems(items) {
+      this._platformModuleNavItems = items
+      useCookie('platformModuleNavItems').value = items
+    },
+
     hasPermission(key) {
       if (this.isSuperAdmin) return true
 
@@ -52,6 +60,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistUser(data.user)
       this._persistRoles(data.roles || [])
       this._persistPermissions(data.permissions || [])
+      this._persistPlatformModuleNavItems(data.platform_modules || [])
+      applyTheme(data.ui_theme)
 
       return data
     },
@@ -67,6 +77,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistUser(null)
       this._persistRoles([])
       this._persistPermissions([])
+      this._persistPlatformModuleNavItems([])
       this._hydrated = false
       postBroadcast('logout')
     },
@@ -78,6 +89,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(data.user)
         this._persistRoles(data.roles || [])
         this._persistPermissions(data.permissions || [])
+        this._persistPlatformModuleNavItems(data.platform_modules || [])
+        applyTheme(data.ui_theme)
         this._hydrated = true
 
         return data.user
@@ -86,6 +99,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(null)
         this._persistRoles([])
         this._persistPermissions([])
+        this._persistPlatformModuleNavItems([])
         this._hydrated = true
 
         return null

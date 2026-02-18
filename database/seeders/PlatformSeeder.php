@@ -2,22 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Core\Settings\SessionSettingsPayload;
+use App\Core\Theme\ThemePayload;
 use App\Platform\Models\PlatformPermission;
 use App\Platform\Models\PlatformRole;
+use App\Platform\Models\PlatformSetting;
 use App\Platform\Models\PlatformUser;
-use App\Platform\RBAC\PermissionCatalog;
+use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
 
 class PlatformSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create permissions from catalog (single source of truth)
-        $permissions = collect(PermissionCatalog::all())
-            ->map(fn ($p) => PlatformPermission::updateOrCreate(
-                ['key' => $p['key']],
-                ['label' => $p['label']],
-            ));
+        // Create permissions from catalog (module-driven, single source of truth)
+        PlatformPermissionCatalog::sync();
 
         // Create super_admin role (structural — no pivot sync needed, bypass is in PlatformUser::hasPermission)
         $superAdmin = PlatformRole::updateOrCreate(
@@ -31,7 +30,7 @@ class PlatformSeeder extends Seeder
             ['name' => 'Admin'],
         );
 
-        $modulePermission = $permissions->firstWhere('key', 'manage_modules');
+        $modulePermission = PlatformPermission::where('key', 'manage_modules')->first();
         if ($modulePermission) {
             $admin->permissions()->sync([$modulePermission->id]);
         }
@@ -77,6 +76,14 @@ class PlatformSeeder extends Seeder
 
         if (!$prodAdmin->hasRole('admin')) {
             $prodAdmin->roles()->attach($admin->id);
+        }
+
+        // Seed platform settings singleton (idempotent — only creates if missing)
+        if (PlatformSetting::query()->count() === 0) {
+            PlatformSetting::create([
+                'theme' => ThemePayload::defaults()->toArray(),
+                'session' => SessionSettingsPayload::defaults()->toArray(),
+            ]);
         }
     }
 }

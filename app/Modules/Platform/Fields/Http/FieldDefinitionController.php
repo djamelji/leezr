@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Fields\Http;
 
 use App\Core\Fields\FieldDefinition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class PlatformFieldDefinitionController
+class FieldDefinitionController
 {
     public function index(Request $request): JsonResponse
     {

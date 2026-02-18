@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Platform\Http\Controllers;
+namespace App\Modules\Platform\Companies\Http;
 
 use App\Core\Models\User;
 use Illuminate\Http\JsonResponse;
 
-class PlatformCompanyUserController
+class CompanyUserController
 {
     public function index(): JsonResponse
     {

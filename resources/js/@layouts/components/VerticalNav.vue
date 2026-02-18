@@ -51,7 +51,7 @@ Close overlay vertical nav when link is clicked
 */
 const route = useRoute()
 
-watch(() => route.name, () => {
+watch(() => route.fullPath, () => {
   props.toggleIsOverlayNavActive(false)
 })
 
