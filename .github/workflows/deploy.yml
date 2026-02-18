@@ -62,7 +62,7 @@ jobs:
       - name: Write build metadata
         run: |
           echo "${{ github.sha }}" > .build-sha
-          git rev-parse --short HEAD > .build-version
+          echo "${{ github.sha }}" > .build-version
 
       - name: Create release artifact
         run: |
