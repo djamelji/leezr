@@ -12,7 +12,6 @@ import wideSvg from '@images/customizer-icons/wide-light.svg'
 const platformStore = usePlatformStore()
 const { toast } = useAppToast()
 
-const isLoading = ref(true)
 const isSaving = ref(false)
 
 const defaults = {
@@ -27,7 +26,14 @@ const defaults = {
   content_width: 'boxed',
 }
 
-const form = reactive({ ...defaults })
+// Module-level state: survives layout-switch remounts (vertical ↔ horizontal
+// changes the layout component which remounts all children including this page).
+// Without this, onMounted refetches from DB and overwrites unsaved preview state.
+const _form = reactive({ ...defaults })
+let _fetched = false
+
+const form = _form
+const isLoading = ref(!_fetched)
 
 const presetColors = [
   { main: '#7367F0', darken: '#675DD8' },
@@ -99,12 +105,15 @@ watch(previewPayload, val => {
 })
 
 onMounted(async () => {
+  if (_fetched) return // Already loaded — this is a layout-switch remount
+
   try {
     await platformStore.fetchThemeSettings()
     if (platformStore.themeSettings)
       loadSettings(platformStore.themeSettings)
   }
   finally {
+    _fetched = true
     isLoading.value = false
   }
 })
