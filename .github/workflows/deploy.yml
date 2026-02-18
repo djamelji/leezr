@@ -101,8 +101,18 @@ jobs:
     name: Deploy to ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     needs: build
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
+      - name: Set deploy target
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "app_path=/var/www/clients/client1/web2" >> $GITHUB_OUTPUT
+            echo "deploy_url=https://leezr.com" >> $GITHUB_OUTPUT
+          else
+            echo "app_path=/var/www/clients/client1/web3" >> $GITHUB_OUTPUT
+            echo "deploy_url=https://dev.leezr.com" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout deploy scripts
         uses: actions/checkout@v4
         with:
@@ -119,32 +129,32 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ vars.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Upload artifact to VPS
         run: |
           scp -i ~/.ssh/deploy_key \
-            -P ${{ vars.VPS_PORT || 22 }} \
+            -P ${{ secrets.VPS_PORT || 22 }} \
             /tmp/release.tar.gz \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/leezr-release-${{ github.ref_name }}.tar.gz
 
       - name: Upload deploy script
         run: |
           scp -i ~/.ssh/deploy_key \
-            -P ${{ vars.VPS_PORT || 22 }} \
+            -P ${{ secrets.VPS_PORT || 22 }} \
             deploy/deploy_release.sh \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/leezr-deploy.sh
 
       - name: Execute deployment
         run: |
           ssh -i ~/.ssh/deploy_key \
-            -p ${{ vars.VPS_PORT || 22 }} \
+            -p ${{ secrets.VPS_PORT || 22 }} \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "bash /tmp/leezr-deploy.sh /tmp/leezr-release-${{ github.ref_name }}.tar.gz ${{ vars.APP_PATH }}"
+            "bash /tmp/leezr-deploy.sh /tmp/leezr-release-${{ github.ref_name }}.tar.gz ${{ steps.target.outputs.app_path }}"
 
       - name: Health check
         run: |
-          DEPLOY_URL="${{ vars.DEPLOY_URL }}"
+          DEPLOY_URL="${{ steps.target.outputs.deploy_url }}"
           echo "Checking $DEPLOY_URL/up ..."
           for i in 1 2 3 4 5; do
             STATUS=$(curl -sk -o /dev/null -w "%{http_code}" "$DEPLOY_URL/up" || true)
@@ -158,9 +168,9 @@ jobs:
           echo "HEALTH CHECK FAILED after 5 attempts"
           echo "Fetching last 50 lines of deploy.log..."
           ssh -i ~/.ssh/deploy_key \
-            -p ${{ vars.VPS_PORT || 22 }} \
+            -p ${{ secrets.VPS_PORT || 22 }} \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "tail -50 ${{ vars.APP_PATH }}/shared/storage/logs/deploy.log 2>/dev/null || echo 'No deploy.log found'"
+            "tail -50 ${{ steps.target.outputs.app_path }}/shared/storage/logs/deploy.log 2>/dev/null || echo 'No deploy.log found'"
           exit 1
 
       - name: Cleanup SSH key
@@ -171,6 +181,6 @@ jobs:
         if: always()
         run: |
           ssh -i ~/.ssh/deploy_key \
-            -p ${{ vars.VPS_PORT || 22 }} \
+            -p ${{ secrets.VPS_PORT || 22 }} \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "rm -f /tmp/leezr-release-${{ github.ref_name }}.tar.gz /tmp/leezr-deploy.sh" 2>/dev/null || true
