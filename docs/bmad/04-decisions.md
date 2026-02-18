@@ -1765,4 +1765,55 @@ definePage({
 
 ---
 
+## ADR-075 : Overlay fantôme — bfcache + chunk error hardening
+
+- **Date** : 2026-02-17
+- **Contexte** : Bug récurrent (3 occurrences) — overlay sombre bloquant toute interaction après login. Symptômes clés : persiste après refresh dans le même onglet, fonctionne dans un nouvel onglet, pastille bleue Chrome.
+- **Diagnostic** :
+  - **Cause 1 — bfcache** : Chrome restaure l'état JS complet (heap, DOM, overlays) depuis le back-forward cache. Un `F5` peut servir depuis bfcache au lieu d'un vrai reload. Nouvel onglet = load frais = pas de bfcache. Explique 100% des symptômes "persiste après refresh, nouvel onglet OK".
+  - **Cause 2 — chunk error loop** : Après deploy, les anciens chunks sont 404. `handleChunkError()` reload une fois, puis montre un overlay (`z-index: 99999`) au 2ème échec en 10s. Le bouton "Rafraîchir" appelait `location.reload()` qui pouvait re-404 → boucle infinie overlay.
+  - **Cause 3 — pas de cleanup post-mount** : Si Vue monte après une recovery chunk, l'overlay brut DOM n'était jamais supprimé.
+- **Décision** :
+  1. **bfcache guard** (`main.js`) : `window.addEventListener('pageshow', e => { if (e.persisted) location.reload() })` — force un vrai reload quand Chrome restaure depuis bfcache.
+  2. **Chunk error hardening** (`main.js`) : au 2ème échec, `sessionStorage.removeItem('lzr:chunk-reload')` pour que le prochain refresh reparte propre. Bouton "Rafraîchir" navigue vers `location.pathname` (pas reload, évite cache HTTP stale).
+  3. **Post-mount cleanup** (`main.js`) : après `app.mount('#app')`, supprime `#lzr-chunk-error` et tout `.layout-overlay.visible` résiduel.
+  4. **Route afterEach guard** (`guards.js`) : après chaque navigation, supprime `#lzr-chunk-error` et réinitialise `.layout-overlay.visible` si desktop (≥ 1280px).
+- **Conséquences** :
+  - Le bfcache ne peut plus restaurer un état JS zombie — reload forcé garanti
+  - Le chunk error overlay ne peut plus boucler — chaque refresh repart propre
+  - Vue mount réussie = nettoyage automatique de tout overlay stale
+  - Navigation = nettoyage automatique des overlays orphelins
+  - `@layouts/` et `@core/` non modifiés (politique UI respectée)
+
+---
+
+## ADR-076 : CI/CD — Build en CI, deploy atomique, zéro build VPS
+
+- **Date** : 2026-02-17
+- **Contexte** : Le système webhook (deploy.sh + webhook.php) causait des échecs récurrents : secret webhook mal synchronisé, build pnpm sur VPS (slow + fragile), permissions ISPConfig, chunks 404 lors de deploy partiels. 5 incidents en 2 jours.
+- **Décision** : Remplacer le webhook par GitHub Actions CI/CD.
+  - **Build en CI** : GitHub Actions runner fait `composer install --no-dev` + `pnpm install` + `pnpm build`. Produit un artifact tar.gz (~50MB) contenant vendor/, public/build/, et tout le code backend. Zéro build sur le VPS.
+  - **Deploy via SSH** : L'artifact est SCP sur le VPS, puis `deploy_release.sh` l'unpack dans `releases/`, lie shared/.env + storage, run migrations, optimize, et switch le symlink atomiquement (`ln -sfn` + `mv -Tf`).
+  - **Rollback** : `rollback.sh` liste les releases et repointe le symlink. 1 commande, instantané.
+  - **Health check** : Après deploy, curl `$DEPLOY_URL/up`. Si 5 échecs → échec du workflow + affichage des logs.
+  - **Anti-concurrence** : flock par app_path + GitHub Actions `concurrency` group par branche.
+  - **Deux environnements** : GitHub Environments `staging` (dev) et `production` (main) avec variables spécifiques (APP_PATH, DEPLOY_URL).
+- **Fichiers** :
+  - `.github/workflows/deploy.yml` — workflow CI/CD
+  - `deploy/deploy_release.sh` — script de déploiement atomique
+  - `deploy/rollback.sh` — script de rollback
+  - `docs/deploy.md` — documentation complète
+- **Ancien système** : `public/webhook.php` + `deploy.sh` (racine) sont dépréciés. Supprimer le webhook GitHub après validation du nouveau système.
+- **Conséquences** :
+  - Zéro build sur VPS — plus de problèmes pnpm/node
+  - Chunks 404 impossible — public/build/ et code backend dans le même artifact
+  - Deploy idempotent — relancer N fois = même résultat
+  - Rollback instantané — symlink switch
+  - Pas de deploy partiel — échec avant switch = ancien code reste live
+  - Traçabilité complète — GitHub Actions logs + deploy.log
+  - Secrets dans GitHub (pas sur le VPS, sauf .env)
+  - Latence deploy : ~3-5 min (build CI ~2 min, transfer ~30s, deploy ~1 min)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
