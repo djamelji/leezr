@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // SPA: redirect unauthenticated non-JSON requests to /login (avoids Route [login] not defined)
+        $middleware->redirectGuestsTo('/login');
         $middleware->alias([
             'company.context' => \App\Company\Http\Middleware\SetCompanyContext::class,
             'company.access' => \App\Company\Http\Middleware\EnsureCompanyAccess::class,
