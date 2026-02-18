@@ -2,7 +2,7 @@
  * BroadcastChannel multi-tab sync.
  *
  * Channel name: 'leezr-runtime'
- * Events: 'logout', 'company-switch', 'cache-invalidate'
+ * Events: 'logout', 'company-switch', 'cache-invalidate', 'session-extended', 'session-expired'
  *
  * Graceful fallback: if BroadcastChannel is not supported, all functions no-op.
  */
@@ -18,6 +18,8 @@ let channel = null
  * @param {Function} handlers.onLogout
  * @param {Function} handlers.onCompanySwitch - receives { companyId }
  * @param {Function} handlers.onCacheInvalidate - receives { keys }
+ * @param {Function} handlers.onSessionExtended - receives { ttl }
+ * @param {Function} handlers.onSessionExpired
  */
 export function initBroadcast(handlers) {
   if (typeof BroadcastChannel === 'undefined') return
@@ -38,13 +40,19 @@ export function initBroadcast(handlers) {
     case 'cache-invalidate':
       handlers.onCacheInvalidate?.(payload)
       break
+    case 'session-extended':
+      handlers.onSessionExtended?.(payload)
+      break
+    case 'session-expired':
+      handlers.onSessionExpired?.(payload)
+      break
     }
   }
 }
 
 /**
  * Post an event to all other tabs.
- * @param {string} event - 'logout' | 'company-switch' | 'cache-invalidate'
+ * @param {string} event - 'logout' | 'company-switch' | 'cache-invalidate' | 'session-extended' | 'session-expired'
  * @param {Object} [payload={}]
  */
 export function postBroadcast(event, payload = {}) {

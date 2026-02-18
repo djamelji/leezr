@@ -202,6 +202,14 @@
         "hexInput": "إدخال هيكس"
       }
     },
+    "dataIterator": {
+      "noResultsText": "لم يتم العثور على سجلات مطابقة",
+      "loadingText": "جارٍ تحميل العناصر..."
+    },
+    "dataTable": {
+      "itemsPerPageText": "صفوف لكل صفحة:",
+      "sortBy": "ترتيب حسب"
+    },
     "dataFooter": {
       "itemsPerPageText": "مواد لكل صفحة:",
       "itemsPerPageAll": "الجميع",

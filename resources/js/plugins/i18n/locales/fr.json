@@ -203,6 +203,14 @@
         "hexInput": "entrée hexadécimale"
       }
     },
+    "dataIterator": {
+      "noResultsText": "Aucun enregistrement correspondant",
+      "loadingText": "Chargement des éléments..."
+    },
+    "dataTable": {
+      "itemsPerPageText": "Lignes par page :",
+      "sortBy": "Trier par"
+    },
     "dataFooter": {
       "itemsPerPageText": "Objets par page:",
       "itemsPerPageAll": "Tout",

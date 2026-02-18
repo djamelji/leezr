@@ -369,6 +369,10 @@
     "usePasswordStrength": true,
     "useCompanyNav": true,
     "usePlatformNav": true,
-    "applyTheme": true
+    "applyTheme": true,
+    "applyTypography": true,
+    "previewTypography": true,
+    "resetTypography": true,
+    "useSessionGovernance": true
   }
 }

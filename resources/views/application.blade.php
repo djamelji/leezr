@@ -49,6 +49,45 @@
 
     if (primaryColor)
       document.documentElement.style.setProperty('--initial-loader-color', primaryColor)
+
+    // Typography early init — reads localStorage, sets CSS custom property
+    // and injects @font-face / Google link before Vue mounts → no font flash.
+    // The SCSS variable $font-family-custom uses var(--lzr-font-family, "Public Sans")
+    // so setting the property is enough — every element picks it up naturally.
+    ;(function() {
+      try {
+        var raw = localStorage.getItem('lzr-typography')
+        if (!raw) return
+        var t = JSON.parse(raw)
+        if (!t.active_family_name) return
+
+        if (t.active_source === 'local' && t.font_faces) {
+          var css = ''
+          t.font_faces.forEach(function(f) {
+            css += '@font-face { font-family: "' + t.active_family_name + '"; '
+              + 'font-weight: ' + f.weight + '; font-style: ' + f.style + '; '
+              + 'src: url("' + f.url + '") format("' + f.format + '"); '
+              + 'font-display: swap; } '
+          })
+          var style = document.createElement('style')
+          style.id = 'lzr-typography-preload'
+          style.textContent = css
+          document.head.appendChild(style)
+        }
+
+        if (t.active_source === 'google') {
+          var w = (t.google_weights || [400]).join(';')
+          var link = document.createElement('link')
+          link.id = 'lzr-typography-google-preload'
+          link.rel = 'stylesheet'
+          link.href = 'https://fonts.googleapis.com/css2?family='
+            + encodeURIComponent(t.active_family_name) + ':wght@' + w + '&display=swap'
+          document.head.appendChild(link)
+        }
+
+        document.documentElement.style.setProperty('--lzr-font-family', '"' + t.active_family_name + '"')
+      } catch(e) {}
+    })()
     </script>
   </body>
 </html>

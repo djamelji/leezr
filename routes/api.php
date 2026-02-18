@@ -11,8 +11,11 @@ Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
 
 // Authenticated (auth:sanctum)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'session.governance'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/my-companies', [AuthController::class, 'myCompanies']);
+
+    // Heartbeat (session keepalive — governance middleware handles TTL header)
+    Route::post('/heartbeat', fn () => response()->noContent());
 });

@@ -21,6 +21,15 @@ export const $platformApi = ofetch.create({
 
   },
   onResponse({ response }) {
+    // Session TTL resync — dispatch to governance composable (zero coupling)
+    const ttl = response.headers.get('x-session-ttl')
+    if (ttl && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lzr:session-ttl', {
+        detail: { ttl: parseInt(ttl, 10) },
+      }))
+    }
+
+    // Build version mismatch detection
     const serverVersion = response.headers.get('x-build-version')
     if (!serverVersion || serverVersion === 'dev') return
 
@@ -34,22 +43,25 @@ export const $platformApi = ofetch.create({
   async onResponseError({ request, response, options }) {
     const status = response.status
 
-    // 401 Unauthenticated — redirect to platform login
+    // 401 Unauthenticated — purge + broadcast + hard redirect
     if (status === 401) {
-      // During auth bootstrap (fetchMe), let the guard handle redirect
-      if (options._authCheck)
-        return
+      if (options._authCheck) return
+
+      // Broadcast session-expired to all tabs (synchronous — fires before redirect)
+      const { postBroadcast } = await import('@/core/runtime/broadcast')
+      postBroadcast('session-expired')
 
       useCookie('platformUserData').value = null
       useCookie('platformRoles').value = null
       useCookie('platformPermissions').value = null
 
-      const { router } = await import('@/plugins/1.router')
-      const currentPath = router.currentRoute.value.path
+      try {
+        const { useRuntimeStore } = await import('@/core/runtime/runtime')
+        useRuntimeStore().teardown()
+      } catch {}
 
-      if (currentPath !== '/platform/login') {
-        router.push('/platform/login')
-      }
+      // Hard redirect (not router.push) for full JS cleanup
+      window.location.href = '/platform/login'
 
       return
     }

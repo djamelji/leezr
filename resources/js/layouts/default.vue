@@ -2,7 +2,11 @@
 import { useConfigStore } from '@core/stores/config'
 import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
+import { useSessionGovernance } from '@/composables/useSessionGovernance'
+import { useAuthStore } from '@/core/stores/auth'
+import { useRuntimeStore } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
+import SessionTimeoutWarning from './components/SessionTimeoutWarning.vue'
 
 const DefaultLayoutWithHorizontalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithHorizontalNav.vue'))
 const DefaultLayoutWithVerticalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithVerticalNav.vue'))
@@ -16,6 +20,27 @@ switchToVerticalNavOnLtOverlayNavBreakpoint()
 const { layoutAttrs, injectSkinClasses } = useSkins()
 
 injectSkinClasses()
+
+// SECTION: Session Governance
+const auth = useAuthStore()
+const runtime = useRuntimeStore()
+const session = useSessionGovernance()
+
+watch(() => [runtime.isReady, auth.sessionConfig], ([ready, config]) => {
+  if (ready && config) {
+    session.start({
+      scope: 'company',
+      config,
+      async onLogout() {
+        await auth.logout()
+        window.location.href = '/login'
+      },
+    })
+  }
+}, { immediate: true })
+
+onUnmounted(() => session.stop())
+// !SECTION
 
 // SECTION: Loading Indicator
 const isFallbackStateActive = ref(false)
@@ -52,6 +77,12 @@ watch([
       </RouterView>
     </AppShellGate>
   </Component>
+
+  <SessionTimeoutWarning
+    :is-dialog-visible="session.isWarningVisible.value"
+    :remaining-seconds="session.remainingSeconds.value"
+    @extend="session.extendSession"
+  />
 </template>
 
 <style lang="scss">

@@ -38,6 +38,15 @@ export const $api = ofetch.create({
 
   },
   onResponse({ response }) {
+    // Session TTL resync — dispatch to governance composable (zero coupling)
+    const ttl = response.headers.get('x-session-ttl')
+    if (ttl && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lzr:session-ttl', {
+        detail: { ttl: parseInt(ttl, 10) },
+      }))
+    }
+
+    // Build version mismatch detection
     const serverVersion = response.headers.get('x-build-version')
     if (!serverVersion || serverVersion === 'dev') return
 
@@ -52,21 +61,24 @@ export const $api = ofetch.create({
     const status = response.status
     const { toast } = useAppToast()
 
-    // 401 Unauthenticated — session expired
+    // 401 Unauthenticated — purge + broadcast + hard redirect
     if (status === 401) {
-      // During auth bootstrap (fetchMe), let the guard handle redirect
-      if (options._authCheck)
-        return
+      if (options._authCheck) return
+
+      // Broadcast session-expired to all tabs (synchronous — fires before redirect)
+      const { postBroadcast } = await import('@/core/runtime/broadcast')
+      postBroadcast('session-expired')
 
       useCookie('userData').value = null
       useCookie('currentCompanyId').value = null
 
-      const { router } = await import('@/plugins/1.router')
-      const currentPath = router.currentRoute.value.fullPath
+      try {
+        const { useRuntimeStore } = await import('@/core/runtime/runtime')
+        useRuntimeStore().teardown()
+      } catch {}
 
-      if (currentPath !== '/login') {
-        router.push({ path: '/login', query: { redirect: safeRedirect(currentPath) } })
-      }
+      // Hard redirect (not router.push) for full JS cleanup
+      window.location.href = '/login'
 
       return
     }

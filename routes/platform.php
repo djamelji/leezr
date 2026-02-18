@@ -25,7 +25,7 @@ Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPa
     ->middleware('throttle:5,1');
 
 // Authenticated platform routes
-Route::middleware('auth:platform')->group(function () {
+Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::get('/me', [PlatformAuthController::class, 'me']);
     Route::post('/logout', [PlatformAuthController::class, 'logout']);
 
@@ -111,6 +111,9 @@ Route::middleware('auth:platform')->group(function () {
         Route::get('/session-settings', [SessionSettingsController::class, 'show']);
         Route::put('/session-settings', [SessionSettingsController::class, 'update']);
     });
+
+    // Heartbeat (session keepalive — governance middleware handles TTL header)
+    Route::post('/heartbeat', fn () => response()->noContent());
 
     // Job Domains (CRUD)
     Route::middleware('platform.permission:manage_jobdomains')->group(function () {

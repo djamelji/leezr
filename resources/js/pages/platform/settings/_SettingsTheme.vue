@@ -1,4 +1,5 @@
 <script setup>
+import SettingsTypography from './_SettingsTypography.vue'
 import { usePlatformStore } from '@/core/stores/platform'
 import { useAppToast } from '@/composables/useAppToast'
 import { applyTheme } from '@/composables/useApplyTheme'
@@ -79,14 +80,22 @@ const loadSettings = data => {
   Object.assign(form, data)
 }
 
-// Live preview — apply all except layout (layout switch remounts the page)
-watch(form, val => {
-  if (!isLoading.value) {
-    const { layout, ...rest } = val
+// Live preview — watch only previewable fields (layout excluded: structural change, applied on save)
+const previewPayload = computed(() => ({
+  theme: form.theme,
+  skin: form.skin,
+  primary_color: form.primary_color,
+  primary_darken_color: form.primary_darken_color,
+  semi_dark: form.semi_dark,
+  navbar_blur: form.navbar_blur,
+  nav_collapsed: form.nav_collapsed,
+  content_width: form.content_width,
+}))
 
-    applyTheme({ ...rest })
-  }
-}, { deep: true })
+watch(previewPayload, val => {
+  if (!isLoading.value)
+    applyTheme(val)
+})
 
 onMounted(async () => {
   try {
@@ -368,6 +377,8 @@ const resetToDefaults = async () => {
     >
       Changes are previewed live. Click Save to persist for all users.
     </VAlert>
+
+    <SettingsTypography class="mt-6" />
   </div>
 </template>
 

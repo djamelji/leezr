@@ -6,6 +6,7 @@ use App\Core\Auth\Requests\LoginRequest;
 use App\Core\Auth\Requests\RegisterRequest;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ class AuthController extends Controller
             'user' => $result['user'],
             'company' => $result['company'],
             'ui_theme' => UIResolverService::forCompany()->toArray(),
+            'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ], 201);
     }
 
@@ -72,6 +74,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => Auth::user(),
             'ui_theme' => UIResolverService::forCompany()->toArray(),
+            'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ]);
     }
 
@@ -94,6 +97,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $request->user(),
             'ui_theme' => UIResolverService::forCompany()->toArray(),
+            'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ]);
     }
 

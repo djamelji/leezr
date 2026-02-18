@@ -4,6 +4,7 @@ namespace App\Platform\Auth;
 
 use App\Core\Modules\ModuleManifest;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class PlatformAuthController extends Controller
             'permissions' => $permissions,
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
+            'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ]);
     }
 
@@ -64,6 +66,7 @@ class PlatformAuthController extends Controller
             'permissions' => $permissions,
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
+            'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ]);
     }
 

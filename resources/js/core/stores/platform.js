@@ -17,6 +17,8 @@ export const usePlatformStore = defineStore('platform', {
     _jobdomains: [],
     _themeSettings: null,
     _sessionSettings: null,
+    _typographySettings: null,
+    _fontFamilies: [],
   }),
 
   getters: {
@@ -34,6 +36,8 @@ export const usePlatformStore = defineStore('platform', {
     jobdomains: state => state._jobdomains,
     themeSettings: state => state._themeSettings,
     sessionSettings: state => state._sessionSettings,
+    typographySettings: state => state._typographySettings,
+    fontFamilies: state => state._fontFamilies,
   },
 
   actions: {
@@ -346,6 +350,71 @@ export const usePlatformStore = defineStore('platform', {
       })
 
       this._sessionSettings = data.session
+
+      return data
+    },
+
+    // ─── Typography Settings ────────────────────────────
+    async fetchTypographySettings() {
+      const data = await $platformApi('/typography')
+
+      this._typographySettings = data.typography
+      this._fontFamilies = data.families
+    },
+
+    async updateTypographySettings(payload) {
+      const data = await $platformApi('/typography', {
+        method: 'PUT',
+        body: payload,
+      })
+
+      this._typographySettings = data.typography
+
+      return data
+    },
+
+    async createFontFamily(payload) {
+      const data = await $platformApi('/font-families', {
+        method: 'POST',
+        body: payload,
+      })
+
+      this._fontFamilies.push(data.family)
+
+      return data
+    },
+
+    async uploadFont(familyId, formData) {
+      const data = await $platformApi(`/font-families/${familyId}/fonts`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      const idx = this._fontFamilies.findIndex(f => f.id === familyId)
+      if (idx !== -1)
+        this._fontFamilies[idx] = data.family
+
+      return data
+    },
+
+    async deleteFont(familyId, fontId) {
+      const data = await $platformApi(`/font-families/${familyId}/fonts/${fontId}`, {
+        method: 'DELETE',
+      })
+
+      const idx = this._fontFamilies.findIndex(f => f.id === familyId)
+      if (idx !== -1)
+        this._fontFamilies[idx] = data.family
+
+      return data
+    },
+
+    async deleteFontFamily(familyId) {
+      const data = await $platformApi(`/font-families/${familyId}`, {
+        method: 'DELETE',
+      })
+
+      this._fontFamilies = this._fontFamilies.filter(f => f.id !== familyId)
 
       return data
     },

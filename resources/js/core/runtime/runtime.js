@@ -64,6 +64,12 @@ export const useRuntimeStore = defineStore('runtime', {
 
     /** @type {number} Bumped on each journal.log() to trigger reactive reads */
     _journalVersion: 0,
+
+    /** @type {number|null} Last known session TTL (seconds) from cross-tab sync */
+    _sessionTTL: null,
+
+    /** @type {number} Timestamp of last TTL sync (for cross-tab composable resync) */
+    _sessionTTLSyncedAt: 0,
   }),
 
   getters: {
@@ -229,6 +235,21 @@ export const useRuntimeStore = defineStore('runtime', {
           payload.keys.forEach(k => cacheRemove(k))
         }
         break
+
+      case 'session-extended':
+        this._sessionTTL = payload.ttl ?? null
+        this._sessionTTLSyncedAt = Date.now()
+        break
+
+      case 'session-expired':
+        this.teardown()
+        try { resolveStore('auth')._persistUser(null) } catch {}
+        try { resolveStore('platformAuth')._persistUser(null) } catch {}
+        if (typeof window !== 'undefined') {
+          const isPlat = window.location.pathname.startsWith('/platform')
+          window.location.href = isPlat ? '/platform/login' : '/login'
+        }
+        break
       }
     },
 
@@ -313,6 +334,8 @@ export const useRuntimeStore = defineStore('runtime', {
         onLogout: () => this.handleBroadcast('logout', {}),
         onCompanySwitch: payload => this.handleBroadcast('company-switch', payload),
         onCacheInvalidate: payload => this.handleBroadcast('cache-invalidate', payload),
+        onSessionExtended: payload => this.handleBroadcast('session-extended', payload),
+        onSessionExpired: payload => this.handleBroadcast('session-expired', payload),
       })
     },
   },

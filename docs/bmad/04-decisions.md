@@ -1715,6 +1715,54 @@ definePage({
   - Sous-lot backend uniquement — le frontend (UI + runtime) suit dans des sous-lots séparés
   - ApexCharts avec `fontFamily: 'Public Sans'` hardcodé ne changera pas (tradeoff accepté)
 
+## ADR-073 : Font Library Frontend — Typography UI + Runtime CSS + Auth Integration
+
+- **Date** : 2026-02-19
+- **Contexte** : ADR-072 a livré le backend Font Library (tables, VO, controller). Il manque le frontend : UI d'administration, application runtime de la police via CSS custom property, et intégration auth pour que la config typographique soit livrée à chaque login/me.
+
+- **Décision** : **3 sous-lots frontend** intégrés en un seul lot.
+
+  **1. Frontend UI** : `_SettingsTypography.vue` — composant d'administration (liste de familles, upload woff2 par variante via expansion panel, activation famille, toggle Google Fonts, preview live). Intégré dans `_SettingsTheme.vue` (section Typography en bas de la carte Theme).
+
+  **2. Runtime CSS** : `useApplyTypography.js` — composable qui injecte les `@font-face` ou Google Fonts `<link>` dans le `<head>`, et met à jour `--lzr-font-family` sur `documentElement`. SCSS variable `$font-family-custom` consomme `var(--lzr-font-family, "Public Sans")`. Early init dans `application.blade.php` via `localStorage` pour éviter le flash de font.
+
+  **3. Auth integration** : `ui_typography` ajouté aux réponses `/me` et `/login` (platform + company). Les stores auth persistent la config. `applyTypography()` appelé en parallèle de `applyTheme()`.
+
+- **Conséquences** :
+  - Les admins platform contrôlent la police globale depuis Settings > Theme > Typography
+  - Preview live sans save, persisté en `localStorage` (`lzr-typography`) pour early init
+  - Changement de police = 0 flash grâce à l'early init dans le Blade template
+  - SCSS `$font-family-custom` utilise le CSS custom property — Vuetify suit automatiquement
+  - Google Fonts optionnel (toggle admin), désactivé par défaut (RGPD)
+
+## ADR-074 : Session Governance Runtime — Server-Authoritative Idle Timeout (R4.8)
+
+- **Date** : 2026-02-19
+- **Contexte** : Les paramètres de session (idle_timeout, warning_threshold, heartbeat_interval) sont configurables via Platform Settings > Sessions et stockés en DB (ADR-070). Mais **aucun runtime** ne les utilise — aucun timeout, aucun warning, aucun heartbeat. Source de vérité : `sessions.last_activity` (colonne integer, table gérée par le driver `database` de Laravel). Formule TTL : `last_activity + idle_timeout - now()`.
+
+- **Décision** : **Architecture 3 couches server-authoritative**.
+
+  **Layer 1 — Backend Middleware** : `SessionGovernance` (app/Http/Middleware/) appliqué uniquement sur les groupes auth (`auth:platform`, `auth:sanctum`, `auth:sanctum` + `company.context`). 3 guards (driver check, sessionId null, logout exclusion). Lit `sessions.last_activity` directement depuis la DB (pas de cache — changement admin = effet immédiat). Si expiré → `invalidate()` + 401. Sinon → `$next()` puis header `X-Session-TTL` = `idle_timeout` en secondes. Routes heartbeat `POST /heartbeat` → 204 (le middleware gère le TTL header). `/me` et `/login` retournent `ui_session` config.
+
+  **Layer 2 — Frontend Composable** : `useSessionGovernance()` — scope-aware (`platform` | `company`). Protection double-mount (`start()` appelle `stop()` si déjà actif). Cleanup strict (tous intervals + DOM listeners + CustomEvent + watcher). DOM activity tracking (passive, throttle 1s). Tick countdown (1s). Heartbeat via native `fetch` (pas ofetch, pour lire les headers). TTL resync depuis 3 sources : (1) heartbeat response header, (2) `CustomEvent('lzr:session-ttl')` dispatché par les interceptors API `onResponse`, (3) `BroadcastChannel` cross-tab via runtime store watcher.
+
+  **Layer 3 — UI Dialog** : `SessionTimeoutWarning.vue` — pattern exact `ConfirmDialog` preset (persistent, countdown, "Stay Connected").
+
+  **401 Interceptors** : purge stores + `runtime.teardown()` + `postBroadcast('session-expired')` + hard redirect (`window.location.href`, jamais `router.push`).
+
+  **BroadcastChannel** : 2 nouveaux events (`session-extended`, `session-expired`) sur le canal `leezr-runtime` existant. `session-expired` reçu → teardown + purge auth cookies + redirect login.
+
+- **Conséquences** :
+  - Le serveur est l'autorité unique sur l'expiration de session
+  - Changement admin de `idle_timeout` → effet immédiat (pas de cache)
+  - Multi-onglet coordonné : heartbeat Tab A → broadcast → Tab B resync
+  - Session expirée côté serveur → 401 → interceptor purge + broadcast + hard redirect (pas de zombie JS)
+  - Heartbeat envoyé SEULEMENT si l'utilisateur est actif (économie réseau)
+  - Navigation CRUD active resync le TTL via `onResponse` (heartbeat = fallback)
+  - Hot reload Vite = pas de timers doublés (protection double-mount)
+  - Login/logout routes exclues de la gouvernance (pas de boucle)
+  - 16 fichiers (3 CREATE, 13 MODIFY)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

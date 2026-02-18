@@ -10,11 +10,13 @@ export const useAuthStore = defineStore('auth', {
     _companies: [],
     _currentCompanyId: useCookie('currentCompanyId').value || null,
     _hydrated: false,
+    _sessionConfig: null,
   }),
 
   getters: {
     user: state => state._user,
     isLoggedIn: state => !!state._user,
+    sessionConfig: state => state._sessionConfig,
     companies: state => state._companies,
     currentCompanyId: state => state._currentCompanyId,
     currentCompany: state => state._companies.find(c => c.id === Number(state._currentCompanyId)),
@@ -72,6 +74,7 @@ export const useAuthStore = defineStore('auth', {
       }]
       this._persistCompanyId(data.company.id)
       applyTheme(data.ui_theme)
+      this._sessionConfig = data.ui_session ?? null
 
       return data
     },
@@ -86,6 +89,7 @@ export const useAuthStore = defineStore('auth', {
 
       this._persistUser(data.user)
       applyTheme(data.ui_theme)
+      this._sessionConfig = data.ui_session ?? null
       await this.fetchMyCompanies()
 
       return data
@@ -112,6 +116,7 @@ export const useAuthStore = defineStore('auth', {
 
         this._persistUser(data.user)
         applyTheme(data.ui_theme)
+        this._sessionConfig = data.ui_session ?? null
         this._hydrated = true
 
         return data.user

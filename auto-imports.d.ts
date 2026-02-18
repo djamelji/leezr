@@ -14,6 +14,7 @@ declare global {
   const alphaDashValidator: typeof import('./resources/js/@core/utils/validators.js')['alphaDashValidator']
   const alphaValidator: typeof import('./resources/js/@core/utils/validators.js')['alphaValidator']
   const applyTheme: typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']
+  const applyTypography: typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('./resources/js/@core/utils/formatters.js')['avatarText']
@@ -109,6 +110,7 @@ declare global {
   const passwordValidator: typeof import('./resources/js/@core/utils/validators.js')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const prefixWithPlus: typeof import('./resources/js/@core/utils/formatters.js')['prefixWithPlus']
+  const previewTypography: typeof import('./resources/js/composables/useApplyTypography.js')['previewTypography']
   const provide: typeof import('vue')['provide']
   const provideLocal: typeof import('@vueuse/core')['provideLocal']
   const reactify: typeof import('@vueuse/core')['reactify']
@@ -128,6 +130,7 @@ declare global {
   const regexValidator: typeof import('./resources/js/@core/utils/validators.js')['regexValidator']
   const registerPlugins: typeof import('./resources/js/@core/utils/plugins.js')['registerPlugins']
   const requiredValidator: typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']
+  const resetTypography: typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
@@ -300,6 +303,7 @@ declare global {
   const useScriptTag: typeof import('@vueuse/core')['useScriptTag']
   const useScroll: typeof import('@vueuse/core')['useScroll']
   const useScrollLock: typeof import('@vueuse/core')['useScrollLock']
+  const useSessionGovernance: typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']
   const useSessionStorage: typeof import('@vueuse/core')['useSessionStorage']
   const useShare: typeof import('@vueuse/core')['useShare']
   const useSkins: typeof import('./resources/js/@core/composable/useSkins.js')['useSkins']
@@ -383,6 +387,7 @@ declare module 'vue' {
     readonly alphaDashValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['alphaDashValidator']>
     readonly alphaValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['alphaValidator']>
     readonly applyTheme: UnwrapRef<typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']>
+    readonly applyTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['avatarText']>
@@ -478,6 +483,7 @@ declare module 'vue' {
     readonly passwordValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly prefixWithPlus: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['prefixWithPlus']>
+    readonly previewTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['previewTypography']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
@@ -497,6 +503,7 @@ declare module 'vue' {
     readonly regexValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['regexValidator']>
     readonly registerPlugins: UnwrapRef<typeof import('./resources/js/@core/utils/plugins.js')['registerPlugins']>
     readonly requiredValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']>
+    readonly resetTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
@@ -668,6 +675,7 @@ declare module 'vue' {
     readonly useScriptTag: UnwrapRef<typeof import('@vueuse/core')['useScriptTag']>
     readonly useScroll: UnwrapRef<typeof import('@vueuse/core')['useScroll']>
     readonly useScrollLock: UnwrapRef<typeof import('@vueuse/core')['useScrollLock']>
+    readonly useSessionGovernance: UnwrapRef<typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
     readonly useSkins: UnwrapRef<typeof import('./resources/js/@core/composable/useSkins.js')['useSkins']>

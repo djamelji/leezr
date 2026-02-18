@@ -47,6 +47,7 @@ declare module 'vue-router/auto-routes' {
     'platform-settings-settings-general': RouteRecordInfo<'platform-settings-settings-general', '/platform/settings/_SettingsGeneral', Record<never, never>, Record<never, never>>,
     'platform-settings-settings-session': RouteRecordInfo<'platform-settings-settings-session', '/platform/settings/_SettingsSession', Record<never, never>, Record<never, never>>,
     'platform-settings-settings-theme': RouteRecordInfo<'platform-settings-settings-theme', '/platform/settings/_SettingsTheme', Record<never, never>, Record<never, never>>,
+    'platform-settings-settings-typography': RouteRecordInfo<'platform-settings-settings-typography', '/platform/settings/_SettingsTypography', Record<never, never>, Record<never, never>>,
     'platform-settings-tab': RouteRecordInfo<'platform-settings-tab', '/platform/settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'platform-users': RouteRecordInfo<'platform-users', '/platform/users', Record<never, never>, Record<never, never>>,
     'platform-users-id': RouteRecordInfo<'platform-users-id', '/platform/users/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,

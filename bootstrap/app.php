@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware(['api', 'auth:sanctum', 'company.context'])
+            Route::middleware(['api', 'auth:sanctum', 'company.context', 'session.governance'])
                 ->prefix('api')
                 ->group(base_path('routes/company.php'));
 
@@ -32,6 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'module.active' => \App\Core\Modules\EnsureModuleActive::class,
 
             'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
+
+            'session.governance' => \App\Http\Middleware\SessionGovernance::class,
         ]);
 
         $middleware->appendToGroup('api', \App\Http\Middleware\AddBuildVersion::class);
