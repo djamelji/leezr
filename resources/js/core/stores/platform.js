@@ -19,6 +19,7 @@ export const usePlatformStore = defineStore('platform', {
     _sessionSettings: null,
     _typographySettings: null,
     _fontFamilies: [],
+    _maintenanceSettings: null,
   }),
 
   getters: {
@@ -38,6 +39,7 @@ export const usePlatformStore = defineStore('platform', {
     sessionSettings: state => state._sessionSettings,
     typographySettings: state => state._typographySettings,
     fontFamilies: state => state._fontFamilies,
+    maintenanceSettings: state => state._maintenanceSettings,
   },
 
   actions: {
@@ -417,6 +419,28 @@ export const usePlatformStore = defineStore('platform', {
       this._fontFamilies = this._fontFamilies.filter(f => f.id !== familyId)
 
       return data
+    },
+
+    // ─── Maintenance Settings ────────────────────────────
+    async fetchMaintenanceSettings() {
+      const data = await $platformApi('/maintenance-settings')
+
+      this._maintenanceSettings = data.maintenance
+    },
+
+    async updateMaintenanceSettings(payload) {
+      const data = await $platformApi('/maintenance-settings', {
+        method: 'PUT',
+        body: payload,
+      })
+
+      this._maintenanceSettings = data.maintenance
+
+      return data
+    },
+
+    async fetchMyIp() {
+      return await $platformApi('/maintenance/my-ip')
     },
 
     // ─── Helpers ────────────────────────────────────────

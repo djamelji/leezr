@@ -17,6 +17,7 @@
   "dependencies": {
     "@floating-ui/dom": "1.6.8",
     "@formkit/drag-and-drop": "0.1.6",
+    "@lottiefiles/lottie-player": "^2.0.12",
     "@sindresorhus/is": "7.1.0",
     "@tiptap/extension-highlight": "^2.27.2",
     "@tiptap/extension-image": "^2.27.2",
@@ -93,7 +94,6 @@
     "eslint-plugin-vue": "9.33.0",
     "figlet": "^1.10.0",
     "laravel-vite-plugin": "2.0.0",
-
     "postcss-html": "1.8.0",
     "postcss-scss": "4.0.9",
     "rollup-plugin-visualizer": "^6.0.5",

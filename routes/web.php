@@ -4,4 +4,5 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('{any?}', function() {
     return view('application');
-})->where('any', '^(?!api|sanctum).*$');
+})->where('any', '^(?!api|sanctum).*$')
+  ->middleware('maintenance.check');

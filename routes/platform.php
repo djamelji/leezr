@@ -6,6 +6,7 @@ use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
 use App\Modules\Platform\Modules\Http\ModuleController;
+use App\Modules\Platform\Maintenance\Http\MaintenanceSettingsController;
 use App\Modules\Platform\Settings\Http\SessionSettingsController;
 use App\Modules\Platform\Settings\Http\TypographyController;
 use App\Modules\Platform\Theme\Http\ThemeController;
@@ -110,6 +111,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::middleware('platform.permission:manage_session_settings')->group(function () {
         Route::get('/session-settings', [SessionSettingsController::class, 'show']);
         Route::put('/session-settings', [SessionSettingsController::class, 'update']);
+    });
+
+    // Maintenance Settings
+    Route::middleware('platform.permission:manage_maintenance')->group(function () {
+        Route::get('/maintenance-settings', [MaintenanceSettingsController::class, 'show']);
+        Route::put('/maintenance-settings', [MaintenanceSettingsController::class, 'update']);
+        Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
     });
 
     // Heartbeat (session keepalive — governance middleware handles TTL header)

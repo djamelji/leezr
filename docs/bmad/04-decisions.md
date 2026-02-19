@@ -1853,6 +1853,40 @@ definePage({
   - Aucune modification manuelle du `.env` VPS nécessaire
   - **Leçon** : tout env var qui existe côté client ET serveur doit utiliser la même source (ici `${{ github.sha }}`)
 
+## ADR-078 : Audience Module + Maintenance Mode (R4.9)
+
+- **Date** : 2026-02-20
+- **Contexte** : Le SaaS Leezr a besoin (1) d'un système de souscription email réutilisable (mailing lists, subscribers, double opt-in) et (2) d'un mode maintenance qui bloque l'accès aux clients tout en laissant la plateforme admin accessible. La page de maintenance doit inclure un formulaire "Notify me" qui alimente le système de souscription.
+- **Décision** :
+  - **Audience** : Module `platform.audience` dans `app/Modules/Platform/Audience/`. 4 tables (mailing_lists, subscribers, mailing_list_subscriptions, audience_tokens). Services statiques : Subscribe (honeypot + double opt-in), Confirm (token SHA-256), Unsubscribe. Endpoints publics sous `/api/audience/*` avec throttle 10/min. Token sécurisé : raw token dans l'URL, hash SHA-256 en DB, expiration 48h.
+  - **Maintenance** : Middleware `MaintenanceMode` sur le catch-all SPA uniquement (pas sur les routes API). Les routes exemptées : `platform/*`, `maintenance`, `audience/confirm`, `audience/unsubscribe`. Bypass par IP allowlist. Configuration stockée dans `platform_settings.maintenance` (JSON) via `MaintenanceSettingsPayload` (même pattern que `SessionSettingsPayload`).
+  - **Page publique** : `/maintenance` = page Vue (layout: blank, public: true). Design minimal SaaS-grade : centré verticalement, fond thème (`--v-theme-background`), icône primaire, headline/subheadline/description + email subscribe. Dark mode natif. Aucun branding externe.
+  - **Platform UI** : Onglet "Maintenance" dans Platform Settings. Toggle on/off, IP allowlist avec "Detect my IP", champs texte simples (headline, subheadline, description, CTA text, list slug) + live preview via `MaintenancePreview.vue`.
+  - **Permissions** : `manage_maintenance` dans le module `platform.settings`, `manage_audience` dans le module `platform.audience`. Synchro via `PlatformPermissionCatalog::sync()`.
+- **Refactoring R4.9.1** (2026-02-20) : Suppression du block editor (page_blocks, type-based rendering). Remplacé par 5 champs texte simples : `headline`, `subheadline`, `description`, `cta_text`, `list_slug`. Ajout de `MaintenancePreview.vue` (composant réutilisable, live preview dans settings). Page publique et preview partagent la même structure visuelle.
+- **Fichiers créés** (22) :
+  - 5 migrations (4 audience tables + maintenance JSON column)
+  - 4 modèles Audience (MailingList, Subscriber, MailingListSubscription, AudienceToken)
+  - 3 services (Subscribe, Confirm, Unsubscribe)
+  - 1 controller public (AudienceController)
+  - 1 module manifest (AudienceModule)
+  - 1 payload VO (MaintenanceSettingsPayload — champs : enabled, allowlist_ips, headline, subheadline, description, cta_text, list_slug)
+  - 1 middleware (MaintenanceMode)
+  - 1 controller platform (MaintenanceSettingsController)
+  - 3 pages Vue (maintenance, audience/confirm, audience/unsubscribe)
+  - 1 composant settings (_SettingsMaintenance.vue)
+  - 1 composant preview (MaintenancePreview.vue)
+- **Fichiers modifiés** (11) :
+  - ModuleRegistry, PlatformSettingsModule, PlatformSetting model, PlatformSeeder
+  - routes/api.php, routes/web.php, routes/platform.php, bootstrap/app.php
+  - platform.js store, [tab].vue settings page, 04-decisions.md
+- **Conséquences** :
+  - Le système Audience est réutilisable pour tout futur besoin de souscription (newsletter, waitlist, beta access)
+  - La maintenance bloque uniquement le SPA client, pas les API (qui suivent leur auth normale 401/200)
+  - La plateforme admin reste 100% accessible pendant la maintenance
+  - Les emails de confirmation ne sont pas encore envoyés (infrastructure email à venir) — le message utilisateur l'indique clairement
+  - Aucun CMS complexity — champs texte simples, preview live, design thème-aware
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Core\Settings\MaintenanceSettingsPayload;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\ThemePayload;
 use App\Core\Typography\TypographyPayload;
@@ -86,6 +87,7 @@ class PlatformSeeder extends Seeder
                 'theme' => ThemePayload::defaults()->toArray(),
                 'session' => SessionSettingsPayload::defaults()->toArray(),
                 'typography' => TypographyPayload::defaults()->toArray(),
+                'maintenance' => MaintenanceSettingsPayload::defaults()->toArray(),
             ]);
         }
 

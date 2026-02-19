@@ -31,6 +31,7 @@ class PlatformSettingsModule implements ModuleDefinition
             permissions: [
                 ['key' => 'manage_theme_settings', 'label' => 'Manage Theme Settings'],
                 ['key' => 'manage_session_settings', 'label' => 'Manage Session Settings'],
+                ['key' => 'manage_maintenance', 'label' => 'Manage Maintenance Mode'],
             ],
             bundles: [
                 [
@@ -44,6 +45,12 @@ class PlatformSettingsModule implements ModuleDefinition
                     'label' => 'Sessions',
                     'hint' => 'Configure session governance (timeout, keepalive, warnings).',
                     'permissions' => ['manage_session_settings'],
+                ],
+                [
+                    'key' => 'settings.maintenance',
+                    'label' => 'Maintenance',
+                    'hint' => 'Control maintenance mode, IP allowlist, and public page content.',
+                    'permissions' => ['manage_maintenance'],
                 ],
             ],
             scope: 'platform',

@@ -1,5 +1,6 @@
 <script setup>
 import SettingsGeneral from './_SettingsGeneral.vue'
+import SettingsMaintenance from './_SettingsMaintenance.vue'
 import SettingsSession from './_SettingsSession.vue'
 import SettingsTheme from './_SettingsTheme.vue'
 
@@ -22,6 +23,7 @@ const tabs = [
   { title: 'General', icon: 'tabler-settings', tab: 'general' },
   { title: 'Theme', icon: 'tabler-palette', tab: 'theme' },
   { title: 'Sessions', icon: 'tabler-clock-shield', tab: 'sessions' },
+  { title: 'Maintenance', icon: 'tabler-barrier-block', tab: 'maintenance' },
 ]
 </script>
 
@@ -61,6 +63,10 @@ const tabs = [
 
       <VWindowItem value="sessions">
         <SettingsSession />
+      </VWindowItem>
+
+      <VWindowItem value="maintenance">
+        <SettingsMaintenance />
       </VWindowItem>
     </VWindow>
   </div>

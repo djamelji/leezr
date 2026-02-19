@@ -253,6 +253,7 @@ declare global {
   const useLastChanged: typeof import('@vueuse/core')['useLastChanged']
   const useLocalStorage: typeof import('@vueuse/core')['useLocalStorage']
   const useMagicKeys: typeof import('@vueuse/core')['useMagicKeys']
+  const useMaintenanceTheme: typeof import('./resources/js/composables/useMaintenanceTheme.js')['useMaintenanceTheme']
   const useManualRefHistory: typeof import('@vueuse/core')['useManualRefHistory']
   const useMath: typeof import('@vueuse/math')['useMath']
   const useMax: typeof import('@vueuse/math')['useMax']
@@ -625,6 +626,7 @@ declare module 'vue' {
     readonly useLastChanged: UnwrapRef<typeof import('@vueuse/core')['useLastChanged']>
     readonly useLocalStorage: UnwrapRef<typeof import('@vueuse/core')['useLocalStorage']>
     readonly useMagicKeys: UnwrapRef<typeof import('@vueuse/core')['useMagicKeys']>
+    readonly useMaintenanceTheme: UnwrapRef<typeof import('./resources/js/composables/useMaintenanceTheme.js')['useMaintenanceTheme']>
     readonly useManualRefHistory: UnwrapRef<typeof import('@vueuse/core')['useManualRefHistory']>
     readonly useMath: UnwrapRef<typeof import('@vueuse/math')['useMath']>
     readonly useMax: UnwrapRef<typeof import('@vueuse/math')['useMax']>

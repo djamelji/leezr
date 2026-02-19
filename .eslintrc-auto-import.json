@@ -373,6 +373,7 @@
     "applyTypography": true,
     "previewTypography": true,
     "resetTypography": true,
-    "useSessionGovernance": true
+    "useSessionGovernance": true,
+    "useMaintenanceTheme": true
   }
 }

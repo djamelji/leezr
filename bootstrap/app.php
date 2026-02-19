@@ -36,6 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
 
             'session.governance' => \App\Http\Middleware\SessionGovernance::class,
+
+            'maintenance.check' => \App\Modules\Platform\Maintenance\MaintenanceMode::class,
         ]);
 
         $middleware->appendToGroup('api', \App\Http\Middleware\AddBuildVersion::class);

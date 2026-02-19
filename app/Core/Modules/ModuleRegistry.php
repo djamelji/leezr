@@ -5,6 +5,7 @@ namespace App\Core\Modules;
 use App\Modules\Core\Members\MembersModule;
 use App\Modules\Core\Settings\SettingsModule;
 use App\Modules\Logistics\Shipments\ShipmentsModule;
+use App\Modules\Platform\Audience\AudienceModule;
 use App\Modules\Platform\Billing\BillingModule;
 use App\Modules\Platform\Companies\CompaniesModule;
 use App\Modules\Platform\Settings\PlatformSettingsModule;
@@ -38,6 +39,7 @@ class ModuleRegistry
         JobdomainsModule::class,
         FieldsModule::class,
         PlatformSettingsModule::class,
+        AudienceModule::class,
         BillingModule::class,
     ];
 
