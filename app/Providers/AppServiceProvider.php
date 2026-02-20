@@ -28,5 +28,15 @@ class AppServiceProvider extends ServiceProvider
             'company' => Company::class,
             'platform_user' => PlatformUser::class,
         ]);
+
+        // ADR-081: Remove Vite hot file outside local — prevents production
+        // from loading dev server assets (:5173) if the file leaks.
+        if (! $this->app->environment('local')) {
+            $hotFile = public_path('hot');
+
+            if (file_exists($hotFile)) {
+                @unlink($hotFile);
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     _platformModuleNavItems: useCookie('platformModuleNavItems').value || [],
     _hydrated: false,
     _sessionConfig: null,
+    _appVersion: null,
   }),
 
   getters: {
@@ -22,6 +23,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     platformModuleNavItems: state => state._platformModuleNavItems,
     isSuperAdmin: state => Array.isArray(state._roles) && state._roles.includes('super_admin'),
     sessionConfig: state => state._sessionConfig,
+    appVersion: state => state._appVersion,
   },
 
   actions: {
@@ -65,6 +67,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistPlatformModuleNavItems(data.platform_modules || [])
       applyTheme(data.ui_theme)
       this._sessionConfig = data.ui_session ?? null
+      this._appVersion = data.app_version ?? null
 
       return data
     },
@@ -95,6 +98,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistPlatformModuleNavItems(data.platform_modules || [])
         applyTheme(data.ui_theme)
         this._sessionConfig = data.ui_session ?? null
+        this._appVersion = data.app_version ?? null
         this._hydrated = true
 
         return data.user

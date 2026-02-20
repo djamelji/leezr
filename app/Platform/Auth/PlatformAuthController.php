@@ -46,6 +46,7 @@ class PlatformAuthController extends Controller
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
+            'app_version' => config('app.version'),
         ]);
     }
 
@@ -67,6 +68,7 @@ class PlatformAuthController extends Controller
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
+            'app_version' => config('app.version'),
         ]);
     }
 

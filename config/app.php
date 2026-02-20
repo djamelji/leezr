@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Leezr'),
 
     /*
     |--------------------------------------------------------------------------
@@ -127,6 +127,8 @@ return [
     | middleware to expose X-Build-Version header for frontend handshake.
     |
     */
+
+    'version' => env('APP_VERSION', 'dev'),
 
     'build_version' => env('APP_BUILD_VERSION', 'dev'),
 

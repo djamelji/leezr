@@ -109,11 +109,17 @@ cd "$RELEASE_DIR"
 pnpm install --frozen-lockfile
 pnpm build
 
+# ─── 7.5 Remove Vite hot file if present (ADR-081) ───────────
+
+rm -f "$RELEASE_DIR/public/hot"
+
 # ─── 8. Inject version + optimize + health check ─────────────
 
 echo "→ [8/9] version + optimize + health check..."
 sed -i "s/^VITE_APP_VERSION=.*/VITE_APP_VERSION=$SHORT_HASH/" "$SHARED_DIR/.env"
 sed -i "s/^APP_BUILD_VERSION=.*/APP_BUILD_VERSION=$SHORT_HASH/" "$SHARED_DIR/.env"
+# APP_VERSION — legacy deploy has no run_number, use "dev" fallback
+grep -q '^APP_VERSION=' "$SHARED_DIR/.env" || echo "APP_VERSION=dev" >> "$SHARED_DIR/.env"
 php "$RELEASE_DIR/artisan" storage:link --force 2>/dev/null || true
 php "$RELEASE_DIR/artisan" optimize
 php "$RELEASE_DIR/artisan" event:cache

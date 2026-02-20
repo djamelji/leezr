@@ -1,5 +1,14 @@
 <script setup>
-const appName = import.meta.env.VITE_APP_NAME || 'Leezr'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+
+const platformAuth = usePlatformAuthStore()
+
+const appName = 'Leezr'
+
+const versionLabel = computed(() => {
+  const v = platformAuth.appVersion
+  return v && v !== 'dev' ? `Leezr v${v}` : 'Leezr (dev)'
+})
 
 const envLabel = computed(() => {
   const host = window.location.hostname
@@ -45,6 +54,17 @@ const envLabel = computed(() => {
               <VListItem>
                 <template #prepend>
                   <VIcon
+                    icon="tabler-version"
+                    class="me-2"
+                  />
+                </template>
+                <VListItemTitle>Version</VListItemTitle>
+                <VListItemSubtitle>{{ versionLabel }}</VListItemSubtitle>
+              </VListItem>
+
+              <VListItem>
+                <template #prepend>
+                  <VIcon
                     icon="tabler-server"
                     class="me-2"
                   />
@@ -55,14 +75,6 @@ const envLabel = computed(() => {
             </VList>
           </VCol>
         </VRow>
-
-        <VAlert
-          type="info"
-          variant="tonal"
-          class="mt-4"
-        >
-          General settings will be expanded in future releases.
-        </VAlert>
       </VCardText>
     </VCard>
   </div>

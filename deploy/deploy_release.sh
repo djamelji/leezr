@@ -69,6 +69,9 @@ if [ -f "$RELEASE_DIR/.build-version" ]; then
   log "  Version: $SHORT_SHA"
 fi
 
+# ─── [2.5] Remove Vite hot file if present (ADR-081) ─────────────
+rm -f "$RELEASE_DIR/public/hot"
+
 # ─── [3/9] Link shared .env + storage ───────────────────────────
 log "→ [3/9] Link shared .env + storage"
 
@@ -83,12 +86,24 @@ ln -sfn "$SHARED_DIR/storage" "$RELEASE_DIR/storage"
 mkdir -p "$RELEASE_DIR/bootstrap/cache"
 chmod -R ug+w "$RELEASE_DIR/bootstrap/cache"
 
-# ─── [4/9] Update build version in shared .env ──────────────────
+# ─── [4/9] Update build version + app version in shared .env ─────
 log "→ [4/9] Update APP_BUILD_VERSION=$VERSION"
 if grep -q '^APP_BUILD_VERSION=' "$SHARED_DIR/.env" 2>/dev/null; then
   sed -i "s/^APP_BUILD_VERSION=.*/APP_BUILD_VERSION=$VERSION/" "$SHARED_DIR/.env"
 else
   echo "APP_BUILD_VERSION=$VERSION" >> "$SHARED_DIR/.env"
+fi
+
+# APP_VERSION (semantic, e.g. 1.0.42) — ADR-082
+APP_VERSION="dev"
+if [ -f "$RELEASE_DIR/.app-version" ]; then
+  APP_VERSION=$(cat "$RELEASE_DIR/.app-version")
+fi
+log "  APP_VERSION=$APP_VERSION"
+if grep -q '^APP_VERSION=' "$SHARED_DIR/.env" 2>/dev/null; then
+  sed -i "s/^APP_VERSION=.*/APP_VERSION=$APP_VERSION/" "$SHARED_DIR/.env"
+else
+  echo "APP_VERSION=$APP_VERSION" >> "$SHARED_DIR/.env"
 fi
 
 # ─── [5/9] Run migrations ───────────────────────────────────────

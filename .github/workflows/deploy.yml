@@ -63,6 +63,18 @@ jobs:
         run: |
           echo "${{ github.sha }}" > .build-sha
           echo "${{ github.sha }}" > .build-version
+          echo "1.0.${{ github.run_number }}" > .app-version
+
+      - name: Validate build output
+        run: |
+          if [ ! -f public/build/manifest.json ]; then
+            echo "ERROR: public/build/manifest.json not found — build failed"
+            exit 1
+          fi
+          echo "Build manifest found: $(wc -l < public/build/manifest.json) lines"
+
+      - name: Remove Vite hot file (ADR-081)
+        run: rm -f public/hot
 
       - name: Create release artifact
         run: |
@@ -85,6 +97,7 @@ jobs:
             --exclude='*.d.ts' \
             --exclude='.eslintrc*' \
             --exclude='scripts' \
+            --exclude='public/hot' \
             .
 
       - name: Upload artifact
