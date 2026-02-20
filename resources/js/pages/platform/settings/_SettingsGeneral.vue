@@ -54,7 +54,7 @@ const envLabel = computed(() => {
               <VListItem>
                 <template #prepend>
                   <VIcon
-                    icon="tabler-version"
+                    icon="tabler-versions"
                     class="me-2"
                   />
                 </template>
