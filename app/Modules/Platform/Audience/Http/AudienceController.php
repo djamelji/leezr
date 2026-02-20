@@ -4,6 +4,7 @@ namespace App\Modules\Platform\Audience\Http;
 
 use App\Core\Settings\MaintenanceSettingsPayload;
 use App\Http\Controllers\Controller;
+use App\Platform\Models\PlatformSetting;
 use App\Modules\Platform\Audience\AudienceConfirmService;
 use App\Modules\Platform\Audience\AudienceSubscribeService;
 use App\Modules\Platform\Audience\AudienceUnsubscribeService;
@@ -62,8 +63,10 @@ class AudienceController extends Controller
     public function maintenancePage(): JsonResponse
     {
         $p = MaintenanceSettingsPayload::fromSettings();
+        $settings = PlatformSetting::instance();
 
         return response()->json([
+            'app_name' => $settings->general['app_name'] ?? 'Leezr',
             'enabled' => $p->enabled,
             'headline' => $p->headline,
             'subheadline' => $p->subheadline,

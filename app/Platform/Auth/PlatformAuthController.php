@@ -7,6 +7,7 @@ use App\Core\Modules\ModuleRegistry;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\System\UptimeService;
 use App\Core\Theme\UIResolverService;
+use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -75,7 +76,10 @@ class PlatformAuthController extends Controller
 
     private static function appMeta(): array
     {
+        $settings = PlatformSetting::instance();
+
         return [
+            'app_name' => $settings->general['app_name'] ?? 'Leezr',
             'version' => config('app.version'),
             'build_number' => config('app.build_number'),
             'build_date' => config('app.build_date'),

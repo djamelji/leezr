@@ -7,6 +7,7 @@ use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
 use App\Modules\Platform\Modules\Http\ModuleController;
 use App\Modules\Platform\Maintenance\Http\MaintenanceSettingsController;
+use App\Modules\Platform\Settings\Http\GeneralSettingsController;
 use App\Modules\Platform\Settings\Http\SessionSettingsController;
 use App\Modules\Platform\Settings\Http\TypographyController;
 use App\Modules\Platform\Theme\Http\ThemeController;
@@ -89,6 +90,12 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Platform user profile (show with dynamic fields)
     Route::middleware('platform.permission:manage_platform_users')->group(function () {
         Route::get('/platform-users/{id}', [UserController::class, 'show']);
+    });
+
+    // General Settings
+    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+        Route::get('/general-settings', [GeneralSettingsController::class, 'show']);
+        Route::put('/general-settings', [GeneralSettingsController::class, 'update']);
     });
 
     // Theme Settings

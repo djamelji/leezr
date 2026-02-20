@@ -1,5 +1,6 @@
 <script setup>
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
+import { useAppName } from '@/composables/useAppName'
 
 definePage({
   meta: {
@@ -9,6 +10,8 @@ definePage({
 })
 
 usePublicTheme()
+
+const appName = useAppName()
 
 const capabilities = [
   {
@@ -252,7 +255,7 @@ const reasons = [
       <VContainer>
         <div class="text-center mb-12">
           <h2 class="text-h3 font-weight-bold">
-            Why businesses choose Leezr
+            Why businesses choose {{ appName }}
           </h2>
         </div>
 
@@ -313,7 +316,7 @@ const reasons = [
     <footer class="py-6" :style="{ background: 'rgb(var(--v-theme-surface))' }">
       <VContainer>
         <div class="d-flex flex-wrap justify-center align-center gap-4 text-body-2 text-medium-emphasis">
-          <span>&copy; {{ new Date().getFullYear() }} Leezr. All rights reserved.</span>
+          <span>&copy; {{ new Date().getFullYear() }} {{ appName }}. All rights reserved.</span>
           <RouterLink
             to="/login"
             class="text-primary text-decoration-none"

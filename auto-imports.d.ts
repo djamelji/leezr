@@ -138,6 +138,7 @@ declare global {
   const rgbaToHex: typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']
   const safeRedirect: typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']
   const setActivePinia: typeof import('pinia')['setActivePinia']
+  const setAppName: typeof import('./resources/js/composables/useAppName.js')['setAppName']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
@@ -168,6 +169,7 @@ declare global {
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useAnimate: typeof import('@vueuse/core')['useAnimate']
   const useApi: typeof import('./resources/js/composables/useApi.js')['useApi']
+  const useAppName: typeof import('./resources/js/composables/useAppName.js')['useAppName']
   const useAppToast: typeof import('./resources/js/composables/useAppToast.js')['useAppToast']
   const useArrayDifference: typeof import('@vueuse/core')['useArrayDifference']
   const useArrayEvery: typeof import('@vueuse/core')['useArrayEvery']
@@ -513,6 +515,7 @@ declare module 'vue' {
     readonly rgbaToHex: UnwrapRef<typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']>
     readonly safeRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
+    readonly setAppName: UnwrapRef<typeof import('./resources/js/composables/useAppName.js')['setAppName']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
@@ -542,6 +545,7 @@ declare module 'vue' {
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useApi: UnwrapRef<typeof import('./resources/js/composables/useApi.js')['useApi']>
+    readonly useAppName: UnwrapRef<typeof import('./resources/js/composables/useAppName.js')['useAppName']>
     readonly useAppToast: UnwrapRef<typeof import('./resources/js/composables/useAppToast.js')['useAppToast']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
     readonly useArrayEvery: UnwrapRef<typeof import('@vueuse/core')['useArrayEvery']>

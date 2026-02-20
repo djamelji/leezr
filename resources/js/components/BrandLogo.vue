@@ -1,5 +1,7 @@
 <script setup>
-const props = defineProps({
+import { useAppName } from '@/composables/useAppName'
+
+defineProps({
   size: {
     type: String,
     default: 'md',
@@ -7,26 +9,21 @@ const props = defineProps({
   },
 })
 
-const sizes = {
-  sm: { fontSize: '20px', dot: '6px' },
-  md: { fontSize: '28px', dot: '8px' },
-  lg: { fontSize: '42px', dot: '10px' },
-}
+const appName = useAppName()
 
-const s = computed(() => sizes[props.size])
+const sizes = {
+  sm: '20px',
+  md: '28px',
+  lg: '42px',
+}
 </script>
 
 <template>
   <span
     class="d-inline-flex align-center"
-    :style="{ fontSize: s.fontSize, fontWeight: 700, lineHeight: 1 }"
+    :style="{ fontSize: sizes[size], fontWeight: 700, lineHeight: 1 }"
   >
-    <span style="color: rgb(var(--v-theme-on-surface))">leezr</span>
-    <span
-      :style="{
-        color: 'rgb(var(--v-theme-primary))',
-        fontWeight: 700,
-      }"
-    >.</span>
+    <span style="color: rgb(var(--v-theme-on-surface))">{{ appName.toLowerCase() }}</span>
+    <span :style="{ color: 'rgb(var(--v-theme-primary))', fontWeight: 700 }">.</span>
   </span>
 </template>

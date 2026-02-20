@@ -8,8 +8,11 @@ definePage({
   },
 })
 
+import { useAppName, setAppName } from '@/composables/useAppName'
+
 usePublicTheme()
 
+const appName = useAppName()
 const { bindPlayer } = useMaintenanceTheme()
 
 const email = ref('')
@@ -40,6 +43,7 @@ onMounted(async () => {
     if (res.ok) {
       const data = await res.json()
 
+      if (data.app_name) setAppName(data.app_name)
       pageData.headline = data.headline || pageData.headline
       pageData.subheadline = data.subheadline ?? ''
       pageData.description = data.description ?? ''
@@ -92,7 +96,7 @@ async function handleSubscribe() {
     <div class="grid">
       <div class="left">
         <p class="brand">
-          leezr<span class="dot">.</span>
+          {{ appName.toLowerCase() }}<span class="dot">.</span>
         </p>
 
         <h1 class="title">

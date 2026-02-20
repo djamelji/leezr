@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
 import { applyTheme } from '@/composables/useApplyTheme'
+import { setAppName } from '@/composables/useAppName'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
 
@@ -68,6 +69,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       applyTheme(data.ui_theme)
       this._sessionConfig = data.ui_session ?? null
       this._appMeta = data.app_meta ?? null
+      if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)
 
       return data
     },
@@ -99,6 +101,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         applyTheme(data.ui_theme)
         this._sessionConfig = data.ui_session ?? null
         this._appMeta = data.app_meta ?? null
+        if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)
         this._hydrated = true
 
         return data.user

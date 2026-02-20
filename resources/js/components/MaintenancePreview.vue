@@ -1,5 +1,8 @@
 <script setup>
 import '@lottiefiles/lottie-player'
+import { useAppName } from '@/composables/useAppName'
+
+const appName = useAppName()
 
 const props = defineProps({
   headline: { type: String, default: '' },
@@ -59,7 +62,7 @@ function onKeydownSingle(event) {
   <div class="mp">
     <div class="mp-left">
       <p class="mp-brand">
-        leezr<span class="dot">.</span>
+        {{ appName.toLowerCase() }}<span class="dot">.</span>
       </p>
 
       <h1

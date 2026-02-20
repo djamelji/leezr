@@ -1972,6 +1972,26 @@ definePage({
   - Changement de couleur primaire → branding mis à jour partout instantanément
   - Maintenance page garde son propre CSS (inline scoped, contexte différent)
 
+## ADR-084 : Dynamic Application Name (platform_settings.general)
+
+- **Date** : 2026-02-20
+- **Contexte** : Le nom de l'application ("Leezr") était hardcodé partout dans le frontend. Besoin de le rendre éditable depuis Platform Settings pour le white-labeling futur.
+- **Décision** :
+  - Nouvelle colonne JSON `general` dans `platform_settings` (migration) avec clé `app_name`
+  - `GeneralSettingsController` (show/update) sous `manage_theme_settings` permission
+  - `app_name` exposé dans : `/me` (via `app_meta`), `/api/public/theme`, `/api/audience/maintenance-page`
+  - Composable `useAppName` : ref réactive globale (`ref('Leezr')`) + `setAppName()` setter
+  - Alimenté par : `usePublicTheme`, `platformAuth` store, maintenance API
+  - `BrandLogo.vue` lit `useAppName()` — toujours dynamique
+  - `_SettingsGeneral.vue` : champ éditable + save immédiat + mise à jour live du brand
+  - Landing page (`index.vue`) : copyright + "Why businesses choose X" dynamiques
+  - Maintenance page + MaintenancePreview : brand text dynamique
+  - Seuls 2 fallbacks `'Leezr'` restent : `useAppName.js` (init avant API) et form init dans settings
+- **Conséquences** :
+  - Changement du nom dans General Settings → propagation instantanée partout (navbar, landing, maintenance, footer)
+  - Pages publiques (non auth) reçoivent le nom via `/api/public/theme` — pas besoin d'être connecté
+  - White-labeling possible sans modifier le code
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
