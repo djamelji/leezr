@@ -12,8 +12,9 @@
 set -euo pipefail
 
 # ─── Arguments ────────────────────────────────────────────────────
-ARTIFACT_PATH="${1:?Usage: deploy_release.sh <artifact.tar.gz> <app_path>}"
-APP_PATH="${2:?Usage: deploy_release.sh <artifact.tar.gz> <app_path>}"
+ARTIFACT_PATH="${1:?Usage: deploy_release.sh <artifact.tar.gz> <app_path> [branch]}"
+APP_PATH="${2:?Usage: deploy_release.sh <artifact.tar.gz> <app_path> [branch]}"
+BRANCH="${3:-main}"
 
 RELEASES_DIR="$APP_PATH/releases"
 SHARED_DIR="$APP_PATH/shared"
@@ -119,6 +120,12 @@ $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
 # ─── [6/9] Run SystemSeeder (idempotent) ────────────────────────
 log "→ [6/9] Run SystemSeeder"
 $PHP_BIN artisan db:seed --class=SystemSeeder --force 2>&1 | tee -a "$LOG_FILE"
+
+# Staging only: seed demo data (idempotent via updateOrCreate)
+if [ "$BRANCH" = "dev" ]; then
+  log "→ [6.5] Run DevSeeder (staging only)"
+  $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
+fi
 
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"

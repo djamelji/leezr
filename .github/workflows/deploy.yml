@@ -168,7 +168,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
             -p ${{ secrets.VPS_PORT || 22 }} \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "bash /tmp/leezr-deploy.sh /tmp/leezr-release-${{ github.ref_name }}.tar.gz ${{ steps.target.outputs.app_path }}"
+            "bash /tmp/leezr-deploy.sh /tmp/leezr-release-${{ github.ref_name }}.tar.gz ${{ steps.target.outputs.app_path }} ${{ github.ref_name }}"
 
       - name: Health check
         run: |

@@ -102,6 +102,12 @@ php "$RELEASE_DIR/artisan" migrate --force
 echo "→ [6/9] seed SystemSeeder..."
 php "$RELEASE_DIR/artisan" db:seed --class=SystemSeeder --force
 
+# Staging only: seed demo data (idempotent via updateOrCreate)
+if [ "$BRANCH" = "dev" ]; then
+    echo "→ [6.5/9] seed DevSeeder (staging only)..."
+    php "$RELEASE_DIR/artisan" db:seed --class=DevSeeder --force
+fi
+
 # ─── 7. Frontend build ───────────────────────────────────────
 
 echo "→ [7/9] pnpm install + build..."
