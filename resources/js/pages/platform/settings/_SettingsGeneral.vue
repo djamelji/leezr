@@ -3,11 +3,11 @@ import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 const platformAuth = usePlatformAuthStore()
 
-const appName = 'Leezr'
+const meta = computed(() => platformAuth.appMeta || {})
 
 const versionLabel = computed(() => {
-  const v = platformAuth.appVersion
-  return v && v !== 'dev' ? `Leezr v${v}` : 'Leezr (dev)'
+  const v = meta.value.version
+  return v && v !== 'dev' ? `v${v}` : 'dev'
 })
 
 const envLabel = computed(() => {
@@ -17,6 +17,25 @@ const envLabel = computed(() => {
 
   return 'Local'
 })
+
+const buildDateLabel = computed(() => {
+  const raw = meta.value.build_date
+  if (!raw) return null
+  try {
+    return new Date(raw).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+  }
+  catch { return raw }
+})
+
+const items = computed(() => [
+  { icon: 'tabler-app-window', label: 'Application', value: 'Leezr' },
+  { icon: 'tabler-versions', label: 'Version', value: versionLabel.value },
+  { icon: 'tabler-server', label: 'Environment', value: envLabel.value },
+  { icon: 'tabler-hash', label: 'Build', value: meta.value.build_number ? `#${meta.value.build_number}` : null },
+  { icon: 'tabler-git-commit', label: 'Commit', value: meta.value.commit_hash || null },
+  { icon: 'tabler-calendar-event', label: 'Build Date', value: buildDateLabel.value },
+  { icon: 'tabler-clock-up', label: 'Uptime', value: meta.value.uptime || null },
+])
 </script>
 
 <template>
@@ -40,38 +59,21 @@ const envLabel = computed(() => {
             md="6"
           >
             <VList>
-              <VListItem>
-                <template #prepend>
-                  <VIcon
-                    icon="tabler-app-window"
-                    class="me-2"
-                  />
-                </template>
-                <VListItemTitle>Application</VListItemTitle>
-                <VListItemSubtitle>{{ appName }}</VListItemSubtitle>
-              </VListItem>
-
-              <VListItem>
-                <template #prepend>
-                  <VIcon
-                    icon="tabler-versions"
-                    class="me-2"
-                  />
-                </template>
-                <VListItemTitle>Version</VListItemTitle>
-                <VListItemSubtitle>{{ versionLabel }}</VListItemSubtitle>
-              </VListItem>
-
-              <VListItem>
-                <template #prepend>
-                  <VIcon
-                    icon="tabler-server"
-                    class="me-2"
-                  />
-                </template>
-                <VListItemTitle>Environment</VListItemTitle>
-                <VListItemSubtitle>{{ envLabel }}</VListItemSubtitle>
-              </VListItem>
+              <template
+                v-for="item in items"
+                :key="item.label"
+              >
+                <VListItem v-if="item.value">
+                  <template #prepend>
+                    <VIcon
+                      :icon="item.icon"
+                      class="me-2"
+                    />
+                  </template>
+                  <VListItemTitle>{{ item.label }}</VListItemTitle>
+                  <VListItemSubtitle>{{ item.value }}</VListItemSubtitle>
+                </VListItem>
+              </template>
             </VList>
           </VCol>
         </VRow>

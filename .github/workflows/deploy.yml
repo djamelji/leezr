@@ -63,7 +63,12 @@ jobs:
         run: |
           echo "${{ github.sha }}" > .build-sha
           echo "${{ github.sha }}" > .build-version
-          echo "1.0.${{ github.run_number }}" > .app-version
+          cat > .app-meta <<META
+          APP_VERSION=1.0.${{ github.run_number }}
+          APP_BUILD_NUMBER=${{ github.run_number }}
+          APP_BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          APP_COMMIT_HASH=$(echo "${{ github.sha }}" | head -c 7)
+          META
 
       - name: Validate build output
         run: |

@@ -5,6 +5,7 @@ namespace App\Platform\Auth;
 use App\Core\Modules\ModuleManifest;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Settings\SessionSettingsPayload;
+use App\Core\System\UptimeService;
 use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class PlatformAuthController extends Controller
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
-            'app_version' => config('app.version'),
+            'app_meta' => self::appMeta(),
         ]);
     }
 
@@ -68,8 +69,19 @@ class PlatformAuthController extends Controller
             'platform_modules' => $this->platformModuleNavItems(),
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
-            'app_version' => config('app.version'),
+            'app_meta' => self::appMeta(),
         ]);
+    }
+
+    private static function appMeta(): array
+    {
+        return [
+            'version' => config('app.version'),
+            'build_number' => config('app.build_number'),
+            'build_date' => config('app.build_date'),
+            'commit_hash' => config('app.commit_hash'),
+            'uptime' => UptimeService::formatted(),
+        ];
     }
 
     private function platformModuleNavItems(): array

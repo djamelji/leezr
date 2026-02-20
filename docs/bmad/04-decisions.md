@@ -1937,20 +1937,22 @@ definePage({
 ## ADR-082 : Application Versioning (APP_VERSION)
 
 - **Date** : 2026-02-20
-- **Contexte** : Besoin de traçabilité de version applicative dans la plateforme. `APP_BUILD_VERSION` est un SHA git utilisé pour le handshake frontend/backend (ADR-045c), pas adapté pour un affichage humain.
+- **Contexte** : Besoin de traçabilité complète des builds dans la plateforme. `APP_BUILD_VERSION` est un SHA git utilisé pour le handshake frontend/backend (ADR-045c), pas adapté pour un affichage humain.
 - **Décision** :
-  - `config/app.php` expose `'version' => env('APP_VERSION', 'dev')`
-  - Format : `1.0.{github.run_number}` (ex: `1.0.42`), auto-incrémenté par CI
-  - Le CI écrit `.app-version` dans l'artifact, `deploy_release.sh` l'injecte dans `.env`
-  - La réponse `/me` et `/login` platform inclut `app_version`
-  - Le store `platformAuth` expose `appVersion`
-  - `_SettingsGeneral.vue` affiche `Leezr v1.0.42` (ou `Leezr (dev)` localement)
-  - Ne se calcule PAS depuis les changelogs — c'est un compteur CI auto-incrémenté
+  - Le CI génère `.app-meta` contenant 4 variables : `APP_VERSION`, `APP_BUILD_NUMBER`, `APP_BUILD_DATE`, `APP_COMMIT_HASH`
+  - `config/app.php` expose : `version`, `build_number`, `build_date`, `commit_hash`
+  - `deploy_release.sh` lit `.app-meta` et injecte chaque clé dans `.env`
+  - `PlatformAuthController` expose `app_meta` (objet) dans `/me` et `/login`
+  - `UptimeService` lit `/proc/uptime` (Linux) pour le uptime serveur
+  - `_SettingsGeneral.vue` affiche : Application, Version, Environment, Build #, Commit, Build Date, Uptime
+  - Items sans valeur (null) sont masqués automatiquement (local = seulement Application + Version + Environment)
+  - Version format : `1.0.{github.run_number}`, auto-incrémenté
+  - Aucun appel git à runtime — tout vient du CI
 - **Conséquences** :
-  - Chaque deploy production/staging a un numéro de version unique et croissant
+  - Chaque deploy a un numéro de version unique, un build number, une date, et un commit hash
   - `APP_BUILD_VERSION` (SHA) reste séparé pour le version mismatch check
-  - Localement, `APP_VERSION` vaut `dev` par défaut — aucune config requise
-  - Le legacy `deploy.sh` ne gère pas `run_number` → fallback `dev`
+  - Localement, seuls Application/Version/Environment sont visibles (pas de metadata CI)
+  - Le uptime est calculé à runtime depuis `/proc/uptime` (Linux only, null sur macOS)
 
 ---
 

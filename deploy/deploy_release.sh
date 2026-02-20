@@ -94,16 +94,21 @@ else
   echo "APP_BUILD_VERSION=$VERSION" >> "$SHARED_DIR/.env"
 fi
 
-# APP_VERSION (semantic, e.g. 1.0.42) — ADR-082
-APP_VERSION="dev"
-if [ -f "$RELEASE_DIR/.app-version" ]; then
-  APP_VERSION=$(cat "$RELEASE_DIR/.app-version")
-fi
-log "  APP_VERSION=$APP_VERSION"
-if grep -q '^APP_VERSION=' "$SHARED_DIR/.env" 2>/dev/null; then
-  sed -i "s/^APP_VERSION=.*/APP_VERSION=$APP_VERSION/" "$SHARED_DIR/.env"
+# Build metadata from .app-meta (ADR-082)
+if [ -f "$RELEASE_DIR/.app-meta" ]; then
+  while IFS='=' read -r key value; do
+    key=$(echo "$key" | xargs)
+    value=$(echo "$value" | xargs)
+    [ -z "$key" ] && continue
+    log "  $key=$value"
+    if grep -q "^${key}=" "$SHARED_DIR/.env" 2>/dev/null; then
+      sed -i "s/^${key}=.*/${key}=${value}/" "$SHARED_DIR/.env"
+    else
+      echo "${key}=${value}" >> "$SHARED_DIR/.env"
+    fi
+  done < "$RELEASE_DIR/.app-meta"
 else
-  echo "APP_VERSION=$APP_VERSION" >> "$SHARED_DIR/.env"
+  log "  WARN: .app-meta not found — skipping metadata injection"
 fi
 
 # ─── [5/9] Run migrations ───────────────────────────────────────

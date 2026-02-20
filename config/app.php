@@ -132,6 +132,12 @@ return [
 
     'build_version' => env('APP_BUILD_VERSION', 'dev'),
 
+    'build_number' => env('APP_BUILD_NUMBER'),
+
+    'build_date' => env('APP_BUILD_DATE'),
+
+    'commit_hash' => env('APP_COMMIT_HASH'),
+
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
