@@ -33,6 +33,7 @@ export const useAuthStore = defineStore('auth', {
     roleLevel: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
       if (company?.role === 'owner') return 'management'
+      if (company?.role === 'admin') return 'management'
       if (company?.company_role?.is_administrative) return 'management'
 
       return 'operational'

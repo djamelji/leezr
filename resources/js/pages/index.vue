@@ -1,6 +1,7 @@
 <script setup>
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import { useAppName } from '@/composables/useAppName'
+import { useAuthStore } from '@/core/stores/auth'
 
 definePage({
   meta: {
@@ -12,6 +13,7 @@ definePage({
 usePublicTheme()
 
 const appName = useAppName()
+const auth = useAuthStore()
 
 const capabilities = [
   {
@@ -100,20 +102,30 @@ const reasons = [
         <div class="d-flex align-center gap-2">
           <NavbarThemeSwitcher />
 
-          <VBtn
-            variant="text"
-            to="/login"
-            class="d-none d-sm-flex"
-          >
-            Sign In
-          </VBtn>
+          <template v-if="auth.isLoggedIn">
+            <VBtn
+              color="primary"
+              to="/dashboard"
+            >
+              Dashboard
+            </VBtn>
+          </template>
+          <template v-else>
+            <VBtn
+              variant="text"
+              to="/login"
+              class="d-none d-sm-flex"
+            >
+              Sign In
+            </VBtn>
 
-          <VBtn
-            color="primary"
-            to="/register"
-          >
-            Start Free
-          </VBtn>
+            <VBtn
+              color="primary"
+              to="/register"
+            >
+              Start Free
+            </VBtn>
+          </template>
         </div>
       </VContainer>
     </VAppBar>
@@ -130,20 +142,31 @@ const reasons = [
             The workspace your business deserves.
           </p>
           <div class="d-flex gap-4 justify-center flex-wrap">
-            <VBtn
-              color="primary"
-              size="large"
-              to="/register"
-            >
-              Start Free
-            </VBtn>
-            <VBtn
-              variant="outlined"
-              size="large"
-              to="/login"
-            >
-              Sign In
-            </VBtn>
+            <template v-if="auth.isLoggedIn">
+              <VBtn
+                color="primary"
+                size="large"
+                to="/dashboard"
+              >
+                Go to Dashboard
+              </VBtn>
+            </template>
+            <template v-else>
+              <VBtn
+                color="primary"
+                size="large"
+                to="/register"
+              >
+                Start Free
+              </VBtn>
+              <VBtn
+                variant="outlined"
+                size="large"
+                to="/login"
+              >
+                Sign In
+              </VBtn>
+            </template>
           </div>
         </div>
       </VContainer>
@@ -318,10 +341,10 @@ const reasons = [
         <div class="d-flex flex-wrap justify-center align-center gap-4 text-body-2 text-medium-emphasis">
           <span>&copy; {{ new Date().getFullYear() }} {{ appName }}. All rights reserved.</span>
           <RouterLink
-            to="/login"
+            :to="auth.isLoggedIn ? '/dashboard' : '/login'"
             class="text-primary text-decoration-none"
           >
-            Sign In
+            {{ auth.isLoggedIn ? 'Dashboard' : 'Sign In' }}
           </RouterLink>
           <span>Privacy</span>
         </div>
