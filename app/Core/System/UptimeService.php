@@ -10,17 +10,18 @@ class UptimeService
      */
     public static function formatted(): ?string
     {
-        if (!is_readable('/proc/uptime')) {
+        try {
+            $output = @shell_exec('uptime -s 2>/dev/null');
+
+            if (!$output) {
+                return null;
+            }
+
+            $bootTime = new \DateTimeImmutable(trim($output));
+            $seconds = time() - $bootTime->getTimestamp();
+        } catch (\Throwable) {
             return null;
         }
-
-        $raw = file_get_contents('/proc/uptime');
-
-        if ($raw === false) {
-            return null;
-        }
-
-        $seconds = (int) explode(' ', trim($raw))[0];
 
         $days = intdiv($seconds, 86400);
         $hours = intdiv($seconds % 86400, 3600);
