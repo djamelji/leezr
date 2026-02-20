@@ -20,6 +20,7 @@ export function useCompanyNav() {
       icon: { icon: item.icon },
       permission: item.permission,
       surface: item.surface,
+      operationalOnly: item.operationalOnly,
     }))
 
     let items
@@ -51,6 +52,7 @@ export function useCompanyNav() {
     return items.filter(item => {
       if (item.heading) return true
       if (item.surface === 'structure' && auth.roleLevel !== 'management') return false
+      if (item.operationalOnly && auth.roleLevel === 'management') return false
       if (item.ownerOnly && !auth.isOwner) return false
       if (item.permission && !auth.hasPermission(item.permission)) return false
 
