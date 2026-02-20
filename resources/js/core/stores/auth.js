@@ -53,6 +53,7 @@ export const useAuthStore = defineStore('auth', {
 
     hasPermission(key) {
       if (this.isOwner) return true
+      if (this.roleLevel === 'management' && this.currentCompany?.role === 'admin') return true
 
       return Array.isArray(this.permissions) && this.permissions.includes(key)
     },
