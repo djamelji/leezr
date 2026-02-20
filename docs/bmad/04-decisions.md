@@ -1954,6 +1954,24 @@ definePage({
   - Localement, seuls Application/Version/Environment sont visibles (pas de metadata CI)
   - Le uptime est calculé à runtime depuis `/proc/uptime` (Linux only, null sur macOS)
 
+## ADR-083 : BrandLogo — composant de marque réutilisable
+
+- **Date** : 2026-02-20
+- **Contexte** : Le branding "leezr." (texte + point coloré en primary) était dupliqué dans 3 endroits (landing page, maintenance page, settings) avec des styles différents. Besoin de cohérence et de réutilisabilité.
+- **Décision** :
+  - Créer `resources/js/components/BrandLogo.vue` — composant unique pour le branding
+  - Props : `size` (`sm` / `md` / `lg`) contrôlant fontSize et taille du point
+  - Couleurs via tokens Vuetify uniquement : `--v-theme-on-surface` (texte) + `--v-theme-primary` (point)
+  - Zéro CSS custom, zéro hex hardcodé — suit automatiquement le thème et le dark mode
+  - Auto-importé via `unplugin-vue-components` (dir `resources/js/components/`)
+  - Utilisé dans : `_SettingsGeneral.vue` (lg), `index.vue` navbar (md)
+  - `_SettingsGeneral.vue` : brand card centrée au-dessus des settings, avec version en `text-medium-emphasis`
+  - Suppression du doublon `.brand-text` / `.brand-dot` CSS dans la landing page
+- **Conséquences** :
+  - Un seul composant pour toute l'identité visuelle textuelle
+  - Changement de couleur primaire → branding mis à jour partout instantanément
+  - Maintenance page garde son propre CSS (inline scoped, contexte différent)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

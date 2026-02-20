@@ -89,7 +89,7 @@ const reasons = [
           to="/"
           class="d-flex align-center text-decoration-none"
         >
-          <span class="brand-text">leezr<span class="brand-dot">.</span></span>
+          <BrandLogo size="md" />
         </RouterLink>
 
         <VSpacer />
@@ -335,18 +335,6 @@ const reasons = [
 
 .landing-navbar {
   border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-
-.brand-text {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.brand-dot {
-  color: rgb(var(--v-theme-primary));
-  font-weight: bold;
 }
 
 .hero-section {

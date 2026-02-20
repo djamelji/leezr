@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import BrandLogo from '@/components/BrandLogo.vue'
 
 const platformAuth = usePlatformAuthStore()
 
@@ -28,7 +29,6 @@ const buildDateLabel = computed(() => {
 })
 
 const items = computed(() => [
-  { icon: 'tabler-app-window', label: 'Application', value: 'Leezr' },
   { icon: 'tabler-versions', label: 'Version', value: versionLabel.value },
   { icon: 'tabler-server', label: 'Environment', value: envLabel.value },
   { icon: 'tabler-hash', label: 'Build', value: meta.value.build_number ? `#${meta.value.build_number}` : null },
@@ -40,6 +40,17 @@ const items = computed(() => [
 
 <template>
   <div>
+    <!-- Brand card -->
+    <VCard class="mb-6">
+      <VCardText class="d-flex flex-column align-center py-8">
+        <BrandLogo size="lg" />
+        <span class="text-body-1 text-medium-emphasis mt-2">
+          {{ versionLabel }}
+        </span>
+      </VCardText>
+    </VCard>
+
+    <!-- Info card -->
     <VCard>
       <VCardTitle class="d-flex align-center">
         <VIcon
