@@ -22,10 +22,12 @@ const canManage = computed(() => auth.hasPermission('shipments.manage_status'))
 const canAssign = computed(() => auth.hasPermission('shipments.assign'))
 
 const memberOptions = computed(() => {
-  return companyStore.members.map(m => ({
-    title: m.user.display_name,
-    value: m.user.id,
-  }))
+  return companyStore.members
+    .filter(m => m.role !== 'owner' && m.company_role)
+    .map(m => ({
+      title: `${m.user.display_name} — ${m.company_role.name}`,
+      value: m.user.id,
+    }))
 })
 
 const shipment = computed(() => shipmentStore.currentShipment)
