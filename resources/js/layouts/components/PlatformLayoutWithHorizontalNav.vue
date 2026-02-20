@@ -1,6 +1,5 @@
 <script setup>
 import { usePlatformNav } from '@/composables/usePlatformNav'
-import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
@@ -10,7 +9,6 @@ import PlatformUserProfile from '@/layouts/components/PlatformUserProfile.vue'
 
 // @layouts plugin
 import { HorizontalNavLayout } from '@layouts'
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
 const { navItems: rawNavItems } = usePlatformNav()
 
@@ -23,13 +21,9 @@ const navItems = computed(() => rawNavItems.value.filter(item => !item.heading))
     <template #navbar>
       <RouterLink
         to="/platform"
-        class="app-logo d-flex align-center gap-x-3"
+        class="app-logo d-flex align-center gap-x-3 text-decoration-none"
       >
-        <VNodeRenderer :nodes="themeConfig.app.logo" />
-
-        <h1 class="app-title font-weight-bold leading-normal text-xl text-capitalize">
-          {{ themeConfig.app.title }}
-        </h1>
+        <BrandLogo size="md" />
       </RouterLink>
 
       <VSpacer />

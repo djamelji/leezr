@@ -1,13 +1,11 @@
 <script setup>
 import staticNavItems from '@/navigation/horizontal'
 import { useModuleStore } from '@/core/stores/module'
-import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
 import { HorizontalNavLayout } from '@layouts'
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
 const moduleStore = useModuleStore()
 
@@ -44,13 +42,9 @@ const navItems = computed(() => {
     <template #navbar>
       <RouterLink
         to="/"
-        class="app-logo d-flex align-center gap-x-3"
+        class="app-logo d-flex align-center gap-x-3 text-decoration-none"
       >
-        <VNodeRenderer :nodes="themeConfig.app.logo" />
-
-        <h1 class="app-title font-weight-bold leading-normal text-xl text-capitalize">
-          {{ themeConfig.app.title }}
-        </h1>
+        <BrandLogo size="md" />
       </RouterLink>
       <VSpacer />
 

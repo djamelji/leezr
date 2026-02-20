@@ -1,33 +1,48 @@
 <script setup>
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
-import { setAppName } from '@/composables/useAppName'
+import { useAppName, setAppName } from '@/composables/useAppName'
 import { $platformApi } from '@/utils/platformApi'
-import BrandLogo from '@/components/BrandLogo.vue'
 
 const platformAuth = usePlatformAuthStore()
 const meta = computed(() => platformAuth.appMeta || {})
+const appName = useAppName()
 
-const form = ref({ app_name: meta.value.app_name || 'Leezr' })
+const brandNameEl = ref(null)
 const saving = ref(false)
 const saved = ref(false)
 
-watch(meta, val => {
-  if (val.app_name && !saving.value) {
-    form.value.app_name = val.app_name
-  }
-}, { immediate: true })
+onMounted(() => {
+  if (brandNameEl.value)
+    brandNameEl.value.textContent = appName.value.toLowerCase()
+})
 
-async function save() {
+watch(appName, val => {
+  if (brandNameEl.value && brandNameEl.value !== document.activeElement)
+    brandNameEl.value.textContent = val.toLowerCase()
+})
+
+async function onBrandBlur(event) {
+  const raw = event.target.textContent.trim()
+  if (!raw || raw.length > 50) {
+    event.target.textContent = appName.value.toLowerCase()
+
+    return
+  }
+
+  const name = raw.charAt(0).toUpperCase() + raw.slice(1)
+
+  if (name === appName.value) return
+
   saving.value = true
   saved.value = false
 
   try {
     await $platformApi('/general-settings', {
       method: 'PUT',
-      body: { app_name: form.value.app_name },
+      body: { app_name: name },
     })
 
-    setAppName(form.value.app_name)
+    setAppName(name)
     saved.value = true
     setTimeout(() => { saved.value = false }, 3000)
   }
@@ -36,9 +51,15 @@ async function save() {
   }
 }
 
+function onPaste(event) {
+  event.preventDefault()
+  document.execCommand('insertText', false, event.clipboardData?.getData('text/plain') ?? '')
+}
+
 const versionLabel = computed(() => {
   const v = meta.value.version
-  return v && v !== 'dev' ? `v${v}` : 'dev'
+
+  return v && v !== 'dev' ? `V ${v}` : 'dev'
 })
 
 const envLabel = computed(() => {
@@ -58,108 +79,113 @@ const buildDateLabel = computed(() => {
   catch { return raw }
 })
 
-const infoItems = computed(() => [
-  { icon: 'tabler-versions', label: 'Version', value: versionLabel.value },
-  { icon: 'tabler-server', label: 'Environment', value: envLabel.value },
-  { icon: 'tabler-hash', label: 'Build', value: meta.value.build_number ? `#${meta.value.build_number}` : null },
-  { icon: 'tabler-git-commit', label: 'Commit', value: meta.value.commit_hash || null },
-  { icon: 'tabler-calendar-event', label: 'Build Date', value: buildDateLabel.value },
-  { icon: 'tabler-clock-up', label: 'Uptime', value: meta.value.uptime || null },
+const statItems = computed(() => [
+  { label: 'Build', value: meta.value.build_number ? `#${meta.value.build_number}` : '—' },
+  { label: 'Commit', value: meta.value.commit_hash || '—' },
+  { label: 'Build Date', value: buildDateLabel.value || '—' },
+  { label: 'Uptime', value: meta.value.uptime || '—' },
 ])
 </script>
 
 <template>
-  <div>
-    <!-- Brand card -->
-    <VCard class="mb-6">
-      <VCardText class="d-flex flex-column align-center py-8">
-        <BrandLogo size="lg" />
-        <span class="text-body-1 text-medium-emphasis mt-2">
-          {{ versionLabel }}
-        </span>
-      </VCardText>
-    </VCard>
-
-    <!-- Branding settings -->
-    <VCard class="mb-6">
-      <VCardTitle class="d-flex align-center">
-        <VIcon
-          icon="tabler-brush"
-          class="me-2"
-        />
-        Branding
-      </VCardTitle>
-      <VCardSubtitle>
-        Application name displayed across the platform.
-      </VCardSubtitle>
-
-      <VCardText>
-        <VRow>
-          <VCol
-            cols="12"
-            md="6"
-          >
-            <AppTextField
-              v-model="form.app_name"
-              label="Application Name"
-              :rules="[v => !!v || 'Required', v => v.length <= 50 || 'Max 50 characters']"
-            />
-          </VCol>
-        </VRow>
-
-        <div class="d-flex align-center gap-3 mt-4">
-          <VBtn
-            :loading="saving"
-            @click="save"
-          >
-            Save
-          </VBtn>
+  <VCard>
+    <VCardText class="pa-0">
+      <div class="d-flex flex-column flex-md-row">
+        <!-- Brand section -->
+        <div class="d-flex flex-column align-center justify-center pa-6 brand-section">
           <span
-            v-if="saved"
-            class="text-success text-body-2"
+            class="brand-editable"
+            :style="{ fontSize: '42px', fontWeight: 700, lineHeight: 1 }"
+          >
+            <span
+              ref="brandNameEl"
+              contenteditable="plaintext-only"
+              class="brand-name"
+              @blur="onBrandBlur"
+              @paste="onPaste"
+              @keydown.enter.prevent="$event.target.blur()"
+            />
+            <span :style="{ color: 'rgb(var(--v-theme-primary))', fontWeight: 700 }">.</span>
+          </span>
+
+          <span
+            v-if="saving"
+            class="text-body-2 text-medium-emphasis mt-2"
+          >
+            Saving...
+          </span>
+          <span
+            v-else-if="saved"
+            class="text-body-2 text-success mt-2"
           >
             Saved!
           </span>
-        </div>
-      </VCardText>
-    </VCard>
-
-    <!-- System info -->
-    <VCard>
-      <VCardTitle class="d-flex align-center">
-        <VIcon
-          icon="tabler-info-circle"
-          class="me-2"
-        />
-        System Information
-      </VCardTitle>
-
-      <VCardText>
-        <VRow>
-          <VCol
-            cols="12"
-            md="6"
+          <span
+            v-else
+            class="text-body-2 text-medium-emphasis mt-2"
           >
-            <VList>
-              <template
-                v-for="item in infoItems"
-                :key="item.label"
-              >
-                <VListItem v-if="item.value">
-                  <template #prepend>
-                    <VIcon
-                      :icon="item.icon"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle>{{ item.label }}</VListItemTitle>
-                  <VListItemSubtitle>{{ item.value }}</VListItemSubtitle>
-                </VListItem>
-              </template>
-            </VList>
-          </VCol>
-        </VRow>
-      </VCardText>
-    </VCard>
-  </div>
+            {{ versionLabel }} — {{ envLabel }}
+          </span>
+        </div>
+
+        <VDivider :vertical="$vuetify.display.mdAndUp" />
+
+        <!-- Stats section -->
+        <div class="d-flex flex-wrap flex-grow-1 align-center">
+          <template
+            v-for="(item, i) in statItems"
+            :key="item.label"
+          >
+            <div class="stat-item d-flex flex-column align-center justify-center pa-4 text-center">
+              <span class="text-caption text-uppercase text-medium-emphasis font-weight-medium">
+                {{ item.label }}
+              </span>
+              <span class="text-body-1 font-weight-medium mt-1">
+                {{ item.value }}
+              </span>
+            </div>
+
+            <VDivider
+              v-if="i < statItems.length - 1"
+              vertical
+              class="d-none d-md-block align-self-stretch"
+            />
+          </template>
+        </div>
+      </div>
+    </VCardText>
+  </VCard>
 </template>
+
+<style lang="scss" scoped>
+.brand-section {
+  min-inline-size: 200px;
+}
+
+.brand-name {
+  outline: none;
+  border-radius: 4px;
+  color: rgb(var(--v-theme-on-surface));
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: 0 0 0 2px rgba(var(--v-theme-on-surface), 0.08);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.3);
+  }
+}
+
+.stat-item {
+  flex: 1 1 auto;
+  min-inline-size: 120px;
+}
+
+// Mobile: 2 stats per row
+@media (max-width: 959.98px) {
+  .stat-item {
+    flex: 0 0 50%;
+  }
+}
+</style>

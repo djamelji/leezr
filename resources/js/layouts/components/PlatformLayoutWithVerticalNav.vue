@@ -50,3 +50,25 @@ const { navItems } = usePlatformNav()
     <TheCustomizer />
   </VerticalNavLayout>
 </template>
+
+<style lang="scss">
+// Center BrandLogo in vertical nav header
+.layout-vertical-nav .nav-header .app-title-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin-inline-end: 0;
+}
+
+// Smooth size transition for collapsed state
+.layout-vertical-nav .brand-logo {
+  transition: font-size 0.25s ease-in-out;
+}
+
+// Collapsed state: shrink font to fit 80px width
+.layout-vertical-nav-collapsed .layout-vertical-nav:not(.hovered) {
+  .brand-logo {
+    font-size: 14px !important;
+  }
+}
+</style>

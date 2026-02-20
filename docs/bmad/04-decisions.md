@@ -1992,6 +1992,22 @@ definePage({
   - Pages publiques (non auth) reçoivent le nom via `/api/public/theme` — pas besoin d'être connecté
   - White-labeling possible sans modifier le code
 
+## ADR-085 : BrandLogo dans toutes les navbars + Settings General redesign
+
+- **Date** : 2026-02-20
+- **Contexte** : L'ancien logo SVG + titre statique "Leezr" restait dans les navbars verticales et horizontales après l'ajout de `BrandLogo`. La page General Settings utilisait un formulaire classique au lieu d'un inline edit, et les métadonnées système étaient dans une VList séparée.
+- **Décision** :
+  - `themeConfig.js` : `logo` remplacé par `h(BrandLogo, { size: 'md' })`, `title` vidé — le SVG original n'est plus utilisé
+  - Navbars horizontales (Platform + Default) : `VNodeRenderer + themeConfig.app.title` remplacés par `<BrandLogo size="md" />`
+  - Navbars verticales : CSS global pour centrer le logo (`.app-title-wrapper { flex: 1; justify-content: center; margin-inline-end: 0 }`) et réduire la taille en mode collapsed (`font-size: 14px !important` via `.layout-vertical-nav-collapsed .layout-vertical-nav:not(.hovered)`)
+  - `BrandLogo.vue` : ajout classes CSS `brand-logo`, `brand-text`, `brand-dot` pour ciblage CSS contextuel
+  - `_SettingsGeneral.vue` : refonte en une seule VCard horizontale — brand (inline-editable) à gauche avec version + environnement, puis 4 stats (Build, Commit, Build Date, Uptime) séparées par des `VDivider vertical`. Responsive : 2 stats par ligne en mobile.
+- **Conséquences** :
+  - Le brand `leezr.` apparaît dans toutes les navbars (vertical, horizontal, platform, company)
+  - Le logo s'adapte au collapsed sidebar (texte complet réduit à 14px, transition fluide 0.25s)
+  - General Settings : vue compacte et professionnelle en une seule carte
+  - L'ancien SVG logo (`@images/logo.svg`) n'est plus importé dans `themeConfig.js`
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
