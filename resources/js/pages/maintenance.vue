@@ -1,7 +1,5 @@
 <script setup>
 import '@lottiefiles/lottie-player'
-import { applyTheme } from '@/composables/useApplyTheme'
-import { applyTypography } from '@/composables/useApplyTypography'
 
 definePage({
   meta: {
@@ -9,6 +7,8 @@ definePage({
     public: true,
   },
 })
+
+usePublicTheme()
 
 const { bindPlayer } = useMaintenanceTheme()
 
@@ -45,14 +45,6 @@ onMounted(async () => {
       pageData.description = data.description ?? ''
       pageData.cta_text = data.cta_text || pageData.cta_text
       pageData.list_slug = data.list_slug || pageData.list_slug
-
-      // Apply server-side theme (primary color + typography)
-      if (data.primary_color) {
-        applyTheme({ primary_color: data.primary_color })
-      }
-      if (data.typography) {
-        applyTypography(data.typography)
-      }
     }
   }
   catch {

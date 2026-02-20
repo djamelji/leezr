@@ -16,6 +16,8 @@ definePage({
   },
 })
 
+usePublicTheme()
+
 const email = ref('')
 const isLoading = ref(false)
 const successMessage = ref('')

@@ -120,7 +120,7 @@ export const setupGuards = router => {
 
         toast('Module not available for your company.', 'warning')
 
-        return '/'
+        return '/dashboard'
       }
     }
   })

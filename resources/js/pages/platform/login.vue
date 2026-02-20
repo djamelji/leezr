@@ -18,6 +18,8 @@ definePage({
   },
 })
 
+usePublicTheme()
+
 const platformAuth = usePlatformAuthStore()
 const router = useRouter()
 

@@ -1887,6 +1887,38 @@ definePage({
   - Les emails de confirmation ne sont pas encore envoyés (infrastructure email à venir) — le message utilisateur l'indique clairement
   - Aucun CMS complexity — champs texte simples, preview live, design thème-aware
 
+## ADR-079 : Public Theme Endpoint — Auth Pages Theme Alignment
+
+- **Date** : 2026-02-20
+- **Contexte** : Les pages d'authentification (`/login`, `/platform/login`, `/forgot-password`, `/reset-password`, `/register`) utilisent les tokens Vuetify (`text-primary`, `bg-surface`) mais chargent la couleur primaire par défaut (`#7367F0`) au lieu de la couleur configurée par l'admin dans Platform Settings. Même problème résolu pour `/maintenance` en ADR-078.
+- **Décision** :
+  - Endpoint public `GET /api/public/theme` → retourne `primary_color`, `primary_darken_color`, `typography` depuis `UIResolverService::forPlatform()` + `TypographyResolverService::forPlatform()`. Throttle 30/min, pas d'auth.
+  - Composable `usePublicTheme()` → fetch une fois par session SPA (flag module-level), applique via `applyTheme()` + `applyTypography()`. Silent fail.
+  - Ajouté à 7 pages auth + `maintenance.vue` (remplace le fetch inline de thème/typo).
+- **Fichiers** : `PublicThemeController.php` (CREATE), `usePublicTheme.js` (CREATE), `routes/api.php` (MODIFY), 7 pages auth (MODIFY +1 ligne chacune), `maintenance.vue` (MODIFY simplifié).
+- **Conséquences** :
+  - Changer la couleur primaire dans Theme Settings → toutes les pages publiques (auth + maintenance) reflètent immédiatement le changement
+  - Typography (ex: Poppins) s'applique sur toutes les pages publiques
+  - Dark mode fonctionne nativement (tokens Vuetify)
+  - Aucun changement de layout ou de logique d'auth
+
+## ADR-080 : Public Landing Page at `/`
+
+- **Date** : 2026-02-20
+- **Contexte** : Le projet n'a pas de page d'accueil publique. La route `/` charge directement le dashboard authentifié. Besoin d'un point d'entrée marketing SaaS professionnel, thème-aware, responsive, dark mode.
+- **Décision** :
+  - Renommer `pages/index.vue` (dashboard) → `pages/dashboard.vue` (route `/dashboard`)
+  - Créer nouveau `pages/index.vue` comme landing page publique (layout: blank, public: true)
+  - 6 sections : Navbar sticky, Hero (gradient primaire + illustration), Features (6 cards), How It Works (3 steps), Stats (3 cards), CTA final + Footer
+  - Utilise `usePublicTheme()` pour synchroniser couleur primaire + typographie depuis le serveur
+  - 100% Vuetify components + tokens thème (`--v-theme-primary`, `bg-surface`, etc.)
+  - Post-login redirect mis à jour : `/` → `/dashboard` dans login.vue, register.vue, safeRedirect.js, guards.js
+- **Conséquences** :
+  - `/` = page marketing publique, accessible à tous
+  - `/dashboard` = dashboard authentifié (ancien `/`)
+  - Changement de couleur primaire dans Theme Settings → landing page reflète immédiatement
+  - Dark mode natif sur la landing page
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

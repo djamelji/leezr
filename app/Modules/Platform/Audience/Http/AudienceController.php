@@ -3,8 +3,6 @@
 namespace App\Modules\Platform\Audience\Http;
 
 use App\Core\Settings\MaintenanceSettingsPayload;
-use App\Core\Theme\UIResolverService;
-use App\Core\Typography\TypographyResolverService;
 use App\Http\Controllers\Controller;
 use App\Modules\Platform\Audience\AudienceConfirmService;
 use App\Modules\Platform\Audience\AudienceSubscribeService;
@@ -64,8 +62,6 @@ class AudienceController extends Controller
     public function maintenancePage(): JsonResponse
     {
         $p = MaintenanceSettingsPayload::fromSettings();
-        $theme = UIResolverService::forPlatform();
-        $typo = TypographyResolverService::forPlatform();
 
         return response()->json([
             'enabled' => $p->enabled,
@@ -74,13 +70,6 @@ class AudienceController extends Controller
             'description' => $p->description,
             'cta_text' => $p->ctaText,
             'list_slug' => $p->listSlug,
-            'primary_color' => $theme->primaryColor,
-            'typography' => [
-                'active_source' => $typo['active_source'],
-                'active_family_name' => $typo['active_family_name'],
-                'font_faces' => $typo['font_faces'],
-                'google_weights' => $typo['google_weights'] ?? [],
-            ],
         ]);
     }
 }

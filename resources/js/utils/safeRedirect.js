@@ -6,7 +6,7 @@
  * @param {string} fallback — safe default if redirect is invalid
  * @returns {string} — safe redirect path
  */
-export function safeRedirect(redirect, fallback = '/') {
+export function safeRedirect(redirect, fallback = '/dashboard') {
   if (!redirect || typeof redirect !== 'string')
     return fallback
 

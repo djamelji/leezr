@@ -17,6 +17,8 @@ definePage({
   },
 })
 
+usePublicTheme()
+
 const route = useRoute()
 const router = useRouter()
 

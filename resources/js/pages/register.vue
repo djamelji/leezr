@@ -18,6 +18,8 @@ definePage({
   },
 })
 
+usePublicTheme()
+
 const auth = useAuthStore()
 const runtime = useRuntimeStore()
 const router = useRouter()
@@ -54,7 +56,7 @@ const handleRegister = async () => {
     // Reset runtime to cold — the guard will boot('company') on redirect
     runtime.teardown()
 
-    await router.push('/')
+    await router.push('/dashboard')
   }
   catch (error) {
     if (error?.data?.errors)

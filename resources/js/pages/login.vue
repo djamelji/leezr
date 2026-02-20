@@ -19,6 +19,8 @@ definePage({
   },
 })
 
+usePublicTheme()
+
 const auth = useAuthStore()
 const runtime = useRuntimeStore()
 const router = useRouter()
@@ -46,7 +48,7 @@ const handleLogin = async () => {
     // Reset runtime to cold — the guard will boot('company') on redirect
     runtime.teardown()
 
-    const redirect = safeRedirect(route.query.redirect, '/')
+    const redirect = safeRedirect(route.query.redirect, '/dashboard')
 
     await router.push(redirect)
   }

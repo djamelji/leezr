@@ -2,6 +2,7 @@
 
 use App\Core\Auth\AuthController;
 use App\Core\Auth\PasswordResetController;
+use App\Core\Theme\Http\PublicThemeController;
 use App\Modules\Platform\Audience\Http\AudienceController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,9 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
+
+// Public theme (primary color + typography for unauthenticated pages)
+Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:30,1');
 
 // Audience — public (throttled, no auth)
 Route::prefix('audience')->middleware('throttle:10,1')->group(function () {

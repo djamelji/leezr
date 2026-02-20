@@ -33,6 +33,7 @@ declare module 'vue-router/auto-routes' {
     'company-shipments': RouteRecordInfo<'company-shipments', '/company/shipments', Record<never, never>, Record<never, never>>,
     'company-shipments-id': RouteRecordInfo<'company-shipments-id', '/company/shipments/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-shipments-create': RouteRecordInfo<'company-shipments-create', '/company/shipments/create', Record<never, never>, Record<never, never>>,
+    'dashboard': RouteRecordInfo<'dashboard', '/dashboard', Record<never, never>, Record<never, never>>,
     'forgot-password': RouteRecordInfo<'forgot-password', '/forgot-password', Record<never, never>, Record<never, never>>,
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
     'maintenance': RouteRecordInfo<'maintenance', '/maintenance', Record<never, never>, Record<never, never>>,
