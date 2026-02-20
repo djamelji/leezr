@@ -2008,6 +2008,26 @@ definePage({
   - General Settings : vue compacte et professionnelle en une seule carte
   - L'ancien SVG logo (`@images/logo.svg`) n'est plus importé dans `themeConfig.js`
 
+## ADR-086 : Role-Based Views in Shipment Module — Dual Entry Points
+
+- **Date** : 2026-02-18
+- **Contexte** : Le module Shipments affiche la même UI à tous les utilisateurs. Un Driver voit la même page `/shipments` qu'un Manager. BMAD P6 prescrit des pages séparées par rôle, pas des `v-if` dans la même page. Le système RBAC est mature (CompanyRole, permissions, bundles, CompanyAccess).
+- **Décision** :
+  - Architecture dual entry points : `/shipments` (management: view, create, assign) et `/my-deliveries` (driver: voir ses livraisons assignées, mettre à jour le statut)
+  - Migration : `assigned_to_user_id` nullable FK sur `shipments` + index compound `(company_id, assigned_to_user_id, status)`
+  - 2 nouvelles permissions : `shipments.assign` (assigner des expéditions) et `shipments.view_own` (voir ses livraisons assignées)
+  - 1 nouveau bundle : `shipments.delivery` = `[shipments.view_own, shipments.manage_status]`
+  - Bundle `shipments.operations` mis à jour : inclut désormais `shipments.assign`
+  - Driver role dans JobdomainRegistry : remplace les permissions directes par le bundle `shipments.delivery`
+  - Tout le nouveau code vit sous `app/Modules/Logistics/Shipments/` (MyDeliveryController, MyDeliveryReadModel, AssignShipment use case)
+  - `app/Core/Models/Shipment.php` reste persistence-only (fillable + relationship, pas de logique métier)
+  - Routes management protégées par `shipments.view`, routes driver par `shipments.view_own` — séparation stricte par middleware
+- **Conséquences** :
+  - Le Driver ne voit que "My Deliveries" dans la nav, pas "Shipments"
+  - Le Manager/Dispatcher peut assigner des expéditions à des membres
+  - Les routes existantes `GET /shipments` reçoivent maintenant le middleware `shipments.view` (resserrement de sécurité)
+  - Pattern réutilisable pour d'autres modules avec des vues par rôle (ex: futurs modules fleet, dispatch)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

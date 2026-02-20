@@ -52,10 +52,7 @@ class JobdomainRegistry
                         'bundles' => [
                             'members.team_access',
                             'settings.company_info',
-                        ],
-                        'permissions' => [
-                            'shipments.view',
-                            'shipments.manage_status',
+                            'shipments.delivery',
                         ],
                     ],
                     'ops_manager' => [

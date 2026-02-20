@@ -1,33 +1,24 @@
 <script setup>
-import { useAuthStore } from '@/core/stores/auth'
-import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
+import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
-const auth = useAuthStore()
-const shipmentStore = useShipmentStore()
+const deliveryStore = useDeliveryStore()
 const router = useRouter()
 
 const isLoading = ref(true)
 const statusFilter = ref('')
-const searchQuery = ref('')
-
-const canManage = computed(() => auth.hasPermission('shipments.create'))
 
 const headers = [
   { title: 'Reference', key: 'reference' },
   { title: 'Status', key: 'status', width: '140px' },
-  { title: 'Assigned To', key: 'assigned_to', sortable: false },
-  { title: 'Origin', key: 'origin_address', sortable: false },
   { title: 'Destination', key: 'destination_address', sortable: false },
   { title: 'Scheduled', key: 'scheduled_at' },
-  { title: 'Created by', key: 'created_by', sortable: false },
   { title: 'Actions', key: 'actions', align: 'center', width: '80px', sortable: false },
 ]
 
 const statusOptions = [
   { title: 'All', value: '' },
-  { title: 'Draft', value: 'draft' },
   { title: 'Planned', value: 'planned' },
   { title: 'In Transit', value: 'in_transit' },
   { title: 'Delivered', value: 'delivered' },
@@ -76,13 +67,12 @@ const truncate = (str, len = 40) => {
   return str.length > len ? `${str.substring(0, len)}...` : str
 }
 
-const loadShipments = async (page = 1) => {
+const loadDeliveries = async (page = 1) => {
   isLoading.value = true
   try {
-    await shipmentStore.fetchShipments({
+    await deliveryStore.fetchDeliveries({
       page,
       status: statusFilter.value || undefined,
-      search: searchQuery.value || undefined,
     })
   }
   finally {
@@ -90,12 +80,12 @@ const loadShipments = async (page = 1) => {
   }
 }
 
-onMounted(() => loadShipments())
+onMounted(() => loadDeliveries())
 
-watch([statusFilter, searchQuery], () => loadShipments(1))
+watch(statusFilter, () => loadDeliveries(1))
 
 const onPageChange = page => {
-  loadShipments(page)
+  loadDeliveries(page)
 }
 </script>
 
@@ -104,31 +94,13 @@ const onPageChange = page => {
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
         <div class="d-flex align-center gap-x-2">
-          <VIcon icon="tabler-truck" />
-          <span>Shipments</span>
+          <VIcon icon="tabler-truck-delivery" />
+          <span>My Deliveries</span>
         </div>
-        <VBtn
-          v-if="canManage"
-          prepend-icon="tabler-plus"
-          :to="{ name: 'company-shipments-create' }"
-        >
-          New Shipment
-        </VBtn>
       </VCardTitle>
 
       <VCardText>
         <VRow class="mb-4">
-          <VCol
-            cols="12"
-            md="4"
-          >
-            <AppTextField
-              v-model="searchQuery"
-              placeholder="Search by reference..."
-              prepend-inner-icon="tabler-search"
-              clearable
-            />
-          </VCol>
           <VCol
             cols="12"
             md="3"
@@ -145,15 +117,15 @@ const onPageChange = page => {
 
       <VDataTable
         :headers="headers"
-        :items="shipmentStore.shipments"
+        :items="deliveryStore.deliveries"
         :loading="isLoading"
-        :items-per-page="shipmentStore.pagination.per_page"
+        :items-per-page="deliveryStore.pagination.per_page"
         hide-default-footer
       >
         <!-- Reference -->
         <template #item.reference="{ item }">
           <RouterLink
-            :to="{ name: 'company-shipments-id', params: { id: item.id } }"
+            :to="{ name: 'company-my-deliveries-id', params: { id: item.id } }"
             class="text-primary font-weight-medium"
           >
             {{ item.reference }}
@@ -170,22 +142,6 @@ const onPageChange = page => {
           </VChip>
         </template>
 
-        <!-- Assigned To -->
-        <template #item.assigned_to="{ item }">
-          <span v-if="item.assigned_to">
-            {{ item.assigned_to.display_name }}
-          </span>
-          <span
-            v-else
-            class="text-disabled"
-          >—</span>
-        </template>
-
-        <!-- Origin -->
-        <template #item.origin_address="{ item }">
-          {{ truncate(item.origin_address) }}
-        </template>
-
         <!-- Destination -->
         <template #item.destination_address="{ item }">
           {{ truncate(item.destination_address) }}
@@ -196,24 +152,13 @@ const onPageChange = page => {
           {{ formatDate(item.scheduled_at) }}
         </template>
 
-        <!-- Created by -->
-        <template #item.created_by="{ item }">
-          <template v-if="item.created_by">
-            {{ item.created_by.display_name }}
-          </template>
-          <span
-            v-else
-            class="text-disabled"
-          >—</span>
-        </template>
-
         <!-- Actions -->
         <template #item.actions="{ item }">
           <VBtn
             icon
             size="small"
             variant="text"
-            :to="{ name: 'company-shipments-id', params: { id: item.id } }"
+            :to="{ name: 'company-my-deliveries-id', params: { id: item.id } }"
           >
             <VIcon icon="tabler-eye" />
           </VBtn>
@@ -222,7 +167,7 @@ const onPageChange = page => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No shipments found.
+            No deliveries assigned to you.
           </div>
         </template>
 
@@ -231,12 +176,12 @@ const onPageChange = page => {
           <VDivider />
           <div class="d-flex align-center justify-space-between flex-wrap gap-3 pa-4">
             <span class="text-body-2 text-disabled">
-              {{ shipmentStore.pagination.total }} shipment(s)
+              {{ deliveryStore.pagination.total }} delivery(ies)
             </span>
             <VPagination
-              v-if="shipmentStore.pagination.last_page > 1"
-              :model-value="shipmentStore.pagination.current_page"
-              :length="shipmentStore.pagination.last_page"
+              v-if="deliveryStore.pagination.last_page > 1"
+              :model-value="deliveryStore.pagination.current_page"
+              :length="deliveryStore.pagination.last_page"
               :total-visible="5"
               @update:model-value="onPageChange"
             />

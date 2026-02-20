@@ -28,6 +28,8 @@ declare module 'vue-router/auto-routes' {
     'company-members': RouteRecordInfo<'company-members', '/company/members', Record<never, never>, Record<never, never>>,
     'company-members-id': RouteRecordInfo<'company-members-id', '/company/members/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-modules': RouteRecordInfo<'company-modules', '/company/modules', Record<never, never>, Record<never, never>>,
+    'company-my-deliveries': RouteRecordInfo<'company-my-deliveries', '/company/my-deliveries', Record<never, never>, Record<never, never>>,
+    'company-my-deliveries-id': RouteRecordInfo<'company-my-deliveries-id', '/company/my-deliveries/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-roles': RouteRecordInfo<'company-roles', '/company/roles', Record<never, never>, Record<never, never>>,
     'company-settings': RouteRecordInfo<'company-settings', '/company/settings', Record<never, never>, Record<never, never>>,
     'company-shipments': RouteRecordInfo<'company-shipments', '/company/shipments', Record<never, never>, Record<never, never>>,

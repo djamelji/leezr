@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 // Platform auth — public (throttled)
 Route::post('/login', [PlatformAuthController::class, 'login'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:15,1');
 Route::post('/forgot-password', [PlatformPasswordResetController::class, 'forgotPassword'])
     ->middleware('throttle:5,1');
 Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPassword'])

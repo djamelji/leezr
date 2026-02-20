@@ -9,6 +9,7 @@ use App\Modules\Core\Settings\Http\CompanyController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
 use App\Modules\Core\Settings\Http\CompanyJobdomainController;
+use App\Modules\Logistics\Shipments\Http\MyDeliveryController;
 use App\Modules\Logistics\Shipments\Http\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,11 +53,24 @@ Route::put('/modules/{key}/disable', [CompanyModuleController::class, 'disable']
 
 // ─── Shipments (module-gated) ─────────────────────────────
 Route::middleware('company.access:use-module,logistics_shipments')->group(function () {
-    Route::get('/shipments', [ShipmentController::class, 'index']);
+    // Management routes
+    Route::get('/shipments', [ShipmentController::class, 'index'])
+        ->middleware('company.access:use-permission,shipments.view');
     Route::post('/shipments', [ShipmentController::class, 'store'])
         ->middleware('company.access:use-permission,shipments.create');
-    Route::get('/shipments/{id}', [ShipmentController::class, 'show']);
+    Route::get('/shipments/{id}', [ShipmentController::class, 'show'])
+        ->middleware('company.access:use-permission,shipments.view');
     Route::put('/shipments/{id}/status', [ShipmentController::class, 'changeStatus'])
+        ->middleware('company.access:use-permission,shipments.manage_status');
+    Route::post('/shipments/{id}/assign', [ShipmentController::class, 'assign'])
+        ->middleware('company.access:use-permission,shipments.assign');
+
+    // Driver routes (strictly separated)
+    Route::get('/my-deliveries', [MyDeliveryController::class, 'index'])
+        ->middleware('company.access:use-permission,shipments.view_own');
+    Route::get('/my-deliveries/{id}', [MyDeliveryController::class, 'show'])
+        ->middleware('company.access:use-permission,shipments.view_own');
+    Route::put('/my-deliveries/{id}/status', [MyDeliveryController::class, 'updateStatus'])
         ->middleware('company.access:use-permission,shipments.manage_status');
 });
 

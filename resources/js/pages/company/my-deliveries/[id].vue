@@ -1,57 +1,36 @@
 <script setup>
-import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
-import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
+import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
-const auth = useAuthStore()
-const companyStore = useCompanyStore()
-const shipmentStore = useShipmentStore()
+const deliveryStore = useDeliveryStore()
 const route = useRoute()
 const router = useRouter()
 
 const isLoading = ref(true)
 const isChangingStatus = ref(false)
-const isAssigning = ref(false)
-const selectedUserId = ref(null)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const canManage = computed(() => auth.hasPermission('shipments.manage_status'))
-const canAssign = computed(() => auth.hasPermission('shipments.assign'))
-
-const memberOptions = computed(() => {
-  return companyStore.members.map(m => ({
-    title: m.user.display_name,
-    value: m.user.id,
-  }))
-})
-
-const shipment = computed(() => shipmentStore.currentShipment)
+const delivery = computed(() => deliveryStore.currentDelivery)
 
 const transitions = {
-  draft: [
-    { status: 'planned', label: 'Mark as Planned', color: 'info', icon: 'tabler-calendar-check' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
-  ],
   planned: [
     { status: 'in_transit', label: 'Start Transit', color: 'warning', icon: 'tabler-truck' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
   ],
   in_transit: [
     { status: 'delivered', label: 'Mark Delivered', color: 'success', icon: 'tabler-check' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
   ],
   delivered: [],
   canceled: [],
+  draft: [],
 }
 
 const availableTransitions = computed(() => {
-  if (!shipment.value)
+  if (!delivery.value)
     return []
 
-  return transitions[shipment.value.status] || []
+  return transitions[delivery.value.status] || []
 })
 
 const statusColor = status => {
@@ -97,7 +76,7 @@ const changeStatus = async newStatus => {
   successMessage.value = ''
 
   try {
-    await shipmentStore.changeStatus(shipment.value.id, newStatus)
+    await deliveryStore.updateStatus(delivery.value.id, newStatus)
     successMessage.value = `Status changed to "${statusLabel(newStatus)}".`
   }
   catch (error) {
@@ -108,36 +87,12 @@ const changeStatus = async newStatus => {
   }
 }
 
-const assignShipment = async () => {
-  isAssigning.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-
-  try {
-    await shipmentStore.assignShipment(shipment.value.id, selectedUserId.value || null)
-    successMessage.value = selectedUserId.value ? 'Shipment assigned.' : 'Assignment removed.'
-  }
-  catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to assign shipment.'
-  }
-  finally {
-    isAssigning.value = false
-  }
-}
-
 onMounted(async () => {
   try {
-    await shipmentStore.fetchShipment(route.params.id)
-
-    if (canAssign.value) {
-      await companyStore.fetchMembers()
-    }
-
-    // Init selected user from current assignment
-    selectedUserId.value = shipmentStore.currentShipment?.assigned_to_user_id || null
+    await deliveryStore.fetchDelivery(route.params.id)
   }
   catch {
-    await router.push({ name: 'company-shipments' })
+    await router.push({ name: 'company-my-deliveries' })
   }
   finally {
     isLoading.value = false
@@ -152,19 +107,19 @@ onMounted(async () => {
         icon
         variant="text"
         size="small"
-        :to="{ name: 'company-shipments' }"
+        :to="{ name: 'company-my-deliveries' }"
       >
         <VIcon icon="tabler-arrow-left" />
       </VBtn>
       <h4 class="text-h4">
-        {{ shipment?.reference || 'Shipment' }}
+        {{ delivery?.reference || 'Delivery' }}
       </h4>
       <VChip
-        v-if="shipment"
-        :color="statusColor(shipment.status)"
+        v-if="delivery"
+        :color="statusColor(delivery.status)"
         size="small"
       >
-        {{ statusLabel(shipment.status) }}
+        {{ statusLabel(delivery.status) }}
       </VChip>
     </div>
 
@@ -173,7 +128,7 @@ onMounted(async () => {
       indeterminate
     />
 
-    <template v-else-if="shipment">
+    <template v-else-if="delivery">
       <VAlert
         v-if="successMessage"
         type="success"
@@ -195,13 +150,13 @@ onMounted(async () => {
       </VAlert>
 
       <VRow>
-        <!-- Shipment details -->
+        <!-- Delivery details -->
         <VCol
           cols="12"
           md="8"
         >
           <VCard>
-            <VCardTitle>Shipment Details</VCardTitle>
+            <VCardTitle>Delivery Details</VCardTitle>
             <VCardText>
               <VRow>
                 <VCol
@@ -212,7 +167,7 @@ onMounted(async () => {
                     Reference
                   </div>
                   <div class="text-body-1 font-weight-medium">
-                    {{ shipment.reference }}
+                    {{ delivery.reference }}
                   </div>
                 </VCol>
 
@@ -224,7 +179,7 @@ onMounted(async () => {
                     Scheduled Date
                   </div>
                   <div class="text-body-1">
-                    {{ formatDate(shipment.scheduled_at) }}
+                    {{ formatDate(delivery.scheduled_at) }}
                   </div>
                 </VCol>
 
@@ -236,7 +191,7 @@ onMounted(async () => {
                     Origin
                   </div>
                   <div class="text-body-1">
-                    {{ shipment.origin_address || '—' }}
+                    {{ delivery.origin_address || '—' }}
                   </div>
                 </VCol>
 
@@ -248,7 +203,7 @@ onMounted(async () => {
                     Destination
                   </div>
                   <div class="text-body-1">
-                    {{ shipment.destination_address || '—' }}
+                    {{ delivery.destination_address || '—' }}
                   </div>
                 </VCol>
 
@@ -257,55 +212,7 @@ onMounted(async () => {
                     Notes
                   </div>
                   <div class="text-body-1">
-                    {{ shipment.notes || '—' }}
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    Assigned To
-                  </div>
-                  <div class="text-body-1">
-                    <template v-if="shipment.assigned_to">
-                      {{ shipment.assigned_to.display_name }}
-                    </template>
-                    <span
-                      v-else
-                      class="text-disabled"
-                    >Unassigned</span>
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    Created by
-                  </div>
-                  <div class="text-body-1">
-                    <template v-if="shipment.created_by">
-                      {{ shipment.created_by.display_name }}
-                    </template>
-                    <span
-                      v-else
-                      class="text-disabled"
-                    >—</span>
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    Created at
-                  </div>
-                  <div class="text-body-1">
-                    {{ formatDate(shipment.created_at) }}
+                    {{ delivery.notes || '—' }}
                   </div>
                 </VCol>
               </VRow>
@@ -319,9 +226,9 @@ onMounted(async () => {
           md="4"
         >
           <VCard>
-            <VCardTitle>Actions</VCardTitle>
+            <VCardTitle>Update Status</VCardTitle>
             <VCardText>
-              <template v-if="canManage && availableTransitions.length">
+              <template v-if="availableTransitions.length">
                 <div class="d-flex flex-column gap-3">
                   <VBtn
                     v-for="transition in availableTransitions"
@@ -341,32 +248,6 @@ onMounted(async () => {
                   No actions available.
                 </div>
               </template>
-            </VCardText>
-          </VCard>
-
-          <!-- Assignment card -->
-          <VCard
-            v-if="canAssign"
-            class="mt-4"
-          >
-            <VCardTitle>Assignment</VCardTitle>
-            <VCardText>
-              <AppSelect
-                v-model="selectedUserId"
-                :items="memberOptions"
-                placeholder="Select a member..."
-                clearable
-                class="mb-3"
-              />
-              <VBtn
-                color="primary"
-                prepend-icon="tabler-user-check"
-                :loading="isAssigning"
-                block
-                @click="assignShipment"
-              >
-                {{ selectedUserId ? 'Assign' : 'Unassign' }}
-              </VBtn>
             </VCardText>
           </VCard>
         </VCol>

@@ -1,5 +1,5 @@
 <script setup>
-import { useShipmentStore } from '@/core/stores/shipment'
+import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 

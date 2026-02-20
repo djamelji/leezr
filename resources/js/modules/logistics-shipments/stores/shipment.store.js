@@ -60,6 +60,23 @@ export const useShipmentStore = defineStore('shipment', {
       return data.shipment
     },
 
+    async assignShipment(id, userId) {
+      const data = await $api(`/shipments/${id}/assign`, {
+        method: 'POST',
+        body: { user_id: userId },
+      })
+
+      this._currentShipment = data.shipment
+
+      // Update in list if present
+      const index = this._shipments.findIndex(s => s.id === id)
+      if (index !== -1) {
+        this._shipments[index] = data.shipment
+      }
+
+      return data.shipment
+    },
+
     async changeStatus(id, status) {
       const data = await $api(`/shipments/${id}/status`, {
         method: 'PUT',

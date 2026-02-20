@@ -188,6 +188,7 @@ class DevSeeder extends Seeder
             ['company_id' => $company->id, 'reference' => 'SHP-DEMO-0002'],
             [
                 'created_by_user_id' => $owner->id,
+                'assigned_to_user_id' => $user->id,
                 'status' => Shipment::STATUS_PLANNED,
                 'origin_address' => '8 Boulevard Haussmann, 75009 Paris',
                 'destination_address' => '22 Rue de la Gare, 33000 Bordeaux',
@@ -199,6 +200,7 @@ class DevSeeder extends Seeder
             ['company_id' => $company->id, 'reference' => 'SHP-DEMO-0003'],
             [
                 'created_by_user_id' => $admin->id,
+                'assigned_to_user_id' => $user->id,
                 'status' => Shipment::STATUS_IN_TRANSIT,
                 'origin_address' => '3 Place Bellecour, 69002 Lyon',
                 'destination_address' => '15 Quai des Belges, 13001 Marseille',

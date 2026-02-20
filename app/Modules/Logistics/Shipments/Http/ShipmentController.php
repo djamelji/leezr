@@ -2,9 +2,11 @@
 
 namespace App\Modules\Logistics\Shipments\Http;
 
+use App\Modules\Logistics\Shipments\Http\Requests\AssignShipmentRequest;
 use App\Modules\Logistics\Shipments\Http\Requests\ChangeShipmentStatusRequest;
 use App\Modules\Logistics\Shipments\Http\Requests\StoreShipmentRequest;
 use App\Modules\Logistics\Shipments\ReadModels\ShipmentReadModel;
+use App\Modules\Logistics\Shipments\UseCases\AssignShipment;
 use App\Modules\Logistics\Shipments\UseCases\ChangeShipmentStatus;
 use App\Modules\Logistics\Shipments\UseCases\CreateShipment;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +20,7 @@ class ShipmentController
             company: $request->attributes->get('company'),
             status: $request->input('status'),
             search: $request->input('search'),
+            assignedToUserId: $request->filled('assigned_to') ? (int) $request->input('assigned_to') : null,
             perPage: (int) $request->input('per_page', 15),
         );
 
@@ -46,6 +49,26 @@ class ShipmentController
         );
 
         return response()->json([
+            'shipment' => $shipment,
+        ]);
+    }
+
+    public function assign(AssignShipmentRequest $request, int $id): JsonResponse
+    {
+        try {
+            $shipment = AssignShipment::handle(
+                company: $request->attributes->get('company'),
+                shipmentId: $id,
+                userId: $request->input('user_id'),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Shipment assigned.',
             'shipment' => $shipment,
         ]);
     }

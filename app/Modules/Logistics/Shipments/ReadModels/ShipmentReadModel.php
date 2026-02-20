@@ -15,10 +15,11 @@ class ShipmentReadModel
         Company $company,
         ?string $status = null,
         ?string $search = null,
+        ?int $assignedToUserId = null,
         int $perPage = 15,
     ): LengthAwarePaginator {
         $query = Shipment::where('company_id', $company->id)
-            ->with('createdBy:id,name')
+            ->with('createdBy:id,first_name,last_name', 'assignedTo:id,first_name,last_name')
             ->orderByDesc('created_at');
 
         if ($status) {
@@ -27,6 +28,10 @@ class ShipmentReadModel
 
         if ($search) {
             $query->where('reference', 'like', "%{$search}%");
+        }
+
+        if ($assignedToUserId !== null) {
+            $query->where('assigned_to_user_id', $assignedToUserId);
         }
 
         return $query->paginate($perPage);
@@ -38,7 +43,7 @@ class ShipmentReadModel
     public static function find(Company $company, int $id): Shipment
     {
         return Shipment::where('company_id', $company->id)
-            ->with('createdBy:id,name')
+            ->with('createdBy:id,first_name,last_name', 'assignedTo:id,first_name,last_name')
             ->findOrFail($id);
     }
 }
