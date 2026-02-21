@@ -2071,4 +2071,71 @@ definePage({
 
 ---
 
+## ADR-088 : Frontend Modular Governance Standard
+
+- **Date** : 2026-02-21
+- **Contexte** : Suite aux refactors P1–P3 (ADR-087), `core/` est désormais infrastructure-only et tout le CRUD métier vit dans `modules/`. Cependant, sans règles formelles, le risque de régression architecturale est élevé : un développeur pressé pourrait ajouter un store métier dans `core/`, hardcoder des routes dans un layout, ou créer des dépendances croisées entre modules. Ce ADR formalise les règles de gouvernance permanentes pour garantir l'isolation modulaire, la portabilité des modules, et la préparation marketplace.
+- **Décision** : Les règles suivantes sont permanentes et non-négociables.
+
+  **R1 — `core/` est infrastructure-only**
+  - Contenu autorisé : auth, session, module registry, runtime utilities, broadcast, cache, state machine
+  - Contenu interdit : CRUD métier, feature stores, state spécifique à un module
+  - Fichiers autorisés dans `core/stores/` : `auth.js`, `platformAuth.js`, `module.js` — aucun autre
+  - Tout ajout de store dans `core/` est une violation architecturale
+
+  **R2 — Tout le métier vit dans `modules/`**
+  - Stores Pinia (`*.store.js`)
+  - Composables métier (feature composables)
+  - Composants UI spécifiques au domaine (optionnel)
+  - Logique runtime spécifique au module (optionnel)
+  - Structure standard : `modules/<scope>/<domain>/<domain>.store.js`
+  - Scopes existants : `company/`, `platform-admin/`, `logistics-shipments/`
+
+  **R3 — Direction des dépendances (unidirectionnelle)**
+  - `pages/ → modules/ → core/` — jamais l'inverse
+  - `modules/` ne doit PAS importer d'autres modules sauf si explicitement documenté dans un ADR
+  - `core/` ne doit JAMAIS importer `modules/` (exception : `runtime.js` pour l'hydration, documentée dans ADR-087)
+  - Les layouts ne doivent contenir aucune logique métier — uniquement des composables de navigation (`useCompanyNav`, `usePlatformNav`)
+
+  **R4 — Convention de nommage des stores**
+  - Tous les stores modulaires utilisent le suffixe `*.store.js`
+  - Pas de nom générique (`store.js`) dans `core/`
+  - Pas de store métier dans `core/`
+  - Pinia ID : `<scope><Domain>` (ex: `companyMembers`, `platformUsers`, `platformSettings`)
+  - Export : `use<Scope><Domain>Store` (ex: `useMembersStore`, `usePlatformCompaniesStore`)
+
+  **R5 — Isolation des modules**
+  - Un module doit pouvoir être supprimé sans modifier `core/`
+  - Un module ne doit pas dépendre d'effets de bord cachés d'un autre module
+  - L'accès cross-module nécessite une frontière API explicite (composable partagé ou event bus)
+  - Chaque module est autonome : son store, ses pages, ses composables
+
+  **R6 — Gouvernance de la navigation**
+  - La navigation doit être module-driven (déclarée par les modules via `navItems` dans leur `ModuleClass`)
+  - Aucune route métier hardcodée dans les layouts, shortcuts, ou search bars
+  - Aucun résidu demo Vuexy dans la navigation
+  - La visibilité des items doit être basée sur les permissions ou l'activation des modules
+  - Les guards utilisent `to.meta.surface` et `to.meta.module` — pas de Sets hardcodés
+
+  **R7 — Séparation des scopes**
+  - Les modules `company/` et `platform-admin/` sont des bounded contexts séparés
+  - Ils ne partagent pas d'état directement (pas d'import croisé entre scopes)
+  - Les préoccupations partagées vivent dans `core/` (auth, runtime, module registry)
+  - API clients séparés : `$api` (company scope) vs `$platformApi` (platform scope)
+
+- **Conséquences** :
+  - Architecture isolée et portable — chaque module est auto-suffisant
+  - Discipline architecturale accrue — plus de raccourcis vers `core/`
+  - Légèrement plus de boilerplate (un store par domaine au lieu d'un monolithe)
+  - Structure marketplace-ready — un module peut être activé/désactivé sans impact sur le reste
+  - Les revues de code doivent vérifier les frontières modulaires
+
+- **Enforcement** :
+  - Tout store métier ajouté dans `core/` est une régression architecturale et doit être refusé
+  - Tout import cross-module doit être justifié dans un ADR dédié
+  - Les nouveaux modules doivent suivre la structure `modules/<scope>/<domain>/<domain>.store.js`
+  - Les layouts et guards ne doivent jamais référencer directement un store métier
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
