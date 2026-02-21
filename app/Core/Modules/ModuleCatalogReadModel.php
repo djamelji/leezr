@@ -6,13 +6,13 @@ use App\Core\Models\Company;
 
 /**
  * Read model that builds the full module catalog for a company.
- * Combines platform_modules + company_modules + capabilities into a single list.
+ * Combines platform_modules + company_modules + capabilities + entitlements into a single list.
  */
 class ModuleCatalogReadModel
 {
     /**
      * Get the full module catalog for a company.
-     * Returns all platform modules with their activation status and capabilities.
+     * Returns all platform modules with their activation status, capabilities, and entitlement info.
      */
     public static function forCompany(Company $company): array
     {
@@ -26,9 +26,13 @@ class ModuleCatalogReadModel
             ->get()
             ->keyBy('module_key');
 
-        return $platformModules->map(function (PlatformModule $pm) use ($companyModules) {
+        $entitlements = EntitlementResolver::allForCompany($company);
+
+        return $platformModules->map(function (PlatformModule $pm) use ($companyModules, $entitlements) {
             $cm = $companyModules->get($pm->key);
             $capabilities = ModuleRegistry::capabilities($pm->key);
+            $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
+            $entitlement = $entitlements[$pm->key] ?? ['entitled' => false, 'source' => null, 'reason' => 'unknown_module'];
 
             $isActive = $pm->is_enabled_globally
                 && $cm !== null
@@ -42,6 +46,12 @@ class ModuleCatalogReadModel
                 'is_enabled_for_company' => $cm?->is_enabled_for_company ?? false,
                 'is_active' => $isActive,
                 'capabilities' => $capabilities?->toArray() ?? [],
+                'type' => $manifest?->type ?? 'addon',
+                'is_entitled' => $entitlement['entitled'],
+                'entitlement_source' => $entitlement['source'],
+                'entitlement_reason' => $entitlement['reason'],
+                'requires' => $manifest?->requires ?? [],
+                'min_plan' => $manifest?->minPlan,
             ];
         })->all();
     }

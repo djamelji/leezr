@@ -25,5 +25,8 @@ final class ModuleManifest
         public readonly string $scope = 'company',
         public readonly string $type = 'core',
         public readonly string $visibility = 'visible',
+        public readonly array $requires = [],
+        public readonly ?string $minPlan = null,
+        public readonly ?array $compatibleJobdomains = null,
     ) {}
 }

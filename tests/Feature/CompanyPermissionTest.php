@@ -6,6 +6,8 @@ use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Company\RBAC\CompanyRole;
 use App\Core\Fields\FieldDefinitionCatalog;
+use App\Core\Jobdomains\Jobdomain;
+use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;
 use App\Core\Models\User;
@@ -54,6 +56,11 @@ class CompanyPermissionTest extends TestCase
         $this->noRole = User::factory()->create();
 
         $this->company = Company::create(['name' => 'RBAC Co', 'slug' => 'rbac-co']);
+
+        // Assign jobdomain so modules are entitled
+        JobdomainRegistry::sync();
+        $jobdomain = Jobdomain::where('key', 'logistique')->first();
+        $this->company->jobdomains()->attach($jobdomain->id);
 
         // Activer tous les modules
         foreach (ModuleRegistry::definitions() as $key => $def) {
@@ -547,14 +554,16 @@ class CompanyPermissionTest extends TestCase
             'shipments.manage_fields',
         ], $adminPerms);
 
-        // 6 operational permissions
+        // 8 operational permissions
         $this->assertEquals([
             'members.invite',
             'members.view',
             'settings.view',
+            'shipments.assign',
             'shipments.create',
             'shipments.manage_status',
             'shipments.view',
+            'shipments.view_own',
         ], $opPerms);
     }
 

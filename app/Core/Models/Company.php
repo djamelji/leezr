@@ -5,6 +5,7 @@ namespace App\Core\Models;
 use App\Company\RBAC\CompanyRole;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\CompanyModule;
+use App\Core\Plans\PlanRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,6 +17,7 @@ class Company extends Model
         'name',
         'slug',
         'status',
+        'plan_key',
     ];
 
     public function memberships(): HasMany
@@ -72,5 +74,10 @@ class Company extends Model
     public function isSuspended(): bool
     {
         return $this->status === 'suspended';
+    }
+
+    public function planLevel(): int
+    {
+        return PlanRegistry::level($this->plan_key ?? 'starter');
     }
 }

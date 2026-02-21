@@ -2138,4 +2138,53 @@ definePage({
 
 ---
 
+## ADR-089 : Module Entitlement System — Plan + Jobdomain + Dependencies
+
+- **Date** : 2026-02-21
+- **Contexte** : Le système de modules (ADR-021/062) a une infrastructure mature : `ModuleManifest` VO, `ModuleRegistry` agrégateur, `PlatformModule`/`CompanyModule` couches DB, `ModuleGate`, et middleware `CompanyAccess`. Les modules déclarent `type: 'core'|'addon'` dans leur manifest, mais **ce champ était idle** — aucun code ne l'appliquait. Problèmes : (1) `CompanyModuleController::enable()` ne vérifie que `isEnabledGlobally()` — tout admin peut activer n'importe quel module, (2) les modules core peuvent être désactivés, (3) pas de gating par plan, (4) pas de résolution de dépendances, (5) pas de compatibilité jobdomain, (6) pas de visibilité entitlement côté frontend.
+
+- **Décision** :
+
+  **1. Plan Abstraction — `PlanRegistry`**
+  - Registre statique déclaratif (comme `JobdomainRegistry`) avec niveaux numériques : `starter (0)`, `pro (10)`, `business (20)`
+  - Code-defined, pas en DB — le billing est différé (ADR-011)
+  - Migration : `companies.plan_key` (string, default 'starter')
+  - `PlanRegistry::meetsRequirement(companyPlan, requiredPlan)` — comparaison de niveaux
+
+  **2. Entitlement = Computed (pas de table)**
+  - `EntitlementResolver::check(Company, moduleKey)` — résolution en 4 gates :
+    1. **Core gate** — `type === 'core'` → toujours entitled, ne peut pas être désactivé
+    2. **Plan gate** — `minPlan` défini ET plan company insuffisant → rejeté
+    3. **Compat gate** — `compatibleJobdomains` défini ET jobdomain company pas dans la liste → rejeté
+    4. **Source gate** — module dans `default_modules` du jobdomain → entitled via jobdomain
+  - Retourne `{entitled, source, reason}` — pas de table d'entitlements
+
+  **3. Dependencies — `DependencyResolver`**
+  - `ModuleManifest` enrichi avec `requires[]` (module keys), `minPlan` (nullable), `compatibleJobdomains` (nullable)
+  - `DependencyResolver::canActivate()` — vérifie que tous les modules requis sont actifs
+  - `DependencyResolver::canDeactivate()` — vérifie qu'aucun module actif ne dépend de celui-ci
+
+  **4. Controller Wiring**
+  - `enable()` : vérifie `isEnabledGlobally` → entitlement → dependencies → activation
+  - `disable()` : vérifie core protection → dependencies → désactivation
+  - Messages d'erreur explicites : 'plan_required', 'incompatible_jobdomain', 'not_available'
+
+  **5. API Enrichment — `ModuleCatalogReadModel`**
+  - Ajoute `type`, `is_entitled`, `entitlement_source`, `entitlement_reason`, `requires`, `min_plan`
+
+  **6. Frontend — modules.vue entitlement-aware**
+  - Core → badge "Core", toggle toujours on, désactivé
+  - Entitled → toggle actif, badge "Included"
+  - Non-entitled → grayed out, badge "Requires Pro" ou "Not available"
+
+- **Conséquences** :
+  - Les modules core ne peuvent plus être désactivés
+  - Les modules addon nécessitent un entitlement (jobdomain ou futur achat)
+  - Le gating par plan fonctionne dès maintenant (même sans billing)
+  - Zéro nouvelle table — entitlement calculé dynamiquement
+  - Prêt pour marketplace : `minPlan`, `compatibleJobdomains`, `requires` déjà dans le contrat
+  - Les modules existants (Members, Settings, Shipments) ne changent pas — aucun `minPlan` défini
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
