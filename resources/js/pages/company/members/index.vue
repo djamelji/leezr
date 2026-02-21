@@ -2,13 +2,15 @@
 definePage({ meta: { surface: 'structure' } })
 
 import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
-import { useJobdomainStore } from '@/core/stores/jobdomain'
+import { useMembersStore } from '@/modules/company/members/members.store'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
 const auth = useAuthStore()
-const companyStore = useCompanyStore()
+const membersStore = useMembersStore()
+const settingsStore = useCompanySettingsStore()
 const jobdomainStore = useJobdomainStore()
 const router = useRouter()
 const { toast } = useAppToast()
@@ -79,8 +81,8 @@ const allowCustomFields = computed(() => jobdomainStore.allowCustomFields)
 
 onMounted(async () => {
   await Promise.all([
-    companyStore.fetchMembers(),
-    companyStore.fetchCompanyRoles().catch(() => {}),
+    membersStore.fetchMembers(),
+    settingsStore.fetchCompanyRoles().catch(() => {}),
   ])
 })
 
@@ -94,7 +96,7 @@ const removeMember = async member => {
     return
 
   try {
-    await companyStore.removeMember(member.id)
+    await membersStore.removeMember(member.id)
     successMessage.value = 'Member removed.'
   }
   catch (error) {
@@ -110,7 +112,7 @@ const openQuickView = async member => {
   quickViewLoading.value = true
 
   try {
-    const data = await companyStore.fetchMemberProfile(member.id)
+    const data = await membersStore.fetchMemberProfile(member.id)
 
     quickViewMember.value = { ...member, ...data.member }
     quickViewBaseFields.value = data.base_fields || {}
@@ -142,8 +144,8 @@ const openFieldsDrawer = async () => {
 
   try {
     await Promise.all([
-      companyStore.fetchFieldActivations(),
-      companyStore.fetchCustomFieldDefinitions(),
+      membersStore.fetchFieldActivations(),
+      membersStore.fetchCustomFieldDefinitions(),
     ])
   }
   finally {
@@ -191,8 +193,8 @@ const saveEditField = async () => {
     payload.options = editFieldForm.value.options.map(o => o.trim()).filter(o => o.length)
 
   try {
-    await companyStore.updateCustomFieldDefinition(editFieldDef.value.id, payload)
-    await companyStore.fetchFieldActivations()
+    await membersStore.updateCustomFieldDefinition(editFieldDef.value.id, payload)
+    await membersStore.fetchFieldActivations()
     toast('Custom field updated.', 'success')
     closeEditField()
   }
@@ -204,17 +206,17 @@ const saveEditField = async () => {
   }
 }
 
-const customFieldCount = computed(() => companyStore.customFieldDefinitions.length)
+const customFieldCount = computed(() => membersStore.customFieldDefinitions.length)
 
 // company_user activations only (member fields)
 const memberActivations = computed(() => {
-  return companyStore.fieldActivations.filter(
+  return membersStore.fieldActivations.filter(
     a => a.definition?.scope === 'company_user',
   )
 })
 
 const availableMemberDefs = computed(() => {
-  return companyStore.availableFieldDefinitions.filter(
+  return membersStore.availableFieldDefinitions.filter(
     d => d.scope === 'company_user',
   )
 })
@@ -223,7 +225,7 @@ const activeCount = computed(() => memberActivations.value.filter(a => a.enabled
 
 const activateField = async def => {
   try {
-    const data = await companyStore.upsertFieldActivation({
+    const data = await membersStore.upsertFieldActivation({
       field_definition_id: def.id,
       enabled: true,
       required_override: false,
@@ -239,7 +241,7 @@ const activateField = async def => {
 
 const toggleVisible = async (activation, enabled) => {
   try {
-    await companyStore.upsertFieldActivation({
+    await membersStore.upsertFieldActivation({
       field_definition_id: activation.field_definition_id,
       enabled,
       required_override: activation.required_override,
@@ -253,7 +255,7 @@ const toggleVisible = async (activation, enabled) => {
 
 const toggleRequired = async (activation, required) => {
   try {
-    await companyStore.upsertFieldActivation({
+    await membersStore.upsertFieldActivation({
       field_definition_id: activation.field_definition_id,
       enabled: activation.enabled,
       required_override: required,
@@ -292,7 +294,7 @@ const createCustomField = async () => {
     payload.options = createFieldForm.value.options.map(o => o.trim()).filter(o => o.length)
 
   try {
-    const data = await companyStore.createCustomFieldDefinition(payload)
+    const data = await membersStore.createCustomFieldDefinition(payload)
 
     toast(data.message, 'success')
     isCreateFieldDialogOpen.value = false
@@ -323,7 +325,7 @@ const executeDeleteField = async () => {
   deleteFieldLoading.value = true
 
   try {
-    const data = await companyStore.deleteCustomFieldDefinition(defId)
+    const data = await membersStore.deleteCustomFieldDefinition(defId)
 
     toast(data.message, 'success')
     isDeleteFieldDialogOpen.value = false
@@ -413,7 +415,7 @@ const typeOptions = [
           </thead>
           <tbody>
             <tr
-              v-for="member in companyStore.members"
+              v-for="member in membersStore.members"
               :key="member.id"
             >
               <td>
@@ -497,7 +499,7 @@ const typeOptions = [
 
     <AddMemberDrawer
       :is-drawer-open="isDrawerOpen"
-      :company-roles="companyStore.roles"
+      :company-roles="settingsStore.roles"
       @update:is-drawer-open="isDrawerOpen = $event"
       @member-added="handleMemberAdded"
     />

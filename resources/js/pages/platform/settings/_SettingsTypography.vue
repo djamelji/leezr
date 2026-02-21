@@ -1,9 +1,9 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { previewTypography, resetTypography } from '@/composables/useApplyTypography'
 
-const platformStore = usePlatformStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -49,7 +49,7 @@ const weightLabels = {
 }
 
 // ─── Computed ────────────────────────────────
-const localFamilies = computed(() => platformStore.fontFamilies)
+const localFamilies = computed(() => settingsStore.fontFamilies)
 
 const familySelectItems = computed(() =>
   localFamilies.value.map(f => ({ title: f.name, value: f.id })),
@@ -125,9 +125,9 @@ const loadSettings = data => {
 
 onMounted(async () => {
   try {
-    await platformStore.fetchTypographySettings()
-    if (platformStore.typographySettings)
-      loadSettings(platformStore.typographySettings)
+    await settingsStore.fetchTypographySettings()
+    if (settingsStore.typographySettings)
+      loadSettings(settingsStore.typographySettings)
   }
   finally {
     isLoading.value = false
@@ -138,7 +138,7 @@ onMounted(async () => {
 const save = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateTypographySettings({ ...form })
+    const data = await settingsStore.updateTypographySettings({ ...form })
 
     toast(data.message, 'success')
     loadSettings(data.typography)
@@ -154,7 +154,7 @@ const save = async () => {
 const resetToDefaults = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateTypographySettings({ ...defaults })
+    const data = await settingsStore.updateTypographySettings({ ...defaults })
 
     toast('Typography reset to defaults.', 'success')
     loadSettings(data.typography)
@@ -173,7 +173,7 @@ const createFamily = async () => {
   if (!newFamilyName.value.trim()) return
   isCreatingFamily.value = true
   try {
-    const data = await platformStore.createFontFamily({ name: newFamilyName.value.trim() })
+    const data = await settingsStore.createFontFamily({ name: newFamilyName.value.trim() })
 
     toast(data.message, 'success')
     form.active_family_id = data.family.id
@@ -190,7 +190,7 @@ const createFamily = async () => {
 
 const deleteFamily = async familyId => {
   try {
-    const data = await platformStore.deleteFontFamily(familyId)
+    const data = await settingsStore.deleteFontFamily(familyId)
 
     toast(data.message, 'success')
     if (form.active_family_id === familyId)
@@ -243,7 +243,7 @@ const uploadFonts = async () => {
       fd.append('weight', weight)
       fd.append('style', style)
 
-      await platformStore.uploadFont(form.active_family_id, fd)
+      await settingsStore.uploadFont(form.active_family_id, fd)
       uploaded++
     }
 
@@ -264,7 +264,7 @@ const uploadFonts = async () => {
 
 const deleteFont = async (familyId, fontId) => {
   try {
-    const data = await platformStore.deleteFont(familyId, fontId)
+    const data = await settingsStore.deleteFont(familyId, fontId)
 
     toast(data.message, 'success')
   }

@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
 
 definePage({
   meta: {
@@ -9,12 +9,12 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const usersStore = usePlatformUsersStore()
 const isLoading = ref(true)
 
 onMounted(async () => {
   try {
-    await platformStore.fetchCompanyUsers()
+    await usersStore.fetchCompanyUsers()
   }
   finally {
     isLoading.value = false
@@ -42,7 +42,7 @@ const onPageChange = async page => {
   isLoading.value = true
 
   try {
-    await platformStore.fetchCompanyUsers(page)
+    await usersStore.fetchCompanyUsers(page)
   }
   finally {
     isLoading.value = false
@@ -66,7 +66,7 @@ const onPageChange = async page => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.companyUsers"
+        :items="usersStore.companyUsers"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer
@@ -122,12 +122,12 @@ const onPageChange = async page => {
 
       <!-- Pagination -->
       <VCardText
-        v-if="platformStore.companyUsersPagination.last_page > 1"
+        v-if="usersStore.companyUsersPagination.last_page > 1"
         class="d-flex justify-center"
       >
         <VPagination
-          :model-value="platformStore.companyUsersPagination.current_page"
-          :length="platformStore.companyUsersPagination.last_page"
+          :model-value="usersStore.companyUsersPagination.current_page"
+          :length="usersStore.companyUsersPagination.last_page"
           @update:model-value="onPageChange"
         />
       </VCardText>

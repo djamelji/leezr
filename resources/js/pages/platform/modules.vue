@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -10,14 +10,14 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const togglingKey = ref(null)
 
 onMounted(async () => {
   try {
-    await platformStore.fetchModules()
+    await settingsStore.fetchModules()
   }
   finally {
     isLoading.value = false
@@ -35,7 +35,7 @@ const toggleModule = async module => {
   togglingKey.value = module.key
 
   try {
-    const data = await platformStore.toggleModule(module.key)
+    const data = await settingsStore.toggleModule(module.key)
 
     toast(data.message, 'success')
   }
@@ -64,7 +64,7 @@ const toggleModule = async module => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.modules"
+        :items="settingsStore.modules"
         :loading="isLoading"
         item-value="key"
         :items-per-page="-1"

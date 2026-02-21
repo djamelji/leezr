@@ -2,11 +2,11 @@
 definePage({ meta: { surface: 'structure' } })
 
 import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 const auth = useAuthStore()
-const companyStore = useCompanyStore()
+const settingsStore = useCompanyStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -23,8 +23,8 @@ const isAdvancedMode = ref(false)
 onMounted(async () => {
   try {
     await Promise.all([
-      companyStore.fetchCompanyRoles(),
-      companyStore.fetchPermissionCatalog(),
+      settingsStore.fetchCompanyRoles(),
+      settingsStore.fetchPermissionCatalog(),
     ])
   }
   finally {
@@ -34,7 +34,7 @@ onMounted(async () => {
 
 // ─── Simple mode: Capability bundles per module ─────
 const capabilityModules = computed(() => {
-  const modules = companyStore.permissionModules
+  const modules = settingsStore.permissionModules
   const isManagement = drawerForm.value.is_administrative
 
   return modules
@@ -78,7 +78,7 @@ const toggleCapability = cap => {
 
 // ─── Advanced mode: Permission groups ───────────────
 const permissionGroups = computed(() => {
-  const catalog = companyStore.permissionCatalog
+  const catalog = settingsStore.permissionCatalog
   const isManagement = drawerForm.value.is_administrative
   const coreGroups = {}
   const moduleGroups = {}
@@ -120,7 +120,7 @@ const hasModuleGroups = computed(() =>
 watch(() => drawerForm.value.is_administrative, newVal => {
   if (!newVal) {
     const adminIds = new Set(
-      companyStore.permissionCatalog.filter(p => p.is_admin).map(p => p.id),
+      settingsStore.permissionCatalog.filter(p => p.is_admin).map(p => p.id),
     )
 
     drawerForm.value.permissions = drawerForm.value.permissions.filter(id => !adminIds.has(id))
@@ -187,7 +187,7 @@ const handleDrawerSubmit = async () => {
 
   try {
     if (isEditMode.value) {
-      const data = await companyStore.updateCompanyRole(editingRole.value.id, {
+      const data = await settingsStore.updateCompanyRole(editingRole.value.id, {
         name: drawerForm.value.name,
         is_administrative: drawerForm.value.is_administrative,
         permissions: drawerForm.value.permissions,
@@ -196,7 +196,7 @@ const handleDrawerSubmit = async () => {
       toast(data.message, 'success')
     }
     else {
-      const data = await companyStore.createCompanyRole({
+      const data = await settingsStore.createCompanyRole({
         name: drawerForm.value.name,
         is_administrative: drawerForm.value.is_administrative,
         permissions: drawerForm.value.permissions,
@@ -221,7 +221,7 @@ const deleteRole = async role => {
   actionLoading.value = role.id
 
   try {
-    const data = await companyStore.deleteCompanyRole(role.id)
+    const data = await settingsStore.deleteCompanyRole(role.id)
 
     toast(data.message, 'success')
   }
@@ -258,7 +258,7 @@ const deleteRole = async role => {
 
       <VDataTable
         :headers="headers"
-        :items="companyStore.roles"
+        :items="settingsStore.roles"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer

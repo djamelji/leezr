@@ -18,7 +18,7 @@ import { createScheduler } from './scheduler'
 import { buildSnapshot } from './invariants'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
-import { useJobdomainStore } from '@/core/stores/jobdomain'
+import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { useModuleStore } from '@/core/stores/module'
 
 // Module-level journal (non-reactive — accessed via getter + version counter)

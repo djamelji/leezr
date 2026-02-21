@@ -23,7 +23,7 @@ let _fetched = false
 
 <script setup>
 import SettingsTypography from './_SettingsTypography.vue'
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { applyTheme } from '@/composables/useApplyTheme'
 import borderSkin from '@images/customizer-icons/border-light.svg'
@@ -32,7 +32,7 @@ import defaultSkin from '@images/customizer-icons/default-light.svg'
 import horizontalLight from '@images/customizer-icons/horizontal-light.svg'
 import wideSvg from '@images/customizer-icons/wide-light.svg'
 
-const platformStore = usePlatformStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
 const form = _form
@@ -112,9 +112,9 @@ onMounted(async () => {
   if (_fetched) return // Layout-switch remount — form state already loaded
 
   try {
-    await platformStore.fetchThemeSettings()
-    if (platformStore.themeSettings)
-      loadSettings(platformStore.themeSettings)
+    await settingsStore.fetchThemeSettings()
+    if (settingsStore.themeSettings)
+      loadSettings(settingsStore.themeSettings)
   }
   finally {
     _fetched = true
@@ -125,7 +125,7 @@ onMounted(async () => {
 const save = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateThemeSettings({ ...form })
+    const data = await settingsStore.updateThemeSettings({ ...form })
 
     toast(data.message, 'success')
     loadSettings(data.theme)
@@ -142,7 +142,7 @@ const save = async () => {
 const resetToDefaults = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateThemeSettings({ ..._defaults })
+    const data = await settingsStore.updateThemeSettings({ ..._defaults })
 
     toast('Theme reset to defaults.', 'success')
     loadSettings(data.theme)

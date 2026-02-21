@@ -1,8 +1,8 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
-const platformStore = usePlatformStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -24,9 +24,9 @@ const loadSettings = data => {
 
 onMounted(async () => {
   try {
-    await platformStore.fetchSessionSettings()
-    if (platformStore.sessionSettings)
-      loadSettings(platformStore.sessionSettings)
+    await settingsStore.fetchSessionSettings()
+    if (settingsStore.sessionSettings)
+      loadSettings(settingsStore.sessionSettings)
   }
   finally {
     isLoading.value = false
@@ -55,7 +55,7 @@ const save = async () => {
 
   isSaving.value = true
   try {
-    const data = await platformStore.updateSessionSettings({ ...form })
+    const data = await settingsStore.updateSessionSettings({ ...form })
 
     toast(data.message, 'success')
     loadSettings(data.session)
@@ -71,7 +71,7 @@ const save = async () => {
 const resetToDefaults = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateSessionSettings({ ...defaults })
+    const data = await settingsStore.updateSessionSettings({ ...defaults })
 
     toast('Session settings reset to defaults.', 'success')
     loadSettings(data.session)

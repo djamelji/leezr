@@ -1,5 +1,5 @@
 <script setup>
-import { useCompanyStore } from '@/core/stores/company'
+import { useMembersStore } from '@/modules/company/members/members.store'
 
 const props = defineProps({
   isDrawerOpen: {
@@ -14,7 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:isDrawerOpen', 'memberAdded'])
 
-const companyStore = useCompanyStore()
+const membersStore = useCompanyStore()
 
 const form = ref({
   first_name: '',
@@ -35,7 +35,7 @@ const handleSubmit = async () => {
   errorMessage.value = ''
 
   try {
-    await companyStore.addMember({
+    await membersStore.addMember({
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       email: form.value.email,

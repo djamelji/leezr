@@ -1,5 +1,6 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
+import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -12,7 +13,8 @@ definePage({
 })
 
 const router = useRouter()
-const platformStore = usePlatformStore()
+const usersStore = usePlatformUsersStore()
+const rolesStore = usePlatformRolesStore()
 const platformAuthStore = usePlatformAuthStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
@@ -30,14 +32,14 @@ const canManageCredentials = computed(() =>
 
 // Roles options for VSelect
 const roleOptions = computed(() =>
-  platformStore.roles.map(r => ({ title: r.name, value: r.id })),
+  rolesStore.roles.map(r => ({ title: r.name, value: r.id })),
 )
 
 onMounted(async () => {
   try {
     await Promise.all([
-      platformStore.fetchPlatformUsers(),
-      platformStore.fetchRoles(),
+      usersStore.fetchPlatformUsers(),
+      rolesStore.fetchRoles(),
     ])
   }
   finally {
@@ -79,7 +81,7 @@ const handleDrawerSubmit = async () => {
       payload.password_confirmation = drawerForm.value.password_confirmation
     }
 
-    const data = await platformStore.createPlatformUser(payload)
+    const data = await usersStore.createPlatformUser(payload)
 
     toast(data.message, 'success')
     isDrawerOpen.value = false
@@ -99,7 +101,7 @@ const deleteUser = async user => {
   actionLoading.value = user.id
 
   try {
-    const data = await platformStore.deletePlatformUser(user.id)
+    const data = await usersStore.deletePlatformUser(user.id)
 
     toast(data.message, 'success')
   }
@@ -115,7 +117,7 @@ const onPageChange = async page => {
   isLoading.value = true
 
   try {
-    await platformStore.fetchPlatformUsers(page)
+    await usersStore.fetchPlatformUsers(page)
   }
   finally {
     isLoading.value = false
@@ -147,7 +149,7 @@ const onPageChange = async page => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.platformUsers"
+        :items="usersStore.platformUsers"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer
@@ -236,12 +238,12 @@ const onPageChange = async page => {
 
       <!-- Pagination -->
       <VCardText
-        v-if="platformStore.platformUsersPagination.last_page > 1"
+        v-if="usersStore.platformUsersPagination.last_page > 1"
         class="d-flex justify-center"
       >
         <VPagination
-          :model-value="platformStore.platformUsersPagination.current_page"
-          :length="platformStore.platformUsersPagination.last_page"
+          :model-value="usersStore.platformUsersPagination.current_page"
+          :length="usersStore.platformUsersPagination.last_page"
           @update:model-value="onPageChange"
         />
       </VCardText>

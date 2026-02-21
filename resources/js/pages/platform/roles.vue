@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -10,7 +10,7 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const rolesStore = usePlatformRolesStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const actionLoading = ref(null)
@@ -26,14 +26,14 @@ const isSuperAdminRole = computed(() => editingRole.value?.key === 'super_admin'
 
 // Permissions options for VSelect (from catalog)
 const permissionOptions = computed(() =>
-  platformStore.permissionCatalog.map(p => ({ title: p.label, value: p.id })),
+  rolesStore.permissionCatalog.map(p => ({ title: p.label, value: p.id })),
 )
 
 onMounted(async () => {
   try {
     await Promise.all([
-      platformStore.fetchRoles(),
-      platformStore.fetchPermissionCatalog(),
+      rolesStore.fetchRoles(),
+      rolesStore.fetchPermissionCatalog(),
     ])
   }
   finally {
@@ -78,12 +78,12 @@ const handleDrawerSubmit = async () => {
       if (!isSuperAdminRole.value)
         payload.permissions = drawerForm.value.permissions
 
-      const data = await platformStore.updateRole(editingRole.value.id, payload)
+      const data = await rolesStore.updateRole(editingRole.value.id, payload)
 
       toast(data.message, 'success')
     }
     else {
-      const data = await platformStore.createRole({
+      const data = await rolesStore.createRole({
         key: drawerForm.value.key,
         name: drawerForm.value.name,
         permissions: drawerForm.value.permissions,
@@ -108,7 +108,7 @@ const deleteRole = async role => {
   actionLoading.value = role.id
 
   try {
-    const data = await platformStore.deleteRole(role.id)
+    const data = await rolesStore.deleteRole(role.id)
 
     toast(data.message, 'success')
   }
@@ -145,7 +145,7 @@ const deleteRole = async role => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.roles"
+        :items="rolesStore.roles"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer

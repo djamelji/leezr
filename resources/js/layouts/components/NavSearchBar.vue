@@ -11,108 +11,55 @@ const configStore = useConfigStore()
 const isAppSearchBarVisible = ref(false)
 const isLoading = ref(false)
 
-// 👉 Default suggestions
+// 👉 Default suggestions — real platform routes
 const suggestionGroups = [
   {
-    title: 'Popular Searches',
+    title: 'Management',
     content: [
       {
-        icon: 'tabler-chart-bar',
-        title: 'Analytics',
-        url: { name: 'dashboards-analytics' },
+        icon: 'tabler-dashboard',
+        title: 'Dashboard',
+        url: { name: 'platform' },
       },
       {
-        icon: 'tabler-chart-donut-3',
-        title: 'CRM',
-        url: { name: 'dashboards-crm' },
+        icon: 'tabler-user-shield',
+        title: 'Users',
+        url: { name: 'platform-users' },
       },
       {
-        icon: 'tabler-shopping-cart',
-        title: 'eCommerce',
-        url: { name: 'dashboards-ecommerce' },
+        icon: 'tabler-building',
+        title: 'Companies',
+        url: { name: 'platform-companies' },
       },
       {
-        icon: 'tabler-truck',
-        title: 'Logistics',
-        url: { name: 'dashboards-logistics' },
+        icon: 'tabler-shield-lock',
+        title: 'Roles',
+        url: { name: 'platform-roles' },
       },
     ],
   },
   {
-    title: 'Apps & Pages',
+    title: 'Configuration',
     content: [
       {
-        icon: 'tabler-calendar',
-        title: 'Calendar',
-        url: { name: 'apps-calendar' },
+        icon: 'tabler-briefcase',
+        title: 'Job Domains',
+        url: { name: 'platform-jobdomains' },
       },
       {
-        icon: 'tabler-lock',
-        title: 'Roles & Permissions',
-        url: { name: 'apps-roles' },
+        icon: 'tabler-forms',
+        title: 'Custom Fields',
+        url: { name: 'platform-fields' },
+      },
+      {
+        icon: 'tabler-puzzle',
+        title: 'Modules',
+        url: { name: 'platform-modules' },
       },
       {
         icon: 'tabler-settings',
-        title: 'Account Settings',
-        url: {
-          name: 'pages-account-settings-tab',
-          params: { tab: 'account' },
-        },
-      },
-      {
-        icon: 'tabler-copy',
-        title: 'Dialog Examples',
-        url: { name: 'pages-dialog-examples' },
-      },
-    ],
-  },
-  {
-    title: 'User Interface',
-    content: [
-      {
-        icon: 'tabler-typography',
-        title: 'Typography',
-        url: { name: 'pages-typography' },
-      },
-      {
-        icon: 'tabler-menu-2',
-        title: 'Accordion',
-        url: { name: 'components-expansion-panel' },
-      },
-      {
-        icon: 'tabler-info-triangle',
-        title: 'Alert',
-        url: { name: 'components-alert' },
-      },
-      {
-        icon: 'tabler-checkbox',
-        title: 'Cards',
-        url: { name: 'pages-cards-card-basic' },
-      },
-    ],
-  },
-  {
-    title: 'Forms & Tables',
-    content: [
-      {
-        icon: 'tabler-circle-dot',
-        title: 'Radio',
-        url: { name: 'forms-radio' },
-      },
-      {
-        icon: 'tabler-file-invoice',
-        title: 'Form Layouts',
-        url: { name: 'forms-form-layouts' },
-      },
-      {
-        icon: 'tabler-table',
-        title: 'Table',
-        url: { name: 'tables-data-table' },
-      },
-      {
-        icon: 'tabler-edit',
-        title: 'Editor',
-        url: { name: 'forms-editors' },
+        title: 'Settings',
+        url: { name: 'platform-settings-tab', params: { tab: 'general' } },
       },
     ],
   },
@@ -121,19 +68,19 @@ const suggestionGroups = [
 // 👉 No Data suggestion
 const noDataSuggestions = [
   {
-    title: 'Analytics',
-    icon: 'tabler-chart-bar',
-    url: { name: 'dashboards-analytics' },
+    title: 'Dashboard',
+    icon: 'tabler-dashboard',
+    url: { name: 'platform' },
   },
   {
-    title: 'CRM',
-    icon: 'tabler-chart-donut-3',
-    url: { name: 'dashboards-crm' },
+    title: 'Users',
+    icon: 'tabler-user-shield',
+    url: { name: 'platform-users' },
   },
   {
-    title: 'eCommerce',
-    icon: 'tabler-shopping-cart',
-    url: { name: 'dashboards-ecommerce' },
+    title: 'Companies',
+    icon: 'tabler-building',
+    url: { name: 'platform-companies' },
   },
 ]
 

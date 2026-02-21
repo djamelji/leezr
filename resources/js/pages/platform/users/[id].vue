@@ -1,6 +1,7 @@
 <script setup>
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
+import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -14,7 +15,8 @@ definePage({
 
 const route = useRoute()
 const router = useRouter()
-const platformStore = usePlatformStore()
+const usersStore = usePlatformUsersStore()
+const rolesStore = usePlatformRolesStore()
 const platformAuthStore = usePlatformAuthStore()
 const { toast } = useAppToast()
 
@@ -60,14 +62,14 @@ const showCredentials = computed(() =>
 
 // Roles options
 const roleOptions = computed(() =>
-  platformStore.roles.map(r => ({ title: r.name, value: r.id })),
+  rolesStore.roles.map(r => ({ title: r.name, value: r.id })),
 )
 
 onMounted(async () => {
   try {
     const [profile] = await Promise.all([
-      platformStore.fetchPlatformUserProfile(route.params.id),
-      platformStore.fetchRoles(),
+      usersStore.fetchPlatformUserProfile(route.params.id),
+      rolesStore.fetchRoles(),
     ])
 
     applyProfile(profile)
@@ -101,7 +103,7 @@ const handleOverviewSave = async () => {
   savingOverview.value = true
 
   try {
-    const data = await platformStore.updatePlatformUser(route.params.id, {
+    const data = await usersStore.updatePlatformUser(route.params.id, {
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       email: form.value.email,
@@ -111,7 +113,7 @@ const handleOverviewSave = async () => {
     toast(data.message, 'success')
 
     // Re-fetch full profile to get updated ReadModel
-    const profile = await platformStore.fetchPlatformUserProfile(route.params.id)
+    const profile = await usersStore.fetchPlatformUserProfile(route.params.id)
 
     applyProfile(profile)
   }
@@ -127,13 +129,13 @@ const handleDynamicSave = async () => {
   savingDynamic.value = true
 
   try {
-    const data = await platformStore.updatePlatformUser(route.params.id, {
+    const data = await usersStore.updatePlatformUser(route.params.id, {
       dynamic_fields: { ...dynamicForm.value },
     })
 
     toast(data.message, 'success')
 
-    const profile = await platformStore.fetchPlatformUserProfile(route.params.id)
+    const profile = await usersStore.fetchPlatformUserProfile(route.params.id)
 
     applyProfile(profile)
   }
@@ -156,7 +158,7 @@ const handleConfirmReset = async confirmed => {
   resetPasswordLoading.value = true
 
   try {
-    const data = await platformStore.resetPlatformUserPassword(route.params.id)
+    const data = await usersStore.resetPlatformUserPassword(route.params.id)
 
     toast(data.message, 'success')
   }
@@ -172,7 +174,7 @@ const handleSetPassword = async () => {
   setPasswordLoading.value = true
 
   try {
-    const data = await platformStore.setPlatformUserPassword(route.params.id, {
+    const data = await usersStore.setPlatformUserPassword(route.params.id, {
       password: setPasswordForm.value.password,
       password_confirmation: setPasswordForm.value.password_confirmation,
     })
@@ -182,7 +184,7 @@ const handleSetPassword = async () => {
     setPasswordForm.value = { password: '', password_confirmation: '' }
 
     // Re-fetch to update status
-    const profile = await platformStore.fetchPlatformUserProfile(route.params.id)
+    const profile = await usersStore.fetchPlatformUserProfile(route.params.id)
 
     applyProfile(profile)
   }

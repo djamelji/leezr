@@ -3,14 +3,16 @@ definePage({ meta: { surface: 'structure' } })
 
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
+import { useMembersStore } from '@/modules/company/members/members.store'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import MemberProfileForm from '@/company/components/MemberProfileForm.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const companyStore = useCompanyStore()
+const membersStore = useMembersStore()
+const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
 
 const member = ref(null)
@@ -53,8 +55,8 @@ const applyProfile = data => {
 onMounted(async () => {
   try {
     const [data] = await Promise.all([
-      companyStore.fetchMemberProfile(route.params.id),
-      companyStore.fetchCompanyRoles().catch(() => {}),
+      membersStore.fetchMemberProfile(route.params.id),
+      settingsStore.fetchCompanyRoles().catch(() => {}),
     ])
 
     applyProfile(data)
@@ -70,7 +72,7 @@ onMounted(async () => {
 
 const handleOverviewSave = async payload => {
   try {
-    const data = await companyStore.updateMemberProfile(route.params.id, payload)
+    const data = await membersStore.updateMemberProfile(route.params.id, payload)
 
     applyProfile(data)
     toast('Member profile updated.', 'success')
@@ -84,7 +86,7 @@ const handleDynamicSave = async () => {
   savingDynamic.value = true
 
   try {
-    const data = await companyStore.updateMemberProfile(route.params.id, {
+    const data = await membersStore.updateMemberProfile(route.params.id, {
       dynamic_fields: { ...dynamicForm.value },
     })
 
@@ -110,7 +112,7 @@ const handleConfirmReset = async confirmed => {
   resetPasswordLoading.value = true
 
   try {
-    const data = await companyStore.resetMemberPassword(route.params.id)
+    const data = await membersStore.resetMemberPassword(route.params.id)
 
     toast(data.message, 'success')
   }
@@ -126,7 +128,7 @@ const handleSetPassword = async () => {
   setPasswordLoading.value = true
 
   try {
-    const data = await companyStore.setMemberPassword(route.params.id, {
+    const data = await membersStore.setMemberPassword(route.params.id, {
       password: setPasswordForm.value.password,
       password_confirmation: setPasswordForm.value.password_confirmation,
     })
@@ -136,7 +138,7 @@ const handleSetPassword = async () => {
     setPasswordForm.value = { password: '', password_confirmation: '' }
 
     // Re-fetch to update status
-    const profile = await companyStore.fetchMemberProfile(route.params.id)
+    const profile = await membersStore.fetchMemberProfile(route.params.id)
 
     applyProfile(profile)
   }
@@ -254,7 +256,7 @@ const handleSetPassword = async () => {
                 :base-fields="baseFields"
                 :dynamic-fields="[]"
                 :editable="canEdit"
-                :company-roles="companyStore.roles"
+                :company-roles="settingsStore.roles"
                 @save="handleOverviewSave"
               />
             </VCardText>

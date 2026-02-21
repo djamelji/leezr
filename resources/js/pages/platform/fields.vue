@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformFieldsStore } from '@/modules/platform-admin/fields/fields.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -10,7 +10,7 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const fieldsStore = usePlatformFieldsStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const scopeFilter = ref('')
@@ -53,18 +53,18 @@ const defHeaders = [
 
 const filteredDefinitions = computed(() => {
   if (!scopeFilter.value)
-    return platformStore.fieldDefinitions
+    return fieldsStore.fieldDefinitions
 
-  return platformStore.fieldDefinitions.filter(d => d.scope === scopeFilter.value)
+  return fieldsStore.fieldDefinitions.filter(d => d.scope === scopeFilter.value)
 })
 
 const platformUserDefs = computed(() => {
-  return platformStore.fieldDefinitions.filter(d => d.scope === 'platform_user')
+  return fieldsStore.fieldDefinitions.filter(d => d.scope === 'platform_user')
 })
 
 const activationMap = computed(() => {
   const map = {}
-  for (const a of platformStore.fieldActivations) {
+  for (const a of fieldsStore.fieldActivations) {
     map[a.field_definition_id] = a
   }
 
@@ -72,14 +72,14 @@ const activationMap = computed(() => {
 })
 
 const activeCount = computed(() => {
-  return platformStore.fieldActivations.filter(a => a.enabled).length
+  return fieldsStore.fieldActivations.filter(a => a.enabled).length
 })
 
 onMounted(async () => {
   try {
     await Promise.all([
-      platformStore.fetchFieldDefinitions(),
-      platformStore.fetchFieldActivations(),
+      fieldsStore.fetchFieldDefinitions(),
+      fieldsStore.fetchFieldActivations(),
     ])
   }
   finally {
@@ -115,7 +115,7 @@ const handleDefSubmit = async () => {
 
   try {
     if (isDefEditMode.value) {
-      const data = await platformStore.updateFieldDefinition(editingDef.value.id, {
+      const data = await fieldsStore.updateFieldDefinition(editingDef.value.id, {
         label: defForm.value.label,
         validation_rules: defForm.value.validation_rules,
         options: defForm.value.options,
@@ -125,7 +125,7 @@ const handleDefSubmit = async () => {
       toast(data.message, 'success')
     }
     else {
-      const data = await platformStore.createFieldDefinition({
+      const data = await fieldsStore.createFieldDefinition({
         code: defForm.value.code,
         scope: defForm.value.scope,
         label: defForm.value.label,
@@ -150,7 +150,7 @@ const deleteDef = async def => {
   if (!confirm(`Delete field definition "${def.code}"?`)) return
 
   try {
-    const data = await platformStore.deleteFieldDefinition(def.id)
+    const data = await fieldsStore.deleteFieldDefinition(def.id)
 
     toast(data.message, 'success')
   }
@@ -164,7 +164,7 @@ const toggleActivation = async (def, enabled) => {
   const existing = activationMap.value[def.id]
 
   try {
-    await platformStore.upsertFieldActivation({
+    await fieldsStore.upsertFieldActivation({
       field_definition_id: def.id,
       enabled,
       required_override: existing?.required_override || false,
@@ -180,7 +180,7 @@ const toggleRequired = async (def, required) => {
   const existing = activationMap.value[def.id]
 
   try {
-    await platformStore.upsertFieldActivation({
+    await fieldsStore.upsertFieldActivation({
       field_definition_id: def.id,
       enabled: existing?.enabled ?? true,
       required_override: required,
@@ -196,7 +196,7 @@ const updateOrder = async (def, order) => {
   const existing = activationMap.value[def.id]
 
   try {
-    await platformStore.upsertFieldActivation({
+    await fieldsStore.upsertFieldActivation({
       field_definition_id: def.id,
       enabled: existing?.enabled ?? true,
       required_override: existing?.required_override || false,

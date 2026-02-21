@@ -1,9 +1,9 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 import MaintenancePreview from '@/components/MaintenancePreview.vue'
 
-const platformStore = usePlatformStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -43,9 +43,9 @@ const loadSettings = data => {
 
 onMounted(async () => {
   try {
-    await platformStore.fetchMaintenanceSettings()
-    if (platformStore.maintenanceSettings)
-      loadSettings(platformStore.maintenanceSettings)
+    await settingsStore.fetchMaintenanceSettings()
+    if (settingsStore.maintenanceSettings)
+      loadSettings(settingsStore.maintenanceSettings)
   }
   finally {
     isLoading.value = false
@@ -66,7 +66,7 @@ const removeIp = index => {
 
 const detectMyIp = async () => {
   try {
-    const data = await platformStore.fetchMyIp()
+    const data = await settingsStore.fetchMyIp()
     if (data.ip && !form.allowlist_ips.includes(data.ip)) {
       form.allowlist_ips.push(data.ip)
       toast(`Added your IP: ${data.ip}`, 'success')
@@ -83,7 +83,7 @@ const detectMyIp = async () => {
 const save = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateMaintenanceSettings({
+    const data = await settingsStore.updateMaintenanceSettings({
       enabled: form.enabled,
       allowlist_ips: form.allowlist_ips,
       headline: form.headline,
@@ -107,7 +107,7 @@ const save = async () => {
 const resetToDefaults = async () => {
   isSaving.value = true
   try {
-    const data = await platformStore.updateMaintenanceSettings({ ...defaults })
+    const data = await settingsStore.updateMaintenanceSettings({ ...defaults })
 
     toast('Maintenance settings reset to defaults.', 'success')
     loadSettings(data.maintenance)

@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -10,14 +10,14 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
 onMounted(async () => {
   try {
-    await platformStore.fetchCompanies()
+    await companiesStore.fetchCompanies()
   }
   finally {
     isLoading.value = false
@@ -40,7 +40,7 @@ const suspend = async company => {
   actionLoading.value = company.id
 
   try {
-    await platformStore.suspendCompany(company.id)
+    await companiesStore.suspendCompany(company.id)
     toast('Company suspended.', 'success')
   }
   catch (error) {
@@ -55,7 +55,7 @@ const reactivate = async company => {
   actionLoading.value = company.id
 
   try {
-    await platformStore.reactivateCompany(company.id)
+    await companiesStore.reactivateCompany(company.id)
     toast('Company reactivated.', 'success')
   }
   catch (error) {
@@ -70,7 +70,7 @@ const onPageChange = async page => {
   isLoading.value = true
 
   try {
-    await platformStore.fetchCompanies(page)
+    await companiesStore.fetchCompanies(page)
   }
   finally {
     isLoading.value = false
@@ -105,7 +105,7 @@ const formatDate = dateStr => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.companies"
+        :items="companiesStore.companies"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer
@@ -164,12 +164,12 @@ const formatDate = dateStr => {
 
       <!-- Pagination -->
       <VCardText
-        v-if="platformStore.companiesPagination.last_page > 1"
+        v-if="companiesStore.companiesPagination.last_page > 1"
         class="d-flex justify-center"
       >
         <VPagination
-          :model-value="platformStore.companiesPagination.current_page"
-          :length="platformStore.companiesPagination.last_page"
+          :model-value="companiesStore.companiesPagination.current_page"
+          :length="companiesStore.companiesPagination.last_page"
           @update:model-value="onPageChange"
         />
       </VCardText>

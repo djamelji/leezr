@@ -2030,4 +2030,45 @@ definePage({
 
 ---
 
+## ADR-087 : Frontend Modular Architecture — Core Store Purification (P1-P2-P3)
+
+- **Date** : 2026-02-21
+- **Contexte** : `core/stores/` contenait 3 monolithes CRUD métier (`company.js` 350+ lignes, `platform.js` 459 lignes, `jobdomain.js` 82 lignes) mélangés avec l'infrastructure (auth, platformAuth, module). Ces stores violaient la règle de portabilité modulaire : un module supprimé ne devait pas nécessiter de toucher core/. De plus, 4 violations architecturales affectaient les layouts et la navigation (routes Vuexy fantômes, hardcoded route sets, imports directs de stores dans les layouts, shortcuts statiques).
+- **Décision** :
+  - **Phase P4** (fixes structurels) :
+    - `NavSearchBar.vue` : remplacé les routes demo Vuexy (dashboards-crm, analytics...) par les routes platform réelles
+    - `guards.js` : supprimé le Set `STRUCTURE_ROUTES` hardcodé, remplacé par `to.meta.surface === 'structure'`
+    - `DefaultLayoutWithHorizontalNav.vue` : remplacé l'import direct `useModuleStore` + logique manuelle par le composable `useCompanyNav()` (aligné avec le layout vertical)
+    - `NavbarShortcuts.vue` : remplacé les 6 shortcuts hardcodés par une dérivation dynamique depuis `usePlatformNav()`
+  - **Phase P1** (extract company.js) :
+    - `core/stores/company.js` éclaté en 2 stores modulaires :
+      - `modules/company/members/members.store.js` (Pinia ID: `companyMembers`) — members CRUD, field activations/definitions
+      - `modules/company/settings/settings.store.js` (Pinia ID: `companySettings`) — company info, roles, permissions
+    - 6 pages company migrées, `company.js` supprimé de core
+  - **Phase P2** (extract platform.js) :
+    - `core/stores/platform.js` (459 lignes) éclaté en 6 stores modulaires :
+      - `modules/platform-admin/companies/companies.store.js` (Pinia ID: `platformCompanies`)
+      - `modules/platform-admin/users/users.store.js` (Pinia ID: `platformUsers`)
+      - `modules/platform-admin/roles/roles.store.js` (Pinia ID: `platformRoles`)
+      - `modules/platform-admin/fields/fields.store.js` (Pinia ID: `platformFields`)
+      - `modules/platform-admin/jobdomains/jobdomains.store.js` (Pinia ID: `platformJobdomains`)
+      - `modules/platform-admin/settings/settings.store.js` (Pinia ID: `platformSettings`) — modules, theme, session, typography, maintenance
+    - 14 pages platform migrées, `platform.js` supprimé de core
+  - **Phase P3** (extract jobdomain.js) :
+    - `core/stores/jobdomain.js` relocalisé vers `modules/company/jobdomain/jobdomain.store.js` (company-scoped : utilise `$api`, endpoint `/company/jobdomain`)
+    - 4 importers migrés (2 pages company, runtime.js, devtools), `jobdomain.js` supprimé de core
+  - **Résultat final** : `core/stores/` ne contient plus que l'infrastructure :
+    - `auth.js` — session auth company
+    - `platformAuth.js` — session auth platform
+    - `module.js` — registre des modules activés
+- **Conséquences** :
+  - `core/` est désormais infrastructure-only — aucun CRUD métier
+  - Tout module métier peut être supprimé sans toucher core/
+  - Convention établie : `modules/<scope>/<domain>/<domain>.store.js` avec `*.store.js` naming
+  - Les layouts et navigation utilisent exclusivement des composables (`useCompanyNav`, `usePlatformNav`) — plus d'imports de stores métier dans les layouts
+  - Les guards utilisent `to.meta.surface` au lieu de Sets hardcodés — extensible sans modification de code
+  - 30+ fichiers modifiés, 3 stores monolithiques supprimés, 9 stores modulaires créés, 0 régressions build
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

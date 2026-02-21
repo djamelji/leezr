@@ -3,10 +3,10 @@ definePage({ meta: { surface: 'structure' } })
 
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 
 const auth = useAuthStore()
-const companyStore = useCompanyStore()
+const settingsStore = useCompanyStore()
 
 const form = ref({
   name: '',
@@ -20,13 +20,13 @@ const errorMessage = ref('')
 const canEdit = computed(() => auth.hasPermission('settings.manage'))
 
 const dynamicFields = computed(() => {
-  return companyStore.company?.dynamic_fields || []
+  return settingsStore.company?.dynamic_fields || []
 })
 
 onMounted(async () => {
-  await companyStore.fetchCompany()
+  await settingsStore.fetchCompany()
 
-  const data = companyStore.company
+  const data = settingsStore.company
   form.value.name = data?.base_fields?.name || ''
 
   // Build dynamic form values from resolved fields
@@ -50,7 +50,7 @@ const handleSave = async () => {
       payload.dynamic_fields = { ...dynamicForm.value }
     }
 
-    await companyStore.updateCompany(payload)
+    await settingsStore.updateCompany(payload)
 
     // Update the company name in auth store too
     await auth.fetchMyCompanies()
@@ -66,7 +66,7 @@ const handleSave = async () => {
 }
 
 const resetForm = () => {
-  const data = companyStore.company
+  const data = settingsStore.company
   form.value.name = data?.base_fields?.name || ''
 
   const df = {}

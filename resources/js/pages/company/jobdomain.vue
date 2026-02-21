@@ -2,7 +2,7 @@
 definePage({ meta: { surface: 'structure' } })
 
 import { useAuthStore } from '@/core/stores/auth'
-import { useJobdomainStore } from '@/core/stores/jobdomain'
+import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 
 const auth = useAuthStore()
 const jobdomainStore = useJobdomainStore()

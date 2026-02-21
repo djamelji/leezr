@@ -5,19 +5,6 @@ import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
 import { safeRedirect } from '@/utils/safeRedirect'
 
-/**
- * Structure routes — governance pages hidden from operational roles.
- * Checked AFTER tenant hydration so roleLevel is reliable.
- */
-const STRUCTURE_ROUTES = new Set([
-  'company-members',
-  'company-members-id',
-  'company-settings',
-  'company-modules',
-  'company-jobdomain',
-  'company-roles',
-])
-
 export const setupGuards = router => {
   router.beforeEach(async to => {
     // Version mismatch check (ADR-045e)
@@ -93,7 +80,7 @@ export const setupGuards = router => {
     }
 
     // Surface guard — structure routes require tenant hydration + management level
-    if (STRUCTURE_ROUTES.has(to.name)) {
+    if (to.meta.surface === 'structure') {
       if (!runtime.isReady) {
         await runtime.whenReady(5000)
       }

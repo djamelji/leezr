@@ -1,5 +1,8 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
+import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
+import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 
 definePage({
   meta: {
@@ -8,7 +11,10 @@ definePage({
   },
 })
 
-const platformStore = usePlatformStore()
+const companiesStore = usePlatformCompaniesStore()
+const usersStore = usePlatformUsersStore()
+const rolesStore = usePlatformRolesStore()
+const settingsStore = usePlatformSettingsStore()
 const isLoading = ref(true)
 
 const stats = ref({
@@ -22,19 +28,19 @@ const stats = ref({
 onMounted(async () => {
   try {
     await Promise.all([
-      platformStore.fetchCompanies(),
-      platformStore.fetchPlatformUsers(),
-      platformStore.fetchCompanyUsers(),
-      platformStore.fetchRoles(),
-      platformStore.fetchModules(),
+      companiesStore.fetchCompanies(),
+      usersStore.fetchPlatformUsers(),
+      usersStore.fetchCompanyUsers(),
+      rolesStore.fetchRoles(),
+      settingsStore.fetchModules(),
     ])
 
     stats.value = {
-      companies: platformStore.companiesPagination.total,
-      platformUsers: platformStore.platformUsersPagination.total,
-      companyUsers: platformStore.companyUsersPagination.total,
-      roles: platformStore.roles.length,
-      modules: platformStore.modules.length,
+      companies: companiesStore.companiesPagination.total,
+      platformUsers: usersStore.platformUsersPagination.total,
+      companyUsers: usersStore.companyUsersPagination.total,
+      roles: rolesStore.roles.length,
+      modules: settingsStore.modules.length,
     }
   }
   finally {

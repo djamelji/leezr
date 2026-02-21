@@ -1,5 +1,6 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformJobdomainsStore } from '@/modules/platform-admin/jobdomains/jobdomains.store'
+import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -12,7 +13,8 @@ definePage({
 
 const route = useRoute()
 const router = useRouter()
-const platformStore = usePlatformStore()
+const jobdomainsStore = usePlatformJobdomainsStore()
+const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -41,7 +43,7 @@ const isDeleteDialogOpen = ref(false)
 
 const handleDelete = async () => {
   try {
-    const data = await platformStore.deleteJobdomain(jobdomain.value.id)
+    const data = await jobdomainsStore.deleteJobdomain(jobdomain.value.id)
 
     toast(data.message, 'success')
     isDeleteDialogOpen.value = false
@@ -57,7 +59,7 @@ const saveOverview = async () => {
   isSaving.value = true
 
   try {
-    const data = await platformStore.updateJobdomain(jobdomain.value.id, {
+    const data = await jobdomainsStore.updateJobdomain(jobdomain.value.id, {
       label: overviewForm.value.label,
       description: overviewForm.value.description || null,
       allow_custom_fields: overviewForm.value.allowCustomFields,
@@ -75,7 +77,7 @@ const saveOverview = async () => {
 }
 
 // ─── Modules ────────────────────────────────────────
-const allModules = computed(() => platformStore.modules)
+const allModules = computed(() => settingsStore.modules)
 
 const isModuleSelected = moduleKey => {
   return (jobdomain.value?.default_modules || []).includes(moduleKey)
@@ -90,7 +92,7 @@ const toggleModule = async (moduleKey, enabled) => {
     : current.filter(k => k !== moduleKey)
 
   try {
-    const data = await platformStore.updateJobdomain(jobdomain.value.id, {
+    const data = await jobdomainsStore.updateJobdomain(jobdomain.value.id, {
       default_modules: updated,
     })
 
@@ -132,7 +134,7 @@ const availableCompanyUserDefs = computed(() => {
 
 const savePresetFields = async newFields => {
   try {
-    const data = await platformStore.updateJobdomain(jobdomain.value.id, {
+    const data = await jobdomainsStore.updateJobdomain(jobdomain.value.id, {
       default_fields: newFields,
     })
 
@@ -337,7 +339,7 @@ const toggleRolePerm = permKey => {
 
 const saveDefaultRoles = async updatedRoles => {
   try {
-    const data = await platformStore.updateJobdomain(jobdomain.value.id, {
+    const data = await jobdomainsStore.updateJobdomain(jobdomain.value.id, {
       default_roles: updatedRoles,
     })
 
@@ -410,8 +412,8 @@ const deletePresetRole = async role => {
 onMounted(async () => {
   try {
     const [jdData] = await Promise.all([
-      platformStore.fetchJobdomain(route.params.id),
-      platformStore.fetchModules(),
+      jobdomainsStore.fetchJobdomain(route.params.id),
+      settingsStore.fetchModules(),
     ])
 
     jobdomain.value = jdData.jobdomain

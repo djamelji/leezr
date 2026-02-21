@@ -1,5 +1,5 @@
 <script setup>
-import { usePlatformStore } from '@/core/stores/platform'
+import { usePlatformJobdomainsStore } from '@/modules/platform-admin/jobdomains/jobdomains.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -11,7 +11,7 @@ definePage({
 })
 
 const router = useRouter()
-const platformStore = usePlatformStore()
+const jobdomainsStore = usePlatformJobdomainsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -25,7 +25,7 @@ const handleCreate = async () => {
   createLoading.value = true
 
   try {
-    const data = await platformStore.createJobdomain({
+    const data = await jobdomainsStore.createJobdomain({
       key: createForm.value.key,
       label: createForm.value.label,
       description: createForm.value.description || null,
@@ -59,7 +59,7 @@ const handleDelete = async () => {
   if (!deletingJobdomain.value) return
 
   try {
-    const data = await platformStore.deleteJobdomain(deletingJobdomain.value.id)
+    const data = await jobdomainsStore.deleteJobdomain(deletingJobdomain.value.id)
 
     toast(data.message, 'success')
   }
@@ -83,7 +83,7 @@ const headers = [
 // ─── Load data ──────────────────────────────────────
 onMounted(async () => {
   try {
-    await platformStore.fetchJobdomains()
+    await jobdomainsStore.fetchJobdomains()
   }
   finally {
     isLoading.value = false
@@ -112,7 +112,7 @@ onMounted(async () => {
 
       <VDataTable
         :headers="headers"
-        :items="platformStore.jobdomains"
+        :items="jobdomainsStore.jobdomains"
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer

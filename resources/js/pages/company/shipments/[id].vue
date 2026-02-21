@@ -1,12 +1,12 @@
 <script setup>
 import { useAuthStore } from '@/core/stores/auth'
-import { useCompanyStore } from '@/core/stores/company'
+import { useMembersStore } from '@/modules/company/members/members.store'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
 const auth = useAuthStore()
-const companyStore = useCompanyStore()
+const membersStore = useCompanyStore()
 const shipmentStore = useShipmentStore()
 const route = useRoute()
 const router = useRouter()
@@ -22,7 +22,7 @@ const canManage = computed(() => auth.hasPermission('shipments.manage_status'))
 const canAssign = computed(() => auth.hasPermission('shipments.assign'))
 
 const memberOptions = computed(() => {
-  return companyStore.members
+  return membersStore.members
     .filter(m => m.role !== 'owner' && m.company_role)
     .map(m => ({
       title: `${m.user.display_name} — ${m.company_role.name}`,
@@ -132,7 +132,7 @@ onMounted(async () => {
     await shipmentStore.fetchShipment(route.params.id)
 
     if (canAssign.value) {
-      await companyStore.fetchMembers()
+      await membersStore.fetchMembers()
     }
 
     // Init selected user from current assignment
