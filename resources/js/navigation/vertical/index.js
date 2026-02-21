@@ -28,7 +28,7 @@ export const coreNavItems = [
 export default [
   {
     title: 'Dashboard',
-    to: { name: 'root' },
+    to: { name: 'dashboard' },
     icon: { icon: 'tabler-smart-home' },
   },
   { heading: 'Company' },

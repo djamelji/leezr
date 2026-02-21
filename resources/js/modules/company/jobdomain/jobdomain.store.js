@@ -21,7 +21,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
     /**
      * Landing route from the jobdomain profile. Fallback to '/'.
      */
-    landingRoute: state => state._profile?.landing_route || '/',
+    landingRoute: state => state._profile?.landing_route || '/dashboard',
 
     /**
      * Nav profile key from the jobdomain profile.

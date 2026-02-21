@@ -72,7 +72,7 @@ export const setupGuards = router => {
     const auth = useAuthStore()
 
     if (to.meta.unauthenticatedOnly) {
-      return auth.isLoggedIn ? '/' : undefined
+      return auth.isLoggedIn ? '/dashboard' : undefined
     }
 
     if (!auth.isLoggedIn) {
