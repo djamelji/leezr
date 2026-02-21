@@ -6,7 +6,7 @@ import { useCompanySettingsStore } from '@/modules/company/settings/settings.sto
 import { useAppToast } from '@/composables/useAppToast'
 
 const auth = useAuthStore()
-const settingsStore = useCompanyStore()
+const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)

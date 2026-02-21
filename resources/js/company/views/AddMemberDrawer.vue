@@ -14,7 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:isDrawerOpen', 'memberAdded'])
 
-const membersStore = useCompanyStore()
+const membersStore = useMembersStore()
 
 const form = ref({
   first_name: '',

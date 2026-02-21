@@ -6,7 +6,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 
 const auth = useAuthStore()
-const settingsStore = useCompanyStore()
+const settingsStore = useCompanySettingsStore()
 
 const form = ref({
   name: '',

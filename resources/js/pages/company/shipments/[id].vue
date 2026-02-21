@@ -6,7 +6,7 @@ import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
 const auth = useAuthStore()
-const membersStore = useCompanyStore()
+const membersStore = useMembersStore()
 const shipmentStore = useShipmentStore()
 const route = useRoute()
 const router = useRouter()
