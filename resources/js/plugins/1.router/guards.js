@@ -113,19 +113,19 @@ export const setupGuards = router => {
   })
 
   // ─── Overlay cleanup (ADR-075) ─────────────────────────
-  // After each navigation, clean up stray overlay artifacts that may
-  // persist from bfcache restoration, chunk error recovery, or Vuetify
-  // overlay leaks. This runs AFTER the new page renders.
+  // After each navigation, clean up stray overlay artifacts.
+  // Uses el.click() instead of class removal so the Vue click handler
+  // in VerticalNavLayout resets the reactive refs (isOverlayNavActive,
+  // isLayoutOverlayVisible) — class-only removal gets re-added by Vue.
   router.afterEach(() => {
     // Chunk error overlay (raw DOM, not managed by Vue)
     document.getElementById('lzr-chunk-error')?.remove()
 
-    // Layout overlay stuck in visible state (e.g. bfcache restore at mobile breakpoint)
-    // Only clean up if we're on desktop (>= 1280px) — on mobile the overlay may be intentional
-    if (window.innerWidth >= 1280) {
-      document.querySelectorAll('.layout-overlay.visible').forEach(el => {
-        el.classList.remove('visible')
-      })
-    }
+    // Layout overlay stuck in visible state — dismiss at ALL breakpoints.
+    // The VerticalNav watcher already handles intentional nav close on
+    // route change, so this is purely a safety net for stuck overlays.
+    document.querySelectorAll('.layout-overlay.visible').forEach(el => {
+      el.click()
+    })
   })
 }

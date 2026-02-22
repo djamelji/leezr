@@ -32,6 +32,32 @@ const router = createRouter({
 })
 
 setupGuards(router)
+
+// ADR-046 F3: Catch chunk load failures during navigation
+router.onError(error => {
+  const msg = String(error?.message || '')
+  if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('Failed to fetch dynamically imported module')) {
+    try {
+      const payload = JSON.stringify({
+        type: 'chunk_load_failure',
+        message: msg.slice(0, 2000),
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        build_version: window.__APP_VERSION__ || null,
+      })
+
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/runtime-error', new Blob([payload], { type: 'application/json' }))
+      }
+    }
+    catch {
+      // Fire-and-forget
+    }
+
+    window.location.reload()
+  }
+})
+
 export { router }
 export default function (app) {
   app.use(router)

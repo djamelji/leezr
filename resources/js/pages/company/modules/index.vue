@@ -79,6 +79,7 @@ const headers = [
   { title: 'Description', key: 'description', sortable: false },
   { title: '', key: 'entitlement', align: 'center', width: '140px', sortable: false },
   { title: 'Status', key: 'status', align: 'center', width: '100px', sortable: false },
+  { title: '', key: 'actions', align: 'center', width: '120px', sortable: false },
 ]
 </script>
 
@@ -114,9 +115,19 @@ const headers = [
         :items-per-page="-1"
         hide-default-footer
       >
-        <!-- Module name -->
+        <!-- Module name with icon -->
         <template #item.name="{ item }">
           <div class="d-flex align-center gap-x-3 py-2">
+            <VAvatar
+              size="32"
+              :color="item.type === 'core' ? 'primary' : 'info'"
+              variant="tonal"
+            >
+              <VIcon
+                :icon="item.icon_name || 'tabler-puzzle'"
+                size="18"
+              />
+            </VAvatar>
             <div>
               <span
                 class="text-body-1 font-weight-medium"
@@ -168,6 +179,18 @@ const headers = [
             hide-details
             @update:model-value="toggleModule(item)"
           />
+        </template>
+
+        <!-- Configure action -->
+        <template #item.actions="{ item }">
+          <VBtn
+            v-if="item.is_active"
+            size="small"
+            variant="tonal"
+            :to="{ name: 'company-modules-key', params: { key: item.key } }"
+          >
+            Configure
+          </VBtn>
         </template>
 
         <!-- Empty state -->

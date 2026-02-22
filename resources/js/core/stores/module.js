@@ -75,6 +75,17 @@ export const useModuleStore = defineStore('module', {
       return data.modules
     },
 
+    async fetchModuleSettings(key) {
+      return await $api(`/modules/${key}/settings`)
+    },
+
+    async updateModuleSettings(key, settings) {
+      return await $api(`/modules/${key}/settings`, {
+        method: 'PUT',
+        body: { settings },
+      })
+    },
+
     reset() {
       this._modules = []
       this._loaded = false

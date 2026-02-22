@@ -8,6 +8,36 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import { VerticalNavLayout } from '@layouts'
 
 const { navItems } = useCompanyNav()
+
+// ─── Overlay stuck failsafe ─────────────────────────────
+// If .layout-overlay stays visible for >10s without user interaction,
+// auto-dismiss it by simulating a click (resets Vue reactive refs).
+// This catches edge cases where normal cleanup (afterEach, route watcher) fails.
+let overlayStuckTimer = null
+
+function startOverlayWatch() {
+  clearInterval(overlayStuckTimer)
+  let stuckSince = 0
+
+  overlayStuckTimer = setInterval(() => {
+    const overlay = document.querySelector('.layout-overlay.visible')
+    if (overlay) {
+      if (!stuckSince) {
+        stuckSince = Date.now()
+      }
+      else if (Date.now() - stuckSince > 10_000) {
+        overlay.click()
+        stuckSince = 0
+      }
+    }
+    else {
+      stuckSince = 0
+    }
+  }, 2000)
+}
+
+onMounted(startOverlayWatch)
+onUnmounted(() => clearInterval(overlayStuckTimer))
 </script>
 
 <template>

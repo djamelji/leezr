@@ -37,7 +37,7 @@ const isSelf = computed(() =>
 )
 
 const showCredentials = computed(() =>
-  auth.hasPermission('members.credentials') && member.value?.role !== 'owner' && !isSelf.value,
+  auth.hasPermission('members.credentials') && !member.value?._isProtected && !isSelf.value,
 )
 
 const applyProfile = data => {

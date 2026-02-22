@@ -13,6 +13,7 @@ use App\Core\Models\Shipment;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Modules\PlatformModule;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -102,6 +103,9 @@ class DevSeeder extends Seeder
                 ['is_enabled_for_company' => true],
             );
         }
+
+        // ─── Module commercial config (productization seeds) ────────────
+        $this->seedModuleConfigs();
 
         // ─── Jobdomain assignment (seeds default roles + permissions) ────
         // Note: CompanyPermissionCatalog::sync() already ran in SystemSeeder
@@ -218,5 +222,65 @@ class DevSeeder extends Seeder
                 'scheduled_at' => now()->subDays(3),
             ],
         );
+    }
+
+    private function seedModuleConfigs(): void
+    {
+        PlatformModule::where('key', 'logistics_tracking')->update([
+            'display_name_override' => 'Real-Time Tracking',
+            'description_override' => 'Track shipments in real time with live geolocation updates.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-map-pin',
+            'pricing_mode' => 'addon',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'pricing_model' => 'flat',
+            'pricing_metric' => 'none',
+            'pricing_params' => [
+                'price_monthly' => 29,
+            ],
+            'notes' => 'Flat monthly add-on fee for real-time shipment tracking.',
+        ]);
+
+        PlatformModule::where('key', 'logistics_fleet')->update([
+            'display_name_override' => 'Fleet Management',
+            'description_override' => 'Manage vehicles, drivers and maintenance schedules.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-truck',
+            'pricing_mode' => 'addon',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'pricing_model' => 'per_seat',
+            'pricing_metric' => 'users',
+            'pricing_params' => [
+                'included' => ['starter' => 5, 'pro' => 10, 'business' => 25],
+                'overage_unit_price' => ['starter' => 1, 'pro' => 0.8, 'business' => 0.6],
+            ],
+            'notes' => 'Per-seat pricing with plan-based included seats.',
+        ]);
+
+        PlatformModule::where('key', 'logistics_analytics')->update([
+            'display_name_override' => 'Advanced Analytics',
+            'description_override' => 'Operational insights and performance dashboards.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-chart-bar',
+            'pricing_mode' => 'addon',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'pricing_model' => 'plan_flat',
+            'pricing_metric' => 'none',
+            'pricing_params' => [
+                'starter' => 49,
+                'pro' => 29,
+                'business' => 19,
+            ],
+            'notes' => 'Additional monthly price varies by plan tier.',
+        ]);
+
+        // Future example: image-based icon (e.g., Stripe module)
+        // PlatformModule::where('key', 'payments_stripe')->update([
+        //     'icon_type' => 'image',
+        //     'icon_name' => '/images/modules/stripe.svg',
+        // ]);
     }
 }

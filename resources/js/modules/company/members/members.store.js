@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 
+// Centralized owner-detection: sole location that reads the role field.
+// All consumers check _isProtected instead of comparing role strings.
+const hydrateMember = m => ({ ...m, _isProtected: m.role === 'owner' })
+
 export const useMembersStore = defineStore('companyMembers', {
   state: () => ({
     _members: [],
@@ -20,9 +24,9 @@ export const useMembersStore = defineStore('companyMembers', {
     async fetchMembers() {
       const data = await $api('/company/members')
 
-      this._members = data.members
+      this._members = data.members.map(hydrateMember)
 
-      return data.members
+      return this._members
     },
 
     async addMember({ first_name, last_name, email, company_role_id }) {
@@ -31,9 +35,11 @@ export const useMembersStore = defineStore('companyMembers', {
         body: { first_name, last_name, email, company_role_id },
       })
 
-      this._members.push(data.member)
+      const member = hydrateMember(data.member)
 
-      return data.member
+      this._members.push(member)
+
+      return member
     },
 
     async updateMember(id, { company_role_id }) {
@@ -68,7 +74,11 @@ export const useMembersStore = defineStore('companyMembers', {
 
     // ─── Member Profile (show with dynamic fields) ──────
     async fetchMemberProfile(id) {
-      return await $api(`/company/members/${id}`)
+      const data = await $api(`/company/members/${id}`)
+
+      data.member = hydrateMember(data.member)
+
+      return data
     },
 
     // ─── Member Credentials (admin-triggered) ──────

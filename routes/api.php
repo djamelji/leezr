@@ -2,7 +2,9 @@
 
 use App\Core\Auth\AuthController;
 use App\Core\Auth\PasswordResetController;
+use App\Core\Billing\Http\WebhookController;
 use App\Core\Theme\Http\PublicThemeController;
+use App\Http\Controllers\RuntimeErrorController;
 use App\Modules\Platform\Audience\Http\AudienceController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +24,12 @@ Route::prefix('audience')->middleware('throttle:10,1')->group(function () {
     Route::post('/unsubscribe', [AudienceController::class, 'unsubscribe']);
     Route::get('/maintenance-page', [AudienceController::class, 'maintenancePage']);
 });
+
+// Webhooks — public (no auth, external services)
+Route::post('/webhooks/billing', WebhookController::class)->middleware('throttle:60,1');
+
+// Runtime error reporting — public (no auth, frontend → backend)
+Route::post('/runtime-error', RuntimeErrorController::class)->middleware('throttle:10,1');
 
 // Authenticated (auth:sanctum)
 Route::middleware(['auth:sanctum', 'session.governance'])->group(function () {

@@ -20,10 +20,10 @@ export const useAuthStore = defineStore('auth', {
     companies: state => state._companies,
     currentCompanyId: state => state._currentCompanyId,
     currentCompany: state => state._companies.find(c => c.id === Number(state._currentCompanyId)),
-    isOwner: state => {
+    isAdministrative: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
 
-      return company?.role === 'owner'
+      return company?.is_administrative === true
     },
     permissions: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
@@ -32,11 +32,8 @@ export const useAuthStore = defineStore('auth', {
     },
     roleLevel: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
-      if (company?.role === 'owner') return 'management'
-      if (company?.role === 'admin') return 'management'
-      if (company?.company_role?.is_administrative) return 'management'
 
-      return 'operational'
+      return company?.is_administrative ? 'management' : 'operational'
     },
   },
 
@@ -52,7 +49,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     hasPermission(key) {
-      if (this.isOwner) return true
+      if (this.isAdministrative) return true
 
       return Array.isArray(this.permissions) && this.permissions.includes(key)
     },
@@ -71,6 +68,7 @@ export const useAuthStore = defineStore('auth', {
         name: data.company.name,
         slug: data.company.slug,
         role: 'owner',
+        is_administrative: true,
         company_role: null,
       }]
       this._persistCompanyId(data.company.id)

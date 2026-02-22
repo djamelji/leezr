@@ -339,6 +339,15 @@ const executeDeleteField = async () => {
   }
 }
 
+const avatarInitials = name => {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0][0].toUpperCase()
+}
+
 const scopeOptions = [
   { title: 'Member', value: 'company_user' },
   { title: 'Company', value: 'company' },
@@ -429,10 +438,9 @@ const typeOptions = [
                       v-if="member.user.avatar"
                       :src="member.user.avatar"
                     />
-                    <VIcon
-                      v-else
-                      icon="tabler-user"
-                    />
+                    <span v-else class="text-xs font-weight-medium">
+                      {{ avatarInitials(member.user.display_name) }}
+                    </span>
                   </VAvatar>
                   <RouterLink
                     :to="`/company/members/${member.id}`"
@@ -470,7 +478,7 @@ const typeOptions = [
                 >
                   <VIcon icon="tabler-eye" />
                 </VBtn>
-                <template v-if="canManage && member.role !== 'owner'">
+                <template v-if="canManage && !member._isProtected">
                   <VBtn
                     icon
                     size="small"
@@ -539,11 +547,9 @@ const typeOptions = [
                 v-if="quickViewMember.user?.avatar"
                 :src="quickViewMember.user.avatar"
               />
-              <VIcon
-                v-else
-                icon="tabler-user"
-                size="24"
-              />
+              <span v-else class="text-sm font-weight-medium">
+                {{ avatarInitials(quickViewMember.user?.display_name) }}
+              </span>
             </VAvatar>
             <div>
               <div class="text-body-1 font-weight-medium text-high-emphasis">

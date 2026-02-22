@@ -6,6 +6,7 @@ use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Modules\PlatformModule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -32,10 +33,14 @@ class JobdomainController extends Controller
             ])->orderBy('default_order')->get();
 
         // Build module bundles for the platform role template UI (company-scope only)
+        // Apply display overrides from platform_modules DB rows
         $modules = collect(ModuleRegistry::forScope('company'));
+        $platformOverrides = PlatformModule::all()->keyBy('key');
         $moduleBundles = [];
 
         foreach ($modules as $modKey => $manifest) {
+            $pm = $platformOverrides->get($modKey);
+
             $bundles = [];
             foreach ($manifest->bundles as $bundle) {
                 $bundles[] = [
@@ -49,8 +54,8 @@ class JobdomainController extends Controller
 
             $moduleBundles[] = [
                 'module_key' => $modKey,
-                'module_name' => $manifest->name,
-                'module_description' => $manifest->description,
+                'module_name' => $pm?->display_name_override ?? $manifest->name,
+                'module_description' => $pm?->description_override ?? $manifest->description,
                 'is_core' => str_starts_with($modKey, 'core.'),
                 'bundles' => $bundles,
             ];

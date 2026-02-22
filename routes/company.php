@@ -50,6 +50,9 @@ Route::put('/modules/{key}/enable', [CompanyModuleController::class, 'enable'])
     ->middleware('company.access:use-permission,settings.manage');
 Route::put('/modules/{key}/disable', [CompanyModuleController::class, 'disable'])
     ->middleware('company.access:use-permission,settings.manage');
+Route::get('/modules/{key}/settings', [CompanyModuleController::class, 'getSettings']);
+Route::put('/modules/{key}/settings', [CompanyModuleController::class, 'updateSettings'])
+    ->middleware('company.access:use-permission,settings.manage');
 
 // ─── Shipments (module-gated) ─────────────────────────────
 Route::middleware('company.access:use-module,logistics_shipments')->group(function () {

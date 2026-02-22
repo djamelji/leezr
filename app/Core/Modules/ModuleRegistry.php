@@ -2,52 +2,98 @@
 
 namespace App\Core\Modules;
 
-use App\Modules\Core\Members\MembersModule;
-use App\Modules\Core\Settings\SettingsModule;
-use App\Modules\Logistics\Shipments\ShipmentsModule;
-use App\Modules\Platform\Audience\AudienceModule;
-use App\Modules\Platform\Billing\BillingModule;
-use App\Modules\Platform\Companies\CompaniesModule;
-use App\Modules\Platform\Settings\PlatformSettingsModule;
-use App\Modules\Platform\Dashboard\DashboardModule;
-use App\Modules\Platform\Fields\FieldsModule;
-use App\Modules\Platform\Jobdomains\JobdomainsModule;
-use App\Modules\Platform\Modules\ModulesModule;
-use App\Modules\Platform\Roles\RolesModule;
-use App\Modules\Platform\Users\UsersModule;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use ReflectionClass;
 
 /**
- * Aggregator loading module manifests from per-module classes.
+ * Aggregator loading module manifests via autodiscovery.
  * Single source of truth for module definitions.
+ * Scans app/Modules/** for classes implementing ModuleDefinition.
  * Modules are seeded into platform_modules via sync().
  */
 class ModuleRegistry
 {
-    /** @var array<class-string<ModuleDefinition>> */
-    private static array $modules = [
-        // Company-scope modules
-        MembersModule::class,
-        SettingsModule::class,
-        ShipmentsModule::class,
-
-        // Platform-scope modules
-        DashboardModule::class,
-        CompaniesModule::class,
-        UsersModule::class,
-        RolesModule::class,
-        ModulesModule::class,
-        JobdomainsModule::class,
-        FieldsModule::class,
-        PlatformSettingsModule::class,
-        AudienceModule::class,
-        BillingModule::class,
-    ];
-
-    /** @var array<string, ModuleManifest>|null */
+    /** @var array<string, ModuleManifest>|null Manifest cache keyed by module key */
     private static ?array $cache = null;
+
+    /** @var array<class-string<ModuleDefinition>>|null Discovered module classes */
+    private static ?array $discovered = null;
+
+    /** @var array<string, string>|null Module key → FQCN mapping */
+    private static ?array $classMap = null;
+
+    /**
+     * Discover all module classes implementing ModuleDefinition.
+     * Uses recursive filesystem scan (not fragile glob).
+     *
+     * @return array<class-string<ModuleDefinition>>
+     */
+    private static function discoverModules(): array
+    {
+        if (static::$discovered !== null) {
+            return static::$discovered;
+        }
+
+        $modulesPath = app_path('Modules');
+        $modules = [];
+
+        if (!is_dir($modulesPath)) {
+            static::$discovered = [];
+
+            return [];
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($modulesPath, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::LEAVES_ONLY,
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $filename = $file->getBasename('.php');
+
+            if (!str_ends_with($filename, 'Module')) {
+                continue;
+            }
+
+            // Convert file path to FQCN
+            $relativePath = str_replace(
+                [app_path() . DIRECTORY_SEPARATOR, '.php'],
+                ['', ''],
+                $file->getRealPath(),
+            );
+            $className = 'App\\' . str_replace(DIRECTORY_SEPARATOR, '\\', $relativePath);
+
+            if (!class_exists($className)) {
+                continue;
+            }
+
+            $reflection = new ReflectionClass($className);
+
+            if ($reflection->isAbstract()) {
+                continue;
+            }
+
+            if (!$reflection->implementsInterface(ModuleDefinition::class)) {
+                continue;
+            }
+
+            $modules[] = $className;
+        }
+
+        static::$discovered = $modules;
+
+        return $modules;
+    }
 
     /**
      * All module definitions, keyed by module key.
+     * Builds both manifest cache and class map in a single pass.
      *
      * @return array<string, ModuleManifest>
      */
@@ -58,13 +104,16 @@ class ModuleRegistry
         }
 
         $manifests = [];
+        $classMap = [];
 
-        foreach (static::$modules as $class) {
+        foreach (static::discoverModules() as $class) {
             $manifest = $class::manifest();
             $manifests[$manifest->key] = $manifest;
+            $classMap[$manifest->key] = $class;
         }
 
         static::$cache = $manifests;
+        static::$classMap = $classMap;
 
         return $manifests;
     }
@@ -147,10 +196,36 @@ class ModuleRegistry
     }
 
     /**
-     * Clear the cached manifests (for testing).
+     * Get the FQCN of the module class for a given key.
+     */
+    public static function moduleClass(string $key): ?string
+    {
+        static::definitions(); // ensure classMap is populated
+
+        return static::$classMap[$key] ?? null;
+    }
+
+    /**
+     * Get the directory path of a module by its key.
+     */
+    public static function modulePath(string $key): ?string
+    {
+        $class = static::moduleClass($key);
+
+        if (!$class) {
+            return null;
+        }
+
+        return dirname((new ReflectionClass($class))->getFileName());
+    }
+
+    /**
+     * Clear all caches (for testing or re-discovery).
      */
     public static function clearCache(): void
     {
         static::$cache = null;
+        static::$discovered = null;
+        static::$classMap = null;
     }
 }

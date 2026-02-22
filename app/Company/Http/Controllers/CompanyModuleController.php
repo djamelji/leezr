@@ -2,15 +2,11 @@
 
 namespace App\Company\Http\Controllers;
 
-use App\Core\Events\ModuleDisabled;
-use App\Core\Events\ModuleEnabled;
 use App\Core\Modules\CompanyModule;
-use App\Core\Modules\DependencyResolver;
-use App\Core\Modules\EntitlementResolver;
+use App\Core\Modules\CompanyModuleService;
 use App\Core\Modules\ModuleCatalogReadModel;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
-use App\Core\Modules\PlatformModule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -35,54 +31,17 @@ class CompanyModuleController
     public function enable(Request $request, string $key): JsonResponse
     {
         $company = $request->attributes->get('company');
+        $result = CompanyModuleService::enable($company, $key);
 
-        if (!ModuleGate::isEnabledGlobally($key)) {
-            return response()->json([
-                'message' => 'Module is not available globally.',
-            ], 422);
+        if ($result['success']) {
+            Log::info('module.enabled', [
+                'module_key' => $key,
+                'company_id' => $company->id,
+                'user_id' => $request->user()->id,
+            ]);
         }
 
-        $entitlement = EntitlementResolver::check($company, $key);
-
-        if (!$entitlement['entitled']) {
-            $messages = [
-                'plan_required' => 'This module requires a higher plan.',
-                'incompatible_jobdomain' => 'This module is not available for your industry.',
-                'not_available' => 'This module is not included in your plan.',
-            ];
-
-            return response()->json([
-                'message' => $messages[$entitlement['reason']] ?? 'Module not available.',
-                'reason' => $entitlement['reason'],
-            ], 422);
-        }
-
-        $deps = DependencyResolver::canActivate($company, $key);
-
-        if (!$deps['can_activate']) {
-            return response()->json([
-                'message' => 'Required modules must be activated first.',
-                'missing' => $deps['missing'],
-            ], 422);
-        }
-
-        CompanyModule::updateOrCreate(
-            ['company_id' => $company->id, 'module_key' => $key],
-            ['is_enabled_for_company' => true],
-        );
-
-        Log::info('module.enabled', [
-            'module_key' => $key,
-            'company_id' => $company->id,
-            'user_id' => $request->user()->id,
-        ]);
-
-        ModuleEnabled::dispatch($company, $key);
-
-        return response()->json([
-            'message' => 'Module enabled.',
-            'modules' => ModuleCatalogReadModel::forCompany($company),
-        ]);
+        return response()->json($result['data'], $result['status']);
     }
 
     /**
@@ -91,48 +50,81 @@ class CompanyModuleController
     public function disable(Request $request, string $key): JsonResponse
     {
         $company = $request->attributes->get('company');
+        $result = CompanyModuleService::disable($company, $key);
 
-        $platformModule = PlatformModule::where('key', $key)->first();
-
-        if (!$platformModule) {
-            return response()->json([
-                'message' => 'Module not found.',
-            ], 404);
+        if ($result['success']) {
+            Log::info('module.disabled', [
+                'module_key' => $key,
+                'company_id' => $company->id,
+                'user_id' => $request->user()->id,
+            ]);
         }
+
+        return response()->json($result['data'], $result['status']);
+    }
+
+    /**
+     * Get module settings (config_json).
+     */
+    public function getSettings(Request $request, string $key): JsonResponse
+    {
+        $company = $request->attributes->get('company');
 
         $manifest = ModuleRegistry::definitions()[$key] ?? null;
-
-        if ($manifest && $manifest->type === 'core') {
-            return response()->json([
-                'message' => 'Core modules cannot be disabled.',
-            ], 422);
+        if (!$manifest || $manifest->scope !== 'company') {
+            return response()->json(['message' => 'Module not found.'], 404);
         }
 
-        $deps = DependencyResolver::canDeactivate($company, $key);
-
-        if (!$deps['can_deactivate']) {
-            return response()->json([
-                'message' => 'Other modules depend on this one.',
-                'dependents' => $deps['dependents'],
-            ], 422);
+        if (!ModuleGate::isActive($company, $key)) {
+            return response()->json(['message' => 'Module is not active.'], 422);
         }
 
-        CompanyModule::updateOrCreate(
-            ['company_id' => $company->id, 'module_key' => $key],
-            ['is_enabled_for_company' => false],
-        );
+        $companyModule = CompanyModule::where('company_id', $company->id)
+            ->where('module_key', $key)
+            ->first();
 
-        Log::info('module.disabled', [
+        return response()->json([
+            'module_key' => $key,
+            'settings' => $companyModule?->config_json ?? (object) [],
+        ]);
+    }
+
+    /**
+     * Update module settings (config_json).
+     */
+    public function updateSettings(Request $request, string $key): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $manifest = ModuleRegistry::definitions()[$key] ?? null;
+        if (!$manifest || $manifest->scope !== 'company') {
+            return response()->json(['message' => 'Module not found.'], 404);
+        }
+
+        if (!ModuleGate::isActive($company, $key)) {
+            return response()->json(['message' => 'Module is not active.'], 422);
+        }
+
+        $validated = $request->validate([
+            'settings' => ['required', 'array'],
+        ]);
+
+        $companyModule = CompanyModule::where('company_id', $company->id)
+            ->where('module_key', $key)
+            ->firstOrFail();
+
+        $companyModule->update(['config_json' => $validated['settings']]);
+
+        Log::info('module.settings_updated', [
             'module_key' => $key,
             'company_id' => $company->id,
             'user_id' => $request->user()->id,
         ]);
 
-        ModuleDisabled::dispatch($company, $key);
-
         return response()->json([
-            'message' => 'Module disabled.',
-            'modules' => ModuleCatalogReadModel::forCompany($company),
+            'message' => 'Module settings updated.',
+            'module_key' => $key,
+            'settings' => $companyModule->config_json,
         ]);
     }
 }

@@ -130,7 +130,7 @@ const handleSave = () => {
         md="6"
       >
         <AppSelect
-          v-if="editable && member?.role !== 'owner'"
+          v-if="editable && !member?._isProtected"
           v-model="form.company_role_id"
           label="Role"
           :items="roleOptions"

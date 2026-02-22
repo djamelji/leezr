@@ -1,10 +1,14 @@
 import { createApp } from 'vue'
 import App from '@/App.vue'
 import { registerPlugins } from '@core/utils/plugins'
+import { initErrorReporter } from '@/core/runtime/errorReporter'
 
 // Styles
 import '@core-scss/template/index.scss'
 import '@styles/styles.scss'
+
+// ─── Global error monitoring (ADR-046 F2) ────────────
+initErrorReporter()
 
 // ─── bfcache guard (ADR-075) ─────────────────────────────
 // Chrome's back-forward cache preserves entire JS state (including stuck
@@ -18,8 +22,31 @@ window.addEventListener('pageshow', event => {
   }
 })
 
-// ─── Chunk Resilience (ADR-045d + ADR-075 hardening) ─────
-function handleChunkError() {
+// ─── Chunk Resilience (ADR-045d + ADR-075 + ADR-046 F3) ──
+function reportChunkFailure(message) {
+  try {
+    const payload = JSON.stringify({
+      type: 'chunk_load_failure',
+      message: String(message).slice(0, 2000),
+      url: window.location.href,
+      user_agent: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+      build_version: window.__APP_VERSION__ || null,
+    })
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/runtime-error', new Blob([payload], { type: 'application/json' }))
+    }
+  }
+  catch {
+    // Fire-and-forget — never block the reload
+  }
+}
+
+function handleChunkError(errorMessage) {
+  // ADR-046 F3: Log chunk failure before any reload
+  reportChunkFailure(errorMessage || 'Unknown chunk error')
+
   const key = 'lzr:chunk-reload'
   const last = Number(sessionStorage.getItem(key) || 0)
   const now = Date.now()
@@ -49,14 +76,14 @@ function handleChunkError() {
 
 window.addEventListener('vite:preloadError', event => {
   event.preventDefault()
-  handleChunkError()
+  handleChunkError(event.payload?.message || 'vite:preloadError')
 })
 
 window.addEventListener('unhandledrejection', event => {
   const msg = String(event.reason?.message || event.reason || '')
   if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('ChunkLoadError')) {
     event.preventDefault()
-    handleChunkError()
+    handleChunkError(msg)
   }
 })
 
@@ -71,8 +98,8 @@ app.mount('#app')
 
 // ─── Post-mount cleanup ──────────────────────────────────
 // If Vue mounted successfully, any chunk error overlay is stale — remove it.
-// Also clean up layout overlay artifacts from bfcache/tab-restore.
+// Layout overlay: use .click() so the Vue handler resets the reactive refs.
 document.getElementById('lzr-chunk-error')?.remove()
 document.querySelectorAll('.layout-overlay.visible').forEach(el => {
-  el.classList.remove('visible')
+  el.click()
 })

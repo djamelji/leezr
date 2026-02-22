@@ -1,7 +1,9 @@
 <?php
 
 use App\Modules\Platform\Companies\Http\CompanyController;
+use App\Modules\Platform\Companies\Http\CompanyModuleController;
 use App\Modules\Platform\Companies\Http\CompanyUserController;
+use App\Modules\Platform\Companies\Http\PlanController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
@@ -34,8 +36,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Companies
     Route::middleware('platform.permission:manage_companies')->group(function () {
         Route::get('/companies', [CompanyController::class, 'index']);
+        Route::get('/companies/{id}', [CompanyController::class, 'show']);
         Route::put('/companies/{id}/suspend', [CompanyController::class, 'suspend']);
         Route::put('/companies/{id}/reactivate', [CompanyController::class, 'reactivate']);
+        Route::put('/companies/{id}/plan', [CompanyController::class, 'updatePlan']);
+        Route::put('/companies/{id}/modules/{key}/enable', [CompanyModuleController::class, 'enable']);
+        Route::put('/companies/{id}/modules/{key}/disable', [CompanyModuleController::class, 'disable']);
+        Route::get('/plans', [PlanController::class, 'index']);
     });
 
     // Company users (read-only supervision)
@@ -73,7 +80,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Modules
     Route::middleware('platform.permission:manage_modules')->group(function () {
         Route::get('/modules', [ModuleController::class, 'index']);
+        Route::get('/modules/{key}', [ModuleController::class, 'show']);
         Route::put('/modules/{key}/toggle', [ModuleController::class, 'toggle']);
+        Route::put('/modules/{key}/config', [ModuleController::class, 'updateConfig']);
     });
 
     // Field Definitions + Activations

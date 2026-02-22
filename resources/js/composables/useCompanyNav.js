@@ -6,7 +6,7 @@ import { useModuleStore } from '@/core/stores/module'
 const coreRouteNames = new Set(coreNavItems.map(i => i.to?.name).filter(Boolean))
 
 /**
- * Company navigation items — filtered by surface, permission, ownerOnly.
+ * Company navigation items — filtered by surface and permission.
  * Shared between layout and forbidden page (single source of truth).
  */
 export function useCompanyNav() {
@@ -48,12 +48,11 @@ export function useCompanyNav() {
       items = [...staticNavItems]
     }
 
-    // Filter by surface → ownerOnly → permission
+    // Filter by surface → permission
     return items.filter(item => {
       if (item.heading) return true
       if (item.surface === 'structure' && auth.roleLevel !== 'management') return false
       if (item.operationalOnly && auth.roleLevel === 'management') return false
-      if (item.ownerOnly && !auth.isOwner) return false
       if (item.permission && !auth.hasPermission(item.permission)) return false
 
       return true

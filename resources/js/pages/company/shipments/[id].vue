@@ -23,7 +23,7 @@ const canAssign = computed(() => auth.hasPermission('shipments.assign'))
 
 const memberOptions = computed(() => {
   return membersStore.members
-    .filter(m => m.role !== 'owner' && m.company_role)
+    .filter(m => !m._isProtected && m.company_role)
     .map(m => ({
       title: `${m.user.display_name} — ${m.company_role.name}`,
       value: m.user.id,

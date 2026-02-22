@@ -78,9 +78,49 @@ const saveOverview = async () => {
 
 // ─── Modules ────────────────────────────────────────
 const allModules = computed(() => settingsStore.modules)
+const jdKey = computed(() => jobdomain.value?.key)
+const defaultModuleKeys = computed(() => new Set(jobdomain.value?.default_modules || []))
 
 const isModuleSelected = moduleKey => {
-  return (jobdomain.value?.default_modules || []).includes(moduleKey)
+  return defaultModuleKeys.value.has(moduleKey)
+}
+
+// Core modules — always active, cannot toggle
+const coreModules = computed(() =>
+  allModules.value.filter(m => m.type === 'core'),
+)
+
+// Included by default in this jobdomain (non-core)
+const includedModules = computed(() =>
+  allModules.value.filter(m => m.type !== 'core' && defaultModuleKeys.value.has(m.key)),
+)
+
+// Compatible with this jobdomain but not included by default
+const compatibleModules = computed(() =>
+  allModules.value.filter(m => {
+    if (m.type === 'core') return false
+    if (defaultModuleKeys.value.has(m.key)) return false
+
+    // No restriction or matches this jobdomain
+    return m.compatible_jobdomains === null || (jdKey.value && m.compatible_jobdomains.includes(jdKey.value))
+  }),
+)
+
+// Incompatible with this jobdomain
+const incompatibleModules = computed(() =>
+  allModules.value.filter(m => {
+    if (m.type === 'core') return false
+    if (defaultModuleKeys.value.has(m.key)) return false
+    if (m.compatible_jobdomains === null) return false
+
+    return !jdKey.value || !m.compatible_jobdomains.includes(jdKey.value)
+  }),
+)
+
+const planLabel = planKey => {
+  const labels = { pro: 'Pro', business: 'Business' }
+
+  return labels[planKey] || planKey
 }
 
 const toggleModule = async (moduleKey, enabled) => {
@@ -637,7 +677,7 @@ onMounted(async () => {
                 icon="tabler-puzzle"
                 class="me-2"
               />
-              Default Modules
+              Module Configuration
               <VSpacer />
               <VChip
                 color="info"
@@ -656,44 +696,239 @@ onMounted(async () => {
               These presets are applied only when assigning this job domain to a company. Existing companies are not affected.
             </VAlert>
 
-            <VTable
-              v-if="allModules.length"
-              class="text-no-wrap mt-2"
-            >
-              <thead>
-                <tr>
-                  <th>Module</th>
-                  <th>Description</th>
-                  <th style="width: 100px;">
-                    Default
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="mod in allModules"
-                  :key="mod.key"
-                >
-                  <td class="font-weight-medium">
-                    {{ mod.name }}
-                  </td>
-                  <td class="text-medium-emphasis">
-                    {{ mod.description }}
-                  </td>
-                  <td>
-                    <VSwitch
-                      :model-value="isModuleSelected(mod.key)"
-                      density="compact"
-                      hide-details
-                      @update:model-value="toggleModule(mod.key, $event)"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </VTable>
+            <!-- Section: Core Modules -->
+            <template v-if="coreModules.length">
+              <VCardTitle class="text-body-1 mt-4">
+                <VIcon
+                  icon="tabler-shield-check"
+                  size="20"
+                  class="me-2"
+                  color="primary"
+                />
+                Core Modules
+              </VCardTitle>
+              <VCardSubtitle class="text-body-2 mb-2">
+                Always active for all companies. Cannot be removed.
+              </VCardSubtitle>
+              <VTable class="text-no-wrap">
+                <tbody>
+                  <tr
+                    v-for="mod in coreModules"
+                    :key="mod.key"
+                  >
+                    <td class="font-weight-medium">
+                      <RouterLink
+                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
+                        class="text-high-emphasis text-decoration-none"
+                      >
+                        {{ mod.name }}
+                      </RouterLink>
+                      <VChip
+                        color="primary"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-2"
+                      >
+                        Core
+                      </VChip>
+                    </td>
+                    <td class="text-medium-emphasis">
+                      {{ mod.description }}
+                    </td>
+                    <td style="width: 100px;">
+                      <VSwitch
+                        :model-value="true"
+                        density="compact"
+                        hide-details
+                        disabled
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </template>
+
+            <!-- Section: Included by Default -->
+            <template v-if="includedModules.length">
+              <VDivider class="my-2" />
+              <VCardTitle class="text-body-1">
+                <VIcon
+                  icon="tabler-check"
+                  size="20"
+                  class="me-2"
+                  color="success"
+                />
+                Included by Default
+              </VCardTitle>
+              <VCardSubtitle class="text-body-2 mb-2">
+                Auto-activated when this job domain is assigned.
+              </VCardSubtitle>
+              <VTable class="text-no-wrap">
+                <tbody>
+                  <tr
+                    v-for="mod in includedModules"
+                    :key="mod.key"
+                  >
+                    <td class="font-weight-medium">
+                      <RouterLink
+                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
+                        class="text-high-emphasis text-decoration-none"
+                      >
+                        {{ mod.name }}
+                      </RouterLink>
+                      <VChip
+                        color="success"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-2"
+                      >
+                        Included
+                      </VChip>
+                      <VChip
+                        v-if="mod.min_plan"
+                        color="warning"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-1"
+                      >
+                        Requires {{ planLabel(mod.min_plan) }}
+                      </VChip>
+                    </td>
+                    <td class="text-medium-emphasis">
+                      {{ mod.description }}
+                    </td>
+                    <td style="width: 100px;">
+                      <VSwitch
+                        :model-value="true"
+                        density="compact"
+                        hide-details
+                        @update:model-value="toggleModule(mod.key, $event)"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </template>
+
+            <!-- Section: Compatible (Available to add) -->
+            <template v-if="compatibleModules.length">
+              <VDivider class="my-2" />
+              <VCardTitle class="text-body-1">
+                <VIcon
+                  icon="tabler-puzzle"
+                  size="20"
+                  class="me-2"
+                  color="info"
+                />
+                Available Modules
+              </VCardTitle>
+              <VCardSubtitle class="text-body-2 mb-2">
+                Compatible with this job domain. Toggle to include by default.
+              </VCardSubtitle>
+              <VTable class="text-no-wrap">
+                <tbody>
+                  <tr
+                    v-for="mod in compatibleModules"
+                    :key="mod.key"
+                  >
+                    <td class="font-weight-medium">
+                      <RouterLink
+                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
+                        class="text-high-emphasis text-decoration-none"
+                      >
+                        {{ mod.name }}
+                      </RouterLink>
+                      <VChip
+                        v-if="mod.compatible_jobdomains"
+                        color="info"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-2"
+                      >
+                        Marketplace
+                      </VChip>
+                      <VChip
+                        v-if="mod.min_plan"
+                        color="warning"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-1"
+                      >
+                        Requires {{ planLabel(mod.min_plan) }}
+                      </VChip>
+                    </td>
+                    <td class="text-medium-emphasis">
+                      {{ mod.description }}
+                    </td>
+                    <td style="width: 100px;">
+                      <VSwitch
+                        :model-value="false"
+                        density="compact"
+                        hide-details
+                        @update:model-value="toggleModule(mod.key, $event)"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </template>
+
+            <!-- Section: Incompatible -->
+            <template v-if="incompatibleModules.length">
+              <VDivider class="my-2" />
+              <VCardTitle class="text-body-1">
+                <VIcon
+                  icon="tabler-lock"
+                  size="20"
+                  class="me-2"
+                  color="secondary"
+                />
+                Incompatible Modules
+              </VCardTitle>
+              <VCardSubtitle class="text-body-2 mb-2">
+                Not available for this job domain.
+              </VCardSubtitle>
+              <VTable class="text-no-wrap">
+                <tbody>
+                  <tr
+                    v-for="mod in incompatibleModules"
+                    :key="mod.key"
+                    class="text-disabled"
+                  >
+                    <td class="font-weight-medium">
+                      <RouterLink
+                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
+                        class="text-decoration-none"
+                      >
+                        {{ mod.name }}
+                      </RouterLink>
+                      <VChip
+                        color="secondary"
+                        size="x-small"
+                        variant="tonal"
+                        class="ms-2"
+                      >
+                        Not available
+                      </VChip>
+                    </td>
+                    <td>
+                      {{ mod.description }}
+                    </td>
+                    <td style="width: 100px;">
+                      <VSwitch
+                        :model-value="false"
+                        density="compact"
+                        hide-details
+                        disabled
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </template>
 
             <VCardText
-              v-else
+              v-if="!allModules.length"
               class="text-center text-disabled"
             >
               No modules available.

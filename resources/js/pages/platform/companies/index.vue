@@ -10,14 +10,22 @@ definePage({
   },
 })
 
+const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
+const onRowClick = (_event, { item }) => {
+  router.push({ name: 'platform-companies-id', params: { id: item.id } })
+}
+
 onMounted(async () => {
   try {
-    await companiesStore.fetchCompanies()
+    await Promise.all([
+      companiesStore.fetchCompanies(),
+      companiesStore.fetchPlans(),
+    ])
   }
   finally {
     isLoading.value = false
@@ -28,6 +36,7 @@ const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Slug', key: 'slug' },
   { title: 'Status', key: 'status', align: 'center', width: '120px' },
+  { title: 'Plan', key: 'plan_key', align: 'center', width: '160px', sortable: false },
   { title: 'Members', key: 'memberships_count', align: 'center', width: '100px' },
   { title: 'Created', key: 'created_at', width: '140px' },
   { title: 'Actions', key: 'actions', align: 'center', width: '160px', sortable: false },
@@ -45,6 +54,24 @@ const suspend = async company => {
   }
   catch (error) {
     toast(error?.data?.message || 'Failed to suspend company.', 'error')
+  }
+  finally {
+    actionLoading.value = null
+  }
+}
+
+const changePlan = async (company, planKey) => {
+  if (planKey === company.plan_key)
+    return
+
+  actionLoading.value = company.id
+
+  try {
+    await companiesStore.updateCompanyPlan(company.id, planKey)
+    toast('Plan updated.', 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || 'Failed to update plan.', 'error')
   }
   finally {
     actionLoading.value = null
@@ -109,6 +136,9 @@ const formatDate = dateStr => {
         :loading="isLoading"
         :items-per-page="-1"
         hide-default-footer
+        hover
+        class="cursor-pointer"
+        @click:row="onRowClick"
       >
         <!-- Status -->
         <template #item.status="{ item }">
@@ -118,6 +148,23 @@ const formatDate = dateStr => {
           >
             {{ item.status }}
           </VChip>
+        </template>
+
+        <!-- Plan -->
+        <template #item.plan_key="{ item }">
+          <div @click.stop>
+            <VSelect
+              :model-value="item.plan_key"
+              :items="companiesStore.plans"
+              item-title="name"
+              item-value="key"
+              density="compact"
+              variant="outlined"
+              hide-details
+              :loading="actionLoading === item.id"
+              @update:model-value="changePlan(item, $event)"
+            />
+          </div>
         </template>
 
         <!-- Members count -->
@@ -138,7 +185,7 @@ const formatDate = dateStr => {
             variant="tonal"
             size="small"
             :loading="actionLoading === item.id"
-            @click="suspend(item)"
+            @click.stop="suspend(item)"
           >
             Suspend
           </VBtn>
@@ -148,7 +195,7 @@ const formatDate = dateStr => {
             variant="tonal"
             size="small"
             :loading="actionLoading === item.id"
-            @click="reactivate(item)"
+            @click.stop="reactivate(item)"
           >
             Reactivate
           </VBtn>

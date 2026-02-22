@@ -887,111 +887,52 @@ definePage({
 
 ---
 
-## ADR-046 : Enterprise Runtime Hardening (Backlog)
+## ADR-046 : Enterprise Runtime Hardening — Implémenté
 
-- **Date** : 2026-02-14
-- **Statut** : **Backlog** — documenté, NON implémenté
-- **Priorité** : Low
-- **Risque** : Faible
+- **Date** : 2026-02-14 (documenté) → 2026-02-22 (implémenté)
+- **Statut** : **Implémenté** — les 4 sous-lots F1–F4 sont en production
 - **Impact** : Observabilité / Robustesse production
 - **Prérequis** : ADR-045 (Production Hardening) implémenté
 
-- **Contexte** : Le runtime SPA est désormais robuste (versioning ADR-045c, handshake ADR-045e, chunk resilience ADR-045d). Il manque 4 briques d'observabilité et de discipline production pour atteindre un niveau enterprise-grade. Ce lot est optionnel, non urgent, mais stratégique pour le passage à l'échelle.
+- **Contexte** : Le runtime SPA est robuste (versioning ADR-045c, handshake ADR-045e, chunk resilience ADR-045d). Suite à des instabilités post-login (overlay freeze), les 4 briques d'observabilité et de discipline production sont désormais nécessaires.
 
-- **Décision** : Créer un LOT F composé de 4 sous-lots indépendants, chacun déployable et réversible séparément :
+- **Décision** : LOT F — 4 sous-lots implémentés simultanément :
 
-  ### F1 — API Cache Discipline
+  ### F1 — API Cache Discipline ✅
+  - `NoCacheHeaders` middleware : `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` + `Pragma: no-cache` + `Expires: 0`
+  - Enregistré dans le groupe `api` via `bootstrap/app.php` (s'applique à toutes les routes `/api/*`, `/api/platform/*`)
+  - Également appliqué au `/health` endpoint via middleware direct
+  - **Fichiers** : `app/Http/Middleware/NoCacheHeaders.php` (CREATE), `bootstrap/app.php` (MODIFY)
 
-  **Problème** : Les endpoints `/api/*` ne forcent pas explicitement la non-mise en cache côté navigateur/proxy. Un proxy ou CDN mal configuré pourrait cacher des réponses API authentifiées.
+  ### F2 — Global Error Monitoring ✅
+  - Frontend : `errorReporter.js` — listeners `window.error` + `unhandledrejection` → `sendBeacon` vers `/api/runtime-error`
+  - Payload : `{ type, message, stack, url, user_agent, timestamp, build_version }`
+  - Chunk errors exclus (gérés par F3)
+  - Backend : `RuntimeErrorController` — valide le payload, log vers canal `runtime` (`storage/logs/runtime.log`)
+  - Canal `runtime` ajouté à `config/logging.php` (single file, séparé de laravel.log)
+  - Route `POST /api/runtime-error` avec `throttle:10,1`
+  - **Fichiers** : `resources/js/core/runtime/errorReporter.js` (CREATE), `app/Http/Controllers/RuntimeErrorController.php` (CREATE), `config/logging.php` (MODIFY), `routes/api.php` (MODIFY), `resources/js/main.js` (MODIFY)
 
-  **Solution future** :
-  - Middleware `ApiNoCacheHeaders` ajoutant `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` sur toutes les routes API
-  - Enregistrement dans le groupe middleware `api` (comme `AddBuildVersion`)
+  ### F3 — Chunk Failure Logging ✅
+  - `reportChunkFailure()` dans `main.js` : `sendBeacon` fire-and-forget vers `/api/runtime-error` AVANT tout reload
+  - `handleChunkError()` enrichi : reçoit le message d'erreur, log avant reload ou overlay
+  - `router.onError` dans `plugins/1.router/index.js` : attrape les chunk failures pendant la navigation, log + reload
+  - Réutilise l'endpoint F2 (`/api/runtime-error`) avec `type: 'chunk_load_failure'`
+  - **Fichiers** : `resources/js/main.js` (MODIFY), `resources/js/plugins/1.router/index.js` (MODIFY)
 
-  **Impact** : Zéro impact métier. Protection contre proxy/CDN mal configuré.
-
-  **Fichiers estimés** :
-  - `app/Http/Middleware/ApiNoCacheHeaders.php` (nouveau, ~10 lignes)
-  - `bootstrap/app.php` (1 ligne — appendToGroup)
-
-  ---
-
-  ### F2 — Global Error Monitoring
-
-  **Problème** : Aucune centralisation des erreurs runtime JS. Les erreurs silencieuses (chunk failures, API errors, mismatch) ne sont pas détectées côté serveur.
-
-  **Solution future** :
-  - Hooks globaux `window.onerror` + `window.addEventListener('unhandledrejection')` (complémentaires au handler chunk ADR-045d)
-  - Envoi d'un payload minimal vers `POST /api/runtime-error` (endpoint dédié, non authentifié, rate-limited)
-  - Payload : `{ build_version, route, message, stack?, user_agent, timestamp }`
-  - Backend : log structuré (`Log::warning`) — pas de table dédiée au départ
-  - Rate limiting strict : `throttle:10,1` sur l'endpoint
-
-  **Impact** : Détection proactive des erreurs chunk, API, mismatch. Traçabilité des incidents runtime.
-
-  **Fichiers estimés** :
-  - `resources/js/utils/errorReporter.js` (nouveau, ~30 lignes)
-  - `resources/js/main.js` (import + init)
-  - `app/Http/Controllers/RuntimeErrorController.php` (nouveau, ~20 lignes)
-  - `routes/api.php` (1 route)
-
-  ---
-
-  ### F3 — Chunk Failure Logging
-
-  **Problème** : Le handler chunk (ADR-045d) reload silencieusement ou affiche un overlay, mais ne trace pas l'événement. Impossible de savoir si un deploy a causé des chunk failures massifs.
-
-  **Solution future** :
-  - Avant le reload (dans `handleChunkError`), envoyer un beacon vers `POST /api/runtime-event`
-  - Payload : `{ type: 'chunk_failure', build_version, asset_url?, route, timestamp }`
-  - Utiliser `navigator.sendBeacon()` (fire-and-forget, survit au reload)
-  - Backend : log structuré — pas de table dédiée
-  - Dépend de F2 pour l'endpoint (ou endpoint séparé si F2 non implémenté)
-
-  **Impact** : Traçabilité des déploiements problématiques. Dashboarding futur possible.
-
-  **Fichiers estimés** :
-  - `resources/js/main.js` (ajout `sendBeacon` dans `handleChunkError`)
-  - `app/Http/Controllers/RuntimeEventController.php` (nouveau si séparé de F2)
-  - `routes/api.php` (1 route si séparé)
-
-  ---
-
-  ### F4 — Health Endpoint
-
-  **Problème** : Aucun endpoint de health check pour le monitoring externe, la vérification CI/CD, ou le debug mismatch en production.
-
-  **Solution future** :
-  - `GET /health` (hors groupe `api`, pas d'auth) retournant :
-    ```json
-    {
-      "status": "ok",
-      "build_version": "abc1234",
-      "environment": "production",
-      "timestamp": "2026-02-14T12:00:00Z"
-    }
-    ```
-  - Laravel fournit déjà `/up` (configuré dans `bootstrap/app.php`) mais il ne retourne que HTTP 200 sans metadata
-  - Le health endpoint enrichi expose `config('app.build_version')` et `config('app.env')`
-  - Pas de check DB/Redis dans la réponse (simplicité, vitesse) — extensible plus tard
-
-  **Usages** :
-  - Monitoring externe (UptimeRobot, Pingdom)
-  - Vérification post-deploy dans le deploy script
-  - Debug mismatch : comparer `X-Build-Version` header vs `/health` response
-  - CI/CD : smoke test après deploy
-
-  **Fichiers estimés** :
-  - `routes/web.php` (1 route) ou controller dédié
-  - Optionnel : `app/Http/Controllers/HealthController.php` (~10 lignes)
+  ### F4 — Health Endpoint ✅
+  - `GET /health` — public, sans auth, avec `NoCacheHeaders` middleware
+  - Retourne : `{ status, app_version, build_version, commit_hash, timestamp }`
+  - Lit `config('app.version')`, `config('app.build_version')`, `config('app.commit_hash')` (déjà configurés)
+  - Route catch-all SPA mise à jour pour exclure `/health`
+  - **Fichiers** : `app/Http/Controllers/HealthController.php` (CREATE), `routes/web.php` (MODIFY)
 
 - **Conséquences** :
-  - Chaque sous-lot (F1-F4) est indépendant et déployable séparément
-  - F2 et F3 partagent un pattern commun (endpoint runtime events) — à factoriser si les deux sont implémentés
-  - Aucun sous-lot ne modifie le comportement métier existant
-  - Aucun sous-lot ne nécessite de migration DB
-  - L'ordre d'implémentation recommandé : F4 (le plus simple) → F1 → F3 → F2 (le plus complexe)
-  - Ce lot ne sera implémenté que lorsqu'un besoin concret d'observabilité se manifestera (incident en prod, scaling, onboarding monitoring)
+  - Les réponses API ne sont jamais cachées par un proxy/CDN/navigateur
+  - Les erreurs runtime JS sont centralisées dans `storage/logs/runtime.log` (séparé de l'app log)
+  - Les chunk failures sont tracés AVANT le reload — visibilité sur les déploiements problématiques
+  - Le `/health` endpoint expose les metadata build pour monitoring externe, CI/CD smoke test, debug mismatch
+  - Aucun changement de comportement métier — observabilité pure
 
 ---
 
@@ -2184,6 +2125,177 @@ definePage({
   - Zéro nouvelle table — entitlement calculé dynamiquement
   - Prêt pour marketplace : `minPlan`, `compatibleJobdomains`, `requires` déjà dans le contrat
   - Les modules existants (Members, Settings, Shipments) ne changent pas — aucun `minPlan` défini
+
+## ADR-090 : Platform Plan Management — Minimal Wiring
+
+- **Date** : 2026-02-21
+- **Contexte** : ADR-089 a introduit `PlanRegistry` et `companies.plan_key` pour le gating des modules par plan. Mais aucune interface admin ne permettait de voir ou modifier le plan d'une company. Les admins plateforme devaient intervenir en base de données.
+- **Décision** : Câbler le `PlanRegistry` existant à l'UI admin plateforme avec un périmètre minimal :
+  1. `GET /api/platform/plans` — expose les définitions du `PlanRegistry` (read-only)
+  2. `PUT /api/platform/companies/{id}/plan` — modifie `plan_key` avec validation `Rule::in(PlanRegistry::keys())`
+  3. Colonne "Plan" dans la page companies avec `VSelect` inline pour changement direct
+  4. Pas de billing, pas de Stripe, pas de changement d'entitlements — le plan modifie `plan_key` et l'`EntitlementResolver` le lit en temps réel
+- **Conséquences** : Les admins plateforme peuvent assigner un plan à toute company via l'UI. Le changement est immédiat — les modules gated par `minPlan` deviennent accessibles ou inaccessibles instantanément. Prêt pour le futur billing (ADR-011) qui automatisera les changements de plan.
+
+## ADR-091 : Billing Abstraction Layer — Interface Only
+
+- **Date** : 2026-02-21
+- **Contexte** : ADR-089/090 ont câblé `PlanRegistry` et l'assignation de plan via l'UI admin. L'étape suivante est de préparer le raccordement à un service de billing externe (Stripe), tout en respectant ADR-011 qui diffère explicitement le billing réel. Objectif : poser la couture (seam) architecturale pour que le jour où Stripe est activé, on swap un driver — le reste de l'app ne change pas.
+- **Décision** : Introduire une **couche d'abstraction billing** minimale, sans aucune implémentation réelle :
+  1. **`BillingProvider`** — interface/contrat avec 5 méthodes : `ensureCustomer`, `changePlan`, `cancelSubscription`, `billingPortalUrl`, `handleWebhook`
+  2. **`NullBillingProvider`** — driver par défaut, `changePlan()` écrit `plan_key` en DB directement (comportement actuel), le reste est no-op
+  3. **`StripeBillingProvider`** — stub, chaque méthode throw `RuntimeException('Stripe billing not implemented — see ADR-011')`, isole le futur SDK Stripe dans un seul fichier
+  4. **`BillingManager`** — étend `Illuminate\Support\Manager`, résout le driver via `config('billing.driver')` (default `'null'`)
+  5. **`config/billing.php`** — driver + clés Stripe isolées (`BILLING_DRIVER`, `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`)
+  6. **Binding** — `BillingProvider` → `BillingManager::driver()` dans `AppServiceProvider`
+  7. **Webhook route** — `POST /api/webhooks/billing` (public, throttled), délègue au `BillingProvider::handleWebhook()`
+- **Conséquences** :
+  - Aucune dépendance Stripe ajoutée, aucune table de subscription, aucun checkout, aucune UI billing
+  - Le code existant (`PlanRegistry`, `EntitlementResolver`, `CompanyController::updatePlan`) n'est pas modifié
+  - Pour activer Stripe : installer `stripe/stripe-php`, implémenter `StripeBillingProvider`, setter `BILLING_DRIVER=stripe`
+  - Le `NullBillingProvider` reste le driver de production jusqu'à ce que le billing soit prêt
+
+## ADR-092 : Platform Company Profile (V1, NO billing)
+
+- **Date** : 2026-02-21
+- **Contexte** : Les admins plateforme peuvent lister les companies et changer plan/status inline, mais il n'existe pas de page de détail. De plus, la logique enable/disable de modules est dupliquée inline dans `CompanyModuleController` côté company, sans possibilité de réutilisation côté plateforme.
+- **Décision** :
+  1. **Service extraction** — Extraire la logique enable/disable dans `CompanyModuleService` (Core) pour partage entre company-side et platform-side controllers. Le service retourne un résultat structuré `{success, status, data}`, les controllers restent thin wrappers (logging + JsonResponse).
+  2. **Profile endpoint** — `GET /api/platform/companies/{id}` retourne company (with jobdomains + memberships_count), plan (from PlanRegistry), et modules (from ModuleCatalogReadModel).
+  3. **Platform module toggle** — `PUT /api/platform/companies/{id}/modules/{key}/enable|disable` via un nouveau `CompanyModuleController` plateforme qui utilise le service partagé.
+  4. **Frontend** — Page profil company avec 2 onglets (Overview + Modules). Overview : info read-only, plan VSelect, suspend/reactivate. Modules : liste avec VSwitch (disabled pour core + non-entitled).
+  5. **Directory pattern** — `companies.vue` migré vers `companies/index.vue` (cohérence avec `jobdomains/`, `users/`), bouton "View" ajouté dans la liste.
+- **Conséquences** :
+  - Zéro duplication de logique module — un seul service, deux controllers
+  - `ModuleCatalogReadModel::forCompany()` confirmé context-independent (pas de `auth()`, pas de `request()`)
+  - Les admins plateforme peuvent voir et gérer les modules de chaque company
+  - Pas de billing, pas de Stripe — `plan_key` reste un simple champ DB
+  - Prêt pour extension future (onglets supplémentaires : members, activity, etc.)
+
+## ADR-093 : Module Catalog UX (Clickable + Configurable)
+
+- **Date** : 2026-02-21
+- **Contexte** : Les modules existent en tant qu'entrées de liste, mais il n'y a pas de page de profil module ni de page de configuration côté company. Les noms de modules ne sont pas cliquables dans les onglets Modules des jobdomains et companies. L'index platform/modules n'offre ni filtres ni colonnes enrichies.
+- **Décision** :
+  1. **Platform Module Profile** — `GET /api/platform/modules/{key}` retourne manifest complet, platformModule, dependents (reverse lookup), companies utilisant le module, jobdomains compatibles, et jobdomains incluant le module par défaut. Page frontend avec 4 onglets : Overview, Compatibility, Dependencies, Companies.
+  2. **Enhanced Platform Modules Listing** — Index enrichi avec colonnes Type, Min Plan, Jobdomains. Filtres par type (core/addon), plan minimum (none/pro/business), et statut global (enabled/disabled). Lignes cliquables vers le profil module. Toggle VSwitch isolé avec `@click.stop`.
+  3. **Company Module Settings** — `GET/PUT /api/company/modules/{key}/settings` exploitant la colonne `config_json` existante dans `company_modules`. Page company `/modules/{key}` avec éditeur JSON (AppTextarea monospace), validation JSON côté client, save/reset.
+  4. **Clickable Module Names** — Dans l'onglet Modules des jobdomains (`platform/jobdomains/[id].vue`) et du profil company (`platform/companies/[id].vue`), les noms de modules sont des RouterLink vers `platform-modules-key`.
+  5. **Directory pattern** — `platform/modules.vue` migré vers `platform/modules/index.vue`, `company/modules.vue` migré vers `company/modules/index.vue` (cohérence avec le pattern `[key].vue`).
+- **Conséquences** :
+  - Chaque module a une page de profil navigable depuis n'importe quel listing
+  - Le graph de dépendances est visible (requires + dependents) avec liens inter-modules
+  - Les admins voient quelles companies utilisent un module donné
+  - Les companies peuvent configurer leurs modules actifs via JSON settings
+  - `config_json` (colonne existante) est exploitée — aucune migration nécessaire
+  - Les filtres sur l'index permettent une navigation rapide dans un catalogue croissant
+
+## ADR-094 : Module Product Editor (Structured Pricing + Editable Platform Config)
+
+- **Date** : 2026-02-22
+- **Contexte** : La page profil module platform (`/platform/modules/{key}`) est en lecture seule — toutes les données proviennent du manifest (code). Les admins plateforme n'ont aucun moyen de configurer les métadonnées commerciales (pricing, listing, schema settings) sans modifier le code. Un éditeur JSON brut ne suffit pas pour opérer un catalogue de centaines de modules.
+- **Décision** :
+  1. **Extend `platform_modules`** — 7 colonnes ajoutées : `is_listed` (bool), `is_sellable` (bool), `pricing_model` (string nullable), `pricing_metric` (string nullable), `pricing_params` (JSON), `settings_schema` (JSON), `notes` (text). String columns + `Rule::in()` validation (pas de DB enum). `ModuleRegistry::sync()` ne touche que key/name/description — colonnes commerciales safe.
+  2. **`PUT /api/platform/modules/{key}/config`** — endpoint de mise à jour avec validation field-scoped via `Validator::make()` pour `pricing_params` selon `pricing_model` (flat→price_monthly, plan_flat→starter/pro/business, per_seat→included+overage, usage→unit_price, tiered→tiers array). Retourne 422 avec erreurs par champ.
+  3. **`GET /api/platform/modules/{key}`** — enrichi avec clé `platform_config` séparant manifest read-only (tech) et config DB editable (commercial).
+  4. **Module Product Editor** — Page redessinée en 2 colonnes (md=8 + md=4), inspirée du preset `ecommerce/product/add`. Colonne gauche : Module Summary (read-only), Pricing Editor (formulaire structuré avec champs conditionnels par pricing_model : number inputs, table plan, repeater tiers), Preview box, Expert mode (JSON toggle), Companies panel (lazy-loaded, VExpansionPanel). Colonne droite : Commercial (switches Listed/Sellable + Notes), Organize (compatibility, included by, dependencies — read-only chips).
+  5. **Dirty state** — Save button disabled quand clean, `variant="elevated"` quand dirty. Snapshot JSON pour détection.
+  6. **Seed** — DevSeeder enrichi avec pricing configs pour 3 modules logistique : tracking (flat/$29), fleet (per_seat/included+overage), analytics (plan_flat/$49-29-19).
+- **Contraintes** : Pas de billing, pas de Stripe, pas de changement EntitlementResolver. Manifests = tech metadata, DB = commercial metadata.
+- **Fichiers** : 1 CREATE (migration), 7 MODIFY (PlatformModule, ModuleController, routes/platform, DevSeeder, settings.store.js, [key].vue, 04-decisions.md)
+- **Conséquences** :
+  - Les admins plateforme configurent le pricing et le listing sans toucher au code ni au JSON brut
+  - Le formulaire structuré adapte ses champs au pricing_model sélectionné (flat, plan_flat, per_seat, usage, tiered)
+  - La preview affiche le pricing calculé par plan — feedback immédiat sans billing
+  - L'expert mode offre un fallback JSON pour cas avancés
+  - `sync()` et colonnes commerciales coexistent sans conflit
+  - Prêt pour futur billing engine qui consommera `pricing_model`/`pricing_params`
+
+## ADR-095 : Pricing UX Clarification + Governance Completion
+
+- **Date** : 2026-02-22
+- **Contexte** : ADR-094 a livré un éditeur structuré fonctionnel mais utilisant du jargon technique (`plan_flat`, `pricing_metric`, `per_seat`) incompréhensible pour un ops non-dev. Aucune distinction explicite entre module inclus dans l'abonnement, add-on payant, ou interne. Les prix affichés ne clarifient pas qu'ils sont additionnels au forfait de base.
+- **Décision** :
+  1. **`pricing_mode` field** — Nouvelle colonne `pricing_mode` (string nullable) dans `platform_modules`. Trois valeurs : `included` (inclus dans l'abonnement), `addon` (coût mensuel additionnel), `internal` (non commercial). Sélecteur "Commercial Mode" en haut de l'éditeur pricing avec textes d'aide contextuels.
+  2. **Labels user-friendly** — Tous les labels techniques remplacés : `flat` → "Fixed price (same for all plans)", `plan_flat` → "Price varies by plan", `per_seat` → "Per active user", `usage` → "Usage-based", `tiered` → "Tiered pricing". "Pricing Model" renommé "Pricing Structure", "Pricing Metric" renommé "Pricing Unit".
+  3. **Prix additionnels explicites** — Tous les prix en mode addon préfixés par "+" dans la preview (`+$29/mo`). Labels précisent "Additional monthly price" pour éviter toute confusion avec le prix de base du plan.
+  4. **Pricing Unit intelligent** — Sélecteur affiché uniquement pour usage/tiered (les seuls modèles où la métrique est configurable). Pour flat/plan_flat → auto `none`, pour per_seat → auto `users`. Items avec descriptions humaines ("Per shipment", "Per SMS sent", etc.).
+  5. **Consistency enforcement** — Backend : si `pricing_mode ≠ addon`, pricing_model/metric/params mis à null. Frontend : watcher sur pricing_mode qui nettoie les champs pricing. Watcher sur pricing_model qui auto-corrige la métrique.
+  6. **Revenue Impact Preview** — Preview contextuelle par mode : `included` → VAlert info "Included in subscription plan — no additional charge", `internal` → VAlert warning "does not generate additional revenue", `addon` → VAlert success avec prix par plan préfixés "+".
+  7. **Seed** — DevSeeder enrichi avec `pricing_mode: 'addon'` pour les 3 modules logistique.
+- **Contraintes** : Pas de billing, pas de Stripe, pas de changement EntitlementResolver. Pas de nouveau modèle ni de nouvelle table — une seule colonne ajoutée.
+- **Fichiers** : 1 CREATE (migration pricing_mode), 4 MODIFY (PlatformModule, ModuleController, DevSeeder, [key].vue, 04-decisions.md)
+- **Conséquences** :
+  - Un ops non-dev comprend immédiatement si un module génère du revenu additionnel ou non
+  - Les 3 modes commerciaux sont explicites et gouvernent la visibilité des champs pricing
+  - La preview affiche l'impact financier réel avec notation "+$" sans ambiguïté
+  - Le backend garantit la cohérence (pas de pricing orphelin si mode ≠ addon)
+  - Prêt pour futur billing engine qui filtrera sur `pricing_mode = 'addon'`
+
+## ADR-098 : Module Packaging Architecture (Self-Contained + Exportable Modules)
+
+- **Date** : 2026-02-22
+- **Contexte** : Le système de modules utilise une liste hardcodée de 16 classes dans `ModuleRegistry::$modules`. Les migrations sont centralisées dans `database/migrations/`, les routes inline dans `routes/company.php` et `routes/platform.php`, aucun fichier metadata, aucun asset icône. À l'échelle de centaines de modules, ce modèle ne tient pas.
+- **Décision** :
+  1. **Autodiscovery robuste** — `ModuleRegistry` remplace la liste hardcodée par un scan récursif de `app/Modules/` via `RecursiveDirectoryIterator`. Cherche toutes les classes `*Module.php`, vérifie `class_exists()` + `is_subclass_of(ModuleDefinition::class)` + non abstraite. Cache en `static::$discovered`. Nouvelles méthodes : `modulePath(string $key)` (chemin disque du module) et `moduleClass(string $key)` (FQCN).
+  2. **ModuleManifest — icon support** — Deux nouveaux paramètres : `iconType` (`'tabler'|'image'`, default `'tabler'`) et `iconRef` (string, default `'tabler-puzzle'`). Si `iconType='image'`, le fichier SVG doit être dans `{module}/resources/{iconRef}`.
+  3. **Export/Import CLI** — `php artisan module:export {key}` produit `storage/modules/{key}.json` contenant : `manifest` (read-only), `permissions`, `bundles`, `platform_module` (toute la config DB éditable : pricing, overrides, listing), `metadata` (version, exported_at), et `icon_data` (base64 SVG si image). `php artisan module:import {path}` : valide le JSON, vérifie que le module PHP existe, sync le registre, applique `platform_module` via `update()`, écrit le SVG si icon image. DB sync only — ne crée pas de code PHP.
+  4. **Override columns** — 4 colonnes ajoutées à `platform_modules` : `display_name_override`, `description_override`, `min_plan_override`, `sort_order_override`. Exportées/importées avec la config commerciale.
+  5. **Module-local migrations + routes** — Infrastructure dans `AppServiceProvider::loadModuleAssets()` : charge automatiquement `{module}/database/migrations/` et `{module}/routes/{company,platform}.php` s'ils existent. Pattern pour nouveaux modules uniquement — l'existant reste centralisé.
+  6. **Convention module.json** — Fichier optionnel `module.json` dans le dossier module pour metadata (version, author). L'export lit la version depuis ce fichier s'il existe.
+  7. **Convention de structure** — Chaque module dans `app/Modules/{Domain}/{ModuleName}/` avec : `{Name}Module.php` (requis), `module.json` (optionnel), `Http/`, `Services/`, `ReadModels/`, `UseCases/`, `database/migrations/`, `resources/`, `routes/`, `README.md`.
+- **Contraintes** : Pas de changement EntitlementResolver. Pas de changement billing. Pattern new-only pour migrations/routes. Import = DB sync only.
+- **Fichiers** : 3 CREATE (ModuleExportCommand, ModuleImportCommand, module.json example), 4 MODIFY (ModuleManifest, ModuleRegistry, PlatformModule + migration, AppServiceProvider)
+- **Conséquences** :
+  - Ajouter un module = créer une classe dans `app/Modules/` — plus besoin de toucher `ModuleRegistry`
+  - Un module est exportable/importable comme un package JSON autonome
+  - La config commerciale (pricing, overrides, listing) voyage avec le module
+  - Les nouveaux modules peuvent colocaliser migrations et routes
+  - Le registre ne dépend jamais de la DB pour la structure — manifests = source de vérité technique
+  - Prêt pour marketplace future (import depuis catalogue externe)
+
+## ADR-097 : Module Visual Identity + Governance Completion (Overrides + Sidebar + Icons + Pricing Preview)
+
+- **Date** : 2026-02-22
+- **Contexte** : Le système de modules ne possède pas d'identité visuelle. Les modules sont affichés avec l'icône générique `tabler-puzzle` partout. Les champs d'override (display_name_override, description_override, min_plan_override, sort_order_override) créés par ADR-098 ne sont pas exposés dans l'UI d'édition. La page profil module ([key].vue) n'affiche pas les permissions et bundles en détail. Le pricing preview n'a pas de contexte visuel (pas d'icône par pricing_model, pas de couleur sémantique par pricing_mode).
+- **Décision** :
+  1. **Colonnes icon DB** — Ajout de `icon_type` (varchar nullable) et `icon_name` (varchar nullable) à `platform_modules`. Override chain : DB → manifest → `'tabler-puzzle'` fallback. PlatformModule fillable mis à jour.
+  2. **Override merge API** — Toutes les API (ModuleController index/show, ModuleCatalogReadModel, JobdomainController show) appliquent `override ?? manifest` pour name, description, min_plan, sort_order. Tri par sort_order effectif. `show()` retourne `manifest_defaults` séparé + `permissions`/`bundles` complets dans `module`.
+  3. **updateConfig enrichi** — Accepte les champs override (display_name_override, description_override, min_plan_override, sort_order_override) + icon (icon_type, icon_name) avec validation.
+  4. **UI — Module Identity** — Carte "Module Summary" renommée "Module Identity". 4 champs éditables avec persistent-hint montrant le manifest default. Champs techniques (type, surface, key) restent disabled. Section icon (type select + name text).
+  5. **UI — Sidebar Permissions + Bundles** — Deux cartes read-only dans la colonne droite : Permissions (chips par permission.label) et Capability Bundles (chips colorés warning si is_admin, info sinon, avec hint text).
+  6. **UI — Icons dans les listings** — VAvatar 32px avec icône dynamique (`item.icon_name`) devant le nom du module dans : platform/modules/index.vue, company/modules/index.vue, et VAvatar 48px dans le header profil [key].vue.
+  7. **UI — Pricing preview visuel** — Icône contextuelle par pricing_model (flat=currency-dollar, plan_flat=layers-linked, per_seat=users, usage=activity, tiered=chart-bar). Couleur sémantique par pricing_mode (included=primary, addon=success, internal=warning). Chip pricing_mode avec préfixe "+" pour addon dans le titre Pricing.
+  8. **DevSeeder cohérent** — seedModuleConfigs() enrichi pour les 3 modules logistique avec display_name_override, description_override, icon_type='tabler', icon_name spécifique (tabler-map-pin, tabler-truck, tabler-chart-bar).
+  9. **Dirty state étendu** — currentPayload inclut les 6 nouveaux champs (4 overrides + 2 icons). Save payload et re-hydration mis à jour. Pas de régression sur le comportement existant.
+- **Contraintes** : Pas de changement EntitlementResolver. Pas de billing. Metadata technique (type, scope, surface, key, requires) reste read-only.
+- **Fichiers** : 1 CREATE (migration icon columns), 6 MODIFY (PlatformModule, ModuleController, ModuleCatalogReadModel, JobdomainController, DevSeeder, platform/modules/[key].vue, platform/modules/index.vue, company/modules/index.vue, 04-decisions.md)
+- **Conséquences** :
+  - Chaque module a une identité visuelle propre (icône + nom commercial distinct du code)
+  - Un ops peut personnaliser nom, description, min_plan, sort_order et icône sans toucher au code
+  - Les permissions et bundles sont visibles directement dans le profil module (pas besoin de regarder le code)
+  - Le pricing preview donne un feedback visuel immédiat du mode commercial et de la structure de prix
+  - L'override chain (DB → manifest → fallback) est cohérent sur toute la stack (API + frontend)
+
+---
+
+## ADR-099 : Bugfix — Overlay bloqué après navigation (écran grisé)
+
+- **Date** : 2026-02-22
+- **Contexte** : Le `.layout-overlay` (scrim 60% noir + `pointer-events: auto`) de `@layouts/components/VerticalNavLayout.vue` peut rester bloqué en état visible, rendant l'application inutilisable (écran grisé, clics bloqués). Symptôme : refresh KO, nouvel onglet OK. Trois bugs cumulatifs identifiés par audit :
+  1. Le nettoyage `afterEach` ne s'exécutait que sur desktop (`window.innerWidth >= 1280`) — aucun nettoyage sur mobile/tablette
+  2. Le nettoyage DOM (`classList.remove('visible')`) est inefficace car Vue réinjecte la classe au prochain render tick (les refs réactives `isOverlayNavActive`/`isLayoutOverlayVisible` restent `true`)
+  3. Aucun timeout failsafe — une fois bloqué, l'overlay reste permanent
+- **Décision** :
+  1. **afterEach universel** — Suppression de la restriction `>= 1280px`. Le nettoyage s'applique à TOUS les breakpoints. Le watcher `VerticalNav` gère déjà la fermeture intentionnelle au changement de route, le afterEach est un filet de sécurité.
+  2. **`.click()` au lieu de `classList.remove()`** — Appel de `el.click()` sur `.layout-overlay.visible` déclenche le handler Vue natif `@click="() => { isOverlayNavActive = false; isLayoutOverlayVisible = false }"`, réinitialisant correctement les deux refs réactives.
+  3. **Failsafe 10s** — `setInterval(2s)` dans `DefaultLayoutWithVerticalNav.vue` détecte un overlay visible depuis >10 secondes consécutives et le dismiss automatiquement via `.click()`.
+- **Contraintes** : `@core/` et `@layouts/` NON modifiés (politique UI Vuexy). Pas de changements backend. Pas de fichiers créés.
+- **Fichiers** : 3 MODIFY (`plugins/1.router/guards.js`, `main.js`, `layouts/components/DefaultLayoutWithVerticalNav.vue`)
+- **Conséquences** :
+  - Un overlay bloqué est désormais impossible : nettoyé au changement de route (afterEach) + auto-dismissé après 10s (failsafe)
+  - La technique `.click()` contourne la limitation de ne pas pouvoir modifier `@layouts/` en déléguant au handler Vue existant
+  - Coût CPU négligeable (un `querySelector` toutes les 2s)
 
 ---
 

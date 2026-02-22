@@ -111,11 +111,16 @@ class AuthController extends Controller
             ->get();
 
         $companies = $memberships->map(function ($membership) {
+            // Owner/admin are always administrative, regardless of CompanyRole
+            $isAdministrative = in_array($membership->role, ['owner', 'admin'])
+                || (bool) $membership->companyRole?->is_administrative;
+
             $data = [
                 'id' => $membership->company->id,
                 'name' => $membership->company->name,
                 'slug' => $membership->company->slug,
                 'role' => $membership->role,
+                'is_administrative' => $isAdministrative,
             ];
 
             if ($membership->companyRole) {

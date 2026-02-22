@@ -5,11 +5,13 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
   state: () => ({
     _companies: [],
     _companiesPagination: { current_page: 1, last_page: 1, total: 0 },
+    _plans: [],
   }),
 
   getters: {
     companies: state => state._companies,
     companiesPagination: state => state._companiesPagination,
+    plans: state => state._plans,
   },
 
   actions: {
@@ -38,6 +40,33 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
       this._updateCompanyInList(data.company)
 
       return data
+    },
+
+    async fetchPlans() {
+      this._plans = await $platformApi('/plans')
+    },
+
+    async updateCompanyPlan(id, planKey) {
+      const data = await $platformApi(`/companies/${id}/plan`, {
+        method: 'PUT',
+        body: { plan_key: planKey },
+      })
+
+      this._updateCompanyInList(data.company)
+
+      return data
+    },
+
+    async fetchCompanyProfile(id) {
+      return await $platformApi(`/companies/${id}`)
+    },
+
+    async enableModule(companyId, moduleKey) {
+      return await $platformApi(`/companies/${companyId}/modules/${moduleKey}/enable`, { method: 'PUT' })
+    },
+
+    async disableModule(companyId, moduleKey) {
+      return await $platformApi(`/companies/${companyId}/modules/${moduleKey}/disable`, { method: 'PUT' })
     },
 
     _updateCompanyInList(company) {
