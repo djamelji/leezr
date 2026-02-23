@@ -1,4 +1,6 @@
 <script setup>
+const { t } = useI18n()
+
 import { usePasswordStrength } from '@/composables/usePasswordStrength'
 import { $api } from '@/utils/api'
 import { refreshCsrf } from '@/utils/csrf'
@@ -60,7 +62,7 @@ const handleSubmit = async () => {
     }, 2000)
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to reset password. The link may have expired.'
+    errorMessage.value = error?.data?.message || t('auth.failedToReset')
   }
   finally {
     isLoading.value = false
@@ -123,10 +125,10 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Set Your Password
+            {{ t('auth.setPasswordTitle') }}
           </h4>
           <p class="mb-0">
-            Your new password must be different from previously used passwords
+            {{ t('auth.setPasswordSubtitle') }}
           </p>
         </VCardText>
 
@@ -136,7 +138,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
             type="success"
             class="mb-6"
           >
-            {{ successMessage }} Redirecting to login...
+            {{ successMessage }} {{ t('auth.redirectingToLogin') }}
           </VAlert>
 
           <VAlert
@@ -155,7 +157,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 <AppTextField
                   v-model="form.password"
                   autofocus
-                  label="New Password"
+                  :label="t('auth.newPassword')"
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
                   autocomplete="new-password"
@@ -199,7 +201,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
               <VCol cols="12">
                 <AppTextField
                   v-model="form.password_confirmation"
-                  label="Confirm Password"
+                  :label="t('auth.confirmPassword')"
                   autocomplete="new-password"
                   placeholder="············"
                   :type="isConfirmPasswordVisible ? 'text' : 'password'"
@@ -214,7 +216,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                   type="submit"
                   :loading="isLoading"
                 >
-                  Set New Password
+                  {{ t('auth.setNewPassword') }}
                 </VBtn>
               </VCol>
 
@@ -228,7 +230,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                     size="20"
                     class="me-1 flip-in-rtl"
                   />
-                  <span>Back to login</span>
+                  <span>{{ t('auth.backToLogin') }}</span>
                 </RouterLink>
               </VCol>
             </VRow>

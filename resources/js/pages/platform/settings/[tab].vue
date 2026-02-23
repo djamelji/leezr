@@ -12,6 +12,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const route = useRoute('platform-settings-tab')
 
 const activeTab = computed({
@@ -19,12 +20,12 @@ const activeTab = computed({
   set: () => route.params.tab,
 })
 
-const tabs = [
-  { title: 'General', icon: 'tabler-settings', tab: 'general' },
-  { title: 'Theme', icon: 'tabler-palette', tab: 'theme' },
-  { title: 'Sessions', icon: 'tabler-clock-shield', tab: 'sessions' },
-  { title: 'Maintenance', icon: 'tabler-barrier-block', tab: 'maintenance' },
-]
+const tabs = computed(() => [
+  { title: t('platformSettings.tabs.general'), icon: 'tabler-settings', tab: 'general' },
+  { title: t('platformSettings.tabs.theme'), icon: 'tabler-palette', tab: 'theme' },
+  { title: t('platformSettings.tabs.sessions'), icon: 'tabler-clock-shield', tab: 'sessions' },
+  { title: t('platformSettings.tabs.maintenance'), icon: 'tabler-barrier-block', tab: 'maintenance' },
+])
 </script>
 
 <template>

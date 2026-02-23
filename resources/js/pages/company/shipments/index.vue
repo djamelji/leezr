@@ -1,9 +1,11 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { useAuthStore } from '@/core/stores/auth'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const shipmentStore = useShipmentStore()
 const router = useRouter()
@@ -14,25 +16,25 @@ const searchQuery = ref('')
 
 const canManage = computed(() => auth.hasPermission('shipments.create'))
 
-const headers = [
-  { title: 'Reference', key: 'reference' },
-  { title: 'Status', key: 'status', width: '140px' },
-  { title: 'Assigned To', key: 'assigned_to', sortable: false },
-  { title: 'Origin', key: 'origin_address', sortable: false },
-  { title: 'Destination', key: 'destination_address', sortable: false },
-  { title: 'Scheduled', key: 'scheduled_at' },
-  { title: 'Created by', key: 'created_by', sortable: false },
-  { title: 'Actions', key: 'actions', align: 'center', width: '80px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('shipments.reference'), key: 'reference' },
+  { title: t('common.status'), key: 'status', width: '140px' },
+  { title: t('shipments.assignedTo'), key: 'assigned_to', sortable: false },
+  { title: t('shipments.origin'), key: 'origin_address', sortable: false },
+  { title: t('shipments.destination'), key: 'destination_address', sortable: false },
+  { title: t('shipments.scheduled'), key: 'scheduled_at' },
+  { title: t('shipments.createdBy'), key: 'created_by', sortable: false },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '80px', sortable: false },
+])
 
-const statusOptions = [
-  { title: 'All', value: '' },
-  { title: 'Draft', value: 'draft' },
-  { title: 'Planned', value: 'planned' },
-  { title: 'In Transit', value: 'in_transit' },
-  { title: 'Delivered', value: 'delivered' },
-  { title: 'Canceled', value: 'canceled' },
-]
+const statusOptions = computed(() => [
+  { title: t('shipments.all'), value: '' },
+  { title: t('shipments.statusDraft'), value: 'draft' },
+  { title: t('shipments.statusPlanned'), value: 'planned' },
+  { title: t('shipments.statusInTransit'), value: 'in_transit' },
+  { title: t('shipments.statusDelivered'), value: 'delivered' },
+  { title: t('shipments.statusCanceled'), value: 'canceled' },
+])
 
 const statusColor = status => {
   const colors = {
@@ -48,25 +50,14 @@ const statusColor = status => {
 
 const statusLabel = status => {
   const labels = {
-    draft: 'Draft',
-    planned: 'Planned',
-    in_transit: 'In Transit',
-    delivered: 'Delivered',
-    canceled: 'Canceled',
+    draft: t('shipments.statusDraft'),
+    planned: t('shipments.statusPlanned'),
+    in_transit: t('shipments.statusInTransit'),
+    delivered: t('shipments.statusDelivered'),
+    canceled: t('shipments.statusCanceled'),
   }
 
   return labels[status] || status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr)
-    return '—'
-
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 const truncate = (str, len = 40) => {
@@ -105,14 +96,14 @@ const onPageChange = page => {
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
         <div class="d-flex align-center gap-x-2">
           <VIcon icon="tabler-truck" />
-          <span>Shipments</span>
+          <span>{{ t('shipments.title') }}</span>
         </div>
         <VBtn
           v-if="canManage"
           prepend-icon="tabler-plus"
           :to="{ name: 'company-shipments-create' }"
         >
-          New Shipment
+          {{ t('shipments.newShipment') }}
         </VBtn>
       </VCardTitle>
 
@@ -124,7 +115,7 @@ const onPageChange = page => {
           >
             <AppTextField
               v-model="searchQuery"
-              placeholder="Search by reference..."
+              :placeholder="t('shipments.searchByReference')"
               prepend-inner-icon="tabler-search"
               clearable
             />
@@ -136,7 +127,7 @@ const onPageChange = page => {
             <AppSelect
               v-model="statusFilter"
               :items="statusOptions"
-              placeholder="Filter by status"
+              :placeholder="t('shipments.filterByStatus')"
               clearable
             />
           </VCol>
@@ -222,7 +213,7 @@ const onPageChange = page => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No shipments found.
+            {{ t('shipments.noShipmentsFound') }}
           </div>
         </template>
 
@@ -231,7 +222,7 @@ const onPageChange = page => {
           <VDivider />
           <div class="d-flex align-center justify-space-between flex-wrap gap-3 pa-4">
             <span class="text-body-2 text-disabled">
-              {{ shipmentStore.pagination.total }} shipment(s)
+              {{ t('shipments.shipmentCount', { count: shipmentStore.pagination.total }) }}
             </span>
             <VPagination
               v-if="shipmentStore.pagination.last_page > 1"

@@ -1,10 +1,12 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const membersStore = useMembersStore()
 const shipmentStore = useShipmentStore()
@@ -32,28 +34,28 @@ const memberOptions = computed(() => {
 
 const shipment = computed(() => shipmentStore.currentShipment)
 
-const transitions = {
+const transitions = computed(() => ({
   draft: [
-    { status: 'planned', label: 'Mark as Planned', color: 'info', icon: 'tabler-calendar-check' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
+    { status: 'planned', label: t('shipments.markAsPlanned'), color: 'info', icon: 'tabler-calendar-check' },
+    { status: 'canceled', label: t('shipments.cancelShipment'), color: 'error', icon: 'tabler-x' },
   ],
   planned: [
-    { status: 'in_transit', label: 'Start Transit', color: 'warning', icon: 'tabler-truck' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
+    { status: 'in_transit', label: t('shipments.startTransit'), color: 'warning', icon: 'tabler-truck' },
+    { status: 'canceled', label: t('shipments.cancelShipment'), color: 'error', icon: 'tabler-x' },
   ],
   in_transit: [
-    { status: 'delivered', label: 'Mark Delivered', color: 'success', icon: 'tabler-check' },
-    { status: 'canceled', label: 'Cancel', color: 'error', icon: 'tabler-x' },
+    { status: 'delivered', label: t('shipments.markDelivered'), color: 'success', icon: 'tabler-check' },
+    { status: 'canceled', label: t('shipments.cancelShipment'), color: 'error', icon: 'tabler-x' },
   ],
   delivered: [],
   canceled: [],
-}
+}))
 
 const availableTransitions = computed(() => {
   if (!shipment.value)
     return []
 
-  return transitions[shipment.value.status] || []
+  return transitions.value[shipment.value.status] || []
 })
 
 const statusColor = status => {
@@ -70,27 +72,14 @@ const statusColor = status => {
 
 const statusLabel = status => {
   const labels = {
-    draft: 'Draft',
-    planned: 'Planned',
-    in_transit: 'In Transit',
-    delivered: 'Delivered',
-    canceled: 'Canceled',
+    draft: t('shipments.statusDraft'),
+    planned: t('shipments.statusPlanned'),
+    in_transit: t('shipments.statusInTransit'),
+    delivered: t('shipments.statusDelivered'),
+    canceled: t('shipments.statusCanceled'),
   }
 
   return labels[status] || status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr)
-    return '—'
-
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 const changeStatus = async newStatus => {
@@ -100,10 +89,10 @@ const changeStatus = async newStatus => {
 
   try {
     await shipmentStore.changeStatus(shipment.value.id, newStatus)
-    successMessage.value = `Status changed to "${statusLabel(newStatus)}".`
+    successMessage.value = t('shipments.statusChangedTo', { status: statusLabel(newStatus) })
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to change status.'
+    errorMessage.value = error?.data?.message || t('shipments.failedToChangeStatus')
   }
   finally {
     isChangingStatus.value = false
@@ -117,10 +106,10 @@ const assignShipment = async () => {
 
   try {
     await shipmentStore.assignShipment(shipment.value.id, selectedUserId.value || null)
-    successMessage.value = selectedUserId.value ? 'Shipment assigned.' : 'Assignment removed.'
+    successMessage.value = selectedUserId.value ? t('shipments.shipmentAssigned') : t('shipments.assignmentRemoved')
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to assign shipment.'
+    errorMessage.value = error?.data?.message || t('shipments.failedToAssign')
   }
   finally {
     isAssigning.value = false
@@ -159,7 +148,7 @@ onMounted(async () => {
         <VIcon icon="tabler-arrow-left" />
       </VBtn>
       <h4 class="text-h4">
-        {{ shipment?.reference || 'Shipment' }}
+        {{ shipment?.reference || t('shipments.shipment') }}
       </h4>
       <VChip
         v-if="shipment"
@@ -203,7 +192,7 @@ onMounted(async () => {
           md="8"
         >
           <VCard>
-            <VCardTitle>Shipment Details</VCardTitle>
+            <VCardTitle>{{ t('shipments.shipmentDetails') }}</VCardTitle>
             <VCardText>
               <VRow>
                 <VCol
@@ -211,7 +200,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Reference
+                    {{ t('shipments.reference') }}
                   </div>
                   <div class="text-body-1 font-weight-medium">
                     {{ shipment.reference }}
@@ -223,7 +212,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Scheduled Date
+                    {{ t('shipments.scheduledDate') }}
                   </div>
                   <div class="text-body-1">
                     {{ formatDate(shipment.scheduled_at) }}
@@ -235,7 +224,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Origin
+                    {{ t('shipments.origin') }}
                   </div>
                   <div class="text-body-1">
                     {{ shipment.origin_address || '—' }}
@@ -247,7 +236,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Destination
+                    {{ t('shipments.destination') }}
                   </div>
                   <div class="text-body-1">
                     {{ shipment.destination_address || '—' }}
@@ -256,7 +245,7 @@ onMounted(async () => {
 
                 <VCol cols="12">
                   <div class="text-body-2 text-disabled mb-1">
-                    Notes
+                    {{ t('shipments.notes') }}
                   </div>
                   <div class="text-body-1">
                     {{ shipment.notes || '—' }}
@@ -268,7 +257,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Assigned To
+                    {{ t('shipments.assignedTo') }}
                   </div>
                   <div class="text-body-1">
                     <template v-if="shipment.assigned_to">
@@ -277,7 +266,7 @@ onMounted(async () => {
                     <span
                       v-else
                       class="text-disabled"
-                    >Unassigned</span>
+                    >{{ t('shipments.unassigned') }}</span>
                   </div>
                 </VCol>
 
@@ -286,7 +275,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Created by
+                    {{ t('shipments.createdBy') }}
                   </div>
                   <div class="text-body-1">
                     <template v-if="shipment.created_by">
@@ -304,7 +293,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Created at
+                    {{ t('shipments.createdAt') }}
                   </div>
                   <div class="text-body-1">
                     {{ formatDate(shipment.created_at) }}
@@ -321,7 +310,7 @@ onMounted(async () => {
           md="4"
         >
           <VCard>
-            <VCardTitle>Actions</VCardTitle>
+            <VCardTitle>{{ t('common.actions') }}</VCardTitle>
             <VCardText>
               <template v-if="canManage && availableTransitions.length">
                 <div class="d-flex flex-column gap-3">
@@ -340,7 +329,7 @@ onMounted(async () => {
               </template>
               <template v-else>
                 <div class="text-body-2 text-disabled text-center py-4">
-                  No actions available.
+                  {{ t('shipments.noActionsAvailable') }}
                 </div>
               </template>
             </VCardText>
@@ -351,12 +340,12 @@ onMounted(async () => {
             v-if="canAssign"
             class="mt-4"
           >
-            <VCardTitle>Assignment</VCardTitle>
+            <VCardTitle>{{ t('shipments.assignment') }}</VCardTitle>
             <VCardText>
               <AppSelect
                 v-model="selectedUserId"
                 :items="memberOptions"
-                placeholder="Select a member..."
+                :placeholder="t('shipments.selectMember')"
                 clearable
                 class="mb-3"
               />
@@ -367,7 +356,7 @@ onMounted(async () => {
                 block
                 @click="assignShipment"
               >
-                {{ selectedUserId ? 'Assign' : 'Unassign' }}
+                {{ selectedUserId ? t('shipments.assign') : t('shipments.unassign') }}
               </VBtn>
             </VCardText>
           </VCard>

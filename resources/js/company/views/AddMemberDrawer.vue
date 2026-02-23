@@ -1,6 +1,8 @@
 <script setup>
 import { useMembersStore } from '@/modules/company/members/members.store'
 
+const { t } = useI18n()
+
 const props = defineProps({
   isDrawerOpen: {
     type: Boolean,
@@ -46,7 +48,7 @@ const handleSubmit = async () => {
     emit('memberAdded')
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to add member.'
+    errorMessage.value = error?.data?.message || t('members.failedToAdd')
   }
   finally {
     isLoading.value = false
@@ -70,7 +72,7 @@ const handleClose = () => {
     @update:model-value="handleClose"
   >
     <AppDrawerHeaderSection
-      title="Add Member"
+      :title="t('members.addMember')"
       @cancel="handleClose"
     />
 
@@ -94,7 +96,7 @@ const handleClose = () => {
             variant="tonal"
             class="mb-4"
           >
-            If the email is not already registered, an invitation will be sent automatically.
+            {{ t('members.invitationAutoSent') }}
           </VAlert>
 
           <VForm @submit.prevent="handleSubmit">
@@ -105,7 +107,7 @@ const handleClose = () => {
               >
                 <AppTextField
                   v-model="form.first_name"
-                  label="First Name"
+                  :label="t('members.firstName')"
                   placeholder="John"
                 />
               </VCol>
@@ -115,14 +117,14 @@ const handleClose = () => {
               >
                 <AppTextField
                   v-model="form.last_name"
-                  label="Last Name"
+                  :label="t('members.lastName')"
                   placeholder="Doe"
                 />
               </VCol>
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
-                  label="Email"
+                  :label="t('common.email')"
                   type="email"
                   placeholder="user@email.com"
                 />
@@ -131,10 +133,10 @@ const handleClose = () => {
               <VCol cols="12">
                 <AppSelect
                   v-model="form.company_role_id"
-                  label="Role"
+                  :label="t('members.role')"
                   :items="roleOptions"
                   clearable
-                  placeholder="No role"
+                  :placeholder="t('members.noRole')"
                 />
               </VCol>
 
@@ -144,7 +146,7 @@ const handleClose = () => {
                   class="me-4"
                   :loading="isLoading"
                 >
-                  Add
+                  {{ t('common.add') }}
                 </VBtn>
                 <VBtn
                   type="reset"
@@ -152,7 +154,7 @@ const handleClose = () => {
                   color="secondary"
                   @click="handleClose"
                 >
-                  Cancel
+                  {{ t('common.cancel') }}
                 </VBtn>
               </VCol>
             </VRow>

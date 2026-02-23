@@ -2,6 +2,7 @@ import { useRuntimeStore } from '@/core/runtime/runtime'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
+import { useWorldStore } from '@/core/stores/world'
 import { useAppToast } from '@/composables/useAppToast'
 import { safeRedirect } from '@/utils/safeRedirect'
 
@@ -29,6 +30,9 @@ export const setupGuards = router => {
 
     // ─── Determine scope ─────────────────────────────────
     const scope = to.meta.platform ? 'platform' : 'company'
+
+    // Ensure world settings are fetched (fire-and-forget, non-blocking)
+    useWorldStore().fetch()
 
     // ─── Boot runtime if cold or scope switched ──────────
     if (runtime.phase === 'cold' || runtime.scope !== scope) {

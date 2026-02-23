@@ -6,7 +6,9 @@ use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Jobdomains\JobdomainRegistry;
+use App\Core\Markets\MarketRegistry;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Plans\PlanRegistry;
 use App\Platform\Models\PlatformPermission;
 use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
@@ -26,6 +28,9 @@ class SystemSeeder extends Seeder
         // ─── Platform RBAC (permissions, roles, super_admin) ─────
         $this->call(PlatformSeeder::class);
 
+        // ─── Plan catalog ──────────────────────────────────────────
+        PlanRegistry::sync();
+
         // ─── Module catalog ──────────────────────────────────────
         ModuleRegistry::sync();
 
@@ -37,6 +42,9 @@ class SystemSeeder extends Seeder
 
         // ─── Field definitions catalog ─────────────────────────
         FieldDefinitionCatalog::sync();
+
+        // ─── Market catalog (ADR-104) ──────────────────────
+        MarketRegistry::sync();
 
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();

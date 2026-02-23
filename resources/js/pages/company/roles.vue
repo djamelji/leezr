@@ -5,6 +5,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
@@ -128,12 +129,12 @@ watch(() => drawerForm.value.is_administrative, newVal => {
 })
 
 // ─── Table ──────────────────────────────────────────
-const headers = [
-  { title: 'Name', key: 'name' },
-  { title: 'Level', key: 'level', width: '140px', sortable: false },
-  { title: 'Members', key: 'memberships_count', align: 'center', width: '100px' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '180px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('common.name'), key: 'name' },
+  { title: t('common.level'), key: 'level', width: '140px', sortable: false },
+  { title: t('Members'), key: 'memberships_count', align: 'center', width: '100px' },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '180px', sortable: false },
+])
 
 // ─── Drawer actions ─────────────────────────────────
 const openCreateDrawer = () => {
@@ -207,7 +208,7 @@ const handleDrawerSubmit = async () => {
     isDrawerOpen.value = false
   }
   catch (error) {
-    toast(error?.data?.message || 'Operation failed.', 'error')
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
     drawerLoading.value = false
@@ -215,7 +216,7 @@ const handleDrawerSubmit = async () => {
 }
 
 const deleteRole = async role => {
-  if (!confirm(`Delete role "${role.name}"?`))
+  if (!confirm(t('roles.confirmDelete', { name: role.name })))
     return
 
   actionLoading.value = role.id
@@ -226,7 +227,7 @@ const deleteRole = async role => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete role.', 'error')
+    toast(error?.data?.message || t('roles.failedToDelete'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -242,18 +243,18 @@ const deleteRole = async role => {
           icon="tabler-shield-lock"
           class="me-2"
         />
-        Company Roles
+        {{ t('roles.title') }}
         <VSpacer />
         <VBtn
           size="small"
           prepend-icon="tabler-plus"
           @click="openCreateDrawer"
         >
-          Add Role
+          {{ t('roles.addRole') }}
         </VBtn>
       </VCardTitle>
       <VCardSubtitle>
-        Define who can do what in your company.
+        {{ t('roles.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -273,7 +274,7 @@ const deleteRole = async role => {
               color="warning"
               variant="tonal"
             >
-              system
+              {{ t('common.system') }}
             </VChip>
           </div>
         </template>
@@ -285,7 +286,7 @@ const deleteRole = async role => {
             size="small"
             variant="tonal"
           >
-            {{ item.is_administrative ? 'Management' : 'Operational' }}
+            {{ item.is_administrative ? t('roles.management') : t('roles.operational') }}
           </VChip>
         </template>
 
@@ -315,7 +316,7 @@ const deleteRole = async role => {
                 activator="parent"
                 location="top"
               >
-                Edit
+                {{ t('common.edit') }}
               </VTooltip>
             </VBtn>
             <VBtn
@@ -330,7 +331,7 @@ const deleteRole = async role => {
                 activator="parent"
                 location="top"
               >
-                Clone
+                {{ t('common.clone') }}
               </VTooltip>
             </VBtn>
             <VBtn
@@ -350,7 +351,7 @@ const deleteRole = async role => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No roles yet. Create one to get started.
+            {{ t('roles.noRoles') }}
           </div>
         </template>
       </VDataTable>
@@ -364,7 +365,7 @@ const deleteRole = async role => {
       width="500"
     >
       <AppDrawerHeaderSection
-        :title="isEditMode ? 'Edit Role' : 'New Role'"
+        :title="isEditMode ? t('roles.editRole') : t('roles.newRole')"
         @cancel="isDrawerOpen = false"
       />
 
@@ -378,15 +379,15 @@ const deleteRole = async role => {
               <VCol cols="12">
                 <AppTextField
                   v-model="drawerForm.name"
-                  label="Role Name"
-                  placeholder="e.g. Dispatcher, Accountant"
+                  :label="t('roles.roleName')"
+                  :placeholder="t('roles.roleNamePlaceholder')"
                 />
               </VCol>
 
               <!-- Role Level -->
               <VCol cols="12">
                 <h6 class="text-h6 mb-3">
-                  Role Level
+                  {{ t('roles.roleLevel') }}
                 </h6>
                 <VRadioGroup
                   :model-value="drawerForm.is_administrative ? 'management' : 'operational'"
@@ -395,9 +396,9 @@ const deleteRole = async role => {
                   <VRadio value="operational">
                     <template #label>
                       <div>
-                        <span class="font-weight-medium">Operational</span>
+                        <span class="font-weight-medium">{{ t('roles.operational') }}</span>
                         <div class="text-body-2 text-disabled">
-                          Can manage daily work only.
+                          {{ t('roles.operationalDescription') }}
                         </div>
                       </div>
                     </template>
@@ -408,7 +409,7 @@ const deleteRole = async role => {
                   >
                     <template #label>
                       <div>
-                        <span class="font-weight-medium">Management</span>
+                        <span class="font-weight-medium">{{ t('roles.management') }}</span>
                         <VTooltip location="top">
                           <template #activator="{ props: tooltipProps }">
                             <VIcon
@@ -418,10 +419,10 @@ const deleteRole = async role => {
                               v-bind="tooltipProps"
                             />
                           </template>
-                          Management roles can configure company structure and sensitive settings.
+                          {{ t('roles.managementTooltip') }}
                         </VTooltip>
                         <div class="text-body-2 text-disabled">
-                          Can manage team and company configuration.
+                          {{ t('roles.managementDescription') }}
                         </div>
                       </div>
                     </template>
@@ -437,7 +438,7 @@ const deleteRole = async role => {
               <VCol cols="12">
                 <div class="d-flex align-center justify-space-between mb-4">
                   <h6 class="text-h6">
-                    Capabilities
+                    {{ t('roles.capabilities') }}
                   </h6>
                   <VBtn
                     variant="text"
@@ -446,7 +447,7 @@ const deleteRole = async role => {
                     :prepend-icon="isAdvancedMode ? 'tabler-layout-grid' : 'tabler-adjustments'"
                     @click="isAdvancedMode = !isAdvancedMode"
                   >
-                    {{ isAdvancedMode ? 'Simple view' : 'Advanced' }}
+                    {{ isAdvancedMode ? t('roles.simpleView') : t('roles.advanced') }}
                   </VBtn>
                 </div>
 
@@ -460,7 +461,7 @@ const deleteRole = async role => {
                         size="20"
                         color="primary"
                       />
-                      <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
+                      <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                     </div>
 
                     <template
@@ -511,7 +512,7 @@ const deleteRole = async role => {
                             color="warning"
                             variant="tonal"
                           >
-                            Custom
+                            {{ t('common.custom') }}
                           </VChip>
                           <VChip
                             v-else-if="cap.is_admin"
@@ -519,7 +520,7 @@ const deleteRole = async role => {
                             color="error"
                             variant="tonal"
                           >
-                            Sensitive
+                            {{ t('common.sensitive') }}
                           </VChip>
                         </div>
                       </div>
@@ -590,7 +591,7 @@ const deleteRole = async role => {
                             color="warning"
                             variant="tonal"
                           >
-                            Custom
+                            {{ t('common.custom') }}
                           </VChip>
                           <VChip
                             v-else-if="cap.is_admin"
@@ -598,7 +599,7 @@ const deleteRole = async role => {
                             color="error"
                             variant="tonal"
                           >
-                            Sensitive
+                            {{ t('common.sensitive') }}
                           </VChip>
                         </div>
                       </div>
@@ -616,7 +617,7 @@ const deleteRole = async role => {
                         size="20"
                         color="primary"
                       />
-                      <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
+                      <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                     </div>
 
                     <template
@@ -669,7 +670,7 @@ const deleteRole = async role => {
                             color="error"
                             variant="tonal"
                           >
-                            Sensitive
+                            {{ t('common.sensitive') }}
                           </VChip>
                         </div>
                       </div>
@@ -739,7 +740,7 @@ const deleteRole = async role => {
                             color="error"
                             variant="tonal"
                           >
-                            Sensitive
+                            {{ t('common.sensitive') }}
                           </VChip>
                         </div>
                       </div>
@@ -754,14 +755,14 @@ const deleteRole = async role => {
                   class="me-3"
                   :loading="drawerLoading"
                 >
-                  {{ isEditMode ? 'Update' : 'Create' }}
+                  {{ isEditMode ? t('common.update') : t('common.create') }}
                 </VBtn>
                 <VBtn
                   variant="tonal"
                   color="secondary"
                   @click="isDrawerOpen = false"
                 >
-                  Cancel
+                  {{ t('common.cancel') }}
                 </VBtn>
               </VCol>
             </VRow>

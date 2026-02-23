@@ -51,8 +51,10 @@ declare global {
   const effectScope: typeof import('vue')['effectScope']
   const emailValidator: typeof import('./resources/js/@core/utils/validators.js')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
-  const formatDate: typeof import('./resources/js/@core/utils/formatters.js')['formatDate']
+  const formatDate: typeof import('./resources/js/utils/datetime.js')['formatDate']
+  const formatDateTime: typeof import('./resources/js/utils/datetime.js')['formatDateTime']
   const formatDateToMonthShort: typeof import('./resources/js/@core/utils/formatters.js')['formatDateToMonthShort']
+  const formatMoney: typeof import('./resources/js/utils/money.js')['formatMoney']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
@@ -294,6 +296,7 @@ declare global {
   const usePreferredReducedMotion: typeof import('@vueuse/core')['usePreferredReducedMotion']
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
   const useProjection: typeof import('@vueuse/math')['useProjection']
+  const usePublicPlans: typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']
   const usePublicTheme: typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
@@ -429,7 +432,10 @@ declare module 'vue' {
     readonly emailValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly formatDate: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['formatDate']>
+    readonly formatDate: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDate']>
+    readonly formatDateTime: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDateTime']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['formatDateToMonthShort']>
+    readonly formatMoney: UnwrapRef<typeof import('./resources/js/utils/money.js')['formatMoney']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
@@ -450,7 +456,6 @@ declare module 'vue' {
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isToday: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isToday']>
-    readonly kFormatter: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['kFormatter']>
     readonly lengthValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>
@@ -670,6 +675,7 @@ declare module 'vue' {
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProjection: UnwrapRef<typeof import('@vueuse/math')['useProjection']>
+    readonly usePublicPlans: UnwrapRef<typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']>
     readonly usePublicTheme: UnwrapRef<typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>

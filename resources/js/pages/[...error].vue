@@ -13,21 +13,23 @@ definePage({
     public: true,
   },
 })
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="misc-wrapper">
     <ErrorHeader
       status-code="404"
-      title="Page Not Found ⚠️"
-      description="We couldn't find the page you are looking for."
+      :title="t('errorPage.pageNotFound')"
+      :description="t('errorPage.description')"
     />
 
     <VBtn
       to="/"
       class="mb-11"
     >
-      Back to Home
+      {{ t('errorPage.backToHome') }}
     </VBtn>
 
     <!-- 👉 Image -->

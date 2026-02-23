@@ -2,6 +2,7 @@
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
@@ -35,14 +36,14 @@ onMounted(async () => {
 
 const warningError = computed(() => {
   if (form.warning_threshold >= form.idle_timeout)
-    return 'Must be less than idle timeout.'
+    return t('platformSettings.session.mustBeLessThanTimeout')
 
   return null
 })
 
 const heartbeatError = computed(() => {
   if (form.heartbeat_interval >= form.idle_timeout)
-    return 'Must be less than idle timeout.'
+    return t('platformSettings.session.mustBeLessThanTimeout')
 
   return null
 })
@@ -61,7 +62,7 @@ const save = async () => {
     loadSettings(data.session)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save session settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.session.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -73,11 +74,11 @@ const resetToDefaults = async () => {
   try {
     const data = await settingsStore.updateSessionSettings({ ...defaults })
 
-    toast('Session settings reset to defaults.', 'success')
+    toast(t('platformSettings.session.resetSuccess'), 'success')
     loadSettings(data.session)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reset session settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.session.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -93,16 +94,16 @@ const resetToDefaults = async () => {
           icon="tabler-clock-shield"
           class="me-2"
         />
-        Session Governance
+        {{ t('platformSettings.session.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Configure session timeout, keepalive, and warning behavior for all users.
+        {{ t('platformSettings.session.subtitle') }}
       </VCardSubtitle>
 
       <VCardText v-if="!isLoading">
         <!-- Timeout Settings -->
         <h6 class="text-h6 mb-4">
-          Timeout Settings
+          {{ t('platformSettings.session.timeoutSettings') }}
         </h6>
 
         <VRow class="mb-6">
@@ -112,11 +113,11 @@ const resetToDefaults = async () => {
           >
             <AppTextField
               v-model.number="form.idle_timeout"
-              label="Idle Timeout (minutes)"
+              :label="t('platformSettings.session.idleTimeout')"
               type="number"
               min="5"
               max="1440"
-              hint="Session expires after this many minutes of inactivity. Min: 5, Max: 1440 (24h)."
+              :hint="t('platformSettings.session.idleTimeoutHint')"
               persistent-hint
             />
           </VCol>
@@ -127,12 +128,12 @@ const resetToDefaults = async () => {
           >
             <AppTextField
               v-model.number="form.warning_threshold"
-              label="Warning Threshold (minutes)"
+              :label="t('platformSettings.session.warningThreshold')"
               type="number"
               min="1"
               max="30"
               :error-messages="warningError"
-              hint="Show expiration warning this many minutes before timeout."
+              :hint="t('platformSettings.session.warningThresholdHint')"
               persistent-hint
             />
           </VCol>
@@ -143,12 +144,12 @@ const resetToDefaults = async () => {
           >
             <AppTextField
               v-model.number="form.heartbeat_interval"
-              label="Heartbeat Interval (minutes)"
+              :label="t('platformSettings.session.heartbeatInterval')"
               type="number"
               min="1"
               max="60"
               :error-messages="heartbeatError"
-              hint="How often the client checks session status with the server."
+              :hint="t('platformSettings.session.heartbeatIntervalHint')"
               persistent-hint
             />
           </VCol>
@@ -158,13 +159,13 @@ const resetToDefaults = async () => {
 
         <!-- Remember Me -->
         <h6 class="text-h6 mb-4">
-          Remember Me
+          {{ t('platformSettings.session.rememberMe') }}
         </h6>
 
         <div class="d-flex flex-column gap-4 mb-4">
           <div class="d-flex align-center justify-space-between">
             <VLabel for="remember-me">
-              Enable "Remember Me" on login
+              {{ t('platformSettings.session.enableRememberMe') }}
             </VLabel>
             <VSwitch
               id="remember-me"
@@ -176,10 +177,10 @@ const resetToDefaults = async () => {
 
           <AppTextField
             v-model.number="form.remember_me_duration"
-            label="Remember Me Duration (minutes)"
+            :label="t('platformSettings.session.rememberMeDuration')"
             type="number"
             disabled
-            hint="How long the 'Remember Me' token stays valid."
+            :hint="t('platformSettings.session.rememberMeDurationHint')"
             persistent-hint
           />
         </div>
@@ -188,7 +189,7 @@ const resetToDefaults = async () => {
           type="info"
           variant="tonal"
         >
-          Remember Me will be available with the upcoming authentication upgrade (Passport/Sanctum).
+          {{ t('platformSettings.session.rememberMeNotice') }}
         </VAlert>
       </VCardText>
 
@@ -201,7 +202,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading || hasErrors"
           @click="save"
         >
-          Save
+          {{ t('common.save') }}
         </VBtn>
         <VBtn
           variant="outlined"
@@ -209,7 +210,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading"
           @click="resetToDefaults"
         >
-          Reset to Defaults
+          {{ t('common.reset') }}
         </VBtn>
       </VCardActions>
     </VCard>

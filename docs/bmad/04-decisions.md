@@ -2299,4 +2299,137 @@ definePage({
 
 ---
 
+## ADR-100 : Commercial Layer Completion (Plans + Pricing + UX)
+
+- **Date** : 2026-02-22
+- **Contexte** : Le système de plans (`PlanRegistry` avec starter/pro/business), le billing abstrait (`BillingProvider` + `NullBillingProvider`), et le module entitlement (`EntitlementResolver`) existent mais la **couche de présentation commerciale** manque : pas de pricing public, pas de choix de plan à l'inscription, pas de page plan côté company, pas de plan_key exposé dans `myCompanies()`.
+- **Décision** :
+  1. **PlanRegistry enrichi** — Ajout de `price_monthly`, `price_yearly`, `is_popular`, `feature_labels`, `limits` à chaque plan. Méthode `publicCatalog()` pour API publique.
+  2. **API publique pricing** — `GET /api/public/plans` (plans + jobdomains actifs) et `GET /api/public/plans/preview` (modules disponibles pour un couple jobdomain+plan, miroir des 4 gates d'EntitlementResolver sans Company).
+  3. **Registration wizard 3 étapes** — Jobdomain → Plan → Account. `register.vue` transformé en stepper Vuexy. `RegisterRequest` accepte `jobdomain_key` + `plan_key` optionnels. `AuthController::register()` utilise `JobdomainGate::assignToCompany()` si jobdomain fourni.
+  4. **plan_key dans myCompanies()** — Chaque company retournée inclut `plan_key`.
+  5. **Page /company/plan** — Plan actuel + comparaison des 3 plans + CTA upgrade/downgrade via `BillingProvider::changePlan()`. Surface `structure` (management only).
+  6. **Endpoint PUT /api/company/plan** — `CompanyPlanController` valide le `plan_key` et délègue à `BillingProvider` (NullBillingProvider écrit directement en DB).
+  7. **Dashboard widget** — `_PlanBadgeWidget.vue` affiche le plan actuel + lien upgrade.
+  8. **Page /platform/plans** — Vue lecture seule des plans pour les admins platform.
+  9. **Navigation** — Item "Plan" ajouté au menu vertical (surface: structure).
+- **Contraintes** : EntitlementResolver NON modifié. Billing engine NON modifié. `@core/` et `@layouts/` NON modifiés. Presets Vuexy respectés (AppPricing, AccountSettingsBillingAndPlans, register-multi-steps, CustomRadiosWithIcon).
+- **Fichiers** : 6 CREATE, 10 MODIFY
+  - Backend : `PlanRegistry.php` (MODIFY), `PublicPlanController.php` (CREATE), `api.php` (MODIFY), `AuthController.php` (MODIFY), `RegisterRequest.php` (MODIFY), `CompanyPlanController.php` (CREATE), `company.php` (MODIFY)
+  - Frontend : `usePublicPlans.js` (CREATE), `register.vue` (MODIFY), `auth.js` (MODIFY), `plan.vue` (CREATE), `platform/plans.vue` (CREATE), `_PlanBadgeWidget.vue` (CREATE), `_DashboardManagement.vue` (MODIFY), `navigation/vertical/index.js` (MODIFY)
+- **Conséquences** :
+  - Tout visiteur peut voir les plans et pricing sans authentification
+  - L'inscription capture jobdomain + plan dès le départ (wizard guidé)
+  - Les admins company voient leur plan et peuvent changer via BillingProvider
+  - Le plan_key est disponible côté frontend pour tout affichage conditionnel futur
+  - Prêt pour Stripe : il suffit de brancher `StripeBillingProvider` (ADR-011)
+
+---
+
+## ADR-101 : Plan Domain Refactor + Payment Gateway Architecture
+
+- **Date** : 2026-02-21
+- **Contexte** : Les plans étaient codés en dur dans `PlanRegistry::definitions()`. Pas de lifecycle de paiement : `NullBillingProvider::changePlan()` écrit directement `plan_key` en DB sans audit, sans état pending, sans abstraction checkout.
+- **Décision** :
+  1. **Plans DB-driven** — Table `plans` avec prix en cents. `PlanRegistry` refactoré en cache DB (pattern ModuleRegistry). `seedDefaults()` pour le seeding, `definitions()` lit depuis la DB. Shape de retour **strictement identique** (prix en dollars).
+  2. **Platform Plan CRUD** — `PlanCrudController` (index/store/update/toggleActive) sous `manage_companies`. Remplace l'ancien `PlanController` read-only.
+  3. **PaymentGatewayProvider** — Nouveau contrat vendor-agnostic (`createCheckout`, `handleCallback`, `cancelSubscription`, `key`). Coexiste avec `BillingProvider` existant.
+  4. **PaymentGatewayManager** — Extends `Manager` (même pattern que `BillingManager`). Driver par défaut lu depuis `platform_settings.billing`. Pas de hardcoding stripe — discovery dynamique via `module.json`.
+  5. **NullPaymentGateway** — Driver par défaut. `createCheckout()` crée une `Subscription(pending)` et retourne `CheckoutResult(mode: 'internal', message: 'Contact admin')`. Garde contre les duplicates pending.
+  6. **ChangePlanService** — Service Core pour orchestrer le checkout (controllers thin).
+  7. **Tables billing** — `subscriptions`, `payments`, `invoices` vendor-agnostic avec FK cascade delete. Index sur `(company_id, status)`.
+  8. **POST /api/company/billing/checkout** — Nouveau endpoint dédié. PUT /company/plan reste pour les changements admin via BillingProvider.
+  9. **Platform Billing Governance** — `BillingConfigController` : providers, config (dans platform_settings.billing), subscriptions (ReadModel), approve (DB transaction + enforce one active), reject.
+  10. **BillingModule** — Visibilité changée de `hidden` à `visible`. Page `/platform/billing` avec sélecteur provider + table subscriptions.
+  11. **Company UX** — Plan.vue utilise checkout endpoint. Affiche "Pending Approval" si subscription pending existe. Désactive upgrade buttons pendant pending.
+  12. **Module packaging Stripe** — `StripePaymentModule` stub (scope: platform, type: addon, visibility: hidden). `module.json` avec `provides_payment_driver: stripe`. Routes placeholder. Pas de SDK Stripe.
+- **Contraintes** : EntitlementResolver NON modifié. `companies.plan_key` inchangé. Aucun SDK Stripe. Pas de breaking API contract (checkout est additif).
+- **Fichiers** : 21 CREATE, 13 MODIFY, 1 DELETE
+- **Conséquences** :
+  - Les plans sont modifiables par les admins platform (CRUD complet)
+  - Le flow d'upgrade company passe par un checkout avec subscription pending
+  - Les admins platform approuvent/rejettent les subscriptions
+  - La config payment gateway est en DB (modifiable via UI)
+  - Le système découvre dynamiquement les providers de paiement via module.json
+  - Prêt pour Stripe SDK integration (ADR-102)
+
+## ADR-102 : Platform Commercial Governance Refactor
+
+- **Date** : 2026-02-23
+- **Contexte** : ADR-101 a structuré le domaine technique (Plans DB, Subscription lifecycle, PaymentGateway abstraction). Cependant la surface Platform était trop technique pour des employés non techniques : prix en cents, driver/JSON config exposés, Plans absent du menu navigation.
+- **Décision** :
+  1. **Plan-centric governance** — Page `/platform/plans` refaite en grille VCard marketing (prix en dollars, badges, features). Plus de table CRUD technique.
+  2. **Page dédiée par plan** — `/platform/plans/{key}` avec 4 sections : infos commerciales, features marketing (liste éditable), limits techniques (panneau repliable), companies sur ce plan.
+  3. **Prix en dollars** — Le contrôleur accepte les prix en dollars et convertit en cents côté serveur. Aucun cent visible dans l'UI Platform.
+  4. **PlansModule** — Nouveau module platform avec nav item "Plans" (sortOrder: 15, permission: manage_companies). Plans maintenant visible dans la navigation.
+  5. **Page Payments** — `/platform/payments` remplace `/platform/billing`. Trois sections : modules de paiement (cards visuelles), politiques commerciales (toggles), gouvernance abonnements.
+  6. **Payment Policies** — Nouvelles règles commerciales stockées dans `platform_settings.billing.policies` : paiement requis, approbation admin, billing annuel, devise, TVA.
+  7. **BillingModule renommé** — Nav item "Billing" → "Payments", route → platform-payments, sortOrder 70 → 60.
+  8. **PlanDetailReadModel** — ReadModel pour les companies d'un plan avec subscription eager-loaded.
+- **Contraintes** : Aucune modification de PaymentGatewayManager, ChangePlanService, Subscription lifecycle, EntitlementResolver, structure DB. Surface uniquement.
+- **Fichiers** : 3 CREATE, 7 MODIFY, 1 DELETE, 1 REWRITE = 12 fichiers uniques
+- **Conséquences** :
+  - Platform lisible par un employé administratif non technique
+  - Gouvernance commerciale centrée produit (une page par plan)
+  - Paiements modulaires en surface (modules visuels, pas de driver technique)
+  - Aucune exposition technique brute (cents, JSON, driver keys)
+  - Navigation Platform complète : Dashboard, Companies, Plans, Payments, ...
+
+## ADR-103 : Internationalization & World Layer
+
+- **Date** : 2026-02-23
+- **Contexte** : L'application ciblait uniquement le marché US avec des chaînes hardcodées en anglais, des prix en `$` et des dates au format US. Pour activer le marché français (et futur multi-marché), une couche d'internationalisation complète est nécessaire.
+- **Décision** :
+  1. **Layer 1 — Clean English Baseline** : Normalisation de toutes les chaînes métier via `vue-i18n` (`useI18n()` + `t()`). ~986 clés structurées dans `en.json`. Aucune chaîne hardcodée restante dans les pages métier.
+  2. **Formateurs centralisés** : `formatMoney(cents, {currency, locale})` dans `utils/money.js` et `formatDate()`/`formatDateTime()` dans `utils/datetime.js`, tous basés sur `Intl.NumberFormat` et `Intl.DateTimeFormat`.
+  3. **World Settings** : Nouvelle colonne JSON `world` dans `platform_settings` (country, currency, locale, timezone, dial_code). `WorldSettingsPayload` immutable avec defaults US.
+  4. **WorldSettingsController** — CRUD Platform (permission `manage_theme_settings`) + `PublicWorldController` (public, sans auth).
+  5. **World Store** — Pinia store global `useWorldStore()` chargé au boot (router guard + `usePublicTheme`). Les formateurs lisent les defaults depuis ce store.
+  6. **Platform Settings → World tab** — Nouveau tab dans `/platform/settings/world` avec selects pour country, currency, locale, timezone, dial code. Save synchronise le world store global.
+  7. **French locale** — `fr.json` complet (986 clés), traduction professionnelle formelle. Le système i18n auto-enregistre tout fichier `locales/*.json` via `import.meta.glob`.
+- **Fichiers** :
+  - Backend : 1 migration, `WorldSettingsPayload.php`, `WorldSettingsController.php`, `PublicWorldController.php`, model + routes modifiés
+  - Frontend : `world.js` (store), `_SettingsWorld.vue`, `money.js` + `datetime.js` (formateurs connectés au world store), `[tab].vue` (world tab ajouté), `fr.json`, `en.json` (~986 clés)
+  - ~40 pages/composants métier modifiés pour `t()` dans Layer 1
+- **Conséquences** :
+  - Toutes les chaînes métier passent par `t()` — ajout d'une langue = un fichier JSON
+  - Les formateurs respectent automatiquement la locale et devise du platform (world store)
+  - Changement de locale depuis Platform Settings → impact immédiat sur tous les utilisateurs
+  - Prêt pour le marché français : switch locale `fr-FR`, currency `EUR`, timezone `Europe/Paris`
+
+## ADR-104 : International Market Engine
+
+- **Date** : 2026-02-23
+- **Contexte** : ADR-103 introduisait un simple tab "World" avec 5 champs dropdown stockés en JSON column (`platform_settings.world`). Insuffisant pour un SaaS multi-marché : pas de CRUD, pas de statuts juridiques, pas de langues par marché, pas de traductions dynamiques, pas de taux de change. ADR-104 remplace ce tab par un véritable **domaine Markets** — un moteur d'internationalisation complet et administrable.
+- **Décision** :
+  1. **8 nouvelles tables** : `markets` (CRUD par pays), `legal_statuses` (statuts juridiques par marché avec taux TVA), `languages` (globales), `market_language` (pivot), `translation_bundles` (traductions DB par locale/namespace), `translation_overrides` (surcharges par marché), `fx_rates` (taux de change), + colonnes `market_key`/`legal_status_key` ajoutées à `companies`
+  2. **6 Eloquent models** : `Market`, `LegalStatus`, `Language`, `TranslationBundle`, `TranslationOverride`, `FxRate` dans `app/Core/Markets/`
+  3. **MarketRegistry** : Pattern Registry (comme `PlanRegistry`) — `seedDefaults()` fournit le marché FR avec 8 statuts juridiques (SAS, SASU, SARL, EURL, SA, SNC, SCI, Auto-entrepreneur) + langues en/fr. `sync()` idempotent, préserve les décisions admin.
+  4. **MarketResolver** : Résolution de marché pour une company (market_key → market) ou default (is_default → premier actif → fallback US). `WorldSettingsPayload` évolué pour lire depuis `MarketResolver::resolveDefault()` — l'API `/api/public/world` reste backward-compatible.
+  5. **TranslationRepository** : Fusion traductions DB bundles + surcharges par marché. `diff()` pour preview import.
+  6. **API publique** : `GET /api/public/markets`, `GET /api/public/markets/{key}`, `GET /api/public/i18n/{locale}/{namespace?}` (avec `?market=` optionnel)
+  7. **Platform admin** : Module `platform.markets` (permission `manage_markets`) — CRUD marchés, statuts juridiques imbriqués, langues, traductions (import/export JSON), taux de change. Pages Vue : `/platform/markets` (index + detail 4 tabs), `/platform/languages`.
+  8. **Company UX** : Sélecteurs marché + statut juridique dans company settings. `world.js` store enrichi avec `applyMarket()`.
+  9. **FX Scheduler** : `FxRateFetchJob` (ShouldQueue) avec source stub (rates hardcodés). Planifié toutes les 6 heures via `routes/console.php`. UI dans la page markets index.
+  10. **World tab supprimé** : Le tab "World" de Platform Settings est remplacé par les pages Markets dédiées.
+- **Fichiers** :
+  - Migrations : 8 fichiers (`create_markets`, `create_legal_statuses`, `create_languages`, `create_market_language`, `create_translation_bundles`, `create_translation_overrides`, `create_fx_rates`, `add_market_columns_to_companies`)
+  - Models : `Market`, `LegalStatus`, `Language`, `TranslationBundle`, `TranslationOverride`, `FxRate`
+  - Services : `MarketRegistry`, `MarketResolver`, `TranslationRepository`, `MarketDetailReadModel`
+  - Controllers : `PublicMarketController`, `PublicI18nController`, `MarketCrudController`, `LegalStatusController`, `LanguageController`, `TranslationController`, `FxRateController`, `CompanyMarketController`
+  - Module : `MarketsModule` (navItems, permission manage_markets)
+  - Job : `FxRateFetchJob`
+  - Frontend : `markets.store.js`, `markets/index.vue`, `markets/[key].vue`, `languages.vue`, company `settings.vue` + `settings.store.js` + `world.js` modifiés
+  - Supprimé : `_SettingsWorld.vue`, world actions dans `settings.store.js`
+  - i18n : clés markets/legalStatuses/languages/translations/fxRates en en.json + fr.json
+- **Conséquences** :
+  - Multi-marché natif : créer un marché = ajouter un pays avec sa devise, locale, timezone, statuts juridiques
+  - Chaque company est rattachée à un marché → formatMoney/formatDate utilisent les paramètres du marché
+  - Traductions dynamiques en DB avec surcharges par marché (terminologie locale)
+  - Taux de change maintenus automatiquement (extensible vers API réelle)
+  - World tab remplacé par un système complet et administrable
+  - Backward-compatible : `/api/public/world` retourne les données du marché par défaut
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

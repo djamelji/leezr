@@ -11,6 +11,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const jobdomainsStore = usePlatformJobdomainsStore()
@@ -50,7 +51,7 @@ const handleDelete = async () => {
     router.push({ name: 'platform-jobdomains' })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToDelete'), 'error')
   }
 }
 
@@ -69,7 +70,7 @@ const saveOverview = async () => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save.', 'error')
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
     isSaving.value = false
@@ -140,7 +141,7 @@ const toggleModule = async (moduleKey, enabled) => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update modules.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToUpdateModules'), 'error')
   }
 }
 
@@ -182,7 +183,7 @@ const savePresetFields = async newFields => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update fields.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToUpdateFields'), 'error')
   }
 }
 
@@ -387,13 +388,13 @@ const saveDefaultRoles = async updatedRoles => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update roles.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToUpdateRoles'), 'error')
   }
 }
 
 const handleRoleDrawerSubmit = async () => {
   if (!roleForm.value.name?.trim()) {
-    toast('Role name is required.', 'error')
+    toast(t('platformJobdomains.roleNameRequired'), 'error')
 
     return
   }
@@ -423,7 +424,7 @@ const handleRoleDrawerSubmit = async () => {
     else {
       const key = generateRoleKey(roleForm.value.name)
       if (!key) {
-        toast('Could not generate a valid key from the role name.', 'error')
+        toast(t('platformJobdomains.failedToGenerateKey'), 'error')
 
         return
       }
@@ -439,7 +440,7 @@ const handleRoleDrawerSubmit = async () => {
 }
 
 const deletePresetRole = async role => {
-  if (!confirm(`Remove preset role "${role.name}"?`))
+  if (!confirm(t('platformJobdomains.confirmRemoveRole', { name: role.name })))
     return
 
   const current = { ...(jobdomain.value.default_roles || {}) }
@@ -463,7 +464,7 @@ onMounted(async () => {
     resetOverviewForm()
   }
   catch {
-    toast('Job domain not found.', 'error')
+    toast(t('platformJobdomains.notFound'), 'error')
     await router.push({ name: 'platform-jobdomains' })
   }
   finally {
@@ -506,7 +507,7 @@ onMounted(async () => {
                 color="primary"
                 size="small"
               >
-                {{ jobdomain.companies_count }} {{ jobdomain.companies_count === 1 ? 'company' : 'companies' }}
+                {{ t('platformJobdomains.companiesCount', { count: jobdomain.companies_count }, jobdomain.companies_count) }}
               </VChip>
               <VChip
                 v-else
@@ -514,7 +515,7 @@ onMounted(async () => {
                 variant="tonal"
                 size="small"
               >
-                No companies
+                {{ t('platformJobdomains.noCompanies') }}
               </VChip>
             </div>
           </div>
@@ -528,21 +529,21 @@ onMounted(async () => {
             icon="tabler-info-circle"
             class="me-1"
           />
-          Overview
+          {{ t('platformJobdomains.overview') }}
         </VTab>
         <VTab value="modules">
           <VIcon
             icon="tabler-puzzle"
             class="me-1"
           />
-          Default Modules
+          {{ t('platformJobdomains.defaultModules') }}
         </VTab>
         <VTab value="fields">
           <VIcon
             icon="tabler-forms"
             class="me-1"
           />
-          Default Fields
+          {{ t('platformJobdomains.defaultFields') }}
           <VChip
             size="x-small"
             class="ms-2"
@@ -555,7 +556,7 @@ onMounted(async () => {
             icon="tabler-shield-lock"
             class="me-1"
           />
-          Default Roles
+          {{ t('platformJobdomains.defaultRoles') }}
           <VChip
             size="x-small"
             class="ms-2"
@@ -581,9 +582,9 @@ onMounted(async () => {
                   >
                     <AppTextField
                       :model-value="jobdomain.key"
-                      label="Code"
+                      :label="t('platformJobdomains.codeLabel')"
                       disabled
-                      hint="Immutable after creation."
+                      :hint="t('platformJobdomains.codeHint')"
                       persistent-hint
                     />
                   </VCol>
@@ -594,14 +595,14 @@ onMounted(async () => {
                   >
                     <AppTextField
                       v-model="overviewForm.label"
-                      label="Name"
+                      :label="t('common.name')"
                     />
                   </VCol>
 
                   <VCol cols="12">
                     <AppTextarea
                       v-model="overviewForm.description"
-                      label="Description"
+                      :label="t('common.description')"
                       rows="3"
                     />
                   </VCol>
@@ -609,7 +610,7 @@ onMounted(async () => {
                   <VCol cols="12">
                     <VSwitch
                       v-model="overviewForm.allowCustomFields"
-                      label="Allow companies to create custom fields"
+                      :label="t('platformJobdomains.allowCustomFields')"
                       hide-details
                       color="primary"
                     />
@@ -621,14 +622,14 @@ onMounted(async () => {
                         type="submit"
                         :loading="isSaving"
                       >
-                        Save
+                        {{ t('common.save') }}
                       </VBtn>
                       <VBtn
                         variant="tonal"
                         color="secondary"
                         @click="resetOverviewForm"
                       >
-                        Reset
+                        {{ t('common.reset') }}
                       </VBtn>
                     </div>
                   </VCol>
@@ -643,10 +644,10 @@ onMounted(async () => {
               <div class="d-flex align-center justify-space-between">
                 <div>
                   <div class="text-body-1 font-weight-medium text-error">
-                    Delete Job Domain
+                    {{ t('platformJobdomains.deleteJobDomain') }}
                   </div>
                   <div class="text-body-2 text-medium-emphasis">
-                    This action is permanent and cannot be undone.
+                    {{ t('platformJobdomains.deleteWarning') }}
                   </div>
                 </div>
                 <VBtn
@@ -655,13 +656,13 @@ onMounted(async () => {
                   :disabled="jobdomain.companies_count > 0"
                   @click="isDeleteDialogOpen = true"
                 >
-                  Delete
+                  {{ t('common.delete') }}
                   <VTooltip
                     v-if="jobdomain.companies_count > 0"
                     activator="parent"
                     location="top"
                   >
-                    Cannot delete: assigned to {{ jobdomain.companies_count }} company(ies)
+                    {{ t('platformJobdomains.cannotDelete', { count: jobdomain.companies_count }) }}
                   </VTooltip>
                 </VBtn>
               </div>
@@ -677,14 +678,14 @@ onMounted(async () => {
                 icon="tabler-puzzle"
                 class="me-2"
               />
-              Module Configuration
+              {{ t('platformJobdomains.moduleConfiguration') }}
               <VSpacer />
               <VChip
                 color="info"
                 variant="tonal"
                 size="small"
               >
-                Preset Only
+                {{ t('platformJobdomains.presetOnly') }}
               </VChip>
             </VCardTitle>
 
@@ -693,7 +694,7 @@ onMounted(async () => {
               variant="tonal"
               class="mx-4 mt-2"
             >
-              These presets are applied only when assigning this job domain to a company. Existing companies are not affected.
+              {{ t('platformJobdomains.presetInfo') }}
             </VAlert>
 
             <!-- Section: Core Modules -->
@@ -705,10 +706,10 @@ onMounted(async () => {
                   class="me-2"
                   color="primary"
                 />
-                Core Modules
+                {{ t('platformJobdomains.coreModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Always active for all companies. Cannot be removed.
+                {{ t('platformJobdomains.coreModulesInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -729,7 +730,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Core
+                        {{ t('platformModules.core') }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -758,10 +759,10 @@ onMounted(async () => {
                   class="me-2"
                   color="success"
                 />
-                Included by Default
+                {{ t('platformJobdomains.includedByDefault') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Auto-activated when this job domain is assigned.
+                {{ t('platformJobdomains.includedByDefaultInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -782,7 +783,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Included
+                        {{ t('platformJobdomains.included') }}
                       </VChip>
                       <VChip
                         v-if="mod.min_plan"
@@ -791,7 +792,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-1"
                       >
-                        Requires {{ planLabel(mod.min_plan) }}
+                        {{ t('platformJobdomains.requiresPlan', { plan: planLabel(mod.min_plan) }) }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -820,10 +821,10 @@ onMounted(async () => {
                   class="me-2"
                   color="info"
                 />
-                Available Modules
+                {{ t('platformJobdomains.availableModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Compatible with this job domain. Toggle to include by default.
+                {{ t('platformJobdomains.availableModulesInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -845,7 +846,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Marketplace
+                        {{ t('platformJobdomains.marketplace') }}
                       </VChip>
                       <VChip
                         v-if="mod.min_plan"
@@ -854,7 +855,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-1"
                       >
-                        Requires {{ planLabel(mod.min_plan) }}
+                        {{ t('platformJobdomains.requiresPlan', { plan: planLabel(mod.min_plan) }) }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -883,10 +884,10 @@ onMounted(async () => {
                   class="me-2"
                   color="secondary"
                 />
-                Incompatible Modules
+                {{ t('platformJobdomains.incompatibleModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Not available for this job domain.
+                {{ t('platformJobdomains.incompatibleModulesInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -908,7 +909,7 @@ onMounted(async () => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Not available
+                        {{ t('platformJobdomains.notAvailable') }}
                       </VChip>
                     </td>
                     <td>
@@ -931,7 +932,7 @@ onMounted(async () => {
               v-if="!allModules.length"
               class="text-center text-disabled"
             >
-              No modules available.
+              {{ t('platformJobdomains.noModulesAvailable') }}
             </VCardText>
           </VCard>
         </VWindowItem>
@@ -944,14 +945,14 @@ onMounted(async () => {
                 icon="tabler-forms"
                 class="me-2"
               />
-              Default Fields
+              {{ t('platformJobdomains.defaultFields') }}
               <VSpacer />
               <VChip
                 color="info"
                 variant="tonal"
                 size="small"
               >
-                Preset Only
+                {{ t('platformJobdomains.presetOnly') }}
               </VChip>
             </VCardTitle>
 
@@ -960,12 +961,12 @@ onMounted(async () => {
               variant="tonal"
               class="mx-4 mt-2"
             >
-              These presets are applied only when assigning this job domain to a company. Existing company activations are never modified.
+              {{ t('platformJobdomains.fieldsPresetInfo') }}
             </VAlert>
 
             <!-- Section 1: Preset Fields -->
             <VCardTitle class="text-body-1 mt-2">
-              Preset Fields
+              {{ t('platformJobdomains.presetFields') }}
             </VCardTitle>
 
             <VTable
@@ -974,13 +975,13 @@ onMounted(async () => {
             >
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Scope</th>
+                  <th>{{ t('common.code') }}</th>
+                  <th>{{ t('common.scope') }}</th>
                   <th style="width: 120px;">
-                    Required
+                    {{ t('members.required') }}
                   </th>
                   <th style="width: 100px;">
-                    Order
+                    {{ t('platformFields.order') }}
                   </th>
                   <th style="width: 60px;" />
                 </tr>
@@ -999,7 +1000,7 @@ onMounted(async () => {
                       size="x-small"
                       class="ms-2"
                     >
-                      system
+                      {{ t('common.system') }}
                     </VChip>
                   </td>
                   <td>
@@ -1048,14 +1049,14 @@ onMounted(async () => {
               v-else
               class="text-disabled"
             >
-              No fields in this preset. Add fields from the list below.
+              {{ t('platformJobdomains.noFieldsInPreset') }}
             </VCardText>
 
             <VDivider class="my-2" />
 
             <!-- Section 2: Available Fields -->
             <VCardTitle class="text-body-1">
-              Available Fields
+              {{ t('platformJobdomains.availableFields') }}
             </VCardTitle>
 
             <!-- Company scope -->
@@ -1124,7 +1125,7 @@ onMounted(async () => {
               v-if="!availableCompanyDefs.length && !availableCompanyUserDefs.length"
               class="text-disabled"
             >
-              All fields are already in the preset.
+              {{ t('platformJobdomains.allFieldsInPreset') }}
             </VCardText>
           </VCard>
         </VWindowItem>
@@ -1137,14 +1138,14 @@ onMounted(async () => {
                 icon="tabler-shield-lock"
                 class="me-2"
               />
-              Default Roles
+              {{ t('platformJobdomains.defaultRoles') }}
               <VSpacer />
               <VBtn
                 size="small"
                 prepend-icon="tabler-plus"
                 @click="openRoleCreateDrawer"
               >
-                Add Role
+                {{ t('platformJobdomains.addRolePreset') }}
               </VBtn>
             </VCardTitle>
 
@@ -1153,7 +1154,7 @@ onMounted(async () => {
               variant="tonal"
               class="mx-4 mt-2"
             >
-              These role presets are cloned when assigning this job domain to a company. Existing companies are not affected.
+              {{ t('platformJobdomains.rolePresetsInfo') }}
             </VAlert>
 
             <VTable
@@ -1162,12 +1163,12 @@ onMounted(async () => {
             >
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>{{ t('common.name') }}</th>
                   <th style="width: 140px;">
-                    Level
+                    {{ t('common.level') }}
                   </th>
                   <th style="width: 140px;">
-                    Capabilities
+                    {{ t('roles.capabilities') }}
                   </th>
                   <th style="width: 100px;" />
                 </tr>
@@ -1186,7 +1187,7 @@ onMounted(async () => {
                       size="small"
                       variant="tonal"
                     >
-                      {{ role.is_administrative ? 'Management' : 'Operational' }}
+                      {{ role.is_administrative ? t('common.management') : t('common.operational') }}
                     </VChip>
                   </td>
                   <td>
@@ -1197,7 +1198,7 @@ onMounted(async () => {
                         color="primary"
                         variant="tonal"
                       >
-                        {{ role.bundles.length }} {{ role.bundles.length === 1 ? 'capability' : 'capabilities' }}
+                        {{ role.bundles.length }} {{ t('platformJobdomains.capability', role.bundles.length) }}
                       </VChip>
                       <VChip
                         v-if="role.permissions.length > 0"
@@ -1205,7 +1206,7 @@ onMounted(async () => {
                         color="secondary"
                         variant="tonal"
                       >
-                        {{ role.permissions.length }} custom
+                        {{ t('platformJobdomains.customCount', { count: role.permissions.length }) }}
                       </VChip>
                       <VChip
                         v-if="role.bundles.length === 0 && role.permissions.length === 0"
@@ -1213,7 +1214,7 @@ onMounted(async () => {
                         color="default"
                         variant="tonal"
                       >
-                        None
+                        {{ t('platformJobdomains.none') }}
                       </VChip>
                     </div>
                   </td>
@@ -1247,7 +1248,7 @@ onMounted(async () => {
               v-else
               class="text-center text-disabled"
             >
-              No role presets. Add one to get started.
+              {{ t('platformJobdomains.noRolePresets') }}
             </VCardText>
           </VCard>
         </VWindowItem>
@@ -1261,7 +1262,7 @@ onMounted(async () => {
         width="500"
       >
         <AppDrawerHeaderSection
-          :title="isRoleEditMode ? 'Edit Role Preset' : 'Add Role Preset'"
+          :title="isRoleEditMode ? t('platformJobdomains.editRolePreset') : t('platformJobdomains.addRolePresetDrawer')"
           @cancel="isRoleDrawerOpen = false"
         />
 
@@ -1274,13 +1275,13 @@ onMounted(async () => {
                 <VCol cols="12">
                   <AppTextField
                     v-model="roleForm.name"
-                    label="Role Name"
-                    placeholder="e.g. Dispatcher, Accountant"
+                    :label="t('roles.roleName')"
+                    :placeholder="t('roles.roleNamePlaceholder')"
                   />
                 </VCol>
                 <VCol cols="12">
                   <h6 class="text-h6 mb-3">
-                    Role Level
+                    {{ t('roles.roleLevel') }}
                   </h6>
                   <VRadioGroup
                     :model-value="roleForm.is_administrative ? 'management' : 'operational'"
@@ -1289,9 +1290,9 @@ onMounted(async () => {
                     <VRadio value="operational">
                       <template #label>
                         <div>
-                          <span class="font-weight-medium">Operational</span>
+                          <span class="font-weight-medium">{{ t('roles.operational') }}</span>
                           <div class="text-body-2 text-disabled">
-                            Can manage daily work only.
+                            {{ t('roles.operationalDescription') }}
                           </div>
                         </div>
                       </template>
@@ -1302,7 +1303,7 @@ onMounted(async () => {
                     >
                       <template #label>
                         <div>
-                          <span class="font-weight-medium">Management</span>
+                          <span class="font-weight-medium">{{ t('roles.management') }}</span>
                           <VTooltip location="top">
                             <template #activator="{ props: tooltipProps }">
                               <VIcon
@@ -1312,10 +1313,10 @@ onMounted(async () => {
                                 v-bind="tooltipProps"
                               />
                             </template>
-                            Management roles can configure company structure and sensitive settings.
+                            {{ t('roles.managementTooltip') }}
                           </VTooltip>
                           <div class="text-body-2 text-disabled">
-                            Can manage team and company configuration.
+                            {{ t('roles.managementDescription') }}
                           </div>
                         </div>
                       </template>
@@ -1331,7 +1332,7 @@ onMounted(async () => {
                 <VCol cols="12">
                   <div class="d-flex align-center justify-space-between mb-4">
                     <h6 class="text-h6">
-                      Capabilities
+                      {{ t('roles.capabilities') }}
                     </h6>
                     <VBtn
                       variant="text"
@@ -1340,7 +1341,7 @@ onMounted(async () => {
                       :prepend-icon="isRoleAdvancedMode ? 'tabler-layout-grid' : 'tabler-adjustments'"
                       @click="isRoleAdvancedMode = !isRoleAdvancedMode"
                     >
-                      {{ isRoleAdvancedMode ? 'Simple view' : 'Advanced' }}
+                      {{ isRoleAdvancedMode ? t('roles.simpleView') : t('roles.advanced') }}
                     </VBtn>
                   </div>
 
@@ -1354,7 +1355,7 @@ onMounted(async () => {
                           size="20"
                           color="primary"
                         />
-                        <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
+                        <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                       </div>
 
                       <template
@@ -1404,7 +1405,7 @@ onMounted(async () => {
                               color="error"
                               variant="tonal"
                             >
-                              Sensitive
+                              {{ t('common.sensitive') }}
                             </VChip>
                           </div>
                         </div>
@@ -1474,7 +1475,7 @@ onMounted(async () => {
                               color="error"
                               variant="tonal"
                             >
-                              Sensitive
+                              {{ t('common.sensitive') }}
                             </VChip>
                           </div>
                         </div>
@@ -1492,7 +1493,7 @@ onMounted(async () => {
                           size="20"
                           color="primary"
                         />
-                        <span class="text-body-1 font-weight-medium">Core &mdash; Team &amp; Company</span>
+                        <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                       </div>
 
                       <template
@@ -1545,7 +1546,7 @@ onMounted(async () => {
                               color="error"
                               variant="tonal"
                             >
-                              Sensitive
+                              {{ t('common.sensitive') }}
                             </VChip>
                           </div>
                         </div>
@@ -1615,7 +1616,7 @@ onMounted(async () => {
                               color="error"
                               variant="tonal"
                             >
-                              Sensitive
+                              {{ t('common.sensitive') }}
                             </VChip>
                           </div>
                         </div>
@@ -1630,14 +1631,14 @@ onMounted(async () => {
                     class="me-3"
                     :loading="roleDrawerLoading"
                   >
-                    {{ isRoleEditMode ? 'Update' : 'Create' }}
+                    {{ isRoleEditMode ? t('common.update') : t('common.create') }}
                   </VBtn>
                   <VBtn
                     variant="tonal"
                     color="secondary"
                     @click="isRoleDrawerOpen = false"
                   >
-                    Cancel
+                    {{ t('common.cancel') }}
                   </VBtn>
                 </VCol>
               </VRow>
@@ -1652,11 +1653,9 @@ onMounted(async () => {
         max-width="400"
       >
         <VCard>
-          <VCardTitle>Confirm Delete</VCardTitle>
+          <VCardTitle>{{ t('platformJobdomains.confirmDeleteTitle') }}</VCardTitle>
           <VCardText>
-            Are you sure you want to delete the job domain
-            <strong>{{ jobdomain?.label }}</strong>?
-            This action cannot be undone.
+            {{ t('platformJobdomains.confirmDeleteMessage', { name: jobdomain?.label }) }}
           </VCardText>
           <VCardActions>
             <VSpacer />
@@ -1664,13 +1663,13 @@ onMounted(async () => {
               variant="tonal"
               @click="isDeleteDialogOpen = false"
             >
-              Cancel
+              {{ t('common.cancel') }}
             </VBtn>
             <VBtn
               color="error"
               @click="handleDelete"
             >
-              Delete
+              {{ t('common.delete') }}
             </VBtn>
           </VCardActions>
         </VCard>
@@ -1678,4 +1677,3 @@ onMounted(async () => {
     </template>
   </div>
 </template>
-

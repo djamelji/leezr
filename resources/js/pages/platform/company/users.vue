@@ -1,5 +1,8 @@
 <script setup>
 import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
+import { formatDate } from '@/utils/datetime'
+
+const { t } = useI18n()
 
 definePage({
   meta: {
@@ -21,22 +24,12 @@ onMounted(async () => {
   }
 })
 
-const headers = [
-  { title: 'Name', key: 'display_name' },
-  { title: 'Email', key: 'email' },
-  { title: 'Companies', key: 'companies', sortable: false },
-  { title: 'Created', key: 'created_at' },
-]
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
+const headers = computed(() => [
+  { title: t('common.name'), key: 'display_name' },
+  { title: t('common.email'), key: 'email' },
+  { title: t('Companies'), key: 'companies', sortable: false },
+  { title: t('common.created'), key: 'created_at' },
+])
 
 const onPageChange = async page => {
   isLoading.value = true
@@ -58,10 +51,10 @@ const onPageChange = async page => {
           icon="tabler-users-group"
           class="me-2"
         />
-        Company Users
+        {{ t('platformCompanyUsers.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Read-only supervision of company users across all tenants.
+        {{ t('platformCompanyUsers.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -115,7 +108,7 @@ const onPageChange = async page => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No company users found.
+            {{ t('platformCompanyUsers.noUsers') }}
           </div>
         </template>
       </VDataTable>

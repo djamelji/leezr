@@ -3,10 +3,14 @@
 namespace App\Core\Models;
 
 use App\Company\RBAC\CompanyRole;
+use App\Core\Billing\Subscription;
 use App\Core\Jobdomains\Jobdomain;
+use App\Core\Markets\LegalStatus;
+use App\Core\Markets\Market;
 use App\Core\Modules\CompanyModule;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
@@ -18,7 +22,19 @@ class Company extends Model
         'slug',
         'status',
         'plan_key',
+        'market_key',
+        'legal_status_key',
     ];
+
+    public function market(): BelongsTo
+    {
+        return $this->belongsTo(Market::class, 'market_key', 'key');
+    }
+
+    public function legalStatus(): BelongsTo
+    {
+        return $this->belongsTo(LegalStatus::class, 'legal_status_key', 'key');
+    }
 
     public function memberships(): HasMany
     {
@@ -40,6 +56,11 @@ class Company extends Model
     public function modules(): HasMany
     {
         return $this->hasMany(CompanyModule::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
     }
 
     public function shipments(): HasMany

@@ -1,8 +1,10 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
+const { t } = useI18n()
 const deliveryStore = useDeliveryStore()
 const route = useRoute()
 const router = useRouter()
@@ -14,23 +16,23 @@ const successMessage = ref('')
 
 const delivery = computed(() => deliveryStore.currentDelivery)
 
-const transitions = {
+const transitions = computed(() => ({
   planned: [
-    { status: 'in_transit', label: 'Start Transit', color: 'warning', icon: 'tabler-truck' },
+    { status: 'in_transit', label: t('deliveries.startTransit'), color: 'warning', icon: 'tabler-truck' },
   ],
   in_transit: [
-    { status: 'delivered', label: 'Mark Delivered', color: 'success', icon: 'tabler-check' },
+    { status: 'delivered', label: t('deliveries.markDelivered'), color: 'success', icon: 'tabler-check' },
   ],
   delivered: [],
   canceled: [],
   draft: [],
-}
+}))
 
 const availableTransitions = computed(() => {
   if (!delivery.value)
     return []
 
-  return transitions[delivery.value.status] || []
+  return transitions.value[delivery.value.status] || []
 })
 
 const statusColor = status => {
@@ -47,27 +49,14 @@ const statusColor = status => {
 
 const statusLabel = status => {
   const labels = {
-    draft: 'Draft',
-    planned: 'Planned',
-    in_transit: 'In Transit',
-    delivered: 'Delivered',
-    canceled: 'Canceled',
+    draft: t('deliveries.statusDraft'),
+    planned: t('deliveries.statusPlanned'),
+    in_transit: t('deliveries.statusInTransit'),
+    delivered: t('deliveries.statusDelivered'),
+    canceled: t('deliveries.statusCanceled'),
   }
 
   return labels[status] || status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr)
-    return '—'
-
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 const changeStatus = async newStatus => {
@@ -77,10 +66,10 @@ const changeStatus = async newStatus => {
 
   try {
     await deliveryStore.updateStatus(delivery.value.id, newStatus)
-    successMessage.value = `Status changed to "${statusLabel(newStatus)}".`
+    successMessage.value = t('deliveries.statusChangedTo', { status: statusLabel(newStatus) })
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to change status.'
+    errorMessage.value = error?.data?.message || t('deliveries.failedToChangeStatus')
   }
   finally {
     isChangingStatus.value = false
@@ -112,7 +101,7 @@ onMounted(async () => {
         <VIcon icon="tabler-arrow-left" />
       </VBtn>
       <h4 class="text-h4">
-        {{ delivery?.reference || 'Delivery' }}
+        {{ delivery?.reference || t('deliveries.delivery') }}
       </h4>
       <VChip
         v-if="delivery"
@@ -156,7 +145,7 @@ onMounted(async () => {
           md="8"
         >
           <VCard>
-            <VCardTitle>Delivery Details</VCardTitle>
+            <VCardTitle>{{ t('deliveries.deliveryDetails') }}</VCardTitle>
             <VCardText>
               <VRow>
                 <VCol
@@ -164,7 +153,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Reference
+                    {{ t('deliveries.reference') }}
                   </div>
                   <div class="text-body-1 font-weight-medium">
                     {{ delivery.reference }}
@@ -176,7 +165,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Scheduled Date
+                    {{ t('deliveries.scheduledDate') }}
                   </div>
                   <div class="text-body-1">
                     {{ formatDate(delivery.scheduled_at) }}
@@ -188,7 +177,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Origin
+                    {{ t('deliveries.origin') }}
                   </div>
                   <div class="text-body-1">
                     {{ delivery.origin_address || '—' }}
@@ -200,7 +189,7 @@ onMounted(async () => {
                   md="6"
                 >
                   <div class="text-body-2 text-disabled mb-1">
-                    Destination
+                    {{ t('deliveries.destination') }}
                   </div>
                   <div class="text-body-1">
                     {{ delivery.destination_address || '—' }}
@@ -209,7 +198,7 @@ onMounted(async () => {
 
                 <VCol cols="12">
                   <div class="text-body-2 text-disabled mb-1">
-                    Notes
+                    {{ t('deliveries.notes') }}
                   </div>
                   <div class="text-body-1">
                     {{ delivery.notes || '—' }}
@@ -226,7 +215,7 @@ onMounted(async () => {
           md="4"
         >
           <VCard>
-            <VCardTitle>Update Status</VCardTitle>
+            <VCardTitle>{{ t('deliveries.updateStatus') }}</VCardTitle>
             <VCardText>
               <template v-if="availableTransitions.length">
                 <div class="d-flex flex-column gap-3">
@@ -245,7 +234,7 @@ onMounted(async () => {
               </template>
               <template v-else>
                 <div class="text-body-2 text-disabled text-center py-4">
-                  No actions available.
+                  {{ t('deliveries.noActionsAvailable') }}
                 </div>
               </template>
             </VCardText>

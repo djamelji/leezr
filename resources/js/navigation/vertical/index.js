@@ -46,6 +46,12 @@ export default [
     surface: 'structure',
   },
   {
+    title: 'Plan',
+    to: { name: 'company-plan' },
+    icon: { icon: 'tabler-credit-card' },
+    surface: 'structure',
+  },
+  {
     title: 'Roles',
     to: { name: 'company-roles' },
     icon: { icon: 'tabler-shield-lock' },

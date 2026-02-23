@@ -10,6 +10,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const rolesStore = usePlatformRolesStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
@@ -41,13 +42,13 @@ onMounted(async () => {
   }
 })
 
-const headers = [
-  { title: 'Key', key: 'key' },
-  { title: 'Name', key: 'name' },
-  { title: 'Permissions', key: 'permissions', sortable: false },
-  { title: 'Users', key: 'users_count', align: 'center' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '150px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('platformRoles.key'), key: 'key' },
+  { title: t('common.name'), key: 'name' },
+  { title: t('platformRoles.permissions'), key: 'permissions', sortable: false },
+  { title: t('platformRoles.users'), key: 'users_count', align: 'center' },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '150px', sortable: false },
+])
 
 const openCreateDrawer = () => {
   isEditMode.value = false
@@ -94,7 +95,7 @@ const handleDrawerSubmit = async () => {
     isDrawerOpen.value = false
   }
   catch (error) {
-    toast(error?.data?.message || 'Operation failed.', 'error')
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
     drawerLoading.value = false
@@ -102,7 +103,7 @@ const handleDrawerSubmit = async () => {
 }
 
 const deleteRole = async role => {
-  if (!confirm(`Delete role "${role.name}"?`))
+  if (!confirm(t('platformRoles.confirmDeleteRole', { name: role.name })))
     return
 
   actionLoading.value = role.id
@@ -113,7 +114,7 @@ const deleteRole = async role => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete role.', 'error')
+    toast(error?.data?.message || t('platformRoles.failedToDeleteRole'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -129,18 +130,18 @@ const deleteRole = async role => {
           icon="tabler-shield-lock"
           class="me-2"
         />
-        Platform Roles
+        {{ t('platformRoles.title') }}
         <VSpacer />
         <VBtn
           size="small"
           prepend-icon="tabler-plus"
           @click="openCreateDrawer"
         >
-          Add Role
+          {{ t('platformRoles.addRole') }}
         </VBtn>
       </VCardTitle>
       <VCardSubtitle>
-        Manage platform roles and their permissions.
+        {{ t('platformRoles.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -169,7 +170,7 @@ const deleteRole = async role => {
             color="error"
             variant="tonal"
           >
-            All permissions (structural)
+            {{ t('platformRoles.allPermissionsStructural') }}
           </VChip>
           <template v-else>
             <VChip
@@ -231,7 +232,7 @@ const deleteRole = async role => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No roles found.
+            {{ t('platformRoles.noRoles') }}
           </div>
         </template>
       </VDataTable>
@@ -245,7 +246,7 @@ const deleteRole = async role => {
       width="400"
     >
       <AppDrawerHeaderSection
-        :title="isEditMode ? 'Edit Role' : 'Add Role'"
+        :title="isEditMode ? t('platformRoles.editRole') : t('platformRoles.addRole')"
         @cancel="isDrawerOpen = false"
       />
 
@@ -257,16 +258,16 @@ const deleteRole = async role => {
             <VCol cols="12">
               <AppTextField
                 v-model="drawerForm.key"
-                label="Key"
-                placeholder="e.g. support"
+                :label="t('platformRoles.key')"
+                :placeholder="t('platformRoles.keyPlaceholder')"
                 :disabled="isEditMode"
               />
             </VCol>
             <VCol cols="12">
               <AppTextField
                 v-model="drawerForm.name"
-                label="Name"
-                placeholder="e.g. Support Agent"
+                :label="t('common.name')"
+                :placeholder="t('platformRoles.namePlaceholder')"
               />
             </VCol>
             <VCol
@@ -276,8 +277,8 @@ const deleteRole = async role => {
               <AppSelect
                 v-model="drawerForm.permissions"
                 :items="permissionOptions"
-                label="Permissions"
-                placeholder="Select permissions"
+                :label="t('platformRoles.permissions')"
+                :placeholder="t('platformRoles.selectPermissions')"
                 multiple
                 chips
                 closable-chips
@@ -292,7 +293,7 @@ const deleteRole = async role => {
                 variant="tonal"
                 density="compact"
               >
-                All permissions (structural) — cannot be modified.
+                {{ t('platformRoles.allPermissionsInfo') }}
               </VAlert>
             </VCol>
             <VCol cols="12">
@@ -301,14 +302,14 @@ const deleteRole = async role => {
                 class="me-3"
                 :loading="drawerLoading"
               >
-                {{ isEditMode ? 'Update' : 'Create' }}
+                {{ isEditMode ? t('common.update') : t('common.create') }}
               </VBtn>
               <VBtn
                 variant="tonal"
                 color="secondary"
                 @click="isDrawerOpen = false"
               >
-                Cancel
+                {{ t('common.cancel') }}
               </VBtn>
             </VCol>
           </VRow>

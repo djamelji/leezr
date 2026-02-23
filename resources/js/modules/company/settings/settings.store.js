@@ -7,6 +7,7 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     _roles: [],
     _permissionCatalog: [],
     _permissionModules: [],
+    _marketInfo: null,
   }),
 
   getters: {
@@ -14,6 +15,7 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     roles: state => state._roles,
     permissionCatalog: state => state._permissionCatalog,
     permissionModules: state => state._permissionModules,
+    marketInfo: state => state._marketInfo,
   },
 
   actions: {
@@ -78,6 +80,27 @@ export const useCompanySettingsStore = defineStore('companySettings', {
       const data = await $api(`/company/roles/${id}`, { method: 'DELETE' })
 
       this._roles = this._roles.filter(r => r.id !== id)
+
+      return data
+    },
+
+    // ─── Market / Legal Status (ADR-104) ─────────────────
+    async fetchMarketInfo() {
+      const data = await $api('/company/market')
+
+      this._marketInfo = data
+
+      return data
+    },
+
+    async updateMarket(payload) {
+      const data = await $api('/company/market', {
+        method: 'PUT',
+        body: payload,
+      })
+
+      // Refresh full market info to get updated legal statuses list
+      await this.fetchMarketInfo()
 
       return data
     },

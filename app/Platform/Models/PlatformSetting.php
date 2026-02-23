@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PlatformSetting extends Model
 {
-    protected $fillable = ['general', 'theme', 'session', 'typography', 'maintenance'];
+    protected $fillable = ['general', 'theme', 'session', 'typography', 'maintenance', 'billing', 'world'];
 
     protected $casts = [
         'general' => 'array',
@@ -14,6 +14,8 @@ class PlatformSetting extends Model
         'session' => 'array',
         'typography' => 'array',
         'maintenance' => 'array',
+        'billing' => 'array',
+        'world' => 'array',
     ];
 
     /**

@@ -1,7 +1,10 @@
 <script setup>
+import { formatDateTime } from '@/utils/datetime'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppName, setAppName } from '@/composables/useAppName'
 import { $platformApi } from '@/utils/platformApi'
+
+const { t } = useI18n()
 
 const platformAuth = usePlatformAuthStore()
 const meta = computed(() => platformAuth.appMeta || {})
@@ -64,26 +67,24 @@ const versionLabel = computed(() => {
 
 const envLabel = computed(() => {
   const host = window.location.hostname
-  if (host === 'leezr.com') return 'Production'
-  if (host === 'dev.leezr.com') return 'Developpement'
+  if (host === 'leezr.com') return t('platformSettings.general.production')
+  if (host === 'dev.leezr.com') return t('platformSettings.general.development')
 
-  return 'Local'
+  return t('platformSettings.general.local')
 })
 
 const buildDateLabel = computed(() => {
   const raw = meta.value.build_date
   if (!raw) return null
-  try {
-    return new Date(raw).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
-  }
-  catch { return raw }
+
+  return formatDateTime(raw)
 })
 
 const statItems = computed(() => [
-  { label: 'Build', value: meta.value.build_number ? `#${meta.value.build_number}` : '—' },
-  { label: 'Commit', value: meta.value.commit_hash || '—' },
-  { label: 'Build Date', value: buildDateLabel.value || '—' },
-  { label: 'Uptime', value: meta.value.uptime || '—' },
+  { label: t('platformSettings.general.build'), value: meta.value.build_number ? `#${meta.value.build_number}` : '—' },
+  { label: t('platformSettings.general.commit'), value: meta.value.commit_hash || '—' },
+  { label: t('platformSettings.general.buildDate'), value: buildDateLabel.value || '—' },
+  { label: t('platformSettings.general.uptime'), value: meta.value.uptime || '—' },
 ])
 </script>
 
@@ -112,13 +113,13 @@ const statItems = computed(() => [
             v-if="saving"
             class="text-body-2 text-medium-emphasis mt-2"
           >
-            Saving...
+            {{ t('platformSettings.general.saving') }}
           </span>
           <span
             v-else-if="saved"
             class="text-body-2 text-success mt-2"
           >
-            Saved!
+            {{ t('platformSettings.general.saved') }}
           </span>
           <span
             v-else

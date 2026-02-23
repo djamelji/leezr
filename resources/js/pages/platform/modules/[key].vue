@@ -10,6 +10,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const settingsStore = usePlatformSettingsStore()
@@ -72,28 +73,28 @@ const expertPricingError = ref('')
 const expertSchemaError = ref('')
 
 // ─── Options (user-friendly labels) ─────────────────
-const pricingModeOptions = [
-  { title: 'Included in Plan', value: 'included' },
-  { title: 'Paid Add-on (additional monthly cost)', value: 'addon' },
-  { title: 'Internal / Not Commercial', value: 'internal' },
-]
+const pricingModeOptions = computed(() => [
+  { title: t('platformModules.includedInPlan'), value: 'included' },
+  { title: t('platformModules.paidAddon'), value: 'addon' },
+  { title: t('platformModules.internalNotCommercial'), value: 'internal' },
+])
 
-const pricingStructureOptions = [
-  { title: 'Fixed price (same for all plans)', value: 'flat' },
-  { title: 'Price varies by plan', value: 'plan_flat' },
-  { title: 'Per active user', value: 'per_seat' },
-  { title: 'Usage-based', value: 'usage' },
-  { title: 'Tiered pricing', value: 'tiered' },
-]
+const pricingStructureOptions = computed(() => [
+  { title: t('platformModules.fixedPrice'), value: 'flat' },
+  { title: t('platformModules.priceVariesByPlan'), value: 'plan_flat' },
+  { title: t('platformModules.perActiveUser'), value: 'per_seat' },
+  { title: t('platformModules.usageBased'), value: 'usage' },
+  { title: t('platformModules.tieredPricing'), value: 'tiered' },
+])
 
-const pricingUnitOptions = [
-  { title: 'Not usage-based', value: 'none' },
-  { title: 'Per active user', value: 'users' },
-  { title: 'Per shipment', value: 'shipments' },
-  { title: 'Per SMS sent', value: 'sms' },
-  { title: 'Per API call', value: 'api_calls' },
-  { title: 'Per GB stored', value: 'storage_gb' },
-]
+const pricingUnitOptions = computed(() => [
+  { title: t('platformModules.notUsageBased'), value: 'none' },
+  { title: t('platformModules.perActiveUser'), value: 'users' },
+  { title: t('platformModules.perShipment'), value: 'shipments' },
+  { title: t('platformModules.perSmsSent'), value: 'sms' },
+  { title: t('platformModules.perApiCall'), value: 'api_calls' },
+  { title: t('platformModules.perGbStored'), value: 'storage_gb' },
+])
 
 // ─── Computed: is pricing editor active? ────────────
 const isPricingActive = computed(() => platformConfig.value.pricing_mode === 'addon')
@@ -220,7 +221,7 @@ const isDirty = computed(() => currentPayload.value !== originalConfigSnapshot.v
 // ─── Pricing preview ────────────────────────────────
 const metricLabel = computed(() => {
   const m = platformConfig.value.pricing_metric
-  const opt = pricingUnitOptions.find(o => o.value === m)
+  const opt = pricingUnitOptions.value.find(o => o.value === m)
 
   return opt?.title || m || ''
 })
@@ -252,28 +253,28 @@ const pricingPreview = computed(() => {
   const mode = platformConfig.value.pricing_mode
 
   if (!mode || mode === 'internal')
-    return { type: 'none', text: 'This module does not generate additional revenue.' }
+    return { type: 'none', text: t('platformModules.noRevenueImpact') }
 
   if (mode === 'included')
-    return { type: 'included', text: 'Included in subscription plan. No additional cost.' }
+    return { type: 'included', text: t('platformModules.includedInSubscription') }
 
   // mode === 'addon'
   const model = platformConfig.value.pricing_model
   const params = buildPricingParams()
 
   if (!model || !params)
-    return { type: 'none', text: 'Select a pricing structure to configure add-on pricing.' }
+    return { type: 'none', text: t('platformModules.selectPricingStructure') }
 
   if (model === 'flat')
-    return { type: 'simple', text: `All plans: +$${params.price_monthly}/month` }
+    return { type: 'simple', text: t('platformModules.previewAllPlans', { price: params.price_monthly }) }
 
   if (model === 'plan_flat') {
     return {
       type: 'table',
       rows: [
-        { plan: 'Starter', value: params.starter != null ? `+$${params.starter}/month` : '—' },
-        { plan: 'Pro', value: params.pro != null ? `+$${params.pro}/month` : '—' },
-        { plan: 'Business', value: params.business != null ? `+$${params.business}/month` : '—' },
+        { plan: t('platformModules.starter'), value: params.starter != null ? t('platformModules.previewPlanPrice', { price: params.starter }) : '—' },
+        { plan: t('platformModules.pro'), value: params.pro != null ? t('platformModules.previewPlanPrice', { price: params.pro }) : '—' },
+        { plan: t('platformModules.business'), value: params.business != null ? t('platformModules.previewPlanPrice', { price: params.business }) : '—' },
       ],
     }
   }
@@ -282,22 +283,22 @@ const pricingPreview = computed(() => {
     return {
       type: 'table',
       rows: [
-        { plan: 'Starter', value: `${params.included?.starter ?? 0} seats incl., then +$${params.overage_unit_price?.starter ?? 0}/user` },
-        { plan: 'Pro', value: `${params.included?.pro ?? 0} seats incl., then +$${params.overage_unit_price?.pro ?? 0}/user` },
-        { plan: 'Business', value: `${params.included?.business ?? 0} seats incl., then +$${params.overage_unit_price?.business ?? 0}/user` },
+        { plan: t('platformModules.starter'), value: t('platformModules.previewPerSeat', { included: params.included?.starter ?? 0, price: params.overage_unit_price?.starter ?? 0 }) },
+        { plan: t('platformModules.pro'), value: t('platformModules.previewPerSeat', { included: params.included?.pro ?? 0, price: params.overage_unit_price?.pro ?? 0 }) },
+        { plan: t('platformModules.business'), value: t('platformModules.previewPerSeat', { included: params.included?.business ?? 0, price: params.overage_unit_price?.business ?? 0 }) },
       ],
     }
   }
 
   if (model === 'usage')
-    return { type: 'simple', text: `+$${params.unit_price} ${metricLabel.value || 'per unit'}` }
+    return { type: 'simple', text: t('platformModules.previewUsage', { price: params.unit_price, metric: metricLabel.value || t('platformModules.previewPerUnitFallback') }) }
 
   if (model === 'tiered') {
     return {
       type: 'tiers',
-      rows: params.tiers.map(t => ({
-        range: t.up_to != null ? `Up to ${t.up_to}` : 'Unlimited',
-        price: `+$${t.price}`,
+      rows: params.tiers.map(tier => ({
+        range: tier.up_to != null ? t('platformModules.previewUpTo', { n: tier.up_to }) : t('platformModules.previewUnlimited'),
+        price: t('platformModules.previewPrice', { price: tier.price }),
       })),
     }
   }
@@ -333,7 +334,7 @@ onMounted(async () => {
     originalConfigSnapshot.value = currentPayload.value
   }
   catch {
-    toast('Module not found.', 'error')
+    toast(t('platformModules.moduleNotFound'), 'error')
     router.push({ name: 'platform-modules' })
   }
   finally {
@@ -401,7 +402,7 @@ const toggleGlobal = async () => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to toggle module.', 'error')
+    toast(error?.data?.message || t('platformModules.failedToToggle'), 'error')
   }
   finally {
     togglingGlobal.value = false
@@ -482,7 +483,7 @@ const saveConfig = async () => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save configuration.', 'error')
+    toast(error?.data?.message || t('platformModules.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -490,7 +491,7 @@ const saveConfig = async () => {
 }
 
 const planLabel = planKey => {
-  const labels = { pro: 'Pro', business: 'Business' }
+  const labels = { pro: t('platformModules.pro'), business: t('platformModules.business') }
 
   return labels[planKey] || planKey
 }
@@ -537,27 +538,27 @@ const planLabel = planKey => {
                 :color="mod.type === 'core' ? 'primary' : 'info'"
                 size="x-small"
               >
-                {{ mod.type === 'core' ? 'Core' : 'Addon' }}
+                {{ mod.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
               </VChip>
               <VChip
                 v-if="mod.min_plan"
                 color="warning"
                 size="x-small"
               >
-                Min: {{ planLabel(mod.min_plan) }}
+                {{ t('platformModules.minPrefix', { plan: planLabel(mod.min_plan) }) }}
               </VChip>
               <VChip
                 :color="mod.is_enabled_globally ? 'success' : 'error'"
                 size="x-small"
               >
-                {{ mod.is_enabled_globally ? 'Enabled' : 'Disabled' }}
+                {{ mod.is_enabled_globally ? t('platformModules.enabled') : t('platformModules.disabled') }}
               </VChip>
             </div>
           </div>
 
           <!-- Global toggle -->
           <div class="d-flex align-center gap-2">
-            <span class="text-body-2 text-medium-emphasis">Global</span>
+            <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.global') }}</span>
             <VSwitch
               :model-value="mod.is_enabled_globally"
               :loading="togglingGlobal"
@@ -578,13 +579,13 @@ const planLabel = planKey => {
         >
           <!-- Module Identity (editable overrides + read-only technical) -->
           <VCard
-            title="Module Identity"
+            :title="t('platformModules.moduleIdentity')"
             class="mb-6"
           >
             <VCardText>
               <!-- Editable overrides -->
               <div class="text-body-2 font-weight-medium mb-3">
-                Display Overrides
+                {{ t('platformModules.displayOverrides') }}
               </div>
               <VRow>
                 <VCol
@@ -593,9 +594,9 @@ const planLabel = planKey => {
                 >
                   <AppTextField
                     v-model="platformConfig.display_name_override"
-                    label="Display Name"
+                    :label="t('platformModules.displayName')"
                     :placeholder="manifestDefaults.name"
-                    :hint="`Manifest: ${manifestDefaults.name}`"
+                    :hint="t('platformModules.manifestPrefix', { value: manifestDefaults.name })"
                     persistent-hint
                     clearable
                   />
@@ -606,16 +607,16 @@ const planLabel = planKey => {
                 >
                   <AppTextField
                     :model-value="mod.key"
-                    label="Key"
+                    :label="t('platformModules.key')"
                     disabled
                   />
                 </VCol>
                 <VCol cols="12">
                   <AppTextarea
                     v-model="platformConfig.description_override"
-                    label="Description"
+                    :label="t('platformModules.descriptionLabel')"
                     :placeholder="manifestDefaults.description"
-                    :hint="`Manifest: ${manifestDefaults.description}`"
+                    :hint="t('platformModules.manifestPrefix', { value: manifestDefaults.description })"
                     persistent-hint
                     clearable
                     rows="2"
@@ -627,10 +628,10 @@ const planLabel = planKey => {
                 >
                   <VSelect
                     v-model="platformConfig.min_plan_override"
-                    :items="[{ title: 'Pro', value: 'pro' }, { title: 'Business', value: 'business' }]"
-                    label="Min Plan Override"
-                    :placeholder="manifestDefaults.min_plan || 'None'"
-                    :hint="`Manifest: ${manifestDefaults.min_plan || 'None'}`"
+                    :items="[{ title: t('platformModules.pro'), value: 'pro' }, { title: t('platformModules.business'), value: 'business' }]"
+                    :label="t('platformModules.minPlanOverride')"
+                    :placeholder="manifestDefaults.min_plan || t('platformModules.none')"
+                    :hint="t('platformModules.manifestPrefix', { value: manifestDefaults.min_plan || t('platformModules.none') })"
                     persistent-hint
                     clearable
                   />
@@ -642,9 +643,9 @@ const planLabel = planKey => {
                   <AppTextField
                     v-model="platformConfig.sort_order_override"
                     type="number"
-                    label="Sort Order Override"
+                    :label="t('platformModules.sortOrderOverride')"
                     :placeholder="String(manifestDefaults.sort_order)"
-                    :hint="`Manifest: ${manifestDefaults.sort_order}`"
+                    :hint="t('platformModules.manifestPrefix', { value: manifestDefaults.sort_order })"
                     persistent-hint
                     clearable
                   />
@@ -655,7 +656,7 @@ const planLabel = planKey => {
 
               <!-- Icon override -->
               <div class="text-body-2 font-weight-medium mb-3">
-                Icon
+                {{ t('platformModules.icon') }}
               </div>
               <VRow>
                 <VCol
@@ -664,8 +665,8 @@ const planLabel = planKey => {
                 >
                   <VSelect
                     v-model="platformConfig.icon_type"
-                    :items="[{ title: 'Tabler Icon', value: 'tabler' }, { title: 'Image (SVG)', value: 'image' }]"
-                    label="Icon Type"
+                    :items="[{ title: t('platformModules.tablerIcon'), value: 'tabler' }, { title: t('platformModules.imageSvg'), value: 'image' }]"
+                    :label="t('platformModules.iconType')"
                     clearable
                   />
                 </VCol>
@@ -675,9 +676,9 @@ const planLabel = planKey => {
                 >
                   <AppTextField
                     v-model="platformConfig.icon_name"
-                    label="Icon Name"
+                    :label="t('platformModules.iconName')"
                     placeholder="tabler-puzzle"
-                    hint="Tabler icon name (e.g. tabler-truck) or image path"
+                    :hint="t('platformModules.iconNameHint')"
                     persistent-hint
                     clearable
                   />
@@ -688,7 +689,7 @@ const planLabel = planKey => {
 
               <!-- Read-only technical metadata -->
               <div class="text-body-2 font-weight-medium mb-3">
-                Technical Metadata
+                {{ t('platformModules.technicalMetadata') }}
               </div>
               <VRow>
                 <VCol
@@ -697,7 +698,7 @@ const planLabel = planKey => {
                 >
                   <AppTextField
                     :model-value="mod.type"
-                    label="Type"
+                    :label="t('common.type')"
                     disabled
                   />
                 </VCol>
@@ -707,7 +708,7 @@ const planLabel = planKey => {
                 >
                   <AppTextField
                     :model-value="mod.surface"
-                    label="Surface"
+                    :label="t('platformModules.surface')"
                     disabled
                   />
                 </VCol>
@@ -719,7 +720,7 @@ const planLabel = planKey => {
             <!-- Entitlement logic -->
             <VCardText>
               <div class="text-body-1 font-weight-medium mb-3">
-                Entitlement Logic
+                {{ t('platformModules.entitlementLogic') }}
               </div>
               <div class="d-flex flex-column gap-2">
                 <div class="d-flex align-center gap-2">
@@ -729,7 +730,7 @@ const planLabel = planKey => {
                     size="18"
                   />
                   <span class="text-body-2">
-                    <strong>Core gate:</strong> {{ mod.type === 'core' ? 'Always entitled (core module)' : 'Not a core module — passes through' }}
+                    <strong>{{ t('platformModules.coreGate') }}</strong> {{ mod.type === 'core' ? t('platformModules.coreGateAlways') : t('platformModules.coreGatePass') }}
                   </span>
                 </div>
                 <div class="d-flex align-center gap-2">
@@ -739,7 +740,7 @@ const planLabel = planKey => {
                     size="18"
                   />
                   <span class="text-body-2">
-                    <strong>Plan gate:</strong> {{ mod.min_plan ? `Requires ${planLabel(mod.min_plan)} plan or higher` : 'No plan requirement' }}
+                    <strong>{{ t('platformModules.planGate') }}</strong> {{ mod.min_plan ? t('platformModules.planGateRequired', { plan: planLabel(mod.min_plan) }) : t('platformModules.planGateNone') }}
                   </span>
                 </div>
                 <div class="d-flex align-center gap-2">
@@ -749,7 +750,7 @@ const planLabel = planKey => {
                     size="18"
                   />
                   <span class="text-body-2">
-                    <strong>Compat gate:</strong> {{ mod.compatible_jobdomains ? `Restricted to: ${mod.compatible_jobdomains.join(', ')}` : 'Compatible with all job domains' }}
+                    <strong>{{ t('platformModules.compatGate') }}</strong> {{ mod.compatible_jobdomains ? t('platformModules.compatGateRestricted', { list: mod.compatible_jobdomains.join(', ') }) : t('platformModules.compatGateAll') }}
                   </span>
                 </div>
                 <div class="d-flex align-center gap-2">
@@ -759,7 +760,7 @@ const planLabel = planKey => {
                     size="18"
                   />
                   <span class="text-body-2">
-                    <strong>Source gate:</strong> Must be in jobdomain's default_modules (or future addon purchase)
+                    <strong>{{ t('platformModules.sourceGate') }}</strong> {{ t('platformModules.sourceGateInfo') }}
                   </span>
                 </div>
               </div>
@@ -774,7 +775,7 @@ const planLabel = planKey => {
                 :color="pricingModeColor"
                 class="me-2"
               />
-              Pricing
+              {{ t('platformModules.pricing') }}
               <VChip
                 v-if="platformConfig.pricing_mode"
                 :color="pricingModeColor"
@@ -782,7 +783,7 @@ const planLabel = planKey => {
                 variant="tonal"
                 class="ms-2"
               >
-                {{ platformConfig.pricing_mode === 'addon' ? '+ Add-on' : platformConfig.pricing_mode === 'included' ? 'Included' : 'Internal' }}
+                {{ platformConfig.pricing_mode === 'addon' ? t('platformModules.addonLabel') : platformConfig.pricing_mode === 'included' ? t('platformModules.includedLabel') : t('platformModules.internalLabel') }}
               </VChip>
             </VCardTitle>
             <VCardText>
@@ -790,12 +791,12 @@ const planLabel = planKey => {
               <AppSelect
                 v-model="platformConfig.pricing_mode"
                 :items="pricingModeOptions"
-                label="Commercial Mode"
+                :label="t('platformModules.commercialMode')"
                 clearable
                 class="mb-2"
               />
               <div class="text-body-2 text-medium-emphasis mb-4">
-                If set to "Paid Add-on", the price configured below is added on top of the company's base subscription plan price.
+                {{ t('platformModules.commercialModeHint') }}
               </div>
 
               <!-- Pricing structure (only when addon) -->
@@ -810,7 +811,7 @@ const planLabel = planKey => {
                     <AppSelect
                       v-model="platformConfig.pricing_model"
                       :items="pricingStructureOptions"
-                      label="Pricing Structure"
+                      :label="t('platformModules.pricingStructure')"
                       clearable
                     />
                   </VCol>
@@ -822,11 +823,11 @@ const planLabel = planKey => {
                     <AppSelect
                       v-model="platformConfig.pricing_metric"
                       :items="pricingUnitOptions"
-                      label="Pricing Unit"
+                      :label="t('platformModules.pricingUnit')"
                       clearable
                     />
                     <div class="text-body-2 text-medium-emphasis mt-1">
-                      For usage-based or per-user pricing, this defines what is measured.
+                      {{ t('platformModules.pricingUnitHint') }}
                     </div>
                   </VCol>
                 </VRow>
@@ -839,7 +840,7 @@ const planLabel = planKey => {
                 <!-- Flat -->
                 <template v-if="platformConfig.pricing_model === 'flat'">
                   <div class="text-body-2 font-weight-medium mb-3">
-                    Additional monthly price (same for all plans)
+                    {{ t('platformModules.flatMonthlyPrice') }}
                   </div>
                   <VRow>
                     <VCol
@@ -849,8 +850,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="flatPrice"
                         type="number"
-                        label="Monthly add-on price"
-                        prefix="$"
+                        :label="t('platformModules.monthlyAddonPrice')"
                         placeholder="29"
                       />
                     </VCol>
@@ -860,10 +860,10 @@ const planLabel = planKey => {
                 <!-- Plan Flat -->
                 <template v-if="platformConfig.pricing_model === 'plan_flat'">
                   <div class="text-body-2 font-weight-medium mb-1">
-                    Additional monthly price per subscription plan
+                    {{ t('platformModules.planFlatPrice') }}
                   </div>
                   <div class="text-body-2 text-medium-emphasis mb-3">
-                    This amount is added to the company's selected subscription plan price.
+                    {{ t('platformModules.planFlatHint') }}
                   </div>
                   <VRow>
                     <VCol
@@ -873,8 +873,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="planFlatPrices.starter"
                         type="number"
-                        label="Starter"
-                        prefix="$"
+                        :label="t('platformModules.starter')"
                         placeholder="49"
                       />
                     </VCol>
@@ -885,8 +884,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="planFlatPrices.pro"
                         type="number"
-                        label="Pro"
-                        prefix="$"
+                        :label="t('platformModules.pro')"
                         placeholder="29"
                       />
                     </VCol>
@@ -897,8 +895,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="planFlatPrices.business"
                         type="number"
-                        label="Business"
-                        prefix="$"
+                        :label="t('platformModules.business')"
                         placeholder="19"
                       />
                     </VCol>
@@ -908,7 +905,7 @@ const planLabel = planKey => {
                 <!-- Per Seat -->
                 <template v-if="platformConfig.pricing_model === 'per_seat'">
                   <div class="text-body-2 font-weight-medium mb-3">
-                    Included seats per plan (no additional cost)
+                    {{ t('platformModules.includedSeats') }}
                   </div>
                   <VRow>
                     <VCol
@@ -918,7 +915,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatIncluded.starter"
                         type="number"
-                        label="Starter"
+                        :label="t('platformModules.starter')"
                         placeholder="5"
                       />
                     </VCol>
@@ -929,7 +926,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatIncluded.pro"
                         type="number"
-                        label="Pro"
+                        :label="t('platformModules.pro')"
                         placeholder="10"
                       />
                     </VCol>
@@ -940,7 +937,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatIncluded.business"
                         type="number"
-                        label="Business"
+                        :label="t('platformModules.business')"
                         placeholder="25"
                       />
                     </VCol>
@@ -949,7 +946,7 @@ const planLabel = planKey => {
                   <VDivider class="my-4" />
 
                   <div class="text-body-2 font-weight-medium mb-3">
-                    Additional price per extra user (beyond included seats)
+                    {{ t('platformModules.extraUserPrice') }}
                   </div>
                   <VRow>
                     <VCol
@@ -959,8 +956,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatOverage.starter"
                         type="number"
-                        label="Starter"
-                        prefix="$"
+                        :label="t('platformModules.starter')"
                         placeholder="1.00"
                       />
                     </VCol>
@@ -971,8 +967,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatOverage.pro"
                         type="number"
-                        label="Pro"
-                        prefix="$"
+                        :label="t('platformModules.pro')"
                         placeholder="0.80"
                       />
                     </VCol>
@@ -983,8 +978,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="perSeatOverage.business"
                         type="number"
-                        label="Business"
-                        prefix="$"
+                        :label="t('platformModules.business')"
                         placeholder="0.60"
                       />
                     </VCol>
@@ -994,7 +988,7 @@ const planLabel = planKey => {
                 <!-- Usage -->
                 <template v-if="platformConfig.pricing_model === 'usage'">
                   <div class="text-body-2 font-weight-medium mb-3">
-                    Additional cost per unit consumed
+                    {{ t('platformModules.usageUnitCost') }}
                   </div>
                   <VRow>
                     <VCol
@@ -1004,8 +998,7 @@ const planLabel = planKey => {
                       <AppTextField
                         v-model="usageUnitPrice"
                         type="number"
-                        label="Price per unit"
-                        prefix="$"
+                        :label="t('platformModules.pricePerUnit')"
                         placeholder="0.05"
                       />
                     </VCol>
@@ -1015,7 +1008,7 @@ const planLabel = planKey => {
                 <!-- Tiered -->
                 <template v-if="platformConfig.pricing_model === 'tiered'">
                   <div class="text-body-2 font-weight-medium mb-3">
-                    Additional pricing tiers
+                    {{ t('platformModules.additionalTiers') }}
                   </div>
                   <div
                     v-for="(tier, i) in tiers"
@@ -1030,7 +1023,7 @@ const planLabel = planKey => {
                         <AppTextField
                           v-model="tier.up_to"
                           type="number"
-                          :label="i === 0 ? 'Up to (units)' : ''"
+                          :label="i === 0 ? t('platformModules.upToUnits') : ''"
                           placeholder="1000"
                         />
                       </VCol>
@@ -1041,8 +1034,7 @@ const planLabel = planKey => {
                         <AppTextField
                           v-model="tier.price"
                           type="number"
-                          :label="i === 0 ? 'Price' : ''"
-                          prefix="$"
+                          :label="i === 0 ? t('platformModules.price') : ''"
                           placeholder="10"
                         />
                       </VCol>
@@ -1067,7 +1059,7 @@ const planLabel = planKey => {
                     prepend-icon="tabler-plus"
                     @click="tiers.push({ up_to: null, price: null })"
                   >
-                    Add tier
+                    {{ t('platformModules.addTier') }}
                   </VBtn>
                 </template>
               </template>
@@ -1076,7 +1068,7 @@ const planLabel = planKey => {
               <template v-if="pricingPreview">
                 <VDivider class="my-4" />
                 <div class="text-body-2 font-weight-medium mb-2">
-                  Revenue Impact Preview
+                  {{ t('platformModules.revenuePreview') }}
                 </div>
 
                 <VAlert
@@ -1119,23 +1111,23 @@ const planLabel = planKey => {
           <div class="d-flex align-center gap-2 mb-4">
             <VSwitch
               v-model="showExpertMode"
-              label="Expert mode"
+              :label="t('platformModules.expertMode')"
               hide-details
               density="compact"
             />
-            <span class="text-body-2 text-medium-emphasis">Edit raw JSON</span>
+            <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.editRawJson') }}</span>
           </div>
 
           <!-- Expert mode card -->
           <VCard
             v-if="showExpertMode"
-            title="Raw JSON"
+            :title="t('platformModules.rawJson')"
             class="mb-6"
           >
             <VCardText>
               <AppTextarea
                 v-model="expertPricingJson"
-                label="pricing_params (JSON)"
+                :label="t('platformModules.pricingParamsJson')"
                 rows="6"
                 :error-messages="expertPricingError ? [expertPricingError] : []"
                 style="font-family: monospace;"
@@ -1144,7 +1136,7 @@ const planLabel = planKey => {
               />
               <AppTextarea
                 v-model="expertSchemaJson"
-                label="settings_schema (JSON)"
+                :label="t('platformModules.settingsSchemaJson')"
                 rows="8"
                 :error-messages="expertSchemaError ? [expertSchemaError] : []"
                 style="font-family: monospace;"
@@ -1161,7 +1153,7 @@ const planLabel = planKey => {
             class="mb-6"
             @click="saveConfig"
           >
-            Save Configuration
+            {{ t('platformModules.saveConfiguration') }}
           </VBtn>
 
           <!-- Companies (lazy-loaded) -->
@@ -1172,7 +1164,7 @@ const planLabel = planKey => {
                   icon="tabler-buildings"
                   class="me-2"
                 />
-                Companies using this module
+                {{ t('platformModules.companiesUsingModule') }}
                 <VChip
                   v-if="companiesLoaded"
                   size="x-small"
@@ -1188,13 +1180,13 @@ const planLabel = planKey => {
                 >
                   <thead>
                     <tr>
-                      <th>Company</th>
-                      <th>Slug</th>
+                      <th>{{ t('platformModules.company') }}</th>
+                      <th>{{ t('platformModules.slug') }}</th>
                       <th class="text-center">
-                        Status
+                        {{ t('platformModules.status') }}
                       </th>
                       <th class="text-center">
-                        Plan
+                        {{ t('platformModules.plan') }}
                       </th>
                       <th style="width: 100px;" />
                     </tr>
@@ -1220,7 +1212,7 @@ const planLabel = planKey => {
                         </VChip>
                       </td>
                       <td class="text-center">
-                        {{ c.plan_key || 'starter' }}
+                        {{ c.plan_key || t('platformModules.starter').toLowerCase() }}
                       </td>
                       <td>
                         <VBtn
@@ -1228,7 +1220,7 @@ const planLabel = planKey => {
                           variant="tonal"
                           :to="{ name: 'platform-companies-id', params: { id: c.id } }"
                         >
-                          View
+                          {{ t('common.view') }}
                         </VBtn>
                       </td>
                     </tr>
@@ -1239,7 +1231,7 @@ const planLabel = planKey => {
                   v-else
                   class="text-center text-disabled pa-4"
                 >
-                  No companies are currently using this module.
+                  {{ t('platformModules.noCompaniesUsingModule') }}
                 </div>
               </VExpansionPanelText>
             </VExpansionPanel>
@@ -1253,20 +1245,20 @@ const planLabel = planKey => {
         >
           <!-- Commercial -->
           <VCard
-            title="Commercial"
+            :title="t('platformModules.commercial')"
             class="mb-6"
           >
             <VCardText>
               <div class="d-flex flex-column gap-y-4">
                 <VSwitch
                   v-model="platformConfig.is_listed"
-                  label="Listed in catalog"
+                  :label="t('platformModules.listedInCatalog')"
                   color="primary"
                   hide-details
                 />
                 <VSwitch
                   v-model="platformConfig.is_sellable"
-                  label="Sellable"
+                  :label="t('platformModules.sellable')"
                   color="primary"
                   hide-details
                 />
@@ -1276,16 +1268,16 @@ const planLabel = planKey => {
 
               <AppTextarea
                 v-model="platformConfig.notes"
-                label="Notes"
+                :label="t('platformModules.notes')"
                 rows="3"
-                placeholder="Internal notes about this module..."
+                :placeholder="t('platformModules.notesPlaceholder')"
               />
             </VCardText>
           </VCard>
 
           <!-- Permissions (read-only chips) -->
           <VCard
-            title="Permissions"
+            :title="t('platformModules.permissionsTitle')"
             class="mb-6"
           >
             <VCardText>
@@ -1304,13 +1296,13 @@ const planLabel = planKey => {
               <span
                 v-else
                 class="text-disabled text-body-2"
-              >No permissions defined.</span>
+              >{{ t('platformModules.noPermissions') }}</span>
             </VCardText>
           </VCard>
 
           <!-- Capability Bundles (read-only chips + hint) -->
           <VCard
-            title="Capability Bundles"
+            :title="t('platformModules.capabilityBundles')"
             class="mb-6"
           >
             <VCardText>
@@ -1339,19 +1331,19 @@ const planLabel = planKey => {
               <span
                 v-else
                 class="text-disabled text-body-2"
-              >No bundles defined.</span>
+              >{{ t('platformModules.noBundles') }}</span>
               <div class="text-body-2 text-medium-emphasis mt-3">
-                Bundles group permissions for role templates. They are defined in code and read-only.
+                {{ t('platformModules.bundlesDescription') }}
               </div>
             </VCardText>
           </VCard>
 
           <!-- Organize (read-only info) -->
-          <VCard title="Organize">
+          <VCard :title="t('platformModules.organize')">
             <VCardText>
               <!-- Compatibility -->
               <div class="text-body-2 font-weight-medium mb-2">
-                Compatibility
+                {{ t('platformModules.compatibility') }}
               </div>
               <template v-if="compatibleJobdomainsDetail === null">
                 <VAlert
@@ -1360,7 +1352,7 @@ const planLabel = planKey => {
                   density="compact"
                   class="text-body-2 mb-4"
                 >
-                  All job domains
+                  {{ t('platformModules.allJobDomains') }}
                 </VAlert>
               </template>
               <template v-else-if="compatibleJobdomainsDetail.length">
@@ -1377,14 +1369,14 @@ const planLabel = planKey => {
                 </div>
               </template>
               <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">No matching job domains.</span>
+                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noMatchingJobdomains') }}</span>
               </template>
 
               <VDivider class="mb-4" />
 
               <!-- Included by -->
               <div class="text-body-2 font-weight-medium mb-2">
-                Included By
+                {{ t('platformModules.includedBy') }}
               </div>
               <template v-if="includedByJobdomains.length">
                 <div class="d-flex flex-wrap gap-1 mb-4">
@@ -1401,14 +1393,14 @@ const planLabel = planKey => {
                 </div>
               </template>
               <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">Not included by default in any job domain.</span>
+                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.notIncludedByDefault') }}</span>
               </template>
 
               <VDivider class="mb-4" />
 
               <!-- Dependencies -->
               <div class="text-body-2 font-weight-medium mb-2">
-                Requires
+                {{ t('platformModules.requires') }}
               </div>
               <template v-if="mod.requires.length">
                 <div class="d-flex flex-wrap gap-1 mb-4">
@@ -1425,11 +1417,11 @@ const planLabel = planKey => {
                 </div>
               </template>
               <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">No dependencies.</span>
+                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noDependencies') }}</span>
               </template>
 
               <div class="text-body-2 font-weight-medium mb-2">
-                Dependents
+                {{ t('platformModules.dependents') }}
               </div>
               <template v-if="dependents.length">
                 <div class="d-flex flex-wrap gap-1">
@@ -1446,7 +1438,7 @@ const planLabel = planKey => {
                 </div>
               </template>
               <template v-else>
-                <span class="text-disabled text-body-2">No modules depend on this one.</span>
+                <span class="text-disabled text-body-2">{{ t('platformModules.noDependents') }}</span>
               </template>
             </VCardText>
           </VCard>

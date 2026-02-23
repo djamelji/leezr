@@ -12,15 +12,15 @@ class BillingModule implements ModuleDefinition
     {
         return new ModuleManifest(
             key: 'platform.billing',
-            name: 'Billing',
-            description: 'Billing and subscription management',
+            name: 'Payments',
+            description: 'Payment modules, policies and subscription governance',
             surface: 'structure',
-            sortOrder: 70,
+            sortOrder: 60,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing'],
+                    ['key' => 'payments', 'title' => 'Payments', 'to' => ['name' => 'platform-payments'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing'],
                 ],
-                routeNames: ['platform-billing'],
+                routeNames: ['platform-payments'],
             ),
             permissions: [
                 ['key' => 'manage_billing', 'label' => 'Manage Billing'],
@@ -36,7 +36,7 @@ class BillingModule implements ModuleDefinition
             ],
             scope: 'platform',
             type: 'internal',
-            visibility: 'hidden',
+            visibility: 'visible',
         );
     }
 }

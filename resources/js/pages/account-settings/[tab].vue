@@ -2,6 +2,7 @@
 import AccountSettingsAccount from '@/views/pages/account-settings/AccountSettingsAccount.vue'
 import AccountSettingsSecurity from '@/views/pages/account-settings/AccountSettingsSecurity.vue'
 
+const { t } = useI18n()
 const route = useRoute('account-settings-tab')
 
 const activeTab = computed({
@@ -9,18 +10,18 @@ const activeTab = computed({
   set: () => route.params.tab,
 })
 
-const tabs = [
+const tabs = computed(() => [
   {
-    title: 'Account',
+    title: t('accountSettings.account'),
     icon: 'tabler-users',
     tab: 'account',
   },
   {
-    title: 'Security',
+    title: t('accountSettings.security'),
     icon: 'tabler-lock',
     tab: 'security',
   },
-]
+])
 
 definePage({ meta: { navActiveLink: 'account-settings-tab' } })
 </script>

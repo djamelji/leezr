@@ -3,7 +3,9 @@
 namespace App\Core\Auth\Requests;
 
 use App\Core\Auth\PasswordPolicy;
+use App\Core\Plans\PlanRegistry;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
@@ -20,6 +22,8 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', PasswordPolicy::rules()],
             'company_name' => ['required', 'string', 'max:255'],
+            'jobdomain_key' => ['sometimes', 'nullable', 'string', 'exists:jobdomains,key'],
+            'plan_key' => ['sometimes', 'nullable', 'string', Rule::in(PlanRegistry::keys())],
         ];
     }
 }

@@ -10,6 +10,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const router = useRouter()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
@@ -42,14 +43,30 @@ const filteredModules = computed(() => {
   })
 })
 
-const headers = [
-  { title: 'Module', key: 'name' },
-  { title: 'Key', key: 'key', width: '180px' },
-  { title: 'Type', key: 'type', align: 'center', width: '100px', sortable: false },
-  { title: 'Min Plan', key: 'min_plan', align: 'center', width: '120px', sortable: false },
-  { title: 'Jobdomains', key: 'compatible_jobdomains', align: 'center', width: '140px', sortable: false },
-  { title: 'Global', key: 'status', align: 'center', width: '100px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('platformModules.module'), key: 'name' },
+  { title: t('platformModules.key'), key: 'key', width: '180px' },
+  { title: t('common.type'), key: 'type', align: 'center', width: '100px', sortable: false },
+  { title: t('platformModules.minPlan'), key: 'min_plan', align: 'center', width: '120px', sortable: false },
+  { title: t('platformModules.jobdomains'), key: 'compatible_jobdomains', align: 'center', width: '140px', sortable: false },
+  { title: t('platformModules.global'), key: 'status', align: 'center', width: '100px', sortable: false },
+])
+
+const filterTypeItems = computed(() => [
+  { title: t('platformModules.core'), value: 'core' },
+  { title: t('platformModules.addon'), value: 'addon' },
+])
+
+const filterPlanItems = computed(() => [
+  { title: t('platformModules.noRequirement'), value: 'none' },
+  { title: t('platformModules.pro'), value: 'pro' },
+  { title: t('platformModules.business'), value: 'business' },
+])
+
+const filterEnabledItems = computed(() => [
+  { title: t('platformModules.enabled'), value: true },
+  { title: t('platformModules.disabled'), value: false },
+])
 
 const onRowClick = (_event, { item }) => {
   router.push({ name: 'platform-modules-key', params: { key: item.key } })
@@ -64,7 +81,7 @@ const toggleModule = async module => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to toggle module.', 'error')
+    toast(error?.data?.message || t('platformModules.failedToToggle'), 'error')
   }
   finally {
     togglingKey.value = null
@@ -72,7 +89,7 @@ const toggleModule = async module => {
 }
 
 const planLabel = planKey => {
-  const labels = { pro: 'Pro', business: 'Business' }
+  const labels = { pro: t('platformModules.pro'), business: t('platformModules.business') }
 
   return labels[planKey] || planKey
 }
@@ -96,10 +113,10 @@ const hasFilters = computed(() =>
           icon="tabler-puzzle"
           class="me-2"
         />
-        Platform Modules
+        {{ t('platformModules.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Manage module availability globally. Click a module for details.
+        {{ t('platformModules.subtitle') }}
       </VCardSubtitle>
 
       <!-- Filters -->
@@ -111,8 +128,8 @@ const hasFilters = computed(() =>
           >
             <VSelect
               v-model="filterType"
-              :items="[{ title: 'Core', value: 'core' }, { title: 'Addon', value: 'addon' }]"
-              label="Type"
+              :items="filterTypeItems"
+              :label="t('common.type')"
               clearable
               density="compact"
               hide-details
@@ -124,8 +141,8 @@ const hasFilters = computed(() =>
           >
             <VSelect
               v-model="filterPlan"
-              :items="[{ title: 'No requirement', value: 'none' }, { title: 'Pro', value: 'pro' }, { title: 'Business', value: 'business' }]"
-              label="Min Plan"
+              :items="filterPlanItems"
+              :label="t('platformModules.minPlan')"
               clearable
               density="compact"
               hide-details
@@ -137,8 +154,8 @@ const hasFilters = computed(() =>
           >
             <VSelect
               v-model="filterEnabled"
-              :items="[{ title: 'Enabled', value: true }, { title: 'Disabled', value: false }]"
-              label="Global Status"
+              :items="filterEnabledItems"
+              :label="t('platformModules.globalStatus')"
               clearable
               density="compact"
               hide-details
@@ -156,7 +173,7 @@ const hasFilters = computed(() =>
               color="secondary"
               @click="clearFilters"
             >
-              Clear filters
+              {{ t('platformModules.clearFilters') }}
             </VBtn>
           </VCol>
         </VRow>
@@ -204,7 +221,7 @@ const hasFilters = computed(() =>
             size="small"
             variant="tonal"
           >
-            {{ item.type === 'core' ? 'Core' : 'Addon' }}
+            {{ item.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
           </VChip>
         </template>
 
@@ -240,7 +257,7 @@ const hasFilters = computed(() =>
           <span
             v-else
             class="text-disabled"
-          >All</span>
+          >{{ t('platformModules.all') }}</span>
         </template>
 
         <!-- Global status toggle -->
@@ -260,7 +277,7 @@ const hasFilters = computed(() =>
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No modules found.
+            {{ t('platformModules.noModules') }}
           </div>
         </template>
       </VDataTable>

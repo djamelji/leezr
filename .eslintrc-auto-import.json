@@ -377,6 +377,9 @@
     "useMaintenanceTheme": true,
     "usePublicTheme": true,
     "setAppName": true,
-    "useAppName": true
+    "useAppName": true,
+    "usePublicPlans": true,
+    "formatDateTime": true,
+    "formatMoney": true
   }
 }

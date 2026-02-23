@@ -3,6 +3,7 @@ import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { $api } from '@/utils/api'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 
 const form = ref({
@@ -60,7 +61,7 @@ const handleSave = async () => {
     })
 
     auth._persistUser(data.base_fields)
-    successMessage.value = 'Profile updated successfully.'
+    successMessage.value = t('accountSettings.profileUpdated')
 
     // Refresh dynamic fields from response
     dynamicFields.value = data.dynamic_fields || []
@@ -71,7 +72,7 @@ const handleSave = async () => {
     dynamicForm.value = df
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to update profile.'
+    errorMessage.value = error?.data?.message || t('accountSettings.failedToUpdate')
   }
   finally {
     isLoading.value = false
@@ -104,10 +105,10 @@ const changeAvatar = async file => {
     })
 
     auth._persistUser(data.user)
-    successMessage.value = 'Avatar updated.'
+    successMessage.value = t('accountSettings.avatarUpdated')
   }
   catch {
-    errorMessage.value = 'Failed to upload avatar.'
+    errorMessage.value = t('accountSettings.failedToUploadAvatar')
   }
 }
 
@@ -152,7 +153,7 @@ const resetForm = () => {
                   icon="tabler-cloud-upload"
                   class="d-sm-none"
                 />
-                <span class="d-none d-sm-block">Upload new photo</span>
+                <span class="d-none d-sm-block">{{ t('accountSettings.uploadNewPhoto') }}</span>
               </VBtn>
 
               <input
@@ -166,7 +167,7 @@ const resetForm = () => {
             </div>
 
             <p class="text-body-1 mb-0">
-              Allowed JPG or PNG. Max size of 2MB
+              {{ t('accountSettings.allowedFileTypes') }}
             </p>
           </form>
         </VCardText>
@@ -203,7 +204,7 @@ const resetForm = () => {
               >
                 <AppTextField
                   v-model="form.first_name"
-                  label="First Name"
+                  :label="t('members.firstName')"
                   placeholder="John"
                 />
               </VCol>
@@ -214,7 +215,7 @@ const resetForm = () => {
               >
                 <AppTextField
                   v-model="form.last_name"
-                  label="Last Name"
+                  :label="t('members.lastName')"
                   placeholder="Doe"
                 />
               </VCol>
@@ -225,7 +226,7 @@ const resetForm = () => {
               >
                 <AppTextField
                   v-model="form.email"
-                  label="Email"
+                  :label="t('common.email')"
                   placeholder="johndoe@email.com"
                   type="email"
                   disabled
@@ -239,7 +240,7 @@ const resetForm = () => {
                 </VCol>
                 <VCol cols="12">
                   <h6 class="text-h6">
-                    Additional Information
+                    {{ t('accountSettings.additionalInformation') }}
                   </h6>
                 </VCol>
                 <DynamicFormRenderer
@@ -256,7 +257,7 @@ const resetForm = () => {
                   type="submit"
                   :loading="isLoading"
                 >
-                  Save changes
+                  {{ t('common.saveChanges') }}
                 </VBtn>
 
                 <VBtn
@@ -265,7 +266,7 @@ const resetForm = () => {
                   type="reset"
                   @click.prevent="resetForm"
                 >
-                  Cancel
+                  {{ t('common.cancel') }}
                 </VBtn>
               </VCol>
             </VRow>

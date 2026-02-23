@@ -3,6 +3,7 @@ import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/sett
 import { useAppToast } from '@/composables/useAppToast'
 import { previewTypography, resetTypography } from '@/composables/useApplyTypography'
 
+const { t } = useI18n()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
@@ -61,12 +62,12 @@ const selectedFamily = computed(() => {
   return localFamilies.value.find(f => f.id === form.active_family_id)
 })
 
-const variantHeaders = [
-  { title: 'Weight', key: 'weight' },
-  { title: 'Style', key: 'style' },
-  { title: 'File', key: 'original_name' },
+const variantHeaders = computed(() => [
+  { title: t('platformSettings.typography.weight'), key: 'weight' },
+  { title: t('platformSettings.typography.style'), key: 'style' },
+  { title: t('platformSettings.typography.file'), key: 'original_name' },
   { title: '', key: 'actions', sortable: false, align: 'end' },
-]
+])
 
 // ─── Preview ─────────────────────────────────
 const previewPayload = computed(() => {
@@ -144,7 +145,7 @@ const save = async () => {
     loadSettings(data.typography)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save typography settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.typography.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -156,12 +157,12 @@ const resetToDefaults = async () => {
   try {
     const data = await settingsStore.updateTypographySettings({ ...defaults })
 
-    toast('Typography reset to defaults.', 'success')
+    toast(t('platformSettings.typography.resetSuccess'), 'success')
     loadSettings(data.typography)
     resetTypography()
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reset typography settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.typography.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -181,7 +182,7 @@ const createFamily = async () => {
     newFamilyName.value = ''
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to create font family.', 'error')
+    toast(error?.data?.message || t('platformSettings.typography.failedToCreateFamily'), 'error')
   }
   finally {
     isCreatingFamily.value = false
@@ -197,7 +198,7 @@ const deleteFamily = async familyId => {
       form.active_family_id = null
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete font family.', 'error')
+    toast(error?.data?.message || t('platformSettings.typography.failedToDeleteFamily'), 'error')
   }
 }
 
@@ -247,13 +248,13 @@ const uploadFonts = async () => {
       uploaded++
     }
 
-    toast(`${uploaded} font${uploaded > 1 ? 's' : ''} uploaded.`, 'success')
+    toast(t('platformSettings.typography.fontsUploaded', { count: uploaded }), 'success')
     uploadFiles.value = null
   }
   catch (error) {
     const msg = uploaded > 0
-      ? `${uploaded} uploaded, then failed: ${error?.data?.message || 'Upload error.'}`
-      : error?.data?.message || 'Upload failed.'
+      ? t('platformSettings.typography.uploadedThenFailed', { uploaded, error: error?.data?.message || t('platformSettings.typography.uploadError') })
+      : error?.data?.message || t('platformSettings.typography.uploadFailed')
 
     toast(msg, 'error')
   }
@@ -269,7 +270,7 @@ const deleteFont = async (familyId, fontId) => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete font.', 'error')
+    toast(error?.data?.message || t('platformSettings.typography.failedToDeleteFont'), 'error')
   }
 }
 </script>
@@ -282,17 +283,17 @@ const deleteFont = async (familyId, fontId) => {
           icon="tabler-typography"
           class="me-2"
         />
-        Typography
+        {{ t('platformSettings.typography.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Manage platform fonts. Changes are previewed live.
+        {{ t('platformSettings.typography.subtitle') }}
       </VCardSubtitle>
 
       <VCardText v-if="!isLoading">
         <!-- Font Source -->
         <div class="d-flex align-center justify-space-between mb-6">
           <h6 class="text-h6">
-            Font Source
+            {{ t('platformSettings.typography.fontSource') }}
           </h6>
           <VRadioGroup
             v-model="form.active_source"
@@ -300,11 +301,11 @@ const deleteFont = async (familyId, fontId) => {
             hide-details
           >
             <VRadio
-              label="Local"
+              :label="t('platformSettings.typography.local')"
               value="local"
             />
             <VRadio
-              label="Google"
+              :label="t('platformSettings.typography.google')"
               value="google"
             />
           </VRadioGroup>
@@ -315,7 +316,7 @@ const deleteFont = async (familyId, fontId) => {
         <!-- Local Font Family -->
         <template v-if="form.active_source === 'local'">
           <h6 class="text-h6 mb-4">
-            Local Font Family
+            {{ t('platformSettings.typography.localFontFamily') }}
           </h6>
 
           <VRow class="mb-6">
@@ -326,8 +327,8 @@ const deleteFont = async (familyId, fontId) => {
               <AppSelect
                 v-model="form.active_family_id"
                 :items="familySelectItems"
-                label="Active Family"
-                placeholder="Select a font family"
+                :label="t('platformSettings.typography.activeFamily')"
+                :placeholder="t('platformSettings.typography.selectFontFamily')"
                 clearable
               />
             </VCol>
@@ -341,7 +342,7 @@ const deleteFont = async (familyId, fontId) => {
                 variant="tonal"
                 @click="isNewFamilyDialogVisible = true"
               >
-                New Family
+                {{ t('platformSettings.typography.newFamily') }}
               </VBtn>
               <VBtn
                 v-if="selectedFamily"
@@ -349,7 +350,7 @@ const deleteFont = async (familyId, fontId) => {
                 variant="tonal"
                 @click="deleteFamily(selectedFamily.id)"
               >
-                Delete
+                {{ t('common.delete') }}
               </VBtn>
             </VCol>
           </VRow>
@@ -359,7 +360,7 @@ const deleteFont = async (familyId, fontId) => {
             <VExpansionPanels class="mb-6">
               <VExpansionPanel>
                 <VExpansionPanelTitle>
-                  {{ selectedFamily.name }} — {{ (selectedFamily.fonts || []).length }} variant{{ (selectedFamily.fonts || []).length !== 1 ? 's' : '' }}
+                  {{ selectedFamily.name }} — {{ t('platformSettings.typography.variantCount', { count: (selectedFamily.fonts || []).length }) }}
                 </VExpansionPanelTitle>
                 <VExpansionPanelText>
                   <VDataTable
@@ -383,7 +384,7 @@ const deleteFont = async (familyId, fontId) => {
                       </IconBtn>
                     </template>
                     <template #no-data>
-                      <span class="text-medium-emphasis">No font variants uploaded yet.</span>
+                      <span class="text-medium-emphasis">{{ t('platformSettings.typography.noVariantsUploaded') }}</span>
                     </template>
                   </VDataTable>
                 </VExpansionPanelText>
@@ -392,7 +393,7 @@ const deleteFont = async (familyId, fontId) => {
 
             <!-- Upload Fonts -->
             <h6 class="text-h6 mb-4">
-              Upload Fonts
+              {{ t('platformSettings.typography.uploadFonts') }}
             </h6>
 
             <VRow class="mb-6">
@@ -404,12 +405,12 @@ const deleteFont = async (familyId, fontId) => {
                   <VLabel
                     class="mb-1 text-body-2 text-wrap"
                     style="line-height: 15px;"
-                    text="Font files (.woff2)"
+                    :text="t('platformSettings.typography.fontFiles')"
                   />
                   <VFileInput
                     v-model="uploadFiles"
                     accept=".woff2"
-                    placeholder="Select one or more .woff2 files"
+                    :placeholder="t('platformSettings.typography.selectWoff2Files')"
                     prepend-icon=""
                     prepend-inner-icon="tabler-upload"
                     variant="outlined"
@@ -428,7 +429,7 @@ const deleteFont = async (familyId, fontId) => {
                   :disabled="!uploadFiles?.length"
                   @click="uploadFonts"
                 >
-                  Upload
+                  {{ t('platformSettings.typography.upload') }}
                 </VBtn>
               </VCol>
             </VRow>
@@ -439,7 +440,7 @@ const deleteFont = async (familyId, fontId) => {
               density="compact"
               class="mb-6"
             >
-              Weight and style are auto-detected from filenames (e.g. Bold, Italic, Light, SemiBold).
+              {{ t('platformSettings.typography.autoDetectHint') }}
             </VAlert>
           </template>
 
@@ -449,7 +450,7 @@ const deleteFont = async (familyId, fontId) => {
         <!-- Google Font -->
         <template v-if="form.active_source === 'google'">
           <h6 class="text-h6 mb-4">
-            Google Font
+            {{ t('platformSettings.typography.googleFont') }}
           </h6>
 
           <VRow class="mb-6">
@@ -459,8 +460,8 @@ const deleteFont = async (familyId, fontId) => {
             >
               <AppTextField
                 v-model="form.google_active_family"
-                label="Font Family Name"
-                placeholder="e.g. Roboto, Inter, Poppins"
+                :label="t('platformSettings.typography.fontFamilyName')"
+                :placeholder="t('platformSettings.typography.fontFamilyNamePlaceholder')"
               />
             </VCol>
             <VCol
@@ -471,7 +472,7 @@ const deleteFont = async (familyId, fontId) => {
                 v-model="form.google_weights"
                 :items="weightOptions"
                 :menu-props="{ maxHeight: '400' }"
-                label="Weights"
+                :label="t('platformSettings.typography.weights')"
                 multiple
                 chips
                 closable-chips
@@ -484,7 +485,7 @@ const deleteFont = async (familyId, fontId) => {
 
         <!-- Preview -->
         <h6 class="text-h6 mb-4">
-          Preview
+          {{ t('platformSettings.typography.preview') }}
         </h6>
 
         <VCard variant="outlined">
@@ -514,7 +515,7 @@ const deleteFont = async (familyId, fontId) => {
           :disabled="isLoading"
           @click="save"
         >
-          Save
+          {{ t('common.save') }}
         </VBtn>
         <VBtn
           variant="outlined"
@@ -522,7 +523,7 @@ const deleteFont = async (familyId, fontId) => {
           :disabled="isLoading"
           @click="resetToDefaults"
         >
-          Reset to Defaults
+          {{ t('common.reset') }}
         </VBtn>
       </VCardActions>
     </VCard>
@@ -533,12 +534,12 @@ const deleteFont = async (familyId, fontId) => {
       max-width="500"
     >
       <DialogCloseBtn @click="isNewFamilyDialogVisible = false" />
-      <VCard title="Create Font Family">
+      <VCard :title="t('platformSettings.typography.createFontFamily')">
         <VCardText>
           <AppTextField
             v-model="newFamilyName"
-            label="Family Name"
-            placeholder="e.g. My Custom Font"
+            :label="t('platformSettings.typography.familyName')"
+            :placeholder="t('platformSettings.typography.familyNamePlaceholder')"
             autofocus
             @keyup.enter="createFamily"
           />
@@ -549,7 +550,7 @@ const deleteFont = async (familyId, fontId) => {
             color="secondary"
             @click="isNewFamilyDialogVisible = false"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </VBtn>
           <VBtn
             color="primary"
@@ -557,7 +558,7 @@ const deleteFont = async (familyId, fontId) => {
             :disabled="!newFamilyName.trim()"
             @click="createFamily"
           >
-            Create
+            {{ t('common.create') }}
           </VBtn>
         </VCardActions>
       </VCard>

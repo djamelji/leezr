@@ -1,11 +1,14 @@
 <?php
 
+use App\Company\Http\Controllers\BillingCheckoutController;
 use App\Company\Http\Controllers\CompanyModuleController;
+use App\Company\Http\Controllers\CompanyPlanController;
 use App\Company\Http\Controllers\CompanyRoleController;
 use App\Company\Http\Controllers\UserProfileController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
 use App\Modules\Core\Members\Http\MembershipController;
 use App\Modules\Core\Settings\Http\CompanyController;
+use App\Modules\Core\Settings\Http\CompanyMarketController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
 use App\Modules\Core\Settings\Http\CompanyJobdomainController;
@@ -18,9 +21,22 @@ use Illuminate\Support\Facades\Route;
 // All routes here require X-Company-Id header
 // Authorization: company.access:{ability},{key} (owner bypasses all)
 
+// ─── Company plan (ADR-100) ───────────────────────────────
+Route::put('/company/plan', [CompanyPlanController::class, 'update'])
+    ->middleware('company.access:manage-structure');
+
+// ─── Billing checkout (ADR-101) ──────────────────────────
+Route::post('/billing/checkout', BillingCheckoutController::class)
+    ->middleware('company.access:manage-structure');
+
 // ─── Company settings ─────────────────────────────────────
 Route::get('/company', [CompanyController::class, 'show']);
 Route::put('/company', [CompanyController::class, 'update'])
+    ->middleware('company.access:use-permission,settings.manage');
+
+// ─── Company market / legal status (ADR-104) ─────────────
+Route::get('/company/market', [CompanyMarketController::class, 'show']);
+Route::put('/company/market', [CompanyMarketController::class, 'update'])
     ->middleware('company.access:use-permission,settings.manage');
 
 // ─── Members management ───────────────────────────────────

@@ -10,6 +10,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const router = useRouter()
 const jobdomainsStore = usePlatformJobdomainsStore()
 const { toast } = useAppToast()
@@ -39,7 +40,7 @@ const handleCreate = async () => {
     router.push({ name: 'platform-jobdomains-id', params: { id: data.jobdomain.id } })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to create job domain.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToCreate'), 'error')
   }
   finally {
     createLoading.value = false
@@ -64,7 +65,7 @@ const handleDelete = async () => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete.', 'error')
+    toast(error?.data?.message || t('platformJobdomains.failedToDelete'), 'error')
   }
   finally {
     isDeleteDialogOpen.value = false
@@ -73,12 +74,12 @@ const handleDelete = async () => {
 }
 
 // ─── Table ──────────────────────────────────────────
-const headers = [
-  { title: 'Key', key: 'key', width: '160px' },
-  { title: 'Name', key: 'label' },
-  { title: 'Companies', key: 'companies_count', width: '120px', align: 'center' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '160px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('common.code'), key: 'key', width: '160px' },
+  { title: t('common.name'), key: 'label' },
+  { title: t('Companies'), key: 'companies_count', width: '120px', align: 'center' },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '160px', sortable: false },
+])
 
 // ─── Load data ──────────────────────────────────────
 onMounted(async () => {
@@ -99,14 +100,14 @@ onMounted(async () => {
           icon="tabler-briefcase"
           class="me-2"
         />
-        Job Domains
+        {{ t('platformJobdomains.title') }}
         <VSpacer />
         <VBtn
           size="small"
           prepend-icon="tabler-plus"
           @click="isCreateDialogOpen = true"
         >
-          Add Job Domain
+          {{ t('platformJobdomains.addJobDomain') }}
         </VBtn>
       </VCardTitle>
 
@@ -142,7 +143,7 @@ onMounted(async () => {
               variant="tonal"
               :to="{ name: 'platform-jobdomains-id', params: { id: item.id } }"
             >
-              Manage
+              {{ t('platformJobdomains.manage') }}
             </VBtn>
             <VBtn
               icon
@@ -158,7 +159,7 @@ onMounted(async () => {
                 activator="parent"
                 location="top"
               >
-                Cannot delete: assigned to {{ item.companies_count }} company(ies)
+                {{ t('platformJobdomains.cannotDelete', { count: item.companies_count }) }}
               </VTooltip>
             </VBtn>
           </div>
@@ -166,7 +167,7 @@ onMounted(async () => {
 
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No job domains found.
+            {{ t('platformJobdomains.noJobDomains') }}
           </div>
         </template>
       </VDataTable>
@@ -177,16 +178,16 @@ onMounted(async () => {
       v-model="isCreateDialogOpen"
       max-width="500"
     >
-      <VCard title="New Job Domain">
+      <VCard :title="t('platformJobdomains.newJobDomain')">
         <VCardText>
           <VForm @submit.prevent="handleCreate">
             <VRow>
               <VCol cols="12">
                 <AppTextField
                   v-model="createForm.key"
-                  label="Code"
-                  placeholder="my_jobdomain"
-                  hint="Lowercase, underscores only. Immutable after creation."
+                  :label="t('platformJobdomains.codeLabel')"
+                  :placeholder="t('platformJobdomains.codePlaceholder')"
+                  :hint="t('platformJobdomains.codeHint')"
                   persistent-hint
                 />
               </VCol>
@@ -194,16 +195,16 @@ onMounted(async () => {
               <VCol cols="12">
                 <AppTextField
                   v-model="createForm.label"
-                  label="Name"
-                  placeholder="Job Domain Name"
+                  :label="t('common.name')"
+                  :placeholder="t('platformJobdomains.namePlaceholder')"
                 />
               </VCol>
 
               <VCol cols="12">
                 <AppTextarea
                   v-model="createForm.description"
-                  label="Description"
-                  placeholder="Brief description..."
+                  :label="t('common.description')"
+                  :placeholder="t('platformJobdomains.descriptionPlaceholder')"
                   rows="3"
                 />
               </VCol>
@@ -215,13 +216,13 @@ onMounted(async () => {
                     color="secondary"
                     @click="isCreateDialogOpen = false"
                   >
-                    Cancel
+                    {{ t('common.cancel') }}
                   </VBtn>
                   <VBtn
                     type="submit"
                     :loading="createLoading"
                   >
-                    Create
+                    {{ t('common.create') }}
                   </VBtn>
                 </div>
               </VCol>
@@ -237,11 +238,9 @@ onMounted(async () => {
       max-width="400"
     >
       <VCard>
-        <VCardTitle>Confirm Delete</VCardTitle>
+        <VCardTitle>{{ t('platformJobdomains.confirmDeleteTitle') }}</VCardTitle>
         <VCardText>
-          Are you sure you want to delete the job domain
-          <strong>{{ deletingJobdomain?.label }}</strong>?
-          This action cannot be undone.
+          {{ t('platformJobdomains.confirmDeleteMessage', { name: deletingJobdomain?.label }) }}
         </VCardText>
         <VCardActions>
           <VSpacer />
@@ -249,13 +248,13 @@ onMounted(async () => {
             variant="tonal"
             @click="isDeleteDialogOpen = false"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </VBtn>
           <VBtn
             color="error"
             @click="handleDelete"
           >
-            Delete
+            {{ t('common.delete') }}
           </VBtn>
         </VCardActions>
       </VCard>

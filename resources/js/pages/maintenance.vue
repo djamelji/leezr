@@ -12,6 +12,7 @@ import { useAppName, setAppName } from '@/composables/useAppName'
 
 usePublicTheme()
 
+const { t } = useI18n()
 const appName = useAppName()
 const { bindPlayer } = useMaintenanceTheme()
 
@@ -131,7 +132,7 @@ async function handleSubscribe() {
           <input
             v-model="email"
             type="email"
-            placeholder="Enter your email"
+            :placeholder="t('maintenancePage.enterYourEmail')"
             required
           >
           <button
@@ -157,7 +158,7 @@ async function handleSubscribe() {
             size="28"
             color="success"
           />
-          <span>You're on the list. We'll notify you when we're back online.</span>
+          <span>{{ t('maintenancePage.onTheList') }}</span>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { useCompanySettingsStore } from '@/modules/company/settings/settings.sto
 import MemberProfileForm from '@/company/components/MemberProfileForm.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -62,7 +63,7 @@ onMounted(async () => {
     applyProfile(data)
   }
   catch {
-    toast('Failed to load member profile.', 'error')
+    toast(t('members.failedToLoadProfile'), 'error')
     router.push('/company/members')
   }
   finally {
@@ -75,10 +76,10 @@ const handleOverviewSave = async payload => {
     const data = await membersStore.updateMemberProfile(route.params.id, payload)
 
     applyProfile(data)
-    toast('Member profile updated.', 'success')
+    toast(t('members.profileUpdated'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update profile.', 'error')
+    toast(error?.data?.message || t('members.failedToUpdateProfile'), 'error')
   }
 }
 
@@ -91,10 +92,10 @@ const handleDynamicSave = async () => {
     })
 
     applyProfile(data)
-    toast('Custom fields updated.', 'success')
+    toast(t('members.customFieldsUpdated'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update custom fields.', 'error')
+    toast(error?.data?.message || t('members.failedToUpdateCustomFields'), 'error')
   }
   finally {
     savingDynamic.value = false
@@ -117,7 +118,7 @@ const handleConfirmReset = async confirmed => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to send reset email.', 'error')
+    toast(error?.data?.message || t('credentials.failedToSendReset'), 'error')
   }
   finally {
     resetPasswordLoading.value = false
@@ -143,7 +144,7 @@ const handleSetPassword = async () => {
     applyProfile(profile)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to set password.', 'error')
+    toast(error?.data?.message || t('credentials.failedToSetPassword'), 'error')
   }
   finally {
     setPasswordLoading.value = false
@@ -198,7 +199,7 @@ const handleSetPassword = async () => {
               :color="baseFields.status === 'active' ? 'success' : 'warning'"
               size="x-small"
             >
-              {{ baseFields.status === 'active' ? 'Active' : 'Invited' }}
+              {{ baseFields.status === 'active' ? t('members.activeStatus') : t('members.invitedStatus') }}
             </VChip>
           </div>
         </div>
@@ -222,7 +223,7 @@ const handleSetPassword = async () => {
             icon="tabler-user"
             class="me-2"
           />
-          Overview
+          {{ t('members.overview') }}
         </VTab>
         <VTab
           v-if="dynamicFields.length"
@@ -232,7 +233,7 @@ const handleSetPassword = async () => {
             icon="tabler-forms"
             class="me-2"
           />
-          Custom Fields
+          {{ t('members.customFields') }}
         </VTab>
         <VTab
           v-if="showCredentials"
@@ -242,7 +243,7 @@ const handleSetPassword = async () => {
             icon="tabler-key"
             class="me-2"
           />
-          Credentials
+          {{ t('credentials.title') }}
         </VTab>
       </VTabs>
 
@@ -278,7 +279,7 @@ const handleSetPassword = async () => {
                       type="submit"
                       :loading="savingDynamic"
                     >
-                      Save custom fields
+                      {{ t('members.saveCustomFields') }}
                     </VBtn>
                   </VCol>
                 </VRow>
@@ -295,10 +296,10 @@ const handleSetPassword = async () => {
                 <!-- Force reset -->
                 <div>
                   <h6 class="text-h6 mb-2">
-                    Force Password Reset
+                    {{ t('credentials.forceReset') }}
                   </h6>
                   <p class="text-body-2 text-disabled mb-3">
-                    Send a password reset email to this user. Any previous reset tokens will be invalidated.
+                    {{ t('credentials.forceResetDescription') }}
                   </p>
                   <VBtn
                     prepend-icon="tabler-mail-forward"
@@ -307,7 +308,7 @@ const handleSetPassword = async () => {
                     :loading="resetPasswordLoading"
                     @click="confirmForceReset"
                   >
-                    Send Reset Email
+                    {{ t('credentials.sendResetEmail') }}
                   </VBtn>
                 </div>
 
@@ -316,10 +317,10 @@ const handleSetPassword = async () => {
                 <!-- Set password -->
                 <div>
                   <h6 class="text-h6 mb-2">
-                    Set Password Manually
+                    {{ t('credentials.setPasswordManually') }}
                   </h6>
                   <p class="text-body-2 text-disabled mb-3">
-                    Override this user's password directly.
+                    {{ t('credentials.setPasswordDescription') }}
                   </p>
 
                   <VBtn
@@ -329,7 +330,7 @@ const handleSetPassword = async () => {
                     color="info"
                     @click="showSetPasswordFields = true"
                   >
-                    Set Password
+                    {{ t('credentials.setPassword') }}
                   </VBtn>
 
                   <template v-if="showSetPasswordFields">
@@ -340,9 +341,9 @@ const handleSetPassword = async () => {
                       >
                         <AppTextField
                           v-model="setPasswordForm.password"
-                          label="New Password"
+                          :label="t('credentials.newPassword')"
                           type="password"
-                          placeholder="Min 8 characters"
+                          :placeholder="t('credentials.minChars')"
                         />
                       </VCol>
                       <VCol
@@ -351,9 +352,9 @@ const handleSetPassword = async () => {
                       >
                         <AppTextField
                           v-model="setPasswordForm.password_confirmation"
-                          label="Confirm Password"
+                          :label="t('credentials.confirmPassword')"
                           type="password"
-                          placeholder="Repeat password"
+                          :placeholder="t('credentials.repeatPassword')"
                         />
                       </VCol>
                       <VCol cols="12">
@@ -363,14 +364,14 @@ const handleSetPassword = async () => {
                             :loading="setPasswordLoading"
                             @click="handleSetPassword"
                           >
-                            Save Password
+                            {{ t('credentials.savePassword') }}
                           </VBtn>
                           <VBtn
                             variant="tonal"
                             color="secondary"
                             @click="showSetPasswordFields = false; setPasswordForm = { password: '', password_confirmation: '' }"
                           >
-                            Cancel
+                            {{ t('common.cancel') }}
                           </VBtn>
                         </div>
                       </VCol>
@@ -402,10 +403,10 @@ const handleSetPassword = async () => {
           </VBtn>
 
           <h6 class="text-lg font-weight-medium">
-            Send a password reset email to {{ baseFields.display_name }}?
+            {{ t('credentials.confirmResetTitle', { name: baseFields.display_name }) }}
           </h6>
           <p class="text-body-2 text-disabled mt-2">
-            This will invalidate any previous reset tokens.
+            {{ t('credentials.confirmResetMessage') }}
           </p>
         </VCardText>
 
@@ -415,7 +416,7 @@ const handleSetPassword = async () => {
             color="warning"
             @click="handleConfirmReset(true)"
           >
-            Confirm
+            {{ t('credentials.confirm') }}
           </VBtn>
 
           <VBtn
@@ -423,7 +424,7 @@ const handleSetPassword = async () => {
             variant="tonal"
             @click="handleConfirmReset(false)"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </VBtn>
         </VCardText>
       </VCard>

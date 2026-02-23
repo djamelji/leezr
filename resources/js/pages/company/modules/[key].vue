@@ -4,6 +4,7 @@ definePage({ meta: { surface: 'structure' } })
 import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const moduleStore = useModuleStore()
@@ -30,14 +31,14 @@ onMounted(async () => {
     }
 
     if (!mod.value) {
-      toast('Module not found.', 'error')
+      toast(t('companyModules.moduleNotFound'), 'error')
       router.push({ name: 'company-modules' })
 
       return
     }
 
     if (!mod.value.is_active) {
-      toast('Module is not active.', 'error')
+      toast(t('companyModules.moduleNotActive'), 'error')
       router.push({ name: 'company-modules' })
 
       return
@@ -49,7 +50,7 @@ onMounted(async () => {
     settingsJson.value = JSON.stringify(settings.value, null, 2)
   }
   catch {
-    toast('Failed to load module settings.', 'error')
+    toast(t('companyModules.failedToLoadSettings'), 'error')
     router.push({ name: 'company-modules' })
   }
   finally {
@@ -87,7 +88,7 @@ const saveSettings = async () => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save settings.', 'error')
+    toast(error?.data?.message || t('companyModules.failedToSaveSettings'), 'error')
   }
   finally {
     isSaving.value = false
@@ -101,15 +102,15 @@ const resetSettings = () => {
 
 const entitlementLabel = () => {
   if (!mod.value) return ''
-  if (mod.value.type === 'core') return 'Core — always active'
-  if (mod.value.entitlement_source === 'jobdomain') return 'Included via job domain'
+  if (mod.value.type === 'core') return t('companyModules.coreAlwaysActive')
+  if (mod.value.entitlement_source === 'jobdomain') return t('companyModules.includedViaJobDomain')
   if (!mod.value.is_entitled) {
-    if (mod.value.entitlement_reason === 'plan_required') return `Requires ${mod.value.min_plan} plan`
+    if (mod.value.entitlement_reason === 'plan_required') return t('companyModules.requiresPlanLabel', { plan: mod.value.min_plan })
 
-    return 'Not entitled'
+    return t('companyModules.notEntitled')
   }
 
-  return 'Entitled'
+  return t('companyModules.entitled')
 }
 </script>
 
@@ -153,13 +154,13 @@ const entitlementLabel = () => {
                 :color="mod.is_active ? 'success' : 'error'"
                 size="x-small"
               >
-                {{ mod.is_active ? 'Active' : 'Inactive' }}
+                {{ mod.is_active ? t('companyModules.active') : t('companyModules.inactive') }}
               </VChip>
               <VChip
                 :color="mod.type === 'core' ? 'primary' : 'info'"
                 size="x-small"
               >
-                {{ mod.type === 'core' ? 'Core' : 'Addon' }}
+                {{ mod.type === 'core' ? t('companyModules.coreChip') : t('companyModules.addon') }}
               </VChip>
               <span class="text-body-2 text-medium-emphasis">{{ entitlementLabel() }}</span>
             </div>
@@ -174,7 +175,7 @@ const entitlementLabel = () => {
             icon="tabler-info-circle"
             class="me-2"
           />
-          Overview
+          {{ t('companyModules.overview') }}
         </VCardTitle>
         <VCardText>
           <p class="text-body-1">
@@ -190,16 +191,16 @@ const entitlementLabel = () => {
             icon="tabler-settings"
             class="me-2"
           />
-          Settings
+          {{ t('companyModules.settings') }}
         </VCardTitle>
         <VCardSubtitle>
-          Module configuration (JSON). Changes are saved per-company.
+          {{ t('companyModules.settingsSubtitle') }}
         </VCardSubtitle>
         <VCardText>
           <VForm @submit.prevent="saveSettings">
             <AppTextarea
               v-model="settingsJson"
-              label="Configuration (JSON)"
+              :label="t('companyModules.configurationJson')"
               rows="10"
               :error-messages="jsonError ? [jsonError] : []"
               style="font-family: monospace;"
@@ -211,14 +212,14 @@ const entitlementLabel = () => {
                 type="submit"
                 :loading="isSaving"
               >
-                Save Settings
+                {{ t('companyModules.saveSettings') }}
               </VBtn>
               <VBtn
                 variant="tonal"
                 color="secondary"
                 @click="resetSettings"
               >
-                Reset
+                {{ t('common.reset') }}
               </VBtn>
             </div>
           </VForm>

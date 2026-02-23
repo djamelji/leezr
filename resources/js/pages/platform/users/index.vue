@@ -4,6 +4,8 @@ import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.stor
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
+
 definePage({
   meta: {
     layout: 'platform',
@@ -47,13 +49,13 @@ onMounted(async () => {
   }
 })
 
-const headers = [
-  { title: 'Name', key: 'display_name' },
-  { title: 'Email', key: 'email' },
-  { title: 'Status', key: 'status', width: '140px' },
-  { title: 'Roles', key: 'roles', sortable: false },
-  { title: 'Actions', key: 'actions', align: 'center', width: '120px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('common.name'), key: 'display_name' },
+  { title: t('common.email'), key: 'email' },
+  { title: t('common.status'), key: 'status', width: '140px' },
+  { title: t('Roles'), key: 'roles', sortable: false },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '120px', sortable: false },
+])
 
 const hasRole = (user, key) => {
   return user.roles?.some(r => r.key === key)
@@ -87,7 +89,7 @@ const handleDrawerSubmit = async () => {
     isDrawerOpen.value = false
   }
   catch (error) {
-    toast(error?.data?.message || 'Operation failed.', 'error')
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
     drawerLoading.value = false
@@ -95,7 +97,7 @@ const handleDrawerSubmit = async () => {
 }
 
 const deleteUser = async user => {
-  if (!confirm(`Delete platform user "${user.display_name}"?`))
+  if (!confirm(t('platformUsers.confirmDeleteUser', { name: user.display_name })))
     return
 
   actionLoading.value = user.id
@@ -106,7 +108,7 @@ const deleteUser = async user => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete user.', 'error')
+    toast(error?.data?.message || t('platformUsers.failedToDeleteUser'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -133,18 +135,18 @@ const onPageChange = async page => {
           icon="tabler-user-shield"
           class="me-2"
         />
-        Platform Users
+        {{ t('platformUsers.title') }}
         <VSpacer />
         <VBtn
           size="small"
           prepend-icon="tabler-plus"
           @click="openCreateDrawer"
         >
-          Add User
+          {{ t('platformUsers.addUser') }}
         </VBtn>
       </VCardTitle>
       <VCardSubtitle>
-        Manage platform employees and their roles.
+        {{ t('platformUsers.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -179,7 +181,7 @@ const onPageChange = async page => {
             :color="item.status === 'invited' ? 'warning' : 'success'"
             size="small"
           >
-            {{ item.status === 'invited' ? 'Invitation pending' : 'Active' }}
+            {{ item.status === 'invited' ? t('common.invitationPending') : t('common.active') }}
           </VChip>
         </template>
 
@@ -231,7 +233,7 @@ const onPageChange = async page => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No platform users found.
+            {{ t('platformUsers.noPlatformUsers') }}
           </div>
         </template>
       </VDataTable>
@@ -257,7 +259,7 @@ const onPageChange = async page => {
       width="400"
     >
       <AppDrawerHeaderSection
-        title="Add Platform User"
+        :title="t('platformUsers.addPlatformUser')"
         @cancel="isDrawerOpen = false"
       />
 
@@ -272,8 +274,8 @@ const onPageChange = async page => {
             >
               <AppTextField
                 v-model="drawerForm.first_name"
-                label="First Name"
-                placeholder="John"
+                :label="t('platformUsers.firstName')"
+                :placeholder="t('platformUsers.firstNamePlaceholder')"
               />
             </VCol>
             <VCol
@@ -282,24 +284,24 @@ const onPageChange = async page => {
             >
               <AppTextField
                 v-model="drawerForm.last_name"
-                label="Last Name"
-                placeholder="Doe"
+                :label="t('platformUsers.lastName')"
+                :placeholder="t('platformUsers.lastNamePlaceholder')"
               />
             </VCol>
             <VCol cols="12">
               <AppTextField
                 v-model="drawerForm.email"
-                label="Email"
+                :label="t('common.email')"
                 type="email"
-                placeholder="john@leezr.com"
+                :placeholder="t('platformUsers.emailPlaceholder')"
               />
             </VCol>
             <VCol cols="12">
               <AppSelect
                 v-model="drawerForm.roles"
                 :items="roleOptions"
-                label="Roles"
-                placeholder="Select roles"
+                :label="t('Roles')"
+                :placeholder="t('platformUsers.selectRoles')"
                 multiple
                 chips
                 closable-chips
@@ -311,18 +313,18 @@ const onPageChange = async page => {
               <VCol cols="12">
                 <VDivider class="mb-2" />
                 <div class="text-body-2 font-weight-medium mb-2">
-                  Credentials
+                  {{ t('platformUsers.credentials') }}
                 </div>
                 <VRadioGroup
                   v-model="drawerForm.credentialMode"
                   inline
                 >
                   <VRadio
-                    label="Send invitation link"
+                    :label="t('platformUsers.sendInvitationLink')"
                     value="invite"
                   />
                   <VRadio
-                    label="Set password now"
+                    :label="t('platformUsers.setPasswordNow')"
                     value="password"
                   />
                 </VRadioGroup>
@@ -332,17 +334,17 @@ const onPageChange = async page => {
                 <VCol cols="12">
                   <AppTextField
                     v-model="drawerForm.password"
-                    label="Password"
+                    :label="t('platformUsers.password')"
                     type="password"
-                    placeholder="Min 8 characters"
+                    :placeholder="t('credentials.minChars')"
                   />
                 </VCol>
                 <VCol cols="12">
                   <AppTextField
                     v-model="drawerForm.password_confirmation"
-                    label="Confirm Password"
+                    :label="t('platformUsers.confirmPasswordLabel')"
                     type="password"
-                    placeholder="Repeat password"
+                    :placeholder="t('credentials.repeatPassword')"
                   />
                 </VCol>
               </template>
@@ -358,7 +360,7 @@ const onPageChange = async page => {
                 variant="tonal"
                 density="compact"
               >
-                An invitation email will be sent to set their password.
+                {{ t('platformUsers.invitationInfo') }}
               </VAlert>
             </VCol>
 
@@ -368,14 +370,14 @@ const onPageChange = async page => {
                 class="me-3"
                 :loading="drawerLoading"
               >
-                Create
+                {{ t('common.create') }}
               </VBtn>
               <VBtn
                 variant="tonal"
                 color="secondary"
                 @click="isDrawerOpen = false"
               >
-                Cancel
+                {{ t('common.cancel') }}
               </VBtn>
             </VCol>
           </VRow>

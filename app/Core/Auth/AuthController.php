@@ -4,6 +4,7 @@ namespace App\Core\Auth;
 
 use App\Core\Auth\Requests\LoginRequest;
 use App\Core\Auth\Requests\RegisterRequest;
+use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Settings\SessionSettingsPayload;
@@ -30,15 +31,25 @@ class AuthController extends Controller
                 'password_set_at' => now(),
             ]);
 
+            $planKey = $validated['plan_key'] ?? 'starter';
+
             $company = Company::create([
                 'name' => $validated['company_name'],
                 'slug' => Str::slug($validated['company_name']) . '-' . Str::random(4),
+                'plan_key' => $planKey,
             ]);
 
             $company->memberships()->create([
                 'user_id' => $user->id,
                 'role' => 'owner',
             ]);
+
+            // ADR-100: Assign jobdomain + activate defaults if provided
+            $jobdomainKey = $validated['jobdomain_key'] ?? null;
+
+            if ($jobdomainKey) {
+                JobdomainGate::assignToCompany($company, $jobdomainKey);
+            }
 
             return ['user' => $user, 'company' => $company];
         });
@@ -121,6 +132,7 @@ class AuthController extends Controller
                 'slug' => $membership->company->slug,
                 'role' => $membership->role,
                 'is_administrative' => $isAdministrative,
+                'plan_key' => $membership->company->plan_key ?? 'starter',
             ];
 
             if ($membership->companyRole) {

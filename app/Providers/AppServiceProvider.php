@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Core\Billing\BillingManager;
 use App\Core\Billing\Contracts\BillingProvider;
+use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Platform\Models\PlatformUser;
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(BillingProvider::class, function ($app) {
             return $app->make(BillingManager::class)->driver();
         });
+
+        $this->app->singleton(PaymentGatewayManager::class);
     }
 
     /**

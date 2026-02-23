@@ -32,6 +32,7 @@ import defaultSkin from '@images/customizer-icons/default-light.svg'
 import horizontalLight from '@images/customizer-icons/horizontal-light.svg'
 import wideSvg from '@images/customizer-icons/wide-light.svg'
 
+const { t } = useI18n()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
@@ -51,26 +52,26 @@ const isCustomColor = computed(() => {
   return !presetColors.some(c => c.main === form.primary_color)
 })
 
-const themeMode = [
-  { bgImage: 'tabler-sun', value: 'light', label: 'Light' },
-  { bgImage: 'tabler-moon-stars', value: 'dark', label: 'Dark' },
-  { bgImage: 'tabler-device-desktop-analytics', value: 'system', label: 'System' },
-]
+const themeMode = computed(() => [
+  { bgImage: 'tabler-sun', value: 'light', label: t('platformSettings.theme.light') },
+  { bgImage: 'tabler-moon-stars', value: 'dark', label: t('platformSettings.theme.dark') },
+  { bgImage: 'tabler-device-desktop-analytics', value: 'system', label: t('platformSettings.theme.system') },
+])
 
-const skinOptions = [
-  { bgImage: defaultSkin, value: 'default', label: 'Default' },
-  { bgImage: borderSkin, value: 'bordered', label: 'Bordered' },
-]
+const skinOptions = computed(() => [
+  { bgImage: defaultSkin, value: 'default', label: t('platformSettings.theme.skinDefault') },
+  { bgImage: borderSkin, value: 'bordered', label: t('platformSettings.theme.skinBordered') },
+])
 
-const layoutOptions = [
-  { bgImage: defaultSkin, value: 'vertical', label: 'Vertical' },
-  { bgImage: horizontalLight, value: 'horizontal', label: 'Horizontal' },
-]
+const layoutOptions = computed(() => [
+  { bgImage: defaultSkin, value: 'vertical', label: t('platformSettings.theme.layoutVertical') },
+  { bgImage: horizontalLight, value: 'horizontal', label: t('platformSettings.theme.layoutHorizontal') },
+])
 
-const contentWidthOptions = [
-  { bgImage: compact, value: 'boxed', label: 'Compact' },
-  { bgImage: wideSvg, value: 'fluid', label: 'Wide' },
-]
+const contentWidthOptions = computed(() => [
+  { bgImage: compact, value: 'boxed', label: t('platformSettings.theme.contentCompact') },
+  { bgImage: wideSvg, value: 'fluid', label: t('platformSettings.theme.contentWide') },
+])
 
 const isHorizontal = computed(() => form.layout === 'horizontal')
 
@@ -132,7 +133,7 @@ const save = async () => {
     applyTheme(data.theme)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save theme settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.theme.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -144,12 +145,12 @@ const resetToDefaults = async () => {
   try {
     const data = await settingsStore.updateThemeSettings({ ..._defaults })
 
-    toast('Theme reset to defaults.', 'success')
+    toast(t('platformSettings.theme.resetSuccess'), 'success')
     loadSettings(data.theme)
     applyTheme(data.theme)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reset theme settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.theme.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -165,10 +166,10 @@ const resetToDefaults = async () => {
           icon="tabler-palette"
           class="me-2"
         />
-        Platform Theme Settings
+        {{ t('platformSettings.theme.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Configure the global UI appearance for all users. Changes are previewed live.
+        {{ t('platformSettings.theme.subtitle') }}
       </VCardSubtitle>
 
       <VCardText v-if="!isLoading">
@@ -179,7 +180,7 @@ const resetToDefaults = async () => {
             md="6"
           >
             <h6 class="text-h6 mb-2">
-              Primary Color
+              {{ t('platformSettings.theme.primaryColor') }}
             </h6>
             <div
               class="d-flex align-center"
@@ -230,7 +231,7 @@ const resetToDefaults = async () => {
             md="6"
           >
             <h6 class="text-h6 mb-2">
-              Theme Mode
+              {{ t('platformSettings.theme.themeMode') }}
             </h6>
             <CustomRadiosWithImage
               :key="form.theme"
@@ -261,7 +262,7 @@ const resetToDefaults = async () => {
         <div class="d-flex flex-column flex-md-row align-md-start gap-4 mb-6">
           <div class="flex-fill">
             <h6 class="text-h6 mb-2">
-              Skin
+              {{ t('platformSettings.theme.skin') }}
             </h6>
             <CustomRadiosWithImage
               :key="form.skin"
@@ -280,7 +281,7 @@ const resetToDefaults = async () => {
 
           <div class="flex-fill">
             <h6 class="text-h6 mb-2">
-              Layout
+              {{ t('platformSettings.theme.layout') }}
             </h6>
             <CustomRadiosWithImage
               :key="form.layout"
@@ -299,7 +300,7 @@ const resetToDefaults = async () => {
 
           <div class="flex-fill">
             <h6 class="text-h6 mb-2">
-              Content Width
+              {{ t('platformSettings.theme.contentWidth') }}
             </h6>
             <CustomRadiosWithImage
               :key="form.content_width"
@@ -320,13 +321,13 @@ const resetToDefaults = async () => {
         <!-- Options -->
         <div class="mb-6">
           <h6 class="text-h6 mb-4">
-            Options
+            {{ t('platformSettings.theme.options') }}
           </h6>
 
           <div class="d-flex flex-column gap-4">
             <div class="d-flex align-center justify-space-between">
               <VLabel for="semi-dark">
-                Semi-dark menu
+                {{ t('platformSettings.theme.semiDarkMenu') }}
               </VLabel>
               <VSwitch
                 id="semi-dark"
@@ -338,7 +339,7 @@ const resetToDefaults = async () => {
 
             <div class="d-flex align-center justify-space-between">
               <VLabel for="navbar-blur">
-                Navbar blur
+                {{ t('platformSettings.theme.navbarBlur') }}
               </VLabel>
               <VSwitch
                 id="navbar-blur"
@@ -349,7 +350,7 @@ const resetToDefaults = async () => {
 
             <div class="d-flex align-center justify-space-between">
               <VLabel for="nav-collapsed">
-                Nav collapsed
+                {{ t('platformSettings.theme.navCollapsed') }}
               </VLabel>
               <VSwitch
                 id="nav-collapsed"
@@ -371,7 +372,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading"
           @click="save"
         >
-          Save
+          {{ t('common.save') }}
         </VBtn>
         <VBtn
           variant="outlined"
@@ -379,7 +380,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading"
           @click="resetToDefaults"
         >
-          Reset to Defaults
+          {{ t('common.reset') }}
         </VBtn>
       </VCardActions>
     </VCard>
@@ -389,7 +390,7 @@ const resetToDefaults = async () => {
       variant="tonal"
       class="mt-4"
     >
-      Changes are previewed live. Click Save to persist for all users.
+      {{ t('platformSettings.theme.livePreviewNotice') }}
     </VAlert>
 
     <SettingsTypography class="mt-6" />

@@ -10,6 +10,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const fieldsStore = usePlatformFieldsStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
@@ -25,31 +26,31 @@ const defLoading = ref(false)
 // ─── Activations state (platform_user scope) ────────
 const activeTab = ref('definitions')
 
-const scopeOptions = [
-  { title: 'All scopes', value: '' },
-  { title: 'Platform User', value: 'platform_user' },
-  { title: 'Company', value: 'company' },
-  { title: 'Company User', value: 'company_user' },
-]
+const scopeOptions = computed(() => [
+  { title: t('platformFields.allScopes'), value: '' },
+  { title: t('platformFields.scopePlatformUser'), value: 'platform_user' },
+  { title: t('platformFields.scopeCompany'), value: 'company' },
+  { title: t('platformFields.scopeCompanyUser'), value: 'company_user' },
+])
 
-const typeOptions = [
-  { title: 'String', value: 'string' },
-  { title: 'Number', value: 'number' },
-  { title: 'Boolean', value: 'boolean' },
-  { title: 'Date', value: 'date' },
-  { title: 'Select', value: 'select' },
-  { title: 'JSON', value: 'json' },
-]
+const typeOptions = computed(() => [
+  { title: t('platformFields.typeString'), value: 'string' },
+  { title: t('platformFields.typeNumber'), value: 'number' },
+  { title: t('platformFields.typeBoolean'), value: 'boolean' },
+  { title: t('platformFields.typeDate'), value: 'date' },
+  { title: t('platformFields.typeSelect'), value: 'select' },
+  { title: t('platformFields.typeJson'), value: 'json' },
+])
 
-const defHeaders = [
-  { title: 'Code', key: 'code', width: '160px' },
-  { title: 'Label', key: 'label' },
-  { title: 'Scope', key: 'scope', width: '140px' },
-  { title: 'Type', key: 'type', width: '100px' },
-  { title: 'Order', key: 'default_order', width: '80px' },
+const defHeaders = computed(() => [
+  { title: t('common.code'), key: 'code', width: '160px' },
+  { title: t('common.label'), key: 'label' },
+  { title: t('common.scope'), key: 'scope', width: '140px' },
+  { title: t('common.type'), key: 'type', width: '100px' },
+  { title: t('platformFields.order'), key: 'default_order', width: '80px' },
   { title: '', key: 'is_system', width: '60px', sortable: false },
-  { title: 'Actions', key: 'actions', align: 'center', width: '100px', sortable: false },
-]
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '100px', sortable: false },
+])
 
 const filteredDefinitions = computed(() => {
   if (!scopeFilter.value)
@@ -138,7 +139,7 @@ const handleDefSubmit = async () => {
     isDefDrawerOpen.value = false
   }
   catch (error) {
-    toast(error?.data?.message || 'Operation failed.', 'error')
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
     defLoading.value = false
@@ -147,7 +148,7 @@ const handleDefSubmit = async () => {
 
 const deleteDef = async def => {
   if (def.is_system) return
-  if (!confirm(`Delete field definition "${def.code}"?`)) return
+  if (!confirm(t('platformFields.confirmDeleteDef', { code: def.code }))) return
 
   try {
     const data = await fieldsStore.deleteFieldDefinition(def.id)
@@ -155,7 +156,7 @@ const deleteDef = async def => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete.', 'error')
+    toast(error?.data?.message || t('platformFields.failedToDelete'), 'error')
   }
 }
 
@@ -172,7 +173,7 @@ const toggleActivation = async (def, enabled) => {
     })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update activation.', 'error')
+    toast(error?.data?.message || t('platformFields.failedToUpdateActivation'), 'error')
   }
 }
 
@@ -188,7 +189,7 @@ const toggleRequired = async (def, required) => {
     })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update.', 'error')
+    toast(error?.data?.message || t('platformFields.failedToUpdateActivation'), 'error')
   }
 }
 
@@ -204,7 +205,7 @@ const updateOrder = async (def, order) => {
     })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update order.', 'error')
+    toast(error?.data?.message || t('platformFields.failedToUpdateOrder'), 'error')
   }
 }
 
@@ -227,20 +228,20 @@ const scopeColor = scope => {
           icon="tabler-list"
           class="me-1"
         />
-        Field Definitions
+        {{ t('platformFields.fieldDefinitions') }}
       </VTab>
       <VTab value="activations">
         <VIcon
           icon="tabler-toggle-right"
           class="me-1"
         />
-        Platform User Activations
+        {{ t('platformFields.platformUserActivations') }}
         <VChip
           size="x-small"
           class="ms-2"
           :color="activeCount >= 50 ? 'error' : 'default'"
         >
-          {{ activeCount }} / 50
+          {{ t('platformFields.activeCount', { count: activeCount }) }}
         </VChip>
       </VTab>
     </VTabs>
@@ -257,7 +258,7 @@ const scopeColor = scope => {
               icon="tabler-forms"
               class="me-2"
             />
-            Field Definitions
+            {{ t('platformFields.fieldDefinitions') }}
             <VSpacer />
             <AppSelect
               v-model="scopeFilter"
@@ -271,7 +272,7 @@ const scopeColor = scope => {
               prepend-icon="tabler-plus"
               @click="openCreateDefDrawer"
             >
-              Add Definition
+              {{ t('platformFields.addDefinition') }}
             </VBtn>
           </VCardTitle>
 
@@ -334,7 +335,7 @@ const scopeColor = scope => {
 
             <template #no-data>
               <div class="text-center pa-4 text-disabled">
-                No field definitions found.
+                {{ t('platformFields.noDefinitions') }}
               </div>
             </template>
           </VDataTable>
@@ -349,34 +350,34 @@ const scopeColor = scope => {
               icon="tabler-toggle-right"
               class="me-2"
             />
-            Platform User Field Activations
+            {{ t('platformFields.platformUserActivations') }}
             <VSpacer />
             <VChip
               :color="activeCount >= 50 ? 'error' : 'success'"
               size="small"
             >
-              {{ activeCount }} / 50 active
+              {{ t('platformFields.activeCount', { count: activeCount }) }}
             </VChip>
           </VCardTitle>
 
           <VCardSubtitle>
-            Enable fields for all platform users. Changes apply globally.
+            {{ t('platformFields.enableFieldsSubtitle') }}
           </VCardSubtitle>
 
           <VTable class="text-no-wrap">
             <thead>
               <tr>
-                <th>Code</th>
-                <th>Label</th>
-                <th>Type</th>
+                <th>{{ t('common.code') }}</th>
+                <th>{{ t('common.label') }}</th>
+                <th>{{ t('common.type') }}</th>
                 <th style="width: 80px;">
-                  Enabled
+                  {{ t('platformFields.enabled') }}
                 </th>
                 <th style="width: 80px;">
-                  Required
+                  {{ t('platformFields.required') }}
                 </th>
                 <th style="width: 100px;">
-                  Order
+                  {{ t('platformFields.order') }}
                 </th>
               </tr>
             </thead>
@@ -436,7 +437,7 @@ const scopeColor = scope => {
             v-if="!platformUserDefs.length && !isLoading"
             class="text-center text-disabled"
           >
-            No platform_user scope definitions found.
+            {{ t('platformFields.noActivations') }}
           </VCardText>
         </VCard>
       </VWindowItem>
@@ -450,7 +451,7 @@ const scopeColor = scope => {
       width="420"
     >
       <AppDrawerHeaderSection
-        :title="isDefEditMode ? 'Edit Field Definition' : 'New Field Definition'"
+        :title="isDefEditMode ? t('platformFields.editDefinition') : t('platformFields.newDefinition')"
         @cancel="isDefDrawerOpen = false"
       />
 
@@ -462,9 +463,9 @@ const scopeColor = scope => {
             <VCol cols="12">
               <AppTextField
                 v-model="defForm.code"
-                label="Code"
+                :label="t('common.code')"
                 placeholder="field_code"
-                hint="Lowercase, underscores only. Immutable after creation."
+                :hint="t('platformFields.codeHint')"
                 :disabled="isDefEditMode"
               />
             </VCol>
@@ -473,7 +474,7 @@ const scopeColor = scope => {
               <AppSelect
                 v-model="defForm.scope"
                 :items="scopeOptions.filter(o => o.value)"
-                label="Scope"
+                :label="t('common.scope')"
                 :disabled="isDefEditMode"
               />
             </VCol>
@@ -482,7 +483,7 @@ const scopeColor = scope => {
               <AppSelect
                 v-model="defForm.type"
                 :items="typeOptions"
-                label="Type"
+                :label="t('common.type')"
                 :disabled="isDefEditMode"
               />
             </VCol>
@@ -490,15 +491,15 @@ const scopeColor = scope => {
             <VCol cols="12">
               <AppTextField
                 v-model="defForm.label"
-                label="Label"
-                placeholder="Field Label"
+                :label="t('common.label')"
+                :placeholder="t('platformFields.fieldLabelPlaceholder')"
               />
             </VCol>
 
             <VCol cols="12">
               <AppTextField
                 v-model="defForm.default_order"
-                label="Default Order"
+                :label="t('platformFields.defaultOrder')"
                 type="number"
                 placeholder="0"
               />
@@ -510,14 +511,14 @@ const scopeColor = scope => {
                 class="me-3"
                 :loading="defLoading"
               >
-                {{ isDefEditMode ? 'Update' : 'Create' }}
+                {{ isDefEditMode ? t('common.update') : t('common.create') }}
               </VBtn>
               <VBtn
                 variant="tonal"
                 color="secondary"
                 @click="isDefDrawerOpen = false"
               >
-                Cancel
+                {{ t('common.cancel') }}
               </VBtn>
             </VCol>
           </VRow>

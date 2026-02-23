@@ -3,7 +3,8 @@
 use App\Modules\Platform\Companies\Http\CompanyController;
 use App\Modules\Platform\Companies\Http\CompanyModuleController;
 use App\Modules\Platform\Companies\Http\CompanyUserController;
-use App\Modules\Platform\Companies\Http\PlanController;
+use App\Modules\Platform\Billing\Http\BillingConfigController;
+use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
@@ -16,6 +17,12 @@ use App\Modules\Platform\Theme\Http\ThemeController;
 use App\Modules\Platform\Roles\Http\PermissionController;
 use App\Modules\Platform\Roles\Http\RoleController;
 use App\Modules\Platform\Users\Http\UserController;
+use App\Modules\Platform\Markets\Http\MarketCrudController;
+use App\Modules\Platform\Markets\Http\LegalStatusController;
+use App\Modules\Platform\Markets\Http\LanguageController;
+use App\Modules\Platform\Markets\Http\TranslationController;
+use App\Modules\Platform\Markets\Http\FxRateController;
+use App\Modules\Platform\Settings\Http\WorldSettingsController;
 use App\Platform\Auth\PlatformAuthController;
 use App\Platform\Auth\PlatformPasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -42,7 +49,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/companies/{id}/plan', [CompanyController::class, 'updatePlan']);
         Route::put('/companies/{id}/modules/{key}/enable', [CompanyModuleController::class, 'enable']);
         Route::put('/companies/{id}/modules/{key}/disable', [CompanyModuleController::class, 'disable']);
-        Route::get('/plans', [PlanController::class, 'index']);
+        Route::get('/plans', [PlanCrudController::class, 'index']);
+        Route::get('/plans/{key}', [PlanCrudController::class, 'show']);
+        Route::post('/plans', [PlanCrudController::class, 'store']);
+        Route::put('/plans/{id}', [PlanCrudController::class, 'update']);
+        Route::put('/plans/{id}/toggle-active', [PlanCrudController::class, 'toggleActive']);
     });
 
     // Company users (read-only supervision)
@@ -129,11 +140,65 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/session-settings', [SessionSettingsController::class, 'update']);
     });
 
+    // World Settings (localization, currency, timezone)
+    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+        Route::get('/world-settings', [WorldSettingsController::class, 'show']);
+        Route::put('/world-settings', [WorldSettingsController::class, 'update']);
+    });
+
     // Maintenance Settings
     Route::middleware('platform.permission:manage_maintenance')->group(function () {
         Route::get('/maintenance-settings', [MaintenanceSettingsController::class, 'show']);
         Route::put('/maintenance-settings', [MaintenanceSettingsController::class, 'update']);
         Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
+    });
+
+    // Billing / Payments governance (ADR-101, ADR-102)
+    Route::middleware('platform.permission:manage_billing')->group(function () {
+        Route::get('/billing/providers', [BillingConfigController::class, 'providers']);
+        Route::get('/billing/config', [BillingConfigController::class, 'showConfig']);
+        Route::put('/billing/config', [BillingConfigController::class, 'updateConfig']);
+        Route::get('/billing/policies', [BillingConfigController::class, 'policies']);
+        Route::put('/billing/policies', [BillingConfigController::class, 'updatePolicies']);
+        Route::get('/billing/subscriptions', [BillingConfigController::class, 'subscriptions']);
+        Route::put('/billing/subscriptions/{id}/approve', [BillingConfigController::class, 'approveSubscription']);
+        Route::put('/billing/subscriptions/{id}/reject', [BillingConfigController::class, 'rejectSubscription']);
+    });
+
+    // Markets governance (ADR-104)
+    Route::middleware('platform.permission:manage_markets')->group(function () {
+        // Markets CRUD
+        Route::get('/markets', [MarketCrudController::class, 'index']);
+        Route::get('/markets/{key}', [MarketCrudController::class, 'show']);
+        Route::post('/markets', [MarketCrudController::class, 'store']);
+        Route::put('/markets/{id}', [MarketCrudController::class, 'update']);
+        Route::put('/markets/{id}/toggle-active', [MarketCrudController::class, 'toggleActive']);
+        Route::put('/markets/{id}/set-default', [MarketCrudController::class, 'setDefault']);
+
+        // Legal statuses (nested under market)
+        Route::post('/markets/{marketKey}/legal-statuses', [LegalStatusController::class, 'store']);
+        Route::put('/legal-statuses/{id}', [LegalStatusController::class, 'update']);
+        Route::delete('/legal-statuses/{id}', [LegalStatusController::class, 'destroy']);
+        Route::put('/markets/{marketKey}/legal-statuses/reorder', [LegalStatusController::class, 'reorder']);
+
+        // Languages
+        Route::get('/languages', [LanguageController::class, 'index']);
+        Route::post('/languages', [LanguageController::class, 'store']);
+        Route::put('/languages/{id}', [LanguageController::class, 'update']);
+        Route::delete('/languages/{id}', [LanguageController::class, 'destroy']);
+        Route::put('/languages/{id}/toggle-active', [LanguageController::class, 'toggleActive']);
+
+        // Translations
+        Route::get('/translations', [TranslationController::class, 'index']);
+        Route::get('/translations/{locale}/{namespace}', [TranslationController::class, 'show']);
+        Route::put('/translations/{id}', [TranslationController::class, 'update']);
+        Route::post('/translations/import-preview', [TranslationController::class, 'importPreview']);
+        Route::post('/translations/import-apply', [TranslationController::class, 'importApply']);
+        Route::get('/translations/export/{locale}', [TranslationController::class, 'export']);
+
+        // FX rates
+        Route::get('/fx-rates', [FxRateController::class, 'index']);
+        Route::post('/fx-rates/refresh', [FxRateController::class, 'refresh']);
     });
 
     // Heartbeat (session keepalive — governance middleware handles TTL header)

@@ -1,4 +1,6 @@
 <script setup>
+const { t } = useI18n()
+
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
 import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
@@ -50,35 +52,35 @@ onMounted(async () => {
 
 const cards = computed(() => [
   {
-    title: 'Companies',
+    title: t('Companies'),
     value: stats.value.companies,
     icon: 'tabler-building',
     color: 'primary',
     to: { name: 'platform-companies' },
   },
   {
-    title: 'Platform Users',
+    title: t('Platform Users'),
     value: stats.value.platformUsers,
     icon: 'tabler-user-shield',
     color: 'error',
     to: { name: 'platform-users' },
   },
   {
-    title: 'Company Users',
+    title: t('Company Users'),
     value: stats.value.companyUsers,
     icon: 'tabler-users-group',
     color: 'info',
     to: { name: 'platform-company-users' },
   },
   {
-    title: 'Roles',
+    title: t('Roles'),
     value: stats.value.roles,
     icon: 'tabler-shield-lock',
     color: 'success',
     to: { name: 'platform-roles' },
   },
   {
-    title: 'Modules',
+    title: t('Modules'),
     value: stats.value.modules,
     icon: 'tabler-puzzle',
     color: 'warning',
@@ -90,7 +92,7 @@ const cards = computed(() => [
 <template>
   <div>
     <h4 class="text-h4 mb-6">
-      Platform Dashboard
+      {{ t('platformDashboard.title') }}
     </h4>
 
     <VRow>
@@ -129,7 +131,7 @@ const cards = computed(() => [
               :color="card.color"
               size="small"
             >
-              View
+              {{ t('common.view') }}
             </VBtn>
           </VCardText>
         </VCard>

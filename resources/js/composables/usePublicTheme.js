@@ -1,6 +1,7 @@
 import { applyTheme } from '@/composables/useApplyTheme'
 import { applyTypography } from '@/composables/useApplyTypography'
 import { setAppName } from '@/composables/useAppName'
+import { useWorldStore } from '@/core/stores/world'
 
 let fetched = false
 
@@ -10,6 +11,10 @@ export function usePublicTheme() {
   onMounted(async () => {
     if (fetched) return
     fetched = true
+
+    // Fetch world settings (locale, currency, timezone) in parallel
+    const worldStore = useWorldStore()
+    worldStore.fetch()
 
     try {
       const res = await fetch('/api/public/theme')

@@ -171,5 +171,6 @@ export const usePlatformSettingsStore = defineStore('platformSettings', {
     async fetchMyIp() {
       return await $platformApi('/maintenance/my-ip')
     },
+
   },
 })

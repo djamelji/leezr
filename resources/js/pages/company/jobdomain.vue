@@ -4,6 +4,7 @@ definePage({ meta: { surface: 'structure' } })
 import { useAuthStore } from '@/core/stores/auth'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const jobdomainStore = useJobdomainStore()
 
@@ -30,10 +31,10 @@ const selectJobdomain = async key => {
 
   try {
     await jobdomainStore.setJobdomain(key)
-    successMessage.value = 'Jobdomain assigned successfully. Default modules have been activated.'
+    successMessage.value = t('jobdomain.assigned')
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to assign jobdomain.'
+    errorMessage.value = error?.data?.message || t('jobdomain.failedToAssign')
   }
   finally {
     isSaving.value = false
@@ -49,10 +50,10 @@ const selectJobdomain = async key => {
           icon="tabler-briefcase"
           class="me-2"
         />
-        Industry Profile
+        {{ t('jobdomain.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Select the industry profile for your company. This configures your default modules and navigation.
+        {{ t('jobdomain.subtitle') }}
       </VCardSubtitle>
 
       <VCardText>
@@ -83,7 +84,7 @@ const selectJobdomain = async key => {
           variant="tonal"
           class="mb-6"
         >
-          Current profile: <strong>{{ jobdomainStore.jobdomain?.label }}</strong>
+          {{ t('jobdomain.currentProfile') }} <strong>{{ jobdomainStore.jobdomain?.label }}</strong>
         </VAlert>
 
         <!-- Available jobdomains -->
@@ -108,7 +109,7 @@ const selectJobdomain = async key => {
                 {{ jd.label }}
               </VCardTitle>
               <VCardText>
-                {{ jd.description || 'No description available.' }}
+                {{ jd.description || t('jobdomain.noDescription') }}
               </VCardText>
               <VCardActions>
                 <VBtn
@@ -121,7 +122,7 @@ const selectJobdomain = async key => {
                     icon="tabler-check"
                     start
                   />
-                  Active
+                  {{ t('common.active') }}
                 </VBtn>
                 <VBtn
                   v-else-if="canManage"
@@ -129,7 +130,7 @@ const selectJobdomain = async key => {
                   :loading="isSaving"
                   @click="selectJobdomain(jd.key)"
                 >
-                  Select
+                  {{ t('common.select') }}
                 </VBtn>
               </VCardActions>
             </VCard>

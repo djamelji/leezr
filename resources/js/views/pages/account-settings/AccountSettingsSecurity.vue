@@ -1,6 +1,8 @@
 <script setup>
 import { $api } from '@/utils/api'
 
+const { t } = useI18n()
+
 const form = ref({
   current_password: '',
   password: '',
@@ -29,7 +31,7 @@ const handleChangePassword = async () => {
       },
     })
 
-    successMessage.value = 'Password updated successfully.'
+    successMessage.value = t('accountSettings.passwordUpdated')
     form.value = {
       current_password: '',
       password: '',
@@ -37,7 +39,7 @@ const handleChangePassword = async () => {
     }
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to update password.'
+    errorMessage.value = error?.data?.message || t('accountSettings.failedToUpdatePassword')
   }
   finally {
     isLoading.value = false
@@ -48,7 +50,7 @@ const handleChangePassword = async () => {
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Change Password">
+      <VCard :title="t('accountSettings.changePassword')">
         <VCardText class="pt-0">
           <VAlert
             v-if="successMessage"
@@ -78,7 +80,7 @@ const handleChangePassword = async () => {
               >
                 <AppTextField
                   v-model="form.current_password"
-                  label="Current Password"
+                  :label="t('accountSettings.currentPassword')"
                   placeholder="············"
                   :type="isCurrentPasswordVisible ? 'text' : 'password'"
                   autocomplete="current-password"
@@ -95,7 +97,7 @@ const handleChangePassword = async () => {
               >
                 <AppTextField
                   v-model="form.password"
-                  label="New Password"
+                  :label="t('accountSettings.newPassword')"
                   placeholder="············"
                   :type="isNewPasswordVisible ? 'text' : 'password'"
                   autocomplete="new-password"
@@ -110,7 +112,7 @@ const handleChangePassword = async () => {
               >
                 <AppTextField
                   v-model="form.password_confirmation"
-                  label="Confirm New Password"
+                  :label="t('accountSettings.confirmNewPassword')"
                   placeholder="············"
                   :type="isConfirmPasswordVisible ? 'text' : 'password'"
                   autocomplete="new-password"
@@ -121,11 +123,11 @@ const handleChangePassword = async () => {
 
               <VCol cols="12">
                 <p class="text-body-2">
-                  Password Requirements:
+                  {{ t('accountSettings.passwordRequirements') }}
                 </p>
                 <ul class="ps-6 mb-6">
                   <li class="text-body-2 mb-1">
-                    Minimum 8 characters long
+                    {{ t('accountSettings.minCharsLong') }}
                   </li>
                 </ul>
 
@@ -133,7 +135,7 @@ const handleChangePassword = async () => {
                   type="submit"
                   :loading="isLoading"
                 >
-                  Save changes
+                  {{ t('common.saveChanges') }}
                 </VBtn>
               </VCol>
             </VRow>

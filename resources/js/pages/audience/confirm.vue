@@ -11,6 +11,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const authThemeMask = useGenerateImageVariant(miscMaskLight, miscMaskDark)
 const route = useRoute()
 
@@ -53,7 +54,7 @@ onMounted(async () => {
     <div class="text-center mb-15">
       <template v-if="loading">
         <h4 class="text-h4 font-weight-medium mb-2">
-          Confirming your subscription...
+          {{ t('audience.confirmingSubscription') }}
         </h4>
         <VProgressCircular
           indeterminate
@@ -63,25 +64,25 @@ onMounted(async () => {
 
       <template v-else-if="result?.status === 'confirmed'">
         <h4 class="text-h4 font-weight-medium mb-2">
-          Subscription confirmed!
+          {{ t('audience.subscriptionConfirmed') }}
         </h4>
         <p class="text-body-1 mb-6">
-          Your email <strong>{{ result.email }}</strong> has been confirmed for <strong>{{ result.list_name }}</strong>.
+          {{ t('audience.emailConfirmedFor', { email: result.email, list: result.list_name }) }}
         </p>
         <VBtn to="/">
-          Back to Home
+          {{ t('audience.backToHome') }}
         </VBtn>
       </template>
 
       <template v-else>
         <h4 class="text-h4 font-weight-medium mb-2">
-          Invalid or expired link
+          {{ t('audience.invalidOrExpired') }}
         </h4>
         <p class="text-body-1 mb-6">
-          This confirmation link is no longer valid. Please try subscribing again.
+          {{ t('audience.confirmInvalidDesc') }}
         </p>
         <VBtn to="/">
-          Back to Home
+          {{ t('audience.backToHome') }}
         </VBtn>
       </template>
     </div>

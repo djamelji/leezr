@@ -1,29 +1,31 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
+const { t } = useI18n()
 const deliveryStore = useDeliveryStore()
 const router = useRouter()
 
 const isLoading = ref(true)
 const statusFilter = ref('')
 
-const headers = [
-  { title: 'Reference', key: 'reference' },
-  { title: 'Status', key: 'status', width: '140px' },
-  { title: 'Destination', key: 'destination_address', sortable: false },
-  { title: 'Scheduled', key: 'scheduled_at' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '80px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('deliveries.reference'), key: 'reference' },
+  { title: t('common.status'), key: 'status', width: '140px' },
+  { title: t('deliveries.destination'), key: 'destination_address', sortable: false },
+  { title: t('deliveries.scheduled'), key: 'scheduled_at' },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '80px', sortable: false },
+])
 
-const statusOptions = [
-  { title: 'All', value: '' },
-  { title: 'Planned', value: 'planned' },
-  { title: 'In Transit', value: 'in_transit' },
-  { title: 'Delivered', value: 'delivered' },
-  { title: 'Canceled', value: 'canceled' },
-]
+const statusOptions = computed(() => [
+  { title: t('deliveries.all'), value: '' },
+  { title: t('deliveries.statusPlanned'), value: 'planned' },
+  { title: t('deliveries.statusInTransit'), value: 'in_transit' },
+  { title: t('deliveries.statusDelivered'), value: 'delivered' },
+  { title: t('deliveries.statusCanceled'), value: 'canceled' },
+])
 
 const statusColor = status => {
   const colors = {
@@ -39,25 +41,14 @@ const statusColor = status => {
 
 const statusLabel = status => {
   const labels = {
-    draft: 'Draft',
-    planned: 'Planned',
-    in_transit: 'In Transit',
-    delivered: 'Delivered',
-    canceled: 'Canceled',
+    draft: t('deliveries.statusDraft'),
+    planned: t('deliveries.statusPlanned'),
+    in_transit: t('deliveries.statusInTransit'),
+    delivered: t('deliveries.statusDelivered'),
+    canceled: t('deliveries.statusCanceled'),
   }
 
   return labels[status] || status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr)
-    return '—'
-
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 const truncate = (str, len = 40) => {
@@ -95,7 +86,7 @@ const onPageChange = page => {
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
         <div class="d-flex align-center gap-x-2">
           <VIcon icon="tabler-truck-delivery" />
-          <span>My Deliveries</span>
+          <span>{{ t('deliveries.title') }}</span>
         </div>
       </VCardTitle>
 
@@ -108,7 +99,7 @@ const onPageChange = page => {
             <AppSelect
               v-model="statusFilter"
               :items="statusOptions"
-              placeholder="Filter by status"
+              :placeholder="t('deliveries.filterByStatus')"
               clearable
             />
           </VCol>
@@ -167,7 +158,7 @@ const onPageChange = page => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No deliveries assigned to you.
+            {{ t('deliveries.noDeliveries') }}
           </div>
         </template>
 
@@ -176,7 +167,7 @@ const onPageChange = page => {
           <VDivider />
           <div class="d-flex align-center justify-space-between flex-wrap gap-3 pa-4">
             <span class="text-body-2 text-disabled">
-              {{ deliveryStore.pagination.total }} delivery(ies)
+              {{ t('deliveries.deliveryCount', { count: deliveryStore.pagination.total }) }}
             </span>
             <VPagination
               v-if="deliveryStore.pagination.last_page > 1"

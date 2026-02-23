@@ -1,4 +1,6 @@
 <script setup>
+const { t } = useI18n()
+
 import { $platformApi } from '@/utils/platformApi'
 import { refreshCsrf } from '@/utils/csrf'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
@@ -38,7 +40,7 @@ const handleSubmit = async () => {
     successMessage.value = data.message
   }
   catch {
-    successMessage.value = 'If an account exists for this email, a reset link has been sent.'
+    successMessage.value = t('auth.resetLinkSent')
   }
   finally {
     isLoading.value = false
@@ -101,10 +103,10 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Platform — Forgot Password?
+            {{ t('auth.platformForgotTitle') }}
           </h4>
           <p class="mb-0">
-            Enter your email and we'll send you instructions to reset your password
+            {{ t('auth.forgotSubtitle') }}
           </p>
         </VCardText>
 
@@ -123,7 +125,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 <AppTextField
                   v-model="email"
                   autofocus
-                  label="Email"
+                  :label="t('auth.email')"
                   placeholder="admin@leezr.com"
                   type="email"
                 />
@@ -136,7 +138,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                   :loading="isLoading"
                   :disabled="!!successMessage"
                 >
-                  Send Reset Link
+                  {{ t('auth.sendResetLink') }}
                 </VBtn>
               </VCol>
 
@@ -150,7 +152,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                     size="20"
                     class="me-1 flip-in-rtl"
                   />
-                  <span>Back to login</span>
+                  <span>{{ t('auth.backToLogin') }}</span>
                 </RouterLink>
               </VCol>
             </VRow>

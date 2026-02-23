@@ -4,6 +4,7 @@ definePage({ meta: { surface: 'structure' } })
 import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const moduleStore = useModuleStore()
 
@@ -35,7 +36,7 @@ const toggleModule = async module => {
     }
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to toggle module.'
+    errorMessage.value = error?.data?.message || t('companyModules.failedToToggle')
   }
   finally {
     togglingKey.value = null
@@ -59,28 +60,28 @@ const isToggleDisabled = module => {
 
 const entitlementChip = module => {
   if (module.type === 'core')
-    return { text: 'Core', color: 'primary' }
+    return { text: t('companyModules.coreChip'), color: 'primary' }
   if (!module.is_entitled) {
     if (module.entitlement_reason === 'plan_required')
-      return { text: `Requires ${module.min_plan}`, color: 'warning' }
+      return { text: t('companyModules.requiresPlan', { plan: module.min_plan }), color: 'warning' }
     if (module.entitlement_reason === 'incompatible_jobdomain')
-      return { text: 'Not available', color: 'error' }
+      return { text: t('companyModules.notAvailable'), color: 'error' }
 
-    return { text: 'Not available', color: 'secondary' }
+    return { text: t('companyModules.notAvailable'), color: 'secondary' }
   }
   if (module.entitlement_source === 'jobdomain')
-    return { text: 'Included', color: 'success' }
+    return { text: t('companyModules.includedChip'), color: 'success' }
 
   return null
 }
 
-const headers = [
-  { title: 'Module', key: 'name' },
-  { title: 'Description', key: 'description', sortable: false },
+const headers = computed(() => [
+  { title: t('companyModules.module'), key: 'name' },
+  { title: t('common.description'), key: 'description', sortable: false },
   { title: '', key: 'entitlement', align: 'center', width: '140px', sortable: false },
-  { title: 'Status', key: 'status', align: 'center', width: '100px', sortable: false },
+  { title: t('common.status'), key: 'status', align: 'center', width: '100px', sortable: false },
   { title: '', key: 'actions', align: 'center', width: '120px', sortable: false },
-]
+])
 </script>
 
 <template>
@@ -101,10 +102,10 @@ const headers = [
           icon="tabler-puzzle"
           class="me-2"
         />
-        Modules
+        {{ t('companyModules.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Manage the modules available for your company.
+        {{ t('companyModules.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -141,7 +142,7 @@ const headers = [
                 color="warning"
                 class="ms-2"
               >
-                Unavailable
+                {{ t('companyModules.unavailable') }}
               </VChip>
             </div>
           </div>
@@ -189,14 +190,14 @@ const headers = [
             variant="tonal"
             :to="{ name: 'company-modules-key', params: { key: item.key } }"
           >
-            Configure
+            {{ t('companyModules.configure') }}
           </VBtn>
         </template>
 
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No modules available.
+            {{ t('companyModules.noModulesAvailable') }}
           </div>
         </template>
       </VDataTable>

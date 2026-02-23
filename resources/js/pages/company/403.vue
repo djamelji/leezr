@@ -3,6 +3,7 @@ definePage({ meta: { surface: 'structure' } })
 
 import { useCompanyNav } from '@/composables/useCompanyNav'
 
+const { t } = useI18n()
 const router = useRouter()
 const { firstAccessibleRoute } = useCompanyNav()
 
@@ -44,11 +45,11 @@ onUnmounted(() => {
         />
 
         <VCardTitle class="text-h5 mb-2">
-          Access restricted
+          {{ t('forbidden.title') }}
         </VCardTitle>
 
         <VCardText class="text-body-1 mb-4">
-          This section is reserved for management roles.
+          {{ t('forbidden.message') }}
         </VCardText>
 
         <VCardText class="text-body-2 text-disabled">
@@ -58,7 +59,7 @@ onUnmounted(() => {
             indeterminate
             class="me-2"
           />
-          Redirecting in {{ countdown }}s...
+          {{ t('forbidden.redirecting', { seconds: countdown }) }}
         </VCardText>
 
         <VCardActions class="justify-center gap-2">
@@ -66,13 +67,13 @@ onUnmounted(() => {
             variant="tonal"
             @click="router.back()"
           >
-            Go back
+            {{ t('forbidden.goBack') }}
           </VBtn>
           <VBtn
             color="primary"
             :to="firstAccessibleRoute"
           >
-            Go to dashboard
+            {{ t('forbidden.goToDashboard') }}
           </VBtn>
         </VCardActions>
       </VCard>

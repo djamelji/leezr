@@ -3,6 +3,7 @@ import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/sett
 import { useAppToast } from '@/composables/useAppToast'
 import MaintenancePreview from '@/components/MaintenancePreview.vue'
 
+const { t } = useI18n()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 
@@ -69,14 +70,14 @@ const detectMyIp = async () => {
     const data = await settingsStore.fetchMyIp()
     if (data.ip && !form.allowlist_ips.includes(data.ip)) {
       form.allowlist_ips.push(data.ip)
-      toast(`Added your IP: ${data.ip}`, 'success')
+      toast(t('platformSettings.maintenance.ipAdded', { ip: data.ip }), 'success')
     }
     else if (data.ip) {
-      toast('Your IP is already in the allowlist.', 'info')
+      toast(t('platformSettings.maintenance.ipAlreadyInList'), 'info')
     }
   }
   catch {
-    toast('Failed to detect your IP.', 'error')
+    toast(t('platformSettings.maintenance.failedToDetectIp'), 'error')
   }
 }
 
@@ -97,7 +98,7 @@ const save = async () => {
     loadSettings(data.maintenance)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to save maintenance settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.maintenance.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -109,11 +110,11 @@ const resetToDefaults = async () => {
   try {
     const data = await settingsStore.updateMaintenanceSettings({ ...defaults })
 
-    toast('Maintenance settings reset to defaults.', 'success')
+    toast(t('platformSettings.maintenance.resetSuccess'), 'success')
     loadSettings(data.maintenance)
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reset maintenance settings.', 'error')
+    toast(error?.data?.message || t('platformSettings.maintenance.failedToSave'), 'error')
   }
   finally {
     isSaving.value = false
@@ -129,17 +130,17 @@ const resetToDefaults = async () => {
           icon="tabler-barrier-block"
           class="me-2"
         />
-        Maintenance Mode
+        {{ t('platformSettings.maintenance.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Control maintenance mode, IP allowlist, and public page content.
+        {{ t('platformSettings.maintenance.subtitle') }}
       </VCardSubtitle>
 
       <VCardText v-if="!isLoading">
         <!-- Section 1 — Toggle -->
         <div class="d-flex align-center justify-space-between mb-4">
           <VLabel for="maintenance-toggle">
-            Enable Maintenance Mode
+            {{ t('platformSettings.maintenance.enableMaintenance') }}
           </VLabel>
           <VSwitch
             id="maintenance-toggle"
@@ -154,17 +155,17 @@ const resetToDefaults = async () => {
           variant="tonal"
           class="mb-6"
         >
-          Enabling maintenance will block all non-platform users from accessing the application.
+          {{ t('platformSettings.maintenance.maintenanceWarning') }}
         </VAlert>
 
         <VDivider class="mb-6" />
 
         <!-- Section 2 — IP Allowlist -->
         <h6 class="text-h6 mb-4">
-          IP Allowlist
+          {{ t('platformSettings.maintenance.ipAllowlist') }}
         </h6>
         <p class="text-body-2 mb-4">
-          IPs in this list can bypass maintenance mode.
+          {{ t('platformSettings.maintenance.ipAllowlistDesc') }}
         </p>
 
         <VTable
@@ -173,9 +174,9 @@ const resetToDefaults = async () => {
         >
           <thead>
             <tr>
-              <th>IP Address</th>
+              <th>{{ t('platformSettings.maintenance.ipAddress') }}</th>
               <th class="text-end">
-                Actions
+                {{ t('common.actions') }}
               </th>
             </tr>
           </thead>
@@ -197,7 +198,7 @@ const resetToDefaults = async () => {
         <div class="d-flex gap-4 mb-6">
           <AppTextField
             v-model="newIp"
-            placeholder="Enter IP address"
+            :placeholder="t('platformSettings.maintenance.enterIpAddress')"
             class="flex-grow-1"
             @keyup.enter="addIp"
           />
@@ -205,13 +206,13 @@ const resetToDefaults = async () => {
             variant="outlined"
             @click="addIp"
           >
-            Add
+            {{ t('common.add') }}
           </VBtn>
           <VBtn
             variant="tonal"
             @click="detectMyIp"
           >
-            Detect my IP
+            {{ t('platformSettings.maintenance.detectMyIp') }}
           </VBtn>
         </div>
 
@@ -219,12 +220,12 @@ const resetToDefaults = async () => {
 
         <!-- Section 3 — Mailing List -->
         <h6 class="text-h6 mb-4">
-          Notification List
+          {{ t('platformSettings.maintenance.notificationList') }}
         </h6>
         <AppTextField
           v-model="form.list_slug"
-          label="Mailing List Slug"
-          hint="Slug of the mailing list for 'Notify me' subscriptions."
+          :label="t('platformSettings.maintenance.mailingListSlug')"
+          :hint="t('platformSettings.maintenance.mailingListHint')"
           persistent-hint
           class="mb-6"
         />
@@ -234,9 +235,9 @@ const resetToDefaults = async () => {
         <!-- Section 4 — Editable Preview -->
         <div class="d-flex align-center justify-space-between mb-4">
           <h6 class="text-h6">
-            Page Content
+            {{ t('platformSettings.maintenance.pageContent') }}
           </h6>
-          <span class="text-caption text-disabled">Click on text to edit</span>
+          <span class="text-caption text-disabled">{{ t('platformSettings.maintenance.clickToEdit') }}</span>
         </div>
 
         <MaintenancePreview
@@ -256,7 +257,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading"
           @click="save"
         >
-          Save
+          {{ t('common.save') }}
         </VBtn>
         <VBtn
           variant="outlined"
@@ -264,7 +265,7 @@ const resetToDefaults = async () => {
           :disabled="isLoading"
           @click="resetToDefaults"
         >
-          Reset to Defaults
+          {{ t('common.reset') }}
         </VBtn>
       </VCardActions>
     </VCard>

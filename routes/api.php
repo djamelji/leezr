@@ -3,6 +3,10 @@
 use App\Core\Auth\AuthController;
 use App\Core\Auth\PasswordResetController;
 use App\Core\Billing\Http\WebhookController;
+use App\Core\Plans\Http\PublicPlanController;
+use App\Core\Markets\Http\PublicI18nController;
+use App\Core\Markets\Http\PublicMarketController;
+use App\Core\Settings\Http\PublicWorldController;
 use App\Core\Theme\Http\PublicThemeController;
 use App\Http\Controllers\RuntimeErrorController;
 use App\Modules\Platform\Audience\Http\AudienceController;
@@ -16,6 +20,22 @@ Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']
 
 // Public theme (primary color + typography for unauthenticated pages)
 Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:30,1');
+
+// Public world settings (locale, currency, timezone for all pages)
+Route::get('/public/world', PublicWorldController::class)->middleware('throttle:30,1');
+
+// Public plans & pricing (ADR-100 — no auth)
+Route::prefix('public')->middleware('throttle:30,1')->group(function () {
+    Route::get('/plans', [PublicPlanController::class, 'index']);
+    Route::get('/plans/preview', [PublicPlanController::class, 'preview']);
+});
+
+// Public markets & i18n (ADR-104 — no auth)
+Route::prefix('public')->middleware('throttle:30,1')->group(function () {
+    Route::get('/markets', [PublicMarketController::class, 'index']);
+    Route::get('/markets/{key}', [PublicMarketController::class, 'show']);
+    Route::get('/i18n/{locale}/{namespace?}', [PublicI18nController::class, 'bundle']);
+});
 
 // Audience — public (throttled, no auth)
 Route::prefix('audience')->middleware('throttle:10,1')->group(function () {

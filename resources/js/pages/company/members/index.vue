@@ -8,6 +8,7 @@ import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const membersStore = useMembersStore()
 const settingsStore = useCompanySettingsStore()
@@ -88,19 +89,19 @@ onMounted(async () => {
 
 const handleMemberAdded = () => {
   isDrawerOpen.value = false
-  successMessage.value = 'Member added successfully.'
+  successMessage.value = t('members.memberAdded')
 }
 
 const removeMember = async member => {
-  if (!confirm(`Remove ${member.user.display_name} from this company?`))
+  if (!confirm(t('members.confirmRemove', { name: member.user.display_name })))
     return
 
   try {
     await membersStore.removeMember(member.id)
-    successMessage.value = 'Member removed.'
+    successMessage.value = t('members.memberRemoved')
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to remove member.'
+    errorMessage.value = error?.data?.message || t('members.failedToRemove')
   }
 }
 
@@ -195,11 +196,11 @@ const saveEditField = async () => {
   try {
     await membersStore.updateCustomFieldDefinition(editFieldDef.value.id, payload)
     await membersStore.fetchFieldActivations()
-    toast('Custom field updated.', 'success')
+    toast(t('members.customFieldUpdated'), 'success')
     closeEditField()
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update field.', 'error')
+    toast(error?.data?.message || t('members.failedToUpdateField'), 'error')
   }
   finally {
     editFieldLoading.value = false
@@ -235,7 +236,7 @@ const activateField = async def => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to activate field.', 'error')
+    toast(error?.data?.message || t('members.failedToActivate'), 'error')
   }
 }
 
@@ -249,7 +250,7 @@ const toggleVisible = async (activation, enabled) => {
     })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update.', 'error')
+    toast(error?.data?.message || t('members.failedToUpdate'), 'error')
   }
 }
 
@@ -263,7 +264,7 @@ const toggleRequired = async (activation, required) => {
     })
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update.', 'error')
+    toast(error?.data?.message || t('members.failedToUpdate'), 'error')
   }
 }
 
@@ -300,7 +301,7 @@ const createCustomField = async () => {
     isCreateFieldDialogOpen.value = false
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to create field.', 'error')
+    toast(error?.data?.message || t('members.failedToCreateField'), 'error')
   }
   finally {
     createFieldLoading.value = false
@@ -332,7 +333,7 @@ const executeDeleteField = async () => {
     deleteFieldTarget.value = null
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to delete field.', 'error')
+    toast(error?.data?.message || t('members.failedToDeleteField'), 'error')
   }
   finally {
     deleteFieldLoading.value = false
@@ -348,25 +349,25 @@ const avatarInitials = name => {
     : parts[0][0].toUpperCase()
 }
 
-const scopeOptions = [
-  { title: 'Member', value: 'company_user' },
-  { title: 'Company', value: 'company' },
-]
+const scopeOptions = computed(() => [
+  { title: t('members.scopeMember'), value: 'company_user' },
+  { title: t('members.scopeCompany'), value: 'company' },
+])
 
-const typeOptions = [
-  { title: 'Text', value: 'string' },
-  { title: 'Number', value: 'number' },
-  { title: 'Yes/No', value: 'boolean' },
-  { title: 'Date', value: 'date' },
-  { title: 'Select', value: 'select' },
-]
+const typeOptions = computed(() => [
+  { title: t('members.typeText'), value: 'string' },
+  { title: t('members.typeNumber'), value: 'number' },
+  { title: t('members.typeBoolean'), value: 'boolean' },
+  { title: t('members.typeDate'), value: 'date' },
+  { title: t('members.typeSelect'), value: 'select' },
+])
 </script>
 
 <template>
   <div>
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
-        <span>Team Members</span>
+        <span>{{ t('members.title') }}</span>
         <div
           v-if="canInvite || canManage"
           class="d-flex gap-2"
@@ -377,14 +378,14 @@ const typeOptions = [
             prepend-icon="tabler-forms"
             @click="openFieldsDrawer"
           >
-            Member Fields
+            {{ t('members.memberFields') }}
           </VBtn>
           <VBtn
             v-if="canInvite"
             prepend-icon="tabler-plus"
             @click="isDrawerOpen = true"
           >
-            Add Member
+            {{ t('members.addMember') }}
           </VBtn>
         </div>
       </VCardTitle>
@@ -413,12 +414,12 @@ const typeOptions = [
         <VTable class="text-no-wrap">
           <thead>
             <tr>
-              <th>User</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Role</th>
+              <th>{{ t('members.user') }}</th>
+              <th>{{ t('members.email') }}</th>
+              <th>{{ t('members.status') }}</th>
+              <th>{{ t('members.role') }}</th>
               <th v-if="canInvite || canManage">
-                Actions
+                {{ t('common.actions') }}
               </th>
             </tr>
           </thead>
@@ -456,7 +457,7 @@ const typeOptions = [
                   :color="member.user.status === 'active' ? 'success' : 'warning'"
                   size="small"
                 >
-                  {{ member.user.status === 'active' ? 'Active' : 'Invitation pending' }}
+                  {{ member.user.status === 'active' ? t('members.activeStatus') : t('common.invitationPending') }}
                 </VChip>
               </td>
               <td>
@@ -519,7 +520,7 @@ const typeOptions = [
     >
       <VCard>
         <VCardTitle class="d-flex align-center justify-space-between">
-          <span>Member Profile</span>
+          <span>{{ t('members.memberProfile') }}</span>
           <VBtn
             icon
             variant="text"
@@ -573,7 +574,7 @@ const typeOptions = [
               :color="quickViewMember.user?.status === 'active' ? 'success' : 'warning'"
               size="small"
             >
-              {{ quickViewMember.user?.status === 'active' ? 'Active' : 'Invitation pending' }}
+              {{ quickViewMember.user?.status === 'active' ? t('members.activeStatus') : t('common.invitationPending') }}
             </VChip>
           </div>
 
@@ -598,7 +599,7 @@ const typeOptions = [
             prepend-icon="tabler-external-link"
             @click="router.push(`/company/members/${quickViewMember.id}`); isQuickViewOpen = false"
           >
-            View full profile
+            {{ t('members.viewFullProfile') }}
           </VBtn>
         </VCardText>
       </VCard>
@@ -614,7 +615,7 @@ const typeOptions = [
       <!-- ── Edit Custom Field View ──────────────────────── -->
       <template v-if="editFieldDef">
         <AppDrawerHeaderSection
-          title="Edit Custom Field"
+          :title="t('members.editCustomField')"
           @cancel="closeEditField"
         />
 
@@ -641,21 +642,21 @@ const typeOptions = [
               size="small"
               variant="tonal"
             >
-              {{ editFieldDef.scope === 'company_user' ? 'Member' : 'Company' }}
+              {{ editFieldDef.scope === 'company_user' ? t('members.scopeMember') : t('members.scopeCompany') }}
             </VChip>
           </div>
 
           <!-- Editable fields -->
           <AppTextField
             v-model="editFieldForm.label"
-            label="Label"
+            :label="t('members.labelField')"
             class="mb-4"
           />
 
           <!-- Options editor for select type -->
           <template v-if="editFieldDef.type === 'select'">
             <div class="text-body-2 font-weight-medium mb-2">
-              Options
+              {{ t('common.options') }}
             </div>
             <div
               v-for="(option, idx) in editFieldForm.options"
@@ -689,7 +690,7 @@ const typeOptions = [
               class="mb-4"
               @click="editFieldForm.options.push('')"
             >
-              Add option
+              {{ t('members.addOption') }}
             </VBtn>
           </template>
 
@@ -700,7 +701,7 @@ const typeOptions = [
             :disabled="!editFieldForm.label.trim() || !isEditSelectValid"
             @click="saveEditField"
           >
-            Save
+            {{ t('common.save') }}
           </VBtn>
         </VCardText>
       </template>
@@ -708,7 +709,7 @@ const typeOptions = [
       <!-- ── Field List View ─────────────────────────────── -->
       <template v-else>
         <AppDrawerHeaderSection
-          title="Member Fields"
+          :title="t('members.memberFields')"
           @cancel="isFieldsDrawerOpen = false"
         />
 
@@ -725,13 +726,13 @@ const typeOptions = [
               :color="activeCount >= 50 ? 'error' : 'success'"
               size="small"
             >
-              {{ activeCount }} / 50 active fields
+              {{ t('members.activeFieldsCount', { count: activeCount }) }}
             </VChip>
           </VCardText>
 
           <!-- Section A: Active Fields -->
           <VCardTitle class="text-body-1">
-            Active Fields
+            {{ t('members.activeFields') }}
           </VCardTitle>
 
           <VTable
@@ -741,12 +742,12 @@ const typeOptions = [
           >
             <thead>
               <tr>
-                <th>Label</th>
+                <th>{{ t('members.labelField') }}</th>
                 <th style="width: 70px;">
-                  Visible
+                  {{ t('members.visible') }}
                 </th>
                 <th style="width: 70px;">
-                  Required
+                  {{ t('members.required') }}
                 </th>
                 <th style="width: 60px;" />
               </tr>
@@ -777,7 +778,7 @@ const typeOptions = [
                       variant="tonal"
                       size="x-small"
                     >
-                      system
+                      {{ t('common.system') }}
                     </VChip>
                     <VChip
                       v-if="activation.definition?.company_id"
@@ -785,7 +786,7 @@ const typeOptions = [
                       variant="tonal"
                       size="x-small"
                     >
-                      custom
+                      {{ t('common.custom') }}
                     </VChip>
                     <VChip
                       v-if="activation.used_count > 0"
@@ -836,7 +837,7 @@ const typeOptions = [
             v-else
             class="text-disabled"
           >
-            No member fields activated yet.
+            {{ t('members.noFieldsActivated') }}
           </VCardText>
 
           <!-- Section B: Available Fields -->
@@ -844,7 +845,7 @@ const typeOptions = [
             <VDivider class="my-2" />
 
             <VCardTitle class="text-body-1">
-              Available Fields
+              {{ t('members.availableFields') }}
             </VCardTitle>
 
             <VCardText>
@@ -877,7 +878,7 @@ const typeOptions = [
                 :color="customFieldCount >= 20 ? 'error' : 'info'"
                 size="small"
               >
-                {{ customFieldCount }} / 20 custom fields
+                {{ t('members.customFieldCount', { count: customFieldCount }) }}
               </VChip>
               <VBtn
                 variant="tonal"
@@ -886,7 +887,7 @@ const typeOptions = [
                 :disabled="customFieldCount >= 20"
                 @click="openCreateFieldDialog"
               >
-                Create Custom Field
+                {{ t('members.createCustomField') }}
               </VBtn>
             </VCardText>
           </template>
@@ -899,22 +900,22 @@ const typeOptions = [
       v-model="isCreateFieldDialogOpen"
       max-width="500"
     >
-      <VCard title="Create Custom Field">
+      <VCard :title="t('members.createCustomField')">
         <VCardText>
           <VRow>
             <VCol cols="6">
               <AppTextField
                 v-model="createFieldForm.label"
-                label="Label"
-                placeholder="e.g. Employee ID"
+                :label="t('members.labelField')"
+                :placeholder="t('members.labelPlaceholder')"
               />
             </VCol>
             <VCol cols="6">
               <AppTextField
                 v-model="createFieldForm.code"
-                label="Code"
-                placeholder="e.g. employee_id"
-                hint="Auto-generated from label"
+                :label="t('common.code')"
+                :placeholder="t('members.codePlaceholder')"
+                :hint="t('members.codeHint')"
                 persistent-hint
                 @input="codeManuallyEdited = true"
               />
@@ -922,14 +923,14 @@ const typeOptions = [
             <VCol cols="6">
               <AppSelect
                 v-model="createFieldForm.scope"
-                label="Scope"
+                :label="t('common.scope')"
                 :items="scopeOptions"
               />
             </VCol>
             <VCol cols="6">
               <AppSelect
                 v-model="createFieldForm.type"
-                label="Type"
+                :label="t('common.type')"
                 :items="typeOptions"
               />
             </VCol>
@@ -940,7 +941,7 @@ const typeOptions = [
               cols="12"
             >
               <div class="text-body-2 font-weight-medium mb-2">
-                Options
+                {{ t('common.options') }}
               </div>
               <div
                 v-for="(option, idx) in createFieldForm.options"
@@ -973,7 +974,7 @@ const typeOptions = [
                 prepend-icon="tabler-plus"
                 @click="createFieldForm.options.push('')"
               >
-                Add option
+                {{ t('members.addOption') }}
               </VBtn>
             </VCol>
           </VRow>
@@ -985,7 +986,7 @@ const typeOptions = [
             variant="tonal"
             @click="isCreateFieldDialogOpen = false"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </VBtn>
           <VBtn
             color="primary"
@@ -993,7 +994,7 @@ const typeOptions = [
             :disabled="!createFieldForm.code || !createFieldForm.label || !isSelectValid"
             @click="createCustomField"
           >
-            Create
+            {{ t('common.create') }}
           </VBtn>
         </VCardActions>
       </VCard>
@@ -1004,16 +1005,15 @@ const typeOptions = [
       v-model="isDeleteFieldDialogOpen"
       max-width="450"
     >
-      <VCard title="Delete Custom Field">
+      <VCard :title="t('members.deleteCustomField')">
         <VCardText>
           <template v-if="deleteFieldTarget?.used_count > 0">
-            This field is currently used in <strong>{{ deleteFieldTarget.used_count }}</strong> profile(s).
-            Deleting it will permanently remove all stored values.
+            {{ t('members.deleteConfirmUsed', { count: deleteFieldTarget.used_count }) }}
             <br><br>
-            <strong>This action cannot be undone.</strong>
+            <strong>{{ t('members.deleteIrreversible') }}</strong>
           </template>
           <template v-else>
-            Are you sure you want to delete this custom field?
+            {{ t('members.deleteConfirm') }}
           </template>
         </VCardText>
 
@@ -1023,14 +1023,14 @@ const typeOptions = [
             variant="tonal"
             @click="isDeleteFieldDialogOpen = false"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </VBtn>
           <VBtn
             color="error"
             :loading="deleteFieldLoading"
             @click="executeDeleteField"
           >
-            Delete permanently
+            {{ t('members.deletePermanently') }}
           </VBtn>
         </VCardActions>
       </VCard>

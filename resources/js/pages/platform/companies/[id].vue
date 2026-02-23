@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -10,6 +11,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
@@ -44,7 +46,7 @@ onMounted(async () => {
     applyProfile(profileData)
   }
   catch {
-    toast('Failed to load company profile.', 'error')
+    toast(t('platformCompanyDetail.failedToLoad'), 'error')
     router.push({ name: 'platform-companies' })
   }
   finally {
@@ -62,7 +64,7 @@ const changePlan = async planKey => {
   try {
     await companiesStore.updateCompanyPlan(company.value.id, planKey)
     company.value.plan_key = planKey
-    toast('Plan updated.', 'success')
+    toast(t('companies.planUpdated'), 'success')
 
     // Refresh modules since entitlements may have changed
     const profileData = await companiesStore.fetchCompanyProfile(route.params.id)
@@ -71,7 +73,7 @@ const changePlan = async planKey => {
   }
   catch (error) {
     planForm.value.plan_key = company.value.plan_key
-    toast(error?.data?.message || 'Failed to update plan.', 'error')
+    toast(error?.data?.message || t('companies.failedToUpdatePlan'), 'error')
   }
   finally {
     actionLoading.value = false
@@ -80,7 +82,7 @@ const changePlan = async planKey => {
 
 // ─── Suspend / Reactivate ───────────────────────────
 const suspend = async () => {
-  if (!confirm(`Suspend "${company.value.name}"? All company members will lose access.`))
+  if (!confirm(t('companies.confirmSuspend', { name: company.value.name })))
     return
 
   actionLoading.value = true
@@ -89,10 +91,10 @@ const suspend = async () => {
     const data = await companiesStore.suspendCompany(company.value.id)
 
     company.value = data.company
-    toast('Company suspended.', 'success')
+    toast(t('companies.companySuspended'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to suspend company.', 'error')
+    toast(error?.data?.message || t('companies.failedToSuspend'), 'error')
   }
   finally {
     actionLoading.value = false
@@ -106,10 +108,10 @@ const reactivate = async () => {
     const data = await companiesStore.reactivateCompany(company.value.id)
 
     company.value = data.company
-    toast('Company reactivated.', 'success')
+    toast(t('companies.companyReactivated'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reactivate company.', 'error')
+    toast(error?.data?.message || t('companies.failedToReactivate'), 'error')
   }
   finally {
     actionLoading.value = false
@@ -140,7 +142,7 @@ const availableModules = computed(() =>
 )
 
 const planLabel = planKey => {
-  const labels = { pro: 'Pro', business: 'Business' }
+  const labels = { pro: t('platformModules.pro'), business: t('platformModules.business') }
 
   return labels[planKey] || planKey
 }
@@ -164,7 +166,7 @@ const toggleModule = async mod => {
     toast(data.message, 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to toggle module.', 'error')
+    toast(error?.data?.message || t('platformCompanyDetail.failedToToggleModule'), 'error')
   }
   finally {
     moduleToggleLoading.value = null
@@ -175,17 +177,6 @@ const isModuleToggleDisabled = mod => {
   return mod.type === 'core' || !mod.is_entitled || !mod.is_enabled_globally
 }
 
-// ─── Helpers ────────────────────────────────────────
-const formatDate = dateStr => {
-  if (!dateStr)
-    return '—'
-
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
 </script>
 
 <template>
@@ -243,14 +234,14 @@ const formatDate = dateStr => {
             icon="tabler-info-circle"
             class="me-1"
           />
-          Overview
+          {{ t('platformCompanyDetail.overview') }}
         </VTab>
         <VTab value="modules">
           <VIcon
             icon="tabler-puzzle"
             class="me-1"
           />
-          Modules
+          {{ t('platformCompanyDetail.modules') }}
         </VTab>
       </VTabs>
 
@@ -270,7 +261,7 @@ const formatDate = dateStr => {
                 >
                   <AppTextField
                     :model-value="company.name"
-                    label="Name"
+                    :label="t('common.name')"
                     disabled
                   />
                 </VCol>
@@ -280,7 +271,7 @@ const formatDate = dateStr => {
                 >
                   <AppTextField
                     :model-value="company.slug"
-                    label="Slug"
+                    :label="t('common.slug')"
                     disabled
                   />
                 </VCol>
@@ -290,7 +281,7 @@ const formatDate = dateStr => {
                 >
                   <AppTextField
                     :model-value="formatDate(company.created_at)"
-                    label="Created"
+                    :label="t('common.created')"
                     disabled
                   />
                 </VCol>
@@ -300,7 +291,7 @@ const formatDate = dateStr => {
                 >
                   <AppTextField
                     :model-value="String(company.memberships_count ?? 0)"
-                    label="Members"
+                    :label="t('companies.members')"
                     disabled
                   />
                 </VCol>
@@ -308,7 +299,7 @@ const formatDate = dateStr => {
                 <!-- Job Domain -->
                 <VCol cols="12">
                   <div class="text-body-1 font-weight-medium mb-2">
-                    Job Domain
+                    {{ t('platformCompanyDetail.jobDomain') }}
                   </div>
                   <div
                     v-if="company.jobdomains?.length"
@@ -326,7 +317,7 @@ const formatDate = dateStr => {
                   <span
                     v-else
                     class="text-disabled"
-                  >No job domain assigned</span>
+                  >{{ t('platformCompanyDetail.noJobDomain') }}</span>
                 </VCol>
 
                 <!-- Plan -->
@@ -339,7 +330,7 @@ const formatDate = dateStr => {
                     :items="companiesStore.plans"
                     item-title="name"
                     item-value="key"
-                    label="Plan"
+                    :label="t('companies.plan')"
                     :loading="actionLoading"
                     @update:model-value="changePlan"
                   />
@@ -354,10 +345,10 @@ const formatDate = dateStr => {
               <div class="d-flex align-center justify-space-between">
                 <div>
                   <div class="text-body-1 font-weight-medium">
-                    Company Status
+                    {{ t('platformCompanyDetail.companyStatus') }}
                   </div>
                   <div class="text-body-2 text-medium-emphasis">
-                    {{ company.status === 'active' ? 'This company is active. Suspending will block all member access.' : 'This company is suspended. Members cannot access the platform.' }}
+                    {{ company.status === 'active' ? t('platformCompanyDetail.activeDescription') : t('platformCompanyDetail.suspendedDescription') }}
                   </div>
                 </div>
                 <VBtn
@@ -367,7 +358,7 @@ const formatDate = dateStr => {
                   :loading="actionLoading"
                   @click="suspend"
                 >
-                  Suspend
+                  {{ t('companies.suspend') }}
                 </VBtn>
                 <VBtn
                   v-else
@@ -376,7 +367,7 @@ const formatDate = dateStr => {
                   :loading="actionLoading"
                   @click="reactivate"
                 >
-                  Reactivate
+                  {{ t('companies.reactivate') }}
                 </VBtn>
               </div>
             </VCardText>
@@ -391,7 +382,7 @@ const formatDate = dateStr => {
                 icon="tabler-puzzle"
                 class="me-2"
               />
-              Company Modules
+              {{ t('platformCompanyDetail.companyModules') }}
             </VCardTitle>
 
             <!-- Section: Core -->
@@ -403,10 +394,10 @@ const formatDate = dateStr => {
                   class="me-2"
                   color="primary"
                 />
-                Core Modules
+                {{ t('platformCompanyDetail.coreModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Always active. Cannot be disabled.
+                {{ t('platformCompanyDetail.coreModulesInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -427,7 +418,7 @@ const formatDate = dateStr => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Core
+                        {{ t('platformCompanyDetail.coreChip') }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -456,10 +447,10 @@ const formatDate = dateStr => {
                   class="me-2"
                   color="success"
                 />
-                Included by Job Domain
+                {{ t('platformCompanyDetail.includedByJobDomain') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Available through the company's job domain.
+                {{ t('platformCompanyDetail.includedByJobDomainInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -480,7 +471,7 @@ const formatDate = dateStr => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Included
+                        {{ t('platformCompanyDetail.includedChip') }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -510,10 +501,10 @@ const formatDate = dateStr => {
                   class="me-2"
                   color="warning"
                 />
-                Plan-gated Modules
+                {{ t('platformCompanyDetail.planGatedModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Requires a plan upgrade to unlock.
+                {{ t('platformCompanyDetail.planGatedInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -535,7 +526,7 @@ const formatDate = dateStr => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        Requires {{ planLabel(mod.min_plan) }}
+                        {{ t('platformCompanyDetail.requiresPlan', { plan: planLabel(mod.min_plan) }) }}
                       </VChip>
                     </td>
                     <td>
@@ -564,10 +555,10 @@ const formatDate = dateStr => {
                   class="me-2"
                   color="secondary"
                 />
-                Other Modules
+                {{ t('platformCompanyDetail.otherModules') }}
               </VCardTitle>
               <VCardSubtitle class="text-body-2 mb-2">
-                Not currently available for this company.
+                {{ t('platformCompanyDetail.otherModulesInfo') }}
               </VCardSubtitle>
               <VTable class="text-no-wrap">
                 <tbody>
@@ -589,7 +580,7 @@ const formatDate = dateStr => {
                         variant="tonal"
                         class="ms-2"
                       >
-                        {{ mod.entitlement_reason === 'incompatible_jobdomain' ? 'Incompatible' : 'Not available' }}
+                        {{ mod.entitlement_reason === 'incompatible_jobdomain' ? t('platformCompanyDetail.incompatible') : t('platformCompanyDetail.notAvailable') }}
                       </VChip>
                     </td>
                     <td>
@@ -612,7 +603,7 @@ const formatDate = dateStr => {
               v-if="!modules.length"
               class="text-center text-disabled"
             >
-              No modules available.
+              {{ t('platformCompanyDetail.noModulesAvailable') }}
             </VCardText>
           </VCard>
         </VWindowItem>

@@ -12,73 +12,74 @@ definePage({
 
 usePublicTheme()
 
+const { t } = useI18n()
 const appName = useAppName()
 const auth = useAuthStore()
 
-const capabilities = [
+const capabilities = computed(() => [
   {
     icon: 'tabler-users-group',
-    title: 'Manage your clients',
-    desc: 'Keep all your contacts, history, and interactions organized in one place.',
+    title: t('landing.manageClients'),
+    desc: t('landing.manageClientsDesc'),
   },
   {
     icon: 'tabler-user-shield',
-    title: 'Organize your team',
-    desc: 'Assign roles, manage access, and keep everyone aligned on what matters.',
+    title: t('landing.organizeTeam'),
+    desc: t('landing.organizeTeamDesc'),
   },
   {
     icon: 'tabler-chart-dots-3',
-    title: 'Track your operations',
-    desc: 'Follow orders, shipments, and tasks from start to finish with full visibility.',
+    title: t('landing.trackOperations'),
+    desc: t('landing.trackOperationsDesc'),
   },
   {
     icon: 'tabler-adjustments-horizontal',
-    title: 'Customize your workspace',
-    desc: 'Adapt the interface, branding, and features to match how you work.',
+    title: t('landing.customizeWorkspace'),
+    desc: t('landing.customizeWorkspaceDesc'),
   },
   {
     icon: 'tabler-lock',
-    title: 'Stay in control',
-    desc: 'Secure access, session management, and permissions — you decide who sees what.',
+    title: t('landing.stayInControl'),
+    desc: t('landing.stayInControlDesc'),
   },
   {
     icon: 'tabler-rocket',
-    title: 'Grow with confidence',
-    desc: 'Add team members, services, and locations as your business expands.',
+    title: t('landing.growWithConfidence'),
+    desc: t('landing.growWithConfidenceDesc'),
   },
-]
+])
 
-const industries = [
-  { icon: 'tabler-truck-delivery', label: 'Delivery & Logistics' },
-  { icon: 'tabler-scissors', label: 'Beauty & Wellness' },
-  { icon: 'tabler-shopping-bag', label: 'Retail & Commerce' },
-  { icon: 'tabler-heart-handshake', label: 'Associations' },
-  { icon: 'tabler-tools', label: 'Service Companies' },
-  { icon: 'tabler-building-store', label: 'Growing SMEs' },
-]
+const industries = computed(() => [
+  { icon: 'tabler-truck-delivery', label: t('landing.deliveryLogistics') },
+  { icon: 'tabler-scissors', label: t('landing.beautyWellness') },
+  { icon: 'tabler-shopping-bag', label: t('landing.retailCommerce') },
+  { icon: 'tabler-heart-handshake', label: t('landing.associations') },
+  { icon: 'tabler-tools', label: t('landing.serviceCompanies') },
+  { icon: 'tabler-building-store', label: t('landing.growingSMEs') },
+])
 
-const reasons = [
+const reasons = computed(() => [
   {
     icon: 'tabler-device-desktop',
-    title: 'Modern interface',
-    desc: 'A clean, intuitive workspace designed for daily use — not a cluttered dashboard.',
+    title: t('landing.modernInterface'),
+    desc: t('landing.modernInterfaceDesc'),
   },
   {
     icon: 'tabler-arrows-maximize',
-    title: 'Flexible by design',
-    desc: 'Activate only what you need. Your workspace adapts to your activity, not the other way around.',
+    title: t('landing.flexibleByDesign'),
+    desc: t('landing.flexibleByDesignDesc'),
   },
   {
     icon: 'tabler-clock-check',
-    title: 'Reliable & secure',
-    desc: 'Your data stays protected. Role-based access, encrypted sessions, and full control over your account.',
+    title: t('landing.reliableSecure'),
+    desc: t('landing.reliableSecureDesc'),
   },
   {
     icon: 'tabler-trending-up',
-    title: 'Designed for growth',
-    desc: 'Start small and scale up. Add people, features, and locations without starting over.',
+    title: t('landing.designedForGrowth'),
+    desc: t('landing.designedForGrowthDesc'),
   },
-]
+])
 </script>
 
 <template>
@@ -107,7 +108,7 @@ const reasons = [
               color="primary"
               to="/dashboard"
             >
-              Dashboard
+              {{ t('Dashboard') }}
             </VBtn>
           </template>
           <template v-else>
@@ -116,14 +117,14 @@ const reasons = [
               to="/login"
               class="d-none d-sm-flex"
             >
-              Sign In
+              {{ t('landing.signIn') }}
             </VBtn>
 
             <VBtn
               color="primary"
               to="/register"
             >
-              Start Free
+              {{ t('landing.startFree') }}
             </VBtn>
           </template>
         </div>
@@ -135,11 +136,10 @@ const reasons = [
       <VContainer>
         <div class="hero-content text-center mx-auto">
           <h1 class="hero-title mb-6">
-            Manage your business.<br>Simply. Professionally.
+            {{ t('landing.heroTitle') }}
           </h1>
           <p class="text-h6 text-medium-emphasis mb-8 mx-auto" style="max-inline-size: 560px;">
-            All your clients, team, operations, and growth — in one place.
-            The workspace your business deserves.
+            {{ t('landing.heroSubtitle') }}
           </p>
           <div class="d-flex gap-4 justify-center flex-wrap">
             <template v-if="auth.isLoggedIn">
@@ -148,7 +148,7 @@ const reasons = [
                 size="large"
                 to="/dashboard"
               >
-                Go to Dashboard
+                {{ t('landing.goToDashboard') }}
               </VBtn>
             </template>
             <template v-else>
@@ -157,14 +157,14 @@ const reasons = [
                 size="large"
                 to="/register"
               >
-                Start Free
+                {{ t('landing.startFree') }}
               </VBtn>
               <VBtn
                 variant="outlined"
                 size="large"
                 to="/login"
               >
-                Sign In
+                {{ t('landing.signIn') }}
               </VBtn>
             </template>
           </div>
@@ -182,13 +182,13 @@ const reasons = [
             size="small"
             class="mb-4"
           >
-            All-in-one
+            {{ t('landing.allInOne') }}
           </VChip>
           <h2 class="text-h3 font-weight-bold mb-2">
-            Everything you need to run your business
+            {{ t('landing.everythingYouNeed') }}
           </h2>
           <p class="text-body-1 text-medium-emphasis mx-auto" style="max-inline-size: 520px;">
-            Stop juggling between tools. One workspace to manage your day-to-day, your team, and your growth.
+            {{ t('landing.stopJuggling') }}
           </p>
         </div>
 
@@ -234,13 +234,13 @@ const reasons = [
             size="small"
             class="mb-4"
           >
-            For every industry
+            {{ t('landing.forEveryIndustry') }}
           </VChip>
           <h2 class="text-h3 font-weight-bold mb-2">
-            Built for real businesses
+            {{ t('landing.builtForRealBusinesses') }}
           </h2>
           <p class="text-body-1 text-medium-emphasis mx-auto" style="max-inline-size: 520px;">
-            Whether you run a delivery company, a beauty salon, or a growing team — the workspace adapts to your activity.
+            {{ t('landing.builtForRealDesc') }}
           </p>
         </div>
 
@@ -278,7 +278,7 @@ const reasons = [
       <VContainer>
         <div class="text-center mb-12">
           <h2 class="text-h3 font-weight-bold">
-            Why businesses choose {{ appName }}
+            {{ t('landing.whyChoose', { app: appName }) }}
           </h2>
         </div>
 
@@ -320,17 +320,17 @@ const reasons = [
     >
       <VContainer class="text-center">
         <h2 class="text-h3 font-weight-bold text-primary mb-2">
-          Ready to take control of your business?
+          {{ t('landing.readyToTakeControl') }}
         </h2>
         <p class="text-h6 text-medium-emphasis mb-8 mx-auto" style="max-inline-size: 480px;">
-          Create your workspace in minutes. No credit card required.
+          {{ t('landing.createInMinutes') }}
         </p>
         <VBtn
           color="primary"
           size="large"
           to="/register"
         >
-          Create your workspace
+          {{ t('landing.createYourWorkspace') }}
         </VBtn>
       </VContainer>
     </section>
@@ -339,14 +339,14 @@ const reasons = [
     <footer class="py-6" :style="{ background: 'rgb(var(--v-theme-surface))' }">
       <VContainer>
         <div class="d-flex flex-wrap justify-center align-center gap-4 text-body-2 text-medium-emphasis">
-          <span>&copy; {{ new Date().getFullYear() }} {{ appName }}. All rights reserved.</span>
+          <span>&copy; {{ new Date().getFullYear() }} {{ appName }}. {{ t('landing.allRightsReserved') }}</span>
           <RouterLink
             :to="auth.isLoggedIn ? '/dashboard' : '/login'"
             class="text-primary text-decoration-none"
           >
-            {{ auth.isLoggedIn ? 'Dashboard' : 'Sign In' }}
+            {{ auth.isLoggedIn ? t('Dashboard') : t('landing.signIn') }}
           </RouterLink>
-          <span>Privacy</span>
+          <span>{{ t('landing.privacy') }}</span>
         </div>
       </VContainer>
     </footer>

@@ -1,6 +1,8 @@
 <script setup>
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 
+const { t } = useI18n()
+
 const props = defineProps({
   member: {
     type: Object,
@@ -95,8 +97,8 @@ const handleSave = () => {
       >
         <AppTextField
           v-model="form.first_name"
-          label="First Name"
-          placeholder="First Name"
+          :label="t('members.firstName')"
+          :placeholder="t('members.firstName')"
           :disabled="!editable"
         />
       </VCol>
@@ -106,8 +108,8 @@ const handleSave = () => {
       >
         <AppTextField
           v-model="form.last_name"
-          label="Last Name"
-          placeholder="Last Name"
+          :label="t('members.lastName')"
+          :placeholder="t('members.lastName')"
           :disabled="!editable"
         />
       </VCol>
@@ -119,7 +121,7 @@ const handleSave = () => {
       >
         <AppTextField
           :model-value="baseFields?.email || ''"
-          label="Email"
+          :label="t('common.email')"
           disabled
         />
       </VCol>
@@ -132,15 +134,15 @@ const handleSave = () => {
         <AppSelect
           v-if="editable && !member?._isProtected"
           v-model="form.company_role_id"
-          label="Role"
+          :label="t('members.role')"
           :items="roleOptions"
           clearable
-          placeholder="No role"
+          :placeholder="t('members.noRole')"
         />
         <AppTextField
           v-else
           :model-value="member?.company_role?.name || member?.role || ''"
-          label="Role"
+          :label="t('members.role')"
           disabled
           class="text-capitalize"
         />
@@ -153,7 +155,7 @@ const handleSave = () => {
         </VCol>
         <VCol cols="12">
           <h6 class="text-h6">
-            Additional Information
+            {{ t('members.additionalInformation') }}
           </h6>
         </VCol>
         <DynamicFormRenderer
@@ -179,7 +181,7 @@ const handleSave = () => {
           type="submit"
           :loading="isSaving"
         >
-          Save changes
+          {{ t('common.saveChanges') }}
         </VBtn>
       </VCol>
     </VRow>

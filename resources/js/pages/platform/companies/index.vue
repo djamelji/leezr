@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { formatDate } from '@/utils/datetime'
 
 definePage({
   meta: {
@@ -10,6 +11,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
@@ -32,28 +34,28 @@ onMounted(async () => {
   }
 })
 
-const headers = [
-  { title: 'Name', key: 'name' },
-  { title: 'Slug', key: 'slug' },
-  { title: 'Status', key: 'status', align: 'center', width: '120px' },
-  { title: 'Plan', key: 'plan_key', align: 'center', width: '160px', sortable: false },
-  { title: 'Members', key: 'memberships_count', align: 'center', width: '100px' },
-  { title: 'Created', key: 'created_at', width: '140px' },
-  { title: 'Actions', key: 'actions', align: 'center', width: '160px', sortable: false },
-]
+const headers = computed(() => [
+  { title: t('common.name'), key: 'name' },
+  { title: t('common.slug'), key: 'slug' },
+  { title: t('common.status'), key: 'status', align: 'center', width: '120px' },
+  { title: t('Plan'), key: 'plan_key', align: 'center', width: '160px', sortable: false },
+  { title: t('companies.members'), key: 'memberships_count', align: 'center', width: '100px' },
+  { title: t('common.created'), key: 'created_at', width: '140px' },
+  { title: t('common.actions'), key: 'actions', align: 'center', width: '160px', sortable: false },
+])
 
 const suspend = async company => {
-  if (!confirm(`Suspend "${company.name}"? All company members will lose access.`))
+  if (!confirm(t('companies.confirmSuspend', { name: company.name })))
     return
 
   actionLoading.value = company.id
 
   try {
     await companiesStore.suspendCompany(company.id)
-    toast('Company suspended.', 'success')
+    toast(t('companies.companySuspended'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to suspend company.', 'error')
+    toast(error?.data?.message || t('companies.failedToSuspend'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -68,10 +70,10 @@ const changePlan = async (company, planKey) => {
 
   try {
     await companiesStore.updateCompanyPlan(company.id, planKey)
-    toast('Plan updated.', 'success')
+    toast(t('companies.planUpdated'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to update plan.', 'error')
+    toast(error?.data?.message || t('companies.failedToUpdatePlan'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -83,10 +85,10 @@ const reactivate = async company => {
 
   try {
     await companiesStore.reactivateCompany(company.id)
-    toast('Company reactivated.', 'success')
+    toast(t('companies.companyReactivated'), 'success')
   }
   catch (error) {
-    toast(error?.data?.message || 'Failed to reactivate company.', 'error')
+    toast(error?.data?.message || t('companies.failedToReactivate'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -104,15 +106,11 @@ const onPageChange = async page => {
   }
 }
 
-const formatDate = dateStr => {
+const fmtDate = dateStr => {
   if (!dateStr)
     return '—'
 
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDate(dateStr)
 }
 </script>
 
@@ -124,10 +122,10 @@ const formatDate = dateStr => {
           icon="tabler-building"
           class="me-2"
         />
-        Companies
+        {{ t('companies.title') }}
       </VCardTitle>
       <VCardSubtitle>
-        Manage all companies on the platform.
+        {{ t('companies.subtitle') }}
       </VCardSubtitle>
 
       <VDataTable
@@ -174,7 +172,7 @@ const formatDate = dateStr => {
 
         <!-- Created at -->
         <template #item.created_at="{ item }">
-          {{ formatDate(item.created_at) }}
+          {{ fmtDate(item.created_at) }}
         </template>
 
         <!-- Actions -->
@@ -187,7 +185,7 @@ const formatDate = dateStr => {
             :loading="actionLoading === item.id"
             @click.stop="suspend(item)"
           >
-            Suspend
+            {{ t('companies.suspend') }}
           </VBtn>
           <VBtn
             v-else
@@ -197,14 +195,14 @@ const formatDate = dateStr => {
             :loading="actionLoading === item.id"
             @click.stop="reactivate(item)"
           >
-            Reactivate
+            {{ t('companies.reactivate') }}
           </VBtn>
         </template>
 
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            No companies found.
+            {{ t('companies.noCompanies') }}
           </div>
         </template>
       </VDataTable>

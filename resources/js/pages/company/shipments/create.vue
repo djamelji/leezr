@@ -3,6 +3,7 @@ import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
 
+const { t } = useI18n()
 const shipmentStore = useShipmentStore()
 const router = useRouter()
 
@@ -31,7 +32,7 @@ const handleSubmit = async () => {
     await router.push({ name: 'company-shipments-id', params: { id: shipment.id } })
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Failed to create shipment.'
+    errorMessage.value = error?.data?.message || t('shipments.failedToCreate')
   }
   finally {
     isSubmitting.value = false
@@ -51,7 +52,7 @@ const handleSubmit = async () => {
         <VIcon icon="tabler-arrow-left" />
       </VBtn>
       <h4 class="text-h4">
-        New Shipment
+        {{ t('shipments.newShipment') }}
       </h4>
     </div>
 
@@ -75,8 +76,8 @@ const handleSubmit = async () => {
             >
               <AppTextField
                 v-model="form.origin_address"
-                label="Origin Address"
-                placeholder="Pickup location"
+                :label="t('shipments.originAddress')"
+                :placeholder="t('shipments.pickupLocation')"
               />
             </VCol>
 
@@ -86,8 +87,8 @@ const handleSubmit = async () => {
             >
               <AppTextField
                 v-model="form.destination_address"
-                label="Destination Address"
-                placeholder="Delivery location"
+                :label="t('shipments.destinationAddress')"
+                :placeholder="t('shipments.deliveryLocation')"
               />
             </VCol>
 
@@ -97,7 +98,7 @@ const handleSubmit = async () => {
             >
               <AppTextField
                 v-model="form.scheduled_at"
-                label="Scheduled Date"
+                :label="t('shipments.scheduledDate')"
                 type="datetime-local"
               />
             </VCol>
@@ -105,8 +106,8 @@ const handleSubmit = async () => {
             <VCol cols="12">
               <AppTextField
                 v-model="form.notes"
-                label="Notes"
-                placeholder="Additional information..."
+                :label="t('shipments.notes')"
+                :placeholder="t('shipments.additionalInfo')"
               />
             </VCol>
 
@@ -116,14 +117,14 @@ const handleSubmit = async () => {
                   type="submit"
                   :loading="isSubmitting"
                 >
-                  Create Shipment
+                  {{ t('shipments.createShipment') }}
                 </VBtn>
                 <VBtn
                   variant="tonal"
                   color="secondary"
                   :to="{ name: 'company-shipments' }"
                 >
-                  Cancel
+                  {{ t('common.cancel') }}
                 </VBtn>
               </div>
             </VCol>

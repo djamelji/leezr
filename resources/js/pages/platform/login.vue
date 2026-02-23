@@ -1,4 +1,6 @@
 <script setup>
+const { t } = useI18n()
+
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
@@ -45,7 +47,7 @@ const handleLogin = async () => {
     await router.push('/platform')
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || 'Invalid credentials.'
+    errorMessage.value = error?.data?.message || t('auth.invalidCredentials')
   }
   finally {
     isLoading.value = false
@@ -108,10 +110,10 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Platform Admin
+            {{ t('auth.platformAdmin') }}
           </h4>
           <p class="mb-0">
-            Sign in to the platform backoffice
+            {{ t('auth.platformSignInSubtitle') }}
           </p>
         </VCardText>
         <VCardText>
@@ -131,7 +133,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 <AppTextField
                   v-model="form.email"
                   autofocus
-                  label="Email"
+                  :label="t('auth.email')"
                   type="email"
                   placeholder="admin@leezr.com"
                 />
@@ -140,7 +142,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
               <VCol cols="12">
                 <AppTextField
                   v-model="form.password"
-                  label="Password"
+                  :label="t('auth.password')"
                   placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
                   autocomplete="current-password"
@@ -153,7 +155,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                     class="text-primary text-body-2"
                     to="/platform/forgot-password"
                   >
-                    Forgot Password?
+                    {{ t('auth.forgotPassword') }}
                   </RouterLink>
                 </div>
 
@@ -162,7 +164,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                   type="submit"
                   :loading="isLoading"
                 >
-                  Login
+                  {{ t('auth.login') }}
                 </VBtn>
               </VCol>
             </VRow>
