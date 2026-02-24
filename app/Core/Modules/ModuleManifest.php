@@ -8,8 +8,8 @@ namespace App\Core\Modules;
  * Replaces the raw associative arrays previously returned by ModuleRegistry.
  * All consumers access typed properties instead of fragile array keys.
  *
- * Idle fields (scope, type, visibility) are typed but have zero consumers.
- * They establish the contract for future categorisation logic.
+ * scope: 'admin' (platform admin portal) | 'company' (tenant portal).
+ * surface: 'structure' (governance UI) | 'operations' (business UI).
  */
 final class ModuleManifest
 {
@@ -22,7 +22,7 @@ final class ModuleManifest
         public readonly Capabilities $capabilities,
         public readonly array $permissions,
         public readonly array $bundles,
-        public readonly string $scope = 'company',
+        public readonly string $scope,
         public readonly string $type = 'core',
         public readonly string $visibility = 'visible',
         public readonly array $requires = [],

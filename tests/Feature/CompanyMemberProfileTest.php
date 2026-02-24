@@ -9,12 +9,13 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\ActivatesCompanyModules;
 use Tests\Support\SetsUpCompanyRbac;
 use Tests\TestCase;
 
 class CompanyMemberProfileTest extends TestCase
 {
-    use RefreshDatabase, SetsUpCompanyRbac;
+    use RefreshDatabase, SetsUpCompanyRbac, ActivatesCompanyModules;
 
     private User $owner;
     private User $admin;
@@ -35,6 +36,7 @@ class CompanyMemberProfileTest extends TestCase
         $this->member = User::factory()->create();
 
         $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->activateCompanyModules($this->company);
         $adminRole = $this->setUpCompanyRbac($this->company);
 
         $this->ownerMembership = $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);

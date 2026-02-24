@@ -6,6 +6,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.markets',
     navActiveLink: 'platform-international-tab',
   },
 })
@@ -28,6 +29,8 @@ const form = reactive({
   locale: '',
   timezone: '',
   dial_code: '',
+  flag_code: '',
+  flag_svg: '',
   is_active: true,
   is_default: false,
   sort_order: 0,
@@ -63,6 +66,8 @@ const loadMarket = async () => {
       locale: data.market.locale,
       timezone: data.market.timezone,
       dial_code: data.market.dial_code,
+      flag_code: data.market.flag_code || '',
+      flag_svg: data.market.flag_svg || '',
       is_active: data.market.is_active,
       is_default: data.market.is_default,
       sort_order: data.market.sort_order,
@@ -97,6 +102,18 @@ const saveGeneral = async () => {
   finally {
     isSaving.value = false
   }
+}
+
+// ─── Flag reset ─────────────────────────────────────
+const hasDefaultFlag = computed(() => {
+  return ['FR', 'GB'].includes(form.key)
+})
+
+const resetToDefaultFlag = async () => {
+  const data = await marketsStore.fetchMarket(route.params.key)
+
+  form.flag_svg = data.market.flag_svg || ''
+  form.flag_code = data.market.flag_code || ''
 }
 
 // ─── Legal statuses ─────────────────────────────────
@@ -358,6 +375,61 @@ const legalHeaders = [
                   v-model="form.is_default"
                   :label="t('markets.isDefault')"
                   disabled
+                />
+              </VCol>
+
+              <!-- Flag Section -->
+              <VCol cols="12">
+                <h6 class="text-h6 mb-2">
+                  {{ t('markets.flag') }}
+                </h6>
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <AppTextField
+                  v-model="form.flag_code"
+                  :label="t('markets.flagCode')"
+                  placeholder="FR"
+                  hint="ISO 3166-1 alpha-2"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="8"
+              >
+                <div class="d-flex align-center gap-4">
+                  <div
+                    v-if="form.flag_svg"
+                    v-html="form.flag_svg"
+                    style="width: 64px; height: 44px;"
+                    class="border rounded pa-1 d-flex align-center justify-center"
+                  />
+                  <VIcon
+                    v-else
+                    icon="tabler-flag-off"
+                    size="40"
+                    color="disabled"
+                  />
+                  <VBtn
+                    v-if="hasDefaultFlag"
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="tabler-restore"
+                    @click="resetToDefaultFlag"
+                  >
+                    {{ t('markets.flagReset') }}
+                  </VBtn>
+                </div>
+              </VCol>
+              <VCol cols="12">
+                <AppTextarea
+                  v-model="form.flag_svg"
+                  :label="t('markets.flagSvg')"
+                  rows="4"
+                  placeholder="<svg viewBox='0 0 640 480'>...</svg>"
+                  :hint="t('markets.flagSvgHint')"
                 />
               </VCol>
             </VRow>

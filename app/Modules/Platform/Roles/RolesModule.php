@@ -33,7 +33,7 @@ class RolesModule implements ModuleDefinition
                     'permissions' => ['manage_roles'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

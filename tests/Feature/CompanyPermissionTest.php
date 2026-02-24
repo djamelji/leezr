@@ -545,10 +545,12 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 5 admin permissions
+        // 7 admin permissions (includes core.billing + core.modules)
         $this->assertEquals([
+            'billing.manage',
             'members.credentials',
             'members.manage',
+            'modules.manage',
             'settings.manage',
             'shipments.delete',
             'shipments.manage_fields',

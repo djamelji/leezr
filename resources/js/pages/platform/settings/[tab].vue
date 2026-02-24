@@ -8,6 +8,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.settings',
     navActiveLink: 'platform-settings-tab',
   },
 })

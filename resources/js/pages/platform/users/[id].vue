@@ -11,6 +11,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.users',
     permission: 'manage_platform_users',
   },
 })

@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { surface: 'structure' } })
+definePage({ meta: { surface: 'structure', module: 'core.modules' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'

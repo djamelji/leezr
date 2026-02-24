@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\HealthController;
+use App\Modules\Infrastructure\System\Http\HealthController;
 use Illuminate\Support\Facades\Route;
 
 // Health endpoint (ADR-046 F4) — public, no auth, no-cache headers

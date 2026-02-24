@@ -10,11 +10,12 @@ use App\Core\Jobdomains\Jobdomain;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\ActivatesCompanyModules;
 use Tests\TestCase;
 
 class CompanyCustomFieldDeletionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ActivatesCompanyModules;
 
     private User $owner;
     private Company $company;
@@ -28,6 +29,7 @@ class CompanyCustomFieldDeletionTest extends TestCase
 
         $this->owner = User::factory()->create();
         $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
             'role' => 'owner',
@@ -141,6 +143,7 @@ class CompanyCustomFieldDeletionTest extends TestCase
         $ownerB = User::factory()->create();
         $companyB = Company::create(['name' => 'Co B', 'slug' => 'co-b']);
         $companyB->memberships()->create(['user_id' => $ownerB->id, 'role' => 'owner']);
+        $this->activateCompanyModules($companyB);
         $companyB->jobdomains()->sync([$this->jobdomain->id]);
 
         $response = $this->actingAs($ownerB)

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Platform\Modules\Http;
 
+use App\Core\Modules\AdminModuleService;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
@@ -14,19 +15,21 @@ use Illuminate\Validation\Rule;
 class ModuleController
 {
     /**
-     * List company-scope modules in the platform catalog (toggleable).
-     * Applies override merge: override ?? manifest/synced value.
+     * List modules in the platform catalog, separated by scope.
+     * Company-scope: toggleable, with override merge.
+     * Platform-scope: read-only manifest data.
      */
     public function index(): JsonResponse
     {
-        $definitions = ModuleRegistry::forScope('company');
-        $companyModuleKeys = array_keys($definitions);
+        // ─── Company-scope modules (toggleable) ─────────────
+        $companyDefinitions = ModuleRegistry::forScope('company');
+        $companyModuleKeys = array_keys($companyDefinitions);
 
-        $modules = PlatformModule::whereIn('key', $companyModuleKeys)
+        $companyModules = PlatformModule::whereIn('key', $companyModuleKeys)
             ->orderBy('sort_order')
             ->get()
-            ->map(function (PlatformModule $module) use ($definitions) {
-                $manifest = $definitions[$module->key] ?? null;
+            ->map(function (PlatformModule $module) use ($companyDefinitions) {
+                $manifest = $companyDefinitions[$module->key] ?? null;
                 $arr = $module->toArray();
 
                 // Effective values (override ?? synced/manifest)
@@ -48,8 +51,29 @@ class ModuleController
             ->sortBy('sort_order')
             ->values();
 
+        // ─── Platform-scope modules (read-only) ─────────────
+        $platformDefinitions = ModuleRegistry::forScope('admin');
+
+        $platformModules = collect($platformDefinitions)
+            ->map(fn ($manifest) => [
+                'key' => $manifest->key,
+                'name' => $manifest->name,
+                'description' => $manifest->description,
+                'type' => $manifest->type,
+                'visibility' => $manifest->visibility,
+                'surface' => $manifest->surface,
+                'sort_order' => $manifest->sortOrder,
+                'icon_type' => $manifest->iconType,
+                'icon_name' => $manifest->iconRef,
+                'permissions' => array_map(fn ($p) => $p['key'] ?? $p, $manifest->permissions),
+                'capabilities' => $manifest->capabilities->toArray(),
+            ])
+            ->sortBy('sort_order')
+            ->values();
+
         return response()->json([
-            'modules' => $modules,
+            'company' => $companyModules,
+            'platform' => $platformModules,
         ]);
     }
 
@@ -157,23 +181,45 @@ class ModuleController
 
     /**
      * Toggle a module's global availability.
+     * Supports both company-scope and admin-scope (addon) modules.
      */
     public function toggle(string $key): JsonResponse
     {
-        $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+        $manifest = ModuleRegistry::definitions()[$key] ?? null;
 
-        if (!in_array($key, $companyModuleKeys, true)) {
-            return response()->json([
-                'message' => 'Only company-scope modules can be toggled.',
-            ], 422);
+        if (!$manifest) {
+            return response()->json(['message' => 'Module not found.'], 404);
         }
 
+        // Admin-scope modules: delegate to AdminModuleService
+        if ($manifest->scope === 'admin') {
+            $module = PlatformModule::where('key', $key)->first();
+
+            if (!$module) {
+                return response()->json(['message' => 'Module not found.'], 404);
+            }
+
+            $result = $module->is_enabled_globally
+                ? AdminModuleService::disable($key)
+                : AdminModuleService::enable($key);
+
+            if (!$result['success']) {
+                return response()->json($result['data'], $result['status']);
+            }
+
+            $module->refresh();
+
+            return response()->json([
+                'message' => $result['data']['message'],
+                'module' => $module,
+            ]);
+        }
+
+        // Company-scope modules: existing toggle logic
         $module = PlatformModule::where('key', $key)->first();
 
         if (!$module) {
-            return response()->json([
-                'message' => 'Module not found.',
-            ], 404);
+            return response()->json(['message' => 'Module not found.'], 404);
         }
 
         $module->is_enabled_globally = !$module->is_enabled_globally;

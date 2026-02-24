@@ -6,6 +6,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.modules',
     permission: 'manage_modules',
   },
 })

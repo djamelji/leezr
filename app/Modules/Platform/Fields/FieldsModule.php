@@ -33,7 +33,7 @@ class FieldsModule implements ModuleDefinition
                     'permissions' => ['manage_field_definitions'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

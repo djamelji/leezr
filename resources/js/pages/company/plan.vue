@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { surface: 'structure' } })
+definePage({ meta: { surface: 'structure', module: 'core.billing' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { usePublicPlans } from '@/composables/usePublicPlans'

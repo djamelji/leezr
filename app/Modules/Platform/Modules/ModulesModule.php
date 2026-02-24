@@ -20,7 +20,7 @@ class ModulesModule implements ModuleDefinition
                 navItems: [
                     ['key' => 'modules', 'title' => 'Modules', 'to' => ['name' => 'platform-modules'], 'icon' => 'tabler-puzzle', 'permission' => 'manage_modules'],
                 ],
-                routeNames: ['platform-modules'],
+                routeNames: ['platform-modules', 'platform-modules-key'],
             ),
             permissions: [
                 ['key' => 'manage_modules', 'label' => 'Manage Modules'],
@@ -33,7 +33,7 @@ class ModulesModule implements ModuleDefinition
                     'permissions' => ['manage_modules'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

@@ -91,6 +91,7 @@ const createForm = ref({
 })
 
 const headers = [
+  { title: t('markets.flag'), key: 'flag_svg', width: '60px', sortable: false },
   { title: t('markets.key'), key: 'key', width: '80px' },
   { title: t('markets.name'), key: 'name' },
   { title: t('markets.currency'), key: 'currency', width: '100px' },
@@ -220,6 +221,21 @@ const navigateToMarket = key => {
         class="text-no-wrap"
         @click:row="(_, { item }) => navigateToMarket(item.key)"
       >
+        <template #item.flag_svg="{ item }">
+          <span
+            v-if="item.flag_svg"
+            v-html="item.flag_svg"
+            class="d-inline-flex"
+            style="width: 32px; height: 22px;"
+          />
+          <VIcon
+            v-else
+            icon="tabler-flag"
+            size="20"
+            color="disabled"
+          />
+        </template>
+
         <template #item.key="{ item }">
           <span class="font-weight-medium">{{ item.key }}</span>
         </template>

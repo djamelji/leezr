@@ -20,7 +20,7 @@ class JobdomainsModule implements ModuleDefinition
                 navItems: [
                     ['key' => 'jobdomains', 'title' => 'Job Domains', 'to' => ['name' => 'platform-jobdomains'], 'icon' => 'tabler-briefcase', 'permission' => 'manage_jobdomains'],
                 ],
-                routeNames: ['platform-jobdomains'],
+                routeNames: ['platform-jobdomains', 'platform-jobdomains-id'],
             ),
             permissions: [
                 ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],
@@ -33,7 +33,7 @@ class JobdomainsModule implements ModuleDefinition
                     'permissions' => ['manage_jobdomains'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

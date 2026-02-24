@@ -13,7 +13,7 @@ use App\Modules\Platform\Maintenance\Http\MaintenanceSettingsController;
 use App\Modules\Platform\Settings\Http\GeneralSettingsController;
 use App\Modules\Platform\Settings\Http\SessionSettingsController;
 use App\Modules\Platform\Settings\Http\TypographyController;
-use App\Modules\Platform\Theme\Http\ThemeController;
+use App\Modules\Platform\Settings\Http\ThemeController;
 use App\Modules\Platform\Roles\Http\PermissionController;
 use App\Modules\Platform\Roles\Http\RoleController;
 use App\Modules\Platform\Users\Http\UserController;
@@ -25,8 +25,8 @@ use App\Modules\Platform\Translations\Http\TranslationController;
 use App\Modules\Platform\Translations\Http\TranslationMatrixController;
 use App\Modules\Platform\Translations\Http\OverrideController;
 use App\Modules\Platform\Settings\Http\WorldSettingsController;
-use App\Platform\Auth\PlatformAuthController;
-use App\Platform\Auth\PlatformPasswordResetController;
+use App\Modules\Infrastructure\AdminAuth\Http\PlatformAuthController;
+use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
 use Illuminate\Support\Facades\Route;
 
 // Platform auth — public (throttled)
@@ -43,7 +43,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::post('/logout', [PlatformAuthController::class, 'logout']);
 
     // Companies
-    Route::middleware('platform.permission:manage_companies')->group(function () {
+    Route::middleware(['module.active:platform.companies', 'platform.permission:manage_companies'])->group(function () {
         Route::get('/companies', [CompanyController::class, 'index']);
         Route::get('/companies/{id}', [CompanyController::class, 'show']);
         Route::put('/companies/{id}/suspend', [CompanyController::class, 'suspend']);
@@ -51,6 +51,10 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/companies/{id}/plan', [CompanyController::class, 'updatePlan']);
         Route::put('/companies/{id}/modules/{key}/enable', [CompanyModuleController::class, 'enable']);
         Route::put('/companies/{id}/modules/{key}/disable', [CompanyModuleController::class, 'disable']);
+    });
+
+    // Plans
+    Route::middleware(['module.active:platform.plans', 'platform.permission:manage_plans'])->group(function () {
         Route::get('/plans', [PlanCrudController::class, 'index']);
         Route::get('/plans/{key}', [PlanCrudController::class, 'show']);
         Route::post('/plans', [PlanCrudController::class, 'store']);
@@ -59,12 +63,12 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Company users (read-only supervision)
-    Route::middleware('platform.permission:view_company_users')->group(function () {
+    Route::middleware(['module.active:platform.companies', 'platform.permission:view_company_users'])->group(function () {
         Route::get('/company-users', [CompanyUserController::class, 'index']);
     });
 
     // Platform users (CRUD)
-    Route::middleware('platform.permission:manage_platform_users')->group(function () {
+    Route::middleware(['module.active:platform.users', 'platform.permission:manage_platform_users'])->group(function () {
         Route::get('/platform-users', [UserController::class, 'index']);
         Route::post('/platform-users', [UserController::class, 'store']);
         Route::put('/platform-users/{id}', [UserController::class, 'update']);
@@ -72,13 +76,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Platform user credentials (privileged)
-    Route::middleware('platform.permission:manage_platform_user_credentials')->group(function () {
+    Route::middleware(['module.active:platform.users', 'platform.permission:manage_platform_user_credentials'])->group(function () {
         Route::post('/platform-users/{id}/reset-password', [PlatformPasswordResetController::class, 'adminResetPassword']);
         Route::put('/platform-users/{id}/password', [UserController::class, 'setPassword']);
     });
 
     // Roles (CRUD)
-    Route::middleware('platform.permission:manage_roles')->group(function () {
+    Route::middleware(['module.active:platform.roles', 'platform.permission:manage_roles'])->group(function () {
         Route::get('/roles', [RoleController::class, 'index']);
         Route::post('/roles', [RoleController::class, 'store']);
         Route::put('/roles/{id}', [RoleController::class, 'update']);
@@ -86,12 +90,12 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Permissions (read-only)
-    Route::middleware('platform.permission:manage_roles')->group(function () {
+    Route::middleware(['module.active:platform.roles', 'platform.permission:manage_roles'])->group(function () {
         Route::get('/permissions', [PermissionController::class, 'index']);
     });
 
     // Modules
-    Route::middleware('platform.permission:manage_modules')->group(function () {
+    Route::middleware(['module.active:platform.modules', 'platform.permission:manage_modules'])->group(function () {
         Route::get('/modules', [ModuleController::class, 'index']);
         Route::get('/modules/{key}', [ModuleController::class, 'show']);
         Route::put('/modules/{key}/toggle', [ModuleController::class, 'toggle']);
@@ -99,7 +103,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Field Definitions + Activations
-    Route::middleware('platform.permission:manage_field_definitions')->group(function () {
+    Route::middleware(['module.active:platform.fields', 'platform.permission:manage_field_definitions'])->group(function () {
         Route::get('/field-definitions', [FieldDefinitionController::class, 'index']);
         Route::post('/field-definitions', [FieldDefinitionController::class, 'store']);
         Route::put('/field-definitions/{id}', [FieldDefinitionController::class, 'update']);
@@ -110,24 +114,24 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Platform user profile (show with dynamic fields)
-    Route::middleware('platform.permission:manage_platform_users')->group(function () {
+    Route::middleware(['module.active:platform.users', 'platform.permission:manage_platform_users'])->group(function () {
         Route::get('/platform-users/{id}', [UserController::class, 'show']);
     });
 
     // General Settings
-    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_theme_settings'])->group(function () {
         Route::get('/general-settings', [GeneralSettingsController::class, 'show']);
         Route::put('/general-settings', [GeneralSettingsController::class, 'update']);
     });
 
     // Theme Settings
-    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_theme_settings'])->group(function () {
         Route::get('/theme', [ThemeController::class, 'show']);
         Route::put('/theme', [ThemeController::class, 'update']);
     });
 
     // Typography Settings
-    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_theme_settings'])->group(function () {
         Route::get('/typography', [TypographyController::class, 'show']);
         Route::put('/typography', [TypographyController::class, 'update']);
         Route::post('/font-families', [TypographyController::class, 'createFamily']);
@@ -137,26 +141,26 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Session Settings
-    Route::middleware('platform.permission:manage_session_settings')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_session_settings'])->group(function () {
         Route::get('/session-settings', [SessionSettingsController::class, 'show']);
         Route::put('/session-settings', [SessionSettingsController::class, 'update']);
     });
 
     // World Settings (localization, currency, timezone)
-    Route::middleware('platform.permission:manage_theme_settings')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_theme_settings'])->group(function () {
         Route::get('/world-settings', [WorldSettingsController::class, 'show']);
         Route::put('/world-settings', [WorldSettingsController::class, 'update']);
     });
 
     // Maintenance Settings
-    Route::middleware('platform.permission:manage_maintenance')->group(function () {
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_maintenance'])->group(function () {
         Route::get('/maintenance-settings', [MaintenanceSettingsController::class, 'show']);
         Route::put('/maintenance-settings', [MaintenanceSettingsController::class, 'update']);
         Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
     });
 
     // Billing / Payments governance (ADR-101, ADR-102)
-    Route::middleware('platform.permission:manage_billing')->group(function () {
+    Route::middleware(['module.active:platform.billing', 'platform.permission:manage_billing'])->group(function () {
         Route::get('/billing/providers', [BillingConfigController::class, 'providers']);
         Route::get('/billing/config', [BillingConfigController::class, 'showConfig']);
         Route::put('/billing/config', [BillingConfigController::class, 'updateConfig']);
@@ -168,7 +172,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Markets governance (ADR-104)
-    Route::middleware('platform.permission:manage_markets')->group(function () {
+    Route::middleware(['module.active:platform.markets', 'platform.permission:manage_markets'])->group(function () {
         // Markets CRUD
         Route::get('/markets/export', [MarketCrudController::class, 'export']);
         Route::post('/markets/import-preview', [MarketCrudController::class, 'importPreview']);
@@ -201,7 +205,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Translation governance (ADR-104 — separate permission)
-    Route::middleware('platform.permission:manage_translations')->group(function () {
+    Route::middleware(['module.active:platform.translations', 'platform.permission:manage_translations'])->group(function () {
         // Stats + Namespaces
         Route::get('/translations/stats', [TranslationMatrixController::class, 'stats']);
         Route::get('/translations/namespaces', [TranslationMatrixController::class, 'namespaces']);
@@ -228,7 +232,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::post('/heartbeat', fn () => response()->noContent());
 
     // Job Domains (CRUD)
-    Route::middleware('platform.permission:manage_jobdomains')->group(function () {
+    Route::middleware(['module.active:platform.jobdomains', 'platform.permission:manage_jobdomains'])->group(function () {
         Route::get('/jobdomains', [JobdomainController::class, 'index']);
         Route::get('/jobdomains/{id}', [JobdomainController::class, 'show']);
         Route::post('/jobdomains', [JobdomainController::class, 'store']);

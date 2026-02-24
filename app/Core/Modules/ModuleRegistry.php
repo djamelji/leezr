@@ -108,6 +108,13 @@ class ModuleRegistry
 
         foreach (static::discoverModules() as $class) {
             $manifest = $class::manifest();
+
+            if (!in_array($manifest->scope, ['admin', 'company'], true)) {
+                throw new \RuntimeException(
+                    "Module '{$manifest->key}' declares invalid scope '{$manifest->scope}'. Allowed: admin, company."
+                );
+            }
+
             $manifests[$manifest->key] = $manifest;
             $classMap[$manifest->key] = $class;
         }

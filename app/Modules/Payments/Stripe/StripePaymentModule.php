@@ -26,7 +26,7 @@ class StripePaymentModule implements ModuleDefinition
             capabilities: new Capabilities(),
             permissions: [],
             bundles: [],
-            scope: 'platform',
+            scope: 'admin',
             type: 'addon',
             visibility: 'hidden',
             iconRef: 'tabler-brand-stripe',

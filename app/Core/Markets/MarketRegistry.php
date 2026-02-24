@@ -2,6 +2,8 @@
 
 namespace App\Core\Markets;
 
+use App\Core\Markets\SvgSanitizer;
+
 /**
  * DB-backed market registry with in-memory cache.
  * Follows PlanRegistry/ModuleRegistry/JobdomainRegistry sync pattern.
@@ -34,6 +36,8 @@ class MarketRegistry
                     'locale' => 'fr-FR',
                     'timezone' => 'Europe/Paris',
                     'dial_code' => '+33',
+                    'flag_code' => 'FR',
+                    'flag_svg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><g fill-rule="evenodd" stroke-width="1pt"><path fill="#fff" d="M0 0h640v480H0z"/><path fill="#002654" d="M0 0h213.3v480H0z"/><path fill="#ce1126" d="M426.7 0H640v480H426.7z"/></g></svg>',
                     'is_active' => true,
                     'is_default' => true,
                     'sort_order' => 0,
@@ -55,6 +59,8 @@ class MarketRegistry
                     'locale' => 'en-GB',
                     'timezone' => 'Europe/London',
                     'dial_code' => '+44',
+                    'flag_code' => 'GB',
+                    'flag_svg' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><path fill="#012169" d="M0 0h640v480H0z"/><path fill="#FFF" d="m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z"/><path fill="#C8102E" d="m424 281 216 159v40L369 281zm-184 20 6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z"/><path fill="#FFF" d="M241 0v480h160V0zM0 160v160h640V160z"/><path fill="#C8102E" d="M0 193v96h640v-96zM273 0v480h96V0z"/></svg>',
                     'is_active' => true,
                     'is_default' => false,
                     'sort_order' => 1,
@@ -96,18 +102,28 @@ class MarketRegistry
 
         // Sync markets
         foreach ($defaults['markets'] as $key => $def) {
+            $existingMarket = Market::where('key', $key)->first();
+
+            $flagData = [];
+            if (!$existingMarket || empty($existingMarket->flag_code)) {
+                $flagData['flag_code'] = $def['flag_code'] ?? null;
+            }
+            if (!$existingMarket || empty($existingMarket->flag_svg)) {
+                $flagData['flag_svg'] = isset($def['flag_svg']) ? SvgSanitizer::sanitize($def['flag_svg']) : null;
+            }
+
             $market = Market::updateOrCreate(
                 ['key' => $key],
-                [
+                array_merge([
                     'name' => $def['name'],
                     'currency' => $def['currency'],
                     'locale' => $def['locale'],
                     'timezone' => $def['timezone'],
                     'dial_code' => $def['dial_code'],
                     'sort_order' => $def['sort_order'] ?? 0,
-                    'is_active' => Market::where('key', $key)->value('is_active') ?? ($def['is_active'] ?? true),
-                    'is_default' => Market::where('key', $key)->value('is_default') ?? ($def['is_default'] ?? false),
-                ],
+                    'is_active' => ($existingMarket?->is_active) ?? ($def['is_active'] ?? true),
+                    'is_default' => ($existingMarket?->is_default) ?? ($def['is_default'] ?? false),
+                ], $flagData),
             );
 
             // Sync legal statuses for this market
@@ -208,22 +224,34 @@ class MarketRegistry
         $created = 0;
         $updated = 0;
 
+        // Filter out metadata keys
+        $data = array_filter($data, fn ($key) => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($data, &$created, &$updated) {
             foreach ($data as $key => $def) {
                 $exists = Market::where('key', $key)->exists();
 
+                $marketData = [
+                    'name' => $def['name'],
+                    'currency' => $def['currency'] ?? 'USD',
+                    'locale' => $def['locale'] ?? 'en-US',
+                    'timezone' => $def['timezone'] ?? 'UTC',
+                    'dial_code' => $def['dial_code'] ?? '+1',
+                    'sort_order' => $def['sort_order'] ?? 0,
+                    'is_active' => $def['is_active'] ?? true,
+                    'is_default' => $def['is_default'] ?? false,
+                ];
+
+                if (!empty($def['flag_code'])) {
+                    $marketData['flag_code'] = $def['flag_code'];
+                }
+                if (!empty($def['flag_svg'])) {
+                    $marketData['flag_svg'] = SvgSanitizer::sanitize($def['flag_svg']);
+                }
+
                 $market = Market::updateOrCreate(
                     ['key' => $key],
-                    [
-                        'name' => $def['name'],
-                        'currency' => $def['currency'] ?? 'USD',
-                        'locale' => $def['locale'] ?? 'en-US',
-                        'timezone' => $def['timezone'] ?? 'UTC',
-                        'dial_code' => $def['dial_code'] ?? '+1',
-                        'sort_order' => $def['sort_order'] ?? 0,
-                        'is_active' => $def['is_active'] ?? true,
-                        'is_default' => $def['is_default'] ?? false,
-                    ],
+                    $marketData,
                 );
 
                 $exists ? $updated++ : $created++;

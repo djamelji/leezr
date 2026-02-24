@@ -20,7 +20,7 @@ class UsersModule implements ModuleDefinition
                 navItems: [
                     ['key' => 'platform-users', 'title' => 'Platform Users', 'to' => ['name' => 'platform-users'], 'icon' => 'tabler-user-shield', 'permission' => 'manage_platform_users'],
                 ],
-                routeNames: ['platform-users'],
+                routeNames: ['platform-users', 'platform-users-id'],
             ),
             permissions: [
                 ['key' => 'manage_platform_users', 'label' => 'Manage Platform Users'],
@@ -34,7 +34,7 @@ class UsersModule implements ModuleDefinition
                     'permissions' => ['manage_platform_users', 'manage_platform_user_credentials'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

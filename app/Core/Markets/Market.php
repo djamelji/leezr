@@ -16,6 +16,8 @@ class Market extends Model
         'locale',
         'timezone',
         'dial_code',
+        'flag_code',
+        'flag_svg',
         'is_active',
         'is_default',
         'sort_order',

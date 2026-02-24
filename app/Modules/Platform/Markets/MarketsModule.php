@@ -26,7 +26,7 @@ class MarketsModule implements ModuleDefinition
                 ['key' => 'manage_markets', 'label' => 'Manage markets, languages, legal statuses & FX rates'],
             ],
             bundles: [],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
             visibility: 'visible',
         );

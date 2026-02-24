@@ -7,11 +7,12 @@ use App\Core\Models\User;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\ActivatesCompanyModules;
 use Tests\TestCase;
 
 class NameSplitTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ActivatesCompanyModules;
 
     // ─── 1) Register with first_name + last_name ──────────
 
@@ -68,6 +69,7 @@ class NameSplitTest extends TestCase
         $owner = User::factory()->create();
         $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
+        $this->activateCompanyModules($company);
 
         $response = $this->actingAs($owner)
             ->withHeaders(['X-Company-Id' => $company->id])

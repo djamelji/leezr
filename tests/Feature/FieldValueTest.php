@@ -14,11 +14,12 @@ use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\ActivatesCompanyModules;
 use Tests\TestCase;
 
 class FieldValueTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ActivatesCompanyModules;
 
     private User $owner;
     private Company $company;
@@ -33,6 +34,7 @@ class FieldValueTest extends TestCase
         // Company context
         $this->owner = User::factory()->create();
         $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
             'role' => 'owner',

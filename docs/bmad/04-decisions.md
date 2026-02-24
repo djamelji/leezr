@@ -2432,4 +2432,220 @@ definePage({
 
 ---
 
+## ADR-105 : Market Flags (SVG) + Export/Import JSON Metadata
+
+- **Date** : 2026-02-24
+- **Contexte** : Les marchés n'avaient aucune représentation visuelle (drapeau). L'export JSON ne contenait pas de métadonnées de version. L'import ne filtrait pas les clés internes, risquant de créer des marchés fantômes à partir de clés comme `_meta`.
+- **Décision** :
+  1. **2 nouvelles colonnes** sur `markets` : `flag_code` (VARCHAR 2, nullable — ISO 3166-1 alpha-2) et `flag_svg` (LONGTEXT, nullable — markup SVG sanitisé).
+  2. **SvgSanitizer** (`app/Core/Markets/SvgSanitizer.php`) : Service de sanitisation SVG par allowlist de tags et d'attributs via DOMDocument. Supprime `<script>`, `<foreignObject>`, attributs `on*`, href `javascript:`/`data:`. Tout SVG est sanitisé avant stockage en DB.
+  3. **Seed defaults** : FR (tricolore) et GB (Union Jack) fournis en SVG inline dans `MarketRegistry::seedDefaults()`, sanitisés au passage par `SvgSanitizer::sanitize()`.
+  4. **Sync protecteur** : `MarketRegistry::sync()` ne remplace pas les flags existants (préserve les éditions admin). Seuls les champs vides sont peuplés depuis les seed defaults.
+  5. **Import smart** : `importFromArray()` n'inclut `flag_code`/`flag_svg` que si non-vides dans le payload d'import (pas d'écrasement par valeur nulle). Les clés commençant par `_` sont filtrées avant traitement.
+  6. **Export avec `_meta`** : L'export JSON inclut un objet `_meta: { version, exported_at }` pour traçabilité. Le preview et l'apply d'import filtrent `_meta` côté backend.
+  7. **UI table** : Colonne drapeau en première position dans `_TabMarkets.vue` — SVG inline (32×22px) ou icône fallback `tabler-flag`.
+  8. **UI détail** : Section "Flag" dans le tab General de `[key].vue` — champ code ISO, textarea SVG avec preview live (64×44px), bouton reset pour recharger la valeur serveur.
+  9. **Validation** : `flag_code` (nullable, string, size:2), `flag_svg` (nullable, string, max:50000) sur store et update.
+- **Fichiers** :
+  - Créés : `database/migrations/2026_02_24_100001_add_flag_columns_to_markets.php`, `app/Core/Markets/SvgSanitizer.php`
+  - Modifiés : `Market.php` ($fillable), `MarketRegistry.php` (seed + sync + import), `MarketCrudController.php` (validation + export + sanitize), `_TabMarkets.vue`, `[key].vue`, `en.json`, `fr.json`
+- **Conséquences** :
+  - Chaque marché peut afficher un drapeau SVG inline — zéro dépendance externe, zéro requête réseau
+  - Le SVG est toujours sanitisé avant stockage → safe pour `v-html`
+  - L'export JSON est versionné et auto-documenté
+  - L'import est robuste : pas de marchés fantômes, pas d'écrasement involontaire des drapeaux
+
+---
+
+## ADR-106 : Séparation UI Modules Entreprise / Modules Plateforme
+
+- **Date** : 2026-02-24
+- **Contexte** : La page `/platform/modules` affichait uniquement les modules company-scope (core.members, core.settings, logistics_*) sous le titre "Modules plateforme", créant une confusion architecturale. Les 14 modules platform-scope (platform.dashboard, platform.users, platform.plans, etc.) étaient invisibles dans l'UI — aucune vue d'ensemble des capacités internes de la plateforme.
+- **Décision** :
+  1. **Aucune modification d'architecture** : pas de changement de scope dans les manifests, pas de nouvelle colonne DB, pas de modification du ModuleRegistry.
+  2. **Controller `index()`** : Retourne désormais `{ company: [...], platform: [...] }` au lieu de `{ modules: [...] }`. Les modules company restent identiques (override merge, toggleable). Les modules platform sont construits en lecture seule depuis les manifests (key, name, description, type, visibility, surface, sortOrder, icon, permissions, capabilities).
+  3. **UI à onglets** : La page `/platform/modules` utilise `VTabs` (pill style) avec deux onglets :
+     - **"Modules entreprise"** : comportement identique à l'existant (filtres type/plan/status, toggle global, click → page détail, chips jobdomains)
+     - **"Modules plateforme"** : table lecture seule avec nom+description, key, badge "Internal", surface, chips permissions. Pas de toggle, pas de pricing, pas de navigation vers détail. Les modules `visibility: hidden` sont exclus.
+  4. **Store** : Nouveau state `_platformModules` + getter `platformModules`. `fetchModules()` lit `data.company` et `data.platform`.
+  5. **i18n** : 3 clés ajoutées (en + fr) : `companyModules`, `platformTab`, `platformSubtitle`.
+- **Fichiers** :
+  - Modifiés : `ModuleController.php` (index), `settings.store.js` (state + getter + fetch), `modules/index.vue` (VTabs layout), `en.json`, `fr.json`
+- **Conséquences** :
+  - Visibilité complète : l'admin voit les deux scopes de modules séparément
+  - Clarté structurelle : les modules entreprise sont gouvernables, les modules plateforme sont informationnels
+  - Pas de mélange de scopes — la séparation est explicite dans l'UI
+  - Zéro impact sur les endpoints existants (show, toggle, updateConfig restent company-scope only)
+
+## ADR-107 : Backend Activation Contract — Module Route Gating
+
+- **Date** : 2026-02-24
+- **Contexte** : Les routes company-scope `core.settings` et `core.members` n'étaient pas protégées par le middleware `company.access:use-module,{key}`. Un utilisateur dont le module était désactivé pouvait toujours accéder aux endpoints. L'audit LOT 1 a identifié ce manque.
+- **Décision** :
+  1. **Toute route company-module** est wrappée dans un `Route::middleware('company.access:use-module,{moduleKey}')->group(...)` dans `routes/company.php`.
+  2. **Test automatisé** : `CompanyModuleRoutesAreGatedTest` scanne toutes les routes Laravel, vérifie que chaque controller sous `App\Modules\` en scope company porte le middleware `company.access:use-module,{key}`. Toute nouvelle route non-gatée fait échouer la CI.
+  3. **Trait de test** : `tests/Support/ActivatesCompanyModules.php` — appelle `ModuleRegistry::sync()` + crée les `CompanyModule` records pour tous les modules company-scope. Appliqué à tous les tests existants qui touchent des routes module-gatées.
+  4. **Routes non-gatées** (par design) : Company plan (ADR-100), Billing checkout (ADR-101), Modules management, Company roles, User profile — ces routes ne sont pas liées à un module spécifique.
+- **Fichiers** :
+  - Modifiés : `routes/company.php`, 9 fichiers de tests existants, `tests/Feature/ExampleTest.php`
+  - Créés : `tests/Feature/CompanyModuleRoutesAreGatedTest.php`, `tests/Support/ActivatesCompanyModules.php`
+- **Conséquences** :
+  - Contrat contractuel : impossible d'ajouter une route company-module sans la gater — le test l'attrape
+  - Les tests existants ont été migrés vers le trait `ActivatesCompanyModules`
+  - 193 → 206 tests (ajout des tests module-dependency en LOT 2)
+
+## ADR-108 : Enforcement des dépendances `requires` entre modules
+
+- **Date** : 2026-02-24
+- **Contexte** : Le champ `ModuleManifest::requires` existait mais aucun module ne l'utilisait et aucun test ne validait son enforcement. Les modules logistics (tracking, fleet, analytics) n'étaient pas protégés par un lien de dépendance vers `logistics_shipments`.
+- **Décision** :
+  1. **Dépendances déclarées** : `logistics_tracking`, `logistics_fleet`, `logistics_analytics` requièrent tous `logistics_shipments` via `requires: ['logistics_shipments']`.
+  2. **Activation bloquée** : `DependencyResolver::canActivate()` vérifie que tous les modules requis sont actifs via `ModuleGate::isActive()`. `CompanyModuleService::enable()` retourne 422 avec `missing: [...]` si non satisfait.
+  3. **Désactivation bloquée** : `DependencyResolver::canDeactivate()` scanne tous les modules company-scope pour trouver ceux qui déclarent le module comme requirement ET qui sont actifs. `CompanyModuleService::disable()` retourne 422 avec `dependents: [...]`.
+  4. **Zéro cascade automatique** : La désactivation d'un module requis est refusée — l'admin doit désactiver les dépendants d'abord explicitement.
+  5. **13 tests** dans `ModuleDependencyTest.php` couvrant : resolver direct, service-level, HTTP-level, multi-dependents, no-cascade.
+- **Fichiers** :
+  - Modifiés : `TrackingModule.php`, `FleetModule.php`, `AnalyticsModule.php` (ajout `requires`)
+  - Créé : `tests/Feature/ModuleDependencyTest.php`
+  - Déjà existants (non modifiés) : `DependencyResolver.php`, `CompanyModuleService.php`
+- **Conséquences** :
+  - Pattern établi : tout futur module avec dépendances utilise `requires: [...]` dans son manifest
+  - Enforcement bidirectionnel : activation ET désactivation sont contraintes
+  - Messages d'erreur explicites avec les clés de modules concernés
+
+## ADR-109 : Cross-scope Module Pattern — 2 modules distincts, couplage via requires
+
+- **Date** : 2026-02-24
+- **Contexte** : Certains domaines fonctionnels (billing, plans, fields) ont besoin de capacités à la fois côté plateforme (configuration admin) et côté entreprise (utilisation). La question se pose : un module peut-il être multi-scope ? Comment modéliser cette dualité ?
+- **Décision** :
+  1. **Un module = un scope unique.** `ModuleManifest::scope` est soit `'company'` soit `'platform'`, jamais les deux. Un manifest ne peut pas déclarer deux scopes.
+  2. **Un domaine cross-scope = 2 modules distincts** avec des clés explicites. Convention de nommage :
+     - `{domain}.platform` pour le module plateforme (ex: `billing.platform`)
+     - `{domain}` ou `{domain}.company` pour le module entreprise (ex: `billing` ou `billing.company`)
+  3. **Couplage via `requires`** : Le module entreprise déclare `requires: ['{domain}.platform']` si sa configuration admin est gérée par le module plateforme. Le module plateforme ne déclare PAS de dépendance inverse — il est autonome.
+  4. **Pas de manifest multi-scope** : Interdiction de créer un manifest avec `scope: 'both'` ou un tableau de scopes. La dualité est gérée par deux fichiers PHP séparés dans deux répertoires distincts.
+  5. **Structure fichiers** :
+     ```
+     app/Modules/
+     ├── Platform/Billing/         # scope=platform (config admin)
+     │   └── BillingModule.php     # key='platform.billing'
+     └── Company/Billing/          # scope=company (utilisation)
+         └── BillingModule.php     # key='billing', requires=['platform.billing']
+     ```
+  6. **Navigation** : Chaque module déclare ses propres `navItems` et `routeNames` dans ses `Capabilities`. Pas de navItems partagés entre scopes.
+  7. **Activation** : Le module plateforme est toujours activé via `PlatformModule.is_enabled_globally`. Le module company est activé per-company via `CompanyModule`. L'enforcement `requires` (ADR-108) garantit que le module plateforme est actif avant que le module company puisse être activé.
+- **Modules existants concernés** :
+  - `platform.billing` (platform scope) — existe déjà
+  - `platform.fields` (platform scope) — existe déjà
+  - `platform.plans` (platform scope) — existe déjà
+  - Aucun module company-scope cross-scope n'existe encore. Ce pattern sera appliqué quand le besoin émergera (ex: `billing.company` pour la gestion des abonnements côté entreprise).
+- **Conséquences** :
+  - Clarté architecturale : un module = un scope, un manifest = un fichier
+  - Pas de confusion entre capacités admin et capacités utilisateur
+  - Le `requires` explicite documente le couplage au lieu de le rendre implicite
+  - Scalable : chaque nouveau domaine cross-scope suit le même pattern sans exception
+
+## ADR-110 : Platform Navigation Manifest-Driven
+
+- **Date** : 2026-02-24
+- **Contexte** : La navigation plateforme devait être alignée avec le pattern company (manifest-driven via composable). Besoin de valider contractuellement que chaque module plateforme déclare ses navItems et routeNames.
+- **Décision** :
+  1. **Composable `usePlatformNav()`** — déjà existant, lit `platformAuth.platformModuleNavItems` alimenté par l'API `/api/platform/me`. Filtre par permission, place Dashboard en premier, ajoute heading "Management".
+  2. **Backend `platformModuleNavItems()`** — collecte les navItems de tous les modules platform avec `visibility !== 'hidden'`. Retourné dans le payload login/me.
+  3. **Contrat structurel** — `PlatformModuleNavContractTest.php` (5 tests) :
+     - Tout module visible avec routeNames doit déclarer navItems (sauf modules shared-page documentés)
+     - Tout module avec navItems doit déclarer routeNames
+     - Les routes référencées dans navItems doivent être dans routeNames
+     - Pas de navItem keys dupliqués entre modules
+     - L'API retourne tous les items attendus
+  4. **Pattern "shared page"** — TranslationsModule (`platform.translations`) partage la page International avec MarketsModule (`platform.markets`). Il déclare `routeNames: ['platform-international-tab']` mais pas de navItem propre — la nav est portée par Markets. Ce pattern est explicitement documenté dans la liste `$sharedPageModules` du test.
+  5. **Modules stub** (ex: `platform.audience`) — navItems vides = pas de navigation. Quand la page sera créée, le test attrapera l'incohérence.
+- **Fichiers** :
+  - Créé : `tests/Feature/PlatformModuleNavContractTest.php`
+  - Existants (non modifiés) : `usePlatformNav.js`, `PlatformAuthController.php`, tous les modules platform
+- **Conséquences** :
+  - Navigation 100% manifest-driven pour les deux scopes (company + platform)
+  - Le CI attrape tout nouveau module qui oublie de déclarer ses navItems
+  - Le pattern shared-page est explicitement documenté et whitlisté
+
+## ADR-111 : Structural Cleanup — LOT 5
+
+- **Date** : 2026-02-24
+- **Contexte** : L'audit architectural a identifié 4 incohérences structurelles : ThemeController orphelin, collision sortOrder, permission manquante, routeNames désalignés.
+- **Décision** :
+  1. **ThemeController orphan résolu** — Le controller `ThemeController` vivait dans `app/Modules/Platform/Theme/Http/` sans ModuleDefinition associée. Il fait partie des Settings (utilise `manage_theme_settings`). Déplacé vers `app/Modules/Platform/Settings/Http/ThemeController.php`, import route mis à jour, répertoire orphelin `Platform/Theme/` supprimé.
+  2. **sortOrder collision fixée** — `platform.fields` (60) et `platform.billing` (60) avaient le même sortOrder. Billing changé à 65 pour dé-dupliquer. Test `ModuleManifestIntegrityTest::test_no_sort_order_collisions_within_same_scope` ajouté pour prévenir toute récidive.
+  3. **Permission `manage_plans` créée** — `PlansModule` utilisait `manage_companies` par emprunt. Ajout d'une permission dédiée `manage_plans`, bundle `plans.catalog`, extraction des routes plans dans leur propre groupe middleware `platform.permission:manage_plans`.
+  4. **routeNames alignés** — 5 modules platform avaient des pages détail (`[id].vue`, `[key].vue`) non déclarées dans `routeNames`. Ajouté :
+     - `platform-companies-id` à CompaniesModule
+     - `platform-plans-key` à PlansModule
+     - `platform-jobdomains-id` à JobdomainsModule
+     - `platform-users-id` à UsersModule
+     - `platform-modules-key` à ModulesModule
+  5. **Test d'intégrité manifests** — `ModuleManifestIntegrityTest` (4 tests) : pas de collision sortOrder, permissions navItem référencent des permissions déclarées, requires référencent des modules existants, naming convention respectée.
+- **Fichiers** :
+  - Créés : `app/Modules/Platform/Settings/Http/ThemeController.php`, `tests/Feature/ModuleManifestIntegrityTest.php`
+  - Modifiés : `routes/platform.php`, `BillingModule.php`, `PlansModule.php`, `CompaniesModule.php`, `JobdomainsModule.php`, `UsersModule.php`, `ModulesModule.php`, `PlatformSettingsModule.php`
+  - Supprimés : `app/Modules/Platform/Theme/` (répertoire orphelin)
+- **Conséquences** :
+  - Zéro controller orphelin — chaque controller appartient à un module déclaré
+  - Zéro collision sortOrder — le CI l'attrape
+  - Permission autonome par module — séparation propre des responsabilités
+  - routeNames complets — le frontend peut contractuellement vérifier l'alignement page↔module
+
+## ADR-112 : Frontend/Backend Module Alignment — LOT 6
+
+- **Date** : 2026-02-24
+- **Contexte** : Le frontend et le backend avaient des incohérences dans la protection des routes modules. Les pages `members/` et `settings.vue` étaient gatées côté backend (`company.access:use-module`) mais pas côté frontend (pas de `meta.module`). Les pages `plans/` utilisaient `permission: 'manage_companies'` au lieu de `manage_plans`.
+- **Décision** :
+  1. **`meta.module` sur toutes les pages company module-gated** :
+     - `members/index.vue`, `members/[id].vue` → `meta.module: 'core.members'`
+     - `settings.vue` → `meta.module: 'core.settings'`
+     - `jobdomain.vue` → `meta.module: 'core.settings'`
+     - Les pages shipments/deliveries avaient déjà `meta.module: 'logistics_shipments'` ✅
+  2. **Permission `manage_plans` alignée frontend↔backend** :
+     - `plans/index.vue`, `plans/[key].vue` → `permission: 'manage_plans'` (était `manage_companies`)
+     - Routes backend `/api/platform/plans/*` → groupe `platform.permission:manage_plans`
+  3. **routeNames complétés** pour company modules :
+     - `core.members` : ajout `company-members-id` (page détail)
+     - `core.settings` : ajout `company-jobdomain` (page industrie sous gate settings)
+  4. **Test de vérification `PageModuleAlignmentTest`** (3 tests) :
+     - Chaque page company sous un module déclare `meta.module` correspondant au manifest
+     - Chaque permission frontend platform est déclarée dans un module manifest
+     - Chaque routeName de module a une page Vue correspondante
+  5. **Guard flow (existant, non modifié)** :
+     - Company : `to.meta.module` → `moduleStore.isActive(key)` → redirect `/dashboard` si inactif
+     - Platform : `to.meta.permission` → `platformAuth.hasPermission(key)` → redirect `/platform` si refusé
+- **Fichiers** :
+  - Modifiés : `members/index.vue`, `members/[id].vue`, `settings.vue`, `jobdomain.vue`, `plans/index.vue`, `plans/[key].vue`, `MembersModule.php`, `SettingsModule.php`
+  - Créé : `tests/Feature/PageModuleAlignmentTest.php`
+- **Conséquences** :
+  - Alignement contractuel : backend ET frontend refusent les routes de modules inactifs
+  - Permission coherence : chaque page utilise la permission de son module, pas celle d'un autre
+  - Le CI attrape tout nouveau désalignement page↔module
+  - Zéro TODO, zéro dette technique dans l'alignement frontend/backend
+
+---
+
+## ADR-113 : Unified Module Engine — Scope Admin + Middleware Universel
+
+- **Date** : 2026-02-24
+- **Contexte** : Le moteur modulaire traitait `scope: 'platform'` et `scope: 'company'` de façon asymétrique. Les modules platform n'avaient pas de gate d'activation (`module.active:{key}`), pas de `ModuleGate`, et leurs routes contournaient le moteur modulaire. Les modules company utilisaient `ModuleGate`, `CompanyModuleService`, et le middleware `company.access:use-module,{key}`. Ce double chemin créait de la dérive et de la dette technique.
+- **Décision** :
+  1. **Scope obligatoire** : `scope` est obligatoire dans `ModuleManifest` (pas de valeur par défaut). La valeur `'platform'` est renommée en `'admin'`. Le boot refuse tout scope invalide.
+  2. **Activation unifiée** : `ModuleGate::isActiveForScope()` gère les deux scopes. Les modules admin nécessitent uniquement `is_enabled_globally`. Les modules company nécessitent le contexte company + activation. `AdminModuleService` gère le toggle des modules admin. Les modules `type: 'core'` sont toujours actifs pour toute company (seul `is_enabled_globally` est vérifié).
+  3. **Middleware universel** : Toutes les routes de modules utilisent `module.active:{key}`. Les routes admin le reçoivent en plus de `platform.permission:{key}`. Routes exemptées : auth, /me, /logout, /heartbeat, routes publiques.
+  4. **Zéro route hors module** : Tous les controllers sont sous `App\Modules\`. Infrastructure (auth, public, system, webhooks) sous `App\Modules\Infrastructure\*` sans `ModuleDefinition`. Deux nouveaux modules company : `core.modules` (catalog browse) et `core.billing` (plan & billing).
+  5. **Alignement frontend total** : Toutes les pages platform déclarent `meta.module`. Le router guard bloque si le module est désactivé globalement. `PlatformAuthController` retourne `disabled_modules` dans login/me. La navigation company est manifest-driven (Roles, Industry, Plan, Modules supprimés du nav statique).
+  - Fichiers clés : `ModuleManifest`, `ModuleGate`, `ModuleRegistry`, `EnsureModuleActive`, `AdminModuleService`, `PlatformAuthController`, `guards.js`, `platformAuth.js`
+  - Les clés de module gardent leur préfixe (`platform.*`, `core.*`, `payments.*`) — seule la valeur du champ `scope` change.
+- **Conséquences** :
+  - Un seul chemin d'activation, de middleware et de routing pour admin et company — zéro exception
+  - Le CI vérifie l'alignement page↔module pour les deux scopes (`PageModuleAlignmentTest`)
+  - Le CI vérifie que toutes les routes de modules ont le middleware d'activation (`GlobalModuleRouteCoverageTest`)
+  - Le CI vérifie que tous les controllers sont sous `App\Modules\` (`NoOrphanRouteTest`)
+  - Zéro dette technique dans le moteur modulaire
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

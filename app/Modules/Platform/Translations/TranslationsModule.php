@@ -18,13 +18,13 @@ class TranslationsModule implements ModuleDefinition
             sortOrder: 13,
             capabilities: new Capabilities(
                 navItems: [],
-                routeNames: ['platform-international-tab'],
+                routeNames: [],
             ),
             permissions: [
                 ['key' => 'manage_translations', 'label' => 'Manage translation bundles & market overrides'],
             ],
             bundles: [],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
             visibility: 'visible',
         );

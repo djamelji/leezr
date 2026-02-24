@@ -11,6 +11,7 @@ use App\Platform\Models\PlatformPermission;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformSetting;
 use App\Platform\Models\PlatformUser;
+use App\Core\Modules\ModuleRegistry;
 use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
 
@@ -18,6 +19,9 @@ class PlatformSeeder extends Seeder
 {
     public function run(): void
     {
+        // Sync module registry → platform_modules (must run before permissions)
+        ModuleRegistry::sync();
+
         // Create permissions from catalog (module-driven, single source of truth)
         PlatformPermissionCatalog::sync();
 

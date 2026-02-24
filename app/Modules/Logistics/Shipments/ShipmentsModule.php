@@ -54,6 +54,7 @@ class ShipmentsModule implements ModuleDefinition
                     'permissions' => ['shipments.view_own', 'shipments.manage_status'],
                 ],
             ],
+            scope: 'company',
             type: 'addon',
         );
     }

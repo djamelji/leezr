@@ -20,7 +20,7 @@ class MembersModule implements ModuleDefinition
                 navItems: [
                     ['key' => 'members', 'title' => 'Members', 'to' => ['name' => 'company-members'], 'icon' => 'tabler-users', 'permission' => 'members.view', 'surface' => 'structure'],
                 ],
-                routeNames: ['company-members'],
+                routeNames: ['company-members', 'company-members-id'],
                 middlewareKey: 'core.members',
             ),
             permissions: [
@@ -44,6 +44,7 @@ class MembersModule implements ModuleDefinition
                     'is_admin' => true,
                 ],
             ],
+            scope: 'company',
             type: 'core',
         );
     }

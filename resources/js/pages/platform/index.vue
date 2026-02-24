@@ -10,6 +10,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.dashboard',
   },
 })
 

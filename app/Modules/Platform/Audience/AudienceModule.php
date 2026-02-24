@@ -24,7 +24,7 @@ class AudienceModule implements ModuleDefinition
                 ['key' => 'manage_audience', 'label' => 'Manage Audience'],
             ],
             bundles: [],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

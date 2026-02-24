@@ -22,7 +22,9 @@ class AnalyticsModule implements ModuleDefinition
             ),
             permissions: [],
             bundles: [],
+            scope: 'company',
             type: 'addon',
+            requires: ['logistics_shipments'],
             minPlan: 'business',
             compatibleJobdomains: ['logistique'],
         );

@@ -1,14 +1,14 @@
 <?php
 
-use App\Core\Auth\AuthController;
-use App\Core\Auth\PasswordResetController;
-use App\Core\Billing\Http\WebhookController;
-use App\Core\Plans\Http\PublicPlanController;
-use App\Core\Markets\Http\PublicI18nController;
-use App\Core\Markets\Http\PublicMarketController;
-use App\Core\Settings\Http\PublicWorldController;
-use App\Core\Theme\Http\PublicThemeController;
-use App\Http\Controllers\RuntimeErrorController;
+use App\Modules\Infrastructure\Auth\Http\AuthController;
+use App\Modules\Infrastructure\Auth\Http\PasswordResetController;
+use App\Modules\Infrastructure\Webhooks\Http\WebhookController;
+use App\Modules\Infrastructure\Public\Http\PublicPlanController;
+use App\Modules\Infrastructure\Public\Http\PublicI18nController;
+use App\Modules\Infrastructure\Public\Http\PublicMarketController;
+use App\Modules\Infrastructure\Public\Http\PublicWorldController;
+use App\Modules\Infrastructure\Public\Http\PublicThemeController;
+use App\Modules\Infrastructure\System\Http\RuntimeErrorController;
 use App\Modules\Platform\Audience\Http\AudienceController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,8 +37,8 @@ Route::prefix('public')->middleware('throttle:30,1')->group(function () {
     Route::get('/i18n/{locale}/{namespace?}', [PublicI18nController::class, 'bundle']);
 });
 
-// Audience — public (throttled, no auth)
-Route::prefix('audience')->middleware('throttle:10,1')->group(function () {
+// Audience — public (throttled, no auth, module-gated)
+Route::prefix('audience')->middleware(['module.active:platform.audience', 'throttle:10,1'])->group(function () {
     Route::post('/subscribe', [AudienceController::class, 'subscribe']);
     Route::post('/confirm', [AudienceController::class, 'confirm']);
     Route::post('/unsubscribe', [AudienceController::class, 'unsubscribe']);

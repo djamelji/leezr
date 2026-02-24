@@ -13,7 +13,7 @@ class PlatformSettingsModule implements ModuleDefinition
         return new ModuleManifest(
             key: 'platform.settings',
             name: 'Settings',
-            description: 'Platform-wide settings: appearance, sessions, general',
+            description: 'Platform-wide settings: appearance, theme, sessions, general',
             surface: 'structure',
             sortOrder: 90,
             capabilities: new Capabilities(
@@ -53,7 +53,7 @@ class PlatformSettingsModule implements ModuleDefinition
                     'permissions' => ['manage_maintenance'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

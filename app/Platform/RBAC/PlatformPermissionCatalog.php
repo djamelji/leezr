@@ -20,7 +20,7 @@ class PlatformPermissionCatalog
     {
         $permissions = [];
 
-        foreach (ModuleRegistry::forScope('platform') as $moduleKey => $manifest) {
+        foreach (ModuleRegistry::forScope('admin') as $moduleKey => $manifest) {
             foreach ($manifest->permissions as $permission) {
                 $permissions[] = [
                     'key' => $permission['key'],

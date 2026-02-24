@@ -7,6 +7,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.jobdomains',
     permission: 'manage_jobdomains',
   },
 })

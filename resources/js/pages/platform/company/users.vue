@@ -8,6 +8,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.companies',
     permission: 'view_company_users',
   },
 })

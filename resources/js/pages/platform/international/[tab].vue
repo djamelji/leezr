@@ -9,6 +9,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.markets',
     navActiveLink: 'platform-international-tab',
   },
 })

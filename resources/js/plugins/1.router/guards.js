@@ -61,6 +61,15 @@ export const setupGuards = router => {
         return { path: '/platform/login' }
       }
 
+      // Module guard — block if module is disabled globally
+      if (to.meta.module && platformAuth.isModuleInactive(to.meta.module)) {
+        const { toast } = useAppToast()
+
+        toast('This module is currently disabled.', 'warning')
+
+        return '/platform'
+      }
+
       if (to.meta.permission && !platformAuth.hasPermission(to.meta.permission)) {
         const { toast } = useAppToast()
 

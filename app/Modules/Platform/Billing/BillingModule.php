@@ -15,7 +15,7 @@ class BillingModule implements ModuleDefinition
             name: 'Payments',
             description: 'Payment modules, policies and subscription governance',
             surface: 'structure',
-            sortOrder: 60,
+            sortOrder: 65,
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'payments', 'title' => 'Payments', 'to' => ['name' => 'platform-payments'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing'],
@@ -34,7 +34,7 @@ class BillingModule implements ModuleDefinition
                     'permissions' => ['manage_billing', 'view_billing'],
                 ],
             ],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
             visibility: 'visible',
         );

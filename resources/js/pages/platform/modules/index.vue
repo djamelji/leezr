@@ -6,6 +6,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.modules',
     permission: 'manage_modules',
   },
 })
@@ -16,8 +17,9 @@ const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const togglingKey = ref(null)
+const activeTab = ref('company')
 
-// Filters
+// Filters (company tab only)
 const filterType = ref(null)
 const filterPlan = ref(null)
 const filterEnabled = ref(null)
@@ -31,6 +33,7 @@ onMounted(async () => {
   }
 })
 
+// ─── Company tab ────────────────────────────────────
 const filteredModules = computed(() => {
   return settingsStore.modules.filter(m => {
     if (filterType.value && m.type !== filterType.value) return false
@@ -43,7 +46,7 @@ const filteredModules = computed(() => {
   })
 })
 
-const headers = computed(() => [
+const companyHeaders = computed(() => [
   { title: t('platformModules.module'), key: 'name' },
   { title: t('platformModules.key'), key: 'key', width: '180px' },
   { title: t('common.type'), key: 'type', align: 'center', width: '100px', sortable: false },
@@ -103,6 +106,19 @@ const clearFilters = () => {
 const hasFilters = computed(() =>
   filterType.value !== null || filterPlan.value !== null || filterEnabled.value !== null,
 )
+
+// ─── Platform tab ───────────────────────────────────
+const platformHeaders = computed(() => [
+  { title: t('platformModules.module'), key: 'name' },
+  { title: t('platformModules.key'), key: 'key', width: '200px' },
+  { title: t('common.type'), key: 'type', align: 'center', width: '100px', sortable: false },
+  { title: t('platformModules.surface'), key: 'surface', align: 'center', width: '120px', sortable: false },
+  { title: t('platformModules.permissionsTitle'), key: 'permissions', sortable: false },
+])
+
+const visiblePlatformModules = computed(() => {
+  return settingsStore.platformModules.filter(m => m.visibility !== 'hidden')
+})
 </script>
 
 <template>
@@ -119,168 +135,294 @@ const hasFilters = computed(() =>
         {{ t('platformModules.subtitle') }}
       </VCardSubtitle>
 
-      <!-- Filters -->
       <VCardText class="pb-0">
-        <VRow>
-          <VCol
-            cols="12"
-            sm="3"
-          >
-            <VSelect
-              v-model="filterType"
-              :items="filterTypeItems"
-              :label="t('common.type')"
-              clearable
-              density="compact"
-              hide-details
+        <VTabs
+          v-model="activeTab"
+          class="v-tabs-pill"
+        >
+          <VTab value="company">
+            <VIcon
+              size="20"
+              start
+              icon="tabler-building"
             />
-          </VCol>
-          <VCol
-            cols="12"
-            sm="3"
-          >
-            <VSelect
-              v-model="filterPlan"
-              :items="filterPlanItems"
-              :label="t('platformModules.minPlan')"
-              clearable
-              density="compact"
-              hide-details
+            {{ t('platformModules.companyModules') }}
+          </VTab>
+          <VTab value="platform">
+            <VIcon
+              size="20"
+              start
+              icon="tabler-server"
             />
-          </VCol>
-          <VCol
-            cols="12"
-            sm="3"
-          >
-            <VSelect
-              v-model="filterEnabled"
-              :items="filterEnabledItems"
-              :label="t('platformModules.globalStatus')"
-              clearable
-              density="compact"
-              hide-details
-            />
-          </VCol>
-          <VCol
-            cols="12"
-            sm="3"
-            class="d-flex align-center"
-          >
-            <VBtn
-              v-if="hasFilters"
-              variant="text"
-              size="small"
-              color="secondary"
-              @click="clearFilters"
-            >
-              {{ t('platformModules.clearFilters') }}
-            </VBtn>
-          </VCol>
-        </VRow>
+            {{ t('platformModules.platformTab') }}
+          </VTab>
+        </VTabs>
       </VCardText>
 
-      <VDataTable
-        :headers="headers"
-        :items="filteredModules"
-        :loading="isLoading"
-        item-value="key"
-        :items-per-page="-1"
-        hide-default-footer
-        hover
-        class="cursor-pointer"
-        @click:row="onRowClick"
+      <VWindow
+        v-model="activeTab"
+        class="disable-tab-transition"
+        :touch="false"
       >
-        <!-- Module name with icon -->
-        <template #item.name="{ item }">
-          <div class="d-flex align-center gap-x-3 py-2">
-            <VAvatar
-              size="32"
-              :color="item.type === 'core' ? 'primary' : 'info'"
-              variant="tonal"
-            >
-              <VIcon
-                :icon="item.icon_name || 'tabler-puzzle'"
-                size="18"
-              />
-            </VAvatar>
-            <span class="text-body-1 font-weight-medium text-high-emphasis">
-              {{ item.name }}
-            </span>
-          </div>
-        </template>
+        <!-- Tab 1: Company Modules -->
+        <VWindowItem value="company">
+          <!-- Filters -->
+          <VCardText class="pb-0">
+            <VRow>
+              <VCol
+                cols="12"
+                sm="3"
+              >
+                <VSelect
+                  v-model="filterType"
+                  :items="filterTypeItems"
+                  :label="t('common.type')"
+                  clearable
+                  density="compact"
+                  hide-details
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                sm="3"
+              >
+                <VSelect
+                  v-model="filterPlan"
+                  :items="filterPlanItems"
+                  :label="t('platformModules.minPlan')"
+                  clearable
+                  density="compact"
+                  hide-details
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                sm="3"
+              >
+                <VSelect
+                  v-model="filterEnabled"
+                  :items="filterEnabledItems"
+                  :label="t('platformModules.globalStatus')"
+                  clearable
+                  density="compact"
+                  hide-details
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                sm="3"
+                class="d-flex align-center"
+              >
+                <VBtn
+                  v-if="hasFilters"
+                  variant="text"
+                  size="small"
+                  color="secondary"
+                  @click="clearFilters"
+                >
+                  {{ t('platformModules.clearFilters') }}
+                </VBtn>
+              </VCol>
+            </VRow>
+          </VCardText>
 
-        <!-- Key -->
-        <template #item.key="{ item }">
-          <code class="text-sm">{{ item.key }}</code>
-        </template>
-
-        <!-- Type -->
-        <template #item.type="{ item }">
-          <VChip
-            :color="item.type === 'core' ? 'primary' : 'info'"
-            size="small"
-            variant="tonal"
+          <VDataTable
+            :headers="companyHeaders"
+            :items="filteredModules"
+            :loading="isLoading"
+            item-value="key"
+            :items-per-page="-1"
+            hide-default-footer
+            hover
+            class="cursor-pointer"
+            @click:row="onRowClick"
           >
-            {{ item.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
-          </VChip>
-        </template>
+            <!-- Module name with icon -->
+            <template #item.name="{ item }">
+              <div class="d-flex align-center gap-x-3 py-2">
+                <VAvatar
+                  size="32"
+                  :color="item.type === 'core' ? 'primary' : 'info'"
+                  variant="tonal"
+                >
+                  <VIcon
+                    :icon="item.icon_name || 'tabler-puzzle'"
+                    size="18"
+                  />
+                </VAvatar>
+                <span class="text-body-1 font-weight-medium text-high-emphasis">
+                  {{ item.name }}
+                </span>
+              </div>
+            </template>
 
-        <!-- Min plan -->
-        <template #item.min_plan="{ item }">
-          <VChip
-            v-if="item.min_plan"
-            color="warning"
-            size="small"
-            variant="tonal"
+            <!-- Key -->
+            <template #item.key="{ item }">
+              <code class="text-sm">{{ item.key }}</code>
+            </template>
+
+            <!-- Type -->
+            <template #item.type="{ item }">
+              <VChip
+                :color="item.type === 'core' ? 'primary' : 'info'"
+                size="small"
+                variant="tonal"
+              >
+                {{ item.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
+              </VChip>
+            </template>
+
+            <!-- Min plan -->
+            <template #item.min_plan="{ item }">
+              <VChip
+                v-if="item.min_plan"
+                color="warning"
+                size="small"
+                variant="tonal"
+              >
+                {{ planLabel(item.min_plan) }}
+              </VChip>
+              <span
+                v-else
+                class="text-disabled"
+              >—</span>
+            </template>
+
+            <!-- Compatible jobdomains -->
+            <template #item.compatible_jobdomains="{ item }">
+              <template v-if="item.compatible_jobdomains">
+                <VChip
+                  v-for="jd in item.compatible_jobdomains"
+                  :key="jd"
+                  size="small"
+                  variant="tonal"
+                  class="me-1"
+                >
+                  {{ jd }}
+                </VChip>
+              </template>
+              <span
+                v-else
+                class="text-disabled"
+              >{{ t('platformModules.all') }}</span>
+            </template>
+
+            <!-- Global status toggle -->
+            <template #item.status="{ item }">
+              <div @click.stop>
+                <VSwitch
+                  :model-value="item.is_enabled_globally"
+                  :loading="togglingKey === item.key"
+                  :disabled="togglingKey === item.key"
+                  color="primary"
+                  hide-details
+                  @update:model-value="toggleModule(item)"
+                />
+              </div>
+            </template>
+
+            <!-- Empty state -->
+            <template #no-data>
+              <div class="text-center pa-4 text-disabled">
+                {{ t('platformModules.noModules') }}
+              </div>
+            </template>
+          </VDataTable>
+        </VWindowItem>
+
+        <!-- Tab 2: Platform Modules (read-only) -->
+        <VWindowItem value="platform">
+          <VCardText class="pb-0">
+            <p class="text-body-2 text-medium-emphasis mb-0">
+              {{ t('platformModules.platformSubtitle') }}
+            </p>
+          </VCardText>
+
+          <VDataTable
+            :headers="platformHeaders"
+            :items="visiblePlatformModules"
+            :loading="isLoading"
+            item-value="key"
+            :items-per-page="-1"
+            hide-default-footer
+            class="text-no-wrap"
           >
-            {{ planLabel(item.min_plan) }}
-          </VChip>
-          <span
-            v-else
-            class="text-disabled"
-          >—</span>
-        </template>
+            <!-- Module name with icon -->
+            <template #item.name="{ item }">
+              <div class="d-flex align-center gap-x-3 py-2">
+                <VAvatar
+                  size="32"
+                  color="secondary"
+                  variant="tonal"
+                >
+                  <VIcon
+                    :icon="item.icon_name || 'tabler-puzzle'"
+                    size="18"
+                  />
+                </VAvatar>
+                <div>
+                  <span class="text-body-1 font-weight-medium text-high-emphasis">
+                    {{ item.name }}
+                  </span>
+                  <p
+                    v-if="item.description"
+                    class="text-body-2 text-medium-emphasis mb-0"
+                  >
+                    {{ item.description }}
+                  </p>
+                </div>
+              </div>
+            </template>
 
-        <!-- Compatible jobdomains -->
-        <template #item.compatible_jobdomains="{ item }">
-          <template v-if="item.compatible_jobdomains">
-            <VChip
-              v-for="jd in item.compatible_jobdomains"
-              :key="jd"
-              size="small"
-              variant="tonal"
-              class="me-1"
-            >
-              {{ jd }}
-            </VChip>
-          </template>
-          <span
-            v-else
-            class="text-disabled"
-          >{{ t('platformModules.all') }}</span>
-        </template>
+            <!-- Key -->
+            <template #item.key="{ item }">
+              <code class="text-sm">{{ item.key }}</code>
+            </template>
 
-        <!-- Global status toggle -->
-        <template #item.status="{ item }">
-          <div @click.stop>
-            <VSwitch
-              :model-value="item.is_enabled_globally"
-              :loading="togglingKey === item.key"
-              :disabled="togglingKey === item.key"
-              color="primary"
-              hide-details
-              @update:model-value="toggleModule(item)"
-            />
-          </div>
-        </template>
+            <!-- Type badge -->
+            <template #item.type="{ item }">
+              <VChip
+                color="secondary"
+                size="small"
+                variant="tonal"
+              >
+                {{ t('platformModules.internalLabel') }}
+              </VChip>
+            </template>
 
-        <!-- Empty state -->
-        <template #no-data>
-          <div class="text-center pa-4 text-disabled">
-            {{ t('platformModules.noModules') }}
-          </div>
-        </template>
-      </VDataTable>
+            <!-- Surface -->
+            <template #item.surface="{ item }">
+              <span class="text-body-2">{{ item.surface }}</span>
+            </template>
+
+            <!-- Permissions -->
+            <template #item.permissions="{ item }">
+              <template v-if="item.permissions?.length">
+                <VChip
+                  v-for="perm in item.permissions"
+                  :key="perm"
+                  size="x-small"
+                  variant="outlined"
+                  class="me-1 mb-1"
+                >
+                  {{ perm }}
+                </VChip>
+              </template>
+              <span
+                v-else
+                class="text-disabled"
+              >—</span>
+            </template>
+
+            <!-- Empty state -->
+            <template #no-data>
+              <div class="text-center pa-4 text-disabled">
+                {{ t('platformModules.noModules') }}
+              </div>
+            </template>
+          </VDataTable>
+        </VWindowItem>
+      </VWindow>
     </VCard>
   </div>
 </template>

@@ -7,6 +7,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
+    module: 'platform.billing',
     permission: 'manage_billing',
   },
 })

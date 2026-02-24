@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Markets\Http;
 use App\Core\Markets\Market;
 use App\Core\Markets\MarketRegistry;
 use App\Core\Markets\ReadModels\MarketDetailReadModel;
+use App\Core\Markets\SvgSanitizer;
 use App\Core\Models\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,10 +49,16 @@ class MarketCrudController
             'locale' => ['required', 'string', 'max:10'],
             'timezone' => ['required', 'string', 'max:50'],
             'dial_code' => ['required', 'string', 'max:10'],
+            'flag_code' => ['nullable', 'string', 'size:2'],
+            'flag_svg' => ['nullable', 'string', 'max:50000'],
             'is_active' => ['boolean'],
             'is_default' => ['boolean'],
             'sort_order' => ['integer', 'min:0'],
         ]);
+
+        if (!empty($validated['flag_svg'])) {
+            $validated['flag_svg'] = SvgSanitizer::sanitize($validated['flag_svg']);
+        }
 
         // If setting as default, unset previous default
         if (!empty($validated['is_default'])) {
@@ -79,11 +86,17 @@ class MarketCrudController
             'locale' => ['required', 'string', 'max:10'],
             'timezone' => ['required', 'string', 'max:50'],
             'dial_code' => ['required', 'string', 'max:10'],
+            'flag_code' => ['nullable', 'string', 'size:2'],
+            'flag_svg' => ['nullable', 'string', 'max:50000'],
             'is_active' => ['boolean'],
             'sort_order' => ['integer', 'min:0'],
             'language_keys' => ['nullable', 'array'],
             'language_keys.*' => ['string', 'exists:languages,key'],
         ]);
+
+        if (!empty($validated['flag_svg'])) {
+            $validated['flag_svg'] = SvgSanitizer::sanitize($validated['flag_svg']);
+        }
 
         $languageKeys = $validated['language_keys'] ?? null;
         unset($validated['language_keys']);
@@ -160,7 +173,12 @@ class MarketCrudController
             ->orderBy('sort_order')
             ->get();
 
-        $result = [];
+        $result = [
+            '_meta' => [
+                'version' => '1.0',
+                'exported_at' => now()->toIso8601String(),
+            ],
+        ];
 
         foreach ($markets as $market) {
             $result[$market->key] = [
@@ -169,6 +187,8 @@ class MarketCrudController
                 'locale' => $market->locale,
                 'timezone' => $market->timezone,
                 'dial_code' => $market->dial_code,
+                'flag_code' => $market->flag_code,
+                'flag_svg' => $market->flag_svg,
                 'is_active' => $market->is_active,
                 'is_default' => $market->is_default,
                 'sort_order' => $market->sort_order,
@@ -200,6 +220,8 @@ class MarketCrudController
         if (!is_array($data)) {
             return response()->json(['message' => 'Invalid JSON file.'], 422);
         }
+
+        $data = array_filter($data, fn ($key) => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
 
         $existingKeys = Market::pluck('key')->toArray();
         $toCreate = [];

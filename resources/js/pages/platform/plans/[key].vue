@@ -7,7 +7,8 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
-    permission: 'manage_companies',
+    module: 'platform.plans',
+    permission: 'manage_plans',
   },
 })
 

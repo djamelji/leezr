@@ -22,7 +22,9 @@ class FleetModule implements ModuleDefinition
             ),
             permissions: [],
             bundles: [],
+            scope: 'company',
             type: 'addon',
+            requires: ['logistics_shipments'],
             minPlan: 'pro',
             compatibleJobdomains: ['logistique'],
         );

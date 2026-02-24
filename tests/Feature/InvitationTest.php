@@ -5,17 +5,19 @@ namespace Tests\Feature;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\ActivatesCompanyModules;
 use Tests\TestCase;
 
 class InvitationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ActivatesCompanyModules;
 
     public function test_membership_store_creates_user_if_not_found(): void
     {
         $owner = User::factory()->create();
         $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
+        $this->activateCompanyModules($company);
 
         $response = $this->actingAs($owner)
             ->withHeaders(['X-Company-Id' => $company->id])
@@ -40,6 +42,7 @@ class InvitationTest extends TestCase
         $existing = User::factory()->create(['email' => 'existing@example.com']);
         $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
+        $this->activateCompanyModules($company);
 
         $response = $this->actingAs($owner)
             ->withHeaders(['X-Company-Id' => $company->id])

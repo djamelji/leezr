@@ -18,13 +18,22 @@ class PlansModule implements ModuleDefinition
             sortOrder: 15,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'plans', 'title' => 'Plans', 'to' => ['name' => 'platform-plans'], 'icon' => 'tabler-chart-bar', 'permission' => 'manage_companies'],
+                    ['key' => 'plans', 'title' => 'Plans', 'to' => ['name' => 'platform-plans'], 'icon' => 'tabler-chart-bar', 'permission' => 'manage_plans'],
                 ],
-                routeNames: ['platform-plans'],
+                routeNames: ['platform-plans', 'platform-plans-key'],
             ),
-            permissions: [],
-            bundles: [],
-            scope: 'platform',
+            permissions: [
+                ['key' => 'manage_plans', 'label' => 'Manage Plans'],
+            ],
+            bundles: [
+                [
+                    'key' => 'plans.catalog',
+                    'label' => 'Plan Catalog',
+                    'hint' => 'Configure plan definitions and commercial governance.',
+                    'permissions' => ['manage_plans'],
+                ],
+            ],
+            scope: 'admin',
             type: 'internal',
             visibility: 'visible',
         );

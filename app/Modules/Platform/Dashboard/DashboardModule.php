@@ -24,7 +24,7 @@ class DashboardModule implements ModuleDefinition
             ),
             permissions: [],
             bundles: [],
-            scope: 'platform',
+            scope: 'admin',
             type: 'internal',
         );
     }

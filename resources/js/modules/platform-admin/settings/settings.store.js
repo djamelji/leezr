@@ -4,6 +4,7 @@ import { $platformApi } from '@/utils/platformApi'
 export const usePlatformSettingsStore = defineStore('platformSettings', {
   state: () => ({
     _modules: [],
+    _platformModules: [],
     _themeSettings: null,
     _sessionSettings: null,
     _typographySettings: null,
@@ -13,6 +14,7 @@ export const usePlatformSettingsStore = defineStore('platformSettings', {
 
   getters: {
     modules: state => state._modules,
+    platformModules: state => state._platformModules,
     themeSettings: state => state._themeSettings,
     sessionSettings: state => state._sessionSettings,
     typographySettings: state => state._typographySettings,
@@ -25,7 +27,8 @@ export const usePlatformSettingsStore = defineStore('platformSettings', {
     async fetchModules() {
       const data = await $platformApi('/modules')
 
-      this._modules = data.modules
+      this._modules = data.company
+      this._platformModules = data.platform
     },
 
     async fetchModuleProfile(key) {
