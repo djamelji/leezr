@@ -81,6 +81,11 @@ jobs:
       - name: Remove Vite hot file (ADR-081)
         run: rm -f public/hot
 
+      - name: Copy locale files for backend (excluded with resources/js)
+        run: |
+          mkdir -p resources/locales
+          cp resources/js/plugins/i18n/locales/*.json resources/locales/
+
       - name: Create release artifact
         run: |
           tar czf /tmp/release.tar.gz \

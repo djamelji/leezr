@@ -12,7 +12,10 @@ class TranslationMatrixController
     public function namespaces(): JsonResponse
     {
         // Get namespaces from static JSON (en.json is the reference locale)
-        $path = resource_path('js/plugins/i18n/locales/en.json');
+        $path = resource_path('locales/en.json');
+        if (!file_exists($path)) {
+            $path = resource_path('js/plugins/i18n/locales/en.json');
+        }
         $staticNamespaces = [];
 
         if (file_exists($path)) {

@@ -176,7 +176,10 @@ class TranslationMatrixService
      */
     private static function staticJsonSection(string $locale, string $section): array
     {
-        $path = resource_path("js/plugins/i18n/locales/{$locale}.json");
+        $path = resource_path("locales/{$locale}.json");
+        if (!file_exists($path)) {
+            $path = resource_path("js/plugins/i18n/locales/{$locale}.json");
+        }
 
         if (!file_exists($path)) {
             return [];

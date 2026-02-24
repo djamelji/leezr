@@ -21,10 +21,10 @@ class FxRateController
 
     public function refresh(): JsonResponse
     {
-        FxRateFetchJob::dispatch();
+        FxRateFetchJob::dispatchSync();
 
         return response()->json([
-            'message' => 'FX rate refresh job dispatched.',
+            'message' => 'FX rates refreshed.',
         ]);
     }
 }
