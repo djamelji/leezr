@@ -2648,4 +2648,83 @@ definePage({
 
 ---
 
+## ADR-114 : Navigation 100% Manifest-Driven
+
+- **Date** : 2026-02-25
+- **Statut** : Accepted
+- **Contexte** : Le moteur modulaire supporte `scope: admin | company`, activation unifiée (ModuleGate), permissions déclaratives, filtrage plan/jobdomain, et navItems déclarés dans les manifests. Cependant la navigation n'est pas totalement pilotée par les modules, les groupes sont implicites, le horizontal peut devenir instable (wrap multi-lignes), et les différences de jobdomain ne doivent pas générer des menus hardcodés. Objectif : rendre la navigation entièrement dérivée des manifests modules, dynamique, cohérente et scalable (500+ modules), sans hardcoding.
+- **Décision** : La navigation devient une **projection dynamique des manifests modules**. Le menu est un moteur. Les modules déclarent les items. Le moteur assemble selon le contexte. Aucune liste fixe de groupes. Aucun menu par jobdomain.
+
+### Modèle NavItem Standard
+
+Chaque module peut déclarer :
+
+```php
+[
+    'key' => 'shipments',
+    'title' => 'Shipments',
+    'to' => ['name' => 'company-shipments'],
+    'icon' => 'tabler-truck',
+
+    // Structure
+    'group' => 'operations',
+    'parent' => null,
+
+    // Filtres
+    'jobdomains' => ['delivery', 'logistics'], // optionnel
+    'tags' => ['operations', 'tracking'],      // recommandé long terme
+    'plans' => ['pro'],                        // optionnel
+]
+```
+
+### Pipeline de Construction
+
+1. Collecte de tous les navItems déclarés
+2. Filtrage : module actif, permissions, plan, jobdomain
+3. Construction arbre : `group` → sections, `parent` → hiérarchie
+4. Pruning : suppression groupes vides, suppression parents sans enfants (si non cliquable)
+5. Retour menu final
+
+### Règles Structurelles
+
+- **Groupe** : existe uniquement si ≥ 1 item visible l'utilise. Aucune déclaration globale de groupes.
+- **Parent** : affiché si il possède une route (`to`) OU si il possède ≥ 1 enfant visible. Sinon supprimé.
+
+### Compatibilité Jobdomain (Scalable)
+
+- **Basique** : chaque item déclare explicitement ses jobdomains.
+- **Recommandé (scalable)** : les modules déclarent des `tags`. Chaque jobdomain déclare les tags acceptés. Exemple : `delivery` accepte `['operations','tracking','fleet','core']`, `food` accepte `['core','members','pos']`. Avantage : ajouter un jobdomain ne nécessite pas de modifier tous les modules.
+
+### Navigation Horizontale
+
+- Horizontal affiche uniquement les top-level (groupes/parents)
+- Les enfants sont en dropdown
+- En cas d'overflow → bouton "Plus"
+- Interdiction du wrap sur deux lignes
+
+### Backend Contract
+
+- Endpoints : `GET /api/company/nav`, `GET /api/platform/nav`
+- Le frontend ne contient plus aucune navigation hardcodée.
+
+### Tests Obligatoires
+
+- Aucun parent orphelin
+- Aucun groupe vide
+- Aucune clé dupliquée
+- Aucun cycle parent
+- Même moteur admin et company
+- Un jobdomain sans modules operations ne reçoit jamais le groupe operations
+
+- **Conséquences** :
+  - Navigation entièrement modulaire
+  - Compatible 500+ modules
+  - Ajout module = auto-intégration dans le menu
+  - Aucun hardcoding par jobdomain
+  - Même moteur pour admin et company
+
+- **Non objectifs** : pas d'édition libre du menu, pas de groupes dynamiques hors manifests, pas de duplication UI.
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
