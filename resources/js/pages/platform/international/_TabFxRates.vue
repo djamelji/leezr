@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { formatDateTime } from '@/utils/datetime'
 
 const { t } = useI18n()
 const marketsStore = usePlatformMarketsStore()
@@ -16,9 +17,33 @@ const fxHeaders = [
   { title: t('fxRates.lastUpdated'), key: 'fetched_at' },
 ]
 
+// Build currency → timezone map from loaded markets
+const currencyTimezoneMap = computed(() => {
+  const map = {}
+
+  marketsStore.markets.forEach(m => {
+    if (m.currency && m.timezone)
+      map[m.currency] = m.timezone
+  })
+
+  return map
+})
+
+const formatFxTimestamp = (isoString, currency) => {
+  if (!isoString) return '—'
+
+  const tz = currencyTimezoneMap.value[currency]
+    || Intl.DateTimeFormat().resolvedOptions().timeZone
+
+  return `${formatDateTime(isoString, { timeZone: tz })} (${tz})`
+}
+
 onMounted(async () => {
   try {
-    await marketsStore.fetchFxRates()
+    await Promise.all([
+      marketsStore.fetchFxRates(),
+      marketsStore.fetchMarkets(),
+    ])
   }
   catch {
     // Silent
@@ -74,7 +99,7 @@ const handleRefreshFx = async () => {
       </template>
 
       <template #item.fetched_at="{ item }">
-        <span class="text-medium-emphasis">{{ item.fetched_at || '—' }}</span>
+        <span class="text-medium-emphasis">{{ formatFxTimestamp(item.fetched_at, item.base_currency) }}</span>
       </template>
 
       <template #no-data>
