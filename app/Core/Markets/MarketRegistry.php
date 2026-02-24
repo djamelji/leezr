@@ -49,6 +49,23 @@ class MarketRegistry
                         ['key' => 'ae', 'name' => 'Auto-entrepreneur', 'description' => 'Micro-entreprise (franchise en base de TVA)', 'is_vat_applicable' => false, 'vat_rate' => null, 'is_default' => false, 'sort_order' => 7],
                     ],
                 ],
+                'GB' => [
+                    'name' => 'United Kingdom',
+                    'currency' => 'GBP',
+                    'locale' => 'en-GB',
+                    'timezone' => 'Europe/London',
+                    'dial_code' => '+44',
+                    'is_active' => true,
+                    'is_default' => false,
+                    'sort_order' => 1,
+                    'languages' => ['en'],
+                    'legal_statuses' => [
+                        ['key' => 'ltd', 'name' => 'Ltd', 'description' => 'Private Limited Company', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => true, 'sort_order' => 0],
+                        ['key' => 'plc', 'name' => 'PLC', 'description' => 'Public Limited Company', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 1],
+                        ['key' => 'llp', 'name' => 'LLP', 'description' => 'Limited Liability Partnership', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 2],
+                        ['key' => 'sole_trader', 'name' => 'Sole Trader', 'description' => 'Self-employed individual', 'is_vat_applicable' => false, 'vat_rate' => null, 'is_default' => false, 'sort_order' => 3],
+                    ],
+                ],
             ],
         ];
     }
