@@ -59,18 +59,18 @@ const themeMode = computed(() => [
 ])
 
 const skinOptions = computed(() => [
-  { bgImage: defaultSkin, value: 'default', label: t('platformSettings.theme.skinDefault') },
-  { bgImage: borderSkin, value: 'bordered', label: t('platformSettings.theme.skinBordered') },
+  { bgImage: defaultSkin, value: 'default', label: t('platformSettings.theme.default') },
+  { bgImage: borderSkin, value: 'bordered', label: t('platformSettings.theme.bordered') },
 ])
 
 const layoutOptions = computed(() => [
-  { bgImage: defaultSkin, value: 'vertical', label: t('platformSettings.theme.layoutVertical') },
-  { bgImage: horizontalLight, value: 'horizontal', label: t('platformSettings.theme.layoutHorizontal') },
+  { bgImage: defaultSkin, value: 'vertical', label: t('platformSettings.theme.vertical') },
+  { bgImage: horizontalLight, value: 'horizontal', label: t('platformSettings.theme.horizontal') },
 ])
 
 const contentWidthOptions = computed(() => [
-  { bgImage: compact, value: 'boxed', label: t('platformSettings.theme.contentCompact') },
-  { bgImage: wideSvg, value: 'fluid', label: t('platformSettings.theme.contentWide') },
+  { bgImage: compact, value: 'boxed', label: t('platformSettings.theme.compact') },
+  { bgImage: wideSvg, value: 'fluid', label: t('platformSettings.theme.wide') },
 ])
 
 const isHorizontal = computed(() => form.layout === 'horizontal')
