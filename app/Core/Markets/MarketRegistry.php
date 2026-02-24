@@ -39,14 +39,14 @@ class MarketRegistry
                     'sort_order' => 0,
                     'languages' => ['fr', 'en'],
                     'legal_statuses' => [
-                        ['key' => 'sas', 'name' => 'SAS', 'description' => 'Société par Actions Simplifiée', 'vat_rate' => 20.00, 'is_default' => true, 'sort_order' => 0],
-                        ['key' => 'sasu', 'name' => 'SASU', 'description' => 'SAS Unipersonnelle', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 1],
-                        ['key' => 'sarl', 'name' => 'SARL', 'description' => 'Société à Responsabilité Limitée', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 2],
-                        ['key' => 'eurl', 'name' => 'EURL', 'description' => 'Entreprise Unipersonnelle à Responsabilité Limitée', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 3],
-                        ['key' => 'sa', 'name' => 'SA', 'description' => 'Société Anonyme', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 4],
-                        ['key' => 'snc', 'name' => 'SNC', 'description' => 'Société en Nom Collectif', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 5],
-                        ['key' => 'sci', 'name' => 'SCI', 'description' => 'Société Civile Immobilière', 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 6],
-                        ['key' => 'ae', 'name' => 'Auto-entrepreneur', 'description' => 'Micro-entreprise', 'vat_rate' => 0, 'is_default' => false, 'sort_order' => 7],
+                        ['key' => 'sas', 'name' => 'SAS', 'description' => 'Société par Actions Simplifiée', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => true, 'sort_order' => 0],
+                        ['key' => 'sasu', 'name' => 'SASU', 'description' => 'SAS Unipersonnelle', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 1],
+                        ['key' => 'sarl', 'name' => 'SARL', 'description' => 'Société à Responsabilité Limitée', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 2],
+                        ['key' => 'eurl', 'name' => 'EURL', 'description' => 'Entreprise Unipersonnelle à Responsabilité Limitée', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 3],
+                        ['key' => 'sa', 'name' => 'SA', 'description' => 'Société Anonyme', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 4],
+                        ['key' => 'snc', 'name' => 'SNC', 'description' => 'Société en Nom Collectif', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 5],
+                        ['key' => 'sci', 'name' => 'SCI', 'description' => 'Société Civile Immobilière', 'is_vat_applicable' => true, 'vat_rate' => 20.00, 'is_default' => false, 'sort_order' => 6],
+                        ['key' => 'ae', 'name' => 'Auto-entrepreneur', 'description' => 'Micro-entreprise (franchise en base de TVA)', 'is_vat_applicable' => false, 'vat_rate' => null, 'is_default' => false, 'sort_order' => 7],
                     ],
                 ],
             ],
@@ -95,12 +95,15 @@ class MarketRegistry
 
             // Sync legal statuses for this market
             foreach ($def['legal_statuses'] ?? [] as $ls) {
+                $isVatApplicable = $ls['is_vat_applicable'] ?? true;
+
                 LegalStatus::updateOrCreate(
                     ['market_key' => $key, 'key' => $ls['key']],
                     [
                         'name' => $ls['name'],
                         'description' => $ls['description'] ?? null,
-                        'vat_rate' => $ls['vat_rate'] ?? 0,
+                        'is_vat_applicable' => $isVatApplicable,
+                        'vat_rate' => $isVatApplicable ? ($ls['vat_rate'] ?? 0) : null,
                         'sort_order' => $ls['sort_order'] ?? 0,
                         'is_default' => LegalStatus::where('market_key', $key)
                             ->where('key', $ls['key'])
@@ -175,6 +178,72 @@ class MarketRegistry
     public static function keys(): array
     {
         return array_keys(static::definitions());
+    }
+
+    /**
+     * Import markets from user-provided array (same shape as export).
+     * Used by platform admin import. Upserts markets + legal statuses + language pivots.
+     *
+     * @return array{created: int, updated: int}
+     */
+    public static function importFromArray(array $data): array
+    {
+        $created = 0;
+        $updated = 0;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data, &$created, &$updated) {
+            foreach ($data as $key => $def) {
+                $exists = Market::where('key', $key)->exists();
+
+                $market = Market::updateOrCreate(
+                    ['key' => $key],
+                    [
+                        'name' => $def['name'],
+                        'currency' => $def['currency'] ?? 'USD',
+                        'locale' => $def['locale'] ?? 'en-US',
+                        'timezone' => $def['timezone'] ?? 'UTC',
+                        'dial_code' => $def['dial_code'] ?? '+1',
+                        'sort_order' => $def['sort_order'] ?? 0,
+                        'is_active' => $def['is_active'] ?? true,
+                        'is_default' => $def['is_default'] ?? false,
+                    ],
+                );
+
+                $exists ? $updated++ : $created++;
+
+                // Legal statuses
+                foreach ($def['legal_statuses'] ?? [] as $ls) {
+                    $isVatApplicable = $ls['is_vat_applicable'] ?? true;
+
+                    LegalStatus::updateOrCreate(
+                        ['market_key' => $key, 'key' => $ls['key']],
+                        [
+                            'name' => $ls['name'],
+                            'description' => $ls['description'] ?? null,
+                            'is_vat_applicable' => $isVatApplicable,
+                            'vat_rate' => $isVatApplicable ? ($ls['vat_rate'] ?? 0) : null,
+                            'sort_order' => $ls['sort_order'] ?? 0,
+                            'is_default' => $ls['is_default'] ?? false,
+                        ],
+                    );
+                }
+
+                // Language pivots
+                if (!empty($def['languages'])) {
+                    $languageKeys = Language::whereIn('key', $def['languages'])->pluck('key')->all();
+
+                    if (!empty($languageKeys)) {
+                        $market->languages()->syncWithoutDetaching(
+                            array_combine($languageKeys, array_fill(0, count($languageKeys), []))
+                        );
+                    }
+                }
+            }
+        });
+
+        static::clearCache();
+
+        return ['created' => $created, 'updated' => $updated];
     }
 
     /**

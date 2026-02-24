@@ -81,7 +81,9 @@
     "operational": "Operational",
     "management": "Management",
     "operationFailed": "Operation failed.",
-    "invitationPending": "Invitation pending"
+    "invitationPending": "Invitation pending",
+    "export": "Export",
+    "import": "Import"
   },
 
   "dashboard": {
@@ -304,11 +306,10 @@
     "saveChanges": "Save changes",
     "settingsUpdated": "Company settings updated.",
     "failedToUpdate": "Failed to update company settings.",
-    "marketTitle": "Market & Legal Status",
-    "market": "Market",
-    "legalStatus": "Legal Status",
-    "saveMarket": "Save market settings",
-    "marketUpdated": "Market settings updated."
+    "legalStructureTitle": "Legal Structure",
+    "legalStructure": "Legal structure",
+    "legalStructurePlaceholder": "Select your legal structure",
+    "legalUpdated": "Legal structure updated."
   },
 
   "roles": {
@@ -1172,6 +1173,8 @@
     "key": "Key",
     "name": "Name",
     "description": "Description",
+    "subjectToVat": "Subject to VAT?",
+    "notSubjectToVat": "Not subject to VAT",
     "vatRate": "VAT Rate (%)",
     "isDefault": "Default",
     "saved": "Legal status saved",
@@ -1188,7 +1191,17 @@
     "marketsCount": "Markets",
     "saved": "Language saved",
     "deleted": "Language deleted",
-    "cannotDelete": "Cannot delete: markets are using this language"
+    "cannotDelete": "Cannot delete: markets are using this language",
+    "translationsCard": {
+      "title": "Translations",
+      "description": "Manage UI copy per locale (EN default, then FR, ES...).",
+      "openMatrix": "Open Translation Matrix",
+      "importExport": "Import / Export",
+      "translate": "Translate",
+      "bundles": "{count} bundle | {count} bundles",
+      "keys": "{count} key | {count} keys",
+      "noStats": "No translation data yet"
+    }
   },
 
   "translations": {
@@ -1204,6 +1217,62 @@
     "importSuccess": "Translations imported",
     "namespace": "Namespace",
     "locale": "Locale"
+  },
+
+  "translatePage": {
+    "title": "Translation Management",
+    "tabs": {
+      "matrix": "Matrix",
+      "overrides": "Market Overrides",
+      "importExport": "Import / Export"
+    },
+    "section": "Section",
+    "locales": "Locales",
+    "search": "Search keys...",
+    "key": "Key",
+    "defaultLocale": "Default",
+    "fallbackTooltip": "Fallback to default",
+    "dirtyCount": "{count} unsaved change | {count} unsaved changes",
+    "saveMatrix": "Save Changes",
+    "matrixSaved": "Matrix saved ({count} keys updated)",
+    "noResults": "No translation keys found",
+    "selectMarket": "Select a market",
+    "selectLocale": "Select a locale",
+    "overrideKey": "Key",
+    "overrideValue": "Value",
+    "overrideNamespace": "Section",
+    "addOverride": "Add Override",
+    "bulkSave": "Save All",
+    "saved": "Translations saved",
+    "overrideSaved": "Overrides saved",
+    "overrideDeleted": "Override removed",
+    "selectSection": "Select a section to start editing",
+    "exportLocale": "Export Locale",
+    "importLocale": "Import Locale",
+    "selectLocaleToExport": "Select a locale to export",
+    "selectLocaleToImport": "Select a locale to import",
+    "overridesEmpty": "No overrides for this market yet. Overrides let you customize translations for a specific market without changing the global translations."
+  },
+
+  "marketImport": {
+    "title": "Import Markets",
+    "preview": "Preview Changes",
+    "marketsToCreate": "New markets",
+    "marketsToUpdate": "Updated markets",
+    "languagesToCreate": "New languages",
+    "languagesToUpdate": "Updated languages",
+    "noChanges": "No changes detected",
+    "applied": "Import applied"
+  },
+
+  "international": {
+    "title": "International",
+    "tabs": {
+      "markets": "Markets",
+      "languages": "Languages",
+      "translations": "Translations",
+      "fxRates": "FX Rates"
+    }
   },
 
   "fxRates": {

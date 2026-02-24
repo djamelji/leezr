@@ -8,7 +8,7 @@ use App\Company\Http\Controllers\UserProfileController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
 use App\Modules\Core\Members\Http\MembershipController;
 use App\Modules\Core\Settings\Http\CompanyController;
-use App\Modules\Core\Settings\Http\CompanyMarketController;
+use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
 use App\Modules\Core\Settings\Http\CompanyJobdomainController;
@@ -34,9 +34,9 @@ Route::get('/company', [CompanyController::class, 'show']);
 Route::put('/company', [CompanyController::class, 'update'])
     ->middleware('company.access:use-permission,settings.manage');
 
-// ─── Company market / legal status (ADR-104) ─────────────
-Route::get('/company/market', [CompanyMarketController::class, 'show']);
-Route::put('/company/market', [CompanyMarketController::class, 'update'])
+// ─── Company legal structure (ADR-104) ────────────────────
+Route::get('/company/legal-structure', [CompanyLegalStructureController::class, 'show']);
+Route::put('/company/legal-structure', [CompanyLegalStructureController::class, 'updateLegalStatus'])
     ->middleware('company.access:use-permission,settings.manage');
 
 // ─── Members management ───────────────────────────────────

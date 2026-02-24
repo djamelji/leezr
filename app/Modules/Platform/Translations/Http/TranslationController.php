@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Platform\Markets\Http;
+namespace App\Modules\Platform\Translations\Http;
 
 use App\Core\Markets\TranslationBundle;
 use App\Core\Markets\TranslationRepository;

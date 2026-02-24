@@ -17,10 +17,14 @@ class LegalStatusController
             'key' => ['required', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_]*$/'],
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:255'],
-            'vat_rate' => ['numeric', 'min:0', 'max:100'],
+            'is_vat_applicable' => ['required', 'boolean'],
+            'vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_default' => ['boolean'],
             'sort_order' => ['integer', 'min:0'],
         ]);
+
+        // Enforce VAT rules
+        $validated = $this->enforceVatRules($validated);
 
         // Check uniqueness within market
         if (LegalStatus::where('market_key', $marketKey)->where('key', $validated['key'])->exists()) {
@@ -48,10 +52,14 @@ class LegalStatusController
             'key' => ['required', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_]*$/'],
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:255'],
-            'vat_rate' => ['numeric', 'min:0', 'max:100'],
+            'is_vat_applicable' => ['required', 'boolean'],
+            'vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_default' => ['boolean'],
             'sort_order' => ['integer', 'min:0'],
         ]);
+
+        // Enforce VAT rules
+        $validated = $this->enforceVatRules($validated);
 
         // Check uniqueness within market (exclude self)
         if (LegalStatus::where('market_key', $status->market_key)
@@ -102,5 +110,19 @@ class LegalStatusController
         }
 
         return response()->json(['message' => 'Legal statuses reordered.']);
+    }
+
+    /**
+     * Enforce business rules: if not VAT-applicable, vat_rate must be null.
+     */
+    private function enforceVatRules(array $data): array
+    {
+        if (empty($data['is_vat_applicable'])) {
+            $data['vat_rate'] = null;
+        } elseif (!isset($data['vat_rate'])) {
+            $data['vat_rate'] = 0;
+        }
+
+        return $data;
     }
 }

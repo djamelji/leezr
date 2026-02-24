@@ -6,7 +6,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
-    navActiveLink: 'platform-markets',
+    navActiveLink: 'platform-international-tab',
   },
 })
 
@@ -41,6 +41,7 @@ const legalForm = reactive({
   key: '',
   name: '',
   description: '',
+  is_vat_applicable: true,
   vat_rate: 20,
   is_default: false,
   sort_order: 0,
@@ -69,7 +70,7 @@ const loadMarket = async () => {
   }
   catch {
     toast(t('common.error'), 'error')
-    router.push({ name: 'platform-markets' })
+    router.push({ name: 'platform-international-tab', params: { tab: 'markets' } })
   }
   finally {
     isLoading.value = false
@@ -101,7 +102,7 @@ const saveGeneral = async () => {
 // ─── Legal statuses ─────────────────────────────────
 const openAddLegal = () => {
   legalDialogMode.value = 'create'
-  Object.assign(legalForm, { id: null, key: '', name: '', description: '', vat_rate: 20, is_default: false, sort_order: 0 })
+  Object.assign(legalForm, { id: null, key: '', name: '', description: '', is_vat_applicable: true, vat_rate: 20, is_default: false, sort_order: 0 })
   isLegalDialogOpen.value = true
 }
 
@@ -197,7 +198,7 @@ const legalHeaders = [
   { title: t('legalStatuses.key'), key: 'key', width: '120px' },
   { title: t('legalStatuses.name'), key: 'name' },
   { title: t('legalStatuses.description'), key: 'description' },
-  { title: t('legalStatuses.vatRate'), key: 'vat_rate', width: '120px' },
+  { title: t('legalStatuses.subjectToVat'), key: 'vat_display', width: '160px' },
   { title: t('legalStatuses.isDefault'), key: 'is_default', width: '100px', align: 'center' },
   { title: t('common.actions'), key: 'actions', sortable: false, width: '120px' },
 ]
@@ -211,7 +212,7 @@ const legalHeaders = [
         icon="tabler-arrow-left"
         variant="text"
         class="me-2"
-        @click="router.push({ name: 'platform-markets' })"
+        @click="router.push({ name: 'platform-international-tab', params: { tab: 'markets' } })"
       />
       <div v-if="!isLoading">
         <h4 class="text-h4">
@@ -394,8 +395,19 @@ const legalHeaders = [
             :items="marketsStore.currentMarket?.legal_statuses || []"
             class="text-no-wrap"
           >
-            <template #item.vat_rate="{ item }">
-              {{ item.vat_rate }}%
+            <template #item.vat_display="{ item }">
+              <template v-if="item.is_vat_applicable">
+                <VChip
+                  color="info"
+                  size="small"
+                >
+                  {{ item.vat_rate }}%
+                </VChip>
+              </template>
+              <span
+                v-else
+                class="text-medium-emphasis text-body-2"
+              >{{ t('legalStatuses.notSubjectToVat') }}</span>
             </template>
             <template #item.is_default="{ item }">
               <VChip
@@ -524,7 +536,15 @@ const legalHeaders = [
                 :label="t('legalStatuses.description')"
               />
             </VCol>
+            <VCol cols="12">
+              <VSwitch
+                v-model="legalForm.is_vat_applicable"
+                :label="t('legalStatuses.subjectToVat')"
+                color="primary"
+              />
+            </VCol>
             <VCol
+              v-if="legalForm.is_vat_applicable"
               cols="12"
               md="6"
             >
@@ -534,6 +554,12 @@ const legalHeaders = [
                 type="number"
                 suffix="%"
               />
+            </VCol>
+            <VCol
+              v-if="!legalForm.is_vat_applicable"
+              cols="12"
+            >
+              <span class="text-body-2 text-medium-emphasis">{{ t('legalStatuses.notSubjectToVat') }}</span>
             </VCol>
             <VCol
               cols="12"

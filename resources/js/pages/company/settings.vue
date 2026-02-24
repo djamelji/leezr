@@ -3,13 +3,11 @@ definePage({ meta: { surface: 'structure' } })
 
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
-import { useWorldStore } from '@/core/stores/world'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const worldStore = useWorldStore()
 const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
 
@@ -22,13 +20,9 @@ const isLoading = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-// Market form
-const marketForm = ref({
-  market_key: null,
-  legal_status_key: null,
-})
-
-const marketLoading = ref(false)
+// Legal structure
+const legalStatusKey = ref(null)
+const legalLoading = ref(false)
 
 const canEdit = computed(() => auth.hasPermission('settings.manage'))
 
@@ -36,8 +30,8 @@ const dynamicFields = computed(() => {
   return settingsStore.company?.dynamic_fields || []
 })
 
-const availableMarkets = computed(() => {
-  return settingsStore.marketInfo?.markets || []
+const hasMarketAssigned = computed(() => {
+  return !!settingsStore.marketInfo?.market_name
 })
 
 const availableLegalStatuses = computed(() => {
@@ -47,7 +41,7 @@ const availableLegalStatuses = computed(() => {
 onMounted(async () => {
   await Promise.all([
     settingsStore.fetchCompany(),
-    settingsStore.fetchMarketInfo(),
+    settingsStore.fetchLegalStructure(),
   ])
 
   const data = settingsStore.company
@@ -60,10 +54,8 @@ onMounted(async () => {
   }
   dynamicForm.value = df
 
-  // Init market form
-  const mi = settingsStore.marketInfo
-  marketForm.value.market_key = mi?.market_key || null
-  marketForm.value.legal_status_key = mi?.legal_status_key || null
+  // Init legal status
+  legalStatusKey.value = settingsStore.marketInfo?.legal_status_key || null
 })
 
 const handleSave = async () => {
@@ -105,64 +97,22 @@ const resetForm = () => {
   dynamicForm.value = df
 }
 
-// ─── Market / Legal Status ────────────────────────────
-const handleMarketSave = async () => {
-  marketLoading.value = true
+// ─── Legal Structure ─────────────────────────────────
+const handleLegalSave = async () => {
+  legalLoading.value = true
 
   try {
-    const data = await settingsStore.updateMarket({ ...marketForm.value })
+    const data = await settingsStore.updateLegalStatus(legalStatusKey.value)
 
-    // Update world store with new market data
-    const selectedMarket = availableMarkets.value.find(m => m.key === marketForm.value.market_key)
-    if (selectedMarket)
-      worldStore.applyMarket(selectedMarket)
-
-    // Sync market form with refreshed data
-    const mi = settingsStore.marketInfo
-    marketForm.value.market_key = mi?.market_key || null
-    marketForm.value.legal_status_key = mi?.legal_status_key || null
-
-    toast(data.message || t('companySettings.marketUpdated'), 'success')
+    toast(data.message || t('companySettings.legalUpdated'), 'success')
   }
   catch (error) {
     toast(error?.data?.message || t('common.error'), 'error')
   }
   finally {
-    marketLoading.value = false
+    legalLoading.value = false
   }
 }
-
-// When market changes, clear legal status and load legal statuses for new market
-watch(() => marketForm.value.market_key, async (newKey, oldKey) => {
-  if (newKey !== oldKey && oldKey !== undefined) {
-    marketForm.value.legal_status_key = null
-
-    // Fetch legal statuses for newly selected market via public API
-    if (newKey) {
-      try {
-        const res = await fetch(`/api/public/markets/${newKey}`)
-        if (res.ok) {
-          const data = await res.json()
-
-          settingsStore.$patch(state => {
-            state._marketInfo = {
-              ...state._marketInfo,
-              legal_statuses: data.legal_statuses || [],
-            }
-          })
-        }
-      }
-      catch {
-        // Ignore — legal statuses will be empty
-      }
-    }
-    else {
-      settingsStore.$patch(state => {
-        state._marketInfo = { ...state._marketInfo, legal_statuses: [] }
-      })
-    }
-  }
-})
 </script>
 
 <template>
@@ -237,9 +187,13 @@ watch(() => marketForm.value.market_key, async (newKey, oldKey) => {
       </VCardText>
     </VCard>
 
-    <!-- Market & Legal Status (ADR-104) -->
-    <VCard class="mt-6">
-      <VCardTitle>{{ t('companySettings.marketTitle') }}</VCardTitle>
+    <!-- Legal Structure (ADR-104) — only visible when market assigned by Platform -->
+    <VCard
+      v-if="hasMarketAssigned"
+      class="mt-6"
+    >
+      <VCardTitle>{{ t('companySettings.legalStructureTitle') }}</VCardTitle>
+      <VCardSubtitle>{{ settingsStore.marketInfo?.market_name }}</VCardSubtitle>
       <VCardText>
         <VRow>
           <VCol
@@ -247,34 +201,13 @@ watch(() => marketForm.value.market_key, async (newKey, oldKey) => {
             md="6"
           >
             <AppSelect
-              v-model="marketForm.market_key"
-              :label="t('companySettings.market')"
-              :items="availableMarkets"
-              item-title="name"
-              item-value="key"
-              :disabled="!canEdit"
-              clearable
-            >
-              <template #item="{ props: itemProps, item }">
-                <VListItem
-                  v-bind="itemProps"
-                  :subtitle="`${item.raw.currency} · ${item.raw.locale}`"
-                />
-              </template>
-            </AppSelect>
-          </VCol>
-
-          <VCol
-            cols="12"
-            md="6"
-          >
-            <AppSelect
-              v-model="marketForm.legal_status_key"
-              :label="t('companySettings.legalStatus')"
+              v-model="legalStatusKey"
+              :label="t('companySettings.legalStructure')"
+              :placeholder="t('companySettings.legalStructurePlaceholder')"
               :items="availableLegalStatuses"
               item-title="name"
               item-value="key"
-              :disabled="!canEdit || !marketForm.market_key"
+              :disabled="!canEdit"
               clearable
             >
               <template #item="{ props: itemProps, item }">
@@ -291,10 +224,10 @@ watch(() => marketForm.value.market_key, async (newKey, oldKey) => {
             cols="12"
           >
             <VBtn
-              :loading="marketLoading"
-              @click="handleMarketSave"
+              :loading="legalLoading"
+              @click="handleLegalSave"
             >
-              {{ t('companySettings.saveMarket') }}
+              {{ t('common.save') }}
             </VBtn>
           </VCol>
         </VRow>

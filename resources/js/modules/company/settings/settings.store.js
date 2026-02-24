@@ -84,23 +84,23 @@ export const useCompanySettingsStore = defineStore('companySettings', {
       return data
     },
 
-    // ─── Market / Legal Status (ADR-104) ─────────────────
-    async fetchMarketInfo() {
-      const data = await $api('/company/market')
+    // ─── Legal Structure (ADR-104) ─────────────────────
+    async fetchLegalStructure() {
+      const data = await $api('/company/legal-structure')
 
       this._marketInfo = data
 
       return data
     },
 
-    async updateMarket(payload) {
-      const data = await $api('/company/market', {
+    async updateLegalStatus(legalStatusKey) {
+      const data = await $api('/company/legal-structure', {
         method: 'PUT',
-        body: payload,
+        body: { legal_status_key: legalStatusKey },
       })
 
-      // Refresh full market info to get updated legal statuses list
-      await this.fetchMarketInfo()
+      // Refresh to sync
+      await this.fetchLegalStructure()
 
       return data
     },

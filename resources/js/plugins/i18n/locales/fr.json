@@ -81,7 +81,9 @@
     "operational": "Opérationnel",
     "management": "Gestion",
     "operationFailed": "L'opération a échoué.",
-    "invitationPending": "Invitation en attente"
+    "invitationPending": "Invitation en attente",
+    "export": "Exporter",
+    "import": "Importer"
   },
 
   "dashboard": {
@@ -304,11 +306,10 @@
     "saveChanges": "Enregistrer les modifications",
     "settingsUpdated": "Paramètres de l'entreprise mis à jour.",
     "failedToUpdate": "Échec de la mise à jour des paramètres de l'entreprise.",
-    "marketTitle": "Marché & Statut juridique",
-    "market": "Marché",
-    "legalStatus": "Statut juridique",
-    "saveMarket": "Enregistrer les paramètres marché",
-    "marketUpdated": "Paramètres marché mis à jour."
+    "legalStructureTitle": "Forme juridique",
+    "legalStructure": "Forme juridique",
+    "legalStructurePlaceholder": "Sélectionnez votre forme juridique",
+    "legalUpdated": "Forme juridique mise à jour."
   },
 
   "roles": {
@@ -1173,6 +1174,8 @@
     "key": "Clé",
     "name": "Nom",
     "description": "Description",
+    "subjectToVat": "Assujetti à la TVA ?",
+    "notSubjectToVat": "Non assujetti à la TVA",
     "vatRate": "Taux de TVA (%)",
     "isDefault": "Par défaut",
     "saved": "Statut juridique enregistré",
@@ -1189,7 +1192,17 @@
     "marketsCount": "Marchés",
     "saved": "Langue enregistrée",
     "deleted": "Langue supprimée",
-    "cannotDelete": "Impossible de supprimer : des marchés utilisent cette langue"
+    "cannotDelete": "Impossible de supprimer : des marchés utilisent cette langue",
+    "translationsCard": {
+      "title": "Traductions",
+      "description": "Gérez les textes de l'interface par langue (EN par défaut, puis FR, ES...).",
+      "openMatrix": "Ouvrir la matrice de traductions",
+      "importExport": "Import / Export",
+      "translate": "Traduire",
+      "bundles": "{count} bundle | {count} bundles",
+      "keys": "{count} clé | {count} clés",
+      "noStats": "Aucune donnée de traduction"
+    }
   },
 
   "translations": {
@@ -1205,6 +1218,62 @@
     "importSuccess": "Traductions importées",
     "namespace": "Espace de noms",
     "locale": "Locale"
+  },
+
+  "translatePage": {
+    "title": "Gestion des traductions",
+    "tabs": {
+      "matrix": "Matrice",
+      "overrides": "Surcharges par marché",
+      "importExport": "Import / Export"
+    },
+    "section": "Section",
+    "locales": "Langues",
+    "search": "Rechercher des clés...",
+    "key": "Clé",
+    "defaultLocale": "Par défaut",
+    "fallbackTooltip": "Repli vers la langue par défaut",
+    "dirtyCount": "{count} modification non enregistrée | {count} modifications non enregistrées",
+    "saveMatrix": "Enregistrer les modifications",
+    "matrixSaved": "Matrice enregistrée ({count} clés mises à jour)",
+    "noResults": "Aucune clé de traduction trouvée",
+    "selectMarket": "Sélectionner un marché",
+    "selectLocale": "Sélectionner une langue",
+    "overrideKey": "Clé",
+    "overrideValue": "Valeur",
+    "overrideNamespace": "Section",
+    "addOverride": "Ajouter une surcharge",
+    "bulkSave": "Tout enregistrer",
+    "saved": "Traductions enregistrées",
+    "overrideSaved": "Surcharges enregistrées",
+    "overrideDeleted": "Surcharge supprimée",
+    "selectSection": "Sélectionnez une section pour commencer l'édition",
+    "exportLocale": "Exporter la langue",
+    "importLocale": "Importer la langue",
+    "selectLocaleToExport": "Sélectionnez une langue à exporter",
+    "selectLocaleToImport": "Sélectionnez une langue à importer",
+    "overridesEmpty": "Aucune surcharge pour ce marché. Les surcharges permettent de personnaliser les traductions pour un marché spécifique sans modifier les traductions globales."
+  },
+
+  "marketImport": {
+    "title": "Importer des marchés",
+    "preview": "Aperçu des modifications",
+    "marketsToCreate": "Nouveaux marchés",
+    "marketsToUpdate": "Marchés mis à jour",
+    "languagesToCreate": "Nouvelles langues",
+    "languagesToUpdate": "Langues mises à jour",
+    "noChanges": "Aucun changement détecté",
+    "applied": "Import appliqué"
+  },
+
+  "international": {
+    "title": "International",
+    "tabs": {
+      "markets": "Marchés",
+      "languages": "Langues",
+      "translations": "Traductions",
+      "fxRates": "Taux de change"
+    }
   },
 
   "fxRates": {

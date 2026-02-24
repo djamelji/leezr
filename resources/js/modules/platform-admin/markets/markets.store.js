@@ -8,8 +8,6 @@ export const usePlatformMarketsStore = defineStore('platformMarkets', {
     _marketCompanies: [],
     _marketCompaniesPagination: { current_page: 1, last_page: 1, total: 0 },
     _languages: [],
-    _translations: [],
-    _translationsPagination: { current_page: 1, last_page: 1, total: 0 },
     _fxRates: [],
   }),
 
@@ -19,8 +17,6 @@ export const usePlatformMarketsStore = defineStore('platformMarkets', {
     marketCompanies: state => state._marketCompanies,
     marketCompaniesPagination: state => state._marketCompaniesPagination,
     languages: state => state._languages,
-    translations: state => state._translations,
-    translationsPagination: state => state._translationsPagination,
     fxRates: state => state._fxRates,
   },
 
@@ -206,47 +202,42 @@ export const usePlatformMarketsStore = defineStore('platformMarkets', {
       return data
     },
 
-    // ─── Translations ──────────────────────────────────
-    async fetchTranslations(params = {}) {
-      const data = await $platformApi('/translations', { params })
+    // ─── Import / Export ─────────────────────────────────
+    async exportMarkets() {
+      return await $platformApi('/markets/export')
+    },
 
-      this._translations = data.data
-      this._translationsPagination = {
-        current_page: data.current_page,
-        last_page: data.last_page,
-        total: data.total,
-      }
+    async importMarketsPreview(formData) {
+      return await $platformApi('/markets/import-preview', {
+        method: 'POST',
+        body: formData,
+      })
+    },
+
+    async importMarketsApply(formData) {
+      const data = await $platformApi('/markets/import-apply', {
+        method: 'POST',
+        body: formData,
+      })
+
+      await this.fetchMarkets()
 
       return data
     },
 
-    async fetchTranslation(locale, namespace) {
-      return await $platformApi(`/translations/${locale}/${namespace}`)
+    async exportLanguages() {
+      return await $platformApi('/languages/export')
     },
 
-    async updateTranslation(id, payload) {
-      return await $platformApi(`/translations/${id}`, {
-        method: 'PUT',
-        body: payload,
-      })
-    },
-
-    async importPreview(formData) {
-      return await $platformApi('/translations/import-preview', {
+    async importLanguagesApply(formData) {
+      const data = await $platformApi('/languages/import-apply', {
         method: 'POST',
         body: formData,
       })
-    },
 
-    async importApply(formData) {
-      return await $platformApi('/translations/import-apply', {
-        method: 'POST',
-        body: formData,
-      })
-    },
+      await this.fetchLanguages()
 
-    async exportLocale(locale) {
-      return await $platformApi(`/translations/export/${locale}`)
+      return data
     },
 
     // ─── FX Rates ──────────────────────────────────────

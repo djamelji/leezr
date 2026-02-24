@@ -20,8 +20,10 @@ use App\Modules\Platform\Users\Http\UserController;
 use App\Modules\Platform\Markets\Http\MarketCrudController;
 use App\Modules\Platform\Markets\Http\LegalStatusController;
 use App\Modules\Platform\Markets\Http\LanguageController;
-use App\Modules\Platform\Markets\Http\TranslationController;
 use App\Modules\Platform\Markets\Http\FxRateController;
+use App\Modules\Platform\Translations\Http\TranslationController;
+use App\Modules\Platform\Translations\Http\TranslationMatrixController;
+use App\Modules\Platform\Translations\Http\OverrideController;
 use App\Modules\Platform\Settings\Http\WorldSettingsController;
 use App\Platform\Auth\PlatformAuthController;
 use App\Platform\Auth\PlatformPasswordResetController;
@@ -168,6 +170,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Markets governance (ADR-104)
     Route::middleware('platform.permission:manage_markets')->group(function () {
         // Markets CRUD
+        Route::get('/markets/export', [MarketCrudController::class, 'export']);
+        Route::post('/markets/import-preview', [MarketCrudController::class, 'importPreview']);
+        Route::post('/markets/import-apply', [MarketCrudController::class, 'importApply']);
         Route::get('/markets', [MarketCrudController::class, 'index']);
         Route::get('/markets/{key}', [MarketCrudController::class, 'show']);
         Route::post('/markets', [MarketCrudController::class, 'store']);
@@ -182,13 +187,30 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/markets/{marketKey}/legal-statuses/reorder', [LegalStatusController::class, 'reorder']);
 
         // Languages
+        Route::get('/languages/export', [LanguageController::class, 'export']);
+        Route::post('/languages/import-apply', [LanguageController::class, 'importApply']);
         Route::get('/languages', [LanguageController::class, 'index']);
         Route::post('/languages', [LanguageController::class, 'store']);
         Route::put('/languages/{id}', [LanguageController::class, 'update']);
         Route::delete('/languages/{id}', [LanguageController::class, 'destroy']);
         Route::put('/languages/{id}/toggle-active', [LanguageController::class, 'toggleActive']);
 
-        // Translations
+        // FX rates
+        Route::get('/fx-rates', [FxRateController::class, 'index']);
+        Route::post('/fx-rates/refresh', [FxRateController::class, 'refresh']);
+    });
+
+    // Translation governance (ADR-104 — separate permission)
+    Route::middleware('platform.permission:manage_translations')->group(function () {
+        // Stats + Namespaces
+        Route::get('/translations/stats', [TranslationMatrixController::class, 'stats']);
+        Route::get('/translations/namespaces', [TranslationMatrixController::class, 'namespaces']);
+
+        // Matrix editor (primary editing interface)
+        Route::get('/translations/matrix', [TranslationMatrixController::class, 'index']);
+        Route::put('/translations/matrix', [TranslationMatrixController::class, 'update']);
+
+        // Bundles CRUD
         Route::get('/translations', [TranslationController::class, 'index']);
         Route::get('/translations/{locale}/{namespace}', [TranslationController::class, 'show']);
         Route::put('/translations/{id}', [TranslationController::class, 'update']);
@@ -196,9 +218,10 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/translations/import-apply', [TranslationController::class, 'importApply']);
         Route::get('/translations/export/{locale}', [TranslationController::class, 'export']);
 
-        // FX rates
-        Route::get('/fx-rates', [FxRateController::class, 'index']);
-        Route::post('/fx-rates/refresh', [FxRateController::class, 'refresh']);
+        // Market overrides
+        Route::get('/translations/overrides/{marketKey}/{locale}', [OverrideController::class, 'index']);
+        Route::put('/translations/overrides/{marketKey}', [OverrideController::class, 'upsert']);
+        Route::delete('/translations/overrides/{id}', [OverrideController::class, 'destroy']);
     });
 
     // Heartbeat (session keepalive — governance middleware handles TTL header)

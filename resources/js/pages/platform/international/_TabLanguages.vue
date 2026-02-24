@@ -2,19 +2,51 @@
 import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
 
-definePage({
-  meta: {
-    layout: 'platform',
-    platform: true,
-    navActiveLink: 'platform-languages',
-  },
-})
-
 const { t } = useI18n()
 const marketsStore = usePlatformMarketsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
+const importLoading = ref(false)
+
+const handleExport = async () => {
+  try {
+    const data = await marketsStore.exportLanguages()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = 'languages-export.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+}
+
+const handleImportFile = async file => {
+  if (!file)
+    return
+
+  const formData = new FormData()
+
+  formData.append('file', file)
+  importLoading.value = true
+
+  try {
+    const data = await marketsStore.importLanguagesApply(formData)
+
+    toast(data.message || t('marketImport.applied'), 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    importLoading.value = false
+  }
+}
 
 // Dialog
 const isDialogOpen = ref(false)
@@ -36,7 +68,7 @@ const headers = [
   { title: t('languages.nativeName'), key: 'native_name' },
   { title: t('languages.isActive'), key: 'is_active', width: '100px', align: 'center' },
   { title: t('languages.marketsCount'), key: 'markets_count', width: '100px', align: 'center' },
-  { title: t('common.actions'), key: 'actions', sortable: false, width: '150px' },
+  { title: t('common.actions'), key: 'actions', sortable: false, width: '120px' },
 ]
 
 onMounted(async () => {
@@ -111,16 +143,40 @@ const handleDelete = async lang => {
   <div>
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-6">
-      <h4 class="text-h4">
+      <h5 class="text-h5">
         {{ t('languages.title') }}
-      </h4>
-      <VBtn
-        color="primary"
-        prepend-icon="tabler-plus"
-        @click="openCreate"
-      >
-        {{ t('languages.addLanguage') }}
-      </VBtn>
+      </h5>
+      <div class="d-flex gap-2">
+        <VBtn
+          variant="outlined"
+          prepend-icon="tabler-download"
+          @click="handleExport"
+        >
+          {{ t('common.export') }}
+        </VBtn>
+        <VBtn
+          variant="outlined"
+          prepend-icon="tabler-upload"
+          :loading="importLoading"
+          @click="$refs.langImportInput.click()"
+        >
+          {{ t('common.import') }}
+        </VBtn>
+        <input
+          ref="langImportInput"
+          type="file"
+          accept=".json"
+          class="d-none"
+          @change="e => handleImportFile(e.target.files[0])"
+        >
+        <VBtn
+          color="primary"
+          prepend-icon="tabler-plus"
+          @click="openCreate"
+        >
+          {{ t('languages.addLanguage') }}
+        </VBtn>
+      </div>
     </div>
 
     <!-- Languages Table -->

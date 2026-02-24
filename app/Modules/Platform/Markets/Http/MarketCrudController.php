@@ -8,6 +8,7 @@ use App\Core\Markets\ReadModels\MarketDetailReadModel;
 use App\Core\Models\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MarketCrudController
 {
@@ -148,6 +149,95 @@ class MarketCrudController
         return response()->json([
             'message' => 'Default market updated.',
             'market' => $market->load(['legalStatuses', 'languages']),
+        ]);
+    }
+
+    // ─── Import / Export ────────────────────────────────
+
+    public function export(): JsonResponse
+    {
+        $markets = Market::with(['legalStatuses' => fn ($q) => $q->orderBy('sort_order'), 'languages:key'])
+            ->orderBy('sort_order')
+            ->get();
+
+        $result = [];
+
+        foreach ($markets as $market) {
+            $result[$market->key] = [
+                'name' => $market->name,
+                'currency' => $market->currency,
+                'locale' => $market->locale,
+                'timezone' => $market->timezone,
+                'dial_code' => $market->dial_code,
+                'is_active' => $market->is_active,
+                'is_default' => $market->is_default,
+                'sort_order' => $market->sort_order,
+                'languages' => $market->languages->pluck('key')->toArray(),
+                'legal_statuses' => $market->legalStatuses->map(fn ($ls) => [
+                    'key' => $ls->key,
+                    'name' => $ls->name,
+                    'description' => $ls->description,
+                    'is_vat_applicable' => $ls->is_vat_applicable,
+                    'vat_rate' => $ls->vat_rate,
+                    'is_default' => $ls->is_default,
+                    'sort_order' => $ls->sort_order,
+                ])->toArray(),
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+    public function importPreview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:json', 'max:5120'],
+        ]);
+
+        $content = file_get_contents($validated['file']->getRealPath());
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return response()->json(['message' => 'Invalid JSON file.'], 422);
+        }
+
+        $existingKeys = Market::pluck('key')->toArray();
+        $toCreate = [];
+        $toUpdate = [];
+
+        foreach ($data as $key => $def) {
+            if (in_array($key, $existingKeys)) {
+                $toUpdate[] = $key;
+            } else {
+                $toCreate[] = $key;
+            }
+        }
+
+        return response()->json([
+            'markets_to_create' => $toCreate,
+            'markets_to_update' => $toUpdate,
+            'total' => count($data),
+        ]);
+    }
+
+    public function importApply(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:json', 'max:5120'],
+        ]);
+
+        $content = file_get_contents($validated['file']->getRealPath());
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return response()->json(['message' => 'Invalid JSON file.'], 422);
+        }
+
+        $result = MarketRegistry::importFromArray($data);
+
+        return response()->json([
+            'message' => "Import applied: {$result['created']} created, {$result['updated']} updated.",
+            ...$result,
         ]);
     }
 }

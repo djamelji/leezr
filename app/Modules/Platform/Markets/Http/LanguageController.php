@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Markets\Http;
 use App\Core\Markets\Language;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LanguageController
 {
@@ -87,6 +88,61 @@ class LanguageController
         return response()->json([
             'message' => $language->is_active ? 'Language activated.' : 'Language deactivated.',
             'language' => $language,
+        ]);
+    }
+
+    // ─── Import / Export ────────────────────────────────
+
+    public function export(): JsonResponse
+    {
+        $languages = Language::orderBy('sort_order')->get();
+
+        return response()->json($languages);
+    }
+
+    public function importApply(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:json', 'max:5120'],
+        ]);
+
+        $content = file_get_contents($validated['file']->getRealPath());
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return response()->json(['message' => 'Invalid JSON file.'], 422);
+        }
+
+        $created = 0;
+        $updated = 0;
+
+        DB::transaction(function () use ($data, &$created, &$updated) {
+            foreach ($data as $lang) {
+                if (empty($lang['key']) || empty($lang['name'])) {
+                    continue;
+                }
+
+                $exists = Language::where('key', $lang['key'])->exists();
+
+                Language::updateOrCreate(
+                    ['key' => $lang['key']],
+                    [
+                        'name' => $lang['name'],
+                        'native_name' => $lang['native_name'] ?? $lang['name'],
+                        'sort_order' => $lang['sort_order'] ?? 0,
+                        'is_active' => $lang['is_active'] ?? true,
+                        'is_default' => $lang['is_default'] ?? false,
+                    ],
+                );
+
+                $exists ? $updated++ : $created++;
+            }
+        });
+
+        return response()->json([
+            'message' => "Import applied: {$created} created, {$updated} updated.",
+            'created' => $created,
+            'updated' => $updated,
         ]);
     }
 }

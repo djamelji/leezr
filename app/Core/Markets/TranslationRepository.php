@@ -3,13 +3,8 @@
 namespace App\Core\Markets;
 
 /**
- * Merges translations from DB bundles + market overrides.
- *
- * Fallback chain (applied by the API consumer / frontend):
- *   market overrides > DB bundles > JSON locale > JSON en
- *
- * This repository handles the DB layers (bundles + overrides).
- * The static JSON files are handled by vue-i18n on the frontend.
+ * Merges translations with full fallback chain:
+ *   market overrides > DB bundles > static JSON locale > static JSON en
  *
  * ADR-104: International Market Engine.
  */
@@ -17,11 +12,58 @@ class TranslationRepository
 {
     /**
      * Returns merged translations for a locale, optionally filtered by namespace.
-     * Market overrides are applied on top if a market key is provided.
+     *
+     * Fallback chain (4 layers, merged bottom-up):
+     * 1. English static JSON (base fallback, if locale != 'en')
+     * 2. Requested locale static JSON
+     * 3. DB bundles for requested locale
+     * 4. Market overrides (if marketKey provided)
      *
      * @return array Keyed by namespace when no specific namespace, or flat translations when namespace given.
      */
     public static function bundle(string $locale, ?string $namespace = null, ?string $marketKey = null): array
+    {
+        // Layer 1: English fallback (if requested locale is not English)
+        $result = [];
+
+        if ($locale !== 'en') {
+            $enStatic = self::staticJsonFallback('en', $namespace);
+            $enDb = self::dbBundles('en', $namespace);
+            $result = array_replace_recursive($enStatic, $enDb);
+        }
+
+        // Layer 2: Static JSON for requested locale
+        $localeStatic = self::staticJsonFallback($locale, $namespace);
+        $result = array_replace_recursive($result, $localeStatic);
+
+        // Layer 3: DB bundles for requested locale
+        $localeDb = self::dbBundles($locale, $namespace);
+        $result = array_replace_recursive($result, $localeDb);
+
+        // Layer 4: Market overrides
+        if ($marketKey) {
+            $overrides = TranslationOverride::where('market_key', $marketKey)
+                ->where('locale', $locale)
+                ->when($namespace, fn ($q) => $q->where('namespace', $namespace))
+                ->get();
+
+            foreach ($overrides as $override) {
+                if ($namespace) {
+                    data_set($result, $override->key, $override->value);
+                } else {
+                    data_set($result, "{$override->namespace}.{$override->key}", $override->value);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Fetch DB bundles for a locale, optionally filtered by namespace.
+     * Returns keyed by namespace, or flat if namespace given.
+     */
+    private static function dbBundles(string $locale, ?string $namespace): array
     {
         $query = TranslationBundle::where('locale', $locale);
 
@@ -32,23 +74,31 @@ class TranslationRepository
         $result = [];
 
         foreach ($query->get() as $bundle) {
-            $result[$bundle->namespace] = $bundle->translations;
-        }
-
-        // Apply market overrides
-        if ($marketKey) {
-            $overrides = TranslationOverride::where('market_key', $marketKey)
-                ->where('locale', $locale)
-                ->when($namespace, fn ($q) => $q->where('namespace', $namespace))
-                ->get();
-
-            foreach ($overrides as $override) {
-                data_set($result, "{$override->namespace}.{$override->key}", $override->value);
+            if ($namespace) {
+                $result = $bundle->translations;
+            } else {
+                $result[$bundle->namespace] = $bundle->translations;
             }
         }
 
-        // If a specific namespace was requested, return only that namespace's translations
-        return $namespace ? ($result[$namespace] ?? []) : $result;
+        return $result;
+    }
+
+    /**
+     * Read static JSON locale file as fallback.
+     * Returns keyed by namespace, or just the namespace content if namespace given.
+     */
+    private static function staticJsonFallback(string $locale, ?string $namespace): array
+    {
+        $path = resource_path("js/plugins/i18n/locales/{$locale}.json");
+
+        if (!file_exists($path)) {
+            return [];
+        }
+
+        $data = json_decode(file_get_contents($path), true) ?? [];
+
+        return $namespace ? ($data[$namespace] ?? []) : $data;
     }
 
     /**

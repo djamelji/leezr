@@ -2,22 +2,80 @@
 import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
 
-definePage({
-  meta: {
-    layout: 'platform',
-    platform: true,
-    navActiveLink: 'platform-markets',
-  },
-})
-
 const { t } = useI18n()
 const router = useRouter()
 const marketsStore = usePlatformMarketsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
-const fxLoading = ref(false)
-const fxRefreshing = ref(false)
+
+// Import / Export
+const importFile = ref(null)
+const importLoading = ref(false)
+const isImportPreviewOpen = ref(false)
+const importPreview = ref(null)
+
+const handleExport = async () => {
+  try {
+    const data = await marketsStore.exportMarkets()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = 'markets-export.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+}
+
+const handleImportFile = async file => {
+  if (!file)
+    return
+
+  const formData = new FormData()
+
+  formData.append('file', file)
+  importLoading.value = true
+
+  try {
+    importPreview.value = await marketsStore.importMarketsPreview(formData)
+    isImportPreviewOpen.value = true
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    importLoading.value = false
+  }
+}
+
+const handleImportApply = async () => {
+  if (!importFile.value)
+    return
+
+  const formData = new FormData()
+
+  formData.append('file', importFile.value)
+  importLoading.value = true
+
+  try {
+    const data = await marketsStore.importMarketsApply(formData)
+
+    toast(data.message || t('marketImport.applied'), 'success')
+    isImportPreviewOpen.value = false
+    importFile.value = null
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    importLoading.value = false
+  }
+}
 
 // Create dialog
 const isCreateDialogOpen = ref(false)
@@ -44,43 +102,14 @@ const headers = [
   { title: t('common.actions'), key: 'actions', sortable: false, width: '100px', align: 'center' },
 ]
 
-const fxHeaders = [
-  { title: t('fxRates.baseCurrency'), key: 'base_currency', width: '120px' },
-  { title: t('fxRates.targetCurrency'), key: 'target_currency', width: '120px' },
-  { title: t('fxRates.rate'), key: 'rate' },
-  { title: t('fxRates.lastUpdated'), key: 'fetched_at' },
-]
-
 onMounted(async () => {
   try {
-    await Promise.all([
-      marketsStore.fetchMarkets(),
-      marketsStore.fetchFxRates().then(() => { fxLoading.value = false }).catch(() => { fxLoading.value = false }),
-    ])
+    await marketsStore.fetchMarkets()
   }
   finally {
     isLoading.value = false
   }
 })
-
-const handleRefreshFx = async () => {
-  fxRefreshing.value = true
-
-  try {
-    await marketsStore.refreshFxRates()
-    toast(t('fxRates.refreshing'), 'success')
-
-    // Refetch after a short delay to show updated data
-    setTimeout(async () => {
-      await marketsStore.fetchFxRates()
-      fxRefreshing.value = false
-    }, 2000)
-  }
-  catch (error) {
-    toast(error?.data?.message || t('common.error'), 'error')
-    fxRefreshing.value = false
-  }
-}
 
 const openCreateDialog = () => {
   createForm.value = {
@@ -145,17 +174,41 @@ const navigateToMarket = key => {
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <h4 class="text-h4">
+        <h5 class="text-h5">
           {{ t('markets.title') }}
-        </h4>
+        </h5>
       </div>
-      <VBtn
-        color="primary"
-        prepend-icon="tabler-plus"
-        @click="openCreateDialog"
-      >
-        {{ t('markets.addMarket') }}
-      </VBtn>
+      <div class="d-flex gap-2">
+        <VBtn
+          variant="outlined"
+          prepend-icon="tabler-download"
+          @click="handleExport"
+        >
+          {{ t('common.export') }}
+        </VBtn>
+        <VBtn
+          variant="outlined"
+          prepend-icon="tabler-upload"
+          :loading="importLoading"
+          @click="$refs.importInput.click()"
+        >
+          {{ t('common.import') }}
+        </VBtn>
+        <input
+          ref="importInput"
+          type="file"
+          accept=".json"
+          class="d-none"
+          @change="e => { importFile = e.target.files[0]; handleImportFile(e.target.files[0]) }"
+        >
+        <VBtn
+          color="primary"
+          prepend-icon="tabler-plus"
+          @click="openCreateDialog"
+        >
+          {{ t('markets.addMarket') }}
+        </VBtn>
+      </div>
     </div>
 
     <!-- Markets Table -->
@@ -252,42 +305,70 @@ const navigateToMarket = key => {
       </VDataTable>
     </VCard>
 
-    <!-- FX Rates -->
-    <VCard class="mt-6">
-      <VCardTitle class="d-flex align-center justify-space-between">
-        <span>{{ t('fxRates.title') }}</span>
-        <VBtn
-          size="small"
-          variant="outlined"
-          prepend-icon="tabler-refresh"
-          :loading="fxRefreshing"
-          @click="handleRefreshFx"
-        >
-          {{ t('fxRates.refresh') }}
-        </VBtn>
-      </VCardTitle>
-      <VDataTable
-        :headers="fxHeaders"
-        :items="marketsStore.fxRates"
-        :loading="fxLoading"
-        class="text-no-wrap"
-        density="compact"
-      >
-        <template #item.rate="{ item }">
-          <span class="font-weight-medium">{{ Number(item.rate).toFixed(4) }}</span>
-        </template>
-
-        <template #item.fetched_at="{ item }">
-          <span class="text-medium-emphasis">{{ item.fetched_at || '—' }}</span>
-        </template>
-
-        <template #no-data>
-          <div class="text-center pa-4 text-medium-emphasis">
-            {{ t('fxRates.noRates') }}
+    <!-- Import Preview Dialog -->
+    <VDialog
+      v-model="isImportPreviewOpen"
+      max-width="500"
+    >
+      <VCard :title="t('marketImport.preview')">
+        <VCardText v-if="importPreview">
+          <div
+            v-if="importPreview.markets_to_create?.length"
+            class="mb-4"
+          >
+            <p class="text-body-2 font-weight-medium mb-2">
+              {{ t('marketImport.marketsToCreate') }} ({{ importPreview.markets_to_create.length }})
+            </p>
+            <VChip
+              v-for="key in importPreview.markets_to_create"
+              :key="key"
+              color="success"
+              size="small"
+              class="me-1 mb-1"
+            >
+              {{ key }}
+            </VChip>
           </div>
-        </template>
-      </VDataTable>
-    </VCard>
+          <div v-if="importPreview.markets_to_update?.length">
+            <p class="text-body-2 font-weight-medium mb-2">
+              {{ t('marketImport.marketsToUpdate') }} ({{ importPreview.markets_to_update.length }})
+            </p>
+            <VChip
+              v-for="key in importPreview.markets_to_update"
+              :key="key"
+              color="warning"
+              size="small"
+              class="me-1 mb-1"
+            >
+              {{ key }}
+            </VChip>
+          </div>
+          <p
+            v-if="!importPreview.markets_to_create?.length && !importPreview.markets_to_update?.length"
+            class="text-medium-emphasis"
+          >
+            {{ t('marketImport.noChanges') }}
+          </p>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="outlined"
+            @click="isImportPreviewOpen = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="importLoading"
+            :disabled="!importPreview?.markets_to_create?.length && !importPreview?.markets_to_update?.length"
+            @click="handleImportApply"
+          >
+            {{ t('marketImport.applied') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <!-- Create Market Dialog -->
     <VDialog
