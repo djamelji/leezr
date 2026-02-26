@@ -18,14 +18,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Safety check: abort if any 'admin' rows still exist
-        $adminCount = DB::table('memberships')->where('role', 'admin')->count();
+        // Auto-migrate any remaining 'admin' rows to 'user' before removing the enum value.
+        // The CompanyRole system (is_administrative flag) is now the sole source of truth.
+        $migrated = DB::table('memberships')->where('role', 'admin')->update(['role' => 'user']);
 
-        if ($adminCount > 0) {
-            throw new RuntimeException(
-                "Cannot remove 'admin' enum value: {$adminCount} membership(s) still have role='admin'. "
-                . "Migrate them to role='user' first."
-            );
+        if ($migrated > 0) {
+            logger()->info("[migration] Migrated {$migrated} membership(s) from role='admin' to role='user'.");
         }
 
         // SQLite has no ENUM type — constraint is purely MySQL-side
