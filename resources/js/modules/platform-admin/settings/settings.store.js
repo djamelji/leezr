@@ -52,6 +52,16 @@ export const usePlatformSettingsStore = defineStore('platformSettings', {
       return data
     },
 
+    async togglePlatformModule(key) {
+      const data = await $platformApi(`/modules/${key}/toggle`, { method: 'PUT' })
+
+      const idx = this._platformModules.findIndex(m => m.key === key)
+      if (idx !== -1)
+        this._platformModules[idx] = { ...this._platformModules[idx], is_enabled_globally: data.module.is_enabled_globally }
+
+      return data
+    },
+
     // ─── Theme Settings ────────────────────────────────
     async fetchThemeSettings() {
       const data = await $platformApi('/theme')

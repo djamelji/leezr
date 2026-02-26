@@ -44,7 +44,7 @@ export const useJobdomainStore = defineStore('jobdomain', {
         return data
       }
 
-      const data = await $api('/company/jobdomain', { signal: options.signal })
+      const data = await $api('/company/jobdomain', { signal: options.signal, _silent403: true })
 
       this._assigned = data.assigned
       this._jobdomain = data.jobdomain

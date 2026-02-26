@@ -2,6 +2,7 @@
 
 namespace App\Core\Modules;
 
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\Company;
 use App\Core\Plans\PlanRegistry;
 
@@ -38,7 +39,7 @@ class EntitlementResolver
 
         // Gate 2: Plan check
         if ($manifest->minPlan !== null) {
-            if (!PlanRegistry::meetsRequirement($company->plan_key ?? 'starter', $manifest->minPlan)) {
+            if (!PlanRegistry::meetsRequirement(CompanyEntitlements::planKey($company), $manifest->minPlan)) {
                 return ['entitled' => false, 'source' => null, 'reason' => 'plan_required'];
             }
         }

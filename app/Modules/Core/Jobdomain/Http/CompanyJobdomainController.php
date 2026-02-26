@@ -1,9 +1,13 @@
 <?php
 
-namespace App\Modules\Core\Settings\Http;
+namespace App\Modules\Core\Jobdomain\Http;
 
 use App\Core\Jobdomains\JobdomainCatalogReadModel;
 use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -45,6 +49,14 @@ class CompanyJobdomainController
             'from' => $oldKey,
             'to' => $request->input('key'),
         ]);
+
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('jobdomain.changed', $company->id, ['from' => $oldKey, 'to' => $request->input('key')])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::JOBDOMAIN_CHANGED, 'company', (string) $company->id);
 
         return response()->json(
             ['message' => 'Jobdomain assigned.']

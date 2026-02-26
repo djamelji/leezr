@@ -57,7 +57,7 @@ onMounted(async () => {
   try {
     const [data] = await Promise.all([
       membersStore.fetchMemberProfile(route.params.id),
-      settingsStore.fetchCompanyRoles().catch(() => {}),
+      settingsStore.fetchCompanyRoles({ silent: true }).catch(() => {}),
     ])
 
     applyProfile(data)

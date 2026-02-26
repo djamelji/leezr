@@ -27,20 +27,25 @@ class ModuleCatalogReadModel
             ->get()
             ->keyBy('module_key');
 
+        $activationReasons = CompanyModuleActivationReason::where('company_id', $company->id)
+            ->get(['module_key', 'reason', 'source_module_key'])
+            ->groupBy('module_key');
+
         $entitlements = EntitlementResolver::allForCompany($company);
 
         return $platformModules
             ->sortBy(fn (PlatformModule $pm) => $pm->sort_order_override ?? $pm->sort_order)
             ->values()
-            ->map(function (PlatformModule $pm) use ($companyModules, $entitlements) {
+            ->map(function (PlatformModule $pm) use ($companyModules, $activationReasons, $entitlements) {
                 $cm = $companyModules->get($pm->key);
                 $capabilities = ModuleRegistry::capabilities($pm->key);
                 $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
                 $entitlement = $entitlements[$pm->key] ?? ['entitled' => false, 'source' => null, 'reason' => 'unknown_module'];
 
+                // Core modules are always active when globally enabled (no CompanyModule row needed)
+                // Addon modules require an explicit CompanyModule row with is_enabled_for_company=true
                 $isActive = $pm->is_enabled_globally
-                    && $cm !== null
-                    && $cm->is_enabled_for_company;
+                    && ($manifest?->type === 'core' || ($cm !== null && $cm->is_enabled_for_company));
 
                 return [
                     'key' => $pm->key,
@@ -56,8 +61,16 @@ class ModuleCatalogReadModel
                     'entitlement_reason' => $entitlement['reason'],
                     'requires' => $manifest?->requires ?? [],
                     'min_plan' => $pm->min_plan_override ?? $manifest?->minPlan,
+                    'pricing_mode' => $pm->pricing_mode ?? 'included',
                     'icon_type' => $pm->icon_type ?? $manifest?->iconType ?? 'tabler',
                     'icon_name' => $pm->icon_name ?? $manifest?->iconRef ?? 'tabler-puzzle',
+                    'activation_reasons' => ($activationReasons->get($pm->key) ?? collect())
+                        ->map(fn ($r) => [
+                            'reason' => $r->reason,
+                            'source_module_key' => $r->source_module_key,
+                        ])
+                        ->values()
+                        ->all(),
                 ];
             })->all();
     }

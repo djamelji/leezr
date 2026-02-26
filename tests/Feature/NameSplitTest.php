@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Company\RBAC\CompanyPermissionCatalog;
+use App\Company\RBAC\CompanyRole;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Platform\Models\PlatformUser;
@@ -66,16 +68,26 @@ class NameSplitTest extends TestCase
 
     public function test_membership_store_derives_first_name_from_email(): void
     {
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        CompanyPermissionCatalog::sync();
+
         $owner = User::factory()->create();
         $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
         $this->activateCompanyModules($company);
 
+        $userRole = CompanyRole::create([
+            'company_id' => $company->id,
+            'key' => 'user_role',
+            'name' => 'User',
+            'is_administrative' => false,
+        ]);
+
         $response = $this->actingAs($owner)
             ->withHeaders(['X-Company-Id' => $company->id])
             ->postJson('/api/company/members', [
                 'email' => 'bob.martin@test.com',
-                'role' => 'user',
+                'company_role_id' => $userRole->id,
             ]);
 
         $response->assertStatus(201);

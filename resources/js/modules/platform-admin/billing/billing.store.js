@@ -15,6 +15,9 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     },
     _subscriptions: [],
     _subscriptionsPagination: { current_page: 1, last_page: 1, total: 0 },
+    _paymentModules: [],
+    _paymentRules: [],
+    _previewMethods: [],
   }),
 
   getters: {
@@ -23,6 +26,9 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     policies: state => state._policies,
     subscriptions: state => state._subscriptions,
     subscriptionsPagination: state => state._subscriptionsPagination,
+    paymentModules: state => state._paymentModules,
+    paymentRules: state => state._paymentRules,
+    previewMethods: state => state._previewMethods,
   },
 
   actions: {
@@ -103,6 +109,109 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
       const idx = this._subscriptions.findIndex(s => s.id === subscription.id)
       if (idx !== -1)
         this._subscriptions[idx] = subscription
+    },
+
+    // Payment modules (ADR-124)
+    async fetchPaymentModules() {
+      const data = await $platformApi('/billing/payment-modules')
+
+      this._paymentModules = data.modules
+    },
+
+    async installPaymentModule(providerKey) {
+      const data = await $platformApi(`/billing/payment-modules/${providerKey}/install`, {
+        method: 'PUT',
+      })
+
+      await this.fetchPaymentModules()
+
+      return data
+    },
+
+    async activatePaymentModule(providerKey) {
+      const data = await $platformApi(`/billing/payment-modules/${providerKey}/activate`, {
+        method: 'PUT',
+      })
+
+      await this.fetchPaymentModules()
+
+      return data
+    },
+
+    async deactivatePaymentModule(providerKey) {
+      const data = await $platformApi(`/billing/payment-modules/${providerKey}/deactivate`, {
+        method: 'PUT',
+      })
+
+      await this.fetchPaymentModules()
+
+      return data
+    },
+
+    async updatePaymentModuleCredentials(providerKey, credentials) {
+      const data = await $platformApi(`/billing/payment-modules/${providerKey}/credentials`, {
+        method: 'PUT',
+        body: { credentials },
+      })
+
+      return data
+    },
+
+    async checkPaymentModuleHealth(providerKey) {
+      const data = await $platformApi(`/billing/payment-modules/${providerKey}/health`)
+
+      await this.fetchPaymentModules()
+
+      return data
+    },
+
+    // Payment method rules (ADR-124)
+    async fetchPaymentRules() {
+      const data = await $platformApi('/billing/payment-rules')
+
+      this._paymentRules = data.rules
+    },
+
+    async createPaymentRule(payload) {
+      const data = await $platformApi('/billing/payment-rules', {
+        method: 'POST',
+        body: payload,
+      })
+
+      await this.fetchPaymentRules()
+
+      return data
+    },
+
+    async updatePaymentRule(id, payload) {
+      const data = await $platformApi(`/billing/payment-rules/${id}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      await this.fetchPaymentRules()
+
+      return data
+    },
+
+    async deletePaymentRule(id) {
+      const data = await $platformApi(`/billing/payment-rules/${id}`, {
+        method: 'DELETE',
+      })
+
+      await this.fetchPaymentRules()
+
+      return data
+    },
+
+    async previewPaymentMethods(params) {
+      const data = await $platformApi('/billing/payment-rules/preview', {
+        params,
+      })
+
+      this._previewMethods = data.methods
+
+      return data
     },
   },
 })

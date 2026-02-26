@@ -19,10 +19,8 @@ class SettingsModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view', 'surface' => 'structure'],
-                    ['key' => 'company-roles', 'title' => 'Roles', 'to' => ['name' => 'company-roles'], 'icon' => 'tabler-shield-lock', 'surface' => 'structure'],
-                    ['key' => 'company-jobdomain', 'title' => 'Industry', 'to' => ['name' => 'company-jobdomain'], 'icon' => 'tabler-briefcase', 'surface' => 'structure'],
                 ],
-                routeNames: ['company-settings', 'company-jobdomain', 'company-roles'],
+                routeNames: ['company-settings'],
                 middlewareKey: 'core.settings',
             ),
             permissions: [

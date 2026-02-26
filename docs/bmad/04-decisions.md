@@ -2727,4 +2727,276 @@ Chaque module peut déclarer :
 
 ---
 
+## ADR-115 : Intelligent Module Activation & Dependency Engine
+
+- **Date** : 2026-02-25
+- **Contexte** : Le système de modules gère les dépendances (`requires`) de façon basique : rejet si un module requis n'est pas actif, rejet si un module dont d'autres dépendent est désactivé. Pas de cascade, pas de nettoyage des orphelins, pas de traçabilité de la raison d'activation, pas de détection de cycles, pas d'invariant pricing/requires.
+- **Décision** : Remplacement de `CompanyModuleService` par un `ModuleActivationEngine` intelligent + table `company_module_activation_reasons` comme source de vérité.
+
+### Architecture
+
+**Source de vérité** : `company_module_activation_reasons` (multi-parent tracking)
+- Raisons : `direct`, `plan`, `bundle`, `required`
+- `source_module_key` nullable : quel module a causé cette activation (pour `required`)
+- `company_modules.is_enabled_for_company` devient un **cache dérivé** synchronisé par l'engine
+
+**ModuleActivationEngine** (remplace `CompanyModuleService`) :
+- `enable()` : cascade-active les modules requis avec raison `required`
+- `disable()` : retire la raison `direct`, puis nettoie les orphelins itérativement
+- Orphelin = module avec 0 raisons restantes → désactivé + ses dépendants requis re-évalués
+- `collectTransitiveRequires()` : DFS pour résoudre les dépendances transitives
+- `hasAnyReason()`, `reasonsFor()` : introspection
+
+**DependencyGraphValidator** (validation statique) :
+- Détection de cycles (DFS avec coloration WHITE/GRAY/BLACK)
+- Invariant pricing : module requis ne peut pas avoir `pricing_mode='addon'`
+- Exécutable au seed/boot pour détecter les erreurs de manifeste
+
+**ModuleGate** : inchangé, lit toujours `company_modules.is_enabled_for_company` (cache rapide)
+**DependencyResolver** : conservé pour validation statique (`canActivate`, `canDeactivate`)
+**CompanyModuleService** : délégation simple vers `ModuleActivationEngine` (rétro-compatibilité)
+
+### Fichiers
+
+| Action | Fichier |
+|--------|---------|
+| CREATE | `database/migrations/2026_02_25_100001_create_company_module_activation_reasons_table.php` |
+| CREATE | `database/migrations/2026_02_25_100002_backfill_activation_reasons_from_company_modules.php` |
+| CREATE | `app/Core/Modules/CompanyModuleActivationReason.php` |
+| CREATE | `app/Core/Modules/ModuleActivationEngine.php` |
+| CREATE | `app/Core/Modules/DependencyGraphValidator.php` |
+| CREATE | `tests/Unit/ModuleActivationEngineTest.php` (18 tests) |
+| CREATE | `tests/Unit/DependencyGraphValidatorTest.php` (7 tests) |
+| MODIFY | `app/Core/Modules/CompanyModuleService.php` → thin delegate |
+| MODIFY | `app/Core/Modules/ModuleCatalogReadModel.php` → include activation_reasons |
+| MODIFY | `app/Modules/Core/Modules/Http/CompanyModuleController.php` → use engine |
+| MODIFY | `app/Modules/Platform/Companies/Http/CompanyModuleController.php` → use engine |
+| MODIFY | `app/Core/Jobdomains/JobdomainGate.php` → create activation_reasons |
+| REWRITE | `tests/Feature/ModuleDependencyTest.php` → 19 tests for new behavior |
+
+### Comportements clés
+
+| Avant (CompanyModuleService) | Après (ModuleActivationEngine) |
+|-----|------|
+| Enable rejeté si requires manquant | Enable cascade-active les requires |
+| Disable rejeté si dépendants actifs | Disable retire raison direct, cleanup orphelins |
+| 1 source (company_modules.is_enabled_for_company) | 2 sources : activation_reasons (vérité) + company_modules (cache) |
+| Pas de traçabilité raison | Raisons : direct, plan, bundle, required |
+| Pas de détection cycles | DFS avec coloration (RuntimeException) |
+| Pas d'invariant pricing/requires | Required module ≠ addon pricing |
+
+- **Conséquences** :
+  - Activation intelligente avec cascade automatique
+  - Désactivation sécurisée avec nettoyage des orphelins
+  - Traçabilité complète de chaque activation
+  - Cycles détectés au boot
+  - Invariant pricing protège la facturation
+  - 309 tests green, pnpm build clean
+
+---
+
+## BMAD-UI-001 : Layout obligatoire par surface
+
+- **Date** : 2026-02-25
+- **Contexte** : Après ADR-124, risque récurrent d'oublier la déclaration de layout dans `definePage()`, ce qui casse la navigation (sidebar absente, guards ignorés).
+- **Décision** : Toute page Vue auto-routée (`resources/js/pages/`) DOIT respecter les règles suivantes :
+
+  | Surface | Fichier | `definePage()` meta obligatoire |
+  |---------|---------|-------------------------------|
+  | Platform | `pages/platform/**/*.vue` | `layout: 'platform'`, `platform: true` |
+  | Platform (auth) | `pages/platform/login.vue`, etc. | `layout: 'blank'`, `platform: true` |
+  | Company | `pages/company/**/*.vue` | Pas de `layout:` (default = company layout) |
+  | Auth (public) | `pages/login.vue`, etc. | `layout: 'blank'`, `public: true` |
+
+  **Exceptions** :
+  - Les sous-composants `_Component.vue` ne sont PAS des pages — ils ne déclarent PAS `definePage()`.
+  - Les layouts disponibles sont : `default` (company), `platform`, `blank`. Il n'y a PAS de `layouts/company.vue`.
+
+  **Guards dépendants** :
+  - `meta.platform: true` → scope platform (auth platform, permissions RBAC)
+  - Absence de `meta.platform` → scope company (auth utilisateur, module gates)
+  - `meta.layout: 'platform'` → sidebar/navbar platform
+  - `meta.layout` absent → layout default (sidebar/navbar company)
+
+- **Conséquences** :
+  - Un test automatisé (`PageLayoutMetaTest`) vérifie cette règle sur toutes les pages
+  - Toute page platform sans `layout: 'platform'` + `platform: true` sera détectée en CI
+  - Cette règle est permanente et s'applique à toute nouvelle page créée
+
+---
+
+## ADR-125 : Realtime Event Infrastructure — SSE Invalidation Engine
+
+- **Date** : 2026-02-25
+- **Contexte** : Quand un admin modifie les permissions d'un rôle, les utilisateurs ayant ce rôle ne voient pas le changement en temps réel. Cause : le frontend cache `features:nav` et `auth:companies` dans sessionStorage (TTL 5 min). Le backend est 100% temps réel (prouvé par `CompanyNavRealtimeTest`). Palliatif initial : polling 30s + visibilitychange. Insuffisant : latence, trafic réseau, pas de scaling.
+- **Décision** : Introduire une infrastructure SSE (Server-Sent Events) d'invalidation company-scoped.
+
+  **Architecture** :
+  1. `TopicRegistry` — registre fermé de 5 topics avec les clés de cache invalidées
+  2. `RealtimePublisher` — interface (`publish(RealtimeEvent): void`) avec 2 adapters : `SseRealtimePublisher` (Redis sorted set), `NullRealtimePublisher` (no-op)
+  3. `RealtimeStreamController` — endpoint SSE (`GET /api/realtime/stream`) avec polling Redis 1s + heartbeat 30s
+  4. `RealtimeClient.js` — frontend EventSource avec reconnect (3 tentatives, backoff exponentiel), debounce 2s, fallback polling
+
+  **Topics Phase 1** :
+
+  | Topic | Invalidates | Déclencheurs |
+  |-------|-------------|-------------|
+  | `rbac.changed` | `features:nav`, `auth:companies` | Role CRUD |
+  | `modules.changed` | `features:nav`, `features:modules` | Module enable/disable/settings |
+  | `plan.changed` | `features:nav`, `features:modules`, `auth:companies` | Plan change |
+  | `jobdomain.changed` | `features:nav`, `features:modules`, `tenant:jobdomain` | Jobdomain assign |
+  | `members.changed` | `auth:companies` | Member add/remove/role change |
+
+  **Invariants** :
+  - Publish uniquement APRÈS le commit DB (jamais dans la transaction)
+  - Aucune logique métier dans le publisher
+  - Topics = enum fermé (TopicRegistry), pas de topic ad hoc
+  - Invalidation uniquement, pas de state transfer
+  - Multi-tenant isolation : Redis key = `{prefix}:company:{companyId}`
+  - Rollback : `REALTIME_DRIVER=null` → NullPublisher + polling fallback
+
+- **Status** : Accepted — Phase 1 Implemented
+- **Conséquences** :
+  - 9 fichiers créés, 8 modifiés, 0 migrations DB
+  - 11 publish points dans 5 controllers (Roles ×3, Modules ×3, Plan ×1, Members ×3, Jobdomain ×1)
+  - Latence : ~1-3s (vs 30s polling) quand SSE actif
+  - Fallback automatique vers polling 30s si SSE échoue
+  - 503 tests, 1494 assertions — all green, pnpm build clean
+
+---
+
+## ADR-126 : EventEnvelope + Realtime Backbone v1
+
+- **Date** : 2026-02-25
+- **Status** : Draft — Pending implementation
+- **Contexte** : ADR-125 Phase 1 livre un backbone invalidation-only. La decision strategique B confirme l'evolution vers un backbone temps reel complet (domain events, notifications, audit, security). Le VO actuel `RealtimeEvent(topic, companyId, payload, timestamp)` ne supporte ni categories, ni targeting user, ni versioning.
+- **Décision** : Remplacer `RealtimeEvent` par `EventEnvelope` (id ULID, topic, category, version, company_id, user_id?, payload, invalidates[], timestamp). Introduire 5 categories : `invalidation` | `domain` | `notification` | `audit` | `security`. TopicRegistry v2 multi-categorie avec targeting et versioning. Frontend ChannelRouter dispatche par categorie vers handlers dedies (InvalidationHandler inchange, DomainEventBus, NotificationStore, AuditLiveStore, SecurityAlertHandler).
+
+  **Backward compat** : `version=2 + category=invalidation` produit un SSE identique a Phase 1. Zero breaking change.
+
+  **Depends on** : ADR-125 (Phase 1 done)
+  **Blocks** : ADR-127, ADR-129, ADR-130
+
+- **Conséquences** :
+  - Backend : nouveau VO, TopicRegistry v2, SseRealtimePublisher adapte
+  - Frontend : ChannelRouter + handlers par categorie
+  - Rollback : revert vers `RealtimeEvent` VO. ChannelRouter ignore les categories inconnues (forward-compat)
+
+---
+
+## ADR-127 : Subscription Protocol + Connection Governance
+
+- **Date** : 2026-02-25
+- **Status** : Draft — Pending implementation
+- **Contexte** : Phase 1 envoie tous les events a tous les clients. Pas de filtre, pas de rate limit, pas de gouvernance des connexions. Un user peut ouvrir N streams simultanes (tab-hoarding = epuisement pool PHP-FPM).
+- **Décision** : Le client specifie `?categories=invalidation,domain` ou `?topics=rbac.changed` au connect SSE. Le serveur filtre les events AVANT envoi. Rate limits : 1 stream/user/company (middleware Redis), max N streams/company (configurable, default 100), anti-abuse throttle (5 connect/min/user). Connection lifecycle tracking via Redis (INCR/DECR sur connect/disconnect). Endpoints platform de gouvernance : `GET /api/platform/realtime/status|metrics|connections`, `POST /api/platform/realtime/flush|kill-switch` (permission `manage_system`).
+
+  **Backward compat** : pas de query param = recevoir tout (comportement Phase 1 preserve).
+
+  **Depends on** : ADR-126 (needs categories to filter)
+
+- **Conséquences** :
+  - Backend : filter logic dans RealtimeStreamController, rate limit middleware, 5 endpoints admin
+  - Frontend : RealtimeClient envoie preferences category/topic
+  - Platform : dashboard de gouvernance (cards, tables, kill-switch)
+  - Rollback : retirer filter logic → tous events envoyes. Retirer rate limit middleware.
+
+---
+
+## ADR-128 : Octane Adoption for Realtime Scale
+
+- **Date** : 2026-02-25
+- **Status** : Phase 1 implemented — PubSubTransport + dual-write
+- **Contexte** : Phase 1-2 utilise PHP-FPM : 1 SSE connection = 1 worker bloque pendant 5 min. Avec `pm.max_children=30`, max ~25 SSE connections simultanees. Bottleneck structurel au-dela de 50 users simultanes.
+- **Décision** : Adopter Laravel Octane (Swoole ou FrankenPHP) pour le endpoint SSE. Remplacer la boucle `usleep(1s)` + sorted set polling par Redis SUBSCRIBE coroutine. Etape intermediaire : pool PHP-FPM dedie pour le SSE (routing Nginx). Octane uniquement quand le seuil de >100 SSE connections simultanees est atteint.
+
+  **Transport abstraction (implemented)** :
+  - `StreamTransport` interface: `poll(redisKey, lastTimestamp)` + `sleep()`
+  - `PollingTransport`: FPM-compatible impl (usleep 1s + zrangebyscore)
+  - `PubSubTransport`: fast-poll FPM-compatible impl (usleep 100ms + zrangebyscore)
+  - `RealtimeStreamController` depends on `StreamTransport` (injected)
+  - Bound in `AppServiceProvider` via `config('realtime.transport')`:
+    - `polling` (default) → `PollingTransport` (1s sleep, ~1s latency)
+    - `pubsub` → `PubSubTransport` (100ms sleep, ~100ms latency)
+
+  **Dual-write (implemented)** :
+  - `SseRealtimePublisher::publish()` now does ZADD + PUBLISH
+  - PUBLISH channel: `{prefix}:pubsub:company:{id}` or `{prefix}:pubsub:platform`
+  - Fire-and-forget: if no subscriber listens, message is lost (sorted set = durable source)
+  - Under Octane, PubSubTransport can drain SUBSCRIBE into SplQueue (future phase)
+
+  **Config** : `REALTIME_TRANSPORT=polling|pubsub` in `.env` (config `realtime.transport`)
+
+  **Delivery latency tracking** : RealtimeStreamController records `(now - event.score) * 1000` ms per delivered event via MetricsCollector.
+
+  **Migration path** : PHP-FPM standard (< 50) → PHP-FPM pool dedie (50-200) → Octane + Redis PubSub (200-1000) → Octane horizontal + Redis Cluster (> 1000)
+
+  **Depends on** : ADR-126 (format envelope stable avant changement infra)
+  **Trigger** : > 100 SSE connections simultanees observees
+
+- **Conséquences** :
+  - Infrastructure : nouveau modele de deploiement
+  - Backend : RealtimeStreamController uses StreamTransport abstraction (ready for swap)
+  - `REALTIME_TRANSPORT=pubsub` gives ~100ms latency under FPM at higher CPU cost
+  - Platform governance `/status` endpoint exposes active transport
+  - Transparent pour le frontend (meme protocole SSE)
+  - Rollback : revert vers PHP-FPM + polling sorted set. Pas de perte de donnees.
+
+---
+
+## ADR-129 : Security Events + Alerting Pipeline
+
+- **Date** : 2026-02-25
+- **Status** : Implemented
+- **Contexte** : Le SaaS n'a aucun mecanisme de detection de comportement suspect interne (login brute force, mass role changes, permission flips, tab flooding). Besoin d'observation + alerte sans bloquer les actions.
+- **Décision** : Ajouter `category=security` au backbone. SecurityDetector service avec compteurs Redis sliding window (~0.1ms overhead). Table `security_alerts` (ULID, alert_type, severity, evidence, status lifecycle). 8 alert types initiaux : `suspicious.login_attempts`, `mass.role_changes`, `abnormal.module_toggling`, `excessive.stream_connections`, `rapid.permission_flips`, `bulk.member_removal`, `unauthorized.access_pattern`, `session.anomaly`. Pipeline d'escalade : realtime push → platform notification → (future email/SMS).
+
+  **Regle critique** : le SecurityDetector ne bloque JAMAIS une action. Il observe et alerte. Le blocking est une decision humaine.
+
+  **Depends on** : ADR-126 (`category=security` dans envelope)
+
+- **Conséquences** :
+  - Backend : SecurityDetector, SecurityAlert model, endpoints, registre ferme d'alert types
+  - Frontend : SecurityAlertHandler (platform only), Platform Security Dashboard
+  - DB : 1 table `security_alerts`
+  - Rollback : desactiver SecurityDetector (config flag). Purement additif.
+
+---
+
+## ADR-130 : Audit System Architecture
+
+- **Date** : 2026-02-25
+- **Status** : Implemented
+- **Contexte** : Aucun audit trail permanent. Les mutations sont tracees uniquement dans les logs applicatifs (ephemeres). Besoin de compliance, tracabilite, et observabilite pour platform et company admins.
+- **Décision** : Double audit log : `platform_audit_logs` (actions platform-admin, permanent, append-only) + `company_audit_logs` (actions company-scoped, tenant-isole, retention configurable par plan). AuditLogger service ecrit en DB synchrone AVANT le publish realtime. La DB est la source de verite, le realtime est un complement live. Audit logs = append-only, immutable (aucun UPDATE, aucun DELETE). Rollback = compensating actions (nouvelle mutation tracee), jamais de DB rewind.
+
+  **Anti-patterns interdits** : auto-rollback sur anomalie, DELETE/UPDATE/TRUNCATE sur audit_logs, mutation automatique non controlee.
+
+  **Depends on** : ADR-126 (`category=audit` dans envelope)
+
+- **Conséquences** :
+  - Backend : AuditLogger service, 2 tables, endpoints platform + company avec filtres
+  - Frontend : AuditLiveStore (platform), futur company audit panel
+  - DB : 2 tables (`platform_audit_logs`, `company_audit_logs`)
+  - Rollback : desactiver audit publish (config flag). Tables restent (regulatory).
+
+---
+
+## ADR-131 : Merge Realtime into Security & Auto Kill Switch
+
+- **Date** : 2026-02-26
+- **Status** : Implemented
+- **Contexte** : La page `/platform/realtime` est un dashboard ops manuel pour surveiller le backbone SSE. La page `/platform/security` gere les alertes de securite. Les deux servent l'observabilite admin. Le kill switch manuel est un vestige — les protections automatiques (limites connexions, SecurityDetector) sont deja en place. On fusionne et on automatise.
+- **Décision** : Fusionner `platform.realtime` dans `platform.security` → une seule page "Security & Monitoring" a onglets (Alerts | Monitoring). Automatiser le kill switch : `EventFloodDetector` surveille le volume global d'events via Redis INCR. Si > threshold (config: `event_flood_threshold`, default 1000) dans window (config: `event_flood_window`, default 300s) → kill switch auto active + alerte security critique + audit log. Guard : un seul alert par fenetre (Redis flag). `RealtimeModule` supprime, routes realtime absorbees sous `module.active:platform.security` avec permission `manage_realtime`.
+
+  **Depends on** : ADR-127 (Realtime Governance), ADR-129 (Security Alerting)
+
+- **Conséquences** :
+  - Backend : `EventFloodDetector`, `AlertTypeRegistry` +1 type, routes consolidees, migration cleanup
+  - Frontend : security store etendu, `_SecurityRealtime` sub-component, onglets dans security page
+  - La route `/platform/realtime` n'existe plus (404)
+  - Rollback : re-creer `RealtimeModule`, re-separer les routes, supprimer `EventFloodDetector`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

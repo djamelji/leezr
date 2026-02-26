@@ -20,6 +20,11 @@ export const useAuthStore = defineStore('auth', {
     companies: state => state._companies,
     currentCompanyId: state => state._currentCompanyId,
     currentCompany: state => state._companies.find(c => c.id === Number(state._currentCompanyId)),
+    isOwner: state => {
+      const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
+
+      return company?.role === 'owner'
+    },
     isAdministrative: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
 
@@ -49,7 +54,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     hasPermission(key) {
-      if (this.isAdministrative) return true
+      if (this.isOwner) return true
 
       return Array.isArray(this.permissions) && this.permissions.includes(key)
     },

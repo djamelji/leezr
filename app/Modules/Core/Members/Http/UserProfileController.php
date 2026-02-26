@@ -5,6 +5,8 @@ namespace App\Modules\Core\Members\Http;
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Company\Http\Requests\UpdatePasswordRequest;
 use App\Company\Http\Requests\UpdateProfileRequest;
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +27,7 @@ class UserProfileController extends Controller
         $company = $request->attributes->get('company');
         $validated = $request->validated();
 
+        $before = $request->user()->only('first_name', 'last_name', 'email');
         $request->user()->update(array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email'])));
 
         if (isset($validated['dynamic_fields'])) {
@@ -36,14 +39,24 @@ class UserProfileController extends Controller
             );
         }
 
+        app(AuditLogger::class)->logCompany(
+            $company->id, AuditAction::USER_PROFILE_UPDATED, 'user', (string) $request->user()->id,
+            ['diffBefore' => $before, 'diffAfter' => $request->user()->only('first_name', 'last_name', 'email')],
+        );
+
         return response()->json(CompanyUserProfileReadModel::get($request->user()->fresh(), $company));
     }
 
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
+        $company = $request->attributes->get('company');
         $request->user()->update([
             'password' => $request->validated('password'),
         ]);
+
+        app(AuditLogger::class)->logCompany(
+            $company->id, AuditAction::USER_PASSWORD_CHANGED, 'user', (string) $request->user()->id,
+        );
 
         return response()->json([
             'message' => 'Password updated.',
@@ -58,9 +71,14 @@ class UserProfileController extends Controller
 
         $path = $request->file('avatar')->store('avatars', 'public');
 
+        $company = $request->attributes->get('company');
         $request->user()->update([
             'avatar' => $path,
         ]);
+
+        app(AuditLogger::class)->logCompany(
+            $company->id, AuditAction::USER_AVATAR_UPDATED, 'user', (string) $request->user()->id,
+        );
 
         return response()->json([
             'user' => $request->user()->fresh(),

@@ -83,6 +83,21 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 - Web UI: `http://localhost:8025`
 - Open UI: `pnpm mailpit`
 
+## BMAD-UI-001 : Layout obligatoire par surface
+- **Platform** (`pages/platform/**`) → `definePage({ meta: { layout: 'platform', platform: true } })`
+- **Platform auth** (login, forgot, reset) → `layout: 'blank'`, `platform: true`
+- **Company** (`pages/company/**`) → PAS de `layout:` (default = company layout)
+- **Sous-composants** (`_*.vue`) → PAS de `definePage()` (ce ne sont pas des pages)
+- Layouts disponibles : `default` (company), `platform`, `blank` — il n'y a PAS de `layouts/company.vue`
+- Vérifié automatiquement par `PageLayoutMetaTest`
+
+### PIÈGE CRITIQUE : coexistence page.vue + page/ directory
+- **INTERDIT** : `platform/foo.vue` + `platform/foo/_Sub.vue` dans le même dossier
+- Quand `foo.vue` et `foo/` coexistent, unplugin-vue-router traite `foo.vue` comme parent route
+- `recursiveLayouts()` ne wrappe PAS les parent routes → layout perdu → sidebar absente
+- **Solution** : utiliser `foo/index.vue` comme page principale, `foo/_Sub.vue` comme sous-composants
+- Pattern correct : `settings/[tab].vue` + `settings/_SettingsGeneral.vue` (pas de `settings.vue`)
+
 ## Conventions de code
 - Pages auto-routées via `unplugin-vue-router` depuis `resources/js/pages/`
 - Form elements : wrappers App* (AppTextField, AppSelect, etc.)

@@ -100,7 +100,7 @@ class CompanyPermissionTest extends TestCase
         ]);
 
         $this->adminMembership = $this->company->memberships()->create([
-            'user_id' => $this->admin->id, 'role' => 'admin',
+            'user_id' => $this->admin->id, 'role' => 'user',
             'company_role_id' => $adminRole->id,
         ]);
 
@@ -252,9 +252,13 @@ class CompanyPermissionTest extends TestCase
 
     public function test_owner_can_invite_member(): void
     {
+        $roleId = CompanyRole::where('company_id', $this->company->id)
+            ->where('key', 'viewer')->first()->id;
+
         $response = $this->actAs($this->owner)
             ->postJson('/api/company/members', [
                 'email' => 'new@test.dev',
+                'company_role_id' => $roleId,
             ]);
 
         $response->assertStatus(201);
@@ -262,9 +266,13 @@ class CompanyPermissionTest extends TestCase
 
     public function test_admin_can_invite_member(): void
     {
+        $roleId = CompanyRole::where('company_id', $this->company->id)
+            ->where('key', 'viewer')->first()->id;
+
         $response = $this->actAs($this->admin)
             ->postJson('/api/company/members', [
                 'email' => 'new2@test.dev',
+                'company_role_id' => $roleId,
             ]);
 
         $response->assertStatus(201);
@@ -545,19 +553,24 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 7 admin permissions (includes core.billing + core.modules)
+        // 11 admin permissions (includes core.audit + core.billing + core.modules + core.roles + core.jobdomain)
         $this->assertEquals([
+            'audit.view',
             'billing.manage',
+            'jobdomain.manage',
             'members.credentials',
             'members.manage',
             'modules.manage',
+            'roles.manage',
+            'roles.view',
             'settings.manage',
             'shipments.delete',
             'shipments.manage_fields',
         ], $adminPerms);
 
-        // 8 operational permissions
+        // 9 operational permissions
         $this->assertEquals([
+            'jobdomain.view',
             'members.invite',
             'members.view',
             'settings.view',
@@ -593,7 +606,10 @@ class CompanyPermissionTest extends TestCase
         ]);
 
         $response = $this->actAs($inviterUser)
-            ->postJson('/api/company/members', ['email' => 'invited-by-inviter@test.dev']);
+            ->postJson('/api/company/members', [
+                'email' => 'invited-by-inviter@test.dev',
+                'company_role_id' => $inviterRole->id,
+            ]);
 
         $response->assertStatus(201);
     }

@@ -78,7 +78,7 @@ class DevSeeder extends Seeder
 
         $company->memberships()->updateOrCreate(
             ['user_id' => $admin->id],
-            ['role' => 'admin'],
+            ['role' => 'user'],
         );
 
         $user = User::updateOrCreate(
@@ -97,12 +97,21 @@ class DevSeeder extends Seeder
         );
 
         // ─── Module activation for demo company ──────────────────
-        foreach (ModuleRegistry::definitions() as $key => $definition) {
+        // Only activate company-scope modules (not platform.* or payments.*)
+        $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+
+        foreach ($companyModuleKeys as $key) {
             CompanyModule::updateOrCreate(
                 ['company_id' => $company->id, 'module_key' => $key],
                 ['is_enabled_for_company' => true],
             );
         }
+
+        // Cleanup: remove any non-company-scope modules that were
+        // incorrectly activated in previous runs
+        CompanyModule::where('company_id', $company->id)
+            ->whereNotIn('module_key', $companyModuleKeys)
+            ->delete();
 
         // ─── Module commercial config (productization seeds) ────────────
         $this->seedModuleConfigs();

@@ -86,6 +86,12 @@ export const useModuleStore = defineStore('module', {
       })
     },
 
+    async fetchQuote(keys) {
+      const params = keys.map(k => `keys[]=${encodeURIComponent(k)}`).join('&')
+
+      return await $api(`/modules/quote?${params}`)
+    },
+
     reset() {
       this._modules = []
       this._loaded = false

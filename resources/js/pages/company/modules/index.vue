@@ -12,6 +12,13 @@ const isLoading = ref(true)
 const togglingKey = ref(null)
 const errorMessage = ref('')
 
+// Quote dialog state
+const quoteDialog = ref(false)
+const quoteLoading = ref(false)
+const quoteData = ref(null)
+const quoteModuleKey = ref(null)
+const quoteModuleName = ref('')
+
 const canManage = computed(() => auth.roleLevel === 'management')
 
 onMounted(async () => {
@@ -23,16 +30,56 @@ onMounted(async () => {
   }
 })
 
+const formatAmount = cents => {
+  return (cents / 100).toFixed(2)
+}
+
 const toggleModule = async module => {
-  togglingKey.value = module.key
+  errorMessage.value = ''
+
+  // Enabling an addon module → fetch quote first
+  if (!module.is_enabled_for_company && module.pricing_mode === 'addon') {
+    quoteModuleKey.value = module.key
+    quoteModuleName.value = module.name
+    quoteLoading.value = true
+    quoteDialog.value = true
+    quoteData.value = null
+
+    try {
+      quoteData.value = await moduleStore.fetchQuote([module.key])
+    }
+    catch (error) {
+      quoteDialog.value = false
+      errorMessage.value = error?.data?.message || t('companyModules.failedToToggle')
+    }
+    finally {
+      quoteLoading.value = false
+    }
+
+    return
+  }
+
+  // Direct toggle (disable or enable non-addon)
+  await doToggle(module.key, module.is_enabled_for_company)
+}
+
+const confirmQuoteEnable = async () => {
+  quoteDialog.value = false
+  if (quoteModuleKey.value) {
+    await doToggle(quoteModuleKey.value, false)
+  }
+}
+
+const doToggle = async (key, isCurrentlyEnabled) => {
+  togglingKey.value = key
   errorMessage.value = ''
 
   try {
-    if (module.is_enabled_for_company) {
-      await moduleStore.disableModule(module.key)
+    if (isCurrentlyEnabled) {
+      await moduleStore.disableModule(key)
     }
     else {
-      await moduleStore.enableModule(module.key)
+      await moduleStore.enableModule(key)
     }
   }
   catch (error) {
@@ -202,5 +249,95 @@ const headers = computed(() => [
         </template>
       </VDataTable>
     </VCard>
+
+    <!-- Quote confirmation dialog -->
+    <VDialog
+      v-model="quoteDialog"
+      max-width="480"
+      persistent
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center pt-5 px-6">
+          <VIcon
+            icon="tabler-receipt"
+            class="me-2"
+          />
+          {{ t('companyModules.quoteTitle', { module: quoteModuleName }) }}
+        </VCardTitle>
+
+        <VCardText class="px-6">
+          <div
+            v-if="quoteLoading"
+            class="text-center py-4"
+          >
+            <VProgressCircular indeterminate />
+          </div>
+
+          <template v-else-if="quoteData">
+            <!-- Billable lines -->
+            <div
+              v-for="line in quoteData.lines"
+              :key="line.key"
+              class="d-flex justify-space-between align-center py-1"
+            >
+              <span class="text-body-1">{{ line.title }}</span>
+              <span class="text-body-1 font-weight-medium">
+                {{ formatAmount(line.amount) }} {{ quoteData.currency }}/{{ t('companyModules.quoteMonth') }}
+              </span>
+            </div>
+
+            <VDivider class="my-3" />
+
+            <!-- Total -->
+            <div class="d-flex justify-space-between align-center">
+              <span class="text-body-1 font-weight-bold">{{ t('common.total') }}</span>
+              <span class="text-body-1 font-weight-bold">
+                {{ formatAmount(quoteData.total) }} {{ quoteData.currency }}/{{ t('companyModules.quoteMonth') }}
+              </span>
+            </div>
+
+            <!-- Included modules -->
+            <div
+              v-if="quoteData.included.length"
+              class="mt-4"
+            >
+              <span class="text-body-2 text-medium-emphasis">
+                {{ t('companyModules.quoteIncludes') }}
+              </span>
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                <VChip
+                  v-for="inc in quoteData.included"
+                  :key="inc.key"
+                  size="small"
+                  variant="tonal"
+                  color="info"
+                >
+                  {{ inc.title }}
+                </VChip>
+              </div>
+            </div>
+          </template>
+        </VCardText>
+
+        <VCardActions class="px-6 pb-5">
+          <VSpacer />
+          <VBtn
+            color="secondary"
+            variant="tonal"
+            @click="quoteDialog = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            variant="elevated"
+            :disabled="quoteLoading || !quoteData"
+            @click="confirmQuoteEnable"
+          >
+            {{ t('companyModules.quoteConfirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>

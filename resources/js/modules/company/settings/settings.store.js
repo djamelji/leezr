@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { cacheRemove } from '@/core/runtime/cache'
+import { useAuthStore } from '@/core/stores/auth'
+import { useNavStore } from '@/core/stores/nav'
 
 export const useCompanySettingsStore = defineStore('companySettings', {
   state: () => ({
@@ -39,14 +42,14 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     },
 
     // ─── Company Roles (CRUD) ──────────────────────────
-    async fetchCompanyRoles() {
-      const data = await $api('/company/roles')
+    async fetchCompanyRoles({ silent = false } = {}) {
+      const data = await $api('/company/roles', { _silent403: silent })
 
       this._roles = data.roles
     },
 
-    async fetchPermissionCatalog() {
-      const data = await $api('/company/permissions')
+    async fetchPermissionCatalog({ silent = false } = {}) {
+      const data = await $api('/company/permissions', { _silent403: silent })
 
       this._permissionCatalog = data.permissions
       this._permissionModules = data.modules || []
@@ -59,6 +62,7 @@ export const useCompanySettingsStore = defineStore('companySettings', {
       })
 
       this._roles.push(data.role)
+      this._refreshNavAfterRoleChange()
 
       return data
     },
@@ -73,6 +77,8 @@ export const useCompanySettingsStore = defineStore('companySettings', {
       if (idx !== -1)
         this._roles[idx] = data.role
 
+      this._refreshNavAfterRoleChange()
+
       return data
     },
 
@@ -80,8 +86,28 @@ export const useCompanySettingsStore = defineStore('companySettings', {
       const data = await $api(`/company/roles/${id}`, { method: 'DELETE' })
 
       this._roles = this._roles.filter(r => r.id !== id)
+      this._refreshNavAfterRoleChange()
 
       return data
+    },
+
+    /**
+     * Refresh nav + auth after role CRUD so permission changes
+     * are reflected in the UI without logout.
+     * Clears sessionStorage cache first so the next boot/refresh
+     * won't serve stale data.
+     */
+    _refreshNavAfterRoleChange() {
+      cacheRemove('features:nav')
+      cacheRemove('auth:companies')
+
+      const navStore = useNavStore()
+      const authStore = useAuthStore()
+
+      Promise.all([
+        navStore.fetchCompanyNav(),
+        authStore.fetchMyCompanies(),
+      ]).catch(() => {})
     },
 
     // ─── Legal Structure (ADR-104) ─────────────────────

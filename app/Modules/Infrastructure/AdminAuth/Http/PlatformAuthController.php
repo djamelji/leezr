@@ -2,9 +2,13 @@
 
 namespace App\Modules\Infrastructure\AdminAuth\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleManifest;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Navigation\NavBuilder;
+use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\System\UptimeService;
 use App\Core\Theme\UIResolverService;
@@ -24,6 +28,15 @@ class PlatformAuthController extends Controller
         ]);
 
         if (!Auth::guard('platform')->attempt($credentials)) {
+            SecurityDetector::check('suspicious.login_attempts', $request->ip());
+
+            app(AuditLogger::class)->logPlatform(
+                AuditAction::PLATFORM_LOGIN_FAILED,
+                'admin',
+                null,
+                ['actorType' => 'system', 'severity' => 'warning', 'metadata' => ['email' => $credentials['email'], 'ip' => $request->ip()]],
+            );
+
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 401);
@@ -35,6 +48,13 @@ class PlatformAuthController extends Controller
 
         $user = Auth::guard('platform')->user();
         $user->load('roles.permissions');
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::PLATFORM_LOGIN,
+            'admin',
+            (string) $user->id,
+            ['actorId' => $user->id, 'metadata' => ['ip' => $request->ip()]],
+        );
 
         $permissions = $user->roles
             ->flatMap->permissions
@@ -93,12 +113,8 @@ class PlatformAuthController extends Controller
 
     private function platformModuleNavItems(): array
     {
-        return collect(ModuleRegistry::forScope('admin'))
-            ->filter(fn (ModuleManifest $m) => $m->visibility === 'visible')
-            ->filter(fn (ModuleManifest $m) => ModuleGate::isEnabledGlobally($m->key))
-            ->flatMap(fn (ModuleManifest $m) => $m->capabilities->navItems)
-            ->values()
-            ->all();
+        // Legacy flat format for cookie hydration — delegates to NavBuilder
+        return NavBuilder::flatForAdmin();
     }
 
     private function disabledModuleKeys(): array
@@ -112,6 +128,17 @@ class PlatformAuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        $user = Auth::guard('platform')->user();
+
+        if ($user) {
+            app(AuditLogger::class)->logPlatform(
+                AuditAction::PLATFORM_LOGOUT,
+                'admin',
+                (string) $user->id,
+                ['actorId' => $user->id],
+            );
+        }
+
         Auth::guard('platform')->logout();
 
         if ($request->hasSession()) {

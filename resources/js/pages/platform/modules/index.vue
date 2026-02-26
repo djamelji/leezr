@@ -91,6 +91,22 @@ const toggleModule = async module => {
   }
 }
 
+const togglePlatformModule = async module => {
+  togglingKey.value = module.key
+
+  try {
+    const data = await settingsStore.togglePlatformModule(module.key)
+
+    toast(data.message, 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformModules.failedToToggle'), 'error')
+  }
+  finally {
+    togglingKey.value = null
+  }
+}
+
 const planLabel = planKey => {
   const labels = { pro: t('platformModules.pro'), business: t('platformModules.business') }
 
@@ -113,6 +129,7 @@ const platformHeaders = computed(() => [
   { title: t('platformModules.key'), key: 'key', width: '200px' },
   { title: t('common.type'), key: 'type', align: 'center', width: '100px', sortable: false },
   { title: t('platformModules.surface'), key: 'surface', align: 'center', width: '120px', sortable: false },
+  { title: t('platformModules.global'), key: 'status', align: 'center', width: '100px', sortable: false },
   { title: t('platformModules.permissionsTitle'), key: 'permissions', sortable: false },
 ])
 
@@ -393,6 +410,20 @@ const visiblePlatformModules = computed(() => {
             <!-- Surface -->
             <template #item.surface="{ item }">
               <span class="text-body-2">{{ item.surface }}</span>
+            </template>
+
+            <!-- Global status toggle -->
+            <template #item.status="{ item }">
+              <div @click.stop>
+                <VSwitch
+                  :model-value="item.is_enabled_globally"
+                  :loading="togglingKey === item.key"
+                  :disabled="togglingKey === item.key"
+                  color="primary"
+                  hide-details
+                  @update:model-value="togglePlatformModule(item)"
+                />
+              </div>
             </template>
 
             <!-- Permissions -->

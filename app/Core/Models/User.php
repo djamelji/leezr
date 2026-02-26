@@ -98,7 +98,9 @@ class User extends Authenticatable
 
     public function isAdminOf(Company $company): bool
     {
-        return in_array($this->roleIn($company), ['owner', 'admin']);
+        $membership = $this->membershipFor($company);
+
+        return $membership?->isAdmin() ?? false;
     }
 
     /**

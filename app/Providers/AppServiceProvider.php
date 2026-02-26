@@ -5,8 +5,16 @@ namespace App\Providers;
 use App\Core\Billing\BillingManager;
 use App\Core\Billing\Contracts\BillingProvider;
 use App\Core\Billing\PaymentGatewayManager;
+use App\Core\Billing\PaymentRegistry;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Audit\AuditLogger;
+use App\Core\Realtime\Adapters\NullRealtimePublisher;
+use App\Core\Realtime\Adapters\SseRealtimePublisher;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\Contracts\StreamTransport;
+use App\Core\Realtime\Transports\PollingTransport;
+use App\Core\Realtime\Transports\PubSubTransport;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +33,27 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PaymentGatewayManager::class);
+
+        // ADR-125: Bind realtime publisher (sse or null)
+        $this->app->singleton(RealtimePublisher::class, function () {
+            return match (config('realtime.driver')) {
+                'sse' => new SseRealtimePublisher(),
+                default => new NullRealtimePublisher(),
+            };
+        });
+
+        // ADR-128: Bind stream transport based on config
+        $this->app->singleton(StreamTransport::class, function () {
+            $connection = config('realtime.redis_connection', 'default');
+
+            return match (config('realtime.transport', 'polling')) {
+                'pubsub' => new PubSubTransport($connection),
+                default => new PollingTransport($connection),
+            };
+        });
+
+        // ADR-130: Audit logger singleton
+        $this->app->singleton(AuditLogger::class);
     }
 
     /**
@@ -37,6 +66,9 @@ class AppServiceProvider extends ServiceProvider
             'company' => Company::class,
             'platform_user' => PlatformUser::class,
         ]);
+
+        // ADR-124: Boot payment module registry
+        PaymentRegistry::boot();
 
         // ADR-081: Remove Vite hot file outside local — prevents production
         // from loading dev server assets (:5173) if the file leaks.

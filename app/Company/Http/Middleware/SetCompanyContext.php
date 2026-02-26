@@ -5,13 +5,16 @@ namespace App\Company\Http\Middleware;
 use App\Core\Models\Company;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetCompanyContext
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $companyId = $request->header('X-Company-Id');
+        // ADR-125: Accept company ID from query parameter as fallback
+        // (EventSource API does not support custom headers)
+        $companyId = $request->header('X-Company-Id') ?? $request->query('company_id');
 
         if (!$companyId) {
             return response()->json([
@@ -33,9 +36,26 @@ class SetCompanyContext
             ], 403);
         }
 
-        if (!$request->user()->isMemberOf($company)) {
+        $user = $request->user();
+
+        if (!$user->isMemberOf($company)) {
             return response()->json([
                 'message' => 'You are not a member of this company.',
+            ], 403);
+        }
+
+        // Runtime invariant: non-owner memberships MUST have a CompanyRole
+        $membership = $user->membershipFor($company);
+
+        if ($membership && !$membership->isOwner() && $membership->company_role_id === null) {
+            Log::critical('RBAC invariant violation: non-owner membership without CompanyRole', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'membership_id' => $membership->id,
+            ]);
+
+            return response()->json([
+                'message' => 'Account configuration error. Contact your administrator.',
             ], 403);
         }
 

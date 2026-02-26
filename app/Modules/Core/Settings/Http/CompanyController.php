@@ -3,6 +3,8 @@
 namespace App\Modules\Core\Settings\Http;
 
 use App\Company\Fields\ReadModels\CompanyProfileReadModel;
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use App\Modules\Core\Settings\Http\Requests\UpdateCompanyRequest;
@@ -24,6 +26,7 @@ class CompanyController extends Controller
         $company = $request->attributes->get('company');
         $validated = $request->validated();
 
+        $before = $company->only('name');
         $company->update(array_intersect_key($validated, array_flip(['name'])));
 
         if (isset($validated['dynamic_fields'])) {
@@ -34,6 +37,11 @@ class CompanyController extends Controller
                 $company->id,
             );
         }
+
+        app(AuditLogger::class)->logCompany(
+            $company->id, AuditAction::COMPANY_SETTINGS_UPDATED, 'company', (string) $company->id,
+            ['diffBefore' => $before, 'diffAfter' => $company->only('name')],
+        );
 
         return response()->json(CompanyProfileReadModel::get($company->fresh()));
     }

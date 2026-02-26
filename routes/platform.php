@@ -4,6 +4,8 @@ use App\Modules\Platform\Companies\Http\CompanyController;
 use App\Modules\Platform\Companies\Http\CompanyModuleController;
 use App\Modules\Platform\Companies\Http\CompanyUserController;
 use App\Modules\Platform\Billing\Http\BillingConfigController;
+use App\Modules\Platform\Billing\Http\PaymentModuleController;
+use App\Modules\Platform\Billing\Http\PaymentMethodRuleController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
@@ -25,6 +27,10 @@ use App\Modules\Platform\Translations\Http\TranslationController;
 use App\Modules\Platform\Translations\Http\TranslationMatrixController;
 use App\Modules\Platform\Translations\Http\OverrideController;
 use App\Modules\Platform\Settings\Http\WorldSettingsController;
+use App\Modules\Platform\Realtime\Http\RealtimeGovernanceController;
+use App\Modules\Platform\Audit\Http\PlatformAuditLogController;
+use App\Modules\Platform\Security\Http\SecurityAlertController;
+use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformAuthController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +46,7 @@ Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPa
 // Authenticated platform routes
 Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::get('/me', [PlatformAuthController::class, 'me']);
+    Route::get('/nav', [NavController::class, 'platform']);
     Route::post('/logout', [PlatformAuthController::class, 'logout']);
 
     // Companies
@@ -169,6 +176,21 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/billing/subscriptions', [BillingConfigController::class, 'subscriptions']);
         Route::put('/billing/subscriptions/{id}/approve', [BillingConfigController::class, 'approveSubscription']);
         Route::put('/billing/subscriptions/{id}/reject', [BillingConfigController::class, 'rejectSubscription']);
+
+        // Payment modules governance (ADR-124)
+        Route::get('/billing/payment-modules', [PaymentModuleController::class, 'index']);
+        Route::put('/billing/payment-modules/{providerKey}/install', [PaymentModuleController::class, 'install']);
+        Route::put('/billing/payment-modules/{providerKey}/activate', [PaymentModuleController::class, 'activate']);
+        Route::put('/billing/payment-modules/{providerKey}/deactivate', [PaymentModuleController::class, 'deactivate']);
+        Route::put('/billing/payment-modules/{providerKey}/credentials', [PaymentModuleController::class, 'updateCredentials']);
+        Route::get('/billing/payment-modules/{providerKey}/health', [PaymentModuleController::class, 'health']);
+
+        // Payment method rules governance (ADR-124)
+        Route::get('/billing/payment-rules', [PaymentMethodRuleController::class, 'index']);
+        Route::post('/billing/payment-rules', [PaymentMethodRuleController::class, 'store']);
+        Route::put('/billing/payment-rules/{id}', [PaymentMethodRuleController::class, 'update']);
+        Route::delete('/billing/payment-rules/{id}', [PaymentMethodRuleController::class, 'destroy']);
+        Route::get('/billing/payment-rules/preview', [PaymentMethodRuleController::class, 'preview']);
     });
 
     // Markets governance (ADR-104)
@@ -226,6 +248,34 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/translations/overrides/{marketKey}/{locale}', [OverrideController::class, 'index']);
         Route::put('/translations/overrides/{marketKey}', [OverrideController::class, 'upsert']);
         Route::delete('/translations/overrides/{id}', [OverrideController::class, 'destroy']);
+    });
+
+    // Audit logs (ADR-130)
+    Route::middleware(['module.active:platform.audit', 'platform.permission:view_audit_logs'])->group(function () {
+        Route::get('/audit/platform', [PlatformAuditLogController::class, 'platformLogs']);
+        Route::get('/audit/companies', [PlatformAuditLogController::class, 'companyLogs']);
+        Route::get('/audit/actions', [PlatformAuditLogController::class, 'actions']);
+    });
+
+    // Security & Monitoring (ADR-129, ADR-131)
+    Route::middleware(['module.active:platform.security'])->group(function () {
+        // Security alerts
+        Route::middleware(['platform.permission:manage_security_alerts'])->group(function () {
+            Route::get('/security/alerts', [SecurityAlertController::class, 'index']);
+            Route::get('/security/alert-types', [SecurityAlertController::class, 'alertTypes']);
+            Route::put('/security/alerts/{id}/acknowledge', [SecurityAlertController::class, 'acknowledge']);
+            Route::put('/security/alerts/{id}/resolve', [SecurityAlertController::class, 'resolve']);
+            Route::put('/security/alerts/{id}/false-positive', [SecurityAlertController::class, 'falsePositive']);
+        });
+
+        // Realtime governance (absorbed from platform.realtime — ADR-131)
+        Route::middleware(['platform.permission:manage_realtime'])->group(function () {
+            Route::get('/realtime/status', [RealtimeGovernanceController::class, 'status']);
+            Route::get('/realtime/metrics', [RealtimeGovernanceController::class, 'metrics']);
+            Route::get('/realtime/connections', [RealtimeGovernanceController::class, 'connections']);
+            Route::post('/realtime/flush', [RealtimeGovernanceController::class, 'flush']);
+            Route::post('/realtime/kill-switch', [RealtimeGovernanceController::class, 'killSwitch']);
+        });
     });
 
     // Heartbeat (session keepalive — governance middleware handles TTL header)

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Company\RBAC\CompanyPermission;
+use App\Company\RBAC\CompanyRole;
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldDefinitionCatalog;
@@ -39,9 +41,22 @@ class CompanyMemberProfileTest extends TestCase
         $this->activateCompanyModules($this->company);
         $adminRole = $this->setUpCompanyRbac($this->company);
 
+        $viewerRole = CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'viewer',
+            'name' => 'Viewer',
+            'is_administrative' => false,
+        ]);
+
+        $viewerRole->permissions()->sync(
+            CompanyPermission::where('is_admin', false)
+                ->whereIn('key', ['members.view'])
+                ->pluck('id')->toArray(),
+        );
+
         $this->ownerMembership = $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);
-        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'admin', 'company_role_id' => $adminRole->id]);
-        $this->memberMembership = $this->company->memberships()->create(['user_id' => $this->member->id, 'role' => 'user']);
+        $this->adminMembership = $this->company->memberships()->create(['user_id' => $this->admin->id, 'role' => 'user', 'company_role_id' => $adminRole->id]);
+        $this->memberMembership = $this->company->memberships()->create(['user_id' => $this->member->id, 'role' => 'user', 'company_role_id' => $viewerRole->id]);
 
         // Activate company_user fields
         $cuFields = FieldDefinition::whereNull('company_id')

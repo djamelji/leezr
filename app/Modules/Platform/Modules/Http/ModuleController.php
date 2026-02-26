@@ -2,10 +2,13 @@
 
 namespace App\Modules\Platform\Modules\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Modules\AdminModuleService;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
+use App\Core\Modules\Pricing\ModulePricingPolicy;
 use App\Core\Jobdomains\Jobdomain;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +57,11 @@ class ModuleController
         // ─── Platform-scope modules (read-only) ─────────────
         $platformDefinitions = ModuleRegistry::forScope('admin');
 
+        $platformModuleKeys = array_keys($platformDefinitions);
+        $platformModuleRows = PlatformModule::whereIn('key', $platformModuleKeys)
+            ->get()
+            ->keyBy('key');
+
         $platformModules = collect($platformDefinitions)
             ->map(fn ($manifest) => [
                 'key' => $manifest->key,
@@ -67,6 +75,7 @@ class ModuleController
                 'icon_name' => $manifest->iconRef,
                 'permissions' => array_map(fn ($p) => $p['key'] ?? $p, $manifest->permissions),
                 'capabilities' => $manifest->capabilities->toArray(),
+                'is_enabled_globally' => $platformModuleRows[$manifest->key]?->is_enabled_globally ?? true,
             ])
             ->sortBy('sort_order')
             ->values();
@@ -209,6 +218,11 @@ class ModuleController
 
             $module->refresh();
 
+            app(AuditLogger::class)->logPlatform(
+                $module->is_enabled_globally ? AuditAction::MODULE_ENABLED : AuditAction::MODULE_DISABLED,
+                'platform_module', $key,
+            );
+
             return response()->json([
                 'message' => $result['data']['message'],
                 'module' => $module,
@@ -222,8 +236,15 @@ class ModuleController
             return response()->json(['message' => 'Module not found.'], 404);
         }
 
+        $wasBefore = $module->is_enabled_globally;
         $module->is_enabled_globally = !$module->is_enabled_globally;
         $module->save();
+
+        app(AuditLogger::class)->logPlatform(
+            $module->is_enabled_globally ? AuditAction::MODULE_ENABLED : AuditAction::MODULE_DISABLED,
+            'platform_module', $key,
+            ['diffBefore' => ['is_enabled_globally' => $wasBefore], 'diffAfter' => ['is_enabled_globally' => $module->is_enabled_globally]],
+        );
 
         return response()->json([
             'message' => $module->is_enabled_globally ? 'Module enabled globally.' : 'Module disabled globally.',
@@ -301,6 +322,17 @@ class ModuleController
                     'errors' => $paramErrors->errors(),
                 ], 422);
             }
+        }
+
+        // Enforce pricing invariants before persisting
+        $proposedPricingMode = $validated['pricing_mode'] ?? $module->pricing_mode;
+
+        try {
+            ModulePricingPolicy::assertProposedPricingMode($key, $proposedPricingMode);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
         $module->update($validated);

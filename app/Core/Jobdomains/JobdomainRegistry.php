@@ -35,14 +35,16 @@ class JobdomainRegistry
                         'bundles' => [
                             'members.team_access', 'members.team_management',
                             'settings.company_info', 'settings.company_management',
+                            'roles.governance',
+                            'jobdomain.info', 'jobdomain.management',
                             'shipments.operations', 'shipments.administration',
                         ],
                     ],
                     'dispatcher' => [
                         'name' => 'Dispatcher',
-                        'is_administrative' => true,
+                        'is_administrative' => false,
                         'bundles' => [
-                            'members.team_access', 'members.team_management',
+                            'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
                         ],

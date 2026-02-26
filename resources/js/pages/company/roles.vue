@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { surface: 'structure', module: 'core.settings' } })
+definePage({ meta: { surface: 'structure', module: 'core.roles' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
@@ -33,6 +33,42 @@ onMounted(async () => {
   }
 })
 
+// ─── Inactive module permissions (FIX: make them visible + uncheckable) ─────
+const inactiveModulePermissions = computed(() => {
+  const catalog = settingsStore.permissionCatalog
+  const selected = new Set(drawerForm.value.permissions)
+
+  // Permissions from inactive modules that are currently in the form
+  const inactive = catalog.filter(p => !p.module_active && selected.has(p.id))
+
+  // Group by module
+  const groups = {}
+  for (const p of inactive) {
+    if (!groups[p.module_key]) {
+      groups[p.module_key] = {
+        module_key: p.module_key,
+        name: p.module_name,
+        module_icon: moduleIconMap.value?.[p.module_key] || null,
+        permissions: [],
+      }
+    }
+    groups[p.module_key].permissions.push(p)
+  }
+
+  return Object.values(groups)
+})
+
+const hasInactivePermissions = computed(() => inactiveModulePermissions.value.length > 0)
+
+// ─── i18n helpers for permission catalog ─────
+const te = useI18n().te
+const modName = key => te(`permissionCatalog.modules.${key}.name`) ? t(`permissionCatalog.modules.${key}.name`) : null
+const modDesc = key => te(`permissionCatalog.modules.${key}.description`) ? t(`permissionCatalog.modules.${key}.description`) : null
+const capLabel = key => te(`permissionCatalog.bundles.${key}.label`) ? t(`permissionCatalog.bundles.${key}.label`) : null
+const capHint = key => te(`permissionCatalog.bundles.${key}.hint`) ? t(`permissionCatalog.bundles.${key}.hint`) : null
+const permLabel = key => te(`permissionCatalog.permissions.${key}.label`) ? t(`permissionCatalog.permissions.${key}.label`) : null
+const permHint = key => te(`permissionCatalog.permissions.${key}.hint`) ? t(`permissionCatalog.permissions.${key}.hint`) : null
+
 // ─── Simple mode: Capability bundles per module ─────
 const capabilityModules = computed(() => {
   const modules = settingsStore.permissionModules
@@ -51,8 +87,48 @@ const capabilityModules = computed(() => {
 const coreModules = computed(() => capabilityModules.value.filter(m => m.is_core))
 const businessModules = computed(() => capabilityModules.value.filter(m => !m.is_core))
 
+// ─── Simple mode: unbundled permissions (modules with perms but no bundles) ─────
+// Module icon lookup from permissionModules (which carry module_icon from API)
+const moduleIconMap = computed(() => {
+  const map = {}
+  for (const m of settingsStore.permissionModules) {
+    map[m.module_key] = m.module_icon
+  }
+
+  return map
+})
+
+const unbundledModules = computed(() => {
+  const catalog = settingsStore.permissionCatalog
+  const isManagement = drawerForm.value.is_administrative
+  const bundledModuleKeys = new Set(capabilityModules.value.map(m => m.module_key))
+  const groups = {}
+
+  for (const p of catalog) {
+    if (!p.module_active) continue
+    if (bundledModuleKeys.has(p.module_key)) continue
+    if (!isManagement && p.is_admin) continue
+
+    if (!groups[p.module_key]) {
+      groups[p.module_key] = {
+        module_key: p.module_key,
+        name: p.module_name,
+        description: p.module_description || '',
+        isCore: p.module_key.startsWith('core.'),
+        module_icon: moduleIconMap.value[p.module_key] || null,
+        permissions: [],
+      }
+    }
+    groups[p.module_key].permissions.push(p)
+  }
+
+  return Object.values(groups)
+})
+
 // Capability state: 'checked' | 'unchecked' | 'custom'
 const getCapabilityState = cap => {
+  if (!cap.permission_ids?.length) return 'unchecked'
+
   const selected = new Set(drawerForm.value.permissions)
   const allChecked = cap.permission_ids.every(id => selected.has(id))
   const noneChecked = cap.permission_ids.every(id => !selected.has(id))
@@ -64,14 +140,18 @@ const getCapabilityState = cap => {
 }
 
 const toggleCapability = cap => {
-  const selected = new Set(drawerForm.value.permissions)
-  const allChecked = cap.permission_ids.every(id => selected.has(id))
+  if (!cap.permission_ids?.length) return
 
-  if (allChecked) {
-    cap.permission_ids.forEach(id => selected.delete(id))
+  const selected = new Set(drawerForm.value.permissions)
+  const state = getCapabilityState(cap)
+
+  if (state === 'unchecked') {
+    // Nothing selected → check all
+    cap.permission_ids.forEach(id => selected.add(id))
   }
   else {
-    cap.permission_ids.forEach(id => selected.add(id))
+    // 'checked' or 'custom' (indeterminate) → clear all
+    cap.permission_ids.forEach(id => selected.delete(id))
   }
 
   drawerForm.value.permissions = [...selected]
@@ -97,6 +177,7 @@ const permissionGroups = computed(() => {
         name: p.module_name,
         description: p.module_description || '',
         isCore,
+        module_icon: moduleIconMap.value[p.module_key] || null,
         permissions: [],
       }
     }
@@ -469,11 +550,19 @@ const deleteRole = async role => {
                       :key="mod.module_key"
                     >
                       <div class="ms-7 mb-4">
+                        <div class="d-flex align-center gap-2 mb-1">
+                          <VIcon
+                            :icon="mod.module_icon || 'tabler-puzzle'"
+                            size="18"
+                            color="primary"
+                          />
+                          <span class="text-body-1 font-weight-medium">{{ modName(mod.module_key) || mod.module_name }}</span>
+                        </div>
                         <div
                           v-if="mod.module_description"
-                          class="text-body-2 text-disabled mb-2"
+                          class="text-body-2 text-disabled mb-2 ms-7"
                         >
-                          {{ mod.module_description }}
+                          {{ modDesc(mod.module_key) || mod.module_description }}
                         </div>
                         <div
                           v-for="cap in mod.capabilities"
@@ -488,7 +577,7 @@ const deleteRole = async role => {
                             @update:model-value="toggleCapability(cap)"
                           >
                             <template #label>
-                              <span>{{ cap.label }}</span>
+                              <span>{{ capLabel(cap.key) || cap.label }}</span>
                               <VTooltip
                                 v-if="cap.hint"
                                 location="top"
@@ -501,7 +590,7 @@ const deleteRole = async role => {
                                     v-bind="tp"
                                   />
                                 </template>
-                                {{ cap.hint }}
+                                {{ capHint(cap.key) || cap.hint }}
                               </VTooltip>
                             </template>
                           </VCheckbox>
@@ -540,11 +629,11 @@ const deleteRole = async role => {
                     >
                       <div class="d-flex align-center gap-2 mb-3">
                         <VIcon
-                          icon="tabler-package"
+                          :icon="mod.module_icon || 'tabler-package'"
                           size="20"
                           color="info"
                         />
-                        <span class="text-body-1 font-weight-medium">{{ mod.module_name }}</span>
+                        <span class="text-body-1 font-weight-medium">{{ modName(mod.module_key) || mod.module_name }}</span>
                       </div>
 
                       <div class="ms-7 mb-4">
@@ -552,7 +641,7 @@ const deleteRole = async role => {
                           v-if="mod.module_description"
                           class="text-body-2 text-disabled mb-2"
                         >
-                          {{ mod.module_description }}
+                          {{ modDesc(mod.module_key) || mod.module_description }}
                         </div>
                         <div
                           v-for="cap in mod.capabilities"
@@ -567,7 +656,7 @@ const deleteRole = async role => {
                             @update:model-value="toggleCapability(cap)"
                           >
                             <template #label>
-                              <span>{{ cap.label }}</span>
+                              <span>{{ capLabel(cap.key) || cap.label }}</span>
                               <VTooltip
                                 v-if="cap.hint"
                                 location="top"
@@ -580,7 +669,7 @@ const deleteRole = async role => {
                                     v-bind="tp"
                                   />
                                 </template>
-                                {{ cap.hint }}
+                                {{ capHint(cap.key) || cap.hint }}
                               </VTooltip>
                             </template>
                           </VCheckbox>
@@ -595,6 +684,76 @@ const deleteRole = async role => {
                           </VChip>
                           <VChip
                             v-else-if="cap.is_admin"
+                            size="x-small"
+                            color="error"
+                            variant="tonal"
+                          >
+                            {{ t('common.sensitive') }}
+                          </VChip>
+                        </div>
+                      </div>
+                    </template>
+                  </template>
+
+                  <!-- Unbundled modules (permissions without bundles) -->
+                  <template v-if="unbundledModules.length">
+                    <VDivider
+                      v-if="coreModules.length || businessModules.length"
+                      class="mb-3"
+                    />
+
+                    <template
+                      v-for="mod in unbundledModules"
+                      :key="mod.module_key"
+                    >
+                      <div class="d-flex align-center gap-2 mb-3">
+                        <VIcon
+                          :icon="mod.module_icon || 'tabler-package'"
+                          size="20"
+                          color="info"
+                        />
+                        <span class="text-body-1 font-weight-medium">{{ modName(mod.module_key) || mod.name }}</span>
+                      </div>
+
+                      <div class="ms-7 mb-4">
+                        <div
+                          v-if="mod.description"
+                          class="text-body-2 text-disabled mb-2"
+                        >
+                          {{ modDesc(mod.module_key) || mod.description }}
+                        </div>
+                        <div
+                          v-for="perm in mod.permissions"
+                          :key="perm.id"
+                          class="d-flex align-center"
+                        >
+                          <VCheckbox
+                            :model-value="isPermissionChecked(perm.id)"
+                            hide-details
+                            density="compact"
+                            @update:model-value="togglePermission(perm.id)"
+                          >
+                            <template #label>
+                              <span>{{ permLabel(perm.key) || perm.label }}</span>
+                              <VTooltip
+                                v-if="perm.hint"
+                                location="top"
+                              >
+                                <template #activator="{ props: tp }">
+                                  <VIcon
+                                    icon="tabler-info-circle"
+                                    size="14"
+                                    class="ms-1 text-disabled"
+                                    v-bind="tp"
+                                  />
+                                </template>
+                                {{ permHint(perm.key) || perm.hint }}
+                              </VTooltip>
+                            </template>
+                          </VCheckbox>
+                          <VSpacer />
+                          <VChip
+                            v-if="perm.is_admin"
                             size="x-small"
                             color="error"
                             variant="tonal"
@@ -625,14 +784,19 @@ const deleteRole = async role => {
                       :key="group.module_key"
                     >
                       <div class="ms-7 mb-4">
-                        <div class="text-body-1 font-weight-medium">
-                          {{ group.name }}
+                        <div class="d-flex align-center gap-2">
+                          <VIcon
+                            :icon="group.module_icon || 'tabler-puzzle'"
+                            size="18"
+                            color="primary"
+                          />
+                          <span class="text-body-1 font-weight-medium">{{ modName(group.module_key) || group.name }}</span>
                         </div>
                         <div
                           v-if="group.description"
                           class="text-body-2 text-disabled mb-2"
                         >
-                          {{ group.description }}
+                          {{ modDesc(group.module_key) || group.description }}
                         </div>
                         <div
                           v-for="perm in group.permissions"
@@ -646,7 +810,7 @@ const deleteRole = async role => {
                             @update:model-value="togglePermission(perm.id)"
                           >
                             <template #label>
-                              <span>{{ perm.label }}</span>
+                              <span>{{ permLabel(perm.key) || perm.label }}</span>
                               <VTooltip
                                 v-if="perm.hint"
                                 location="top"
@@ -659,7 +823,7 @@ const deleteRole = async role => {
                                     v-bind="tp"
                                   />
                                 </template>
-                                {{ perm.hint }}
+                                {{ permHint(perm.key) || perm.hint }}
                               </VTooltip>
                             </template>
                           </VCheckbox>
@@ -690,11 +854,11 @@ const deleteRole = async role => {
                     >
                       <div class="d-flex align-center gap-2 mb-3">
                         <VIcon
-                          icon="tabler-package"
+                          :icon="group.module_icon || 'tabler-package'"
                           size="20"
                           color="info"
                         />
-                        <span class="text-body-1 font-weight-medium">{{ group.name }}</span>
+                        <span class="text-body-1 font-weight-medium">{{ modName(group.module_key) || group.name }}</span>
                       </div>
 
                       <div class="ms-7 mb-4">
@@ -702,7 +866,7 @@ const deleteRole = async role => {
                           v-if="group.description"
                           class="text-body-2 text-disabled mb-2"
                         >
-                          {{ group.description }}
+                          {{ modDesc(group.module_key) || group.description }}
                         </div>
                         <div
                           v-for="perm in group.permissions"
@@ -716,7 +880,7 @@ const deleteRole = async role => {
                             @update:model-value="togglePermission(perm.id)"
                           >
                             <template #label>
-                              <span>{{ perm.label }}</span>
+                              <span>{{ permLabel(perm.key) || perm.label }}</span>
                               <VTooltip
                                 v-if="perm.hint"
                                 location="top"
@@ -729,7 +893,7 @@ const deleteRole = async role => {
                                     v-bind="tp"
                                   />
                                 </template>
-                                {{ perm.hint }}
+                                {{ permHint(perm.key) || perm.hint }}
                               </VTooltip>
                             </template>
                           </VCheckbox>
@@ -746,6 +910,62 @@ const deleteRole = async role => {
                       </div>
                     </template>
                   </template>
+                </template>
+              </VCol>
+
+              <!-- ═══ INACTIVE MODULE PERMISSIONS ═══ -->
+              <VCol
+                v-if="hasInactivePermissions"
+                cols="12"
+              >
+                <VDivider class="mb-3" />
+                <VAlert
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                >
+                  {{ t('roles.inactiveModulePermissionsHint') }}
+                </VAlert>
+
+                <template
+                  v-for="group in inactiveModulePermissions"
+                  :key="group.module_key"
+                >
+                  <div class="d-flex align-center gap-2 mb-2">
+                    <VIcon
+                      icon="tabler-package-off"
+                      size="20"
+                      color="disabled"
+                    />
+                    <span class="text-body-1 font-weight-medium text-disabled">{{ modName(group.module_key) || group.name }}</span>
+                    <VChip
+                      size="x-small"
+                      color="warning"
+                      variant="tonal"
+                    >
+                      {{ t('roles.moduleInactive') }}
+                    </VChip>
+                  </div>
+
+                  <div class="ms-7 mb-4">
+                    <div
+                      v-for="perm in group.permissions"
+                      :key="perm.id"
+                      class="d-flex align-center"
+                    >
+                      <VCheckbox
+                        :model-value="isPermissionChecked(perm.id)"
+                        hide-details
+                        density="compact"
+                        @update:model-value="togglePermission(perm.id)"
+                      >
+                        <template #label>
+                          <span class="text-disabled">{{ perm.label }}</span>
+                        </template>
+                      </VCheckbox>
+                    </div>
+                  </div>
                 </template>
               </VCol>
 

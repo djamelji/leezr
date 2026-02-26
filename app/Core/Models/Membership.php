@@ -35,8 +35,18 @@ class Membership extends Model
         return $this->role === 'owner';
     }
 
+    /**
+     * Is this membership administrative?
+     *
+     * Owner always bypasses. For all others, CompanyRole.is_administrative
+     * is the sole source of truth.
+     */
     public function isAdmin(): bool
     {
-        return in_array($this->role, ['owner', 'admin']);
+        if ($this->role === 'owner') {
+            return true;
+        }
+
+        return (bool) $this->companyRole?->is_administrative;
     }
 }

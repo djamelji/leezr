@@ -1,11 +1,16 @@
 <?php
 
-namespace App\Modules\Core\Settings\Http;
+namespace App\Modules\Core\Roles\Http;
 
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
+use App\Core\Security\SecurityDetector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -30,10 +35,13 @@ class CompanyRoleController extends Controller
     public function permissionCatalog(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $modules = collect(ModuleRegistry::definitions());
+        $modules = collect(ModuleRegistry::forScope('company'));
 
         $moduleNames = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->name]);
         $moduleDescriptions = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->description]);
+        $moduleIcons = $modules->mapWithKeys(fn ($m, $key) => [
+            $key => collect($m->capabilities->navItems)->first()['icon'] ?? $m->iconRef,
+        ]);
 
         // Build hint lookup from ModuleRegistry permission definitions
         $hints = [];
@@ -62,7 +70,8 @@ class CompanyRoleController extends Controller
         // Build key→id lookup for resolving bundles
         $keyToId = $permissions->pluck('id', 'key');
 
-        // Build module list with bundles (capabilities)
+        // Build module list with bundles (capabilities).
+        // Only include bundles that resolve to at least one company permission.
         $moduleList = [];
         foreach ($modules as $modKey => $manifest) {
             $isCore = str_starts_with($modKey, 'core.');
@@ -75,6 +84,10 @@ class CompanyRoleController extends Controller
                     ->filter()
                     ->values()
                     ->all();
+
+                if (empty($permissionIds)) {
+                    continue;
+                }
 
                 $bundles[] = [
                     'key' => $bundle['key'],
@@ -90,6 +103,7 @@ class CompanyRoleController extends Controller
                 'module_key' => $modKey,
                 'module_name' => $moduleNames[$modKey] ?? $modKey,
                 'module_description' => $moduleDescriptions[$modKey] ?? '',
+                'module_icon' => $moduleIcons[$modKey] ?? 'tabler-puzzle',
                 'module_active' => $isActive,
                 'is_core' => $isCore,
                 'capabilities' => $bundles,
@@ -134,6 +148,19 @@ class CompanyRoleController extends Controller
             $role->syncPermissionsSafe($validated['permissions']);
         }
 
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.created', 'role_id' => $role->id])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_CREATED, 'role', (string) $role->id, [
+            'diffAfter' => $role->toArray(),
+        ]);
+
+        // ADR-129: detect mass role changes
+        SecurityDetector::check('mass.role_changes', "user:{$request->user()->id}", $company->id, $request->user()->id);
+
         return response()->json([
             'message' => 'Role created.',
             'role' => $role->loadCount('memberships')->load('permissions'),
@@ -152,14 +179,42 @@ class CompanyRoleController extends Controller
             'permissions.*' => 'integer|exists:company_permissions,id',
         ]);
 
+        $wasAdministrative = $role->is_administrative;
+
         $fields = array_intersect_key($validated, array_flip(['name', 'is_administrative']));
         if (!empty($fields)) {
             $role->update($fields);
         }
 
+        // Invariant: operational role cannot have admin permissions.
+        // When transitioning management→operational, strip admin perms
+        // even if the client didn't send a permissions array.
+        $transitionedToOperational = $wasAdministrative
+            && isset($validated['is_administrative'])
+            && !$validated['is_administrative'];
+
         if (array_key_exists('permissions', $validated)) {
             $role->syncPermissionsSafe($validated['permissions']);
+        } elseif ($transitionedToOperational) {
+            $currentIds = $role->permissions()->pluck('company_permissions.id')->toArray();
+            $safeIds = CompanyPermission::whereIn('id', $currentIds)
+                ->where('is_admin', false)
+                ->pluck('id')
+                ->toArray();
+
+            $role->permissions()->sync($safeIds);
         }
+
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.updated', 'role_id' => $role->id])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_UPDATED, 'role', (string) $role->id);
+
+        // ADR-129: detect mass role changes
+        SecurityDetector::check('mass.role_changes', "user:{$request->user()->id}", $company->id, $request->user()->id);
 
         return response()->json([
             'message' => 'Role updated.',
@@ -187,6 +242,17 @@ class CompanyRoleController extends Controller
         }
 
         $role->delete();
+
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.deleted', 'role_id' => $id])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_DELETED, 'role', (string) $id);
+
+        // ADR-129: detect mass role changes
+        SecurityDetector::check('mass.role_changes', "user:{$request->user()->id}", $company->id, $request->user()->id);
 
         return response()->json([
             'message' => 'Role deleted.',

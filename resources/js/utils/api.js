@@ -93,7 +93,8 @@ export const $api = ofetch.create({
 
     // 403 Forbidden
     if (status === 403) {
-      toast(response._data?.message || 'Unauthorized action.', 'error')
+      if (!options._silent403)
+        toast(response._data?.message || 'Unauthorized action.', 'error')
 
       return
     }

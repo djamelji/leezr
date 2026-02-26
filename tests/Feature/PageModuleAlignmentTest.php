@@ -191,6 +191,7 @@ class PageModuleAlignmentTest extends TestCase
             'company-settings' => $base . '/company/settings.vue',
             'company-modules' => $base . '/company/modules/index.vue',
             'company-plan' => $base . '/company/plan.vue',
+            'company-billing-tab' => $base . '/company/billing/[tab].vue',
             'company-roles' => $base . '/company/roles.vue',
         ];
 

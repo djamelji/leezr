@@ -83,7 +83,7 @@ const allowCustomFields = computed(() => jobdomainStore.allowCustomFields)
 onMounted(async () => {
   await Promise.all([
     membersStore.fetchMembers(),
-    settingsStore.fetchCompanyRoles().catch(() => {}),
+    settingsStore.fetchCompanyRoles({ silent: true }).catch(() => {}),
   ])
 })
 

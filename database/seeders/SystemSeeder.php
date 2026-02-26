@@ -46,6 +46,9 @@ class SystemSeeder extends Seeder
         // ─── Market catalog (ADR-104) ──────────────────────
         MarketRegistry::sync();
 
+        // ─── Payment modules (ADR-124) ─────────────────────
+        $this->call(PaymentModuleSeeder::class);
+
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();
     }

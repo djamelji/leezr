@@ -8,6 +8,7 @@ use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Models\Company;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Support\Facades\DB;
@@ -112,6 +113,15 @@ class JobdomainGate
 
             foreach ($defaultModules as $moduleKey) {
                 if (ModuleGate::isEnabledGlobally($moduleKey)) {
+                    // Add activation reason (source of truth)
+                    CompanyModuleActivationReason::firstOrCreate([
+                        'company_id' => $company->id,
+                        'module_key' => $moduleKey,
+                        'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                        'source_module_key' => null,
+                    ]);
+
+                    // Sync cache (derived)
                     CompanyModule::updateOrCreate(
                         ['company_id' => $company->id, 'module_key' => $moduleKey],
                         ['is_enabled_for_company' => true],

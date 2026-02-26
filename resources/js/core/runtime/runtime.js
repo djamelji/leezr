@@ -16,10 +16,18 @@ import { transition } from './stateMachine'
 import { createJournal } from './journal'
 import { createScheduler } from './scheduler'
 import { buildSnapshot } from './invariants'
+import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
+import { createChannelRouter } from '@/core/realtime/ChannelRouter'
+import { createDomainHandler } from '@/core/realtime/handlers/DomainHandler'
+import { createNotificationHandler } from '@/core/realtime/handlers/NotificationHandler'
+import { createAuditHandler } from '@/core/realtime/handlers/AuditHandler'
+import { createSecurityHandler } from '@/core/realtime/handlers/SecurityHandler'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { useModuleStore } from '@/core/stores/module'
+import { useNavStore } from '@/core/stores/nav'
+import { useNotificationStore } from '@/core/stores/notification'
 
 // Module-level journal (non-reactive — accessed via getter + version counter)
 const _journal = createJournal(200)
@@ -27,12 +35,29 @@ const _journal = createJournal(200)
 // Scheduler — initialized lazily after store is created
 let _scheduler = null
 
+// Visibility + polling refresh (fallback when SSE unavailable)
+let _visibilityInitialized = false
+let _lastHiddenAt = 0
+let _pollTimer = null
+const NAV_POLL_MS = 30_000 // 30 seconds
+
+// ADR-125: SSE realtime client
+let _realtimeClient = null
+let _realtimeActive = false
+
+// ADR-126: Channel router + domain event bus
+let _channelRouter = null
+let _domainHandler = null
+
 // Store factory map — keyed by store id from resource declarations
 const storeFactories = {
   auth: useAuthStore,
   platformAuth: usePlatformAuthStore,
   jobdomain: useJobdomainStore,
   module: useModuleStore,
+  nav: useNavStore,
+  notification: useNotificationStore,
+  // auditLive and securityAlert stores will be registered in Phase 3 and 4
 }
 
 function resolveStore(storeId) {
@@ -129,7 +154,13 @@ export const useRuntimeStore = defineStore('runtime', {
 
       this._ensureScheduler()
       this._initBroadcast()
+      this._initVisibilityRefresh()
       await _scheduler.requestBoot(scope)
+
+      // ADR-125: Start SSE after boot completes for company scope
+      if (this._phase === 'ready' && scope === 'company') {
+        this._initRealtime()
+      }
     },
 
     /**
@@ -137,6 +168,8 @@ export const useRuntimeStore = defineStore('runtime', {
      * Called on logout or before scope switch.
      */
     teardown() {
+      this._disconnectRealtime()
+      this._stopNavPoll()
       this._ensureScheduler()
       _scheduler.requestTeardown()
     },
@@ -146,8 +179,16 @@ export const useRuntimeStore = defineStore('runtime', {
      * @param {number|string} companyId
      */
     async switchCompany(companyId) {
+      // ADR-125: Disconnect SSE before switch (company channel changes)
+      this._disconnectRealtime()
+
       this._ensureScheduler()
       await _scheduler.requestSwitch(companyId)
+
+      // Reconnect SSE for the new company
+      if (this._phase === 'ready') {
+        this._initRealtime()
+      }
     },
 
     /**
@@ -337,6 +378,188 @@ export const useRuntimeStore = defineStore('runtime', {
         onSessionExtended: payload => this.handleBroadcast('session-extended', payload),
         onSessionExpired: payload => this.handleBroadcast('session-expired', payload),
       })
+    },
+
+    /**
+     * Realtime RBAC refresh (sans websockets).
+     *
+     * Two mechanisms ensure Alice sees permission changes without logout:
+     *
+     * 1) VISIBILITY — when tab becomes visible after >10s hidden,
+     *    invalidate cache and refetch immediately.
+     *
+     * 2) POLLING — every 30s while tab is visible + company scope + ready,
+     *    background-refetch nav + companies. Covers split-screen / same-tab
+     *    scenarios where visibilitychange never fires.
+     *
+     * Polling is paused when tab is hidden (saves network).
+     */
+    _initVisibilityRefresh() {
+      if (_visibilityInitialized || typeof document === 'undefined') return
+      _visibilityInitialized = true
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          _lastHiddenAt = Date.now()
+          this._stopNavPoll()
+
+          return
+        }
+
+        // Tab became visible — immediate refresh if hidden long enough
+        const hiddenMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0
+
+        if (hiddenMs > 10_000 && this._scope === 'company' && this._phase === 'ready') {
+          this._refreshNavAndAuth()
+        }
+
+        // Restart polling
+        this._startNavPoll()
+      })
+
+      // Start polling on init (tab is visible at boot time)
+      this._startNavPoll()
+    },
+
+    /** Invalidate cache + background-refetch nav and auth companies. */
+    _refreshNavAndAuth() {
+      cacheRemove('features:nav')
+      cacheRemove('auth:companies')
+
+      const navStore = resolveStore('nav')
+      const authStore = resolveStore('auth')
+
+      Promise.all([
+        navStore.fetchCompanyNav(),
+        authStore.fetchMyCompanies(),
+      ]).catch(() => {})
+    },
+
+    _startNavPoll() {
+      // Skip polling when SSE is active (ADR-125)
+      if (_realtimeActive) return
+
+      this._stopNavPoll()
+      _pollTimer = setInterval(() => {
+        if (this._scope === 'company' && this._phase === 'ready') {
+          this._refreshNavAndAuth()
+        }
+      }, NAV_POLL_MS)
+    },
+
+    _stopNavPoll() {
+      if (_pollTimer) {
+        clearInterval(_pollTimer)
+        _pollTimer = null
+      }
+    },
+
+    // ─── ADR-125: SSE Realtime ────────────────────────────
+
+    /**
+     * Connect the SSE realtime client for the current company.
+     * ADR-126: Creates ChannelRouter to dispatch events by category.
+     * Stops polling when SSE is connected; falls back to polling on failure.
+     */
+    _initRealtime() {
+      if (_realtimeClient || typeof EventSource === 'undefined') return
+
+      const authStore = resolveStore('auth')
+      const companyId = authStore.currentCompanyId
+
+      if (!companyId) return
+
+      // ADR-126: Initialize channel router with category handlers
+      _domainHandler = createDomainHandler()
+
+      const notificationHandler = createNotificationHandler(() => {
+        try { return storeFactories.notification?.() ?? null } catch { return null }
+      })
+
+      const auditHandler = createAuditHandler(() => {
+        try { return storeFactories.auditLive?.() ?? null } catch { return null }
+      })
+
+      const securityHandler = createSecurityHandler(() => null) // Placeholder — store created in Phase 4
+
+      _channelRouter = createChannelRouter({
+        invalidation: data => this._handleRealtimeInvalidation(data.invalidates || []),
+        domain: data => _domainHandler.dispatch(data),
+        notification: data => notificationHandler.dispatch(data),
+        audit: data => auditHandler.dispatch(data),
+        security: data => securityHandler.dispatch(data),
+      })
+
+      _realtimeClient = createRealtimeClient({
+        companyId,
+        onEvent: (sseEventType, data) => _channelRouter.dispatch(sseEventType, data),
+        onInvalidate: keys => this._handleRealtimeInvalidation(keys),
+        onConnected: () => {
+          _realtimeActive = true
+          this._stopNavPoll() // SSE replaces polling
+          _journal.log('realtime:connected', { companyId })
+          this._journalVersion++
+        },
+        onFallback: () => {
+          _realtimeActive = false
+          _journal.log('realtime:fallback', { reason: 'SSE failed — activating polling' })
+          this._journalVersion++
+          this._startNavPoll()
+        },
+      })
+
+      _realtimeClient.connect()
+    },
+
+    /**
+     * Disconnect and cleanup the SSE client.
+     */
+    _disconnectRealtime() {
+      if (_realtimeClient) {
+        _realtimeClient.disconnect()
+        _realtimeClient = null
+      }
+      _realtimeActive = false
+      _channelRouter = null
+      if (_domainHandler) {
+        _domainHandler.clear()
+        _domainHandler = null
+      }
+    },
+
+    /**
+     * Handle invalidation events from SSE.
+     * Clears specified cache keys and refetches affected stores.
+     * @param {string[]} keys - Cache keys to invalidate
+     */
+    _handleRealtimeInvalidation(keys) {
+      if (this._scope !== 'company' || this._phase !== 'ready') return
+
+      _journal.log('realtime:invalidate', { keys })
+      this._journalVersion++
+
+      // Invalidate cache keys
+      keys.forEach(k => cacheRemove(k))
+
+      // Refetch affected stores
+      const promises = []
+
+      if (keys.includes('features:nav')) {
+        promises.push(resolveStore('nav').fetchCompanyNav())
+      }
+      if (keys.includes('auth:companies')) {
+        promises.push(resolveStore('auth').fetchMyCompanies())
+      }
+      if (keys.includes('features:modules')) {
+        promises.push(resolveStore('module').fetchModules())
+      }
+      if (keys.includes('tenant:jobdomain')) {
+        promises.push(resolveStore('jobdomain').fetchJobdomain())
+      }
+
+      if (promises.length) {
+        Promise.all(promises).catch(() => {})
+      }
     },
   },
 })

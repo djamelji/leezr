@@ -2,6 +2,9 @@
 
 namespace App\Modules\Platform\Companies\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\Company;
 use App\Core\Modules\ModuleCatalogReadModel;
 use App\Core\Plans\PlanRegistry;
@@ -28,7 +31,7 @@ class CompanyController
 
         return response()->json([
             'company' => $company,
-            'plan' => PlanRegistry::definitions()[$company->plan_key ?? 'starter'] ?? null,
+            'plan' => PlanRegistry::definitions()[CompanyEntitlements::planKey($company)] ?? null,
             'modules' => ModuleCatalogReadModel::forCompany($company),
         ]);
     }
@@ -37,6 +40,11 @@ class CompanyController
     {
         $company = Company::findOrFail($id);
         $company->update(['status' => 'suspended']);
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::COMPANY_SUSPENDED, 'company', (string) $company->id,
+            ['diffBefore' => ['status' => 'active'], 'diffAfter' => ['status' => 'suspended']],
+        );
 
         return response()->json([
             'message' => 'Company suspended.',
@@ -48,6 +56,11 @@ class CompanyController
     {
         $company = Company::findOrFail($id);
         $company->update(['status' => 'active']);
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::COMPANY_REACTIVATED, 'company', (string) $company->id,
+            ['diffBefore' => ['status' => 'suspended'], 'diffAfter' => ['status' => 'active']],
+        );
 
         return response()->json([
             'message' => 'Company reactivated.',

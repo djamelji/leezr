@@ -2,11 +2,15 @@
 
 namespace App\Modules\Infrastructure\Auth\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Auth\Requests\LoginRequest;
 use App\Core\Auth\Requests\RegisterRequest;
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
@@ -60,6 +64,14 @@ class AuthController extends Controller
             $request->session()->regenerate();
         }
 
+        app(AuditLogger::class)->logCompany(
+            $result['company']->id,
+            AuditAction::REGISTER,
+            'user',
+            (string) $result['user']->id,
+            ['actorId' => $result['user']->id, 'metadata' => ['email' => $result['user']->email]],
+        );
+
         return response()->json([
             'user' => $result['user'],
             'company' => $result['company'],
@@ -73,6 +85,16 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         if (!Auth::attempt($credentials)) {
+            // ADR-129: detect suspicious login attempts by IP
+            SecurityDetector::check('suspicious.login_attempts', $request->ip());
+
+            app(AuditLogger::class)->logPlatform(
+                AuditAction::LOGIN_FAILED,
+                'user',
+                null,
+                ['actorType' => 'system', 'severity' => 'warning', 'metadata' => ['email' => $credentials['email'], 'ip' => $request->ip()]],
+            );
+
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 401);
@@ -82,8 +104,21 @@ class AuthController extends Controller
             $request->session()->regenerate();
         }
 
+        $user = Auth::user();
+        $membership = $user->memberships()->first();
+
+        if ($membership) {
+            app(AuditLogger::class)->logCompany(
+                $membership->company_id,
+                AuditAction::LOGIN,
+                'user',
+                (string) $user->id,
+                ['actorId' => $user->id, 'metadata' => ['ip' => $request->ip()]],
+            );
+        }
+
         return response()->json([
-            'user' => Auth::user(),
+            'user' => $user,
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
         ]);
@@ -91,6 +126,22 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        $user = Auth::user();
+
+        if ($user) {
+            $membership = $user->memberships()->first();
+
+            if ($membership) {
+                app(AuditLogger::class)->logCompany(
+                    $membership->company_id,
+                    AuditAction::LOGOUT,
+                    'user',
+                    (string) $user->id,
+                    ['actorId' => $user->id],
+                );
+            }
+        }
+
         Auth::guard('web')->logout();
 
         if ($request->hasSession()) {
@@ -122,9 +173,8 @@ class AuthController extends Controller
             ->get();
 
         $companies = $memberships->map(function ($membership) {
-            // Owner/admin are always administrative, regardless of CompanyRole
-            $isAdministrative = in_array($membership->role, ['owner', 'admin'])
-                || (bool) $membership->companyRole?->is_administrative;
+            // Delegate to Membership::isAdmin() — single source of truth
+            $isAdministrative = $membership->isAdmin();
 
             $data = [
                 'id' => $membership->company->id,
@@ -132,7 +182,7 @@ class AuthController extends Controller
                 'slug' => $membership->company->slug,
                 'role' => $membership->role,
                 'is_administrative' => $isAdministrative,
-                'plan_key' => $membership->company->plan_key ?? 'starter',
+                'plan_key' => CompanyEntitlements::planKey($membership->company),
             ];
 
             if ($membership->companyRole) {

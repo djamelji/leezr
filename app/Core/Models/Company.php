@@ -8,6 +8,7 @@ use App\Core\Jobdomains\Jobdomain;
 use App\Core\Markets\LegalStatus;
 use App\Core\Markets\Market;
 use App\Core\Modules\CompanyModule;
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -99,6 +100,6 @@ class Company extends Model
 
     public function planLevel(): int
     {
-        return PlanRegistry::level($this->plan_key ?? 'starter');
+        return PlanRegistry::level(CompanyEntitlements::planKey($this));
     }
 }

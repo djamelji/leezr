@@ -48,6 +48,10 @@ Route::prefix('audience')->middleware(['module.active:platform.audience', 'throt
 // Webhooks — public (no auth, external services)
 Route::post('/webhooks/billing', WebhookController::class)->middleware('throttle:60,1');
 
+// Provider-specific webhooks with idempotency (ADR-124)
+Route::post('/webhooks/payments/{providerKey}', \App\Modules\Infrastructure\Webhooks\Http\PaymentWebhookController::class)
+    ->middleware('throttle:120,1');
+
 // Runtime error reporting — public (no auth, frontend → backend)
 Route::post('/runtime-error', RuntimeErrorController::class)->middleware('throttle:10,1');
 

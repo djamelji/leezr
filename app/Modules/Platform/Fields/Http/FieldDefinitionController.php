@@ -2,6 +2,8 @@
 
 namespace App\Modules\Platform\Fields\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Fields\FieldDefinition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +56,11 @@ class FieldDefinitionController
             'created_by_platform' => true,
         ]));
 
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::FIELD_CREATED, 'field_definition', (string) $definition->id,
+            ['diffAfter' => $definition->only('code', 'scope', 'label', 'type')],
+        );
+
         return response()->json([
             'message' => 'Field definition created.',
             'field_definition' => $definition,
@@ -75,7 +82,13 @@ class FieldDefinitionController
             'default_order' => ['sometimes', 'integer', 'min:0'],
         ]);
 
+        $before = $definition->only('label', 'validation_rules', 'options', 'default_order');
         $definition->update($validated);
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::FIELD_UPDATED, 'field_definition', (string) $definition->id,
+            ['diffBefore' => $before, 'diffAfter' => $definition->only('label', 'validation_rules', 'options', 'default_order')],
+        );
 
         return response()->json([
             'message' => 'Field definition updated.',
@@ -92,6 +105,11 @@ class FieldDefinitionController
                 'message' => 'Cannot delete a system field.',
             ], 403);
         }
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::FIELD_DELETED, 'field_definition', (string) $definition->id,
+            ['diffBefore' => $definition->only('code', 'scope', 'label', 'type')],
+        );
 
         $definition->delete();
 

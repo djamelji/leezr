@@ -59,6 +59,16 @@ export const companyResources = [
     dependsOn: ['auth:companies'], // Needs X-Company-Id header set
     critical: false, // Nav falls back to static items
   },
+  {
+    key: 'features:nav',
+    phase: 'features',
+    store: 'nav',
+    action: 'fetchCompanyNav',
+    abortGroup: 'features',
+    ttl: 5 * 60 * 1000,
+    dependsOn: ['auth:companies'],
+    critical: false,
+  },
 ]
 
 /** @type {ResourceDef[]} */
@@ -73,5 +83,15 @@ export const platformResources = [
     dependsOn: [],
     critical: true,
     cacheable: false,
+  },
+  {
+    key: 'platform:nav',
+    phase: 'features',
+    store: 'nav',
+    action: 'fetchPlatformNav',
+    abortGroup: 'features',
+    ttl: 5 * 60 * 1000,
+    dependsOn: ['platform:me'],
+    critical: false,
   },
 ]

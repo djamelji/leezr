@@ -2,6 +2,8 @@
 
 namespace App\Modules\Platform\Roles\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Platform\Models\PlatformRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +38,11 @@ class RoleController
             $role->permissions()->sync($validated['permissions']);
         }
 
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::ROLE_CREATED, 'platform_role', (string) $role->id,
+            ['diffAfter' => $role->only('key', 'name')],
+        );
+
         return response()->json([
             'message' => 'Role created.',
             'role' => $role->loadCount('users')->load('permissions'),
@@ -59,6 +66,8 @@ class RoleController
             'permissions.*' => 'integer|exists:platform_permissions,id',
         ]);
 
+        $before = $role->only('key', 'name');
+
         $fields = array_intersect_key($validated, array_flip(['key', 'name']));
         if (!empty($fields)) {
             $role->update($fields);
@@ -67,6 +76,11 @@ class RoleController
         if (array_key_exists('permissions', $validated)) {
             $role->permissions()->sync($validated['permissions']);
         }
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::ROLE_UPDATED, 'platform_role', (string) $role->id,
+            ['diffBefore' => $before, 'diffAfter' => $role->only('key', 'name')],
+        );
 
         return response()->json([
             'message' => 'Role updated.',
@@ -90,7 +104,14 @@ class RoleController
             ], 422);
         }
 
+        $roleName = $role->name;
+        $roleId = $role->id;
         $role->delete();
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::ROLE_DELETED, 'platform_role', (string) $roleId,
+            ['diffBefore' => ['key' => $role->key, 'name' => $roleName]],
+        );
 
         return response()->json([
             'message' => 'Role deleted.',

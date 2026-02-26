@@ -592,4 +592,122 @@ main ← production (leezr.com)
 
 ---
 
+## Evolution Architecture — Realtime Backbone v1
+
+**Status** : Draft — Decision strategique B confirmee (backbone temps reel complet)
+**Date** : 2026-02-25
+**Base** : ADR-125 (Phase 1 — SSE invalidation, implemented). Decisions atomiques : ADR-126 a ADR-130 dans `04-decisions.md`.
+
+### Contexte
+
+ADR-125 Phase 1 livre un backbone d'invalidation SSE. La decision strategique B evolue ce backbone vers un systeme temps reel complet supportant : invalidations (actuel), domain events, notifications ciblees, audit live, et detection securite.
+
+### Event Model cible — EventEnvelope
+
+```
+EventEnvelope
+  id          : string    // ULID (sortable + unique)
+  topic       : string    // ex: 'rbac.changed', 'member.joined'
+  category    : enum      // 'invalidation' | 'domain' | 'notification' | 'audit' | 'security'
+  version     : int       // Envelope schema version (starts at 2)
+  company_id  : int       // Tenant isolation key
+  user_id     : ?int      // null = company-wide, int = user-targeted
+  payload     : array     // Category-specific
+  invalidates : string[]  // Cache keys (non-empty only for category=invalidation)
+  timestamp   : float     // microtime(true)
+```
+
+### Categories (5)
+
+| Category | Direction | Targeting | Phase |
+|----------|-----------|-----------|-------|
+| `invalidation` | server → all company users | company | 1 (actuel) |
+| `domain` | server → all OR targeted user | company or user | 2 |
+| `notification` | server → targeted user(s) | user | 2 |
+| `audit` | server → platform/company admins | platform or company | 2 |
+| `security` | server → platform admins | platform | 3 |
+
+### Transport — Evolution
+
+```
+Phase 1-2:  SSE + Redis sorted set polling (1s latence)         [PHP-FPM]
+Phase 3:    SSE + Redis PubSub SUBSCRIBE (latence ~0)            [Octane]
+Phase 4:    SSE (push) + WebSocket (bidirectionnel si besoin)    [Octane + Reverb]
+```
+
+**Separation** : SSE = push unidirectionnel (invalidation, domain, notification, audit, security). WebSocket = bidirectionnel (presence, chat, co-editing) — uniquement si besoin metier avere. Les deux coexistent.
+
+### Frontend — ChannelRouter
+
+```
+EventSource → RealtimeClient → ChannelRouter
+                                  ├── 'invalidate'     → InvalidationHandler  [EXISTANT]
+                                  ├── 'domain'         → DomainEventBus       [Pinia event bus]
+                                  ├── 'notification'   → NotificationStore    [Pinia store + toast]
+                                  ├── 'audit'          → AuditLiveStore       [platform only]
+                                  └── 'security'       → SecurityAlertHandler [platform only]
+```
+
+### Audit Log System — Double niveau
+
+- **Platform Audit Log** : table `platform_audit_logs` (permanent, append-only). Actions platform-admin.
+- **Company Audit Log** : table `company_audit_logs` (tenant-scoped, retention par plan). Actions company.
+- DB write synchrone AVANT publish realtime. DB = source de verite, realtime = complement live.
+- Append-only, immutable. Rollback = compensating actions, jamais de DB rewind.
+
+### Security Detection
+
+- SecurityDetector : compteurs Redis sliding window (~0.1ms overhead par action).
+- 8 alert types initiaux (login, mass changes, toggling, flooding, permission flips, bulk removal, 403 patterns, session anomaly).
+- Table `security_alerts` avec lifecycle (open → acknowledged → resolved | false_positive).
+- Observe et alerte, ne bloque JAMAIS. Human in the loop.
+
+### Governance Platform
+
+- 5 endpoints admin : `GET status|metrics|connections`, `POST flush|kill-switch` (permission `manage_system`).
+- 10 metriques : events_total, connections_active, publish/delivery latency, reconnects, error_rate, heartbeats, stream_duration.
+- Connection governance : 1 stream/user/company, max N/company, anti-abuse throttle.
+
+### Scalabilite — Tiers
+
+```
+< 50 users   → PHP-FPM standard            (Phase 1-2)
+< 200 users  → PHP-FPM dedicated pool       (Phase 2, config Nginx)
+< 1000 users → Octane + Redis PubSub        (Phase 3, ADR-128)
+> 1000 users → Octane horizontal + Cluster   (Phase 4)
+> 5000 users → Dedicated gateway             (nouvel ADR si necessaire)
+```
+
+Rollback a chaque tier : `REALTIME_DRIVER=null` → polling (< 1 minute).
+
+### Plan d'execution par lots
+
+```
+LOT 0 (Hardening Phase 1.1)   — rate limit, Redis auth, tests, metrics
+  |
+  v
+LOT 1 (ADR-126: Envelope)     — EventEnvelope, TopicRegistry v2, ChannelRouter
+  |
+  ├────────────────┐
+  v                v
+LOT 2 (ADR-130)  LOT 3 (ADR-127)     [parallelisables]
+  |
+  v
+LOT 4 (ADR-129: Security)
+
+LOT 5 (ADR-128: Octane) — trigger independant (seuil scale)
+```
+
+### Non-goals
+
+- Pas de rollback automatique depuis realtime
+- Pas de publish manual via API
+- Pas de mutation runtime du TopicRegistry (closed enum, deploy-time only)
+- Pas de WAF/IDS (SecurityDetector = observation interne)
+- Pas de WebSocket avant besoin metier avere
+- Pas de message broker externe (Kafka, RabbitMQ) — Redis suffit
+- Pas de DLQ (events = invalidations ephemeres)
+
+---
+
 > **Rappel** : Cette architecture est un cadre initial. Chaque décision significative doit être tracée dans `04-decisions.md`.

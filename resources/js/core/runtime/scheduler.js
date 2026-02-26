@@ -348,12 +348,15 @@ export function createScheduler(deps) {
       cacheRemove('auth:companies')
       cacheRemove('tenant:jobdomain')
       cacheRemove('features:modules')
+      cacheRemove('features:nav')
 
       // Reset tenant/features stores
       const jobdomainStore = deps.resolveStore('jobdomain')
       const moduleStore = deps.resolveStore('module')
+      const navStore = deps.resolveStore('nav')
       jobdomainStore.reset()
       moduleStore.reset()
+      navStore.reset()
 
       const runId = ++_runId
 

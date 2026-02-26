@@ -1,17 +1,22 @@
 <?php
 
+use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
+use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Core\Billing\Http\BillingCheckoutController;
+use App\Modules\Core\Billing\Http\CompanyBillingController;
 use App\Modules\Core\Billing\Http\CompanyPlanController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
 use App\Modules\Core\Members\Http\MembershipController;
 use App\Modules\Core\Members\Http\UserProfileController;
+use App\Modules\Core\Audit\Http\CompanyAuditLogController;
 use App\Modules\Core\Modules\Http\CompanyModuleController;
+use App\Modules\Core\Modules\Http\ModuleQuoteController;
 use App\Modules\Core\Settings\Http\CompanyController;
 use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
-use App\Modules\Core\Settings\Http\CompanyJobdomainController;
-use App\Modules\Core\Settings\Http\CompanyRoleController;
+use App\Modules\Core\Jobdomain\Http\CompanyJobdomainController;
+use App\Modules\Core\Roles\Http\CompanyRoleController;
 use App\Modules\Logistics\Shipments\Http\MyDeliveryController;
 use App\Modules\Logistics\Shipments\Http\ShipmentController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +26,12 @@ use Illuminate\Support\Facades\Route;
 // All routes here require X-Company-Id header
 // Authorization: company.access:{ability},{key} (owner bypasses all)
 
+// ─── Navigation (infrastructure-level, no module gate) ────
+Route::get('/nav', [NavController::class, 'company']);
+
+// ─── Realtime SSE stream (ADR-125, no module gate) ────────
+Route::get('/realtime/stream', RealtimeStreamController::class);
+
 // ─── Company plan (ADR-100, module-gated) ─────────────────
 Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::put('/company/plan', [CompanyPlanController::class, 'update'])
@@ -28,6 +39,13 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
 
     Route::post('/billing/checkout', BillingCheckoutController::class)
         ->middleware('company.access:manage-structure');
+
+    // Billing details (ADR-124)
+    Route::get('/billing/payment-methods', [CompanyBillingController::class, 'paymentMethods']);
+    Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
+    Route::get('/billing/payments', [CompanyBillingController::class, 'payments']);
+    Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);
+    Route::get('/billing/portal-url', [CompanyBillingController::class, 'portalUrl']);
 });
 
 // ─── Company settings (module-gated) ─────────────────────
@@ -39,11 +57,6 @@ Route::middleware('company.access:use-module,core.settings')->group(function () 
     // Legal structure (ADR-104)
     Route::get('/company/legal-structure', [CompanyLegalStructureController::class, 'show']);
     Route::put('/company/legal-structure', [CompanyLegalStructureController::class, 'updateLegalStatus'])
-        ->middleware('company.access:use-permission,settings.manage');
-
-    // Jobdomain
-    Route::get('/company/jobdomain', [CompanyJobdomainController::class, 'show']);
-    Route::put('/company/jobdomain', [CompanyJobdomainController::class, 'update'])
         ->middleware('company.access:use-permission,settings.manage');
 
     // Field activations
@@ -60,17 +73,28 @@ Route::middleware('company.access:use-module,core.settings')->group(function () 
     Route::delete('/company/field-definitions/{id}', [CompanyFieldDefinitionController::class, 'destroy'])
         ->middleware('company.access:use-permission,settings.manage');
 
-    // Company roles (structure — manage-structure)
+});
+
+// ─── Company roles (module-gated, permission-based) ───────
+Route::middleware('company.access:use-module,core.roles')->group(function () {
     Route::get('/company/roles', [CompanyRoleController::class, 'index'])
-        ->middleware('company.access:manage-structure');
+        ->middleware('company.access:use-permission,roles.view');
     Route::get('/company/permissions', [CompanyRoleController::class, 'permissionCatalog'])
-        ->middleware('company.access:manage-structure');
+        ->middleware('company.access:use-permission,roles.view');
     Route::post('/company/roles', [CompanyRoleController::class, 'store'])
-        ->middleware('company.access:manage-structure');
+        ->middleware('company.access:use-permission,roles.manage');
     Route::put('/company/roles/{id}', [CompanyRoleController::class, 'update'])
-        ->middleware('company.access:manage-structure');
+        ->middleware('company.access:use-permission,roles.manage');
     Route::delete('/company/roles/{id}', [CompanyRoleController::class, 'destroy'])
-        ->middleware('company.access:manage-structure');
+        ->middleware('company.access:use-permission,roles.manage');
+});
+
+// ─── Company jobdomain (module-gated, permission-based) ──
+Route::middleware('company.access:use-module,core.jobdomain')->group(function () {
+    Route::get('/company/jobdomain', [CompanyJobdomainController::class, 'show'])
+        ->middleware('company.access:use-permission,jobdomain.view');
+    Route::put('/company/jobdomain', [CompanyJobdomainController::class, 'update'])
+        ->middleware('company.access:use-permission,jobdomain.manage');
 });
 
 // ─── Members management (module-gated) ───────────────────
@@ -107,6 +131,13 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
     Route::get('/modules/{key}/settings', [CompanyModuleController::class, 'getSettings']);
     Route::put('/modules/{key}/settings', [CompanyModuleController::class, 'updateSettings'])
         ->middleware('company.access:use-permission,modules.manage');
+    Route::get('/modules/quote', ModuleQuoteController::class);
+});
+
+// ─── Audit log (module-gated, admin permission) ─────────
+Route::middleware('company.access:use-module,core.audit')->group(function () {
+    Route::get('/audit', [CompanyAuditLogController::class, 'index'])
+        ->middleware('company.access:use-permission,audit.view');
 });
 
 // ─── Shipments (module-gated) ─────────────────────────────

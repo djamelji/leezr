@@ -2,6 +2,8 @@
 
 namespace App\Modules\Platform\Users\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Auth\PasswordPolicy;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValidationService;
@@ -63,6 +65,11 @@ class UserController
             ? 'Platform user created. Invitation sent.'
             : 'Platform user created with password.';
 
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::PLATFORM_USER_CREATED, 'platform_user', (string) $user->id,
+            ['diffAfter' => $user->only('first_name', 'last_name', 'email')],
+        );
+
         return response()->json([
             'message' => $message,
             'user' => $user->load('roles'),
@@ -79,6 +86,7 @@ class UserController
     public function update(Request $request, int $id): JsonResponse
     {
         $user = PlatformUser::findOrFail($id);
+        $before = $user->only('first_name', 'last_name', 'email');
 
         $fixedRules = [
             'first_name' => 'sometimes|string|max:255',
@@ -124,6 +132,11 @@ class UserController
             );
         }
 
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::PLATFORM_USER_UPDATED, 'platform_user', (string) $user->id,
+            ['diffBefore' => $before, 'diffAfter' => $user->only('first_name', 'last_name', 'email')],
+        );
+
         return response()->json([
             'message' => 'Platform user updated.',
             'user' => $user->load('roles'),
@@ -150,6 +163,10 @@ class UserController
             'password' => $request->input('password'),
         ])->save();
 
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::PLATFORM_USER_PASSWORD_SET, 'platform_user', (string) $user->id,
+        );
+
         return response()->json([
             'message' => 'Password set for ' . $user->display_name . '.',
             'user' => $user->load('roles'),
@@ -169,6 +186,11 @@ class UserController
                 ], 409);
             }
         }
+
+        app(AuditLogger::class)->logPlatform(
+            AuditAction::PLATFORM_USER_DELETED, 'platform_user', (string) $user->id,
+            ['diffBefore' => $user->only('first_name', 'last_name', 'email')],
+        );
 
         $user->delete();
 

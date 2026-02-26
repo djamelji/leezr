@@ -7,6 +7,11 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
+use App\Core\Security\SecurityDetector;
 use App\Modules\Core\Members\Http\Requests\StoreMemberRequest;
 use App\Modules\Core\Members\Http\Requests\UpdateMemberRequest;
 use Illuminate\Http\JsonResponse;
@@ -82,7 +87,7 @@ class MembershipController extends Controller
         $membership = $company->memberships()->create([
             'user_id' => $user->id,
             'role' => 'user',
-            'company_role_id' => $validated['company_role_id'] ?? null,
+            'company_role_id' => $validated['company_role_id'],
         ]);
 
         $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name']);
@@ -92,6 +97,14 @@ class MembershipController extends Controller
             $token = Password::broker('users')->createToken($user);
             $user->sendPasswordResetNotification($token);
         }
+
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.added', 'user_id' => $user->id])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ADDED, 'user', (string) $user->id);
 
         return response()->json([
             'member' => [
@@ -112,6 +125,7 @@ class MembershipController extends Controller
 
         // ─── Bloc A — Base fields (user table) ─────────────────
         $baseFields = array_intersect_key($validated, array_flip(['first_name', 'last_name']));
+        $profileBefore = $membership->user->only('first_name', 'last_name');
         if (!empty($baseFields)) {
             $membership->user->update($baseFields);
         }
@@ -126,7 +140,16 @@ class MembershipController extends Controller
             );
         }
 
+        // Audit profile changes (base fields or dynamic fields)
+        if (!empty($baseFields) || isset($validated['dynamic_fields'])) {
+            app(AuditLogger::class)->logCompany(
+                $company->id, AuditAction::MEMBER_PROFILE_UPDATED, 'user', (string) $membership->user_id,
+                ['diffBefore' => $profileBefore, 'diffAfter' => $membership->user->only('first_name', 'last_name')],
+            );
+        }
+
         // ─── Bloc C — Company role (membership pivot) ────────
+        $roleChanged = false;
         if (array_key_exists('company_role_id', $validated)) {
             if ($membership->isOwner()) {
                 return response()->json([
@@ -134,7 +157,18 @@ class MembershipController extends Controller
                 ], 403);
             }
 
+            $roleChanged = $membership->company_role_id !== $validated['company_role_id'];
             $membership->update(['company_role_id' => $validated['company_role_id']]);
+        }
+
+        // ADR-125: publish after mutation (only on role reassignment)
+        if ($roleChanged) {
+            app(RealtimePublisher::class)->publish(
+                EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.role_changed', 'user_id' => $membership->user_id])
+            );
+
+            // ADR-130: audit log
+            app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ROLE_CHANGED, 'membership', (string) $membership->id);
         }
 
         $membership = $membership->fresh(['companyRole:id,key,name']);
@@ -163,7 +197,19 @@ class MembershipController extends Controller
             ], 403);
         }
 
+        $userId = $membership->user_id;
         $membership->delete();
+
+        // ADR-125: publish after mutation
+        app(RealtimePublisher::class)->publish(
+            EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.removed'])
+        );
+
+        // ADR-130: audit log
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_REMOVED, 'user', (string) $userId);
+
+        // ADR-129: detect bulk member removal
+        SecurityDetector::check('bulk.member_removal', "user:{$request->user()->id}", $company->id, $request->user()->id);
 
         return response()->json([
             'message' => 'Member removed.',
