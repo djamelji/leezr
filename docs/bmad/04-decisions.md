@@ -2929,6 +2929,46 @@ Chaque module peut déclarer :
 
   **Delivery latency tracking** : RealtimeStreamController records `(now - event.score) * 1000` ms per delivered event via MetricsCollector.
 
+  **Architecture** :
+  ```
+  Controller (mutation)
+       │
+       ▼
+  SseRealtimePublisher::publish(envelope)
+       │
+       ├─ ZADD  {prefix}:company:{id}          ← durable sorted set (source of truth)
+       ├─ ZREMRANGEBYSCORE (GC > 2min)
+       ├─ EXPIRE (safety TTL 5min)
+       ├─ HINCRBY metrics counter
+       └─ PUBLISH {prefix}:pubsub:company:{id} ← fire-and-forget notification
+       │
+       ▼
+  RealtimeStreamController (SSE loop)
+       │
+       ├─ StreamTransport::poll(key, lastTs)    ← ZRANGEBYSCORE (identical for both transports)
+       ├─ StreamTransport::sleep()              ← 1s (polling) or 100ms (pubsub)
+       ├─ sendEvent(sseType, data)
+       └─ MetricsCollector::recordDeliveryLatency(now - event.score)
+  ```
+
+  **Fichiers Phase 1** :
+  | Fichier | Role |
+  |---------|------|
+  | `app/Core/Realtime/Contracts/StreamTransport.php` | Interface: `poll()` + `sleep()` |
+  | `app/Core/Realtime/Transports/PollingTransport.php` | usleep(1s) + ZRANGEBYSCORE |
+  | `app/Core/Realtime/Transports/PubSubTransport.php` | usleep(100ms) + ZRANGEBYSCORE |
+  | `app/Core/Realtime/Adapters/SseRealtimePublisher.php` | ZADD + PUBLISH dual-write |
+  | `app/Modules/Infrastructure/Realtime/Http/RealtimeStreamController.php` | SSE stream + delivery latency |
+  | `app/Modules/Platform/Realtime/Http/RealtimeGovernanceController.php` | `/status` expose transport actif |
+  | `config/realtime.php` | `transport` = `polling` ou `pubsub` |
+  | `app/Providers/AppServiceProvider.php` | Binding conditionnel StreamTransport |
+  | `resources/js/pages/platform/security/_SecurityRealtime.vue` | Card Transport dans monitoring |
+  | `tests/Unit/PubSubTransportTest.php` | 6 tests (poll, sleep, graceful, channels) |
+
+  **Contrainte FPM** : Predis `subscribe()` est bloquant — impossible de poll + subscribe en parallele sans coroutines. Le PubSubTransport sous FPM compense par un poll 10x plus frequent. Le vrai Redis SUBSCRIBE sera pour Octane (phase ulterieure, SplQueue + coroutine drain).
+
+  **Tradeoff CPU** : `pubsub` transport fait 10x plus de ZRANGEBYSCORE/s par connection SSE. Acceptable pour < 100 connections. Au-dela, passer a Octane + vrai SUBSCRIBE.
+
   **Migration path** : PHP-FPM standard (< 50) → PHP-FPM pool dedie (50-200) → Octane + Redis PubSub (200-1000) → Octane horizontal + Redis Cluster (> 1000)
 
   **Depends on** : ADR-126 (format envelope stable avant changement infra)
@@ -2939,8 +2979,9 @@ Chaque module peut déclarer :
   - Backend : RealtimeStreamController uses StreamTransport abstraction (ready for swap)
   - `REALTIME_TRANSPORT=pubsub` gives ~100ms latency under FPM at higher CPU cost
   - Platform governance `/status` endpoint exposes active transport
+  - Delivery latency mesuree et visible dans `/platform/api/realtime/metrics`
   - Transparent pour le frontend (meme protocole SSE)
-  - Rollback : revert vers PHP-FPM + polling sorted set. Pas de perte de donnees.
+  - Rollback : `REALTIME_TRANSPORT=polling` (defaut) — pas de perte de donnees
 
 ---
 
