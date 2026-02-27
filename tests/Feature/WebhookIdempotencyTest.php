@@ -45,7 +45,7 @@ class WebhookIdempotencyTest extends TestCase
             'provider_key' => 'internal',
             'event_id' => 'evt_123',
             'event_type' => 'payment.completed',
-            'status' => 'failed', // InternalPaymentAdapter returns handled:false
+            'status' => 'ignored', // InternalPaymentAdapter returns handled:false
         ]);
     }
 

@@ -8,6 +8,7 @@ use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
 use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
+use App\Core\Plans\Plan;
 
 /**
  * Internal payment adapter — no external payment processing.
@@ -43,11 +44,17 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
             );
         }
 
+        $plan = Plan::where('key', $planKey)->first();
+        $trialDays = $plan?->trial_days ?? 0;
+
         $subscription = Subscription::create([
             'company_id' => $company->id,
             'plan_key' => $planKey,
-            'status' => 'pending',
+            'status' => $trialDays > 0 ? 'trialing' : 'pending',
             'provider' => 'internal',
+            'trial_ends_at' => $trialDays > 0 ? now()->addDays($trialDays) : null,
+            'current_period_start' => $trialDays > 0 ? now() : null,
+            'current_period_end' => $trialDays > 0 ? now()->addDays($trialDays) : null,
         ]);
 
         return new CheckoutResult(
@@ -70,5 +77,15 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
     public function handleWebhookEvent(array $payload, array $headers): WebhookHandlingResult
     {
         return new WebhookHandlingResult(handled: false);
+    }
+
+    public function refund(string $providerPaymentId, int $amount, array $metadata = []): array
+    {
+        throw new \RuntimeException('Internal provider does not support refunds.');
+    }
+
+    public function verifyWebhookSignature(string $rawBody, array $headers): void
+    {
+        // No-op — internal provider has no external webhooks.
     }
 }

@@ -5,6 +5,7 @@ use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Core\Billing\Http\BillingCheckoutController;
 use App\Modules\Core\Billing\Http\CompanyBillingController;
 use App\Modules\Core\Billing\Http\CompanyPlanController;
+use App\Modules\Core\Billing\Http\SubscriptionMutationController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
 use App\Modules\Core\Members\Http\MembershipController;
 use App\Modules\Core\Members\Http\UserProfileController;
@@ -40,12 +41,24 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::post('/billing/checkout', BillingCheckoutController::class)
         ->middleware('company.access:manage-structure');
 
-    // Billing details (ADR-124)
-    Route::get('/billing/payment-methods', [CompanyBillingController::class, 'paymentMethods']);
+    // Billing details (ADR-124, ADR-135 LOT4)
+    Route::get('/billing/overview', [CompanyBillingController::class, 'overview']);
     Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
+    Route::get('/billing/invoices/{id}', [CompanyBillingController::class, 'invoiceDetail']);
     Route::get('/billing/payments', [CompanyBillingController::class, 'payments']);
+    Route::get('/billing/wallet', [CompanyBillingController::class, 'wallet']);
     Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);
+    Route::get('/billing/payment-methods', [CompanyBillingController::class, 'paymentMethods']);
     Route::get('/billing/portal-url', [CompanyBillingController::class, 'portalUrl']);
+    Route::get('/billing/invoices/{id}/pdf', [CompanyBillingController::class, 'invoicePdf']);
+
+    // Subscription mutations (ADR-135 D1, manage-structure required)
+    Route::post('/billing/plan-change', [SubscriptionMutationController::class, 'planChange'])
+        ->middleware('company.access:manage-structure');
+    Route::put('/billing/subscription/cancel', [SubscriptionMutationController::class, 'cancel'])
+        ->middleware('company.access:manage-structure');
+    Route::post('/billing/pay-now', [SubscriptionMutationController::class, 'payNow'])
+        ->middleware('company.access:manage-structure');
 });
 
 // ─── Company settings (module-gated) ─────────────────────

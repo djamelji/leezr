@@ -39,6 +39,13 @@ class CompanyJobdomainController
 
         $company = $request->attributes->get('company');
 
+        // ADR-134: Jobdomain is immutable once assigned
+        if ($company->jobdomain !== null) {
+            return response()->json([
+                'message' => 'Jobdomain cannot be changed once assigned. Contact support or create a new company.',
+            ], 422);
+        }
+
         $oldKey = $company->jobdomain?->key;
 
         $jobdomain = JobdomainGate::assignToCompany($company, $request->input('key'));

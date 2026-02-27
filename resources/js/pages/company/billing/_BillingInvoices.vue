@@ -1,39 +1,123 @@
 <script setup>
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = useCompanyBillingStore()
 
 const isLoading = ref(true)
+const statusFilter = ref('')
 
-onMounted(async () => {
+const headers = computed(() => [
+  { title: t('companyBilling.invoiceNumber'), key: 'number' },
+  { title: t('companyBilling.invoiceStatus'), key: 'status', width: '130px' },
+  { title: t('companyBilling.invoicePeriod'), key: 'period', sortable: false },
+  { title: t('companyBilling.invoiceAmount'), key: 'amount', align: 'end' },
+  { title: t('companyBilling.invoiceAmountDue'), key: 'amount_due', align: 'end' },
+  { title: t('companyBilling.invoiceIssuedAt'), key: 'issued_at' },
+  { title: t('companyBilling.invoiceActions'), key: 'actions', align: 'center', width: '120px', sortable: false },
+])
+
+const statusOptions = computed(() => [
+  { title: t('companyBilling.filterAll'), value: '' },
+  { title: t('companyBilling.invoiceStatusOpen'), value: 'open' },
+  { title: t('companyBilling.invoiceStatusOverdue'), value: 'overdue' },
+  { title: t('companyBilling.invoiceStatusPaid'), value: 'paid' },
+  { title: t('companyBilling.invoiceStatusVoided'), value: 'voided' },
+])
+
+const statusColor = status => {
+  const colors = {
+    draft: 'secondary',
+    open: 'info',
+    overdue: 'error',
+    paid: 'success',
+    voided: 'warning',
+  }
+
+  return colors[status] || 'secondary'
+}
+
+const statusLabel = status => {
+  const labels = {
+    draft: t('companyBilling.invoiceStatusDraft'),
+    open: t('companyBilling.invoiceStatusOpen'),
+    overdue: t('companyBilling.invoiceStatusOverdue'),
+    paid: t('companyBilling.invoiceStatusPaid'),
+    voided: t('companyBilling.invoiceStatusVoided'),
+  }
+
+  return labels[status] || status
+}
+
+const formatDate = dateStr => {
+  if (!dateStr) return '—'
+
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const formatPeriod = item => {
+  if (!item.period_start || !item.period_end) return '—'
+
+  const opts = { month: 'short', day: 'numeric' }
+
+  return `${new Date(item.period_start).toLocaleDateString(undefined, opts)} – ${new Date(item.period_end).toLocaleDateString(undefined, opts)}`
+}
+
+const loadInvoices = async (page = 1) => {
+  isLoading.value = true
   try {
-    await store.fetchInvoices()
+    await store.fetchInvoices({
+      page,
+      status: statusFilter.value || undefined,
+    })
   }
   finally {
     isLoading.value = false
   }
-})
+}
+
+const onPageChange = page => {
+  loadInvoices(page)
+}
+
+const downloadPdf = invoice => {
+  window.open(`/api/billing/invoices/${invoice.id}/pdf`, '_blank')
+}
+
+onMounted(() => loadInvoices())
+watch(statusFilter, () => loadInvoices(1))
 </script>
 
 <template>
   <VCard>
-    <VCardTitle>
+    <VCardTitle class="d-flex align-center">
       <VIcon
         icon="tabler-file-invoice"
         class="me-2"
       />
       {{ t('companyBilling.invoices') }}
+      <VSpacer />
+      <AppSelect
+        v-model="statusFilter"
+        :items="statusOptions"
+        density="compact"
+        style="max-inline-size: 160px;"
+      />
     </VCardTitle>
 
-    <VCardText>
+    <VCardText class="pa-0">
       <VSkeletonLoader
-        v-if="isLoading"
+        v-if="isLoading && store.invoices.length === 0"
         type="table"
       />
 
       <div
-        v-else
+        v-else-if="store.invoices.length === 0 && !isLoading"
         class="text-center pa-6 text-disabled"
       >
         <VIcon
@@ -45,6 +129,74 @@ onMounted(async () => {
           {{ t('companyBilling.noInvoices') }}
         </p>
       </div>
+
+      <VDataTable
+        v-else
+        :headers="headers"
+        :items="store.invoices"
+        :loading="isLoading"
+        :items-per-page="store.invoicePagination.per_page"
+        hide-default-footer
+      >
+        <template #item.number="{ item }">
+          <span class="text-body-1 font-weight-medium">
+            {{ item.number }}
+          </span>
+        </template>
+
+        <template #item.status="{ item }">
+          <VChip
+            :color="statusColor(item.status)"
+            size="small"
+          >
+            {{ statusLabel(item.status) }}
+          </VChip>
+        </template>
+
+        <template #item.period="{ item }">
+          {{ formatPeriod(item) }}
+        </template>
+
+        <template #item.amount="{ item }">
+          {{ formatMoney(item.amount, { currency: item.currency }) }}
+        </template>
+
+        <template #item.amount_due="{ item }">
+          <span :class="item.amount_due > 0 ? 'text-error' : 'text-success'">
+            {{ formatMoney(item.amount_due, { currency: item.currency }) }}
+          </span>
+        </template>
+
+        <template #item.issued_at="{ item }">
+          {{ formatDate(item.issued_at) }}
+        </template>
+
+        <template #item.actions="{ item }">
+          <IconBtn
+            size="small"
+            :title="t('companyBilling.invoiceDownloadPdf')"
+            @click="downloadPdf(item)"
+          >
+            <VIcon icon="tabler-download" />
+          </IconBtn>
+        </template>
+
+        <template #bottom>
+          <VDivider />
+          <div class="d-flex align-center justify-space-between flex-wrap gap-3 pa-4">
+            <span class="text-body-2 text-disabled">
+              {{ t('companyBilling.invoiceCount', { count: store.invoicePagination.total }) }}
+            </span>
+            <VPagination
+              v-if="store.invoicePagination.last_page > 1"
+              :model-value="store.invoicePagination.current_page"
+              :length="store.invoicePagination.last_page"
+              :total-visible="5"
+              @update:model-value="onPageChange"
+            />
+          </div>
+        </template>
+      </VDataTable>
     </VCardText>
   </VCard>
 </template>

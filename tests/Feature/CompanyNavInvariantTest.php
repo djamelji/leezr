@@ -118,7 +118,7 @@ class CompanyNavInvariantTest extends TestCase
     // Regression: management WITHOUT jobdomain.view → no Industry
     // ───────────────────────────────────────────────────────────
 
-    public function test_management_without_jobdomain_view_does_not_see_jobdomain(): void
+    public function test_management_with_selective_permissions_sees_correct_nav(): void
     {
         $role = CompanyRole::create([
             'company_id' => $this->company->id,
@@ -127,7 +127,7 @@ class CompanyNavInvariantTest extends TestCase
             'is_administrative' => true,
         ]);
 
-        // Give roles.view + shipments.view, but NOT jobdomain.view
+        // Give roles.view + shipments.view
         $perms = CompanyPermission::whereIn('key', ['roles.view', 'shipments.view'])
             ->pluck('id')->toArray();
         $role->permissions()->sync($perms);
@@ -141,8 +141,6 @@ class CompanyNavInvariantTest extends TestCase
 
         $keys = $this->navKeysFor($user);
 
-        $this->assertNotContains('company-jobdomain', $keys,
-            'Management role without jobdomain.view must NOT see Industry nav item');
         $this->assertContains('company-roles', $keys,
             'Management role with roles.view should see Roles');
     }
@@ -156,7 +154,6 @@ class CompanyNavInvariantTest extends TestCase
         $keys = $this->navKeysFor($this->owner);
 
         $this->assertContains('company-roles', $keys, 'Owner should see Roles');
-        $this->assertContains('company-jobdomain', $keys, 'Owner should see Industry');
         $this->assertContains('members', $keys, 'Owner should see Members');
         $this->assertContains('settings', $keys, 'Owner should see Settings');
     }

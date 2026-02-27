@@ -17,17 +17,8 @@ class JobdomainModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 22,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'company-jobdomain',
-                        'title' => 'Industry',
-                        'to' => ['name' => 'company-jobdomain'],
-                        'icon' => 'tabler-briefcase',
-                        'permission' => 'jobdomain.view',
-                        'surface' => 'structure',
-                    ],
-                ],
-                routeNames: ['company-jobdomain'],
+                navItems: [],
+                routeNames: [],
                 middlewareKey: 'core.jobdomain',
             ),
             permissions: [

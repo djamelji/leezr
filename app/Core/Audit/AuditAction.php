@@ -69,4 +69,24 @@ final class AuditAction
     // ─── Security ───────────────────────────────────────
     public const SECURITY_ALERT_ACKNOWLEDGED = 'security.alert_acknowledged';
     public const SECURITY_ALERT_RESOLVED = 'security.alert_resolved';
+
+    // ─── Billing (ADR-135 LOT4) ──────────────────────
+    public const BILLING_POLICY_UPDATED = 'billing.policy_updated';
+    public const INVOICE_MARKED_PAID = 'billing.invoice_marked_paid';
+    public const INVOICE_VOIDED = 'billing.invoice_voided';
+    public const INVOICE_NOTES_UPDATED = 'billing.invoice_notes_updated';
+    public const CREDIT_NOTE_ISSUED = 'billing.credit_note_issued';
+    public const DUNNING_FORCE_RETRY = 'billing.dunning_force_retry';
+    public const BILLING_REFUND = 'billing.refund';
+    public const INVOICE_DUNNING_FORCED = 'billing.invoice_dunning_forced';
+    public const CREDIT_NOTE_MANUAL = 'billing.credit_note_manual';
+    public const INVOICE_WRITTEN_OFF = 'billing.invoice_written_off';
+    public const WALLET_ADMIN_CREDIT = 'billing.wallet_admin_credit';
+
+    // ─── Subscription mutations (ADR-135 D1) ────────────
+    public const PLAN_CHANGE_REQUESTED = 'subscription.plan_change_requested';
+    public const PLAN_CHANGE_EXECUTED = 'subscription.plan_change_executed';
+    public const CANCEL_REQUESTED = 'subscription.cancel_requested';
+    public const CANCEL_EXECUTED = 'subscription.cancel_executed';
+    public const PAID_NOW = 'subscription.paid_now';
 }

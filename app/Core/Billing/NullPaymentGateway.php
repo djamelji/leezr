@@ -4,6 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Billing\Contracts\PaymentGatewayProvider;
 use App\Core\Models\Company;
+use App\Core\Plans\Plan;
 
 /**
  * Default payment gateway — no external payment processing.
@@ -26,11 +27,17 @@ class NullPaymentGateway implements PaymentGatewayProvider
             );
         }
 
+        $plan = Plan::where('key', $planKey)->first();
+        $trialDays = $plan?->trial_days ?? 0;
+
         $subscription = Subscription::create([
             'company_id' => $company->id,
             'plan_key' => $planKey,
-            'status' => 'pending',
+            'status' => $trialDays > 0 ? 'trialing' : 'pending',
             'provider' => 'null',
+            'trial_ends_at' => $trialDays > 0 ? now()->addDays($trialDays) : null,
+            'current_period_start' => $trialDays > 0 ? now() : null,
+            'current_period_end' => $trialDays > 0 ? now()->addDays($trialDays) : null,
         ]);
 
         return new CheckoutResult(

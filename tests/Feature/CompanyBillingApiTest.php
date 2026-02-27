@@ -101,29 +101,31 @@ class CompanyBillingApiTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // 3) Invoices returns empty stub
+    // 3) Invoices returns paginated empty list
     // ═══════════════════════════════════════════════════════
 
-    public function test_invoices_returns_empty_stub(): void
+    public function test_invoices_returns_paginated_empty(): void
     {
         $response = $this->actAs($this->owner)
             ->getJson('/api/billing/invoices');
 
         $response->assertOk()
-            ->assertExactJson(['invoices' => []]);
+            ->assertJsonPath('total', 0)
+            ->assertJsonPath('data', []);
     }
 
     // ═══════════════════════════════════════════════════════
-    // 4) Payments returns empty stub
+    // 4) Payments returns paginated empty list
     // ═══════════════════════════════════════════════════════
 
-    public function test_payments_returns_empty_stub(): void
+    public function test_payments_returns_paginated_empty(): void
     {
         $response = $this->actAs($this->owner)
             ->getJson('/api/billing/payments');
 
         $response->assertOk()
-            ->assertExactJson(['payments' => []]);
+            ->assertJsonPath('total', 0)
+            ->assertJsonPath('data', []);
     }
 
     // ═══════════════════════════════════════════════════════

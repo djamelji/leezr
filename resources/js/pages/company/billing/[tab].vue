@@ -2,6 +2,7 @@
 import BillingInvoices from './_BillingInvoices.vue'
 import BillingPaymentMethods from './_BillingPaymentMethods.vue'
 import BillingPayments from './_BillingPayments.vue'
+import BillingWallet from './_BillingWallet.vue'
 
 definePage({
   meta: {
@@ -23,6 +24,7 @@ const tabs = computed(() => [
   { title: t('companyBilling.tabs.paymentMethods'), icon: 'tabler-credit-card', tab: 'payment-methods' },
   { title: t('companyBilling.tabs.invoices'), icon: 'tabler-file-invoice', tab: 'invoices' },
   { title: t('companyBilling.tabs.payments'), icon: 'tabler-cash', tab: 'payments' },
+  { title: t('companyBilling.tabs.wallet'), icon: 'tabler-wallet', tab: 'wallet' },
 ])
 </script>
 
@@ -62,6 +64,10 @@ const tabs = computed(() => [
 
       <VWindowItem value="payments">
         <BillingPayments />
+      </VWindowItem>
+
+      <VWindowItem value="wallet">
+        <BillingWallet />
       </VWindowItem>
     </VWindow>
   </div>

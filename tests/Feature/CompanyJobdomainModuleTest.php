@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
+use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Models\Company;
 use App\Core\Models\User;
@@ -133,12 +134,12 @@ class CompanyJobdomainModuleTest extends TestCase
     }
 
     // ───────────────────────────────────────────────────────────
-    // Nav: management without jobdomain.view → no Industry item
+    // ADR-134: No nav item (page removed, info shown in plan)
     // ───────────────────────────────────────────────────────────
 
-    public function test_nav_hides_jobdomain_without_jobdomain_view(): void
+    public function test_no_jobdomain_nav_item_after_page_removal(): void
     {
-        $response = $this->actAs($this->limitedAdmin)->getJson('/api/nav');
+        $response = $this->actAs($this->owner)->getJson('/api/nav');
         $response->assertOk();
 
         $keys = collect($response->json('groups'))
@@ -146,20 +147,7 @@ class CompanyJobdomainModuleTest extends TestCase
             ->toArray();
 
         $this->assertNotContains('company-jobdomain', $keys,
-            'Management role without jobdomain.view must NOT see Industry nav item');
-    }
-
-    public function test_nav_shows_jobdomain_with_jobdomain_view(): void
-    {
-        $response = $this->actAs($this->manager)->getJson('/api/nav');
-        $response->assertOk();
-
-        $keys = collect($response->json('groups'))
-            ->flatMap(fn ($g) => collect($g['items'])->pluck('key'))
-            ->toArray();
-
-        $this->assertContains('company-jobdomain', $keys,
-            'Management role with jobdomain.view should see Industry nav item');
+            'Jobdomain nav item must not exist (page removed, info integrated into plan)');
     }
 
     // ───────────────────────────────────────────────────────────
@@ -190,5 +178,32 @@ class CompanyJobdomainModuleTest extends TestCase
         $bundleKeys = collect($jdModule['capabilities'])->pluck('key')->toArray();
         $this->assertContains('jobdomain.info', $bundleKeys);
         $this->assertContains('jobdomain.management', $bundleKeys);
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // ADR-134: Jobdomain immutability once assigned
+    // ───────────────────────────────────────────────────────────
+
+    public function test_cannot_change_jobdomain_once_assigned(): void
+    {
+        // Assign jobdomain first
+        JobdomainGate::assignToCompany($this->company, 'logistique');
+
+        // Attempt to change → must be rejected
+        $this->actAs($this->owner)
+            ->putJson('/api/company/jobdomain', ['key' => 'logistique'])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Jobdomain cannot be changed once assigned. Contact support or create a new company.']);
+    }
+
+    public function test_can_assign_jobdomain_when_none_set(): void
+    {
+        // Company has no jobdomain (setUp does not assign one)
+        $this->assertNull($this->company->jobdomain);
+
+        // First assignment → must succeed
+        $this->actAs($this->owner)
+            ->putJson('/api/company/jobdomain', ['key' => 'logistique'])
+            ->assertOk();
     }
 }

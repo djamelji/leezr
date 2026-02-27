@@ -4,8 +4,12 @@ use App\Modules\Platform\Companies\Http\CompanyController;
 use App\Modules\Platform\Companies\Http\CompanyModuleController;
 use App\Modules\Platform\Companies\Http\CompanyUserController;
 use App\Modules\Platform\Billing\Http\BillingConfigController;
+use App\Modules\Platform\Billing\Http\PlatformBillingController;
+use App\Modules\Platform\Billing\Http\PlatformInvoiceMutationController;
+use App\Modules\Platform\Billing\Http\PlatformAdvancedMutationController;
 use App\Modules\Platform\Billing\Http\PaymentModuleController;
 use App\Modules\Platform\Billing\Http\PaymentMethodRuleController;
+use App\Modules\Platform\Billing\Http\PlatformBillingPolicyController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
@@ -166,6 +170,17 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
     });
 
+    // Billing read endpoints (ADR-135 LOT4)
+    Route::middleware(['module.active:platform.billing', 'platform.permission:view_billing'])->group(function () {
+        Route::get('/billing/invoices', [PlatformBillingController::class, 'invoices']);
+        Route::get('/billing/invoices/{id}', [PlatformBillingController::class, 'invoiceDetail']);
+        Route::get('/billing/payments', [PlatformBillingController::class, 'payments']);
+        Route::get('/billing/credit-notes', [PlatformBillingController::class, 'creditNotes']);
+        Route::get('/billing/wallets', [PlatformBillingController::class, 'wallets']);
+        Route::get('/billing/all-subscriptions', [PlatformBillingController::class, 'subscriptions']);
+        Route::get('/billing/dunning', [PlatformBillingController::class, 'dunning']);
+    });
+
     // Billing / Payments governance (ADR-101, ADR-102)
     Route::middleware(['module.active:platform.billing', 'platform.permission:manage_billing'])->group(function () {
         Route::get('/billing/providers', [BillingConfigController::class, 'providers']);
@@ -173,6 +188,23 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/billing/config', [BillingConfigController::class, 'updateConfig']);
         Route::get('/billing/policies', [BillingConfigController::class, 'policies']);
         Route::put('/billing/policies', [BillingConfigController::class, 'updatePolicies']);
+
+        // Billing engine policy singleton (ADR-135 D0)
+        Route::get('/billing/billing-policy', [PlatformBillingPolicyController::class, 'show']);
+        Route::put('/billing/billing-policy', [PlatformBillingPolicyController::class, 'update']);
+
+        // Invoice mutations (ADR-135 D2a)
+        Route::put('/billing/invoices/{id}/mark-paid-offline', [PlatformInvoiceMutationController::class, 'markPaidOffline']);
+        Route::put('/billing/invoices/{id}/void', [PlatformInvoiceMutationController::class, 'void']);
+        Route::put('/billing/invoices/{id}/notes', [PlatformInvoiceMutationController::class, 'updateNotes']);
+
+        // Advanced invoice mutations (ADR-136 D2c)
+        Route::post('/billing/invoices/{id}/refund', [PlatformAdvancedMutationController::class, 'refund']);
+        Route::post('/billing/invoices/{id}/retry-payment', [PlatformAdvancedMutationController::class, 'retryPayment']);
+        Route::put('/billing/invoices/{id}/dunning-transition', [PlatformAdvancedMutationController::class, 'forceDunningTransition']);
+        Route::post('/billing/invoices/{id}/credit-note', [PlatformAdvancedMutationController::class, 'issueCreditNote']);
+        Route::put('/billing/invoices/{id}/write-off', [PlatformAdvancedMutationController::class, 'writeOff']);
+
         Route::get('/billing/subscriptions', [BillingConfigController::class, 'subscriptions']);
         Route::put('/billing/subscriptions/{id}/approve', [BillingConfigController::class, 'approveSubscription']);
         Route::put('/billing/subscriptions/{id}/reject', [BillingConfigController::class, 'rejectSubscription']);

@@ -10,9 +10,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Subscription extends Model
 {
     protected $fillable = [
-        'company_id', 'plan_key', 'status', 'provider',
+        'company_id', 'plan_key', 'interval', 'status', 'provider',
         'provider_subscription_id', 'current_period_start',
-        'current_period_end', 'metadata',
+        'current_period_end', 'trial_ends_at', 'cancel_at_period_end',
+        'metadata',
     ];
 
     protected function casts(): array
@@ -20,6 +21,8 @@ class Subscription extends Model
         return [
             'current_period_start' => 'datetime',
             'current_period_end' => 'datetime',
+            'trial_ends_at' => 'datetime',
+            'cancel_at_period_end' => 'boolean',
             'metadata' => 'array',
         ];
     }
@@ -37,5 +40,22 @@ class Subscription extends Model
     public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'pending');
+    }
+
+    public function scopeTrialing(Builder $query): Builder
+    {
+        return $query->where('status', 'trialing');
+    }
+
+    public function isTrialing(): bool
+    {
+        return $this->status === 'trialing'
+            && $this->trial_ends_at !== null
+            && $this->trial_ends_at->isFuture();
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
     }
 }

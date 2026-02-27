@@ -3509,6 +3509,531 @@ Les 17 autres modules avec permissions ont une couverture bundle à 100%. Les 3 
   - `super_admin` role still shows "all permissions" bypass indicator
   - Capability toggle (check/uncheck/indeterminate) works on platform scope
 
+## ADR-134 : Jobdomain Immutability — Verrouillage après assignation
+
+- **Date** : 2026-02-27
+- **Status** : Implemented
+- **Depends on** : ADR-009 (Jobdomain = profil déclaratif), ADR-025 (Company = exactement 1 jobdomain)
+
+### Contexte
+
+Le jobdomain (`company_jobdomain` pivot) pouvait être changé après l'assignation initiale via `PUT /api/company/jobdomain`. Ce changement provoque un drift structurel dans 5 sous-systèmes :
+
+1. **Module activation drift** — les modules activés par l'ancien jobdomain restent actifs mais sont potentiellement incompatibles
+2. **Role bundle mismatch** — les rôles seedés par l'ancien profil ne correspondent plus aux bundles du nouveau
+3. **Field preset incoherence** — les `FieldActivation` de l'ancien profil persistent (pas de cleanup)
+4. **Permission orphaning** — les permissions rattachées aux anciens modules restent assignées aux rôles
+5. **Billing entitlement incoherence** — les entitlements calculés via `EntitlementResolver` deviennent incohérents
+
+`JobdomainGate::assignToCompany()` est idempotent pour l'ajout (updateOrCreate) mais ne supprime jamais les artefacts du profil précédent. Il n'existe pas de moteur de migration inter-jobdomain.
+
+### Décision
+
+**Le jobdomain est immuable une fois assigné.** Guard applicatif (pas DB) :
+
+- `CompanyJobdomainController::update()` : si `$company->jobdomain !== null` → retourne `422` avec message explicite
+- L'assignation initiale (company sans jobdomain) reste fonctionnelle
+- Le flux d'inscription (`POST /api/register` avec `jobdomain_key`) n'est pas impacté
+- Aucune modification de `JobdomainGate`, `EntitlementResolver`, ou `ModuleActivationEngine`
+
+**Frontend** : la page `/company/jobdomain` passe en lecture seule si un jobdomain est déjà assigné :
+- Bandeau warning avec icône `tabler-lock`
+- Boutons "Select" masqués
+- Message : "Votre profil sectoriel est verrouillé"
+
+### Conséquences
+
+- Élimine les 5 catégories de drift structurel
+- Pas de migration DB nécessaire (guard applicatif uniquement)
+- Les seeders et tests continuent de fonctionner (assignation initiale)
+- Le test `test_cannot_change_jobdomain_once_assigned` valide l'invariant
+- Le test `test_can_assign_jobdomain_when_none_set` valide que l'assignation initiale fonctionne
+
+### Risques et Rollback
+
+**Reversibilité** : supprimer le guard dans `CompanyJobdomainController::update()` + retirer `isLocked` du template Vue. Changement de 2 fichiers, aucune migration à reverter.
+
+**Phase future** : si un override platform super_admin est nécessaire, ajouter un endpoint dédié `POST /api/platform/companies/{id}/force-jobdomain` avec audit log renforcé et cascade de cleanup. Hors scope de cette ADR.
+
+---
+
+## ADR-135 : Billing Engine v1 — Wallet-First, Policy-Driven, DB-First
+
+- **Date** : 2026-02-27
+- **Contexte** : Le système de billing existant ne supporte que les changements de plan via NullPaymentGateway (souscriptions en pending → approbation admin). Pas de factures réelles, pas de wallet, pas de credit notes, pas de prorata, pas de dunning. Les politiques de facturation sont stockées en JSON blob dans `platform_settings.billing`.
+
+### Décision
+
+Implémenter un moteur de facturation complet en 8 lots (LOT 1 = fondations) avec 3 piliers structurels :
+
+#### Pilier 1 : Wallet/Ledger obligatoire
+
+- `company_wallets` — un wallet par company, `cached_balance` (cache de performance)
+- `company_wallet_transactions` — ledger append-only immutable (source de vérité)
+- Flux **wallet-first** : `invoice.total → wallet credit → remaining → provider charge`
+- Locking : `SELECT FOR UPDATE` sur le wallet avant tout débit
+- Invariant : `cached_balance = SUM(credits) - SUM(debits)`, recomputé sous verrou
+
+#### Pilier 2 : BillingPolicy entity dédiée
+
+- `platform_billing_policies` — table singleton avec 20 colonnes typées
+- Remplace le JSON blob `platform_settings.billing`
+- Paramètres : `wallet_first`, `upgrade_timing`, `downgrade_timing`, `proration_strategy`, `grace_period_days`, `max_retry_attempts`, `retry_intervals_days`, `failure_action`, `invoice_due_days`, `invoice_prefix`, `tax_mode`, `default_tax_rate_bps`, `free_trial_days`, `addon_billing_interval`, etc.
+- Timing values : `immediate`, `end_of_period`, `end_of_trial`
+
+#### Pilier 3 : Moteur unifié plan + addons
+
+- Un seul moteur de facturation pour les souscriptions de plan ET les modules addon
+- `invoice_lines` avec type `plan`, `addon`, `proration`, `adjustment`
+- `ModuleQuoteCalculator` intégré dans le pipeline de facturation
+
+### Schema
+
+| Table | Type | Colonnes clés |
+|-------|------|---------------|
+| `platform_billing_policies` | NEW | 20 paramètres typés, singleton |
+| `company_wallets` | NEW | `company_id` (unique), `currency`, `cached_balance` (bigint) |
+| `company_wallet_transactions` | NEW | `wallet_id`, `type`, `amount`, `balance_after`, `source_type`, `idempotency_key` |
+| `invoices` | ALTER | +`number`, `subtotal`, `tax_amount`, `wallet_credit_applied`, `amount_due`, `period_start/end`, `billing_snapshot`, `finalized_at` |
+| `invoice_lines` | NEW | `invoice_id`, `type`, `module_key`, `quantity`, `unit_amount`, `amount` |
+| `credit_notes` | NEW | `number`, `company_id`, `invoice_id`, `amount`, `status`, `wallet_transaction_id` |
+
+### Services (LOT 1)
+
+| Service | Responsabilité |
+|---------|----------------|
+| `WalletLedger` | Credit/debit avec locking, idempotency, recompute |
+| `InvoiceNumbering` | Numérotation séquentielle sans trous (SELECT FOR UPDATE minimal) |
+| `InvoiceIssuer` | Création draft → ajout lines → finalize (compute + wallet + number + snapshot) |
+| `CreditNoteIssuer` | Draft → issue → apply (→ wallet credit) |
+| `TaxResolver` | Calcul taxe (none/exclusive/inclusive), basis points, floor |
+
+### Invariants
+
+1. **W1** : `wallet.cached_balance = SUM(credits) - SUM(debits)` — recomputé sous FOR UPDATE
+2. **W2** : `cached_balance >= 0` sauf si `allow_negative_wallet` — enforcement applicatif
+3. **I1** : `invoice.amount = invoice.subtotal + invoice.tax_amount` — computé à la finalisation
+4. **I2** : `invoice.amount_due = invoice.amount - invoice.wallet_credit_applied`
+5. **I3** : `SUM(invoice_lines.amount) = invoice.subtotal`
+6. **I4** : Numérotation séquentielle sans trous — SELECT FOR UPDATE sur policy row
+7. **I5** : Invoice immutable après `finalized_at IS NOT NULL` — seuls `notes`, `retry_count`, `status`, `paid_at`, `voided_at` modifiables
+8. **C1** : Credit note `applied` → `wallet_transaction_id IS NOT NULL`
+
+### Règles de type
+
+- Tous les montants en cents : `BIGINT` (cumuls peuvent dépasser 32-bit)
+- Pas de CHECK constraint DB (enforcement applicatif + tests)
+- Proration : `remaining_days / total_days × price`, floor systématique (favorable company)
+- Delta résiduel (1-2 cents) jamais compensé
+
+### Lots
+
+| LOT | Scope |
+|-----|-------|
+| 1 | Fondations : Invoice Core + Credit Notes + Wallet + BillingPolicy + TaxResolver |
+| 2 | Proration + Timing (upgrade/downgrade) |
+| 3 | Payment Engine wallet-first |
+| 4 | Dunning |
+| 5 | Tax Engine (market-based) |
+| 6 | UI Company (factures, wallet, billing) |
+| 7 | UI Platform (governance, policies, audit) |
+| 8 | Audit + E2E + migration platform_settings.billing |
+
+### LOT 2 : Plan Change + Proration + Trial Timing
+
+#### Schema LOT 2
+
+| Table | Type | Colonnes clés |
+|-------|------|---------------|
+| `plan_change_intents` | NEW | `company_id`, `from_plan_key`, `to_plan_key`, `interval_from/to`, `timing`, `effective_at`, `proration_snapshot`, `status`, `idempotency_key` |
+| `subscriptions` | ALTER | +`interval` (monthly/yearly), `trial_ends_at`, `cancel_at_period_end` |
+
+#### Services LOT 2
+
+| Service | Responsabilité |
+|---------|----------------|
+| `PlanChangeIntent` | Modèle persistent — intent de changement de plan, statut scheduled/executed/cancelled |
+| `ProrationCalculator` | Calcul pur, déterministe, sans DB. `(old_price, new_price, period, change_date) → {credit, charge, net}` |
+| `PlanChangeExecutor` | Pipeline transactionnel : schedule → execute. Batch `executeScheduled()` pour cron |
+
+#### Invariants LOT 2
+
+1. **P1** : 1 seul intent `scheduled` par company à un instant donné
+2. **P2** : Intent `executed` = immutable (status + executed_at frozen)
+3. **P3** : Proration = `floor(remaining_days / total_days × price)` — company-favorable
+4. **P4** : Timing policy-driven : `upgrade_timing` et `downgrade_timing` depuis PlatformBillingPolicy
+5. **P5** : Net > 0 → facture proration ; Net < 0 → wallet credit ; Net = 0 → no-op
+6. **P6** : Idempotency via `idempotency_key` unique sur intent
+7. **P7** : `end_of_trial` exécution → subscription status `trialing` → `active`
+
+### Audit LOT 1+2 — Corrections & Preuves
+
+#### Bug fix : end_of_trial / end_of_period silently fallback to now()
+
+`PlanChangeExecutor::schedule()` acceptait `end_of_trial` même sans `subscription.trial_ends_at`, et `end_of_period` sans `current_period_end`. Fallback silencieux à `now()` = exécution immédiate non voulue.
+
+**Fix** : throw `RuntimeException` quand les données manquent. 2 tests ajoutés.
+
+#### Pré-LOT3 : Trial par plan (zéro dette)
+
+`PlatformBillingPolicy.free_trial_days` existait comme paramètre global, mais les Plans n'avaient pas de `trial_days`. Résultat : `subscription.trial_ends_at` n'était jamais défini, `end_of_trial` timing incomplet.
+
+Livré en pré-LOT3 (pas de dette, prêt pour LOT3 dunning) :
+- `plans.trial_days` ajouté (migration + modèle + registry). Pro/Business = 14 jours.
+- `InternalPaymentAdapter` et `NullPaymentGateway` créent un subscription `trialing` avec `trial_ends_at` quand `plan.trial_days > 0`
+- 5 tests couvrant le cycle complet (création trialing → end_of_trial → active)
+
+#### Guard dur : idempotency_key obligatoire sur écritures wallet système
+
+`WalletLedger::record()` throw si `actorType === 'system'` et `idempotencyKey === null`. Écritures manuelles (`platform_user`, etc.) autorisées sans clé. 2 tests ajoutés.
+
+#### Preuves idempotency (17 tests)
+
+| Write-path | Mécanisme idempotency | Vérifié par test |
+|---|---|---|
+| `schedule()` | `idempotency_key` unique sur intent | `test_schedule_idempotency_key_prevents_duplicate` |
+| `execute()` | Status guard `scheduled` + lockForUpdate | `test_execute_replay_throws_no_side_effects` |
+| `WalletLedger` | `idempotency_key` unique sur transaction | `test_wallet_ledger_idempotency_key_prevents_duplicate` |
+| `CreditNoteIssuer::apply()` | `credit-note-{id}` key + status guard | `test_credit_note_apply_is_idempotent_via_wallet_key` |
+| `InvoiceIssuer::finalize()` | `isFinalized()` guard + lockForUpdate | `test_invoice_finalize_replay_throws` |
+| `WalletLedger` (system) | Hard guard: system + no key → throw | `test_system_wallet_write_without_idempotency_key_throws` |
+| `WalletLedger` (manual) | No key required for non-system writes | `test_manual_wallet_write_without_idempotency_key_allowed` |
+
+#### Preuves atomicité (3 tests)
+
+- `execute()` crash (subscription supprimée) → rollback total, intent reste `scheduled`
+- Direct `execute()` failure → rollback vérifié
+- `finalize()` nested transaction (wallet debit) → savepoints Laravel corrects
+
+### LOT 3 : Dunning Engine — Payment-Failure Policy
+
+#### Service
+
+`DunningEngine::processOverdueInvoices()` — pipeline en 2 phases :
+
+1. **Phase 1** : Scan invoices `open` + `finalized_at IS NOT NULL` + `due_at <= now - grace_period_days` → mark `overdue`, schedule `next_retry_at`, subscription → `past_due`
+2. **Phase 2** : Scan invoices `overdue` + `next_retry_at <= now` → attempt wallet payment, reschedule ou exhaust
+
+#### Matrice de policies (PlatformBillingPolicy)
+
+| Paramètre | Default | Effet |
+|-----------|---------|-------|
+| `grace_period_days` | 3 | Jours après `due_at` avant première action dunning |
+| `max_retry_attempts` | 3 | Tentatives max avant `uncollectible` |
+| `retry_intervals_days` | [1, 3, 7] | Jours entre chaque retry |
+| `failure_action` | suspend | Action quand max retries atteint : `suspend` ou `cancel` |
+
+#### Statuts invoice ajoutés
+
+| Status | Signification |
+|--------|---------------|
+| `overdue` | Past grace period, en cours de retry |
+| `uncollectible` | Max retries exhausted, failure_action appliquée |
+
+#### Transitions subscription.status (dunning)
+
+| Transition | Déclencheur |
+|-----------|-------------|
+| `active/trialing` → `past_due` | Première invoice passe overdue (Phase 1) |
+| `past_due` → `active` | Toutes les invoices overdue payées (réactivation bornée) |
+| `past_due` → `suspended` | `failure_action=suspend`, max retries exhausted |
+| `past_due` → `cancelled` | `failure_action=cancel`, max retries exhausted |
+
+#### Wallet payment rule (LOT3)
+
+**Full-coverage only.** Si `wallet_balance < amount_due`, le paiement échoue entièrement et l'invoice est reschedulée. Pas de paiement partiel — il n'y a pas de provider pour couvrir le reste en LOT3. Le partial wallet + provider fallback sera implémenté en LOT4 (Stripe).
+
+#### failure_action=cancel — sémantique complète
+
+1. Subscription → `cancelled`
+2. Tous les `PlanChangeIntent` scheduled pour la company → `cancelled`
+3. `company.plan_key` → `starter` (free tier)
+4. `company.status` → `suspended`
+
+#### Réactivation bornée
+
+Quand un retry paie l'invoice :
+- Si plus aucune invoice `overdue` pour la subscription → subscription revient `active`
+- Si `company.status = suspended` et plus aucune invoice `overdue`/`uncollectible` → company revient `active`
+- Les invoices `uncollectible` sont terminales — réactivation après uncollectible requiert une action admin (void + resubscribe)
+
+#### Artisan command
+
+`billing:process-dunning` — idempotent, schedulable quotidiennement. Implémente `Isolatable` (cache lock, pas d'exécution concurrente).
+
+#### Invariants LOT 3
+
+1. **D1** : Seuls les invoices finalized + open + non-voided sont éligibles au dunning
+2. **D2** : `retry_count` incrémente exactement 1× par tentative
+3. **D3** : Wallet payment utilise `idempotency_key: dunning-retry-{invoice_id}-{retry_count}`
+4. **D4** : Suspension/cancellation company est idempotente
+5. **D5** : `failure_action=cancel` → subscription cancelled + intents cancelled + plan_key downgraded + company suspended
+6. **D6** : Invoice `uncollectible` est un état terminal (plus de retry)
+7. **D7** : Subscription `past_due` dès la première invoice overdue
+8. **D8** : Réactivation bornée — subscription revient `active` ssi zéro invoice outstanding
+9. **D9** : Phases 1 et 2 strictement séparées (pas de leak cross-phase dans un même run)
+
+### Audit LOT 3 — Corrections & Preuves
+
+#### Fix 1 : ProcessDunningCommand → Isolatable
+
+Le command manquait de protection contre l'exécution concurrente. Deux crons parallèles pouvaient sélectionner les mêmes invoices (même si lockForUpdate sérialisait le traitement individuel).
+
+**Fix** : `implements Isolatable` — cache lock, une seule instance à la fois.
+
+#### Fix 2 : Subscription status transitions (past_due)
+
+`subscription.status` restait `active` pendant tout le dunning → incohérent avec `company.status`.
+
+**Fix** : `markOverdue()` met la subscription en `past_due`. `applyFailureAction()` met en `suspended` ou `cancelled`.
+
+#### Fix 3 : Réactivation bornée
+
+Aucun mécanisme de retour à `active` quand un retry payait l'invoice.
+
+**Fix** : `checkReactivation()` après chaque paiement réussi. Vérifie que zéro invoice overdue/uncollectible reste avant de réactiver.
+
+#### Fix 4 : failure_action=cancel sémantique complète
+
+`cancel` ne touchait ni `company.plan_key`, ni les `PlanChangeIntent` scheduled.
+
+**Fix** : Cancel annule tous les intents scheduled + downgrade `company.plan_key → starter`.
+
+#### Fix 5 : Wallet partial payment rule documentée
+
+Design choice explicite : full-coverage only en LOT3. `wallet_balance < amount_due` → payment fails entirely. Pas de partial.
+
+#### Preuves (20 tests, 70 assertions)
+
+| Test | Invariant vérifié |
+|------|-------------------|
+| `test_subscription_becomes_past_due_on_overdue_invoice` | D7 |
+| `test_reactivation_when_all_overdue_invoices_paid` | D8 |
+| `test_no_reactivation_when_uncollectible_remains` | D8 (négatif) |
+| `test_cancel_action_cancels_scheduled_plan_change_intents` | D5 |
+| `test_cancel_action_downgrades_plan_key_to_starter` | D5 |
+| `test_command_implements_isolatable` | Isolatable |
+
+### Phase D — Delivery (UI + backend mutations post-LOTs)
+
+Phases de livraison intégrées après les LOTs backend. Chaque phase D est incrémentale, testée, et documentée.
+
+#### Phase D0 : PlatformBillingPolicy Governance (Backend)
+
+`PlatformBillingPolicyController` — singleton GET/PUT sur `platform_billing_policies`.
+
+- Route : `GET|PUT /api/platform/billing/billing-policy`
+- Middleware : `module.active:platform.billing` + `platform.permission:manage_billing`
+- Validation : enums, bounds, `retry_intervals_days` length/increasing, `next_number` cannot decrease, prefix regex
+- Audit : `AuditAction::BILLING_POLICY_UPDATED` avec diff before/after, skip si no-change
+- 23 tests E2E
+
+#### Phase D1 : Subscription Behaviour Mutations (Backend)
+
+`ChangePlanService`, `SubscriptionCanceller`, `InvoicePayNowService` — endpoints company-facing.
+
+| Endpoint | Service | Effet |
+|----------|---------|-------|
+| `PUT /api/billing/plan-change` | `ChangePlanService` | Schedule un `PlanChangeIntent` selon timing policy |
+| `PUT /api/billing/cancel` | `SubscriptionCanceller` | `cancel_at_period_end = true` ou immédiat |
+| `POST /api/billing/pay-now` | `InvoicePayNowService` | Wallet payment sur invoices open/overdue |
+
+- Tous requièrent `idempotency_key`
+- Audit via `AuditLogger::logCompany()` avec actions `PLAN_CHANGE_REQUESTED`, `CANCEL_REQUESTED`, `PAID_NOW`
+- 15 tests E2E
+
+#### Phase D1.1 : UI Platform Settings → Billing (Frontend)
+
+Onglet "Billing" ajouté dans Platform Settings (`/platform/settings/billing`).
+
+| Fichier | Action |
+|---------|--------|
+| `resources/js/modules/platform-admin/billing/billingPolicy.store.js` | CREATE — Pinia store fetch/update |
+| `resources/js/pages/platform/settings/_SettingsBilling.vue` | CREATE — 5 sections (Wallet, Plan Changes, Dunning, Invoice, Tax) |
+| `resources/js/pages/platform/settings/[tab].vue` | MODIFY — ajout tab + VWindowItem |
+| `en.json` + `fr.json` | MODIFY — ~45 clés `platformSettings.billing.*` |
+
+Caractéristiques :
+- **17 champs safe** exposés, **3 champs phantom** exclus (`proration_strategy`, `free_trial_days`, `addon_billing_interval`)
+- Dirty tracking via `JSON.stringify` snapshot
+- Validation client : retry intervals length/increasing, `next_number` cannot decrease below server value
+- `retry_intervals_days` auto-resize quand `max_retry_attempts` change
+- 403 graceful : si permission manquante, VAlert au lieu du formulaire
+- Zéro modification backend
+
+#### Phase D2a : Platform Admin Invoice Mutations (Backend)
+
+`AdminInvoiceMutationService` — 3 mutations admin sur factures finalisées.
+
+| Endpoint | Méthode service | Guards | Effet |
+|----------|-----------------|--------|-------|
+| `PUT /billing/invoices/{id}/mark-paid-offline` | `markPaidOffline()` | finalized + not voided | status→paid, paid_at→now(), Payment(provider=offline) créé |
+| `PUT /billing/invoices/{id}/void` | `void()` | finalized + not paid | status→void, voided_at→now(), CreditNote si wallet_credit_applied > 0 |
+| `PUT /billing/invoices/{id}/notes` | `updateNotes()` | finalized + not voided | notes mis à jour |
+
+| Fichier | Action |
+|---------|--------|
+| `app/Core/Billing/AdminInvoiceMutationService.php` | CREATE — service avec 3 méthodes |
+| `app/Modules/Platform/Billing/Http/PlatformInvoiceMutationController.php` | CREATE — controller avec validation |
+| `app/Core/Audit/AuditAction.php` | MODIFY — ajout `INVOICE_NOTES_UPDATED` |
+| `routes/platform.php` | MODIFY — 3 routes sous `manage_billing` |
+| `tests/Feature/AdminInvoiceMutationTest.php` | CREATE — 23 tests E2E (66 assertions) |
+
+Idempotency :
+- `markPaidOffline` : si invoice déjà `paid` + Payment avec même `idempotency_key` en metadata → 200 replay
+- `void` : si invoice déjà `void` → 200 replay
+- `updateNotes` : skip audit si valeur identique
+
+Wallet credit reversal (void) :
+- Si `invoice.wallet_credit_applied > 0` → `CreditNoteIssuer::issueAndApply()` reverse le crédit wallet
+
+Audit : `INVOICE_MARKED_PAID` (severity=warning), `INVOICE_VOIDED` (severity=warning), `INVOICE_NOTES_UPDATED` (severity=info)
+
+#### Phase D2b : Platform Billing UI — Invoice Actions (Frontend)
+
+Actions admin sur l'onglet Invoices de la page `/platform/billing`.
+
+| Fichier | Action |
+|---------|--------|
+| `resources/js/modules/platform-admin/billing/billing.store.js` | MODIFY — 3 actions mutation + `_mutationLoading` lock map |
+| `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` | MODIFY — colonne Actions, VMenu, dialogs confirm + notes |
+| `en.json` + `fr.json` | MODIFY — 16 clés `platformBilling.action*`, `confirm*`, `notes*`, toasts |
+
+Caractéristiques :
+- **Permission gate** : colonne Actions visible seulement si `hasPermission('manage_billing')`
+- **Can-act guards** : mark-paid/void seulement sur `open|overdue`, notes seulement sur finalized
+- **Idempotency key UI** : format `ui-{action}-{YYYYMMDDHHmmss}-{rand6}`
+- **Double-click protection** : `_mutationLoading[invoiceId]` lock par facture
+- **Confirm dialog** : VDialog custom pour mark-paid (primary) et void (red/error)
+- **Notes dialog** : VDialog avec AppTextarea, max 2000 chars, save/cancel
+- **Error handling** : 401/403 → "Not authorized", 409 → conflict message, else → generic
+- **Auto-refresh** : après mutation, re-fetch la page courante d'invoices
+- Aucune action sur les autres onglets (Dunning, Payments, Credit Notes, Wallets, Subscriptions)
+
+#### Phase D2c : Advanced Admin Mutations (ADR-136)
+
+**Date** : 2026-02-27
+**Statut** : Livré
+
+5 mutations admin sensibles sur factures finalisées, toutes protégées par `manage_billing`, idempotency, audit logging, et `DB::transaction`.
+
+**Endpoints** (sous `/api/platform/billing/invoices/{id}/`) :
+
+| Verb | Route | Action | Status requis |
+|------|-------|--------|---------------|
+| POST | `refund` | Émet un avoir de remboursement (issued, pas applied V1) | `paid` |
+| POST | `retry-payment` | Force un retry dunning via wallet | `overdue` |
+| PUT  | `dunning-transition` | Force une transition dunning | `open→overdue` ou `overdue→uncollectible` |
+| POST | `credit-note` | Émet un avoir manuel (± wallet apply) | finalized, non voided |
+| PUT  | `write-off` | Passage comptable en irrécouvrable | `overdue` |
+
+**Machine d'état facture — transitions autorisées** :
+- `open → overdue` (dunning-transition) : schedule retry, subscription → past_due
+- `overdue → uncollectible` (dunning-transition) : applique failure_action (suspend/cancel)
+- `overdue → uncollectible` (write-off) : PAS de failure_action (passage comptable pur)
+- `overdue → paid` (retry-payment + wallet suffisant) : bounded reactivation
+- `overdue → retried` (retry-payment + wallet insuffisant) : reschedule next_retry_at
+
+**Distinction critique write-off vs dunning-transition(uncollectible)** :
+- `forceDunningTransition(overdue→uncollectible)` : applique `DunningEngine::applyFailureAction()` → suspend/cancel company+subscription
+- `writeOff()` : NE FAIT PAS de failure_action — pure écriture comptable, company et subscription inchangées
+
+**Refund — plafond cumulatif** :
+- `SUM(credit_notes WHERE type=refund AND invoice_id=X) + montant_demandé <= invoice.amount`
+- CreditNote créé en statut `issued` (pas `applied`) — V1 sans provider refund
+
+**Idempotency** :
+- Refund/Credit Note : `CreditNote.metadata->idempotency_key` par invoice
+- Dunning Transition/Write-off : status check (si déjà dans target_status → replay)
+- Retry Payment : status check (overdue requis, sinon 409)
+
+**Modifications DunningEngine** :
+- `applyFailureAction()` : `private static` → `public static` (réutilisé par forceDunningTransition)
+- Ajout `retrySingleInvoice(Invoice)` : wrapper public qui désambiguë le retour `'retried'` en `'paid'|'retried'|'exhausted'|'skipped'`
+
+**AuditAction ajoutés** :
+- `INVOICE_DUNNING_FORCED` = `billing.invoice_dunning_forced`
+- `CREDIT_NOTE_MANUAL` = `billing.credit_note_manual`
+- `INVOICE_WRITTEN_OFF` = `billing.invoice_written_off`
+- `BILLING_REFUND` et `DUNNING_FORCE_RETRY` existaient déjà (forward declarations)
+
+**Fichiers** :
+- `app/Core/Billing/AdminAdvancedMutationService.php` (créé — 5 méthodes)
+- `app/Modules/Platform/Billing/Http/PlatformAdvancedMutationController.php` (créé — 5 endpoints)
+- `app/Core/Billing/DunningEngine.php` (modifié — +1 méthode publique, 1 visibilité)
+- `app/Core/Audit/AuditAction.php` (modifié — +3 constantes)
+- `routes/platform.php` (modifié — +5 routes)
+- `tests/Feature/AdminAdvancedMutationTest.php` (créé — 28 tests, 100 assertions)
+
+### Conséquences
+
+- LOT 1 : 6 migrations, 5 modèles, 5 services, 35 tests
+- LOT 2 : 2 migrations, 1 modèle, 2 services, 21 tests (11 unit + 10 feature)
+- Audit LOT 1+2 : 1 bug fix (timing throw), pré-LOT3 (trial_days), 1 guard (system idempotency), 1 migration, 22 tests ajoutés
+- LOT 3 : 1 service (DunningEngine), 1 command (billing:process-dunning, Isolatable), 20 tests E2E
+- Phase D0 : 1 controller, 23 tests
+- Phase D1 : 3 services, 3 endpoints, 15 tests
+- Phase D1.1 : 2 fichiers créés, 3 modifiés, ~45 clés i18n
+- Phase D2a : 1 service, 1 controller, 3 routes, 23 tests (66 assertions)
+- Phase D2b : 3 fichiers modifiés, 16 clés i18n
+- Phase D2c : 2 services (créé + modifié), 1 controller, 5 routes, 28 tests (100 assertions)
+- Phase D3a : 2 interfaces étendues, 1 adapter réécrit, 1 controller durci, 1 migration, 7 tests (17 assertions)
+- `platform_settings.billing` JSON blob conservé temporairement (supprimé en LOT 8)
+- `Invoice.amount` conservé comme synonyme de `total` (backward compat)
+
+#### Phase D3a : Stripe SDK Bootstrap & Webhook Security (ADR-137)
+
+**Date** : 2026-02-27
+**Statut** : Livré
+
+Stripe SDK installé (`stripe/stripe-php` v19.4), vérification de signature webhook obligatoire (HMAC-SHA256), interface `refund()` ajoutée, webhook controller durci.
+
+**Changements interface** (`PaymentProviderAdapter`) :
+- `refund(string $providerPaymentId, int $amount, array $metadata = []): array` — retourne `{provider_refund_id, amount, status, raw_response}`
+- `verifyWebhookSignature(string $rawBody, array $headers): void` — throw `RuntimeException` si invalide
+
+**StripePaymentAdapter** — SDK live :
+- `verifyWebhookSignature()` : HMAC-SHA256 via `Stripe\Webhook::constructEvent()`, tolérance 300s
+- `refund()` : appel `Stripe\Refund::create()` via wrapper testable `callStripeRefund()` (protected)
+- `healthCheck()` : `Stripe\Balance::retrieve()` réel
+- Checkout/callback/cancel/webhookEvent : stubs (D3b scope)
+
+**InternalPaymentAdapter** :
+- `refund()` : throw `RuntimeException` (pas de provider externe)
+- `verifyWebhookSignature()` : no-op (pas de webhooks externes)
+
+**PaymentWebhookController — flux durci** :
+1. Vérifie provider actif (existant)
+2. Résout l'adapter tôt (avant storage)
+3. Vérifie la signature : `adapter->verifyWebhookSignature()` → 400 si invalide
+4. Exige `event_id` — suppression du fallback `uniqid('evt_')`
+5. Exige `event_type` — suppression du fallback `'unknown'`
+6. Rejette `event.created` > 5 minutes → 400
+7. Insert idempotent (existant)
+8. `DB::transaction` autour du handler
+9. Status `'ignored'` (au lieu de `'failed'`) pour events non-handled
+
+**Migration** :
+- Index unique sur `payments.provider_payment_id` (nullable — MySQL/SQLite OK avec multiples NULL)
+
+**Tests** (`StripeWebhookSecurityTest` — 7 tests, 17 assertions) :
+- Signature invalide → 400
+- Event trop vieux → 400
+- Event ID manquant → 400
+- Signature valide → 200 + row webhook_events
+- Duplicate event → idempotent (1 row)
+- Refund SDK success → normalized array
+- Refund SDK exception → RuntimeException
+
+**Fichiers** :
+- `app/Core/Billing/Contracts/PaymentProviderAdapter.php` (modifié — +2 méthodes)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (réécrit — SDK live)
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` (modifié — +2 méthodes)
+- `app/Modules/Infrastructure/Webhooks/Http/PaymentWebhookController.php` (durci)
+- `database/migrations/2026_02_27_300001_add_unique_provider_payment_id_to_payments.php` (créé)
+- `tests/Feature/StripeWebhookSecurityTest.php` (créé — 7 tests)
+- `tests/Feature/WebhookIdempotencyTest.php` (modifié — status assertion)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

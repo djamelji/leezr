@@ -33,6 +33,7 @@ class PlanRegistry
                 'price_monthly' => 0,
                 'price_yearly' => 0,
                 'is_popular' => false,
+                'trial_days' => 0,
                 'feature_labels' => [
                     'Up to 5 members',
                     'Core modules only',
@@ -47,6 +48,7 @@ class PlanRegistry
                 'price_monthly' => 29,
                 'price_yearly' => 290,
                 'is_popular' => true,
+                'trial_days' => 14,
                 'feature_labels' => [
                     'Unlimited members',
                     'All industry modules',
@@ -62,6 +64,7 @@ class PlanRegistry
                 'price_monthly' => 79,
                 'price_yearly' => 790,
                 'is_popular' => false,
+                'trial_days' => 14,
                 'feature_labels' => [
                     'Everything in Pro',
                     'Premium addons',
@@ -90,6 +93,7 @@ class PlanRegistry
                     'price_monthly' => ($def['price_monthly'] ?? 0) * 100,
                     'price_yearly' => ($def['price_yearly'] ?? 0) * 100,
                     'is_popular' => $def['is_popular'] ?? false,
+                    'trial_days' => $def['trial_days'] ?? 0,
                     'feature_labels' => $def['feature_labels'] ?? [],
                     'limits' => $def['limits'] ?? [],
                 ],
@@ -136,6 +140,7 @@ class PlanRegistry
                 'price_monthly' => $plan->priceMonthlyDollars(),
                 'price_yearly' => $plan->priceYearlyDollars(),
                 'is_popular' => $plan->is_popular,
+                'trial_days' => $plan->trial_days ?? 0,
                 'feature_labels' => $plan->feature_labels ?? [],
                 'limits' => $plan->limits ?? [],
             ];

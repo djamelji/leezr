@@ -2,6 +2,7 @@
 definePage({ meta: { surface: 'structure', module: 'core.billing' } })
 
 import { useAuthStore } from '@/core/stores/auth'
+import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
@@ -9,6 +10,7 @@ import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const jobdomainStore = useJobdomainStore()
 const { toast } = useAppToast()
 const { plans, loading, fetchPlans } = usePublicPlans()
 
@@ -108,15 +110,21 @@ const yearlyTotal = plan => {
       <span>{{ t('companyPlan.pendingMessage') }}</span>
     </VAlert>
 
-    <!-- Current Plan -->
-    <VCard class="mb-6">
-      <VCardTitle>{{ t('companyPlan.currentPlan') }}</VCardTitle>
-      <VCardText>
-        <VRow>
-          <VCol
-            cols="12"
-            md="6"
-          >
+    <!-- Current Plan + Industry Profile -->
+    <VRow class="mb-6">
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <VCard class="h-100">
+          <VCardTitle>
+            <VIcon
+              icon="tabler-credit-card"
+              class="me-2"
+            />
+            {{ t('companyPlan.currentPlan') }}
+          </VCardTitle>
+          <VCardText>
             <div class="mb-4">
               <h3 class="text-body-1 text-high-emphasis font-weight-medium mb-1">
                 {{ t('companyPlan.yourCurrentPlanIs') }}
@@ -147,27 +155,74 @@ const yearlyTotal = plan => {
                 </span>
               </h3>
             </div>
-          </VCol>
 
-          <VCol
-            cols="12"
-            md="6"
-          >
             <VAlert
               v-if="currentPlanKey === 'starter' && !hasPendingSubscription"
               icon="tabler-rocket"
               type="info"
               variant="tonal"
+              class="mt-4"
             >
               <VAlertTitle class="mb-1">
                 {{ t('companyPlan.upgradeToUnlock') }}
               </VAlertTitle>
               <span>{{ t('companyPlan.upgradeToUnlockMessage') }}</span>
             </VAlert>
-          </VCol>
-        </VRow>
-      </VCardText>
-    </VCard>
+          </VCardText>
+        </VCard>
+      </VCol>
+
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <VCard class="h-100">
+          <VCardTitle>
+            <VIcon
+              icon="tabler-briefcase"
+              class="me-2"
+            />
+            {{ t('jobdomain.title') }}
+          </VCardTitle>
+          <VCardText>
+            <div
+              v-if="jobdomainStore.assigned"
+              class="mb-4"
+            >
+              <h3 class="text-body-1 text-high-emphasis font-weight-medium mb-1">
+                {{ t('jobdomain.currentProfile') }}
+                <VChip
+                  color="primary"
+                  label
+                  size="small"
+                  class="ms-1"
+                >
+                  {{ jobdomainStore.jobdomain?.label }}
+                </VChip>
+              </h3>
+            </div>
+
+            <VAlert
+              v-if="jobdomainStore.assigned"
+              type="warning"
+              variant="tonal"
+              icon="tabler-lock"
+            >
+              {{ t('jobdomain.immutableNotice') }}
+            </VAlert>
+
+            <VAlert
+              v-else
+              type="info"
+              variant="tonal"
+              icon="tabler-info-circle"
+            >
+              {{ t('jobdomain.noProfileAssigned') }}
+            </VAlert>
+          </VCardText>
+        </VCard>
+      </VCol>
+    </VRow>
 
     <!-- Plan Comparison -->
     <VCard>

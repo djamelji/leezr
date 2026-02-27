@@ -76,11 +76,6 @@ class DevSeeder extends Seeder
             ],
         );
 
-        $company->memberships()->updateOrCreate(
-            ['user_id' => $admin->id],
-            ['role' => 'user'],
-        );
-
         $user = User::updateOrCreate(
             ['email' => 'bob@leezr.test'],
             [
@@ -89,11 +84,6 @@ class DevSeeder extends Seeder
                 'password' => 'password',
                 'password_set_at' => now(),
             ],
-        );
-
-        $company->memberships()->updateOrCreate(
-            ['user_id' => $user->id],
-            ['role' => 'user'],
         );
 
         // ─── Module activation for demo company ──────────────────
@@ -118,25 +108,29 @@ class DevSeeder extends Seeder
 
         // ─── Jobdomain assignment (seeds default roles + permissions) ────
         // Note: CompanyPermissionCatalog::sync() already ran in SystemSeeder
+        // Must run BEFORE creating non-owner memberships (creates company roles)
         JobdomainGate::assignToCompany($company, 'logistique');
 
-        // ─── Assign RBAC roles to demo members ──────────────────
+        // ─── Create non-owner memberships WITH company_role_id ──────────
+        // DB trigger enforces: non-owner membership must have company_role_id
         $dispatcherRole = CompanyRole::where('company_id', $company->id)
             ->where('key', 'dispatcher')->first();
-
-        if ($dispatcherRole) {
-            $company->memberships()
-                ->where('user_id', $admin->id)
-                ->update(['company_role_id' => $dispatcherRole->id]);
-        }
 
         $driverRole = CompanyRole::where('company_id', $company->id)
             ->where('key', 'driver')->first();
 
+        if ($dispatcherRole) {
+            $company->memberships()->updateOrCreate(
+                ['user_id' => $admin->id],
+                ['role' => 'user', 'company_role_id' => $dispatcherRole->id],
+            );
+        }
+
         if ($driverRole) {
-            $company->memberships()
-                ->where('user_id', $user->id)
-                ->update(['company_role_id' => $driverRole->id]);
+            $company->memberships()->updateOrCreate(
+                ['user_id' => $user->id],
+                ['role' => 'user', 'company_role_id' => $driverRole->id],
+            );
         }
 
         // ─── Field activations for demo company ──────────────────
