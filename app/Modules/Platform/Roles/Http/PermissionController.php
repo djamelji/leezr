@@ -2,15 +2,15 @@
 
 namespace App\Modules\Platform\Roles\Http;
 
-use App\Platform\Models\PlatformPermission;
+use App\Core\RBAC\PermissionCatalogBuilder;
 use Illuminate\Http\JsonResponse;
 
 class PermissionController
 {
     public function index(): JsonResponse
     {
-        $permissions = PlatformPermission::orderBy('key')->get();
-
-        return response()->json(['permissions' => $permissions]);
+        return response()->json(
+            PermissionCatalogBuilder::build('admin')
+        );
     }
 }

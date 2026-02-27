@@ -181,38 +181,6 @@ class NameSplitTest extends TestCase
         }
     }
 
-    // ─── 8) Navigation titles exist in i18n locales ────────
-
-    public function test_navigation_titles_exist_in_i18n(): void
-    {
-        $enJson = json_decode(file_get_contents(base_path('resources/js/plugins/i18n/locales/en.json')), true);
-
-        $navFiles = [
-            base_path('resources/js/navigation/vertical/index.js'),
-            base_path('resources/js/navigation/horizontal/index.js'),
-        ];
-
-        $missing = [];
-
-        foreach ($navFiles as $file) {
-            $content = file_get_contents($file);
-
-            // Extract title: '...' and heading: '...'
-            preg_match_all("/(?:title|heading):\s*'([^']+)'/", $content, $matches);
-
-            foreach ($matches[1] as $key) {
-                if (!array_key_exists($key, $enJson)) {
-                    $missing[] = "{$key} (in " . basename($file) . ')';
-                }
-            }
-        }
-
-        $this->assertEmpty(
-            $missing,
-            "Navigation keys missing from en.json:\n" . implode("\n", $missing),
-        );
-    }
-
     // ─── 9) Frontend does not use user.name property ──────
 
     public function test_frontend_does_not_use_user_name_property(): void

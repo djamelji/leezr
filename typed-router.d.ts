@@ -88,5 +88,6 @@ declare module 'vue-router/auto-routes' {
     'platform-users-id': RouteRecordInfo<'platform-users-id', '/platform/users/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
     'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
+    'shared-permission-matrix': RouteRecordInfo<'shared-permission-matrix', '/shared/_PermissionMatrix', Record<never, never>, Record<never, never>>,
   }
 }

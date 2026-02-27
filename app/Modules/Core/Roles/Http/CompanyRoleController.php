@@ -4,8 +4,7 @@ namespace App\Modules\Core\Roles\Http;
 
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
-use App\Core\Modules\ModuleGate;
-use App\Core\Modules\ModuleRegistry;
+use App\Core\RBAC\PermissionCatalogBuilder;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Realtime\Contracts\RealtimePublisher;
@@ -35,85 +34,10 @@ class CompanyRoleController extends Controller
     public function permissionCatalog(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $modules = collect(ModuleRegistry::forScope('company'));
 
-        $moduleNames = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->name]);
-        $moduleDescriptions = $modules->mapWithKeys(fn ($m, $key) => [$key => $m->description]);
-        $moduleIcons = $modules->mapWithKeys(fn ($m, $key) => [
-            $key => collect($m->capabilities->navItems)->first()['icon'] ?? $m->iconRef,
-        ]);
-
-        // Build hint lookup from ModuleRegistry permission definitions
-        $hints = [];
-        foreach ($modules as $modKey => $manifest) {
-            foreach ($manifest->permissions as $perm) {
-                if (isset($perm['hint'])) {
-                    $hints[$perm['key']] = $perm['hint'];
-                }
-            }
-        }
-
-        $permissions = CompanyPermission::orderBy('module_key')
-            ->orderBy('key')
-            ->get(['id', 'key', 'label', 'module_key', 'is_admin'])
-            ->map(function ($p) use ($company, $moduleNames, $moduleDescriptions, $hints) {
-                $isCore = str_starts_with($p->module_key, 'core.');
-
-                return array_merge($p->toArray(), [
-                    'module_name' => $moduleNames[$p->module_key] ?? $p->module_key,
-                    'module_description' => $moduleDescriptions[$p->module_key] ?? '',
-                    'hint' => $hints[$p->key] ?? '',
-                    'module_active' => $isCore || ModuleGate::isActive($company, $p->module_key),
-                ]);
-            });
-
-        // Build key→id lookup for resolving bundles
-        $keyToId = $permissions->pluck('id', 'key');
-
-        // Build module list with bundles (capabilities).
-        // Only include bundles that resolve to at least one company permission.
-        $moduleList = [];
-        foreach ($modules as $modKey => $manifest) {
-            $isCore = str_starts_with($modKey, 'core.');
-            $isActive = $isCore || ModuleGate::isActive($company, $modKey);
-
-            $bundles = [];
-            foreach ($manifest->bundles as $bundle) {
-                $permissionIds = collect($bundle['permissions'])
-                    ->map(fn ($key) => $keyToId[$key] ?? null)
-                    ->filter()
-                    ->values()
-                    ->all();
-
-                if (empty($permissionIds)) {
-                    continue;
-                }
-
-                $bundles[] = [
-                    'key' => $bundle['key'],
-                    'label' => $bundle['label'],
-                    'hint' => $bundle['hint'] ?? '',
-                    'is_admin' => $bundle['is_admin'] ?? false,
-                    'permissions' => $bundle['permissions'],
-                    'permission_ids' => $permissionIds,
-                ];
-            }
-
-            $moduleList[] = [
-                'module_key' => $modKey,
-                'module_name' => $moduleNames[$modKey] ?? $modKey,
-                'module_description' => $moduleDescriptions[$modKey] ?? '',
-                'module_icon' => $moduleIcons[$modKey] ?? 'tabler-puzzle',
-                'module_active' => $isActive,
-                'is_core' => $isCore,
-                'capabilities' => $bundles,
-            ];
-        }
-
-        return response()->json([
-            'permissions' => $permissions,
-            'modules' => $moduleList,
-        ]);
+        return response()->json(
+            PermissionCatalogBuilder::build('company', $company)
+        );
     }
 
     public function store(Request $request): JsonResponse

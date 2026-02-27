@@ -23,7 +23,14 @@ class AudienceModule implements ModuleDefinition
             permissions: [
                 ['key' => 'manage_audience', 'label' => 'Manage Audience'],
             ],
-            bundles: [],
+            bundles: [
+                [
+                    'key' => 'audience.management',
+                    'label' => 'Audience Management',
+                    'hint' => 'Manage mailing lists, subscribers, and subscriptions.',
+                    'permissions' => ['manage_audience'],
+                ],
+            ],
             scope: 'admin',
             type: 'internal',
         );

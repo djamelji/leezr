@@ -5,11 +5,13 @@ export const usePlatformRolesStore = defineStore('platformRoles', {
   state: () => ({
     _roles: [],
     _permissionCatalog: [],
+    _permissionModules: [],
   }),
 
   getters: {
     roles: state => state._roles,
     permissionCatalog: state => state._permissionCatalog,
+    permissionModules: state => state._permissionModules,
   },
 
   actions: {
@@ -55,6 +57,7 @@ export const usePlatformRolesStore = defineStore('platformRoles', {
       const data = await $platformApi('/permissions')
 
       this._permissionCatalog = data.permissions
+      this._permissionModules = data.modules || []
     },
   },
 })

@@ -88,6 +88,43 @@ class ModuleManifestIntegrityTest extends TestCase
         );
     }
 
+    /**
+     * ADR-133: Every module with permissions must declare capability bundles
+     * covering all its permissions. No flat-only permission modules allowed.
+     */
+    public function test_modules_with_permissions_must_have_bundles(): void
+    {
+        $violations = [];
+
+        foreach (ModuleRegistry::definitions() as $key => $manifest) {
+            if (empty($manifest->permissions)) {
+                continue;
+            }
+
+            if (empty($manifest->bundles)) {
+                $violations[] = "{$key}: has ".count($manifest->permissions).' permission(s) but no bundles';
+
+                continue;
+            }
+
+            $bundledKeys = collect($manifest->bundles)
+                ->flatMap(fn ($b) => $b['permissions'])
+                ->unique()
+                ->all();
+
+            foreach ($manifest->permissions as $perm) {
+                if (! in_array($perm['key'], $bundledKeys, true)) {
+                    $violations[] = "{$key}: permission '{$perm['key']}' is not covered by any bundle";
+                }
+            }
+        }
+
+        $this->assertEmpty(
+            $violations,
+            "ADR-133 violation — modules with unbundled permissions:\n".implode("\n", $violations),
+        );
+    }
+
     public function test_module_keys_follow_naming_convention(): void
     {
         $violations = [];

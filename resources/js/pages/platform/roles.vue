@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { useAppToast } from '@/composables/useAppToast'
+import PermissionMatrix from '@/pages/shared/_PermissionMatrix.vue'
 
 definePage({
   meta: {
@@ -25,11 +26,6 @@ const drawerForm = ref({ key: '', name: '', permissions: [] })
 const drawerLoading = ref(false)
 
 const isSuperAdminRole = computed(() => editingRole.value?.key === 'super_admin')
-
-// Permissions options for VSelect (from catalog)
-const permissionOptions = computed(() =>
-  rolesStore.permissionCatalog.map(p => ({ title: p.label, value: p.id })),
-)
 
 onMounted(async () => {
   try {
@@ -244,7 +240,7 @@ const deleteRole = async role => {
       v-model="isDrawerOpen"
       temporary
       location="end"
-      width="400"
+      width="500"
     >
       <AppDrawerHeaderSection
         :title="isEditMode ? t('platformRoles.editRole') : t('platformRoles.addRole')"
@@ -253,69 +249,75 @@ const deleteRole = async role => {
 
       <VDivider />
 
-      <VCardText>
-        <VForm @submit.prevent="handleDrawerSubmit">
-          <VRow>
-            <VCol cols="12">
-              <AppTextField
-                v-model="drawerForm.key"
-                :label="t('platformRoles.key')"
-                :placeholder="t('platformRoles.keyPlaceholder')"
-                :disabled="isEditMode"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField
-                v-model="drawerForm.name"
-                :label="t('common.name')"
-                :placeholder="t('platformRoles.namePlaceholder')"
-              />
-            </VCol>
-            <VCol
-              v-if="!isSuperAdminRole"
-              cols="12"
-            >
-              <AppSelect
-                v-model="drawerForm.permissions"
-                :items="permissionOptions"
-                :label="t('platformRoles.permissions')"
-                :placeholder="t('platformRoles.selectPermissions')"
-                multiple
-                chips
-                closable-chips
-              />
-            </VCol>
-            <VCol
-              v-else
-              cols="12"
-            >
-              <VAlert
-                type="info"
-                variant="tonal"
-                density="compact"
+      <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
+        <VCardText>
+          <VForm @submit.prevent="handleDrawerSubmit">
+            <VRow>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="drawerForm.key"
+                  :label="t('platformRoles.key')"
+                  :placeholder="t('platformRoles.keyPlaceholder')"
+                  :disabled="isEditMode"
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="drawerForm.name"
+                  :label="t('common.name')"
+                  :placeholder="t('platformRoles.namePlaceholder')"
+                />
+              </VCol>
+
+              <!-- Permission matrix or super_admin info -->
+              <VCol
+                v-if="isSuperAdminRole"
+                cols="12"
               >
-                {{ t('platformRoles.allPermissionsInfo') }}
-              </VAlert>
-            </VCol>
-            <VCol cols="12">
-              <VBtn
-                type="submit"
-                class="me-3"
-                :loading="drawerLoading"
-              >
-                {{ isEditMode ? t('common.update') : t('common.create') }}
-              </VBtn>
-              <VBtn
-                variant="tonal"
-                color="secondary"
-                @click="isDrawerOpen = false"
-              >
-                {{ t('common.cancel') }}
-              </VBtn>
-            </VCol>
-          </VRow>
-        </VForm>
-      </VCardText>
+                <VAlert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                >
+                  {{ t('platformRoles.allPermissionsInfo') }}
+                </VAlert>
+              </VCol>
+
+              <template v-else>
+                <VCol cols="12">
+                  <VDivider />
+                </VCol>
+                <VCol cols="12">
+                  <PermissionMatrix
+                    v-model:selected-permissions="drawerForm.permissions"
+                    :permission-catalog="rolesStore.permissionCatalog"
+                    :permission-modules="rolesStore.permissionModules"
+                    :is-administrative="true"
+                    scope="platform"
+                  />
+                </VCol>
+              </template>
+
+              <VCol cols="12">
+                <VBtn
+                  type="submit"
+                  class="me-3"
+                  :loading="drawerLoading"
+                >
+                  {{ isEditMode ? t('common.update') : t('common.create') }}
+                </VBtn>
+                <VBtn
+                  variant="tonal"
+                  color="secondary"
+                  @click="isDrawerOpen = false"
+                >
+                  {{ t('common.cancel') }}
+                </VBtn>
+              </VCol>
+            </VRow>
+          </VForm>
+        </VCardText>
+      </div>
     </VNavigationDrawer>
   </div>
 </template>

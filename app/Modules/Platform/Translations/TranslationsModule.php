@@ -23,7 +23,14 @@ class TranslationsModule implements ModuleDefinition
             permissions: [
                 ['key' => 'manage_translations', 'label' => 'Manage translation bundles & market overrides'],
             ],
-            bundles: [],
+            bundles: [
+                [
+                    'key' => 'translations.management',
+                    'label' => 'Translation Management',
+                    'hint' => 'Manage translation bundles & market overrides.',
+                    'permissions' => ['manage_translations'],
+                ],
+            ],
             scope: 'admin',
             type: 'internal',
             visibility: 'visible',

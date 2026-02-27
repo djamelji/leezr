@@ -418,10 +418,12 @@
     "simpleView": "Vue simple",
     "advanced": "Avancé",
     "coreTeamCompany": "Essentiel — Équipe et entreprise",
+    "platformModules": "Modules plateforme",
     "confirmDelete": "Supprimer le rôle « {name} » ?",
     "failedToDelete": "Échec de la suppression du rôle.",
     "noRoles": "Aucun rôle pour le moment. Créez-en un pour commencer.",
-    "inactiveModulePermissionsHint": "Ce rôle possède des permissions de modules désactivés. Vous pouvez les décocher pour nettoyer.",
+    "addonModules": "Modules complémentaires",
+    "disabledModules": "Modules désactivés",
     "moduleInactive": "Désactivé",
     "unbundledPermissions": "Permissions"
   },

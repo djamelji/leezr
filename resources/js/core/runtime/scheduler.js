@@ -123,8 +123,10 @@ export function createScheduler(deps) {
   async function _continueFromPhase(runId) {
     if (_isStale(runId)) return
 
-    // Platform / public: only auth phase → go straight to ready
-    if (_currentScope !== 'company') {
+    const resources = _currentScope === 'platform' ? platformResources : companyResources
+
+    // Public scope: only auth phase → go straight to ready
+    if (_currentScope !== 'company' && _currentScope !== 'platform') {
       deps.transition('ready')
       deps.setBootedAt(Date.now())
       deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
@@ -133,13 +135,24 @@ export function createScheduler(deps) {
       return
     }
 
-    // Company scope: check login before continuing
-    const auth = deps.resolveStore('auth')
-    if (!auth.isLoggedIn) {
-      deps.transition('ready')
-      _resolveReady()
+    // Check login before continuing
+    if (_currentScope === 'company') {
+      const auth = deps.resolveStore('auth')
+      if (!auth.isLoggedIn) {
+        deps.transition('ready')
+        _resolveReady()
 
-      return
+        return
+      }
+    }
+    else if (_currentScope === 'platform') {
+      const platformAuth = deps.resolveStore('platformAuth')
+      if (!platformAuth.isLoggedIn) {
+        deps.transition('ready')
+        _resolveReady()
+
+        return
+      }
     }
 
     // Determine completed phase from active runner's resources
@@ -147,16 +160,20 @@ export function createScheduler(deps) {
     // Mark the retried phase as executed (it wasn't marked during the failed boot)
     if (completedPhase) _markPhaseExecuted(completedPhase)
 
-    const phaseOrder = ['auth', 'tenant', 'features']
+    const phaseOrder = _currentScope === 'company'
+      ? ['auth', 'tenant', 'features']
+      : ['auth', 'features']
     const startIdx = phaseOrder.indexOf(completedPhase)
     const remaining = phaseOrder.slice(startIdx + 1)
 
     for (const phase of remaining) {
       if (_isStale(runId)) return
 
+      const phaseResources = resources.filter(r => r.phase === phase)
+      if (phaseResources.length === 0) continue
+
       deps.transition(phase)
 
-      const phaseResources = companyResources.filter(r => r.phase === phase)
       const result = await _runJobs(phaseResources, runId)
       if (_isStale(runId)) return
 
@@ -211,7 +228,7 @@ export function createScheduler(deps) {
       // Initialize run metadata
       const requiredPhases = scope === 'company'
         ? ['auth', 'tenant', 'features']
-        : scope === 'platform' ? ['auth'] : []
+        : scope === 'platform' ? ['auth', 'features'] : []
 
       _runMeta = { runId, scope, requiredPhases, executedPhases: new Set() }
 
@@ -284,11 +301,11 @@ export function createScheduler(deps) {
         _markPhaseExecuted('tenant')
       }
 
-      // Phase: features (company scope only)
-      if (scope === 'company') {
+      // Phase: features (both company and platform scopes)
+      const featureResources = resources.filter(r => r.phase === 'features')
+      if (featureResources.length > 0) {
         if (_isStale(runId)) return
         deps.transition('features')
-        const featureResources = resources.filter(r => r.phase === 'features')
         const featureResult = await _runJobs(featureResources, runId)
         if (_isStale(runId)) return
         if (featureResult.critical) {

@@ -10,7 +10,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     _user: useCookie('platformUserData').value || null,
     _roles: useCookie('platformRoles').value || [],
     _permissions: useCookie('platformPermissions').value || [],
-    _platformModuleNavItems: useCookie('platformModuleNavItems').value || [],
     _disabledModuleKeys: useCookie('platformDisabledModules').value || [],
     _hydrated: false,
     _sessionConfig: null,
@@ -22,7 +21,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     isLoggedIn: state => !!state._user,
     roles: state => state._roles,
     permissions: state => state._permissions,
-    platformModuleNavItems: state => state._platformModuleNavItems,
     disabledModuleKeys: state => state._disabledModuleKeys,
     isModuleInactive: state => key => state._disabledModuleKeys.includes(key),
     isSuperAdmin: state => Array.isArray(state._roles) && state._roles.includes('super_admin'),
@@ -44,11 +42,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     _persistPermissions(permissions) {
       this._permissions = permissions
       useCookie('platformPermissions').value = permissions
-    },
-
-    _persistPlatformModuleNavItems(items) {
-      this._platformModuleNavItems = items
-      useCookie('platformModuleNavItems').value = items
     },
 
     _persistDisabledModules(keys) {
@@ -73,7 +66,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistUser(data.user)
       this._persistRoles(data.roles || [])
       this._persistPermissions(data.permissions || [])
-      this._persistPlatformModuleNavItems(data.platform_modules || [])
       this._persistDisabledModules(data.disabled_modules || [])
       applyTheme(data.ui_theme)
       this._sessionConfig = data.ui_session ?? null
@@ -94,7 +86,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistUser(null)
       this._persistRoles([])
       this._persistPermissions([])
-      this._persistPlatformModuleNavItems([])
       this._persistDisabledModules([])
       this._hydrated = false
       postBroadcast('logout')
@@ -107,7 +98,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(data.user)
         this._persistRoles(data.roles || [])
         this._persistPermissions(data.permissions || [])
-        this._persistPlatformModuleNavItems(data.platform_modules || [])
         this._persistDisabledModules(data.disabled_modules || [])
         applyTheme(data.ui_theme)
         this._sessionConfig = data.ui_session ?? null
@@ -121,7 +111,6 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistUser(null)
         this._persistRoles([])
         this._persistPermissions([])
-        this._persistPlatformModuleNavItems([])
         this._persistDisabledModules([])
         this._hydrated = true
 

@@ -144,6 +144,47 @@ Les service workers interfèrent avec le flow `Set-Cookie` de Sanctum. **Aucun s
 - Middleware `SetCompanyContext` : vérifie header, vérifie membership, injecte company dans le request
 - Si header absent → 400, si non membre → 403
 
+### RBAC — Unified Permission Architecture (ADR-132)
+
+Architecture scope-aware : deux tables physiques, un seul contrat de catalog.
+
+#### Schéma uniforme
+
+Les deux tables ont un schéma symétrique :
+```
+company_permissions:  id, key, label, module_key, is_admin, timestamps
+platform_permissions: id, key, label, module_key, is_admin, timestamps
+```
+
+Chaque permission est déclarée dans un `ModuleManifest` (source unique). `CompanyPermissionCatalog::sync()` et `PlatformPermissionCatalog::sync()` écrivent en DB à partir des manifests. Les seeders appellent ces syncs — zéro permission hardcodée.
+
+#### PermissionCatalogBuilder (service partagé)
+
+```
+App\Core\RBAC\PermissionCatalogBuilder::build(scope, ?company)
+```
+
+Retourne le même contrat API pour les deux scopes :
+```json
+{
+  "permissions": [{ id, key, label, module_key, is_admin, module_name, hint, module_active }],
+  "modules": [{ module_key, module_name, module_icon, capabilities: [{ key, label, hint, permission_ids }] }]
+}
+```
+
+Différence scope : `module_active` = `ModuleGate::isActive($company, $key)` (company) vs toujours `true` (platform).
+
+#### Middleware d'enforcement
+
+| Scope | Middleware | Bypass |
+|-------|-----------|--------|
+| Platform | `platform.permission:{key}` → `PlatformUser::hasPermission()` | `super_admin` role |
+| Company | `company.access:use-permission,{key}` → `CompanyAccess::checkPermission()` | Owner |
+
+#### Frontend — `_PermissionMatrix.vue`
+
+Composant partagé entre `company/roles.vue` et `platform/roles.vue`. Props : `permissionCatalog`, `permissionModules`, `selectedPermissions` (v-model), `isAdministrative`, `scope`. Affiche : Simple mode (bundles par module) + Advanced mode (permissions individuelles par module).
+
 ### Module System (LOT 2 — ADR-021, ADR-022, ADR-023)
 
 Système universaliste de modules : **platform-defined, company-activated**.

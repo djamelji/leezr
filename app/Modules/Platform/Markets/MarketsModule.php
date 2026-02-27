@@ -25,7 +25,14 @@ class MarketsModule implements ModuleDefinition
             permissions: [
                 ['key' => 'manage_markets', 'label' => 'Manage markets, languages, legal statuses & FX rates'],
             ],
-            bundles: [],
+            bundles: [
+                [
+                    'key' => 'markets.governance',
+                    'label' => 'Market Governance',
+                    'hint' => 'Manage markets, languages, legal statuses & FX rates.',
+                    'permissions' => ['manage_markets'],
+                ],
+            ],
             scope: 'admin',
             type: 'internal',
             visibility: 'visible',

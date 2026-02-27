@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class PlatformPermission extends Model
 {
-    protected $fillable = ['key', 'label'];
+    protected $fillable = ['key', 'label', 'module_key', 'is_admin'];
+
+    protected function casts(): array
+    {
+        return [
+            'is_admin' => 'boolean',
+        ];
+    }
 
     public function roles(): BelongsToMany
     {

@@ -2548,6 +2548,7 @@ definePage({
 ## ADR-110 : Platform Navigation Manifest-Driven
 
 - **Date** : 2026-02-24
+- **Statut** : Implemented
 - **Contexte** : La navigation plateforme devait être alignée avec le pattern company (manifest-driven via composable). Besoin de valider contractuellement que chaque module plateforme déclare ses navItems et routeNames.
 - **Décision** :
   1. **Composable `usePlatformNav()`** — déjà existant, lit `platformAuth.platformModuleNavItems` alimenté par l'API `/api/platform/me`. Filtre par permission, place Dashboard en premier, ajoute heading "Management".
@@ -2571,6 +2572,7 @@ definePage({
 ## ADR-111 : Structural Cleanup — LOT 5
 
 - **Date** : 2026-02-24
+- **Statut** : Implemented
 - **Contexte** : L'audit architectural a identifié 4 incohérences structurelles : ThemeController orphelin, collision sortOrder, permission manquante, routeNames désalignés.
 - **Décision** :
   1. **ThemeController orphan résolu** — Le controller `ThemeController` vivait dans `app/Modules/Platform/Theme/Http/` sans ModuleDefinition associée. Il fait partie des Settings (utilise `manage_theme_settings`). Déplacé vers `app/Modules/Platform/Settings/Http/ThemeController.php`, import route mis à jour, répertoire orphelin `Platform/Theme/` supprimé.
@@ -2596,6 +2598,7 @@ definePage({
 ## ADR-112 : Frontend/Backend Module Alignment — LOT 6
 
 - **Date** : 2026-02-24
+- **Statut** : Implemented
 - **Contexte** : Le frontend et le backend avaient des incohérences dans la protection des routes modules. Les pages `members/` et `settings.vue` étaient gatées côté backend (`company.access:use-module`) mais pas côté frontend (pas de `meta.module`). Les pages `plans/` utilisaient `permission: 'manage_companies'` au lieu de `manage_plans`.
 - **Décision** :
   1. **`meta.module` sur toutes les pages company module-gated** :
@@ -2630,6 +2633,7 @@ definePage({
 ## ADR-113 : Unified Module Engine — Scope Admin + Middleware Universel
 
 - **Date** : 2026-02-24
+- **Statut** : Implemented
 - **Contexte** : Le moteur modulaire traitait `scope: 'platform'` et `scope: 'company'` de façon asymétrique. Les modules platform n'avaient pas de gate d'activation (`module.active:{key}`), pas de `ModuleGate`, et leurs routes contournaient le moteur modulaire. Les modules company utilisaient `ModuleGate`, `CompanyModuleService`, et le middleware `company.access:use-module,{key}`. Ce double chemin créait de la dérive et de la dette technique.
 - **Décision** :
   1. **Scope obligatoire** : `scope` est obligatoire dans `ModuleManifest` (pas de valeur par défaut). La valeur `'platform'` est renommée en `'admin'`. Le boot refuse tout scope invalide.
@@ -2651,7 +2655,7 @@ definePage({
 ## ADR-114 : Navigation 100% Manifest-Driven
 
 - **Date** : 2026-02-25
-- **Statut** : Accepted
+- **Statut** : Implemented — Legacy fallback removed (ADR-114 convergence)
 - **Contexte** : Le moteur modulaire supporte `scope: admin | company`, activation unifiée (ModuleGate), permissions déclaratives, filtrage plan/jobdomain, et navItems déclarés dans les manifests. Cependant la navigation n'est pas totalement pilotée par les modules, les groupes sont implicites, le horizontal peut devenir instable (wrap multi-lignes), et les différences de jobdomain ne doivent pas générer des menus hardcodés. Objectif : rendre la navigation entièrement dérivée des manifests modules, dynamique, cohérente et scalable (500+ modules), sans hardcoding.
 - **Décision** : La navigation devient une **projection dynamique des manifests modules**. Le menu est un moteur. Les modules déclarent les items. Le moteur assemble selon le contexte. Aucune liste fixe de groupes. Aucun menu par jobdomain.
 
@@ -2730,6 +2734,7 @@ Chaque module peut déclarer :
 ## ADR-115 : Intelligent Module Activation & Dependency Engine
 
 - **Date** : 2026-02-25
+- **Statut** : Implemented
 - **Contexte** : Le système de modules gère les dépendances (`requires`) de façon basique : rejet si un module requis n'est pas actif, rejet si un module dont d'autres dépendent est désactivé. Pas de cascade, pas de nettoyage des orphelins, pas de traçabilité de la raison d'activation, pas de détection de cycles, pas d'invariant pricing/requires.
 - **Décision** : Remplacement de `CompanyModuleService` par un `ModuleActivationEngine` intelligent + table `company_module_activation_reasons` comme source de vérité.
 
@@ -2792,6 +2797,127 @@ Chaque module peut déclarer :
   - Cycles détectés au boot
   - Invariant pricing protège la facturation
   - 309 tests green, pnpm build clean
+
+---
+
+## ADR-116 : Module Pricing Policy + Quote Calculator
+
+- **Date** : 2026-02-25
+- **Statut** : Implemented
+- **Contexte** : Le moteur modulaire (ADR-115) gère l'activation et les dépendances, mais ne contient pas de logique de tarification. Les modules ont un `pricing_mode` (`addon`, `included`, `internal`) et un `pricing_model` (`flat`, `plan_flat`), mais aucune couche ne valide les invariants prix/dépendances ni ne calcule de devis. Risque : un module requis par un autre pourrait être facturé en addon, créant une incohérence facturation/activation.
+- **Décision** :
+  1. **DependencyGraph** — Requêtes read-only sur le graphe de dépendances des manifests modules.
+     - `requires(key)` : dépendances directes
+     - `requiresClosure(key)` : fermeture transitive (DFS)
+     - `requiredBy(key)` : reverse lookup
+     - `buildFullGraph()` : adjacency list complète
+     - Résultats toujours triés alphabétiquement pour déterminisme.
+  2. **ModulePricingPolicy** — Validation des invariants tarification au boot et lors des mises à jour.
+     - Règle 1 : Un module requis par au moins un autre ne peut pas être addon-priced
+     - Règle 2 : Les modules `type: 'core'` ne peuvent pas être addon-priced
+     - Règle 3 : Les modules `type: 'internal'` doivent avoir `pricing_mode: 'internal'`
+     - Règle 4 : Aucune dépendance transitive ne peut être facturable indépendamment
+     - Lève `RuntimeException` à la première violation.
+  3. **ModuleQuoteCalculator** — Calcul déterministe de devis.
+     - Pipeline : validation → vérification entitlements → expansion dépendances transitives → calcul montants
+     - Seuls les modules sélectionnés sont facturés (addon-priced). Les modules requis sont `included` (non facturés).
+     - Montants en centimes (entiers, pas de floats).
+     - Modèles supportés : `flat` (prix fixe mensuel), `plan_flat` (prix dépendant du plan).
+     - Même input → même output garanti (tri alphabétique des clés avant traitement).
+  4. **Quote DTOs** — Objets immuables : `Quote` (total, currency, lines, included), `QuoteLine`, `QuoteIncluded`.
+  5. **Endpoint** — `GET /api/modules/quote?keys[]=m1&keys[]=m2` via `ModuleQuoteController`.
+     - Requiert auth + contexte company.
+     - Retourne 422 pour module invalide, désactivé, ou non-éligible.
+- **Fichiers** :
+  - `app/Core/Modules/DependencyGraph.php` (108 lignes)
+  - `app/Core/Modules/Pricing/ModulePricingPolicy.php` (245 lignes)
+  - `app/Core/Modules/Pricing/ModuleQuoteCalculator.php` (167 lignes)
+  - `app/Core/Modules/Pricing/Quote.php`, `QuoteLine.php`, `QuoteIncluded.php`
+  - `app/Modules/Core/Modules/Http/ModuleQuoteController.php`
+  - `tests/Unit/ModulePricingPolicyTest.php` (13 tests)
+  - `tests/Unit/DependencyGraphTest.php` (13 tests)
+  - `tests/Unit/ModuleQuoteCalculatorTest.php` (15 tests)
+  - `tests/Feature/ModuleQuoteEndpointTest.php` (10 tests)
+- **Conséquences** :
+  - 51 tests couvrent pricing, graphe et endpoint
+  - Invariants prix/dépendances protégés au boot — impossible de créer une incohérence facturation
+  - Devis déterministe et sérialisable (centimes, tri alphabétique)
+  - Extension future (per_seat, usage, tiered) préparée mais retourne 0 actuellement
+
+---
+
+> **Note** : ADR 117–123 n'ont jamais été utilisés. La numérotation passe de 116 à 124.
+
+---
+
+## ADR-124 : Payment Module Registry + Gateway Orchestration + Webhook Idempotency
+
+- **Date** : 2026-02-25
+- **Statut** : Implemented
+- **Commit** : `1a9104b`
+- **Contexte** : La plateforme doit supporter plusieurs prestataires de paiement (internal, Stripe, PayPal) avec des méthodes de paiement différentes selon le marché, le plan et l'intervalle de facturation. Le système doit être extensible (ajout de providers via module.json), gouvernable (admin platform installe/active/configure), et idempotent (webhooks ne doivent jamais être traités deux fois).
+- **Décision** :
+  1. **PaymentRegistry** — Registre statique de manifests paiement, booté dans `AppServiceProvider::boot()`.
+     - Découvre les providers depuis les `module.json` (clé `payment_module`)
+     - Provider `internal` (approbation manuelle) toujours disponible
+     - Chaque manifest déclare : `providerKey`, `name`, `supportedMethods`, `requiresCredentials`, `credentialFields`
+  2. **PaymentOrchestrator** — Moteur de résolution contextuelle.
+     - Résout les méthodes de paiement disponibles pour un contexte (market + plan + interval)
+     - Score de spécificité : +1 par dimension non-null. Spécificité > priorité.
+     - Déduplique par `method_key` (garde le score le plus élevé)
+     - `resolveMethodsForContext()` : filtre les providers inactifs/non-installés (utilisé par company)
+     - `previewMethodsForContext()` : sans filtre provider (utilisé par admin pour prévisualisation)
+  3. **Governance admin** — `PaymentModuleController` :
+     - Install, activate, deactivate, update credentials, health check
+     - Credentials stockés chiffrés en DB (`encrypted` cast)
+     - Health check appelle l'adapter du provider
+  4. **Rules admin** — `PaymentMethodRuleController` :
+     - CRUD sur `platform_payment_method_rules`
+     - Contrainte unique : `(method_key, provider_key, market_key, plan_key, interval)`
+     - Preview endpoint pour simuler la résolution
+  5. **Company billing** — `CompanyBillingController` :
+     - `payment-methods` : résout via orchestrator pour le contexte de la company
+     - `invoices`, `payments`, `portal-url` : stubs (retournent `[]`/`null` — intégration future)
+     - `subscription` : retourne l'abonnement actif
+  6. **Webhook idempotency** — `PaymentWebhookController` + `WebhookEvent` :
+     - `POST /api/webhooks/payments/{providerKey}` — throttle 120 req/min, pas d'auth
+     - Insert dans `webhook_events` avec contrainte unique `(provider_key, event_id)`
+     - Si doublon → `200 { duplicate: true }` sans retraitement
+     - Si nouveau → adapter.handleWebhookEvent() → status `processed` ou `failed`
+  7. **Adapter pattern** — `PaymentProviderAdapter` interface :
+     - `availableMethods()`, `healthCheck()`, `handleWebhookEvent()`
+     - `InternalPaymentAdapter` : approbation manuelle, toujours healthy
+     - `StripePaymentAdapter` : stub (SDK non installé, `RuntimeException`)
+- **Tables** :
+  - `platform_payment_modules` — Providers installés/actifs (credentials chiffrés)
+  - `platform_payment_method_rules` — Règles de méthodes par contexte
+  - `company_payment_customers` — Mapping company → customer ID provider
+  - `company_payment_profiles` — Méthodes de paiement sauvegardées
+  - `webhook_events` — Idempotency tracking
+- **Fichiers clés** :
+  - `app/Core/Billing/PaymentRegistry.php`, `PaymentModuleManifest.php`, `PaymentOrchestrator.php`
+  - `app/Core/Billing/PlatformPaymentModule.php`, `PlatformPaymentMethodRule.php`
+  - `app/Core/Billing/CompanyPaymentCustomer.php`, `CompanyPaymentProfile.php`, `WebhookEvent.php`
+  - `app/Core/Billing/Contracts/PaymentProviderAdapter.php`
+  - `app/Core/Billing/Adapters/InternalPaymentAdapter.php`, `StripePaymentAdapter.php`
+  - `app/Core/Billing/ReadModels/PlatformPaymentGovernanceReadService.php`, `CompanyBillingReadService.php`
+  - `app/Modules/Infrastructure/Webhooks/Http/PaymentWebhookController.php`
+  - `app/Modules/Platform/Billing/Http/PaymentModuleController.php`, `PaymentMethodRuleController.php`
+  - `app/Modules/Core/Billing/Http/CompanyBillingController.php`
+  - `database/seeders/PaymentModuleSeeder.php`
+  - `resources/js/modules/platform-admin/billing/billing.store.js`
+- **Tests** :
+  - `tests/Feature/WebhookIdempotencyTest.php` (4 tests)
+  - `tests/Feature/PlatformPaymentModulesApiTest.php` (9 tests)
+  - `tests/Feature/PlatformPaymentRulesApiTest.php` (8 tests)
+  - `tests/Feature/CompanyBillingApiTest.php` (6 tests)
+  - `tests/Unit/PaymentRuleEvaluationTest.php` (9 tests)
+- **Conséquences** :
+  - 36 tests couvrent registry, orchestration, governance, idempotency
+  - Extensible : ajouter un provider = ajouter un module avec `payment_module` dans `module.json`
+  - Spécificité > priorité : les règles les plus précises gagnent toujours
+  - Idempotency garantie par contrainte DB — aucun doublon de traitement
+  - Stub Stripe prêt pour intégration (adapter pattern en place)
 
 ---
 
@@ -2868,7 +2994,7 @@ Chaque module peut déclarer :
 ## ADR-126 : EventEnvelope + Realtime Backbone v1
 
 - **Date** : 2026-02-25
-- **Status** : Draft — Pending implementation
+- **Status** : Implemented
 - **Contexte** : ADR-125 Phase 1 livre un backbone invalidation-only. La decision strategique B confirme l'evolution vers un backbone temps reel complet (domain events, notifications, audit, security). Le VO actuel `RealtimeEvent(topic, companyId, payload, timestamp)` ne supporte ni categories, ni targeting user, ni versioning.
 - **Décision** : Remplacer `RealtimeEvent` par `EventEnvelope` (id ULID, topic, category, version, company_id, user_id?, payload, invalidates[], timestamp). Introduire 5 categories : `invalidation` | `domain` | `notification` | `audit` | `security`. TopicRegistry v2 multi-categorie avec targeting et versioning. Frontend ChannelRouter dispatche par categorie vers handlers dedies (InvalidationHandler inchange, DomainEventBus, NotificationStore, AuditLiveStore, SecurityAlertHandler).
 
@@ -2887,7 +3013,7 @@ Chaque module peut déclarer :
 ## ADR-127 : Subscription Protocol + Connection Governance
 
 - **Date** : 2026-02-25
-- **Status** : Draft — Pending implementation
+- **Status** : Implemented
 - **Contexte** : Phase 1 envoie tous les events a tous les clients. Pas de filtre, pas de rate limit, pas de gouvernance des connexions. Un user peut ouvrir N streams simultanes (tab-hoarding = epuisement pool PHP-FPM).
 - **Décision** : Le client specifie `?categories=invalidation,domain` ou `?topics=rbac.changed` au connect SSE. Le serveur filtre les events AVANT envoi. Rate limits : 1 stream/user/company (middleware Redis), max N streams/company (configurable, default 100), anti-abuse throttle (5 connect/min/user). Connection lifecycle tracking via Redis (INCR/DECR sur connect/disconnect). Endpoints platform de gouvernance : `GET /api/platform/realtime/status|metrics|connections`, `POST /api/platform/realtime/flush|kill-switch` (permission `manage_system`).
 
@@ -3037,6 +3163,351 @@ Chaque module peut déclarer :
   - Frontend : security store etendu, `_SecurityRealtime` sub-component, onglets dans security page
   - La route `/platform/realtime` n'existe plus (404)
   - Rollback : re-creer `RealtimeModule`, re-separer les routes, supprimer `EventFloodDetector`
+
+---
+
+## ADR-132 : Unified Permission Architecture (Scope-Aware)
+
+- **Date** : 2026-02-26
+- **Status** : Ready
+- **Depends on** : ADR-113 (Unified Module Engine)
+
+### Contexte
+
+Platform et Company ont deux systèmes de permissions parallèles construits sur le même `ModuleManifest` mais divergents en schéma DB, API endpoint shape, et rendu frontend.
+
+**Company scope** (état actuel — complet) :
+- `company_permissions` table : `key, label, module_key, is_admin`
+- `CompanyPermissionCatalog::sync()` écrit `module_key` + `is_admin` en DB
+- `CompanyRoleController::permissionCatalog()` enrichit avec hints, bundles, module_active, icons
+- Frontend `roles.vue` : Simple mode (capability bundles par module) + Advanced mode (permissions individuelles par module) + inactive module handling
+- 20 permissions across 7 core + 1 business module, 13 bundles
+
+**Platform scope** (état actuel — lacunaire) :
+- `platform_permissions` table : `key, label` seulement (PAS de `module_key`, PAS de `is_admin`)
+- `PlatformPermissionCatalog::sync()` n'écrit PAS `module_key` en DB (pourtant il le calcule dans `all()`)
+- `PermissionController::index()` retourne un flat array `[{id, key, label}]` sans enrichissement
+- Frontend `roles.vue` : VSelect flat avec chips, zéro groupement par module
+- 20 permissions across 14 admin-scope modules, **17 bundles déjà déclarés dans les manifests mais jamais exposés**
+
+**Constat critique** : Les platform modules **déclarent déjà** `bundles` et `permissions` avec structure complète dans leurs `ModuleManifest`. Le `PlatformPermissionCatalog::all()` **calcule déjà** le `module_key`. Toute l'information existe — elle est simplement perdue lors du sync DB et jamais exposée par l'API.
+
+### Décision
+
+**Option A retenue** : Normaliser les deux tables existantes (pas de merge en une seule table).
+
+Justification : Platform et Company ont des pivots différents (`platform_role_permission` vs `company_role_permission`), des modèles de rôles différents (pas de `company_id` côté platform), et des guards d'auth différents (`auth:platform` vs `auth:sanctum`). Merger introduirait un scope column + polymorphic pivots sans gain fonctionnel. L'unification se fait au niveau du **service catalog** et du **contrat API**.
+
+#### B1. Schema Normalization — `platform_permissions` table
+
+**Migration** : Ajouter `module_key VARCHAR(50) INDEXED` + `is_admin BOOLEAN DEFAULT false` + `hint VARCHAR(255) NULLABLE`.
+
+Backfill : `PlatformPermissionCatalog::sync()` remplit automatiquement (les données viennent de `ModuleManifest`).
+
+Résultat : les deux tables ont un schéma symétrique :
+```
+company_permissions:  id, key, label, module_key, is_admin, timestamps
+platform_permissions: id, key, label, module_key, is_admin, timestamps
+```
+
+> Note: `hint` reste dans le manifest uniquement (pas en DB). Le catalog endpoint le lit à la volée depuis `ModuleManifest`, comme le fait déjà `CompanyRoleController::permissionCatalog()`.
+
+#### B2. `PlatformPermissionCatalog::sync()` — Normalisation
+
+Aligner sur `CompanyPermissionCatalog::sync()` :
+```php
+PlatformPermission::updateOrCreate(
+    ['key' => $permission['key']],
+    [
+        'label' => $permission['label'],
+        'module_key' => $permission['module_key'],  // AJOUT
+        'is_admin' => $permission['is_admin'] ?? false,  // AJOUT
+    ],
+);
+```
+
+`PlatformPermissionCatalog::all()` retourne déjà `module_key`. Ajouter `is_admin` (les manifests platform n'en déclarent pas encore → default false, futur-proof).
+
+#### B3. Unified Catalog Contract — Platform `PermissionController`
+
+Remplacer le flat `GET /permissions` par un `permissionCatalog()` endpoint miroir de `CompanyRoleController::permissionCatalog()`.
+
+**Contrat API unifié** (identique pour les deux scopes) :
+
+```json
+{
+  "permissions": [
+    {
+      "id": 1,
+      "key": "manage_companies",
+      "label": "Manage Companies",
+      "module_key": "platform.companies",
+      "is_admin": false,
+      "module_name": "Companies",
+      "module_description": "Manage companies and their users",
+      "hint": "",
+      "module_active": true
+    }
+  ],
+  "modules": [
+    {
+      "module_key": "platform.companies",
+      "module_name": "Companies",
+      "module_description": "Manage companies and their users",
+      "module_icon": "tabler-building",
+      "module_active": true,
+      "is_core": false,
+      "capabilities": [
+        {
+          "key": "companies.supervision",
+          "label": "Company Supervision",
+          "hint": "Manage companies and view their users.",
+          "is_admin": false,
+          "permissions": ["manage_companies", "view_company_users"],
+          "permission_ids": [1, 2]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Différence scope** :
+- Company : `module_active` dépend de `ModuleGate::isActive($company, $key)` (per-company activation)
+- Platform : `module_active` = toujours `true` (admin modules always active, pas de per-tenant activation)
+
+#### B4. Shared Catalog Service — `PermissionCatalogBuilder`
+
+Extraire la logique d'enrichissement (actuellement inline dans `CompanyRoleController::permissionCatalog()`) en un service réutilisable :
+
+```
+App\Core\RBAC\PermissionCatalogBuilder
+```
+
+Méthode publique :
+```php
+public static function build(string $scope, ?Company $company = null): array
+// $scope = 'company' | 'admin'
+// $company = required for 'company' scope (module activation check)
+// Returns: ['permissions' => [...], 'modules' => [...]]
+```
+
+Les deux controllers (`CompanyRoleController::permissionCatalog()` et platform `PermissionController::index()`) délèguent à ce builder. Zéro duplication de logique.
+
+#### B5. `PlatformPermission` Model — Normalisation
+
+```php
+protected $fillable = ['key', 'label', 'module_key', 'is_admin'];
+
+protected function casts(): array {
+    return ['is_admin' => 'boolean'];
+}
+```
+
+Aligné sur `CompanyPermission`.
+
+#### B6. Platform Roles Store — Normalisation
+
+Ajouter `_permissionModules` state + `permissionModules` getter (symétrique au company settings store) :
+
+```javascript
+state: () => ({
+  _roles: [],
+  _permissionCatalog: [],
+  _permissionModules: [],  // AJOUT
+}),
+
+async fetchPermissionCatalog() {
+  const data = await $platformApi('/permissions')
+  this._permissionCatalog = data.permissions
+  this._permissionModules = data.modules || []  // AJOUT
+}
+```
+
+#### B7. Shared `_PermissionMatrix.vue` Sub-Component
+
+Extraire la logique de rendu permissions de `company/roles.vue` (lignes 72-913, ~840 lignes de template) en un sous-composant partagé :
+
+```
+resources/js/pages/shared/_PermissionMatrix.vue
+```
+
+**Props** :
+| Prop | Type | Description |
+|------|------|-------------|
+| `permissionCatalog` | `Array` | Enriched permissions flat array |
+| `permissionModules` | `Array` | Modules with capabilities/bundles |
+| `selectedPermissions` | `Array<number>` | Selected permission IDs (v-model) |
+| `isAdministrative` | `Boolean` | Management vs Operational toggle state |
+| `scope` | `'company'\|'platform'` | Scope flag |
+
+**Events** :
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `update:selectedPermissions` | `Array<number>` | Emitted on permission toggle |
+
+**Internal state** :
+- `isAdvancedMode` : Simple/Advanced toggle (local)
+- Computed : `capabilityModules`, `coreModules`, `businessModules`, `unbundledModules`, `permissionGroups`
+- Methods : `getCapabilityState()`, `toggleCapability()`, `togglePermission()`, `isPermissionChecked()`
+
+**Scope-specific behavior** :
+- `scope='company'` : Shows inactive module permissions section (modules can be deactivated per-company)
+- `scope='platform'` : All modules always active → inactive section never rendered
+- `scope='company'` : Splits modules into core (prefixed `core.`) vs business
+- `scope='platform'` : All modules are admin-scope → no core/business split needed, but CAN reuse the visual grouping. GroupBy manifest `surface` (structure vs operations) or simply list all.
+
+**i18n** : The component uses the same i18n fallback pattern (`permissionCatalog.modules.{key}.name` → API label). No scope-specific i18n.
+
+Both `company/roles.vue` and `platform/roles.vue` import `_PermissionMatrix` and pass their store data as props.
+
+#### B8. Platform Role Level — `is_administrative` concept
+
+Company roles have `is_administrative` boolean (Management vs Operational). Platform roles do NOT have this concept currently.
+
+**Decision** : Do NOT add `is_administrative` to platform roles.
+
+Justification : Platform has `super_admin` (structural bypass) + custom roles. There's no equivalent "admin permission gating" need — all platform permissions are administrative by nature. Adding the toggle would create UX confusion. The `_PermissionMatrix` component receives `isAdministrative` as prop — platform always passes `true` (all permissions visible, no stripping).
+
+#### B9. Permission Key Mapping — Backfill
+
+`PlatformPermissionCatalog::all()` already returns `module_key` for every permission. The migration backfill is trivially computed by re-running `sync()`.
+
+Explicit mapping (for traceability) :
+
+| Permission Key | module_key |
+|---------------|-----------|
+| `manage_companies` | `platform.companies` |
+| `view_company_users` | `platform.companies` |
+| `manage_plans` | `platform.plans` |
+| `manage_markets` | `platform.markets` |
+| `manage_translations` | `platform.translations` |
+| `manage_platform_users` | `platform.users` |
+| `manage_platform_user_credentials` | `platform.users` |
+| `manage_roles` | `platform.roles` |
+| `manage_modules` | `platform.modules` |
+| `manage_field_definitions` | `platform.fields` |
+| `manage_jobdomains` | `platform.jobdomains` |
+| `manage_theme_settings` | `platform.settings` |
+| `manage_session_settings` | `platform.settings` |
+| `manage_maintenance` | `platform.settings` |
+| `manage_billing` | `platform.billing` |
+| `view_billing` | `platform.billing` |
+| `view_audit_logs` | `platform.audit` |
+| `manage_security_alerts` | `platform.security` |
+| `manage_realtime` | `platform.security` |
+| `manage_audience` | `platform.audience` |
+
+20 permissions across 14 modules. 17 bundles already declared in manifests.
+
+### Implementation Plan — Strict Dependency Order
+
+```
+Phase 1: Backend Schema (no frontend changes, no API break)
+  ├─ 1a. Migration: add module_key + is_admin to platform_permissions
+  ├─ 1b. PlatformPermission model: add fillable + casts
+  ├─ 1c. PlatformPermissionCatalog::sync(): write module_key + is_admin
+  ├─ 1d. Run migration + re-sync (backfill)
+  └─ Tests: verify all 20 permissions have module_key after sync
+
+Phase 2: Shared Catalog Service (still no API break)
+  ├─ 2a. Create PermissionCatalogBuilder service
+  ├─ 2b. Refactor CompanyRoleController::permissionCatalog() to use builder
+  └─ Tests: company catalog endpoint returns identical response
+
+Phase 3: Platform Catalog Endpoint (API break — coordinated)
+  ├─ 3a. Refactor PermissionController::index() to use PermissionCatalogBuilder
+  ├─ 3b. Response now returns {permissions: [...enriched], modules: [...with bundles]}
+  └─ Tests: platform catalog endpoint returns correct structure
+
+Phase 4: Frontend — Store + Shared Component
+  ├─ 4a. Platform roles store: add _permissionModules state
+  ├─ 4b. Extract _PermissionMatrix.vue from company/roles.vue
+  ├─ 4c. Rewire company/roles.vue to use _PermissionMatrix
+  ├─ 4d. Rewire platform/roles.vue to use _PermissionMatrix
+  └─ Tests: both pages render module-grouped permissions
+
+Phase 5: Cleanup
+  ├─ 5a. i18n: add platform module/bundle/permission keys
+  └─ 5b. Verify: identical UX on both scopes
+```
+
+### Conséquences
+
+- **Platform roles page** : gains module grouping, bundles, simple/advanced modes, hints, icons
+- **Code reduction** : ~840 lines of permission template extracted from company/roles.vue into shared component
+- **Zero company-side regression** : Same enriched API contract, same rendering
+- **Schema symmetry** : Both permission tables have same columns
+- **Catalog service** : Single PermissionCatalogBuilder — no more inline enrichment
+- **No new tables** : Just 2 columns added to existing table + migration
+- **No new models** : Existing models updated
+- **`super_admin` bypass** : Unchanged — bypasses at `PlatformUser::hasPermission()` level, not at UI level
+
+## ADR-133 : RBAC Capability Model — Bundle-First Enforcement
+
+- **Date** : 2026-02-27
+- **Status** : Implemented
+- **Depends on** : ADR-054 (Capability Abstraction Layer), ADR-132 (Unified Permission Architecture)
+
+### Contexte
+
+3 modules platform exposent des permissions sans capability bundles :
+- `platform.audience` — `manage_audience` (aucun bundle)
+- `platform.markets` — `manage_markets` (aucun bundle)
+- `platform.translations` — `manage_translations` (aucun bundle)
+
+Les 17 autres modules avec permissions ont une couverture bundle à 100%. Les 3 fautifs provoquent un rendu incohérent dans `_PermissionMatrix.vue` (section séparée "unbundled" au lieu de s'intégrer aux autres modules).
+
+### Décision
+
+**Règle architecturale** : tout module déclarant des `permissions` DOIT déclarer au moins un `bundle` couvrant l'ensemble de ses permissions. Aucun module à permissions plates n'est autorisé.
+
+**Correctifs appliqués** :
+- `platform.markets` : ajout bundle `markets.governance` → `[manage_markets]`
+- `platform.audience` : ajout bundle `audience.management` → `[manage_audience]`
+- `platform.translations` : ajout bundle `translations.management` → `[manage_translations]`
+
+**Validation** : `ModuleManifestIntegrityTest::test_modules_with_permissions_must_have_bundles()`
+- Échoue si un module avec permissions n'a pas de bundles
+- Échoue si une permission n'est couverte par aucun bundle
+- Empêche toute dérive future
+
+### Conséquences
+
+- Tous les modules (company + platform) passent par le rendu capability dans `_PermissionMatrix`
+- Les futurs modules DOIVENT déclarer des bundles ou le test CI échoue
+- Si un module n'a qu'un seul groupe logique de permissions, un bundle synthétique suffit (ex: `audience.management`)
+- Aucune modification du `PermissionCatalogBuilder` — la correction est à la source (manifests)
+- Aucune modification des clés de permissions existantes
+
+### Risques et Rollback
+
+**Breaking changes** :
+- Phase 3 changes the `GET /permissions` response shape. The only consumer is `platform/roles.vue` (same deploy).
+- No external API consumers.
+
+**Feature flags** : None needed. All changes are deployed together (same PR). If partial rollback required:
+- Phases 1-2 are invisible (no API break, no UI change)
+- Phase 3-4 must ship together (API + frontend coordinated)
+
+**Rollback** :
+- Revert Phase 4 frontend changes → platform roles falls back to flat VSelect
+- Revert Phase 3 → PermissionController returns flat array
+- Phases 1-2 are inert (extra columns, unused service) — can remain
+
+**Regression cases** (test plan) :
+- Backend:
+  - `PlatformPermissionCatalog::sync()` writes `module_key` for all 20 permissions
+  - `PermissionCatalogBuilder::build('admin')` returns 14 modules with 17 bundles
+  - `PermissionCatalogBuilder::build('company', $company)` returns same shape as current `permissionCatalog()`
+  - Platform role CRUD still works (store, update with permissions, super_admin protection)
+  - Company role CRUD unchanged (invariant: `syncPermissionsSafe`, admin permission stripping)
+- Frontend:
+  - Company roles page renders identically (regression test with screenshots)
+  - Platform roles page renders module-grouped permissions in drawer
+  - Simple/Advanced toggle works on both scopes
+  - `super_admin` role still shows "all permissions" bypass indicator
+  - Capability toggle (check/uncheck/indeterminate) works on platform scope
 
 ---
 

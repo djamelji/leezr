@@ -418,10 +418,12 @@
     "simpleView": "Simple view",
     "advanced": "Advanced",
     "coreTeamCompany": "Core — Team & Company",
+    "platformModules": "Platform Modules",
     "confirmDelete": "Delete role \"{name}\"?",
     "failedToDelete": "Failed to delete role.",
     "noRoles": "No roles yet. Create one to get started.",
-    "inactiveModulePermissionsHint": "This role has permissions from disabled modules. You can uncheck them to clean up.",
+    "addonModules": "Addon Modules",
+    "disabledModules": "Disabled Modules",
     "moduleInactive": "Disabled",
     "unbundledPermissions": "Permissions"
   },

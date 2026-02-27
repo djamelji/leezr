@@ -9,6 +9,7 @@ const TRANSITIONS = new Set([
   'cold→auth',
   'cold→ready',
   'auth→tenant',
+  'auth→features',
   'auth→ready',
   'auth→error',
   'auth→cold',

@@ -14,7 +14,7 @@ class PlatformPermissionCatalog
     /**
      * All platform permissions, aggregated from module manifests.
      *
-     * @return array<array{key: string, label: string, module_key: string}>
+     * @return array<array{key: string, label: string, module_key: string, is_admin: bool}>
      */
     public static function all(): array
     {
@@ -26,6 +26,7 @@ class PlatformPermissionCatalog
                     'key' => $permission['key'],
                     'label' => $permission['label'],
                     'module_key' => $moduleKey,
+                    'is_admin' => $permission['is_admin'] ?? false,
                 ];
             }
         }
@@ -49,7 +50,11 @@ class PlatformPermissionCatalog
         foreach (static::all() as $permission) {
             PlatformPermission::updateOrCreate(
                 ['key' => $permission['key']],
-                ['label' => $permission['label']],
+                [
+                    'label' => $permission['label'],
+                    'module_key' => $permission['module_key'],
+                    'is_admin' => $permission['is_admin'],
+                ],
             );
         }
     }

@@ -5,8 +5,7 @@ import { useNavStore } from '@/core/stores/nav'
 /**
  * Platform navigation items — manifest-driven, permission-filtered.
  *
- * When navStore is loaded (backend groups available), converts groups to nav items.
- * Falls back to legacy cookie-based nav when navStore not yet loaded.
+ * Converts backend nav groups to flat nav items with headings.
  */
 export function usePlatformNav() {
   const { t } = useI18n()
@@ -14,12 +13,7 @@ export function usePlatformNav() {
   const navStore = useNavStore()
 
   const navItems = computed(() => {
-    if (navStore.platformLoaded) {
-      return groupsToNavItems(navStore.platformGroups, auth, t)
-    }
-
-    // TODO(ADR-114): Remove legacy fallback. Convergence test: NavEndpointTest::test_platform_nav_matches_legacy
-    return legacyPlatformNav(auth)
+    return groupsToNavItems(navStore.platformGroups, auth, t)
   })
 
   const firstAccessibleRoute = computed(() => {
@@ -67,34 +61,6 @@ function groupsToNavItems(groups, auth, t) {
       items.push(navItem)
     }
   }
-
-  return items.filter(item => {
-    if (item.heading) return true
-    if (!item.permission) return true
-
-    return auth.hasPermission(item.permission)
-  }).filter(orphanHeadingFilter)
-}
-
-/**
- * Legacy fallback: existing usePlatformNav logic (cookie-based).
- */
-function legacyPlatformNav(auth) {
-  const moduleNavItems = (auth.platformModuleNavItems || []).map(item => ({
-    title: item.title,
-    to: item.to,
-    icon: { icon: item.icon },
-    permission: item.permission || null,
-  }))
-
-  const dashboard = moduleNavItems.find(i => i.to?.name === 'platform')
-  const rest = moduleNavItems.filter(i => i.to?.name !== 'platform')
-
-  const items = [
-    ...(dashboard ? [dashboard] : []),
-    { heading: 'Management' },
-    ...rest,
-  ]
 
   return items.filter(item => {
     if (item.heading) return true
