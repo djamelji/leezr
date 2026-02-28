@@ -4999,6 +4999,21 @@ self::assertNotFrozen($companyId);
 - **Exemple** : Layout `[revenue_trend x=0,w=8 + ar_outstanding x=0,y=4,w=4]`. Ajout `refund_ratio` (w=4) → first-fit trouve (8, 0) au lieu de (4, 4). Le widget se place à droite de revenue_trend, pas à côté de ar_outstanding sur une ligne inférieure.
 - **Fichiers** : `dashboard.store.js` (platform + company) — action `addWidget` réécrite.
 
+## ADR-153 : Hydration Gate — Full Boot Before Layout Mount
+
+- **Date** : 2026-02-28
+- **Contexte** : Après login, la sidebar (menu de navigation) restait vide. Un refresh de la page la faisait apparaître. Le problème n'était PAS CSS/visuel mais un défaut d'initialisation du cycle de vie.
+- **Cause racine** : Le router guard (`guards.js:43`) n'attendait que `whenAuthResolved()` (Phase 1 : validation session) avant d'autoriser la navigation. Le layout montait AVANT que la Phase 3 (`features:nav` → `navStore.fetchCompanyNav()`) ne complète. Le `navStore.companyGroups` était `[]` au moment du render — la sidebar affichait uniquement les items statiques (Dashboard, Account Settings) sans les sections métier dynamiques.
+  - **Login** : login() → teardown() → router.push → guard await auth ONLY → layout mount (nav vide) → features:nav complète tard → sidebar devrait se mettre à jour mais race condition avec le composant `VerticalNavLayout` de Vuexy.
+  - **Refresh** : boot froid → même race mais le délai est trop court pour être visible à l'oeil.
+- **Décision** : Remplacer `await runtime.whenAuthResolved()` par `await runtime.whenReady(8000)` dans le router guard, pour les deux cas : boot initial (cold/scope switch) et recovery (error state). Le guard bloque la navigation jusqu'à ce que TOUTES les phases soient complétées (auth → tenant → features → ready). Timeout 8s de sécurité — si boot stall, le guard continue et AppShellGate affiche le loading.
+- **Conséquences** :
+  - Le bouton login reste en état `loading` pendant tout le boot (~300-800ms de plus). L'utilisateur voit une transition directe login → dashboard avec sidebar complète. Zéro flash vide, zéro double render.
+  - Les utilisateurs non authentifiés ne sont PAS bloqués : le scheduler court-circuite (`!auth.isLoggedIn → _resolveReady()`) immédiatement après la phase auth. Le guard redirige vers /login sans délai.
+  - Les navigations ultérieures (même scope, runtime ready) ne sont PAS affectées : le bloc boot ne s'exécute que si `phase === 'cold'` ou scope change.
+  - Les routes module-gated conservent leur propre `whenReady(5000)` en second filet.
+- **Fichiers** : `resources/js/plugins/1.router/guards.js` — 2 lignes modifiées (whenAuthResolved → whenReady).
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

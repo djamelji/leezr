@@ -35,18 +35,20 @@ export const setupGuards = router => {
     useWorldStore().fetch()
 
     // ─── Boot runtime if cold or scope switched ──────────
+    // ADR-153: Await full boot (not just auth) so layout mounts with
+    // nav + modules already hydrated. Prevents empty sidebar after login.
     if (runtime.phase === 'cold' || runtime.scope !== scope) {
       if (runtime.scope && runtime.scope !== scope) {
         runtime.teardown()
       }
-      runtime.boot(scope)                    // fire (starts full boot)
-      await runtime.whenAuthResolved()       // await auth phase ONLY
+      runtime.boot(scope)
+      await runtime.whenReady(8000)
     }
     // ─── Re-boot if in error state ─────────────────────
     else if (runtime.phase === 'error') {
       runtime.teardown()
       runtime.boot(scope)
-      await runtime.whenAuthResolved()
+      await runtime.whenReady(8000)
     }
 
     // ─── Platform scope ──────────────────────────────────
