@@ -2,15 +2,18 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useDisplay } from 'vuetify'
 
 /**
- * Dashboard Grid Engine V5 (ADR-152 V5).
+ * Dashboard Grid Engine V6 (ADR-152 V6 — Single Source of Truth).
  *
- * Responsive grid with breakpoint contract:
+ * Layout is ALWAYS canonical 12-col. Responsive is PURELY VISUAL.
+ *
+ * Visual breakpoint contract (render-only, never mutates layout):
  *   Desktop (≥1280px) → 12 cols
- *   Tablet  (≥960px)  → 6 cols
- *   Mobile  (<960px)  → 4 cols (max w=2)
+ *   Tablet + Mobile (<1280px) → 6 cols
  *
- * Pipeline applied to EVERY layout mutation:
- *   1. clampToBounds    — enforce bounds + mobile w clamp
+ * 6 cols on mobile ensures S widgets (w=3) fit 2 per row.
+ *
+ * Pipeline applied to EVERY layout mutation (always 12 cols):
+ *   1. clampToBounds    — enforce bounds
  *   2. resolveOverlaps  — eliminate ALL overlaps
  *   3. compactLayout    — gravity up, zero holes
  *   3b. packRowsLeft    — eliminate horizontal gaps
@@ -18,13 +21,17 @@ import { useDisplay } from 'vuetify'
  *   4. assertNoOverlap  — final gate
  *
  * Each widget keeps its own h (free height). No row height unification.
+ * Viewport resize NEVER mutates layout — only visual clamping at render time.
  */
 export function useDashboardGrid(gridRef, catalog) {
   const { smAndDown, mdAndDown } = useDisplay()
 
-  // B1: Breakpoint contract
+  // Canonical grid — layout is ALWAYS stored in 12-col coordinates
+  const CANONICAL_COLS = 12
+
+  // Visual breakpoint — used ONLY for CSS grid rendering, never for layout mutation
+  // 6 cols on mobile/tablet so S widgets (w=3) fit 2 per row on all viewports
   const cols = computed(() => {
-    if (smAndDown.value) return 4
     if (mdAndDown.value) return 6
 
     return 12
@@ -52,7 +59,7 @@ export function useDashboardGrid(gridRef, catalog) {
     if (!gridRef.value) return { cellW: 80, cellH: ROW_HEIGHT }
     const rect = gridRef.value.getBoundingClientRect()
 
-    return { cellW: rect.width / cols.value, cellH: ROW_HEIGHT }
+    return { cellW: rect.width / CANONICAL_COLS, cellH: ROW_HEIGHT }
   }
 
   // ── Geometry ──
@@ -66,15 +73,12 @@ export function useDashboardGrid(gridRef, catalog) {
   // ══════════════════════════════════════════════════
 
   /**
-   * Step 1: Clamp tile to grid bounds.
-   * Mobile (4 cols): w clamped to max 2 (B3).
+   * Step 1: Clamp tile to grid bounds (always 12-col canonical).
    */
   function clampToBounds(tile, numCols) {
     let w = Math.max(1, Math.min(tile.w, numCols))
 
-    // Mobile: max 2 widgets per row. Desktop/tablet: min WIDGET_MIN_W
-    if (numCols === 4) w = Math.min(2, w)
-    else w = Math.max(WIDGET_MIN_W, w)
+    w = Math.max(WIDGET_MIN_W, w)
 
     const h = Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, tile.h))
     const x = Math.max(0, Math.min(tile.x, numCols - w))
@@ -305,6 +309,126 @@ export function useDashboardGrid(gridRef, catalog) {
     return layout
   }
 
+  // ══════════════════════════════════════════════════
+  // VISUAL LAYOUT (derived, never persisted)
+  // ══════════════════════════════════════════════════
+
+  /**
+   * Compute a visual layout for rendering at a given viewport column count.
+   * PURE function — returns a NEW array of tiles with derived x/y/w/h positions.
+   * The canonical layout is NEVER mutated, emitted, or saved.
+   *
+   * Algorithm:
+   *   1. Copy canonical layout, sort by (y, x) to preserve reading order
+   *   2. For each tile: renderW = min(w, viewCols), renderH = forceH || h
+   *   3. Place using occupancy map: find first row where tile fits
+   *   4. Return derived layout with visual positions
+   *
+   * At viewCols === CANONICAL_COLS (12) and no forceH, returns canonical positions unchanged.
+   *
+   * @param {Array} canonicalLayout - tiles with canonical x/y/w/h
+   * @param {number} viewCols - visual column count (6 on mobile/tablet, 12 on desktop)
+   * @param {number|null} forceH - if set, override all tile heights (mobile → 2)
+   */
+  function computeVisualLayout(canonicalLayout, viewCols, forceH = null) {
+    if (viewCols >= CANONICAL_COLS && !forceH) {
+      return canonicalLayout.map(t => ({ ...t }))
+    }
+
+    const sorted = [...canonicalLayout].sort((a, b) => a.y - b.y || a.x - b.x)
+
+    // Occupancy map: sparse rows × viewCols columns
+    // Each cell is true if occupied
+    const occupied = []
+
+    function isOccupied(row, col) {
+      return !!(occupied[row] && occupied[row][col])
+    }
+
+    function markOccupied(x, y, w, h) {
+      for (let row = y; row < y + h; row++) {
+        if (!occupied[row]) occupied[row] = new Array(viewCols).fill(false)
+        for (let col = x; col < x + w; col++) {
+          occupied[row][col] = true
+        }
+      }
+    }
+
+    function canPlace(x, y, w, h) {
+      for (let row = y; row < y + h; row++) {
+        for (let col = x; col < x + w; col++) {
+          if (col >= viewCols) return false
+          if (isOccupied(row, col)) return false
+        }
+      }
+
+      return true
+    }
+
+    const result = []
+    const halfCols = Math.floor(viewCols / 2)
+
+    function placeTile(tile, w, h) {
+      for (let y = 0; ; y++) {
+        for (let x = 0; x <= viewCols - w; x++) {
+          if (canPlace(x, y, w, h)) {
+            markOccupied(x, y, w, h)
+            result.push({ ...tile, x, y, w, h })
+
+            return
+          }
+        }
+        if (y > 200) {
+          markOccupied(0, y, w, h)
+          result.push({ ...tile, x: 0, y, w, h })
+
+          return
+        }
+      }
+    }
+
+    // ── Mobile mode: interleave charts (full) and KPI pairs (half) ──
+    if (forceH) {
+      const charts = sorted.filter(t => t.w > 6)   // w>6 → full width (graphiques)
+      const kpis = sorted.filter(t => t.w <= 6)    // w<=6 → half width (KPI, paired)
+
+      // If odd KPI count → last one goes full width
+      const kpiOdd = kpis.length % 2 !== 0
+
+      let ci = 0 // chart index
+      let ki = 0 // kpi index
+
+      // Interleave: 1 chart → up to 2 KPIs → 1 chart → up to 2 KPIs → ...
+      while (ci < charts.length || ki < kpis.length) {
+        // Place one chart
+        if (ci < charts.length) {
+          placeTile(charts[ci], viewCols, forceH)
+          ci++
+        }
+
+        // Place up to 2 KPIs
+        for (let pair = 0; pair < 2 && ki < kpis.length; pair++) {
+          const isLast = ki === kpis.length - 1
+          const w = (kpiOdd && isLast) ? viewCols : halfCols
+
+          placeTile(kpis[ki], w, forceH)
+          ki++
+        }
+      }
+
+      return result
+    }
+
+    // ── Non-mobile: standard visual re-pack ──
+    for (const tile of sorted) {
+      const renderW = Math.min(tile.w, viewCols)
+
+      placeTile(tile, renderW, tile.h)
+    }
+
+    return result
+  }
+
   /**
    * Step 4: Assert no overlap.
    */
@@ -322,7 +446,7 @@ export function useDashboardGrid(gridRef, catalog) {
    * Full pipeline: clamp → resolve → compact → packLeft → compact → reflow → packLeft → compact → assert.
    */
   function applyPipeline(layout, movedKey) {
-    const numCols = cols.value
+    const numCols = CANONICAL_COLS
 
     let tiles = layout.map(t => clampToBounds(t, numCols))
 
@@ -338,28 +462,6 @@ export function useDashboardGrid(gridRef, catalog) {
     if (tiles.some(t => t.y + t.h > DASHBOARD_MAX_H)) return null
 
     return tiles
-  }
-
-  /**
-   * Breakpoint remap: proportionally remap x/w, then pipeline.
-   * Mobile (4 cols): w clamped to max 2 (B3).
-   */
-  function remapBreakpoint(layout, oldCols, newCols) {
-    if (oldCols === newCols || !layout.length) return layout
-
-    const remapped = layout.map(t => {
-      let newW = Math.max(1, Math.round(t.w * newCols / oldCols))
-
-      // Mobile: max w = 2
-      if (newCols === 4) newW = Math.min(2, newW)
-
-      newW = Math.min(newCols, newW)
-      const newX = Math.max(0, Math.min(Math.floor(t.x * newCols / oldCols), newCols - newW))
-
-      return { ...t, x: newX, w: newW }
-    })
-
-    return applyPipeline(remapped, null) || remapped
   }
 
   // ── Drag (handle-only, 6px threshold) ──
@@ -442,7 +544,7 @@ export function useDashboardGrid(gridRef, catalog) {
       let newX = Math.max(0, dragging.value.origTileX + deltaCols)
       let newY = Math.max(0, dragging.value.origTileY + deltaRows)
 
-      newX = Math.min(newX, cols.value - dragging.value.w)
+      newX = Math.min(newX, CANONICAL_COLS - dragging.value.w)
 
       ghostTile.value = { x: newX, y: newY, w: dragging.value.w, h: dragging.value.h }
     }
@@ -472,11 +574,11 @@ export function useDashboardGrid(gridRef, catalog) {
         newW = resizing.value.origW
       }
 
-      newW = Math.min(newW, cols.value)
+      newW = Math.min(newW, CANONICAL_COLS)
 
       let ghostX = resizing.value.x
 
-      if (ghostX + newW > cols.value) {
+      if (ghostX + newW > CANONICAL_COLS) {
         ghostX = 0
       }
 
@@ -524,6 +626,7 @@ export function useDashboardGrid(gridRef, catalog) {
 
   return {
     cols,
+    CANONICAL_COLS,
     isMobile,
     dragging,
     resizing,
@@ -534,6 +637,6 @@ export function useDashboardGrid(gridRef, catalog) {
     startResize,
     onMouseUp,
     applyPipeline,
-    remapBreakpoint,
+    computeVisualLayout,
   }
 }

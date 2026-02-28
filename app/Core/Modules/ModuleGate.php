@@ -80,6 +80,13 @@ class ModuleGate
     {
         $platformModule = PlatformModule::where('key', $moduleKey)->first();
 
-        return $platformModule?->is_enabled_globally ?? false;
+        if ($platformModule) {
+            return $platformModule->is_enabled_globally;
+        }
+
+        // No row yet (before sync) — known modules default to enabled
+        $manifest = ModuleRegistry::definitions()[$moduleKey] ?? null;
+
+        return $manifest !== null;
     }
 }

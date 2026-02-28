@@ -21,7 +21,7 @@ const {
   cols, isMobile, dragging, resizing, ghostTile,
   placementError, placementErrorKey,
   startDrag, startResize, onMouseUp,
-  applyPipeline, remapBreakpoint,
+  applyPipeline, computeVisualLayout,
 } = useDashboardGrid(gridRef, catalogRef)
 
 const sortedLayout = computed(() =>
@@ -47,7 +47,7 @@ const previewLayout = computed(() => {
   return applyPipeline(newLayout, key)
 })
 
-const displayLayout = computed(() => {
+const canonicalDisplay = computed(() => {
   if (previewLayout.value) {
     return [...previewLayout.value].sort((a, b) => a.y - b.y || a.x - b.x)
   }
@@ -55,15 +55,11 @@ const displayLayout = computed(() => {
   return sortedLayout.value
 })
 
-// ── Breakpoint remap (A7) ──
-
-watch(cols, (newCols, oldCols) => {
-  if (oldCols !== newCols && props.layout.length) {
-    const remapped = remapBreakpoint(props.layout, oldCols, newCols)
-
-    if (remapped) emit('update:layout', remapped)
-  }
-})
+// Derived visual layout — re-packed for current viewport, NEVER persisted
+// Mobile: all widgets forced to h=2 (density S) for compact display
+const displayLayout = computed(() =>
+  computeVisualLayout(canonicalDisplay.value, cols.value, isMobile.value ? 2 : null),
+)
 
 // ── Density Engine (ADR-152 — pure height-based) ──
 
@@ -203,7 +199,7 @@ onUnmounted(() => {
   <div
     ref="gridRef"
     class="dashboard-grid"
-    :style="{ '--dashboard-cols': cols, '--dashboard-gap': cols <= 4 ? '8px' : cols <= 6 ? '12px' : '16px' }"
+    :style="{ '--dashboard-cols': cols, '--dashboard-gap': cols <= 6 ? '10px' : '16px' }"
   >
     <div
       v-for="tile in displayLayout"
@@ -215,7 +211,7 @@ onUnmounted(() => {
         'dashboard-tile--resizing': resizing?.key === tile.key,
       }"
       :style="{
-        gridColumn: `${tile.x + 1} / span ${Math.min(tile.w, cols)}`,
+        gridColumn: `${tile.x + 1} / span ${tile.w}`,
         gridRow: `${tile.y + 1} / span ${tile.h}`,
       }"
     >
@@ -311,8 +307,9 @@ onUnmounted(() => {
       v-if="ghostTile"
       class="dashboard-ghost"
       :style="{
-        gridColumn: `${ghostTile.x + 1} / span ${Math.min(ghostTile.w, cols)}`,
+        gridColumn: `${Math.min(ghostTile.x, cols - Math.min(ghostTile.w, cols)) + 1} / span ${Math.min(ghostTile.w, cols)}`,
         gridRow: `${ghostTile.y + 1} / span ${ghostTile.h}`,
+        zIndex: 5,
       }"
     />
   </div>

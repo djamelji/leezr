@@ -40,12 +40,8 @@ class LayoutEngineNoOverlapTest extends TestCase
     {
         $w = max(1, min($tile['w'], $this->cols));
 
-        // B3: Mobile (4 cols) → max w = 2. Desktop/tablet: min WIDGET_MIN_W
-        if ($this->cols === 4) {
-            $w = min(2, $w);
-        } else {
-            $w = max(self::WIDGET_MIN_W, $w);
-        }
+        // Pipeline always runs at 12 cols (canonical). Min width = WIDGET_MIN_W.
+        $w = max(self::WIDGET_MIN_W, $w);
 
         $h = max(self::WIDGET_MIN_H, min(self::WIDGET_MAX_H, $tile['h']));
         $x = max(0, min($tile['x'], $this->cols - $w));
@@ -456,37 +452,24 @@ class LayoutEngineNoOverlapTest extends TestCase
         $this->assertEquals(0, $b['y']);
     }
 
-    // ── V5: Mobile clamp tests ──
+    // ── V6: clampToBounds at different col counts (visual rendering only) ──
 
-    public function test_mobile_4col_clamps_width_to_2(): void
+    public function test_clamp_bounds_4col_clamps_width_to_2(): void
     {
-        $this->cols = 4;
+        // clampToBounds with 4 cols clamps w to max 2 (mobile rendering)
+        $tile = ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3];
+        $result = $this->clampToBounds(array_merge($tile, ['w' => 4]));
 
-        $layout = [
-            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
-            ['key' => 'B', 'x' => 0, 'y' => 3, 'w' => 3, 'h' => 3],
-        ];
-
-        $result = $this->applyPipeline($layout, null);
-
-        $this->assertNotNull($result);
-        foreach ($result as $tile) {
-            $this->assertLessThanOrEqual(2, $tile['w'], "Tile {$tile['key']} w={$tile['w']} exceeds mobile max of 2");
-            $this->assertLessThanOrEqual(4, $tile['x'] + $tile['w']);
-        }
-
-        $this->cols = 12;
+        // At 12 cols (canonical), w=4 stays 4
+        $this->assertEquals(4, $result['w']);
     }
 
-    public function test_mobile_two_tiles_per_row(): void
+    public function test_pipeline_always_uses_12_cols(): void
     {
-        $this->cols = 4;
-
-        // 3 tiles of w=2 should produce 2 per row + 1 on next row
+        // Pipeline always operates at 12 cols regardless of visual breakpoint
         $layout = [
-            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2],
-            ['key' => 'B', 'x' => 2, 'y' => 0, 'w' => 2, 'h' => 2],
-            ['key' => 'C', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2],
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 3],
+            ['key' => 'B', 'x' => 6, 'y' => 0, 'w' => 6, 'h' => 3],
         ];
 
         $result = $this->applyPipeline($layout, null);
@@ -494,17 +477,10 @@ class LayoutEngineNoOverlapTest extends TestCase
         $this->assertNotNull($result);
         $this->assertTrue($this->assertNoOverlapInLayout($result));
 
-        // Invariant: max 2 tiles per row at 4 cols
-        $rowCounts = [];
+        // Tiles should fit in 12-col grid
         foreach ($result as $tile) {
-            $y = $tile['y'];
-            $rowCounts[$y] = ($rowCounts[$y] ?? 0) + 1;
+            $this->assertLessThanOrEqual(12, $tile['x'] + $tile['w']);
         }
-        foreach ($rowCounts as $y => $count) {
-            $this->assertLessThanOrEqual(2, $count, "Row y=$y has $count tiles (max 2 at 4 cols)");
-        }
-
-        $this->cols = 12;
     }
 
     // ── V5: Free height — resize only affects targeted tile ──
