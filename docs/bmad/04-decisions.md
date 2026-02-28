@@ -3978,6 +3978,7 @@ Caractéristiques :
 - Phase D2b : 3 fichiers modifiés, 16 clés i18n
 - Phase D2c : 2 services (créé + modifié), 1 controller, 5 routes, 28 tests (100 assertions)
 - Phase D3a : 2 interfaces étendues, 1 adapter réécrit, 1 controller durci, 1 migration, 7 tests (17 assertions)
+- Phase D3b : 1 service créé, 1 adapter modifié, 1 migration, 14 tests (51 assertions)
 - `platform_settings.billing` JSON blob conservé temporairement (supprimé en LOT 8)
 - `Invoice.amount` conservé comme synonyme de `total` (backward compat)
 
@@ -4033,6 +4034,929 @@ Stripe SDK installé (`stripe/stripe-php` v19.4), vérification de signature web
 - `database/migrations/2026_02_27_300001_add_unique_provider_payment_id_to_payments.php` (créé)
 - `tests/Feature/StripeWebhookSecurityTest.php` (créé — 7 tests)
 - `tests/Feature/WebhookIdempotencyTest.php` (modifié — status assertion)
+
+#### Phase D3b : Stripe Webhook State Synchronization (ADR-138)
+
+**Date** : 2026-02-27
+**Statut** : Livré
+
+Business event handlers pour webhooks Stripe. 3 event types traités : `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`.
+
+**StripeEventProcessor** (nouveau service `app/Core/Billing/Stripe/`) :
+- `process(array $payload): WebhookHandlingResult` — dispatcher pour 3 types d'events
+- `handlePaymentSucceeded()` — upsert Payment, mark Invoice paid (open/overdue → paid)
+- `handlePaymentFailed()` — upsert Payment (status=failed), mark Invoice overdue (open → overdue seulement)
+- `handleChargeRefunded()` — issue CreditNote par refund (status=issued, PAS de wallet apply)
+
+**Mapping STRICT invoice-first** :
+- PaymentIntent `metadata.invoice_id` → lookup direct avec guard company_id
+- Fallback : `metadata.invoice_number` → lookup par numéro
+- Si aucune facture finalisée résolue → `handled: false`, PAS de Payment créé
+- Company : `metadata.company_id` → direct. Fallback : `CompanyPaymentCustomer.provider_customer_id`
+
+**Migration** :
+- `payments.invoice_id` nullable FK → invoices (nullOnDelete)
+- Index composite `(invoice_id, status)` pour queries billing
+- Contrainte `unique(provider_payment_id)` globale conservée (D3a)
+
+**Idempotency** :
+- Payment upsert : `Payment::updateOrCreate(['provider_payment_id' => $intentId])` + index unique
+- Invoice mark-paid : guard `in_array($status, ['open', 'overdue'])` — jamais re-marquer paid
+- Invoice mark-overdue : guard `$status === 'open'` — jamais régresser paid
+- Refund CreditNote : `CreditNote.metadata->provider_refund_id` dedup par invoice
+
+**Invariants D3b** :
+1. **S1** : Payment upsert idempotent (unique provider_payment_id)
+2. **S2** : Invoice paid seulement depuis open/overdue (void/uncollectible ignorés)
+3. **S3** : payment_failed → open→overdue seulement (DunningEngine gère la suite)
+4. **S4** : Refund CreditNote issued only, pas de wallet apply (conservateur)
+5. **S5** : Résolution company/invoice échoue gracieusement (handled=false)
+
+**AuditAction ajoutés** :
+- `WEBHOOK_PAYMENT_SYNCED` = `webhook.payment_synced` (severity: info)
+- `WEBHOOK_PAYMENT_FAILED` = `webhook.payment_failed` (severity: warning)
+- `WEBHOOK_REFUND_SYNCED` = `webhook.refund_synced` (severity: critical)
+
+**Tests** (`StripeWebhookSyncTest` — 14 tests, 51 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| payment_intent.succeeded | creates payment + marks paid, idempotent replay, ignored sans invoice, ignored si void, noop si déjà paid |
+| payment_intent.payment_failed | creates failed payment + marks overdue, noop si déjà overdue, noop si paid, ignored sans invoice |
+| charge.refunded | creates CN issued, idempotent par refund_id, ignored sans payment matching |
+| Edge + Audit | unhandled event → ignored, 3 audit logs créés |
+
+**Fichiers** :
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (créé — 3 handlers + 3 resolvers)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — wire handleWebhookEvent)
+- `app/Core/Billing/Payment.php` (modifié — +invoice_id fillable + invoice() relation)
+- `app/Core/Audit/AuditAction.php` (modifié — +3 constantes webhook)
+- `database/migrations/2026_02_27_400001_add_invoice_id_to_payments_table.php` (créé)
+- `tests/Feature/StripeWebhookSyncTest.php` (créé — 14 tests)
+
+---
+
+### ADR-139 — Phase D3c : Provider-First Collection & Refund Chaining
+
+**Date** : 2026-02-27
+**Statut** : Implémenté
+**Contexte** : D3b a établi le webhook Stripe comme source de vérité. Mais DunningEngine retry uniquement via wallet, et les refunds admin sont locaux uniquement. D3c rend Stripe le moteur de collection actif.
+
+#### Design critique : API calls OUTSIDE DB::transaction
+
+`DunningEngine::attemptRetry()` s'exécute dans `DB::transaction` avec `lockForUpdate()`. Les appels API Stripe ne doivent JAMAIS être dans cette transaction (row lock maintenu pendant I/O réseau).
+
+**Solution** : L'appel provider se fait AVANT la transaction wallet. Si provider réussit → return `'provider_attempted'` (webhook finalise l'état). Si provider échoue → fallback au flow wallet existant.
+
+#### Flux retry DunningEngine (modifié)
+
+```
+1. attemptProviderPayment() [HORS transaction]
+   → subscription.provider != null && != 'internal'
+   → adapter.collectInvoice(invoice, company)
+   → status == 'succeeded' → 'provider_attempted' (webhook finalisera)
+   → status == 'failed' ou exception → null (fallback wallet)
+
+2. DB::transaction [existant, inchangé]
+   → attemptWalletPayment()
+   → paid / reschedule / exhaust
+```
+
+#### collectInvoice() — Interface + Implémentation
+
+```php
+// PaymentProviderAdapter (interface)
+public function collectInvoice(Invoice $invoice, Company $company, array $metadata = []): array;
+// Retourne: {provider_payment_id, amount, status: 'succeeded'|'failed', raw_response}
+
+// StripePaymentAdapter
+// - Rate limit: 50 appels / 60s (RateLimiter)
+// - PaymentIntent::create(['confirm' => true, 'off_session' => true])
+// - Ne mute PAS la DB locale — webhook = source de vérité
+
+// InternalPaymentAdapter
+// - throw RuntimeException (pas de collection externe)
+```
+
+#### Refund chaining admin
+
+`AdminAdvancedMutationService::refund()` est provider-aware :
+
+```
+1. Trouver Payment provider : Payment.where(invoice_id, status=succeeded, provider!=internal)
+2. Si trouvé : adapter.refund(provider_payment_id, amount)
+   → succès : stocker provider_refund_id dans CreditNote.metadata
+   → échec : RuntimeException → controller renvoie 409
+3. Si pas trouvé : CreditNote locale uniquement (wallet-only invoices)
+```
+
+CreditNote metadata enrichi :
+- `provider_refund_id` — ID Stripe du refund
+- `provider_payment_id` — ID du payment original
+
+#### Adapter resolution
+
+`resolveAdapter()` dans DunningEngine et AdminAdvancedMutationService utilise le container Laravel (`app(StripePaymentAdapter::class)`) pour permettre le test override via `$this->app->bind()`.
+
+#### Rate limiting
+
+```php
+private const RATE_LIMIT_KEY = 'stripe-api';
+private const RATE_LIMIT_MAX = 50;
+private const RATE_LIMIT_DECAY = 60;
+// RateLimiter::tooManyAttempts() → RuntimeException
+// RateLimiter::hit() avant chaque appel
+// Couvre : collectInvoice() + refund()
+```
+
+#### Valeurs retour DunningEngine
+
+- `retrySingleInvoice()` : `'paid' | 'retried' | 'exhausted' | 'skipped' | 'provider_attempted'`
+- `'provider_attempted'` = provider a accepté la charge, webhook finalisera l'état local
+
+#### Invariants
+
+1. **I1** : collectInvoice() ne mute JAMAIS la DB locale
+2. **I2** : API call toujours HORS DB::transaction
+3. **I3** : Provider fail → wallet fallback transparent
+4. **I4** : Rate limit Stripe → RuntimeException (catchée par DunningEngine, propagée par admin refund)
+5. **I5** : Idempotency refund admin préservée (CreditNote.metadata.idempotency_key)
+6. **I6** : Invoice sans Payment provider → refund local-only
+
+**AuditAction ajouté** :
+- `PROVIDER_COLLECTION_ATTEMPTED` = `billing.provider_collection_attempted`
+
+**Tests** (`StripeProviderCollectionTest` — 18 tests, 48 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| Provider collection (7) | retry Stripe first, provider ne marque pas paid, fallback wallet, exhaust sans wallet, amount_due vérifié, metadata invoice_id+company_id, internal skippé |
+| Admin refund chaining (6) | Stripe refund appelé, CN avec provider_refund_id, abort on provider failure, idempotent replay, partial refund, wallet-only no Stripe |
+| Rate limit (3) | blocks collection, wallet fallback preserved, refund bloqué |
+| Audit (2) | refund audit, dunning retry audit |
+
+**Fichiers** :
+- `app/Core/Billing/Contracts/PaymentProviderAdapter.php` (modifié — +collectInvoice)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — +collectInvoice, +rate limit refund)
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` (modifié — +collectInvoice stub)
+- `app/Core/Billing/DunningEngine.php` (modifié — provider-first retry, resolveAdapter)
+- `app/Core/Billing/AdminAdvancedMutationService.php` (modifié — refund chaining, resolveAdapter)
+- `app/Core/Audit/AuditAction.php` (modifié — +1 constante)
+- `tests/Feature/StripeProviderCollectionTest.php` (créé — 18 tests)
+
+**Zéro frontend. Zéro nouvel endpoint. Zéro migration.**
+
+---
+
+### ADR-140 — Phase D3d : Reconciliation, Drift Detection & Alerting (Finance Hardening)
+
+**Date** : 2026-02-27
+**Statut** : Implémenté
+**Contexte** : D3c a établi provider-first collection, webhook source-of-truth, refund chaining, et rate limiting global. D3d complète la couche finance production-grade avec : détection de drift, réconciliation planifiée, alerting automatique, et isolation du rate limiting par company.
+
+#### Stratégie : Detection-only (pas d'auto-repair)
+
+Le ReconciliationEngine détecte les écarts mais ne corrige **rien** automatiquement. Toute correction passe par intervention admin. Auto-repair prévu en D3e.
+
+#### Taxonomie des drifts (5 types)
+
+| Type | Condition |
+|------|-----------|
+| `missing_local_payment` | Stripe PI succeeded, aucun Payment local avec ce provider_payment_id |
+| `missing_stripe_payment` | Payment local succeeded (provider=stripe), absent de la liste Stripe |
+| `status_mismatch` | Stripe PI succeeded mais Payment local status ≠ succeeded |
+| `refund_mismatch` | Charge Stripe refunded mais aucun CreditNote correspondant |
+| `invoice_not_paid` | Stripe PI succeeded + metadata.invoice_id, mais Invoice status ≠ paid |
+
+#### Rate limit isolation (Critical Fix)
+
+```php
+// AVANT (D3c) — global
+private const RATE_LIMIT_KEY = 'stripe-api';
+
+// APRÈS (D3d) — par company
+private static function rateLimitKey(?int $companyId = null): string
+{
+    return $companyId ? "stripe-api:{$companyId}" : 'stripe-api:global';
+}
+```
+
+- `collectInvoice()` → `enforceRateLimit($company->id)`
+- `refund()` → `enforceRateLimit($metadata['company_id'])`
+- `listPaymentIntents()` → `enforceRateLimit($companyId)`
+- Seuil inchangé : 50 appels / 60s par company
+
+#### Alerting
+
+Policy : `severity >= critical` + `config('billing.alerting.enabled')` → `BillingCriticalAlert` via `Notification::route('mail', $email)`.
+
+```php
+// config/billing.php
+'alerting' => [
+    'enabled' => env('BILLING_ALERT_ENABLED', false),
+    'email'   => env('BILLING_ALERT_EMAIL'),
+    'webhook_url' => env('BILLING_ALERT_WEBHOOK'),  // future
+],
+```
+
+Hook dans `AuditLogger::logPlatform()` — après DB write + realtime publish. Graceful : exception → `Log::warning()`, ne bloque jamais l'audit.
+
+#### Scheduler
+
+```php
+// routes/console.php
+Schedule::command('billing:process-dunning')->daily()->withoutOverlapping();
+Schedule::command('billing:reconcile')->weekly()->withoutOverlapping();
+```
+
+Les deux commandes implémentent `Isolatable` (cache lock, une instance).
+
+#### Commande billing:reconcile
+
+```
+billing:reconcile {--company=} {--dry-run}
+```
+
+- `--company=ID` : limiter à une company
+- `--dry-run` : pas d'audit log
+- Délègue à `ReconciliationEngine::reconcile()`
+- Output : summary des drifts par type
+
+#### Invariants
+
+1. **I1** : Detection-only — aucune mutation automatique
+2. **I2** : Rate limit isolé par company — `stripe-api:{companyId}`
+3. **I3** : Alerting graceful — dispatch fail → warning log, audit intact
+4. **I4** : Dry-run = aucun side-effect (pas d'audit, pas d'alert)
+5. **I5** : Stripe API errors dans reconcile → skip company, continue les autres
+6. **I6** : Scheduler withoutOverlapping + Isolatable = zéro concurrence
+
+**AuditAction ajouté** :
+- `BILLING_DRIFT_DETECTED` = `billing.drift_detected` (severity: critical)
+
+**Tests** (`BillingReconciliationTest` — 20 tests, 30 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| Detection (8) | missing local, missing stripe, status mismatch, refund mismatch, invoice not paid, clean, dry-run no log, non-dry-run logs |
+| Alerting (6) | critical dispatches, disabled no dispatch, email channel, non-critical no dispatch, alert content, dispatch failure graceful |
+| Rate limit isolation (3) | company isolation, A ne bloque pas B, global fallback |
+| Scheduler (3) | dunning daily, reconcile weekly, withoutOverlapping |
+
+**Fichiers** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — rate limit isolation + listPaymentIntents)
+- `app/Core/Billing/ReconciliationEngine.php` (créé — drift detection)
+- `app/Console/Commands/BillingReconcileCommand.php` (créé — Isolatable)
+- `app/Core/Audit/AuditLogger.php` (modifié — alert hook)
+- `app/Core/Audit/AuditAction.php` (modifié — +1 constante)
+- `app/Notifications/BillingCriticalAlert.php` (créé — mail notification)
+- `config/billing.php` (modifié — +alerting config)
+- `routes/console.php` (modifié — +2 scheduler entries)
+- `tests/Feature/StripeProviderCollectionTest.php` (modifié — rate limit keys)
+- `tests/Feature/BillingReconciliationTest.php` (créé — 20 tests)
+
+**Zéro frontend. Zéro migration. Zéro nouvel endpoint.**
+
+**Future D3e** : Auto-repair strategy (réconciliation corrective, forensics).
+
+---
+
+### ADR-141 — Phase D3e : Auto-Repair & Financial Forensics (Controlled, Auditable, Reversible)
+
+**Date** : 2026-02-27
+**Statut** : Implémenté
+**Contexte** : D3d a établi la détection de drift (5 types) et l'alerting. D3e ajoute l'auto-repair contrôlé pour les drifts safe, avec snapshot avant mutation, et un service de forensics pour timeline financière.
+
+#### Stratégie : Opt-in only, 3 safe types
+
+L'auto-repair est **désactivé par défaut** (`billing.auto_repair.enabled = false`). Dry-run par défaut (`billing.auto_repair.dry_run_default = true`). Seuls 3 types de drift sont réparables automatiquement :
+
+| Type safe | Réparation |
+|-----------|------------|
+| `missing_local_payment` | Crée un Payment local depuis les données Stripe |
+| `status_mismatch` | Met à jour le status du Payment local → succeeded |
+| `invoice_not_paid` | Marque l'Invoice comme paid + paid_at |
+
+Les 2 types unsafe (`missing_stripe_payment`, `refund_mismatch`) sont **toujours ignorés** — intervention admin obligatoire.
+
+#### Snapshot avant mutation (FinancialSnapshot)
+
+Chaque auto-repair prend un snapshot **avant** toute modification :
+
+```
+financial_snapshots
+├── company_id (FK)
+├── trigger (auto_repair | forensics)
+├── drift_type (missing_local_payment | status_mismatch | invoice_not_paid)
+├── entity_type (payment | invoice)
+├── entity_id
+├── snapshot_data (JSON — état complet avant mutation)
+├── correlation_id (UUID partagé par toutes les réparations d'un run)
+└── created_at
+```
+
+- Snapshots immutables — jamais modifiés après création
+- `correlation_id` lie toutes les réparations d'un même run
+- Indexé sur `[company_id, entity_type, entity_id]`
+
+#### Idempotence
+
+Chaque stratégie vérifie l'état actuel **avant** de muter :
+- `missing_local_payment` : skip si Payment avec ce provider_payment_id existe déjà
+- `status_mismatch` : skip si Payment.status === 'succeeded'
+- `invoice_not_paid` : skip si Invoice.status === 'paid'
+
+Un double-run ne produit aucune mutation supplémentaire.
+
+#### Configuration
+
+```php
+// config/billing.php
+'auto_repair' => [
+    'enabled'          => env('BILLING_AUTO_REPAIR_ENABLED', false),
+    'dry_run_default'  => env('BILLING_AUTO_REPAIR_DRY_RUN', true),
+    'safe_types'       => [
+        'missing_local_payment',
+        'status_mismatch',
+        'invoice_not_paid',
+    ],
+],
+```
+
+#### Commande billing:reconcile (étendue)
+
+```
+billing:reconcile {--company=} {--dry-run} {--repair}
+```
+
+- `--repair` : active l'auto-repair des drifts safe
+- Requiert `billing.auto_repair.enabled = true` en config
+- `--dry-run` + `--repair` : calcule les réparations sans muter
+
+#### Financial Forensics
+
+`FinancialForensicsService::timeline(companyId, days, ?entityType)` — vue chronologique de tous les événements financiers :
+- Invoices, Payments, CreditNotes, WalletTransactions, FinancialSnapshots
+- Filtrable par type d'entité
+- Trié par timestamp
+
+#### Invariants
+
+1. **I1** : Auto-repair opt-in uniquement — config enabled = false par défaut
+2. **I2** : Snapshot avant toute mutation — pas de mutation sans preuve
+3. **I3** : Idempotent — double-run = zéro mutation supplémentaire
+4. **I4** : Types unsafe jamais réparés automatiquement (missing_stripe_payment, refund_mismatch)
+5. **I5** : Dry-run = aucun side-effect (pas de snapshot, pas de mutation, pas d'audit)
+6. **I6** : Correlation ID lie toutes les réparations d'un run
+7. **I7** : Erreur sur une réparation → log warning, continue les autres
+
+**AuditAction ajouté** :
+- `BILLING_AUTO_REPAIR_APPLIED` = `billing.auto_repair_applied` (severity: warning)
+
+**Tests** (`BillingAutoRepairTest` — 25 tests, 65 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| missing_local_payment (3) | create payment, correct amount, links to subscription |
+| status_mismatch (3) | update status, stores previous in metadata, skips missing payment |
+| invoice_not_paid (4) | mark paid, sets paid_at, skips missing invoice, skips no invoice_id |
+| Snapshots (5) | missing creates snapshot, status creates snapshot before mutation, invoice creates snapshot, correlation_id, dry-run no snapshots |
+| Idempotency (4) | missing idempotent, status idempotent, invoice idempotent, double repair safe |
+| Config/dry-run (3) | disabled skips repairs, unsafe types skipped, dry-run no mutations |
+| Forensics (3) | timeline includes all types, sorted chronologically, filters by type |
+
+**Fichiers** :
+- `config/billing.php` (modifié — +auto_repair config)
+- `app/Core/Audit/AuditAction.php` (modifié — +1 constante)
+- `app/Core/Billing/FinancialSnapshot.php` (créé — modèle Eloquent)
+- `database/migrations/2026_02_27_500001_create_financial_snapshots_table.php` (créé)
+- `app/Core/Billing/AutoRepairEngine.php` (créé — 3 stratégies de réparation)
+- `app/Core/Billing/ReconciliationEngine.php` (modifié — +paramètre autoRepair)
+- `app/Console/Commands/BillingReconcileCommand.php` (modifié — +--repair flag)
+- `app/Core/Billing/FinancialForensicsService.php` (créé — timeline forensics)
+- `tests/Feature/BillingAutoRepairTest.php` (créé — 25 tests)
+
+**1 migration. Zéro frontend. Zéro nouvel endpoint.**
+
+---
+
+### ADR-142 — Phase D3f : Immutable Financial Ledger (Enterprise-Grade Accounting Layer)
+
+**Date** : 2026-02-27
+**Statut** : Implémenté
+**Contexte** : D3e a établi detect → alert → snapshot → repair → audit → forensics. D3f ajoute une couche comptable append-only double-entry, garantissant : aucune modification destructive, traçabilité irréfutable, reconstruction de solde à tout instant, conformité audit.
+
+#### Principes non négociables
+
+1. **Append-only strict** — jamais UPDATE, jamais DELETE (enforced par boot())
+2. **Double-entry obligatoire** — SUM(debit) = SUM(credit) par correlation_id
+3. **Aucune logique métier dans le ledger** — le ledger enregistre, ne décide pas
+4. **Le ledger ne remplace pas les tables métier** — les Payment/Invoice/CreditNote restent source de vérité opérationnelle
+5. **Reconstruction possible** — trialBalance(companyId) recompute le solde en temps réel
+
+#### Mapping comptable
+
+| Événement | Entry Type | Débit | Crédit |
+|-----------|-----------|-------|--------|
+| Invoice finalisée (100€) | `invoice_issued` | AR: 100 | REVENUE: 100 |
+| Paiement reçu (100€) | `payment_received` | CASH: 100 | AR: 100 |
+| Refund émis (30€) | `refund_issued` | REFUND: 30 | CASH: 30 |
+| Write-off (bad debt 100€) | `writeoff` | BAD_DEBT: 100 | AR: 100 |
+
+Comptes : `AR` (Accounts Receivable), `CASH`, `REVENUE`, `REFUND`, `BAD_DEBT`
+
+#### Schema
+
+```sql
+financial_ledger_entries
+├── id
+├── company_id (FK, index)
+├── entry_type (invoice_issued | payment_received | refund_issued | writeoff | adjustment)
+├── account_code (AR | CASH | REVENUE | REFUND | BAD_DEBT)
+├── debit DECIMAL(15,2)
+├── credit DECIMAL(15,2)
+├── currency CHAR(3)
+├── reference_type (invoice | payment | credit_note)
+├── reference_id
+├── correlation_id UUID (index)
+├── metadata JSON
+├── recorded_at (index)
+└── timestamps
+```
+
+NO soft deletes. NO cascade delete. NO update possible.
+
+#### LedgerService API
+
+```php
+LedgerService::recordInvoiceIssued(Invoice $invoice);    // Debit AR, Credit REVENUE
+LedgerService::recordPaymentReceived(Payment $payment);   // Debit CASH, Credit AR
+LedgerService::recordRefundIssued(CreditNote $cn);        // Debit REFUND, Credit CASH
+LedgerService::recordWriteOff(Invoice $invoice);           // Debit BAD_DEBT, Credit AR
+LedgerService::trialBalance(int $companyId): array;        // Balance par compte
+```
+
+#### Hooks dans le domaine
+
+| Point d'intégration | Moment |
+|---------------------|--------|
+| `InvoiceIssuer::finalize()` | Après update → `recordInvoiceIssued()` |
+| `StripeEventProcessor::handlePaymentSucceeded()` | Après Payment créé + Invoice payée → `recordPaymentReceived()` |
+| `AdminAdvancedMutationService::refund()` | Après CreditNote émis → `recordRefundIssued()` |
+| `AdminAdvancedMutationService::writeOff()` | Après status uncollectible → `recordWriteOff()` |
+| `DunningEngine::attemptRetry()` (exhausted) | Après status uncollectible → `recordWriteOff()` |
+
+Chaque hook est wrappé en try/catch — le ledger ne bloque **jamais** le flux métier.
+
+#### Commande billing:ledger-check
+
+```
+billing:ledger-check {--company=}
+```
+
+Validations :
+1. Double-entry : `SUM(debit) == SUM(credit)` par correlation_id
+2. Orphelins : reference_type/id pointe vers un enregistrement existant
+3. Cohérence devise : pas de mix EUR/USD dans un même correlation group
+
+#### Invariants
+
+1. **I1** : Append-only — update() et delete() lèvent RuntimeException
+2. **I2** : Double-entry — debit == credit par correlation_id (vérifié par ledger-check)
+3. **I3** : Ledger indépendant du repair engine — n'auto-répare jamais
+4. **I4** : Trial balance reproductible — SUM(debit - credit) par account_code
+5. **I5** : Hooks gracieux — erreur ledger → warning log, flux métier intact
+6. **I6** : Ledger isolé — pas de cascade delete depuis les tables métier
+
+**Tests** (`BillingLedgerTest` — 30 tests, 62 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| Double-entry (10) | invoice 2 entries, debit=credit, AR debit, REVENUE credit, payment 2 entries, CASH debit + AR credit, refund 2 entries, REFUND debit + CASH credit, writeoff 2 entries, BAD_DEBT debit + AR credit |
+| Immutability (5) | update throws, delete throws, save throws, create works, has timestamps |
+| Hook integration (5) | finalize hook, webhook hook, admin refund hook, admin writeoff hook, dunning exhaustion hook |
+| Trial balance (5) | all accounts present, after invoice, after payment clears AR, after refund, after writeoff |
+| Integrity command (5) | clean passes, detects imbalance, detects orphan, detects currency mismatch, company filter |
+
+**Fichiers** :
+- `database/migrations/2026_02_27_600001_create_financial_ledger_entries_table.php` (créé)
+- `app/Core/Billing/LedgerEntry.php` (créé — modèle immutable)
+- `app/Core/Billing/LedgerService.php` (créé — 4 recording methods + trialBalance)
+- `app/Console/Commands/BillingLedgerCheckCommand.php` (créé — Isolatable)
+- `app/Core/Billing/InvoiceIssuer.php` (modifié — hook ledger)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (modifié — hook ledger)
+- `app/Core/Billing/AdminAdvancedMutationService.php` (modifié — hook ledger refund + writeoff)
+- `app/Core/Billing/DunningEngine.php` (modifié — hook ledger writeoff)
+- `tests/Feature/BillingLedgerTest.php` (créé — 30 tests)
+
+**1 migration. 1 commande. Zéro frontend. Zéro nouvel endpoint.**
+
+---
+
+## ADR-143 : Period Closing, Ledger Locking & Financial Controls (D3g)
+
+- **Date** : 2026-02-27
+- **Contexte** : ADR-142 fournit un ledger immutable append-only, mais ne gère pas la clôture comptable, le gel financier, ni les seuils de sécurité sur les opérations critiques.
+- **Décision** : Ajouter 5 mécanismes de contrôle financier :
+  1. **Financial Period Closing** — période (start_date, end_date) fermable par commande CLI. Une fois fermée, aucune écriture normale dans le ledger pour les dates couvertes.
+  2. **Ledger Period Guard** — `assertPeriodOpen()` vérifié avant chaque recording method. Rejet avec RuntimeException si la date tombe dans une période fermée.
+  3. **Adjustment Entries** — seul moyen de modifier le ledger après clôture. `entry_type='adjustment'`, reason obligatoire, double-entry respectée.
+  4. **Financial Freeze** — boolean `financial_freeze` sur Company. Quand activé : aucune écriture ledger (y compris adjustments), refunds et writeoffs bloqués.
+  5. **Writeoff Threshold** — seuil configurable (`billing.writeoff_threshold` en cents). Si > 0, les write-offs dépassant le seuil sont rejetés.
+- **Conséquences** :
+  - Clôture = opération irréversible (par design, pas de réouverture)
+  - Freeze = opération réversible (toggle admin)
+  - Guards LedgerService propagés via try/catch dans les hooks métier → freeze/period bloquent le ledger mais le flux métier continue (warning log)
+  - Threshold = 0 signifie illimité (défaut)
+
+**Invariants** :
+1. **I1** : Période fermée → écriture normale rejetée, adjustment permis (sauf freeze)
+2. **I2** : Company frozen → toute écriture ledger rejetée, y compris adjustments
+3. **I3** : Freeze bloque aussi refund() et writeOff() dans AdminAdvancedMutationService
+4. **I4** : Writeoff threshold vérifié avant l'écriture DB — pas d'incohérence partielle
+5. **I5** : BillingPeriodCloseCommand est Isolatable — une seule instance à la fois
+6. **I6** : Overlap interdit — deux périodes fermées ne peuvent pas chevaucher pour la même company
+7. **I7** : Audit trail — clôture de période → AuditAction::BILLING_PERIOD_CLOSED (severity critical)
+
+**LedgerService — guards ajoutés** :
+```php
+// Chaque recording method commence par :
+self::assertPeriodOpen($companyId);
+self::assertNotFrozen($companyId);
+```
+
+**Config** (`config/billing.php`) :
+```php
+'writeoff_threshold' => (int) env('BILLING_WRITEOFF_THRESHOLD', 0),
+```
+
+**Tests** (`BillingPeriodGovernanceTest` — 35 tests, 70 assertions) :
+| Groupe | Tests |
+|--------|-------|
+| Period Closing (8) | create, close, casts, unique constraint, different companies, audit constants, freeze attribute, freeze default |
+| Ledger Guard (7) | no period passes, open period passes, closed period throws, outside period passes, invoice rejected, payment rejected, writeoff rejected |
+| Adjustment (5) | balanced entries, entry_type=adjustment, reason in metadata, returns correlation_id, rejects zero |
+| Financial Freeze (5) | blocks ledger, blocks adjustment, blocks admin writeoff, blocks admin refund, unfrozen allows |
+| Writeoff Threshold (5) | below succeeds, above blocked, equal succeeds, zero=unlimited, config reads correctly |
+| Command (5) | dry-run, creates period, logs audit, rejects overlap, rejects invalid dates |
+
+**Fichiers** :
+- `database/migrations/2026_02_27_700001_create_financial_periods_table.php` (créé)
+- `database/migrations/2026_02_27_700002_add_financial_freeze_to_companies.php` (créé)
+- `app/Core/Billing/FinancialPeriod.php` (créé — modèle)
+- `app/Core/Models/Company.php` (modifié — +financial_freeze fillable + cast)
+- `app/Core/Audit/AuditAction.php` (modifié — +3 constantes)
+- `app/Core/Billing/LedgerService.php` (modifié — guards + recordAdjustment)
+- `app/Core/Billing/AdminAdvancedMutationService.php` (modifié — freeze + threshold guards)
+- `config/billing.php` (modifié — +writeoff_threshold)
+- `app/Console/Commands/BillingPeriodCloseCommand.php` (créé — Isolatable)
+- `tests/Feature/BillingPeriodGovernanceTest.php` (créé — 35 tests)
+
+**2 migrations. 1 commande. Zéro frontend. Zéro nouvel endpoint.**
+
+---
+
+## ADR-144 : HTTP Exposure of D3 Financial Services (D4b)
+
+- **Date** : 2026-02-27
+- **Contexte** : D3 services (Ledger, Forensics, Reconciliation, Period governance) exist only as internal PHP classes + CLI commands. The platform billing UI (D4c) needs HTTP endpoints to consume them.
+- **Décision** : Create a thin HTTP layer (`PlatformFinancialController`) that delegates to Core services via `PlatformFinancialReadService`. No business logic in the controller.
+- **Endpoints** :
+  - **Read** (view_billing) : `GET /billing/ledger/trial-balance`, `GET /billing/ledger/entries`, `GET /billing/financial-periods`, `GET /billing/forensics/timeline`, `GET /billing/forensics/snapshots`, `GET /billing/drift-history`
+  - **Write** (manage_billing) : `POST /billing/financial-periods/close`, `PUT /billing/companies/{id}/financial-freeze`, `POST /billing/reconcile`
+- **Contraintes** :
+  - Reconcile defaults to `dry_run=true` — auto-repair remains CLI-only
+  - Financial freeze toggle is per-company, not global
+  - All endpoints use existing `module.active:platform.billing` + `platform.permission:*` middleware
+  - 4 FormRequests for strict validation (TrialBalanceRequest, PeriodCloseRequest, FinancialFreezeRequest, ReconcileRequest)
+- **Fichiers** :
+  - `app/Core/Billing/ReadModels/PlatformFinancialReadService.php` (créé)
+  - `app/Modules/Platform/Billing/Http/PlatformFinancialController.php` (créé — 9 méthodes)
+  - `app/Modules/Platform/Billing/Http/Requests/` (créé — 4 FormRequests)
+  - `routes/platform.php` (modifié — +9 routes)
+
+**Zéro migration. Zéro modification Core. Repair = CLI-only.**
+
+---
+
+## ADR-145 : Invoice Detail Pages + PDF Fix (D4d)
+
+- **Date** : 2026-02-27
+- **Contexte** : D4c delivered tab-based billing views (invoices, payments, governance, ledger, forensics) but lacked drill-down invoice detail pages. The company-scope PDF download used `window.open()` which bypasses `$api` headers — the `X-Company-Id` header required by `SetCompanyContext` middleware was never sent, causing auth failures.
+- **Décision** :
+  - **Invoice detail pages** — Platform (`/platform/billing/invoices/[id]`) and Company (`/company/billing/invoices/[id]`) using Vuexy 9+3 col invoice preview preset layout
+  - **Backend enrichment** — `invoiceDetail()` in both `PlatformBillingReadService` and `CompanyBillingReadService` now includes `payments` and `ledger_entries` arrays (queried by `reference_type=invoice` + `reference_id`)
+  - **PDF fix** — Replace `window.open()` with `$api` blob download (ofetch `responseType: 'blob'`), which auto-injects `X-Company-Id` from cookie
+  - **Click-through** — Invoice number in list views becomes a `RouterLink` to the detail page
+  - **Scope separation** — Platform detail shows ledger entries (financial forensics), company detail does not
+- **Contraintes** :
+  - Zero new routes — existing `GET /billing/invoices/{id}` (both scopes) reused
+  - Zero new controllers — enriched existing read services only
+  - Platform page requires `layout: 'platform', platform: true` meta (BMAD-UI-001)
+  - Company page has NO layout meta (default = company layout)
+  - All amounts displayed via `formatMoney()` (cents → display)
+  - All text i18n'd (EN + FR)
+- **Fichiers** :
+  - `app/Core/Billing/ReadModels/PlatformBillingReadService.php` (modifié — +payments, +ledger_entries)
+  - `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (modifié — +payments, +ledger_entries)
+  - `resources/js/pages/platform/billing/invoices/[id].vue` (créé)
+  - `resources/js/pages/company/billing/invoices/[id].vue` (créé)
+  - `resources/js/pages/company/billing/_BillingInvoices.vue` (modifié — PDF blob + RouterLink)
+  - `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` (modifié — RouterLink)
+  - `resources/js/modules/platform-admin/billing/billing.store.js` (modifié — +fetchInvoiceDetail)
+  - `tests/Feature/InvoiceDetailEndpointTest.php` (créé — 10 tests)
+
+**Zéro route. Zéro migration. Zéro controller.**
+
+---
+
+## ADR-146 : D4d Hardening — i18n Nav, Ledger Crash, CSRF, Runtime Safety
+
+- **Date** : 2026-02-27
+- **Contexte** : Post-D4d, cinq problèmes identifiés :
+  1. Les titres de navigation (sidebar) étaient des chaînes anglaises brutes passées depuis les manifests modules — aucune traduction FR
+  2. `e.debit.toFixed(2)` crash sur la page détail facture : Laravel `decimal:2` cast sérialise en **string** dans le JSON, pas en number
+  3. Le retry 419 CSRF dans `$api` réutilisait les headers stale contenant l'ancien `X-XSRF-TOKEN`
+  4. Les `v-for` sur `invoice.payments`, `invoice.credit_notes`, `invoice.ledger_entries` crashent si le backend retourne `null`/`undefined`
+  5. Chaîne "Notes:" hardcodée en anglais dans la page détail company
+- **Décision** :
+  - **i18n navigation** — Les composables `useCompanyNav` et `usePlatformNav` traduisent via `t('nav.company.{key}')` / `t('nav.platform.{key}')` au lieu de passer `item.title` brut. Ajout de `nav.platform.*` (15 clés), `nav.company.*` (11 clés), `nav.groups.account` dans EN + FR. Les items statiques (Dashboard, Account Settings, heading Account) aussi i18n'és.
+  - **Ledger numeric** — `Number(e.debit).toFixed(2)` : coerce string→number avant `.toFixed()`. Fonctionne avec string ET number.
+  - **CSRF retry** — Avant le retry, suppression de `X-XSRF-TOKEN` de `options.headers` pour que `onRequest` injecte le token frais.
+  - **Runtime safety** — `v-for="p in (invoice.payments || [])"` sur toutes les boucles des deux pages détail.
+  - **Hardcoded string** — `"Notes:"` → `t('companyBilling.invoiceDetail.notes')`
+- **Tests** : +2 tests dans `InvoiceDetailEndpointTest` (total 12) :
+  - `test_ledger_entries_return_numeric_debit_credit` — vérifie que debit/credit survivent au cast `decimal:2`
+  - `test_invoice_detail_without_ledger_entries` — vérifie le retour d'un tableau vide
+- **Fichiers** :
+  - `resources/js/composables/useCompanyNav.js` (modifié — i18n titles)
+  - `resources/js/composables/usePlatformNav.js` (modifié — i18n titles)
+  - `resources/js/pages/platform/billing/invoices/[id].vue` (modifié — Number() coerce + v-for safety)
+  - `resources/js/pages/company/billing/invoices/[id].vue` (modifié — v-for safety + i18n "Notes:")
+  - `resources/js/utils/api.js` (modifié — delete stale XSRF before 419 retry)
+  - `resources/js/plugins/i18n/locales/en.json` (modifié — +nav.platform.*, +nav.company.*, +nav.groups.account)
+  - `resources/js/plugins/i18n/locales/fr.json` (modifié — idem FR)
+  - `tests/Feature/InvoiceDetailEndpointTest.php` (modifié — +2 tests)
+
+---
+
+## ADR-147 : D4e Billing Widgets Dashboard
+
+- **Date** : 2026-02-27
+- **Contexte** : Le tableau de bord plateforme et la page billing n'affichaient aucun indicateur financier visuel. Les données existent dans le ledger (ADR-142) mais aucun widget ne les exploite. L'objectif est de fournir une vue d'ensemble financière rapide pour les admins plateforme.
+- **Décision** :
+  - **Architecture widgets** — Interface `BillingDashboardWidget` (key, labelKey, defaultPeriod, resolve) + `BillingWidgetRegistry` (static catalog). Chaque widget est une classe autonome qui interroge le `PlatformBillingWidgetsReadService`.
+  - **ReadModel** — `PlatformBillingWidgetsReadService` : 5 méthodes statiques (currencyForCompany, revenueTrend, refundTotals, revenueTotals, arOutstanding). Requêtes sur `LedgerEntry` uniquement (immutable, append-only).
+  - **3 widgets** — `RevenueTrendWidget` (graphique area daily), `RefundRatioWidget` (ratio % avec seuils couleur), `ArOutstandingWidget` (solde net créances).
+  - **Controller passif** — `PlatformBillingWidgetsController` : index (liste widgets) + show (résout un widget). Aucun SQL dans le controller. 409 Conflict si devises mixtes.
+  - **Routes** — 2 GET dans le groupe `view_billing` : `/billing/widgets` et `/billing/widgets/{key}`.
+  - **Frontend** — Store Pinia enrichi (widgetData, widgetLoading, fetchAllWidgets). 3 sous-composants Vue (`_RevenueTrendWidget.vue`, `_RefundRatioWidget.vue`, `_ArOutstandingWidget.vue`). VueApexCharts pour le graphique area.
+  - **Dashboard** — Section « Financial Overview (Billing) » sur `/platform` avec toggle localStorage (`lzr:dashboard-billing-widgets`), gatée par permission `view_billing`.
+  - **Billing page** — Section « Financial Overview » en haut de `/platform/billing` avec sélecteur company + période.
+  - **i18n** — Clés `platformBilling.widgets.*` (13) + `platformDashboard.billingWidgets.*` (2) en EN + FR.
+- **Tests** : `PlatformBillingWidgetsTest` (10 tests) :
+  1. index requires auth (401)
+  2. index requires view_billing (403)
+  3. index returns 3 widgets
+  4. show unknown widget → 404
+  5. revenue_trend returns labels + series
+  6. refund_ratio returns revenue/refunds/ratio
+  7. ar_outstanding returns outstanding balance
+  8. validate company_id → 422
+  9. validate period enum → 422
+  10. mixed currencies → 409
+- **Fichiers** :
+  - `app/Modules/Billing/Dashboard/BillingDashboardWidget.php` (créé — interface)
+  - `app/Modules/Billing/Dashboard/BillingWidgetRegistry.php` (créé — registre statique)
+  - `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php` (créé — read model)
+  - `app/Modules/Billing/Dashboard/Widgets/RevenueTrendWidget.php` (créé)
+  - `app/Modules/Billing/Dashboard/Widgets/RefundRatioWidget.php` (créé)
+  - `app/Modules/Billing/Dashboard/Widgets/ArOutstandingWidget.php` (créé)
+  - `app/Modules/Platform/Billing/Http/PlatformBillingWidgetsController.php` (créé)
+  - `app/Modules/Platform/Billing/Http/Requests/WidgetResolveRequest.php` (créé)
+  - `routes/platform.php` (modifié — +2 routes widget)
+  - `resources/js/modules/platform-admin/billing/billing.store.js` (modifié — widget state/actions)
+  - `resources/js/pages/platform/billing/_RevenueTrendWidget.vue` (créé — ApexCharts area)
+  - `resources/js/pages/platform/billing/_RefundRatioWidget.vue` (créé — ratio + progress)
+  - `resources/js/pages/platform/billing/_ArOutstandingWidget.vue` (créé — montant outstanding)
+  - `resources/js/pages/platform/billing/index.vue` (modifié — Financial Overview section)
+  - `resources/js/pages/platform/index.vue` (modifié — dashboard billing widgets toggle)
+  - `resources/js/plugins/i18n/locales/en.json` (modifié — +widget keys)
+  - `resources/js/plugins/i18n/locales/fr.json` (modifié — +widget keys FR)
+  - `tests/Feature/PlatformBillingWidgetsTest.php` (créé — 10 tests)
+
+---
+
+## ADR-148 : D4e.2 Dashboard Engine — Catalog + Scope + Persistent Layout
+
+- **Date** : 2026-02-27
+- **Contexte** : ADR-147 fournissait 3 widgets billing company-scoped uniquement. Le dashboard exigeait un `company_id` pour chaque appel widget — aucune vue globale (cross-company) n'existait. Aucun catalogue, aucun batch resolver, aucune persistance de disposition, et aucun mécanisme pour d'autres modules d'enregistrer des widgets.
+- **Décision** :
+  - **WidgetManifest** — Nouvelle interface contrat (`app/Modules/Dashboard/Contracts/WidgetManifest.php`) : key, module, labelKey, descriptionKey, scope (`global`|`company`|`both`), permissions, capabilities, defaultConfig, resolve(array $context). Remplace `BillingDashboardWidget` pour le nouveau moteur (l'ancien reste intact).
+  - **DashboardWidgetRegistry** — Registre statique pattern `PaymentRegistry` : register, all, find, catalogForUser (filtrage par permissions + capabilities), boot, clearCache.
+  - **PeriodParser** — Extraction du parseur de période dupliqué dans les 3 widgets (`app/Modules/Dashboard/PeriodParser.php`).
+  - **Scope global** — 5 nouvelles méthodes dans `PlatformBillingWidgetsReadService` : `currencyGlobal()` (retourne devise unique ou `'MULTI'`), `revenueTrendGlobal()`, `refundTotalsGlobal()`, `revenueTotalsGlobal()`, `arOutstandingGlobal()`. Agrégation cross-company sans filtre company_id.
+  - **Widget adapters** — 3 nouvelles classes dans `app/Modules/Dashboard/Widgets/` implémentant `WidgetManifest` et déléguant au ReadModel. Préfixées `billing.` (billing.revenue_trend, billing.refund_ratio, billing.ar_outstanding). Les anciennes classes dans `Billing/Dashboard/Widgets/` restent intactes (backward compat).
+  - **Layout persistent** — Table `platform_user_dashboard_layouts` (user_id unique, layout_json). Modèle `PlatformUserDashboardLayout`. Layout par défaut en dur dans le controller si aucun enregistré.
+  - **Batch resolver** — `POST /dashboard/widgets/data` accepte un tableau de widgets à résoudre en une requête. Gestion d'erreur par widget (not_found, forbidden, company_id_required, RuntimeException).
+  - **Catalog endpoint** — `GET /dashboard/widgets/catalog` retourne les widgets visibles pour l'utilisateur courant.
+  - **4 routes** — catalog, batchResolve, layout GET, layout PUT. Middleware `module.active:platform.dashboard` uniquement (pas de permission spécifique — filtrage par widget).
+  - **hasCapability stub** — Ajouté à `PlatformUser`, retourne toujours `true` (capabilities non implémentées).
+  - **Frontend** — Nouveau store Pinia `dashboard.store.js` (catalog, layout, widgetData, resolveWidgets, saveLayout). Dashboard page transformée avec grille dynamique, drag-and-drop HTML5 natif, drawer catalogue, scope toggle par widget, bouton Save Layout.
+  - **Multi-currency** — Frontend affiche un badge "Multi-currency" si `currency === 'MULTI'`. Les widgets formatent les montants sans symbole devise dans ce cas.
+  - **i18n** — 15 clés `platformDashboard.engine.*` EN + FR. 2 clés description widget ajoutées.
+- **Tests** : `DashboardEngineTest` (10 tests, 46 assertions) :
+  1. catalog requires auth (401)
+  2. catalog filters by permission (admin=3, viewer=0)
+  3. catalog returns widget structure
+  4. batch resolve global scope (3 widgets sans company_id)
+  5. batch resolve company scope
+  6. batch resolve unknown widget → not_found
+  7. company scope requires company_id
+  8. layout get returns default
+  9. layout put saves and get returns
+  10. layout is per-user (indépendance entre users)
+- **Non-régressions** : `PlatformBillingWidgetsTest` (10 tests) reste vert. Endpoints `/billing/widgets` intacts.
+- **Fichiers** :
+  - `app/Modules/Dashboard/Contracts/WidgetManifest.php` (créé — interface)
+  - `app/Modules/Dashboard/DashboardWidgetRegistry.php` (créé — registre statique)
+  - `app/Modules/Dashboard/PeriodParser.php` (créé — helper)
+  - `app/Modules/Dashboard/Widgets/BillingRevenueTrendWidget.php` (créé — adapter)
+  - `app/Modules/Dashboard/Widgets/BillingRefundRatioWidget.php` (créé — adapter)
+  - `app/Modules/Dashboard/Widgets/BillingArOutstandingWidget.php` (créé — adapter)
+  - `app/Modules/Dashboard/PlatformUserDashboardLayout.php` (créé — modèle)
+  - `app/Modules/Platform/Dashboard/Http/DashboardWidgetController.php` (créé — catalog + batch)
+  - `app/Modules/Platform/Dashboard/Http/DashboardLayoutController.php` (créé — layout CRUD)
+  - `database/migrations/2026_02_27_800001_create_platform_user_dashboard_layouts_table.php` (créé)
+  - `resources/js/modules/platform-admin/dashboard/dashboard.store.js` (créé — Pinia store)
+  - `tests/Feature/DashboardEngineTest.php` (créé — 10 tests)
+  - `app/Platform/Models/PlatformUser.php` (modifié — +hasCapability stub)
+  - `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php` (modifié — +5 méthodes global)
+  - `app/Providers/AppServiceProvider.php` (modifié — +DashboardWidgetRegistry::boot())
+  - `routes/platform.php` (modifié — +4 routes dashboard)
+  - `resources/js/pages/platform/index.vue` (modifié — grille dynamique)
+  - `resources/js/pages/platform/billing/_RevenueTrendWidget.vue` (modifié — +scope prop, MULTI)
+  - `resources/js/pages/platform/billing/_RefundRatioWidget.vue` (modifié — +scope prop, MULTI)
+  - `resources/js/pages/platform/billing/_ArOutstandingWidget.vue` (modifié — +scope prop, MULTI)
+  - `resources/js/plugins/i18n/locales/en.json` (modifié — +engine keys, +desc keys)
+  - `resources/js/plugins/i18n/locales/fr.json` (modifié — +engine keys, +desc keys)
+
+## ADR-149 : D4e.3 Dashboard Grid Engine V2 — Grid x/y/w/h, Module Hooks, Company Surface
+
+- **Date** : 2026-02-27
+- **Contexte** : ADR-148 livrait un moteur de widgets plat avec `col_span`, drag-and-drop HTML5, côté plateforme uniquement. Manquant : grille 2D réelle (x/y/w/h), CSS Grid responsive, drag+resize, dashboard entreprise, hooks de widgets par module, défauts par jobdomain, auto-inject addon, validation layout, conformité thème.
+- **Décision** :
+  - **WidgetManifest V2** — 4 nouvelles méthodes : `layout()` (default_w/h, min_w/max_w, min_h/max_h), `category()` (groupement UI), `tags()` (recherche), `component()` (clé composant frontend). Trait `WidgetLayoutDefaults` fournit les implémentations par défaut.
+  - **Module key système** — `module()` passe de `'billing'` à `'core.billing'` (cohérence ModuleGate). `category()` remplace le rôle de groupement.
+  - **Convention-based discovery** — `app/Modules/*/Dashboard/widgets.php` et `app/Modules/*/*/Dashboard/widgets.php` retournent des tableaux de FQCN. `DashboardWidgetRegistry::boot()` scanne ces fichiers au lieu d'enregistrer en dur.
+  - **Dual catalog** — `catalogForUser(PlatformUser)` (existant, filtrage permissions) + `catalogForCompany(Company)` (nouveau, filtrage par activation module via `ModuleGate::isActiveForScope()`).
+  - **LayoutValidator** — Validation : max 30 tuiles, bornes grille (x≥0, y≥0, x+w≤12), contraintes min/max du manifest, détection overlap rectangulaire O(n²).
+  - **LayoutPacker** — Algorithme first-fit row-by-row en grille 12 colonnes. Carte d'occupation sparse. Borne de sécurité y<200. Retourne `{packed[], pending[]}`.
+  - **4 tables** — `company_dashboard_layouts` (company_id unique, layout_json), `jobdomain_dashboard_defaults` (jobdomain_id unique, layout_json, version), migration données `col_span→x/y/w/h`, `company_dashboard_widget_suggestions` (company_id, widget_key, status enum pending/accepted/dismissed).
+  - **Company dashboard endpoints** — 5 routes core sans module gate : catalog GET, batchResolve POST (scope forcé company), layout GET, layout PUT (middleware `company.access:manage-structure`), suggestions GET.
+  - **Platform presets** — Route `GET /dashboard/layout/presets` retournant les défauts par jobdomain.
+  - **ModuleEnabled listener** — `InjectModuleWidgets` : à l'activation d'un module, injecte les widgets company-scoped dans le layout via LayoutPacker, crée des suggestions pour les widgets non placés.
+  - **JobDomain dashboard clone** — Dans `JobdomainGate::assignToCompany()`, si un défaut existe et l'entreprise n'a pas de layout → clone automatique.
+  - **DashboardGrid.vue** — Composant partagé CSS Grid : `grid-template-columns: repeat(var(--dashboard-cols), 1fr)`, `grid-auto-rows: 80px`. Drag + resize par mousedown/mousemove/mouseup avec snap grille. Ghost preview. Responsive via `useDisplay()` (12/8/4 colonnes).
+  - **Widget shell** — VCard `variant="flat"`, flex column, dernier enfant flex-grow. Widgets ne contiennent plus de `<VCard>` propre.
+  - **widgetComponentMap.js** — Registre de composants async (`defineAsyncComponent`) pour code splitting. Partagé entre les deux surfaces.
+  - **Company dashboard page** — `pages/company/index.vue` sans meta layout (default = company). Suggestions banner VAlert, catalogue drawer, grille éditable si `manage-structure`.
+  - **Thème** — Zéro couleur codée en dur. Resize handle + ghost utilisent `rgba(var(--v-theme-primary), ...)`. Tous les chips `variant="tonal"`.
+  - **i18n** — 3 clés `platformDashboard.engine.*` (presets, applyPreset, resizeHint) + 9 clés `companyDashboard.*` EN/FR.
+- **Tests** :
+  - `LayoutValidatorTest` (7 tests) : valid, x<0, y<0, overflow, overlap, min/max, max tiles
+  - `LayoutPackerTest` (3 tests) : empty grid, existing respected, max tiles → pending
+  - `WidgetRegistryScanTest` (4 tests) : boot discovery, system key, V2 fields, catalogForCompany filtering
+  - `DashboardGridV2Test` (9 tests) : platform grid format, overlap rejection, presets, company catalog, company batch resolve, company layout CRUD, manage-structure guard, suggestions, company overlap rejection
+  - `DashboardEngineTest` (10 tests) : mis à jour pour format x/y/w/h et module `core.billing`
+- **Fichiers** :
+  - Créés : WidgetLayoutDefaults.php (trait), widgets.php (convention), LayoutValidator.php, LayoutPacker.php, CompanyDashboardLayout.php, JobdomainDashboardDefault.php, CompanyDashboardWidgetSuggestion.php, InjectModuleWidgets.php, CompanyDashboardWidgetController.php, CompanyDashboardLayoutController.php, 4 migrations, useDashboardGrid.js, DashboardGrid.vue, widgetComponentMap.js, company/dashboard.store.js, company/index.vue, 4 fichiers test
+  - Modifiés : WidgetManifest.php, DashboardWidgetRegistry.php, 3 billing widgets, DashboardWidgetController.php, DashboardLayoutController.php, JobdomainGate.php, AppServiceProvider.php, routes/company.php, routes/platform.php, platform/dashboard.store.js, platform/index.vue, 3 billing widget Vue, DashboardEngineTest.php, en.json, fr.json
+
+## ADR-150 : Widget Responsive Density Engine
+
+- **Date** : 2026-02-27
+- **Contexte** : ADR-149 livrait une grille CSS Grid fonctionnelle avec drag + resize, mais le contenu des widgets ne s'adaptait pas à la taille de leur tuile. Un widget redimensionné en petit croppe son contenu (chart tronqué, texte coupé).
+- **Décision** :
+  - **Density S/M/L** — Algorithme basé sur w/h de la tuile : `L` (w≥8 && h≥4), `M` (w≥4 && h≥3), `S` (sinon). Calculé dans `DashboardGrid.vue`, passé aux widgets via prop `viewport: { w, h, pxWidth, pxHeight, density }`.
+  - **ResizeObserver par tuile** — Chaque tuile observe son `contentRect` via `ResizeObserver`. Les dimensions pixel (`pxWidth`, `pxHeight`) sont disponibles en temps réel.
+  - **Widget shell** — `VCard variant="flat"` avec `border-radius: 12px`, `background-color: rgb(var(--v-theme-surface))`. Shell interne en flex column, dernier enfant `flex: 1 1 auto; min-height: 0; overflow: hidden`.
+  - **BillingRevenueTrend** — L: chart complet avec axes + tooltips + grid. M: chart simplifié (hauteur réduite, padding compacté). S: sparkline mode (`chart.sparkline.enabled: true`, pas d'axes/grid) + KPI valeur courante.
+  - **BillingRefundRatio** — L: KPI + breakdown revenue/refunds + progress bar. M: KPI + progress bar. S: ratio seul avec icône colorée.
+  - **BillingArOutstanding** — L/M: montant + description. S: montant seul avec icône.
+  - **Compatibilité** — Prop `viewport` optionnel, fallback density `'L'` si absent. Widgets fonctionnent identiquement sans la prop.
+  - **Zéro style inline** — Toutes les couleurs via Vuetify tokens (`text-${color}`, `:color` props). Aucun hex codé en dur.
+- **Tests** : `WidgetDensityTest` (4 tests) — L/M/S computation, boundary values.
+- **Fichiers** :
+  - Modifiés : `DashboardGrid.vue` (ResizeObserver, viewport prop, widget-shell CSS), `_RevenueTrendWidget.vue` (density S/M/L avec sparkline), `_RefundRatioWidget.vue` (density S/M/L), `_ArOutstandingWidget.vue` (density S/M/L)
+  - Créé : `tests/Unit/WidgetDensityTest.php`
+
+## ADR-151 : Company Dashboard Wiring Fix
+
+- **Date** : 2026-02-27
+- **Contexte** : ADR-149 créait `pages/company/index.vue` comme page dashboard entreprise, mais le routing effectif du dashboard company est `pages/dashboard.vue` (route `'dashboard'` à `/dashboard`). La navigation pointait déjà vers `{ name: 'dashboard' }`. Résultat : le dashboard widget engine n'était pas visible côté company.
+- **Décision** :
+  - **Intégration dans `dashboard.vue`** — Le widget engine (DashboardGrid, catalog drawer, suggestions, save layout) est intégré dans la page existante `pages/dashboard.vue` sous la section welcome + plan badge. Pas de page séparée.
+  - **Suppression `company/index.vue`** — Le fichier orphelin à `/company` est supprimé (route inaccessible depuis la navigation).
+  - **Empty state propre** — Si aucun widget configuré : VAvatar tonal + icône `tabler-layout-dashboard` + titre + description + bouton "Add Widget" (si `canEdit`). Pattern cohérent avec Vuexy.
+  - **Navigation inchangée** — La nav company pointe déjà vers `{ name: 'dashboard' }` avec i18n `nav.company.dashboard`. Pas de modification nécessaire.
+  - **Audit hook** — `JobdomainGate::assignToCompany()` log via `\Log::info()` le clone de dashboard default (ou le skip si layout existant).
+  - **i18n** — 2 nouvelles clés : `companyDashboard.widgetsTitle`, `companyDashboard.emptyStateHint` (EN + FR).
+- **Tests** : 2 tests ajoutés à `DashboardGridV2Test` — roundtrip complet API (catalog → save → get → resolve), empty state (layout vide par défaut).
+- **Fichiers** :
+  - Modifiés : `pages/dashboard.vue` (intégration widget engine), `JobdomainGate.php` (audit log), `en.json` + `fr.json` (+2 clés), `DashboardGridV2Test.php` (+2 tests)
+  - Supprimé : `pages/company/index.vue`
+
+---
+
+## ADR-152 : D4e.3 Fix Pack — Scope Widgets + Collision Drag + Smart Chart Density
+
+- **Date** : 2026-02-28
+- **Contexte** : Le dashboard grid V2 (ADR-149/150/151) présentait 3 problèmes : (1) les widgets billing platform (Revenue Trend, Refund Ratio, AR Outstanding) apparaissaient dans le catalog company, (2) le drag-drop autorisait l'overlap entre widgets, (3) en densité M les labels de dates se chevauchaient et en S les données étaient cachées sans contexte min/max.
+- **Décision** :
+  - **A) Audience séparation** — Nouveau champ `audience(): string` ('platform'|'company'|'both') sur `WidgetManifest`. Default trait = 'platform' (safe). Les 3 widgets billing sont `audience: 'platform'`. `catalogForCompany()` filtre par `audience in ['company','both']` + scope + module activation via `ModuleGate::isActive()`. Résultat : catalog company = [] sans widgets company activés.
+  - **B) Collision resolution** — `useDashboardGrid.js` expose `resolveCollisions(layout, movedKey)` : push-down algorithm qui déplace les tiles impactées vers `y = movedTile.y + movedTile.h`, résout les cascades, safety bound y<200. Si impossible : revert layout + VSnackbar erreur i18n `dashboardGrid.noSpaceToPlaceWidget`.
+  - **C) Smart chart density** — `maxTicks = max(2, floor(pxWidth / 80))` basé sur le `viewport.pxWidth` du ResizeObserver. Mode M : `xaxis.tickAmount = maxTicks`, `hideOverlappingLabels: true`, format court (`12 Feb`), font réduite. Mode S : sparkline + KPI + min/max context, `padding.bottom: 12` pour respiration.
+- **Tests** :
+  - `WidgetDensityTest` +1 test `test_max_ticks_computation` (9 assertions)
+  - `WidgetRegistryScanTest` +1 test `test_widgets_have_audience_field`, renommé `test_catalog_for_company_excludes_platform_audience_widgets`
+  - `DashboardGridV2Test` renommé `test_company_catalog_excludes_platform_audience_widgets`, mis à jour roundtrip
+- **Fichiers** :
+  - Backend : `WidgetManifest.php` (+audience), `WidgetLayoutDefaults.php` (+audience default), 3 billing widgets (+audience override), `DashboardWidgetRegistry.php` (catalogForCompany audience filter), controllers (+audience field)
+  - Frontend : `useDashboardGrid.js` (collision resolution), `DashboardGrid.vue` (+resolveCollisions +VSnackbar), `_RevenueTrendWidget.vue` (maxTicks + min/max S), `_RefundRatioWidget.vue` (S padding fix)
+  - i18n : `en.json` + `fr.json` (+dashboardGrid.noSpaceToPlaceWidget)
+
+### Addendum — UX Hardening (2026-02-28)
+
+- **Contexte** : Le drag était trop agressif (tout clic déclenchait un drag), les collisions laissaient des trous, le mode S affichait des axes et des dates cropées.
+- **Décisions** :
+  - **Drag handle only** — Le drag ne se déclenche qu'au clic sur l'icône `.drag-handle` (tabler-grip-vertical). Le contenu du widget (texte, KPI) est sélectionnable/scrollable normalement.
+  - **Drag threshold 6px** — Le drag ne s'active qu'après un déplacement de souris ≥ 6px. En dessous, c'est un clic normal.
+  - **compactLayout()** — Après chaque mutation (drop, resize), tous les tiles sont remontés au maximum possible (y--) tant qu'il n'y a pas d'overlap. Zéro trou garanti.
+  - **Smart collision** — Le tile déplacé a la priorité, les autres sont poussés vers le bas puis compactés. Résultat : réorganisation propre sans sauts ni espaces vides.
+  - **Height override h<=2 → S** — Si `tile.h <= 2`, la densité est forcée à S (sparkline only, no axes). Évite les axes et labels dans un espace insuffisant.
+  - **Axes strictement désactivés en S** — `xaxis.labels.show: false`, `yaxis.show: false`, `grid.show: false`, `legend.show: false`. Aucune ligne H/V.
+  - **Date format intelligent** — L/M : `"12 Feb"` (mois court). M : `tickAmount = maxTicks`, `hideOverlappingLabels: true`. S : aucun label, tooltip seul.
+  - **Header toujours visible** — Structure `widget-content > widget-header (flex: 0 0 auto) + widget-body/widget-chart-area (flex: 1 1 auto)`. En S, header réduit (`text-caption`) mais jamais supprimé.
+  - **KPI jamais cropé** — Padding stable, overflow contrôlé par `widget-body { min-height: 0; overflow: hidden }`. KPI dans zone `flex: 0 0 auto`.
+  - **Invalid placement** — Si le drop est hors grille ou impossible : revert + snackbar i18n `dashboardGrid.invalidPlacement`.
+- **Tests** : `WidgetDensityTest` +1 test `test_height_override_forces_s` (6 assertions). Total : 995 passed, 0 failures.
+- **Fichiers** : `useDashboardGrid.js` (rewrite: handle-only, threshold, compactLayout, collision), `DashboardGrid.vue` (rewrite: handle-only template, height override, validation), 3 billing widgets (rewrite: strict S/M/L, header always visible, structured layout), `en.json` + `fr.json` (+invalidPlacement)
+
+### Addendum V2 — UX Correction (2026-02-28)
+
+- **Contexte** : Le hardening précédent ne corrigeait que le drag sur handle. Les axes restaient visibles en mode S, la formule de densité basée sur grid (w,h) ne reflétait pas la taille réelle des pixels, et les collisions ne tentaient que le push-down (création de trous).
+- **Décisions** :
+  - **Formule densité h + pxWidth** — Nouvelle `computeDensity(h, pxWidth)` : h≤2→S, h≤3→M, pxWidth<400→S, pxWidth<700→M, else→L. La hauteur de grille force S/M dans les cas extrêmes, le reste est piloté par la largeur pixel réelle (via ResizeObserver). Suppression de l'ancienne formule basée sur grid (w,h).
+  - **Collision intelligente** — `resolveCollisions(layout, movedKey, origPos)` tente dans l'ordre : (1) **Swap** — si exactement 1 tile chevauche et ses dimensions permettent de le placer à l'ancienne position du tile déplacé. (2) **Push latéral** — essai droite puis gauche du tile déplacé. (3) **Push-down** — descente sous le tile déplacé + résolution cascade. (4) **Compact** — remontée globale.
+  - **S mode bulletproof** — Ajout explicite `xaxis.crosshairs: { show: false }`, `yaxis.axisBorder: { show: false }`, `yaxis.axisTicks: { show: false }`, `grid.padding.bottom: 12` dans la config ApexCharts S. Aucune ligne d'axe possible.
+- **Tests** : `WidgetDensityTest` entièrement réécrit pour la nouvelle formule (7 tests, 39 assertions). Total suite : 996 passed, 0 failures.
+- **Fichiers** : `DashboardGrid.vue` (computeDensity h+pxWidth, origPos passé), `useDashboardGrid.js` (resolveCollisions swap+lateral+push-down+compact), `_RevenueTrendWidget.vue` (S config crosshairs/axisBorder/axisTicks/padding), `WidgetDensityTest.php` (rewrite)
+
+### Addendum V3 — Grid Engine V3 (2026-02-28)
+
+- **Contexte** : V2 laissait des collisions (tiles superposées) et des trous persistants. L'algorithme de collision ad-hoc (swap/lateral/push-down) n'était pas déterministe. Besoin d'un VRAI layout engine avec invariants prouvés.
+- **Décisions** :
+  - **Pipeline unique** — Chaque mutation (drag, resize, add, remove, breakpoint) passe par exactement le même pipeline : `clampToBounds → resolveOverlaps → compactLayout → assertNoOverlap`. Si l'assertion finale échoue : revert + snackbar.
+  - **resolveOverlaps déterministe** — Boucle jusqu'à stabilité (max 200 itérations). Pour chaque paire de tiles en collision : le tile déplacé (movedKey) a priorité, sinon upper-left reste fixe. Le tile mobile est résolu dans l'ordre : (1) shift right, (2) shift left, (3) push down, (4) fallback next row (x=0, y=maxBottom). Chaque option n'est appliquée que si elle ne crée aucun nouveau chevauchement. Zéro collision garantie.
+  - **compactLayout gravity** — Tri y asc, x asc. Chaque tile descend y-- tant que pas d'overlap. Zéro trou garanti.
+  - **Breakpoint remap** — Quand cols change (12/8/4) : remap proportionnel `newW = round(w * newCols / oldCols)`, `newX = floor(x * newCols / oldCols)`, puis pipeline complet. Ajouté via `watch(cols)` dans DashboardGrid.vue.
+  - **Resize reflow** — Si le ghost dépasse cols au x courant : ghostX=0 (wrap). Le pipeline résout le reste au drop.
+  - **Chart crop fix** — `_RevenueTrendWidget.vue` : chart `height="100%"` (plus de hauteurs fixes 140/220), `:key="density"` pour remount propre, `chart.redrawOnParentResize: true`, suppression `overflow: hidden` sur widget-content et widget-chart-area (le parent card clip), M mode `grid.padding.bottom: 0` (plus de -5).
+  - **KPI widget-kpi** — Nouveau bloc `flex: 0 0 auto` pour le KPI en mode S : jamais cropé.
+- **Tests** : 4 nouveaux fichiers unit (29 tests, 118 assertions) :
+  - `LayoutEngineNoOverlapTest` (7 tests) — prouve que drag/resize/cascade ne produit jamais d'overlap
+  - `LayoutEngineCompactionTest` (6 tests) — prouve que compactLayout élimine tous les trous
+  - `LayoutEngineReflowTest` (6 tests) — prouve shift right > shift left > push down, breakpoint remap, full row → next row
+  - `DensityRenderRulesTest` (10 tests) — prouve la formule + documente les règles de rendu par densité
+- **Total suite** : 1025 passed, 0 failures.
+- **Fichiers** :
+  - `useDashboardGrid.js` — rewrite complet : pipeline, resolveOverlaps déterministe, remapBreakpoint
+  - `DashboardGrid.vue` — applyPipeline au drop, watch(cols) breakpoint remap
+  - `_RevenueTrendWidget.vue` — height="100%", :key=density, widget-kpi flex, pas d'overflow hidden
+  - 4 nouveaux tests unit PHP
+
+### Addendum V5 — Responsive Grid + Persistent Header (2026-02-28)
+
+- **Contexte** : V3 résolvait les collisions mais le grid n'était pas véritablement responsive. En réduisant la hauteur d'un widget, le header/title/snackbar disparaissait (masqué par `overflow: hidden` ou supprimé par `v-if`). Les breakpoints tablet/mobile ne réorganisaient pas les widgets correctement. Le resize sur mobile ne restreignait pas au vertical.
+- **Décisions** :
+  - **A) Header JAMAIS supprimé** — Chaque widget utilise un header unifié inline flex : `header-left` (icône + titre tronquable) + `header-right` (KPI + chip, jamais masqués). Le header est un unique `<div class="widget-header">` — PAS de `<template v-if="density === 'S'">` qui supprime le header. En S : typographie compacte (`text-caption` titre, `text-body-2` KPI). En M/L : typographie standard (`text-body-1` titre, `text-h6` KPI). Le KPI est toujours dans `header-right` (pas dans le body). Le body contient uniquement le chart/contenu spécifique à la densité. INTERDIT : `v-if` supprimant le header, `display:none` sur snackbar/chip, `overflow:hidden` clippant le KPI.
+  - **B) Breakpoint contract responsive** — Desktop ≥1280px → 12 cols. Tablet ≥960px <1280px → 8 cols. Mobile <960px → 4 cols. Via Vuetify `useDisplay()` : `smAndDown` → 4 cols, `mdAndDown` → 8 cols. Mobile (4 cols) : `w` max = 2 (clamp dans `clampToBounds`), max 2 widgets par row, packing vertical. Gap responsive : 8px mobile / 16px desktop (via CSS custom property `--dashboard-gap`).
+  - **C) Mobile resize vertical only** — Quand `isMobile`, le resize freeze la largeur (`newW = resizing.origW`). Curseur `s-resize` au lieu de `se-resize`.
+  - **D) Row height unification** — `normalizeRowHeights(tiles)` : pour chaque row (tiles partageant le même `y`), `rowH = max(h des widgets de la row)`, clampé au plus proche supérieur dans `{2, 3, 4, 6}`. Tous les tiles de la row reçoivent `rowH`. Élimine les incohérences visuelles intra-row.
+  - **E) Pipeline V5** — `clampToBounds → resolveOverlaps → compactLayout → normalizeRowHeights → re-resolveOverlaps → re-compactLayout → assertNoOverlap`. Le re-resolve + re-compact après normalisation corrige les overlaps potentiels causés par le changement de hauteur.
+- **Tests** : Mis à jour 2 fichiers + 6 nouveaux tests :
+  - `LayoutEngineNoOverlapTest` — +3 tests : `mobile_4col_clamps_width_to_2`, `mobile_two_tiles_per_row`, `row_heights_normalized_to_valid_set`, `normalize_row_heights_clamps_to_ceiling`. Pipeline V5 avec `normalizeRowHeights`.
+  - `LayoutEngineReflowTest` — +2 tests : `breakpoint_8_to_4_mobile_clamp`, `row_height_normalization_after_reflow`. Pipeline V5 + mobile clamp dans `remapBreakpoint`.
+- **Total suite** : 1031 passed, 0 failures (9 skipped).
+- **Fichiers** :
+  - `useDashboardGrid.js` — breakpoints smAndDown/mdAndDown, `isMobile`, mobile w clamp dans clampToBounds, `normalizeRowHeights`, pipeline V5, mobile vertical-only resize
+  - `DashboardGrid.vue` — import `isMobile`, gap responsive `--dashboard-gap`, resize handle cursor `s-resize` mobile
+  - `_RevenueTrendWidget.vue` — header unifié inline flex (header-left + header-right), KPI dans header-right, zéro `v-if` sur header
+  - `_RefundRatioWidget.vue` — header unifié inline flex, ratio% dans header-right, zéro `v-if` sur header
+  - `_ArOutstandingWidget.vue` — header unifié inline flex, montant dans header-right, zéro `v-if` sur header
+  - 2 tests unit PHP mis à jour (V5 pipeline + mobile + row height)
+
+### Addendum V5-hotfix — Row Height Unification Reverted (2026-02-28)
+
+- **Contexte** : La normalisation de hauteur de row (V5) empêchait les layouts "1 grand à gauche + 2 petits stackés à droite" — tous les widgets d'une même ligne recevaient la même hauteur, écrasant les différences voulues.
+- **Décision** : Suppression complète de `normalizeRowHeights`. Chaque widget garde son `h` indépendamment. Le pipeline redevient : `clampToBounds → resolveOverlaps → compactLayout → assertNoOverlap`. Le resize vertical ne modifie que le tile ciblé.
+- **Tests** : Les 2 tests `row_heights_normalized_to_valid_set` et `normalize_row_heights_clamps_to_ceiling` sont remplacés par `resize_height_does_not_affect_neighbors` et `two_small_beside_one_large` qui prouvent le free-height. Le test `row_height_normalization_after_reflow` est remplacé par `free_height_preserved_after_reflow`. Total suite : 1031 passed, 0 failures.
 
 ---
 

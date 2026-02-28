@@ -1,0 +1,438 @@
+<?php
+
+namespace Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+/**
+ * ADR-152 V5: Layout engine — ZERO COLLISION invariant.
+ *
+ * Mirrors the frontend resolveOverlaps + compactLayout pipeline.
+ * Proves that after any mutation (drag, resize, add, remove),
+ * no two tiles ever overlap.
+ *
+ * Pipeline: clamp → resolve → compact → assert.
+ * Each widget keeps its own h (free height, no row unification).
+ */
+class LayoutEngineNoOverlapTest extends TestCase
+{
+    private int $cols = 12;
+
+    // ── Engine (mirrors useDashboardGrid.js V5) ──
+
+    private function overlaps(array $a, array $b): bool
+    {
+        return $a['x'] < $b['x'] + $b['w']
+            && $a['x'] + $a['w'] > $b['x']
+            && $a['y'] < $b['y'] + $b['h']
+            && $a['y'] + $a['h'] > $b['y'];
+    }
+
+    private function clampToBounds(array $tile): array
+    {
+        $w = max(1, min($tile['w'], $this->cols));
+
+        // B3: Mobile (4 cols) → max w = 2
+        if ($this->cols === 4) {
+            $w = min(2, $w);
+        }
+
+        $h = max(1, $tile['h']);
+        $x = max(0, min($tile['x'], $this->cols - $w));
+        $y = max(0, $tile['y']);
+
+        return array_merge($tile, compact('x', 'y', 'w', 'h'));
+    }
+
+    private function resolveOverlaps(array $tiles, ?string $movedKey): array
+    {
+        $layout = array_map(fn ($t) => $t, $tiles);
+        $iterations = 0;
+
+        while ($iterations < 200) {
+            $fixedIdx = -1;
+            $moveIdx = -1;
+
+            for ($i = 0; $i < count($layout) && $fixedIdx === -1; $i++) {
+                for ($j = $i + 1; $j < count($layout); $j++) {
+                    if (! $this->overlaps($layout[$i], $layout[$j])) {
+                        continue;
+                    }
+
+                    if ($layout[$i]['key'] === $movedKey) {
+                        $fixedIdx = $i;
+                        $moveIdx = $j;
+                    } elseif ($layout[$j]['key'] === $movedKey) {
+                        $fixedIdx = $j;
+                        $moveIdx = $i;
+                    } elseif ($layout[$i]['y'] < $layout[$j]['y']
+                        || ($layout[$i]['y'] === $layout[$j]['y'] && $layout[$i]['x'] < $layout[$j]['x'])) {
+                        $fixedIdx = $i;
+                        $moveIdx = $j;
+                    } else {
+                        $fixedIdx = $j;
+                        $moveIdx = $i;
+                    }
+
+                    break;
+                }
+            }
+
+            if ($fixedIdx === -1) {
+                break;
+            }
+            $iterations++;
+
+            $fixed = $layout[$fixedIdx];
+            $T = $layout[$moveIdx];
+            $placed = false;
+
+            // 1) SHIFT RIGHT
+            $rightX = $fixed['x'] + $fixed['w'];
+            if (! $placed && $rightX + $T['w'] <= $this->cols) {
+                $candidate = array_merge($T, ['x' => $rightX]);
+                $noConflict = true;
+                foreach ($layout as $k => $t) {
+                    if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                        $noConflict = false;
+                        break;
+                    }
+                }
+                if ($noConflict) {
+                    $layout[$moveIdx] = $candidate;
+                    $placed = true;
+                }
+            }
+
+            // 2) SHIFT LEFT
+            if (! $placed) {
+                $leftX = $fixed['x'] - $T['w'];
+                if ($leftX >= 0) {
+                    $candidate = array_merge($T, ['x' => $leftX]);
+                    $noConflict = true;
+                    foreach ($layout as $k => $t) {
+                        if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                            $noConflict = false;
+                            break;
+                        }
+                    }
+                    if ($noConflict) {
+                        $layout[$moveIdx] = $candidate;
+                        $placed = true;
+                    }
+                }
+            }
+
+            // 3) PUSH DOWN
+            if (! $placed) {
+                $pushY = $fixed['y'] + $fixed['h'];
+                $pushX = max(0, min($T['x'], $this->cols - $T['w']));
+                $candidate = array_merge($T, ['x' => $pushX, 'y' => $pushY]);
+                $noConflict = true;
+                foreach ($layout as $k => $t) {
+                    if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                        $noConflict = false;
+                        break;
+                    }
+                }
+                if ($noConflict) {
+                    $layout[$moveIdx] = $candidate;
+                    $placed = true;
+                }
+            }
+
+            // 4) FALLBACK
+            if (! $placed) {
+                $maxY = 0;
+                foreach ($layout as $k => $t) {
+                    if ($k !== $moveIdx) {
+                        $maxY = max($maxY, $t['y'] + $t['h']);
+                    }
+                }
+                $layout[$moveIdx] = array_merge($T, ['x' => 0, 'y' => $maxY]);
+            }
+        }
+
+        return $layout;
+    }
+
+    private function compactLayout(array $tiles): array
+    {
+        $layout = array_map(fn ($t) => $t, $tiles);
+        usort($layout, fn ($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
+
+        for ($i = 0; $i < count($layout); $i++) {
+            while ($layout[$i]['y'] > 0) {
+                $candidate = array_merge($layout[$i], ['y' => $layout[$i]['y'] - 1]);
+                $blocked = false;
+                for ($j = 0; $j < count($layout); $j++) {
+                    if ($i === $j) {
+                        continue;
+                    }
+                    if ($this->overlaps($candidate, $layout[$j])) {
+                        $blocked = true;
+                        break;
+                    }
+                }
+                if ($blocked) {
+                    break;
+                }
+                $layout[$i] = $candidate;
+            }
+        }
+
+        return $layout;
+    }
+
+    private function assertNoOverlapInLayout(array $tiles): bool
+    {
+        for ($i = 0; $i < count($tiles); $i++) {
+            for ($j = $i + 1; $j < count($tiles); $j++) {
+                if ($this->overlaps($tiles[$i], $tiles[$j])) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Full pipeline: clamp → resolve → compact → assert.
+     */
+    private function applyPipeline(array $layout, ?string $movedKey): ?array
+    {
+        $tiles = array_map(fn ($t) => $this->clampToBounds($t), $layout);
+        $tiles = $this->resolveOverlaps($tiles, $movedKey);
+        $tiles = $this->compactLayout($tiles);
+
+        if (! $this->assertNoOverlapInLayout($tiles)) {
+            return null;
+        }
+        foreach ($tiles as $t) {
+            if ($t['y'] >= 200) {
+                return null;
+            }
+        }
+
+        return $tiles;
+    }
+
+    // ── Tests ──
+
+    public function test_move_onto_other_tile_no_overlap(): void
+    {
+        // A at (0,0,4,4), B at (4,0,4,4). Move A to (4,0) → overlaps B
+        $layout = [
+            ['key' => 'A', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result, 'Pipeline must resolve overlaps');
+        $this->assertTrue($this->assertNoOverlapInLayout($result), 'No overlap in result');
+    }
+
+    public function test_three_tiles_cascading_overlap(): void
+    {
+        // A, B, C all at same position
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 4],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 4],
+            ['key' => 'C', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 4],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+    }
+
+    public function test_full_row_overlap_pushes_down(): void
+    {
+        // 3 tiles of w=4 at row 0. Move 4th tile of w=4 onto row 0
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'C', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'D', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'D');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+    }
+
+    public function test_resize_wider_no_overlap(): void
+    {
+        // A at (0,0,4,4), B at (4,0,4,4). A resized to w=8 → overlaps B
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+        // A should keep its position (moved tile priority)
+        $a = collect($result)->firstWhere('key', 'A');
+        $this->assertEquals(0, $a['x']);
+        $this->assertEquals(0, $a['y']);
+        $this->assertEquals(8, $a['w']);
+    }
+
+    public function test_many_tiles_stress_no_overlap(): void
+    {
+        // 12 tiles all at (0,0,3,3)
+        $layout = [];
+        for ($i = 0; $i < 12; $i++) {
+            $layout[] = ['key' => "tile_$i", 'x' => 0, 'y' => 0, 'w' => 3, 'h' => 3];
+        }
+
+        $result = $this->applyPipeline($layout, 'tile_0');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+        $this->assertCount(12, $result);
+    }
+
+    public function test_edge_tiles_at_grid_boundary(): void
+    {
+        // Tile at right edge resized wider → clamped + no overlap
+        $layout = [
+            ['key' => 'A', 'x' => 8, 'y' => 0, 'w' => 6, 'h' => 3],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+        // A should be clamped: x + w <= 12
+        $a = collect($result)->firstWhere('key', 'A');
+        $this->assertLessThanOrEqual(12, $a['x'] + $a['w']);
+    }
+
+    public function test_shift_right_preferred_over_push_down(): void
+    {
+        // A at (0,0,4,3), B at (0,0,4,3). B should shift right to (4,0)
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+
+        $a = collect($result)->firstWhere('key', 'A');
+        $b = collect($result)->firstWhere('key', 'B');
+        // A stays at (0,0), B shifts right to (4,0) — same row
+        $this->assertEquals(0, $a['x']);
+        $this->assertEquals(0, $a['y']);
+        $this->assertEquals(4, $b['x']);
+        $this->assertEquals(0, $b['y']);
+    }
+
+    // ── V5: Mobile clamp tests ──
+
+    public function test_mobile_4col_clamps_width_to_2(): void
+    {
+        $this->cols = 4;
+
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'B', 'x' => 0, 'y' => 3, 'w' => 3, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        foreach ($result as $tile) {
+            $this->assertLessThanOrEqual(2, $tile['w'], "Tile {$tile['key']} w={$tile['w']} exceeds mobile max of 2");
+            $this->assertLessThanOrEqual(4, $tile['x'] + $tile['w']);
+        }
+
+        $this->cols = 12;
+    }
+
+    public function test_mobile_two_tiles_per_row(): void
+    {
+        $this->cols = 4;
+
+        // 3 tiles of w=2 should produce 2 per row + 1 on next row
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2],
+            ['key' => 'B', 'x' => 2, 'y' => 0, 'w' => 2, 'h' => 2],
+            ['key' => 'C', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 2],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+
+        // Invariant: max 2 tiles per row at 4 cols
+        $rowCounts = [];
+        foreach ($result as $tile) {
+            $y = $tile['y'];
+            $rowCounts[$y] = ($rowCounts[$y] ?? 0) + 1;
+        }
+        foreach ($rowCounts as $y => $count) {
+            $this->assertLessThanOrEqual(2, $count, "Row y=$y has $count tiles (max 2 at 4 cols)");
+        }
+
+        $this->cols = 12;
+    }
+
+    // ── V5: Free height — resize only affects targeted tile ──
+
+    public function test_resize_height_does_not_affect_neighbors(): void
+    {
+        // A(0,0,6,2) B(6,0,6,4) — different heights on same row is allowed
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 2],
+            ['key' => 'B', 'x' => 6, 'y' => 0, 'w' => 6, 'h' => 4],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $b = collect($result)->firstWhere('key', 'B');
+        // A keeps h=2, B keeps h=4 — no unification
+        $this->assertEquals(2, $a['h']);
+        $this->assertEquals(4, $b['h']);
+    }
+
+    public function test_two_small_beside_one_large(): void
+    {
+        // Large(0,0,6,6) SmallA(6,0,6,3) SmallB(6,3,6,3) — valid stacked layout
+        $layout = [
+            ['key' => 'Large', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 6],
+            ['key' => 'SmallA', 'x' => 6, 'y' => 0, 'w' => 6, 'h' => 3],
+            ['key' => 'SmallB', 'x' => 6, 'y' => 3, 'w' => 6, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+
+        $large = collect($result)->firstWhere('key', 'Large');
+        $smallA = collect($result)->firstWhere('key', 'SmallA');
+        $smallB = collect($result)->firstWhere('key', 'SmallB');
+
+        // Heights preserved independently
+        $this->assertEquals(6, $large['h']);
+        $this->assertEquals(3, $smallA['h']);
+        $this->assertEquals(3, $smallB['h']);
+        // SmallA + SmallB stacked beside Large
+        $this->assertEquals(0, $smallA['y']);
+        $this->assertEquals(3, $smallB['y']);
+    }
+}
