@@ -4981,6 +4981,24 @@ self::assertNotFrozen($companyId);
   - **packRowsLeft** : Nouvelle étape pipeline entre compact et assert. Groupe les tiles par `y`, trie par `x` asc, réassigne `x` séquentiellement (`cursor = 0, tile.x = cursor, cursor += tile.w`). Si un tile crée un cross-row overlap (tile haute au-dessus), cherche le premier `x` libre. Si overflow (`x + w > cols`), le tile descend en bas à `x=0`. Pipeline final : `clamp → resolve → compact → packLeft → compact → assert`. Le double compact gère les trous verticaux créés par le déplacement des tiles overflow.
 - **Tests** : 5 nouveaux tests : `widget_min_width_3_on_desktop`, `four_w3_widgets_fit_12_cols`, `no_horizontal_gap_after_removal`, `overflow_goes_to_bottom_left`, `resize_wider_packs_neighbors_and_overflows`. Total suite : 1041 passed, 0 failures.
 
+### Addendum V5-hotfix-A — Auto-Reflow Upward (2026-02-28)
+
+- **Contexte** : Quand widget1 grandit et pousse widget3 vers le bas, puis widget1 rétrécit, widget3 restait en bas car `compactLayout` ne change que `y` (pas `x`). Si la place libre est à un `x` différent sur une ligne supérieure, compact ne la trouve pas.
+- **Décision** : Nouvelle étape `reflowUpward` dans le pipeline. Traite les tiles du bas vers le haut. Pour chaque tile, cherche la première position `(y, x)` libre en partant de `y=0`. Pipeline final : `clamp → resolve → compact → packLeft → compact → reflowUpward → packLeft → compact → assert`.
+- **Tests** : 2 nouveaux tests : `tile_reflows_up_when_space_frees`, `reflow_respects_overlap_constraints`. Total : 37 layout tests, 1043 suite.
+
+### Addendum V5-hotfix-B — Ghost Preview Live Simulation (2026-02-28)
+
+- **Contexte** : Pendant le drag, seul le ghost (rectangle pointillé) montrait la position cible. Les AUTRES widgets ne bougeaient pas visuellement, donnant une UX statique.
+- **Décision** : `previewLayout` computed dans `DashboardGrid.vue`. Pendant drag/resize, exécute `applyPipeline` en simulation avec la position du ghost. Les autres tiles s'affichent à leurs positions résolues avec `transition: grid-column/grid-row 0.15s ease`. `displayLayout` computed sélectionne `previewLayout` ou `sortedLayout` selon l'état.
+
+### Addendum V5-hotfix-C — First-Fit Widget Placement (2026-02-28)
+
+- **Contexte** : `addWidget()` dans les stores platform et company utilisait un algorithme "last row" — il cherchait la ligne la plus basse (`max(y)`) et essayait de placer le widget à droite. Si la ligne était pleine (ex: 8+4=12), le widget allait systématiquement en dessous même si des trous existaient sur d'autres lignes (ex: après suppression d'un widget en milieu de grille).
+- **Décision** : Remplacement par un algorithme **first-fit** : scan top-to-bottom (y=0→maxY), left-to-right (x=0→12-w). Pour chaque position candidate (x, y), vérifie l'absence d'overlap rectangle avec tous les tiles existants (`col < t.x + t.w && col + w > t.x && row < t.y + t.h && row + h > t.y`). Premier gap trouvé → placement. Si aucun gap → placement en dessous (`y = maxY`). Complexité O(maxY × 12 × n) — négligeable pour ≤30 widgets.
+- **Exemple** : Layout `[revenue_trend x=0,w=8 + ar_outstanding x=0,y=4,w=4]`. Ajout `refund_ratio` (w=4) → first-fit trouve (8, 0) au lieu de (4, 4). Le widget se place à droite de revenue_trend, pas à côté de ar_outstanding sur une ligne inférieure.
+- **Fichiers** : `dashboard.store.js` (platform + company) — action `addWidget` réécrite.
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
