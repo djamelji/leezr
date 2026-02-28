@@ -21,6 +21,8 @@ class LayoutEngineReflowTest extends TestCase
 {
     private int $cols = 12;
 
+    private const WIDGET_MIN_W = 3;
+
     private const WIDGET_MIN_H = 2;
 
     private const WIDGET_MAX_H = 6;
@@ -39,9 +41,11 @@ class LayoutEngineReflowTest extends TestCase
     {
         $w = max(1, min($tile['w'], $this->cols));
 
-        // B3: Mobile (4 cols) → max w = 2
+        // B3: Mobile (4 cols) → max w = 2. Desktop/tablet: min WIDGET_MIN_W
         if ($this->cols === 4) {
             $w = min(2, $w);
+        } else {
+            $w = max(self::WIDGET_MIN_W, $w);
         }
 
         $h = max(self::WIDGET_MIN_H, min(self::WIDGET_MAX_H, $tile['h']));
@@ -191,6 +195,72 @@ class LayoutEngineReflowTest extends TestCase
         return $layout;
     }
 
+    private function packRowsLeft(array $tiles): array
+    {
+        $sorted = array_map(fn ($t) => $t, $tiles);
+        usort($sorted, fn ($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
+
+        $rowYs = array_values(array_unique(array_column($sorted, 'y')));
+        sort($rowYs);
+
+        $packed = [];
+        $overflow = [];
+
+        foreach ($rowYs as $rowY) {
+            $row = array_values(array_filter($sorted, fn ($t) => $t['y'] === $rowY));
+            usort($row, fn ($a, $b) => $a['x'] <=> $b['x']);
+            $cursor = 0;
+
+            foreach ($row as $tile) {
+                $x = $cursor;
+                while ($x + $tile['w'] <= $this->cols) {
+                    $candidate = array_merge($tile, ['x' => $x]);
+                    $blocked = false;
+                    foreach ($packed as $p) {
+                        if ($this->overlaps($candidate, $p)) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (! $blocked) {
+                        break;
+                    }
+                    $x++;
+                }
+
+                if ($x + $tile['w'] <= $this->cols) {
+                    $packed[] = array_merge($tile, ['x' => $x]);
+                    $cursor = $x + $tile['w'];
+                } else {
+                    $overflow[] = $tile;
+                }
+            }
+        }
+
+        if (! empty($overflow)) {
+            $maxY = 0;
+            foreach ($packed as $t) {
+                $maxY = max($maxY, $t['y'] + $t['h']);
+            }
+            $cursor = 0;
+            $rowMaxH = 0;
+            $currentY = $maxY;
+
+            foreach ($overflow as $tile) {
+                if ($cursor + $tile['w'] > $this->cols) {
+                    $currentY += $rowMaxH ?: 1;
+                    $cursor = 0;
+                    $rowMaxH = 0;
+                }
+                $packed[] = array_merge($tile, ['x' => $cursor, 'y' => $currentY]);
+                $cursor += $tile['w'];
+                $rowMaxH = max($rowMaxH, $tile['h']);
+            }
+        }
+
+        return $packed;
+    }
+
     private function assertNoOverlap(array $tiles): bool
     {
         for ($i = 0; $i < count($tiles); $i++) {
@@ -208,6 +278,8 @@ class LayoutEngineReflowTest extends TestCase
     {
         $tiles = array_map(fn ($t) => $this->clampToBounds($t), $layout);
         $tiles = $this->resolveOverlaps($tiles, $movedKey);
+        $tiles = $this->compactLayout($tiles);
+        $tiles = $this->packRowsLeft($tiles);
         $tiles = $this->compactLayout($tiles);
 
         if (! $this->assertNoOverlap($tiles)) {

@@ -39,6 +39,7 @@ export function useDashboardGrid(gridRef, catalog) {
 
   const DRAG_THRESHOLD = 6
   const ROW_HEIGHT = 80
+  const WIDGET_MIN_W = 3
   const WIDGET_MIN_H = 2
   const WIDGET_MAX_H = 6
   const DASHBOARD_MAX_H = 24
@@ -69,8 +70,9 @@ export function useDashboardGrid(gridRef, catalog) {
   function clampToBounds(tile, numCols) {
     let w = Math.max(1, Math.min(tile.w, numCols))
 
-    // Mobile: max 2 widgets per row
+    // Mobile: max 2 widgets per row. Desktop/tablet: min WIDGET_MIN_W
     if (numCols === 4) w = Math.min(2, w)
+    else w = Math.max(WIDGET_MIN_W, w)
 
     const h = Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, tile.h))
     const x = Math.max(0, Math.min(tile.x, numCols - w))
@@ -205,6 +207,67 @@ export function useDashboardGrid(gridRef, catalog) {
   }
 
   /**
+   * Step 3b: Pack rows left — eliminate horizontal gaps.
+   * Groups tiles by y, packs left within each row.
+   * Respects cross-row overlaps (taller tiles spanning multiple rows).
+   * Overflow tiles placed at bottom, x=0.
+   */
+  function packRowsLeft(tiles, numCols) {
+    const sorted = tiles.map(t => ({ ...t }))
+    sorted.sort((a, b) => a.y - b.y || a.x - b.x)
+
+    const rowYs = [...new Set(sorted.map(t => t.y))].sort((a, b) => a - b)
+    const packed = []
+    const overflow = []
+
+    for (const rowY of rowYs) {
+      const row = sorted.filter(t => t.y === rowY)
+      let cursor = 0
+
+      for (const tile of row) {
+        // Find leftmost x >= cursor with no overlap against already-packed tiles
+        let x = cursor
+
+        while (x + tile.w <= numCols) {
+          const candidate = { ...tile, x }
+
+          if (!packed.some(p => overlaps(candidate, p))) break
+          x++
+        }
+
+        if (x + tile.w <= numCols) {
+          packed.push({ ...tile, x })
+          cursor = x + tile.w
+        }
+        else {
+          overflow.push(tile)
+        }
+      }
+    }
+
+    // Overflow → bottom, packed left
+    if (overflow.length) {
+      let maxY = packed.reduce((m, t) => Math.max(m, t.y + t.h), 0)
+      let cursor = 0
+      let rowMaxH = 0
+
+      for (const tile of overflow) {
+        if (cursor + tile.w > numCols) {
+          maxY += rowMaxH || 1
+          cursor = 0
+          rowMaxH = 0
+        }
+
+        packed.push({ ...tile, x: cursor, y: maxY })
+        cursor += tile.w
+        rowMaxH = Math.max(rowMaxH, tile.h)
+      }
+    }
+
+    return packed
+  }
+
+  /**
    * Step 4: Assert no overlap.
    */
   function assertNoOverlap(tiles) {
@@ -226,6 +289,8 @@ export function useDashboardGrid(gridRef, catalog) {
     let tiles = layout.map(t => clampToBounds(t, numCols))
 
     tiles = resolveOverlaps(tiles, movedKey, numCols)
+    tiles = compactLayout(tiles)
+    tiles = packRowsLeft(tiles, numCols)
     tiles = compactLayout(tiles)
 
     if (!assertNoOverlap(tiles)) return null
@@ -293,7 +358,7 @@ export function useDashboardGrid(gridRef, catalog) {
 
     const layout = widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 6 }
 
-    return { ...layout, min_h: Math.max(WIDGET_MIN_H, layout.min_h), max_h: Math.min(WIDGET_MAX_H, layout.max_h) }
+    return { ...layout, min_w: Math.max(WIDGET_MIN_W, layout.min_w), min_h: Math.max(WIDGET_MIN_H, layout.min_h), max_h: Math.min(WIDGET_MAX_H, layout.max_h) }
   }
 
   // ── Mouse move ──

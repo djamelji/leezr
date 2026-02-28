@@ -18,6 +18,8 @@ class LayoutEngineNoOverlapTest extends TestCase
 {
     private int $cols = 12;
 
+    private const WIDGET_MIN_W = 3;
+
     private const WIDGET_MIN_H = 2;
 
     private const WIDGET_MAX_H = 6;
@@ -38,9 +40,11 @@ class LayoutEngineNoOverlapTest extends TestCase
     {
         $w = max(1, min($tile['w'], $this->cols));
 
-        // B3: Mobile (4 cols) → max w = 2
+        // B3: Mobile (4 cols) → max w = 2. Desktop/tablet: min WIDGET_MIN_W
         if ($this->cols === 4) {
             $w = min(2, $w);
+        } else {
+            $w = max(self::WIDGET_MIN_W, $w);
         }
 
         $h = max(self::WIDGET_MIN_H, min(self::WIDGET_MAX_H, $tile['h']));
@@ -190,6 +194,72 @@ class LayoutEngineNoOverlapTest extends TestCase
         return $layout;
     }
 
+    private function packRowsLeft(array $tiles): array
+    {
+        $sorted = array_map(fn ($t) => $t, $tiles);
+        usort($sorted, fn ($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
+
+        $rowYs = array_values(array_unique(array_column($sorted, 'y')));
+        sort($rowYs);
+
+        $packed = [];
+        $overflow = [];
+
+        foreach ($rowYs as $rowY) {
+            $row = array_values(array_filter($sorted, fn ($t) => $t['y'] === $rowY));
+            usort($row, fn ($a, $b) => $a['x'] <=> $b['x']);
+            $cursor = 0;
+
+            foreach ($row as $tile) {
+                $x = $cursor;
+                while ($x + $tile['w'] <= $this->cols) {
+                    $candidate = array_merge($tile, ['x' => $x]);
+                    $blocked = false;
+                    foreach ($packed as $p) {
+                        if ($this->overlaps($candidate, $p)) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (! $blocked) {
+                        break;
+                    }
+                    $x++;
+                }
+
+                if ($x + $tile['w'] <= $this->cols) {
+                    $packed[] = array_merge($tile, ['x' => $x]);
+                    $cursor = $x + $tile['w'];
+                } else {
+                    $overflow[] = $tile;
+                }
+            }
+        }
+
+        if (! empty($overflow)) {
+            $maxY = 0;
+            foreach ($packed as $t) {
+                $maxY = max($maxY, $t['y'] + $t['h']);
+            }
+            $cursor = 0;
+            $rowMaxH = 0;
+            $currentY = $maxY;
+
+            foreach ($overflow as $tile) {
+                if ($cursor + $tile['w'] > $this->cols) {
+                    $currentY += $rowMaxH ?: 1;
+                    $cursor = 0;
+                    $rowMaxH = 0;
+                }
+                $packed[] = array_merge($tile, ['x' => $cursor, 'y' => $currentY]);
+                $cursor += $tile['w'];
+                $rowMaxH = max($rowMaxH, $tile['h']);
+            }
+        }
+
+        return $packed;
+    }
+
     private function assertNoOverlapInLayout(array $tiles): bool
     {
         for ($i = 0; $i < count($tiles); $i++) {
@@ -210,6 +280,8 @@ class LayoutEngineNoOverlapTest extends TestCase
     {
         $tiles = array_map(fn ($t) => $this->clampToBounds($t), $layout);
         $tiles = $this->resolveOverlaps($tiles, $movedKey);
+        $tiles = $this->compactLayout($tiles);
+        $tiles = $this->packRowsLeft($tiles);
         $tiles = $this->compactLayout($tiles);
 
         if (! $this->assertNoOverlapInLayout($tiles)) {
@@ -539,5 +611,109 @@ class LayoutEngineNoOverlapTest extends TestCase
         $bAfter = collect($after)->firstWhere('key', 'B');
 
         $this->assertEquals($bBefore['x'], $bAfter['x'], 'B x must not change when A height changes');
+    }
+
+    // ── V5: min_w = 3 ──
+
+    public function test_widget_min_width_3_on_desktop(): void
+    {
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 2, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $this->assertEquals(3, $a['w'], 'w must be clamped to WIDGET_MIN_W=3');
+    }
+
+    public function test_four_w3_widgets_fit_12_cols(): void
+    {
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 3, 'h' => 3],
+            ['key' => 'B', 'x' => 3, 'y' => 0, 'w' => 3, 'h' => 3],
+            ['key' => 'C', 'x' => 6, 'y' => 0, 'w' => 3, 'h' => 3],
+            ['key' => 'D', 'x' => 9, 'y' => 0, 'w' => 3, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+        // All 4 on same row, packed left
+        foreach ($result as $tile) {
+            $this->assertEquals(0, $tile['y']);
+        }
+    }
+
+    // ── V5: Strict left row packing ──
+
+    public function test_no_horizontal_gap_after_removal(): void
+    {
+        // A(0,0,4,3), C(8,0,4,3) — gap at x=4..7
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'C', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $c = collect($result)->firstWhere('key', 'C');
+
+        $this->assertEquals(0, $a['x']);
+        $this->assertEquals(4, $c['x'], 'C must pack left to fill the gap');
+    }
+
+    public function test_overflow_goes_to_bottom_left(): void
+    {
+        // A(0,0,10,3) + B(0,0,3,3) — B can't fit on row with A(w=10)
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 10, 'h' => 3],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 3, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $b = collect($result)->firstWhere('key', 'B');
+
+        $this->assertEquals(0, $a['x']);
+        $this->assertEquals(0, $a['y']);
+        $this->assertEquals(0, $b['x'], 'Overflow tile must go to x=0');
+        $this->assertGreaterThan(0, $b['y'], 'Overflow tile must go below');
+    }
+
+    public function test_resize_wider_packs_neighbors_and_overflows(): void
+    {
+        // w1(0,0,6,3) w2(6,0,3,3) w3(9,0,3,3). Resize w1 to w=8
+        $layout = [
+            ['key' => 'W1', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 3],
+            ['key' => 'W2', 'x' => 6, 'y' => 0, 'w' => 3, 'h' => 3],
+            ['key' => 'W3', 'x' => 9, 'y' => 0, 'w' => 3, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'W1');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlapInLayout($result));
+
+        $w1 = collect($result)->firstWhere('key', 'W1');
+        $this->assertEquals(0, $w1['x']);
+        $this->assertEquals(8, $w1['w']);
+
+        // All tiles packed left on their rows — no gaps
+        $rows = collect($result)->groupBy('y');
+        foreach ($rows as $y => $tiles) {
+            $sorted = $tiles->sortBy('x')->values();
+            $cursor = 0;
+            foreach ($sorted as $tile) {
+                $this->assertEquals($cursor, $tile['x'], "Row y=$y: tile {$tile['key']} should be at x=$cursor (packed left)");
+                $cursor += $tile['w'];
+            }
+        }
     }
 }

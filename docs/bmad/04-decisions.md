@@ -4971,7 +4971,15 @@ self::assertNotFrozen($companyId);
   - **Limites par widget** : `WIDGET_MIN_H = 2`, `WIDGET_MAX_H = 6`. Appliquées dans `clampToBounds` et `getConstraints` (cap global, peu importe le manifest du widget).
   - **Limite dashboard** : `DASHBOARD_MAX_H = 24` (en unités de grille). Le pipeline rejette tout layout où un tile a `y + h > 24` (remplace l'ancien guard `y >= 200`).
   - **Snackbar** : Quand le resize brut dépasse `WIDGET_MAX_H`, affiche `dashboardGrid.maxHeightReached` via le mécanisme `placementError` existant.
-- **Tests** : 4 nouveaux tests : `widget_height_clamped_to_max_6`, `widget_height_clamped_to_min_2`, `dashboard_max_height_24_enforced`, `resize_height_no_horizontal_effect`. Total suite : 1036 passed, 0 failures.
+- **Tests** : 4 nouveaux tests : `widget_height_clamped_to_max_6`, `widget_height_clamped_to_min_2`, `dashboard_max_height_24_enforced`, `resize_height_no_horizontal_effect`.
+
+### Addendum V5-hotfix-4 — Allow W=3 + Strict Left Row Packing (2026-02-28)
+
+- **Contexte** : `BillingRevenueTrendWidget` avait `min_w=4` empêchant les widgets de faire 3 colonnes. De plus, après suppression d'un widget, les widgets restants ne comblaient pas le trou horizontal (gap entre widgets sur la même ligne).
+- **Décisions** :
+  - **WIDGET_MIN_W = 3** : Constante globale. Appliquée dans `clampToBounds` (desktop/tablet uniquement, mobile garde max w=2). `getConstraints` enforce `min_w >= WIDGET_MIN_W`. `BillingRevenueTrendWidget.min_w` corrigé de 4 à 3. `max_h` corrigé de 8 à 6 (cohérent avec WIDGET_MAX_H).
+  - **packRowsLeft** : Nouvelle étape pipeline entre compact et assert. Groupe les tiles par `y`, trie par `x` asc, réassigne `x` séquentiellement (`cursor = 0, tile.x = cursor, cursor += tile.w`). Si un tile crée un cross-row overlap (tile haute au-dessus), cherche le premier `x` libre. Si overflow (`x + w > cols`), le tile descend en bas à `x=0`. Pipeline final : `clamp → resolve → compact → packLeft → compact → assert`. Le double compact gère les trous verticaux créés par le déplacement des tiles overflow.
+- **Tests** : 5 nouveaux tests : `widget_min_width_3_on_desktop`, `four_w3_widgets_fit_12_cols`, `no_horizontal_gap_after_removal`, `overflow_goes_to_bottom_left`, `resize_wider_packs_neighbors_and_overflows`. Total suite : 1041 passed, 0 failures.
 
 ---
 
