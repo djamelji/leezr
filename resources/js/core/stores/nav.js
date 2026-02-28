@@ -15,6 +15,14 @@ export const useNavStore = defineStore('nav', {
     companyGroups: state => state._companyGroups,
     platformLoaded: state => state._platformLoaded,
     companyLoaded: state => state._companyLoaded,
+
+    /** Hydration source of truth — used by router guard + layout gate. */
+    isHydrated: state => scope => {
+      if (scope === 'platform') return state._platformLoaded
+      if (scope === 'company') return state._companyLoaded
+
+      return true
+    },
   },
 
   actions: {

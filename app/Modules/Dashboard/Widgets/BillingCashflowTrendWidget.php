@@ -2,18 +2,16 @@
 
 namespace App\Modules\Dashboard\Widgets;
 
-use App\Core\Billing\ReadModels\PlatformBillingWidgetsReadService;
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
-use App\Modules\Dashboard\PeriodParser;
 
-class BillingRevenueTrendWidget implements WidgetManifest
+class BillingCashflowTrendWidget implements WidgetManifest
 {
     use WidgetLayoutDefaults;
 
     public function key(): string
     {
-        return 'billing.revenue_trend';
+        return 'billing.cashflow_trend_30d';
     }
 
     public function module(): string
@@ -40,22 +38,22 @@ class BillingRevenueTrendWidget implements WidgetManifest
 
     public function component(): string
     {
-        return 'BillingRevenueTrend';
+        return 'BillingCashflowTrend';
     }
 
     public function tags(): array
     {
-        return ['revenue', 'chart', 'trend'];
+        return ['cashflow', 'trend', 'chart', 'billing'];
     }
 
     public function labelKey(): string
     {
-        return 'platformBilling.widgets.revenueTrend';
+        return 'platformBilling.widgets.cashflowTrend';
     }
 
     public function descriptionKey(): string
     {
-        return 'platformBilling.widgets.revenueTrendDesc';
+        return 'platformBilling.widgets.cashflowTrendDesc';
     }
 
     public function audience(): string
@@ -90,27 +88,7 @@ class BillingRevenueTrendWidget implements WidgetManifest
 
     public function resolve(array $context): array
     {
-        $scope = $context['scope'] ?? 'company';
-        $period = $context['period'] ?? '30d';
-        $from = PeriodParser::parse($period);
-        $to = now();
-
-        if ($scope === 'global') {
-            $currency = PlatformBillingWidgetsReadService::currencyGlobal();
-            $chart = PlatformBillingWidgetsReadService::revenueTrendGlobal($from, $to);
-        } else {
-            $companyId = (int) $context['company_id'];
-            $currency = PlatformBillingWidgetsReadService::currencyForCompany($companyId);
-            $chart = PlatformBillingWidgetsReadService::revenueTrend($companyId, $from, $to);
-        }
-
-        return [
-            'key' => $this->key(),
-            'scope' => $scope,
-            'currency' => $currency,
-            'period' => $period,
-            'chart' => $chart,
-        ];
+        return $this->transform([], $context);
     }
 
     public function transform(array $dataset, array $context): array
@@ -118,9 +96,9 @@ class BillingRevenueTrendWidget implements WidgetManifest
         return [
             'key' => $this->key(),
             'scope' => $context['scope'] ?? 'global',
-            'currency' => $dataset['currency'],
+            'currency' => $dataset['currency'] ?? null,
             'period' => $context['period'] ?? '30d',
-            'chart' => $dataset['revenue_trend'],
+            'chart' => $dataset['cashflow_trend'] ?? ['labels' => [], 'series' => []],
         ];
     }
 }

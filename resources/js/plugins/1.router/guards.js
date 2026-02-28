@@ -2,6 +2,7 @@ import { useRuntimeStore } from '@/core/runtime/runtime'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
+import { useNavStore } from '@/core/stores/nav'
 import { useWorldStore } from '@/core/stores/world'
 import { useAppToast } from '@/composables/useAppToast'
 import { safeRedirect } from '@/utils/safeRedirect'
@@ -34,19 +35,20 @@ export const setupGuards = router => {
     // Ensure world settings are fetched (fire-and-forget, non-blocking)
     useWorldStore().fetch()
 
-    // ─── Boot runtime if cold or scope switched ──────────
+    // ─── Boot runtime if needed ──────────────────────────
     // ADR-153: Await full boot (not just auth) so layout mounts with
     // nav + modules already hydrated. Prevents empty sidebar after login.
-    if (runtime.phase === 'cold' || runtime.scope !== scope) {
-      if (runtime.scope && runtime.scope !== scope) {
+    const navStore = useNavStore()
+
+    const needsBoot = runtime.phase === 'cold'
+      || runtime.scope !== scope
+      || runtime.phase === 'error'
+      || (runtime.isReady && !navStore.isHydrated(scope))
+
+    if (needsBoot) {
+      if (runtime.phase !== 'cold') {
         runtime.teardown()
       }
-      runtime.boot(scope)
-      await runtime.whenReady(8000)
-    }
-    // ─── Re-boot if in error state ─────────────────────
-    else if (runtime.phase === 'error') {
-      runtime.teardown()
       runtime.boot(scope)
       await runtime.whenReady(8000)
     }

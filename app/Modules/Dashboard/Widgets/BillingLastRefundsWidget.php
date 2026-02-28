@@ -2,18 +2,16 @@
 
 namespace App\Modules\Dashboard\Widgets;
 
-use App\Core\Billing\ReadModels\PlatformBillingWidgetsReadService;
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
-use App\Modules\Dashboard\PeriodParser;
 
-class BillingRevenueTrendWidget implements WidgetManifest
+class BillingLastRefundsWidget implements WidgetManifest
 {
     use WidgetLayoutDefaults;
 
     public function key(): string
     {
-        return 'billing.revenue_trend';
+        return 'billing.last_refunds';
     }
 
     public function module(): string
@@ -24,7 +22,7 @@ class BillingRevenueTrendWidget implements WidgetManifest
     public function layout(): array
     {
         return [
-            'default_w' => 8,
+            'default_w' => 6,
             'default_h' => 4,
             'min_w' => 3,
             'max_w' => 12,
@@ -40,22 +38,22 @@ class BillingRevenueTrendWidget implements WidgetManifest
 
     public function component(): string
     {
-        return 'BillingRevenueTrend';
+        return 'BillingLastRefunds';
     }
 
     public function tags(): array
     {
-        return ['revenue', 'chart', 'trend'];
+        return ['refunds', 'activity', 'billing'];
     }
 
     public function labelKey(): string
     {
-        return 'platformBilling.widgets.revenueTrend';
+        return 'platformBilling.widgets.lastRefunds';
     }
 
     public function descriptionKey(): string
     {
-        return 'platformBilling.widgets.revenueTrendDesc';
+        return 'platformBilling.widgets.lastRefundsDesc';
     }
 
     public function audience(): string
@@ -85,32 +83,12 @@ class BillingRevenueTrendWidget implements WidgetManifest
 
     public function datasetKey(): ?string
     {
-        return 'billing.timeseries';
+        return 'billing.activity';
     }
 
     public function resolve(array $context): array
     {
-        $scope = $context['scope'] ?? 'company';
-        $period = $context['period'] ?? '30d';
-        $from = PeriodParser::parse($period);
-        $to = now();
-
-        if ($scope === 'global') {
-            $currency = PlatformBillingWidgetsReadService::currencyGlobal();
-            $chart = PlatformBillingWidgetsReadService::revenueTrendGlobal($from, $to);
-        } else {
-            $companyId = (int) $context['company_id'];
-            $currency = PlatformBillingWidgetsReadService::currencyForCompany($companyId);
-            $chart = PlatformBillingWidgetsReadService::revenueTrend($companyId, $from, $to);
-        }
-
-        return [
-            'key' => $this->key(),
-            'scope' => $scope,
-            'currency' => $currency,
-            'period' => $period,
-            'chart' => $chart,
-        ];
+        return $this->transform([], $context);
     }
 
     public function transform(array $dataset, array $context): array
@@ -118,9 +96,7 @@ class BillingRevenueTrendWidget implements WidgetManifest
         return [
             'key' => $this->key(),
             'scope' => $context['scope'] ?? 'global',
-            'currency' => $dataset['currency'],
-            'period' => $context['period'] ?? '30d',
-            'chart' => $dataset['revenue_trend'],
+            'items' => $dataset['last_refunds'] ?? [],
         ];
     }
 }

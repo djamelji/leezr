@@ -3152,7 +3152,7 @@ Chaque module peut déclarer :
 ## ADR-131 : Merge Realtime into Security & Auto Kill Switch
 
 - **Date** : 2026-02-26
-- **Status** : Implemented
+- **Status** : Superseded by ADR-157
 - **Contexte** : La page `/platform/realtime` est un dashboard ops manuel pour surveiller le backbone SSE. La page `/platform/security` gere les alertes de securite. Les deux servent l'observabilite admin. Le kill switch manuel est un vestige — les protections automatiques (limites connexions, SecurityDetector) sont deja en place. On fusionne et on automatise.
 - **Décision** : Fusionner `platform.realtime` dans `platform.security` → une seule page "Security & Monitoring" a onglets (Alerts | Monitoring). Automatiser le kill switch : `EventFloodDetector` surveille le volume global d'events via Redis INCR. Si > threshold (config: `event_flood_threshold`, default 1000) dans window (config: `event_flood_window`, default 300s) → kill switch auto active + alerte security critique + audit log. Guard : un seul alert par fenetre (Redis flag). `RealtimeModule` supprime, routes realtime absorbees sous `module.active:platform.security` avec permission `manage_realtime`.
 
@@ -5035,6 +5035,158 @@ self::assertNotFrozen($companyId);
   - Migration : sync 3 nouvelles permissions + auto-assign aux rôles ayant `manage_billing`
   - Company catalogs never voient les widgets platform (filtrage audience existant)
 - **Fichiers** : `ModuleManifest.php`, `BillingModule.php`, `ModuleController.php`, 3 widget files, `DashboardWidgetRegistry.php`, migration, 5 settings page files, `modules/index.vue`, `invoices/[id].vue`, `en.json`, `fr.json`
+
+## ADR-155 : Dashboard Grid V6 — Single Source of Truth + Responsive Visuel
+
+- **Date** : 2026-02-28
+- **Contexte** : Après ADR-152/154, deux régressions critiques :
+  1. **Widgets billing invisibles** — `ModuleGate::isEnabledGlobally()` retournait `false` quand aucune row `platform_modules` n'existait (avant sync). Les widgets liés à `platform.billing` disparaissaient entre déploiement et exécution du seeder.
+  2. **Overlap responsive** — `remapBreakpoint()` + watcher `cols` mutait le layout canonical à chaque resize viewport, déclenchant `_dirty = true` et créant des overlaps sur mobile/tablette.
+- **Décision** :
+  1. **Layout = toujours 12 colonnes canoniques** — `x`, `y`, `w`, `h` sont stockés en coordonnées 12-col. Le pipeline (`applyPipeline`) utilise toujours `CANONICAL_COLS = 12`.
+  2. **Responsive = purement visuel** — `computeVisualLayout(canonicalLayout, viewCols, forceH)` est une fonction pure qui recalcule les positions pour le viewport courant via un occupancy map. Le résultat n'est JAMAIS persisté, émis ou muté.
+  3. **Suppression de `remapBreakpoint()`** — Plus de watcher `watch(cols, ...)`. Le resize viewport ne produit AUCUN changement d'état.
+  4. **Breakpoints visuels** — Desktop (≥1280px) → 12 cols CSS. Mobile+Tablette (<1280px) → 6 cols CSS.
+  5. **Mobile : forceH=2** — Tous les widgets passent en hauteur 2 (density S) sur mobile.
+  6. **Regroupement mobile** — Widgets `w ≤ 6` → demi-largeur (3 cols sur 6), regroupés par paires. Widgets `w > 6` → pleine largeur (6 cols).
+  7. **Interleaving charts/KPIs** — En mobile, alternance : 1 graphique (w>6, pleine largeur) → 2 KPIs (w≤6, demi-largeur) → 1 graphique → 2 KPIs → reste.
+  8. **Règle impaire** — Si nombre impair de KPIs, le dernier passe en pleine largeur.
+  9. **ModuleGate manifest-aware** — `isEnabledGlobally()` tombe en fallback sur `ModuleRegistry::definitions()` : module connu sans row DB → `true` (enabled par défaut). Module inconnu → `false`. Un `is_enabled_globally = false` explicite en DB le désactive.
+  10. **Drag/resize en 12 cols** — `getCellSize()` divise par `CANONICAL_COLS`, pas par `cols.value`. Le snapping est toujours en grille 12 colonnes.
+- **Conséquences** :
+  - Zero mutation passive : resize fenêtre → aucun `_dirty`, aucun bouton "Save" intempestif
+  - Widgets billing visibles immédiatement après déploiement (avant `sync()`)
+  - Layout identique sur tous les écrans une fois sauvegardé
+  - Le même système s'applique aux dashboards company (même `computeVisualLayout`)
+  - Suppression du code mobile `numCols === 4` (plus de breakpoint 4 cols)
+- **Tests** : `ResponsiveLayoutIntegrityTest` (25 tests — V1-V16 visuel, R1-R8 structural), `PlatformDashboardWidgetCatalogAfterADR154Test` (9 tests), `LayoutEngineNoOverlapTest` (21 tests)
+- **Fichiers** : `useDashboardGrid.js`, `DashboardGrid.vue`, `ModuleGate.php`, 3 test files
+
+---
+
+## ADR-156 : Platform Dashboard Batch ReadModel Architecture
+
+- **Date** : 2026-02-28
+- **Contexte** : Le dashboard platform avait 3 widgets billing. Chaque widget appelait `PlatformBillingWidgetsReadService` individuellement — requêtes redondantes quand plusieurs widgets partagent les mêmes données. Besoin de scaler à 12+ widgets avec des requêtes DB minimales.
+- **Décision** :
+  1. **Contract `WidgetManifest` étendu** — Ajout de `datasetKey(): ?string` et `transform(array $dataset, array $context): array` à l'interface. Défauts backward-compatible dans le trait `WidgetLayoutDefaults` (`datasetKey() = null`, `transform() = resolve()`).
+  2. **Routing batch/individuel** — Le controller route vers le batch service si `widget->datasetKey() !== null`, sinon résolution individuelle via `resolve()`. Pas de `method_exists()` fragile.
+  3. **Service injectable** — `PlatformBillingDashboardReadService` (constructor injection, non static) dans `app/Modules/Platform/Billing/ReadModels/`. Groupe par `datasetKey + context hash`, charge chaque dataset UNE SEULE fois, cache le résultat, fan-out via `transform()`.
+  4. **4 datasets** :
+     - `billing.activity` (3 queries) — `Payment`, `Invoice`, `CreditNote` avec `->with('company:id,name')`, LIMIT 5 chacun
+     - `billing.kpis` (2 queries) — `LedgerEntry` agrégat (revenue, refunds, AR outstanding), currency. MRR = `null` (pas de source SubscriptionContract pricing)
+     - `billing.risk` (3 queries) — `Payment` failed 7d, `Invoice` overdue, failure_reason GROUP BY
+     - `billing.timeseries` (2 queries) — `LedgerEntry` revenue trend + cashflow trend (`entry_type=payment_received`, `account_code=CASH`)
+  5. **Scope-aware** — Chaque dataset prend `(string $scope, ?int $companyId, ...)`. Un seul méthode par dataset, pas de duplication `*Global()` / `*ForCompany()`.
+  6. **Cache** — Clé `dashboard:billing:{dataset}:{scope}:{companyId}:{period}`. TTL : 30s (activity/kpis/risk), 60s (timeseries). Pas de permissionHash — la vérification des permissions se fait AVANT le batch resolver (dans le controller).
+  7. **MRR non supporté** — `mrr = null` avec `meta.not_supported = true`. Sera implémenté quand le modèle de pricing SubscriptionContract existera.
+  8. **Cashflow = LedgerEntry** — Utilise `entry_type='payment_received'`, `account_code='CASH'` (source immutable), PAS la table `payments` directement.
+  9. **Données manquantes** — Si source indisponible : `{ data: null, meta: { unavailable_reason: '...' } }`.
+  10. **Frontend partagé** — `_RecentListWidgetShell.vue` pour les 3 widgets activité (LastPayments, LastInvoices, LastRefunds). Évite le copy-paste.
+  11. **RÈGLE BMAD** — Platform widgets DOIVENT déclarer `audience='platform'` + `module='platform.*'`. Company widgets DOIVENT déclarer `audience='company'` + `module='core.*'` ou `addon.*`. Cross-leak interdit.
+- **12 widgets** :
+  | # | Key | Dataset | Type |
+  |---|-----|---------|------|
+  | 1 | `billing.last_payments` | `billing.activity` | list |
+  | 2 | `billing.last_invoices` | `billing.activity` | list |
+  | 3 | `billing.last_refunds` | `billing.activity` | list |
+  | 4 | `billing.revenue_mtd` | `billing.kpis` | KPI |
+  | 5 | `billing.mrr` | `billing.kpis` | KPI |
+  | 6 | `billing.ar_outstanding` | `billing.kpis` | KPI |
+  | 7 | `billing.refund_ratio` | `billing.kpis` | KPI |
+  | 8 | `billing.failed_payments_7d` | `billing.risk` | KPI |
+  | 9 | `billing.pending_dunning` | `billing.risk` | KPI |
+  | 10 | `billing.top_failure_reasons` | `billing.risk` | list |
+  | 11 | `billing.revenue_trend` | `billing.timeseries` | chart |
+  | 12 | `billing.cashflow_trend_30d` | `billing.timeseries` | chart |
+- **Conséquences** :
+  - Maximum ~10 queries pour 12 widgets (cold cache), 0 queries en warm cache
+  - Extensible à 40+ widgets sans dégradation (un dataset = N widgets gratis)
+  - Zero impact sur les endpoints company dashboard
+  - `catalogForCompany()` retourne 0 widgets billing (tous `audience='platform'`)
+- **Tests** : `PlatformBillingDashboardBatchTest` (8 tests — batch 12 widgets, cold/warm cache query count, module disabled, forbidden, not_found, company isolation, scope company)
+- **Fichiers** : `WidgetManifest.php`, `WidgetLayoutDefaults.php`, `PlatformBillingWidgetsReadService.php`, `PlatformBillingDashboardReadService.php`, `DashboardWidgetController.php`, `widgets.php`, 12 widget classes (3 modified + 9 created), `widgetComponentMap.js`, 10 Vue components (1 shell + 9 widgets), `en.json`, `fr.json`
+
+---
+
+## ADR-157 : Platform Security & Realtime Backbone as First-Class Modules
+
+- **Date** : 2026-02-28
+- **Status** : Implemented
+- **Supersedes** : ADR-131 (Merge Realtime into Security)
+- **Depends on** : ADR-113 (Unified Module Engine), ADR-127 (Realtime Governance), ADR-129 (Security Alerting)
+- **Contexte** : ADR-131 avait fusionné `platform.realtime` dans `platform.security` (type `internal`). Cela créait des problèmes : (1) concerns tangled — alertes sécurité et monitoring SSE partagent module, permissions, routes, store et onglets UI ; (2) `type: 'internal'` empêche le toggle via `AdminModuleService` ; (3) risque de surface leakage — un module platform ne doit JAMAIS gater une route company.
+- **Décision** : Séparer en 2 modules indépendants toggleables (`type: 'platform'`).
+
+  **BMAD Rules (ADR-157)** :
+  - "Tout écran platform visible dans le menu doit appartenir à un module `platform.*`"
+  - "Aucun module `platform.*` ne peut gater une route `company.*`"
+
+  **`platform.security`** : Alertes sécurité uniquement. Permissions granulaires : `security.view`, `security.manage`, `security.alerts.view`, `security.alerts.manage`, `security.audit.view`. Bundles : `security.full`, `security.readonly`.
+
+  **`platform.realtime`** : Gouvernance backbone SSE. Permissions granulaires : `realtime.view`, `realtime.manage`, `realtime.metrics.view`, `realtime.connections.view`, `realtime.governance`. Bundles : `realtime.full`, `realtime.readonly`.
+
+  **SSE stream company** : Infrastructure — PAS gaté par module platform. Le kill switch (cache flag runtime) et le rate-limiting gèrent les abus, pas le module toggling.
+
+  **ReadService** : `PlatformRealtimeMonitoringReadService` injectable découple les lectures monitoring des appels statiques runtime (`MetricsCollector`, `ConnectionTracker`, `TopicRegistry`).
+
+  **Routes platform** : Séparées en 2 groupes `module.active:platform.security` et `module.active:platform.realtime` avec permissions granulaires.
+
+  **Frontend** : Security = page mono-vue (alertes). Realtime = page standalone (`/platform/realtime`). Stores séparés, aucun partage.
+
+  Pas de migration nécessaire — `ModuleRegistry::sync()` crée automatiquement les lignes `platform_modules`.
+
+- **Conséquences** :
+  - Backend : `RealtimeModule` recréé, `SecurityModule` allégé, routes séparées, `RealtimeGovernanceController` injecte ReadService
+  - Frontend : store dédié `realtime.store.js`, page `/platform/realtime/index.vue`, page security simplifiée (plus d'onglets)
+  - `_SecurityRealtime.vue` supprimé (contenu migré vers realtime page)
+  - Désactiver `platform.realtime` bloque les routes platform uniquement — SSE company reste opérationnel
+  - Désactiver `platform.security` bloque les alertes uniquement — n'affecte pas le realtime
+- **Tests** : `PlatformSecurityModuleToggleTest` (6 tests), `PlatformRealtimeModuleToggleTest` (7 tests — inclut test SSE-still-200)
+- **Fichiers** : `SecurityModule.php`, `RealtimeModule.php`, `PlatformRealtimeMonitoringReadService.php`, `RealtimeGovernanceController.php`, `routes/platform.php`, `realtime/index.vue`, `security/index.vue`, `realtime.store.js`, `security.store.js`, `en.json`, `fr.json`
+
+---
+
+## ADR-158 : Billing Demo Seeder — Données financières réalistes pour dashboards
+
+- **Date** : 2026-02-28
+- **Status** : Implemented
+- **Depends on** : ADR-156 (Dashboard Batch ReadModel)
+- **Contexte** : Les 12 widgets billing du dashboard affichaient zéro données — aucune ligne dans `invoices`, `payments`, `credit_notes`, `financial_ledger_entries`. Le widget MRR retourne `meta.not_supported = true` (pas de moteur de calcul MRR implémenté). Le widget dunning ne détectait rien car aucune facture en retard n'existait.
+- **Décision** : Créer `BillingDemoSeeder` avec données financières réalistes couvrant 90 jours sur 3 companies.
+
+  **Contenu seedé** :
+  - 3 companies : Leezr Logistics (pro), TransFret Express (business), ColisTech (starter)
+  - 3 factures mensuelles par company (subtotal + TVA 20%, lignes détaillées)
+  - Paiements succeeded pour les mois passés, facture open pour le mois en cours
+  - 1 facture overdue par company (`status='open'`, `due_at` = -30 jours) → `pending_dunning > 0`
+  - 2 paiements failed par company (avec `metadata.failure_reason`) → widget risk
+  - 1 credit note par company → widget refund ratio
+  - Ecritures ledger double-entry : AR/REVENUE (invoice), CASH/AR (payment), REFUND/CASH (refund)
+
+  **Protection prod** (double barrière) :
+  1. `DatabaseSeeder` gate avec `app()->environment('local')`
+  2. `BillingDemoSeeder::run()` vérifie aussi `app()->environment('production')` → skip
+
+  **Idempotence** : Skip si `Invoice::where('number', 'LIKE', 'DEMO-%')->exists()`
+
+  **Cache** : TTL-only (30-60s par dataset). Pas d'invalidation realtime — acceptable pour données financières à faible fréquence de changement.
+
+  **Formules vérifiées** :
+  - Refund ratio = `refunds_amount / revenue_amount × 100` (amount-based, pas count-based)
+  - MRR = `meta.not_supported = true` (pas juste `data = null`)
+  - Dunning = `Invoice::where('status', 'open')->where('due_at', '<', now())`
+
+  **Bug fix** : `PlatformBillingWidgetsReadService::riskDataset()` utilisait `status='sent'` (invalide) au lieu de `status='open'` pour la requête dunning.
+
+- **Conséquences** :
+  - Tous les 12 widgets billing affichent des données réalistes en dev
+  - Revenue, refunds, AR outstanding, cashflow trend, activity lists, risk indicators tous alimentés
+  - `pending_dunning >= 3` grâce aux factures overdue
+  - `failed_payments_7d >= 6` grâce aux paiements échoués
+  - Aucun impact prod — double barrière environment
+- **Tests** : 1109 tests passent (dont DashboardGridV2Test, CompanyBillingApiTest)
+- **Fichiers** : `BillingDemoSeeder.php` (created), `DevSeeder.php` (modified — calls BillingDemoSeeder), `PlatformBillingWidgetsReadService.php` (bugfix dunning query)
 
 ---
 

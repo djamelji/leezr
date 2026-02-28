@@ -115,6 +115,30 @@ final class DashboardWidgetRegistry
         }
     }
 
+    /**
+     * Filter a saved layout array, keeping only tiles whose widget key
+     * exists in the registry AND whose module is currently enabled.
+     *
+     * Uses isActiveForScope() which handles both admin-scoped and
+     * company-scoped modules correctly:
+     *   - admin-scoped → isEnabledGlobally()
+     *   - company-scoped → isActive($company, key)
+     *
+     * @return array Filtered layout tiles (re-indexed)
+     */
+    public static function filterLayout(array $tiles, ?Company $company = null): array
+    {
+        return array_values(array_filter($tiles, function (array $tile) use ($company) {
+            $widget = static::find($tile['key'] ?? '');
+
+            if (!$widget) {
+                return false;
+            }
+
+            return ModuleGate::isActiveForScope($widget->module(), $company);
+        }));
+    }
+
     public static function clearCache(): void
     {
         static::$widgets = [];

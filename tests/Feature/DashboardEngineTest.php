@@ -133,7 +133,7 @@ class DashboardEngineTest extends TestCase
             ->getJson('/api/platform/dashboard/widgets/catalog');
 
         $response->assertOk();
-        $this->assertCount(3, $response->json('widgets'));
+        $this->assertCount(12, $response->json('widgets'));
 
         // Viewer without view_billing sees 0
         $response = $this->actingAs($this->viewer, 'platform')

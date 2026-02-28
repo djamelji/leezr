@@ -17,6 +17,7 @@ use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
+use Database\Seeders\BillingDemoSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -190,6 +191,9 @@ class DevSeeder extends Seeder
                 ['value' => '+33 6 12 34 56 78'],
             );
         }
+
+        // ─── Billing demo data (invoices, payments, ledger entries) ─
+        $this->call(BillingDemoSeeder::class);
 
         // ─── Sample shipments (stable references for idempotency) ─
         Shipment::updateOrCreate(

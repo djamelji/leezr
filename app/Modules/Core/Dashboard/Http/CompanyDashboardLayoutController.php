@@ -5,6 +5,7 @@ namespace App\Modules\Core\Dashboard\Http;
 use App\Http\Controllers\Controller;
 use App\Modules\Dashboard\CompanyDashboardLayout;
 use App\Modules\Dashboard\CompanyDashboardWidgetSuggestion;
+use App\Modules\Dashboard\DashboardWidgetRegistry;
 use App\Modules\Dashboard\LayoutValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,11 +17,12 @@ class CompanyDashboardLayoutController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
-        $companyId = $request->attributes->get('company')->id;
-        $layout = CompanyDashboardLayout::where('company_id', $companyId)->first();
+        $company = $request->attributes->get('company');
+        $layout = CompanyDashboardLayout::where('company_id', $company->id)->first();
+        $tiles = $layout?->layout_json ?? [];
 
         return response()->json([
-            'layout' => $layout?->layout_json ?? [],
+            'layout' => DashboardWidgetRegistry::filterLayout($tiles, $company),
         ]);
     }
 

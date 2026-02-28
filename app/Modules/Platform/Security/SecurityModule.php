@@ -12,36 +12,40 @@ class SecurityModule implements ModuleDefinition
     {
         return new ModuleManifest(
             key: 'platform.security',
-            name: 'Security & Monitoring',
-            description: 'Anomaly detection, security alert management, and realtime backbone monitoring',
+            name: 'Security',
+            description: 'Anomaly detection and security alert management',
             surface: 'structure',
             sortOrder: 94,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'security', 'title' => 'Security & Monitoring', 'to' => ['name' => 'platform-security'], 'icon' => 'tabler-shield-lock', 'permission' => 'manage_security_alerts'],
+                    ['key' => 'security', 'title' => 'Security', 'to' => ['name' => 'platform-security'], 'icon' => 'tabler-shield-lock', 'permission' => 'security.view'],
                 ],
                 routeNames: ['platform-security'],
             ),
             permissions: [
-                ['key' => 'manage_security_alerts', 'label' => 'Manage Security Alerts'],
-                ['key' => 'manage_realtime', 'label' => 'Manage Realtime'],
+                ['key' => 'security.view', 'label' => 'View Security Dashboard'],
+                ['key' => 'security.manage', 'label' => 'Manage Security Settings'],
+                ['key' => 'security.alerts.view', 'label' => 'View Security Alerts'],
+                ['key' => 'security.alerts.manage', 'label' => 'Manage Security Alerts'],
+                ['key' => 'security.audit.view', 'label' => 'View Security Audit'],
             ],
             bundles: [
                 [
-                    'key' => 'security.alerts',
-                    'label' => 'Security Alert Management',
-                    'hint' => 'View, acknowledge, and resolve security alerts.',
-                    'permissions' => ['manage_security_alerts'],
+                    'key' => 'security.full',
+                    'label' => 'Full Security Management',
+                    'hint' => 'Complete security governance access.',
+                    'permissions' => ['security.view', 'security.manage', 'security.alerts.view', 'security.alerts.manage', 'security.audit.view'],
                 ],
                 [
-                    'key' => 'security.realtime',
-                    'label' => 'Realtime Governance',
-                    'hint' => 'Monitor SSE connections, metrics, and control the realtime backbone.',
-                    'permissions' => ['manage_realtime'],
+                    'key' => 'security.readonly',
+                    'label' => 'Security Read-Only',
+                    'hint' => 'View security alerts and audit logs.',
+                    'permissions' => ['security.view', 'security.alerts.view', 'security.audit.view'],
                 ],
             ],
             scope: 'admin',
-            type: 'internal',
+            type: 'platform',
+            iconRef: 'tabler-shield-lock',
         );
     }
 }

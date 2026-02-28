@@ -67,7 +67,7 @@ export const companyResources = [
     abortGroup: 'features',
     ttl: 5 * 60 * 1000,
     dependsOn: ['auth:companies'],
-    critical: false,
+    critical: true, // ADR-153: ready must include nav hydration
   },
 ]
 
@@ -92,6 +92,6 @@ export const platformResources = [
     abortGroup: 'features',
     ttl: 5 * 60 * 1000,
     dependsOn: ['platform:me'],
-    critical: false,
+    critical: true, // ADR-153: ready must include nav hydration
   },
 ]

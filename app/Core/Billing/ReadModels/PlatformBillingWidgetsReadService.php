@@ -2,7 +2,10 @@
 
 namespace App\Core\Billing\ReadModels;
 
+use App\Core\Billing\CreditNote;
+use App\Core\Billing\Invoice;
 use App\Core\Billing\LedgerEntry;
+use App\Core\Billing\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -244,5 +247,217 @@ class PlatformBillingWidgetsReadService
         $outstanding = (float) $result->total_debit - (float) $result->total_credit;
 
         return ['outstanding' => $outstanding];
+    }
+
+    // ── Dataset methods (ADR-156) ────────────────────────────────
+
+    /**
+     * Activity dataset — last payments, invoices, and credit notes.
+     */
+    public static function activityDataset(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
+    {
+        $paymentQuery = Payment::with('company:id,name')
+            ->whereBetween('created_at', [$from, $to])
+            ->orderByDesc('created_at')
+            ->limit(5);
+
+        $invoiceQuery = Invoice::with('company:id,name')
+            ->whereBetween('issued_at', [$from, $to])
+            ->orderByDesc('issued_at')
+            ->limit(5);
+
+        $creditNoteQuery = CreditNote::with('company:id,name')
+            ->whereBetween('issued_at', [$from, $to])
+            ->orderByDesc('issued_at')
+            ->limit(5);
+
+        if ($scope === 'company' && $companyId) {
+            $paymentQuery->where('company_id', $companyId);
+            $invoiceQuery->where('company_id', $companyId);
+            $creditNoteQuery->where('company_id', $companyId);
+        }
+
+        return [
+            'last_payments' => $paymentQuery->get()->map(fn ($p) => [
+                'id' => $p->id,
+                'company_name' => $p->company?->name,
+                'amount' => $p->amount,
+                'currency' => $p->currency,
+                'status' => $p->status,
+                'date' => $p->created_at?->toIso8601String(),
+            ])->all(),
+            'last_invoices' => $invoiceQuery->get()->map(fn ($i) => [
+                'id' => $i->id,
+                'company_name' => $i->company?->name,
+                'number' => $i->number,
+                'amount' => $i->amount,
+                'currency' => $i->currency,
+                'status' => $i->status,
+                'date' => $i->issued_at?->toIso8601String(),
+            ])->all(),
+            'last_refunds' => $creditNoteQuery->get()->map(fn ($cn) => [
+                'id' => $cn->id,
+                'company_name' => $cn->company?->name,
+                'amount' => $cn->amount,
+                'currency' => $cn->currency,
+                'reason' => $cn->reason,
+                'status' => $cn->status,
+                'date' => $cn->issued_at?->toIso8601String(),
+            ])->all(),
+        ];
+    }
+
+    /**
+     * KPIs dataset — revenue, refunds, AR outstanding.
+     */
+    public static function kpisDataset(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
+    {
+        $revenueQuery = LedgerEntry::where('entry_type', 'invoice_issued')
+            ->where('account_code', 'REVENUE')
+            ->whereBetween('recorded_at', [$from, $to]);
+
+        $refundQuery = LedgerEntry::where('entry_type', 'refund_issued')
+            ->where('account_code', 'REFUND')
+            ->whereBetween('recorded_at', [$from, $to]);
+
+        $arQuery = LedgerEntry::where('account_code', 'AR');
+
+        if ($scope === 'company' && $companyId) {
+            $revenueQuery->where('company_id', $companyId);
+            $refundQuery->where('company_id', $companyId);
+            $arQuery->where('company_id', $companyId);
+            $currency = static::currencyForCompany($companyId);
+        } else {
+            $currency = static::currencyGlobal();
+        }
+
+        $revenue = (float) $revenueQuery->sum('credit');
+        $refunds = (float) $refundQuery->sum('debit');
+
+        $arResult = $arQuery->select(
+            DB::raw('COALESCE(SUM(debit), 0) as total_debit'),
+            DB::raw('COALESCE(SUM(credit), 0) as total_credit')
+        )->first();
+
+        $outstanding = (float) $arResult->total_debit - (float) $arResult->total_credit;
+
+        return [
+            'revenue' => $revenue,
+            'refunds' => $refunds,
+            'outstanding' => $outstanding,
+            'currency' => $currency,
+            'mrr' => null,
+        ];
+    }
+
+    /**
+     * Risk dataset — failed payments, overdue invoices, failure reasons.
+     */
+    public static function riskDataset(string $scope, ?int $companyId): array
+    {
+        $failedQuery = Payment::where('status', 'failed')
+            ->where('created_at', '>=', now()->subDays(7));
+
+        $overdueQuery = Invoice::where('status', 'open')
+            ->where('due_at', '<', now());
+
+        if ($scope === 'company' && $companyId) {
+            $failedQuery->where('company_id', $companyId);
+            $overdueQuery->where('company_id', $companyId);
+        }
+
+        $failedCount = $failedQuery->count();
+        $overdueCount = $overdueQuery->count();
+
+        // Top failure reasons from payment metadata
+        $reasonQuery = Payment::where('status', 'failed')
+            ->where('created_at', '>=', now()->subDays(7));
+
+        if ($scope === 'company' && $companyId) {
+            $reasonQuery->where('company_id', $companyId);
+        }
+
+        $reasons = $reasonQuery->get()
+            ->groupBy(fn ($p) => $p->metadata['failure_reason'] ?? 'unknown')
+            ->map(fn ($group, $reason) => ['reason' => $reason, 'count' => $group->count()])
+            ->sortByDesc('count')
+            ->values()
+            ->take(5)
+            ->all();
+
+        return [
+            'failed_payments_7d' => $failedCount,
+            'pending_dunning' => $overdueCount,
+            'top_failure_reasons' => $reasons,
+        ];
+    }
+
+    /**
+     * Timeseries dataset — revenue trend + cashflow trend.
+     */
+    public static function timeseriesDataset(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
+    {
+        $revenueQuery = LedgerEntry::where('entry_type', 'invoice_issued')
+            ->where('account_code', 'REVENUE')
+            ->whereBetween('recorded_at', [$from, $to])
+            ->select(
+                DB::raw('DATE(recorded_at) as date_label'),
+                DB::raw('SUM(credit) as total')
+            )
+            ->groupBy('date_label')
+            ->orderBy('date_label');
+
+        $cashflowQuery = LedgerEntry::where('entry_type', 'payment_received')
+            ->where('account_code', 'CASH')
+            ->whereBetween('recorded_at', [$from, $to])
+            ->select(
+                DB::raw('DATE(recorded_at) as date_label'),
+                DB::raw('SUM(debit) as total')
+            )
+            ->groupBy('date_label')
+            ->orderBy('date_label');
+
+        if ($scope === 'company' && $companyId) {
+            $revenueQuery->where('company_id', $companyId);
+            $cashflowQuery->where('company_id', $companyId);
+            $currency = static::currencyForCompany($companyId);
+        } else {
+            $currency = static::currencyGlobal();
+        }
+
+        $revenueRows = $revenueQuery->get();
+        $cashflowRows = $cashflowQuery->get();
+
+        return [
+            'revenue_trend' => static::buildContinuousSeries($revenueRows, $from, $to),
+            'cashflow_trend' => static::buildContinuousSeries($cashflowRows, $from, $to),
+            'currency' => $currency,
+        ];
+    }
+
+    /**
+     * Build continuous date series filling gaps with 0.
+     */
+    public static function buildContinuousSeries($rows, Carbon $from, Carbon $to): array
+    {
+        $seriesMap = [];
+
+        foreach ($rows as $row) {
+            $seriesMap[$row->date_label] = (float) $row->total;
+        }
+
+        $labels = [];
+        $series = [];
+        $current = $from->copy()->startOfDay();
+        $end = $to->copy()->startOfDay();
+
+        while ($current->lte($end)) {
+            $key = $current->toDateString();
+            $labels[] = $key;
+            $series[] = $seriesMap[$key] ?? 0.0;
+            $current->addDay();
+        }
+
+        return ['labels' => $labels, 'series' => $series];
     }
 }

@@ -1,5 +1,6 @@
 <script setup>
 import { useCompanyNav } from '@/composables/useCompanyNav'
+import { useNavStore } from '@/core/stores/nav'
 // Components
 import Footer from '@/layouts/components/Footer.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
@@ -8,6 +9,10 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import { VerticalNavLayout } from '@layouts'
 
 const { navItems } = useCompanyNav()
+const navStore = useNavStore()
+
+// ADR-153: Gate sidebar items until nav is hydrated (defense-in-depth)
+const effectiveNavItems = computed(() => navStore.companyLoaded ? navItems.value : [])
 
 // ─── Overlay stuck failsafe ─────────────────────────────
 // If .layout-overlay stays visible for >10s without user interaction,
@@ -41,7 +46,7 @@ onUnmounted(() => clearInterval(overlayStuckTimer))
 </script>
 
 <template>
-  <VerticalNavLayout :nav-items="navItems">
+  <VerticalNavLayout :nav-items="effectiveNavItems">
     <!-- navbar -->
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">

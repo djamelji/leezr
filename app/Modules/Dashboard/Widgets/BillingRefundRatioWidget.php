@@ -83,6 +83,11 @@ class BillingRefundRatioWidget implements WidgetManifest
         return ['period' => '30d'];
     }
 
+    public function datasetKey(): ?string
+    {
+        return 'billing.kpis';
+    }
+
     public function resolve(array $context): array
     {
         $scope = $context['scope'] ?? 'company';
@@ -108,6 +113,23 @@ class BillingRefundRatioWidget implements WidgetManifest
             'scope' => $scope,
             'currency' => $currency,
             'period' => $period,
+            'revenue' => $revenue,
+            'refunds' => $refunds,
+            'ratio' => $ratio,
+        ];
+    }
+
+    public function transform(array $dataset, array $context): array
+    {
+        $revenue = $dataset['revenue'];
+        $refunds = $dataset['refunds'];
+        $ratio = $revenue > 0 ? round(($refunds / $revenue) * 100, 2) : 0.0;
+
+        return [
+            'key' => $this->key(),
+            'scope' => $context['scope'] ?? 'global',
+            'currency' => $dataset['currency'],
+            'period' => $context['period'] ?? '30d',
             'revenue' => $revenue,
             'refunds' => $refunds,
             'ratio' => $ratio,

@@ -50,4 +50,19 @@ interface WidgetManifest
      * @param array{scope: string, company_id: ?int, period: ?string} $context
      */
     public function resolve(array $context): array;
+
+    /**
+     * Dataset key for batch resolution. Return null for individual-only resolution.
+     * Widgets sharing the same dataset key share a single data load.
+     */
+    public function datasetKey(): ?string;
+
+    /**
+     * Transform a pre-loaded dataset into widget-specific data.
+     * Called only when datasetKey() is non-null.
+     *
+     * @param array $dataset  The pre-loaded dataset
+     * @param array $context  The widget request context
+     */
+    public function transform(array $dataset, array $context): array;
 }

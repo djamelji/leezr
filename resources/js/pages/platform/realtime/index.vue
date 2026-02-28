@@ -1,9 +1,11 @@
 <script setup>
-import { usePlatformSecurityStore } from '@/modules/platform-admin/security/security.store'
+import { usePlatformRealtimeStore } from '@/modules/platform-admin/realtime/realtime.store'
 
 const { t } = useI18n()
 
-const securityStore = usePlatformSecurityStore()
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.realtime' } })
+
+const realtimeStore = usePlatformRealtimeStore()
 const loading = ref(true)
 const killSwitchLoading = ref(false)
 const flushLoading = ref(false)
@@ -13,9 +15,9 @@ async function fetchAll() {
   loading.value = true
   try {
     await Promise.allSettled([
-      securityStore.fetchRealtimeStatus(),
-      securityStore.fetchRealtimeMetrics(),
-      securityStore.fetchRealtimeConnections(),
+      realtimeStore.fetchRealtimeStatus(),
+      realtimeStore.fetchRealtimeMetrics(),
+      realtimeStore.fetchRealtimeConnections(),
     ])
   }
   finally {
@@ -26,7 +28,7 @@ async function fetchAll() {
 async function toggleKillSwitch() {
   killSwitchLoading.value = true
   try {
-    await securityStore.toggleKillSwitch()
+    await realtimeStore.toggleKillSwitch()
   }
   finally {
     killSwitchLoading.value = false
@@ -37,7 +39,7 @@ async function flushData() {
   flushLoading.value = true
   confirmFlushDialog.value = false
   try {
-    await securityStore.flushRealtimeData()
+    await realtimeStore.flushRealtimeData()
   }
   finally {
     flushLoading.value = false
@@ -90,10 +92,10 @@ onMounted(fetchAll)
             >
               <VIcon
                 start
-                :icon="securityStore.realtimeStatus?.kill_switch ? 'tabler-player-pause' : 'tabler-player-play'"
-                :class="{ 'blink': !securityStore.realtimeStatus?.kill_switch }"
+                :icon="realtimeStore.realtimeStatus?.kill_switch ? 'tabler-player-pause' : 'tabler-player-play'"
+                :class="{ 'blink': !realtimeStore.realtimeStatus?.kill_switch }"
               />
-              {{ securityStore.realtimeStatus?.kill_switch ? t('realtime.reactivate') : t('realtime.killSwitch') }}
+              {{ realtimeStore.realtimeStatus?.kill_switch ? t('realtime.reactivate') : t('realtime.killSwitch') }}
             </VBtn>
             <VBtn
               color="error"
@@ -132,7 +134,7 @@ onMounted(fetchAll)
                 {{ t('realtime.driver') }}
               </p>
               <h6 class="text-h6">
-                {{ securityStore.realtimeStatus?.driver ?? '—' }}
+                {{ realtimeStore.realtimeStatus?.driver ?? '—' }}
               </h6>
             </div>
           </VCardText>
@@ -146,18 +148,18 @@ onMounted(fetchAll)
         <VCard>
           <VCardText class="d-flex align-center gap-3">
             <VAvatar
-              :color="securityStore.realtimeStatus?.kill_switch ? 'error' : 'success'"
+              :color="realtimeStore.realtimeStatus?.kill_switch ? 'error' : 'success'"
               variant="tonal"
               rounded
             >
-              <VIcon :icon="securityStore.realtimeStatus?.kill_switch ? 'tabler-shield-off' : 'tabler-shield-check'" />
+              <VIcon :icon="realtimeStore.realtimeStatus?.kill_switch ? 'tabler-shield-off' : 'tabler-shield-check'" />
             </VAvatar>
             <div>
               <p class="text-body-2 mb-0">
                 {{ t('realtime.status') }}
               </p>
               <h6 class="text-h6">
-                {{ securityStore.realtimeStatus?.kill_switch ? t('realtime.stopped') : t('realtime.active') }}
+                {{ realtimeStore.realtimeStatus?.kill_switch ? t('realtime.stopped') : t('realtime.active') }}
               </h6>
             </div>
           </VCardText>
@@ -182,7 +184,7 @@ onMounted(fetchAll)
                 {{ t('realtime.connections') }}
               </p>
               <h6 class="text-h6">
-                {{ securityStore.realtimeConnections.global_count }}
+                {{ realtimeStore.realtimeConnections.global_count }}
               </h6>
             </div>
           </VCardText>
@@ -207,7 +209,7 @@ onMounted(fetchAll)
                 {{ t('realtime.topics') }}
               </p>
               <h6 class="text-h6">
-                {{ securityStore.realtimeStatus?.topic_count ?? 0 }}
+                {{ realtimeStore.realtimeStatus?.topic_count ?? 0 }}
               </h6>
             </div>
           </VCardText>
@@ -221,7 +223,7 @@ onMounted(fetchAll)
         <VCard>
           <VCardText class="d-flex align-center gap-3">
             <VAvatar
-              :color="securityStore.realtimeStatus?.transport === 'pubsub' ? 'success' : 'secondary'"
+              :color="realtimeStore.realtimeStatus?.transport === 'pubsub' ? 'success' : 'secondary'"
               variant="tonal"
               rounded
             >
@@ -232,7 +234,7 @@ onMounted(fetchAll)
                 {{ t('realtime.transportLabel') }}
               </p>
               <h6 class="text-h6">
-                {{ securityStore.realtimeStatus?.transport ?? '—' }}
+                {{ realtimeStore.realtimeStatus?.transport ?? '—' }}
               </h6>
             </div>
           </VCardText>
@@ -253,7 +255,7 @@ onMounted(fetchAll)
           </VCardTitle>
           <VDataTable
             :headers="metricsHeaders"
-            :items="securityStore.metricsItems"
+            :items="realtimeStore.metricsItems"
             :loading="loading"
             density="comfortable"
             :items-per-page="-1"
@@ -301,7 +303,7 @@ onMounted(fetchAll)
                   {{ t('realtime.publishLatency') }}
                 </p>
                 <h6 class="text-h6">
-                  {{ securityStore.realtimeMetrics?.latency?.publish?.avg ? `${Math.round(securityStore.realtimeMetrics.latency.publish.avg)}ms` : '—' }}
+                  {{ realtimeStore.realtimeMetrics?.latency?.publish?.avg ? `${Math.round(realtimeStore.realtimeMetrics.latency.publish.avg)}ms` : '—' }}
                 </h6>
               </div>
               <div>
@@ -309,7 +311,7 @@ onMounted(fetchAll)
                   {{ t('realtime.deliveryLatency') }}
                 </p>
                 <h6 class="text-h6">
-                  {{ securityStore.realtimeMetrics?.latency?.delivery?.avg ? `${Math.round(securityStore.realtimeMetrics.latency.delivery.avg)}ms` : '—' }}
+                  {{ realtimeStore.realtimeMetrics?.latency?.delivery?.avg ? `${Math.round(realtimeStore.realtimeMetrics.latency.delivery.avg)}ms` : '—' }}
                 </h6>
               </div>
             </div>
@@ -328,7 +330,7 @@ onMounted(fetchAll)
           </VCardTitle>
           <VDataTable
             :headers="connectionHeaders"
-            :items="securityStore.realtimeConnections.connections"
+            :items="realtimeStore.realtimeConnections.connections"
             :loading="loading"
             density="comfortable"
             :items-per-page="-1"

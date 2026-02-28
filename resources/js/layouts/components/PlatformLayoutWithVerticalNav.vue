@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformNav } from '@/composables/usePlatformNav'
+import { useNavStore } from '@/core/stores/nav'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
@@ -11,10 +12,14 @@ import PlatformUserProfile from '@/layouts/components/PlatformUserProfile.vue'
 import { VerticalNavLayout } from '@layouts'
 
 const { navItems } = usePlatformNav()
+const navStore = useNavStore()
+
+// ADR-153: Gate sidebar items until nav is hydrated (defense-in-depth)
+const effectiveNavItems = computed(() => navStore.platformLoaded ? navItems.value : [])
 </script>
 
 <template>
-  <VerticalNavLayout :nav-items="navItems">
+  <VerticalNavLayout :nav-items="effectiveNavItems">
     <!-- 👉 navbar -->
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">

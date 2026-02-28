@@ -320,22 +320,32 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/audit/actions', [PlatformAuditLogController::class, 'actions']);
     });
 
-    // Security & Monitoring (ADR-129, ADR-131)
+    // Security Alerts (ADR-129, ADR-157)
     Route::middleware(['module.active:platform.security'])->group(function () {
-        // Security alerts
-        Route::middleware(['platform.permission:manage_security_alerts'])->group(function () {
+        Route::middleware(['platform.permission:security.alerts.view'])->group(function () {
             Route::get('/security/alerts', [SecurityAlertController::class, 'index']);
             Route::get('/security/alert-types', [SecurityAlertController::class, 'alertTypes']);
+        });
+
+        Route::middleware(['platform.permission:security.alerts.manage'])->group(function () {
             Route::put('/security/alerts/{id}/acknowledge', [SecurityAlertController::class, 'acknowledge']);
             Route::put('/security/alerts/{id}/resolve', [SecurityAlertController::class, 'resolve']);
             Route::put('/security/alerts/{id}/false-positive', [SecurityAlertController::class, 'falsePositive']);
         });
+    });
 
-        // Realtime governance (absorbed from platform.realtime — ADR-131)
-        Route::middleware(['platform.permission:manage_realtime'])->group(function () {
+    // Realtime Governance (ADR-127, ADR-157)
+    Route::middleware(['module.active:platform.realtime'])->group(function () {
+        Route::middleware(['platform.permission:realtime.metrics.view'])->group(function () {
             Route::get('/realtime/status', [RealtimeGovernanceController::class, 'status']);
             Route::get('/realtime/metrics', [RealtimeGovernanceController::class, 'metrics']);
+        });
+
+        Route::middleware(['platform.permission:realtime.connections.view'])->group(function () {
             Route::get('/realtime/connections', [RealtimeGovernanceController::class, 'connections']);
+        });
+
+        Route::middleware(['platform.permission:realtime.governance'])->group(function () {
             Route::post('/realtime/flush', [RealtimeGovernanceController::class, 'flush']);
             Route::post('/realtime/kill-switch', [RealtimeGovernanceController::class, 'killSwitch']);
         });

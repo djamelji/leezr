@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformNav } from '@/composables/usePlatformNav'
+import { useNavStore } from '@/core/stores/nav'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
@@ -11,8 +12,12 @@ import PlatformUserProfile from '@/layouts/components/PlatformUserProfile.vue'
 import { HorizontalNavLayout } from '@layouts'
 
 const { navItems: rawNavItems } = usePlatformNav()
+const navStore = useNavStore()
 
-const navItems = computed(() => rawNavItems.value.filter(item => !item.heading))
+const navItems = computed(() => {
+  if (!navStore.platformLoaded) return [] // ADR-153: gate until hydrated
+  return rawNavItems.value.filter(item => !item.heading)
+})
 </script>
 
 <template>

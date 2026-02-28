@@ -38,4 +38,14 @@ trait WidgetLayoutDefaults
     {
         return 'platform';
     }
+
+    public function datasetKey(): ?string
+    {
+        return null;
+    }
+
+    public function transform(array $dataset, array $context): array
+    {
+        return $this->resolve($context);
+    }
 }

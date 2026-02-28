@@ -3,6 +3,7 @@
 namespace App\Modules\Platform\Dashboard\Http;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Dashboard\DashboardWidgetRegistry;
 use App\Modules\Dashboard\JobdomainDashboardDefault;
 use App\Modules\Dashboard\LayoutValidator;
 use App\Modules\Dashboard\PlatformUserDashboardLayout;
@@ -18,9 +19,10 @@ class DashboardLayoutController extends Controller
     {
         $userId = $request->user('platform')->id;
         $layout = PlatformUserDashboardLayout::where('user_id', $userId)->first();
+        $tiles = $layout?->layout_json ?? self::defaultLayout();
 
         return response()->json([
-            'layout' => $layout?->layout_json ?? self::defaultLayout(),
+            'layout' => DashboardWidgetRegistry::filterLayout($tiles),
         ]);
     }
 

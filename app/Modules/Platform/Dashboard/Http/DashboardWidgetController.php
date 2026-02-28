@@ -4,6 +4,7 @@ namespace App\Modules\Platform\Dashboard\Http;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Dashboard\DashboardWidgetRegistry;
+use App\Modules\Platform\Billing\ReadModels\PlatformBillingDashboardReadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -42,7 +43,7 @@ class DashboardWidgetController extends Controller
      *
      * Batch resolve multiple widgets.
      */
-    public function batchResolve(Request $request): JsonResponse
+    public function batchResolve(Request $request, PlatformBillingDashboardReadService $batchService): JsonResponse
     {
         $validated = $request->validate([
             'widgets' => ['required', 'array', 'min:1', 'max:20'],
@@ -54,6 +55,7 @@ class DashboardWidgetController extends Controller
 
         $user = $request->user('platform');
         $results = [];
+        $batchable = [];
 
         foreach ($validated['widgets'] as $req) {
             $widget = DashboardWidgetRegistry::find($req['key']);
@@ -80,11 +82,24 @@ class DashboardWidgetController extends Controller
                 continue;
             }
 
-            try {
-                $data = $widget->resolve($req);
-                $results[] = ['key' => $req['key'], 'data' => $data];
-            } catch (RuntimeException $e) {
-                $results[] = ['key' => $req['key'], 'error' => $e->getMessage()];
+            // Route to batch or individual
+            if ($widget->datasetKey() !== null) {
+                $batchable[] = ['widget' => $widget, 'request' => $req];
+            } else {
+                try {
+                    $data = $widget->resolve($req);
+                    $results[] = ['key' => $req['key'], 'data' => $data];
+                } catch (RuntimeException $e) {
+                    $results[] = ['key' => $req['key'], 'error' => $e->getMessage()];
+                }
+            }
+        }
+
+        if (!empty($batchable)) {
+            $batchResults = $batchService->resolveMany($batchable);
+
+            foreach ($batchResults as $batchResult) {
+                $results[] = ['key' => $batchResult['key'], 'data' => $batchResult];
             }
         }
 

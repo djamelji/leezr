@@ -6,30 +6,12 @@ export const usePlatformSecurityStore = defineStore('platformSecurity', {
     _alerts: [],
     _alertsPagination: { current_page: 1, last_page: 1, total: 0 },
     _alertTypes: {},
-    _realtimeStatus: null,
-    _realtimeMetrics: null,
-    _realtimeConnections: { connections: [], by_company: {}, global_count: 0 },
   }),
 
   getters: {
     alerts: state => state._alerts,
     alertsPagination: state => state._alertsPagination,
     alertTypes: state => state._alertTypes,
-    realtimeStatus: state => state._realtimeStatus,
-    realtimeMetrics: state => state._realtimeMetrics,
-    realtimeConnections: state => state._realtimeConnections,
-    metricsItems: state => {
-      if (!state._realtimeMetrics?.events) return []
-
-      return Object.entries(state._realtimeMetrics.events).map(([key, count]) => {
-        const raw = key.replace('events_total:', '')
-        const separatorIdx = raw.lastIndexOf(':')
-        const topic = separatorIdx > 0 ? raw.substring(0, separatorIdx) : raw
-        const category = separatorIdx > 0 ? raw.substring(separatorIdx + 1) : ''
-
-        return { topic, category, count }
-      })
-    },
   },
 
   actions: {
@@ -78,34 +60,6 @@ export const usePlatformSecurityStore = defineStore('platformSecurity', {
       this._updateAlertInList(data.alert)
 
       return data
-    },
-
-    async fetchRealtimeStatus() {
-      this._realtimeStatus = await $platformApi('/realtime/status')
-    },
-
-    async fetchRealtimeMetrics() {
-      this._realtimeMetrics = await $platformApi('/realtime/metrics')
-    },
-
-    async fetchRealtimeConnections() {
-      this._realtimeConnections = await $platformApi('/realtime/connections')
-    },
-
-    async toggleKillSwitch() {
-      const active = !this._realtimeStatus?.kill_switch
-
-      await $platformApi('/realtime/kill-switch', { method: 'POST', body: { active } })
-      await this.fetchRealtimeStatus()
-    },
-
-    async flushRealtimeData() {
-      await $platformApi('/realtime/flush', { method: 'POST' })
-      await Promise.allSettled([
-        this.fetchRealtimeStatus(),
-        this.fetchRealtimeMetrics(),
-        this.fetchRealtimeConnections(),
-      ])
     },
 
     _updateAlertInList(alert) {

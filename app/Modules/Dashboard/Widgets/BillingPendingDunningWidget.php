@@ -2,17 +2,16 @@
 
 namespace App\Modules\Dashboard\Widgets;
 
-use App\Core\Billing\ReadModels\PlatformBillingWidgetsReadService;
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 
-class BillingArOutstandingWidget implements WidgetManifest
+class BillingPendingDunningWidget implements WidgetManifest
 {
     use WidgetLayoutDefaults;
 
     public function key(): string
     {
-        return 'billing.ar_outstanding';
+        return 'billing.pending_dunning';
     }
 
     public function module(): string
@@ -23,10 +22,10 @@ class BillingArOutstandingWidget implements WidgetManifest
     public function layout(): array
     {
         return [
-            'default_w' => 4,
+            'default_w' => 3,
             'default_h' => 2,
             'min_w' => 3,
-            'max_w' => 8,
+            'max_w' => 6,
             'min_h' => 2,
             'max_h' => 4,
         ];
@@ -39,22 +38,22 @@ class BillingArOutstandingWidget implements WidgetManifest
 
     public function component(): string
     {
-        return 'BillingArOutstanding';
+        return 'BillingPendingDunning';
     }
 
     public function tags(): array
     {
-        return ['accounts-receivable', 'outstanding', 'billing'];
+        return ['dunning', 'overdue', 'risk', 'billing'];
     }
 
     public function labelKey(): string
     {
-        return 'platformBilling.widgets.arOutstanding';
+        return 'platformBilling.widgets.pendingDunning';
     }
 
     public function descriptionKey(): string
     {
-        return 'platformBilling.widgets.arOutstandingDesc';
+        return 'platformBilling.widgets.pendingDunningDesc';
     }
 
     public function audience(): string
@@ -84,28 +83,12 @@ class BillingArOutstandingWidget implements WidgetManifest
 
     public function datasetKey(): ?string
     {
-        return 'billing.kpis';
+        return 'billing.risk';
     }
 
     public function resolve(array $context): array
     {
-        $scope = $context['scope'] ?? 'company';
-
-        if ($scope === 'global') {
-            $currency = PlatformBillingWidgetsReadService::currencyGlobal();
-            $outstanding = PlatformBillingWidgetsReadService::arOutstandingGlobal()['outstanding'];
-        } else {
-            $companyId = (int) $context['company_id'];
-            $currency = PlatformBillingWidgetsReadService::currencyForCompany($companyId);
-            $outstanding = PlatformBillingWidgetsReadService::arOutstanding($companyId)['outstanding'];
-        }
-
-        return [
-            'key' => $this->key(),
-            'scope' => $scope,
-            'currency' => $currency,
-            'outstanding' => $outstanding,
-        ];
+        return $this->transform([], $context);
     }
 
     public function transform(array $dataset, array $context): array
@@ -113,8 +96,7 @@ class BillingArOutstandingWidget implements WidgetManifest
         return [
             'key' => $this->key(),
             'scope' => $context['scope'] ?? 'global',
-            'currency' => $dataset['currency'],
-            'outstanding' => $dataset['outstanding'],
+            'count' => $dataset['pending_dunning'] ?? 0,
         ];
     }
 }
