@@ -18,6 +18,12 @@ class LayoutEngineNoOverlapTest extends TestCase
 {
     private int $cols = 12;
 
+    private const WIDGET_MIN_H = 2;
+
+    private const WIDGET_MAX_H = 6;
+
+    private const DASHBOARD_MAX_H = 24;
+
     // ── Engine (mirrors useDashboardGrid.js V5) ──
 
     private function overlaps(array $a, array $b): bool
@@ -37,7 +43,7 @@ class LayoutEngineNoOverlapTest extends TestCase
             $w = min(2, $w);
         }
 
-        $h = max(1, $tile['h']);
+        $h = max(self::WIDGET_MIN_H, min(self::WIDGET_MAX_H, $tile['h']));
         $x = max(0, min($tile['x'], $this->cols - $w));
         $y = max(0, $tile['y']);
 
@@ -87,37 +93,37 @@ class LayoutEngineNoOverlapTest extends TestCase
             $T = $layout[$moveIdx];
             $placed = false;
 
-            // 1) SHIFT RIGHT
+            // 1) SHIFT RIGHT — h=1 probe: decision independent of actual h
             $rightX = $fixed['x'] + $fixed['w'];
             if (! $placed && $rightX + $T['w'] <= $this->cols) {
-                $candidate = array_merge($T, ['x' => $rightX]);
+                $probe = array_merge($T, ['x' => $rightX, 'h' => 1]);
                 $noConflict = true;
                 foreach ($layout as $k => $t) {
-                    if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                    if ($k !== $moveIdx && $this->overlaps($probe, $t)) {
                         $noConflict = false;
                         break;
                     }
                 }
                 if ($noConflict) {
-                    $layout[$moveIdx] = $candidate;
+                    $layout[$moveIdx] = array_merge($T, ['x' => $rightX]);
                     $placed = true;
                 }
             }
 
-            // 2) SHIFT LEFT
+            // 2) SHIFT LEFT — h=1 probe: decision independent of actual h
             if (! $placed) {
                 $leftX = $fixed['x'] - $T['w'];
                 if ($leftX >= 0) {
-                    $candidate = array_merge($T, ['x' => $leftX]);
+                    $probe = array_merge($T, ['x' => $leftX, 'h' => 1]);
                     $noConflict = true;
                     foreach ($layout as $k => $t) {
-                        if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                        if ($k !== $moveIdx && $this->overlaps($probe, $t)) {
                             $noConflict = false;
                             break;
                         }
                     }
                     if ($noConflict) {
-                        $layout[$moveIdx] = $candidate;
+                        $layout[$moveIdx] = array_merge($T, ['x' => $leftX]);
                         $placed = true;
                     }
                 }
@@ -210,7 +216,7 @@ class LayoutEngineNoOverlapTest extends TestCase
             return null;
         }
         foreach ($tiles as $t) {
-            if ($t['y'] >= 200) {
+            if ($t['y'] + $t['h'] > self::DASHBOARD_MAX_H) {
                 return null;
             }
         }
@@ -286,10 +292,10 @@ class LayoutEngineNoOverlapTest extends TestCase
 
     public function test_many_tiles_stress_no_overlap(): void
     {
-        // 12 tiles all at (0,0,3,3)
+        // 12 tiles all at (0,0,3,2) — h=2 so worst-case stacking stays under DASHBOARD_MAX_H=24
         $layout = [];
         for ($i = 0; $i < 12; $i++) {
-            $layout[] = ['key' => "tile_$i", 'x' => 0, 'y' => 0, 'w' => 3, 'h' => 3];
+            $layout[] = ['key' => "tile_$i", 'x' => 0, 'y' => 0, 'w' => 3, 'h' => 2];
         }
 
         $result = $this->applyPipeline($layout, 'tile_0');
@@ -409,6 +415,39 @@ class LayoutEngineNoOverlapTest extends TestCase
         $this->assertEquals(4, $b['h']);
     }
 
+    public function test_height_change_does_not_alter_horizontal_packing(): void
+    {
+        // Same layout with h=2 vs h=4 for tile A → identical x positions
+        $layoutH2 = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 2],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'C', 'x' => 4, 'y' => 2, 'w' => 4, 'h' => 3],
+        ];
+        $layoutH4 = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 4],
+            ['key' => 'B', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'C', 'x' => 4, 'y' => 2, 'w' => 4, 'h' => 3],
+        ];
+
+        $resultH2 = $this->applyPipeline($layoutH2, 'A');
+        $resultH4 = $this->applyPipeline($layoutH4, 'A');
+
+        $this->assertNotNull($resultH2);
+        $this->assertNotNull($resultH4);
+
+        // Extract x positions keyed by tile key
+        $xH2 = collect($resultH2)->pluck('x', 'key')->toArray();
+        $xH4 = collect($resultH4)->pluck('x', 'key')->toArray();
+        $wH2 = collect($resultH2)->pluck('w', 'key')->toArray();
+        $wH4 = collect($resultH4)->pluck('w', 'key')->toArray();
+
+        // Horizontal positions must be identical regardless of h
+        foreach (['A', 'B', 'C'] as $key) {
+            $this->assertEquals($xH2[$key], $xH4[$key], "Tile $key: x differs between h=2 and h=4");
+            $this->assertEquals($wH2[$key], $wH4[$key], "Tile $key: w differs between h=2 and h=4");
+        }
+    }
+
     public function test_two_small_beside_one_large(): void
     {
         // Large(0,0,6,6) SmallA(6,0,6,3) SmallB(6,3,6,3) — valid stacked layout
@@ -434,5 +473,71 @@ class LayoutEngineNoOverlapTest extends TestCase
         // SmallA + SmallB stacked beside Large
         $this->assertEquals(0, $smallA['y']);
         $this->assertEquals(3, $smallB['y']);
+    }
+
+    // ── V5: Vertical resize limits ──
+
+    public function test_widget_height_clamped_to_max_6(): void
+    {
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 10],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $this->assertEquals(6, $a['h'], 'h must be clamped to WIDGET_MAX_H=6');
+    }
+
+    public function test_widget_height_clamped_to_min_2(): void
+    {
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 1],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $a = collect($result)->firstWhere('key', 'A');
+        $this->assertEquals(2, $a['h'], 'h must be clamped to WIDGET_MIN_H=2');
+    }
+
+    public function test_dashboard_max_height_24_enforced(): void
+    {
+        // 5 tiles of h=6 stacked → total 30 rows, last tile at y=24 → exceeds DASHBOARD_MAX_H
+        $layout = [];
+        for ($i = 0; $i < 5; $i++) {
+            $layout[] = ['key' => "tile_$i", 'x' => 0, 'y' => 0, 'w' => 12, 'h' => 6];
+        }
+
+        $result = $this->applyPipeline($layout, null);
+
+        // Pipeline returns null: last tile would land at y=24, y+h=30 > 24
+        $this->assertNull($result, 'Pipeline must reject layouts exceeding DASHBOARD_MAX_H=24');
+    }
+
+    public function test_resize_height_no_horizontal_effect(): void
+    {
+        // A(0,0,4,2) B(4,0,4,2). Resize A to h=6 → B must stay at x=4
+        $layoutBefore = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 2],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 2],
+        ];
+        $layoutAfter = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 6],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 2],
+        ];
+
+        $before = $this->applyPipeline($layoutBefore, 'A');
+        $after = $this->applyPipeline($layoutAfter, 'A');
+
+        $this->assertNotNull($before);
+        $this->assertNotNull($after);
+
+        $bBefore = collect($before)->firstWhere('key', 'B');
+        $bAfter = collect($after)->firstWhere('key', 'B');
+
+        $this->assertEquals($bBefore['x'], $bAfter['x'], 'B x must not change when A height changes');
     }
 }

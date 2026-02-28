@@ -4958,6 +4958,21 @@ self::assertNotFrozen($companyId);
 - **Décision** : Suppression complète de `normalizeRowHeights`. Chaque widget garde son `h` indépendamment. Le pipeline redevient : `clampToBounds → resolveOverlaps → compactLayout → assertNoOverlap`. Le resize vertical ne modifie que le tile ciblé.
 - **Tests** : Les 2 tests `row_heights_normalized_to_valid_set` et `normalize_row_heights_clamps_to_ceiling` sont remplacés par `resize_height_does_not_affect_neighbors` et `two_small_beside_one_large` qui prouvent le free-height. Le test `row_height_normalization_after_reflow` est remplacé par `free_height_preserved_after_reflow`. Total suite : 1031 passed, 0 failures.
 
+### Addendum V5-hotfix-2 — Decouple Vertical Height From Horizontal Packing (2026-02-28)
+
+- **Contexte** : Le `resolveOverlaps` utilisait `overlaps(candidate, t)` avec le `h` réel du tile candidat pour les checks SHIFT RIGHT / SHIFT LEFT. Un tile avec `h=4` pouvait échouer le shift right (overlap vertical avec un tile en dessous) alors que `h=2` passait — causant un packing horizontal différent basé uniquement sur la hauteur.
+- **Décision** : Les checks SHIFT RIGHT et SHIFT LEFT utilisent un **probe `h=1`** au lieu du `h` réel. La décision horizontale dépend uniquement de `x + w + cols`, jamais de `h`. Le tile placé conserve son `h` réel. Les overlaps verticaux résultants sont résolus aux itérations suivantes du loop `resolveOverlaps`. Règle : `H4V2` et `H4V4` produisent exactement les mêmes positions horizontales.
+- **Tests** : Nouveau test `height_change_does_not_alter_horizontal_packing` qui compare les positions x entre un layout avec `h=2` et `h=4` — identiques.
+
+### Addendum V5-hotfix-3 — Vertical Resize Limit (2026-02-28)
+
+- **Contexte** : Le resize vertical était illimité — un widget pouvait atteindre `h=8` ou plus, dépassant les contraintes visuelles raisonnables.
+- **Décisions** :
+  - **Limites par widget** : `WIDGET_MIN_H = 2`, `WIDGET_MAX_H = 6`. Appliquées dans `clampToBounds` et `getConstraints` (cap global, peu importe le manifest du widget).
+  - **Limite dashboard** : `DASHBOARD_MAX_H = 24` (en unités de grille). Le pipeline rejette tout layout où un tile a `y + h > 24` (remplace l'ancien guard `y >= 200`).
+  - **Snackbar** : Quand le resize brut dépasse `WIDGET_MAX_H`, affiche `dashboardGrid.maxHeightReached` via le mécanisme `placementError` existant.
+- **Tests** : 4 nouveaux tests : `widget_height_clamped_to_max_6`, `widget_height_clamped_to_min_2`, `dashboard_max_height_24_enforced`, `resize_height_no_horizontal_effect`. Total suite : 1036 passed, 0 failures.
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

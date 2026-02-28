@@ -21,6 +21,12 @@ class LayoutEngineReflowTest extends TestCase
 {
     private int $cols = 12;
 
+    private const WIDGET_MIN_H = 2;
+
+    private const WIDGET_MAX_H = 6;
+
+    private const DASHBOARD_MAX_H = 24;
+
     private function overlaps(array $a, array $b): bool
     {
         return $a['x'] < $b['x'] + $b['w']
@@ -38,7 +44,7 @@ class LayoutEngineReflowTest extends TestCase
             $w = min(2, $w);
         }
 
-        $h = max(1, $tile['h']);
+        $h = max(self::WIDGET_MIN_H, min(self::WIDGET_MAX_H, $tile['h']));
         $x = max(0, min($tile['x'], $this->cols - $w));
         $y = max(0, $tile['y']);
 
@@ -88,37 +94,37 @@ class LayoutEngineReflowTest extends TestCase
             $T = $layout[$moveIdx];
             $placed = false;
 
-            // 1) SHIFT RIGHT
+            // 1) SHIFT RIGHT — h=1 probe: decision independent of actual h
             $rightX = $fixed['x'] + $fixed['w'];
             if (! $placed && $rightX + $T['w'] <= $this->cols) {
-                $candidate = array_merge($T, ['x' => $rightX]);
+                $probe = array_merge($T, ['x' => $rightX, 'h' => 1]);
                 $noConflict = true;
                 foreach ($layout as $k => $t) {
-                    if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                    if ($k !== $moveIdx && $this->overlaps($probe, $t)) {
                         $noConflict = false;
                         break;
                     }
                 }
                 if ($noConflict) {
-                    $layout[$moveIdx] = $candidate;
+                    $layout[$moveIdx] = array_merge($T, ['x' => $rightX]);
                     $placed = true;
                 }
             }
 
-            // 2) SHIFT LEFT
+            // 2) SHIFT LEFT — h=1 probe: decision independent of actual h
             if (! $placed) {
                 $leftX = $fixed['x'] - $T['w'];
                 if ($leftX >= 0) {
-                    $candidate = array_merge($T, ['x' => $leftX]);
+                    $probe = array_merge($T, ['x' => $leftX, 'h' => 1]);
                     $noConflict = true;
                     foreach ($layout as $k => $t) {
-                        if ($k !== $moveIdx && $this->overlaps($candidate, $t)) {
+                        if ($k !== $moveIdx && $this->overlaps($probe, $t)) {
                             $noConflict = false;
                             break;
                         }
                     }
                     if ($noConflict) {
-                        $layout[$moveIdx] = $candidate;
+                        $layout[$moveIdx] = array_merge($T, ['x' => $leftX]);
                         $placed = true;
                     }
                 }
@@ -204,7 +210,16 @@ class LayoutEngineReflowTest extends TestCase
         $tiles = $this->resolveOverlaps($tiles, $movedKey);
         $tiles = $this->compactLayout($tiles);
 
-        return $this->assertNoOverlap($tiles) ? $tiles : null;
+        if (! $this->assertNoOverlap($tiles)) {
+            return null;
+        }
+        foreach ($tiles as $t) {
+            if ($t['y'] + $t['h'] > self::DASHBOARD_MAX_H) {
+                return null;
+            }
+        }
+
+        return $tiles;
     }
 
     private function remapBreakpoint(array $layout, int $oldCols, int $newCols): ?array

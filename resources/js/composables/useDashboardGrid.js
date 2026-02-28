@@ -39,6 +39,9 @@ export function useDashboardGrid(gridRef, catalog) {
 
   const DRAG_THRESHOLD = 6
   const ROW_HEIGHT = 80
+  const WIDGET_MIN_H = 2
+  const WIDGET_MAX_H = 6
+  const DASHBOARD_MAX_H = 24
 
   let pendingDrag = null
 
@@ -69,7 +72,7 @@ export function useDashboardGrid(gridRef, catalog) {
     // Mobile: max 2 widgets per row
     if (numCols === 4) w = Math.min(2, w)
 
-    const h = Math.max(1, tile.h)
+    const h = Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, tile.h))
     const x = Math.max(0, Math.min(tile.x, numCols - w))
     const y = Math.max(0, tile.y)
 
@@ -119,27 +122,27 @@ export function useDashboardGrid(gridRef, catalog) {
       const T = layout[moveIdx]
       let placed = false
 
-      // 1) SHIFT RIGHT
+      // 1) SHIFT RIGHT — h=1 probe: decision independent of actual h
       const rightX = fixed.x + fixed.w
 
       if (!placed && rightX + T.w <= numCols) {
-        const candidate = { ...T, x: rightX }
+        const probe = { ...T, x: rightX, h: 1 }
 
-        if (layout.every((t, k) => k === moveIdx || !overlaps(candidate, t))) {
-          layout[moveIdx] = candidate
+        if (layout.every((t, k) => k === moveIdx || !overlaps(probe, t))) {
+          layout[moveIdx] = { ...T, x: rightX }
           placed = true
         }
       }
 
-      // 2) SHIFT LEFT
+      // 2) SHIFT LEFT — h=1 probe: decision independent of actual h
       if (!placed) {
         const leftX = fixed.x - T.w
 
         if (leftX >= 0) {
-          const candidate = { ...T, x: leftX }
+          const probe = { ...T, x: leftX, h: 1 }
 
-          if (layout.every((t, k) => k === moveIdx || !overlaps(candidate, t))) {
-            layout[moveIdx] = candidate
+          if (layout.every((t, k) => k === moveIdx || !overlaps(probe, t))) {
+            layout[moveIdx] = { ...T, x: leftX }
             placed = true
           }
         }
@@ -226,7 +229,7 @@ export function useDashboardGrid(gridRef, catalog) {
     tiles = compactLayout(tiles)
 
     if (!assertNoOverlap(tiles)) return null
-    if (tiles.some(t => t.y >= 200)) return null
+    if (tiles.some(t => t.y + t.h > DASHBOARD_MAX_H)) return null
 
     return tiles
   }
@@ -288,7 +291,9 @@ export function useDashboardGrid(gridRef, catalog) {
   function getConstraints(key) {
     const widget = catalog.value?.find(w => w.key === key)
 
-    return widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 8 }
+    const layout = widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 6 }
+
+    return { ...layout, min_h: Math.max(WIDGET_MIN_H, layout.min_h), max_h: Math.min(WIDGET_MAX_H, layout.max_h) }
   }
 
   // ── Mouse move ──
@@ -345,8 +350,16 @@ export function useDashboardGrid(gridRef, catalog) {
 
       const constraints = getConstraints(resizing.value.key)
 
+      const rawH = resizing.value.origH + deltaRows
+
       let newW = Math.max(constraints.min_w, Math.min(constraints.max_w, resizing.value.origW + deltaCols))
-      let newH = Math.max(constraints.min_h, Math.min(constraints.max_h, resizing.value.origH + deltaRows))
+      let newH = Math.max(constraints.min_h, Math.min(constraints.max_h, rawH))
+
+      // Global height cap
+      if (rawH > WIDGET_MAX_H && !placementError.value) {
+        placementErrorKey.value = 'dashboardGrid.maxHeightReached'
+        placementError.value = true
+      }
 
       // B4: Mobile — vertical resize only (freeze width)
       if (isMobile.value) {
