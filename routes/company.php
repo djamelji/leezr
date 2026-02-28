@@ -15,6 +15,7 @@ use App\Modules\Core\Audit\Http\CompanyAuditLogController;
 use App\Modules\Core\Modules\Http\CompanyModuleController;
 use App\Modules\Core\Modules\Http\ModuleQuoteController;
 use App\Modules\Core\Settings\Http\CompanyController;
+use App\Modules\Core\Theme\Http\ThemePreferenceController;
 use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
@@ -31,6 +32,11 @@ use Illuminate\Support\Facades\Route;
 
 // ─── Navigation (infrastructure-level, no module gate) ────
 Route::get('/nav', [NavController::class, 'company']);
+
+// ─── Theme preference (ADR-159, module-gated) ───────────
+Route::middleware(['company.access:use-module,core.theme', 'company.access:use-permission,theme.manage'])->group(function () {
+    Route::put('/theme-preference', [ThemePreferenceController::class, 'update']);
+});
 
 // ─── Realtime SSE stream (ADR-125, no module gate) ────────
 Route::get('/realtime/stream', RealtimeStreamController::class);

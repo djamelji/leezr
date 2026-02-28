@@ -18,7 +18,7 @@ class PlatformUser extends Authenticatable
         return PlatformUserFactory::new();
     }
 
-    protected $fillable = ['first_name', 'last_name', 'email', 'password'];
+    protected $fillable = ['first_name', 'last_name', 'email', 'password', 'theme_preference'];
 
     protected $guarded = ['name'];
 

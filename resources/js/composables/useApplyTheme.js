@@ -15,16 +15,22 @@ import { vuetifyInstance } from '@/plugins/vuetify'
  *
  * Called from auth store login() and fetchMe() when `ui_theme` is present,
  * and from the platform theme page after save/reset.
+ *
+ * ADR-159: userThemePreference overrides payload.theme when provided.
+ * This ensures the user's DB-persisted preference wins over the
+ * platform-wide default — fixing the "light reverts to system on refresh" bug.
  */
-export function applyTheme(payload) {
+export function applyTheme(payload, userThemePreference = null) {
   if (!payload) return
 
   const configStore = useConfigStore()
   const layoutStore = useLayoutConfigStore()
 
-  // Theme mode (light / dark / system) — watcher in initConfigStore() applies to Vuetify
-  if (payload.theme) {
-    configStore.theme = payload.theme
+  // Theme mode — user preference overrides platform default (ADR-159)
+  const themeMode = userThemePreference || payload.theme
+
+  if (themeMode) {
+    configStore.theme = themeMode
   }
 
   // Skin (default / bordered) — watcher in _handleSkinChanges() applies

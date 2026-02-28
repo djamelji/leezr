@@ -39,6 +39,7 @@ use App\Modules\Platform\Realtime\Http\RealtimeGovernanceController;
 use App\Modules\Platform\Audit\Http\PlatformAuditLogController;
 use App\Modules\Platform\Security\Http\SecurityAlertController;
 use App\Modules\Infrastructure\Navigation\Http\NavController;
+use App\Modules\Infrastructure\Theme\Http\PlatformThemePreferenceController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformAuthController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +57,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::get('/me', [PlatformAuthController::class, 'me']);
     Route::get('/nav', [NavController::class, 'platform']);
     Route::post('/logout', [PlatformAuthController::class, 'logout']);
+
+    // Theme preference (ADR-159, no module gate — platform admins always have it)
+    Route::put('/theme-preference', [PlatformThemePreferenceController::class, 'update']);
 
     // Companies
     Route::middleware(['module.active:platform.companies', 'platform.permission:manage_companies'])->group(function () {

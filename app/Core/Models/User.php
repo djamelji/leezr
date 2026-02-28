@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'password_set_at',
         'avatar',
+        'theme_preference',
     ];
 
     protected $guarded = ['name'];

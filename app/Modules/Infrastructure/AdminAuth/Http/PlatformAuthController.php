@@ -11,6 +11,7 @@ use App\Core\Navigation\NavBuilder;
 use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\System\UptimeService;
+use App\Core\Theme\ThemeResolver;
 use App\Core\Theme\UIResolverService;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
@@ -71,6 +72,7 @@ class PlatformAuthController extends Controller
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
             'app_meta' => self::appMeta(),
+            'theme_preference' => ThemeResolver::resolve($user),
         ]);
     }
 
@@ -94,6 +96,7 @@ class PlatformAuthController extends Controller
             'ui_theme' => UIResolverService::forPlatform()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
             'app_meta' => self::appMeta(),
+            'theme_preference' => ThemeResolver::resolve($user),
         ]);
     }
 

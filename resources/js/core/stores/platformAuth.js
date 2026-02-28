@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
 import { applyTheme } from '@/composables/useApplyTheme'
+import { useThemeStore } from '@/modules/core/theme/theme.store'
 import { setAppName } from '@/composables/useAppName'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
@@ -67,7 +68,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._persistRoles(data.roles || [])
       this._persistPermissions(data.permissions || [])
       this._persistDisabledModules(data.disabled_modules || [])
-      applyTheme(data.ui_theme)
+      applyTheme(data.ui_theme, data.theme_preference)
+      useThemeStore().init(data.theme_preference, 'platform')
       this._sessionConfig = data.ui_session ?? null
       this._appMeta = data.app_meta ?? null
       if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)
@@ -99,7 +101,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._persistRoles(data.roles || [])
         this._persistPermissions(data.permissions || [])
         this._persistDisabledModules(data.disabled_modules || [])
-        applyTheme(data.ui_theme)
+        applyTheme(data.ui_theme, data.theme_preference)
+        useThemeStore().init(data.theme_preference, 'platform')
         this._sessionConfig = data.ui_session ?? null
         this._appMeta = data.app_meta ?? null
         if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)

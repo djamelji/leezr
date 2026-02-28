@@ -5190,4 +5190,64 @@ self::assertNotFrozen($companyId);
 
 ---
 
+## ADR-159 : Core Theme Module (Light / Dark / System)
+
+- **Date** : 2026-02-28
+- **Contexte** : Le thème (light/dark/system) était stocké uniquement en cookie via `@core/stores/config.js`. A chaque `fetchMe()`, `applyTheme()` écrasait la préférence utilisateur avec le défaut plateforme (`system`). Résultat : la préférence ne persistait pas entre sessions.
+- **Décision** : Créer un module `core.theme` (scope company, type core) avec persistance DB de la préférence utilisateur.
+
+  **Architecture** :
+  - Colonne `theme_preference ENUM('light','dark','system') DEFAULT 'system'` sur `users` et `platform_users`
+  - `ThemeResolver::resolve($user)` — retourne la préférence stockée ou 'system' par défaut
+  - `ThemePreferenceController` (company scope) — `PUT /api/theme-preference` avec middleware `company.access:use-module,core.theme` + `company.access:use-permission,theme.manage`
+  - `PlatformThemePreferenceController` (infra scope) — `PUT /api/platform/theme-preference` sans module gate (admins plateforme ont toujours le contrôle thème)
+  - Réponses auth (`register`, `login`, `me`) incluent `theme_preference`
+
+  **Bug fix** (`applyTheme`) :
+  - Signature changée : `applyTheme(payload, userThemePreference = null)`
+  - `userThemePreference` prend priorité sur `payload.theme` (défaut plateforme)
+  - Le cookie reste cache de performance, la DB est l'autorité
+
+  **Frontend** (`theme.store.js`) :
+  - Pinia store avec watcher sur `configStore.theme` (détecte les clics ThemeSwitcher)
+  - Persiste automatiquement en DB via API au changement
+  - `init(preference, scope)` appelé dans `register`, `login`, `fetchMe`
+  - Scopes : `'company'` → `/api/theme-preference`, `'platform'` → `/api/platform/theme-preference`
+
+  **Header** (`NavbarGlobalWidgets.vue`) :
+  - Platform : toggle toujours visible
+  - Company : visible ssi `moduleStore.isActive('core.theme') && authStore.hasPermission('theme.view')`
+
+  **Module manifest** :
+  - Permissions : `theme.view` (voir le toggle), `theme.manage` (changer la préférence)
+  - Bundles : `theme.full` (view + manage), `theme.readonly` (view seul)
+  - Pas de navItems (le toggle est dans le header, pas dans la sidebar)
+
+  **Jobdomain** : `core.theme` ajouté aux `default_modules` de `logistique`, bundle `theme.full` attribué aux 4 rôles par défaut (manager, dispatcher, driver, ops_manager)
+
+  **Contrainte `@core`** : `@core/stores/config.js` et `@core/components/ThemeSwitcher.vue` ne sont PAS modifiables (politique Vuexy). Le fix opère entièrement en dehors de `@core` via wrapping et interception.
+
+- **Conséquences** :
+  - Préférence thème persistée en DB, survit aux sessions et appareils
+  - Plus de flash/revert au refresh (`fetchMe` respecte la préférence utilisateur)
+  - Toggle conditionnel par module + permission (désactivation globale = toggle masqué)
+  - Deux surfaces supportées (company + platform) avec contrôleurs séparés
+  - Aucune modification de `@core/` ou `@layouts/`
+- **Tests** : `ThemeModuleTest` (7 tests), `ThemePreferenceTest` (10 tests)
+- **Fichiers** :
+  - `app/Modules/Core/Theme/ThemeModule.php` (created)
+  - `app/Core/Theme/ThemeResolver.php` (created)
+  - `app/Modules/Core/Theme/Http/ThemePreferenceController.php` (created)
+  - `app/Modules/Infrastructure/Theme/Http/PlatformThemePreferenceController.php` (created)
+  - `database/migrations/2026_02_28_200001_add_theme_preference_to_users.php` (created)
+  - `resources/js/modules/core/theme/theme.store.js` (created)
+  - `resources/js/composables/useApplyTheme.js` (modified — bug fix)
+  - `resources/js/core/stores/auth.js` (modified — theme init)
+  - `resources/js/core/stores/platformAuth.js` (modified — theme init)
+  - `resources/js/layouts/components/NavbarGlobalWidgets.vue` (modified — conditional toggle)
+  - `app/Core/Jobdomains/JobdomainRegistry.php` (modified — theme defaults)
+  - `routes/company.php`, `routes/platform.php` (modified — routes)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

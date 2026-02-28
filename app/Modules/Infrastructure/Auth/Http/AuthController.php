@@ -12,6 +12,7 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
+use App\Core\Theme\ThemeResolver;
 use App\Core\Theme\UIResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,7 @@ class AuthController extends Controller
             'company' => $result['company'],
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
+            'theme_preference' => ThemeResolver::resolve($result['user']),
         ], 201);
     }
 
@@ -121,6 +123,7 @@ class AuthController extends Controller
             'user' => $user,
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
+            'theme_preference' => ThemeResolver::resolve($user),
         ]);
     }
 
@@ -160,6 +163,7 @@ class AuthController extends Controller
             'user' => $request->user(),
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
+            'theme_preference' => ThemeResolver::resolve($request->user()),
         ]);
     }
 

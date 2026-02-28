@@ -20,7 +20,7 @@ class JobdomainRegistry
                 'description' => 'Transport, fleet management, dispatch',
                 'landing_route' => '/',
                 'nav_profile' => 'logistique',
-                'default_modules' => ['core.members', 'core.settings', 'logistics_shipments'],
+                'default_modules' => ['core.theme', 'core.members', 'core.settings', 'logistics_shipments'],
                 'default_fields' => [
                     ['code' => 'siret', 'required' => true, 'order' => 0],
                     ['code' => 'vat_number', 'required' => false, 'order' => 1],
@@ -33,6 +33,7 @@ class JobdomainRegistry
                         'name' => 'Manager',
                         'is_administrative' => true,
                         'bundles' => [
+                            'theme.full',
                             'members.team_access', 'members.team_management',
                             'settings.company_info', 'settings.company_management',
                             'roles.governance',
@@ -44,6 +45,7 @@ class JobdomainRegistry
                         'name' => 'Dispatcher',
                         'is_administrative' => false,
                         'bundles' => [
+                            'theme.full',
                             'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
@@ -52,6 +54,7 @@ class JobdomainRegistry
                     'driver' => [
                         'name' => 'Driver',
                         'bundles' => [
+                            'theme.full',
                             'members.team_access',
                             'settings.company_info',
                             'shipments.delivery',
@@ -61,6 +64,7 @@ class JobdomainRegistry
                         'name' => 'Operations Manager',
                         'is_administrative' => true,
                         'bundles' => [
+                            'theme.full',
                             'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
