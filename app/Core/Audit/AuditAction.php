@@ -83,6 +83,25 @@ final class AuditAction
     public const INVOICE_WRITTEN_OFF = 'billing.invoice_written_off';
     public const WALLET_ADMIN_CREDIT = 'billing.wallet_admin_credit';
 
+    // ─── Provider collection (ADR-139 D3c) ───────────────
+    public const PROVIDER_COLLECTION_ATTEMPTED = 'billing.provider_collection_attempted';
+
+    // ─── Reconciliation (ADR-140 D3d) ──────────────────
+    public const BILLING_DRIFT_DETECTED = 'billing.drift_detected';
+
+    // ─── Auto-Repair (ADR-141 D3e) ──────────────────────
+    public const BILLING_AUTO_REPAIR_APPLIED = 'billing.auto_repair_applied';
+
+    // ─── Webhook sync (ADR-138 D3b) ──────────────────────
+    public const WEBHOOK_PAYMENT_SYNCED = 'webhook.payment_synced';
+    public const WEBHOOK_PAYMENT_FAILED = 'webhook.payment_failed';
+    public const WEBHOOK_REFUND_SYNCED = 'webhook.refund_synced';
+
+    // ─── Period Closing & Financial Controls (ADR-143 D3g) ──
+    public const BILLING_PERIOD_CLOSED = 'billing.period_closed';
+    public const BILLING_FINANCIAL_FREEZE_ENABLED = 'billing.financial_freeze_enabled';
+    public const BILLING_FINANCIAL_FREEZE_DISABLED = 'billing.financial_freeze_disabled';
+
     // ─── Subscription mutations (ADR-135 D1) ────────────
     public const PLAN_CHANGE_REQUESTED = 'subscription.plan_change_requested';
     public const PLAN_CHANGE_EXECUTED = 'subscription.plan_change_executed';

@@ -18,7 +18,7 @@ class BillingRevenueTrendWidget implements WidgetManifest
 
     public function module(): string
     {
-        return 'core.billing';
+        return 'platform.billing';
     }
 
     public function layout(): array

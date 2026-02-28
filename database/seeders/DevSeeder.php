@@ -8,6 +8,7 @@ use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValue;
 use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;
 use App\Core\Models\User;
@@ -83,6 +84,18 @@ class DevSeeder extends Seeder
                 'last_name' => 'Dupont',
                 'password' => 'password',
                 'password_set_at' => now(),
+            ],
+        );
+
+        // ─── Subscription for demo company ────────────────────────
+        Subscription::updateOrCreate(
+            ['company_id' => $company->id, 'plan_key' => 'pro'],
+            [
+                'interval' => 'monthly',
+                'status' => 'active',
+                'provider' => 'internal',
+                'current_period_start' => now()->startOfMonth(),
+                'current_period_end' => now()->endOfMonth(),
             ],
         );
 

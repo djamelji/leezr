@@ -6,13 +6,15 @@ import { useDisplay } from 'vuetify'
  *
  * Responsive grid with breakpoint contract:
  *   Desktop (≥1280px) → 12 cols
- *   Tablet  (≥960px)  → 8 cols
+ *   Tablet  (≥960px)  → 6 cols
  *   Mobile  (<960px)  → 4 cols (max w=2)
  *
  * Pipeline applied to EVERY layout mutation:
  *   1. clampToBounds    — enforce bounds + mobile w clamp
  *   2. resolveOverlaps  — eliminate ALL overlaps
  *   3. compactLayout    — gravity up, zero holes
+ *   3b. packRowsLeft    — eliminate horizontal gaps
+ *   3c. reflowUpward    — lift tiles to higher rows when space available
  *   4. assertNoOverlap  — final gate
  *
  * Each widget keeps its own h (free height). No row height unification.
@@ -23,7 +25,7 @@ export function useDashboardGrid(gridRef, catalog) {
   // B1: Breakpoint contract
   const cols = computed(() => {
     if (smAndDown.value) return 4
-    if (mdAndDown.value) return 8
+    if (mdAndDown.value) return 6
 
     return 12
   })
@@ -41,7 +43,7 @@ export function useDashboardGrid(gridRef, catalog) {
   const ROW_HEIGHT = 80
   const WIDGET_MIN_W = 3
   const WIDGET_MIN_H = 2
-  const WIDGET_MAX_H = 6
+  const WIDGET_MAX_H = 8
   const DASHBOARD_MAX_H = 24
 
   let pendingDrag = null
@@ -268,6 +270,42 @@ export function useDashboardGrid(gridRef, catalog) {
   }
 
   /**
+   * Step 3c: Reflow upward — lift tiles to earlier rows when space available.
+   * Processes bottom-up: tries to move each tile to the earliest (y, x)
+   * where it fits without overlap.
+   */
+  function reflowUpward(tiles, numCols) {
+    const layout = tiles.map(t => ({ ...t }))
+
+    // Process bottom tiles first — they have the most potential to move up
+    layout.sort((a, b) => b.y - a.y || a.x - b.x)
+
+    for (let i = 0; i < layout.length; i++) {
+      const tile = layout[i]
+      let bestCandidate = null
+
+      for (let y = 0; y < tile.y; y++) {
+        for (let x = 0; x + tile.w <= numCols; x++) {
+          const candidate = { ...tile, x, y }
+
+          if (!layout.some((t, idx) => idx !== i && overlaps(candidate, t))) {
+            bestCandidate = candidate
+            break
+          }
+        }
+
+        if (bestCandidate) break
+      }
+
+      if (bestCandidate) {
+        layout[i] = bestCandidate
+      }
+    }
+
+    return layout
+  }
+
+  /**
    * Step 4: Assert no overlap.
    */
   function assertNoOverlap(tiles) {
@@ -281,7 +319,7 @@ export function useDashboardGrid(gridRef, catalog) {
   }
 
   /**
-   * Full pipeline: clamp → resolve → compact → assert.
+   * Full pipeline: clamp → resolve → compact → packLeft → compact → reflow → packLeft → compact → assert.
    */
   function applyPipeline(layout, movedKey) {
     const numCols = cols.value
@@ -290,6 +328,9 @@ export function useDashboardGrid(gridRef, catalog) {
 
     tiles = resolveOverlaps(tiles, movedKey, numCols)
     tiles = compactLayout(tiles)
+    tiles = packRowsLeft(tiles, numCols)
+    tiles = compactLayout(tiles)
+    tiles = reflowUpward(tiles, numCols)
     tiles = packRowsLeft(tiles, numCols)
     tiles = compactLayout(tiles)
 
@@ -356,7 +397,7 @@ export function useDashboardGrid(gridRef, catalog) {
   function getConstraints(key) {
     const widget = catalog.value?.find(w => w.key === key)
 
-    const layout = widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 6 }
+    const layout = widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 8 }
 
     return { ...layout, min_w: Math.max(WIDGET_MIN_W, layout.min_w), min_h: Math.max(WIDGET_MIN_H, layout.min_h), max_h: Math.min(WIDGET_MAX_H, layout.max_h) }
   }

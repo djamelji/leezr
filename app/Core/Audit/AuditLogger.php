@@ -5,9 +5,11 @@ namespace App\Core\Audit;
 use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
 use App\Core\Realtime\TopicRegistry;
+use App\Notifications\BillingCriticalAlert;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * ADR-130: Central audit logging service.
@@ -72,6 +74,9 @@ class AuditLogger
                 'error' => $e->getMessage(),
             ]);
         }
+
+        // Dispatch critical alert notification if enabled (ADR-140)
+        $this->dispatchCriticalAlertIfNeeded($log);
 
         return $log;
     }
@@ -152,5 +157,32 @@ class AuditLogger
         }
 
         return $log;
+    }
+
+    /**
+     * Dispatch a critical alert notification if billing alerting is enabled.
+     * Graceful: never breaks the audit flow on dispatch failure.
+     */
+    private function dispatchCriticalAlertIfNeeded(PlatformAuditLog $log): void
+    {
+        if ($log->severity !== 'critical' || ! config('billing.alerting.enabled')) {
+            return;
+        }
+
+        $email = config('billing.alerting.email');
+
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Notification::route('mail', $email)
+                ->notify(new BillingCriticalAlert($log));
+        } catch (\Throwable $e) {
+            Log::warning('[audit] critical alert dispatch failed', [
+                'audit_id' => $log->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

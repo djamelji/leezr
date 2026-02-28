@@ -1,5 +1,6 @@
 <script setup>
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { $api } from '@/utils/api'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
@@ -85,8 +86,23 @@ const onPageChange = page => {
   loadInvoices(page)
 }
 
-const downloadPdf = invoice => {
-  window.open(`/api/billing/invoices/${invoice.id}/pdf`, '_blank')
+const downloadPdf = async invoice => {
+  try {
+    const blob = await $api(`/billing/invoices/${invoice.id}/pdf`, {
+      responseType: 'blob',
+    })
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = `invoice-${invoice.number || invoice.id}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  catch {
+    // Error handled by $api onResponseError
+  }
 }
 
 onMounted(() => loadInvoices())
@@ -139,9 +155,12 @@ watch(statusFilter, () => loadInvoices(1))
         hide-default-footer
       >
         <template #item.number="{ item }">
-          <span class="text-body-1 font-weight-medium">
+          <RouterLink
+            :to="`/company/billing/invoices/${item.id}`"
+            class="text-body-1 font-weight-medium text-primary text-decoration-none"
+          >
             {{ item.number }}
-          </span>
+          </RouterLink>
         </template>
 
         <template #item.status="{ item }">

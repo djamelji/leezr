@@ -169,7 +169,19 @@ class InvoiceIssuer
                 'paid_at' => $amountDue <= 0 ? $now : null,
             ]);
 
-            return $invoice->fresh();
+            $invoice = $invoice->fresh();
+
+            // Ledger: record invoice issued (ADR-142 D3f)
+            try {
+                LedgerService::recordInvoiceIssued($invoice);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[ledger] invoice issued recording failed', [
+                    'invoice_id' => $invoice->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return $invoice;
         });
     }
 

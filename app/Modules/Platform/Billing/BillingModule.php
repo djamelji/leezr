@@ -18,26 +18,38 @@ class BillingModule implements ModuleDefinition
             sortOrder: 65,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'payments', 'title' => 'Payments', 'to' => ['name' => 'platform-payments'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing'],
-                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing'], 'icon' => 'tabler-file-invoice', 'permission' => 'view_billing'],
+                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing'], 'icon' => 'tabler-file-invoice', 'permission' => 'view_billing', 'group' => 'governance'],
+                    ['key' => 'payments', 'title' => 'Payments', 'to' => ['name' => 'platform-payments'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing', 'group' => 'governance'],
+                    ['key' => 'billing-settings', 'title' => 'Billing Settings', 'to' => ['name' => 'platform-billing-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-settings', 'permission' => 'manage_billing', 'group' => 'governance'],
                 ],
-                routeNames: ['platform-payments', 'platform-billing'],
+                routeNames: ['platform-billing', 'platform-payments', 'platform-billing-settings-tab', 'platform-billing-invoices-id'],
             ),
             permissions: [
-                ['key' => 'manage_billing', 'label' => 'Manage Billing'],
                 ['key' => 'view_billing', 'label' => 'View Billing'],
+                ['key' => 'manage_billing', 'label' => 'Manage Billing'],
+                ['key' => 'manage_billing_providers', 'label' => 'Manage Payment Providers'],
+                ['key' => 'manage_billing_policies', 'label' => 'Manage Billing Policies'],
+                ['key' => 'view_billing_audit', 'label' => 'View Billing Audit'],
             ],
             bundles: [
                 [
-                    'key' => 'billing.management',
-                    'label' => 'Billing Management',
-                    'hint' => 'Manage billing and view subscription details.',
-                    'permissions' => ['manage_billing', 'view_billing'],
+                    'key' => 'billing.full',
+                    'label' => 'Full Billing Management',
+                    'hint' => 'Complete billing governance access.',
+                    'permissions' => ['view_billing', 'manage_billing', 'manage_billing_providers', 'manage_billing_policies', 'view_billing_audit'],
+                ],
+                [
+                    'key' => 'billing.readonly',
+                    'label' => 'Billing Read-Only',
+                    'hint' => 'View billing data and audit logs.',
+                    'permissions' => ['view_billing', 'view_billing_audit'],
                 ],
             ],
             scope: 'admin',
-            type: 'internal',
+            type: 'platform',
             visibility: 'visible',
+            iconRef: 'tabler-credit-card',
+            settingsRoute: 'platform-billing-settings-tab',
         );
     }
 }

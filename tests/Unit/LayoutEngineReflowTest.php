@@ -261,6 +261,43 @@ class LayoutEngineReflowTest extends TestCase
         return $packed;
     }
 
+    private function reflowUpward(array $tiles): array
+    {
+        $layout = array_map(fn ($t) => $t, $tiles);
+        usort($layout, fn ($a, $b) => $b['y'] <=> $a['y'] ?: $a['x'] <=> $b['x']);
+
+        for ($i = 0; $i < count($layout); $i++) {
+            $tile = $layout[$i];
+            $bestCandidate = null;
+
+            for ($y = 0; $y < $tile['y']; $y++) {
+                for ($x = 0; $x + $tile['w'] <= $this->cols; $x++) {
+                    $candidate = array_merge($tile, ['x' => $x, 'y' => $y]);
+                    $blocked = false;
+                    foreach ($layout as $idx => $t) {
+                        if ($idx !== $i && $this->overlaps($candidate, $t)) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (! $blocked) {
+                        $bestCandidate = $candidate;
+                        break;
+                    }
+                }
+                if ($bestCandidate !== null) {
+                    break;
+                }
+            }
+
+            if ($bestCandidate !== null) {
+                $layout[$i] = $bestCandidate;
+            }
+        }
+
+        return $layout;
+    }
+
     private function assertNoOverlap(array $tiles): bool
     {
         for ($i = 0; $i < count($tiles); $i++) {
@@ -279,6 +316,9 @@ class LayoutEngineReflowTest extends TestCase
         $tiles = array_map(fn ($t) => $this->clampToBounds($t), $layout);
         $tiles = $this->resolveOverlaps($tiles, $movedKey);
         $tiles = $this->compactLayout($tiles);
+        $tiles = $this->packRowsLeft($tiles);
+        $tiles = $this->compactLayout($tiles);
+        $tiles = $this->reflowUpward($tiles);
         $tiles = $this->packRowsLeft($tiles);
         $tiles = $this->compactLayout($tiles);
 
@@ -469,6 +509,48 @@ class LayoutEngineReflowTest extends TestCase
         foreach ($result as $tile) {
             $this->assertLessThanOrEqual(2, $tile['w'], "Mobile: w must be ≤ 2");
         }
+    }
+
+    public function test_tile_reflows_up_when_space_frees(): void
+    {
+        // A(0,0,8,3) B(8,0,4,3) C(0,3,4,3) — C is on row 3 because A fills 0..8
+        // Shrink A to w=4 → row 0 now has room for C at x=8
+        // Before reflow: C stays at (0,3) because compact only decreases y at same x
+        // After reflow: C should move to row 0 at x=8 (or wherever it fits)
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'B', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3],
+            ['key' => 'C', 'x' => 0, 'y' => 3, 'w' => 4, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, 'A');
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlap($result));
+
+        $c = collect($result)->firstWhere('key', 'C');
+        // C should reflow up to row 0 at x=8 (space available)
+        $this->assertEquals(0, $c['y'], 'C should reflow up to row 0 when space is available');
+        $this->assertEquals(8, $c['x'], 'C should pack at x=8 (first available slot on row 0)');
+    }
+
+    public function test_reflow_respects_overlap_constraints(): void
+    {
+        // A(0,0,6,3) B(6,0,6,3) C(0,3,6,3) — row 0 full, no room for C
+        $layout = [
+            ['key' => 'A', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 3],
+            ['key' => 'B', 'x' => 6, 'y' => 0, 'w' => 6, 'h' => 3],
+            ['key' => 'C', 'x' => 0, 'y' => 3, 'w' => 6, 'h' => 3],
+        ];
+
+        $result = $this->applyPipeline($layout, null);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($this->assertNoOverlap($result));
+
+        $c = collect($result)->firstWhere('key', 'C');
+        // Row 0 is full (6+6=12), C can't reflow up — stays at y=3
+        $this->assertEquals(3, $c['y'], 'C must stay at row 3 when row 0 is full');
     }
 
     public function test_free_height_preserved_after_reflow(): void

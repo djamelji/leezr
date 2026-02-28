@@ -30,7 +30,8 @@
       "management": "Gestion",
       "company": "Entreprise",
       "operations": "Opérations",
-      "account": "Compte"
+      "account": "Compte",
+      "governance": "Gouvernance"
     },
     "platform": {
       "dashboard": "Tableau de bord",
@@ -47,7 +48,8 @@
       "security": "Sécurité & Surveillance",
       "audit": "Journal d'audit",
       "payments": "Paiements",
-      "billing": "Facturation"
+      "billing": "Facturation",
+      "billing-settings": "Paramètres facturation"
     },
     "company": {
       "dashboard": "Tableau de bord",
@@ -1031,6 +1033,7 @@
     "addonLabel": "+ Extension",
     "includedLabel": "Inclus",
     "internalLabel": "Interne",
+    "platformType": "Plateforme",
     "commercialMode": "Mode commercial",
     "commercialModeHint": "Si défini sur « Extension payante », le prix configuré ci-dessous s'ajoute au prix de l'abonnement de base de l'entreprise.",
     "pricingStructure": "Structure tarifaire",
@@ -1114,6 +1117,46 @@
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
     "perUser": "/utilisateur"
+  },
+
+  "billingSettings": {
+    "title": "Paramètres de facturation",
+    "subtitle": "Configurer la facturation, les fournisseurs, les politiques et l'audit.",
+    "tabs": {
+      "general": "Général",
+      "providers": "Fournisseurs",
+      "policies": "Politiques",
+      "audit": "Audit"
+    },
+    "general": {
+      "title": "Configuration de facturation",
+      "invoicePrefix": "Préfixe facture",
+      "invoiceNextNumber": "Prochain numéro de facture",
+      "creditNotePrefix": "Préfixe avoir",
+      "creditNoteNextNumber": "Prochain numéro d'avoir",
+      "invoiceDueDays": "Jours d'échéance facture",
+      "taxMode": "Mode de taxe",
+      "defaultTaxRate": "Taux de taxe par défaut (bps)",
+      "upgradeTiming": "Moment de mise à niveau",
+      "downgradeTiming": "Moment de rétrogradation"
+    },
+    "providers": {
+      "title": "Fournisseurs de paiement"
+    },
+    "policies": {
+      "title": "Politiques de facturation",
+      "walletFirst": "Appliquer le crédit portefeuille en premier",
+      "allowNegativeWallet": "Autoriser portefeuille négatif",
+      "autoApplyWalletCredit": "Auto-appliquer crédit portefeuille",
+      "gracePeriodDays": "Période de grâce (jours)",
+      "maxRetryAttempts": "Tentatives de relance max",
+      "retryInterval": "Relance #{n} (jours)",
+      "failureAction": "Action en cas d'échec"
+    },
+    "audit": {
+      "title": "Audit facturation"
+    },
+    "saved": "Paramètres enregistrés."
   },
 
   "platformJobdomains": {
@@ -1566,7 +1609,8 @@
   "dashboardGrid": {
     "noSpaceToPlaceWidget": "Pas assez d'espace pour placer le widget. Essayez de supprimer ou redimensionner d'autres widgets.",
     "invalidPlacement": "Placement invalide. Le widget a été remis à sa position précédente.",
-    "maxHeightReached": "Hauteur maximale du widget atteinte (6 lignes)."
+    "maxHeightReached": "Hauteur maximale du widget atteinte (6 lignes).",
+    "minWidgetRequired": "Au moins un widget est requis."
   },
 
   "auth": {

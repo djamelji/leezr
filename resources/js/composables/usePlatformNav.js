@@ -40,7 +40,7 @@ function groupsToNavItems(groups, auth, t) {
 
     for (const item of group.items) {
       const navItem = {
-        title: item.title,
+        title: t(`nav.platform.${item.key}`),
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
@@ -49,7 +49,7 @@ function groupsToNavItems(groups, auth, t) {
       // Only set children when non-empty — Vuexy uses 'children' in item
       // to decide between VerticalNavLink vs VerticalNavGroup
       const children = (item.children || []).map(c => ({
-        title: c.title,
+        title: t(`nav.platform.${c.key}`),
         to: c.to,
         icon: { icon: c.icon },
       }))

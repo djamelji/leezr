@@ -5014,6 +5014,28 @@ self::assertNotFrozen($companyId);
   - Les routes module-gated conservent leur propre `whenReady(5000)` en second filet.
 - **Fichiers** : `resources/js/plugins/1.router/guards.js` — 2 lignes modifiées (whenAuthResolved → whenReady).
 
+## ADR-154 : Platform Billing — First-Class Governance Module
+
+- **Date** : 2026-02-28
+- **Contexte** : `platform.billing` existait en `type: 'internal'` — non-toggleable, sans page de paramètres dédiée, sans permissions granulaires au-delà de `view_billing`/`manage_billing`. Les widgets billing étaient liés à `core.billing` (mauvais module). Le `ModuleController::show()` rejetait les modules admin-scope.
+- **Décision** :
+  1. Changer le type de `internal` à `platform` (toggleable via AdminModuleService)
+  2. Ajouter 3 nouvelles permissions (`manage_billing_providers`, `manage_billing_policies`, `view_billing_audit`) — les 2 existantes (`view_billing`, `manage_billing`) sont CONSERVÉES sans renommage
+  3. Ajouter `settingsRoute` nullable sur `ModuleManifest` (backward-compatible)
+  4. Créer la page settings `/platform/billing/settings/[tab]` avec 4 onglets (General, Providers, Policies, Audit) permission-gated
+  5. Rebinder les 3 widgets billing de `core.billing` → `platform.billing` (audience `platform` protège déjà contre fuite company via `catalogForCompany()`)
+  6. Ajouter check `ModuleGate::isEnabledGlobally()` dans `DashboardWidgetRegistry::catalogForUser()`
+  7. Étendre `ModuleController::show()` pour supporter les modules admin-scope
+  8. Ajouter nav group `governance` pour les items billing
+  9. Row click sur le Platform tab de `/platform/modules` ouvre `settingsRoute` si existant
+- **Conséquences** :
+  - Toggle off `platform.billing` → routes 403, nav items absents, widgets absents du dashboard
+  - Toggle on → tout restauré
+  - Zero régression : permissions existantes inchangées, routes existantes intactes
+  - Migration : sync 3 nouvelles permissions + auto-assign aux rôles ayant `manage_billing`
+  - Company catalogs never voient les widgets platform (filtrage audience existant)
+- **Fichiers** : `ModuleManifest.php`, `BillingModule.php`, `ModuleController.php`, 3 widget files, `DashboardWidgetRegistry.php`, migration, 5 settings page files, `modules/index.vue`, `invoices/[id].vue`, `en.json`, `fr.json`
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

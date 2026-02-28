@@ -136,6 +136,12 @@ const platformHeaders = computed(() => [
 const visiblePlatformModules = computed(() => {
   return settingsStore.platformModules.filter(m => m.visibility !== 'hidden')
 })
+
+const onPlatformRowClick = (_event, { item }) => {
+  if (item.settings_route) {
+    router.push({ name: item.settings_route, params: { tab: 'general' } })
+  }
+}
 </script>
 
 <template>
@@ -362,7 +368,9 @@ const visiblePlatformModules = computed(() => {
             item-value="key"
             :items-per-page="-1"
             hide-default-footer
-            class="text-no-wrap"
+            hover
+            class="text-no-wrap cursor-pointer"
+            @click:row="onPlatformRowClick"
           >
             <!-- Module name with icon -->
             <template #item.name="{ item }">
@@ -399,11 +407,11 @@ const visiblePlatformModules = computed(() => {
             <!-- Type badge -->
             <template #item.type="{ item }">
               <VChip
-                color="secondary"
+                :color="item.type === 'platform' ? 'info' : 'secondary'"
                 size="small"
                 variant="tonal"
               >
-                {{ t('platformModules.internalLabel') }}
+                {{ item.type === 'platform' ? t('platformModules.platformType') : t('platformModules.internalLabel') }}
               </VChip>
             </template>
 

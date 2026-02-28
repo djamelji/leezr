@@ -22,10 +22,18 @@ class Company extends Model
         'name',
         'slug',
         'status',
+        'financial_freeze',
         'plan_key',
         'market_key',
         'legal_status_key',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'financial_freeze' => 'boolean',
+        ];
+    }
 
     public function market(): BelongsTo
     {

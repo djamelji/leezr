@@ -70,6 +70,14 @@ class PlatformUser extends Authenticatable
             ->exists();
     }
 
+    /**
+     * Stub — capabilities not implemented yet, always allow.
+     */
+    public function hasCapability(string $key): bool
+    {
+        return true;
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         ResetPassword::createUrlUsing(fn ($notifiable, $token) => url("/platform/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForPasswordReset())));

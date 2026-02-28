@@ -11,3 +11,9 @@ Artisan::command('inspire', function () {
 
 // FX rate refresh every 6 hours (ADR-104)
 Schedule::job(new FxRateFetchJob)->cron('0 */6 * * *')->withoutOverlapping();
+
+// Dunning retry — daily (ADR-136)
+Schedule::command('billing:process-dunning')->daily()->withoutOverlapping();
+
+// Reconciliation — weekly (ADR-140)
+Schedule::command('billing:reconcile')->weekly()->withoutOverlapping();

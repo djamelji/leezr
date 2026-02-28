@@ -30,5 +30,6 @@ final class ModuleManifest
         public readonly ?array $compatibleJobdomains = null,
         public readonly string $iconType = 'tabler',
         public readonly string $iconRef = 'tabler-puzzle',
+        public readonly ?string $settingsRoute = null,
     ) {}
 }

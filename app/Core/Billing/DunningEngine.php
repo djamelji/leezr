@@ -2,6 +2,8 @@
 
 namespace App\Core\Billing;
 
+use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Models\Company;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -95,12 +97,16 @@ class DunningEngine
      * Wraps the internal attemptRetry() logic for a single invoice.
      * Disambiguates the 'retried' return value by checking post-state.
      *
-     * @return string 'paid' | 'retried' | 'exhausted' | 'skipped'
+     * @return string 'paid' | 'retried' | 'exhausted' | 'skipped' | 'provider_attempted'
      */
     public static function retrySingleInvoice(Invoice $invoice): string
     {
         $policy = PlatformBillingPolicy::instance();
         $result = static::attemptRetry($invoice, $policy);
+
+        if ($result === 'provider_attempted') {
+            return 'provider_attempted';
+        }
 
         // attemptRetry returns 'retried' for both "paid" and "rescheduled".
         // Disambiguate by checking the invoice's current status.
@@ -147,10 +153,30 @@ class DunningEngine
     /**
      * Attempt a retry on an overdue invoice.
      *
-     * @return string 'retried' | 'exhausted' | 'skipped'
+     * @return string 'retried' | 'exhausted' | 'skipped' | 'provider_attempted'
      */
     private static function attemptRetry(Invoice $invoice, PlatformBillingPolicy $policy): string
     {
+        // Phase 1: Provider-first collection (OUTSIDE transaction — no lock during API call)
+        $providerResult = static::attemptProviderPayment($invoice);
+
+        if ($providerResult === 'provider_attempted') {
+            // Provider accepted the charge — webhook will finalize state.
+            // Increment retry_count inside a short transaction.
+            DB::transaction(function () use ($invoice) {
+                $invoice = Invoice::where('id', $invoice->id)->lockForUpdate()->first();
+
+                if ($invoice->status !== 'overdue') {
+                    return;
+                }
+
+                $invoice->update(['retry_count' => $invoice->retry_count + 1]);
+            });
+
+            return 'provider_attempted';
+        }
+
+        // Phase 2: Wallet fallback (existing transactional flow)
         return DB::transaction(function () use ($invoice, $policy) {
             $invoice = Invoice::where('id', $invoice->id)->lockForUpdate()->first();
 
@@ -162,7 +188,7 @@ class DunningEngine
             $maxRetries = $policy->max_retry_attempts;
             $newRetryCount = $invoice->retry_count + 1;
 
-            // Try wallet-first payment (full-coverage only)
+            // Try wallet payment (full-coverage only)
             $paid = static::attemptWalletPayment($invoice);
 
             if ($paid) {
@@ -187,6 +213,16 @@ class DunningEngine
                     'next_retry_at' => null,
                 ]);
 
+                // Ledger: record write-off (ADR-142 D3f)
+                try {
+                    LedgerService::recordWriteOff($invoice);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('[ledger] dunning writeoff recording failed', [
+                        'invoice_id' => $invoice->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 // Apply failure action to the company
                 static::applyFailureAction($invoice->company, $policy);
 
@@ -207,12 +243,53 @@ class DunningEngine
     }
 
     /**
+     * Attempt provider-first payment (Stripe charge, SEPA, etc.).
+     *
+     * Runs OUTSIDE DB::transaction to avoid holding row locks during API calls.
+     * Returns 'provider_attempted' if provider accepted the charge (webhook will finalize).
+     * Returns null if no provider or provider failed → caller falls back to wallet.
+     */
+    private static function attemptProviderPayment(Invoice $invoice): ?string
+    {
+        if ($invoice->amount_due <= 0) {
+            return null;
+        }
+
+        $subscription = $invoice->subscription;
+
+        if (! $subscription || ! $subscription->provider || $subscription->provider === 'internal') {
+            return null;
+        }
+
+        $adapter = static::resolveAdapter($subscription->provider);
+
+        if (! $adapter) {
+            return null;
+        }
+
+        try {
+            $result = $adapter->collectInvoice($invoice, $invoice->company);
+
+            return $result['status'] === 'succeeded' ? 'provider_attempted' : null;
+        } catch (\Throwable) {
+            return null; // Provider failed → wallet fallback
+        }
+    }
+
+    private static function resolveAdapter(string $provider): ?PaymentProviderAdapter
+    {
+        return match ($provider) {
+            'stripe' => app(StripePaymentAdapter::class),
+            default => null,
+        };
+    }
+
+    /**
      * Attempt to pay the invoice using wallet balance.
      * Returns true if fully paid, false otherwise.
      *
-     * LOT3 scope: wallet-first, full-coverage only.
+     * Full-coverage only — partial not supported.
      * If wallet_balance < amount_due → payment fails entirely (no partial).
-     * Provider payment (Stripe charge) will be added in LOT4+.
      */
     private static function attemptWalletPayment(Invoice $invoice): bool
     {

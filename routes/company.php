@@ -1,5 +1,7 @@
 <?php
 
+use App\Modules\Core\Dashboard\Http\CompanyDashboardLayoutController;
+use App\Modules\Core\Dashboard\Http\CompanyDashboardWidgetController;
 use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
 use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Core\Billing\Http\BillingCheckoutController;
@@ -32,6 +34,14 @@ Route::get('/nav', [NavController::class, 'company']);
 
 // ─── Realtime SSE stream (ADR-125, no module gate) ────────
 Route::get('/realtime/stream', RealtimeStreamController::class);
+
+// ─── Company Dashboard (core, no module gate — ADR-149) ───
+Route::get('/dashboard/widgets/catalog', [CompanyDashboardWidgetController::class, 'catalog']);
+Route::post('/dashboard/widgets/data', [CompanyDashboardWidgetController::class, 'batchResolve']);
+Route::get('/dashboard/layout', [CompanyDashboardLayoutController::class, 'show']);
+Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'update'])
+    ->middleware('company.access:manage-structure');
+Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
 
 // ─── Company plan (ADR-100, module-gated) ─────────────────
 Route::middleware('company.access:use-module,core.billing')->group(function () {

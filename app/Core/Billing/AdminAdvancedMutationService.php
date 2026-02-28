@@ -4,7 +4,10 @@ namespace App\Core\Billing;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -45,6 +48,12 @@ class AdminAdvancedMutationService
             throw new RuntimeException('Only paid invoices can be refunded.');
         }
 
+        // ADR-143 D3g: Financial freeze guard
+        $company = $invoice->company;
+        if ($company && $company->financial_freeze) {
+            throw new RuntimeException('Company is financially frozen — refunds are blocked.');
+        }
+
         if ($amount <= 0) {
             throw new RuntimeException('Refund amount must be positive.');
         }
@@ -62,16 +71,54 @@ class AdminAdvancedMutationService
             throw new RuntimeException('Cumulative refund amount exceeds invoice total.');
         }
 
-        return DB::transaction(function () use ($invoice, $amount, $reason, $idempotencyKey) {
+        // Provider-first refund: if invoice was paid via external provider, chain refund there first
+        $providerPayment = Payment::where('invoice_id', $invoice->id)
+            ->where('status', 'succeeded')
+            ->whereNotNull('provider_payment_id')
+            ->where('provider', '!=', 'internal')
+            ->first();
+
+        $providerRefundId = null;
+
+        if ($providerPayment) {
+            $adapter = static::resolveAdapter($providerPayment->provider);
+
+            if ($adapter) {
+                $refundResult = $adapter->refund($providerPayment->provider_payment_id, $amount, [
+                    'invoice_id' => (string) $invoice->id,
+                    'company_id' => (string) $invoice->company_id,
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                $providerRefundId = $refundResult['provider_refund_id'] ?? null;
+            }
+        }
+
+        return DB::transaction(function () use ($invoice, $amount, $reason, $idempotencyKey, $providerPayment, $providerRefundId) {
             $creditNote = CreditNoteIssuer::createDraft(
                 company: $invoice->company,
                 amount: $amount,
                 reason: $reason,
                 invoiceId: $invoice->id,
-                metadata: ['idempotency_key' => $idempotencyKey, 'type' => 'refund'],
+                metadata: [
+                    'idempotency_key' => $idempotencyKey,
+                    'type' => 'refund',
+                    'provider_refund_id' => $providerRefundId,
+                    'provider_payment_id' => $providerPayment?->provider_payment_id,
+                ],
             );
 
             $creditNote = CreditNoteIssuer::issue($creditNote);
+
+            // Ledger: record refund issued (ADR-142 D3f)
+            try {
+                LedgerService::recordRefundIssued($creditNote);
+            } catch (\Throwable $e) {
+                Log::warning('[ledger] refund recording failed', [
+                    'credit_note_id' => $creditNote->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             $this->audit->logPlatform(
                 AuditAction::BILLING_REFUND,
@@ -86,6 +133,8 @@ class AdminAdvancedMutationService
                         'credit_note_number' => $creditNote->number,
                         'amount' => $amount,
                         'reason' => $reason,
+                        'provider_refund_id' => $providerRefundId,
+                        'provider_payment_id' => $providerPayment?->provider_payment_id,
                     ],
                 ],
             );
@@ -295,6 +344,20 @@ class AdminAdvancedMutationService
             throw new RuntimeException('Only overdue invoices can be written off.');
         }
 
+        // ADR-143 D3g: Writeoff threshold guard
+        $threshold = (int) config('billing.writeoff_threshold', 0);
+        if ($threshold > 0 && $invoice->amount_due > $threshold) {
+            throw new RuntimeException(
+                "Write-off amount ({$invoice->amount_due}) exceeds threshold ({$threshold})."
+            );
+        }
+
+        // ADR-143 D3g: Financial freeze guard
+        $company = $invoice->company;
+        if ($company && $company->financial_freeze) {
+            throw new RuntimeException('Company is financially frozen — write-offs are blocked.');
+        }
+
         return DB::transaction(function () use ($invoice, $idempotencyKey) {
             $before = ['status' => $invoice->status];
 
@@ -304,6 +367,16 @@ class AdminAdvancedMutationService
             ]);
 
             $invoice->refresh();
+
+            // Ledger: record write-off (ADR-142 D3f)
+            try {
+                LedgerService::recordWriteOff($invoice);
+            } catch (\Throwable $e) {
+                Log::warning('[ledger] writeoff recording failed', [
+                    'invoice_id' => $invoice->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             $this->audit->logPlatform(
                 AuditAction::INVOICE_WRITTEN_OFF,
@@ -338,5 +411,13 @@ class AdminAdvancedMutationService
         if ($invoice->voided_at !== null) {
             throw new RuntimeException('Invoice is already voided.');
         }
+    }
+
+    private static function resolveAdapter(string $provider): ?PaymentProviderAdapter
+    {
+        return match ($provider) {
+            'stripe' => app(StripePaymentAdapter::class),
+            default => null,
+        };
     }
 }

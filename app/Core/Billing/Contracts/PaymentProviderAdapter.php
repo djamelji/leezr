@@ -4,6 +4,8 @@ namespace App\Core\Billing\Contracts;
 
 use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
+use App\Core\Billing\Invoice;
+use App\Core\Models\Company;
 
 /**
  * Extended payment provider interface.
@@ -45,4 +47,13 @@ interface PaymentProviderAdapter extends PaymentGatewayProvider
      * @throws \RuntimeException If signature is invalid
      */
     public function verifyWebhookSignature(string $rawBody, array $headers): void;
+
+    /**
+     * Attempt to collect payment for an invoice via the provider.
+     *
+     * Does NOT mutate local DB — webhook remains source-of-truth for final state.
+     *
+     * @return array{provider_payment_id: string, amount: int, status: 'succeeded'|'failed', raw_response: array}
+     */
+    public function collectInvoice(Invoice $invoice, Company $company, array $metadata = []): array;
 }

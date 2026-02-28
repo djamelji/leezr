@@ -19,6 +19,9 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     _paymentRules: [],
     _previewMethods: [],
 
+    // Invoice detail
+    _invoiceDetail: null,
+
     // Invoice mutation loading locks (ADR-135 D2b)
     _mutationLoading: {},
 
@@ -35,6 +38,24 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     _allSubscriptionsPagination: { current_page: 1, last_page: 1, per_page: 20, total: 0 },
     _dunningInvoices: [],
     _dunningPagination: { current_page: 1, last_page: 1, per_page: 20, total: 0 },
+
+    // Financial governance (D4b/D4c)
+    _trialBalance: {},
+    _ledgerEntries: [],
+    _ledgerPagination: { current_page: 1, last_page: 1, per_page: 50, total: 0 },
+    _financialPeriods: [],
+    _timeline: [],
+    _snapshots: [],
+    _snapshotsPagination: { current_page: 1, last_page: 1, per_page: 50, total: 0 },
+    _driftHistory: [],
+    _financialLoading: false,
+
+    // Billing widgets (D4e)
+    _widgets: [],
+    _widgetData: {},
+    _widgetsLoading: false,
+    _widgetLoading: {},
+    _widgetsPeriod: '30d',
   }),
 
   getters: {
@@ -46,6 +67,9 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     paymentModules: state => state._paymentModules,
     paymentRules: state => state._paymentRules,
     previewMethods: state => state._previewMethods,
+
+    // Invoice detail
+    invoiceDetail: state => state._invoiceDetail,
 
     // Mutation loading lock
     mutationLoading: state => state._mutationLoading,
@@ -63,6 +87,24 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     allSubscriptionsPagination: state => state._allSubscriptionsPagination,
     dunningInvoices: state => state._dunningInvoices,
     dunningPagination: state => state._dunningPagination,
+
+    // Financial governance getters
+    trialBalance: state => state._trialBalance,
+    ledgerEntries: state => state._ledgerEntries,
+    ledgerPagination: state => state._ledgerPagination,
+    financialPeriods: state => state._financialPeriods,
+    timeline: state => state._timeline,
+    snapshots: state => state._snapshots,
+    snapshotsPagination: state => state._snapshotsPagination,
+    driftHistory: state => state._driftHistory,
+    financialLoading: state => state._financialLoading,
+
+    // Billing widgets getters
+    widgets: state => state._widgets,
+    widgetData: state => state._widgetData,
+    widgetsLoading: state => state._widgetsLoading,
+    widgetLoading: state => state._widgetLoading,
+    widgetsPeriod: state => state._widgetsPeriod,
   },
 
   actions: {
@@ -248,6 +290,14 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
       return data
     },
 
+    // ── Invoice detail ──
+
+    async fetchInvoiceDetail(id) {
+      const data = await $platformApi(`/billing/invoices/${id}`)
+
+      this._invoiceDetail = data.invoice
+    },
+
     // ── Read-only billing data (view_billing, ADR-135 Phase A) ──
 
     async fetchAllInvoices({ page = 1, company_id, status } = {}) {
@@ -413,6 +463,290 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
       finally {
         delete this._mutationLoading[invoiceId]
       }
+    },
+
+    // ── Advanced invoice mutations (ADR-136 D2c / D4a) ──
+
+    async refundInvoice(invoiceId, payload) {
+      this._mutationLoading[invoiceId] = true
+      try {
+        const data = await $platformApi(`/billing/invoices/${invoiceId}/refund`, {
+          method: 'POST',
+          body: payload,
+        })
+
+        await this.fetchAllInvoices({
+          page: this._allInvoicesPagination.current_page,
+        })
+
+        return data
+      }
+      finally {
+        delete this._mutationLoading[invoiceId]
+      }
+    },
+
+    async retryInvoicePayment(invoiceId, payload) {
+      this._mutationLoading[invoiceId] = true
+      try {
+        const data = await $platformApi(`/billing/invoices/${invoiceId}/retry-payment`, {
+          method: 'POST',
+          body: payload,
+        })
+
+        await this.fetchAllInvoices({
+          page: this._allInvoicesPagination.current_page,
+        })
+
+        return data
+      }
+      finally {
+        delete this._mutationLoading[invoiceId]
+      }
+    },
+
+    async forceDunningTransition(invoiceId, payload) {
+      this._mutationLoading[invoiceId] = true
+      try {
+        const data = await $platformApi(`/billing/invoices/${invoiceId}/dunning-transition`, {
+          method: 'PUT',
+          body: payload,
+        })
+
+        await this.fetchAllInvoices({
+          page: this._allInvoicesPagination.current_page,
+        })
+
+        return data
+      }
+      finally {
+        delete this._mutationLoading[invoiceId]
+      }
+    },
+
+    async issueManualCreditNote(invoiceId, payload) {
+      this._mutationLoading[invoiceId] = true
+      try {
+        const data = await $platformApi(`/billing/invoices/${invoiceId}/credit-note`, {
+          method: 'POST',
+          body: payload,
+        })
+
+        await this.fetchAllInvoices({
+          page: this._allInvoicesPagination.current_page,
+        })
+
+        return data
+      }
+      finally {
+        delete this._mutationLoading[invoiceId]
+      }
+    },
+
+    async writeOffInvoice(invoiceId, payload) {
+      this._mutationLoading[invoiceId] = true
+      try {
+        const data = await $platformApi(`/billing/invoices/${invoiceId}/write-off`, {
+          method: 'PUT',
+          body: payload,
+        })
+
+        await this.fetchAllInvoices({
+          page: this._allInvoicesPagination.current_page,
+        })
+
+        return data
+      }
+      finally {
+        delete this._mutationLoading[invoiceId]
+      }
+    },
+
+    // ── Financial governance (D4b/D4c) ──
+
+    async fetchTrialBalance(companyId) {
+      this._financialLoading = true
+      try {
+        const data = await $platformApi(`/billing/ledger/trial-balance?company_id=${companyId}`)
+
+        this._trialBalance = data.balance || {}
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async fetchLedgerEntries({ company_id, correlation_id, entry_type, page = 1 } = {}) {
+      this._financialLoading = true
+      try {
+        const params = new URLSearchParams()
+
+        params.set('company_id', company_id)
+        params.set('page', page)
+        if (correlation_id) params.set('correlation_id', correlation_id)
+        if (entry_type) params.set('entry_type', entry_type)
+
+        const data = await $platformApi(`/billing/ledger/entries?${params}`)
+
+        this._ledgerEntries = data.data
+        this._ledgerPagination = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total,
+        }
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async fetchFreezeState(companyId) {
+      const data = await $platformApi(`/billing/companies/${companyId}/financial-freeze`)
+
+      return data
+    },
+
+    async fetchFinancialPeriods(companyId) {
+      const data = await $platformApi(`/billing/financial-periods?company_id=${companyId}`)
+
+      this._financialPeriods = data.periods || []
+    },
+
+    async fetchTimeline({ company_id, days = 30, entity_type } = {}) {
+      this._financialLoading = true
+      try {
+        const params = new URLSearchParams()
+
+        params.set('company_id', company_id)
+        params.set('days', days)
+        if (entity_type) params.set('entity_type', entity_type)
+
+        const data = await $platformApi(`/billing/forensics/timeline?${params}`)
+
+        this._timeline = data.timeline || []
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async fetchSnapshots(companyId, page = 1) {
+      this._financialLoading = true
+      try {
+        const data = await $platformApi(`/billing/forensics/snapshots?company_id=${companyId}&page=${page}`)
+
+        this._snapshots = data.data
+        this._snapshotsPagination = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total,
+        }
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async fetchDriftHistory(companyId) {
+      const data = await $platformApi(`/billing/drift-history?company_id=${companyId}`)
+
+      this._driftHistory = data.drifts || []
+    },
+
+    // Mutations (manage_billing)
+
+    async closeFinancialPeriod(payload) {
+      this._financialLoading = true
+      try {
+        const data = await $platformApi('/billing/financial-periods/close', {
+          method: 'POST',
+          body: payload,
+        })
+
+        if (payload.company_id) {
+          await this.fetchFinancialPeriods(payload.company_id)
+        }
+
+        return data
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async toggleFinancialFreeze(companyId, frozen) {
+      this._financialLoading = true
+      try {
+        const data = await $platformApi(`/billing/companies/${companyId}/financial-freeze`, {
+          method: 'PUT',
+          body: { frozen },
+        })
+
+        return data
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    async runReconcile(payload = {}) {
+      this._financialLoading = true
+      try {
+        const data = await $platformApi('/billing/reconcile', {
+          method: 'POST',
+          body: { dry_run: true, ...payload },
+        })
+
+        return data
+      }
+      finally {
+        this._financialLoading = false
+      }
+    },
+
+    // ── Billing widgets (D4e) ──────────────────────────────
+
+    async fetchWidgets(companyId) {
+      this._widgetsLoading = true
+      try {
+        const data = await $platformApi('/billing/widgets', {
+          params: { company_id: companyId },
+        })
+
+        this._widgets = data.widgets || []
+      }
+      finally {
+        this._widgetsLoading = false
+      }
+    },
+
+    async fetchWidget(key, companyId, period) {
+      this._widgetLoading = { ...this._widgetLoading, [key]: true }
+      try {
+        const data = await $platformApi(`/billing/widgets/${key}`, {
+          params: { company_id: companyId, period },
+        })
+
+        this._widgetData = { ...this._widgetData, [key]: data.data }
+      }
+      finally {
+        this._widgetLoading = { ...this._widgetLoading, [key]: false }
+      }
+    },
+
+    setWidgetsPeriod(period) {
+      this._widgetsPeriod = period
+    },
+
+    async fetchAllWidgets(companyId) {
+      await this.fetchWidgets(companyId)
+
+      const period = this._widgetsPeriod
+      await Promise.all(
+        this._widgets.map(w => this.fetchWidget(w.key, companyId, period)),
+      )
     },
   },
 })

@@ -380,6 +380,7 @@
     "useAppName": true,
     "usePublicPlans": true,
     "formatDateTime": true,
-    "formatMoney": true
+    "formatMoney": true,
+    "useDashboardGrid": true
   }
 }

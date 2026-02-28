@@ -37,7 +37,7 @@ export function useCompanyNav() {
 function companyGroupsToNavItems(groups, auth, t) {
   const items = [
     {
-      title: 'Dashboard',
+      title: t('nav.company.dashboard'),
       to: { name: 'dashboard' },
       icon: { icon: 'tabler-smart-home' },
     },
@@ -50,7 +50,7 @@ function companyGroupsToNavItems(groups, auth, t) {
 
     for (const item of group.items) {
       const navItem = {
-        title: item.title,
+        title: t(`nav.company.${item.key}`),
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
@@ -59,7 +59,7 @@ function companyGroupsToNavItems(groups, auth, t) {
       // Only set children when non-empty — Vuexy uses 'children' in item
       // to decide between VerticalNavLink vs VerticalNavGroup
       const children = (item.children || []).map(c => ({
-        title: c.title,
+        title: t(`nav.company.${c.key}`),
         to: c.to,
         icon: { icon: c.icon },
       }))
@@ -72,9 +72,9 @@ function companyGroupsToNavItems(groups, auth, t) {
     }
   }
 
-  items.push({ heading: 'Account' })
+  items.push({ heading: t('nav.groups.account') })
   items.push({
-    title: 'Account Settings',
+    title: t('nav.company.account-settings'),
     to: { name: 'account-settings-tab', params: { tab: 'account' } },
     icon: { icon: 'tabler-settings' },
   })

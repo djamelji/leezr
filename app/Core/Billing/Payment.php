@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Payment extends Model
 {
     protected $fillable = [
-        'subscription_id', 'company_id', 'amount', 'currency',
+        'subscription_id', 'invoice_id', 'company_id', 'amount', 'currency',
         'status', 'provider', 'provider_payment_id', 'metadata',
     ];
 
@@ -24,6 +24,11 @@ class Payment extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class);
+    }
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     public function company(): BelongsTo

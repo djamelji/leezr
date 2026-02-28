@@ -6,6 +6,7 @@ use App\Core\Billing\CheckoutResult;
 use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
+use App\Core\Billing\Invoice;
 use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
 use App\Core\Plans\Plan;
@@ -87,5 +88,10 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
     public function verifyWebhookSignature(string $rawBody, array $headers): void
     {
         // No-op — internal provider has no external webhooks.
+    }
+
+    public function collectInvoice(Invoice $invoice, Company $company, array $metadata = []): array
+    {
+        throw new \RuntimeException('Internal provider does not support provider collection.');
     }
 }

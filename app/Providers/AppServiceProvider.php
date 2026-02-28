@@ -70,6 +70,15 @@ class AppServiceProvider extends ServiceProvider
         // ADR-124: Boot payment module registry
         PaymentRegistry::boot();
 
+        // ADR-149: Boot dashboard widget registry (convention-based discovery)
+        \App\Modules\Dashboard\DashboardWidgetRegistry::boot();
+
+        // ADR-149: Auto-inject widgets when module enabled for company
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Core\Events\ModuleEnabled::class,
+            \App\Modules\Dashboard\Listeners\InjectModuleWidgets::class,
+        );
+
         // ADR-081: Remove Vite hot file outside local — prevents production
         // from loading dev server assets (:5173) if the file leaks.
         if (! $this->app->environment('local')) {

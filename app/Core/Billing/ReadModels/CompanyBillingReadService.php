@@ -6,6 +6,7 @@ use App\Core\Billing\CompanyEntitlements;
 use App\Core\Billing\CompanyWallet;
 use App\Core\Billing\CompanyWalletTransaction;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\LedgerEntry;
 use App\Core\Billing\Payment;
 use App\Core\Billing\PaymentOrchestrator;
 use App\Core\Billing\Subscription;
@@ -122,6 +123,34 @@ class CompanyBillingReadService
                 'issued_at' => $cn->issued_at?->toISOString(),
                 'applied_at' => $cn->applied_at?->toISOString(),
             ])->toArray(),
+            'payments' => Payment::where('invoice_id', $invoice->id)
+                ->where('company_id', $company->id)
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(fn ($p) => [
+                    'id' => $p->id,
+                    'amount' => $p->amount,
+                    'currency' => $p->currency,
+                    'status' => $p->status,
+                    'provider' => $p->provider,
+                    'provider_payment_id' => $p->provider_payment_id,
+                    'created_at' => $p->created_at->toISOString(),
+                ])->toArray(),
+            'ledger_entries' => LedgerEntry::where('company_id', $company->id)
+                ->where('reference_type', 'invoice')
+                ->where('reference_id', $invoice->id)
+                ->orderByDesc('recorded_at')
+                ->get()
+                ->map(fn ($e) => [
+                    'id' => $e->id,
+                    'entry_type' => $e->entry_type,
+                    'account_code' => $e->account_code,
+                    'debit' => $e->debit,
+                    'credit' => $e->credit,
+                    'currency' => $e->currency,
+                    'correlation_id' => $e->correlation_id,
+                    'recorded_at' => $e->recorded_at->toISOString(),
+                ])->toArray(),
         ];
     }
 

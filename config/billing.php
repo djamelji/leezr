@@ -21,4 +21,52 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Alerting (ADR-140 D3d)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, critical audit events (drift detection, payment failures)
+    | trigger email notifications. Optional webhook for external integrations.
+    |
+    */
+
+    'alerting' => [
+        'enabled'     => env('BILLING_ALERT_ENABLED', false),
+        'email'       => env('BILLING_ALERT_EMAIL'),
+        'webhook_url' => env('BILLING_ALERT_WEBHOOK'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-Repair (ADR-141 D3e)
+    |--------------------------------------------------------------------------
+    |
+    | Controlled auto-repair of safe drift types detected by reconciliation.
+    | Opt-in only, dry-run by default. Snapshot taken before every mutation.
+    |
+    */
+
+    'auto_repair' => [
+        'enabled'          => env('BILLING_AUTO_REPAIR_ENABLED', false),
+        'dry_run_default'  => env('BILLING_AUTO_REPAIR_DRY_RUN', true),
+        'safe_types'       => [
+            'missing_local_payment',
+            'status_mismatch',
+            'invoice_not_paid',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Financial Controls (ADR-143 D3g)
+    |--------------------------------------------------------------------------
+    |
+    | Writeoff threshold: maximum single write-off amount in cents.
+    | Set to 0 to disable the guard (allow unlimited write-offs).
+    |
+    */
+
+    'writeoff_threshold' => (int) env('BILLING_WRITEOFF_THRESHOLD', 0),
+
 ];

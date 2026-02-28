@@ -88,6 +88,14 @@ export const $api = ofetch.create({
       await refreshCsrf()
       options._retried = true
 
+      // Clear stale XSRF token — onRequest will inject the fresh one
+      if (options.headers instanceof Headers) {
+        options.headers.delete('X-XSRF-TOKEN')
+      }
+      else if (options.headers) {
+        delete options.headers['X-XSRF-TOKEN']
+      }
+
       return $api(request, options)
     }
 

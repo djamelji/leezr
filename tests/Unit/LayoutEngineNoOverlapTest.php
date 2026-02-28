@@ -260,6 +260,43 @@ class LayoutEngineNoOverlapTest extends TestCase
         return $packed;
     }
 
+    private function reflowUpward(array $tiles): array
+    {
+        $layout = array_map(fn ($t) => $t, $tiles);
+        usort($layout, fn ($a, $b) => $b['y'] <=> $a['y'] ?: $a['x'] <=> $b['x']);
+
+        for ($i = 0; $i < count($layout); $i++) {
+            $tile = $layout[$i];
+            $bestCandidate = null;
+
+            for ($y = 0; $y < $tile['y']; $y++) {
+                for ($x = 0; $x + $tile['w'] <= $this->cols; $x++) {
+                    $candidate = array_merge($tile, ['x' => $x, 'y' => $y]);
+                    $blocked = false;
+                    foreach ($layout as $idx => $t) {
+                        if ($idx !== $i && $this->overlaps($candidate, $t)) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (! $blocked) {
+                        $bestCandidate = $candidate;
+                        break;
+                    }
+                }
+                if ($bestCandidate !== null) {
+                    break;
+                }
+            }
+
+            if ($bestCandidate !== null) {
+                $layout[$i] = $bestCandidate;
+            }
+        }
+
+        return $layout;
+    }
+
     private function assertNoOverlapInLayout(array $tiles): bool
     {
         for ($i = 0; $i < count($tiles); $i++) {
@@ -274,13 +311,16 @@ class LayoutEngineNoOverlapTest extends TestCase
     }
 
     /**
-     * Full pipeline: clamp → resolve → compact → assert.
+     * Full pipeline: clamp → resolve → compact → packLeft → compact → reflow → packLeft → compact → assert.
      */
     private function applyPipeline(array $layout, ?string $movedKey): ?array
     {
         $tiles = array_map(fn ($t) => $this->clampToBounds($t), $layout);
         $tiles = $this->resolveOverlaps($tiles, $movedKey);
         $tiles = $this->compactLayout($tiles);
+        $tiles = $this->packRowsLeft($tiles);
+        $tiles = $this->compactLayout($tiles);
+        $tiles = $this->reflowUpward($tiles);
         $tiles = $this->packRowsLeft($tiles);
         $tiles = $this->compactLayout($tiles);
 

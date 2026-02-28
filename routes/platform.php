@@ -10,6 +10,10 @@ use App\Modules\Platform\Billing\Http\PlatformAdvancedMutationController;
 use App\Modules\Platform\Billing\Http\PaymentModuleController;
 use App\Modules\Platform\Billing\Http\PaymentMethodRuleController;
 use App\Modules\Platform\Billing\Http\PlatformBillingPolicyController;
+use App\Modules\Platform\Billing\Http\PlatformFinancialController;
+use App\Modules\Platform\Billing\Http\PlatformBillingWidgetsController;
+use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
+use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
@@ -179,6 +183,28 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/billing/wallets', [PlatformBillingController::class, 'wallets']);
         Route::get('/billing/all-subscriptions', [PlatformBillingController::class, 'subscriptions']);
         Route::get('/billing/dunning', [PlatformBillingController::class, 'dunning']);
+
+        // Financial governance read (ADR-144 D4b)
+        Route::get('/billing/ledger/trial-balance', [PlatformFinancialController::class, 'trialBalance']);
+        Route::get('/billing/ledger/entries', [PlatformFinancialController::class, 'ledgerEntries']);
+        Route::get('/billing/financial-periods', [PlatformFinancialController::class, 'financialPeriods']);
+        Route::get('/billing/forensics/timeline', [PlatformFinancialController::class, 'forensicsTimeline']);
+        Route::get('/billing/forensics/snapshots', [PlatformFinancialController::class, 'forensicsSnapshots']);
+        Route::get('/billing/drift-history', [PlatformFinancialController::class, 'driftHistory']);
+        Route::get('/billing/companies/{id}/financial-freeze', [PlatformFinancialController::class, 'freezeState']);
+
+        // Billing widgets (ADR-147 D4e)
+        Route::get('/billing/widgets', [PlatformBillingWidgetsController::class, 'index']);
+        Route::get('/billing/widgets/{key}', [PlatformBillingWidgetsController::class, 'show']);
+    });
+
+    // Dashboard engine (ADR-149 D4e.3)
+    Route::middleware(['module.active:platform.dashboard'])->group(function () {
+        Route::get('/dashboard/widgets/catalog', [DashboardWidgetController::class, 'catalog']);
+        Route::post('/dashboard/widgets/data', [DashboardWidgetController::class, 'batchResolve']);
+        Route::get('/dashboard/layout', [DashboardLayoutController::class, 'show']);
+        Route::put('/dashboard/layout', [DashboardLayoutController::class, 'update']);
+        Route::get('/dashboard/layout/presets', [DashboardLayoutController::class, 'presets']);
     });
 
     // Billing / Payments governance (ADR-101, ADR-102)
@@ -223,6 +249,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/billing/payment-rules/{id}', [PaymentMethodRuleController::class, 'update']);
         Route::delete('/billing/payment-rules/{id}', [PaymentMethodRuleController::class, 'destroy']);
         Route::get('/billing/payment-rules/preview', [PaymentMethodRuleController::class, 'preview']);
+
+        // Financial governance write (ADR-144 D4b)
+        Route::post('/billing/financial-periods/close', [PlatformFinancialController::class, 'closePeriod']);
+        Route::put('/billing/companies/{id}/financial-freeze', [PlatformFinancialController::class, 'toggleFreeze']);
+        Route::post('/billing/reconcile', [PlatformFinancialController::class, 'reconcile']);
     });
 
     // Markets governance (ADR-104)

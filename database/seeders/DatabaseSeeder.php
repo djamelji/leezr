@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         // Demo data — local only (never in staging/production)
         if (app()->environment('local')) {
             $this->call(DevSeeder::class);
+            $this->call(FinanceDemoSeeder::class);
         }
     }
 }

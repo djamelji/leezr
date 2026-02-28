@@ -76,6 +76,7 @@ class ModuleController
                 'permissions' => array_map(fn ($p) => $p['key'] ?? $p, $manifest->permissions),
                 'capabilities' => $manifest->capabilities->toArray(),
                 'is_enabled_globally' => $platformModuleRows[$manifest->key]?->is_enabled_globally ?? true,
+                'settings_route' => $manifest->settingsRoute,
             ])
             ->sortBy('sort_order')
             ->values();
@@ -94,7 +95,36 @@ class ModuleController
     {
         $manifest = ModuleRegistry::definitions()[$key] ?? null;
 
-        if (!$manifest || $manifest->scope !== 'company') {
+        if (!$manifest) {
+            return response()->json(['message' => 'Module not found.'], 404);
+        }
+
+        // Admin-scope modules: return manifest + global state
+        if ($manifest->scope === 'admin') {
+            $platformModule = PlatformModule::where('key', $key)->first();
+
+            return response()->json([
+                'module' => [
+                    'key' => $manifest->key,
+                    'name' => $manifest->name,
+                    'description' => $manifest->description,
+                    'type' => $manifest->type,
+                    'scope' => $manifest->scope,
+                    'surface' => $manifest->surface,
+                    'visibility' => $manifest->visibility,
+                    'sort_order' => $manifest->sortOrder,
+                    'is_enabled_globally' => $platformModule?->is_enabled_globally ?? true,
+                    'permissions' => $manifest->permissions,
+                    'bundles' => $manifest->bundles,
+                    'capabilities' => $manifest->capabilities->toArray(),
+                    'settings_route' => $manifest->settingsRoute,
+                    'icon_type' => $manifest->iconType,
+                    'icon_name' => $manifest->iconRef,
+                ],
+            ]);
+        }
+
+        if ($manifest->scope !== 'company') {
             return response()->json(['message' => 'Module not found.'], 404);
         }
 

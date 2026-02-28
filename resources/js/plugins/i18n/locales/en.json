@@ -30,7 +30,8 @@
       "management": "Management",
       "company": "Company",
       "operations": "Operations",
-      "account": "Account"
+      "account": "Account",
+      "governance": "Governance"
     },
     "platform": {
       "dashboard": "Dashboard",
@@ -47,7 +48,8 @@
       "security": "Security & Monitoring",
       "audit": "Audit Logs",
       "payments": "Payments",
-      "billing": "Billing"
+      "billing": "Billing",
+      "billing-settings": "Billing Settings"
     },
     "company": {
       "dashboard": "Dashboard",
@@ -1031,6 +1033,7 @@
     "addonLabel": "+ Add-on",
     "includedLabel": "Included",
     "internalLabel": "Internal",
+    "platformType": "Platform",
     "commercialMode": "Commercial Mode",
     "commercialModeHint": "If set to \"Paid Add-on\", the price configured below is added on top of the company's base subscription plan price.",
     "pricingStructure": "Pricing Structure",
@@ -1114,6 +1117,46 @@
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
     "perUser": "/user"
+  },
+
+  "billingSettings": {
+    "title": "Billing Settings",
+    "subtitle": "Configure billing, providers, policies and audit.",
+    "tabs": {
+      "general": "General",
+      "providers": "Providers",
+      "policies": "Policies",
+      "audit": "Audit"
+    },
+    "general": {
+      "title": "Billing Configuration",
+      "invoicePrefix": "Invoice Prefix",
+      "invoiceNextNumber": "Next Invoice Number",
+      "creditNotePrefix": "Credit Note Prefix",
+      "creditNoteNextNumber": "Next Credit Note Number",
+      "invoiceDueDays": "Invoice Due Days",
+      "taxMode": "Tax Mode",
+      "defaultTaxRate": "Default Tax Rate (bps)",
+      "upgradeTiming": "Upgrade Timing",
+      "downgradeTiming": "Downgrade Timing"
+    },
+    "providers": {
+      "title": "Payment Providers"
+    },
+    "policies": {
+      "title": "Billing Policies",
+      "walletFirst": "Apply wallet credit first",
+      "allowNegativeWallet": "Allow negative wallet balance",
+      "autoApplyWalletCredit": "Auto-apply wallet credit",
+      "gracePeriodDays": "Grace Period (days)",
+      "maxRetryAttempts": "Max Retry Attempts",
+      "retryInterval": "Retry #{n} (days)",
+      "failureAction": "Failure Action"
+    },
+    "audit": {
+      "title": "Billing Audit"
+    },
+    "saved": "Settings saved successfully."
   },
 
   "platformJobdomains": {
@@ -1566,7 +1609,8 @@
   "dashboardGrid": {
     "noSpaceToPlaceWidget": "Not enough space to place the widget. Try removing or resizing other widgets.",
     "invalidPlacement": "Invalid placement. The widget was reverted to its previous position.",
-    "maxHeightReached": "Maximum widget height reached (6 rows)."
+    "maxHeightReached": "Maximum widget height reached (6 rows).",
+    "minWidgetRequired": "At least one widget is required."
   },
 
   "auth": {
