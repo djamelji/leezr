@@ -32,7 +32,7 @@ class CompanyRolePermissionInvariantTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Inv Co', 'slug' => 'inv-co']);
+        $this->company = Company::create(['name' => 'Inv Co', 'slug' => 'inv-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->setUpCompanyRbac($this->company);
 

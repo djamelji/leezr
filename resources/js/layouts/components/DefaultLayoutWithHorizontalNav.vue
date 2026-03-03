@@ -4,6 +4,7 @@ import { useNavStore } from '@/core/stores/nav'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
+import NavbarGlobalWidgets from '@/layouts/components/NavbarGlobalWidgets.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
 import { HorizontalNavLayout } from '@layouts'
 
@@ -26,6 +27,7 @@ const effectiveNavItems = computed(() => navStore.companyLoaded ? navItems.value
       </RouterLink>
       <VSpacer />
 
+      <NavbarGlobalWidgets />
       <UserProfile />
     </template>
 

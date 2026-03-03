@@ -57,7 +57,7 @@ class DashboardGridV2Test extends TestCase
         $this->owner = User::factory()->create();
         $this->member = User::factory()->create();
 
-        $this->company = Company::create(['name' => 'Grid Co', 'slug' => 'grid-co']);
+        $this->company = Company::create(['name' => 'Grid Co', 'slug' => 'grid-co', 'jobdomain_key' => 'logistique']);
 
         $jobdomain = Jobdomain::where('key', 'logistique')->first();
         $this->company->jobdomains()->attach($jobdomain->id);

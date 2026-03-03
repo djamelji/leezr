@@ -47,7 +47,7 @@ class CompanyFieldDefinitionController extends Controller
         $company = $request->attributes->get('company');
 
         // Gate: jobdomain must allow custom fields
-        if (!$company->jobdomain?->allow_custom_fields) {
+        if (!$company->jobdomain->allow_custom_fields) {
             return response()->json([
                 'message' => 'Your industry profile does not allow custom field creation.',
             ], 403);
@@ -124,7 +124,7 @@ class CompanyFieldDefinitionController extends Controller
         $company = $request->attributes->get('company');
 
         // Gate: jobdomain must allow custom fields
-        if (!$company->jobdomain?->allow_custom_fields) {
+        if (!$company->jobdomain->allow_custom_fields) {
             return response()->json([
                 'message' => 'Your industry profile does not allow custom field management.',
             ], 403);
@@ -160,7 +160,7 @@ class CompanyFieldDefinitionController extends Controller
         $company = $request->attributes->get('company');
 
         // Gate: jobdomain must allow custom fields
-        if (!$company->jobdomain?->allow_custom_fields) {
+        if (!$company->jobdomain->allow_custom_fields) {
             return response()->json([
                 'message' => 'Your industry profile does not allow custom field management.',
             ], 403);

@@ -52,6 +52,7 @@ class SubscriptionMutationTest extends TestCase
             'name' => 'Mutation Co',
             'slug' => 'mutation-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->company->memberships()->create([
@@ -540,6 +541,7 @@ class SubscriptionMutationTest extends TestCase
             'name' => 'Other Co',
             'slug' => 'other-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         Subscription::create([

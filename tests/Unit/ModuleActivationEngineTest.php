@@ -35,10 +35,10 @@ class ModuleActivationEngineTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
         ModuleRegistry::sync();
 
-        $this->company = Company::create(['name' => 'Engine Co', 'slug' => 'engine-co']);
+        $this->company = Company::create(['name' => 'Engine Co', 'slug' => 'engine-co', 'jobdomain_key' => 'logistique']);
 
-        // Assign logistique jobdomain
-        $jobdomain = Jobdomain::firstOrCreate(
+        // Assign logistique jobdomain — updateOrCreate to override seeded defaults
+        $jobdomain = Jobdomain::updateOrCreate(
             ['key' => 'logistique'],
             [
                 'label' => 'Logistique',

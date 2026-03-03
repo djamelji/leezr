@@ -33,7 +33,7 @@ class FieldValueTest extends TestCase
 
         // Company context
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
@@ -227,7 +227,7 @@ class FieldValueTest extends TestCase
 
     public function test_cross_tenant_write_prevention(): void
     {
-        $otherCompany = Company::create(['name' => 'Other Co', 'slug' => 'other-co']);
+        $otherCompany = Company::create(['name' => 'Other Co', 'slug' => 'other-co', 'jobdomain_key' => 'logistique']);
 
         // No activations for $otherCompany — write should be silently ignored
         FieldWriteService::upsert(

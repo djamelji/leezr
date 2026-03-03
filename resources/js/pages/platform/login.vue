@@ -2,6 +2,7 @@
 const { t } = useI18n()
 
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import { useRuntimeStore } from '@/core/runtime/runtime'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
 import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
@@ -24,6 +25,7 @@ definePage({
 usePublicTheme()
 
 const platformAuth = usePlatformAuthStore()
+const runtime = useRuntimeStore()
 const router = useRouter()
 
 const form = ref({
@@ -45,7 +47,11 @@ const handleLogin = async () => {
       password: form.value.password,
     })
 
-    await router.push('/platform')
+    // ADR-160: Reset to cold, boot fully, THEN navigate.
+    runtime.teardown()
+    await runtime.boot('platform')
+
+    await router.replace('/platform')
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('auth.invalidCredentials')

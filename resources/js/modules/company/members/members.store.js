@@ -8,6 +8,8 @@ const hydrateMember = m => ({ ...m, _isProtected: m.role === 'owner' })
 export const useMembersStore = defineStore('companyMembers', {
   state: () => ({
     _members: [],
+    _memberCount: 0,
+    _memberLimit: null,
     _fieldActivations: [],
     _availableFieldDefinitions: [],
     _customFieldDefinitions: [],
@@ -15,6 +17,8 @@ export const useMembersStore = defineStore('companyMembers', {
 
   getters: {
     members: state => state._members,
+    memberCount: state => state._memberCount,
+    memberLimit: state => state._memberLimit,
     fieldActivations: state => state._fieldActivations,
     availableFieldDefinitions: state => state._availableFieldDefinitions,
     customFieldDefinitions: state => state._customFieldDefinitions,
@@ -25,6 +29,8 @@ export const useMembersStore = defineStore('companyMembers', {
       const data = await $api('/company/members')
 
       this._members = data.members.map(hydrateMember)
+      this._memberCount = data.member_count ?? this._members.length
+      this._memberLimit = data.member_limit ?? null
 
       return this._members
     },
@@ -38,6 +44,7 @@ export const useMembersStore = defineStore('companyMembers', {
       const member = hydrateMember(data.member)
 
       this._members.push(member)
+      this._memberCount++
 
       return member
     },
@@ -70,6 +77,7 @@ export const useMembersStore = defineStore('companyMembers', {
       })
 
       this._members = this._members.filter(m => m.id !== id)
+      this._memberCount--
     },
 
     // ─── Member Profile (show with dynamic fields) ──────
@@ -79,6 +87,14 @@ export const useMembersStore = defineStore('companyMembers', {
       data.member = hydrateMember(data.member)
 
       return data
+    },
+
+    // ADR-164: Fetch role-resolved fields for a member (preview on role change)
+    async fetchMemberFields(id, roleKey) {
+      const params = roleKey ? `?role_key=${encodeURIComponent(roleKey)}` : ''
+      const data = await $api(`/company/members/${id}/fields${params}`)
+
+      return data.dynamic_fields
     },
 
     // ─── Member Credentials (admin-triggered) ──────

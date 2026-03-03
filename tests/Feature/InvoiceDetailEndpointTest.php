@@ -56,6 +56,7 @@ class InvoiceDetailEndpointTest extends TestCase
             'name' => 'Invoice Co',
             'slug' => 'invoice-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->company->memberships()->create([
@@ -220,6 +221,7 @@ class InvoiceDetailEndpointTest extends TestCase
             'name' => 'Other Co',
             'slug' => 'other-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $otherOwner = User::factory()->create();

@@ -43,6 +43,7 @@ class CompanyBillingApiTest extends TestCase
             'name' => 'Billing Co',
             'slug' => 'billing-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->company->memberships()->create([

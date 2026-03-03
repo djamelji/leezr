@@ -3,12 +3,14 @@ definePage({ meta: { surface: 'structure', module: 'core.roles' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAppToast } from '@/composables/useAppToast'
 import PermissionMatrix from '@/pages/shared/_PermissionMatrix.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
+const membersStore = useMembersStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
@@ -18,8 +20,12 @@ const actionLoading = ref(null)
 const isDrawerOpen = ref(false)
 const isEditMode = ref(false)
 const editingRole = ref(null)
-const drawerForm = ref({ name: '', is_administrative: false, permissions: [] })
+const drawerForm = ref({ name: '', is_administrative: false, permissions: [], field_config: [] })
 const drawerLoading = ref(false)
+
+// ADR-164: Field config state
+const fieldActivations = ref([])
+const fieldActivationsLoaded = ref(false)
 
 onMounted(async () => {
   try {
@@ -52,55 +58,113 @@ const headers = computed(() => [
   { title: t('common.actions'), key: 'actions', align: 'center', width: '180px', sortable: false },
 ])
 
-// ─── Drawer actions ─────────────────────────────────
-const openCreateDrawer = () => {
-  isEditMode.value = false
-  editingRole.value = null
-  drawerForm.value = { name: '', is_administrative: false, permissions: [] }
-  isDrawerOpen.value = true
+// ─── Field config helpers ───────────────────────────
+const loadFieldActivations = async () => {
+  if (fieldActivationsLoaded.value) return
+  await membersStore.fetchFieldActivations()
+  fieldActivations.value = membersStore.fieldActivations
+    .filter(a => a.enabled && a.definition?.scope === 'company_user')
+  fieldActivationsLoaded.value = true
 }
 
-const openEditDrawer = role => {
+const getFieldConfigEntry = code => {
+  return drawerForm.value.field_config.find(f => f.code === code)
+}
+
+const isFieldVisible = code => {
+  const entry = getFieldConfigEntry(code)
+
+  return entry ? (entry.visible !== false) : true
+}
+
+const isFieldRequired = code => {
+  const entry = getFieldConfigEntry(code)
+
+  return entry?.required || false
+}
+
+const getFieldOrder = code => {
+  const entry = getFieldConfigEntry(code)
+
+  return entry?.order ?? ''
+}
+
+const getFieldGroup = code => {
+  const entry = getFieldConfigEntry(code)
+
+  return entry?.group || ''
+}
+
+const updateFieldConfig = (code, prop, value) => {
+  const idx = drawerForm.value.field_config.findIndex(f => f.code === code)
+
+  if (idx === -1) {
+    // Create a new entry
+    const entry = { code, scope: 'company_user', visible: true, required: false, order: 0 }
+
+    entry[prop] = value
+    drawerForm.value.field_config.push(entry)
+  }
+  else {
+    drawerForm.value.field_config[idx][prop] = value
+  }
+}
+
+const hasFieldConfig = computed(() => drawerForm.value.field_config.length > 0)
+
+// ─── Drawer actions ─────────────────────────────────
+const openCreateDrawer = async () => {
+  isEditMode.value = false
+  editingRole.value = null
+  drawerForm.value = { name: '', is_administrative: false, permissions: [], field_config: [] }
+  isDrawerOpen.value = true
+  await loadFieldActivations()
+}
+
+const openEditDrawer = async role => {
   isEditMode.value = true
   editingRole.value = role
   drawerForm.value = {
     name: role.name,
     is_administrative: role.is_administrative,
     permissions: role.permissions?.map(p => p.id) || [],
+    field_config: role.field_config ? JSON.parse(JSON.stringify(role.field_config)) : [],
   }
   isDrawerOpen.value = true
+  await loadFieldActivations()
 }
 
-const cloneRole = role => {
+const cloneRole = async role => {
   isEditMode.value = false
   editingRole.value = null
   drawerForm.value = {
     name: `${role.name} Copy`,
     is_administrative: role.is_administrative,
     permissions: role.permissions?.map(p => p.id) || [],
+    field_config: role.field_config ? JSON.parse(JSON.stringify(role.field_config)) : [],
   }
   isDrawerOpen.value = true
+  await loadFieldActivations()
 }
 
 const handleDrawerSubmit = async () => {
   drawerLoading.value = true
 
   try {
+    const payload = {
+      name: drawerForm.value.name,
+      is_administrative: drawerForm.value.is_administrative,
+      permissions: drawerForm.value.permissions,
+      field_config: drawerForm.value.field_config.length > 0 ? drawerForm.value.field_config : null,
+    }
+
     if (isEditMode.value) {
-      const data = await settingsStore.updateCompanyRole(editingRole.value.id, {
-        name: drawerForm.value.name,
-        is_administrative: drawerForm.value.is_administrative,
-        permissions: drawerForm.value.permissions,
-      })
+      const data = await settingsStore.updateCompanyRole(editingRole.value.id, payload)
 
       toast(data.message, 'success')
     }
     else {
-      const data = await settingsStore.createCompanyRole({
-        name: drawerForm.value.name,
-        is_administrative: drawerForm.value.is_administrative,
-        permissions: drawerForm.value.permissions,
-      })
+      const data = await settingsStore.createCompanyRole(payload)
 
       toast(data.message, 'success')
     }
@@ -174,6 +238,14 @@ const deleteRole = async role => {
               variant="tonal"
             >
               {{ t('common.system') }}
+            </VChip>
+            <VChip
+              v-if="item.field_config?.length"
+              size="x-small"
+              color="success"
+              variant="tonal"
+            >
+              {{ t('roles.fieldProfile') }}
             </VChip>
           </div>
         </template>
@@ -342,6 +414,100 @@ const deleteRole = async role => {
                   :is-administrative="drawerForm.is_administrative"
                   scope="company"
                 />
+              </VCol>
+
+              <!-- ADR-164: Field Configuration -->
+              <VCol
+                v-if="fieldActivations.length"
+                cols="12"
+              >
+                <VDivider class="mb-4" />
+                <div class="d-flex align-center gap-2 mb-3">
+                  <h6 class="text-h6">
+                    {{ t('roles.fieldConfiguration') }}
+                  </h6>
+                  <VTooltip location="top">
+                    <template #activator="{ props: tp }">
+                      <VIcon
+                        icon="tabler-info-circle"
+                        size="16"
+                        class="text-disabled"
+                        v-bind="tp"
+                      />
+                    </template>
+                    {{ t('roles.fieldConfigTooltip') }}
+                  </VTooltip>
+                </div>
+
+                <VTable
+                  density="compact"
+                  class="text-no-wrap"
+                >
+                  <thead>
+                    <tr>
+                      <th>{{ t('common.name') }}</th>
+                      <th style="width: 80px;">
+                        {{ t('roles.visible') }}
+                      </th>
+                      <th style="width: 80px;">
+                        {{ t('members.required') }}
+                      </th>
+                      <th style="width: 80px;">
+                        {{ t('roles.order') }}
+                      </th>
+                      <th style="width: 100px;">
+                        {{ t('roles.group') }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="fa in fieldActivations"
+                      :key="fa.definition.code"
+                    >
+                      <td class="font-weight-medium">
+                        {{ fa.definition.label }}
+                      </td>
+                      <td>
+                        <VCheckbox
+                          :model-value="isFieldVisible(fa.definition.code)"
+                          density="compact"
+                          hide-details
+                          @update:model-value="updateFieldConfig(fa.definition.code, 'visible', $event)"
+                        />
+                      </td>
+                      <td>
+                        <VCheckbox
+                          :model-value="isFieldRequired(fa.definition.code)"
+                          density="compact"
+                          hide-details
+                          :disabled="!isFieldVisible(fa.definition.code)"
+                          @update:model-value="updateFieldConfig(fa.definition.code, 'required', $event)"
+                        />
+                      </td>
+                      <td>
+                        <AppTextField
+                          :model-value="getFieldOrder(fa.definition.code)"
+                          type="number"
+                          density="compact"
+                          hide-details
+                          style="max-inline-size: 70px;"
+                          @update:model-value="updateFieldConfig(fa.definition.code, 'order', parseInt($event) || 0)"
+                        />
+                      </td>
+                      <td>
+                        <AppTextField
+                          :model-value="getFieldGroup(fa.definition.code)"
+                          density="compact"
+                          hide-details
+                          style="max-inline-size: 90px;"
+                          :placeholder="t('roles.group')"
+                          @update:model-value="updateFieldConfig(fa.definition.code, 'group', $event || null)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
               </VCol>
 
               <VCol cols="12">

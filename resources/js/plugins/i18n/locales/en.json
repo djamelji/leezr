@@ -172,6 +172,8 @@
     "technicalLimitsWarning": "These settings impact business logic and entitlements.",
     "memberLimit": "Member Limit",
     "memberLimitHint": "Leave empty for unlimited",
+    "storageQuotaLimit": "Storage Quota (GB)",
+    "storageQuotaLimitHint": "Leave empty for unlimited",
     "saveLimits": "Save Limits",
     "limitsUpdated": "Limits updated.",
     "failedToSaveLimits": "Failed to save limits.",
@@ -739,7 +741,14 @@
     "confirmUpgrade": "Submit an upgrade request for the {name} plan?",
     "requestCancelled": "Request cancelled.",
     "requestSubmitted": "Request Submitted",
-    "requestSubmittedMessage": "Your request has been submitted for review."
+    "requestSubmittedMessage": "Your request has been submitted for review.",
+    "membersLimit": "Members",
+    "storageLimit": "Storage",
+    "nMembers": "{n} members",
+    "nGb": "{n} GB",
+    "unlimited": "Unlimited",
+    "membersUsage": "Members",
+    "storageUsage": "Storage"
   },
 
   "members": {
@@ -752,6 +761,8 @@
     "role": "Role",
     "memberAdded": "Member added successfully.",
     "memberRemoved": "Member removed.",
+    "showIncompleteOnly": "Show incomplete profiles only",
+    "incompleteProfiles": "{count} member(s) with incomplete profiles",
     "confirmRemove": "Remove {name} from this company?",
     "failedToRemove": "Failed to remove member.",
     "memberProfile": "Member Profile",
@@ -797,6 +808,7 @@
     "profileUpdated": "Member profile updated.",
     "failedToUpdateProfile": "Failed to update profile.",
     "failedToLoadProfile": "Failed to load member profile.",
+    "failedToLoadFields": "Failed to load fields for this role.",
     "activeStatus": "Active",
     "invitedStatus": "Invited",
     "firstName": "First Name",
@@ -804,7 +816,10 @@
     "noRole": "No role",
     "additionalInformation": "Additional Information",
     "failedToAdd": "Failed to add member.",
-    "invitationAutoSent": "If the email is not already registered, an invitation will be sent automatically."
+    "invitationAutoSent": "If the email is not already registered, an invitation will be sent automatically.",
+    "memberQuota": "{current} / {limit} members",
+    "unlimitedMembers": "Unlimited members",
+    "memberLimitReached": "Member limit reached. Upgrade your plan to add more members."
   },
 
   "credentials": {
@@ -837,7 +852,26 @@
     "legalStructureTitle": "Legal Structure",
     "legalStructure": "Legal structure",
     "legalStructurePlaceholder": "Select your legal structure",
-    "legalUpdated": "Legal structure updated."
+    "legalUpdated": "Legal structure updated.",
+    "mandatoryByJobdomain": "Team Information Requirements",
+    "mandatoryByJobdomainHint": "Information your industry requires for each team member.",
+    "mandatoryByJobdomainExplainer": "Based on your company's industry, the following information must be completed for every team member. Members with missing fields will appear as incomplete in the team list.",
+    "storageTitle": "Storage Usage",
+    "storageWarning": "You are approaching your storage limit. Consider upgrading your plan.",
+    "storageBlocked": "Storage limit reached. Upgrade your plan to upload more documents.",
+    "storageQuotaExceeded": "Storage quota exceeded.",
+    "companyDocumentsTitle": "Company Documents",
+    "companyDocumentsDescription": "Upload and manage your company-level legal and regulatory documents.",
+    "documentCatalogTitle": "Document Catalog",
+    "documentCatalogDescription": "Configure which documents are required for your company.",
+    "memberDocuments": "Member Documents",
+    "companyDocumentsScope": "Company Documents",
+    "enabled": "Active",
+    "requiredOverride": "Required",
+    "order": "Order",
+    "mandatory": "Mandatory",
+    "activationSaved": "Document activation updated.",
+    "activationFailed": "Failed to update document activation."
   },
 
   "roles": {
@@ -865,7 +899,89 @@
     "addonModules": "Addon Modules",
     "disabledModules": "Disabled Modules",
     "moduleInactive": "Disabled",
-    "unbundledPermissions": "Permissions"
+    "unbundledPermissions": "Permissions",
+    "fieldConfiguration": "Field Configuration",
+    "fieldConfigTooltip": "Configure which fields are visible and required for members with this role. Unlisted fields remain visible by default.",
+    "fieldProfile": "Field profile",
+    "visible": "Visible",
+    "order": "Order",
+    "group": "Group",
+    "noFieldConfig": "No field configuration",
+    "sensitiveData": "Sensitive Data Access",
+    "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)"
+  },
+
+  "fieldGroups": {
+    "identity": "Identity",
+    "contact": "Contact",
+    "emergency": "Emergency",
+    "hr": "HR / Administrative",
+    "driving": "Driving",
+    "dispatch": "Dispatching"
+  },
+
+  "fieldLabels": {
+    "phone": "Phone",
+    "job_title": "Job Title",
+    "address": "Postal Address",
+    "birth_date": "Date of Birth",
+    "nationality": "Nationality",
+    "social_security_number": "Social Security Number (NIR)",
+    "iban": "IBAN",
+    "contract_type": "Contract Type",
+    "hire_date": "Hire Date",
+    "employee_status": "Status",
+    "emergency_contact_name": "Emergency Contact Name",
+    "emergency_contact_phone": "Emergency Contact Phone",
+    "license_number": "License Number",
+    "license_category": "License Category",
+    "license_expiry": "License Expiry",
+    "adr_certified": "ADR Certified",
+    "vehicle_type": "Vehicle Type",
+    "geographic_zone": "Geographic Zone",
+    "work_schedule": "Work Schedule",
+    "work_mode": "Work Mode"
+  },
+
+  "fieldOptions": {
+    "contract_type": {
+      "CDI": "Permanent (CDI)",
+      "CDD": "Fixed-term (CDD)",
+      "Interim": "Temporary",
+      "Stage": "Internship",
+      "Alternance": "Apprenticeship"
+    },
+    "employee_status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "on_leave": "On Leave",
+      "suspended": "Suspended"
+    },
+    "license_category": {
+      "B": "B — Light vehicle",
+      "C": "C — Heavy vehicle",
+      "CE": "CE — Trailer",
+      "D": "D — Bus",
+      "DE": "DE — Bus + trailer"
+    },
+    "vehicle_type": {
+      "VL": "Light vehicle (VL)",
+      "PL": "Heavy goods (PL)",
+      "SPL": "Super heavy (SPL)",
+      "Frigorifique": "Refrigerated",
+      "Citerne": "Tanker"
+    },
+    "work_schedule": {
+      "day": "Day shift",
+      "evening": "Evening shift",
+      "night": "Night shift",
+      "rotating": "Rotating"
+    },
+    "work_mode": {
+      "on_site": "On-site",
+      "hybrid": "Hybrid",
+      "remote": "Remote"
+    }
   },
 
   "permissionCatalog": {
@@ -1135,7 +1251,10 @@
     "previewPrice": "+{price}",
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
-    "perUser": "/user"
+    "perUser": "/user",
+    "syncButton": "Sync Modules",
+    "syncSuccess": "Module registry synchronized successfully.",
+    "syncFailed": "Failed to sync module registry."
   },
 
   "billingSettings": {
@@ -1238,7 +1357,62 @@
     "fieldsPresetInfo": "These presets are applied only when assigning this job domain to a company. Existing company activations are never modified.",
     "capability": "capability | capabilities",
     "customCount": "{count} custom",
-    "none": "None"
+    "none": "None",
+    "fieldsCount": "{count} fields",
+    "fieldOverrides": "Field Overrides",
+    "fieldOverridesInfo": "Configure which fields are visible and required for members with this role. Fields not listed here remain visible by default.",
+    "ungroupedFields": "Other fields",
+    "noFieldDefinitions": "No field definitions available.",
+    "mandatory": "Mandatory",
+    "mandatoryStatus": "Status",
+    "mandatoryTooltip": "This field is mandatory by the field catalog. It cannot be made optional.",
+    "mandatoryGovernanceAlert": "{count} field(s) in this preset are mandatory by the catalog and cannot be made optional.",
+    "documentPresets": "Document Presets",
+    "documentPresetsInfo": "Modifying presets does not affect existing companies. Only new assignments will use these presets.",
+    "failedToUpdateDocuments": "Failed to update document presets.",
+    "activeDocumentPresets": "Activated by Default",
+    "otherDocumentTypes": "Other Document Types",
+    "presetOrder": "Order",
+    "applicableMarkets": "Markets"
+  },
+
+  "platformDocumentTypes": {
+    "title": "Document Types",
+    "label": "Label",
+    "scope": "Scope",
+    "scopeCompanyUser": "Member Documents",
+    "scopeCompany": "Company Documents",
+    "maxSize": "Max Size",
+    "formats": "Formats",
+    "active": "Active",
+    "archived": "Archived",
+    "archive": "Archive",
+    "restore": "Restore",
+    "general": "General",
+    "defaultOrder": "Sort Order",
+    "validationRules": "Validation Rules",
+    "targeting": "Targeting",
+    "applicableMarkets": "Applicable Markets",
+    "requiredByJobdomains": "Required by Jobdomains",
+    "requiredByModules": "Required by Modules",
+    "tags": "Tags",
+    "createDocumentType": "Create Document Type",
+    "editDocumentType": "Edit Document Type",
+    "syncFromCatalog": "Sync from Catalog",
+    "noDocumentTypes": "No document types found.",
+    "createdSuccess": "Document type created.",
+    "updatedSuccess": "Document type updated.",
+    "archivedSuccess": "Document type archived.",
+    "restoredSuccess": "Document type restored.",
+    "syncedSuccess": "Catalog synced.",
+    "createFailed": "Failed to create document type.",
+    "syncFailed": "Failed to sync catalog.",
+    "usageStats": "Usage Stats",
+    "activationsCount": "Company activations",
+    "memberDocumentsCount": "Member documents",
+    "companyDocumentsCount": "Company documents",
+    "requestsCount": "Workflow requests",
+    "usedInJobdomains": "Used in Jobdomains"
   },
 
   "platformCompanyDetail": {
@@ -1265,7 +1439,8 @@
     "incompatible": "Incompatible",
     "notAvailable": "Not available",
     "noModulesAvailable": "No modules available.",
-    "failedToToggleModule": "Failed to toggle module."
+    "failedToToggleModule": "Failed to toggle module.",
+    "incompleteProfiles": "{count} incomplete profile(s)"
   },
 
   "platformCompanyUsers": {
@@ -1498,7 +1673,51 @@
     "quoteTitle": "Enable {module}",
     "quoteMonth": "mo",
     "quoteIncludes": "Includes:",
-    "quoteConfirm": "Enable"
+    "quoteConfirm": "Enable",
+    "allCategories": "All",
+    "categoryCore": "Core",
+    "categoryAddon": "Add-on",
+    "categoryPremium": "Premium",
+    "categoryIndustry": "Industry",
+    "filterByCategory": "Category",
+    "searchModules": "Search modules...",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "mandatoryFields": "Required Fields",
+    "mandatoryFieldsHint": "These fields become mandatory for members when this module is active.",
+    "incompleteProfilesAlert": "{count} member profile(s) are incomplete. Required fields are missing values.",
+    "noSettings": "This module has no configurable settings.",
+    "advancedSettings": "Advanced Settings",
+    "advancedSettingsHint": "Raw JSON configuration for advanced users.",
+    "tabAddons": "Add-ons",
+    "tabIncluded": "Included",
+    "tabActive": "Active",
+    "tabAll": "All",
+    "upgradeTo": "Upgrade to {plan}",
+    "purchaseAddon": "Purchase Add-on",
+    "contactSales": "Contact Sales",
+    "stateIncluded": "Included",
+    "stateActive": "Active",
+    "stateAvailable": "Available",
+    "stateLocked": "Upgrade Required",
+    "stateLockedAddon": "Add-on Required",
+    "stateContactSales": "Contact Sales",
+    "upgradeDescription": "Upgrade your plan to unlock this module.",
+    "addonDescription": "This module is available as a paid add-on.",
+    "contactDescription": "Contact our sales team to access this module.",
+    "noModulesInTab": "No modules in this section.",
+    "noSearchResults": "No modules match your search.",
+    "searchModuleHint": "Search a module"
+  },
+
+  "themeSettings": {
+    "title": "Theme Toggle Visibility",
+    "subtitle": "Choose which roles can see the Light / Dark mode toggle in the header.",
+    "role": "Role",
+    "showToggle": "Show theme toggle for this role",
+    "updated": "Theme visibility updated.",
+    "failedToUpdate": "Failed to update theme visibility.",
+    "failedToLoad": "Failed to load theme visibility settings."
   },
 
   "shipments": {
@@ -1761,7 +1980,14 @@
     "passwordRequirements": "Password Requirements:",
     "minCharsLong": "Minimum 8 characters long",
     "passwordUpdated": "Password updated successfully.",
-    "failedToUpdatePassword": "Failed to update password."
+    "failedToUpdatePassword": "Failed to update password.",
+    "preferences": "Preferences",
+    "theme": "Theme",
+    "language": "Language",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "documents": "Documents"
   },
 
   "audience": {
@@ -1779,6 +2005,18 @@
 
   "approveConfirm": "Approve upgrade to \"{plan}\" for {company}?",
   "rejectConfirm": "Reject upgrade request for {company}?",
+
+  "fields": {
+    "category": {
+      "base": "General Information",
+      "hr": "HR & Administrative",
+      "domain": "Role-Specific"
+    },
+    "required": "Required",
+    "profileComplete": "Profile complete",
+    "profileIncomplete": "{filled} of {total} required fields filled",
+    "profileIncompleteShort": "Incomplete profile"
+  },
 
   "runtime": {
     "cold": "Initializing...",
@@ -2120,5 +2358,90 @@
     "medium": "Medium",
     "high": "High",
     "critical": "Critical"
+  },
+
+  "documents": {
+    "title": "Documents",
+    "myDocuments": "My Documents",
+    "myDocumentsDescription": "Upload and manage your required documents.",
+    "noDocuments": "No document types available.",
+    "noDocumentsForProfile": "No documents required for your profile.",
+    "upload": "Upload",
+    "download": "Download",
+    "delete": "Delete",
+    "uploadDocument": "Upload Document",
+    "deleteConfirm": "Are you sure you want to delete this document?",
+    "uploaded": "Document uploaded successfully.",
+    "replaced": "Document replaced successfully.",
+    "deleted": "Document deleted.",
+    "failedToUpload": "Failed to upload document.",
+    "quotaExceeded": "Storage quota exceeded. Contact your administrator.",
+    "failedToDelete": "Failed to delete document.",
+    "required": "Required",
+    "optional": "Optional",
+    "noFileUploaded": "No file uploaded",
+    "fileInfo": "{name} ({size})",
+    "maxSize": "Max {size} MB",
+    "acceptedTypes": "Accepted: {types}",
+    "type": {
+      "id_card": "Identity Card",
+      "driving_license": "Driving License",
+      "medical_certificate": "Medical Certificate",
+      "kbis": "K-bis Extract",
+      "insurance_certificate": "Insurance Certificate",
+      "transport_license": "Transport License"
+    },
+    "requested": "Requested",
+    "submitted": "Submitted",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "approve": "Approve",
+    "reject": "Reject",
+    "reviewNote": "Review note",
+    "reviewNotePlaceholder": "Reason for rejection...",
+    "reviewSaved": "Document review saved.",
+    "reviewFailed": "Failed to save review.",
+    "noSubmissionYet": "Awaiting submission",
+    "scopeMember": "Member",
+    "scopeCompany": "Company",
+    "catalog": "Document Catalog",
+    "vault": "Company Documents",
+    "workflow": "Workflow",
+    "preset": "Preset",
+    "inactive": "Inactive",
+    "active": "Active",
+    "systemMandatory": "Mandatory",
+    "systemMandatoryTooltip": "Required by your industry. Cannot be disabled.",
+    "requiredOverride": "Required",
+    "constraints": "Constraints",
+    "documentsSection": "Documents",
+    "documentsSectionDescription": "Configure document requirements and manage company-level documents.",
+    "summaryActiveMember": "{count} member doc active | {count} member docs active",
+    "summaryActiveCompany": "{count} company doc active | {count} company docs active",
+    "summaryUploaded": "{count} uploaded",
+    "noDocumentsActivated": "No document types are currently activated for this company.",
+    "noDocumentsActivatedHint": "A company administrator can enable document requirements in Settings → Documents.",
+    "allMarkets": "All markets",
+    "scope": "Scope",
+    "addCustom": "Add Custom Document Type",
+    "createCustomDocument": "Create Custom Document Type",
+    "customDocument": "Custom",
+    "systemDocument": "System",
+    "documentLabel": "Document label",
+    "maxFileSizeMb": "Max file size (MB)",
+    "acceptedTypes": "Accepted file types",
+    "customTypeCreated": "Custom document type created.",
+    "customTypeArchived": "Document type archived.",
+    "customTypeDeleted": "Document type deleted.",
+    "customTypeDeleteBlocked": "Cannot delete: linked documents exist. Use archive.",
+    "archive": "Archive",
+    "archived": "Archived",
+    "confirmArchive": "Archive this document type? Existing data is preserved.",
+    "confirmDelete": "Permanently delete this document type?",
+    "view": "View",
+    "previewUnavailable": "Preview unavailable",
+    "previewUnavailableDescription": "This file type cannot be previewed. Download to view.",
+    "loadingPreview": "Loading preview...",
+    "failedToLoadPreview": "Failed to load preview."
   }
 }

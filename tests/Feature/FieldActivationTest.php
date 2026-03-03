@@ -41,7 +41,7 @@ class FieldActivationTest extends TestCase
 
         // Company context
         $this->companyOwner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->companyOwner->id,

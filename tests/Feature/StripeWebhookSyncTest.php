@@ -55,6 +55,7 @@ class StripeWebhookSyncTest extends TestCase
             'slug' => 'stripe-sync-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->company->memberships()->create([
             'user_id' => $owner->id,

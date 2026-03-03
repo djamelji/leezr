@@ -67,7 +67,7 @@ class WidgetRegistryScanTest extends TestCase
     {
         JobdomainRegistry::sync();
 
-        $company = Company::create(['name' => 'Widget Co', 'slug' => 'widget-co']);
+        $company = Company::create(['name' => 'Widget Co', 'slug' => 'widget-co', 'jobdomain_key' => 'logistique']);
         $jobdomain = Jobdomain::where('key', 'logistique')->first();
         $company->jobdomains()->attach($jobdomain->id);
 

@@ -35,7 +35,7 @@ class CompanyRolesModuleTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Roles Co', 'slug' => 'roles-co']);
+        $this->company = Company::create(['name' => 'Roles Co', 'slug' => 'roles-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->setUpCompanyRbac($this->company);
 

@@ -28,7 +28,7 @@ class CompanyCustomFieldDeletionTest extends TestCase
         FieldDefinitionCatalog::sync();
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
@@ -41,6 +41,8 @@ class CompanyCustomFieldDeletionTest extends TestCase
             'allow_custom_fields' => true,
         ]);
 
+        // ADR-167a: set jobdomain_key column (source of truth) + pivot for compat
+        $this->company->update(['jobdomain_key' => 'test_domain']);
         $this->company->jobdomains()->sync([$this->jobdomain->id]);
     }
 
@@ -140,8 +142,9 @@ class CompanyCustomFieldDeletionTest extends TestCase
     {
         $field = $this->createCustomField();
 
+        // ADR-167a: use test_domain jobdomain (allows custom fields)
         $ownerB = User::factory()->create();
-        $companyB = Company::create(['name' => 'Co B', 'slug' => 'co-b']);
+        $companyB = Company::create(['name' => 'Co B', 'slug' => 'co-b', 'jobdomain_key' => 'test_domain']);
         $companyB->memberships()->create(['user_id' => $ownerB->id, 'role' => 'owner']);
         $this->activateCompanyModules($companyB);
         $companyB->jobdomains()->sync([$this->jobdomain->id]);

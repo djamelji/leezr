@@ -30,9 +30,14 @@ class UpdateProfileRequest extends FormRequest
 
         $company = $this->attributes->get('company');
 
+        // ADR-169: validate all field categories (no longer restricted to base)
         return array_merge(
             $fixedRules,
-            FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id),
+            FieldValidationService::rules(
+                FieldDefinition::SCOPE_COMPANY_USER,
+                $company?->id,
+                marketKey: $company?->market_key,
+            ),
         );
     }
 }

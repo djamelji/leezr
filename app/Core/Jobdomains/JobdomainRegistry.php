@@ -2,6 +2,8 @@
 
 namespace App\Core\Jobdomains;
 
+use App\Core\Fields\TagDictionary;
+
 /**
  * Declarative registry of all jobdomain profiles.
  * Single source of truth for what a jobdomain provides.
@@ -21,54 +23,230 @@ class JobdomainRegistry
                 'landing_route' => '/',
                 'nav_profile' => 'logistique',
                 'default_modules' => ['core.theme', 'core.members', 'core.settings', 'logistics_shipments'],
+                // ADR-169: default_fields only control activation + order.
+                // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
-                    ['code' => 'siret', 'required' => true, 'order' => 0],
-                    ['code' => 'vat_number', 'required' => false, 'order' => 1],
-                    ['code' => 'legal_form', 'required' => false, 'order' => 2],
-                    ['code' => 'phone', 'required' => false, 'order' => 3],
-                    ['code' => 'job_title', 'required' => false, 'order' => 4],
+                    // Company scope
+                    ['code' => 'siret', 'order' => 0],
+                    ['code' => 'vat_number', 'order' => 1],
+                    ['code' => 'legal_form', 'order' => 2],
+                    // Company User — identity
+                    ['code' => 'job_title', 'order' => 10],
+                    ['code' => 'birth_date', 'order' => 20],
+                    ['code' => 'nationality', 'order' => 30],
+                    // Company User — contact
+                    ['code' => 'phone', 'order' => 40],
+                    ['code' => 'address', 'order' => 50],
+                    ['code' => 'emergency_contact_name', 'order' => 60],
+                    ['code' => 'emergency_contact_phone', 'order' => 70],
+                    // Company User — hr
+                    ['code' => 'hire_date', 'order' => 80],
+                    ['code' => 'contract_type', 'order' => 90],
+                    ['code' => 'employee_status', 'order' => 100],
+                    ['code' => 'social_security_number', 'order' => 110],
+                    ['code' => 'iban', 'order' => 120],
+                    // Company User — driving
+                    ['code' => 'license_number', 'order' => 200],
+                    ['code' => 'license_category', 'order' => 210],
+                    ['code' => 'license_expiry', 'order' => 220],
+                    ['code' => 'adr_certified', 'order' => 230],
+                    ['code' => 'vehicle_type', 'order' => 240],
+                    // Company User — dispatch
+                    ['code' => 'geographic_zone', 'order' => 300],
+                    ['code' => 'work_schedule', 'order' => 310],
+                    ['code' => 'work_mode', 'order' => 320],
+                ],
+                // ADR-169 Phase 3: default document types activated on assignment
+                'default_documents' => [
+                    ['code' => 'id_card', 'order' => 0],
+                    ['code' => 'driving_license', 'order' => 10],
+                    ['code' => 'medical_certificate', 'order' => 20],
+                    ['code' => 'kbis', 'order' => 30],
+                    ['code' => 'insurance_certificate', 'order' => 40],
+                ],
+                // ADR-170: Semantic archetypes for tag-based mandatory resolution
+                'archetypes' => [
+                    'driver' => ['label' => 'Conducteur / Chauffeur', 'default_tags' => [TagDictionary::DRIVING]],
+                    'dispatcher' => ['label' => 'Exploitant / Dispatcher', 'default_tags' => [TagDictionary::DISPATCHING]],
+                    'management' => ['label' => 'Manager / Direction', 'default_tags' => [TagDictionary::MANAGEMENT]],
+                    'operational' => ['label' => 'Opérationnel', 'default_tags' => []],
                 ],
                 'default_roles' => [
                     'manager' => [
                         'name' => 'Manager',
+                        'archetype' => 'management',
                         'is_administrative' => true,
                         'bundles' => [
                             'theme.full',
-                            'members.team_access', 'members.team_management',
+                            'members.team_access', 'members.team_management', 'members.sensitive_data',
                             'settings.company_info', 'settings.company_management',
                             'roles.governance',
                             'jobdomain.info', 'jobdomain.management',
                             'shipments.operations', 'shipments.administration',
                         ],
+                        'fields' => [
+                            // identity
+                            ['code' => 'job_title', 'required' => true, 'visible' => true, 'order' => 0, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'birth_date', 'visible' => true, 'order' => 1, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'nationality', 'visible' => true, 'order' => 2, 'group' => 'identity', 'scope' => 'company_user'],
+                            // contact
+                            ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 10, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'address', 'visible' => true, 'order' => 11, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_name', 'required' => true, 'visible' => true, 'order' => 12, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_phone', 'required' => true, 'visible' => true, 'order' => 13, 'group' => 'contact', 'scope' => 'company_user'],
+                            // hr
+                            ['code' => 'hire_date', 'visible' => true, 'order' => 20, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'contract_type', 'required' => true, 'visible' => true, 'order' => 21, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'employee_status', 'visible' => true, 'order' => 22, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'social_security_number', 'required' => true, 'visible' => true, 'order' => 23, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'iban', 'required' => true, 'visible' => true, 'order' => 24, 'group' => 'hr', 'scope' => 'company_user'],
+                            // driving — hidden for manager
+                            ['code' => 'license_number', 'visible' => false, 'order' => 30, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_category', 'visible' => false, 'order' => 31, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_expiry', 'visible' => false, 'order' => 32, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'adr_certified', 'visible' => false, 'order' => 33, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'vehicle_type', 'visible' => false, 'order' => 34, 'group' => 'driving', 'scope' => 'company_user'],
+                            // dispatch — hidden for manager
+                            ['code' => 'geographic_zone', 'visible' => false, 'order' => 40, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_schedule', 'visible' => false, 'order' => 41, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_mode', 'visible' => false, 'order' => 42, 'group' => 'dispatch', 'scope' => 'company_user'],
+                        ],
+                        'doc_config' => [
+                            ['code' => 'id_card', 'visible' => true, 'order' => 0],
+                            ['code' => 'driving_license', 'visible' => false, 'order' => 10],
+                            ['code' => 'medical_certificate', 'visible' => false, 'order' => 20],
+                        ],
                     ],
                     'dispatcher' => [
                         'name' => 'Dispatcher',
+                        'archetype' => 'dispatcher',
                         'is_administrative' => false,
                         'bundles' => [
                             'theme.full',
                             'members.team_access',
                             'settings.company_info',
                             'shipments.operations',
+                            'shipments.delivery',
+                        ],
+                        'fields' => [
+                            // identity
+                            ['code' => 'job_title', 'required' => true, 'visible' => true, 'order' => 0, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'birth_date', 'visible' => true, 'order' => 1, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'nationality', 'visible' => true, 'order' => 2, 'group' => 'identity', 'scope' => 'company_user'],
+                            // contact
+                            ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 10, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'address', 'visible' => true, 'order' => 11, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_name', 'required' => true, 'visible' => true, 'order' => 12, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_phone', 'required' => true, 'visible' => true, 'order' => 13, 'group' => 'contact', 'scope' => 'company_user'],
+                            // hr
+                            ['code' => 'hire_date', 'visible' => true, 'order' => 20, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'contract_type', 'required' => true, 'visible' => true, 'order' => 21, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'employee_status', 'visible' => true, 'order' => 22, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'social_security_number', 'required' => true, 'visible' => true, 'order' => 23, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'iban', 'required' => true, 'visible' => true, 'order' => 24, 'group' => 'hr', 'scope' => 'company_user'],
+                            // driving — hidden for dispatcher
+                            ['code' => 'license_number', 'visible' => false, 'order' => 30, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_category', 'visible' => false, 'order' => 31, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_expiry', 'visible' => false, 'order' => 32, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'adr_certified', 'visible' => false, 'order' => 33, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'vehicle_type', 'visible' => false, 'order' => 34, 'group' => 'driving', 'scope' => 'company_user'],
+                            // dispatch
+                            ['code' => 'geographic_zone', 'visible' => true, 'order' => 40, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_schedule', 'visible' => true, 'order' => 41, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_mode', 'visible' => true, 'order' => 42, 'group' => 'dispatch', 'scope' => 'company_user'],
+                        ],
+                        'doc_config' => [
+                            ['code' => 'id_card', 'visible' => true, 'order' => 0],
+                            ['code' => 'driving_license', 'visible' => false, 'order' => 10],
+                            ['code' => 'medical_certificate', 'visible' => false, 'order' => 20],
                         ],
                     ],
                     'driver' => [
                         'name' => 'Driver',
+                        'archetype' => 'driver',
                         'bundles' => [
                             'theme.full',
                             'members.team_access',
                             'settings.company_info',
                             'shipments.delivery',
                         ],
+                        'fields' => [
+                            // identity
+                            ['code' => 'job_title', 'visible' => false, 'order' => 0, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'birth_date', 'required' => true, 'visible' => true, 'order' => 1, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'nationality', 'visible' => true, 'order' => 2, 'group' => 'identity', 'scope' => 'company_user'],
+                            // contact
+                            ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 10, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'address', 'required' => true, 'visible' => true, 'order' => 11, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_name', 'required' => true, 'visible' => true, 'order' => 12, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_phone', 'required' => true, 'visible' => true, 'order' => 13, 'group' => 'contact', 'scope' => 'company_user'],
+                            // hr
+                            ['code' => 'hire_date', 'visible' => true, 'order' => 20, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'contract_type', 'required' => true, 'visible' => true, 'order' => 21, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'employee_status', 'visible' => true, 'order' => 22, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'social_security_number', 'required' => true, 'visible' => true, 'order' => 23, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'iban', 'required' => true, 'visible' => true, 'order' => 24, 'group' => 'hr', 'scope' => 'company_user'],
+                            // driving
+                            ['code' => 'license_number', 'visible' => true, 'order' => 30, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_category', 'visible' => true, 'order' => 31, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_expiry', 'visible' => true, 'order' => 32, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'adr_certified', 'visible' => true, 'order' => 33, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'vehicle_type', 'visible' => true, 'order' => 34, 'group' => 'driving', 'scope' => 'company_user'],
+                            // dispatch — hidden for driver
+                            ['code' => 'geographic_zone', 'visible' => false, 'order' => 40, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_schedule', 'visible' => false, 'order' => 41, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_mode', 'visible' => false, 'order' => 42, 'group' => 'dispatch', 'scope' => 'company_user'],
+                        ],
+                        'doc_config' => [
+                            ['code' => 'id_card', 'visible' => true, 'order' => 0],
+                            ['code' => 'driving_license', 'visible' => true, 'required' => true, 'order' => 10],
+                            ['code' => 'medical_certificate', 'visible' => true, 'required' => true, 'order' => 20],
+                        ],
                     ],
                     'ops_manager' => [
                         'name' => 'Operations Manager',
+                        'archetype' => 'management',
                         'is_administrative' => true,
                         'bundles' => [
                             'theme.full',
-                            'members.team_access',
+                            'members.team_access', 'members.team_management', 'members.sensitive_data',
                             'settings.company_info',
+                            'roles.governance',
+                            'jobdomain.info',
                             'shipments.operations',
                             'shipments.administration',
+                        ],
+                        'fields' => [
+                            // identity
+                            ['code' => 'job_title', 'required' => true, 'visible' => true, 'order' => 0, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'birth_date', 'visible' => true, 'order' => 1, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'nationality', 'visible' => true, 'order' => 2, 'group' => 'identity', 'scope' => 'company_user'],
+                            // contact
+                            ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 10, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'address', 'visible' => true, 'order' => 11, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_name', 'required' => true, 'visible' => true, 'order' => 12, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_phone', 'required' => true, 'visible' => true, 'order' => 13, 'group' => 'contact', 'scope' => 'company_user'],
+                            // hr
+                            ['code' => 'hire_date', 'visible' => true, 'order' => 20, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'contract_type', 'required' => true, 'visible' => true, 'order' => 21, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'employee_status', 'visible' => true, 'order' => 22, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'social_security_number', 'required' => true, 'visible' => true, 'order' => 23, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'iban', 'required' => true, 'visible' => true, 'order' => 24, 'group' => 'hr', 'scope' => 'company_user'],
+                            // driving — partial visibility for ops_manager (overview)
+                            ['code' => 'license_number', 'visible' => false, 'order' => 30, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_category', 'visible' => true, 'order' => 31, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_expiry', 'visible' => false, 'order' => 32, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'adr_certified', 'visible' => false, 'order' => 33, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'vehicle_type', 'visible' => true, 'order' => 34, 'group' => 'driving', 'scope' => 'company_user'],
+                            // dispatch — partial visibility for ops_manager (overview)
+                            ['code' => 'geographic_zone', 'visible' => true, 'order' => 40, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_schedule', 'visible' => false, 'order' => 41, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_mode', 'visible' => false, 'order' => 42, 'group' => 'dispatch', 'scope' => 'company_user'],
+                        ],
+                        'doc_config' => [
+                            ['code' => 'id_card', 'visible' => true, 'order' => 0],
+                            ['code' => 'driving_license', 'visible' => false, 'order' => 10],
+                            ['code' => 'medical_certificate', 'visible' => false, 'order' => 20],
                         ],
                     ],
                 ],

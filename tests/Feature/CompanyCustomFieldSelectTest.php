@@ -26,7 +26,7 @@ class CompanyCustomFieldSelectTest extends TestCase
         FieldDefinitionCatalog::sync();
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
@@ -39,6 +39,8 @@ class CompanyCustomFieldSelectTest extends TestCase
             'allow_custom_fields' => true,
         ]);
 
+        // ADR-167a: set jobdomain_key column (source of truth) + pivot for compat
+        $this->company->update(['jobdomain_key' => 'test_domain']);
         $this->company->jobdomains()->sync([$this->jobdomain->id]);
     }
 

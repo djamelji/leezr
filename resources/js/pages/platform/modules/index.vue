@@ -18,6 +18,7 @@ const { toast } = useAppToast()
 const isLoading = ref(true)
 const togglingKey = ref(null)
 const activeTab = ref('company')
+const isSyncing = ref(false)
 
 // Filters (company tab only)
 const filterType = ref(null)
@@ -123,6 +124,22 @@ const hasFilters = computed(() =>
   filterType.value !== null || filterPlan.value !== null || filterEnabled.value !== null,
 )
 
+// ─── Sync ────────────────────────────────────────────
+const syncModules = async () => {
+  isSyncing.value = true
+
+  try {
+    await settingsStore.syncModules()
+    toast(t('platformModules.syncSuccess'), 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformModules.syncFailed'), 'error')
+  }
+  finally {
+    isSyncing.value = false
+  }
+}
+
 // ─── Platform tab ───────────────────────────────────
 const platformHeaders = computed(() => [
   { title: t('platformModules.module'), key: 'name' },
@@ -147,12 +164,29 @@ const onPlatformRowClick = (_event, { item }) => {
 <template>
   <div>
     <VCard>
-      <VCardTitle class="d-flex align-center">
-        <VIcon
-          icon="tabler-puzzle"
-          class="me-2"
-        />
-        {{ t('platformModules.title') }}
+      <VCardTitle class="d-flex align-center justify-space-between">
+        <div class="d-flex align-center">
+          <VIcon
+            icon="tabler-puzzle"
+            class="me-2"
+          />
+          {{ t('platformModules.title') }}
+        </div>
+        <VBtn
+          variant="tonal"
+          color="secondary"
+          size="small"
+          :loading="isSyncing"
+          :disabled="isSyncing"
+          @click="syncModules"
+        >
+          <VIcon
+            start
+            icon="tabler-refresh"
+            size="18"
+          />
+          {{ t('platformModules.syncButton') }}
+        </VBtn>
       </VCardTitle>
       <VCardSubtitle>
         {{ t('platformModules.subtitle') }}

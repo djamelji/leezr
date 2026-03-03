@@ -3,6 +3,7 @@ import { useCompanyNav } from '@/composables/useCompanyNav'
 import { useNavStore } from '@/core/stores/nav'
 // Components
 import Footer from '@/layouts/components/Footer.vue'
+import NavbarGlobalWidgets from '@/layouts/components/NavbarGlobalWidgets.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
 
 // @layouts plugin
@@ -63,6 +64,7 @@ onUnmounted(() => clearInterval(overlayStuckTimer))
 
         <VSpacer />
 
+        <NavbarGlobalWidgets />
         <UserProfile />
       </div>
     </template>

@@ -19,6 +19,11 @@ use Tests\TestCase;
  */
 class GlobalModuleRouteCoverageTest extends TestCase
 {
+    // ADR-149: modules whose routes are intentionally ungated (always accessible)
+    private const UNGATED_MODULES = [
+        'core.dashboard',
+    ];
+
     public function test_all_module_routes_have_activation_middleware(): void
     {
         $allModules = ModuleRegistry::definitions();
@@ -27,6 +32,11 @@ class GlobalModuleRouteCoverageTest extends TestCase
         $modulePathToInfo = [];
 
         foreach ($allModules as $key => $manifest) {
+            // Skip modules explicitly exempted from gating
+            if (in_array($key, self::UNGATED_MODULES, true)) {
+                continue;
+            }
+
             $path = ModuleRegistry::modulePath($key);
 
             if ($path) {

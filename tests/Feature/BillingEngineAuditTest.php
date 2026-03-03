@@ -43,6 +43,7 @@ class BillingEngineAuditTest extends TestCase
             'name' => 'Audit Co',
             'slug' => 'audit-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->subscription = Subscription::create([

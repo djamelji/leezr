@@ -172,6 +172,8 @@
     "technicalLimitsWarning": "Ces paramètres impactent la logique métier et les droits d'accès.",
     "memberLimit": "Limite de membres",
     "memberLimitHint": "Laissez vide pour illimité",
+    "storageQuotaLimit": "Quota de stockage (Go)",
+    "storageQuotaLimitHint": "Laissez vide pour illimité",
     "saveLimits": "Enregistrer les limites",
     "limitsUpdated": "Limites mises à jour.",
     "failedToSaveLimits": "Échec de l'enregistrement des limites.",
@@ -739,7 +741,14 @@
     "confirmUpgrade": "Soumettre une demande de mise à niveau vers l'abonnement {name} ?",
     "requestCancelled": "Demande annulée.",
     "requestSubmitted": "Demande soumise",
-    "requestSubmittedMessage": "Votre demande a été soumise pour examen."
+    "requestSubmittedMessage": "Votre demande a été soumise pour examen.",
+    "membersLimit": "Membres",
+    "storageLimit": "Stockage",
+    "nMembers": "{n} membres",
+    "nGb": "{n} Go",
+    "unlimited": "Illimité",
+    "membersUsage": "Membres",
+    "storageUsage": "Stockage"
   },
 
   "members": {
@@ -752,6 +761,8 @@
     "role": "Rôle",
     "memberAdded": "Membre ajouté avec succès.",
     "memberRemoved": "Membre retiré.",
+    "showIncompleteOnly": "Afficher uniquement les profils incomplets",
+    "incompleteProfiles": "{count} membre(s) avec un profil incomplet",
     "confirmRemove": "Retirer {name} de cette entreprise ?",
     "failedToRemove": "Échec du retrait du membre.",
     "memberProfile": "Profil du membre",
@@ -797,6 +808,7 @@
     "profileUpdated": "Profil du membre mis à jour.",
     "failedToUpdateProfile": "Échec de la mise à jour du profil.",
     "failedToLoadProfile": "Échec du chargement du profil du membre.",
+    "failedToLoadFields": "Échec du chargement des champs pour ce rôle.",
     "activeStatus": "Actif",
     "invitedStatus": "Invité",
     "firstName": "Prénom",
@@ -804,7 +816,10 @@
     "noRole": "Aucun rôle",
     "additionalInformation": "Informations complémentaires",
     "failedToAdd": "Échec de l'ajout du membre.",
-    "invitationAutoSent": "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement."
+    "invitationAutoSent": "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement.",
+    "memberQuota": "{current} / {limit} membres",
+    "unlimitedMembers": "Membres illimités",
+    "memberLimitReached": "Limite de membres atteinte. Mettez à niveau votre abonnement pour ajouter plus de membres."
   },
 
   "credentials": {
@@ -837,7 +852,26 @@
     "legalStructureTitle": "Forme juridique",
     "legalStructure": "Forme juridique",
     "legalStructurePlaceholder": "Sélectionnez votre forme juridique",
-    "legalUpdated": "Forme juridique mise à jour."
+    "legalUpdated": "Forme juridique mise à jour.",
+    "mandatoryByJobdomain": "Informations requises pour l'équipe",
+    "mandatoryByJobdomainHint": "Informations que votre secteur d'activité exige pour chaque membre.",
+    "mandatoryByJobdomainExplainer": "En fonction du secteur d'activité de votre entreprise, les informations suivantes doivent être renseignées pour chaque membre de l'équipe. Les membres avec des informations manquantes apparaîtront comme incomplets dans la liste.",
+    "storageTitle": "Utilisation du stockage",
+    "storageWarning": "Vous approchez de votre limite de stockage. Envisagez de passer à un plan supérieur.",
+    "storageBlocked": "Limite de stockage atteinte. Passez à un plan supérieur pour téléverser plus de documents.",
+    "storageQuotaExceeded": "Quota de stockage dépassé.",
+    "companyDocumentsTitle": "Documents entreprise",
+    "companyDocumentsDescription": "Gérez les documents légaux et réglementaires de votre entreprise.",
+    "documentCatalogTitle": "Catalogue de documents",
+    "documentCatalogDescription": "Configurez les documents requis pour votre entreprise.",
+    "memberDocuments": "Documents membre",
+    "companyDocumentsScope": "Documents entreprise",
+    "enabled": "Actif",
+    "requiredOverride": "Obligatoire",
+    "order": "Ordre",
+    "mandatory": "Obligatoire (système)",
+    "activationSaved": "Activation du document mise à jour.",
+    "activationFailed": "Échec de la mise à jour de l'activation."
   },
 
   "roles": {
@@ -865,7 +899,89 @@
     "addonModules": "Modules complémentaires",
     "disabledModules": "Modules désactivés",
     "moduleInactive": "Désactivé",
-    "unbundledPermissions": "Permissions"
+    "unbundledPermissions": "Permissions",
+    "fieldConfiguration": "Configuration des champs",
+    "fieldConfigTooltip": "Configurez quels champs sont visibles et obligatoires pour les membres avec ce rôle. Les champs non listés restent visibles par défaut.",
+    "fieldProfile": "Profil champs",
+    "visible": "Visible",
+    "order": "Ordre",
+    "group": "Groupe",
+    "noFieldConfig": "Aucune configuration de champs",
+    "sensitiveData": "Accès aux données sensibles",
+    "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)"
+  },
+
+  "fieldGroups": {
+    "identity": "Identité",
+    "contact": "Contact",
+    "emergency": "Urgence",
+    "hr": "RH / Administratif",
+    "driving": "Conduite",
+    "dispatch": "Exploitation"
+  },
+
+  "fieldLabels": {
+    "phone": "Téléphone",
+    "job_title": "Intitulé de poste",
+    "address": "Adresse postale",
+    "birth_date": "Date de naissance",
+    "nationality": "Nationalité",
+    "social_security_number": "N° de sécurité sociale (NIR)",
+    "iban": "IBAN",
+    "contract_type": "Type de contrat",
+    "hire_date": "Date d'embauche",
+    "employee_status": "Statut",
+    "emergency_contact_name": "Contact d'urgence (nom)",
+    "emergency_contact_phone": "Contact d'urgence (tél.)",
+    "license_number": "N° de permis",
+    "license_category": "Catégorie de permis",
+    "license_expiry": "Expiration du permis",
+    "adr_certified": "Certification ADR",
+    "vehicle_type": "Type de véhicule",
+    "geographic_zone": "Zone géographique",
+    "work_schedule": "Planning horaires",
+    "work_mode": "Mode de travail"
+  },
+
+  "fieldOptions": {
+    "contract_type": {
+      "CDI": "CDI",
+      "CDD": "CDD",
+      "Interim": "Intérim",
+      "Stage": "Stage",
+      "Alternance": "Alternance"
+    },
+    "employee_status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "on_leave": "En congé",
+      "suspended": "Suspendu"
+    },
+    "license_category": {
+      "B": "B — Véhicule léger",
+      "C": "C — Poids lourd",
+      "CE": "CE — Remorque",
+      "D": "D — Bus",
+      "DE": "DE — Bus + remorque"
+    },
+    "vehicle_type": {
+      "VL": "Véhicule léger (VL)",
+      "PL": "Poids lourd (PL)",
+      "SPL": "Super poids lourd (SPL)",
+      "Frigorifique": "Frigorifique",
+      "Citerne": "Citerne"
+    },
+    "work_schedule": {
+      "day": "Journée",
+      "evening": "Soirée",
+      "night": "Nuit",
+      "rotating": "Roulement"
+    },
+    "work_mode": {
+      "on_site": "Sur site",
+      "hybrid": "Hybride",
+      "remote": "Télétravail"
+    }
   },
 
   "permissionCatalog": {
@@ -1135,7 +1251,10 @@
     "previewPrice": "+{price}",
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
-    "perUser": "/utilisateur"
+    "perUser": "/utilisateur",
+    "syncButton": "Synchroniser",
+    "syncSuccess": "Registre des modules synchronisé avec succès.",
+    "syncFailed": "Échec de la synchronisation du registre."
   },
 
   "billingSettings": {
@@ -1238,7 +1357,62 @@
     "fieldsPresetInfo": "Ces préréglages sont appliqués uniquement lors de l'assignation de ce domaine d'activité à une entreprise. Les activations des entreprises existantes ne sont jamais modifiées.",
     "capability": "capacité | capacités",
     "customCount": "{count} personnalisé(s)",
-    "none": "Aucun"
+    "none": "Aucun",
+    "fieldsCount": "{count} champs",
+    "fieldOverrides": "Surcharges de champs",
+    "fieldOverridesInfo": "Configurez quels champs sont visibles et obligatoires pour les membres avec ce rôle. Les champs non listés restent visibles par défaut.",
+    "ungroupedFields": "Autres champs",
+    "noFieldDefinitions": "Aucune définition de champ disponible.",
+    "mandatory": "Obligatoire",
+    "mandatoryStatus": "Statut",
+    "mandatoryTooltip": "Ce champ est obligatoire par le catalogue. Il ne peut pas être rendu optionnel.",
+    "mandatoryGovernanceAlert": "{count} champ(s) de ce preset sont obligatoires par le catalogue et ne peuvent pas être rendus optionnels.",
+    "documentPresets": "Presets de documents",
+    "documentPresetsInfo": "Modifier les presets n'affecte pas les entreprises existantes. Seules les nouvelles assignations utiliseront ces presets.",
+    "failedToUpdateDocuments": "Échec de la mise à jour des presets de documents.",
+    "activeDocumentPresets": "Activés par défaut",
+    "otherDocumentTypes": "Autres types de documents",
+    "presetOrder": "Ordre",
+    "applicableMarkets": "Marchés"
+  },
+
+  "platformDocumentTypes": {
+    "title": "Types de documents",
+    "label": "Libellé",
+    "scope": "Portée",
+    "scopeCompanyUser": "Documents membre",
+    "scopeCompany": "Documents entreprise",
+    "maxSize": "Taille max",
+    "formats": "Formats",
+    "active": "Actif",
+    "archived": "Archivé",
+    "archive": "Archiver",
+    "restore": "Restaurer",
+    "general": "Général",
+    "defaultOrder": "Ordre de tri",
+    "validationRules": "Règles de validation",
+    "targeting": "Ciblage",
+    "applicableMarkets": "Marchés applicables",
+    "requiredByJobdomains": "Requis par métiers",
+    "requiredByModules": "Requis par modules",
+    "tags": "Tags",
+    "createDocumentType": "Créer un type de document",
+    "editDocumentType": "Modifier le type de document",
+    "syncFromCatalog": "Synchroniser le catalogue",
+    "noDocumentTypes": "Aucun type de document trouvé.",
+    "createdSuccess": "Type de document créé.",
+    "updatedSuccess": "Type de document mis à jour.",
+    "archivedSuccess": "Type de document archivé.",
+    "restoredSuccess": "Type de document restauré.",
+    "syncedSuccess": "Catalogue synchronisé.",
+    "createFailed": "Échec de la création du type de document.",
+    "syncFailed": "Échec de la synchronisation.",
+    "usageStats": "Statistiques d'utilisation",
+    "activationsCount": "Activations entreprise",
+    "memberDocumentsCount": "Documents membre",
+    "companyDocumentsCount": "Documents entreprise",
+    "requestsCount": "Demandes workflow",
+    "usedInJobdomains": "Utilisé dans les métiers"
   },
 
   "platformCompanyDetail": {
@@ -1265,7 +1439,8 @@
     "incompatible": "Incompatible",
     "notAvailable": "Non disponible",
     "noModulesAvailable": "Aucun module disponible.",
-    "failedToToggleModule": "Échec de l'activation/désactivation du module."
+    "failedToToggleModule": "Échec de l'activation/désactivation du module.",
+    "incompleteProfiles": "{count} profil(s) incomplet(s)"
   },
 
   "platformCompanyUsers": {
@@ -1498,7 +1673,51 @@
     "quoteTitle": "Activer {module}",
     "quoteMonth": "mois",
     "quoteIncludes": "Inclut :",
-    "quoteConfirm": "Activer"
+    "quoteConfirm": "Activer",
+    "allCategories": "Tout",
+    "categoryCore": "Core",
+    "categoryAddon": "Extension",
+    "categoryPremium": "Premium",
+    "categoryIndustry": "Métier",
+    "filterByCategory": "Catégorie",
+    "searchModules": "Rechercher un module...",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "mandatoryFields": "Champs obligatoires",
+    "mandatoryFieldsHint": "Ces champs deviennent obligatoires pour les membres lorsque ce module est actif.",
+    "incompleteProfilesAlert": "{count} profil(s) de membre sont incomplets. Des champs obligatoires n'ont pas de valeur.",
+    "noSettings": "Ce module n'a aucun paramètre configurable.",
+    "advancedSettings": "Paramètres avancés",
+    "advancedSettingsHint": "Configuration JSON brute pour utilisateurs avancés.",
+    "tabAddons": "Extensions",
+    "tabIncluded": "Inclus",
+    "tabActive": "Actifs",
+    "tabAll": "Tout",
+    "upgradeTo": "Passer au plan {plan}",
+    "purchaseAddon": "Acheter l'extension",
+    "contactSales": "Contacter les ventes",
+    "stateIncluded": "Inclus",
+    "stateActive": "Actif",
+    "stateAvailable": "Disponible",
+    "stateLocked": "Mise à niveau requise",
+    "stateLockedAddon": "Extension requise",
+    "stateContactSales": "Contacter les ventes",
+    "upgradeDescription": "Mettez à niveau votre plan pour débloquer ce module.",
+    "addonDescription": "Ce module est disponible en tant qu'extension payante.",
+    "contactDescription": "Contactez notre équipe commerciale pour accéder à ce module.",
+    "noModulesInTab": "Aucun module dans cette section.",
+    "noSearchResults": "Aucun module ne correspond à votre recherche.",
+    "searchModuleHint": "Rechercher un module"
+  },
+
+  "themeSettings": {
+    "title": "Visibilité du sélecteur de thème",
+    "subtitle": "Choisissez quels rôles peuvent voir le sélecteur Clair / Sombre dans l'en-tête.",
+    "role": "Rôle",
+    "showToggle": "Afficher le sélecteur de thème pour ce rôle",
+    "updated": "Visibilité du thème mise à jour.",
+    "failedToUpdate": "Échec de la mise à jour de la visibilité du thème.",
+    "failedToLoad": "Échec du chargement des paramètres de visibilité du thème."
   },
 
   "shipments": {
@@ -1761,7 +1980,14 @@
     "passwordRequirements": "Exigences du mot de passe :",
     "minCharsLong": "8 caractères minimum",
     "passwordUpdated": "Mot de passe mis à jour avec succès.",
-    "failedToUpdatePassword": "Échec de la mise à jour du mot de passe."
+    "failedToUpdatePassword": "Échec de la mise à jour du mot de passe.",
+    "preferences": "Préférences",
+    "theme": "Thème",
+    "language": "Langue",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Système",
+    "documents": "Documents"
   },
 
   "audience": {
@@ -1779,6 +2005,18 @@
 
   "approveConfirm": "Approuver la mise à niveau vers « {plan} » pour {company} ?",
   "rejectConfirm": "Rejeter la demande de mise à niveau pour {company} ?",
+
+  "fields": {
+    "category": {
+      "base": "Informations générales",
+      "hr": "RH & Administratif",
+      "domain": "Spécifique au poste"
+    },
+    "required": "Obligatoire",
+    "profileComplete": "Profil complet",
+    "profileIncomplete": "{filled} sur {total} champs obligatoires renseignés",
+    "profileIncompleteShort": "Profil incomplet"
+  },
 
   "runtime": {
     "cold": "Initialisation...",
@@ -2121,5 +2359,90 @@
     "medium": "Moyen",
     "high": "Élevé",
     "critical": "Critique"
+  },
+
+  "documents": {
+    "title": "Documents",
+    "myDocuments": "Mes documents",
+    "myDocumentsDescription": "Déposez et gérez vos documents requis.",
+    "noDocuments": "Aucun type de document disponible.",
+    "noDocumentsForProfile": "Aucun document requis pour votre profil.",
+    "upload": "Téléverser",
+    "download": "Télécharger",
+    "delete": "Supprimer",
+    "uploadDocument": "Téléverser un document",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce document ?",
+    "uploaded": "Document téléversé avec succès.",
+    "replaced": "Document remplacé avec succès.",
+    "deleted": "Document supprimé.",
+    "failedToUpload": "Échec du téléversement.",
+    "quotaExceeded": "Quota de stockage dépassé. Contactez votre administrateur.",
+    "failedToDelete": "Échec de la suppression.",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "noFileUploaded": "Aucun fichier téléversé",
+    "fileInfo": "{name} ({size})",
+    "maxSize": "Max {size} Mo",
+    "acceptedTypes": "Acceptés : {types}",
+    "type": {
+      "id_card": "Carte d'identité",
+      "driving_license": "Permis de conduire",
+      "medical_certificate": "Certificat médical",
+      "kbis": "Extrait K-bis",
+      "insurance_certificate": "Attestation d'assurance",
+      "transport_license": "Licence de transport"
+    },
+    "requested": "Demandé",
+    "submitted": "Soumis",
+    "approved": "Approuvé",
+    "rejected": "Rejeté",
+    "approve": "Approuver",
+    "reject": "Rejeter",
+    "reviewNote": "Note de révision",
+    "reviewNotePlaceholder": "Motif du rejet...",
+    "reviewSaved": "Révision du document enregistrée.",
+    "reviewFailed": "Échec de l'enregistrement de la révision.",
+    "noSubmissionYet": "En attente de soumission",
+    "scopeMember": "Membre",
+    "scopeCompany": "Entreprise",
+    "catalog": "Catalogue de documents",
+    "vault": "Documents entreprise",
+    "workflow": "Workflow",
+    "preset": "Preset",
+    "inactive": "Inactif",
+    "active": "Actif",
+    "systemMandatory": "Obligatoire",
+    "systemMandatoryTooltip": "Exigé par votre secteur d'activité. Ne peut pas être désactivé.",
+    "requiredOverride": "Requis",
+    "constraints": "Contraintes",
+    "documentsSection": "Documents",
+    "documentsSectionDescription": "Configurez les exigences documentaires et gérez les documents de l'entreprise.",
+    "summaryActiveMember": "{count} doc membre actif | {count} docs membre actifs",
+    "summaryActiveCompany": "{count} doc entreprise actif | {count} docs entreprise actifs",
+    "summaryUploaded": "{count} téléversé | {count} téléversés",
+    "noDocumentsActivated": "Aucun type de document n'est actuellement activé pour cette entreprise.",
+    "noDocumentsActivatedHint": "Un administrateur peut activer les exigences documentaires dans Paramètres → Documents.",
+    "allMarkets": "Tous les marchés",
+    "scope": "Portée",
+    "addCustom": "Ajouter un type personnalisé",
+    "createCustomDocument": "Créer un type de document personnalisé",
+    "customDocument": "Personnalisé",
+    "systemDocument": "Système",
+    "documentLabel": "Libellé du document",
+    "maxFileSizeMb": "Taille max (Mo)",
+    "acceptedTypes": "Types de fichiers acceptés",
+    "customTypeCreated": "Type de document personnalisé créé.",
+    "customTypeArchived": "Type de document archivé.",
+    "customTypeDeleted": "Type de document supprimé.",
+    "customTypeDeleteBlocked": "Suppression impossible : documents liés. Utilisez l'archivage.",
+    "archive": "Archiver",
+    "archived": "Archivé",
+    "confirmArchive": "Archiver ce type ? Les données existantes sont conservées.",
+    "confirmDelete": "Supprimer définitivement ce type de document ?",
+    "view": "Voir",
+    "previewUnavailable": "Aperçu indisponible",
+    "previewUnavailableDescription": "Ce type de fichier ne peut pas être prévisualisé. Téléchargez-le.",
+    "loadingPreview": "Chargement de l'aperçu...",
+    "failedToLoadPreview": "Échec du chargement de l'aperçu."
   }
 }

@@ -2,17 +2,16 @@
 
 namespace App\Modules\Platform\Markets\Http;
 
-use App\Core\Markets\LegalStatus;
-use App\Core\Markets\Market;
+use App\Modules\Platform\Markets\MarketModuleCrudService;
+use App\Modules\Platform\Markets\UseCases\UpsertLegalStatusData;
+use App\Modules\Platform\Markets\UseCases\UpsertLegalStatusUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LegalStatusController
 {
-    public function store(Request $request, string $marketKey): JsonResponse
+    public function store(Request $request, string $marketKey, UpsertLegalStatusUseCase $useCase): JsonResponse
     {
-        Market::where('key', $marketKey)->firstOrFail();
-
         $validated = $request->validate([
             'key' => ['required', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_]*$/'],
             'name' => ['required', 'string', 'max:100'],
@@ -23,20 +22,7 @@ class LegalStatusController
             'sort_order' => ['integer', 'min:0'],
         ]);
 
-        // Enforce VAT rules
-        $validated = $this->enforceVatRules($validated);
-
-        // Check uniqueness within market
-        if (LegalStatus::where('market_key', $marketKey)->where('key', $validated['key'])->exists()) {
-            return response()->json(['message' => 'Legal status key already exists for this market.'], 422);
-        }
-
-        // If setting as default, unset previous default for this market
-        if (!empty($validated['is_default'])) {
-            LegalStatus::where('market_key', $marketKey)->where('is_default', true)->update(['is_default' => false]);
-        }
-
-        $status = LegalStatus::create(array_merge($validated, ['market_key' => $marketKey]));
+        $status = $useCase->execute(UpsertLegalStatusData::fromValidated(null, $marketKey, $validated));
 
         return response()->json([
             'message' => 'Legal status created.',
@@ -44,10 +30,8 @@ class LegalStatusController
         ], 201);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $id, UpsertLegalStatusUseCase $useCase): JsonResponse
     {
-        $status = LegalStatus::findOrFail($id);
-
         $validated = $request->validate([
             'key' => ['required', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_]*$/'],
             'name' => ['required', 'string', 'max:100'],
@@ -58,26 +42,7 @@ class LegalStatusController
             'sort_order' => ['integer', 'min:0'],
         ]);
 
-        // Enforce VAT rules
-        $validated = $this->enforceVatRules($validated);
-
-        // Check uniqueness within market (exclude self)
-        if (LegalStatus::where('market_key', $status->market_key)
-            ->where('key', $validated['key'])
-            ->where('id', '!=', $id)
-            ->exists()) {
-            return response()->json(['message' => 'Legal status key already exists for this market.'], 422);
-        }
-
-        // If setting as default, unset previous default for this market
-        if (!empty($validated['is_default'])) {
-            LegalStatus::where('market_key', $status->market_key)
-                ->where('is_default', true)
-                ->where('id', '!=', $id)
-                ->update(['is_default' => false]);
-        }
-
-        $status->update($validated);
+        $status = $useCase->execute(UpsertLegalStatusData::fromValidated($id, null, $validated));
 
         return response()->json([
             'message' => 'Legal status updated.',
@@ -87,13 +52,9 @@ class LegalStatusController
 
     public function destroy(int $id): JsonResponse
     {
-        $status = LegalStatus::findOrFail($id);
+        MarketModuleCrudService::deleteLegalStatus($id);
 
-        $status->delete();
-
-        return response()->json([
-            'message' => 'Legal status deleted.',
-        ]);
+        return response()->json(['message' => 'Legal status deleted.']);
     }
 
     public function reorder(Request $request, string $marketKey): JsonResponse
@@ -103,26 +64,8 @@ class LegalStatusController
             'ids.*' => ['integer', 'exists:legal_statuses,id'],
         ]);
 
-        foreach ($validated['ids'] as $index => $id) {
-            LegalStatus::where('id', $id)
-                ->where('market_key', $marketKey)
-                ->update(['sort_order' => $index]);
-        }
+        MarketModuleCrudService::reorderLegalStatuses($marketKey, $validated['ids']);
 
         return response()->json(['message' => 'Legal statuses reordered.']);
-    }
-
-    /**
-     * Enforce business rules: if not VAT-applicable, vat_rate must be null.
-     */
-    private function enforceVatRules(array $data): array
-    {
-        if (empty($data['is_vat_applicable'])) {
-            $data['vat_rate'] = null;
-        } elseif (!isset($data['vat_rate'])) {
-            $data['vat_rate'] = 0;
-        }
-
-        return $data;
     }
 }

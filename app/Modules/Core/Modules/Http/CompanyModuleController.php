@@ -2,6 +2,8 @@
 
 namespace App\Modules\Core\Modules\Http;
 
+use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
+use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleCatalogReadModel;
@@ -115,7 +117,29 @@ class CompanyModuleController
         return response()->json([
             'module_key' => $key,
             'settings' => $companyModule?->config_json ?? (object) [],
+            'mandatory_fields' => static::mandatoryFieldsForModule($key),
+            'incomplete_profiles_count' => CompanyUserProfileReadModel::incompleteCount($company),
         ]);
+    }
+
+    /**
+     * ADR-168b: Return fields that are mandatory for a given module.
+     */
+    private static function mandatoryFieldsForModule(string $moduleKey): array
+    {
+        $result = [];
+
+        foreach (FieldDefinitionCatalog::all() as $field) {
+            $requiredByModules = $field['validation_rules']['required_by_modules'] ?? [];
+            if (in_array($moduleKey, $requiredByModules)) {
+                $result[] = [
+                    'code' => $field['code'],
+                    'label' => $field['label'],
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**

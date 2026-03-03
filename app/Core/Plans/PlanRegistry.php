@@ -39,7 +39,7 @@ class PlanRegistry
                     'Core modules only',
                     'Community support',
                 ],
-                'limits' => ['members' => 5],
+                'limits' => ['members' => 5, 'storage_quota_gb' => 1],
             ],
             'pro' => [
                 'name' => 'Pro',
@@ -55,7 +55,7 @@ class PlanRegistry
                     'Priority support',
                     'Custom roles',
                 ],
-                'limits' => ['members' => null],
+                'limits' => ['members' => null, 'storage_quota_gb' => 20],
             ],
             'business' => [
                 'name' => 'Business',
@@ -71,7 +71,7 @@ class PlanRegistry
                     'Dedicated support',
                     'Advanced analytics',
                 ],
-                'limits' => ['members' => null],
+                'limits' => ['members' => null, 'storage_quota_gb' => 100],
             ],
         ];
     }

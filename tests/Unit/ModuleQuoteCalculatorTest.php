@@ -34,10 +34,11 @@ class ModuleQuoteCalculatorTest extends TestCase
             'name' => 'Quote Co',
             'slug' => 'quote-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
-        // Assign logistique jobdomain
-        $jobdomain = Jobdomain::firstOrCreate(
+        // Assign logistique jobdomain — updateOrCreate to override seeded defaults
+        $jobdomain = Jobdomain::updateOrCreate(
             ['key' => 'logistique'],
             [
                 'label' => 'Logistique',

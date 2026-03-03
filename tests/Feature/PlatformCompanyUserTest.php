@@ -45,7 +45,7 @@ class PlatformCompanyUserTest extends TestCase
             'password_set_at' => now(),
         ]);
 
-        $company = Company::create(['name' => 'Test Company', 'slug' => 'test-company']);
+        $company = Company::create(['name' => 'Test Company', 'slug' => 'test-company', 'jobdomain_key' => 'logistique']);
         $user->companies()->attach($company, ['role' => 'owner']);
 
         return $user;

@@ -45,6 +45,7 @@ class PlatformBillingWidgetsTest extends TestCase
             'name' => 'Widget Co',
             'slug' => 'widget-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Seed ledger entries for revenue + refund + AR

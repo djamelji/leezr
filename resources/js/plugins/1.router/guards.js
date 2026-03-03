@@ -1,8 +1,8 @@
 import { useRuntimeStore } from '@/core/runtime/runtime'
+import { bootMachine } from '@/core/runtime/bootMachine'
 import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
-import { useNavStore } from '@/core/stores/nav'
 import { useWorldStore } from '@/core/stores/world'
 import { useAppToast } from '@/composables/useAppToast'
 import { safeRedirect } from '@/utils/safeRedirect'
@@ -22,9 +22,7 @@ export const setupGuards = router => {
 
     // ─── Public routes ───────────────────────────────────
     if (to.meta.public) {
-      if (runtime.phase === 'cold') {
-        await runtime.boot('public')
-      }
+      await runtime.boot('public')
 
       return
     }
@@ -35,22 +33,17 @@ export const setupGuards = router => {
     // Ensure world settings are fetched (fire-and-forget, non-blocking)
     useWorldStore().fetch()
 
-    // ─── Boot runtime if needed ──────────────────────────
-    // ADR-153: Await full boot (not just auth) so layout mounts with
-    // nav + modules already hydrated. Prevents empty sidebar after login.
-    const navStore = useNavStore()
-
-    const needsBoot = runtime.phase === 'cold'
-      || runtime.scope !== scope
-      || runtime.phase === 'error'
-      || (runtime.isReady && !navStore.isHydrated(scope))
-
-    if (needsBoot) {
-      if (runtime.phase !== 'cold') {
+    // ─── Boot runtime (idempotent) ───────────────────────
+    // ADR-160: Single awaitable boot() replaces needsBoot + whenReady.
+    // - Already READY for same scope → no-op (returns immediately)
+    // - Already BOOTING for same scope → awaits existing boot (dedup)
+    // - Different scope → teardown + fresh boot
+    // - FAILED → re-entry blocked; AppShellGate shows error
+    if (bootMachine.scope.value !== scope || !bootMachine.isReady.value) {
+      if (bootMachine.scope.value && bootMachine.scope.value !== scope) {
         runtime.teardown()
       }
-      runtime.boot(scope)
-      await runtime.whenReady(8000)
+      await runtime.boot(scope)
     }
 
     // ─── Platform scope ──────────────────────────────────
@@ -98,10 +91,6 @@ export const setupGuards = router => {
 
     // Surface guard — structure routes require tenant hydration + management level
     if (to.meta.surface === 'structure') {
-      if (!runtime.isReady) {
-        await runtime.whenReady(5000)
-      }
-
       if (!auth.currentCompany) {
         return { path: '/login' }
       }
@@ -111,12 +100,8 @@ export const setupGuards = router => {
       }
     }
 
-    // Module guard — must await ready for module-gated routes
+    // Module guard — boot is already complete, modules are hydrated
     if (to.meta.module) {
-      if (!runtime.isReady) {
-        await runtime.whenReady(5000)
-      }
-
       const moduleStore = useModuleStore()
 
       if (!moduleStore.isActive(to.meta.module)) {

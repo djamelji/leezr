@@ -1,5 +1,6 @@
 <script setup>
 import { useRuntimeStore } from '@/core/runtime/runtime'
+import { bootMachine } from '@/core/runtime/bootMachine'
 
 const runtime = useRuntimeStore()
 const isDev = import.meta.env.DEV
@@ -8,13 +9,13 @@ const isDev = import.meta.env.DEV
 const isTimeout = ref(false)
 let timeoutTimer = null
 
-watch(() => runtime.phase, phase => {
+watch(() => bootMachine.state.value, state => {
   clearTimeout(timeoutTimer)
   isTimeout.value = false
 
-  if (['auth', 'tenant', 'features'].includes(phase)) {
+  if (state === 'BOOTING') {
     timeoutTimer = setTimeout(() => {
-      if (!runtime.isReady && runtime.phase !== 'error') {
+      if (bootMachine.isBooting.value) {
         isTimeout.value = true
       }
     }, 8000)
@@ -35,7 +36,7 @@ const progressPercent = computed(() => {
 const retryPartial = () => runtime.retryFailed()
 
 const retryFull = () => {
-  const scope = runtime.scope || 'company'
+  const scope = bootMachine.scope.value || 'company'
   runtime.teardown()
   runtime.boot(scope)
 }
@@ -51,13 +52,13 @@ const lastEvents = computed(() => {
 
 <template>
   <!-- Ready: render page content -->
-  <div v-if="runtime.isReady">
+  <div v-if="bootMachine.isReady.value">
     <slot />
   </div>
 
   <!-- Error: recoverable error with retry -->
   <div
-    v-else-if="runtime.phase === 'error'"
+    v-else-if="bootMachine.isFailed.value"
     class="d-flex align-center justify-center"
     style="min-height: 400px;"
   >
@@ -77,7 +78,7 @@ const lastEvents = computed(() => {
       </VCardTitle>
 
       <VCardText class="text-body-1 mb-4">
-        {{ runtime.error }}
+        {{ bootMachine.error.value }}
       </VCardText>
 
       <div class="d-flex gap-3 justify-center">
@@ -167,7 +168,7 @@ const lastEvents = computed(() => {
       v-if="isDev"
       class="text-caption text-disabled mt-4"
     >
-      <p>Phase: {{ runtime.phase }} | Scope: {{ runtime.scope }} | Run: {{ runtime.currentRunId ?? '-' }}</p>
+      <p>Phase: {{ runtime.phase }} | Boot: {{ bootMachine.state.value }} | Scope: {{ bootMachine.scope.value }} | Run: {{ runtime.currentRunId ?? '-' }}</p>
       <p>Progress: {{ runtime.progress.done }}/{{ runtime.progress.total }} ({{ runtime.progress.loading }} loading, {{ runtime.progress.error }} errors)</p>
       <div
         v-if="lastEvents.length"

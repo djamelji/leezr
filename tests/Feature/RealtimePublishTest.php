@@ -48,6 +48,7 @@ class RealtimePublishTest extends TestCase
             'name' => 'Realtime Test Co',
             'slug' => 'realtime-test-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         foreach (ModuleRegistry::forScope('company') as $key => $def) {

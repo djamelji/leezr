@@ -38,6 +38,7 @@ class CompanyNavRealtimeTest extends TestCase
             'name' => 'Realtime Co',
             'slug' => 'realtime-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Enable all company modules

@@ -16,6 +16,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  profileCompleteness: {
+    type: Object,
+    default: () => ({ filled: 0, total: 0, complete: true }),
+  },
   editable: {
     type: Boolean,
     default: false,
@@ -30,7 +34,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['save'])
+const emit = defineEmits(['save', 'role-change'])
 
 const form = ref({
   first_name: '',
@@ -44,6 +48,21 @@ const isSaving = ref(false)
 const roleOptions = computed(() =>
   props.companyRoles.map(r => ({ title: r.name, value: r.id })),
 )
+
+// ADR-168: group dynamic fields by category
+const fieldsByCategory = computed(() => {
+  const groups = { base: [], hr: [], domain: [] }
+
+  for (const field of props.dynamicFields) {
+    const cat = field.category || 'base'
+    if (groups[cat])
+      groups[cat].push(field)
+    else
+      groups.base.push(field)
+  }
+
+  return groups
+})
 
 watch(
   () => [props.baseFields, props.member],
@@ -66,6 +85,20 @@ watch(
   },
   { immediate: true },
 )
+
+// ADR-164: Emit role-change when user picks a different role
+const initialRoleSet = ref(false)
+
+watch(() => form.value.company_role_id, (newId, oldId) => {
+  if (!initialRoleSet.value) {
+    initialRoleSet.value = true
+
+    return
+  }
+  if (newId !== oldId) {
+    emit('role-change', newId)
+  }
+})
 
 const handleSave = () => {
   const payload = {
@@ -90,6 +123,31 @@ const handleSave = () => {
 <template>
   <VForm @submit.prevent="handleSave">
     <VRow>
+      <!-- ADR-168b: profile completeness indicator -->
+      <VCol
+        v-if="!profileCompleteness.complete"
+        cols="12"
+      >
+        <VAlert
+          type="warning"
+          variant="tonal"
+        >
+          {{ t('fields.profileIncomplete', { filled: profileCompleteness.filled, total: profileCompleteness.total }) }}
+        </VAlert>
+      </VCol>
+      <VCol
+        v-else-if="profileCompleteness.total > 0"
+        cols="12"
+      >
+        <VChip
+          color="success"
+          variant="tonal"
+          size="small"
+        >
+          {{ t('fields.profileComplete') }}
+        </VChip>
+      </VCol>
+
       <!-- Base fields -->
       <VCol
         cols="12"
@@ -148,21 +206,28 @@ const handleSave = () => {
         />
       </VCol>
 
-      <!-- Dynamic fields -->
+      <!-- Dynamic fields grouped by category (ADR-168) -->
       <template v-if="dynamicFields.length && !loading">
-        <VCol cols="12">
-          <VDivider />
-        </VCol>
-        <VCol cols="12">
-          <h6 class="text-h6">
-            {{ t('members.additionalInformation') }}
-          </h6>
-        </VCol>
-        <DynamicFormRenderer
-          v-model="dynamicForm"
-          :fields="dynamicFields"
-          :disabled="!editable"
-        />
+        <template
+          v-for="cat in ['base', 'hr', 'domain']"
+          :key="cat"
+        >
+          <template v-if="fieldsByCategory[cat]?.length">
+            <VCol cols="12">
+              <VDivider />
+            </VCol>
+            <VCol cols="12">
+              <h6 class="text-h6">
+                {{ t(`fields.category.${cat}`) }}
+              </h6>
+            </VCol>
+            <DynamicFormRenderer
+              v-model="dynamicForm"
+              :fields="fieldsByCategory[cat]"
+              :disabled="!editable"
+            />
+          </template>
+        </template>
       </template>
 
       <VCol

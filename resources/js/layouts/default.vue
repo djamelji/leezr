@@ -4,7 +4,7 @@ import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import { useSessionGovernance } from '@/composables/useSessionGovernance'
 import { useAuthStore } from '@/core/stores/auth'
-import { useRuntimeStore } from '@/core/runtime/runtime'
+import { useRuntimeStore, bootMachine } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
 import SessionTimeoutWarning from './components/SessionTimeoutWarning.vue'
 
@@ -26,7 +26,7 @@ const auth = useAuthStore()
 const runtime = useRuntimeStore()
 const session = useSessionGovernance()
 
-watch(() => [runtime.isReady, auth.sessionConfig], ([ready, config]) => {
+watch(() => [bootMachine.isReady.value, auth.sessionConfig], ([ready, config]) => {
   if (ready && config) {
     session.start({
       scope: 'company',

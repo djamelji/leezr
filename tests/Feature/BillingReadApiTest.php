@@ -60,6 +60,7 @@ class BillingReadApiTest extends TestCase
             'slug' => 'company-a',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->companyA->memberships()->create([
             'user_id' => $this->ownerA->id,
@@ -83,6 +84,7 @@ class BillingReadApiTest extends TestCase
             'slug' => 'company-b',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->companyB->memberships()->create([
             'user_id' => $this->ownerB->id,

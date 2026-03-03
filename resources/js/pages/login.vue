@@ -48,12 +48,14 @@ const handleLogin = async () => {
       password: form.value.password,
     })
 
-    // Reset runtime to cold — the guard will boot('company') on redirect
+    // ADR-160: Reset to cold, boot fully, THEN navigate.
+    // This ensures layout mounts with nav + modules already hydrated.
     runtime.teardown()
+    await runtime.boot('company')
 
     const redirect = safeRedirect(route.query.redirect, '/dashboard')
 
-    await router.push(redirect)
+    await router.replace(redirect)
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('auth.invalidCredentials')

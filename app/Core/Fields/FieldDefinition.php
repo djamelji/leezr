@@ -71,6 +71,16 @@ class FieldDefinition extends Model
         self::SCOPE_COMPANY_USER,
     ];
 
+    public const CATEGORY_BASE = 'base';
+    public const CATEGORY_HR = 'hr';
+    public const CATEGORY_DOMAIN = 'domain';
+
+    public const CATEGORIES = [
+        self::CATEGORY_BASE,
+        self::CATEGORY_HR,
+        self::CATEGORY_DOMAIN,
+    ];
+
     public const MAX_CUSTOM_FIELDS_PER_COMPANY = 20;
 
     public function company(): BelongsTo

@@ -20,17 +20,11 @@ class PlatformInvoiceMutationController
         private readonly AdminInvoiceMutationService $service,
     ) {}
 
-    public function markPaidOffline(Request $request, int $id): JsonResponse
+    public function markPaidOffline(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->markPaidOffline(
@@ -49,17 +43,11 @@ class PlatformInvoiceMutationController
         }
     }
 
-    public function void(Request $request, int $id): JsonResponse
+    public function void(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->void(
@@ -78,17 +66,11 @@ class PlatformInvoiceMutationController
         }
     }
 
-    public function updateNotes(Request $request, int $id): JsonResponse
+    public function updateNotes(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->updateNotes(

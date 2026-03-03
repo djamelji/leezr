@@ -89,8 +89,11 @@ const handleRegister = async () => {
       plan_key: selectedPlan.value || undefined,
     })
 
+    // ADR-160: Reset to cold, boot fully, THEN navigate.
     runtime.teardown()
-    await router.push('/dashboard')
+    await runtime.boot('company')
+
+    await router.replace('/dashboard')
   }
   catch (error) {
     if (error?.data?.errors)

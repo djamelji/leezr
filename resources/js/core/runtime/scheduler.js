@@ -25,6 +25,8 @@ import { assertRuntime, buildSnapshot } from './invariants'
  * @property {Function} setBootedAt      - (ts) => set runtime._bootedAt
  * @property {Function} resetState       - () => clear _resources, _error, etc.
  * @property {Function} getStore         - () => runtime store (for invariant snapshots, DEV only)
+ * @property {Function} onCommit         - () => bootMachine.commit()
+ * @property {Function} onFail           - (msg) => bootMachine.fail(msg)
  */
 
 export function createScheduler(deps) {
@@ -60,6 +62,17 @@ export function createScheduler(deps) {
       _readyResolve()
       _readyResolve = null
     }
+  }
+
+  /** Resolve internal promise AND signal bootMachine commit. */
+  function _commitReady() {
+    _resolveReady()
+    if (deps.onCommit) deps.onCommit()
+  }
+
+  /** Signal bootMachine failure. */
+  function _failBoot(message) {
+    if (deps.onFail) deps.onFail(message)
   }
 
   function _cancelCurrentRun() {
@@ -130,7 +143,7 @@ export function createScheduler(deps) {
       deps.transition('ready')
       deps.setBootedAt(Date.now())
       deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
-      _resolveReady()
+      _commitReady()
 
       return
     }
@@ -140,7 +153,7 @@ export function createScheduler(deps) {
       const auth = deps.resolveStore('auth')
       if (!auth.isLoggedIn) {
         deps.transition('ready')
-        _resolveReady()
+        _commitReady()
 
         return
       }
@@ -149,7 +162,7 @@ export function createScheduler(deps) {
       const platformAuth = deps.resolveStore('platformAuth')
       if (!platformAuth.isLoggedIn) {
         deps.transition('ready')
-        _resolveReady()
+        _commitReady()
 
         return
       }
@@ -180,6 +193,7 @@ export function createScheduler(deps) {
       if (result.critical) {
         deps.setError(`Failed to load ${result.errorKey}.`)
         deps.transition('error')
+        _failBoot(`Failed to load ${result.errorKey}.`)
 
         return
       }
@@ -190,7 +204,7 @@ export function createScheduler(deps) {
     deps.transition('ready')
     deps.setBootedAt(Date.now())
     deps.journal.log('run:complete', { runId, scope: _currentScope, recovery: true })
-    _resolveReady()
+    _commitReady()
     _assert('continueFromPhase:ready')
   }
 
@@ -238,7 +252,7 @@ export function createScheduler(deps) {
       // Public routes need no hydration
       if (scope === 'public') {
         deps.transition('ready')
-        _resolveReady()
+        _commitReady()
         _assert('requestBoot:public-ready')
 
         return
@@ -252,9 +266,11 @@ export function createScheduler(deps) {
       const authResult = await _runJobs(authResources, runId)
       if (_isStale(runId)) return
       if (authResult.critical) {
-        deps.setError(`Failed to load ${authResult.errorKey}.`)
+        const msg = `Failed to load ${authResult.errorKey}.`
+        deps.setError(msg)
         deps.transition('error')
         _resolveAuth() // unblock waiters even on error
+        _failBoot(msg)
         _assert('requestBoot:auth-error')
 
         return
@@ -269,7 +285,7 @@ export function createScheduler(deps) {
       if (scope === 'company') {
         const auth = deps.resolveStore('auth')
         if (!auth.isLoggedIn) {
-          _resolveReady()
+          _commitReady()
 
           return
         }
@@ -278,7 +294,7 @@ export function createScheduler(deps) {
         const platformAuth = deps.resolveStore('platformAuth')
         if (!platformAuth.isLoggedIn) {
           deps.transition('ready')
-          _resolveReady()
+          _commitReady()
 
           return
         }
@@ -292,8 +308,10 @@ export function createScheduler(deps) {
         const tenantResult = await _runJobs(tenantResources, runId)
         if (_isStale(runId)) return
         if (tenantResult.critical) {
-          deps.setError(`Failed to load ${tenantResult.errorKey}.`)
+          const msg = `Failed to load ${tenantResult.errorKey}.`
+          deps.setError(msg)
           deps.transition('error')
+          _failBoot(msg)
           _assert('requestBoot:tenant-error')
 
           return
@@ -309,8 +327,10 @@ export function createScheduler(deps) {
         const featureResult = await _runJobs(featureResources, runId)
         if (_isStale(runId)) return
         if (featureResult.critical) {
-          deps.setError(`Failed to load ${featureResult.errorKey}.`)
+          const msg = `Failed to load ${featureResult.errorKey}.`
+          deps.setError(msg)
           deps.transition('error')
+          _failBoot(msg)
           _assert('requestBoot:features-error')
 
           return
@@ -322,7 +342,7 @@ export function createScheduler(deps) {
       deps.transition('ready')
       deps.setBootedAt(Date.now())
       deps.journal.log('run:complete', { runId, scope })
-      _resolveReady()
+      _commitReady()
       _assert('requestBoot:ready')
     },
 
@@ -396,8 +416,10 @@ export function createScheduler(deps) {
       const tenantResult = await _runJobs(tenantResources, runId)
       if (_isStale(runId)) return
       if (tenantResult.critical) {
-        deps.setError(`Failed to load ${tenantResult.errorKey}.`)
+        const msg = `Failed to load ${tenantResult.errorKey}.`
+        deps.setError(msg)
         deps.transition('error')
+        _failBoot(msg)
 
         return
       }
@@ -407,8 +429,10 @@ export function createScheduler(deps) {
       const featureResult = await _runJobs(featureResources, runId)
       if (_isStale(runId)) return
       if (featureResult.critical) {
-        deps.setError(`Failed to load ${featureResult.errorKey}.`)
+        const msg = `Failed to load ${featureResult.errorKey}.`
+        deps.setError(msg)
         deps.transition('error')
+        _failBoot(msg)
 
         return
       }
@@ -416,7 +440,7 @@ export function createScheduler(deps) {
 
       deps.transition('ready')
       deps.journal.log('run:complete', { runId, scope: 'switch' })
-      _resolveReady()
+      _commitReady()
       _assert('requestSwitch:ready')
     },
 

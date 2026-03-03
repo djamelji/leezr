@@ -6,6 +6,7 @@ import { useMembersStore } from '@/modules/company/members/members.store'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
+import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import { useAppToast } from '@/composables/useAppToast'
 
 const { t } = useI18n()
@@ -19,6 +20,18 @@ const { toast } = useAppToast()
 const isDrawerOpen = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const showIncompleteOnly = ref(false)
+
+// ADR-168b: incomplete profiles
+const incompleteCount = computed(() =>
+  membersStore.members.filter(m => !m.profile_completeness?.complete).length,
+)
+
+const filteredMembers = computed(() => {
+  if (!showIncompleteOnly.value) return membersStore.members
+
+  return membersStore.members.filter(m => !m.profile_completeness?.complete)
+})
 
 // Quick View modal (read-only)
 const isQuickViewOpen = ref(false)
@@ -367,7 +380,23 @@ const typeOptions = computed(() => [
   <div>
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
-        <span>{{ t('members.title') }}</span>
+        <div class="d-flex align-center gap-2">
+          <span>{{ t('members.title') }}</span>
+          <VChip
+            v-if="membersStore.memberLimit !== null"
+            :color="membersStore.memberCount >= membersStore.memberLimit ? 'error' : 'info'"
+            size="small"
+          >
+            {{ t('members.memberQuota', { current: membersStore.memberCount, limit: membersStore.memberLimit }) }}
+          </VChip>
+          <VChip
+            v-else
+            color="success"
+            size="small"
+          >
+            {{ t('members.unlimitedMembers') }}
+          </VChip>
+        </div>
         <div
           v-if="canInvite || canManage"
           class="d-flex gap-2"
@@ -383,6 +412,7 @@ const typeOptions = computed(() => [
           <VBtn
             v-if="canInvite"
             prepend-icon="tabler-plus"
+            :disabled="membersStore.memberLimit !== null && membersStore.memberCount >= membersStore.memberLimit"
             @click="isDrawerOpen = true"
           >
             {{ t('members.addMember') }}
@@ -411,6 +441,39 @@ const typeOptions = computed(() => [
           {{ errorMessage }}
         </VAlert>
 
+        <!-- ADR-172: member limit reached -->
+        <VAlert
+          v-if="membersStore.memberLimit !== null && membersStore.memberCount >= membersStore.memberLimit"
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+        >
+          {{ t('members.memberLimitReached') }}
+        </VAlert>
+
+        <!-- ADR-168b: incomplete profiles summary -->
+        <VAlert
+          v-if="incompleteCount > 0"
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+        >
+          {{ t('members.incompleteProfiles', { count: incompleteCount }) }}
+        </VAlert>
+
+        <!-- ADR-168b: filter -->
+        <div
+          v-if="incompleteCount > 0"
+          class="d-flex align-center mb-4"
+        >
+          <VCheckbox
+            v-model="showIncompleteOnly"
+            :label="t('members.showIncompleteOnly')"
+            hide-details
+            density="compact"
+          />
+        </div>
+
         <VTable class="text-no-wrap">
           <thead>
             <tr>
@@ -425,7 +488,7 @@ const typeOptions = computed(() => [
           </thead>
           <tbody>
             <tr
-              v-for="member in membersStore.members"
+              v-for="member in filteredMembers"
               :key="member.id"
             >
               <td>
@@ -449,6 +512,13 @@ const typeOptions = computed(() => [
                   >
                     {{ member.user.display_name }}
                   </RouterLink>
+                  <VIcon
+                    v-if="!member.profile_completeness?.complete"
+                    icon="tabler-alert-circle"
+                    color="error"
+                    size="16"
+                    :title="t('fields.profileIncompleteShort')"
+                  />
                 </div>
               </td>
               <td>{{ member.user.email }}</td>
@@ -611,6 +681,7 @@ const typeOptions = computed(() => [
       temporary
       location="end"
       width="480"
+      class="scrollable-content"
     >
       <!-- ── Edit Custom Field View ──────────────────────── -->
       <template v-if="editFieldDef">
@@ -621,6 +692,7 @@ const typeOptions = computed(() => [
 
         <VDivider />
 
+        <PerfectScrollbar :options="{ wheelPropagation: false }">
         <VCardText>
           <!-- Read-only info -->
           <div class="d-flex flex-wrap gap-2 mb-4">
@@ -704,6 +776,7 @@ const typeOptions = computed(() => [
             {{ t('common.save') }}
           </VBtn>
         </VCardText>
+        </PerfectScrollbar>
       </template>
 
       <!-- ── Field List View ─────────────────────────────── -->
@@ -715,6 +788,7 @@ const typeOptions = computed(() => [
 
         <VDivider />
 
+        <PerfectScrollbar :options="{ wheelPropagation: false }">
         <VCardText v-if="fieldsLoading">
           <VProgressLinear indeterminate />
         </VCardText>
@@ -892,6 +966,7 @@ const typeOptions = computed(() => [
             </VCardText>
           </template>
         </template>
+        </PerfectScrollbar>
       </template>
     </VNavigationDrawer>
 
@@ -1037,3 +1112,11 @@ const typeOptions = computed(() => [
     </VDialog>
   </div>
 </template>
+
+<style lang="scss">
+.scrollable-content {
+  .v-navigation-drawer__content {
+    overflow: hidden !important;
+  }
+}
+</style>

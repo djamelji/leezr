@@ -25,7 +25,7 @@ class JobdomainFieldPresetTest extends TestCase
         $this->seed(\Database\Seeders\SystemSeeder::class);
 
         $this->companyOwner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->company->memberships()->create([
             'user_id' => $this->companyOwner->id,
             'role' => 'owner',
@@ -80,25 +80,19 @@ class JobdomainFieldPresetTest extends TestCase
         $this->assertEquals(0, $activation->order);
     }
 
-    public function test_field_presets_respect_structured_required(): void
+    public function test_field_presets_do_not_set_required_override(): void
     {
+        // ADR-169: presets only activate + order. Mandatory is handled by FieldDefinitionCatalog via MandatoryContext.
         JobdomainGate::assignToCompany($this->company, 'logistique');
 
-        // siret has required: true in the structured preset
-        $siretDef = FieldDefinition::where('code', 'siret')->first();
-        $activation = FieldActivation::where('company_id', $this->company->id)
-            ->where('field_definition_id', $siretDef->id)
-            ->first();
+        $activations = FieldActivation::where('company_id', $this->company->id)->get();
 
-        $this->assertTrue($activation->required_override);
-
-        // phone has required: false in the structured preset
-        $phoneDef = FieldDefinition::where('code', 'phone')->first();
-        $phoneActivation = FieldActivation::where('company_id', $this->company->id)
-            ->where('field_definition_id', $phoneDef->id)
-            ->first();
-
-        $this->assertFalse($phoneActivation->required_override);
+        foreach ($activations as $activation) {
+            $this->assertFalse(
+                (bool) $activation->required_override,
+                "Activation for def {$activation->field_definition_id} should NOT have required_override (catalog handles mandatory)",
+            );
+        }
     }
 
     public function test_field_presets_are_idempotent(): void
@@ -136,11 +130,11 @@ class JobdomainFieldPresetTest extends TestCase
         $this->assertContains('siret', $codes);
         $this->assertContains('phone', $codes);
 
-        // Verify structure
+        // ADR-169: structure is code + order only (no 'required' — catalog handles mandatory)
         $first = $fields[0];
         $this->assertArrayHasKey('code', $first);
-        $this->assertArrayHasKey('required', $first);
         $this->assertArrayHasKey('order', $first);
+        $this->assertArrayNotHasKey('required', $first);
     }
 
     public function test_default_fields_helper_returns_empty_for_unknown(): void

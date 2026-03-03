@@ -24,6 +24,7 @@ class WalletLedgerTest extends TestCase
         $this->company = Company::create([
             'name' => 'Wallet Co',
             'slug' => 'wallet-co',
+            'jobdomain_key' => 'logistique',
         ]);
     }
 

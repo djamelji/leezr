@@ -59,12 +59,12 @@ class BillingDemoSeeder extends Seeder
 
         $c2 = Company::updateOrCreate(
             ['slug' => 'transfret-express'],
-            ['name' => 'TransFret Express', 'plan_key' => 'business'],
+            ['name' => 'TransFret Express', 'plan_key' => 'business', 'market_key' => 'FR', 'jobdomain_key' => 'logistique'],
         );
 
         $c3 = Company::updateOrCreate(
             ['slug' => 'colistech'],
-            ['name' => 'ColisTech', 'plan_key' => 'starter'],
+            ['name' => 'ColisTech', 'plan_key' => 'starter', 'market_key' => 'FR', 'jobdomain_key' => 'logistique'],
         );
 
         // Ensure subscriptions

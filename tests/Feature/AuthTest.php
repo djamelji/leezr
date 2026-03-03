@@ -11,6 +11,12 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+    }
+
     public function test_register_creates_user_and_company(): void
     {
         $this->get('/sanctum/csrf-cookie');
@@ -22,6 +28,7 @@ class AuthTest extends TestCase
             'password' => 'P@ssw0rd!Strong',
             'password_confirmation' => 'P@ssw0rd!Strong',
             'company_name' => 'Test Company',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $response->assertStatus(201)
@@ -42,6 +49,7 @@ class AuthTest extends TestCase
             'password' => 'P@ssw0rd!Strong',
             'password_confirmation' => 'P@ssw0rd!Strong',
             'company_name' => 'Test Company',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $response->assertStatus(201);

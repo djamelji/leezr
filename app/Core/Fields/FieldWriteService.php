@@ -2,6 +2,7 @@
 
 namespace App\Core\Fields;
 
+use App\Core\Markets\Market;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +23,7 @@ class FieldWriteService
      * @param string $scope
      * @param int|null $companyId
      */
-    public static function upsert(Model $model, array $dynamicFields, string $scope, ?int $companyId = null): void
+    public static function upsert(Model $model, array $dynamicFields, string $scope, ?int $companyId = null, ?string $marketKey = null, ?string $category = null): void
     {
         if (empty($dynamicFields)) {
             return;
@@ -35,6 +36,22 @@ class FieldWriteService
             ->whereIn('code', array_keys($dynamicFields))
             ->get()
             ->keyBy('code');
+
+        // ADR-165: filter out definitions not applicable to the company's market
+        if ($marketKey) {
+            $definitions = $definitions->filter(function ($def) use ($marketKey) {
+                $markets = $def->validation_rules['applicable_markets'] ?? null;
+
+                return $markets === null || in_array($marketKey, $markets);
+            });
+        }
+
+        // ADR-168: filter by category (base/hr/domain) — defense-in-depth
+        if ($category !== null) {
+            $definitions = $definitions->filter(function ($def) use ($category) {
+                return ($def->validation_rules['category'] ?? FieldDefinition::CATEGORY_BASE) === $category;
+            });
+        }
 
         if ($definitions->isEmpty()) {
             return;
@@ -55,7 +72,14 @@ class FieldWriteService
 
         $activeDefIds = $activationQuery->pluck('field_definition_id')->toArray();
 
-        DB::transaction(function () use ($model, $dynamicFields, $definitions, $activeDefIds) {
+        // ADR-165: resolve dial_code for phone normalization
+        $dialCode = '+33';
+        if ($marketKey) {
+            $market = Market::where('key', $marketKey)->first();
+            $dialCode = $market->dial_code ?? '+33';
+        }
+
+        DB::transaction(function () use ($model, $dynamicFields, $definitions, $activeDefIds, $dialCode) {
             foreach ($dynamicFields as $code => $value) {
                 $definition = $definitions->get($code);
                 if (!$definition) {
@@ -65,6 +89,11 @@ class FieldWriteService
                 // Only write if activation exists and is enabled
                 if (!in_array($definition->id, $activeDefIds)) {
                     continue;
+                }
+
+                // ADR-165: auto-normalize phone fields to E.164
+                if (in_array($code, ['phone', 'emergency_contact_phone']) && is_string($value) && $value !== '') {
+                    $value = PhoneNormalizerService::normalize($value, $dialCode);
                 }
 
                 FieldValue::updateOrCreate(

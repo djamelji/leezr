@@ -16,6 +16,7 @@ import { transition } from './stateMachine'
 import { createJournal } from './journal'
 import { createScheduler } from './scheduler'
 import { buildSnapshot } from './invariants'
+import { bootMachine } from './bootMachine'
 import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
 import { createChannelRouter } from '@/core/realtime/ChannelRouter'
 import { createDomainHandler } from '@/core/realtime/handlers/DomainHandler'
@@ -67,6 +68,9 @@ function resolveStore(storeId) {
   return factory()
 }
 
+// Re-export for external consumers (guards, layouts, AppShellGate)
+export { bootMachine }
+
 export const useRuntimeStore = defineStore('runtime', {
   state: () => ({
     /** @type {'cold'|'auth'|'tenant'|'features'|'ready'|'error'} */
@@ -101,8 +105,12 @@ export const useRuntimeStore = defineStore('runtime', {
     phase: state => state._phase,
     scope: state => state._scope,
     error: state => state._error,
-    isReady: state => state._phase === 'ready',
-    isBooting: state => ['cold', 'auth', 'tenant', 'features'].includes(state._phase),
+
+    /** Boot machine state — SINGLE source of truth for ready/booting/failed. */
+    bootState: () => bootMachine.state.value,
+    isReady: () => bootMachine.isReady.value,
+    isBooting: () => bootMachine.isBooting.value,
+    isFailed: () => bootMachine.isFailed.value,
     resourceStatus: state => state._resources,
 
     /** Read journal entries (touch _journalVersion for reactivity). */
@@ -147,18 +155,33 @@ export const useRuntimeStore = defineStore('runtime', {
     /**
      * Boot the runtime for a given scope.
      * Called by the router guard on first navigation.
+     *
+     * Idempotent via bootMachine:
+     * - Already READY for same scope → returns immediately (no-op)
+     * - Already BOOTING for same scope → returns existing promise (dedup)
+     * - Otherwise → starts new boot and returns promise
+     *
      * @param {'company'|'platform'|'public'} scope
+     * @returns {Promise<void>}
      */
     async boot(scope) {
-      if (this._phase !== 'cold') return
+      const promise = bootMachine.prepareBoot(scope)
+
+      // Already ready for this scope — no-op
+      if (promise === null) return
 
       this._ensureScheduler()
       this._initBroadcast()
       this._initVisibilityRefresh()
-      await _scheduler.requestBoot(scope)
+
+      // Fire scheduler (drives internal phases + calls onCommit/onFail)
+      _scheduler.requestBoot(scope)
+
+      // Await the bootMachine promise — resolves on commit() or fail()
+      await promise
 
       // ADR-125: Start SSE after boot completes for company scope
-      if (this._phase === 'ready' && scope === 'company') {
+      if (bootMachine.isReady.value && scope === 'company') {
         this._initRealtime()
       }
     },
@@ -172,6 +195,7 @@ export const useRuntimeStore = defineStore('runtime', {
       this._stopNavPoll()
       this._ensureScheduler()
       _scheduler.requestTeardown()
+      bootMachine.teardown()
     },
 
     /**
@@ -182,11 +206,17 @@ export const useRuntimeStore = defineStore('runtime', {
       // ADR-125: Disconnect SSE before switch (company channel changes)
       this._disconnectRealtime()
 
+      // Force reboot via bootMachine (same scope, force=true)
+      const promise = bootMachine.prepareBoot('company', true)
+
       this._ensureScheduler()
-      await _scheduler.requestSwitch(companyId)
+      _scheduler.requestSwitch(companyId)
+
+      // Await bootMachine promise
+      if (promise) await promise
 
       // Reconnect SSE for the new company
-      if (this._phase === 'ready') {
+      if (bootMachine.isReady.value) {
         this._initRealtime()
       }
     },
@@ -217,9 +247,19 @@ export const useRuntimeStore = defineStore('runtime', {
      * @returns {Promise<{ critical: boolean, errorKey: string|null }>}
      */
     async retryFailed() {
-      this._ensureScheduler()
+      // Prepare bootMachine for retry (force reboot from FAILED state)
+      const scope = bootMachine.scope.value || this._scope || 'company'
+      const promise = bootMachine.prepareBoot(scope, true)
 
-      return _scheduler.retryFailed()
+      this._ensureScheduler()
+      const result = await _scheduler.retryFailed()
+
+      // If the scheduler's retry didn't resolve the bootMachine (e.g., still failing),
+      // the _failBoot() or _commitReady() in scheduler handles it.
+      // But if retryFailed completed with pending promise, await it.
+      if (promise) await promise
+
+      return result
     },
 
     // ─── Broadcast handling ────────────────────────────────
@@ -364,6 +404,8 @@ export const useRuntimeStore = defineStore('runtime', {
           }
           self._journalVersion++ // trigger progress reactivity
         },
+        onCommit: () => bootMachine.commit(),
+        onFail: msg => bootMachine.fail(msg),
       })
     },
 

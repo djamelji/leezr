@@ -68,6 +68,7 @@ class BillingReconciliationTest extends TestCase
             'slug' => 'reconcile-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
 
@@ -78,6 +79,7 @@ class BillingReconciliationTest extends TestCase
             'slug' => 'other-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->companyB->memberships()->create(['user_id' => $ownerB->id, 'role' => 'owner']);
 

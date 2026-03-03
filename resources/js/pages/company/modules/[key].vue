@@ -1,27 +1,56 @@
 <script setup>
 definePage({ meta: { surface: 'structure', module: 'core.modules' } })
 
+import { defineAsyncComponent } from 'vue'
+import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
+import { resolveSettingsPanel } from '@/core/registries/settingsPanelRegistry'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const moduleStore = useModuleStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const isSaving = ref(false)
 
+const canManage = computed(() => auth.roleLevel === 'management')
+
 // Module info from catalog
 const mod = computed(() =>
   moduleStore.modules.find(m => m.key === route.params.key),
 )
 
-// Settings
+// Settings panels from capabilities (dynamic, zero per-module branching)
+const settingsPanels = computed(() => {
+  const panels = mod.value?.capabilities?.settings_panels
+  if (!panels?.length) return []
+
+  return panels
+    .slice()
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map(panel => {
+      const loader = resolveSettingsPanel(panel.component)
+
+      return {
+        ...panel,
+        resolved: loader ? defineAsyncComponent(loader) : null,
+      }
+    })
+    .filter(p => p.resolved)
+})
+
+// Settings (JSON)
 const settings = ref({})
 const settingsJson = ref('')
 const jsonError = ref('')
+
+// ADR-168b: mandatory fields info
+const mandatoryFields = ref([])
+const incompleteProfilesCount = ref(0)
 
 onMounted(async () => {
   try {
@@ -37,7 +66,9 @@ onMounted(async () => {
       return
     }
 
-    if (!mod.value.is_active) {
+    // ADR-163: Only included/active modules can be viewed
+    const state = mod.value.display_state
+    if (state !== 'included' && state !== 'active') {
       toast(t('companyModules.moduleNotActive'), 'error')
       router.push({ name: 'company-modules' })
 
@@ -48,6 +79,8 @@ onMounted(async () => {
 
     settings.value = data.settings || {}
     settingsJson.value = JSON.stringify(settings.value, null, 2)
+    mandatoryFields.value = data.mandatory_fields || []
+    incompleteProfilesCount.value = data.incomplete_profiles_count || 0
   }
   catch {
     toast(t('companyModules.failedToLoadSettings'), 'error')
@@ -100,18 +133,20 @@ const resetSettings = () => {
   jsonError.value = ''
 }
 
-const entitlementLabel = () => {
-  if (!mod.value) return ''
-  if (mod.value.type === 'core') return t('companyModules.coreAlwaysActive')
-  if (mod.value.entitlement_source === 'jobdomain') return t('companyModules.includedViaJobDomain')
-  if (!mod.value.is_entitled) {
-    if (mod.value.entitlement_reason === 'plan_required') return t('companyModules.requiresPlanLabel', { plan: mod.value.min_plan })
+const categoryChipColor = computed(() =>
+  mod.value?.type === 'core' ? 'primary' : 'info',
+)
 
-    return t('companyModules.notEntitled')
+// ADR-163: Display state chip
+const displayStateChip = computed(() => {
+  if (!mod.value) return { text: '', color: 'secondary' }
+  const map = {
+    included: { text: t('companyModules.stateIncluded'), color: 'primary' },
+    active: { text: t('companyModules.stateActive'), color: 'success' },
   }
 
-  return t('companyModules.entitled')
-}
+  return map[mod.value.display_state] || { text: mod.value.display_state, color: 'secondary' }
+})
 </script>
 
 <template>
@@ -142,7 +177,7 @@ const entitlementLabel = () => {
             :color="mod.type === 'core' ? 'primary' : 'info'"
             variant="tonal"
           >
-            <VIcon icon="tabler-puzzle" />
+            <VIcon :icon="mod.icon_name || 'tabler-puzzle'" />
           </VAvatar>
 
           <div>
@@ -151,18 +186,18 @@ const entitlementLabel = () => {
             </h5>
             <div class="d-flex align-center gap-2 mt-1">
               <VChip
-                :color="mod.is_active ? 'success' : 'error'"
+                :color="displayStateChip.color"
                 size="x-small"
               >
-                {{ mod.is_active ? t('companyModules.active') : t('companyModules.inactive') }}
+                {{ displayStateChip.text }}
               </VChip>
               <VChip
-                :color="mod.type === 'core' ? 'primary' : 'info'"
+                :color="categoryChipColor"
                 size="x-small"
+                variant="outlined"
               >
                 {{ mod.type === 'core' ? t('companyModules.coreChip') : t('companyModules.addon') }}
               </VChip>
-              <span class="text-body-2 text-medium-emphasis">{{ entitlementLabel() }}</span>
             </div>
           </div>
         </VCardText>
@@ -184,47 +219,113 @@ const entitlementLabel = () => {
         </VCardText>
       </VCard>
 
-      <!-- Settings -->
-      <VCard>
+      <!-- ADR-168b: mandatory fields info -->
+      <VCard
+        v-if="mandatoryFields.length"
+        class="mb-4"
+      >
         <VCardTitle>
           <VIcon
-            icon="tabler-settings"
+            icon="tabler-list-check"
             class="me-2"
           />
-          {{ t('companyModules.settings') }}
+          {{ t('companyModules.mandatoryFields') }}
         </VCardTitle>
-        <VCardSubtitle>
-          {{ t('companyModules.settingsSubtitle') }}
-        </VCardSubtitle>
+        <VCardSubtitle>{{ t('companyModules.mandatoryFieldsHint') }}</VCardSubtitle>
         <VCardText>
-          <VForm @submit.prevent="saveSettings">
-            <AppTextarea
-              v-model="settingsJson"
-              :label="t('companyModules.configurationJson')"
-              rows="10"
-              :error-messages="jsonError ? [jsonError] : []"
-              style="font-family: monospace;"
-              @input="jsonError = ''"
-            />
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <VChip
+              v-for="field in mandatoryFields"
+              :key="field.code"
+              color="error"
+              variant="tonal"
+              size="small"
+            >
+              {{ field.label }}
+            </VChip>
+          </div>
 
-            <div class="d-flex gap-2 mt-4">
-              <VBtn
-                type="submit"
-                :loading="isSaving"
-              >
-                {{ t('companyModules.saveSettings') }}
-              </VBtn>
-              <VBtn
-                variant="tonal"
-                color="secondary"
-                @click="resetSettings"
-              >
-                {{ t('common.reset') }}
-              </VBtn>
-            </div>
-          </VForm>
+          <VAlert
+            v-if="incompleteProfilesCount > 0"
+            type="warning"
+            variant="tonal"
+          >
+            {{ t('companyModules.incompleteProfilesAlert', { count: incompleteProfilesCount }) }}
+          </VAlert>
         </VCardText>
       </VCard>
+
+      <!-- Capability-driven settings panels -->
+      <component
+        :is="panel.resolved"
+        v-for="panel in settingsPanels"
+        :key="panel.key"
+        class="mb-4"
+      />
+
+      <!-- No configurable settings -->
+      <VCard
+        v-if="!settingsPanels.length"
+        class="mb-4"
+      >
+        <VCardText class="text-center pa-8 text-medium-emphasis">
+          <VIcon
+            icon="tabler-settings-off"
+            size="48"
+            class="mb-4 d-block mx-auto"
+          />
+          <p class="text-body-1">
+            {{ t('companyModules.noSettings') }}
+          </p>
+        </VCardText>
+      </VCard>
+
+      <!-- Advanced Settings (JSON) — collapsed, permission-gated -->
+      <VExpansionPanels
+        v-if="canManage"
+        class="mb-4"
+      >
+        <VExpansionPanel>
+          <VExpansionPanelTitle>
+            <VIcon
+              icon="tabler-code"
+              class="me-2"
+            />
+            {{ t('companyModules.advancedSettings') }}
+          </VExpansionPanelTitle>
+          <VExpansionPanelText>
+            <p class="text-body-2 text-medium-emphasis mb-4">
+              {{ t('companyModules.advancedSettingsHint') }}
+            </p>
+            <VForm @submit.prevent="saveSettings">
+              <AppTextarea
+                v-model="settingsJson"
+                :label="t('companyModules.configurationJson')"
+                rows="10"
+                :error-messages="jsonError ? [jsonError] : []"
+                style="font-family: monospace;"
+                @input="jsonError = ''"
+              />
+
+              <div class="d-flex gap-2 mt-4">
+                <VBtn
+                  type="submit"
+                  :loading="isSaving"
+                >
+                  {{ t('companyModules.saveSettings') }}
+                </VBtn>
+                <VBtn
+                  variant="tonal"
+                  color="secondary"
+                  @click="resetSettings"
+                >
+                  {{ t('common.reset') }}
+                </VBtn>
+              </div>
+            </VForm>
+          </VExpansionPanelText>
+        </VExpansionPanel>
+      </VExpansionPanels>
     </template>
   </div>
 </template>

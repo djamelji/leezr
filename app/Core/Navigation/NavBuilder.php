@@ -108,15 +108,11 @@ class NavBuilder
         }
 
         // 4. Filter: item-level jobdomain (company only)
+        // ADR-167a: jobdomain_key is always present — no null check needed
         if ($company) {
-            $jobdomain = $company->jobdomain;
-            $jobdomainKey = $jobdomain?->key;
+            $jobdomainKey = $company->jobdomain_key;
             $items = array_filter($items, function (NavItem $item) use ($jobdomainKey) {
                 if ($item->jobdomains === null) {
-                    return true;
-                }
-
-                if ($jobdomainKey === null) {
                     return true;
                 }
 

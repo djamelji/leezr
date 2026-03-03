@@ -35,7 +35,7 @@ class CompanyMemberCredentialTest extends TestCase
         $this->admin = User::factory()->create();
         $this->member = User::factory()->create();
 
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $adminRole = $this->setUpCompanyRbac($this->company);
 

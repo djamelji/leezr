@@ -60,7 +60,7 @@ class DevSeeder extends Seeder
 
         $company = Company::updateOrCreate(
             ['slug' => 'leezr-logistics'],
-            ['name' => 'Leezr Logistics', 'plan_key' => 'pro'],
+            ['name' => 'Leezr Logistics', 'plan_key' => 'pro', 'market_key' => 'FR', 'jobdomain_key' => 'logistique'],
         );
 
         $company->memberships()->updateOrCreate(

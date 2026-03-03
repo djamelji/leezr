@@ -25,7 +25,7 @@ class InvitationTest extends TestCase
         CompanyPermissionCatalog::sync();
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);
         $this->activateCompanyModules($this->company);
 

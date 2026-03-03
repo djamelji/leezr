@@ -59,6 +59,7 @@ class AdminInvoiceMutationTest extends TestCase
             'slug' => 'test-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->company->memberships()->create([
             'user_id' => $owner->id,

@@ -1,14 +1,13 @@
 <script setup>
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
-const router = useRouter()
 const platformAuth = usePlatformAuthStore()
 
 const userData = computed(() => platformAuth.user)
 
 const logout = async () => {
   await platformAuth.logout()
-  await router.push('/platform/login')
+  window.location.href = '/platform/login'
 }
 </script>
 

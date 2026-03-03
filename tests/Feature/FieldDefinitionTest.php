@@ -47,7 +47,7 @@ class FieldDefinitionTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure(['field_definitions'])
-            ->assertJsonCount(6, 'field_definitions');
+            ->assertJsonCount(24, 'field_definitions');
     }
 
     public function test_can_filter_field_definitions_by_scope(): void

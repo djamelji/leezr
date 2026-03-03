@@ -1357,7 +1357,7 @@ definePage({
 
 ---
 
-### ADR-064 — Deployment Safety Hardening (R4.2.1)
+## ADR-064 — Deployment Safety Hardening (R4.2.1)
 
 - **Date** : 2026-02-16 (révisé 2026-02-17)
 - **Statut** : Accepté (révisé — production gate retirée)
@@ -3910,7 +3910,7 @@ Caractéristiques :
 - **Auto-refresh** : après mutation, re-fetch la page courante d'invoices
 - Aucune action sur les autres onglets (Dunning, Payments, Credit Notes, Wallets, Subscriptions)
 
-#### Phase D2c : Advanced Admin Mutations (ADR-136)
+## ADR-136 — Advanced Admin Mutations (Billing Phase D2c)
 
 **Date** : 2026-02-27
 **Statut** : Livré
@@ -3982,7 +3982,7 @@ Caractéristiques :
 - `platform_settings.billing` JSON blob conservé temporairement (supprimé en LOT 8)
 - `Invoice.amount` conservé comme synonyme de `total` (backward compat)
 
-#### Phase D3a : Stripe SDK Bootstrap & Webhook Security (ADR-137)
+## ADR-137 — Stripe SDK Bootstrap & Webhook Security (Billing Phase D3a)
 
 **Date** : 2026-02-27
 **Statut** : Livré
@@ -4035,7 +4035,7 @@ Stripe SDK installé (`stripe/stripe-php` v19.4), vérification de signature web
 - `tests/Feature/StripeWebhookSecurityTest.php` (créé — 7 tests)
 - `tests/Feature/WebhookIdempotencyTest.php` (modifié — status assertion)
 
-#### Phase D3b : Stripe Webhook State Synchronization (ADR-138)
+## ADR-138 — Stripe Webhook State Synchronization (Billing Phase D3b)
 
 **Date** : 2026-02-27
 **Statut** : Livré
@@ -4095,7 +4095,7 @@ Business event handlers pour webhooks Stripe. 3 event types traités : `payment_
 
 ---
 
-### ADR-139 — Phase D3c : Provider-First Collection & Refund Chaining
+## ADR-139 — Provider-First Collection & Refund Chaining (Billing Phase D3c)
 
 **Date** : 2026-02-27
 **Statut** : Implémenté
@@ -4206,7 +4206,7 @@ private const RATE_LIMIT_DECAY = 60;
 
 ---
 
-### ADR-140 — Phase D3d : Reconciliation, Drift Detection & Alerting (Finance Hardening)
+## ADR-140 — Reconciliation, Drift Detection & Alerting (Billing Phase D3d)
 
 **Date** : 2026-02-27
 **Statut** : Implémenté
@@ -4318,7 +4318,7 @@ billing:reconcile {--company=} {--dry-run}
 
 ---
 
-### ADR-141 — Phase D3e : Auto-Repair & Financial Forensics (Controlled, Auditable, Reversible)
+## ADR-141 — Auto-Repair & Financial Forensics (Billing Phase D3e)
 
 **Date** : 2026-02-27
 **Statut** : Implémenté
@@ -4436,7 +4436,7 @@ billing:reconcile {--company=} {--dry-run} {--repair}
 
 ---
 
-### ADR-142 — Phase D3f : Immutable Financial Ledger (Enterprise-Grade Accounting Layer)
+## ADR-142 — Immutable Financial Ledger (Billing Phase D3f)
 
 **Date** : 2026-02-27
 **Statut** : Implémenté
@@ -5247,6 +5247,1549 @@ self::assertNotFrozen($companyId);
   - `resources/js/layouts/components/NavbarGlobalWidgets.vue` (modified — conditional toggle)
   - `app/Core/Jobdomains/JobdomainRegistry.php` (modified — theme defaults)
   - `routes/company.php`, `routes/platform.php` (modified — routes)
+
+---
+
+## ADR-160 — Boot Machine: Single Source of Truth for Boot State
+
+**Date** : 2026-02-26
+**Statut** : Accepté
+**Dépend de** : ADR-153
+
+#### Contexte
+
+ADR-153 fixed the empty-sidebar-after-login bug with 4 defense layers. However, the root cause remained: the boot system had no single source of truth for "is the app ready?" The runtime's `boot()` method was fire-and-forget (not awaitable), the guard used a fragile `needsBoot` heuristic with a `navStore.isHydrated` band-aid, and `whenReady(8000)` silently swallowed timeouts.
+
+Race conditions:
+1. Guard calls `runtime.boot()` (fire-and-forget), then `await whenReady(8000)` — timeout swallowed, guard proceeds without boot complete
+2. Login pages call `runtime.teardown()` then `router.push()` — boot triggered by guard in new page context, layout mounts before data loads
+3. `_resolveReady()` called in 11 scattered places in scheduler — no single commit point
+4. `boot()` has `if (this._phase !== 'cold') return` — no re-entry for scope change or error recovery
+
+#### Décision
+
+Introduce `bootMachine.js` — a standalone Vue reactive module (NOT a Pinia store) with 4 states: COLD → BOOTING → READY | FAILED.
+
+**Architecture**:
+- **bootMachine** = external state (what guards and layouts see): COLD, BOOTING, READY, FAILED
+- **stateMachine** (existing) = internal state (detailed progress): cold, auth, tenant, features, ready, error
+- **scheduler** drives internal transitions and calls `bootMachine.commit()`/`bootMachine.fail()`
+
+**Key design decisions**:
+- `prepareBoot(scope, force?)` handles idempotency: returns null (already READY, no-op), existing promise (already BOOTING, dedup), or new promise (boot needed)
+- `commit()` is the SINGLE place where READY is set — called by scheduler
+- `fail(message)` is the SINGLE place where FAILED is set — called by scheduler
+- `teardown()` resets to COLD — called by runtime.teardown() only
+- `runtime.boot(scope)` is now fully awaitable — guards use `await runtime.boot(scope)` with no timeout
+- Login pages call `await runtime.boot(scope)` BEFORE `router.replace(target)` — layout never mounts with empty data
+- AppShellGate reads `bootMachine.isReady`/`bootMachine.isFailed` instead of runtime phase strings
+- Internal `_phase` kept for progress tracking in dev overlay
+- Layout nav hydration gates (`navStore.*Loaded`) kept as defense-in-depth
+
+#### Conséquences
+
+- No overlay freeze after login — boot is awaitable, not fire-and-forget
+- No empty sidebar ever — login pages await boot before redirect
+- No race conditions — single source of truth, dedup, no timeout swallowing
+- No manual overlay toggles — overlay state derived from bootMachine.isBooting
+- Guard simplified: no `needsBoot` heuristic, no `whenReady`, no `navStore.isHydrated` check
+- `whenReady()` and `whenAuthResolved()` kept for backwards compat (devtools stress tests)
+- Tests: 1137 passing, pnpm build clean
+
+#### Fichiers modifiés
+
+- `resources/js/core/runtime/bootMachine.js` (created — 130 lines)
+- `resources/js/core/runtime/scheduler.js` (modified — `_commitReady()` + `_failBoot()`, `onCommit`/`onFail` deps)
+- `resources/js/core/runtime/runtime.js` (modified — boot() idempotent via bootMachine, teardown() resets bootMachine)
+- `resources/js/plugins/1.router/guards.js` (simplified — `await runtime.boot(scope)`, no whenReady)
+- `resources/js/layouts/components/AppShellGate.vue` (modified — reads bootMachine)
+- `resources/js/layouts/default.vue` (modified — session governance uses bootMachine.isReady)
+- `resources/js/layouts/platform.vue` (modified — session governance uses bootMachine.isReady)
+- `resources/js/pages/login.vue` (modified — await boot before redirect)
+- `resources/js/pages/register.vue` (modified — await boot before redirect)
+- `resources/js/pages/platform/login.vue` (modified — teardown + await boot before redirect)
+- `tests/Feature/NavHydrationGateTest.php` (modified — updated for ADR-160 bootMachine)
+
+## ADR-161 : Header Widgets Capability-Driven (No Hardcoded Navbar Toggle)
+
+- **Date** : 2026-02-26
+- **Contexte** : `NavbarGlobalWidgets.vue` hardcodait la visibilité du theme toggle (`if (route.meta?.platform) return true`). Le module system n'avait pas de concept de "header widgets" — `Capabilities` n'avait que `navItems`, `routeNames`, `middlewareKey`.
+- **Décision** : Ajouter `headerWidgets` aux `Capabilities`. Chaque module peut déclarer des widgets à afficher dans la barre de navigation. Un `HeaderWidgetBuilder` (miroir de `NavBuilder`) collecte les widgets des modules actifs, filtre par permissions, trie par `sortOrder`. Le endpoint `/api/nav` retourne `header_widgets` en plus de `groups`. Le frontend utilise un registre de composants pour le rendu dynamique.
+- **Conséquences** :
+  - Tout header widget DOIT être déclaré dans les capabilities d'un module
+  - Désactiver un module supprime ses widgets
+  - Backend = source de vérité pour la visibilité (plus de checks client-side moduleStore/authStore dans le layout)
+  - Platform admins voient les widgets de TOUS les scopes (admin + company) via `HeaderWidgetBuilder::forAdmin()`
+  - Company layouts (`DefaultLayoutWith*`) incluent maintenant `NavbarGlobalWidgets` (unification avec platform)
+  - Ajouter un nouveau widget : déclarer dans le manifest du module + ajouter au registre frontend `widgetComponents`
+- **Dépend de** : ADR-113 (module engine), ADR-159 (core.theme module)
+- **Remplace** : La logique hardcodée de ADR-159
+
+#### Fichiers modifiés
+
+- `app/Core/Modules/Capabilities.php` (modified — added `headerWidgets` property)
+- `app/Modules/Core/Theme/ThemeModule.php` (modified — declares `headerWidgets` capability)
+- `app/Core/Navigation/HeaderWidgetBuilder.php` (created — widget collection + filtering)
+- `app/Modules/Infrastructure/Navigation/Http/NavController.php` (modified — returns `header_widgets`)
+- `resources/js/core/stores/nav.js` (modified — `_platformWidgets`, `_companyWidgets` state/getters)
+- `resources/js/layouts/components/NavbarGlobalWidgets.vue` (rewritten — dynamic rendering via `widgetComponents` registry)
+- `resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue` (modified — added `NavbarGlobalWidgets`)
+- `resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue` (modified — added `NavbarGlobalWidgets`)
+- `tests/Feature/HeaderWidgetCapabilityTest.php` (created — 9 tests)
+
+## ADR-162 : Module Marketplace — Company Modules App Store Model
+
+- **Date** : 2026-03-01
+- **Contexte** : `/company/modules` était un écran technique d'administration : VDataTable pour la liste, éditeur JSON brut pour les paramètres, logique conditionnelle hardcodée (`if module === 'core.theme'`) pour les panels spécifiques. Ce n'est pas acceptable pour un SaaS commercial. Les modules doivent se comporter comme une marketplace produit (modèle App Store / Prestashop).
+- **Décision** :
+  1. **Capabilities.settingsPanels** : Extension de `Capabilities` avec `settingsPanels` (même pattern que `headerWidgets`). Chaque module déclare ses panels de configuration avec `key`, `component`, `label`, `icon`, `permission`, `sortOrder`.
+  2. **Frontend Registry** : `settingsPanelRegistry.js` mappe les noms de composants déclarés par le backend vers des imports lazy Vue. Zéro branchement conditionnel par module dans le renderer.
+  3. **Catalog View** : `index.vue` refactoré de VDataTable vers un grid de cards (pattern AcademyMyCourses). Filtre par catégorie + recherche. Chaque card : icône, nom, description, badge catégorie, statut, boutons d'action.
+  4. **Detail Page** : `[key].vue` refactoré pour rendre dynamiquement les panels déclarés via capabilities. JSON déplacé dans une section "Advanced" (VExpansionPanel collapsed, management-only). Message "No configurable settings" si aucun panel déclaré.
+  5. **Category derivée** : `core` / `addon` / `premium` / `industry` calculée depuis `type`, `pricing_mode`, `minPlan`, `compatibleJobdomains`. Aucun champ DB ajouté.
+- **Conséquences** :
+  - Tout panel de settings DOIT être déclaré dans les capabilities du module
+  - Ajouter un nouveau panel : déclarer dans le manifest + ajouter au registre frontend `settingsPanelRegistry`
+  - Aucune logique conditionnelle par module dans les pages de rendu
+  - JSON visible uniquement dans la section Advanced (collapsed, permission-gated)
+  - La catégorie est un calcul dérivé, pas un champ stocké
+- **Dépend de** : ADR-113 (module engine), ADR-161 (headerWidgets pattern)
+
+#### Fichiers modifiés
+
+- `app/Core/Modules/Capabilities.php` (modified — added `settingsPanels` property)
+- `app/Modules/Core/Theme/ThemeModule.php` (modified — declares `settingsPanels` capability)
+- `app/Core/Modules/ModuleCatalogReadModel.php` (modified — added `category` + `settings_panels` to response)
+- `resources/js/core/registries/settingsPanelRegistry.js` (created — component name -> lazy import map)
+- `resources/js/pages/company/modules/index.vue` (rewritten — card grid marketplace with filters)
+- `resources/js/pages/company/modules/[key].vue` (rewritten — capability-driven dynamic panels + Advanced JSON)
+- `resources/js/plugins/i18n/locales/en.json` (modified — 12 new i18n keys)
+- `resources/js/plugins/i18n/locales/fr.json` (modified — 12 new i18n keys)
+- `tests/Feature/ModuleMarketplaceTest.php` (created — 10 tests)
+
+---
+
+## ADR-163 : Intelligent Module Marketplace Engine — Display State Driven UI
+
+- **Date** : 2026-03-01
+- **Contexte** : Après ADR-162, le catalogue modules exposait des booleans bruts (`is_entitled`, `is_active`, `entitlement_reason`) et le frontend reconstituait la logique d'affichage à partir de ces valeurs. Pas de filtrage des modules incompatibles avec le jobdomain de l'entreprise. Pas de segmentation marketplace (onglets). Pas d'information d'upsell (quel plan upgrader).
+- **Décision** :
+  1. **ModuleDisplayState enum** : 7 valeurs sémantiques (`system`, `included`, `active`, `available`, `locked_plan`, `locked_addon`, `contact_sales`). Le frontend ne calcule plus rien — il rend un seul `display_state`.
+  2. **ModuleDisplayStateResolver** : Pipeline de résolution en 9 étapes strictement ordonnées (first match wins). Ordre : hidden→SYSTEM, globally disabled→SYSTEM, plan requirement→LOCKED_PLAN, addon not entitled→LOCKED_ADDON, core→INCLUDED, jobdomain default→INCLUDED, active+entitled→ACTIVE, entitled→AVAILABLE, fallback→CONTACT_SALES.
+  3. **Manifest extension** : `ModuleManifest` étendu avec `hidden` (bool, default false) et `marketplace` (array, pour `featured`, `recommended_weight`).
+  4. **Catalog filtering** : `ModuleCatalogReadModel` filtre les modules incompatibles avec le jobdomain de l'entreprise et exclut les modules SYSTEM du catalogue. Nouveaux champs : `display_state`, `upgrade_target_plan`, `purchase_mode`, `is_featured`, `is_included`.
+  5. **Tab segmentation** : `index.vue` refactoré avec VTabs : Add-ons (available/locked), Included, Active, All (avec filtres catégorie + recherche). Actions des cards pilotées par `display_state` : Configure (seulement si `settings_panels` existe), Activate, Upgrade, Purchase, Contact Sales.
+  6. **Detail page** : `[key].vue` garde l'accès uniquement aux modules `included` ou `active`. Chips d'état remplacent les anciens chips entitlement.
+  7. **Chips layout** : Catégorie en haut, état en dessous — empilés verticalement (`flex-column align-end`) pour éviter le chevauchement sur textes longs. Onglet Add-ons : uniquement chip catégorie (l'action du bouton suffit). Onglet All : deux chips empilés.
+  8. **Recherche animée upsell** : Barre de recherche pleine largeur avec placeholder animé custom (overlay + Vue `<Transition>`). Partie fixe « Rechercher un module : » + partie animée (icône + nom du module) qui slide du haut vers le bas toutes les 3s. Modules featured en premier dans la rotation. `overflow: hidden` sur le slot animé. Présent dans les onglets Add-ons et All.
+- **Conséquences** :
+  - Le frontend est un pur renderer — zéro logique d'entitlement dans le code Vue
+  - `display_state` est la source de vérité unique pour l'affichage
+  - Les modules SYSTEM ne sont jamais exposés au frontend
+  - Les modules incompatibles avec le jobdomain sont filtrés au niveau catalogue
+  - `LOCKED_PLAN` prend priorité sur l'activation (même si le module a un record d'activation)
+  - Les champs ADR-162 (`is_entitled`, `is_active`, `category`) restent pour backward compatibility
+  - Le bouton « Configurer » n'apparaît que si le module a des `settings_panels` déclarés
+  - Le placeholder animé sert d'outil de **passive discovery / upsell** : expose les noms des modules disponibles avec featured en priorité
+- **Dépend de** : ADR-162 (marketplace model), ADR-113 (module engine), ADR-101 (plan registry)
+
+#### Fichiers créés
+
+- `app/Core/Modules/ModuleDisplayState.php` (enum — 7 valeurs)
+- `app/Core/Modules/ModuleDisplayStateResolver.php` (pipeline de résolution 9 étapes)
+- `tests/Feature/ModuleDisplayStateResolverTest.php` (19 tests, 156 assertions)
+
+#### Fichiers modifiés
+
+- `app/Core/Modules/ModuleManifest.php` (ajout `hidden` + `marketplace` properties)
+- `app/Core/Modules/ModuleCatalogReadModel.php` (filtrage jobdomain/SYSTEM, nouveaux champs display_state)
+- `resources/js/pages/company/modules/index.vue` (tab segmentation, display_state cards, chips layout vertical, recherche animée upsell avec overlay slide, bouton Configurer conditionnel)
+- `resources/js/pages/company/modules/[key].vue` (guard display_state + chips sémantiques)
+- `resources/js/plugins/i18n/locales/en.json` (~17 nouvelles clés i18n dont `searchModuleHint`, `noSearchResults`)
+- `resources/js/plugins/i18n/locales/fr.json` (~17 nouvelles clés i18n dont `searchModuleHint`, `noSearchResults`)
+
+---
+
+## ADR-164 : Actor Profiles & Role-Scoped Fields (Étape 1 — Backend)
+
+- **Date** : 2026-03-01
+- **Contexte** : Après ADR-049/050/052 (Company RBAC), les rôles définissent des **permissions** (ce qu'un acteur peut faire). Après ADR-039/040/042 (Field System), les champs définissent des **données** (ce qu'une entité stocke). Mais il n'y a aucun lien entre les deux : un « driver » et un « manager » voient les mêmes champs dans les formulaires membres. Le jobdomain seed `default_fields` globalement à tous les membres, sans distinction par rôle.
+- **Décision** :
+  1. **`field_config` JSON sur CompanyRole** : Colonne nullable ajoutée à `company_roles`. Chaque entrée : `{code, required, visible, order, group (optionnel), scope}`. Permet de scoper les champs par rôle.
+  2. **Override layer, pas whitelist** : `field_config` est une couche d'override. Les champs mentionnés dedans reçoivent les overrides `visible/required/order/group`. Les champs actifs **NON mentionnés** dans `field_config` restent visibles par défaut (`visible=true`, `required=original`). Cela garantit que les nouveaux champs ajoutés par la plateforme ou les modules sont immédiatement visibles sans mise à jour manuelle des rôles.
+  3. **Pas de table `actor_types` globale** : Les profils métier vivent exclusivement dans `default_roles` du jobdomain. Un jobdomain définit ses rôles/profils (driver/dispatcher/cook/seller…), point.
+  4. **`default_roles` conservé** (pas de renommage en `default_profiles`). On ajoute une clé `fields` dans chaque définition de rôle, aux côtés des `bundles` existants. Zero churn sémantique tant qu'il n'y a pas 2+ jobdomains en production.
+  5. **FieldResolverService** : Nouveau paramètre optionnel `$roleKey`. Si fourni et que le rôle a un `field_config` non-null, applique les overrides. Si null → comportement actuel (tous les champs activés retournés). Backward compatible à 100%.
+  6. **FieldValidationService** : Même paramètre optionnel `$roleKey`, même logique d'override.
+  7. **JobdomainGate::assignToCompany()** : Seed `field_config` depuis `default_roles[role].fields` UNIQUEMENT si `field_config` est actuellement null. Ne jamais écraser les personnalisations existantes.
+  8. **FieldConfigHealthCheck** : Service de diagnostic qui détecte les références orphelines (codes dans `field_config` qui ne correspondent à aucun champ actif).
+  9. **Zero coupling module→fields automatique** : Pas d'auto-activation de champs quand un module s'active. Futur : `suggestedFields` sur ModuleManifest + UX "suggestion" dans la config du module.
+  10. **Codes inconnus ignorés silencieusement** : Le resolver ignore les codes de `field_config` qui ne correspondent à aucun champ résolu. Le health-check les détecte pour les admins.
+- **Conséquences** :
+  - Chaque rôle peut avoir un formulaire de champs différent (driver ne voit pas `job_title`, manager le voit en required)
+  - Les nouveaux champs platform/module/custom sont immédiatement visibles pour tous les rôles (override layer, pas whitelist)
+  - Les entreprises peuvent personnaliser les champs par rôle (field_config éditable) sans perdre les mises à jour futures
+  - Le jobdomain ne seed `field_config` qu'une seule fois (first-time only), respectant les personnalisations
+  - Étape 1 = backend only. Étape 2 = frontend (formulaire membre contextuel + settings rôle×champs). Étape 3 = module suggested fields + field groups UX.
+- **Dépend de** : ADR-039 (field system), ADR-049/050 (RBAC), ADR-052 (role presets), ADR-134 (jobdomain immutability)
+
+#### Fichiers créés
+
+- `database/migrations/2026_03_01_164001_add_field_config_to_company_roles.php` (migration JSON nullable)
+- `app/Core/Fields/FieldConfigHealthCheck.php` (diagnostic service)
+- `tests/Feature/ActorProfileFieldResolutionTest.php` (~16 tests)
+
+#### Fichiers modifiés
+
+- `app/Company/RBAC/CompanyRole.php` (ajout `field_config` fillable + cast + `fieldConfigFor()` helper)
+- `app/Core/Fields/FieldResolverService.php` (paramètre `$roleKey` + override layer logic)
+- `app/Core/Fields/FieldValidationService.php` (paramètre `$roleKey` + override layer logic)
+- `app/Core/Jobdomains/JobdomainRegistry.php` (ajout `fields` dans chaque `default_roles` entry)
+- `app/Core/Jobdomains/JobdomainGate.php` (seed `field_config` only-if-null dans `assignToCompany()`)
+
+---
+
+## ADR-164b : Actor Profiles — Étape 2 : Role-Aware Member UI + Jobdomain Role Field Config
+
+- **Date** : 2026-03-01
+- **Contexte** : ADR-164 Étape 1 a ajouté `field_config` sur `CompanyRole` et la logique d'override dans `FieldResolverService` / `FieldValidationService`, mais aucun endpoint ni frontend ne passait le `roleKey`. Le système de champs restait role-agnostic à l'exécution.
+- **Décision** :
+  1. **API inject roleKey** : `CompanyUserProfileReadModel::get()` accepte `$roleKey` optionnel. `MembershipController::show()` et `update()` résolvent le roleKey depuis la relation `companyRole`. Nouvel endpoint `GET /company/members/{id}/fields?role_key=xxx` pour le preview dynamique.
+  2. **Validation role-aware** : `UpdateMemberRequest` résout le roleKey cible (nouveau rôle si `company_role_id` dans la requête, rôle actuel sinon) et passe à `FieldValidationService::rules()`.
+  3. **CompanyRoleController CRUD** : `store()` et `update()` acceptent `field_config` (array nullable). Le champ est exposé dans les réponses JSON via le cast Eloquent.
+  4. **Jobdomain validateDefaultRoles** : Accepte la clé `fields` dans les définitions de rôle avec validation code obligatoire par entrée.
+  5. **Member Detail UI** : Le `MemberProfileForm` émet `role-change` quand le sélecteur de rôle change. Le parent `[id].vue` intercepte l'événement, appelle `fetchMemberFields(id, roleKey)` et met à jour les champs dynamiques en temps réel. Le tab "Custom Fields" séparé est supprimé — les champs dynamiques sont intégrés dans l'onglet Overview.
+  6. **DynamicFormRenderer groupes** : Support optionnel du rendu groupé. Quand les champs ont un attribut `group`, ils sont regroupés sous des headers de section. Sans groupes, le rendu reste plat (backward compat).
+  7. **Company Roles drawer** : Section "Configuration des champs" ajoutée après les permissions. Table inline avec colonnes Visible/Required/Order/Group par champ activé `company_user`. Le `field_config` est envoyé dans le payload de create/update.
+  8. **Platform Jobdomains role drawer** : Section "Field Overrides" ajoutée après les capabilities. Même UX de table inline, données sauvegardées dans `default_roles[key].fields`. Badge compteur de champs dans le tableau des rôles.
+  9. **Préservation des valeurs** : Aucune suppression silencieuse de `FieldValue` lors d'un changement de rôle. `FieldWriteService` reste un upsert partiel. Les valeurs des champs rendus invisibles persistent en base et réapparaissent si le rôle change.
+- **Conséquences** :
+  - Le formulaire membre s'adapte dynamiquement au rôle sélectionné (champs apparaissent/disparaissent sans rechargement de page)
+  - Les admins company peuvent configurer visible/required/order/group par champ pour chaque rôle
+  - Les admins platform peuvent préconfigurer les field overrides dans les rôles par défaut du jobdomain
+  - Les données de champs ne sont jamais perdues lors d'un changement de rôle
+  - Badge "Profil champs" visible sur les rôles avec field_config configuré
+- **Dépend de** : ADR-164 (Étape 1)
+
+#### Fichiers créés
+
+- `tests/Feature/MemberRoleAwareFieldTest.php` (8 tests HTTP, 24 assertions)
+
+#### Fichiers modifiés
+
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` (ajout `$roleKey` param)
+- `app/Modules/Core/Members/Http/MembershipController.php` (roleKey dans show/update + méthode `fields()`)
+- `app/Modules/Core/Members/Http/Requests/UpdateMemberRequest.php` (validation role-aware)
+- `app/Modules/Core/Roles/Http/CompanyRoleController.php` (field_config dans store/update)
+- `app/Modules/Platform/Jobdomains/Http/JobdomainController.php` (validation `fields` dans validateDefaultRoles)
+- `routes/company.php` (route GET members/{id}/fields)
+- `resources/js/modules/company/members/members.store.js` (action `fetchMemberFields`)
+- `resources/js/company/components/MemberProfileForm.vue` (emit `role-change` + champs dynamiques inline)
+- `resources/js/pages/company/members/[id].vue` (handler role change + refetch + suppression tab Custom Fields)
+- `resources/js/core/components/DynamicFormRenderer.vue` (rendu groupé optionnel)
+- `resources/js/pages/company/roles.vue` (section field config dans drawer + badge)
+- `resources/js/pages/platform/jobdomains/[id].vue` (fields dans role form/drawer/submit + badge)
+- `resources/js/plugins/i18n/locales/en.json` (13 clés ajoutées)
+- `resources/js/plugins/i18n/locales/fr.json` (13 clés ajoutées)
+
+---
+
+## ADR-164c : Logistics Fields V1 — Contenu métier complet
+
+- **Date** : 2026-03-01
+- **Contexte** : L'infrastructure field_config (ADR-164 Steps 1-2) est en place mais le contenu métier est quasi vide : seulement 2 champs `company_user` (phone, job_title) pour 4 rôles logistiques. Un audit métier (perspective DRH) a identifié le besoin de 30 nouveaux champs couvrant base commune, chauffeur, dispatcher et management.
+- **Décision** : Implémenter le contenu métier complet en 6 phases :
+  1. **FieldDefinitionCatalog** — 30 nouvelles définitions system `company_user` : 10 base commune (address, birth_date, nationality, social_security_number, iban, contract_type, hire_date, employee_status, emergency_contact_name/phone), 8 chauffeur (license_number/category/expiry, adr_certified, vehicle_type, driving_experience_years, driver_availability, badge_id), 6 dispatcher (logistics_experience_years, spoken_languages, it_proficiency, geographic_zone, work_schedule, work_mode), 6 management (hierarchy_level, authorized_budget, department, direct_reports_to, signature_authorized, invoice_validation_access)
+  2. **JobdomainRegistry** — `default_fields` étendu à 35 entrées, `default_roles` field_config complet (30 entrées/rôle avec groupes contact/identity/admin/driver/dispatch/management), bundles permissions mis à jour (dispatcher +shipments.delivery, ops_manager +members.team_management +roles.governance +jobdomain.info, manager/ops_manager +members.sensitive_data)
+  3. **Permission `members.sensitive_read`** — Nouvelle permission admin + bundle `members.sensitive_data` dans MembersModule
+  4. **Commande Artisan `jobdomain:sync-logistics-fields`** — Synchronise les field activations manquantes pour les entreprises existantes (--dry-run supporté)
+  5. **Masquage données sensibles** — `FieldResolverService` accepte `$canReadSensitive` (5ème param, default true). IBAN et social_security_number masqués (****1234) si l'utilisateur n'a pas `members.sensitive_read`. Flag `sensitive` stocké dans `validation_rules` JSON (pas de nouvelle colonne)
+  6. **Tests** — 18 tests d'intégration (LogisticsFieldsIntegrationTest) + mise à jour des tests existants (32 champs au lieu de 2)
+- **Conséquences** :
+  - 32 champs `company_user` au total (2 existants + 30 nouveaux), 36 FieldDefinitions system au total
+  - Chaque rôle logistique a un profil de champs complet avec visibilité/obligation contextualisée
+  - Données sensibles (IBAN, sécu) protégées par permission
+  - Entreprises existantes synchronisables via `php artisan jobdomain:sync-logistics-fields`
+  - Aucune nouvelle table, aucune migration, aucun refactor majeur
+  - i18n complet FR/EN pour les 30 labels, 6 groupes, et toutes les options select
+
+### Fichiers créés
+- `app/Console/Commands/SyncLogisticsFieldsCommand.php`
+- `tests/Feature/LogisticsFieldsIntegrationTest.php`
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldDefinitionCatalog.php` (30 nouvelles définitions)
+- `app/Core/Fields/FieldResolverService.php` (masquage sensitif, SENSITIVE_CODES, mask())
+- `app/Core/Jobdomains/JobdomainRegistry.php` (default_fields + default_roles complets)
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` (param canReadSensitive)
+- `app/Modules/Core/Members/MembersModule.php` (permission + bundle sensitive_data)
+- `app/Modules/Core/Members/Http/MembershipController.php` (check sensitive_read dans show/fields/update)
+- `resources/js/plugins/i18n/locales/en.json` (fieldGroups, fieldLabels, fieldOptions)
+- `resources/js/plugins/i18n/locales/fr.json` (idem)
+- `tests/Feature/ActorProfileFieldResolutionTest.php` (counts 2→32)
+- `tests/Feature/CompanyPermissionTest.php` (admin perms 11→12)
+- `tests/Feature/FieldDefinitionTest.php` (count 6→36)
+
+---
+
+## ADR-167a : Jobdomain — Invariant structurel obligatoire
+
+- **Date** : 2026-03-01
+- **Contexte** : Le jobdomain était optionnel (pivot `company_jobdomain`, accessor nullable, registration `sometimes|nullable`). Un état sans jobdomain est invalide — le jobdomain est constitutif de l'identité métier d'une company. Aucune fonctionnalité (modules, fields, navigation, entitlements) ne peut fonctionner sans.
+- **Décision** : Le jobdomain est un **invariant structurel**. Toute company DOIT avoir un `jobdomain_key`. Aucune valeur par défaut métier, aucun fallback silencieux, aucun null check défensif.
+- **Principes** :
+  1. **Absence = état invalide** — le système rejette, ne compense pas
+  2. **Aucun default métier** — pas de fallback `'logistique'` implicite en production
+  3. **Exception explicite** — si un jobdomain n'existe pas en base → RuntimeException claire
+  4. **Column NOT NULL** — source de vérité = `companies.jobdomain_key`, pas le pivot
+- **Implémentation** :
+  1. **Migration 2 phases** — phase 1 : ajout `jobdomain_key` nullable + backfill depuis pivot + orphan guard (abort si des companies n'ont pas de jobdomain). Phase 2 : NOT NULL en MySQL (skip SQLite)
+  2. **Company model** — `$fillable` + accessor `getJobdomainAttribute(): Jobdomain` (non-nullable, RuntimeException si introuvable)
+  3. **Registration** — `jobdomain_key` required dans `RegisterRequest`, plus de `sometimes|nullable`
+  4. **AuthController** — `jobdomain_key` passé au `Company::create()`, pas de fallback conditionnel
+  5. **Factory** — `'jobdomain_key' => 'logistique'` dans la définition
+  6. **Seeders** — DevSeeder + BillingDemoSeeder avec `jobdomain_key` explicite
+  7. **PlatformSeeder** — `JobdomainRegistry::sync()` inclus (invariant structurel)
+  8. **JobdomainGate** — `assignToCompany()` set aussi la colonne `jobdomain_key`
+  9. **12 fichiers défensifs nettoyés** — suppression de tous `?->`, `if ($company->jobdomain)`, null checks
+  10. **66 fichiers test corrigés** — aucun `Company::create()` sans `jobdomain_key`
+- **Conséquences** :
+  - Le pivot `company_jobdomain` reste pour backward compat (suppression dans ADR-167b)
+  - Pas de FK sur `jobdomain_key` (même stratégie que `market_key`, compat SQLite)
+  - Toute migration future qui casse le jobdomain fait échouer le déploiement (orphan guard)
+  - 1234 tests passent, 0 failures
+
+### Fichiers créés
+- `database/migrations/2026_03_01_300001_add_jobdomain_key_to_companies.php`
+- `database/migrations/2026_03_01_300002_make_jobdomain_key_not_null.php`
+
+### Fichiers modifiés
+- `app/Core/Models/Company.php` (fillable + accessor non-nullable)
+- `app/Core/Auth/Requests/RegisterRequest.php` (required)
+- `app/Modules/Infrastructure/Auth/Http/AuthController.php` (no fallback)
+- `database/factories/CompanyFactory.php` (jobdomain_key)
+- `database/seeders/DevSeeder.php` (jobdomain_key)
+- `database/seeders/BillingDemoSeeder.php` (jobdomain_key)
+- `database/seeders/PlatformSeeder.php` (JobdomainRegistry::sync)
+- `app/Core/Jobdomains/JobdomainGate.php` (set column + remove null checks)
+- `app/Core/Navigation/NavBuilder.php` (use jobdomain_key)
+- `app/Core/Modules/EntitlementResolver.php` (remove null checks)
+- `app/Core/Modules/ModuleCatalogReadModel.php` (remove null checks)
+- `app/Core/Modules/ModuleDisplayStateResolver.php` (non-nullable Jobdomain param)
+- `app/Modules/Core/Jobdomain/Http/CompanyJobdomainController.php` (remove null checks)
+- `app/Modules/Core/Settings/Http/CompanyFieldDefinitionController.php` (remove ?->)
+- 66 fichiers test (ajout jobdomain_key explicite)
+
+---
+
+## ADR-168 : Field Categories + Self-Edit Guard
+
+- **Date** : 2026-03-01
+- **Contexte** : Le profil membre utilise des champs dynamiques (FieldDefinitionCatalog → FieldResolverService → FieldValidationService → FieldWriteService). Tous les champs `company_user` étaient exposés identiquement au self-edit (profil perso) et à l'admin-edit (gestion membre). Un employé pouvait théoriquement voir et modifier ses champs RH (SSN, IBAN, contrat) — état invalide.
+- **Décision** : Chaque champ reçoit une `category` (`base`, `hr`, `domain`) stockée dans `validation_rules` JSON (même pattern que `sensitive`, `applicable_markets`). Le self-edit ne voit/écrit que `base`. L'admin-edit voit tout.
+- **Catégories** :
+  - **base** (7) : phone, job_title, address, birth_date, nationality, emergency_contact_name, emergency_contact_phone
+  - **hr** (5) : social_security_number, iban, contract_type, hire_date, employee_status
+  - **domain** (20) : driver (8) + dispatcher (6) + management (6)
+  - **custom fields** : pas de category → traités comme `base` par défaut
+- **Implémentation** :
+  1. Constantes `CATEGORY_BASE/HR/DOMAIN` dans `FieldDefinition`
+  2. `category` dans `validation_rules` de chaque champ dans `FieldDefinitionCatalog`
+  3. Paramètre `?string $category = null` ajouté à `FieldResolverService::resolve()`, `FieldValidationService::rules()`, `FieldWriteService::upsert()`
+  4. Filtre appliqué après le filtre market — si `$category` null = pas de filtre (admin), sinon filtre strict
+  5. `category` exposé dans le retour du resolver pour grouping frontend
+  6. `UserProfileController` passe `CATEGORY_BASE` (show + update) — defense-in-depth sur 3 couches (validation, write, read)
+  7. `MembershipController` ne passe pas de category — voit tout (aucun changement)
+  8. Frontend `MemberProfileForm.vue` groupe les champs par catégorie (base → hr → domain) avec titres de section
+- **Conséquences** :
+  - Pas de migration — stocké dans JSON `validation_rules` existant
+  - Pas de nouvel endpoint
+  - Self-edit protégé par 3 couches : UpdateProfileRequest (validation), FieldWriteService (write), FieldResolverService (read)
+  - 10 tests dédiés dans `FieldCategoryTest`
+  - 1244 tests passent, 0 failures
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldDefinition.php` (constantes CATEGORY)
+- `app/Core/Fields/FieldDefinitionCatalog.php` (category dans validation_rules)
+- `app/Core/Fields/FieldResolverService.php` (param $category + filtre + expose)
+- `app/Core/Fields/FieldValidationService.php` (param $category + filtre)
+- `app/Core/Fields/FieldWriteService.php` (param $category + filtre)
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` (forward $category)
+- `app/Modules/Core/Members/Http/UserProfileController.php` (pass CATEGORY_BASE)
+- `app/Company/Http/Requests/UpdateProfileRequest.php` (pass CATEGORY_BASE)
+- `resources/js/company/components/MemberProfileForm.vue` (group by category)
+- `resources/js/plugins/i18n/locales/en.json` + `fr.json` (category labels)
+
+### Fichier créé
+- `tests/Feature/FieldCategoryTest.php` (10 tests)
+
+---
+
+## ADR-168b : Requirement Layer + Full UX Integration (Phase 2)
+
+- **Date** : 2026-03-02
+- **Contexte** : Phase 1 (ADR-168) a posé les catégories (`base`/`hr`/`domain`) et le self-edit guard. Phase 2 rend certains champs **mandatory** selon le contexte company (jobdomain, modules actifs, rôle du membre), et expose cette information de manière cohérente sur toutes les surfaces : member list, member detail, self-profile, modules page, company settings, platform company view.
+- **Décision** :
+  - Un champ est `mandatory` si : `jobdomain_key ∈ required_by_jobdomains` OU `module actif ∈ required_by_modules` OU `roleKey ∈ required_by_roles`
+  - `required final = activation.required_override || validation_rules.required || mandatory`
+  - `MandatoryContext` : helper statique avec cache par requête (max 2 queries, puis 0)
+  - `isMandatory()` : calcul en mémoire, 0 queries
+  - `bulkCompleteness()` : exactement 5 queries pour N membres (batch, pas de N+1)
+  - Auto-activation des champs quand un module est activé (`autoActivateRequiredFields`)
+  - Frontend : DynamicFormRenderer unique partagé par toutes les surfaces, `*` label + `append-inner-icon` tabler-alert-circle sur champs mandatory
+  - Pas de migration, pas de nouvelle table, pas de state machine
+- **Performance** :
+  - `MandatoryContext::load()` : 2 queries max, puis cache statique
+  - `bulkCompleteness()` : 5 queries (definitions, activations, modules, roles, values)
+  - 0 N+1 : tout batch-loaded puis itéré en mémoire
+- **Conséquences** :
+  - Backend source unique de vérité, frontend affiche sans calculer
+  - Validation 422 si champ mandatory absent dans PUT
+  - Completeness exposé dans member list, detail, self-profile
+  - Mandatory fields info dans modules detail + company settings
+  - Incomplete count dans platform company detail
+  - 10 tests dédiés dans `FieldRequirementLayerTest`
+
+### Fichiers créés
+- `app/Core/Fields/MandatoryContext.php` — shared helper (cache + isMandatory)
+- `tests/Feature/FieldRequirementLayerTest.php` — 10 tests
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldDefinitionCatalog.php` — required_by_* dans validation_rules
+- `app/Core/Fields/FieldResolverService.php` — MandatoryContext + expose mandatory
+- `app/Core/Fields/FieldValidationService.php` — MandatoryContext dans rules()
+- `app/Core/Modules/ModuleActivationEngine.php` — autoActivateRequiredFields()
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` — profile_completeness + bulkCompleteness() + incompleteCount()
+- `app/Company/Fields/ReadModels/CompanyProfileReadModel.php` — jobdomain_mandatory_fields
+- `app/Modules/Core/Members/Http/MembershipController.php` — completeness in index/show/update
+- `app/Modules/Core/Modules/Http/CompanyModuleController.php` — mandatory_fields + incomplete count
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — incomplete_profiles_count
+- `resources/js/core/components/DynamicFormRenderer.vue` — asterisk label + append-inner-icon (pas de VChip, pattern Vuexy preset)
+- `resources/js/views/pages/account-settings/AccountSettingsAccount.vue` — completeness alert
+- `resources/js/company/components/MemberProfileForm.vue` — completeness indicator
+- `resources/js/pages/company/members/[id].vue` — pass completeness to form
+- `resources/js/pages/company/members/index.vue` — incomplete icon, filter, summary
+- `resources/js/pages/company/modules/[key].vue` — mandatory fields card + alert
+- `resources/js/pages/company/settings.vue` — jobdomain mandatory fields (card redesign : titre commercial + VAlert explainer + VList)
+- `resources/js/pages/platform/companies/[id].vue` — incomplete profiles count
+- `resources/js/plugins/i18n/locales/en.json` — new keys
+- `resources/js/plugins/i18n/locales/fr.json` — new keys
+
+---
+
+## ADR-169 — Alignement Total Fields / Jobdomain / Company / Documents / Quota
+
+**Date** : 2026-03-02
+
+### Contexte
+
+Les phases ADR-168/168b ont posé le système de champs dynamiques avec catégories, mandatory layer, et completeness. Trois contradictions critiques existaient entre le moteur et les écrans, et il manquait les briques Documents + Quota :
+
+1. Le role `field_config` pouvait annuler un champ mandatory (bug dans 3 fichiers)
+2. `JobdomainRegistry` portait des clés `required` dans `default_fields` qui contredisaient le catalog
+3. Account Settings filtrait `category:base` uniquement → self-profile montrait moins de champs que l'admin
+4. Aucun système de documents (0 table, 0 model, 0 UI)
+5. Aucun quota stockage plan-based
+
+### Décisions
+
+**Phase 1 — Alignment Fix (0 migration)**
+- Hiérarchie de vérité immutable : `FieldDefinitionCatalog` → `JobdomainRegistry` (activation+ordre uniquement) → `FieldActivation` → `CompanyRole.field_config` (upgrade seulement)
+- Guard mandatory : `$field['required'] = $field['mandatory'] || ($config['required'] ?? $field['required'])` — le role field_config ne peut JAMAIS downgrader mandatory
+- Suppression de la clé `required` de tous les `default_fields` dans JobdomainRegistry (37 entrées)
+- Nettoyage `required` redondant dans `default_roles[].fields` quand le catalog le gère déjà
+- `JobdomainGate` : `required_override => false` systématiquement
+- Account Settings + UpdateProfileRequest : retrait filtre `category:base`, tous les champs visibles/éditables
+- AccountSettingsAccount.vue groupé par catégorie (base, hr, domain)
+
+**Phase 2 — Platform Governance UI (0 migration)**
+- JobdomainController show() enrichi avec `mandatory_field_codes` et `mandatory_by_role` depuis le catalog
+- Platform jobdomain UI : VChip "Mandatory" + lock icon + checkbox disabled pour champs catalog
+- Role field drawer : mandatory fields = checked disabled avec tooltip explicatif
+- Validation `store/update` de jobdomains : `required` retiré de `default_fields` validation rules
+
+**Phase 3 — Document System (3 migrations)**
+- Pattern parallèle aux fields : DocumentTypeCatalog (code-driven) → DocumentTypeActivation (par company) → MemberDocument (uploads)
+- DocumentMandatoryContext : même pattern que MandatoryContext (cache per-request)
+- DocumentResolverService : 3 queries (types → activations → uploads)
+- 6 types de documents : id_card, driving_license, medical_certificate, kbis, insurance_certificate, transport_license
+- MemberDocumentController : CRUD (list/upload/download/delete) avec validation mime/size
+- JobdomainRegistry enrichi avec `default_documents` pour logistique
+- JobdomainGate active les documents par défaut lors de l'assignation
+- UI membre : onglet Documents avec upload/download/delete
+
+**Phase 4 — Storage Quota (0 migration)**
+- `PlanRegistry` : `storage_quota_gb` dans limits (starter: 1 GB, pro: 20 GB, business: 100 GB)
+- `CompanyEntitlements::storageQuotaGb()` → lookup dans plan limits
+- `StorageQuotaService::usage()` → SUM query `member_documents.file_size_bytes` + calcul percentage/warning/blocked
+- Guard upload dans MemberDocumentController : 422 si quota dépassé
+- CompanyProfileReadModel inclut `storage` dans la réponse
+- Company settings : VCard stockage avec VProgressLinear + alertes warning/blocked
+
+### Conséquences
+
+- Les champs mandatory sont inviolables (ni role config, ni admin company ne peuvent downgrader)
+- Le self-profile montre tous les champs (base, hr, domain) groupés par catégorie
+- Le platform admin voit clairement quels champs sont mandatory (lecture seule, lock icon)
+- Le système de documents suit exactement le même pattern que les fields (scalable)
+- Le quota stockage est piloté par le plan → upsell naturel quand limite atteinte
+- 3 nouvelles tables : `document_types`, `document_type_activations`, `member_documents`
+
+### Fichiers créés
+- `app/Core/Documents/DocumentTypeCatalog.php` — catalog code-driven (6 types)
+- `app/Core/Documents/DocumentType.php` — Eloquent model
+- `app/Core/Documents/DocumentTypeActivation.php` — Eloquent model
+- `app/Core/Documents/MemberDocument.php` — Eloquent model (upload record)
+- `app/Core/Documents/DocumentMandatoryContext.php` — cache per-request
+- `app/Core/Documents/DocumentResolverService.php` — 3 queries
+- `app/Core/Storage/StorageQuotaService.php` — quota usage calculator
+- `app/Modules/Core/Members/Http/MemberDocumentController.php` — CRUD documents
+- `database/migrations/2026_03_02_100001_create_document_types_table.php`
+- `database/migrations/2026_03_02_100002_create_document_type_activations_table.php`
+- `database/migrations/2026_03_02_100003_create_member_documents_table.php`
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldResolverService.php` — mandatory guard fix
+- `app/Core/Fields/FieldValidationService.php` — mandatory guard fix
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` — mandatory guard fix
+- `app/Company/Fields/ReadModels/CompanyProfileReadModel.php` — storage usage
+- `app/Core/Jobdomains/JobdomainRegistry.php` — removed `required` from presets, added `default_documents`
+- `app/Core/Jobdomains/JobdomainGate.php` — `required_override => false`, document activation
+- `app/Modules/Core/Members/Http/UserProfileController.php` — removed category filter
+- `app/Company/Http/Requests/UpdateProfileRequest.php` — removed category filter
+- `app/Modules/Platform/Jobdomains/Http/JobdomainController.php` — mandatory_field_codes, validation cleanup
+- `app/Core/Billing/CompanyEntitlements.php` — storageQuotaGb()
+- `app/Core/Plans/PlanRegistry.php` — storage_quota_gb in limits
+- `database/seeders/PlatformSeeder.php` — DocumentTypeCatalog sync
+- `routes/company.php` — document routes
+- `resources/js/views/pages/account-settings/AccountSettingsAccount.vue` — category grouping
+- `resources/js/pages/platform/jobdomains/[id].vue` — mandatory governance UI
+- `resources/js/pages/company/members/[id].vue` — documents tab
+- `resources/js/pages/company/settings.vue` — storage usage card
+- `resources/js/plugins/i18n/locales/en.json` — i18n keys
+- `resources/js/plugins/i18n/locales/fr.json` — i18n keys
+- `tests/Feature/FieldRequirementLayerTest.php` — mandatory downgrade test
+- `tests/Feature/JobdomainFieldPresetTest.php` — updated for no-required presets
+- `tests/Feature/FieldCategoryTest.php` — updated for all-categories self-profile
+- `tests/Feature/PlatformJobdomainTest.php` — updated for no-required presets
+
+---
+
+## ADR-170 Phase 1 : Tags Foundation — Archetypes, Tags sémantiques, doc_config
+
+- **Date** : 2026-03-02
+- **Contexte** : L'ancien mécanisme `required_by_roles` dans les catalogs field/document repose sur des clés de rôle hardcodées (`driver`, `dispatcher`). Les rôles custom créés par les admins company ne bénéficient pas du mandatory automatique. L'architecture V2 remplace ce couplage par un système de **tags sémantiques** décorrélés des rôles spécifiques.
+
+### Décisions
+
+1. **TagDictionary** : constantes PHP centralisées (`DRIVING`, `DISPATCHING`, `MANAGEMENT`). Tags globaux sémantiques, pas namespacés par jobdomain. Classe append-only — un tag ne change jamais de signification.
+
+2. **Tags sur les catalogs** : `FieldDefinitionCatalog` et `DocumentTypeCatalog` gagnent `'tags' => [...]` dans `validation_rules`. 6 champs et 2 documents annotés. Les `required_by_roles` existants sont conservés (dual mode, suppression en Phase 4).
+
+3. **Archetypes** : profils sémantiques déclarés par jobdomain dans `JobdomainRegistry`. Chaque archétype a un label et des `default_tags[]`. 4 archétypes logistique : `driver`, `dispatcher`, `management`, `operational`.
+
+4. **3 colonnes CompanyRole** : `archetype` (string nullable), `required_tags` (JSON nullable), `doc_config` (JSON nullable). Migration additive, backward compatible.
+
+5. **doc_config** : même pattern que `field_config` — `[{code, visible, required, order}]`. Override layer sur les documents par rôle. Chaque default_role du registry déclare maintenant son `doc_config`.
+
+6. **Phase purement additive** : zéro changement comportemental. Les tags, archetypes et doc_config sont ajoutés mais pas encore consommés par les moteurs de résolution.
+
+### Conséquences
+- Le moteur de résolution mandatory reste inchangé (Phase 2 l'étendra)
+- Les rôles existants en DB ne sont pas modifiés (backfill en Phase 2)
+- doc_config n'est pas encore lu par DocumentResolverService (Phase 3)
+- Backward compatible — 1255 tests passent, build clean
+
+### Fichiers créés
+- `app/Core/Fields/TagDictionary.php`
+- `database/migrations/2026_03_02_200001_add_archetype_and_doc_config_to_company_roles.php`
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldDefinitionCatalog.php` — tags sur 6 champs (license_*, vehicle_type, geographic_zone, work_schedule)
+- `app/Core/Documents/DocumentTypeCatalog.php` — tags sur 2 documents (driving_license, medical_certificate)
+- `app/Core/Jobdomains/JobdomainRegistry.php` — archetypes, archetype par default_role, doc_config par default_role
+- `app/Company/RBAC/CompanyRole.php` — archetype, required_tags, doc_config dans fillable + casts
+
+---
+
+## ADR-170 Phase 2 : Tag-Based Resolution (dual mode)
+
+- **Date** : 2026-03-02
+- **Contexte** : Phase 1 a posé les fondations (tags dans catalogs, colonnes sur CompanyRole). Phase 2 active le moteur de résolution tag-based en **dual mode** — ancien chemin (`required_by_roles` par clé) ET nouveau chemin (`tags ∩ required_tags`) coexistent.
+
+### Décisions
+
+1. **MandatoryContext + DocumentMandatoryContext** : nouveau paramètre `?array $roleRequiredTags = null`. 4e check ajouté : `array_intersect($rules['tags'], $roleRequiredTags)` non-vide → mandatory. Les 3 checks existants restent inchangés.
+
+2. **FieldResolverService** : le CompanyRole est maintenant chargé **avant** la boucle d'assembly (une seule query, réutilisée pour le mandatory ET le field_config overlay). Suppression de la query dupliquée dans le bloc overlay → **net: -1 query** vs Phase 1.
+
+3. **FieldValidationService** : même refactoring — role chargé une fois, requis_tags passé à isMandatory dans les deux appels (boucle principale + overlay).
+
+4. **DocumentResolverService** : nouveau chargement optionnel du CompanyRole par roleKey (+1 query seulement si roleKey fourni). required_tags passé à DocumentMandatoryContext.
+
+5. **CompanyUserProfileReadModel** : `bulkCompleteness()` extrait `required_tags` du role déjà chargé en Q4 (0 query additionnelle).
+
+6. **JobdomainGate** : `assignToCompany()` seed maintenant `archetype` et `required_tags` sur les CompanyRole créés. Les `required_tags` sont résolus depuis les `default_tags` de l'archétype dans le registry.
+
+7. **BackfillRoleArchetypesCommand** : commande artisan `role:backfill-archetypes` — pour chaque CompanyRole système sans archétype, mappe key → archétype → default_tags depuis le registry. Idempotent, dry-run supporté.
+
+### Invariants vérifiés
+- Zéro `if (jobdomain === ...)` dans la résolution
+- L'archétype n'est JAMAIS lu par isMandatory() — seul `required_tags` est utilisé
+- Les champs mandatory ne peuvent pas être downgradés (garde existant inchangé)
+- Dual mode : les résultats sont identiques pour les rôles système (les deux chemins retournent true)
+
+### Conséquences
+- Les rôles custom avec `required_tags` bénéficient immédiatement du mandatory automatique
+- Les rôles système existants continuent de fonctionner via `required_by_roles` (backward compat)
+- La suppression de `required_by_roles` (Phase 4) ne nécessitera que le retrait de l'ancien check
+- 1263 tests passent (+8 nouveaux), build clean
+
+### Fichiers créés
+- `app/Console/Commands/BackfillRoleArchetypesCommand.php`
+- `tests/Feature/TagBasedMandatoryTest.php` (8 tests)
+
+### Fichiers modifiés
+- `app/Core/Fields/MandatoryContext.php` — param `$roleRequiredTags`, tag intersection check
+- `app/Core/Documents/DocumentMandatoryContext.php` — idem
+- `app/Core/Fields/FieldResolverService.php` — role chargé avant boucle, required_tags passé, query dupliquée supprimée
+- `app/Core/Fields/FieldValidationService.php` — idem
+- `app/Core/Documents/DocumentResolverService.php` — chargement CompanyRole optionnel, required_tags passé
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` — required_tags extrait et passé
+- `app/Core/Jobdomains/JobdomainGate.php` — seed archetype + required_tags sur rôles
+
+---
+
+## ADR-170 Phase 3 : Document Role Visibility (doc_config)
+
+- **Date** : 2026-03-02
+- **Contexte** : Les fields ont déjà une gouvernance par rôle via `field_config`. Les documents n'avaient pas d'équivalent. Phase 3 ajoute `doc_config` comme **override layer** sur les documents par rôle, avec le même pattern exact que `field_config`.
+
+### Décisions
+
+1. **DocumentResolverService** : overlay `doc_config` ajouté APRÈS l'assembly et le calcul mandatory. Ordre impératif : assembly → mandatory → overlay → mandatory guard → hide. Pattern identique à FieldResolverService.
+
+2. **Mandatory guard absolu** : un document mandatory est TOUJOURS visible et TOUJOURS required. `doc_config.visible=false` et `doc_config.required=false` sont ignorés silencieusement. Aucune exception.
+
+3. **Override layer, pas whitelist** :
+   - `doc_config = null` → tous les documents activés sont visibles
+   - `doc_config` partiel → seuls les items mentionnés sont modifiés, les autres restent intacts
+   - `doc_config.visible=false` → document masqué (non-mandatory uniquement)
+   - `doc_config.required` → upgrade only pour mandatory, libre pour non-mandatory
+   - `doc_config.order` → override d'ordre (même pour mandatory)
+
+4. **CompanyRoleController** : `store()` et `update()` acceptent `doc_config` (sometimes|nullable|array).
+
+5. **JobdomainGate** : `assignToCompany()` seed `doc_config` depuis le registry (même pattern que field_config : seulement si actuellement null).
+
+### Tests de sécurité (DocumentMandatoryCannotBeHiddenTest)
+- Test 1 : mandatory doc + `visible=false` → **RESTE visible** ✓
+- Test 2 : mandatory doc + `required=false` → **RESTE required** ✓
+- Test 3 : mandatory doc + `visible=false` ET `required=false` → **visible ET required** ✓
+- Test 4 (contrôle) : non-mandatory doc + `visible=false` → **correctement masqué** ✓
+
+### Conséquences
+- Les documents suivent exactement la même gouvernance que les fields
+- Le scénario critique (driver + driving_license visible=false) est validé par test
+- 1271 tests passent (+8 nouveaux), build clean
+
+### Fichiers créés
+- `tests/Feature/DocumentMandatoryCannotBeHiddenTest.php` (4 tests sécurité)
+- `tests/Feature/DocumentRoleVisibilityTest.php` (4 tests visibilité)
+
+### Fichiers modifiés
+- `app/Core/Documents/DocumentResolverService.php` — overlay doc_config avec mandatory guard absolu
+- `app/Modules/Core/Roles/Http/CompanyRoleController.php` — doc_config dans validation store/update
+- `app/Core/Jobdomains/JobdomainGate.php` — seed doc_config sur rôles (pattern field_config)
+
+---
+
+## ADR-170 Phase 4 : Suppression required_by_roles (cleanup)
+
+- **Date** : 2026-03-02
+- **Contexte** : Phase 2 avait introduit le dual mode (ancien chemin `required_by_roles` + nouveau chemin `tags`). Phase 4 supprime l'ancien chemin, faisant des tags le **seul mécanisme** de mandatory par rôle. Changement purement interne — aucun impact sur l'API.
+
+### Décisions
+
+1. **`required_by_roles` supprimé partout** :
+   - `FieldDefinitionCatalog` : supprimé de 6 champs (license_number, license_category, license_expiry, vehicle_type, geographic_zone, work_schedule)
+   - `DocumentTypeCatalog` : supprimé de 2 documents (driving_license, medical_certificate)
+   - `MandatoryContext::isMandatory()` : paramètre `$roleKey` supprimé, check `required_by_roles` supprimé
+   - `DocumentMandatoryContext::isMandatory()` : idem
+
+2. **Nouvelle signature** :
+   - `MandatoryContext::isMandatory(FieldDefinition $definition, array $context, ?array $roleRequiredTags = null): bool`
+   - `DocumentMandatoryContext::isMandatory(DocumentType $type, array $context, ?array $roleRequiredTags = null): bool`
+   - 3 paramètres au lieu de 4
+
+3. **5 call sites mis à jour** : FieldResolverService, FieldValidationService (×2), CompanyUserProfileReadModel, DocumentResolverService — tous passent `$roleRequiredTags` uniquement.
+
+4. **Tests adaptés** :
+   - `TagBasedMandatoryTest` : test dual mode remplacé par test "tags are sole mechanism"
+   - `FieldRequirementLayerTest` : test_role_makes_fields_mandatory crée maintenant un CompanyRole avec required_tags
+   - Comments `required_by_roles` nettoyés dans 4 fichiers test
+
+### Invariants post-Phase 4
+- Zéro occurrence de `required_by_roles` dans `app/Core/Fields/` et `app/Core/Documents/`
+- Tags = seul chemin mandatory par rôle
+- Les 3 autres chemins inchangés : required_by_jobdomains, required_by_modules, validation_rules.required
+
+### Conséquences
+- Architecture V2 pleinement active
+- Rôles custom avec `required_tags` fonctionnent identiquement aux rôles système
+- 1271 tests passent, build clean
+
+### Fichiers modifiés
+- `app/Core/Fields/MandatoryContext.php` — signature 3 params, suppression check required_by_roles
+- `app/Core/Documents/DocumentMandatoryContext.php` — idem
+- `app/Core/Fields/FieldDefinitionCatalog.php` — suppression required_by_roles de 6 champs
+- `app/Core/Documents/DocumentTypeCatalog.php` — suppression required_by_roles de 2 documents
+- `app/Core/Fields/FieldResolverService.php` — appel isMandatory() sans roleKey
+- `app/Core/Fields/FieldValidationService.php` — idem (2 call sites)
+- `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` — idem
+- `app/Core/Documents/DocumentResolverService.php` — idem
+- `tests/Feature/TagBasedMandatoryTest.php` — rewrite dual mode test, fix signatures
+- `tests/Feature/FieldRequirementLayerTest.php` — create CompanyRole with required_tags
+- `tests/Feature/DocumentMandatoryCannotBeHiddenTest.php` — update comments
+- `tests/Feature/DocumentRoleVisibilityTest.php` — update comment
+
+---
+
+## ADR-171 : Canon FR Logistique — Nettoyage Catalog & Regroupement
+
+- **Date** : 2026-03-02
+- **Contexte** : Le FieldDefinitionCatalog contenait 32 champs company_user dont 12 n'étaient pas justifiés terrain (concepts RH US/décoratifs : IT Proficiency, Authorized Budget, Reports To, Badge ID, etc.). Les groupes utilisaient des noms incohérents (admin, driver, management). Le canon devait refléter la réalité terrain logistique FR.
+- **Décision** : Nettoyage complet en 4 blocs :
+  - **A1** — Suppression de 12 champs : `driving_experience_years`, `driver_availability`, `badge_id`, `logistics_experience_years`, `spoken_languages`, `it_proficiency`, `hierarchy_level`, `authorized_budget`, `department`, `direct_reports_to`, `signature_authorized`, `invoice_validation_access`. Conservation de `work_mode` avec `tags: ['dispatching']`.
+  - **A2** — JobdomainRegistry : `default_fields` réduit de 33 à 23, field_config des 4 rôles nettoyés, groupes renommés (admin→hr, driver→driving).
+  - **A3** — i18n : 6 groupes canoniques (identity, contact, emergency, hr, driving, dispatch), labels FR/EN nettoyés.
+  - **A4** — Tests adaptés : counts 32→20, groupes assertés mis à jour, 1271 tests verts.
+- **Conséquences** : Canon = 20 company_user + 3 company + 1 platform_user = 24 champs total. Système simple, vendable, 100% terrain-justifié.
+
+### Canon FR Logistique (20 champs company_user)
+
+| Groupe | Champs |
+|--------|--------|
+| identity | job_title, birth_date, nationality |
+| contact | phone, address, emergency_contact_name, emergency_contact_phone |
+| hr | social_security_number, iban, contract_type, hire_date, employee_status |
+| driving | license_number, license_category, license_expiry, adr_certified, vehicle_type |
+| dispatch | geographic_zone, work_schedule, work_mode |
+
+### Fichiers modifiés
+- `app/Core/Fields/FieldDefinitionCatalog.php` — suppression 12 champs, ajout tags dispatching sur work_mode
+- `app/Core/Jobdomains/JobdomainRegistry.php` — default_fields 33→23, 4 role field_configs nettoyés
+- `resources/js/plugins/i18n/locales/en.json` — groupes + labels + options nettoyés
+- `resources/js/plugins/i18n/locales/fr.json` — idem FR
+- `tests/Feature/LogisticsFieldsIntegrationTest.php` — counts, groups, assertions 7 tests
+- `tests/Feature/ActorProfileFieldResolutionTest.php` — counts 32→20, 31→19
+- `tests/Feature/FieldDefinitionTest.php` — count 36→24
+
+---
+
+## ADR-172 : Plans Governed & Sellable — Member Limit Enforcement + Usage UI
+
+- **Date** : 2026-03-02
+- **Contexte** : Les plans (starter/pro/business) définissent des `limits: {members, storage_quota_gb}` en base, mais aucune de ces limites n'est appliquée ou visible dans l'UI.
+- **Décisions** :
+  - B1 : Compléter l'UI platform plan detail avec le champ `storage_quota_gb` (à côté de `members`)
+  - B2 : Ajouter `CompanyEntitlements::memberLimit()`, enforcement dans `MembershipController::store()` (422 si limit atteinte), quota `member_count` + `member_limit` dans `index()`
+  - B3 : Exposer `member_quota` dans `CompanyProfileReadModel`, afficher limites concrètes dans les cartes plan comparaison et usage (VProgressLinear) dans la carte Current Plan
+  - B4 : 10 tests dans `MemberLimitEnforcementTest`
+- **Conséquences** :
+  - Les plans starter sont désormais limités à 5 membres (enforcement backend)
+  - L'UI membres affiche le quota et désactive le bouton "Add Member" quand la limite est atteinte
+  - La page plan company affiche les limites concrètes (membres, stockage) et l'usage courant
+  - Zéro migration nécessaire (limits déjà en JSON)
+
+### Fichiers modifiés
+- `app/Core/Billing/CompanyEntitlements.php` — ajout `memberLimit()`
+- `app/Modules/Core/Members/Http/MembershipController.php` — enforcement `store()` + quota `index()`
+- `app/Company/Fields/ReadModels/CompanyProfileReadModel.php` — ajout `member_quota`
+- `resources/js/pages/platform/plans/[key].vue` — champ `storage_quota_gb`
+- `resources/js/pages/company/plan.vue` — limites concrètes + usage
+- `resources/js/pages/company/members/index.vue` — badge quota + disable bouton
+- `resources/js/modules/company/members/members.store.js` — state `_memberCount`, `_memberLimit`
+- `resources/js/plugins/i18n/locales/en.json` — 11 clés i18n
+- `resources/js/plugins/i18n/locales/fr.json` — 11 clés i18n FR
+- `tests/Feature/MemberLimitEnforcementTest.php` — 10 tests (nouveau)
+
+---
+
+## ADR-173 : Self-Document Upload Phase 1 — Vue membre
+
+- **Date** : 2026-03-02
+- **Contexte** : Le système documentaire (ADR-169/170) couvre l'upload admin via `/company/members/{id}/documents`. Mais le membre lui-même ne peut pas consulter ni uploader ses propres documents depuis son espace personnel (account-settings). Phase 1 ajoute cette capacité en self-service.
+- **Décisions** :
+  - Nouveau pattern UseCase instanciable : `UploadOwnDocumentUseCase` (DTO in, Result out, zéro DI constructeur, collaborateurs statiques)
+  - `DownloadOwnDocumentUseCase` pour le téléchargement avec vérification ownership
+  - `SelfDocumentReadModel::get()` appelle `DocumentResolverService::resolve()` puis post-filtre `scope=company_user` (DETTE-DOC-001 : le resolver ne supporte pas le param scope)
+  - Controller passif `SelfDocumentController` (3 routes : index, upload, download) — zéro logique métier
+  - Quota delta : `projectedUsage = currentUsage + (newSize - existingSize)`, 0 = illimité, delta négatif toujours autorisé
+  - Remplacement : suppression physique de l'ancien fichier avant stockage du nouveau, upsert MemberDocument
+  - Onglet Documents dans account-settings : visible uniquement si `documents.length > 0`, redirect vers `/account-settings/account` si accès direct sans documents
+  - 14 tests : index (scope, market, doc_config, mandatory, empty), upload (create, replace, quota delta+, quota delta−, mime, scope guard), download (own, other user)
+- **Conséquences** :
+  - Le membre peut consulter, uploader et télécharger ses propres documents (company_user scope uniquement)
+  - Le quota stockage est appliqué avec calcul delta (remplacement autorisé si delta ≤ 0)
+  - DETTE-DOC-001 explicite : le ReadModel compense l'absence de param scope dans DocumentResolverService
+  - Aucune migration nécessaire — réutilise les tables `document_types`, `document_type_activations`, `member_documents` existantes
+
+### Fichiers créés
+- `app/Modules/Core/Members/UseCases/UploadOwnDocumentData.php` — DTO (User, Company, code, UploadedFile)
+- `app/Modules/Core/Members/UseCases/UploadOwnDocumentResult.php` — Résultat upload (id, code, fileName, replaced)
+- `app/Modules/Core/Members/UseCases/DownloadOwnDocumentResult.php` — Résultat download (filePath, fileName, disk)
+- `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — Pipeline 10 étapes (membership, scope, activation, validation, quota, storage, upsert)
+- `app/Modules/Core/Members/UseCases/DownloadOwnDocumentUseCase.php` — Vérification ownership + scope guard
+- `app/Core/Documents/ReadModels/SelfDocumentReadModel.php` — Aggrégation lecture self (post-filtre scope, enrichit can_upload/can_delete)
+- `app/Modules/Core/Members/Http/SelfDocumentController.php` — Controller passif (index, upload, download)
+- `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue` — Composant Vue (VTable, upload, download)
+- `tests/Feature/SelfDocumentUploadTest.php` — 14 tests
+
+### Fichiers modifiés
+- `app/Core/Storage/StorageQuotaService.php` — ajout `checkDelta(Company, int delta)`
+- `routes/company.php` — 3 routes `/profile/documents`
+- `resources/js/pages/account-settings/[tab].vue` — onglet Documents conditionnel
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n documents
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n documents FR
+
+---
+
+## ADR-174 : Company Documents Vault + Résolution DETTE-DOC-001
+
+- **Date** : 2026-03-02
+- **Contexte** : Phase 1 (ADR-173) couvrait l'upload self-service des documents `scope=company_user`. Les documents `scope=company` (kbis, attestation d'assurance, licence de transport) n'avaient pas d'interface. DETTE-DOC-001 : le `DocumentResolverService::resolve()` ne filtrait pas par scope, obligeant chaque ReadModel à post-filtrer.
+- **Décisions** :
+  - Nouveau modèle `CompanyDocument` (sans user_id) + migration `company_documents`
+  - Résolution DETTE-DOC-001 : ajout paramètre `?string $scope` au resolver + `?User $user` nullable
+  - Quand `scope=company` ou `user=null`, Q3 (MemberDocument) est sautée entièrement
+  - CompanyDocumentReadModel hydrate les uploads CompanyDocument indépendamment du resolver
+  - StorageQuotaService somme `member_documents` + `company_documents`
+  - UseCase pattern identique à Phase 1 (DTO in, Result out, pipeline explicite)
+  - Vérification membership de l'acteur dans les UseCases (défense en profondeur)
+  - Routes dans le groupe `core.settings`, upload nécessite `settings.manage`
+  - Frontend : composant `CompanyDocumentsVault.vue` intégré dans `settings.vue` (piège coexistence évité)
+- **Conséquences** :
+  - 6 types de documents couverts (3 company_user + 3 company)
+  - DETTE-DOC-001 éliminée — le resolver filtre par scope nativement
+  - Backward compat préservée : appels existants sans scope retournent tous les types
+  - Quota storage unifié (member + company documents)
+  - 15 tests Phase 2 + 14 tests Phase 1 non-régression
+
+### Fichiers créés
+- `database/migrations/2026_03_02_300001_create_company_documents_table.php` — Table company_documents
+- `app/Core/Documents/CompanyDocument.php` — Modèle Eloquent (company, documentType, uploader)
+- `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ReadModel vault company
+- `app/Modules/Core/Members/UseCases/UploadCompanyDocumentData.php` — DTO upload company
+- `app/Modules/Core/Members/UseCases/UploadCompanyDocumentResult.php` — Résultat upload
+- `app/Modules/Core/Members/UseCases/DownloadCompanyDocumentResult.php` — Résultat download
+- `app/Modules/Core/Members/UseCases/UploadCompanyDocumentUseCase.php` — Pipeline 11 étapes
+- `app/Modules/Core/Members/UseCases/DownloadCompanyDocumentUseCase.php` — Pipeline 5 étapes
+- `app/Modules/Core/Settings/Http/CompanyDocumentController.php` — Controller passif (index, upload, download)
+- `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — Composant Vue vault
+- `tests/Feature/CompanyDocumentVaultTest.php` — 15 tests
+
+### Fichiers modifiés
+- `app/Core/Documents/DocumentResolverService.php` — $scope filter Q1, $user nullable, Q3 skip
+- `app/Core/Documents/DocumentType.php` — relation companyDocuments()
+- `app/Core/Documents/ReadModels/SelfDocumentReadModel.php` — scope param, post-filtre supprimé
+- `app/Modules/Core/Members/Http/MemberDocumentController.php` — scope param ajouté
+- `app/Core/Storage/StorageQuotaService.php` — somme member + company documents
+- `routes/company.php` — 3 routes /company/documents
+- `resources/js/pages/company/settings.vue` — intégration CompanyDocumentsVault
+- `resources/js/modules/company/settings/settings.store.js` — state + action fetchCompanyDocuments
+- `resources/js/plugins/i18n/locales/en.json` — clés companyDocumentsTitle/Description
+- `resources/js/plugins/i18n/locales/fr.json` — clés FR
+
+---
+
+## ADR-175 : Document Activation UI / Admin Catalog
+
+- **Date** : 2026-03-02
+- **Contexte** : Phases 1-3 documents (ADR-169/173/174) fournissent upload/download self, member, company. Il manque l'interface admin pour configurer quels document types sont activés par company (enable/disable, order, required_override), groupé par scope.
+- **Décisions** :
+  1. **ReadModel** `CompanyDocumentActivationReadModel::get(Company)` retourne le catalogue complet groupé par scope (`company_user_documents`, `company_documents`), avec market filter, mandatory context (admin view, sans role tags), et activation status
+  2. **UseCase** `UpsertDocumentActivationUseCase` — pipeline 6 étapes : membership → type → system check → market filter → upsert → result. Placé dans `Modules/Core/Settings/UseCases/`
+  3. **Controller passif** `CompanyDocumentActivationController` — zero logique, 2 méthodes (index, upsert)
+  4. **Routes** dans le groupe `core.settings` : GET `/company/document-activations` + PUT `/company/document-activations/{code}` (settings.manage)
+  5. **Frontend** : composant `CompanyDocumentActivationCatalog.vue` avec deux sections scope, VSwitch enabled/required_override, AppTextField order, save par ligne. Intégré dans `settings.vue` avant le vault
+  6. **Mandatory guard** préservé : si `mandatory=true`, le VSwitch `required_override` est désactivé (le système ne peut être overridé)
+  7. **i18n** : 10 clés EN + FR ajoutées dans `companySettings`
+
+- **Conséquences** :
+  - L'admin company peut maintenant activer/désactiver, réordonner, et marquer comme required chaque type de document
+  - Le catalogue respect le market filtering (kbis FR-only invisible pour GB)
+  - Les documents mandatory par jobdomain/module restent verrouillés
+  - 11 tests couvrent index, upsert, market guard, membership, mandatory
+
+### Fichiers créés
+- `app/Core/Documents/ReadModels/CompanyDocumentActivationReadModel.php` — ReadModel admin catalog
+- `app/Modules/Core/Settings/UseCases/UpsertDocumentActivationData.php` — DTO
+- `app/Modules/Core/Settings/UseCases/UpsertDocumentActivationResult.php` — Result
+- `app/Modules/Core/Settings/UseCases/UpsertDocumentActivationUseCase.php` — UseCase 6 étapes
+- `app/Modules/Core/Settings/Http/CompanyDocumentActivationController.php` — Controller passif
+- `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue` — Vue component
+- `tests/Feature/CompanyDocumentActivationTest.php` — 11 tests
+
+### Fichiers modifiés
+- `routes/company.php` — 2 routes /company/document-activations (GET + PUT)
+- `resources/js/pages/company/settings.vue` — import + intégration CompanyDocumentActivationCatalog
+- `resources/js/modules/company/settings/settings.store.js` — state + getter + action fetchDocumentActivations
+- `resources/js/plugins/i18n/locales/en.json` — 10 clés companySettings
+- `resources/js/plugins/i18n/locales/fr.json` — 10 clés FR
+
+---
+
+## ADR-176 : Document Requests / Validation Workflow
+
+- **Date** : 2026-03-02
+- **Contexte** : Phases 1-3 documents (ADR-169/173/174/175) couvrent upload self/member/company et activation admin. Il manque le workflow métier de demande/soumission/validation pour les documents membre (`scope=company_user`).
+- **Décisions** :
+  1. **Nouveau modèle** `DocumentRequest` — table `document_requests` avec unique (company_id, user_id, document_type_id). Statuts : `requested`, `submitted`, `approved`, `rejected`. Séparé de `MemberDocument` (fichier physique vs. état métier)
+  2. **ReadModel** `MemberDocumentWorkflowReadModel` — wrape `DocumentResolverService::resolve()` et enrichit chaque document avec `request_status`, `request_review_note`, timestamps, `has_file`, `can_review`
+  3. **Lazy-create** : à la lecture admin, les documents mandatory dans la surface effective du resolver (activés + visibles pour le rôle + marché) sans request existante reçoivent automatiquement un `DocumentRequest` status=`requested`. **Contrainte verrouillée** : pas de lazy-create pour des documents hors surface effective du membre
+  4. **Self upload side-effect** : après upsert `MemberDocument`, `DocumentRequest::updateOrCreate(status=submitted)`. Couvre : pas de request → submitted, requested → submitted, rejected → submitted (re-upload), approved → submitted (re-upload). Efface reviewer_id/review_note/reviewed_at au passage
+  5. **Admin upload** : même side-effect que self upload dans `MemberDocumentController::upload`
+  6. **Review UseCase** `ReviewMemberDocumentUseCase` — pipeline 9 étapes : actor membership → target membership → type → scope guard (company_user only) → load request → transition guards (approved exige fichier + status=submitted, rejected exige status=submitted) → update → result
+  7. **Route** : `PUT /company/members/{id}/documents/{code}/review` dans le groupe `core.members`, middleware `members.manage`
+  8. **Frontend** : documents tab de `[id].vue` enrichi — badges workflow colorés (VChip), boutons Approve/Reject visibles quand `can_review && canEdit`, VDialog pour note de rejet
+  9. **i18n** : 11 clés EN + FR dans `documents`
+
+- **Conséquences** :
+  - L'admin voit l'état documentaire complet de chaque membre (requested/submitted/approved/rejected)
+  - Les documents mandatory matérialisent automatiquement un besoin (lazy-create)
+  - Le self-upload déclenche automatiquement le passage à `submitted`
+  - Les transitions sont strictes : pas d'approbation sans fichier, pas de review hors `submitted`
+  - La note de rejet permet au membre de comprendre pourquoi son document est refusé
+  - 12 tests couvrent toutes les transitions + non-régression 3 phases
+
+### Side-effect lecture admin (lazy-create)
+Le `MemberDocumentWorkflowReadModel::get()` a un side-effect en écriture : il crée des `DocumentRequest` pour les documents mandatory sans request. Ce side-effect est documenté et verrouillé par la contrainte "surface effective du resolver uniquement".
+
+### Fichiers créés
+- `database/migrations/2026_03_02_400001_create_document_requests_table.php` — migration
+- `app/Core/Documents/DocumentRequest.php` — modèle avec 4 constantes statuts
+- `app/Core/Documents/ReadModels/MemberDocumentWorkflowReadModel.php` — ReadModel enrichi workflow
+- `app/Modules/Core/Members/UseCases/ReviewMemberDocumentData.php` — DTO review
+- `app/Modules/Core/Members/UseCases/ReviewMemberDocumentResult.php` — Result review
+- `app/Modules/Core/Members/UseCases/ReviewMemberDocumentUseCase.php` — UseCase 9 étapes
+- `tests/Feature/DocumentRequestWorkflowTest.php` — 12 tests
+
+### Fichiers modifiés
+- `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — étape 11 workflow side-effect
+- `app/Modules/Core/Members/Http/MemberDocumentController.php` — index via ReadModel, upload side-effect, méthode review
+- `routes/company.php` — 1 route PUT review
+- `resources/js/pages/company/members/[id].vue` — badges workflow + actions review + reject dialog
+- `resources/js/plugins/i18n/locales/en.json` — 11 clés documents
+- `resources/js/plugins/i18n/locales/fr.json` — 11 clés FR
+
+---
+
+## ADR-177 — Fix race condition logout (UserProfile / PlatformUserProfile)
+
+- **Date** : 2026-03-02
+- **Statut** : Accepté
+
+### Contexte
+
+Quand un utilisateur company ou platform clique sur « Logout », l'écran reste bloqué sur :
+
+```
+This is taking longer than expected...
+Phase: ready | Boot: BOOTING | Scope: public | Run: 3
+```
+
+**Cause racine** : `auth.logout()` effectue deux actions en parallèle :
+1. Broadcast un événement qui déclenche `runtime.teardown()` + `window.location.href = '/login'` (via le listener dans `default.vue`)
+2. Le code appelant exécute `await router.push('/login')` juste après
+
+Le `router.push('/login')` déclenche le router guard qui tente de re-booter le runtime (`bootMachine`) alors que le teardown est en cours. La machine d'état se retrouve coincée en `BOOTING` sans jamais se résoudre — deadlock.
+
+### Décision
+
+Remplacer `router.push()` par `window.location.href` dans les deux composants de profil utilisateur. Le hard redirect :
+- Détruit complètement l'état Vue/Pinia (pas de course avec le teardown)
+- Est cohérent avec le pattern déjà utilisé pour le session timeout dans `default.vue`
+- Garantit un état propre au rechargement de la page login
+
+### Conséquences
+
+- Le logout company et platform redirige proprement vers `/login` ou `/platform/login`
+- Aucune régression : le teardown broadcast continue de fonctionner comme garde supplémentaire
+- Pattern unifié : tout logout utilise désormais `window.location.href` (hard redirect)
+
+### Fichiers modifiés
+- `resources/js/layouts/components/UserProfile.vue` — `window.location.href = '/login'` au lieu de `router.push('/login')`, suppression `useRouter()` inutilisé
+- `resources/js/layouts/components/PlatformUserProfile.vue` — `window.location.href = '/platform/login'` au lieu de `router.push('/platform/login')`, suppression `useRouter()` inutilisé
+
+---
+
+## ADR-178 — Phase UI Alignment Documents (2026-03-02)
+
+### Contexte
+Les phases 1-4 (ADR-169/173/174/175/176) ont posé le backend documents complet (DocumentType, DocumentTypeActivation, MemberDocument, workflow review) mais les surfaces frontend ne rendaient pas le métier visible. Le tab documents membre affichait "Aucun type de document disponible" sans explication, les settings montraient deux VCard indépendants sans contexte, et le platform jobdomain n'avait aucune mention des documents.
+
+### Décisions
+1. **Shared UI Components** — 4 composants réutilisables dans `views/shared/documents/` (DocumentScopeChip, DocumentStatusChip, DocumentConstraintsInline, DocumentMandatoryChip) + composable `useDocumentHelpers` pour éliminer la duplication de `formatFileSize`.
+2. **Company Settings** — Unification du catalogue d'activations et du vault dans un seul VCard `CompanyDocumentsSection` avec summary chips (X member docs active, X company docs active, X uploaded). Les sous-composants Catalog et Vault perdent leur VCard wrapper et utilisent les chips partagés.
+3. **Member Detail** — Extraction du bloc documents (138 lignes script + 175 lignes template) dans `MemberDocumentsWorkflowPanel.vue` avec `watch(() => props.memberId, fetchDocuments, { immediate: true })` pour refetch lors de navigation interne. Empty state remplacé par VAlert info expliquant pourquoi aucun document n'apparaît + renvoi vers Settings.
+4. **Platform Jobdomain** — Endpoint `show()` enrichi avec `document_presets` (6 types, 5 en preset logistique). 5ème tab "Document Presets" avec table des presets actifs par défaut et table des autres types. `scopeColor()` supprimé au profit de `DocumentScopeChip`.
+5. **Permissions inchangées** — Cette phase ne modifie pas les permissions. Documentation de la matrice existante : `members.manage` pour admin docs, `settings.manage` pour catalogue + vault, lecture ouverte (module gate seulement).
+
+### Conséquences
+- UI documents fonctionnellement exploitable sur les 3 surfaces (company settings, member detail, platform jobdomain)
+- Empty state actionable au lieu d'un message générique
+- Vocabulaire visuel unifié (scope chips, mandatory chips, status chips) — pas d'invention UI
+- Backend enrichi d'un seul champ `document_presets` en lecture seule
+
+### Fichiers
+- CREATE `resources/js/composables/useDocumentHelpers.js`
+- CREATE `resources/js/views/shared/documents/DocumentScopeChip.vue`
+- CREATE `resources/js/views/shared/documents/DocumentStatusChip.vue`
+- CREATE `resources/js/views/shared/documents/DocumentConstraintsInline.vue`
+- CREATE `resources/js/views/shared/documents/DocumentMandatoryChip.vue`
+- CREATE `resources/js/views/pages/company-settings/CompanyDocumentsSection.vue`
+- CREATE `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue`
+- MODIFY `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue`
+- MODIFY `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue`
+- MODIFY `resources/js/pages/company/settings.vue`
+- MODIFY `resources/js/pages/company/members/[id].vue`
+- MODIFY `resources/js/pages/platform/jobdomains/[id].vue`
+- MODIFY `app/Modules/Platform/Jobdomains/Http/JobdomainController.php`
+- MODIFY `resources/js/plugins/i18n/locales/en.json`
+- MODIFY `resources/js/plugins/i18n/locales/fr.json`
+- MODIFY `tests/Feature/PlatformJobdomainTest.php`
+
+---
+
+## ADR-179 — Platform Jobdomain Document Preset Management (2026-03-03)
+
+### Contexte
+ADR-178 a ajouté un tab "Document Presets" en lecture seule sur la page platform jobdomain. Les presets documents étaient figés dans le `JobdomainRegistry` (code PHP statique). L'admin platform ne pouvait pas ajouter/retirer/réordonner les document presets sans modifier le code.
+
+### Décisions
+1. **Colonne DB `default_documents`** — JSON nullable sur `jobdomains`, même pattern que `default_fields`. Structure : `[{code, order}]`. Pas de champ `mandatory` — la mandatory est une propriété du catalogue (`required_by_jobdomains`), pas du preset.
+2. **DB-first fallback registry** — `JobdomainGate::defaultDocumentsFor()` lit la DB en priorité, fallback `JobdomainRegistry` quand la colonne est `null`. Même pattern que `defaultFieldsFor()`.
+3. **Controller enrichi** — `show()` utilise `JobdomainGate::defaultDocumentsFor()` au lieu du registry direct. `update()` accepte `default_documents` avec validation que les codes existent comme `DocumentType` système.
+4. **Tab 5 éditable** — L'admin peut ajouter/retirer/réordonner les presets inline. Pattern identique au Tab 3 (fields) : `saveDocumentPresets()`, `addDocument()`, `removeDocument()`, `updateDocumentOrder()`.
+5. **Isolation stricte** — Modifier les presets ne modifie PAS les companies existantes. VAlert info le rappelle.
+
+### Conséquences
+- L'admin platform a le contrôle complet des document presets par jobdomain sans modifier le code
+- Les jobdomains existants sans `default_documents` en DB continuent à utiliser le registry (rétro-compatible)
+- `assignToCompany()` n'a pas été modifié — il appelle déjà `defaultDocumentsFor()` qui retourne maintenant la valeur DB
+
+### Fichiers
+- CREATE `database/migrations/2026_03_03_100001_add_default_documents_to_jobdomains.php`
+- MODIFY `app/Core/Jobdomains/Jobdomain.php`
+- MODIFY `app/Core/Jobdomains/JobdomainGate.php`
+- MODIFY `app/Modules/Platform/Jobdomains/Http/JobdomainController.php`
+- MODIFY `resources/js/pages/platform/jobdomains/[id].vue`
+- MODIFY `resources/js/plugins/i18n/locales/en.json`
+- MODIFY `resources/js/plugins/i18n/locales/fr.json`
+- MODIFY `tests/Feature/PlatformJobdomainTest.php`
+
+---
+
+## ADR-180 : Phase 5B — Company Custom Document Types
+
+- **Date** : 2026-03-03
+- **Statut** : Implémenté
+
+### Contexte
+Les phases précédentes (ADR-169/173/174/175/176/178/179) ont construit le système documents complet avec 6 types système dans `DocumentTypeCatalog`. L'admin platform peut gérer les presets via le Tab 5 jobdomain (ADR-179). Mais les companies ne pouvaient pas créer leurs propres types de documents — elles ne voyaient que les 6 types système.
+
+### Périmètre des phases (clarification)
+
+| Phase | Périmètre | Statut |
+|-------|-----------|--------|
+| 5A | Gestion du preset jobdomain depuis le catalogue système existant (platform admin) | Done (ADR-179) |
+| 5B | Types de documents custom company-side (admin company) | **Cette phase** |
+| 5C | Viewer / Review UX (preview avant approve/reject) | À planifier |
+| Hors scope | CRUD de types de documents côté platform (création de nouveaux types système) | Non couvert |
+
+### Décisions
+
+1. **Unicité des codes** : code généré `custom_{company_id}_{Str::slug(label)}` avec garde anti-collision (`_2`, `_3`...). La colonne `code` reste globalement UNIQUE sans migration risquée.
+
+2. **Suppression / Archivage** : archive primary (`archived_at` timestamp), suppression hard seulement si zéro références (member_documents + company_documents + document_requests). Sécurité des données > suppression agressive.
+
+3. **Custom types jamais dans les presets platform** : `DocumentTypeCatalog` ne sync que `is_system=true`. Le platform jobdomain UI filtre déjà `is_system=true`.
+
+4. **Custom types sans mandatory structurel** : pas de `required_by_jobdomains` / `required_by_modules` / `tags`. Seul mécanisme : `required_override=true` sur l'activation.
+
+5. **Résolution élargie** : 4 fichiers qui filtraient `is_system=true` ont été modifiés pour inclure les types custom de la company via `OR company_id = $companyId`, excluant les archivés via `whereNull('archived_at')`.
+
+6. **Défense en profondeur** : vérification membership acteur dans tous les UseCases (Create, Archive, Delete) même si le middleware vérifie déjà.
+
+7. **Fix cohérence suppression document membre** : quand un `MemberDocument` est supprimé, si un `DocumentRequest` existe avec statut `submitted` ou `approved`, il est repassé à `requested` avec reset des champs reviewer/note/timestamps. Logique extraite dans `DeleteMemberDocumentUseCase`.
+
+### Conséquences
+- Les admins company (`settings.manage`) peuvent créer des types custom via POST `/company/document-types/custom`
+- Les types custom s'intègrent immédiatement dans toutes les surfaces existantes (catalogue, vault, self-upload, member workflow)
+- L'archivage masque le type de toutes les surfaces tout en préservant les données historiques
+- La suppression est bloquée si des documents existent (422)
+- Les types custom sont invisibles pour les autres companies et pour les presets platform
+- Le workflow document reste cohérent après suppression d'un fichier
+
+### Fichiers (25)
+- CREATE `database/migrations/2026_03_03_200001_add_company_id_and_archived_at_to_document_types.php`
+- CREATE `app/Modules/Core/Settings/UseCases/CreateCustomDocumentTypeData.php`
+- CREATE `app/Modules/Core/Settings/UseCases/CreateCustomDocumentTypeUseCase.php`
+- CREATE `app/Modules/Core/Settings/UseCases/CreateCustomDocumentTypeResult.php`
+- CREATE `app/Modules/Core/Settings/UseCases/ArchiveCustomDocumentTypeData.php`
+- CREATE `app/Modules/Core/Settings/UseCases/ArchiveCustomDocumentTypeUseCase.php`
+- CREATE `app/Modules/Core/Settings/UseCases/DeleteCustomDocumentTypeData.php`
+- CREATE `app/Modules/Core/Settings/UseCases/DeleteCustomDocumentTypeUseCase.php`
+- CREATE `app/Modules/Core/Settings/Http/CustomDocumentTypeController.php`
+- CREATE `app/Modules/Core/Members/UseCases/DeleteMemberDocumentData.php`
+- CREATE `app/Modules/Core/Members/UseCases/DeleteMemberDocumentUseCase.php`
+- CREATE `resources/js/views/pages/company-settings/CreateCustomDocumentDialog.vue`
+- CREATE `tests/Feature/CustomDocumentTypeTest.php`
+- MODIFY `app/Core/Documents/DocumentType.php`
+- MODIFY `app/Core/Documents/DocumentResolverService.php`
+- MODIFY `app/Core/Documents/ReadModels/CompanyDocumentActivationReadModel.php`
+- MODIFY `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php`
+- MODIFY `app/Modules/Core/Settings/UseCases/UpsertDocumentActivationUseCase.php`
+- MODIFY `app/Modules/Core/Members/Http/MemberDocumentController.php`
+- MODIFY `routes/company.php`
+- MODIFY `resources/js/modules/company/settings/settings.store.js`
+- MODIFY `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue`
+- MODIFY `resources/js/views/pages/company-settings/CompanyDocumentsSection.vue`
+- MODIFY `resources/js/plugins/i18n/locales/en.json`
+- MODIFY `resources/js/plugins/i18n/locales/fr.json`
+
+---
+
+## ADR-181 : Phase 5C — Member Document Viewer / Review UX
+
+- **Date** : 2026-03-03
+- **Statut** : Implémenté
+
+### Contexte
+Le gestionnaire devait télécharger les documents pour les examiner avant d'approuver ou rejeter. Aucune preview inline n'existait — le seul moyen était un lien `<a target="_blank">` vers le endpoint download. Pas pratique pour un flux review rapide.
+
+### Décisions
+
+1. **Zéro modification backend** : les endpoints download existants (`Storage::disk('local')->download()`) retournent déjà le fichier. Côté frontend, `$api(url, { responseType: 'blob' })` récupère le blob (pattern prouvé dans `CompanyDocumentsVault` et `AccountSettingsDocuments`). On crée un `URL.createObjectURL(blob)` pour afficher dans un iframe (PDF) ou img (images).
+
+2. **Types previewables** : `application/pdf` (iframe), `image/jpeg`, `image/png`, `image/webp` (img). Tout autre MIME : fallback avec message "Preview unavailable" + icône `tabler-file-off` + bouton Download.
+
+3. **VDialog viewer partagé** : composant `DocumentViewerDialog.vue` réutilisé sur 3 surfaces (MemberDocumentsWorkflowPanel, CompanyDocumentsVault, AccountSettingsDocuments). Props : `isDialogVisible`, `document`, `downloadUrl`, `canReview`. Emits : `approve`, `reject`, `download`.
+
+4. **Fetch gardé strict** : le fetch blob ne se déclenche que si `isDialogVisible === true` ET `document` existe ET `downloadUrl` non vide. Un compteur `fetchGeneration` empêche un fetch obsolète de corrompre l'état lors d'ouvertures/fermetures rapides.
+
+5. **Cleanup object URLs** : `URL.revokeObjectURL()` appelé systématiquement au close, au changement de document, et au `onBeforeUnmount`. Helper `cleanup()` centralise la logique.
+
+6. **Close + refresh après review** : quand approve/reject est déclenché depuis le viewer, le viewer se ferme et les documents sont refetch immédiatement. Le nouveau statut est visible tout de suite dans le tableau.
+
+7. **UX tableau affiné** : nom de fichier rendu plus discret (`text-caption text-disabled`) au lieu de `text-body-2`. Bouton View (`tabler-eye`) ajouté avant les boutons existants, visible uniquement si un fichier est uploadé.
+
+8. **Helpers partagés** : `isPreviewable(mime)` et `viewerKind(mime)` ajoutés dans `useDocumentHelpers.js` pour éviter la duplication de la logique MIME dans chaque surface.
+
+### Conséquences
+- Le gestionnaire peut examiner PDF et images inline sans quitter l'application
+- Le flux review complet (examiner → approuver/rejeter) se fait en un seul flux continu
+- Les types non previewables (doc, docx) ont un fallback propre avec download
+- Le composant viewer est partagé entre 3 surfaces avec zéro duplication
+- Aucune régression backend (57 tests documents passent)
+
+### Fichiers (8)
+- CREATE `resources/js/views/shared/documents/DocumentViewerDialog.vue`
+- MODIFY `resources/js/composables/useDocumentHelpers.js`
+- MODIFY `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue`
+- MODIFY `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue`
+- MODIFY `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue`
+- MODIFY `resources/js/plugins/i18n/locales/en.json`
+- MODIFY `resources/js/plugins/i18n/locales/fr.json`
+
+---
+
+## ADR-182 : Phase 5D — Platform Document Type Catalog Management
+
+- **Date** : 2026-03-03
+- **Statut** : Implémenté (réaligné architecture modulaire 2026-03-03)
+
+### Contexte
+Les 6 types de documents système étaient définis en dur dans `DocumentTypeCatalog::all()` et synchronisés en DB via `PlatformSeeder`. Le platform admin n'avait aucun moyen de voir, créer, modifier ou archiver les types système. Toute modification nécessitait un changement de code et un redéploiement.
+
+### Décisions
+
+1. **Module platform dédié** : `platform.documents` (`DocumentsModule`) — module autonome, séparé de `PlatformSettingsModule`. Permission `manage_document_catalog`, bundle `documents.catalog`, nav item `document-types`, sortOrder 62, route names `platform-documents` + `platform-documents-id`. Pas de Pinia store (appels directs `$platformApi`).
+
+2. **Source de vérité DB** : `DocumentTypeCatalog::sync()` passe de `updateOrCreate` à `firstOrCreate` (additif uniquement). Le catalogue code devient un seed initial — il ne modifie jamais un type existant en DB. Les modifications platform admin survivent aux re-seed/re-deploy.
+
+3. **Archivage soft** : `archived_at` sur le type + désactivation de toutes les `document_type_activations` (`enabled → false`). Les documents uploadés, les requêtes workflow en cours, et les fichiers physiques restent intacts. Les JSON `default_documents` des jobdomains ne sont pas modifiés (filtrés à la lecture).
+
+4. **Restauration sans auto-activation** : `archived_at = null` mais les activations company ne sont PAS re-activées automatiquement — chaque company doit re-activer manuellement.
+
+5. **Immutabilité preset** : un nouveau type système créé côté platform est disponible pour les futurs presets jobdomain et futures activations, mais ne s'ajoute jamais automatiquement dans les companies existantes. L'archivage ne réécrit pas les presets jobdomain JSON ni les configurations company historiques — il retire uniquement le type des sélections futures et désactive les activations runtime.
+
+6. **Backend BMAD** : ReadModel (`PlatformDocTypeCatalogReadModel`), 4 UseCases (Create/Update/Archive/Restore) avec DTOs, controller passif. 4 constantes audit ajoutées.
+
+7. **Frontend sans store** : appels directs `$platformApi` dans les pages. Index avec tabs scope, table enrichie, create dialog. Detail avec formulaire inline, stats d'usage, boutons archive/restore.
+
+8. **Séparation catalogue/preset** : le catalogue global des types système vit dans `platform.documents` (CRUD). Le preset jobdomain vit dans `platform.jobdomains` (sélection/add/remove/reorder). Le controller jobdomain lit les types depuis la DB (`DocumentType::where('is_system', true)->whereNull('archived_at')`) et hydrate `default_documents` depuis le fallback registry quand la colonne DB est null.
+
+### Invariant produit
+
+| Concept | Rôle |
+|---------|------|
+| Catalogue système platform (`/platform/documents`) | Source globale — CRUD des types système |
+| Preset jobdomain (`/platform/jobdomains/{id}`) | Template initial pour les companies — add/remove/reorder |
+| Company | Autonomie runtime — activations indépendantes |
+
+- Modifier un jobdomain ne rétro-propage **pas** sur les companies déjà configurées
+- Un nouveau type système est disponible pour les futurs presets et activations
+- Un type archivé disparaît des sélections futures sans réécrire les JSON historiques
+
+### Surfaces d'archivage
+
+| Surface | Comportement type archivé |
+|---------|--------------------------|
+| Platform catalog | Visible avec badge "Archived" |
+| Company activation catalog | Caché (`whereNull('archived_at')`) |
+| Jobdomain preset (sélection) | Retiré de la liste "ajouter" |
+| Jobdomain preset (JSON historique) | Toléré, badge "(archived)" à l'affichage |
+| Jobdomain assign to company | Types archivés dans JSON = skippés |
+| Member workflow / Self-service | Masqué si `enabled=false` |
+| Fichiers physiques | Intacts |
+
+### Conséquences
+- Le platform admin peut gérer les types système sans changement de code
+- Les modifications DB survivent aux redéploiements (sync additif)
+- L'archivage est réversible et ne casse aucun historique
+- 14 tests backend couvrent le CRUD + sync + auth/permission
+- Séparation modulaire propre : documents ≠ settings
+
+### Fichiers
+
+**Module platform.documents (CREATE)**
+- `app/Modules/Platform/Documents/DocumentsModule.php`
+- `app/Modules/Platform/Documents/Http/DocumentTypeCatalogController.php`
+- `app/Modules/Platform/Documents/UseCases/CreateSystemDocumentTypeUseCase.php`
+- `app/Modules/Platform/Documents/UseCases/CreateSystemDocumentTypeData.php`
+- `app/Modules/Platform/Documents/UseCases/UpdateSystemDocumentTypeUseCase.php`
+- `app/Modules/Platform/Documents/UseCases/UpdateSystemDocumentTypeData.php`
+- `app/Modules/Platform/Documents/UseCases/ArchiveSystemDocumentTypeUseCase.php`
+- `app/Modules/Platform/Documents/UseCases/ArchiveSystemDocumentTypeData.php`
+- `app/Modules/Platform/Documents/UseCases/RestoreSystemDocumentTypeUseCase.php`
+- `app/Modules/Platform/Documents/UseCases/RestoreSystemDocumentTypeData.php`
+- `app/Core/Documents/ReadModels/PlatformDocTypeCatalogReadModel.php`
+- `resources/js/pages/platform/documents/index.vue`
+- `resources/js/pages/platform/documents/[id].vue`
+- `tests/Feature/PlatformDocumentTypeCatalogTest.php`
+
+**MODIFY**
+- `app/Core/Documents/DocumentTypeCatalog.php` — `firstOrCreate` (seed-only)
+- `app/Core/Audit/AuditAction.php` — +4 constantes DOCUMENT_TYPE_*
+- `app/Modules/Platform/Settings/PlatformSettingsModule.php` — retrait permission/bundle/nav/routes documents
+- `app/Modules/Platform/Jobdomains/Http/JobdomainController.php` — DB source de vérité + hydratation fallback
+- `routes/platform.php` — middleware `module.active:platform.documents`
+- `resources/js/plugins/i18n/locales/en.json` — +clés platformDocumentTypes
+- `resources/js/plugins/i18n/locales/fr.json` — +clés platformDocumentTypes
+- `tests/Feature/PageModuleAlignmentTest.php` — override platform-documents-id
+
+---
+
+## ADR-183 : LOT-BMAD-UNIFICATION Phase 1 — Violations critiques
+
+- **Date** : 2026-03-03
+- **Contexte** : Audit global score 7.9/10. Dashboard n'avait pas de ModuleDefinition (orphelin). AuthController::register() contenait une transaction multi-entités inline. AuthController::myCompanies() contenait une lecture agrégée inline. Plan LOT-BMAD-UNIFICATION 10/10 strict approuvé.
+
+### Décisions
+
+1. **DashboardModule.php** — Création du manifest `core.dashboard` (scope=company, type=core, sortOrder=1). Pas de permissions ni bundles (ADR-149 = dashboard toujours accessible). routeNames=[] car routes ungated par design. navItem pointe vers route `dashboard`.
+
+2. **RegisterCompanyUseCase** — Extraction de la transaction multi-entités (User + Company + Membership + JobdomainGate + AuditLogger) depuis AuthController::register(). DTO `RegisterCompanyData` sans dépendance HTTP (scalaires uniquement, factory `fromValidated(array)`). UseCase injecté via DI container.
+
+3. **UserCompaniesReadModel** — Extraction de la lecture agrégée (memberships + companyRole + permissions + planKey + isAdmin) depuis AuthController::myCompanies(). Placé dans `app/Core/Auth/ReadModels/` (couche Core = domain reads).
+
+4. **Test exemptions ADR-149** — `GlobalModuleRouteCoverageTest` et `CompanyModuleRoutesAreGatedTest` exemptent `core.dashboard` via constante `UNGATED_MODULES` (routes intentionnellement non-gatées).
+
+### Règle anti-inflation appliquée
+- UseCase pour register() : justifié (transaction multi-entités, side-effects audit+jobdomain)
+- ReadModel pour myCompanies() : justifié (lecture agrégée multi-source avec computed fields)
+- login/logout/me : restent inline (infrastructure auth, pas de mutation métier)
+
+### Conséquences
+- AuthController passe de 218 à 134 lignes (passif)
+- 0 dépendance HTTP dans les UseCases/DTOs
+- DashboardModule découvert automatiquement par ModuleRegistry (autodiscovery)
+- Score modulaire attendu : +0.2 points
+
+### Fichiers
+
+**CREATE**
+- `app/Modules/Core/Dashboard/DashboardModule.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyData.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyResult.php`
+- `app/Core/Auth/ReadModels/UserCompaniesReadModel.php`
+
+**MODIFY**
+- `app/Modules/Infrastructure/Auth/Http/AuthController.php` — register() et myCompanies() passifs
+- `tests/Feature/GlobalModuleRouteCoverageTest.php` — UNGATED_MODULES exemption
+- `tests/Feature/CompanyModuleRoutesAreGatedTest.php` — UNGATED_MODULES exemption
+
+---
+
+## ADR-184 : LOT-BMAD-UNIFICATION Phase 2A — platform.jobdomains
+
+- **Date** : 2026-03-03
+- **Contexte** : Phase 1 validée (ADR-183). platform.jobdomains est le module le plus structurant (322 lignes controller, 90 lignes show() avec agrégation massive). Sert de référence architecturale pour les phases suivantes.
+
+### Classification anti-inflation
+
+| Méthode | Verdict | Justification |
+|---------|---------|---------------|
+| `index()` | ReadModel (catalog) | withCount agrégation |
+| `show()` | ReadModel (detail) | 90 lignes, multi-source (fields, modules, bundles, mandatory codes, document presets) |
+| `store()` | UseCase | Validation presets croisée (fields cross-référence DB) |
+| `update()` | UseCase | Multi-validation (fields + roles + documents), invariants croisés |
+| `destroy()` | UseCase | Guard (companies_count > 0) |
+| `validateDefault*()` | Shared validator | Extraits dans `JobdomainPresetValidator` (partagé Create/Update) |
+
+### Décisions
+
+1. **PlatformJobdomainReadModel** — Classe unique avec 2 méthodes : `catalog()` (index) et `detail()` (show). Pas 2 ReadModels séparés — index est trop simple pour justifier un fichier dédié.
+
+2. **UseCases sans abort()** — Les validators utilisent `ValidationException::withMessages()` au lieu de `abort(422)`. Aucune dépendance HTTP dans la couche UseCase/Validator.
+
+3. **JobdomainPresetValidator** — Classe partagée entre Create et Update (DRY). Valide fields, roles, documents. Pas de duplication avec FormRequest (validation HTTP = structure/types, validation UseCase = invariants métier cross-source).
+
+4. **UpdateJobdomainData** — DTO avec `attributes` array plutôt que champs nommés. Justification : update partiel (PATCH semantics), les champs sont déjà validés par FormRequest, et le DTO ne fait que transporter.
+
+5. **Pas de Result object** — Les UseCases retournent directement `Jobdomain` (ou void pour delete). Pas de wrapper inutile.
+
+### Métriques
+
+| Métrique | Avant | Après |
+|----------|-------|-------|
+| Controller lignes | 322 | 87 |
+| Eloquent dans controller | 6 appels | 0 |
+| Méthode la plus longue | 90 lignes (show) | 22 lignes (update) |
+| UseCase injection | — | DI container |
+
+### Fichiers
+
+**CREATE**
+- `app/Modules/Platform/Jobdomains/ReadModels/PlatformJobdomainReadModel.php`
+- `app/Modules/Platform/Jobdomains/UseCases/CreateJobdomainUseCase.php`
+- `app/Modules/Platform/Jobdomains/UseCases/CreateJobdomainData.php`
+- `app/Modules/Platform/Jobdomains/UseCases/UpdateJobdomainUseCase.php`
+- `app/Modules/Platform/Jobdomains/UseCases/UpdateJobdomainData.php`
+- `app/Modules/Platform/Jobdomains/UseCases/DeleteJobdomainUseCase.php`
+- `app/Modules/Platform/Jobdomains/UseCases/JobdomainPresetValidator.php`
+
+**MODIFY**
+- `app/Modules/Platform/Jobdomains/Http/JobdomainController.php` — adaptateur HTTP pur (87 lignes)
+
+---
+
+## ADR-185 : LOT-BMAD-UNIFICATION Phase 2B — platform.markets
+
+- **Date** : 2026-03-03
+- **Contexte** : Phase 2A validée (ADR-184). Module platform.markets = 3 controllers (MarketCrudController 232L, LegalStatusController 123L, LanguageController 129L). Total 484 lignes avec Eloquent direct, SVG sanitization, import/export, invariants (default unique, guard companies).
+
+### Classification anti-inflation
+
+| Méthode | Verdict | Justification |
+|---------|---------|---------------|
+| Market.index/show/export | ReadModel | Agrégation (withCount, relations, projection complexe) |
+| Market.store/update | UseCase (Upsert) | SVG sanitization + default invariant + language sync + cache |
+| Market.toggleActive | UseCase | Guard (companies using) + cache |
+| Market.setDefault | UseCase | Invariant (unique default + inactive guard) + cache |
+| Market.importPreview | ReadModel | Read-only diff computation |
+| Market.importApply | INLINE_OK | Déjà délègue à MarketRegistry |
+| LegalStatus.store/update | UseCase (Upsert) | VAT enforcement + uniqueness cross-market + default management |
+| LegalStatus.destroy | INLINE_OK (service) | Simple delete, aucun guard |
+| LegalStatus.reorder | INLINE_OK (service) | Bulk sort_order, aucun invariant |
+| Language.index/export | ReadModel | withCount(markets) |
+| Language.store/update/toggle | INLINE_OK (service) | Default management trivial, pas d'audit/cache |
+| Language.destroy | UseCase | Guard (markets using) |
+| Language.importApply | UseCase | DB::transaction bulk |
+
+**6 UseCases** (vs 9 plan initial = -33% anti-inflation).
+
+### Décisions
+
+1. **UpsertMarketUseCase** — Combine store+update. SVG sanitization, default invariant, language sync, cache clear.
+2. **UpsertLegalStatusUseCase** — Combine store+update. VAT enforcement, uniqueness cross-market, default management. 3 invariants = non-trivial.
+3. **MarketModuleCrudService** — Service mince pour 5 opérations triviales (Language create/update/toggle, LegalStatus delete/reorder). Un seul fichier, pas d'inflation.
+4. **PlatformMarketReadModel** — Classe unique : catalog(), detail(), export(), languageCatalog(), languageExport(), importPreview(). 6 méthodes dans 1 fichier.
+5. **Pas de DTO** pour UseCases à paramètre unique (ToggleMarketActive, SetDefaultMarket, DeleteLanguage, ImportLanguages = int $id ou array direct).
+
+### Métriques
+
+| Controller | Avant | Après |
+|------------|-------|-------|
+| MarketCrudController | 232 | 138 |
+| LegalStatusController | 123 | 71 |
+| LanguageController | 129 | 98 |
+| **Total** | **484** | **307** (-37%) |
+| Eloquent dans controllers | ~25 appels | **0** |
+
+### Fichiers
+
+**CREATE (10)**
+- `app/Modules/Platform/Markets/ReadModels/PlatformMarketReadModel.php`
+- `app/Modules/Platform/Markets/UseCases/UpsertMarketUseCase.php`
+- `app/Modules/Platform/Markets/UseCases/UpsertMarketData.php`
+- `app/Modules/Platform/Markets/UseCases/ToggleMarketActiveUseCase.php`
+- `app/Modules/Platform/Markets/UseCases/SetDefaultMarketUseCase.php`
+- `app/Modules/Platform/Markets/UseCases/UpsertLegalStatusUseCase.php`
+- `app/Modules/Platform/Markets/UseCases/UpsertLegalStatusData.php`
+- `app/Modules/Platform/Markets/UseCases/DeleteLanguageUseCase.php`
+- `app/Modules/Platform/Markets/UseCases/ImportLanguagesUseCase.php`
+- `app/Modules/Platform/Markets/MarketModuleCrudService.php`
+
+**MODIFY (3)**
+- `app/Modules/Platform/Markets/Http/MarketCrudController.php`
+- `app/Modules/Platform/Markets/Http/LegalStatusController.php`
+- `app/Modules/Platform/Markets/Http/LanguageController.php`
+
+---
+
+## ADR-186 — Phase 2C : platform.billing — Unification BMAD 10/10
+
+**Date** : 2026-03-03
+**Contexte** : LOT-BMAD-UNIFICATION Phase 2C. Le module platform.billing contient 9 controllers (1068 lignes). Situation mixte : 2 controllers déjà passifs (PlatformBillingController, PlatformBillingWidgetsController), 2 quasi-passifs avec Invoice::find inline (AdvancedMutation, InvoiceMutation), et 5 avec Eloquent/logique métier dans controllers (BillingConfig, BillingPolicy, Financial, PaymentModule, PaymentMethodRule).
+
+**Décisions** :
+
+1. **Anti-inflation** : 2 UseCases au lieu de 2 prévus (RejectSubscription downgraded en service mince — ∅ audit, ∅ transaction, 1 update trivial)
+2. **ApproveSubscriptionUseCase** : extraite de BillingConfigController — DB::transaction + expire existing active + BillingProvider::changePlan + status transition pending→active
+3. **UpdateBillingPolicyUseCase** : extraite de PlatformBillingPolicyController — DB::transaction + cannot-decrease guards (invoice_next_number, credit_note_next_number) + retry_intervals invariants + audit diff via DiffEngine
+4. **BillingConfigCrudService** (service mince) : updateConfig, updatePolicies, rejectSubscription, closePeriod, findCompany, toggleFreeze — 6 méthodes triviales sans invariant
+5. **PaymentGovernanceCrudService** (service mince) : installModule, activateModule, deactivateModule, updateModuleCredentials, checkModuleHealth + createRule, updateRule, deleteRule — 8 méthodes CRUD
+6. **Route model binding** : routes `{id}` → `{invoice}` pour AdvancedMutation (5 routes) + InvoiceMutation (3 routes). Controllers passent `Invoice $invoice` au lieu de `Invoice::find($id)`.
+7. **PaymentRegistry::get()** gardé dans controller (pas Eloquent — c'est un registre PHP) pour maintenir la réponse 404 spécifique
+8. **ReadService renames catalogués Phase 4** : 6 fichiers (PlatformBillingReadService, PlatformFinancialReadService, PlatformPaymentGovernanceReadService, PlatformBillingWidgetsReadService, PlatformBillingDashboardReadService, CompanyBillingReadService)
+
+**Conséquences** :
+- 0 Eloquent dans les 9 controllers billing (vérifié par grep)
+- 0 DB:: dans les controllers
+- BillingConfigController : 127L → 95L
+- PlatformBillingPolicyController : 146L → 72L (logique métier extraite dans UseCase)
+- PlatformFinancialController : 174L → 134L
+- PlatformAdvancedMutationController : 186L → 136L (route model binding, ∅ Invoice::find)
+- PlatformInvoiceMutationController : 109L → 86L (route model binding)
+- PaymentModuleController : 136L → 74L
+- PaymentMethodRuleController : 98L → 88L
+- PlatformBillingController : 95L — inchangé (déjà passif)
+- PlatformBillingWidgetsController : 56L — inchangé (déjà passif)
+- Tests : 1369 passed, 0 failed, 9 skipped
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (4)**
+- `app/Modules/Platform/Billing/UseCases/ApproveSubscriptionUseCase.php`
+- `app/Modules/Platform/Billing/UseCases/UpdateBillingPolicyUseCase.php`
+- `app/Modules/Platform/Billing/BillingConfigCrudService.php`
+- `app/Modules/Platform/Billing/PaymentGovernanceCrudService.php`
+
+**MODIFY (8)**
+- `app/Modules/Platform/Billing/Http/BillingConfigController.php`
+- `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php`
+- `app/Modules/Platform/Billing/Http/PlatformFinancialController.php`
+- `app/Modules/Platform/Billing/Http/PlatformAdvancedMutationController.php`
+- `app/Modules/Platform/Billing/Http/PlatformInvoiceMutationController.php`
+- `app/Modules/Platform/Billing/Http/PaymentModuleController.php`
+- `app/Modules/Platform/Billing/Http/PaymentMethodRuleController.php`
+- `routes/platform.php` (route model binding {id}→{invoice})
+
+---
+
+## ADR-187 — Phase 2D : platform.fields + platform.plans + platform.roles — Unification BMAD 10/10
+
+**Date** : 2026-03-03
+**Contexte** : LOT-BMAD-UNIFICATION Phase 2D. Trois modules CRUD simples. Toutes les mutations ont des side-effects (audit ou cache invalidation) → UseCase justifié pour chaque. Anti-inflation : pas de DTO (signature `?int $id, array $validated`), Upsert consolidé pour store+update.
+
+**Décisions** :
+
+1. **platform.fields** (120L → 66L) :
+   - `UpsertPlatformFieldUseCase` : unicité cross-platform + audit (create + update consolidés)
+   - `DeletePlatformFieldUseCase` : guard is_system (`AuthorizationException` → 403) + audit
+   - `PlatformFieldReadModel` : catalogue avec filtre scope
+   - Pas de DTO (anti-inflation)
+
+2. **platform.plans** (137L → 87L) :
+   - `UpsertPlanUseCase` : dollar→cents conversion + cache invalidation (create + update consolidés)
+   - `TogglePlanActiveUseCase` : guard companies using + cache invalidation
+   - `PlatformPlanReadModel` : catalogue (withCount + computed dollars) + detail (companies pagination)
+   - Pas de DTO (anti-inflation)
+
+3. **platform.roles** (120L → 60L) :
+   - `UpsertPlatformRoleUseCase` : permission sync + super_admin guard (create + update consolidés) + audit
+   - `DeletePlatformRoleUseCase` : super_admin structural guard + users_count guard + audit
+   - `PlatformRoleReadModel` : catalogue (withCount users + with permissions)
+   - Pas de DTO (anti-inflation)
+
+4. **Pattern exception** : `AuthorizationException` pour guards structurels (is_system, super_admin) qui sont des protections d'accès → 403. `ValidationException` pour les guards métier (companies using, unicité) → 422.
+
+**Conséquences** :
+- 0 Eloquent / 0 DB:: dans les 3 controllers
+- 6 UseCases créés, 3 ReadModels créés, 0 services minces
+- Lignes totales controllers : 377L → 213L (−43%)
+- Tests : 1369 passed, 0 failed, 9 skipped
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (9)**
+- `app/Modules/Platform/Fields/UseCases/UpsertPlatformFieldUseCase.php`
+- `app/Modules/Platform/Fields/UseCases/DeletePlatformFieldUseCase.php`
+- `app/Modules/Platform/Fields/ReadModels/PlatformFieldReadModel.php`
+- `app/Modules/Platform/Plans/UseCases/UpsertPlanUseCase.php`
+- `app/Modules/Platform/Plans/UseCases/TogglePlanActiveUseCase.php`
+- `app/Modules/Platform/Plans/ReadModels/PlatformPlanReadModel.php`
+- `app/Modules/Platform/Roles/UseCases/UpsertPlatformRoleUseCase.php`
+- `app/Modules/Platform/Roles/UseCases/DeletePlatformRoleUseCase.php`
+- `app/Modules/Platform/Roles/ReadModels/PlatformRoleReadModel.php`
+
+**MODIFY (3)**
+- `app/Modules/Platform/Fields/Http/FieldDefinitionController.php`
+- `app/Modules/Platform/Plans/Http/PlanCrudController.php`
+- `app/Modules/Platform/Roles/Http/RoleController.php`
+
+---
+
+## ADR-188 — Phase 2E : platform.modules — Unification BMAD 10/10
+
+**Date** : 2026-03-03
+**Contexte** : LOT-BMAD-UNIFICATION Phase 2E. Le module platform.modules est le plus structurant de la plateforme (activation, configuration, registry, gouvernance). Controller de 432 lignes avec aggregation massive (dual-scope index, detail multi-source) et mutations complexes (toggle scope-conditionnel, pricing invariants).
+
+**Décisions** :
+
+1. **PlatformModuleReadModel** : 2 projections publiques (`catalog`, `detail`) + 4 privées (companyModules, platformModules, adminDetail, companyDetail). Extrait 189 lignes d'agrégation du controller (dual-scope merge registry+DB, override resolution, reverse dependencies, companies using, compatible jobdomains).
+
+2. **TogglePlatformModuleUseCase** : scope-conditionnel (admin → délègue à AdminModuleService, company → toggle direct). Audit side-effect. AdminModuleService échecs traduits en `ValidationException` (plus de codes HTTP dans la couche UseCase).
+
+3. **UpdateModuleConfigUseCase** : pricing invariants complets extraits — auto-correction mode/model/metric, pricing_params validation model-specific (flat/plan_flat/per_seat/usage/tiered), ModulePricingPolicy enforcement. `RuntimeException` du policy traduit en `ValidationException`.
+
+4. **sync() resté inline** (anti-inflation) : 3 appels service (ModuleRegistry::clearCache, ::sync, AuditLogger). 0 Eloquent direct dans le controller. Pas de UseCase pour un wrapper de 3 lignes.
+
+5. **Anti-inflation** : 0 DTO. ModuleRegistry lookups (non-Eloquent) gardés dans controller pour les 404 checks (concern HTTP). Logique métier seule extraite.
+
+**Conséquences** :
+- Controller : 432L → 97L (−78%)
+- 0 Eloquent / 0 DB:: dans controller
+- Plus grande méthode controller : 26 lignes (updateConfig avec validation rules)
+- 2 UseCases créés, 1 ReadModel créé, 0 services minces
+- Tests : 1369 passed, 0 failed, 9 skipped
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (3)**
+- `app/Modules/Platform/Modules/ReadModels/PlatformModuleReadModel.php`
+- `app/Modules/Platform/Modules/UseCases/TogglePlatformModuleUseCase.php`
+- `app/Modules/Platform/Modules/UseCases/UpdateModuleConfigUseCase.php`
+
+**MODIFY (1)**
+- `app/Modules/Platform/Modules/Http/ModuleController.php`
 
 ---
 

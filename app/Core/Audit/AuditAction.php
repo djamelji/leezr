@@ -28,6 +28,7 @@ final class AuditAction
     public const MODULE_ENABLED = 'module.enabled';
     public const MODULE_DISABLED = 'module.disabled';
     public const MODULE_SETTINGS_UPDATED = 'module.settings_updated';
+    public const MODULE_SYNCED = 'module.synced';
 
     // ─── Members ────────────────────────────────────────
     public const MEMBER_ADDED = 'member.added';
@@ -60,6 +61,12 @@ final class AuditAction
     public const FIELD_UPDATED = 'field.updated';
     public const FIELD_DELETED = 'field.deleted';
 
+    // ─── Document types (platform, ADR-182) ─────────────
+    public const DOCUMENT_TYPE_CREATED = 'document_type.created';
+    public const DOCUMENT_TYPE_UPDATED = 'document_type.updated';
+    public const DOCUMENT_TYPE_ARCHIVED = 'document_type.archived';
+    public const DOCUMENT_TYPE_RESTORED = 'document_type.restored';
+
     // ─── Realtime governance ────────────────────────────
     public const KILL_SWITCH_ACTIVATED = 'realtime.kill_switch_activated';
     public const KILL_SWITCH_DEACTIVATED = 'realtime.kill_switch_deactivated';
@@ -69,6 +76,9 @@ final class AuditAction
     // ─── Security ───────────────────────────────────────
     public const SECURITY_ALERT_ACKNOWLEDGED = 'security.alert_acknowledged';
     public const SECURITY_ALERT_RESOLVED = 'security.alert_resolved';
+
+    // ─── Theme ────────────────────────────────────────
+    public const THEME_VISIBILITY_UPDATED = 'theme.visibility_updated';
 
     // ─── Billing (ADR-135 LOT4) ──────────────────────
     public const BILLING_POLICY_UPDATED = 'billing.policy_updated';

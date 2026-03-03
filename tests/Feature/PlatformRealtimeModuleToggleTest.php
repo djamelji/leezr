@@ -50,6 +50,7 @@ class PlatformRealtimeModuleToggleTest extends TestCase
             'name' => 'RT Test Co',
             'slug' => 'rt-test-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->companyUser = User::factory()->create();

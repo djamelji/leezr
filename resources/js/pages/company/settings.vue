@@ -2,6 +2,7 @@
 definePage({ meta: { module: 'core.settings', surface: 'structure' } })
 
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
+import CompanyDocumentsSection from '@/views/pages/company-settings/CompanyDocumentsSection.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
@@ -30,8 +31,23 @@ const dynamicFields = computed(() => {
   return settingsStore.company?.dynamic_fields || []
 })
 
+// ADR-169 Phase 4: Storage quota
+const storageInfo = computed(() => settingsStore.company?.storage || null)
+
+// ADR-174: Company documents vault
+const companyDocuments = computed(() => settingsStore.companyDocuments)
+const hasCompanyDocuments = computed(() => companyDocuments.value.length > 0)
+
+// ADR-175: Document activation catalog
+const documentActivations = computed(() => settingsStore.documentActivations)
+
 const hasMarketAssigned = computed(() => {
   return !!settingsStore.marketInfo?.market_name
+})
+
+// ADR-168b: jobdomain mandatory fields
+const jobdomainMandatoryFields = computed(() => {
+  return settingsStore.company?.jobdomain_mandatory_fields || []
 })
 
 const availableLegalStatuses = computed(() => {
@@ -42,6 +58,8 @@ onMounted(async () => {
   await Promise.all([
     settingsStore.fetchCompany(),
     settingsStore.fetchLegalStructure(),
+    settingsStore.fetchCompanyDocuments(),
+    settingsStore.fetchDocumentActivations(),
   ])
 
   const data = settingsStore.company
@@ -186,6 +204,111 @@ const handleLegalSave = async () => {
         </VForm>
       </VCardText>
     </VCard>
+
+    <!-- ADR-168b: jobdomain mandatory fields -->
+    <VCard
+      v-if="jobdomainMandatoryFields.length"
+      class="mt-6"
+    >
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            color="warning"
+            variant="tonal"
+            rounded
+          >
+            <VIcon icon="tabler-clipboard-check" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('companySettings.mandatoryByJobdomain') }}</VCardTitle>
+        <VCardSubtitle>{{ t('companySettings.mandatoryByJobdomainHint') }}</VCardSubtitle>
+      </VCardItem>
+      <VCardText>
+        <VAlert
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('companySettings.mandatoryByJobdomainExplainer') }}
+        </VAlert>
+        <VList density="compact">
+          <VListItem
+            v-for="field in jobdomainMandatoryFields"
+            :key="field.code"
+          >
+            <template #prepend>
+              <VIcon
+                icon="tabler-alert-circle"
+                color="warning"
+                size="20"
+              />
+            </template>
+            <VListItemTitle>{{ field.label }}</VListItemTitle>
+          </VListItem>
+        </VList>
+      </VCardText>
+    </VCard>
+
+    <!-- ADR-169 Phase 4: Storage Usage -->
+    <VCard
+      v-if="storageInfo"
+      class="mt-6"
+    >
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            :color="storageInfo.warning ? 'error' : 'primary'"
+            variant="tonal"
+            rounded
+          >
+            <VIcon icon="tabler-database" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('companySettings.storageTitle') }}</VCardTitle>
+        <VCardSubtitle>{{ storageInfo.used_display }} / {{ storageInfo.limit_display }}</VCardSubtitle>
+      </VCardItem>
+      <VCardText>
+        <VAlert
+          v-if="storageInfo.blocked"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('companySettings.storageBlocked') }}
+        </VAlert>
+        <VAlert
+          v-else-if="storageInfo.warning"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('companySettings.storageWarning') }}
+        </VAlert>
+
+        <VProgressLinear
+          :model-value="storageInfo.percentage"
+          :color="storageInfo.blocked ? 'error' : storageInfo.warning ? 'warning' : 'primary'"
+          height="8"
+          rounded
+        />
+        <div class="d-flex justify-space-between mt-2">
+          <span class="text-body-2 text-medium-emphasis">{{ storageInfo.percentage }}%</span>
+          <span class="text-body-2 text-medium-emphasis">{{ storageInfo.limit_display }}</span>
+        </div>
+      </VCardText>
+    </VCard>
+
+    <!-- ADR-178: Unified Documents Section -->
+    <CompanyDocumentsSection
+      :document-activations="documentActivations"
+      :company-documents="companyDocuments"
+      :can-edit="canEdit"
+      @refresh-activations="settingsStore.fetchDocumentActivations()"
+      @refresh-documents="settingsStore.fetchCompanyDocuments()"
+    />
 
     <!-- Legal Structure (ADR-104) — only visible when market assigned by Platform -->
     <VCard

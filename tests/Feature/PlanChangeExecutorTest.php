@@ -43,6 +43,7 @@ class PlanChangeExecutorTest extends TestCase
             'name' => 'Change Co',
             'slug' => 'change-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->subscription = Subscription::create([

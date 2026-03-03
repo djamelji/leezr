@@ -2,14 +2,13 @@
 
 namespace App\Modules\Platform\Billing\Http;
 
-use App\Core\Billing\Contracts\BillingProvider;
 use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\ReadModels\SubscriptionReadModel;
-use App\Core\Billing\Subscription;
+use App\Modules\Platform\Billing\BillingConfigCrudService;
+use App\Modules\Platform\Billing\UseCases\ApproveSubscriptionUseCase;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class BillingConfigController
 {
@@ -36,10 +35,9 @@ class BillingConfigController
             'config' => ['sometimes', 'array'],
         ]);
 
-        $settings = PlatformSetting::instance();
-        $settings->update(['billing' => $validated]);
+        $billing = BillingConfigCrudService::updateConfig($validated);
 
-        return response()->json(['billing' => $settings->billing]);
+        return response()->json(['billing' => $billing]);
     }
 
     public function subscriptions(): JsonResponse
@@ -47,40 +45,23 @@ class BillingConfigController
         return response()->json(SubscriptionReadModel::list());
     }
 
-    public function approveSubscription(int $id, BillingProvider $billing): JsonResponse
+    public function approveSubscription(int $id, ApproveSubscriptionUseCase $useCase): JsonResponse
     {
-        return DB::transaction(function () use ($id, $billing) {
-            $subscription = Subscription::where('status', 'pending')->findOrFail($id);
-            $company = $subscription->company;
+        $subscription = $useCase->execute($id);
 
-            // Enforce one active subscription: expire any existing active
-            Subscription::where('company_id', $company->id)
-                ->where('status', 'active')
-                ->update(['status' => 'expired', 'current_period_end' => now()]);
-
-            $billing->changePlan($company, $subscription->plan_key);
-
-            $subscription->update([
-                'status' => 'active',
-                'current_period_start' => now(),
-                'current_period_end' => now()->addYear(),
-            ]);
-
-            return response()->json([
-                'message' => 'Subscription approved.',
-                'subscription' => $subscription->fresh()->load('company:id,name,slug'),
-            ]);
-        });
+        return response()->json([
+            'message' => 'Subscription approved.',
+            'subscription' => $subscription,
+        ]);
     }
 
     public function rejectSubscription(int $id): JsonResponse
     {
-        $subscription = Subscription::where('status', 'pending')->findOrFail($id);
-        $subscription->update(['status' => 'cancelled']);
+        $subscription = BillingConfigCrudService::rejectSubscription($id);
 
         return response()->json([
             'message' => 'Subscription rejected.',
-            'subscription' => $subscription->fresh()->load('company:id,name,slug'),
+            'subscription' => $subscription,
         ]);
     }
 
@@ -114,14 +95,11 @@ class BillingConfigController
             'vat_rate' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $settings = PlatformSetting::instance();
-        $billing = $settings->billing ?? ['driver' => 'null', 'config' => []];
-        $billing['policies'] = $validated;
-        $settings->update(['billing' => $billing]);
+        $policies = BillingConfigCrudService::updatePolicies($validated);
 
         return response()->json([
             'message' => 'Payment policies updated.',
-            'policies' => $validated,
+            'policies' => $policies,
         ]);
     }
 }

@@ -2,13 +2,10 @@
 
 namespace App\Modules\Platform\Billing\Http;
 
-use App\Core\Audit\AuditAction;
-use App\Core\Audit\AuditLogger;
-use App\Core\Audit\DiffEngine;
 use App\Core\Billing\PlatformBillingPolicy;
+use App\Modules\Platform\Billing\UseCases\UpdateBillingPolicyUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -35,7 +32,7 @@ class PlatformBillingPolicyController
         ]);
     }
 
-    public function update(Request $request, AuditLogger $audit): JsonResponse
+    public function update(Request $request, UpdateBillingPolicyUseCase $useCase): JsonResponse
     {
         $validated = $request->validate([
             // Wallet
@@ -73,74 +70,11 @@ class PlatformBillingPolicyController
             'addon_billing_interval' => ['sometimes', 'string', Rule::in(self::ADDON_BILLING_INTERVAL)],
         ]);
 
-        if (empty($validated)) {
-            return response()->json(['message' => 'No fields to update.'], 422);
-        }
+        $policy = $useCase->execute($validated);
 
-        return DB::transaction(function () use ($validated, $audit) {
-            $policy = PlatformBillingPolicy::instance();
-            $before = $policy->toArray();
-
-            // ── Cannot-decrease guard for next_number fields ──
-            if (isset($validated['invoice_next_number']) && $validated['invoice_next_number'] < $policy->invoice_next_number) {
-                return response()->json([
-                    'message' => 'invoice_next_number cannot decrease.',
-                    'errors' => ['invoice_next_number' => ['Cannot decrease below current value ('.$policy->invoice_next_number.').']]
-                ], 422);
-            }
-
-            if (isset($validated['credit_note_next_number']) && $validated['credit_note_next_number'] < $policy->credit_note_next_number) {
-                return response()->json([
-                    'message' => 'credit_note_next_number cannot decrease.',
-                    'errors' => ['credit_note_next_number' => ['Cannot decrease below current value ('.$policy->credit_note_next_number.').']]
-                ], 422);
-            }
-
-            // ── retry_intervals_days: strictly increasing + length == max_retry_attempts ──
-            $maxRetries = $validated['max_retry_attempts'] ?? $policy->max_retry_attempts;
-            $retryIntervals = $validated['retry_intervals_days'] ?? $policy->retry_intervals_days;
-
-            if (isset($validated['retry_intervals_days']) || isset($validated['max_retry_attempts'])) {
-                if (count($retryIntervals) !== $maxRetries) {
-                    return response()->json([
-                        'message' => 'retry_intervals_days length must equal max_retry_attempts.',
-                        'errors' => ['retry_intervals_days' => ["Expected {$maxRetries} entries, got ".count($retryIntervals).'.']]
-                    ], 422);
-                }
-
-                for ($i = 1; $i < count($retryIntervals); $i++) {
-                    if ($retryIntervals[$i] <= $retryIntervals[$i - 1]) {
-                        return response()->json([
-                            'message' => 'retry_intervals_days must be strictly increasing.',
-                            'errors' => ['retry_intervals_days' => ['Values must be strictly increasing.']]
-                        ], 422);
-                    }
-                }
-            }
-
-            $policy->update($validated);
-            $policy->refresh();
-
-            $after = $policy->toArray();
-            $diff = DiffEngine::diff($before, $after);
-
-            if (! DiffEngine::isEmpty($diff)) {
-                $audit->logPlatform(
-                    AuditAction::BILLING_POLICY_UPDATED,
-                    'platform_billing_policy',
-                    (string) $policy->id,
-                    [
-                        'diffBefore' => $before,
-                        'diffAfter' => $after,
-                        'metadata' => ['diff' => $diff],
-                    ],
-                );
-            }
-
-            return response()->json([
-                'message' => 'Billing policy updated.',
-                'policy' => $policy,
-            ]);
-        });
+        return response()->json([
+            'message' => 'Billing policy updated.',
+            'policy' => $policy,
+        ]);
     }
 }

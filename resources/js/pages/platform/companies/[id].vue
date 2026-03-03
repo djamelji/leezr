@@ -30,11 +30,14 @@ const modules = ref([])
 // ─── Overview form ──────────────────────────────────
 const planForm = ref({ plan_key: '' })
 
+const incompleteProfilesCount = ref(0)
+
 const applyProfile = data => {
   company.value = data.company
   plan.value = data.plan
   modules.value = data.modules
   planForm.value.plan_key = data.company.plan_key || 'starter'
+  incompleteProfilesCount.value = data.incomplete_profiles_count || 0
 }
 
 onMounted(async () => {
@@ -290,11 +293,22 @@ const isModuleToggleDisabled = mod => {
                   cols="12"
                   md="6"
                 >
-                  <AppTextField
-                    :model-value="String(company.memberships_count ?? 0)"
-                    :label="t('companies.members')"
-                    disabled
-                  />
+                  <div class="d-flex align-center gap-2">
+                    <AppTextField
+                      :model-value="String(company.memberships_count ?? 0)"
+                      :label="t('companies.members')"
+                      disabled
+                      class="flex-grow-1"
+                    />
+                    <VChip
+                      v-if="incompleteProfilesCount > 0"
+                      color="error"
+                      variant="tonal"
+                      size="small"
+                    >
+                      {{ t('platformCompanyDetail.incompleteProfiles', { count: incompleteProfilesCount }) }}
+                    </VChip>
+                  </div>
                 </VCol>
 
                 <!-- Job Domain -->

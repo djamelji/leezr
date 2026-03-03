@@ -43,6 +43,7 @@ class CompanyNavPermissionTest extends TestCase
             'name' => 'Nav Perm Co',
             'slug' => 'nav-perm-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Enable all company modules

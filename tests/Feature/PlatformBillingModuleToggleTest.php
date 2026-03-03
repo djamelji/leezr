@@ -123,6 +123,7 @@ class PlatformBillingModuleToggleTest extends TestCase
             'name' => 'Widget Test Co',
             'slug' => 'widget-test-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $catalog = DashboardWidgetRegistry::catalogForCompany($company);

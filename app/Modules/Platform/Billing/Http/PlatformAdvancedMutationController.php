@@ -21,19 +21,13 @@ class PlatformAdvancedMutationController
         private readonly AdminAdvancedMutationService $service,
     ) {}
 
-    public function refund(Request $request, int $id): JsonResponse
+    public function refund(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'amount' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:500'],
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->refund(
@@ -54,17 +48,11 @@ class PlatformAdvancedMutationController
         }
     }
 
-    public function retryPayment(Request $request, int $id): JsonResponse
+    public function retryPayment(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->retryPayment(
@@ -89,18 +77,12 @@ class PlatformAdvancedMutationController
         }
     }
 
-    public function forceDunningTransition(Request $request, int $id): JsonResponse
+    public function forceDunningTransition(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'target_status' => ['required', 'string', 'in:overdue,uncollectible'],
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->forceDunningTransition(
@@ -120,7 +102,7 @@ class PlatformAdvancedMutationController
         }
     }
 
-    public function issueCreditNote(Request $request, int $id): JsonResponse
+    public function issueCreditNote(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'amount' => ['required', 'integer', 'min:1'],
@@ -128,12 +110,6 @@ class PlatformAdvancedMutationController
             'apply_to_wallet' => ['required', 'boolean'],
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->issueCreditNote(
@@ -155,17 +131,11 @@ class PlatformAdvancedMutationController
         }
     }
 
-    public function writeOff(Request $request, int $id): JsonResponse
+    public function writeOff(Request $request, Invoice $invoice): JsonResponse
     {
         $request->validate([
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
-
-        $invoice = Invoice::find($id);
-
-        if (! $invoice) {
-            return response()->json(['message' => 'Invoice not found.'], 404);
-        }
 
         try {
             $result = $this->service->writeOff(

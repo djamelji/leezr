@@ -46,6 +46,7 @@ class AuthorizationContractTest extends TestCase
             'name' => 'Contract Co',
             'slug' => 'contract-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Enable all company modules

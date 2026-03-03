@@ -4,11 +4,13 @@ namespace App\Modules\Core\Members\Http;
 
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldResolverService;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
 use App\Core\Security\SecurityDetector;
@@ -27,17 +29,24 @@ class MembershipController extends Controller
 
         $members = $company->memberships()
             ->with(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name'])
-            ->get()
-            ->map(fn (Membership $m) => [
-                'id' => $m->id,
-                'user' => $m->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
-                'role' => $m->role,
-                'company_role' => $m->companyRole ? $m->companyRole->only('id', 'key', 'name') : null,
-                'created_at' => $m->created_at,
-            ]);
+            ->get();
+
+        // ADR-168b: bulk completeness (5 queries, no N+1)
+        $completeness = CompanyUserProfileReadModel::bulkCompleteness($company, $members);
+
+        $mapped = $members->map(fn (Membership $m) => [
+            'id' => $m->id,
+            'user' => $m->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
+            'role' => $m->role,
+            'company_role' => $m->companyRole ? $m->companyRole->only('id', 'key', 'name') : null,
+            'created_at' => $m->created_at,
+            'profile_completeness' => $completeness[$m->id] ?? ['filled' => 0, 'total' => 0, 'complete' => true],
+        ]);
 
         return response()->json([
-            'members' => $members,
+            'members' => $mapped,
+            'member_count' => $members->count(),
+            'member_limit' => CompanyEntitlements::memberLimit($company),
         ]);
     }
 
@@ -46,7 +55,9 @@ class MembershipController extends Controller
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->with(['user', 'companyRole:id,key,name'])->findOrFail($id);
 
-        $profile = CompanyUserProfileReadModel::get($membership->user, $company);
+        $roleKey = $membership->companyRole?->key;
+        $canReadSensitive = $request->user()->hasCompanyPermission($company, 'members.sensitive_read');
+        $profile = CompanyUserProfileReadModel::get($membership->user, $company, $roleKey, $canReadSensitive);
 
         return response()->json([
             'member' => [
@@ -57,12 +68,42 @@ class MembershipController extends Controller
             ],
             'base_fields' => $profile['base_fields'],
             'dynamic_fields' => $profile['dynamic_fields'],
+            'profile_completeness' => $profile['profile_completeness'],
         ]);
+    }
+
+    public function fields(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $membership = $company->memberships()->with('user')->findOrFail($id);
+        $roleKey = $request->query('role_key');
+        $canReadSensitive = $request->user()->hasCompanyPermission($company, 'members.sensitive_read');
+
+        $fields = FieldResolverService::resolve(
+            model: $membership->user,
+            scope: FieldDefinition::SCOPE_COMPANY_USER,
+            companyId: $company->id,
+            roleKey: $roleKey,
+            canReadSensitive: $canReadSensitive,
+            marketKey: $company->market_key,
+        );
+
+        return response()->json(['dynamic_fields' => $fields]);
     }
 
     public function store(StoreMemberRequest $request): JsonResponse
     {
         $company = $request->attributes->get('company');
+
+        $limit = CompanyEntitlements::memberLimit($company);
+        if ($limit !== null && $company->memberships()->count() >= $limit) {
+            return response()->json([
+                'message' => __('Member limit reached.'),
+                'current' => $company->memberships()->count(),
+                'limit' => $limit,
+            ], 422);
+        }
+
         $validated = $request->validated();
 
         $user = User::where('email', $validated['email'])->first();
@@ -137,6 +178,7 @@ class MembershipController extends Controller
                 $validated['dynamic_fields'],
                 FieldDefinition::SCOPE_COMPANY_USER,
                 $company->id,
+                $company->market_key,
             );
         }
 
@@ -172,7 +214,9 @@ class MembershipController extends Controller
         }
 
         $membership = $membership->fresh(['companyRole:id,key,name']);
-        $profile = CompanyUserProfileReadModel::get($membership->user, $company);
+        $roleKey = $membership->companyRole?->key;
+        $canReadSensitive = $request->user()->hasCompanyPermission($company, 'members.sensitive_read');
+        $profile = CompanyUserProfileReadModel::get($membership->user, $company, $roleKey, $canReadSensitive);
 
         return response()->json([
             'member' => [
@@ -183,6 +227,7 @@ class MembershipController extends Controller
             ],
             'base_fields' => $profile['base_fields'],
             'dynamic_fields' => $profile['dynamic_fields'],
+            'profile_completeness' => $profile['profile_completeness'],
         ]);
     }
 

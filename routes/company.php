@@ -16,6 +16,9 @@ use App\Modules\Core\Modules\Http\CompanyModuleController;
 use App\Modules\Core\Modules\Http\ModuleQuoteController;
 use App\Modules\Core\Settings\Http\CompanyController;
 use App\Modules\Core\Theme\Http\ThemePreferenceController;
+use App\Modules\Core\Theme\Http\ThemeRoleVisibilityController;
+use App\Modules\Core\Settings\Http\CompanyDocumentActivationController;
+use App\Modules\Core\Settings\Http\CustomDocumentTypeController;
 use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
@@ -36,6 +39,12 @@ Route::get('/nav', [NavController::class, 'company']);
 // ─── Theme preference (ADR-159, module-gated) ───────────
 Route::middleware(['company.access:use-module,core.theme', 'company.access:use-permission,theme.manage'])->group(function () {
     Route::put('/theme-preference', [ThemePreferenceController::class, 'update']);
+});
+
+// ─── Theme role visibility (ADR-161) ──────────────
+Route::middleware(['company.access:use-module,core.theme', 'company.access:manage-structure'])->group(function () {
+    Route::get('/theme/role-visibility', [ThemeRoleVisibilityController::class, 'index']);
+    Route::put('/theme/role-visibility', [ThemeRoleVisibilityController::class, 'update']);
 });
 
 // ─── Realtime SSE stream (ADR-125, no module gate) ────────
@@ -102,6 +111,24 @@ Route::middleware('company.access:use-module,core.settings')->group(function () 
     Route::delete('/company/field-definitions/{id}', [CompanyFieldDefinitionController::class, 'destroy'])
         ->middleware('company.access:use-permission,settings.manage');
 
+    // Company documents vault (ADR-174)
+    Route::get('/company/documents', [\App\Modules\Core\Settings\Http\CompanyDocumentController::class, 'index']);
+    Route::post('/company/documents/{code}', [\App\Modules\Core\Settings\Http\CompanyDocumentController::class, 'upload'])
+        ->middleware('company.access:use-permission,settings.manage');
+    Route::get('/company/documents/{code}/download', [\App\Modules\Core\Settings\Http\CompanyDocumentController::class, 'download']);
+
+    // Document activation catalog (ADR-175)
+    Route::get('/company/document-activations', [CompanyDocumentActivationController::class, 'index']);
+    Route::put('/company/document-activations/{code}', [CompanyDocumentActivationController::class, 'upsert'])
+        ->middleware('company.access:use-permission,settings.manage');
+
+    // Custom document types (ADR-180)
+    Route::post('/company/document-types/custom', [CustomDocumentTypeController::class, 'store'])
+        ->middleware('company.access:use-permission,settings.manage');
+    Route::put('/company/document-types/custom/{code}/archive', [CustomDocumentTypeController::class, 'archive'])
+        ->middleware('company.access:use-permission,settings.manage');
+    Route::delete('/company/document-types/custom/{code}', [CustomDocumentTypeController::class, 'destroy'])
+        ->middleware('company.access:use-permission,settings.manage');
 });
 
 // ─── Company roles (module-gated, permission-based) ───────
@@ -130,6 +157,7 @@ Route::middleware('company.access:use-module,core.jobdomain')->group(function ()
 Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::get('/company/members', [MembershipController::class, 'index']);
     Route::get('/company/members/{id}', [MembershipController::class, 'show']);
+    Route::get('/company/members/{id}/fields', [MembershipController::class, 'fields']);
     Route::post('/company/members', [MembershipController::class, 'store'])
         ->middleware('company.access:use-permission,members.invite');
     Route::put('/company/members/{id}', [MembershipController::class, 'update'])
@@ -143,11 +171,28 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::put('/company/members/{id}/password', [MemberCredentialController::class, 'setPassword'])
         ->middleware('company.access:use-permission,members.credentials');
 
+    // Member documents (ADR-169 Phase 3)
+    Route::get('/company/members/{id}/documents', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'index']);
+    Route::post('/company/members/{id}/documents/{code}', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'upload'])
+        ->middleware('company.access:use-permission,members.manage');
+    Route::get('/company/members/{id}/documents/{code}/download', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'download']);
+    Route::delete('/company/members/{id}/documents/{code}', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'destroy'])
+        ->middleware('company.access:use-permission,members.manage');
+
+    // Document review workflow (ADR-176)
+    Route::put('/company/members/{id}/documents/{code}/review', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'review'])
+        ->middleware('company.access:use-permission,members.manage');
+
     // User profile (personal data, no additional permission needed)
     Route::get('/profile', [UserProfileController::class, 'show']);
     Route::put('/profile', [UserProfileController::class, 'update']);
     Route::put('/profile/password', [UserProfileController::class, 'updatePassword']);
     Route::post('/profile/avatar', [UserProfileController::class, 'updateAvatar']);
+
+    // Self-document upload (ADR-173, no additional permission — self scope)
+    Route::get('/profile/documents', [\App\Modules\Core\Members\Http\SelfDocumentController::class, 'index']);
+    Route::post('/profile/documents/{code}', [\App\Modules\Core\Members\Http\SelfDocumentController::class, 'upload']);
+    Route::get('/profile/documents/{code}/download', [\App\Modules\Core\Members\Http\SelfDocumentController::class, 'download']);
 });
 
 // ─── Modules management (module-gated) ───────────────────

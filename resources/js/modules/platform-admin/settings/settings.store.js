@@ -52,6 +52,15 @@ export const usePlatformSettingsStore = defineStore('platformSettings', {
       return data
     },
 
+    async syncModules() {
+      const data = await $platformApi('/modules/sync', { method: 'POST' })
+
+      this._modules = data.company
+      this._platformModules = data.platform
+
+      return data
+    },
+
     async togglePlatformModule(key) {
       const data = await $platformApi(`/modules/${key}/toggle`, { method: 'PUT' })
 

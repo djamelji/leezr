@@ -15,6 +15,11 @@ use Tests\TestCase;
  */
 class CompanyModuleRoutesAreGatedTest extends TestCase
 {
+    // ADR-149: modules whose routes are intentionally ungated (always accessible)
+    private const UNGATED_MODULES = [
+        'core.dashboard',
+    ];
+
     public function test_all_company_module_routes_have_module_gate(): void
     {
         $companyModules = ModuleRegistry::forScope('company');
@@ -23,6 +28,11 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
         $modulePathToKey = [];
 
         foreach ($companyModules as $key => $manifest) {
+            // Skip modules explicitly exempted from gating
+            if (in_array($key, self::UNGATED_MODULES, true)) {
+                continue;
+            }
+
             $path = ModuleRegistry::modulePath($key);
 
             if ($path) {

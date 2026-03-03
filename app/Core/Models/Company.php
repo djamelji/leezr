@@ -25,6 +25,7 @@ class Company extends Model
         'financial_freeze',
         'plan_key',
         'market_key',
+        'jobdomain_key',
         'legal_status_key',
     ];
 
@@ -84,11 +85,21 @@ class Company extends Model
     }
 
     /**
-     * Convenience accessor: $company->jobdomain returns the single assigned jobdomain (or null).
+     * ADR-167a: Jobdomain is a structural invariant — never null.
+     * Throws RuntimeException if the jobdomain key is not found in the jobdomains table.
      */
-    public function getJobdomainAttribute(): ?Jobdomain
+    public function getJobdomainAttribute(): Jobdomain
     {
-        return $this->jobdomains->first();
+        $jobdomain = Jobdomain::where('key', $this->jobdomain_key)->first();
+
+        if (!$jobdomain) {
+            throw new \RuntimeException(
+                "Jobdomain '{$this->jobdomain_key}' not found for company #{$this->id}. "
+                . "Ensure jobdomains table is seeded."
+            );
+        }
+
+        return $jobdomain;
     }
 
     public function owner(): ?User

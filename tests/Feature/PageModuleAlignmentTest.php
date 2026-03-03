@@ -179,6 +179,7 @@ class PageModuleAlignmentTest extends TestCase
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
             'platform-companies-id' => $base . '/platform/companies/[id].vue',
             'platform-jobdomains-id' => $base . '/platform/jobdomains/[id].vue',
+            'platform-documents-id' => $base . '/platform/documents/[id].vue',
             'platform-users-id' => $base . '/platform/users/[id].vue',
             'platform-company-users' => $base . '/platform/company/users.vue',
             'company-shipments' => $base . '/company/shipments/index.vue',

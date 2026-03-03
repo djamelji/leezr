@@ -31,14 +31,15 @@ class ModuleQuoteEndpointTest extends TestCase
             'name' => 'Quote Co',
             'slug' => 'quote-endpoint-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->company->memberships()->create([
             'user_id' => $this->owner->id,
             'role' => 'owner',
         ]);
 
-        // Assign logistique jobdomain
-        $jobdomain = Jobdomain::firstOrCreate(
+        // Assign logistique jobdomain — updateOrCreate to override seeded defaults
+        $jobdomain = Jobdomain::updateOrCreate(
             ['key' => 'logistique'],
             [
                 'label' => 'Logistique',
@@ -191,12 +192,13 @@ class ModuleQuoteEndpointTest extends TestCase
 
     public function test_jobdomain_mismatch_rejected(): void
     {
-        // Create company without logistics jobdomain
+        // ADR-167a: company must have a jobdomain, use one that won't match logistics modules
         $user = User::factory()->create();
         $noJdCompany = Company::create([
             'name' => 'No JD Co',
             'slug' => 'no-jd-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'generic',
         ]);
         $noJdCompany->memberships()->create([
             'user_id' => $user->id,

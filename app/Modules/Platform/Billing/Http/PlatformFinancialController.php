@@ -2,22 +2,18 @@
 
 namespace App\Modules\Platform\Billing\Http;
 
-use App\Core\Billing\FinancialPeriod;
 use App\Core\Billing\ReadModels\PlatformFinancialReadService;
-use App\Core\Billing\ReconciliationEngine;
-use App\Core\Models\Company;
+use App\Modules\Platform\Billing\BillingConfigCrudService;
 use App\Modules\Platform\Billing\Http\Requests\FinancialFreezeRequest;
 use App\Modules\Platform\Billing\Http\Requests\PeriodCloseRequest;
 use App\Modules\Platform\Billing\Http\Requests\ReconcileRequest;
 use App\Modules\Platform\Billing\Http\Requests\TrialBalanceRequest;
+use App\Core\Billing\ReconciliationEngine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
  * ADR-144 D4b: Platform financial governance HTTP layer.
- *
- * Exposes D3 financial services (Ledger, Periods, Forensics, Reconciliation)
- * via HTTP for the platform admin billing UI.
  *
  * Read endpoints require view_billing permission.
  * Write endpoints require manage_billing permission.
@@ -116,16 +112,10 @@ class PlatformFinancialController
 
     public function closePeriod(PeriodCloseRequest $request): JsonResponse
     {
-        $period = FinancialPeriod::updateOrCreate(
-            [
-                'company_id' => $request->integer('company_id'),
-                'start_date' => $request->input('start_date'),
-                'end_date' => $request->input('end_date'),
-            ],
-            [
-                'is_closed' => true,
-                'closed_at' => now(),
-            ],
+        $period = BillingConfigCrudService::closePeriod(
+            $request->integer('company_id'),
+            $request->input('start_date'),
+            $request->input('end_date'),
         );
 
         return response()->json(['period' => $period]);
@@ -133,7 +123,7 @@ class PlatformFinancialController
 
     public function freezeState(int $id): JsonResponse
     {
-        $company = Company::find($id);
+        $company = BillingConfigCrudService::findCompany($id);
 
         if (! $company) {
             return response()->json(['message' => 'Company not found.'], 404);
@@ -147,13 +137,7 @@ class PlatformFinancialController
 
     public function toggleFreeze(FinancialFreezeRequest $request, int $id): JsonResponse
     {
-        $company = Company::find($id);
-
-        if (! $company) {
-            return response()->json(['message' => 'Company not found.'], 404);
-        }
-
-        $company->update(['financial_freeze' => $request->boolean('frozen')]);
+        $company = BillingConfigCrudService::toggleFreeze($id, $request->boolean('frozen'));
 
         return response()->json([
             'company_id' => $company->id,

@@ -65,6 +65,7 @@ class DunningEngineTest extends TestCase
             'slug' => 'dunning-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->subscription = Subscription::create([

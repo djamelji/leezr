@@ -58,6 +58,7 @@ class DashboardEngineTest extends TestCase
             'name' => 'Engine Co',
             'slug' => 'engine-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $corrId = (string) Str::uuid();

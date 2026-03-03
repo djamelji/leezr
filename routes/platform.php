@@ -35,6 +35,7 @@ use App\Modules\Platform\Translations\Http\TranslationController;
 use App\Modules\Platform\Translations\Http\TranslationMatrixController;
 use App\Modules\Platform\Translations\Http\OverrideController;
 use App\Modules\Platform\Settings\Http\WorldSettingsController;
+use App\Modules\Platform\Documents\Http\DocumentTypeCatalogController;
 use App\Modules\Platform\Realtime\Http\RealtimeGovernanceController;
 use App\Modules\Platform\Audit\Http\PlatformAuditLogController;
 use App\Modules\Platform\Security\Http\SecurityAlertController;
@@ -116,6 +117,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Modules
     Route::middleware(['module.active:platform.modules', 'platform.permission:manage_modules'])->group(function () {
         Route::get('/modules', [ModuleController::class, 'index']);
+        Route::post('/modules/sync', [ModuleController::class, 'sync']);
         Route::get('/modules/{key}', [ModuleController::class, 'show']);
         Route::put('/modules/{key}/toggle', [ModuleController::class, 'toggle']);
         Route::put('/modules/{key}/config', [ModuleController::class, 'updateConfig']);
@@ -178,6 +180,17 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
     });
 
+    // Document Type Catalog (ADR-182 → platform.documents module)
+    Route::middleware(['module.active:platform.documents', 'platform.permission:manage_document_catalog'])->group(function () {
+        Route::get('/documents', [DocumentTypeCatalogController::class, 'index']);
+        Route::get('/documents/{id}', [DocumentTypeCatalogController::class, 'show']);
+        Route::post('/documents', [DocumentTypeCatalogController::class, 'store']);
+        Route::put('/documents/{id}', [DocumentTypeCatalogController::class, 'update']);
+        Route::put('/documents/{id}/archive', [DocumentTypeCatalogController::class, 'archive']);
+        Route::put('/documents/{id}/restore', [DocumentTypeCatalogController::class, 'restore']);
+        Route::post('/documents/sync', [DocumentTypeCatalogController::class, 'sync']);
+    });
+
     // Billing read endpoints (ADR-135 LOT4)
     Route::middleware(['module.active:platform.billing', 'platform.permission:view_billing'])->group(function () {
         Route::get('/billing/invoices', [PlatformBillingController::class, 'invoices']);
@@ -224,16 +237,16 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/billing/billing-policy', [PlatformBillingPolicyController::class, 'update']);
 
         // Invoice mutations (ADR-135 D2a)
-        Route::put('/billing/invoices/{id}/mark-paid-offline', [PlatformInvoiceMutationController::class, 'markPaidOffline']);
-        Route::put('/billing/invoices/{id}/void', [PlatformInvoiceMutationController::class, 'void']);
-        Route::put('/billing/invoices/{id}/notes', [PlatformInvoiceMutationController::class, 'updateNotes']);
+        Route::put('/billing/invoices/{invoice}/mark-paid-offline', [PlatformInvoiceMutationController::class, 'markPaidOffline']);
+        Route::put('/billing/invoices/{invoice}/void', [PlatformInvoiceMutationController::class, 'void']);
+        Route::put('/billing/invoices/{invoice}/notes', [PlatformInvoiceMutationController::class, 'updateNotes']);
 
         // Advanced invoice mutations (ADR-136 D2c)
-        Route::post('/billing/invoices/{id}/refund', [PlatformAdvancedMutationController::class, 'refund']);
-        Route::post('/billing/invoices/{id}/retry-payment', [PlatformAdvancedMutationController::class, 'retryPayment']);
-        Route::put('/billing/invoices/{id}/dunning-transition', [PlatformAdvancedMutationController::class, 'forceDunningTransition']);
-        Route::post('/billing/invoices/{id}/credit-note', [PlatformAdvancedMutationController::class, 'issueCreditNote']);
-        Route::put('/billing/invoices/{id}/write-off', [PlatformAdvancedMutationController::class, 'writeOff']);
+        Route::post('/billing/invoices/{invoice}/refund', [PlatformAdvancedMutationController::class, 'refund']);
+        Route::post('/billing/invoices/{invoice}/retry-payment', [PlatformAdvancedMutationController::class, 'retryPayment']);
+        Route::put('/billing/invoices/{invoice}/dunning-transition', [PlatformAdvancedMutationController::class, 'forceDunningTransition']);
+        Route::post('/billing/invoices/{invoice}/credit-note', [PlatformAdvancedMutationController::class, 'issueCreditNote']);
+        Route::put('/billing/invoices/{invoice}/write-off', [PlatformAdvancedMutationController::class, 'writeOff']);
 
         Route::get('/billing/subscriptions', [BillingConfigController::class, 'subscriptions']);
         Route::put('/billing/subscriptions/{id}/approve', [BillingConfigController::class, 'approveSubscription']);

@@ -63,6 +63,7 @@ class PlatformBillingDashboardBatchTest extends TestCase
             'name' => 'Batch Co',
             'slug' => 'batch-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->seedBillingData();

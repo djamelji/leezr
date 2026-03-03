@@ -46,6 +46,7 @@ class SecurityInvariantTest extends TestCase
             'name' => 'Security Invariant Co',
             'slug' => 'sec-inv-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Enable all modules
@@ -291,6 +292,7 @@ class SecurityInvariantTest extends TestCase
         $otherCompany = Company::create([
             'name' => 'Other Co',
             'slug' => 'other-co-sec',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $this->actingAs($this->dispatcher)

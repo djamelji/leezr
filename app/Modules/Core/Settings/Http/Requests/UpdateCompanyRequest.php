@@ -23,7 +23,7 @@ class UpdateCompanyRequest extends FormRequest
 
         return array_merge(
             $fixedRules,
-            FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY, $company?->id),
+            FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY, $company?->id, marketKey: $company?->market_key),
         );
     }
 }

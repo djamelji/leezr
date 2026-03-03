@@ -11,6 +11,8 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     _permissionCatalog: [],
     _permissionModules: [],
     _marketInfo: null,
+    _companyDocuments: [],
+    _documentActivations: { company_user_documents: [], company_documents: [] },
   }),
 
   getters: {
@@ -19,6 +21,8 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     permissionCatalog: state => state._permissionCatalog,
     permissionModules: state => state._permissionModules,
     marketInfo: state => state._marketInfo,
+    companyDocuments: state => state._companyDocuments,
+    documentActivations: state => state._documentActivations,
   },
 
   actions: {
@@ -108,6 +112,43 @@ export const useCompanySettingsStore = defineStore('companySettings', {
         navStore.fetchCompanyNav(),
         authStore.fetchMyCompanies(),
       ]).catch(() => {})
+    },
+
+    // ─── Company Documents Vault (ADR-174) ────────────
+    async fetchCompanyDocuments() {
+      try {
+        const data = await $api('/company/documents')
+
+        this._companyDocuments = data.documents || []
+      }
+      catch {
+        this._companyDocuments = []
+      }
+    },
+
+    // ─── Document Activation Catalog (ADR-175) ────────
+    async fetchDocumentActivations() {
+      try {
+        const data = await $api('/company/document-activations')
+
+        this._documentActivations = data
+      }
+      catch {
+        this._documentActivations = { company_user_documents: [], company_documents: [] }
+      }
+    },
+
+    // ─── Custom Document Types (ADR-180) ────────────────
+    async createCustomDocumentType(payload) {
+      return await $api('/company/document-types/custom', { method: 'POST', body: payload })
+    },
+
+    async archiveCustomDocumentType(code) {
+      return await $api(`/company/document-types/custom/${code}/archive`, { method: 'PUT' })
+    },
+
+    async deleteCustomDocumentType(code) {
+      return await $api(`/company/document-types/custom/${code}`, { method: 'DELETE' })
     },
 
     // ─── Legal Structure (ADR-104) ─────────────────────

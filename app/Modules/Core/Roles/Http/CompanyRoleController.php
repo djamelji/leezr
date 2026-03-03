@@ -49,6 +49,8 @@ class CompanyRoleController extends Controller
             'is_administrative' => 'sometimes|boolean',
             'permissions' => 'sometimes|array',
             'permissions.*' => 'integer|exists:company_permissions,id',
+            'field_config' => 'sometimes|nullable|array',
+            'doc_config' => 'sometimes|nullable|array',
         ]);
 
         // Auto-generate key from name with collision handling
@@ -66,6 +68,8 @@ class CompanyRoleController extends Controller
             'key' => $key,
             'name' => $validated['name'],
             'is_administrative' => $validated['is_administrative'] ?? false,
+            'field_config' => $validated['field_config'] ?? null,
+            'doc_config' => $validated['doc_config'] ?? null,
         ]);
 
         if (isset($validated['permissions'])) {
@@ -101,11 +105,13 @@ class CompanyRoleController extends Controller
             'is_administrative' => 'sometimes|boolean',
             'permissions' => 'sometimes|array',
             'permissions.*' => 'integer|exists:company_permissions,id',
+            'field_config' => 'sometimes|nullable|array',
+            'doc_config' => 'sometimes|nullable|array',
         ]);
 
         $wasAdministrative = $role->is_administrative;
 
-        $fields = array_intersect_key($validated, array_flip(['name', 'is_administrative']));
+        $fields = array_intersect_key($validated, array_flip(['name', 'is_administrative', 'field_config', 'doc_config']));
         if (!empty($fields)) {
             $role->update($fields);
         }

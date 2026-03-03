@@ -45,23 +45,18 @@ class EntitlementResolver
         }
 
         // Gate 3: Jobdomain compatibility
+        // ADR-167a: jobdomain_key is always present — no null check
         if ($manifest->compatibleJobdomains !== null) {
-            $jobdomain = $company->jobdomain;
-
-            if (!$jobdomain || !in_array($jobdomain->key, $manifest->compatibleJobdomains, true)) {
+            if (!in_array($company->jobdomain_key, $manifest->compatibleJobdomains, true)) {
                 return ['entitled' => false, 'source' => null, 'reason' => 'incompatible_jobdomain'];
             }
         }
 
         // Gate 4: Source — is the module available via jobdomain?
-        $jobdomain = $company->jobdomain;
+        $defaultModules = $company->jobdomain->default_modules ?? [];
 
-        if ($jobdomain) {
-            $defaultModules = $jobdomain->default_modules ?? [];
-
-            if (in_array($moduleKey, $defaultModules, true)) {
-                return ['entitled' => true, 'source' => 'jobdomain', 'reason' => null];
-            }
+        if (in_array($moduleKey, $defaultModules, true)) {
+            return ['entitled' => true, 'source' => 'jobdomain', 'reason' => null];
         }
 
         // Future: check addon purchases here

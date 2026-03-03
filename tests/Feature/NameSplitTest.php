@@ -16,6 +16,12 @@ class NameSplitTest extends TestCase
 {
     use RefreshDatabase, ActivatesCompanyModules;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+    }
+
     // ─── 1) Register with first_name + last_name ──────────
 
     public function test_register_with_first_name_last_name(): void
@@ -29,6 +35,7 @@ class NameSplitTest extends TestCase
             'password' => 'P@ssw0rd!Strong',
             'password_confirmation' => 'P@ssw0rd!Strong',
             'company_name' => 'Test Co',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $response->assertStatus(201);
@@ -68,11 +75,10 @@ class NameSplitTest extends TestCase
 
     public function test_membership_store_derives_first_name_from_email(): void
     {
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
         CompanyPermissionCatalog::sync();
 
         $owner = User::factory()->create();
-        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
         $this->activateCompanyModules($company);
 

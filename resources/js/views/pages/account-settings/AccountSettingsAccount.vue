@@ -14,6 +14,23 @@ const form = ref({
 
 const dynamicFields = ref([])
 const dynamicForm = ref({})
+const profileCompleteness = ref({ filled: 0, total: 0, complete: true })
+
+// ADR-169: group fields by category (aligned with MemberProfileForm)
+const categories = ['base', 'hr', 'domain']
+
+const fieldsByCategory = computed(() => {
+  const result = {}
+  for (const cat of categories) {
+    result[cat] = dynamicFields.value.filter(f => (f.category || 'base') === cat)
+  }
+
+  return result
+})
+
+const visibleCategories = computed(() => {
+  return categories.filter(cat => fieldsByCategory.value[cat]?.length > 0)
+})
 
 const isLoading = ref(false)
 const profileLoading = ref(true)
@@ -32,6 +49,7 @@ onMounted(async () => {
     form.value.email = data.base_fields?.email || ''
     avatarPreview.value = data.base_fields?.avatar || null
     dynamicFields.value = data.dynamic_fields || []
+    profileCompleteness.value = data.profile_completeness || { filled: 0, total: 0, complete: true }
 
     // Build dynamic form from resolved fields (keyed by code)
     const df = {}
@@ -65,6 +83,7 @@ const handleSave = async () => {
 
     // Refresh dynamic fields from response
     dynamicFields.value = data.dynamic_fields || []
+    profileCompleteness.value = data.profile_completeness || { filled: 0, total: 0, complete: true }
     const df = {}
     for (const field of data.dynamic_fields || []) {
       df[field.code] = field.value ?? null
@@ -173,6 +192,16 @@ const resetForm = () => {
         </VCardText>
 
         <VCardText class="pt-2">
+          <!-- ADR-168b: profile completeness alert -->
+          <VAlert
+            v-if="!profileCompleteness.complete && !profileLoading"
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            {{ t('fields.profileIncomplete', { filled: profileCompleteness.filled, total: profileCompleteness.total }) }}
+          </VAlert>
+
           <VAlert
             v-if="successMessage"
             type="success"
@@ -233,20 +262,25 @@ const resetForm = () => {
                 />
               </VCol>
 
-              <!-- Dynamic fields (company_user scope) -->
+              <!-- ADR-169: Dynamic fields grouped by category (aligned with MemberProfileForm) -->
               <template v-if="dynamicFields.length && !profileLoading">
-                <VCol cols="12">
-                  <VDivider />
-                </VCol>
-                <VCol cols="12">
-                  <h6 class="text-h6">
-                    {{ t('accountSettings.additionalInformation') }}
-                  </h6>
-                </VCol>
-                <DynamicFormRenderer
-                  v-model="dynamicForm"
-                  :fields="dynamicFields"
-                />
+                <template
+                  v-for="cat in visibleCategories"
+                  :key="cat"
+                >
+                  <VCol cols="12">
+                    <VDivider />
+                  </VCol>
+                  <VCol cols="12">
+                    <h6 class="text-h6">
+                      {{ t(`fields.category.${cat}`) }}
+                    </h6>
+                  </VCol>
+                  <DynamicFormRenderer
+                    v-model="dynamicForm"
+                    :fields="fieldsByCategory[cat]"
+                  />
+                </template>
               </template>
 
               <VCol

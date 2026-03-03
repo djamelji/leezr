@@ -35,6 +35,7 @@ class CompanyController extends Controller
                 $validated['dynamic_fields'],
                 FieldDefinition::SCOPE_COMPANY,
                 $company->id,
+                $company->market_key,
             );
         }
 

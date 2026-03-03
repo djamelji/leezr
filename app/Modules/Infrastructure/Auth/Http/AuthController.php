@@ -4,81 +4,38 @@ namespace App\Modules\Infrastructure\Auth\Http;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Auth\ReadModels\UserCompaniesReadModel;
 use App\Core\Auth\Requests\LoginRequest;
 use App\Core\Auth\Requests\RegisterRequest;
-use App\Core\Billing\CompanyEntitlements;
-use App\Core\Jobdomains\JobdomainGate;
-use App\Core\Models\Company;
-use App\Core\Models\User;
 use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\ThemeResolver;
 use App\Core\Theme\UIResolverService;
+use App\Modules\Infrastructure\Auth\UseCases\RegisterCompanyData;
+use App\Modules\Infrastructure\Auth\UseCases\RegisterCompanyUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $request, RegisterCompanyUseCase $useCase): JsonResponse
     {
-        $validated = $request->validated();
+        $result = $useCase->execute(RegisterCompanyData::fromValidated($request->validated()));
 
-        $result = DB::transaction(function () use ($validated) {
-            $user = User::create([
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'email' => $validated['email'],
-                'password' => $validated['password'],
-                'password_set_at' => now(),
-            ]);
-
-            $planKey = $validated['plan_key'] ?? 'starter';
-
-            $company = Company::create([
-                'name' => $validated['company_name'],
-                'slug' => Str::slug($validated['company_name']) . '-' . Str::random(4),
-                'plan_key' => $planKey,
-            ]);
-
-            $company->memberships()->create([
-                'user_id' => $user->id,
-                'role' => 'owner',
-            ]);
-
-            // ADR-100: Assign jobdomain + activate defaults if provided
-            $jobdomainKey = $validated['jobdomain_key'] ?? null;
-
-            if ($jobdomainKey) {
-                JobdomainGate::assignToCompany($company, $jobdomainKey);
-            }
-
-            return ['user' => $user, 'company' => $company];
-        });
-
-        Auth::login($result['user']);
+        Auth::login($result->user);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
 
-        app(AuditLogger::class)->logCompany(
-            $result['company']->id,
-            AuditAction::REGISTER,
-            'user',
-            (string) $result['user']->id,
-            ['actorId' => $result['user']->id, 'metadata' => ['email' => $result['user']->email]],
-        );
-
         return response()->json([
-            'user' => $result['user'],
-            'company' => $result['company'],
+            'user' => $result->user,
+            'company' => $result->company,
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
-            'theme_preference' => ThemeResolver::resolve($result['user']),
+            'theme_preference' => ThemeResolver::resolve($result->user),
         ], 201);
     }
 
@@ -169,43 +126,8 @@ class AuthController extends Controller
 
     public function myCompanies(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        // Eager-load memberships with their RBAC role + permissions
-        $memberships = $user->memberships()
-            ->with('companyRole.permissions', 'company')
-            ->get();
-
-        $companies = $memberships->map(function ($membership) {
-            // Delegate to Membership::isAdmin() — single source of truth
-            $isAdministrative = $membership->isAdmin();
-
-            $data = [
-                'id' => $membership->company->id,
-                'name' => $membership->company->name,
-                'slug' => $membership->company->slug,
-                'role' => $membership->role,
-                'is_administrative' => $isAdministrative,
-                'plan_key' => CompanyEntitlements::planKey($membership->company),
-            ];
-
-            if ($membership->companyRole) {
-                $data['company_role'] = [
-                    'id' => $membership->companyRole->id,
-                    'key' => $membership->companyRole->key,
-                    'name' => $membership->companyRole->name,
-                    'is_administrative' => (bool) $membership->companyRole->is_administrative,
-                    'permissions' => $membership->companyRole->permissions->pluck('key')->values(),
-                ];
-            } else {
-                $data['company_role'] = null;
-            }
-
-            return $data;
-        });
-
         return response()->json([
-            'companies' => $companies,
+            'companies' => UserCompaniesReadModel::forUser($request->user()),
         ]);
     }
 }

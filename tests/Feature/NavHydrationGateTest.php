@@ -5,13 +5,13 @@ namespace Tests\Feature;
 use Tests\TestCase;
 
 /**
- * ADR-153: Nav hydration gate invariants.
+ * ADR-153 + ADR-160: Nav hydration gate invariants.
  *
  * Prevents regression on the empty-sidebar-after-login fix.
  * The fix relies on 4 layers:
- *   A) Nav store: isHydrated(scope) getter (source of truth)
+ *   A) Nav store: isHydrated(scope) getter (defense-in-depth)
  *   B) Resources: features:nav & platform:nav are critical
- *   C) Guard: detects stale ready (isReady but nav not hydrated → reboot)
+ *   C) Guard: ADR-160 bootMachine awaits full boot (replaces stale-ready check)
  *   D) Layout gate: sidebar items gated on navStore.*Loaded
  */
 class NavHydrationGateTest extends TestCase
@@ -34,25 +34,25 @@ class NavHydrationGateTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // C) Router guard imports navStore for stale-ready check
+    // C) ADR-160: Guard uses bootMachine for awaitable boot
     // ═══════════════════════════════════════════════════════
 
-    public function test_router_guard_uses_nav_store(): void
+    public function test_router_guard_uses_boot_machine(): void
     {
         $content = file_get_contents(
             base_path('resources/js/plugins/1.router/guards.js'),
         );
 
         $this->assertStringContainsString(
-            'useNavStore',
+            'bootMachine',
             $content,
-            'Router guard must import useNavStore for stale-ready detection',
+            'Router guard must import bootMachine for awaitable boot (ADR-160)',
         );
 
         $this->assertStringContainsString(
-            'isHydrated',
+            'await runtime.boot',
             $content,
-            'Router guard must check navStore.isHydrated(scope) before allowing navigation',
+            'Router guard must await runtime.boot() to guarantee nav hydration before navigation',
         );
     }
 

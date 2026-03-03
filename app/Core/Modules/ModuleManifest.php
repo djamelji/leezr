@@ -31,5 +31,7 @@ final class ModuleManifest
         public readonly string $iconType = 'tabler',
         public readonly string $iconRef = 'tabler-puzzle',
         public readonly ?string $settingsRoute = null,
+        public readonly bool $hidden = false,
+        public readonly array $marketplace = [],
     ) {}
 }

@@ -133,7 +133,7 @@ class NavBuilderTest extends TestCase
 
     public function test_for_company_returns_active_modules(): void
     {
-        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         // Enable addon modules
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
@@ -159,7 +159,7 @@ class NavBuilderTest extends TestCase
 
     public function test_for_company_excludes_inactive_modules(): void
     {
-        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co-2', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co-2', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         // Don't enable logistics_shipments
         $groups = NavBuilder::forCompany($company);
@@ -174,7 +174,7 @@ class NavBuilderTest extends TestCase
         // Since no current manifest items use the plans field, we test
         // that the pipeline handles it correctly by verifying the builder runs without error
         // and returns expected structure for a starter plan company.
-        $company = Company::create(['name' => 'Starter Co', 'slug' => 'starter-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Starter Co', 'slug' => 'starter-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         $groups = NavBuilder::forCompany($company);
 
@@ -189,7 +189,7 @@ class NavBuilderTest extends TestCase
 
     public function test_for_company_filters_by_role_level(): void
     {
-        $company = Company::create(['name' => 'RL Co', 'slug' => 'rl-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'RL Co', 'slug' => 'rl-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         // Enable all modules
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
@@ -219,7 +219,7 @@ class NavBuilderTest extends TestCase
 
     public function test_for_company_operational_only_hidden_from_management(): void
     {
-        $company = Company::create(['name' => 'OpOnly Co', 'slug' => 'oponly-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'OpOnly Co', 'slug' => 'oponly-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
             if ($manifest->type !== 'core') {
@@ -252,7 +252,7 @@ class NavBuilderTest extends TestCase
     {
         // Both forAdmin and forCompany return the same structure format
         $adminGroups = NavBuilder::forAdmin();
-        $company = Company::create(['name' => 'Pipe Co', 'slug' => 'pipe-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Pipe Co', 'slug' => 'pipe-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
         $companyGroups = NavBuilder::forCompany($company);
 
         foreach ([$adminGroups, $companyGroups] as $groups) {
@@ -477,7 +477,7 @@ class NavBuilderTest extends TestCase
 
     public function test_group_derived_from_surface_for_company(): void
     {
-        $company = Company::create(['name' => 'Group Co', 'slug' => 'group-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Group Co', 'slug' => 'group-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
             if ($manifest->type !== 'core') {
@@ -580,7 +580,7 @@ class NavBuilderTest extends TestCase
 
     public function test_catalog_core_modules_active_without_company_module_row(): void
     {
-        $company = Company::create(['name' => 'Cat Co', 'slug' => 'cat-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Cat Co', 'slug' => 'cat-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         // Do NOT create any CompanyModule rows — core modules should still be active
         $catalog = \App\Core\Modules\ModuleCatalogReadModel::forCompany($company);

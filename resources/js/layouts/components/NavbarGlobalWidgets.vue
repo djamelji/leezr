@@ -1,25 +1,30 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useNavStore } from '@/core/stores/nav'
 import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
 import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { themeConfig } from '@themeConfig'
-import { useModuleStore } from '@/core/stores/module'
-import { useAuthStore } from '@/core/stores/auth'
 
 const route = useRoute()
-const moduleStore = useModuleStore()
-const authStore = useAuthStore()
+const navStore = useNavStore()
 
-// ADR-159: Theme toggle visibility
-// Platform surface: always visible (platform admins always have theme control)
-// Company surface: visible only if core.theme module is active AND user has theme.view
-const showThemeToggle = computed(() => {
-  if (route.meta?.platform) return true
+// ADR-161: Component registry — maps backend component key → Vue component
+const widgetComponents = {
+  NavbarThemeSwitcher,
+}
 
-  return moduleStore.isActive('core.theme') && authStore.hasPermission('theme.view')
+// ADR-161: Dynamic widgets from module capabilities (filtered by backend)
+const activeWidgets = computed(() => {
+  const widgets = route.meta?.platform
+    ? navStore.platformWidgets
+    : navStore.companyWidgets
+
+  return (widgets || [])
+    .filter(w => widgetComponents[w.component])
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 })
 </script>
 
@@ -28,7 +33,11 @@ const showThemeToggle = computed(() => {
     v-if="themeConfig.app.i18n.enable && themeConfig.app.i18n.langConfig?.length"
     :languages="themeConfig.app.i18n.langConfig"
   />
-  <NavbarThemeSwitcher v-if="showThemeToggle" />
+  <component
+    v-for="widget in activeWidgets"
+    :key="widget.key"
+    :is="widgetComponents[widget.component]"
+  />
   <NavbarShortcuts />
   <NavBarNotifications class="me-1" />
 </template>

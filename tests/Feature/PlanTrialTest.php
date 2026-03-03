@@ -46,6 +46,7 @@ class PlanTrialTest extends TestCase
             'name' => 'Trial Co',
             'slug' => 'trial-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $adapter = new InternalPaymentAdapter();
@@ -77,6 +78,7 @@ class PlanTrialTest extends TestCase
             'name' => 'No Trial Co',
             'slug' => 'no-trial-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $adapter = new InternalPaymentAdapter();
@@ -97,6 +99,7 @@ class PlanTrialTest extends TestCase
             'name' => 'Null Trial Co',
             'slug' => 'null-trial-co',
             'plan_key' => 'starter',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $gateway = new NullPaymentGateway();
@@ -120,6 +123,7 @@ class PlanTrialTest extends TestCase
             'name' => 'Lifecycle Co',
             'slug' => 'lifecycle-co',
             'plan_key' => 'pro',
+            'jobdomain_key' => 'logistique',
         ]);
 
         // Simulate a trialing subscription (as InternalPaymentAdapter would create)

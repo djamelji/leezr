@@ -3,8 +3,8 @@
 namespace App\Modules\Platform\Billing\Http;
 
 use App\Core\Billing\PaymentRegistry;
-use App\Core\Billing\PlatformPaymentMethodRule;
 use App\Core\Billing\ReadModels\PlatformPaymentGovernanceReadService;
+use App\Modules\Platform\Billing\PaymentGovernanceCrudService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -35,7 +35,7 @@ class PaymentMethodRuleController
             'constraints' => ['nullable', 'array'],
         ]);
 
-        $rule = PlatformPaymentMethodRule::create($validated);
+        $rule = PaymentGovernanceCrudService::createRule($validated);
 
         return response()->json([
             'message' => 'Payment method rule created.',
@@ -45,7 +45,6 @@ class PaymentMethodRuleController
 
     public function update(int $id, Request $request): JsonResponse
     {
-        $rule = PlatformPaymentMethodRule::findOrFail($id);
         $providerKeys = array_keys(PaymentRegistry::all());
 
         $validated = $request->validate([
@@ -59,18 +58,17 @@ class PaymentMethodRuleController
             'constraints' => ['nullable', 'array'],
         ]);
 
-        $rule->update($validated);
+        $rule = PaymentGovernanceCrudService::updateRule($id, $validated);
 
         return response()->json([
             'message' => 'Payment method rule updated.',
-            'rule' => $rule->fresh(),
+            'rule' => $rule,
         ]);
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $rule = PlatformPaymentMethodRule::findOrFail($id);
-        $rule->delete();
+        PaymentGovernanceCrudService::deleteRule($id);
 
         return response()->json([
             'message' => 'Payment method rule deleted.',

@@ -28,6 +28,7 @@ class MembersModule implements ModuleDefinition
                 ['key' => 'members.invite', 'label' => 'Invite Members', 'hint' => 'Send invitations to new team members.'],
                 ['key' => 'members.manage', 'label' => 'Manage Members', 'is_admin' => true, 'hint' => 'Edit profiles, assign roles, and remove members.'],
                 ['key' => 'members.credentials', 'label' => 'Manage Credentials', 'is_admin' => true, 'hint' => 'Reset passwords and manage login access.'],
+                ['key' => 'members.sensitive_read', 'label' => 'Read Sensitive Data', 'is_admin' => true, 'hint' => 'Access sensitive member fields (IBAN, social security number).'],
             ],
             bundles: [
                 [
@@ -41,6 +42,13 @@ class MembersModule implements ModuleDefinition
                     'label' => 'Team Management',
                     'hint' => 'Edit profiles, assign roles, and manage credentials.',
                     'permissions' => ['members.manage', 'members.credentials'],
+                    'is_admin' => true,
+                ],
+                [
+                    'key' => 'members.sensitive_data',
+                    'label' => 'Sensitive Data Access',
+                    'hint' => 'Read sensitive member fields (IBAN, social security).',
+                    'permissions' => ['members.sensitive_read'],
                     'is_admin' => true,
                 ],
             ],

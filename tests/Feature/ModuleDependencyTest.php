@@ -40,22 +40,25 @@ class ModuleDependencyTest extends TestCase
         ModuleRegistry::sync();
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Dep Co', 'slug' => 'dep-co']);
+        $this->company = Company::create(['name' => 'Dep Co', 'slug' => 'dep-co', 'jobdomain_key' => 'logistique']);
         $this->company->memberships()->create(['user_id' => $this->owner->id, 'role' => 'owner']);
 
         // Assign logistique jobdomain with logistics modules as default
-        $jobdomain = Jobdomain::create([
-            'key' => 'logistique',
-            'label' => 'Logistique',
-            'is_active' => true,
-            'default_modules' => [
-                'logistics_shipments',
-                'logistics_tracking',
-                'logistics_fleet',
-                'logistics_analytics',
+        // ADR-167a: PlatformSeeder now seeds jobdomains, use updateOrCreate
+        $jobdomain = Jobdomain::updateOrCreate(
+            ['key' => 'logistique'],
+            [
+                'label' => 'Logistique',
+                'is_active' => true,
+                'default_modules' => [
+                    'logistics_shipments',
+                    'logistics_tracking',
+                    'logistics_fleet',
+                    'logistics_analytics',
+                ],
+                'allow_custom_fields' => true,
             ],
-            'allow_custom_fields' => true,
-        ]);
+        );
         $this->company->jobdomains()->sync([$jobdomain->id]);
 
         // Enable core modules only — logistics modules stay disabled

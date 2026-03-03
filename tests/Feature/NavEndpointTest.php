@@ -279,7 +279,7 @@ class NavEndpointTest extends TestCase
     public function test_company_nav_returns_403_for_non_member(): void
     {
         $user = User::factory()->create();
-        $company = Company::create(['name' => 'Other Co', 'slug' => 'other-co']);
+        $company = Company::create(['name' => 'Other Co', 'slug' => 'other-co', 'jobdomain_key' => 'logistique']);
 
         // User is not a member of this company
         $response = $this->actingAs($user)
@@ -315,7 +315,7 @@ class NavEndpointTest extends TestCase
     {
         // Verify NavBuilder::forCompany returns items that cover
         // all company module nav items (core + enabled addons)
-        $company = Company::create(['name' => 'Conv Co', 'slug' => 'conv-co', 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Conv Co', 'slug' => 'conv-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         // Enable all company modules
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
@@ -382,7 +382,7 @@ class NavEndpointTest extends TestCase
     private function createCompanyOwner(): array
     {
         $user = User::factory()->create();
-        $company = Company::create(['name' => 'Nav Co', 'slug' => 'nav-co-' . uniqid(), 'plan_key' => 'starter']);
+        $company = Company::create(['name' => 'Nav Co', 'slug' => 'nav-co-' . uniqid(), 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
         $company->memberships()->create([
             'user_id' => $user->id,

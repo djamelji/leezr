@@ -2,6 +2,7 @@
 
 namespace App\Modules\Platform\Companies\Http;
 
+use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\CompanyEntitlements;
@@ -33,6 +34,7 @@ class CompanyController
             'company' => $company,
             'plan' => PlanRegistry::definitions()[CompanyEntitlements::planKey($company)] ?? null,
             'modules' => ModuleCatalogReadModel::forCompany($company),
+            'incomplete_profiles_count' => CompanyUserProfileReadModel::incompleteCount($company),
         ]);
     }
 

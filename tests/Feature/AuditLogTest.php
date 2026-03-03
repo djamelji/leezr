@@ -69,7 +69,7 @@ class AuditLogTest extends TestCase
 
     public function test_company_audit_log_created_via_logger(): void
     {
-        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid()]);
+        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid(), 'jobdomain_key' => 'logistique']);
         $logger = app(AuditLogger::class);
 
         $log = $logger->logCompany(
@@ -88,7 +88,7 @@ class AuditLogTest extends TestCase
 
     public function test_company_audit_log_persisted_in_db(): void
     {
-        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid()]);
+        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid(), 'jobdomain_key' => 'logistique']);
         $logger = app(AuditLogger::class);
 
         $logger->logCompany(
@@ -109,8 +109,8 @@ class AuditLogTest extends TestCase
     public function test_company_audit_log_tenant_isolation(): void
     {
         $companies = collect([
-            Company::create(['name' => 'Audit Co A', 'slug' => 'audit-co-a-' . uniqid()]),
-            Company::create(['name' => 'Audit Co B', 'slug' => 'audit-co-b-' . uniqid()]),
+            Company::create(['name' => 'Audit Co A', 'slug' => 'audit-co-a-' . uniqid(), 'jobdomain_key' => 'logistique']),
+            Company::create(['name' => 'Audit Co B', 'slug' => 'audit-co-b-' . uniqid(), 'jobdomain_key' => 'logistique']),
         ]);
 
         $logger = app(AuditLogger::class);
@@ -151,7 +151,7 @@ class AuditLogTest extends TestCase
 
     public function test_audit_log_stores_diff(): void
     {
-        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid()]);
+        $company = Company::create(['name' => 'Audit Co', 'slug' => 'audit-co-' . uniqid(), 'jobdomain_key' => 'logistique']);
         $logger = app(AuditLogger::class);
 
         $log = $logger->logCompany(

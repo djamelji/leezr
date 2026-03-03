@@ -4,7 +4,7 @@ import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import { useSessionGovernance } from '@/composables/useSessionGovernance'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
-import { useRuntimeStore } from '@/core/runtime/runtime'
+import { useRuntimeStore, bootMachine } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
 import SessionTimeoutWarning from './components/SessionTimeoutWarning.vue'
 
@@ -24,7 +24,7 @@ const platformAuth = usePlatformAuthStore()
 const runtime = useRuntimeStore()
 const session = useSessionGovernance()
 
-watch(() => [runtime.isReady, platformAuth.sessionConfig], ([ready, config]) => {
+watch(() => [bootMachine.isReady.value, platformAuth.sessionConfig], ([ready, config]) => {
   if (ready && config) {
     session.start({
       scope: 'platform',

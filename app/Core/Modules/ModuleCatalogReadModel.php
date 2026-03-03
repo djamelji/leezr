@@ -2,18 +2,22 @@
 
 namespace App\Core\Modules;
 
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\Company;
+use App\Core\Plans\PlanRegistry;
 
 /**
  * Read model that builds the full module catalog for a company.
  * Combines platform_modules + company_modules + capabilities + entitlements into a single list.
+ *
+ * ADR-163: Adds display_state (from ModuleDisplayStateResolver), filters out
+ * incompatible jobdomain modules and SYSTEM-state modules from the catalog.
  */
 class ModuleCatalogReadModel
 {
     /**
      * Get the full module catalog for a company.
-     * Returns all platform modules with their activation status, capabilities, and entitlement info.
-     * Applies display overrides (name, description, min_plan) and icon fields.
+     * Returns all visible, jobdomain-compatible modules with their display state.
      */
     public static function forCompany(Company $company): array
     {
@@ -33,19 +37,47 @@ class ModuleCatalogReadModel
 
         $entitlements = EntitlementResolver::allForCompany($company);
 
+        // ADR-167a: jobdomain is always present — structural invariant
+        $jobdomain = $company->jobdomain;
+        $companyPlan = CompanyEntitlements::planKey($company);
+
         return $platformModules
             ->sortBy(fn (PlatformModule $pm) => $pm->sort_order_override ?? $pm->sort_order)
             ->values()
-            ->map(function (PlatformModule $pm) use ($companyModules, $activationReasons, $entitlements) {
+            ->map(function (PlatformModule $pm) use ($companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan) {
                 $cm = $companyModules->get($pm->key);
                 $capabilities = ModuleRegistry::capabilities($pm->key);
                 $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
                 $entitlement = $entitlements[$pm->key] ?? ['entitled' => false, 'source' => null, 'reason' => 'unknown_module'];
 
-                // Core modules are always active when globally enabled (no CompanyModule row needed)
-                // Addon modules require an explicit CompanyModule row with is_enabled_for_company=true
+                if (! $manifest) {
+                    return null;
+                }
+
+                // ADR-163: Exclude modules incompatible with company's jobdomain
+                // ADR-167a: jobdomain is always present — no null check
+                if ($manifest->compatibleJobdomains !== null) {
+                    if (! in_array($jobdomain->key, $manifest->compatibleJobdomains, true)) {
+                        return null;
+                    }
+                }
+
                 $isActive = $pm->is_enabled_globally
-                    && ($manifest?->type === 'core' || ($cm !== null && $cm->is_enabled_for_company));
+                    && ($manifest->type === 'core' || ($cm !== null && $cm->is_enabled_for_company));
+
+                $type = $manifest->type;
+                $minPlan = $pm->min_plan_override ?? $manifest->minPlan;
+                $pricingMode = $pm->pricing_mode ?? 'included';
+
+                // ADR-163: Compute display state
+                $displayState = ModuleDisplayStateResolver::resolve(
+                    $manifest, $pm, $entitlement, $isActive, $jobdomain, $companyPlan,
+                );
+
+                // ADR-163: SYSTEM modules are never exposed to the frontend
+                if ($displayState === ModuleDisplayState::SYSTEM) {
+                    return null;
+                }
 
                 return [
                     'key' => $pm->key,
@@ -55,15 +87,17 @@ class ModuleCatalogReadModel
                     'is_enabled_for_company' => $cm?->is_enabled_for_company ?? false,
                     'is_active' => $isActive,
                     'capabilities' => $capabilities?->toArray() ?? [],
-                    'type' => $manifest?->type ?? 'addon',
+                    'type' => $type,
+                    'category' => self::deriveCategory($type, $pricingMode, $minPlan, $manifest->compatibleJobdomains),
+                    'settings_panels' => $capabilities?->settingsPanels ?? [],
                     'is_entitled' => $entitlement['entitled'],
                     'entitlement_source' => $entitlement['source'],
                     'entitlement_reason' => $entitlement['reason'],
-                    'requires' => $manifest?->requires ?? [],
-                    'min_plan' => $pm->min_plan_override ?? $manifest?->minPlan,
-                    'pricing_mode' => $pm->pricing_mode ?? 'included',
-                    'icon_type' => $pm->icon_type ?? $manifest?->iconType ?? 'tabler',
-                    'icon_name' => $pm->icon_name ?? $manifest?->iconRef ?? 'tabler-puzzle',
+                    'requires' => $manifest->requires,
+                    'min_plan' => $minPlan,
+                    'pricing_mode' => $pricingMode,
+                    'icon_type' => $pm->icon_type ?? $manifest->iconType ?? 'tabler',
+                    'icon_name' => $pm->icon_name ?? $manifest->iconRef ?? 'tabler-puzzle',
                     'activation_reasons' => ($activationReasons->get($pm->key) ?? collect())
                         ->map(fn ($r) => [
                             'reason' => $r->reason,
@@ -71,8 +105,43 @@ class ModuleCatalogReadModel
                         ])
                         ->values()
                         ->all(),
+
+                    // ADR-163: Display state engine fields
+                    'display_state' => $displayState->value,
+                    'upgrade_target_plan' => $displayState === ModuleDisplayState::LOCKED_PLAN ? $minPlan : null,
+                    'purchase_mode' => self::derivePurchaseMode($displayState),
+                    'is_featured' => $manifest->marketplace['featured'] ?? false,
+                    'is_included' => $displayState === ModuleDisplayState::INCLUDED,
                 ];
-            })->all();
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private static function deriveCategory(string $type, string $pricingMode, ?string $minPlan, ?array $compatibleJobdomains): string
+    {
+        if ($type === 'core') {
+            return 'core';
+        }
+        if ($pricingMode === 'addon' && $minPlan !== null) {
+            return 'premium';
+        }
+        if ($compatibleJobdomains !== null) {
+            return 'industry';
+        }
+
+        return 'addon';
+    }
+
+    private static function derivePurchaseMode(ModuleDisplayState $state): ?string
+    {
+        return match ($state) {
+            ModuleDisplayState::LOCKED_PLAN => 'plan',
+            ModuleDisplayState::LOCKED_ADDON => 'addon',
+            ModuleDisplayState::CONTACT_SALES => 'sales',
+            default => null,
+        };
     }
 
     /**

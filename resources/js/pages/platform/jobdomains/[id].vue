@@ -2,6 +2,9 @@
 import { usePlatformJobdomainsStore } from '@/modules/platform-admin/jobdomains/jobdomains.store'
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import DocumentScopeChip from '@/views/shared/documents/DocumentScopeChip.vue'
+import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
+import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 
 definePage({
   meta: {
@@ -27,6 +30,10 @@ const activeTab = ref('overview')
 const jobdomain = ref(null)
 const fieldDefinitions = ref([])
 const permissionCatalog = ref([])
+
+// ADR-169: mandatory field codes from catalog (read-only)
+const mandatoryFieldCodes = ref([])
+const mandatoryByRole = ref({})
 
 // ─── Overview form ──────────────────────────────────
 const overviewForm = ref({ label: '', description: '', allowCustomFields: false })
@@ -188,21 +195,26 @@ const savePresetFields = async newFields => {
   }
 }
 
+// ADR-169: mandatory status from catalog (read-only)
+const isFieldMandatory = code => mandatoryFieldCodes.value.includes(code)
+
+const isFieldMandatoryForRole = (code, roleKey) => {
+  const jdMandatory = mandatoryFieldCodes.value.includes(code)
+  const roleMandatory = (mandatoryByRole.value[roleKey] || []).includes(code)
+
+  return jdMandatory || roleMandatory
+}
+
 const addField = async code => {
+  // ADR-169: preset = code + order only (no required)
   const maxOrder = defaultFields.value.reduce((max, f) => Math.max(max, f.order ?? 0), -1)
-  const updated = [...defaultFields.value, { code, required: false, order: maxOrder + 1 }]
+  const updated = [...defaultFields.value, { code, order: maxOrder + 1 }]
 
   await savePresetFields(updated)
 }
 
 const removeField = async code => {
   const updated = defaultFields.value.filter(f => f.code !== code)
-
-  await savePresetFields(updated)
-}
-
-const updateFieldRequired = async (code, required) => {
-  const updated = defaultFields.value.map(f => f.code === code ? { ...f, required } : f)
 
   await savePresetFields(updated)
 }
@@ -214,10 +226,6 @@ const updateFieldOrder = async (code, order) => {
   const updated = defaultFields.value.map(f => f.code === code ? { ...f, order: parsed } : f)
 
   await savePresetFields(updated)
-}
-
-const scopeColor = scope => {
-  return scope === 'company' ? 'primary' : 'warning'
 }
 
 // ─── Roles — Preset management ──────────────────────
@@ -232,6 +240,7 @@ const defaultRoles = computed(() => {
     is_administrative: def.is_administrative || false,
     bundles: def.bundles || [],
     permissions: def.permissions || [],
+    fields: def.fields || [],
   }))
 })
 
@@ -239,9 +248,16 @@ const defaultRoles = computed(() => {
 const isRoleDrawerOpen = ref(false)
 const isRoleEditMode = ref(false)
 const editingRoleKey = ref(null)
-const roleForm = ref({ name: '', is_administrative: false, bundles: [], permissions: [] })
+const roleForm = ref({ name: '', is_administrative: false, bundles: [], permissions: [], fields: [] })
 const roleDrawerLoading = ref(false)
 const isRoleAdvancedMode = ref(false)
+
+// Field config drawer state (separate from role drawer)
+const isFieldDrawerOpen = ref(false)
+const fieldDrawerRoleKey = ref(null)
+const fieldDrawerRoleName = ref('')
+const fieldDrawerFields = ref([])
+const fieldDrawerLoading = ref(false)
 
 // ─── Simple mode: Capability bundles for role drawer ─
 const roleCapabilityModules = computed(() => {
@@ -344,10 +360,157 @@ const generateRoleKey = name => {
   return `${base}_${i}`
 }
 
+// ADR-164: Field config helpers for role drawer
+const companyUserFieldDefs = computed(() =>
+  fieldDefinitions.value.filter(d => d.scope === 'company_user'),
+)
+
+const getRoleFieldEntry = code => {
+  return roleForm.value.fields.find(f => f.code === code)
+}
+
+const isRoleFieldVisible = code => {
+  const entry = getRoleFieldEntry(code)
+
+  return entry ? (entry.visible !== false) : true
+}
+
+const isRoleFieldRequired = code => {
+  const entry = getRoleFieldEntry(code)
+
+  return entry?.required || false
+}
+
+const getRoleFieldOrder = code => {
+  const entry = getRoleFieldEntry(code)
+
+  return entry?.order ?? ''
+}
+
+const getRoleFieldGroup = code => {
+  const entry = getRoleFieldEntry(code)
+
+  return entry?.group || ''
+}
+
+const updateRoleFieldConfig = (code, prop, value) => {
+  const idx = roleForm.value.fields.findIndex(f => f.code === code)
+
+  if (idx === -1) {
+    const entry = { code, scope: 'company_user', visible: true, required: false, order: 0 }
+
+    entry[prop] = value
+    roleForm.value.fields.push(entry)
+  }
+  else {
+    roleForm.value.fields[idx][prop] = value
+  }
+}
+
+// ─── Field config drawer helpers ─────────────────────
+const getFieldDrawerEntry = code => {
+  return fieldDrawerFields.value.find(f => f.code === code)
+}
+
+const isFieldDrawerVisible = code => {
+  const entry = getFieldDrawerEntry(code)
+
+  return entry ? (entry.visible !== false) : true
+}
+
+const isFieldDrawerRequired = code => {
+  const entry = getFieldDrawerEntry(code)
+
+  return entry?.required || false
+}
+
+const getFieldDrawerOrder = code => {
+  const entry = getFieldDrawerEntry(code)
+
+  return entry?.order ?? ''
+}
+
+const getFieldDrawerGroup = code => {
+  const entry = getFieldDrawerEntry(code)
+
+  return entry?.group || ''
+}
+
+const updateFieldDrawerConfig = (code, prop, value) => {
+  const idx = fieldDrawerFields.value.findIndex(f => f.code === code)
+
+  if (idx === -1) {
+    const entry = { code, scope: 'company_user', visible: true, required: false, order: 0 }
+
+    entry[prop] = value
+    fieldDrawerFields.value.push(entry)
+  }
+  else {
+    fieldDrawerFields.value[idx][prop] = value
+  }
+}
+
+// Group field definitions by their group in the role's field_config
+const fieldDrawerGroups = computed(() => {
+  const groups = {}
+  const ungrouped = []
+
+  for (const def of companyUserFieldDefs.value) {
+    const entry = getFieldDrawerEntry(def.code)
+    const group = entry?.group || null
+
+    if (group) {
+      if (!groups[group])
+        groups[group] = []
+      groups[group].push(def)
+    }
+    else {
+      ungrouped.push(def)
+    }
+  }
+
+  // Build ordered array: named groups first (sorted), then ungrouped
+  const result = []
+  for (const name of Object.keys(groups).sort()) {
+    result.push({ name, defs: groups[name] })
+  }
+  if (ungrouped.length > 0)
+    result.push({ name: null, defs: ungrouped })
+
+  return result
+})
+
+const openFieldDrawer = role => {
+  fieldDrawerRoleKey.value = role.key
+  fieldDrawerRoleName.value = role.name
+  fieldDrawerFields.value = JSON.parse(JSON.stringify(role.fields || []))
+  isFieldDrawerOpen.value = true
+}
+
+const handleFieldDrawerSubmit = async () => {
+  fieldDrawerLoading.value = true
+
+  try {
+    const current = { ...(jobdomain.value.default_roles || {}) }
+    const role = current[fieldDrawerRoleKey.value]
+
+    if (!role) return
+
+    role.fields = fieldDrawerFields.value.length > 0 ? fieldDrawerFields.value : []
+    current[fieldDrawerRoleKey.value] = role
+
+    await saveDefaultRoles(current)
+    isFieldDrawerOpen.value = false
+  }
+  finally {
+    fieldDrawerLoading.value = false
+  }
+}
+
 const openRoleCreateDrawer = () => {
   isRoleEditMode.value = false
   editingRoleKey.value = null
-  roleForm.value = { name: '', is_administrative: false, bundles: [], permissions: [] }
+  roleForm.value = { name: '', is_administrative: false, bundles: [], permissions: [], fields: [] }
   isRoleAdvancedMode.value = false
   isRoleDrawerOpen.value = true
 }
@@ -360,6 +523,7 @@ const openRoleEditDrawer = role => {
     is_administrative: role.is_administrative,
     bundles: [...role.bundles],
     permissions: [...role.permissions],
+    fields: JSON.parse(JSON.stringify(role.fields || [])),
   }
   isRoleAdvancedMode.value = role.permissions.length > 0 && role.bundles.length === 0
   isRoleDrawerOpen.value = true
@@ -419,6 +583,11 @@ const handleRoleDrawerSubmit = async () => {
       roleData.permissions = roleForm.value.permissions
     }
 
+    // ADR-164: Include field overrides
+    if (roleForm.value.fields.length > 0) {
+      roleData.fields = roleForm.value.fields
+    }
+
     if (isRoleEditMode.value) {
       current[editingRoleKey.value] = roleData
     }
@@ -450,6 +619,63 @@ const deletePresetRole = async role => {
   await saveDefaultRoles(current)
 }
 
+// ─── Document Presets (ADR-178/179) ─────────────────
+const documentPresets = ref([])
+
+// Source of truth = DB (jobdomain.default_documents), not the server-computed is_in_preset
+const defaultDocuments = computed(() => jobdomain.value?.default_documents || [])
+const presetDocCodes = computed(() => new Set(defaultDocuments.value.map(d => d.code)))
+
+const presetDocuments = computed(() => {
+  return documentPresets.value
+    .filter(d => presetDocCodes.value.has(d.code))
+    .map(d => ({
+      ...d,
+      preset_order: defaultDocuments.value.find(dd => dd.code === d.code)?.order ?? 0,
+    }))
+    .sort((a, b) => a.preset_order - b.preset_order)
+})
+
+const otherDocuments = computed(() =>
+  documentPresets.value.filter(d => !presetDocCodes.value.has(d.code)),
+)
+
+const saveDocumentPresets = async newDocs => {
+  try {
+    const data = await jobdomainsStore.updateJobdomain(jobdomain.value.id, {
+      default_documents: newDocs,
+    })
+
+    jobdomain.value = data.jobdomain
+    toast(data.message, 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformJobdomains.failedToUpdateDocuments'), 'error')
+  }
+}
+
+const addDocument = async code => {
+  const maxOrder = defaultDocuments.value.reduce((max, d) => Math.max(max, d.order ?? 0), -1)
+  const newDocs = [...defaultDocuments.value, { code, order: maxOrder + 10 }]
+
+  await saveDocumentPresets(newDocs)
+}
+
+const removeDocument = async code => {
+  const newDocs = defaultDocuments.value.filter(d => d.code !== code)
+
+  await saveDocumentPresets(newDocs)
+}
+
+const updateDocumentOrder = async (code, order) => {
+  const parsed = parseInt(order, 10)
+  if (isNaN(parsed) || parsed < 0) return
+
+  const newDocs = defaultDocuments.value.map(d => d.code === code ? { ...d, order: parsed } : d)
+
+  await saveDocumentPresets(newDocs)
+}
+
 // ─── Load data ──────────────────────────────────────
 onMounted(async () => {
   try {
@@ -462,6 +688,9 @@ onMounted(async () => {
     fieldDefinitions.value = jdData.field_definitions || []
     permissionCatalog.value = jdData.permission_catalog || []
     moduleBundles.value = jdData.module_bundles || []
+    mandatoryFieldCodes.value = jdData.mandatory_field_codes || []
+    mandatoryByRole.value = jdData.mandatory_by_role || {}
+    documentPresets.value = jdData.document_presets || []
     resetOverviewForm()
   }
   catch {
@@ -563,6 +792,19 @@ onMounted(async () => {
             class="ms-2"
           >
             {{ defaultRoles.length }}
+          </VChip>
+        </VTab>
+        <VTab value="documents">
+          <VIcon
+            icon="tabler-file-text"
+            class="me-1"
+          />
+          {{ t('platformJobdomains.documentPresets') }}
+          <VChip
+            size="x-small"
+            class="ms-2"
+          >
+            {{ presetDocuments.length }}
           </VChip>
         </VTab>
       </VTabs>
@@ -965,6 +1207,16 @@ onMounted(async () => {
               {{ t('platformJobdomains.fieldsPresetInfo') }}
             </VAlert>
 
+            <!-- ADR-169: mandatory governance alert -->
+            <VAlert
+              v-if="mandatoryFieldCodes.length > 0"
+              type="warning"
+              variant="tonal"
+              class="mx-4 mt-2"
+            >
+              {{ t('platformJobdomains.mandatoryGovernanceAlert', { count: mandatoryFieldCodes.length }) }}
+            </VAlert>
+
             <!-- Section 1: Preset Fields -->
             <VCardTitle class="text-body-1 mt-2">
               {{ t('platformJobdomains.presetFields') }}
@@ -978,8 +1230,8 @@ onMounted(async () => {
                 <tr>
                   <th>{{ t('common.code') }}</th>
                   <th>{{ t('common.scope') }}</th>
-                  <th style="width: 120px;">
-                    {{ t('members.required') }}
+                  <th style="width: 140px;">
+                    {{ t('platformJobdomains.mandatoryStatus') }}
                   </th>
                   <th style="width: 100px;">
                     {{ t('platformFields.order') }}
@@ -1005,21 +1257,33 @@ onMounted(async () => {
                     </VChip>
                   </td>
                   <td>
-                    <VChip
-                      :color="scopeColor(field.scope)"
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ field.scope }}
-                    </VChip>
+                    <DocumentScopeChip :scope="field.scope" />
                   </td>
                   <td>
-                    <VCheckbox
-                      :model-value="field.required"
-                      density="compact"
-                      hide-details
-                      @update:model-value="updateFieldRequired(field.code, $event)"
-                    />
+                    <!-- ADR-169: mandatory from catalog = read-only indicator -->
+                    <VChip
+                      v-if="isFieldMandatory(field.code)"
+                      color="error"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      <VIcon
+                        icon="tabler-lock"
+                        size="14"
+                        start
+                      />
+                      {{ t('platformJobdomains.mandatory') }}
+                      <VTooltip
+                        activator="parent"
+                        location="top"
+                      >
+                        {{ t('platformJobdomains.mandatoryTooltip') }}
+                      </VTooltip>
+                    </VChip>
+                    <span
+                      v-else
+                      class="text-disabled"
+                    >—</span>
                   </td>
                   <td>
                     <AppTextField
@@ -1210,7 +1474,15 @@ onMounted(async () => {
                         {{ t('platformJobdomains.customCount', { count: role.permissions.length }) }}
                       </VChip>
                       <VChip
-                        v-if="role.bundles.length === 0 && role.permissions.length === 0"
+                        v-if="role.fields.length > 0"
+                        size="small"
+                        color="success"
+                        variant="tonal"
+                      >
+                        {{ t('platformJobdomains.fieldsCount', { count: role.fields.length }) }}
+                      </VChip>
+                      <VChip
+                        v-if="role.bundles.length === 0 && role.permissions.length === 0 && role.fields.length === 0"
                         size="small"
                         color="default"
                         variant="tonal"
@@ -1229,6 +1501,27 @@ onMounted(async () => {
                         @click="openRoleEditDrawer(role)"
                       >
                         <VIcon icon="tabler-pencil" />
+                        <VTooltip
+                          activator="parent"
+                          location="top"
+                        >
+                          {{ t('roles.capabilities') }}
+                        </VTooltip>
+                      </VBtn>
+                      <VBtn
+                        icon
+                        variant="text"
+                        size="small"
+                        color="default"
+                        @click="openFieldDrawer(role)"
+                      >
+                        <VIcon icon="tabler-forms" />
+                        <VTooltip
+                          activator="parent"
+                          location="top"
+                        >
+                          {{ t('platformJobdomains.fieldOverrides') }}
+                        </VTooltip>
                       </VBtn>
                       <VBtn
                         icon
@@ -1250,6 +1543,169 @@ onMounted(async () => {
               class="text-center text-disabled"
             >
               {{ t('platformJobdomains.noRolePresets') }}
+            </VCardText>
+          </VCard>
+        </VWindowItem>
+
+        <!-- ─── Tab 5: Document Presets (ADR-178) ─────── -->
+        <VWindowItem value="documents">
+          <VCard>
+            <VCardItem>
+              <VCardTitle class="d-flex align-center gap-2">
+                {{ t('platformJobdomains.documentPresets') }}
+                <VChip
+                  color="info"
+                  variant="tonal"
+                  size="small"
+                >
+                  {{ t('documents.preset') }}
+                </VChip>
+              </VCardTitle>
+            </VCardItem>
+            <VCardText>
+              <VAlert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-6"
+              >
+                {{ t('platformJobdomains.documentPresetsInfo') }}
+              </VAlert>
+
+              <!-- Activated by Default -->
+              <template v-if="presetDocuments.length">
+                <h6 class="text-h6 mb-3">
+                  {{ t('platformJobdomains.activeDocumentPresets') }}
+                </h6>
+                <VTable class="text-no-wrap mb-6">
+                  <thead>
+                    <tr>
+                      <th>{{ t('documents.title') }}</th>
+                      <th style="width: 100px;">
+                        {{ t('common.scope') }}
+                      </th>
+                      <th style="width: 100px;">
+                        {{ t('documents.systemMandatory') }}
+                      </th>
+                      <th style="width: 100px;">
+                        {{ t('platformJobdomains.applicableMarkets') }}
+                      </th>
+                      <th>{{ t('documents.constraints') }}</th>
+                      <th style="width: 100px;">
+                        {{ t('platformJobdomains.presetOrder') }}
+                      </th>
+                      <th style="width: 60px;" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="doc in presetDocuments"
+                      :key="doc.code"
+                    >
+                      <td class="font-weight-medium">
+                        {{ t(`documents.type.${doc.code}`, doc.label) }}
+                      </td>
+                      <td>
+                        <DocumentScopeChip :scope="doc.scope" />
+                      </td>
+                      <td>
+                        <DocumentMandatoryChip :mandatory="doc.mandatory_for_jobdomain" />
+                      </td>
+                      <td>
+                        <span v-if="!doc.applicable_markets">{{ t('documents.allMarkets') }}</span>
+                        <span v-else>{{ doc.applicable_markets.join(', ') }}</span>
+                      </td>
+                      <td>
+                        <DocumentConstraintsInline
+                          :max-file-size-mb="doc.max_file_size_mb"
+                          :accepted-types="doc.accepted_types"
+                        />
+                      </td>
+                      <td>
+                        <AppTextField
+                          :model-value="doc.preset_order"
+                          type="number"
+                          density="compact"
+                          hide-details
+                          style="max-inline-size: 80px;"
+                          @change="updateDocumentOrder(doc.code, $event.target.value)"
+                        />
+                      </td>
+                      <td>
+                        <VBtn
+                          icon
+                          variant="text"
+                          size="small"
+                          color="error"
+                          @click="removeDocument(doc.code)"
+                        >
+                          <VIcon icon="tabler-x" />
+                        </VBtn>
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </template>
+
+              <!-- Available Document Types -->
+              <template v-if="otherDocuments.length">
+                <VDivider
+                  v-if="presetDocuments.length"
+                  class="my-4"
+                />
+                <h6 class="text-h6 mb-3">
+                  {{ t('platformJobdomains.otherDocumentTypes') }}
+                </h6>
+                <VTable class="text-no-wrap">
+                  <thead>
+                    <tr>
+                      <th>{{ t('documents.title') }}</th>
+                      <th style="width: 100px;">
+                        {{ t('common.scope') }}
+                      </th>
+                      <th style="width: 100px;">
+                        {{ t('platformJobdomains.applicableMarkets') }}
+                      </th>
+                      <th>{{ t('documents.constraints') }}</th>
+                      <th style="width: 60px;" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="doc in otherDocuments"
+                      :key="doc.code"
+                    >
+                      <td>
+                        {{ t(`documents.type.${doc.code}`, doc.label) }}
+                      </td>
+                      <td>
+                        <DocumentScopeChip :scope="doc.scope" />
+                      </td>
+                      <td>
+                        <span v-if="!doc.applicable_markets">{{ t('documents.allMarkets') }}</span>
+                        <span v-else>{{ doc.applicable_markets.join(', ') }}</span>
+                      </td>
+                      <td>
+                        <DocumentConstraintsInline
+                          :max-file-size-mb="doc.max_file_size_mb"
+                          :accepted-types="doc.accepted_types"
+                        />
+                      </td>
+                      <td>
+                        <VBtn
+                          icon
+                          variant="text"
+                          size="small"
+                          color="success"
+                          @click="addDocument(doc.code)"
+                        >
+                          <VIcon icon="tabler-plus" />
+                        </VBtn>
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </template>
             </VCardText>
           </VCard>
         </VWindowItem>
@@ -1644,6 +2100,169 @@ onMounted(async () => {
                 </VCol>
               </VRow>
             </VForm>
+          </VCardText>
+        </div>
+      </VNavigationDrawer>
+
+      <!-- ─── Field Config Drawer ──────────────────────── -->
+      <VNavigationDrawer
+        v-model="isFieldDrawerOpen"
+        temporary
+        location="end"
+        width="560"
+      >
+        <AppDrawerHeaderSection
+          :title="`${t('platformJobdomains.fieldOverrides')} — ${fieldDrawerRoleName}`"
+          @cancel="isFieldDrawerOpen = false"
+        />
+
+        <VDivider />
+
+        <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
+          <VCardText>
+            <VAlert
+              type="info"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ t('platformJobdomains.fieldOverridesInfo') }}
+            </VAlert>
+
+            <template v-if="fieldDrawerGroups.length">
+              <template
+                v-for="group in fieldDrawerGroups"
+                :key="group.name || '__ungrouped__'"
+              >
+                <div class="d-flex align-center gap-2 mt-4 mb-2">
+                  <VIcon
+                    :icon="group.name ? 'tabler-folder' : 'tabler-list'"
+                    size="18"
+                    color="primary"
+                  />
+                  <span class="text-body-1 font-weight-medium text-capitalize">
+                    {{ group.name ? t(`fieldGroups.${group.name}`, group.name) : t('platformJobdomains.ungroupedFields') }}
+                  </span>
+                  <VChip
+                    size="x-small"
+                    variant="tonal"
+                  >
+                    {{ group.defs.length }}
+                  </VChip>
+                </div>
+
+                <VTable
+                  density="compact"
+                  class="text-no-wrap"
+                >
+                  <thead>
+                    <tr>
+                      <th>{{ t('common.name') }}</th>
+                      <th style="width: 70px;">
+                        {{ t('roles.visible') }}
+                      </th>
+                      <th style="width: 70px;">
+                        {{ t('members.required') }}
+                      </th>
+                      <th style="width: 70px;">
+                        {{ t('roles.order') }}
+                      </th>
+                      <th style="width: 100px;">
+                        {{ t('roles.group') }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="def in group.defs"
+                      :key="def.code"
+                    >
+                      <td class="font-weight-medium">
+                        {{ def.label }}
+                        <!-- ADR-169: mandatory indicator from catalog -->
+                        <VChip
+                          v-if="isFieldMandatoryForRole(def.code, fieldDrawerRoleKey)"
+                          color="error"
+                          size="x-small"
+                          variant="tonal"
+                          class="ms-1"
+                        >
+                          <VIcon
+                            icon="tabler-lock"
+                            size="12"
+                          />
+                          <VTooltip
+                            activator="parent"
+                            location="top"
+                          >
+                            {{ t('platformJobdomains.mandatoryTooltip') }}
+                          </VTooltip>
+                        </VChip>
+                      </td>
+                      <td>
+                        <VCheckbox
+                          :model-value="isFieldDrawerVisible(def.code)"
+                          density="compact"
+                          hide-details
+                          @update:model-value="updateFieldDrawerConfig(def.code, 'visible', $event)"
+                        />
+                      </td>
+                      <td>
+                        <VCheckbox
+                          :model-value="isFieldMandatoryForRole(def.code, fieldDrawerRoleKey) || isFieldDrawerRequired(def.code)"
+                          density="compact"
+                          hide-details
+                          :disabled="!isFieldDrawerVisible(def.code) || isFieldMandatoryForRole(def.code, fieldDrawerRoleKey)"
+                          @update:model-value="updateFieldDrawerConfig(def.code, 'required', $event)"
+                        />
+                      </td>
+                      <td>
+                        <AppTextField
+                          :model-value="getFieldDrawerOrder(def.code)"
+                          type="number"
+                          density="compact"
+                          hide-details
+                          style="max-inline-size: 60px;"
+                          @update:model-value="updateFieldDrawerConfig(def.code, 'order', parseInt($event) || 0)"
+                        />
+                      </td>
+                      <td>
+                        <AppTextField
+                          :model-value="getFieldDrawerGroup(def.code)"
+                          density="compact"
+                          hide-details
+                          style="max-inline-size: 90px;"
+                          :placeholder="t('roles.group')"
+                          @update:model-value="updateFieldDrawerConfig(def.code, 'group', $event || null)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </template>
+            </template>
+
+            <div
+              v-else
+              class="text-center text-disabled pa-4"
+            >
+              {{ t('platformJobdomains.noFieldDefinitions') }}
+            </div>
+
+            <div class="d-flex gap-3 mt-6">
+              <VBtn
+                :loading="fieldDrawerLoading"
+                @click="handleFieldDrawerSubmit"
+              >
+                {{ t('common.save') }}
+              </VBtn>
+              <VBtn
+                variant="tonal"
+                color="secondary"
+                @click="isFieldDrawerOpen = false"
+              >
+                {{ t('common.cancel') }}
+              </VBtn>
+            </div>
           </VCardText>
         </div>
       </VNavigationDrawer>

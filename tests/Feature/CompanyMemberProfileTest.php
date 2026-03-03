@@ -37,7 +37,7 @@ class CompanyMemberProfileTest extends TestCase
         $this->admin = User::factory()->create();
         $this->member = User::factory()->create();
 
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->activateCompanyModules($this->company);
         $adminRole = $this->setUpCompanyRbac($this->company);
 
@@ -160,7 +160,8 @@ class CompanyMemberProfileTest extends TestCase
         $phoneField = collect($response->json('dynamic_fields'))
             ->firstWhere('code', 'phone');
 
-        $this->assertEquals('+33 1 23 45 67 89', $phoneField['value']);
+        // ADR-165: phone is auto-normalized to E.164
+        $this->assertEquals('+33123456789', $phoneField['value']);
     }
 
     // ─── 4) Admin can update company role (Bloc C) ────────
@@ -222,7 +223,8 @@ class CompanyMemberProfileTest extends TestCase
         $phoneField = collect($response->json('dynamic_fields'))
             ->firstWhere('code', 'phone');
 
-        $this->assertEquals('+33 1 11 11 11 11', $phoneField['value']);
+        // ADR-165: phone is auto-normalized to E.164
+        $this->assertEquals('+33111111111', $phoneField['value']);
     }
 
     // ─── 7) Query count is constant ──────────────────────

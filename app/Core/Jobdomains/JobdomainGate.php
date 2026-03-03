@@ -4,6 +4,8 @@ namespace App\Core\Jobdomains;
 
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
+use App\Core\Documents\DocumentType;
+use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Models\Company;
@@ -20,9 +22,9 @@ use Illuminate\Support\Facades\DB;
 class JobdomainGate
 {
     /**
-     * Resolve the jobdomain for a company. Returns null if none assigned.
+     * ADR-167a: Jobdomain is always present — structural invariant.
      */
-    public static function resolveForCompany(Company $company): ?Jobdomain
+    public static function resolveForCompany(Company $company): Jobdomain
     {
         return $company->jobdomain;
     }
@@ -32,13 +34,7 @@ class JobdomainGate
      */
     public static function landingRouteFor(Company $company): string
     {
-        $jobdomain = static::resolveForCompany($company);
-
-        if (!$jobdomain) {
-            return '/';
-        }
-
-        $definition = JobdomainRegistry::get($jobdomain->key);
+        $definition = JobdomainRegistry::get($company->jobdomain_key);
 
         return $definition['landing_route'] ?? '/';
     }
@@ -48,13 +44,7 @@ class JobdomainGate
      */
     public static function navProfileFor(Company $company): ?string
     {
-        $jobdomain = static::resolveForCompany($company);
-
-        if (!$jobdomain) {
-            return null;
-        }
-
-        $definition = JobdomainRegistry::get($jobdomain->key);
+        $definition = JobdomainRegistry::get($company->jobdomain_key);
 
         return $definition['nav_profile'] ?? null;
     }
@@ -77,8 +67,26 @@ class JobdomainGate
     }
 
     /**
+     * Get the default document type codes for a jobdomain.
+     * Returns structured array: [{code, order}, ...]
+     * Reads from DB (editable via platform admin), falls back to Registry.
+     */
+    public static function defaultDocumentsFor(string $jobdomainKey): array
+    {
+        $jobdomain = Jobdomain::where('key', $jobdomainKey)->first();
+
+        if ($jobdomain && $jobdomain->default_documents !== null) {
+            return $jobdomain->default_documents;
+        }
+
+        $definition = JobdomainRegistry::get($jobdomainKey);
+
+        return $definition['default_documents'] ?? [];
+    }
+
+    /**
      * Get the default field presets for a jobdomain.
-     * Returns structured array: [{code, required, order}, ...]
+     * Returns structured array: [{code, order}, ...]
      * Reads from DB (editable via platform admin), falls back to Registry.
      */
     public static function defaultFieldsFor(string $jobdomainKey): array
@@ -105,7 +113,10 @@ class JobdomainGate
             ->firstOrFail();
 
         return DB::transaction(function () use ($company, $jobdomain, $jobdomainKey) {
-            // Assign (upsert via sync with single value)
+            // ADR-167a: Set the direct column (source of truth)
+            $company->update(['jobdomain_key' => $jobdomainKey]);
+
+            // Assign pivot (backward compat — will be removed in ADR-167b)
             $company->jobdomains()->sync([$jobdomain->id]);
 
             // Activate default modules
@@ -151,8 +162,37 @@ class JobdomainGate
                         ],
                         [
                             'enabled' => true,
-                            'required_override' => $config['required'] ?? false,
+                            // ADR-169: catalog handles mandatory via required_by_*, preset only activates
+                            'required_override' => false,
                             'order' => $config['order'] ?? $definition->default_order ?? 0,
+                        ],
+                    );
+                }
+            }
+
+            // ADR-169 Phase 3: Activate default document types
+            $defaultDocuments = static::defaultDocumentsFor($jobdomainKey);
+
+            if (!empty($defaultDocuments)) {
+                $docConfigs = collect($defaultDocuments)->keyBy('code');
+                $docCodes = $docConfigs->keys()->toArray();
+
+                $docTypes = DocumentType::whereIn('code', $docCodes)
+                    ->whereIn('scope', [DocumentType::SCOPE_COMPANY, DocumentType::SCOPE_COMPANY_USER])
+                    ->get();
+
+                foreach ($docTypes as $docType) {
+                    $config = $docConfigs->get($docType->code);
+
+                    DocumentTypeActivation::updateOrCreate(
+                        [
+                            'company_id' => $company->id,
+                            'document_type_id' => $docType->id,
+                        ],
+                        [
+                            'enabled' => true,
+                            'required_override' => false,
+                            'order' => $config['order'] ?? $docType->default_order ?? 0,
                         ],
                     );
                 }
@@ -161,13 +201,26 @@ class JobdomainGate
             // Seed default roles from jobdomain (DB, editable via platform UI)
             $defaultRoles = $jobdomain->default_roles ?? [];
 
+            // ADR-170: Resolve archetype default_tags from registry
+            $registryDef = JobdomainRegistry::get($jobdomainKey);
+            $archetypes = $registryDef['archetypes'] ?? [];
+
             foreach ($defaultRoles as $roleKey => $roleDef) {
+                // ADR-170: Resolve required_tags from archetype's default_tags
+                $archetype = $roleDef['archetype'] ?? null;
+                $requiredTags = null;
+                if ($archetype && isset($archetypes[$archetype])) {
+                    $requiredTags = $archetypes[$archetype]['default_tags'] ?? [];
+                }
+
                 $role = CompanyRole::updateOrCreate(
                     ['company_id' => $company->id, 'key' => $roleKey],
                     [
                         'name' => $roleDef['name'],
                         'is_system' => true,
                         'is_administrative' => $roleDef['is_administrative'] ?? false,
+                        'archetype' => $archetype,
+                        'required_tags' => $requiredTags,
                     ],
                 );
 
@@ -181,6 +234,20 @@ class JobdomainGate
                     ->toArray();
 
                 $role->syncPermissionsSafe($permissionIds);
+
+                // ADR-164: Seed field_config from jobdomain role definition
+                // Only populate if field_config is currently null (don't overwrite company customizations)
+                $roleFieldConfig = $roleDef['fields'] ?? null;
+                if ($roleFieldConfig !== null && $role->field_config === null) {
+                    $role->update(['field_config' => $roleFieldConfig]);
+                }
+
+                // ADR-170 Phase 3: Seed doc_config from jobdomain role definition
+                // Same pattern: only populate if currently null
+                $roleDocConfig = $roleDef['doc_config'] ?? null;
+                if ($roleDocConfig !== null && $role->doc_config === null) {
+                    $role->update(['doc_config' => $roleDocConfig]);
+                }
             }
 
             // Clone dashboard defaults if company has no layout (ADR-149)

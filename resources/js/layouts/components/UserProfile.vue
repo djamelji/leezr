@@ -2,14 +2,13 @@
 import { useAuthStore } from '@/core/stores/auth'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
-const router = useRouter()
 const auth = useAuthStore()
 
 const userData = computed(() => auth.user)
 
 const logout = async () => {
   await auth.logout()
-  await router.push('/login')
+  window.location.href = '/login'
 }
 
 const userProfileList = [

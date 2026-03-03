@@ -11,6 +11,7 @@ use App\Platform\Models\PlatformPermission;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformSetting;
 use App\Platform\Models\PlatformUser;
+use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
@@ -21,6 +22,12 @@ class PlatformSeeder extends Seeder
     {
         // Sync module registry → platform_modules (must run before permissions)
         ModuleRegistry::sync();
+
+        // ADR-167a: Jobdomain is a structural invariant — seed catalog
+        JobdomainRegistry::sync();
+
+        // ADR-169 Phase 3: Sync document type catalog
+        \App\Core\Documents\DocumentTypeCatalog::sync();
 
         // Create permissions from catalog (module-driven, single source of truth)
         PlatformPermissionCatalog::sync();

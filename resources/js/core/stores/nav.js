@@ -6,6 +6,8 @@ export const useNavStore = defineStore('nav', {
   state: () => ({
     _platformGroups: [],
     _companyGroups: [],
+    _platformWidgets: [],
+    _companyWidgets: [],
     _platformLoaded: false,
     _companyLoaded: false,
   }),
@@ -13,6 +15,8 @@ export const useNavStore = defineStore('nav', {
   getters: {
     platformGroups: state => state._platformGroups,
     companyGroups: state => state._companyGroups,
+    platformWidgets: state => state._platformWidgets,
+    companyWidgets: state => state._companyWidgets,
     platformLoaded: state => state._platformLoaded,
     companyLoaded: state => state._companyLoaded,
 
@@ -30,6 +34,7 @@ export const useNavStore = defineStore('nav', {
       const data = await $platformApi('/nav', { signal })
 
       this._platformGroups = data.groups
+      this._platformWidgets = data.header_widgets || []
       this._platformLoaded = true
 
       return data.groups
@@ -46,6 +51,7 @@ export const useNavStore = defineStore('nav', {
       const data = await $api('/nav', { signal })
 
       this._companyGroups = data.groups
+      this._companyWidgets = data.header_widgets || []
       this._companyLoaded = true
 
       return data.groups
@@ -54,6 +60,8 @@ export const useNavStore = defineStore('nav', {
     reset() {
       this._platformGroups = []
       this._companyGroups = []
+      this._platformWidgets = []
+      this._companyWidgets = []
       this._platformLoaded = false
       this._companyLoaded = false
     },

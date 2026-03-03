@@ -381,6 +381,7 @@
     "usePublicPlans": true,
     "formatDateTime": true,
     "formatMoney": true,
-    "useDashboardGrid": true
+    "useDashboardGrid": true,
+    "useDocumentHelpers": true
   }
 }

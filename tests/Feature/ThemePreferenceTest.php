@@ -31,7 +31,7 @@ class ThemePreferenceTest extends TestCase
         ModuleRegistry::sync();
         CompanyPermissionCatalog::sync();
 
-        $this->company = Company::create(['name' => 'Theme Co', 'slug' => 'theme-co', 'plan_key' => 'pro']);
+        $this->company = Company::create(['name' => 'Theme Co', 'slug' => 'theme-co', 'plan_key' => 'pro', 'jobdomain_key' => 'logistique']);
         $this->owner = User::factory()->create();
 
         $this->company->memberships()->create([

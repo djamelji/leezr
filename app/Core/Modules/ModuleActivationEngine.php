@@ -4,6 +4,9 @@ namespace App\Core\Modules;
 
 use App\Core\Events\ModuleDisabled;
 use App\Core\Events\ModuleEnabled;
+use App\Core\Fields\FieldActivation;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Models\Company;
 use Illuminate\Support\Facades\DB;
 
@@ -148,6 +151,9 @@ class ModuleActivationEngine
         foreach (array_unique($activated) as $moduleKey) {
             ModuleEnabled::dispatch($company, $moduleKey);
         }
+
+        // ADR-168b: auto-activate fields required by newly activated modules
+        static::autoActivateRequiredFields($company, array_unique($activated));
 
         return [
             'success' => true,
@@ -410,6 +416,51 @@ class ModuleActivationEngine
 
         foreach ($manifest->requires as $reqKey) {
             static::dfsRequires($reqKey, $visited);
+        }
+    }
+
+    /**
+     * ADR-168b: Auto-activate field definitions that are required_by_modules
+     * for any of the newly activated modules.
+     *
+     * Creates FieldActivation rows (enabled=true) for fields that don't already
+     * have an activation for this company.
+     */
+    private static function autoActivateRequiredFields(Company $company, array $activatedModuleKeys): void
+    {
+        if (empty($activatedModuleKeys)) {
+            return;
+        }
+
+        // Load all system definitions for company_user scope
+        $definitions = FieldDefinition::whereNull('company_id')
+            ->where('scope', FieldDefinition::SCOPE_COMPANY_USER)
+            ->get();
+
+        foreach ($definitions as $definition) {
+            $requiredByModules = $definition->validation_rules['required_by_modules'] ?? [];
+
+            if (empty($requiredByModules)) {
+                continue;
+            }
+
+            // Check if any activated module matches
+            if (empty(array_intersect($activatedModuleKeys, $requiredByModules))) {
+                continue;
+            }
+
+            // Create activation if not already present
+            FieldActivation::firstOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'field_definition_id' => $definition->id,
+                ],
+                [
+                    'enabled' => true,
+                    'required_override' => false,
+                    'order' => $definition->default_order,
+                ],
+            );
         }
     }
 }

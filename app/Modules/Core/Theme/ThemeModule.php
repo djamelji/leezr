@@ -20,6 +20,24 @@ class ThemeModule implements ModuleDefinition
                 navItems: [],
                 routeNames: [],
                 middlewareKey: 'core.theme',
+                headerWidgets: [
+                    [
+                        'key' => 'theme-switcher',
+                        'component' => 'NavbarThemeSwitcher',
+                        'permission' => 'theme.view',
+                        'sortOrder' => 50,
+                    ],
+                ],
+                settingsPanels: [
+                    [
+                        'key' => 'theme-role-visibility',
+                        'component' => 'ThemeRoleVisibility',
+                        'label' => 'Theme Toggle Visibility',
+                        'icon' => 'tabler-moon',
+                        'permission' => 'theme.manage',
+                        'sortOrder' => 10,
+                    ],
+                ],
             ),
             permissions: [
                 ['key' => 'theme.view', 'label' => 'View Theme', 'hint' => 'See the theme toggle in the header.'],

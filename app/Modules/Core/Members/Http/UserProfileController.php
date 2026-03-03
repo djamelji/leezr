@@ -19,7 +19,13 @@ class UserProfileController extends Controller
     {
         $company = $request->attributes->get('company');
 
-        return response()->json(CompanyUserProfileReadModel::get($request->user(), $company));
+        $membership = $company->memberships()->with('companyRole:id,key')->where('user_id', $request->user()->id)->first();
+        $roleKey = $membership?->companyRole?->key;
+
+        // ADR-169: show all categories (not just base) — aligned with member detail
+        return response()->json(CompanyUserProfileReadModel::get(
+            $request->user(), $company, $roleKey,
+        ));
     }
 
     public function update(UpdateProfileRequest $request): JsonResponse
@@ -31,11 +37,13 @@ class UserProfileController extends Controller
         $request->user()->update(array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email'])));
 
         if (isset($validated['dynamic_fields'])) {
+            // ADR-169: write all categories, not just base
             FieldWriteService::upsert(
                 $request->user(),
                 $validated['dynamic_fields'],
                 FieldDefinition::SCOPE_COMPANY_USER,
                 $company->id,
+                $company->market_key,
             );
         }
 
@@ -44,7 +52,12 @@ class UserProfileController extends Controller
             ['diffBefore' => $before, 'diffAfter' => $request->user()->only('first_name', 'last_name', 'email')],
         );
 
-        return response()->json(CompanyUserProfileReadModel::get($request->user()->fresh(), $company));
+        $membership = $company->memberships()->with('companyRole:id,key')->where('user_id', $request->user()->id)->first();
+        $roleKey = $membership?->companyRole?->key;
+
+        return response()->json(CompanyUserProfileReadModel::get(
+            $request->user()->fresh(), $company, $roleKey,
+        ));
     }
 
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse

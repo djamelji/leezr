@@ -31,7 +31,7 @@ class MembershipAdminResolutionTest extends TestCase
         ModuleRegistry::sync();
         CompanyPermissionCatalog::sync();
 
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
     }
 
     // ═══════════════════════════════════════════════════════

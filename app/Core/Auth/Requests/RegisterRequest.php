@@ -22,8 +22,9 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', PasswordPolicy::rules()],
             'company_name' => ['required', 'string', 'max:255'],
-            'jobdomain_key' => ['sometimes', 'nullable', 'string', 'exists:jobdomains,key'],
+            'jobdomain_key' => ['required', 'string', 'exists:jobdomains,key'],
             'plan_key' => ['sometimes', 'nullable', 'string', Rule::in(PlanRegistry::keys())],
+            'market_key' => ['sometimes', 'string', 'exists:markets,key'],
         ];
     }
 }

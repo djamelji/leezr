@@ -11,6 +11,8 @@ final class Capabilities
         public readonly array $navItems = [],
         public readonly array $routeNames = [],
         public readonly ?string $middlewareKey = null,
+        public readonly array $headerWidgets = [],
+        public readonly array $settingsPanels = [],
     ) {}
 
     public function toArray(): array
@@ -19,6 +21,8 @@ final class Capabilities
             'nav_items' => $this->navItems,
             'route_names' => $this->routeNames,
             'middleware_key' => $this->middlewareKey,
+            'header_widgets' => $this->headerWidgets,
+            'settings_panels' => $this->settingsPanels,
         ];
     }
 }

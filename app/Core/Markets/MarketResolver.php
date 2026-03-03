@@ -17,15 +17,10 @@ class MarketResolver
 {
     public static function resolveForCompany(Company $company): Market
     {
-        if ($company->market_key) {
-            $market = Market::where('key', $company->market_key)->first();
+        // ADR-165: market_key is now non-nullable with default 'FR'
+        $market = Market::where('key', $company->market_key)->first();
 
-            if ($market) {
-                return $market;
-            }
-        }
-
-        return static::resolveDefault();
+        return $market ?? static::resolveDefault();
     }
 
     public static function resolveDefault(): Market

@@ -37,7 +37,7 @@ class CompanyJobdomainModuleTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
 
         $this->owner = User::factory()->create();
-        $this->company = Company::create(['name' => 'Jobdomain Co', 'slug' => 'jobdomain-co']);
+        $this->company = Company::create(['name' => 'Jobdomain Co', 'slug' => 'jobdomain-co', 'jobdomain_key' => 'logistique']);
         JobdomainRegistry::sync();
         $this->activateCompanyModules($this->company);
         $this->setUpCompanyRbac($this->company);
@@ -126,11 +126,12 @@ class CompanyJobdomainModuleTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_update_jobdomain_succeeds_with_jobdomain_manage(): void
+    public function test_update_jobdomain_returns_422_when_already_assigned(): void
     {
+        // ADR-167a: jobdomain is always present → immutability guard always triggers
         $this->actAs($this->manager)
             ->putJson('/api/company/jobdomain', ['key' => 'logistique'])
-            ->assertOk();
+            ->assertStatus(422);
     }
 
     // ───────────────────────────────────────────────────────────
@@ -196,14 +197,10 @@ class CompanyJobdomainModuleTest extends TestCase
             ->assertJsonFragment(['message' => 'Jobdomain cannot be changed once assigned. Contact support or create a new company.']);
     }
 
-    public function test_can_assign_jobdomain_when_none_set(): void
+    public function test_jobdomain_is_always_present(): void
     {
-        // Company has no jobdomain (setUp does not assign one)
-        $this->assertNull($this->company->jobdomain);
-
-        // First assignment → must succeed
-        $this->actAs($this->owner)
-            ->putJson('/api/company/jobdomain', ['key' => 'logistique'])
-            ->assertOk();
+        // ADR-167a: jobdomain_key is a structural invariant — always present
+        $this->assertNotNull($this->company->jobdomain_key);
+        $this->assertEquals('logistique', $this->company->jobdomain_key);
     }
 }

@@ -63,6 +63,7 @@ class BillingPeriodGovernanceTest extends TestCase
             'slug' => 'governance-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
         $this->company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
 
@@ -202,6 +203,7 @@ class BillingPeriodGovernanceTest extends TestCase
             'slug' => 'other-co',
             'plan_key' => 'pro',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
 
         FinancialPeriod::create([
@@ -248,6 +250,7 @@ class BillingPeriodGovernanceTest extends TestCase
             'slug' => 'new-co',
             'plan_key' => 'starter',
             'status' => 'active',
+            'jobdomain_key' => 'logistique',
         ]);
 
         $newCompany->refresh(); // Get DB defaults

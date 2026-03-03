@@ -1,11 +1,11 @@
 <script setup>
 definePage({ meta: { module: 'core.members', surface: 'structure' } })
 
-import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import MemberProfileForm from '@/company/components/MemberProfileForm.vue'
+import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
 const { t } = useI18n()
@@ -20,9 +20,10 @@ const member = ref(null)
 const baseFields = ref({})
 const dynamicFields = ref([])
 const dynamicForm = ref({})
+const profileCompleteness = ref({ filled: 0, total: 0, complete: true })
 const isLoading = ref(true)
 const activeTab = ref('overview')
-const savingDynamic = ref(false)
+const fieldLoading = ref(false)
 
 // Credential state
 const showSetPasswordFields = ref(false)
@@ -45,6 +46,7 @@ const applyProfile = data => {
   member.value = data.member
   baseFields.value = data.base_fields || {}
   dynamicFields.value = data.dynamic_fields || []
+  profileCompleteness.value = data.profile_completeness || { filled: 0, total: 0, complete: true }
 
   const df = {}
   for (const field of dynamicFields.value) {
@@ -83,22 +85,30 @@ const handleOverviewSave = async payload => {
   }
 }
 
-const handleDynamicSave = async () => {
-  savingDynamic.value = true
+// ADR-164: When role changes, refetch dynamic fields for the new role
+const handleRoleChange = async roleId => {
+  const role = settingsStore.roles.find(r => r.id === roleId)
+  const roleKey = role?.key || null
+
+  fieldLoading.value = true
 
   try {
-    const data = await membersStore.updateMemberProfile(route.params.id, {
-      dynamic_fields: { ...dynamicForm.value },
-    })
+    const fields = await membersStore.fetchMemberFields(route.params.id, roleKey)
 
-    applyProfile(data)
-    toast(t('members.customFieldsUpdated'), 'success')
+    dynamicFields.value = fields
+
+    // Re-sync dynamicForm, preserving existing values where possible
+    const df = {}
+    for (const field of fields) {
+      df[field.code] = dynamicForm.value[field.code] ?? field.value ?? null
+    }
+    dynamicForm.value = df
   }
-  catch (error) {
-    toast(error?.data?.message || t('members.failedToUpdateCustomFields'), 'error')
+  catch {
+    toast(t('members.failedToLoadFields'), 'error')
   }
   finally {
-    savingDynamic.value = false
+    fieldLoading.value = false
   }
 }
 
@@ -225,15 +235,12 @@ const handleSetPassword = async () => {
           />
           {{ t('members.overview') }}
         </VTab>
-        <VTab
-          v-if="dynamicFields.length"
-          value="custom-fields"
-        >
+        <VTab value="documents">
           <VIcon
-            icon="tabler-forms"
+            icon="tabler-file-text"
             class="me-2"
           />
-          {{ t('members.customFields') }}
+          {{ t('documents.title') }}
         </VTab>
         <VTab
           v-if="showCredentials"
@@ -255,37 +262,24 @@ const handleSetPassword = async () => {
               <MemberProfileForm
                 :member="member"
                 :base-fields="baseFields"
-                :dynamic-fields="[]"
+                :dynamic-fields="dynamicFields"
+                :profile-completeness="profileCompleteness"
                 :editable="canEdit"
+                :loading="fieldLoading"
                 :company-roles="settingsStore.roles"
                 @save="handleOverviewSave"
+                @role-change="handleRoleChange"
               />
             </VCardText>
           </VCard>
         </VWindowItem>
 
-        <!-- Tab: Custom Fields -->
-        <VWindowItem value="custom-fields">
-          <VCard>
-            <VCardText>
-              <VForm @submit.prevent="handleDynamicSave">
-                <VRow>
-                  <DynamicFormRenderer
-                    v-model="dynamicForm"
-                    :fields="dynamicFields"
-                  />
-                  <VCol cols="12">
-                    <VBtn
-                      type="submit"
-                      :loading="savingDynamic"
-                    >
-                      {{ t('members.saveCustomFields') }}
-                    </VBtn>
-                  </VCol>
-                </VRow>
-              </VForm>
-            </VCardText>
-          </VCard>
+        <!-- Tab: Documents (ADR-178) -->
+        <VWindowItem value="documents">
+          <MemberDocumentsWorkflowPanel
+            :member-id="route.params.id"
+            :can-edit="canEdit"
+          />
         </VWindowItem>
 
         <!-- Tab: Credentials -->

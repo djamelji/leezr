@@ -26,6 +26,7 @@ class InvoiceLifecycleTest extends TestCase
         $this->company = Company::create([
             'name' => 'Invoice Co',
             'slug' => 'invoice-co',
+            'jobdomain_key' => 'logistique',
         ]);
     }
 

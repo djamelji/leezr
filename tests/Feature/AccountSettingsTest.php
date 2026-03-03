@@ -24,7 +24,7 @@ class AccountSettingsTest extends TestCase
         FieldDefinitionCatalog::sync();
 
         $this->user = User::factory()->create();
-        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+        $this->company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'jobdomain_key' => 'logistique']);
         $this->company->memberships()->create(['user_id' => $this->user->id, 'role' => 'owner']);
 
         // Activate company_user fields
@@ -92,6 +92,7 @@ class AccountSettingsTest extends TestCase
         $phoneField = collect($response->json('dynamic_fields'))
             ->firstWhere('code', 'phone');
 
-        $this->assertEquals('+33 6 12 34 56 78', $phoneField['value']);
+        // ADR-165: phone is auto-normalized to E.164
+        $this->assertEquals('+33612345678', $phoneField['value']);
     }
 }

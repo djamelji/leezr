@@ -2,6 +2,7 @@
 definePage({ meta: { surface: 'structure', module: 'core.billing' } })
 
 import { useAuthStore } from '@/core/stores/auth'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
@@ -10,9 +11,13 @@ import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const settingsStore = useCompanySettingsStore()
 const jobdomainStore = useJobdomainStore()
 const { toast } = useAppToast()
 const { plans, loading, fetchPlans } = usePublicPlans()
+
+const memberQuota = computed(() => settingsStore.company?.member_quota ?? { current: 0, limit: null })
+const storageInfo = computed(() => settingsStore.company?.storage ?? {})
 
 const annualToggle = ref(true)
 const changingPlan = ref(false)
@@ -25,7 +30,10 @@ const currentPlanKey = computed(() => auth.currentCompany?.plan_key ?? 'starter'
 const currentPlan = computed(() => plans.value.find(p => p.key === currentPlanKey.value))
 
 onMounted(async () => {
-  await fetchPlans()
+  await Promise.all([
+    fetchPlans(),
+    settingsStore.fetchCompany(),
+  ])
   checkingPending.value = false
 })
 
@@ -154,6 +162,46 @@ const yearlyTotal = plan => {
                   ({{ yearlyTotal(currentPlan) }} / {{ t('common.annually').toLowerCase() }})
                 </span>
               </h3>
+            </div>
+
+            <!-- ADR-172: Usage meters -->
+            <div
+              v-if="currentPlan"
+              class="mt-4"
+            >
+              <div class="mb-3">
+                <div class="d-flex justify-space-between text-body-2 mb-1">
+                  <span>{{ t('companyPlan.membersUsage') }}</span>
+                  <span>
+                    {{ memberQuota.current }}
+                    /
+                    {{ memberQuota.limit !== null ? memberQuota.limit : t('companyPlan.unlimited') }}
+                  </span>
+                </div>
+                <VProgressLinear
+                  :model-value="memberQuota.limit ? (memberQuota.current / memberQuota.limit) * 100 : 10"
+                  :color="memberQuota.limit && memberQuota.current >= memberQuota.limit ? 'error' : 'primary'"
+                  rounded
+                  height="6"
+                />
+              </div>
+
+              <div>
+                <div class="d-flex justify-space-between text-body-2 mb-1">
+                  <span>{{ t('companyPlan.storageUsage') }}</span>
+                  <span>
+                    {{ storageInfo.used_display || '0 MB' }}
+                    /
+                    {{ storageInfo.limit_display || '—' }}
+                  </span>
+                </div>
+                <VProgressLinear
+                  :model-value="storageInfo.used_percent ?? 0"
+                  :color="(storageInfo.used_percent ?? 0) >= 90 ? 'error' : 'primary'"
+                  rounded
+                  height="6"
+                />
+              </div>
             </div>
 
             <VAlert
@@ -322,6 +370,30 @@ const yearlyTotal = plan => {
                     </VListItemTitle>
                   </VListItem>
                 </VList>
+
+                <!-- ADR-172: Concrete limits -->
+                <div class="text-start mb-4">
+                  <div class="d-flex align-center gap-2 mb-1">
+                    <VIcon
+                      icon="tabler-users"
+                      size="18"
+                    />
+                    <span class="text-body-2">
+                      {{ t('companyPlan.membersLimit') }}:
+                      <strong>{{ plan.limits?.members ? t('companyPlan.nMembers', { n: plan.limits.members }) : t('companyPlan.unlimited') }}</strong>
+                    </span>
+                  </div>
+                  <div class="d-flex align-center gap-2">
+                    <VIcon
+                      icon="tabler-database"
+                      size="18"
+                    />
+                    <span class="text-body-2">
+                      {{ t('companyPlan.storageLimit') }}:
+                      <strong>{{ plan.limits?.storage_quota_gb ? t('companyPlan.nGb', { n: plan.limits.storage_quota_gb }) : t('companyPlan.unlimited') }}</strong>
+                    </span>
+                  </div>
+                </div>
 
                 <VBtn
                   v-if="plan.key === currentPlanKey"

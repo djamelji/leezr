@@ -41,6 +41,7 @@ const newFeature = ref('')
 
 // Limits
 const memberLimit = ref(null)
+const storageQuotaLimit = ref(null)
 
 onMounted(async () => {
   try {
@@ -73,6 +74,7 @@ const hydrateForm = () => {
   }
   featureLabels.value = [...(plan.feature_labels || [])]
   memberLimit.value = plan.limits?.members ?? null
+  storageQuotaLimit.value = plan.limits?.storage_quota_gb ?? null
 }
 
 // Section 1: Save commercial info
@@ -152,6 +154,8 @@ const buildLimits = () => {
   const limits = {}
   if (memberLimit.value !== null && memberLimit.value !== '')
     limits.members = Number(memberLimit.value)
+  if (storageQuotaLimit.value !== null && storageQuotaLimit.value !== '')
+    limits.storage_quota_gb = Number(storageQuotaLimit.value)
 
   return Object.keys(limits).length ? limits : null
 }
@@ -492,6 +496,21 @@ const fmtDate = dateStr => {
                   type="number"
                   min="1"
                   :hint="t('plans.memberLimitHint')"
+                  persistent-hint
+                  clearable
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <AppTextField
+                  v-model.number="storageQuotaLimit"
+                  :label="t('plans.storageQuotaLimit')"
+                  type="number"
+                  min="1"
+                  :hint="t('plans.storageQuotaLimitHint')"
                   persistent-hint
                   clearable
                 />

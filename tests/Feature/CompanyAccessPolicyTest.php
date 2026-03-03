@@ -51,7 +51,7 @@ class CompanyAccessPolicyTest extends TestCase
         $this->driver = User::factory()->create();
         $this->noRole = User::factory()->create();
 
-        $this->company = Company::create(['name' => 'Access Co', 'slug' => 'access-co']);
+        $this->company = Company::create(['name' => 'Access Co', 'slug' => 'access-co', 'jobdomain_key' => 'logistique']);
 
         // Enable all modules
         foreach (ModuleRegistry::definitions() as $key => $def) {

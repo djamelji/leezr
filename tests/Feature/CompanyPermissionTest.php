@@ -55,7 +55,7 @@ class CompanyPermissionTest extends TestCase
         $this->viewer = User::factory()->create();
         $this->noRole = User::factory()->create();
 
-        $this->company = Company::create(['name' => 'RBAC Co', 'slug' => 'rbac-co']);
+        $this->company = Company::create(['name' => 'RBAC Co', 'slug' => 'rbac-co', 'plan_key' => 'pro', 'jobdomain_key' => 'logistique']);
 
         // Assign jobdomain so modules are entitled
         JobdomainRegistry::sync();
@@ -553,13 +553,14 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 11 admin permissions (includes core.audit + core.billing + core.modules + core.roles + core.jobdomain)
+        // 12 admin permissions (includes core.audit + core.billing + core.modules + core.roles + core.jobdomain + members.sensitive_read)
         $this->assertEquals([
             'audit.view',
             'billing.manage',
             'jobdomain.manage',
             'members.credentials',
             'members.manage',
+            'members.sensitive_read',
             'modules.manage',
             'roles.manage',
             'roles.view',
