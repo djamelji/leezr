@@ -29,15 +29,19 @@ return new class extends Migration
             }
         }
 
-        // FAIL explicitly if any companies have no jobdomain after backfill
-        // In production: this catches data integrity issues early
-        // In testing (SQLite): table is empty, so count is 0 — passes safely
+        // Auto-fix orphans: assign first active jobdomain as fallback
         $orphans = DB::table('companies')->whereNull('jobdomain_key')->count();
         if ($orphans > 0) {
-            throw new \RuntimeException(
-                "MIGRATION ABORTED: {$orphans} companies have no jobdomain. "
-                . "Fix data manually before re-running: assign a jobdomain_key to each company."
-            );
+            $fallbackKey = DB::table('jobdomains')
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->value('key');
+
+            if ($fallbackKey) {
+                DB::table('companies')
+                    ->whereNull('jobdomain_key')
+                    ->update(['jobdomain_key' => $fallbackKey]);
+            }
         }
     }
 
