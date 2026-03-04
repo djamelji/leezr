@@ -1860,6 +1860,8 @@
 
   "platformDashboard": {
     "title": "Tableau de bord plateforme",
+    "statsError": "Certaines statistiques n'ont pas pu être chargées.",
+    "statsPartialError": "{count} statistique(s) non chargée(s).",
     "billingWidgets": {
       "title": "Aperçu financier (Facturation)",
       "toggle": "Afficher les widgets financiers"

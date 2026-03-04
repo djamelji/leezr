@@ -7358,4 +7358,47 @@ Les widgets dashboard ne s'adaptent pas à leur taille rendue. `density` (S/M/L)
 
 ---
 
+## ADR-202 — Platform Dashboard: Admin RBAC + Architecture Decoupling
+
+**Date** : 2026-03-04
+
+**Contexte** :
+Le dashboard platform (`/platform`) ne chargeait pas les widgets pour `prod@leezr.com` (rôle `admin`).
+Message affiché : « Aucun widget disponible pour vos permissions ».
+
+**Cause racine (double)** :
+
+1. **Permissions manquantes** — Le `PlatformSeeder` ne donnait que `manage_modules` au rôle `admin`.
+   Les 5 stats endpoints du dashboard requièrent `manage_companies`, `manage_platform_users`,
+   `view_company_users`, `manage_roles`, `manage_modules`. 4/5 retournaient 403.
+
+2. **Couplage architectural** — `onMounted` utilisait `Promise.all` pour 5 stats fetches suivi de
+   `loadDashboard()` APRÈS le try/finally. `Promise.all` rejetait au premier 403 → `loadDashboard()`
+   jamais appelé → layout vide → message « no widgets ».
+
+**Décisions** :
+
+1. Le rôle `admin` reçoit TOUTES les permissions platform (32). `super_admin` bypass via `isSuperAdmin()`.
+2. `onMounted` découpé en deux flux async indépendants : `loadStats()` (optional, fail-safe) et
+   `loadDashboard()` (critical, always runs).
+3. `Promise.allSettled` pour les stats — chaque fetch échoue indépendamment, les succès sont affichés.
+4. Erreur stats visible via `VAlert` warning (non-bloquant), pas masquée silencieusement.
+5. Tests mis à jour : les tests de permission restrictive créent un rôle dédié au lieu de réutiliser `admin`.
+
+**Conséquences** :
+- Même si un endpoint stats retourne 403/500, le dashboard engine charge ses widgets normalement.
+- Le rôle `admin` peut maintenant accéder à toutes les pages platform (companies, users, roles, etc.).
+- Aucune régression : 1424 tests passent, build clean.
+
+**Fichiers** :
+- `database/seeders/PlatformSeeder.php` — admin sync toutes permissions
+- `resources/js/pages/platform/index.vue` — architecture découplée stats/dashboard
+- `resources/js/plugins/i18n/locales/en.json` — clés statsError/statsPartialError
+- `resources/js/plugins/i18n/locales/fr.json` — idem FR
+- `tests/Feature/PlatformDashboardWidgetCatalogAfterADR154Test.php` — rôle restreint dédié
+- `tests/Feature/PlatformDocumentTypeCatalogTest.php` — rôle restreint dédié
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

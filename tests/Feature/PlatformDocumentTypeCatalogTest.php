@@ -278,7 +278,7 @@ class PlatformDocumentTypeCatalogTest extends TestCase
 
     public function test_requires_manage_document_catalog_permission(): void
     {
-        // Create a platform user without the super_admin role
+        // Create a platform user with a restricted role (no manage_document_catalog)
         $limitedUser = PlatformUser::create([
             'first_name' => 'Limited',
             'last_name' => 'User',
@@ -286,11 +286,8 @@ class PlatformDocumentTypeCatalogTest extends TestCase
             'password' => 'P@ssw0rd!Strong',
         ]);
 
-        // Assign a role that does NOT have manage_document_catalog
-        $viewerRole = PlatformRole::where('key', '!=', 'super_admin')->first();
-        if ($viewerRole) {
-            $limitedUser->roles()->attach($viewerRole);
-        }
+        $restrictedRole = PlatformRole::create(['key' => 'viewer_no_docs', 'name' => 'Viewer']);
+        $limitedUser->roles()->attach($restrictedRole);
 
         $response = $this->actingAs($limitedUser, 'platform')
             ->getJson('/api/platform/documents');

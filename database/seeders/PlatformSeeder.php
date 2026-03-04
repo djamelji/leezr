@@ -38,16 +38,14 @@ class PlatformSeeder extends Seeder
             ['name' => 'Super Admin'],
         );
 
-        // Create admin role (modules only)
+        // Create admin role (full platform access — super_admin bypasses checks entirely)
         $admin = PlatformRole::updateOrCreate(
             ['key' => 'admin'],
             ['name' => 'Admin'],
         );
 
-        $modulePermission = PlatformPermission::where('key', 'manage_modules')->first();
-        if ($modulePermission) {
-            $admin->permissions()->sync([$modulePermission->id]);
-        }
+        // Admin gets all platform permissions (super_admin doesn't need pivot — hasPermission bypasses)
+        $admin->permissions()->sync(PlatformPermission::pluck('id')->toArray());
 
         // Create platform admin user
         $user = PlatformUser::updateOrCreate(

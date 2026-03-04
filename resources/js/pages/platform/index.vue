@@ -23,7 +23,9 @@ const rolesStore = usePlatformRolesStore()
 const settingsStore = usePlatformSettingsStore()
 const dashboardStore = useDashboardStore()
 
-const isLoading = ref(true)
+// ── Stats (optional — fail-safe, never blocks dashboard) ──
+const isStatsLoading = ref(true)
+const statsError = ref(null)
 
 const stats = ref({
   companies: 0,
@@ -33,9 +35,9 @@ const stats = ref({
   modules: 0,
 })
 
-onMounted(async () => {
+async function loadStats() {
   try {
-    await Promise.all([
+    const results = await Promise.allSettled([
       companiesStore.fetchCompanies(),
       usersStore.fetchPlatformUsers(),
       usersStore.fetchCompanyUsers(),
@@ -43,19 +45,36 @@ onMounted(async () => {
       settingsStore.fetchModules(),
     ])
 
+    // Count failures for user feedback
+    const failures = results.filter(r => r.status === 'rejected')
+
+    if (failures.length) {
+      statsError.value = t('platformDashboard.statsPartialError', { count: failures.length })
+    }
+
+    // Read whatever succeeded — stores are already updated by their own actions
     stats.value = {
-      companies: companiesStore.companiesPagination.total,
-      platformUsers: usersStore.platformUsersPagination.total,
-      companyUsers: usersStore.companyUsersPagination.total,
-      roles: rolesStore.roles.length,
-      modules: settingsStore.modules.length,
+      companies: companiesStore.companiesPagination?.total ?? 0,
+      platformUsers: usersStore.platformUsersPagination?.total ?? 0,
+      companyUsers: usersStore.companyUsersPagination?.total ?? 0,
+      roles: rolesStore.roles?.length ?? 0,
+      modules: settingsStore.modules?.length ?? 0,
     }
   }
-  finally {
-    isLoading.value = false
+  catch (err) {
+    statsError.value = err?.message || t('platformDashboard.statsError')
   }
+  finally {
+    isStatsLoading.value = false
+  }
+}
 
-  // Load dashboard engine (widgets)
+// ── Mount: two independent flows ──
+onMounted(() => {
+  // ① Stats — optional, non-blocking
+  loadStats()
+
+  // ② Dashboard engine — critical, independent
   dashboardStore.loadDashboard()
 })
 
@@ -144,6 +163,17 @@ const saveAndResolve = async () => {
       {{ t('platformDashboard.title') }}
     </h4>
 
+    <!-- ═══ Stats Error ═══ -->
+    <VAlert
+      v-if="statsError"
+      type="warning"
+      variant="tonal"
+      class="mb-4"
+      closable
+    >
+      {{ statsError }}
+    </VAlert>
+
     <VRow>
       <VCol
         v-for="card in cards"
@@ -152,7 +182,7 @@ const saveAndResolve = async () => {
         sm="6"
         md="4"
       >
-        <VCard :loading="isLoading">
+        <VCard :loading="isStatsLoading">
           <VCardText class="d-flex align-center gap-x-4">
             <VAvatar
               :color="card.color"
@@ -170,7 +200,7 @@ const saveAndResolve = async () => {
                 {{ card.title }}
               </p>
               <h4 class="text-h4">
-                {{ isLoading ? '—' : card.value }}
+                {{ isStatsLoading ? '—' : card.value }}
               </h4>
             </div>
             <VSpacer />

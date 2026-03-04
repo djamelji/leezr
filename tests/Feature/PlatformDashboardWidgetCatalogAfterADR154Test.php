@@ -196,9 +196,9 @@ class PlatformDashboardWidgetCatalogAfterADR154Test extends TestCase
             'password' => 'P@ssw0rd!Strong',
         ]);
 
-        // Attach admin role (only has manage_modules, NOT view_billing)
-        $adminRole = PlatformRole::where('key', 'admin')->first();
-        $viewer->roles()->attach($adminRole);
+        // Create a restricted role WITHOUT view_billing
+        $restrictedRole = PlatformRole::create(['key' => 'viewer_no_billing', 'name' => 'Viewer']);
+        $viewer->roles()->attach($restrictedRole);
 
         $catalog = DashboardWidgetRegistry::catalogForUser($viewer);
         $keys = array_map(fn ($w) => $w->key(), $catalog);

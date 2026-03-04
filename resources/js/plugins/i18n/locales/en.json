@@ -1860,6 +1860,8 @@
 
   "platformDashboard": {
     "title": "Platform Dashboard",
+    "statsError": "Some statistics could not be loaded.",
+    "statsPartialError": "{count} stat(s) could not be loaded.",
     "billingWidgets": {
       "title": "Financial Overview (Billing)",
       "toggle": "Show billing financial widgets"
