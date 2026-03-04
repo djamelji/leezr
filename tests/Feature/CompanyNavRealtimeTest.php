@@ -130,14 +130,14 @@ class CompanyNavRealtimeTest extends TestCase
     {
         // Step 1: Administrative role → Alice sees structure items (settings)
         $navBefore = $this->navKeysFor($this->alice);
-        $this->assertContains('settings', $navBefore, 'Admin Alice should see settings');
+        $this->assertContains('company-profile', $navBefore, 'Admin Alice should see company-profile');
 
         // Step 2: Downgrade to operational
         $this->role->update(['is_administrative' => false]);
 
         // Step 3: Structure items hidden for operational users on next request
         $navAfter = $this->navKeysFor($this->alice);
-        $this->assertNotContains('settings', $navAfter, 'Operational Alice should NOT see settings');
+        $this->assertNotContains('company-profile', $navAfter, 'Operational Alice should NOT see company-profile');
     }
 
     // ─── Helpers ─────────────────────────────────────────

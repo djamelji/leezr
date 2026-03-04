@@ -119,8 +119,11 @@ class JobdomainGate
             // Assign pivot (backward compat — will be removed in ADR-167b)
             $company->jobdomains()->sync([$jobdomain->id]);
 
+            // ADR-190: Resolve presets with market overlay
+            $presets = JobdomainPresetResolver::resolve($jobdomainKey, $company->market_key);
+
             // Activate default modules
-            $defaultModules = static::defaultModulesFor($jobdomainKey);
+            $defaultModules = $presets->modules;
 
             foreach ($defaultModules as $moduleKey) {
                 if (ModuleGate::isEnabledGlobally($moduleKey)) {
@@ -141,7 +144,7 @@ class JobdomainGate
             }
 
             // Activate default field presets (structured format)
-            $defaultFields = static::defaultFieldsFor($jobdomainKey);
+            $defaultFields = $presets->fields;
 
             if (!empty($defaultFields)) {
                 $fieldConfigs = collect($defaultFields)->keyBy('code');
@@ -171,7 +174,7 @@ class JobdomainGate
             }
 
             // ADR-169 Phase 3: Activate default document types
-            $defaultDocuments = static::defaultDocumentsFor($jobdomainKey);
+            $defaultDocuments = $presets->documents;
 
             if (!empty($defaultDocuments)) {
                 $docConfigs = collect($defaultDocuments)->keyBy('code');
@@ -199,7 +202,7 @@ class JobdomainGate
             }
 
             // Seed default roles from jobdomain (DB, editable via platform UI)
-            $defaultRoles = $jobdomain->default_roles ?? [];
+            $defaultRoles = $presets->roles;
 
             // ADR-170: Resolve archetype default_tags from registry
             $registryDef = JobdomainRegistry::get($jobdomainKey);

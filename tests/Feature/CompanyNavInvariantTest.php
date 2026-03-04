@@ -111,8 +111,8 @@ class CompanyNavInvariantTest extends TestCase
 
         $this->assertNotContains('company-roles', $keys,
             'Management role without roles.view must NOT see Roles nav item');
-        $this->assertContains('settings', $keys,
-            'Management role with settings.view should see Settings');
+        $this->assertContains('company-profile', $keys,
+            'Management role with settings.view should see Company Profile');
     }
 
     // ───────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ class CompanyNavInvariantTest extends TestCase
 
         $this->assertContains('company-roles', $keys, 'Owner should see Roles');
         $this->assertContains('members', $keys, 'Owner should see Members');
-        $this->assertContains('settings', $keys, 'Owner should see Settings');
+        $this->assertContains('company-profile', $keys, 'Owner should see Company Profile');
     }
 
     // ───────────────────────────────────────────────────────────

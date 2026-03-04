@@ -18,9 +18,9 @@ class SettingsModule implements ModuleDefinition
             sortOrder: 20,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'settings', 'title' => 'Settings', 'to' => ['name' => 'company-settings'], 'icon' => 'tabler-building', 'permission' => 'settings.view', 'surface' => 'structure'],
+                    ['key' => 'company-profile', 'title' => 'Company Profile', 'to' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-building-community', 'permission' => 'settings.view', 'surface' => 'structure'],
                 ],
-                routeNames: ['company-settings'],
+                routeNames: ['company-profile-tab', 'company-settings'],
                 middlewareKey: 'core.settings',
             ),
             permissions: [

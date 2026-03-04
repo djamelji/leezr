@@ -18,6 +18,7 @@ use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainController;
+use App\Modules\Platform\Jobdomains\Http\JobdomainOverlayController;
 use App\Modules\Platform\Modules\Http\ModuleController;
 use App\Modules\Platform\Maintenance\Http\MaintenanceSettingsController;
 use App\Modules\Platform\Settings\Http\GeneralSettingsController;
@@ -378,5 +379,10 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/jobdomains', [JobdomainController::class, 'store']);
         Route::put('/jobdomains/{id}', [JobdomainController::class, 'update']);
         Route::delete('/jobdomains/{id}', [JobdomainController::class, 'destroy']);
+
+        // Market Overlays
+        Route::get('/jobdomains/{jobdomainKey}/overlays', [JobdomainOverlayController::class, 'index']);
+        Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);
+        Route::delete('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'destroy']);
     });
 });

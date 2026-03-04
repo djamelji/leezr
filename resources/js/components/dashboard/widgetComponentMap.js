@@ -26,6 +26,13 @@ const map = {
 
   // Timeseries (ADR-156)
   BillingCashflowTrend: defineAsyncComponent(() => import('@/pages/platform/billing/_CashflowTrendWidget.vue')),
+
+  // Compliance (ADR-196)
+  ComplianceRate: defineAsyncComponent(() => import('@/views/company-dashboard/_ComplianceRateWidget.vue')),
+  CompliancePending: defineAsyncComponent(() => import('@/views/company-dashboard/_PendingWidget.vue')),
+  ComplianceOverdue: defineAsyncComponent(() => import('@/views/company-dashboard/_OverdueWidget.vue')),
+  ComplianceRoles: defineAsyncComponent(() => import('@/views/company-dashboard/_RolesWidget.vue')),
+  ComplianceTypes: defineAsyncComponent(() => import('@/views/company-dashboard/_TypesWidget.vue')),
 }
 
 export function resolveWidgetComponent(componentKey) {

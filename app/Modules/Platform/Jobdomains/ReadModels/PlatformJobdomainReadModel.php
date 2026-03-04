@@ -8,6 +8,9 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Jobdomains\JobdomainMarketOverlay;
+use App\Core\Jobdomains\JobdomainPresetResolver;
+use App\Core\Markets\Market;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 
@@ -49,6 +52,18 @@ class PlatformJobdomainReadModel
             $jobdomain->setAttribute('default_documents', $defaultDocs);
         }
 
+        // ADR-190: Market overlays + resolved previews
+        $overlays = JobdomainMarketOverlay::where('jobdomain_key', $jobdomain->key)
+            ->get()
+            ->keyBy('market_key');
+
+        $markets = Market::where('is_active', true)
+            ->select('key', 'name', 'flag_code', 'flag_svg', 'is_default', 'sort_order')
+            ->orderBy('sort_order')
+            ->get();
+
+        $resolvedPreviews = self::buildResolvedPreviews($jobdomain, $overlays);
+
         return [
             'jobdomain' => $jobdomain,
             'field_definitions' => $fieldDefinitions,
@@ -57,7 +72,21 @@ class PlatformJobdomainReadModel
             'mandatory_field_codes' => $mandatoryFieldCodes,
             'mandatory_by_role' => $mandatoryByRole,
             'document_presets' => $documentPresets,
+            'overlays' => $overlays,
+            'markets' => $markets,
+            'resolved_previews' => $resolvedPreviews,
         ];
+    }
+
+    /**
+     * Overlay list for a jobdomain (keyed by market).
+     */
+    public static function overlaysForJobdomain(string $jobdomainKey): array
+    {
+        return JobdomainMarketOverlay::where('jobdomain_key', $jobdomainKey)
+            ->get()
+            ->keyBy('market_key')
+            ->toArray();
     }
 
     /**
@@ -94,6 +123,25 @@ class PlatformJobdomainReadModel
         }
 
         return $result;
+    }
+
+    /**
+     * Build resolved previews for global + each overlay market.
+     * Uses JobdomainPresetResolver — no local merge logic.
+     */
+    private static function buildResolvedPreviews(Jobdomain $jobdomain, $overlays): array
+    {
+        JobdomainPresetResolver::clearCache();
+
+        $previews = [
+            '_global' => (array) JobdomainPresetResolver::resolve($jobdomain->key),
+        ];
+
+        foreach ($overlays as $marketKey => $overlay) {
+            $previews[$marketKey] = (array) JobdomainPresetResolver::resolve($jobdomain->key, $marketKey);
+        }
+
+        return $previews;
     }
 
     /**

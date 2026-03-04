@@ -43,6 +43,8 @@ const quickViewLoading = ref(false)
 // Member Fields Settings drawer
 const isFieldsDrawerOpen = ref(false)
 const fieldsLoading = ref(false)
+const fieldsSearch = ref('')
+const fieldsDrawerTab = ref('active')
 
 // Create Custom Field dialog
 const isCreateFieldDialogOpen = ref(false)
@@ -155,6 +157,8 @@ const roleColor = role => {
 const openFieldsDrawer = async () => {
   isFieldsDrawerOpen.value = true
   fieldsLoading.value = true
+  fieldsSearch.value = ''
+  fieldsDrawerTab.value = 'active'
 
   try {
     await Promise.all([
@@ -232,6 +236,25 @@ const memberActivations = computed(() => {
 const availableMemberDefs = computed(() => {
   return membersStore.availableFieldDefinitions.filter(
     d => d.scope === 'company_user',
+  )
+})
+
+// Filtered activations by search
+const filteredActivations = computed(() => {
+  if (!fieldsSearch.value) return memberActivations.value
+  const q = fieldsSearch.value.toLowerCase()
+
+  return memberActivations.value.filter(
+    a => a.definition?.label?.toLowerCase().includes(q) || a.definition?.code?.toLowerCase().includes(q),
+  )
+})
+
+const filteredAvailableDefs = computed(() => {
+  if (!fieldsSearch.value) return availableMemberDefs.value
+  const q = fieldsSearch.value.toLowerCase()
+
+  return availableMemberDefs.value.filter(
+    d => d.label?.toLowerCase().includes(q) || d.code?.toLowerCase().includes(q),
   )
 })
 
@@ -680,7 +703,7 @@ const typeOptions = computed(() => [
       v-model="isFieldsDrawerOpen"
       temporary
       location="end"
-      width="480"
+      width="560"
       class="scrollable-content"
     >
       <!-- ── Edit Custom Field View ──────────────────────── -->
@@ -788,183 +811,234 @@ const typeOptions = computed(() => [
 
         <VDivider />
 
+        <!-- Search -->
+        <VCardText class="pb-0">
+          <AppTextField
+            v-model="fieldsSearch"
+            :placeholder="t('members.searchFields')"
+            prepend-inner-icon="tabler-search"
+            density="compact"
+            hide-details
+            clearable
+          />
+        </VCardText>
+
+        <!-- Tabs: Active / Available / Custom -->
+        <VCardText class="pb-0 pt-3">
+          <VTabs
+            v-model="fieldsDrawerTab"
+            density="compact"
+          >
+            <VTab value="active">
+              {{ t('members.activeFields') }}
+              <VChip
+                size="x-small"
+                class="ms-1"
+                :color="activeCount >= 50 ? 'error' : 'success'"
+              >
+                {{ activeCount }}
+              </VChip>
+            </VTab>
+            <VTab value="available">
+              {{ t('members.availableFields') }}
+              <VChip
+                v-if="filteredAvailableDefs.length"
+                size="x-small"
+                class="ms-1"
+                color="primary"
+              >
+                {{ filteredAvailableDefs.length }}
+              </VChip>
+            </VTab>
+            <VTab
+              v-if="allowCustomFields"
+              value="custom"
+            >
+              {{ t('common.custom') }}
+              <VChip
+                size="x-small"
+                class="ms-1"
+                :color="customFieldCount >= 20 ? 'error' : 'info'"
+              >
+                {{ customFieldCount }}
+              </VChip>
+            </VTab>
+          </VTabs>
+        </VCardText>
+
+        <VDivider />
+
         <PerfectScrollbar :options="{ wheelPropagation: false }">
         <VCardText v-if="fieldsLoading">
           <VProgressLinear indeterminate />
         </VCardText>
 
         <template v-else>
-          <!-- Counter -->
-          <VCardText class="pb-2">
-            <VChip
-              :color="activeCount >= 50 ? 'error' : 'success'"
-              size="small"
-            >
-              {{ t('members.activeFieldsCount', { count: activeCount }) }}
-            </VChip>
-          </VCardText>
-
-          <!-- Section A: Active Fields -->
-          <VCardTitle class="text-body-1">
-            {{ t('members.activeFields') }}
-          </VCardTitle>
-
-          <VTable
-            v-if="memberActivations.length"
-            class="text-no-wrap"
-            density="compact"
+          <VWindow
+            v-model="fieldsDrawerTab"
+            :touch="false"
           >
-            <thead>
-              <tr>
-                <th>{{ t('members.labelField') }}</th>
-                <th style="width: 70px;">
-                  {{ t('members.visible') }}
-                </th>
-                <th style="width: 70px;">
-                  {{ t('members.required') }}
-                </th>
-                <th style="width: 60px;" />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="activation in memberActivations"
-                :key="activation.id"
+            <!-- Tab: Active Fields -->
+            <VWindowItem value="active">
+              <VTable
+                v-if="filteredActivations.length"
+                class="text-no-wrap"
+                density="compact"
               >
-                <td>
-                  <div class="d-flex align-center gap-1">
-                    <span>{{ activation.definition?.label }}</span>
-                    <VBtn
-                      v-if="activation.definition?.company_id"
-                      icon
-                      size="x-small"
-                      variant="text"
-                      @click="openEditField(activation)"
-                    >
-                      <VIcon
-                        icon="tabler-pencil"
-                        size="14"
+                <thead>
+                  <tr>
+                    <th>{{ t('members.labelField') }}</th>
+                    <th style="width: 70px;">
+                      {{ t('members.visible') }}
+                    </th>
+                    <th style="width: 70px;">
+                      {{ t('members.required') }}
+                    </th>
+                    <th style="width: 60px;" />
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="activation in filteredActivations"
+                    :key="activation.id"
+                  >
+                    <td>
+                      <div class="d-flex align-center gap-1">
+                        <span>{{ activation.definition?.label }}</span>
+                        <VBtn
+                          v-if="activation.definition?.company_id"
+                          icon
+                          size="x-small"
+                          variant="text"
+                          @click="openEditField(activation)"
+                        >
+                          <VIcon
+                            icon="tabler-pencil"
+                            size="14"
+                          />
+                        </VBtn>
+                        <VChip
+                          v-if="activation.definition?.is_system"
+                          color="warning"
+                          variant="tonal"
+                          size="x-small"
+                        >
+                          {{ t('common.system') }}
+                        </VChip>
+                        <VChip
+                          v-if="activation.definition?.company_id"
+                          color="primary"
+                          variant="tonal"
+                          size="x-small"
+                        >
+                          {{ t('common.custom') }}
+                        </VChip>
+                        <VChip
+                          v-if="activation.used_count > 0"
+                          color="info"
+                          variant="tonal"
+                          size="x-small"
+                        >
+                          {{ activation.used_count }} {{ t('common.used') }}
+                        </VChip>
+                      </div>
+                    </td>
+                    <td>
+                      <VSwitch
+                        :model-value="activation.enabled"
+                        density="compact"
+                        hide-details
+                        @update:model-value="toggleVisible(activation, $event)"
                       />
-                    </VBtn>
-                    <VChip
-                      v-if="activation.definition?.is_system"
-                      color="warning"
-                      variant="tonal"
-                      size="x-small"
-                    >
-                      {{ t('common.system') }}
-                    </VChip>
-                    <VChip
-                      v-if="activation.definition?.company_id"
-                      color="primary"
-                      variant="tonal"
-                      size="x-small"
-                    >
-                      {{ t('common.custom') }}
-                    </VChip>
-                    <VChip
-                      v-if="activation.used_count > 0"
-                      color="info"
-                      variant="tonal"
-                      size="x-small"
-                    >
-                      {{ activation.used_count }} used
-                    </VChip>
-                  </div>
-                </td>
-                <td>
-                  <VSwitch
-                    :model-value="activation.enabled"
-                    density="compact"
-                    hide-details
-                    @update:model-value="toggleVisible(activation, $event)"
-                  />
-                </td>
-                <td>
-                  <VCheckbox
-                    :model-value="activation.required_override"
-                    density="compact"
-                    hide-details
-                    @update:model-value="toggleRequired(activation, $event)"
-                  />
-                </td>
-                <td>
-                  <VBtn
-                    v-if="activation.definition?.company_id"
-                    icon
-                    variant="text"
-                    size="x-small"
-                    color="error"
-                    @click="confirmDeleteField(activation)"
+                    </td>
+                    <td>
+                      <VCheckbox
+                        :model-value="activation.required_override"
+                        density="compact"
+                        hide-details
+                        @update:model-value="toggleRequired(activation, $event)"
+                      />
+                    </td>
+                    <td>
+                      <VBtn
+                        v-if="activation.definition?.company_id"
+                        icon
+                        variant="text"
+                        size="x-small"
+                        color="error"
+                        @click="confirmDeleteField(activation)"
+                      >
+                        <VIcon
+                          icon="tabler-trash"
+                          size="16"
+                        />
+                      </VBtn>
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+
+              <VCardText
+                v-else
+                class="text-disabled"
+              >
+                {{ fieldsSearch ? t('members.noFieldsMatch') : t('members.noFieldsActivated') }}
+              </VCardText>
+            </VWindowItem>
+
+            <!-- Tab: Available Fields -->
+            <VWindowItem value="available">
+              <VCardText v-if="filteredAvailableDefs.length">
+                <div class="d-flex flex-wrap gap-2">
+                  <VChip
+                    v-for="def in filteredAvailableDefs"
+                    :key="def.id"
+                    variant="outlined"
+                    color="primary"
+                    :disabled="activeCount >= 50"
+                    @click="activateField(def)"
                   >
                     <VIcon
-                      icon="tabler-trash"
+                      icon="tabler-plus"
                       size="16"
+                      start
                     />
-                  </VBtn>
-                </td>
-              </tr>
-            </tbody>
-          </VTable>
+                    {{ def.label }}
+                  </VChip>
+                </div>
+              </VCardText>
+              <VCardText
+                v-else
+                class="text-disabled"
+              >
+                {{ fieldsSearch ? t('members.noFieldsMatch') : t('members.allFieldsActivated') }}
+              </VCardText>
+            </VWindowItem>
 
-          <VCardText
-            v-else
-            class="text-disabled"
-          >
-            {{ t('members.noFieldsActivated') }}
-          </VCardText>
-
-          <!-- Section B: Available Fields -->
-          <template v-if="availableMemberDefs.length">
-            <VDivider class="my-2" />
-
-            <VCardTitle class="text-body-1">
-              {{ t('members.availableFields') }}
-            </VCardTitle>
-
-            <VCardText>
-              <div class="d-flex flex-wrap gap-2">
+            <!-- Tab: Custom Fields -->
+            <VWindowItem
+              v-if="allowCustomFields"
+              value="custom"
+            >
+              <VCardText class="d-flex align-center justify-space-between">
                 <VChip
-                  v-for="def in availableMemberDefs"
-                  :key="def.id"
-                  variant="outlined"
-                  color="primary"
-                  :disabled="activeCount >= 50"
-                  @click="activateField(def)"
+                  :color="customFieldCount >= 20 ? 'error' : 'info'"
+                  size="small"
                 >
-                  <VIcon
-                    icon="tabler-plus"
-                    size="16"
-                    start
-                  />
-                  {{ def.label }}
+                  {{ t('members.customFieldCount', { count: customFieldCount }) }}
                 </VChip>
-              </div>
-            </VCardText>
-          </template>
-
-          <!-- Section C: Create Custom Field -->
-          <template v-if="allowCustomFields">
-            <VDivider class="my-2" />
-
-            <VCardText class="d-flex align-center justify-space-between">
-              <VChip
-                :color="customFieldCount >= 20 ? 'error' : 'info'"
-                size="small"
-              >
-                {{ t('members.customFieldCount', { count: customFieldCount }) }}
-              </VChip>
-              <VBtn
-                variant="tonal"
-                color="primary"
-                prepend-icon="tabler-plus"
-                :disabled="customFieldCount >= 20"
-                @click="openCreateFieldDialog"
-              >
-                {{ t('members.createCustomField') }}
-              </VBtn>
-            </VCardText>
-          </template>
+                <VBtn
+                  variant="tonal"
+                  color="primary"
+                  prepend-icon="tabler-plus"
+                  :disabled="customFieldCount >= 20"
+                  @click="openCreateFieldDialog"
+                >
+                  {{ t('members.createCustomField') }}
+                </VBtn>
+              </VCardText>
+            </VWindowItem>
+          </VWindow>
         </template>
         </PerfectScrollbar>
       </template>

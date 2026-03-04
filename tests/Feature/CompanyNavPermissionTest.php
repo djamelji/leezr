@@ -133,7 +133,7 @@ class CompanyNavPermissionTest extends TestCase
         $keys = $this->navKeysFor($this->owner);
 
         $this->assertContains('members', $keys, 'Owner should see members');
-        $this->assertContains('settings', $keys, 'Owner should see settings');
+        $this->assertContains('company-profile', $keys, 'Owner should see company-profile');
         $this->assertContains('shipments', $keys, 'Owner should see shipments');
     }
 
@@ -146,7 +146,7 @@ class CompanyNavPermissionTest extends TestCase
         $keys = $this->navKeysFor($this->admin);
 
         $this->assertContains('members', $keys, 'Admin should see members');
-        $this->assertContains('settings', $keys, 'Admin should see settings');
+        $this->assertContains('company-profile', $keys, 'Admin should see company-profile');
         $this->assertContains('shipments', $keys, 'Admin should see shipments');
     }
 
@@ -209,8 +209,8 @@ class CompanyNavPermissionTest extends TestCase
     {
         $keys = $this->navKeysFor($this->driver);
 
-        // Driver does NOT have settings.view — but settings is a structure item anyway
-        $this->assertNotContains('settings', $keys, 'Driver should not see settings');
+        // Driver does NOT have settings.view — but company-profile is a structure item anyway
+        $this->assertNotContains('company-profile', $keys, 'Driver should not see company-profile');
     }
 
     // ═══════════════════════════════════════════════════════

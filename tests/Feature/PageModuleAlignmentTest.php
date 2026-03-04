@@ -196,6 +196,7 @@ class PageModuleAlignmentTest extends TestCase
             'platform-billing-invoices-id' => $base . '/platform/billing/invoices/[id].vue',
             'company-billing-tab' => $base . '/company/billing/[tab].vue',
             'company-roles' => $base . '/company/roles.vue',
+            'company-profile-tab' => $base . '/company/profile/[tab].vue',
         ];
 
         if (isset($overrides[$routeName])) {

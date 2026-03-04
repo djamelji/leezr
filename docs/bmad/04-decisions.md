@@ -6793,4 +6793,348 @@ Les 6 types de documents système étaient définis en dur dans `DocumentTypeCat
 
 ---
 
+## ADR-190 — LOT-PRODUIT Phase A : JobdomainMarketOverlay + PresetResolver
+
+**Date** : 2026-03-03
+**Contexte** : LOT-PRODUIT Phase A. Les presets jobdomain (modules, fields, documents, roles) étaient globaux — pas de variation par marché. Un transporteur FR et un transporteur GB recevaient exactement les mêmes presets à l'assignation. Besoin d'un mécanisme d'overlay par marché sans duplication des définitions globales.
+
+**Décisions** :
+
+1. **Table `jobdomain_market_overlays`** : UNIQUE(jobdomain_key, market_key), FK cascadeOnDelete. 8 colonnes JSON nullable : `override_modules/fields/documents/roles` + `remove_modules/fields/documents/roles`. Override = ajout/remplacement partiel. Remove = exclusion.
+
+2. **Model `JobdomainMarketOverlay`** : relations `jobdomain()` et `market()` via clé naturelle (key, pas id). JSON casts sur les 8 colonnes.
+
+3. **DTO `ResolvedPresets`** : readonly class avec `jobdomainKey`, `marketKey`, `modules[]`, `fields[]`, `documents[]`, `roles[]`. Immutable, pas de mutation post-résolution.
+
+4. **Service `JobdomainPresetResolver`** : static cache par (jobdomainKey, marketKey). 1 query avec eager-load overlays, puis merge in-memory. Merge rules :
+   - Modules : `array_unique(global + override) - remove`
+   - Fields/Documents : merge-by-code (override remplace matching, ajoute nouveau) - remove par code
+   - Roles : deep merge par clé (`array_replace_recursive`) - remove par clé
+
+5. **Mandatory guards** :
+   - Fields : ne peut pas remove un field dont `FieldDefinition.validation_rules.required_by_jobdomains` contient ce jobdomain
+   - Roles : ne peut pas remove un rôle où `is_administrative = true` dans le preset de base
+
+6. **JobdomainGate::assignToCompany()** modifié : utilise `JobdomainPresetResolver::resolve($key, $company->market_key)` au lieu des 3 méthodes `defaultModulesFor/defaultFieldsFor/defaultDocumentsFor` + `$jobdomain->default_roles`. Les 3 méthodes statiques restent disponibles (backward compat pour PlatformJobdomainReadModel).
+
+7. **Relation `Jobdomain::overlays()`** : HasMany via `jobdomain_key` → `key`.
+
+**Conséquences** :
+- Nouveau data model overlay sans modification de la structure existante des jobdomains
+- assignToCompany() est market-aware : une company FR et une company GB recevront des presets différents si un overlay existe
+- Sans overlay, le comportement est identique à avant (global defaults)
+- Static cache garantit 1 query max par résolution (pas de N+1)
+- 23 tests unitaires + intégration couvrant : merge rules, mandatory guards, cache, assignToCompany, model relations, unique constraint
+- Tests : 1392 passed, 0 failed, 9 skipped
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (4)**
+- `database/migrations/2026_03_02_500001_create_jobdomain_market_overlays_table.php`
+- `app/Core/Jobdomains/JobdomainMarketOverlay.php`
+- `app/Core/Jobdomains/ResolvedPresets.php`
+- `app/Core/Jobdomains/JobdomainPresetResolver.php`
+- `tests/Feature/JobdomainMarketOverlayTest.php`
+
+**MODIFY (2)**
+- `app/Core/Jobdomains/Jobdomain.php` — ajout relation `overlays()`
+- `app/Core/Jobdomains/JobdomainGate.php` — `assignToCompany()` utilise PresetResolver
+
+---
+
+## ADR-191 — LOT-PRODUIT Phase B : Platform Jobdomain Editor v2
+
+**Date** : 2026-03-03
+**Contexte** : LOT-PRODUIT Phase B. Phase A a posé le modèle overlay + resolver. Phase B expose ces capacités dans l'éditeur platform jobdomain : CRUD overlay via API, enrichissement du ReadModel (overlays, markets, resolved_previews), refonte des onglets Modules/Fields/Documents dans le frontend.
+
+**Décisions** :
+
+1. **Backend CRUD Overlay (B1)** : `JobdomainOverlayController` avec 3 routes (GET index, PUT upsert, DELETE destroy). Validation des structures JSON (fields/documents exigent `code` required). Controller passif — délègue aux `UpsertJobdomainOverlayUseCase` et `DeleteJobdomainOverlayUseCase`. Les UseCases valident existence jobdomain+market, appellent `JobdomainPresetResolver::clearCache()` après mutation.
+
+2. **ReadModel enrichi (B2)** : `PlatformJobdomainReadModel::detail()` retourne désormais `overlays` (keyBy market_key), `markets` (actifs, ordonnés), `resolved_previews` (_global + chaque market ayant un overlay). Nouvelle méthode `overlaysForJobdomain()` pour le listing overlay. La méthode `buildResolvedPreviews()` utilise `JobdomainPresetResolver::resolve()` — aucun merge local dans le ReadModel.
+
+3. **Frontend Market Selector (B3)** : Composant `_MarketOverlaySelector.vue` — pure présentation, aucun appel API, aucune logique merge. Affiche Global + marchés actifs avec badge overlay.
+
+4. **Modules tab refonte (B4)** : Passage de VTable à grille de VCards avec recherche textuelle + filtre par type (core/addon). Badges type, pricing_mode, compatibility. Aucun filtrage plan-aware, aucune logique entitlement — tous les modules visibles.
+
+5. **Fields tab inline CRUD (B5)** : Bouton "Create Field" + VDialog inline. Réutilise l'API platform `/fields` existante via le store. Delete field sur les champs non-système. Pas de nouvelle logique métier backend.
+
+6. **Documents tab inline CRUD (B6)** : Bouton "Create Document Type" + VDialog inline. Réutilise l'API platform `/documents/types` existante via le store. Pas de nouvelle logique métier backend.
+
+7. **Aucune modification du Core** hors ReadModel (contrainte respectée). Aucun changement dans `JobdomainPresetResolver`. Aucun couplage plan ↔ jobdomain.
+
+**Conséquences** :
+- L'éditeur platform jobdomain est désormais market-aware : sélection de marché, preview résolu, gestion CRUD overlay
+- Les onglets Modules/Fields/Documents sont enrichis avec CRUD inline sans navigation externe
+- 11 tests API couvrant : create/update/delete overlay, validation, 404 jobdomain/market inexistant, listing, resolved previews via detail, detail sans overlay
+- Tests : 1403 passed, 0 failed, 9 skipped (+11 vs Phase A)
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (5)**
+- `app/Modules/Platform/Jobdomains/UseCases/UpsertJobdomainOverlayUseCase.php`
+- `app/Modules/Platform/Jobdomains/UseCases/DeleteJobdomainOverlayUseCase.php`
+- `app/Modules/Platform/Jobdomains/Http/JobdomainOverlayController.php`
+- `resources/js/pages/platform/jobdomains/_MarketOverlaySelector.vue`
+- `tests/Feature/JobdomainOverlayApiTest.php`
+
+**MODIFY (6)**
+- `app/Modules/Platform/Jobdomains/ReadModels/PlatformJobdomainReadModel.php` — overlays, markets, resolved_previews, overlaysForJobdomain()
+- `routes/platform.php` — 3 routes overlay
+- `resources/js/modules/platform-admin/jobdomains/jobdomains.store.js` — 5 nouvelles actions (overlay CRUD + field/doc create)
+- `resources/js/pages/platform/jobdomains/[id].vue` — refonte complète (market selector, modules cards, fields inline CRUD, documents inline CRUD)
+- `resources/js/plugins/i18n/locales/en.json` — ~40 clés platformJobdomains
+- `resources/js/plugins/i18n/locales/fr.json` — ~40 clés platformJobdomains (traduction FR)
+
+---
+
+## ADR-192 — LOT-PRODUIT Phase C : Document Request API (single + batch + queue)
+
+**Date** : 2026-03-03
+**Contexte** : LOT-PRODUIT Phase C. Les demandes de documents étaient créées uniquement en lazy-create lors de la lecture admin (MemberDocumentWorkflowReadModel). Besoin d'un mécanisme explicite : demande single (un membre), demande batch (tous les membres d'un rôle), file d'attente des demandes actives.
+
+**Décisions** :
+
+1. **RequestDocumentUseCase** : Crée/réinitialise une demande de document pour un membre. Guards : DocumentTypeActivation enabled + pas de doublon actif (status in requested/submitted). Respecte le UNIQUE constraint `(company_id, user_id, document_type_id)` — réutilise la row existante si fermée (approved/rejected) en réinitialisant status, timestamps, reviewer. 1 audit entry `document.requested`.
+
+2. **BatchRequestByRoleUseCase** : Crée des demandes pour tous les membres d'un rôle. Filtre les user_ids ayant déjà une request active. Utilise `updateOrCreate` pour respecter le UNIQUE constraint. 1 seule audit entry `document.batch_requested` avec metadata (count, role_id, skipped).
+
+3. **DocumentRequestQueueReadModel** : Retourne les requests actives (requested + submitted) triées par `requested_at` desc. Inclut user (nom/email), role (via membership), document_type (code/label), timestamps.
+
+4. **DocumentRequestController** : 3 endpoints passifs. `store` → RequestDocumentUseCase, `batchByRole` → BatchRequestByRoleUseCase, `queue` → DocumentRequestQueueReadModel. Validation via `$request->validate()`. Aucun Eloquent dans le controller.
+
+5. **Routes** : 3 routes dans `routes/company.php` sous le groupe `core.members` avec permission `members.manage`. POST `/company/document-requests`, POST `/company/document-requests/batch`, GET `/company/document-requests/queue`.
+
+6. **Audit** : 2 nouvelles actions dans `AuditAction` : `DOCUMENT_REQUESTED`, `DOCUMENT_BATCH_REQUESTED`.
+
+**Conséquences** :
+- Les admins peuvent demander explicitement un document (single ou batch par rôle)
+- La queue expose les demandes en cours pour la future UI Phase D
+- Guards stricts : activation vérifiée, doublons actifs bloqués
+- Aucune modification UI (Phase C = backend only)
+- 9 tests API couvrant : single OK, rejet activation disabled, rejet doublon actif, réouverture après close, batch eligible, batch skip actif, batch 1 audit, batch rejet activation, queue tri correct
+- Tests : 1412 passed, 0 failed, 9 skipped (+9 vs Phase B)
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (4)**
+- `app/Modules/Core/Members/UseCases/RequestDocumentUseCase.php`
+- `app/Modules/Core/Members/UseCases/BatchRequestByRoleUseCase.php`
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php`
+- `app/Modules/Core/Members/Http/DocumentRequestController.php`
+- `tests/Feature/DocumentRequestApiTest.php`
+
+**MODIFY (2)**
+- `app/Core/Audit/AuditAction.php` — +2 constantes (DOCUMENT_REQUESTED, DOCUMENT_BATCH_REQUESTED)
+- `routes/company.php` — +3 routes document-requests
+
+---
+
+## ADR-193 — LOT-PRODUIT Phase D : Company UX Alignment (UI only)
+
+**Date** : 2026-03-03
+**Contexte** : LOT-PRODUIT Phase D. La page `/company/settings` mélangeait les scopes company et company_user (paramètres entreprise, champs membres, documents, stockage). Besoin de séparer clairement les scopes et d'intégrer les endpoints document request de Phase C dans l'UI.
+
+**Décisions** :
+
+1. **Nouvelle page `/company/profile/[tab].vue`** : 3 onglets (overview, fields, documents). Pattern VTabs pill + VWindow copié de `account-settings/[tab].vue`. Meta : `module: 'core.settings'`. 3 sous-composants `_*.vue` (pas de `definePage`). L'onglet overview contient le formulaire nom + champs dynamiques + structure juridique. L'onglet fields montre le catalogue d'activation scope=company uniquement. L'onglet documents montre le coffre-fort + quota stockage.
+
+2. **Redirect `/company/settings`** : La page settings existante est réduite à un redirect vers `/company/profile/overview` via `router.replace()` dans `onMounted`. Conserve le routeName `company-settings` pour compatibilité (bookmarks, tests).
+
+3. **Navigation mise à jour** : Le nav item `settings` (key='settings') remplacé par `company-profile` (key='company-profile', icon='tabler-building-community'). Le `routeNames` inclut `company-profile-tab` et `company-settings`. Permission inchangée : `settings.view`.
+
+4. **Member Fields Drawer amélioré** : Largeur 480→560px. Ajout recherche texte (AppTextField avec tabler-search). Ajout tabs internes (Active / Available / Custom) via VTabs + VWindow au lieu de tout empiler. Scope toujours `company_user` uniquement. Activations filtrées par recherche.
+
+5. **MemberDocumentsWorkflowPanel enrichi** : Ajout bouton "Request Document" (VMenu avec liste des doc types requestables). Appelle `POST /api/company/document-requests` (Phase C endpoint). Refresh documents après succès. Les doc types requestables = ceux sans request active.
+
+6. **i18n** : Nouveau namespace `companyProfile` (en + fr). Nouvelles clés dans `members` (searchFields, noFieldsMatch, allFieldsActivated). Nouvelles clés dans `documents` (requestDocument, requestSent). Nouvelle clé `common.used`.
+
+**Conséquences** :
+- Séparation claire des scopes : company profile ≠ member fields
+- Settings page redirige (pas de 404 pour anciens bookmarks)
+- L'UI intègre les endpoints Phase C (document request single)
+- Le batch request par rôle sera intégré en Phase E
+- Tests nav mis à jour pour le nouveau key `company-profile` (13 assertions dans 6 fichiers)
+- Tests : 1412 passed, 0 failed, 9 skipped (même score que Phase C — 0 backend changes)
+- Build : clean
+
+**Fichiers** :
+
+**CREATE (4)**
+- `resources/js/pages/company/profile/[tab].vue`
+- `resources/js/pages/company/profile/_CompanyProfileOverview.vue`
+- `resources/js/pages/company/profile/_CompanyProfileFields.vue`
+- `resources/js/pages/company/profile/_CompanyProfileDocuments.vue`
+
+**MODIFY (12)**
+- `app/Modules/Core/Settings/SettingsModule.php` — nav item settings→company-profile
+- `resources/js/pages/company/settings.vue` — redirect vers profile
+- `resources/js/pages/company/members/index.vue` — drawer 560px + search + tabs
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — request button
+- `resources/js/plugins/i18n/locales/en.json` — +companyProfile, +members, +documents keys
+- `resources/js/plugins/i18n/locales/fr.json` — idem fr
+- `tests/Feature/CompanyNavRealtimeTest.php` — settings→company-profile
+- `tests/Feature/NavEndpointTest.php` — idem
+- `tests/Feature/CompanyNavInvariantTest.php` — idem
+- `tests/Feature/CompanyNavPermissionTest.php` — idem
+- `tests/Unit/NavBuilderTest.php` — idem
+- `tests/Feature/PageModuleAlignmentTest.php` — override company-profile-tab
+- `tests/Feature/AuthorizationContractTest.php` — settings→company-profile
+
+---
+
+### ADR-194 — Phase E : Validation croisée & Consolidation LOT-PRODUIT
+
+**Date** : 2026-03-02
+
+**Contexte** :
+LOT-PRODUIT Phases A→D livrent un ensemble conséquent : overlays marché, éditeur jobdomain v2, Document Request API, Company UX alignment. Phase E valide l'intégrité de bout en bout sans ajouter de fonctionnalité.
+
+**Décisions** :
+
+1. **E1 — JobdomainOverlayE2ETest** (5 tests, 26 assertions)
+   - Valide la chaîne complète : Jobdomain defaults + Market overlay → JobdomainPresetResolver → JobdomainGate::assignToCompany → état Company
+   - Couvre : global defaults (GB), overlay merge (FR), document removal, administrative role protection, isolation inter-market
+   - Résultat : **5/5 passed**
+
+2. **E2 — DocumentRequestE2ETest** (3 tests, 14 assertions)
+   - Lifecycle complet en 9 étapes : request → DB check → queue check → duplicate reject → approve → queue empty → re-request → UNIQUE reuse → status reset
+   - Edge cases : activation disabled (422), unknown doc type (404)
+   - Résultat : **3/3 passed**
+
+3. **E3 — ControllerSizeInvariantTest** (4 tests, 9 assertions)
+   - Invariants structurels : taille ≤250 lignes, pas de DB:: facade, pas de ->save()
+   - Violations existantes baselinées comme dette technique (allowlists figées) :
+     - SIZE: MembershipController.php (263 lignes, allowance 270)
+     - DB_FACADE: 9 controllers (platform settings, webhooks, translations, field definitions)
+     - SAVE: 6 controllers (theme, credentials, password reset, platform user)
+   - Test `allowlists_do_not_grow` empêche toute régression — les allowlists ne peuvent que rétrécir
+   - Résultat : **4/4 passed**
+
+4. **E4 — Consolidation LOT-PRODUIT**
+   - Phase A : JobdomainMarketOverlay foundation (overlay model, preset resolver, gate integration)
+   - Phase B : Platform Jobdomain Editor v2 (overlay CRUD UI, role presets, document presets)
+   - Phase C : Document Request API (single + batch + queue endpoints, state machine)
+   - Phase D : Company UX alignment (profile page, settings redirect, drawer upgrade, doc panel)
+   - Phase E : Validation croisée (12 E2E tests + 4 invariant tests)
+
+**Bilan final** :
+- Tests : **1424 passed**, 0 failed, 9 skipped (5212 assertions)
+- Build : **clean** (0 errors, 0 warnings)
+- Phase E tests : **12/12 passed** (E1: 5, E2: 3, E3: 4)
+- Technical debt baselined : 1 size + 9 DB:: + 6 ->save() — regressions prevented by frozen allowlists
+
+**Fichiers** :
+
+**CREATE (3)**
+- `tests/Feature/JobdomainOverlayE2ETest.php`
+- `tests/Feature/DocumentRequestE2ETest.php`
+- `tests/Feature/ControllerSizeInvariantTest.php`
+
+**MODIFY (1)**
+- `docs/bmad/04-decisions.md` — ADR-194
+
+---
+
+## ADR-195 — Fusion tab Champs → tab Documents (drawers)
+
+**Date** : 2026-03-02
+
+**Contexte** :
+La page `/company/profile` avait 3 tabs (overview, fields, documents). Le tab "Champs" (activation catalog) peut vivre dans le tab "Documents" avec deux drawers dédiés pour une UX plus cohérente.
+
+**Décisions** :
+1. Suppression du tab "fields" — fusion dans le tab "documents"
+2. Création de `DocumentTypesDrawer.vue` et `CreateDocumentTypeDrawer.vue` en tant que composants séparés (`company/views/`)
+3. Les drawers vivent au niveau de la page `[tab].vue` (hors VWindow) pour un overlay correct
+4. Bouton "Créer un type" (texte) + "Gérer les types" dans le append slot de la carte vault
+5. Bouton `+` icon dans le drawer "Gérer les types", à côté du titre section "Documents entreprise"
+6. `hideCreateButton` prop sur `CompanyDocumentActivationCatalog` pour masquer le gros bouton dans le drawer
+7. Nav item traduit via `nav.company.company-profile` (pas top-level key)
+
+**Fichiers** :
+- DELETE : `_CompanyProfileFields.vue`
+- CREATE : `company/views/DocumentTypesDrawer.vue`, `company/views/CreateDocumentTypeDrawer.vue`
+- MODIFY : `[tab].vue`, `_CompanyProfileDocuments.vue`, `CompanyDocumentActivationCatalog.vue`, `en.json`, `fr.json`
+
+---
+
+## ADR-196 — Compliance Widgets (natifs dashboard engine)
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Le dashboard company dispose d'un widget engine (DashboardGrid, catalog, layout, drag/drop, resize, densité S/M/L). On ajoute 5 widgets conformité documents qui consomment `GET /api/company/document-requests/queue` sans aucune modification backend.
+
+**Décisions** :
+1. **Store dédié** `useCompanyComplianceStore` (`compliance.store.js`) — fetchQueue + getters (pendingCount, submittedCount, overdueCount, compliancePercent, groupedByRole, groupedByType)
+2. **5 widgets natifs** enregistrés dans `widgetComponentMap.js` — même pattern que les widgets billing (props data/loading/scope/viewport, density S/M/L, CSS scoped)
+3. **Widgets self-contained** — ignorent la prop `data` (non résolu par le backend) et lisent directement depuis le compliance store
+4. **Catalog injection côté client** — les entrées catalog compliance sont poussées dans `dashboardStore._catalog` après le fetch, sans modification backend
+5. **Overdue** = `requested` avec `requested_at > 48h` (seuil simple côté frontend)
+6. **Roles/Types widgets** — density S = KPI count, density M/L = liste scrollable avec chips
+
+**Conséquences** :
+- 0 modifications backend
+- Les widgets apparaissent dans le catalog drawer et l'utilisateur les ajoute manuellement
+- Le saveLayout envoie ces tiles au backend qui les stocke en JSON (transparent)
+- Le resolveWidgets backend ignorera les clés compliance (widgetData[key] = undefined → le widget gère)
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean
+
+**Fichiers** :
+
+**CREATE (6)**
+- `resources/js/modules/company/dashboard/compliance.store.js`
+- `resources/js/views/company-dashboard/_ComplianceRateWidget.vue`
+- `resources/js/views/company-dashboard/_PendingWidget.vue`
+- `resources/js/views/company-dashboard/_OverdueWidget.vue`
+- `resources/js/views/company-dashboard/_RolesWidget.vue`
+- `resources/js/views/company-dashboard/_TypesWidget.vue`
+
+**MODIFY (4)**
+- `resources/js/components/dashboard/widgetComponentMap.js`
+- `resources/js/pages/dashboard.vue`
+- `resources/js/plugins/i18n/locales/en.json`
+- `resources/js/plugins/i18n/locales/fr.json`
+
+---
+
+### ADR-195 — Fusion tab Champs → tab Documents (Company Profile)
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Le profil entreprise (ADR-193, Phase D) avait 3 onglets : Overview, Fields, Documents. L'onglet "Fields" ne contenait que le `CompanyDocumentActivationCatalog` (configuration des types de documents scope company) — c'est du sur-découpage. Ce contenu appartient naturellement à l'espace Documents.
+
+**Décision** :
+Fusionner l'onglet "Fields" dans l'onglet "Documents". Le catalogue d'activation devient accessible via un bouton "Gérer les types" qui ouvre un drawer (560px).
+
+**Conséquences** :
+- 2 tabs au lieu de 3 (Overview / Documents) — navigation simplifiée
+- 2 boutons dans le header vault : "Gérer les types" + "Créer un type"
+- Chaque bouton ouvre son propre drawer (composant séparé, pattern AddMemberDrawer)
+- `_CompanyProfileFields.vue` supprimé — la page ne gère plus que l'orchestration
+- Drawers suivent le pattern Vuexy : `VNavigationDrawer` + `VCard flat` + `VCardText` + `block-size: calc(100vh - 56px)`
+
+**Fichiers** :
+
+**CREATE (2)**
+- `resources/js/company/views/DocumentTypesDrawer.vue` — drawer catalogue d'activation (560px)
+- `resources/js/company/views/CreateDocumentTypeDrawer.vue` — drawer création type personnalisé (400px)
+
+**DELETE (1)**
+- `resources/js/pages/company/profile/_CompanyProfileFields.vue`
+
+**MODIFY (4)**
+- `resources/js/pages/company/profile/[tab].vue` — suppression tab fields, import supprimé
+- `resources/js/pages/company/profile/_CompanyProfileDocuments.vue` — utilise les 2 drawer components
+- `resources/js/plugins/i18n/locales/en.json` — suppression clé `fields`, ajout `manageTypes` + `createType`
+- `resources/js/plugins/i18n/locales/fr.json` — idem fr
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

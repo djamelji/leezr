@@ -154,7 +154,7 @@ class NavBuilderTest extends TestCase
 
         // Core modules' nav items should be present
         $this->assertContains('members', $allKeys);
-        $this->assertContains('settings', $allKeys);
+        $this->assertContains('company-profile', $allKeys);
     }
 
     public function test_for_company_excludes_inactive_modules(): void
@@ -207,14 +207,14 @@ class NavBuilderTest extends TestCase
         $mgmtKeys = $this->extractItemKeys($mgmtGroups);
 
         $this->assertContains('members', $mgmtKeys, 'Management should see structure items');
-        $this->assertContains('settings', $mgmtKeys, 'Management should see structure items');
+        $this->assertContains('company-profile', $mgmtKeys, 'Management should see structure items');
 
         // Operational does NOT see structure items
         $opGroups = NavBuilder::forCompany($company, null, 'operational');
         $opKeys = $this->extractItemKeys($opGroups);
 
         $this->assertNotContains('members', $opKeys, 'Operational should not see structure items');
-        $this->assertNotContains('settings', $opKeys, 'Operational should not see structure items');
+        $this->assertNotContains('company-profile', $opKeys, 'Operational should not see structure items');
     }
 
     public function test_for_company_operational_only_hidden_from_management(): void

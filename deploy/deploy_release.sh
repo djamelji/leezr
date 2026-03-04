@@ -134,6 +134,10 @@ $PHP_BIN artisan route:clear  2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan view:clear   2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan optimize     2>&1 | tee -a "$LOG_FILE"
 
+# ─── [7.5] Storage symlink (public/storage → shared storage) ─────
+log "→ [7.5] Storage symlink"
+$PHP_BIN artisan storage:link --force 2>&1 | tee -a "$LOG_FILE"
+
 # ─── [8/9] Health check (BEFORE switch) ─────────────────────────
 log "→ [8/9] Health check"
 $PHP_BIN artisan route:list    > /dev/null

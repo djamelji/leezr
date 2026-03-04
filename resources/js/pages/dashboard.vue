@@ -1,17 +1,38 @@
 <script setup>
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyDashboardStore } from '@/modules/company/dashboard/dashboard.store'
+import { useCompanyComplianceStore } from '@/modules/company/dashboard/compliance.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import PlanBadgeWidget from '@/pages/company/dashboard/_PlanBadgeWidget.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const dashboardStore = useCompanyDashboardStore()
+const complianceStore = useCompanyComplianceStore()
 
 const canEdit = computed(() => auth.hasPermission('manage-structure'))
 
-onMounted(() => {
-  dashboardStore.loadDashboard()
+// ── Compliance catalog entries (client-only, no backend) ──
+const COMPLIANCE_CATALOG = [
+  { key: 'ComplianceRate', component: 'ComplianceRate', label_key: 'compliance.complianceRate', description_key: 'compliance.complianceRateDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
+  { key: 'CompliancePending', component: 'CompliancePending', label_key: 'compliance.pending', description_key: 'compliance.pendingDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
+  { key: 'ComplianceOverdue', component: 'ComplianceOverdue', label_key: 'compliance.overdue', description_key: 'compliance.overdueDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
+  { key: 'ComplianceRoles', component: 'ComplianceRoles', label_key: 'compliance.roles', description_key: 'compliance.rolesDesc', scope: 'company', layout: { default_w: 6, default_h: 4 } },
+  { key: 'ComplianceTypes', component: 'ComplianceTypes', label_key: 'compliance.types', description_key: 'compliance.typesDesc', scope: 'company', layout: { default_w: 6, default_h: 4 } },
+]
+
+onMounted(async () => {
+  await Promise.all([
+    dashboardStore.loadDashboard(),
+    complianceStore.fetchQueue(),
+  ])
+
+  // Inject compliance widgets into catalog (client-only)
+  for (const entry of COMPLIANCE_CATALOG) {
+    if (!dashboardStore.catalog.find(w => w.key === entry.key)) {
+      dashboardStore._catalog.push(entry)
+    }
+  }
 })
 
 // ── Dashboard Engine ──

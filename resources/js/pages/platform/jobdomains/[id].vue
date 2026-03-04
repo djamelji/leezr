@@ -5,6 +5,7 @@ import { useAppToast } from '@/composables/useAppToast'
 import DocumentScopeChip from '@/views/shared/documents/DocumentScopeChip.vue'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
+import MarketOverlaySelector from './_MarketOverlaySelector.vue'
 
 definePage({
   meta: {
@@ -34,6 +35,12 @@ const permissionCatalog = ref([])
 // ADR-169: mandatory field codes from catalog (read-only)
 const mandatoryFieldCodes = ref([])
 const mandatoryByRole = ref({})
+
+// ADR-190: Market overlay state
+const overlays = ref({})
+const markets = ref([])
+const resolvedPreviews = ref({})
+const selectedMarketKey = ref(null)
 
 // ─── Overview form ──────────────────────────────────
 const overviewForm = ref({ label: '', description: '', allowCustomFields: false })
@@ -85,7 +92,7 @@ const saveOverview = async () => {
   }
 }
 
-// ─── Modules ────────────────────────────────────────
+// ─── Modules (B4 refonte) ──────────────────────────
 const allModules = computed(() => settingsStore.modules)
 const jdKey = computed(() => jobdomain.value?.key)
 const defaultModuleKeys = computed(() => new Set(jobdomain.value?.default_modules || []))
@@ -94,43 +101,28 @@ const isModuleSelected = moduleKey => {
   return defaultModuleKeys.value.has(moduleKey)
 }
 
-// Core modules — always active, cannot toggle
-const coreModules = computed(() =>
-  allModules.value.filter(m => m.type === 'core'),
-)
+// B4: Search and filter state
+const moduleSearch = ref('')
+const moduleTypeFilter = ref('all')
 
-// Included by default in this jobdomain (non-core)
-const includedModules = computed(() =>
-  allModules.value.filter(m => m.type !== 'core' && defaultModuleKeys.value.has(m.key)),
-)
+const filteredModules = computed(() => {
+  let mods = [...allModules.value]
 
-// Compatible with this jobdomain but not included by default
-const compatibleModules = computed(() =>
-  allModules.value.filter(m => {
-    if (m.type === 'core') return false
-    if (defaultModuleKeys.value.has(m.key)) return false
+  if (moduleSearch.value) {
+    const q = moduleSearch.value.toLowerCase()
 
-    // No restriction or matches this jobdomain
-    return m.compatible_jobdomains === null || (jdKey.value && m.compatible_jobdomains.includes(jdKey.value))
-  }),
-)
+    mods = mods.filter(m =>
+      m.name.toLowerCase().includes(q)
+      || (m.description || '').toLowerCase().includes(q)
+      || m.key.toLowerCase().includes(q),
+    )
+  }
 
-// Incompatible with this jobdomain
-const incompatibleModules = computed(() =>
-  allModules.value.filter(m => {
-    if (m.type === 'core') return false
-    if (defaultModuleKeys.value.has(m.key)) return false
-    if (m.compatible_jobdomains === null) return false
+  if (moduleTypeFilter.value !== 'all')
+    mods = mods.filter(m => m.type === moduleTypeFilter.value)
 
-    return !jdKey.value || !m.compatible_jobdomains.includes(jdKey.value)
-  }),
-)
-
-const planLabel = planKey => {
-  const labels = { pro: 'Pro', business: 'Business' }
-
-  return labels[planKey] || planKey
-}
+  return mods.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+})
 
 const toggleModule = async (moduleKey, enabled) => {
   if (!jobdomain.value) return
@@ -158,13 +150,13 @@ const defaultFields = computed(() => jobdomain.value?.default_fields || [])
 
 const presetCodes = computed(() => new Set(defaultFields.value.map(f => f.code)))
 
-// Resolve preset entries with definition metadata
 const presetFields = computed(() => {
   return defaultFields.value.map(f => {
     const def = fieldDefinitions.value.find(d => d.code === f.code)
 
     return {
       ...f,
+      id: def?.id,
       label: def?.label || f.code,
       scope: def?.scope || 'unknown',
       is_system: def?.is_system || false,
@@ -172,7 +164,6 @@ const presetFields = computed(() => {
   })
 })
 
-// Available = not in preset, grouped by scope
 const availableCompanyDefs = computed(() => {
   return fieldDefinitions.value.filter(d => d.scope === 'company' && !presetCodes.value.has(d.code))
 })
@@ -195,7 +186,6 @@ const savePresetFields = async newFields => {
   }
 }
 
-// ADR-169: mandatory status from catalog (read-only)
 const isFieldMandatory = code => mandatoryFieldCodes.value.includes(code)
 
 const isFieldMandatoryForRole = (code, roleKey) => {
@@ -206,7 +196,6 @@ const isFieldMandatoryForRole = (code, roleKey) => {
 }
 
 const addField = async code => {
-  // ADR-169: preset = code + order only (no required)
   const maxOrder = defaultFields.value.reduce((max, f) => Math.max(max, f.order ?? 0), -1)
   const updated = [...defaultFields.value, { code, order: maxOrder + 1 }]
 
@@ -226,6 +215,76 @@ const updateFieldOrder = async (code, order) => {
   const updated = defaultFields.value.map(f => f.code === code ? { ...f, order: parsed } : f)
 
   await savePresetFields(updated)
+}
+
+// B5: Inline field creation dialog
+const isFieldDialogOpen = ref(false)
+const fieldDialogLoading = ref(false)
+const newFieldForm = ref({ code: '', label: '', type: 'text', scope: 'company_user' })
+
+const fieldTypeOptions = [
+  { title: 'Text', value: 'text' },
+  { title: 'Textarea', value: 'textarea' },
+  { title: 'Number', value: 'number' },
+  { title: 'Date', value: 'date' },
+  { title: 'Select', value: 'select' },
+  { title: 'Boolean', value: 'boolean' },
+  { title: 'Phone', value: 'phone' },
+  { title: 'Email', value: 'email' },
+]
+
+const fieldScopeOptions = [
+  { title: 'Company', value: 'company' },
+  { title: 'Company User', value: 'company_user' },
+]
+
+const openFieldDialog = () => {
+  newFieldForm.value = { code: '', label: '', type: 'text', scope: 'company_user' }
+  isFieldDialogOpen.value = true
+}
+
+const createFieldInline = async () => {
+  if (!newFieldForm.value.code || !newFieldForm.value.label) return
+
+  fieldDialogLoading.value = true
+
+  try {
+    const data = await jobdomainsStore.createField({
+      code: newFieldForm.value.code,
+      label: newFieldForm.value.label,
+      type: newFieldForm.value.type,
+      scope: newFieldForm.value.scope,
+    })
+
+    fieldDefinitions.value.push(data.field)
+    toast(t('platformJobdomains.fieldCreated'), 'success')
+    isFieldDialogOpen.value = false
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformJobdomains.failedToCreateField'), 'error')
+  }
+  finally {
+    fieldDialogLoading.value = false
+  }
+}
+
+const deleteFieldInline = async field => {
+  if (!field.id || field.is_system) return
+  if (!confirm(t('platformJobdomains.confirmDeleteField', { label: field.label }))) return
+
+  try {
+    await jobdomainsStore.deleteField(field.id)
+
+    fieldDefinitions.value = fieldDefinitions.value.filter(d => d.id !== field.id)
+
+    if (presetCodes.value.has(field.code))
+      await removeField(field.code)
+
+    toast(t('platformJobdomains.fieldDeleted'), 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformJobdomains.failedToDeleteField'), 'error')
+  }
 }
 
 // ─── Roles — Preset management ──────────────────────
@@ -252,7 +311,7 @@ const roleForm = ref({ name: '', is_administrative: false, bundles: [], permissi
 const roleDrawerLoading = ref(false)
 const isRoleAdvancedMode = ref(false)
 
-// Field config drawer state (separate from role drawer)
+// Field config drawer state
 const isFieldDrawerOpen = ref(false)
 const fieldDrawerRoleKey = ref(null)
 const fieldDrawerRoleName = ref('')
@@ -282,25 +341,21 @@ const getRoleBundleState = bundle => {
 
 const toggleRoleBundle = bundle => {
   const idx = roleForm.value.bundles.indexOf(bundle.key)
-  if (idx === -1) {
+  if (idx === -1)
     roleForm.value.bundles.push(bundle.key)
-  }
-  else {
+  else
     roleForm.value.bundles.splice(idx, 1)
-  }
 }
 
-// ─── Advanced mode: Permission groups (mirrors Company Roles) ─
+// ─── Advanced mode: Permission groups ─
 const rolePermissionGroups = computed(() => {
   const isManagement = roleForm.value.is_administrative
   const coreGroups = {}
   const moduleGroups = {}
 
-  // Build module metadata lookup from moduleBundles
   const modMeta = {}
-  for (const m of moduleBundles.value) {
+  for (const m of moduleBundles.value)
     modMeta[m.module_key] = { name: m.module_name, description: '', isCore: m.is_core }
-  }
 
   for (const p of permissionCatalog.value) {
     if (!isManagement && p.is_admin) continue
@@ -331,14 +386,12 @@ const hasModulePermGroups = computed(() => rolePermissionGroups.value.some(g => 
 
 watch(() => roleForm.value.is_administrative, newVal => {
   if (!newVal) {
-    // Strip admin bundles
     const adminBundleKeys = new Set(
       moduleBundles.value.flatMap(m => m.bundles.filter(b => b.is_admin).map(b => b.key)),
     )
 
     roleForm.value.bundles = roleForm.value.bundles.filter(k => !adminBundleKeys.has(k))
 
-    // Strip admin permissions
     const adminKeys = new Set(
       permissionCatalog.value.filter(p => p.is_admin).map(p => p.key),
     )
@@ -357,6 +410,7 @@ const generateRoleKey = name => {
   if (!current[base]) return base
   let i = 2
   while (current[`${base}_${i}`]) i++
+
   return `${base}_${i}`
 }
 
@@ -450,7 +504,6 @@ const updateFieldDrawerConfig = (code, prop, value) => {
   }
 }
 
-// Group field definitions by their group in the role's field_config
 const fieldDrawerGroups = computed(() => {
   const groups = {}
   const ungrouped = []
@@ -469,11 +522,10 @@ const fieldDrawerGroups = computed(() => {
     }
   }
 
-  // Build ordered array: named groups first (sorted), then ungrouped
   const result = []
-  for (const name of Object.keys(groups).sort()) {
+  for (const name of Object.keys(groups).sort())
     result.push({ name, defs: groups[name] })
-  }
+
   if (ungrouped.length > 0)
     result.push({ name: null, defs: ungrouped })
 
@@ -535,12 +587,10 @@ const isRolePermChecked = permKey => {
 
 const toggleRolePerm = permKey => {
   const idx = roleForm.value.permissions.indexOf(permKey)
-  if (idx === -1) {
+  if (idx === -1)
     roleForm.value.permissions.push(permKey)
-  }
-  else {
+  else
     roleForm.value.permissions.splice(idx, 1)
-  }
 }
 
 const saveDefaultRoles = async updatedRoles => {
@@ -573,20 +623,14 @@ const handleRoleDrawerSubmit = async () => {
       is_administrative: roleForm.value.is_administrative,
     }
 
-    // Include bundles if any are selected
-    if (roleForm.value.bundles.length > 0) {
+    if (roleForm.value.bundles.length > 0)
       roleData.bundles = roleForm.value.bundles
-    }
 
-    // Include permissions if any direct permissions (Advanced mode fallback)
-    if (roleForm.value.permissions.length > 0) {
+    if (roleForm.value.permissions.length > 0)
       roleData.permissions = roleForm.value.permissions
-    }
 
-    // ADR-164: Include field overrides
-    if (roleForm.value.fields.length > 0) {
+    if (roleForm.value.fields.length > 0)
       roleData.fields = roleForm.value.fields
-    }
 
     if (isRoleEditMode.value) {
       current[editingRoleKey.value] = roleData
@@ -622,7 +666,6 @@ const deletePresetRole = async role => {
 // ─── Document Presets (ADR-178/179) ─────────────────
 const documentPresets = ref([])
 
-// Source of truth = DB (jobdomain.default_documents), not the server-computed is_in_preset
 const defaultDocuments = computed(() => jobdomain.value?.default_documents || [])
 const presetDocCodes = computed(() => new Set(defaultDocuments.value.map(d => d.code)))
 
@@ -676,6 +719,91 @@ const updateDocumentOrder = async (code, order) => {
   await saveDocumentPresets(newDocs)
 }
 
+// B6: Inline document type creation dialog
+const isDocDialogOpen = ref(false)
+const docDialogLoading = ref(false)
+const newDocForm = ref({ code: '', label: '', scope: 'company_user' })
+
+const docScopeOptions = [
+  { title: 'Company', value: 'company' },
+  { title: 'Company User', value: 'company_user' },
+]
+
+const openDocDialog = () => {
+  newDocForm.value = { code: '', label: '', scope: 'company_user' }
+  isDocDialogOpen.value = true
+}
+
+const createDocInline = async () => {
+  if (!newDocForm.value.code || !newDocForm.value.label) return
+
+  docDialogLoading.value = true
+
+  try {
+    const data = await jobdomainsStore.createDocumentType({
+      code: newDocForm.value.code,
+      label: newDocForm.value.label,
+      scope: newDocForm.value.scope,
+    })
+
+    // Add to presets list so it's immediately visible
+    if (data.document_type) {
+      documentPresets.value.push({
+        code: data.document_type.code,
+        label: data.document_type.label,
+        scope: data.document_type.scope,
+        max_file_size_mb: 10,
+        accepted_types: ['pdf', 'jpg', 'png'],
+        applicable_markets: null,
+        is_in_preset: false,
+        mandatory_for_jobdomain: false,
+        required_by_modules: [],
+        preset_order: null,
+      })
+    }
+
+    toast(t('platformJobdomains.documentCreated'), 'success')
+    isDocDialogOpen.value = false
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformJobdomains.failedToCreateDocument'), 'error')
+  }
+  finally {
+    docDialogLoading.value = false
+  }
+}
+
+// ─── Overlay management ─────────────────────────────
+const isDeleteOverlayDialogOpen = ref(false)
+
+const currentOverlay = computed(() => {
+  if (!selectedMarketKey.value) return null
+
+  return overlays.value[selectedMarketKey.value] || null
+})
+
+const currentResolvedPreview = computed(() => {
+  const key = selectedMarketKey.value || '_global'
+
+  return resolvedPreviews.value[key] || resolvedPreviews.value._global || null
+})
+
+const deleteCurrentOverlay = async () => {
+  if (!selectedMarketKey.value || !jobdomain.value) return
+
+  try {
+    await jobdomainsStore.deleteOverlay(jobdomain.value.key, selectedMarketKey.value)
+
+    delete overlays.value[selectedMarketKey.value]
+    delete resolvedPreviews.value[selectedMarketKey.value]
+    toast(t('platformJobdomains.overlayDeleted'), 'success')
+    isDeleteOverlayDialogOpen.value = false
+  }
+  catch (error) {
+    toast(error?.data?.message || t('platformJobdomains.failedToDeleteOverlay'), 'error')
+  }
+}
+
 // ─── Load data ──────────────────────────────────────
 onMounted(async () => {
   try {
@@ -691,6 +819,9 @@ onMounted(async () => {
     mandatoryFieldCodes.value = jdData.mandatory_field_codes || []
     mandatoryByRole.value = jdData.mandatory_by_role || {}
     documentPresets.value = jdData.document_presets || []
+    overlays.value = jdData.overlays || {}
+    markets.value = jdData.markets || []
+    resolvedPreviews.value = jdData.resolved_previews || {}
     resetOverviewForm()
   }
   catch {
@@ -726,7 +857,7 @@ onMounted(async () => {
             <VIcon icon="tabler-arrow-left" />
           </VBtn>
 
-          <div>
+          <div class="flex-grow-1">
             <h5 class="text-h5">
               {{ jobdomain.label }}
             </h5>
@@ -749,8 +880,46 @@ onMounted(async () => {
               </VChip>
             </div>
           </div>
+
+          <!-- B3: Market Overlay Selector -->
+          <MarketOverlaySelector
+            v-if="markets.length > 0"
+            v-model="selectedMarketKey"
+            :markets="markets"
+            :overlays="overlays"
+          />
         </VCardText>
       </VCard>
+
+      <!-- Market overlay info alert -->
+      <VAlert
+        v-if="selectedMarketKey && currentOverlay"
+        type="info"
+        variant="tonal"
+        class="mb-4"
+        closable
+      >
+        {{ t('platformJobdomains.overlayView', { market: selectedMarketKey }) }}
+        <template #append>
+          <VBtn
+            variant="text"
+            color="error"
+            size="small"
+            @click="isDeleteOverlayDialogOpen = true"
+          >
+            {{ t('platformJobdomains.deleteOverlay') }}
+          </VBtn>
+        </template>
+      </VAlert>
+
+      <VAlert
+        v-else-if="selectedMarketKey && !currentOverlay"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+      >
+        {{ t('platformJobdomains.overlayEmpty') }}
+      </VAlert>
 
       <!-- Tabs -->
       <VTabs v-model="activeTab">
@@ -913,7 +1082,7 @@ onMounted(async () => {
           </VCard>
         </VWindowItem>
 
-        <!-- ─── Tab 2: Default Modules ──────────────── -->
+        <!-- ─── Tab 2: Default Modules (B4 refonte) ── -->
         <VWindowItem value="modules">
           <VCard>
             <VCardTitle class="d-flex align-center">
@@ -932,250 +1101,138 @@ onMounted(async () => {
               </VChip>
             </VCardTitle>
 
-            <VAlert
-              type="info"
-              variant="tonal"
-              class="mx-4 mt-2"
-            >
-              {{ t('platformJobdomains.presetInfo') }}
-            </VAlert>
+            <VCardText>
+              <VAlert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-4"
+              >
+                {{ t('platformJobdomains.presetInfo') }}
+              </VAlert>
 
-            <!-- Section: Core Modules -->
-            <template v-if="coreModules.length">
-              <VCardTitle class="text-body-1 mt-4">
-                <VIcon
-                  icon="tabler-shield-check"
-                  size="20"
-                  class="me-2"
-                  color="primary"
-                />
-                {{ t('platformJobdomains.coreModules') }}
-              </VCardTitle>
-              <VCardSubtitle class="text-body-2 mb-2">
-                {{ t('platformJobdomains.coreModulesInfo') }}
-              </VCardSubtitle>
-              <VTable class="text-no-wrap">
-                <tbody>
-                  <tr
-                    v-for="mod in coreModules"
-                    :key="mod.key"
+              <!-- B4: Search + Filters -->
+              <VRow class="mb-4">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <AppTextField
+                    v-model="moduleSearch"
+                    :placeholder="t('platformJobdomains.searchModules')"
+                    prepend-inner-icon="tabler-search"
+                    clearable
+                    density="compact"
+                    hide-details
+                  />
+                </VCol>
+                <VCol
+                  cols="12"
+                  md="3"
+                >
+                  <AppSelect
+                    v-model="moduleTypeFilter"
+                    :items="[
+                      { title: t('platformJobdomains.allTypes'), value: 'all' },
+                      { title: t('platformJobdomains.core'), value: 'core' },
+                      { title: t('platformJobdomains.addon'), value: 'addon' },
+                    ]"
+                    density="compact"
+                    hide-details
+                  />
+                </VCol>
+              </VRow>
+
+              <!-- B4: Module Cards Grid -->
+              <VRow v-if="filteredModules.length">
+                <VCol
+                  v-for="mod in filteredModules"
+                  :key="mod.key"
+                  cols="12"
+                  sm="6"
+                  md="4"
+                  class="d-flex"
+                >
+                  <VCard
+                    variant="outlined"
+                    class="flex-grow-1 d-flex flex-column"
+                    :class="isModuleSelected(mod.key) ? 'border-primary border-opacity-100' : 'border-opacity-50'"
                   >
-                    <td class="font-weight-medium">
-                      <RouterLink
-                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
-                        class="text-high-emphasis text-decoration-none"
-                      >
-                        {{ mod.name }}
-                      </RouterLink>
-                      <VChip
-                        color="primary"
-                        size="x-small"
-                        variant="tonal"
-                        class="ms-2"
-                      >
-                        {{ t('platformModules.core') }}
-                      </VChip>
-                    </td>
-                    <td class="text-medium-emphasis">
+                    <VCardItem>
+                      <template #prepend>
+                        <VAvatar
+                          :color="isModuleSelected(mod.key) ? 'primary' : 'secondary'"
+                          variant="tonal"
+                          size="44"
+                          rounded
+                        >
+                          <VIcon :icon="mod.icon_name || 'tabler-puzzle'" />
+                        </VAvatar>
+                      </template>
+                      <VCardTitle class="text-body-1">
+                        <RouterLink
+                          :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
+                          class="text-high-emphasis text-decoration-none"
+                        >
+                          {{ mod.name }}
+                        </RouterLink>
+                      </VCardTitle>
+                      <template #append>
+                        <VSwitch
+                          :model-value="isModuleSelected(mod.key)"
+                          :disabled="mod.type === 'core'"
+                          density="compact"
+                          hide-details
+                          @update:model-value="toggleModule(mod.key, $event)"
+                        />
+                      </template>
+                    </VCardItem>
+                    <VCardText class="text-body-2 text-medium-emphasis pt-0 flex-grow-1">
                       {{ mod.description }}
-                    </td>
-                    <td style="width: 100px;">
-                      <VSwitch
-                        :model-value="true"
-                        density="compact"
-                        hide-details
-                        disabled
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </template>
-
-            <!-- Section: Included by Default -->
-            <template v-if="includedModules.length">
-              <VDivider class="my-2" />
-              <VCardTitle class="text-body-1">
-                <VIcon
-                  icon="tabler-check"
-                  size="20"
-                  class="me-2"
-                  color="success"
-                />
-                {{ t('platformJobdomains.includedByDefault') }}
-              </VCardTitle>
-              <VCardSubtitle class="text-body-2 mb-2">
-                {{ t('platformJobdomains.includedByDefaultInfo') }}
-              </VCardSubtitle>
-              <VTable class="text-no-wrap">
-                <tbody>
-                  <tr
-                    v-for="mod in includedModules"
-                    :key="mod.key"
-                  >
-                    <td class="font-weight-medium">
-                      <RouterLink
-                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
-                        class="text-high-emphasis text-decoration-none"
-                      >
-                        {{ mod.name }}
-                      </RouterLink>
+                    </VCardText>
+                    <VCardText class="d-flex flex-wrap gap-1 pt-0">
                       <VChip
-                        color="success"
+                        :color="mod.type === 'core' ? 'primary' : 'info'"
                         size="x-small"
                         variant="tonal"
-                        class="ms-2"
                       >
-                        {{ t('platformJobdomains.included') }}
+                        {{ mod.type }}
+                      </VChip>
+                      <VChip
+                        v-if="mod.pricing_mode && mod.pricing_mode !== mod.type"
+                        size="x-small"
+                        variant="tonal"
+                        :color="mod.pricing_mode === 'included' ? 'success' : 'warning'"
+                      >
+                        {{ mod.pricing_mode }}
                       </VChip>
                       <VChip
                         v-if="mod.min_plan"
-                        color="warning"
                         size="x-small"
                         variant="tonal"
-                        class="ms-1"
-                      >
-                        {{ t('platformJobdomains.requiresPlan', { plan: planLabel(mod.min_plan) }) }}
-                      </VChip>
-                    </td>
-                    <td class="text-medium-emphasis">
-                      {{ mod.description }}
-                    </td>
-                    <td style="width: 100px;">
-                      <VSwitch
-                        :model-value="true"
-                        density="compact"
-                        hide-details
-                        @update:model-value="toggleModule(mod.key, $event)"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </template>
-
-            <!-- Section: Compatible (Available to add) -->
-            <template v-if="compatibleModules.length">
-              <VDivider class="my-2" />
-              <VCardTitle class="text-body-1">
-                <VIcon
-                  icon="tabler-puzzle"
-                  size="20"
-                  class="me-2"
-                  color="info"
-                />
-                {{ t('platformJobdomains.availableModules') }}
-              </VCardTitle>
-              <VCardSubtitle class="text-body-2 mb-2">
-                {{ t('platformJobdomains.availableModulesInfo') }}
-              </VCardSubtitle>
-              <VTable class="text-no-wrap">
-                <tbody>
-                  <tr
-                    v-for="mod in compatibleModules"
-                    :key="mod.key"
-                  >
-                    <td class="font-weight-medium">
-                      <RouterLink
-                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
-                        class="text-high-emphasis text-decoration-none"
-                      >
-                        {{ mod.name }}
-                      </RouterLink>
-                      <VChip
-                        v-if="mod.compatible_jobdomains"
-                        color="info"
-                        size="x-small"
-                        variant="tonal"
-                        class="ms-2"
-                      >
-                        {{ t('platformJobdomains.marketplace') }}
-                      </VChip>
-                      <VChip
-                        v-if="mod.min_plan"
-                        color="warning"
-                        size="x-small"
-                        variant="tonal"
-                        class="ms-1"
-                      >
-                        {{ t('platformJobdomains.requiresPlan', { plan: planLabel(mod.min_plan) }) }}
-                      </VChip>
-                    </td>
-                    <td class="text-medium-emphasis">
-                      {{ mod.description }}
-                    </td>
-                    <td style="width: 100px;">
-                      <VSwitch
-                        :model-value="false"
-                        density="compact"
-                        hide-details
-                        @update:model-value="toggleModule(mod.key, $event)"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </template>
-
-            <!-- Section: Incompatible -->
-            <template v-if="incompatibleModules.length">
-              <VDivider class="my-2" />
-              <VCardTitle class="text-body-1">
-                <VIcon
-                  icon="tabler-lock"
-                  size="20"
-                  class="me-2"
-                  color="secondary"
-                />
-                {{ t('platformJobdomains.incompatibleModules') }}
-              </VCardTitle>
-              <VCardSubtitle class="text-body-2 mb-2">
-                {{ t('platformJobdomains.incompatibleModulesInfo') }}
-              </VCardSubtitle>
-              <VTable class="text-no-wrap">
-                <tbody>
-                  <tr
-                    v-for="mod in incompatibleModules"
-                    :key="mod.key"
-                    class="text-disabled"
-                  >
-                    <td class="font-weight-medium">
-                      <RouterLink
-                        :to="{ name: 'platform-modules-key', params: { key: mod.key } }"
-                        class="text-decoration-none"
-                      >
-                        {{ mod.name }}
-                      </RouterLink>
-                      <VChip
                         color="secondary"
+                      >
+                        {{ t('platformModules.minPlan') }}: {{ mod.min_plan }}
+                      </VChip>
+                      <VChip
+                        v-if="mod.compatible_jobdomains && !mod.compatible_jobdomains.includes(jdKey)"
                         size="x-small"
                         variant="tonal"
-                        class="ms-2"
+                        color="error"
                       >
                         {{ t('platformJobdomains.notAvailable') }}
                       </VChip>
-                    </td>
-                    <td>
-                      {{ mod.description }}
-                    </td>
-                    <td style="width: 100px;">
-                      <VSwitch
-                        :model-value="false"
-                        density="compact"
-                        hide-details
-                        disabled
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </template>
+                    </VCardText>
+                  </VCard>
+                </VCol>
+              </VRow>
 
-            <VCardText
-              v-if="!allModules.length"
-              class="text-center text-disabled"
-            >
-              {{ t('platformJobdomains.noModulesAvailable') }}
+              <div
+                v-else
+                class="text-center text-disabled pa-8"
+              >
+                {{ moduleSearch ? t('platformJobdomains.noMatchingModules') : t('platformJobdomains.noModulesAvailable') }}
+              </div>
             </VCardText>
           </VCard>
         </VWindowItem>
@@ -1190,6 +1247,16 @@ onMounted(async () => {
               />
               {{ t('platformJobdomains.defaultFields') }}
               <VSpacer />
+              <!-- B5: Create Field button -->
+              <VBtn
+                size="small"
+                variant="tonal"
+                prepend-icon="tabler-plus"
+                class="me-2"
+                @click="openFieldDialog"
+              >
+                {{ t('platformJobdomains.createField') }}
+              </VBtn>
               <VChip
                 color="info"
                 variant="tonal"
@@ -1207,7 +1274,6 @@ onMounted(async () => {
               {{ t('platformJobdomains.fieldsPresetInfo') }}
             </VAlert>
 
-            <!-- ADR-169: mandatory governance alert -->
             <VAlert
               v-if="mandatoryFieldCodes.length > 0"
               type="warning"
@@ -1236,7 +1302,7 @@ onMounted(async () => {
                   <th style="width: 100px;">
                     {{ t('platformFields.order') }}
                   </th>
-                  <th style="width: 60px;" />
+                  <th style="width: 100px;" />
                 </tr>
               </thead>
               <tbody>
@@ -1260,7 +1326,6 @@ onMounted(async () => {
                     <DocumentScopeChip :scope="field.scope" />
                   </td>
                   <td>
-                    <!-- ADR-169: mandatory from catalog = read-only indicator -->
                     <VChip
                       v-if="isFieldMandatory(field.code)"
                       color="error"
@@ -1296,15 +1361,34 @@ onMounted(async () => {
                     />
                   </td>
                   <td>
-                    <VBtn
-                      icon
-                      variant="text"
-                      size="small"
-                      color="error"
-                      @click="removeField(field.code)"
-                    >
-                      <VIcon icon="tabler-x" />
-                    </VBtn>
+                    <div class="d-flex gap-1">
+                      <VBtn
+                        icon
+                        variant="text"
+                        size="small"
+                        color="error"
+                        @click="removeField(field.code)"
+                      >
+                        <VIcon icon="tabler-x" />
+                      </VBtn>
+                      <!-- B5: Delete field definition (non-system only) -->
+                      <VBtn
+                        v-if="!field.is_system && field.id"
+                        icon
+                        variant="text"
+                        size="small"
+                        color="error"
+                        @click="deleteFieldInline(field)"
+                      >
+                        <VIcon icon="tabler-trash" />
+                        <VTooltip
+                          activator="parent"
+                          location="top"
+                        >
+                          {{ t('common.delete') }}
+                        </VTooltip>
+                      </VBtn>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -1324,7 +1408,6 @@ onMounted(async () => {
               {{ t('platformJobdomains.availableFields') }}
             </VCardTitle>
 
-            <!-- Company scope -->
             <template v-if="availableCompanyDefs.length">
               <VCardText class="pb-2">
                 <VChip
@@ -1355,7 +1438,6 @@ onMounted(async () => {
               </VCardText>
             </template>
 
-            <!-- Company user scope -->
             <template v-if="availableCompanyUserDefs.length">
               <VCardText class="pb-2">
                 <VChip
@@ -1560,6 +1642,16 @@ onMounted(async () => {
                 >
                   {{ t('documents.preset') }}
                 </VChip>
+                <VSpacer />
+                <!-- B6: Create Document Type button -->
+                <VBtn
+                  size="small"
+                  variant="tonal"
+                  prepend-icon="tabler-plus"
+                  @click="openDocDialog"
+                >
+                  {{ t('platformJobdomains.createDocumentType') }}
+                </VBtn>
               </VCardTitle>
             </VCardItem>
             <VCardText>
@@ -1761,17 +1853,6 @@ onMounted(async () => {
                       <template #label>
                         <div>
                           <span class="font-weight-medium">{{ t('roles.management') }}</span>
-                          <VTooltip location="top">
-                            <template #activator="{ props: tooltipProps }">
-                              <VIcon
-                                icon="tabler-info-circle"
-                                size="16"
-                                class="ms-1 text-disabled"
-                                v-bind="tooltipProps"
-                              />
-                            </template>
-                            {{ t('roles.managementTooltip') }}
-                          </VTooltip>
                           <div class="text-body-2 text-disabled">
                             {{ t('roles.managementDescription') }}
                           </div>
@@ -1802,9 +1883,8 @@ onMounted(async () => {
                     </VBtn>
                   </div>
 
-                  <!-- ═══ SIMPLE MODE: Capability bundles ═══ -->
+                  <!-- SIMPLE MODE: Capability bundles -->
                   <template v-if="!isRoleAdvancedMode">
-                    <!-- Core capabilities -->
                     <template v-if="roleCoreModules.length">
                       <div class="d-flex align-center gap-2 mb-3">
                         <VIcon
@@ -1814,7 +1894,6 @@ onMounted(async () => {
                         />
                         <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                       </div>
-
                       <template
                         v-for="mod in roleCoreModules"
                         :key="mod.module_key"
@@ -1868,14 +1947,11 @@ onMounted(async () => {
                         </div>
                       </template>
                     </template>
-
-                    <!-- Business module capabilities -->
                     <template v-if="roleBusinessModules.length">
                       <VDivider
                         v-if="roleCoreModules.length"
                         class="mb-3"
                       />
-
                       <template
                         v-for="mod in roleBusinessModules"
                         :key="mod.module_key"
@@ -1888,14 +1964,7 @@ onMounted(async () => {
                           />
                           <span class="text-body-1 font-weight-medium">{{ mod.module_name }}</span>
                         </div>
-
                         <div class="ms-7 mb-4">
-                          <div
-                            v-if="mod.module_description"
-                            class="text-body-2 text-disabled mb-2"
-                          >
-                            {{ mod.module_description }}
-                          </div>
                           <div
                             v-for="cap in mod.bundles"
                             :key="cap.key"
@@ -1909,40 +1978,16 @@ onMounted(async () => {
                             >
                               <template #label>
                                 <span>{{ cap.label }}</span>
-                                <VTooltip
-                                  v-if="cap.hint"
-                                  location="top"
-                                >
-                                  <template #activator="{ props: tp }">
-                                    <VIcon
-                                      icon="tabler-info-circle"
-                                      size="14"
-                                      class="ms-1 text-disabled"
-                                      v-bind="tp"
-                                    />
-                                  </template>
-                                  {{ cap.hint }}
-                                </VTooltip>
                               </template>
                             </VCheckbox>
-                            <VSpacer />
-                            <VChip
-                              v-if="cap.is_admin"
-                              size="x-small"
-                              color="error"
-                              variant="tonal"
-                            >
-                              {{ t('common.sensitive') }}
-                            </VChip>
                           </div>
                         </div>
                       </template>
                     </template>
                   </template>
 
-                  <!-- ═══ ADVANCED MODE: Individual permissions ═══ -->
+                  <!-- ADVANCED MODE: Individual permissions -->
                   <template v-else>
-                    <!-- Core section -->
                     <template v-if="hasCorePermGroups">
                       <div class="d-flex align-center gap-2 mb-3">
                         <VIcon
@@ -1952,7 +1997,6 @@ onMounted(async () => {
                         />
                         <span class="text-body-1 font-weight-medium">{{ t('roles.coreTeamCompany') }}</span>
                       </div>
-
                       <template
                         v-for="group in rolePermissionGroups.filter(g => g.isCore)"
                         :key="group.module_key"
@@ -1960,12 +2004,6 @@ onMounted(async () => {
                         <div class="ms-7 mb-4">
                           <div class="text-body-1 font-weight-medium">
                             {{ group.name }}
-                          </div>
-                          <div
-                            v-if="group.description"
-                            class="text-body-2 text-disabled mb-2"
-                          >
-                            {{ group.description }}
                           </div>
                           <div
                             v-for="perm in group.permissions"
@@ -1980,20 +2018,6 @@ onMounted(async () => {
                             >
                               <template #label>
                                 <span>{{ perm.label }}</span>
-                                <VTooltip
-                                  v-if="perm.hint"
-                                  location="top"
-                                >
-                                  <template #activator="{ props: tp }">
-                                    <VIcon
-                                      icon="tabler-info-circle"
-                                      size="14"
-                                      class="ms-1 text-disabled"
-                                      v-bind="tp"
-                                    />
-                                  </template>
-                                  {{ perm.hint }}
-                                </VTooltip>
                               </template>
                             </VCheckbox>
                             <VSpacer />
@@ -2009,14 +2033,11 @@ onMounted(async () => {
                         </div>
                       </template>
                     </template>
-
-                    <!-- Module section(s) -->
                     <template v-if="hasModulePermGroups">
                       <VDivider
                         v-if="hasCorePermGroups"
                         class="mb-3"
                       />
-
                       <template
                         v-for="group in rolePermissionGroups.filter(g => !g.isCore)"
                         :key="group.module_key"
@@ -2029,14 +2050,7 @@ onMounted(async () => {
                           />
                           <span class="text-body-1 font-weight-medium">{{ group.name }}</span>
                         </div>
-
                         <div class="ms-7 mb-4">
-                          <div
-                            v-if="group.description"
-                            class="text-body-2 text-disabled mb-2"
-                          >
-                            {{ group.description }}
-                          </div>
                           <div
                             v-for="perm in group.permissions"
                             :key="perm.key"
@@ -2050,31 +2064,8 @@ onMounted(async () => {
                             >
                               <template #label>
                                 <span>{{ perm.label }}</span>
-                                <VTooltip
-                                  v-if="perm.hint"
-                                  location="top"
-                                >
-                                  <template #activator="{ props: tp }">
-                                    <VIcon
-                                      icon="tabler-info-circle"
-                                      size="14"
-                                      class="ms-1 text-disabled"
-                                      v-bind="tp"
-                                    />
-                                  </template>
-                                  {{ perm.hint }}
-                                </VTooltip>
                               </template>
                             </VCheckbox>
-                            <VSpacer />
-                            <VChip
-                              v-if="perm.is_admin"
-                              size="x-small"
-                              color="error"
-                              variant="tonal"
-                            >
-                              {{ t('common.sensitive') }}
-                            </VChip>
                           </div>
                         </div>
                       </template>
@@ -2178,7 +2169,6 @@ onMounted(async () => {
                     >
                       <td class="font-weight-medium">
                         {{ def.label }}
-                        <!-- ADR-169: mandatory indicator from catalog -->
                         <VChip
                           v-if="isFieldMandatoryForRole(def.code, fieldDrawerRoleKey)"
                           color="error"
@@ -2190,12 +2180,6 @@ onMounted(async () => {
                             icon="tabler-lock"
                             size="12"
                           />
-                          <VTooltip
-                            activator="parent"
-                            location="top"
-                          >
-                            {{ t('platformJobdomains.mandatoryTooltip') }}
-                          </VTooltip>
                         </VChip>
                       </td>
                       <td>
@@ -2288,6 +2272,153 @@ onMounted(async () => {
             <VBtn
               color="error"
               @click="handleDelete"
+            >
+              {{ t('common.delete') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
+
+      <!-- ─── B5: Create Field Dialog ─────────────────── -->
+      <VDialog
+        v-model="isFieldDialogOpen"
+        max-width="500"
+      >
+        <VCard>
+          <VCardTitle>{{ t('platformJobdomains.createFieldTitle') }}</VCardTitle>
+          <VCardText>
+            <VForm @submit.prevent="createFieldInline">
+              <VRow>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="newFieldForm.code"
+                    :label="t('platformJobdomains.fieldCode')"
+                    placeholder="my_field_code"
+                    :hint="t('platformJobdomains.codeHint')"
+                    persistent-hint
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="newFieldForm.label"
+                    :label="t('platformJobdomains.fieldLabel')"
+                  />
+                </VCol>
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <AppSelect
+                    v-model="newFieldForm.type"
+                    :label="t('platformJobdomains.fieldType')"
+                    :items="fieldTypeOptions"
+                  />
+                </VCol>
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <AppSelect
+                    v-model="newFieldForm.scope"
+                    :label="t('platformJobdomains.fieldScope')"
+                    :items="fieldScopeOptions"
+                  />
+                </VCol>
+              </VRow>
+            </VForm>
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="tonal"
+              @click="isFieldDialogOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              :loading="fieldDialogLoading"
+              @click="createFieldInline"
+            >
+              {{ t('common.create') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
+
+      <!-- ─── B6: Create Document Type Dialog ─────────── -->
+      <VDialog
+        v-model="isDocDialogOpen"
+        max-width="500"
+      >
+        <VCard>
+          <VCardTitle>{{ t('platformJobdomains.createDocumentTypeTitle') }}</VCardTitle>
+          <VCardText>
+            <VForm @submit.prevent="createDocInline">
+              <VRow>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="newDocForm.code"
+                    :label="t('platformJobdomains.documentCode')"
+                    placeholder="my_document_code"
+                    :hint="t('platformJobdomains.codeHint')"
+                    persistent-hint
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="newDocForm.label"
+                    :label="t('platformJobdomains.documentLabel')"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppSelect
+                    v-model="newDocForm.scope"
+                    :label="t('platformJobdomains.documentScope')"
+                    :items="docScopeOptions"
+                  />
+                </VCol>
+              </VRow>
+            </VForm>
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="tonal"
+              @click="isDocDialogOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              :loading="docDialogLoading"
+              @click="createDocInline"
+            >
+              {{ t('common.create') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
+
+      <!-- ─── Delete Overlay Dialog ───────────────────── -->
+      <VDialog
+        v-model="isDeleteOverlayDialogOpen"
+        max-width="400"
+      >
+        <VCard>
+          <VCardTitle>{{ t('platformJobdomains.deleteOverlay') }}</VCardTitle>
+          <VCardText>
+            {{ t('platformJobdomains.confirmDeleteOverlay', { market: selectedMarketKey }) }}
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="tonal"
+              @click="isDeleteOverlayDialogOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              color="error"
+              @click="deleteCurrentOverlay"
             >
               {{ t('common.delete') }}
             </VBtn>

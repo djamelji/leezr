@@ -267,8 +267,8 @@ class AuthorizationContractTest extends TestCase
 
         $navKeys = $this->extractNavKeys($response->json('groups'));
 
-        // Settings is a structure item — operational cannot see it
-        $this->assertNotContains('settings', $navKeys,
+        // Company Profile is a structure item — operational cannot see it
+        $this->assertNotContains('company-profile', $navKeys,
             'Operational role must NOT see structure surface items');
     }
 

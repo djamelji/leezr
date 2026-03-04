@@ -18,6 +18,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hideCreateButton: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['refresh', 'create-custom', 'archive-custom', 'delete-custom'])
@@ -82,7 +86,7 @@ const handleSave = async doc => {
 <template>
   <!-- Add Custom Document Type button -->
   <div
-    v-if="canEdit"
+    v-if="canEdit && !props.hideCreateButton"
     class="d-flex justify-end mb-4"
   >
     <VBtn
@@ -219,6 +223,26 @@ const handleSave = async doc => {
         {{ t('companySettings.companyDocumentsScope') }}
       </h6>
       <DocumentScopeChip scope="company" />
+      <VSpacer />
+      <VBtn
+        v-if="canEdit"
+        icon
+        variant="tonal"
+        color="success"
+        size="x-small"
+        @click="emit('create-custom')"
+      >
+        <VIcon
+          icon="tabler-plus"
+          size="18"
+        />
+        <VTooltip
+          activator="parent"
+          location="top"
+        >
+          {{ t('companyProfile.createType') }}
+        </VTooltip>
+      </VBtn>
     </div>
     <VTable class="text-no-wrap">
       <thead>

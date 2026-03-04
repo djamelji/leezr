@@ -32,6 +32,36 @@ const rejectNote = ref('')
 const isViewerOpen = ref(false)
 const viewerDocument = ref(null)
 
+// ADR-192: Document request
+const requestMenuVisible = ref(false)
+const requestingCode = ref(null)
+
+// Requestable doc types = those activated but without an active request
+const requestableDocTypes = computed(() => {
+  return memberDocuments.value.filter(
+    doc => !doc.request_status || doc.request_status === 'approved' || doc.request_status === 'rejected',
+  )
+})
+
+const requestDocument = async code => {
+  requestingCode.value = code
+  try {
+    await $api('/company/document-requests', {
+      method: 'POST',
+      body: { user_id: props.memberId, document_type_code: code },
+    })
+    toast(t('documents.requestSent'), 'success')
+    requestMenuVisible.value = false
+    await fetchDocuments()
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    requestingCode.value = null
+  }
+}
+
 const fetchDocuments = async () => {
   documentsLoading.value = true
   try {
@@ -171,6 +201,35 @@ const handleViewerDownload = async () => {
 
 <template>
   <VCard>
+    <!-- ADR-192: Request Document action -->
+    <VCardItem v-if="canEdit && requestableDocTypes.length && !documentsLoading">
+      <template #append>
+        <VMenu v-model="requestMenuVisible">
+          <template #activator="{ props: menuProps }">
+            <VBtn
+              v-bind="menuProps"
+              variant="tonal"
+              color="primary"
+              size="small"
+              prepend-icon="tabler-file-plus"
+            >
+              {{ t('documents.requestDocument') }}
+            </VBtn>
+          </template>
+          <VList density="compact">
+            <VListItem
+              v-for="doc in requestableDocTypes"
+              :key="doc.code"
+              :disabled="requestingCode === doc.code"
+              @click="requestDocument(doc.code)"
+            >
+              <VListItemTitle>{{ t(`documents.type.${doc.code}`, doc.label) }}</VListItemTitle>
+            </VListItem>
+          </VList>
+        </VMenu>
+      </template>
+    </VCardItem>
+
     <VCardText>
       <div
         v-if="documentsLoading"

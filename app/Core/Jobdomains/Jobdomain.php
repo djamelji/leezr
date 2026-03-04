@@ -5,6 +5,7 @@ namespace App\Core\Jobdomains;
 use App\Core\Models\Company;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Jobdomain extends Model
 {
@@ -36,5 +37,10 @@ class Jobdomain extends Model
     {
         return $this->belongsToMany(Company::class, 'company_jobdomain')
             ->withTimestamps();
+    }
+
+    public function overlays(): HasMany
+    {
+        return $this->hasMany(JobdomainMarketOverlay::class, 'jobdomain_key', 'key');
     }
 }

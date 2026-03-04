@@ -52,5 +52,37 @@ export const usePlatformJobdomainsStore = defineStore('platformJobdomains', {
 
       return data
     },
+
+    // ─── Market Overlays ─────────────────────────────
+    async upsertOverlay(jobdomainKey, marketKey, payload) {
+      return await $platformApi(`/jobdomains/${jobdomainKey}/overlays/${marketKey}`, {
+        method: 'PUT',
+        body: payload,
+      })
+    },
+
+    async deleteOverlay(jobdomainKey, marketKey) {
+      return await $platformApi(`/jobdomains/${jobdomainKey}/overlays/${marketKey}`, {
+        method: 'DELETE',
+      })
+    },
+
+    async createField(payload) {
+      return await $platformApi('/fields', {
+        method: 'POST',
+        body: payload,
+      })
+    },
+
+    async deleteField(id) {
+      return await $platformApi(`/fields/${id}`, { method: 'DELETE' })
+    },
+
+    async createDocumentType(payload) {
+      return await $platformApi('/documents/types', {
+        method: 'POST',
+        body: payload,
+      })
+    },
   },
 })

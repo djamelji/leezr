@@ -221,7 +221,7 @@ class NavEndpointTest extends TestCase
 
         // Owner = management → sees structure items
         $this->assertContains('members', $allKeys, 'Management should see members');
-        $this->assertContains('settings', $allKeys, 'Management should see settings');
+        $this->assertContains('company-profile', $allKeys, 'Management should see company-profile');
     }
 
     public function test_company_nav_operational_hides_structure_items(): void
@@ -258,7 +258,7 @@ class NavEndpointTest extends TestCase
 
         // Operational should NOT see structure items
         $this->assertNotContains('members', $allKeys, 'Operational should not see members');
-        $this->assertNotContains('settings', $allKeys, 'Operational should not see settings');
+        $this->assertNotContains('company-profile', $allKeys, 'Operational should not see company-profile');
     }
 
     // ═══════════════════════════════════════════════════════

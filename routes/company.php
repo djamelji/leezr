@@ -183,6 +183,14 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::put('/company/members/{id}/documents/{code}/review', [\App\Modules\Core\Members\Http\MemberDocumentController::class, 'review'])
         ->middleware('company.access:use-permission,members.manage');
 
+    // Document requests (ADR-192)
+    Route::post('/company/document-requests', [\App\Modules\Core\Members\Http\DocumentRequestController::class, 'store'])
+        ->middleware('company.access:use-permission,members.manage');
+    Route::post('/company/document-requests/batch', [\App\Modules\Core\Members\Http\DocumentRequestController::class, 'batchByRole'])
+        ->middleware('company.access:use-permission,members.manage');
+    Route::get('/company/document-requests/queue', [\App\Modules\Core\Members\Http\DocumentRequestController::class, 'queue'])
+        ->middleware('company.access:use-permission,members.manage');
+
     // User profile (personal data, no additional permission needed)
     Route::get('/profile', [UserProfileController::class, 'show']);
     Route::put('/profile', [UserProfileController::class, 'update']);

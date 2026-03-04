@@ -77,6 +77,10 @@ final class AuditAction
     public const SECURITY_ALERT_ACKNOWLEDGED = 'security.alert_acknowledged';
     public const SECURITY_ALERT_RESOLVED = 'security.alert_resolved';
 
+    // ─── Document requests (ADR-192) ─────────────────
+    public const DOCUMENT_REQUESTED = 'document.requested';
+    public const DOCUMENT_BATCH_REQUESTED = 'document.batch_requested';
+
     // ─── Theme ────────────────────────────────────────
     public const THEME_VISIBILITY_UPDATED = 'theme.visibility_updated';
 
