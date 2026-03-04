@@ -1,5 +1,6 @@
 <script setup>
 import { useDashboardGrid } from '@/composables/useDashboardGrid'
+import { getWidgetProfile } from './widgetProfiles'
 import { resolveWidgetComponent } from './widgetComponentMap'
 
 const props = defineProps({
@@ -16,6 +17,7 @@ const emit = defineEmits(['update:layout'])
 const { t } = useI18n()
 
 const gridRef = ref(null)
+const gridInitialized = ref(false)
 const catalogRef = computed(() => props.catalog)
 const {
   cols, isMobile, dragging, resizing, ghostTile,
@@ -61,7 +63,9 @@ const displayLayout = computed(() =>
   computeVisualLayout(canonicalDisplay.value, cols.value, isMobile.value ? 2 : null),
 )
 
-// ── Density Engine (ADR-152 — pure height-based) ──
+// ── Presentation Engine — Widget Intelligence Layer (ADR-201) ──
+// Feature flag — set to false to disable presentationMode and revert to density-only
+const ENABLE_PRESENTATION_ENGINE = false
 
 const tileSizes = reactive({})
 
@@ -80,16 +84,60 @@ function computeDensity(h) {
   return 'L'
 }
 
+/**
+ * Profile-aware presentation mode (ADR-201 WIL).
+ * Breakpoints vary per UI profile — each profile has its own optimal thresholds.
+ * Unknown profiles → null (density-only fallback).
+ */
+function computePresentationMode(pxWidth, pxHeight, profile) {
+  switch (profile) {
+    case 'kpi':
+      if (pxWidth < 180) return 'micro'
+      if (pxWidth < 320) return 'compact'
+      if (pxWidth < 600) return 'balanced'
+
+      return 'hero'
+    case 'kpi-rich':
+      if (pxWidth < 250) return 'compact'
+      if (pxWidth < 500) return 'balanced'
+
+      return 'expanded'
+    case 'list':
+      if (pxWidth < 280) return 'compact'
+      if (pxWidth < 480) return 'balanced'
+
+      return 'expanded'
+    case 'chart':
+      if (pxWidth < 300) return 'spark'
+      if (pxWidth < 650) return 'standard'
+
+      return 'detailed'
+    default:
+      return null
+  }
+}
+
 function getViewport(tile) {
   const size = tileSizes[tile.key]
-  const px = size?.width || 0
+  const pxW = size?.width || 0
+  const pxH = size?.height || 0
+  const profile = getWidgetProfile(tile.key)
+
+  const kpiScale = (profile === 'kpi' || profile === 'kpi-rich')
+    ? Math.max(0.9, Math.min(1.6, Math.min(pxW / 350, pxH / 220)))
+    : 1
 
   return {
     w: tile.w,
     h: tile.h,
-    pxWidth: px,
-    pxHeight: size?.height || 0,
+    pxWidth: pxW,
+    pxHeight: pxH,
     density: computeDensity(tile.h),
+    uiProfile: profile,
+    presentationMode: ENABLE_PRESENTATION_ENGINE
+      ? computePresentationMode(pxW, pxH, profile)
+      : null,
+    kpiScale,
   }
 }
 
@@ -144,7 +192,7 @@ function getComponent(tile) {
 // ── Drag handle only (C1) ──
 
 function handleDragHandleDown(tile, event) {
-  if (!props.editable) return
+  if (!props.editable || !gridInitialized.value) return
   startDrag(tile, event)
 }
 
@@ -156,7 +204,7 @@ function handleRemoveWidget(key) {
 }
 
 function handleResizeDown(tile, event) {
-  if (!props.editable) return
+  if (!props.editable || !gridInitialized.value) return
   startResize(tile, event)
 }
 
@@ -188,6 +236,10 @@ function handleMouseUp() {
 
 onMounted(() => {
   document.addEventListener('mouseup', handleMouseUp)
+  // Block drag/resize until grid layout settles (ADR-198)
+  nextTick(() => {
+    gridInitialized.value = true
+  })
 })
 
 onUnmounted(() => {
@@ -338,6 +390,8 @@ onUnmounted(() => {
   position: relative;
   min-height: 0;
   transition: grid-column 0.15s ease, grid-row 0.15s ease;
+  container-type: inline-size;
+  container-name: dashboard-tile;
 }
 
 .dashboard-tile--dragging,

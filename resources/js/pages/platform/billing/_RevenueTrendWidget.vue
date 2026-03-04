@@ -12,8 +12,18 @@ const props = defineProps({
 const { t, locale } = useI18n()
 const vuetifyTheme = useTheme()
 
-// ── Visual mode — driven by WIDTH (grid columns), not height ──
+const pm = computed(() => props.viewport?.presentationMode)
+
+// ── Visual mode — WIL-aware: use pm if available, fallback to viewport.w ──
 const mode = computed(() => {
+  if (pm.value) {
+    if (pm.value === 'spark') return 'S'
+    if (pm.value === 'standard') return 'M'
+
+    return 'L'
+  }
+
+  // Fallback: width-based (density-only, WIL OFF)
   const w = props.viewport?.w || 12
   if (w <= 4) return 'S'
   if (w <= 6) return 'M'
@@ -27,12 +37,21 @@ const hDensity = computed(() => props.viewport?.density || 'L')
 // Fewer horizontal grid lines when widget is short
 const yTicks = computed(() => hDensity.value === 'S' ? 3 : 5)
 
-// Date tick count based on grid columns — predictable, no truncation
+// Date tick count — WIL-aware: derive from pm, fallback to viewport.w
 const xTicks = computed(() => {
+  if (pm.value) {
+    if (pm.value === 'spark') return 2
+    if (pm.value === 'standard') return 4
+
+    return 7
+  }
+
+  // Fallback
   const w = props.viewport?.w || 12
   if (w <= 4) return 2
   if (w <= 6) return 2
   if (w <= 8) return 5
+
   return 7
 })
 
@@ -115,7 +134,7 @@ const chartOptions = computed(() => {
     gradient: { shadeIntensity: 0.8, opacityFrom: 0.6, opacityTo: 0.1 },
   }
 
-  // ── S: sparkline — no axes, no grid, no dates ──
+  // ── S (spark): sparkline — no axes, no grid, no dates ──
   if (mode.value === 'S') {
     return {
       chart: { ...baseChart, sparkline: { enabled: true } },
@@ -148,7 +167,7 @@ const chartOptions = computed(() => {
     tooltip: { enabled: false },
   }
 
-  // ── M: dashed grid ──
+  // ── M (standard): dashed grid ──
   if (mode.value === 'M') {
     return {
       chart: baseChart,
@@ -175,7 +194,7 @@ const chartOptions = computed(() => {
     }
   }
 
-  // ── L: solid grid, locale dates ──
+  // ── L (detailed): solid grid, locale dates ──
   return {
     chart: baseChart,
     dataLabels: { enabled: false },
@@ -282,7 +301,7 @@ const summaryValue = computed(() => {
       />
     </div>
 
-    <!-- KPI bottom-right for S -->
+    <!-- KPI bottom-right for S (spark) -->
     <div
       v-if="mode === 'S' && summaryValue"
       class="widget-footer"

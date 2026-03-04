@@ -74,13 +74,15 @@ export function useDashboardGrid(gridRef, catalog) {
 
   /**
    * Step 1: Clamp tile to grid bounds (always 12-col canonical).
+   * Uses per-widget constraints from catalog when available.
    */
   function clampToBounds(tile, numCols) {
-    let w = Math.max(1, Math.min(tile.w, numCols))
+    const c = getConstraints(tile.key)
+    let w = Math.max(c.min_w, Math.min(c.max_w, tile.w))
 
-    w = Math.max(WIDGET_MIN_W, w)
+    w = Math.min(w, numCols)
 
-    const h = Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, tile.h))
+    const h = Math.max(c.min_h, Math.min(c.max_h, tile.h))
     const x = Math.max(0, Math.min(tile.x, numCols - w))
     const y = Math.max(0, tile.y)
 
@@ -419,11 +421,40 @@ export function useDashboardGrid(gridRef, catalog) {
       return result
     }
 
-    // ── Non-mobile: standard visual re-pack ──
-    for (const tile of sorted) {
-      const renderW = Math.min(tile.w, viewCols)
+    // ── Tablet only: binary snap with pre-computed widths (ADR-201) ──
+    // Pre-compute render widths BEFORE placement:
+    //   w ≤ halfCols → halfCols (pair), w > halfCols → viewCols (full).
+    //   Orphaned halves (broken by full tiles or at end) → stretched to viewCols.
+    // Mobile path (forceH) is UNCHANGED — it uses interleave above.
+    const renderWidths = new Array(sorted.length)
+    let buffer = null
 
-      placeTile(tile, renderW, tile.h)
+    for (let i = 0; i < sorted.length; i++) {
+      if (sorted[i].w <= halfCols) {
+        if (buffer === null) {
+          buffer = i
+          renderWidths[i] = halfCols
+        }
+        else {
+          renderWidths[i] = halfCols
+          buffer = null
+        }
+      }
+      else {
+        if (buffer !== null) {
+          renderWidths[buffer] = viewCols
+          buffer = null
+        }
+        renderWidths[i] = viewCols
+      }
+    }
+
+    if (buffer !== null) {
+      renderWidths[buffer] = viewCols
+    }
+
+    for (let i = 0; i < sorted.length; i++) {
+      placeTile(sorted[i], renderWidths[i], sorted[i].h)
     }
 
     return result
@@ -498,18 +529,22 @@ export function useDashboardGrid(gridRef, catalog) {
 
   function getConstraints(key) {
     const widget = catalog.value?.find(w => w.key === key)
+    const l = widget?.layout ?? {}
 
-    const layout = widget?.layout ?? { min_w: 3, max_w: 12, min_h: 2, max_h: 8 }
-
-    return { ...layout, min_w: Math.max(WIDGET_MIN_W, layout.min_w), min_h: Math.max(WIDGET_MIN_H, layout.min_h), max_h: Math.min(WIDGET_MAX_H, layout.max_h) }
+    return {
+      min_w: Math.max(WIDGET_MIN_W, l.min_w ?? WIDGET_MIN_W),
+      max_w: Math.min(CANONICAL_COLS, l.max_w ?? CANONICAL_COLS),
+      min_h: Math.max(WIDGET_MIN_H, l.min_h ?? WIDGET_MIN_H),
+      max_h: Math.min(WIDGET_MAX_H, l.max_h ?? WIDGET_MAX_H),
+    }
   }
 
-  // ── Mouse move ──
+  // ── Mouse move (rAF-throttled for ghostTile updates) ──
+
+  let rafId = null
 
   function onMouseMove(event) {
-    const { cellW, cellH } = getCellSize()
-
-    // Pending drag threshold
+    // Threshold check is always immediate (no rAF delay)
     if (pendingDrag && !pendingDrag.activated) {
       const dx = Math.abs(event.clientX - pendingDrag.startMouseX)
       const dy = Math.abs(event.clientY - pendingDrag.startMouseY)
@@ -532,11 +567,30 @@ export function useDashboardGrid(gridRef, catalog) {
         w: pendingDrag.w,
         h: pendingDrag.h,
       }
+
+      return
     }
 
+    // Batch ghostTile updates to one per frame (≈60fps)
+    // This prevents previewLayout pipeline from running on every pixel
+    if (!dragging.value && !resizing.value) return
+
+    const clientX = event.clientX
+    const clientY = event.clientY
+
+    if (rafId) return
+    rafId = requestAnimationFrame(() => {
+      rafId = null
+      updateGhostTile(clientX, clientY)
+    })
+  }
+
+  function updateGhostTile(clientX, clientY) {
+    const { cellW, cellH } = getCellSize()
+
     if (dragging.value) {
-      const dx = event.clientX - dragging.value.startMouseX
-      const dy = event.clientY - dragging.value.startMouseY
+      const dx = clientX - dragging.value.startMouseX
+      const dy = clientY - dragging.value.startMouseY
 
       const deltaCols = Math.round(dx / cellW)
       const deltaRows = Math.round(dy / cellH)
@@ -550,8 +604,8 @@ export function useDashboardGrid(gridRef, catalog) {
     }
 
     if (resizing.value) {
-      const dx = event.clientX - resizing.value.startMouseX
-      const dy = event.clientY - resizing.value.startMouseY
+      const dx = clientX - resizing.value.startMouseX
+      const dy = clientY - resizing.value.startMouseY
 
       const deltaCols = Math.round(dx / cellW)
       const deltaRows = Math.round(dy / cellH)
@@ -589,6 +643,11 @@ export function useDashboardGrid(gridRef, catalog) {
   // ── Mouse up ──
 
   function onMouseUp() {
+    if (rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+
     const result = ghostTile.value ? { ...ghostTile.value } : null
     const key = dragging.value?.key || resizing.value?.key
 

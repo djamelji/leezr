@@ -11,6 +11,8 @@ const props = defineProps({
 const { t } = useI18n()
 
 const density = computed(() => props.viewport?.density || 'L')
+const pm = computed(() => props.viewport?.presentationMode)
+const kpiScale = computed(() => props.viewport?.kpiScale || 1)
 
 const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
 const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
@@ -22,15 +24,74 @@ const formattedAmount = computed(() => {
 
   return formatMoney(Math.round((props.data.revenue || 0) * 100), { currency: cur })
 })
+
+const kpiFontStyle = computed(() => {
+  if (!pm.value) return {}
+
+  return { fontSize: `clamp(22px, ${28 * kpiScale.value}px, 56px)` }
+})
 </script>
 
 <template>
   <div
     class="widget-root"
-    :class="`density-${density}`"
+    :class="[`density-${density}`]"
   >
-    <div class="d-flex justify-space-between align-center widget-header">
-      <div class="d-flex align-center gap-2 overflow-hidden">
+    <!-- ═══ WIL: presentationMode-driven rendering (ADR-201) ═══ -->
+
+    <!-- micro: KPI number only, centered, scaled -->
+    <template v-if="pm === 'micro'">
+      <div class="widget-body widget-body--centered">
+        <VSkeletonLoader
+          v-if="loading"
+          type="text"
+        />
+        <div
+          v-else-if="!data"
+          class="d-flex align-center justify-center h-100 text-disabled"
+        >
+          {{ t('platformBilling.widgets.noData') }}
+        </div>
+        <div
+          v-else
+          class="widget-kpi font-weight-bold text-success"
+          :style="kpiFontStyle"
+        >
+          {{ formattedAmount }}
+        </div>
+      </div>
+    </template>
+
+    <!-- compact: KPI + short label -->
+    <template v-else-if="pm === 'compact'">
+      <div class="widget-body widget-body--centered">
+        <VSkeletonLoader
+          v-if="loading"
+          type="text"
+        />
+        <div
+          v-else-if="!data"
+          class="d-flex align-center justify-center h-100 text-disabled"
+        >
+          {{ t('platformBilling.widgets.noData') }}
+        </div>
+        <template v-else>
+          <div
+            class="widget-kpi font-weight-bold text-success"
+            :style="kpiFontStyle"
+          >
+            {{ formattedAmount }}
+          </div>
+          <div class="widget-subtext text-medium-emphasis">
+            {{ t('platformBilling.widgets.revenueMtd') }}
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- balanced: header (icon+title) + KPI + subtitle -->
+    <template v-else-if="pm === 'balanced'">
+      <div class="d-flex align-center gap-2 overflow-hidden widget-header">
         <VAvatar
           color="success"
           variant="tonal"
@@ -46,28 +107,122 @@ const formattedAmount = computed(() => {
           {{ t('platformBilling.widgets.revenueMtd') }}
         </span>
       </div>
-    </div>
 
-    <div class="widget-body">
-      <VSkeletonLoader
-        v-if="loading"
-        type="text"
-      />
-      <div
-        v-else-if="!data"
-        class="d-flex align-center justify-center h-100 text-disabled"
-      >
-        {{ t('platformBilling.widgets.noData') }}
+      <div class="widget-body">
+        <VSkeletonLoader
+          v-if="loading"
+          type="text"
+        />
+        <div
+          v-else-if="!data"
+          class="d-flex align-center justify-center h-100 text-disabled"
+        >
+          {{ t('platformBilling.widgets.noData') }}
+        </div>
+        <template v-else>
+          <div
+            class="widget-kpi font-weight-bold text-success"
+            :style="kpiFontStyle"
+          >
+            {{ formattedAmount }}
+          </div>
+          <div class="widget-subtext text-medium-emphasis">
+            {{ t('platformBilling.widgets.revenueMtdDesc') }}
+          </div>
+        </template>
       </div>
-      <template v-else>
-        <div class="widget-kpi font-weight-bold text-success">
-          {{ formattedAmount }}
+    </template>
+
+    <!-- hero: header + hero KPI + subtitle, horizontal when wide (CQ) -->
+    <template v-else-if="pm === 'hero'">
+      <div class="d-flex align-center gap-2 overflow-hidden widget-header">
+        <VAvatar
+          color="success"
+          variant="tonal"
+          :size="avatarSize"
+          rounded
+        >
+          <VIcon
+            icon="tabler-trending-up"
+            :size="iconSize"
+          />
+        </VAvatar>
+        <span class="widget-title text-medium-emphasis">
+          {{ t('platformBilling.widgets.revenueMtd') }}
+        </span>
+      </div>
+
+      <div class="widget-body widget-inner">
+        <VSkeletonLoader
+          v-if="loading"
+          type="text"
+        />
+        <div
+          v-else-if="!data"
+          class="d-flex align-center justify-center h-100 text-disabled"
+        >
+          {{ t('platformBilling.widgets.noData') }}
         </div>
-        <div class="widget-subtext text-medium-emphasis">
-          {{ t('platformBilling.widgets.revenueMtdDesc') }}
+        <template v-else>
+          <div
+            class="widget-kpi widget-kpi--hero font-weight-bold text-success"
+            :style="kpiFontStyle"
+          >
+            {{ formattedAmount }}
+          </div>
+          <div class="widget-subtext text-medium-emphasis">
+            {{ t('platformBilling.widgets.revenueMtdDesc') }}
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- ═══ Fallback: density-only (pm is null — flag OFF or unknown) ═══ -->
+    <template v-else>
+      <div
+        v-if="density !== 'S'"
+        class="d-flex align-center gap-2 overflow-hidden widget-header"
+      >
+        <VAvatar
+          color="success"
+          variant="tonal"
+          :size="avatarSize"
+          rounded
+        >
+          <VIcon
+            icon="tabler-trending-up"
+            :size="iconSize"
+          />
+        </VAvatar>
+        <span class="widget-title text-medium-emphasis">
+          {{ t('platformBilling.widgets.revenueMtd') }}
+        </span>
+      </div>
+
+      <div class="widget-body">
+        <VSkeletonLoader
+          v-if="loading"
+          type="text"
+        />
+        <div
+          v-else-if="!data"
+          class="d-flex align-center justify-center h-100 text-disabled"
+        >
+          {{ t('platformBilling.widgets.noData') }}
         </div>
-      </template>
-    </div>
+        <template v-else>
+          <div class="widget-kpi font-weight-bold text-success">
+            {{ formattedAmount }}
+          </div>
+          <div
+            v-if="density !== 'S'"
+            class="widget-subtext text-medium-emphasis"
+          >
+            {{ t('platformBilling.widgets.revenueMtdDesc') }}
+          </div>
+        </template>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -77,6 +232,8 @@ const formattedAmount = computed(() => {
   display: flex;
   flex-direction: column;
 }
+
+/* ── Spacing (density — height-based, unchanged) ── */
 
 .density-S { padding: 12px; }
 .density-M { padding: 16px; }
@@ -99,9 +256,16 @@ const formattedAmount = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: 4px;
   min-height: 0;
 }
+
+.widget-body--centered {
+  align-items: center;
+  text-align: center;
+}
+
+/* ── Typography fallback (density — when WIL OFF) ── */
 
 .density-S .widget-title { font-size: 14px; }
 .density-M .widget-title { font-size: 16px; }
@@ -114,4 +278,24 @@ const formattedAmount = computed(() => {
 .density-S .widget-subtext { font-size: 12px; }
 .density-M .widget-subtext { font-size: 13px; }
 .density-L .widget-subtext { font-size: 14px; }
+
+/* ── WIL: container query layout (hero mode — horizontal when wide) ── */
+
+.widget-inner {
+  flex-direction: column;
+}
+
+@container dashboard-tile (min-width: 400px) {
+  .widget-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* ── WIL: KPI CQ typography (always available via container queries) ── */
+
+.widget-kpi--hero {
+  font-size: clamp(20px, 6cqw, 56px);
+}
 </style>

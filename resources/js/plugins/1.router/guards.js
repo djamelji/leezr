@@ -22,6 +22,10 @@ export const setupGuards = router => {
 
     // ─── Public routes ───────────────────────────────────
     if (to.meta.public) {
+      // Teardown if switching from a non-public scope (prevents ready→ready)
+      if (bootMachine.scope.value && bootMachine.scope.value !== 'public') {
+        runtime.teardown()
+      }
       await runtime.boot('public')
 
       return

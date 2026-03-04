@@ -1,202 +1,94 @@
 import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 import { $platformApi } from '@/utils/platformApi'
+import { createSurfaceEngine } from '@/core/surface-engine/useSurfaceEngine'
 
-export const useDashboardStore = defineStore('platformDashboard', {
-  state: () => ({
-    _catalog: [],
-    _catalogLoading: false,
-    _layout: [],
-    _layoutLoading: false,
-    _widgetData: {},
-    _widgetErrors: {},
-    _dataLoading: false,
-    _presets: [],
-    _dirty: false,
-  }),
+export const useDashboardStore = defineStore('platformDashboard', () => {
+  const engine = createSurfaceEngine({
+    apiFn: $platformApi,
+    scopeStrategy: 'explicit',
+  })
 
-  getters: {
-    catalog: state => state._catalog,
-    catalogLoading: state => state._catalogLoading,
-    layout: state => state._layout,
-    layoutLoading: state => state._layoutLoading,
-    widgetData: state => state._widgetData,
-    widgetErrors: state => state._widgetErrors,
-    dataLoading: state => state._dataLoading,
-    presets: state => state._presets,
-    isDirty: state => state._dirty,
-    isLoading: state => state._catalogLoading || state._layoutLoading || state._dataLoading,
-  },
+  // ── Platform-only extensions ───────────────────────────────────────
 
-  actions: {
-    async fetchCatalog() {
-      this._catalogLoading = true
+  const _presets = ref([])
+  const presets = computed(() => _presets.value)
 
-      try {
-        const data = await $platformApi('/dashboard/widgets/catalog')
+  async function fetchPresets() {
+    const data = await $platformApi('/dashboard/layout/presets')
 
-        this._catalog = data.widgets
-      }
-      finally {
-        this._catalogLoading = false
-      }
-    },
+    _presets.value = data.presets
+  }
 
-    async fetchLayout() {
-      this._layoutLoading = true
+  function updateTile(key, updates) {
+    const item = engine._layout.value.find(i => i.key === key)
+    if (!item) return
 
-      try {
-        const data = await $platformApi('/dashboard/layout')
+    Object.assign(item, updates)
+    engine._dirty.value = true
+  }
 
-        this._layout = data.layout
-        this._dirty = false
-      }
-      finally {
-        this._layoutLoading = false
-      }
-    },
+  function updateWidgetScope(key, scope, companyId = null) {
+    const item = engine._layout.value.find(i => i.key === key)
+    if (!item) return
 
-    async saveLayout() {
-      const data = await $platformApi('/dashboard/layout', {
-        method: 'PUT',
-        body: { layout: this._layout },
-      })
+    item.scope = scope
+    if (scope === 'company' && companyId) {
+      item.config = { ...item.config, company_id: companyId }
+    }
+    else {
+      const { company_id: _, ...rest } = item.config || {}
 
-      this._layout = data.layout
-      this._dirty = false
-    },
+      item.config = rest
+    }
+    engine._dirty.value = true
+  }
 
-    async resolveWidgets() {
-      if (!this._layout.length) return
+  /**
+   * Bootstrap starter layout from catalog when dashboard is empty (ADR-201).
+   * Platform backend already provides defaultLayout(), this is a safety net.
+   * Picks 2 KPIs + 1 chart + 1 list from billing catalog.
+   */
+  function applyDefaultLayout() {
+    const catalog = engine._catalog.value
+    const kpis = catalog.filter(w => (w.layout?.default_w || 4) <= 4)
+    const charts = catalog.filter(w => (w.layout?.default_w || 4) > 6)
+    const lists = catalog.filter(w => {
+      const dw = w.layout?.default_w || 4
 
-      this._dataLoading = true
-      this._widgetErrors = {}
+      return dw > 4 && dw <= 6
+    })
 
-      try {
-        const requests = this._layout.map(item => ({
-          key: item.key,
-          scope: item.scope,
-          company_id: item.config?.company_id || null,
-          period: item.config?.period || '30d',
-        }))
+    const picks = [
+      ...kpis.slice(0, 2),
+      ...charts.slice(0, 1),
+      ...lists.slice(0, 1),
+    ]
 
-        const data = await $platformApi('/dashboard/widgets/data', {
-          method: 'POST',
-          body: { widgets: requests },
-        })
+    for (const entry of picks) {
+      engine.addWidget(entry)
+    }
+  }
 
-        const newData = {}
-        const newErrors = {}
+  // Override loadDashboard with bootstrap safety net
+  async function loadDashboard() {
+    await Promise.all([engine.fetchCatalog(), engine.fetchLayout()])
 
-        for (const result of data.results) {
-          if (result.data) {
-            newData[result.key] = result.data
-          }
-          else if (result.error) {
-            newErrors[result.key] = result.error
-          }
-        }
+    // Safety net: empty layout (edge case) → starter from catalog
+    if (!engine._layout.value.length && engine._catalog.value.length) {
+      applyDefaultLayout()
+      await engine.saveLayout()
+    }
 
-        this._widgetData = newData
-        this._widgetErrors = newErrors
-      }
-      finally {
-        this._dataLoading = false
-      }
-    },
+    await engine.resolveWidgets()
+  }
 
-    async fetchPresets() {
-      const data = await $platformApi('/dashboard/layout/presets')
-
-      this._presets = data.presets
-    },
-
-    async loadDashboard() {
-      await Promise.all([this.fetchCatalog(), this.fetchLayout()])
-      await this.resolveWidgets()
-    },
-
-    // ── Layout mutations ──
-
-    addWidget(catalogEntry) {
-      if (this._layout.find(i => i.key === catalogEntry.key)) return
-
-      const dims = catalogEntry.layout || {}
-      const w = dims.default_w || 4
-      const h = dims.default_h || 4
-
-      // First-fit: scan top-to-bottom, left-to-right for the first gap
-      const maxY = this._layout.length
-        ? this._layout.reduce((max, t) => Math.max(max, t.y + t.h), 0)
-        : 0
-
-      let x = 0
-      let y = maxY
-
-      for (let row = 0; row <= maxY; row++) {
-        let found = false
-
-        for (let col = 0; col <= 12 - w; col++) {
-          const overlaps = this._layout.some(t =>
-            col < t.x + t.w && col + w > t.x
-            && row < t.y + t.h && row + h > t.y,
-          )
-
-          if (!overlaps) {
-            x = col
-            y = row
-            found = true
-            break
-          }
-        }
-        if (found) break
-      }
-
-      this._layout.push({
-        key: catalogEntry.key,
-        x,
-        y,
-        w,
-        h,
-        scope: catalogEntry.scope === 'company' ? 'company' : 'global',
-        config: catalogEntry.default_config || {},
-      })
-      this._dirty = true
-    },
-
-    removeWidget(key) {
-      this._layout = this._layout.filter(i => i.key !== key)
-      delete this._widgetData[key]
-      delete this._widgetErrors[key]
-      this._dirty = true
-    },
-
-    updateTile(key, updates) {
-      const item = this._layout.find(i => i.key === key)
-      if (!item) return
-
-      Object.assign(item, updates)
-      this._dirty = true
-    },
-
-    updateLayout(newLayout) {
-      this._layout = newLayout
-      this._dirty = true
-    },
-
-    updateWidgetScope(key, scope, companyId = null) {
-      const item = this._layout.find(i => i.key === key)
-      if (!item) return
-
-      item.scope = scope
-      if (scope === 'company' && companyId) {
-        item.config = { ...item.config, company_id: companyId }
-      }
-      else {
-        const { company_id: _, ...rest } = item.config || {}
-
-        item.config = rest
-      }
-      this._dirty = true
-    },
-  },
+  return {
+    ...engine,
+    presets,
+    fetchPresets,
+    updateTile,
+    updateWidgetScope,
+    loadDashboard,
+  }
 })

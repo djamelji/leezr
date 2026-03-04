@@ -1,176 +1,78 @@
 import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 import { $api } from '@/utils/api'
+import { createSurfaceEngine } from '@/core/surface-engine/useSurfaceEngine'
 
-export const useCompanyDashboardStore = defineStore('companyDashboard', {
-  state: () => ({
-    _catalog: [],
-    _catalogLoading: false,
-    _layout: [],
-    _layoutLoading: false,
-    _widgetData: {},
-    _widgetErrors: {},
-    _dataLoading: false,
-    _suggestions: [],
-    _dirty: false,
-  }),
+export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
+  const engine = createSurfaceEngine({
+    apiFn: $api,
+    scopeStrategy: 'implicit',
+  })
 
-  getters: {
-    catalog: state => state._catalog,
-    catalogLoading: state => state._catalogLoading,
-    layout: state => state._layout,
-    layoutLoading: state => state._layoutLoading,
-    widgetData: state => state._widgetData,
-    widgetErrors: state => state._widgetErrors,
-    dataLoading: state => state._dataLoading,
-    suggestions: state => state._suggestions,
-    isDirty: state => state._dirty,
-    isLoading: state => state._catalogLoading || state._layoutLoading || state._dataLoading,
-  },
+  // ── Company-only extensions ────────────────────────────────────────
 
-  actions: {
-    async fetchCatalog() {
-      this._catalogLoading = true
+  const _suggestions = ref([])
+  const suggestions = computed(() => _suggestions.value)
 
-      try {
-        const data = await $api('/dashboard/widgets/catalog')
-
-        this._catalog = data.widgets
-      }
-      finally {
-        this._catalogLoading = false
-      }
-    },
-
-    async fetchLayout() {
-      this._layoutLoading = true
-
-      try {
-        const data = await $api('/dashboard/layout')
-
-        this._layout = data.layout
-        this._dirty = false
-      }
-      finally {
-        this._layoutLoading = false
-      }
-    },
-
-    async saveLayout() {
-      const data = await $api('/dashboard/layout', {
-        method: 'PUT',
-        body: { layout: this._layout },
-      })
-
-      this._layout = data.layout
-      this._dirty = false
-    },
-
-    async resolveWidgets() {
-      if (!this._layout.length) return
-
-      this._dataLoading = true
-      this._widgetErrors = {}
-
-      try {
-        const requests = this._layout.map(item => ({
-          key: item.key,
-          period: item.config?.period || '30d',
-        }))
-
-        const data = await $api('/dashboard/widgets/data', {
-          method: 'POST',
-          body: { widgets: requests },
-        })
-
-        const newData = {}
-        const newErrors = {}
-
-        for (const result of data.results) {
-          if (result.data) {
-            newData[result.key] = result.data
-          }
-          else if (result.error) {
-            newErrors[result.key] = result.error
-          }
-        }
-
-        this._widgetData = newData
-        this._widgetErrors = newErrors
-      }
-      finally {
-        this._dataLoading = false
-      }
-    },
-
-    async fetchSuggestions() {
+  async function fetchSuggestions() {
+    try {
       const data = await $api('/dashboard/suggestions')
 
-      this._suggestions = data.suggestions
-    },
+      _suggestions.value = data.suggestions ?? []
+    }
+    catch {
+      _suggestions.value = []
+    }
+  }
 
-    async loadDashboard() {
-      await Promise.all([this.fetchCatalog(), this.fetchLayout(), this.fetchSuggestions()])
-      await this.resolveWidgets()
-    },
+  /**
+   * Bootstrap starter layout from catalog when dashboard is empty (ADR-201).
+   * Picks 3 KPIs + 1 list/chart from available catalog.
+   * Idempotent: only called when engine._layout.value is empty.
+   */
+  function applyDefaultLayout() {
+    const catalog = engine._catalog.value
+    const kpis = catalog.filter(w => (w.layout?.default_w || 4) <= 4)
+    const lists = catalog.filter(w => {
+      const dw = w.layout?.default_w || 4
 
-    // ── Layout mutations ──
+      return dw > 4 && dw <= 6
+    })
+    const charts = catalog.filter(w => (w.layout?.default_w || 4) > 6)
 
-    addWidget(catalogEntry) {
-      if (this._layout.find(i => i.key === catalogEntry.key)) return
+    const picks = [
+      ...kpis.slice(0, 3),
+      ...(lists[0] ? [lists[0]] : charts.slice(0, 1)),
+    ]
 
-      const dims = catalogEntry.layout || {}
-      const w = dims.default_w || 4
-      const h = dims.default_h || 4
+    for (const entry of picks) {
+      engine.addWidget(entry)
+    }
+  }
 
-      // First-fit: scan top-to-bottom, left-to-right for the first gap
-      const maxY = this._layout.length
-        ? this._layout.reduce((max, t) => Math.max(max, t.y + t.h), 0)
-        : 0
+  // Override loadDashboard to include suggestions fetch + bootstrap
+  // clientCatalog: client-only entries (e.g. compliance) injected BEFORE bootstrap check
+  async function loadDashboard(clientCatalog = []) {
+    await Promise.all([engine.fetchCatalog(), engine.fetchLayout(), fetchSuggestions()])
 
-      let x = 0
-      let y = maxY
+    // Inject client-only catalog entries so bootstrap can pick from them
+    if (clientCatalog.length) {
+      engine.injectCatalogEntries(clientCatalog)
+    }
 
-      for (let row = 0; row <= maxY; row++) {
-        let found = false
+    // Bootstrap: empty layout at first login → starter from catalog
+    if (!engine._layout.value.length && engine._catalog.value.length) {
+      applyDefaultLayout()
+      await engine.saveLayout()
+    }
 
-        for (let col = 0; col <= 12 - w; col++) {
-          const overlaps = this._layout.some(t =>
-            col < t.x + t.w && col + w > t.x
-            && row < t.y + t.h && row + h > t.y,
-          )
+    await engine.resolveWidgets()
+  }
 
-          if (!overlaps) {
-            x = col
-            y = row
-            found = true
-            break
-          }
-        }
-        if (found) break
-      }
-
-      this._layout.push({
-        key: catalogEntry.key,
-        x,
-        y,
-        w,
-        h,
-        scope: 'company',
-        config: catalogEntry.default_config || {},
-      })
-      this._dirty = true
-    },
-
-    removeWidget(key) {
-      this._layout = this._layout.filter(i => i.key !== key)
-      delete this._widgetData[key]
-      delete this._widgetErrors[key]
-      this._dirty = true
-    },
-
-    updateLayout(newLayout) {
-      this._layout = newLayout
-      this._dirty = true
-    },
-  },
+  return {
+    ...engine,
+    suggestions,
+    fetchSuggestions,
+    loadDashboard,
+  }
 })

@@ -7137,4 +7137,225 @@ Fusionner l'onglet "Fields" dans l'onglet "Documents". Le catalogue d'activation
 
 ---
 
+## ADR-197 — SurfaceEngine : extraction moteur dashboard partagé
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Les stores Platform (`useDashboardStore`) et Company (`useCompanyDashboardStore`) partagent ~85% de code identique : state, getters, `addWidget` (first-fit), `fetchCatalog`, `fetchLayout`, `saveLayout`, `resolveWidgets`. Toute correction devait être dupliquée manuellement. De plus, `dashboard.vue` mutait `dashboardStore._catalog` directement, violant l'encapsulation Pinia.
+
+**Décision** :
+Extraire un moteur commun `createSurfaceEngine(config)` dans `resources/js/core/surface-engine/`. Factory function retournant state réactif + actions pour utilisation dans `defineStore()` setup. Les deux stores deviennent des wrappers minces exposant uniquement leurs extensions spécifiques. L'algorithme first-fit est extrait dans `useSurfaceFirstFit.js`. L'injection client-side du catalog est encapsulée dans `injectCatalogEntries()`.
+
+Config `scopeStrategy`:
+- `'explicit'` (platform) — `resolveWidgets` envoie `scope + company_id`
+- `'implicit'` (company) — `resolveWidgets` envoie `key + period` uniquement
+
+**Conséquences** :
+- 0 duplication `addWidget` / `resolveWidgets` / `fetchCatalog` / `fetchLayout`
+- Stores propres : platform = engine + presets/updateTile/updateWidgetScope ; company = engine + suggestions
+- `_catalog.push` remplacé par `injectCatalogEntries()` (encapsulation propre)
+- Types JSDoc dans `surfaceEngine.types.d.ts` (DashboardTile, WidgetCatalogEntry, WidgetViewport)
+- 0 modification backend, 0 modification API, 0 changement visuel
+- Architecture prête pour extraction future de widgets cross-surface
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean
+
+**Fichiers** :
+
+**CREATE (3)**
+- `resources/js/core/surface-engine/useSurfaceFirstFit.js` — first-fit algorithm
+- `resources/js/core/surface-engine/useSurfaceEngine.js` — factory `createSurfaceEngine`
+- `resources/js/core/surface-engine/surfaceEngine.types.d.ts` — type definitions
+
+**MODIFY (4)**
+- `resources/js/modules/platform-admin/dashboard/dashboard.store.js` — options → setup wrapper
+- `resources/js/modules/company/dashboard/dashboard.store.js` — options → setup wrapper
+- `resources/js/pages/dashboard.vue` — `_catalog.push` → `injectCatalogEntries()`
+- `docs/bmad/04-decisions.md` — cette entrée
+
+---
+
+## ADR-198 — Stabilisation Host + DashboardHostContainer
+
+**Date** : 2026-03-02
+
+**Contexte** :
+L'audit UI comparatif Platform vs Company (post-ADR-197) a identifié 3 causes d'instabilité DOM sur le dashboard Company : (1) les `v-if` au-dessus du grid provoquent des insertions/suppressions DOM qui décalent la position du grid, (2) le `onMounted` await bloque le rendu du grid tant que toutes les promesses ne sont pas résolues, (3) le drag/resize peut être déclenché avant que le grid ait fini son premier layout. Le Platform dashboard ne souffre pas de ces problèmes car son toolbar est toujours visible et son `loadDashboard()` est fire-and-forget.
+
+**Décision** :
+
+**Phase A — Stabilisation DOM (Company)** :
+- A1 : Remplacer `v-if` par `v-show` sur le banner suggestions, le toolbar et le spinner de chargement (au-dessus et autour du grid) pour préserver les nœuds DOM
+- A2 : Découpler le chargement async — `loadDashboard()` fire-and-forget (`.then()`) au lieu de `await Promise.all`, le grid monte dès que le layout est résolu
+- A3 : Ajouter flag `gridInitialized` dans `DashboardGrid.vue` — bloque drag/resize tant que `nextTick` après `onMounted` n'a pas été atteint
+
+**Phase B — DashboardHostContainer** :
+- Créer `DashboardHostContainer.vue` — conteneur flex-column stable garantissant que le grid occupe toujours la même position DOM
+- Slot `toolbar` (flex: 0 0 auto) + slot default pour grid/empty/loading (flex: 1 1 auto, min-height: 200px)
+- Intégré dans les deux surfaces (Platform et Company) pour uniformiser le layout
+
+**Conséquences** :
+- Grid Company ne subit plus de reflow lors de l'apparition/disparition des éléments conditionnels
+- Le grid est interactif (drag/resize) uniquement après stabilisation complète du layout
+- Les deux surfaces partagent la même structure de conteneur hôte
+- 0 modification backend, 0 modification SurfaceEngine, 0 modification grid engine, 0 changement visuel
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean
+
+**Fichiers** :
+
+**CREATE (1)**
+- `resources/js/components/dashboard/DashboardHostContainer.vue` — conteneur hôte flex-column
+
+**MODIFY (3)**
+- `resources/js/pages/dashboard.vue` — v-show, fire-and-forget, DashboardHostContainer
+- `resources/js/pages/platform/index.vue` — DashboardHostContainer
+- `resources/js/components/dashboard/DashboardGrid.vue` — gridInitialized flag
+
+---
+
+## ADR-199 — LOT-DASHBOARD : Company Resize/Drag/Save Fix
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Après l'extraction SurfaceEngine (ADR-197) et la stabilisation DOM (ADR-198), le dashboard Company présentait 3 symptômes absents de Platform : (1) resize extrêmement lent, (2) save impossible (422), (3) drag dégradé. Investigation ciblée Company-only, Platform en lecture seule.
+
+**Diagnostic (evidence-driven)** :
+
+- **RC-1 : NaN dans getConstraints** — Les widgets compliance (client-only, injectés via `injectCatalogEntries`) ont `layout: { default_w, default_h }` sans `min_w/max_w/min_h/max_h`. La fonction `getConstraints()` utilisait `widget?.layout ?? fallback`, mais le `??` ne se déclenche que si `layout` est nullish — un objet `{ default_w }` est truthy. Résultat : `Math.max(3, undefined)` → `NaN`. NaN se propage dans `ghostTile.w` → le backend reçoit `w: null` → 422.
+- **RC-2 : clampToBounds ignore les contraintes par widget** — Le pipeline utilisait des constantes globales (`WIDGET_MIN_W=3`) au lieu des contraintes per-widget du catalog. Si un widget backend a `min_w: 6`, le pipeline le clampe à 3, mais le backend `LayoutValidator` rejette avec 422.
+- **RC-3 : onMouseMove non throttlé** — Chaque pixel de mouvement déclenche `ghostTile` → `previewLayout` computed → pipeline complet (8 étapes × O(n²)). Pas de rAF.
+- **RC-4 : Widgets client-only sauvegardés au backend** — Les compliance widgets passent le `LayoutValidator` (clés inconnues ignorées), mais `filterLayout()` les supprime au GET. Cycle save/reload incohérent.
+
+**Décision** :
+
+1. **Fix getConstraints** — Defaults explicites avec `??` par propriété : `l.min_w ?? WIDGET_MIN_W`. Plus jamais de NaN.
+2. **Fix clampToBounds** — Utilise `getConstraints(tile.key)` au lieu des constantes globales. Les contraintes backend sont respectées par le pipeline client.
+3. **Throttle rAF** — `onMouseMove` batche les mises à jour `ghostTile` via `requestAnimationFrame`. Le seuil de drag reste instantané. `cancelAnimationFrame` au mouseUp.
+4. **Client-only filter** — `injectCatalogEntries` enregistre les clés dans `_clientOnlyKeys` (Set). `saveLayout` filtre ces tiles avant l'envoi, merge les client-only tiles à la réponse. `resolveWidgets` les exclut des requêtes.
+
+**Conséquences** :
+- Save 422 éliminé — les contraintes sont respectées des deux côtés, les widgets client-only ne sont plus envoyés
+- Drag/resize fluide (~60fps) — un seul pipeline par frame au lieu d'un par pixel
+- Platform inchangé — aucune modification des fichiers Platform (page, store)
+- Les widgets compliance restent en mémoire après save, mais ne sont pas persistés
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean (10.40s)
+
+**Fichiers** :
+
+**MODIFY (2)**
+- `resources/js/composables/useDashboardGrid.js` — getConstraints fix NaN, clampToBounds per-widget, rAF throttle, cancelAnimationFrame
+- `resources/js/core/surface-engine/useSurfaceEngine.js` — _clientOnlyKeys Set, saveLayout filter, resolveWidgets filter, injectCatalogEntries marks keys
+
+---
+
+## ADR-200 — Binary Snap : responsive gap-free tablet layout
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Sur tablet (6-col), les widgets de largeur canonique intermédiaire (ex : w=4) laissent des colonnes vides. Un widget w=4 sur une grille 6 utilise 4 cols et gaspille 2. Le mode mobile (forceH) résout déjà ce problème avec un snap binaire (half/full) + interleaving. Le chemin tablet (non-mobile, viewCols < 12) ne faisait qu'un simple clamp : `renderW = Math.min(tile.w, viewCols)`.
+
+**Décision** :
+
+Algorithme **binary snap avec pré-calcul des largeurs** dans `computeVisualLayout` (chemin tablet only — mobile inchangé) :
+
+1. **Snap binaire** : chaque tile reçoit soit `halfCols` (3) soit `viewCols` (6)
+   - Largeur canonique `w ≤ halfCols` → `halfCols` (demi-ligne, s'apparie en paires)
+   - Largeur canonique `w > halfCols` → `viewCols` (ligne complète, pas de trou)
+
+2. **Pré-calcul** : les largeurs de rendu sont calculées AVANT le placement :
+   - Itération en ordre canonique (y, x) avec un `buffer` index
+   - Tile half sans buffer → buffer = i, renderWidth = halfCols
+   - Tile half avec buffer → paire formée, buffer = null
+   - Tile full avec buffer → orphelin étiré à viewCols, buffer = null
+   - Fin de boucle avec buffer → orphelin étiré à viewCols
+
+3. **Hauteurs préservées** — pas de forceH comme en mobile
+4. **Ordre canonique préservé** — pas d'interleaving
+
+**Conséquences** :
+- Zéro gap sur tablet — chaque tile snap à half (3) ou full (6)
+- Les orphelins (cassés par un full OU en fin de boucle) sont étirés automatiquement
+- Pas de modification rétroactive de l'occupancy map (pré-calcul avant placement)
+- Desktop inchangé (early return à viewCols ≥ CANONICAL_COLS)
+- Mobile inchangé (chemin forceH existant)
+- Pipeline canonique (12-col) jamais muté
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean
+
+**Fichiers** :
+
+**MODIFY (1)**
+- `resources/js/composables/useDashboardGrid.js` — `computeVisualLayout` chemin tablet : binary snap pre-compute (remplace sequential pairing)
+
+---
+
+## ADR-201 — Widget Intelligence Layer (WIL) + Default Dashboard Bootstrap
+
+**Date** : 2026-03-02
+
+**Contexte** :
+Les widgets dashboard ne s'adaptent pas à leur taille rendue. `density` (S/M/L) est basée uniquement sur la hauteur (h). Les widgets KPI affichent un contenu identique à w=3 et w=12 — écrasé en petit, vide en grand. Seuls les graphiques s'adaptent via des checks `viewport.w` ad-hoc. Aucun système unifié. De plus, le dashboard company est vide au premier login (UX KO).
+
+**Décision** :
+
+### A — Widget Intelligence Layer (WIL)
+
+1. **Widget Profile Registry** (`widgetProfiles.js`) — mappe chaque widget key à un profil UI (`kpi`, `kpi-rich`, `list`, `chart`). Profil inconnu → `'unknown'` + warning DEV → fallback density-only. Uniforme Platform + Company, aucune logique spécifique à une surface.
+
+2. **`computePresentationMode(pxWidth, pxHeight, profile)`** — breakpoints par profil :
+   - `kpi` : micro (<180) → compact (<320) → balanced (<600) → hero
+   - `kpi-rich` : compact (<250) → balanced (<500) → expanded
+   - `list` : compact (<280) → balanced (<480) → expanded
+   - `chart` : spark (<300) → standard (<650) → detailed
+   - `unknown` : → null (density-only)
+
+3. **Container Queries** — `container-type: inline-size; container-name: dashboard-tile;` sur `.dashboard-tile`. Widgets utilisent `@container dashboard-tile (min-width: …)` pour le layout CSS. Séparation : `presentationMode` = QUOI afficher (JS), `@container` = COMMENT layouter (CSS).
+
+4. **`kpiScale`** — `Math.max(0.9, Math.min(1.6, Math.min(pxW/350, pxH/220)))` — scaling typographique pour KPI : `font-size: clamp(22px, ${28 * kpiScale}px, 56px)`. CQ fallback : `font-size: clamp(20px, 6cqw, 56px)`.
+
+5. **Feature flag** `ENABLE_PRESENTATION_ENGINE = false` par défaut. Quand OFF → `presentationMode` est `null` partout. Les 3 POC widgets ont un `v-else` strict → fallback au rendu density actuel. Aucun widget non-POC modifié.
+
+6. **POC sur 3 widgets** : `_RevenueMtdWidget.vue` (KPI), `_RecentListWidgetShell.vue` (List), `_RevenueTrendWidget.vue` (Chart).
+
+### B — Default Dashboard Bootstrap
+
+7. **Company store** — dans `loadDashboard()` : après fetchCatalog + fetchLayout, si layout vide → `applyDefaultLayout()` (3 KPI + 1 list/chart depuis catalog disponible) → `saveLayout()` une fois. Idempotent : ne s'exécute que si layout vide.
+
+8. **Platform store** — safety net identique (le backend fournit déjà un default, mais protection edge case).
+
+### C — Mobile Odd Gap (preuve)
+
+9. **Pas de bug mobile** — le mobile path (`computeVisualLayout` avec `forceH`) gère correctement les KPIs impairs : `(kpiOdd && isLast) ? viewCols : halfCols` → dernier KPI étiré pleine largeur. Charts toujours pleine largeur. Prouvé par 3 scénarios (5 KPIs, 3 KPIs + 2 charts, 2 KPIs + 3 charts). Le gap observé = **tablet path** (960-1280px), corrigé par ADR-200 (binary snap pre-compute).
+
+**Conséquences** :
+- Système uniforme Platform + Company — aucune branche spécifique
+- Rollback immédiat via feature flag OFF (défaut)
+- Migration incrémentale : seuls 3 widgets POC implémentent le contrat WIL
+- Dashboard non-vide dès le premier login (company + platform)
+- Zero changement backend
+
+**Tests** : 1424 passed, 0 failed, 9 skipped — build clean (10.71s)
+
+**Fichiers** :
+
+**CREATE (1)**
+- `resources/js/components/dashboard/widgetProfiles.js` — registry profils UI (17 widgets)
+
+**MODIFY (8)**
+- `resources/js/components/dashboard/DashboardGrid.vue` — WIL engine, container queries, feature flag OFF
+- `resources/js/core/surface-engine/surfaceEngine.types.d.ts` — uiProfile, presentationMode, kpiScale
+- `resources/js/pages/platform/billing/_RevenueMtdWidget.vue` — POC KPI (micro/compact/balanced/hero + fallback)
+- `resources/js/pages/platform/billing/_RecentListWidgetShell.vue` — POC List (compact/balanced/expanded + fallback)
+- `resources/js/pages/platform/billing/_RevenueTrendWidget.vue` — POC Chart (spark/standard/detailed + fallback)
+- `resources/js/modules/company/dashboard/dashboard.store.js` — bootstrap default layout
+- `resources/js/modules/platform-admin/dashboard/dashboard.store.js` — bootstrap safety net
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

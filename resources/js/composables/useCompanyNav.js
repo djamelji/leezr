@@ -1,4 +1,3 @@
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/stores/auth'
 import { useNavStore } from '@/core/stores/nav'
 
@@ -6,14 +5,14 @@ import { useNavStore } from '@/core/stores/nav'
  * Company navigation items — manifest-driven, permission-filtered.
  *
  * Converts backend nav groups to flat nav items with headings.
+ * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  */
 export function useCompanyNav() {
-  const { t } = useI18n()
   const auth = useAuthStore()
   const navStore = useNavStore()
 
   const navItems = computed(() => {
-    return companyGroupsToNavItems(navStore.companyGroups, auth, t)
+    return companyGroupsToNavItems(navStore.companyGroups, auth)
   })
 
   /**
@@ -32,12 +31,13 @@ export function useCompanyNav() {
 /**
  * Convert backend groups to flat nav items.
  * Static items (Dashboard, Account Settings) added around groups.
+ * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Frontend only applies last-barrier permission check.
  */
-function companyGroupsToNavItems(groups, auth, t) {
+function companyGroupsToNavItems(groups, auth) {
   const items = [
     {
-      title: t('nav.company.dashboard'),
+      title: 'nav.company.dashboard',
       to: { name: 'dashboard' },
       icon: { icon: 'tabler-smart-home' },
     },
@@ -45,12 +45,12 @@ function companyGroupsToNavItems(groups, auth, t) {
 
   for (const group of groups) {
     if (group.titleKey) {
-      items.push({ heading: t(group.titleKey) })
+      items.push({ heading: group.titleKey })
     }
 
     for (const item of group.items) {
       const navItem = {
-        title: t(`nav.company.${item.key}`),
+        title: `nav.company.${item.key}`,
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
@@ -59,7 +59,7 @@ function companyGroupsToNavItems(groups, auth, t) {
       // Only set children when non-empty — Vuexy uses 'children' in item
       // to decide between VerticalNavLink vs VerticalNavGroup
       const children = (item.children || []).map(c => ({
-        title: t(`nav.company.${c.key}`),
+        title: `nav.company.${c.key}`,
         to: c.to,
         icon: { icon: c.icon },
       }))
@@ -72,9 +72,9 @@ function companyGroupsToNavItems(groups, auth, t) {
     }
   }
 
-  items.push({ heading: t('nav.groups.account') })
+  items.push({ heading: 'nav.groups.account' })
   items.push({
-    title: t('nav.company.account-settings'),
+    title: 'nav.company.account-settings',
     to: { name: 'account-settings-tab', params: { tab: 'account' } },
     icon: { icon: 'tabler-settings' },
   })

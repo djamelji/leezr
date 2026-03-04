@@ -7,6 +7,7 @@ import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.stor
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useDashboardStore } from '@/modules/platform-admin/dashboard/dashboard.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
+import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
 
 definePage({
   meta: {
@@ -127,8 +128,13 @@ const addWidgetFromCatalog = widget => {
 }
 
 const saveAndResolve = async () => {
-  await dashboardStore.saveLayout()
-  await dashboardStore.resolveWidgets()
+  try {
+    await dashboardStore.saveLayout()
+    await dashboardStore.resolveWidgets()
+  }
+  catch {
+    // saveError is set by the engine — UI shows snackbar
+  }
 }
 </script>
 
@@ -181,58 +187,62 @@ const saveAndResolve = async () => {
       </VCol>
     </VRow>
 
-    <!-- ═══ Dashboard Engine Widgets (ADR-149 D4e.3) ═══ -->
-    <div class="d-flex align-center mt-8 mb-4">
-      <h5 class="text-h5">
-        {{ t('platformDashboard.engine.widgetsTitle') }}
-      </h5>
-      <VSpacer />
-      <VBtn
-        v-if="dashboardStore.isDirty"
-        variant="tonal"
-        color="success"
-        size="small"
-        class="me-2"
-        @click="saveAndResolve"
-      >
-        <VIcon
-          start
-          icon="tabler-device-floppy"
-          size="18"
-        />
-        {{ t('platformDashboard.engine.saveLayout') }}
-      </VBtn>
-      <VBtn
-        variant="tonal"
-        size="small"
-        @click="showCatalogDrawer = true"
-      >
-        <VIcon
-          start
-          icon="tabler-plus"
-          size="18"
-        />
-        {{ t('platformDashboard.engine.addWidget') }}
-      </VBtn>
-    </div>
+    <!-- ═══ Dashboard Host (ADR-198 — stable grid position) ═══ -->
+    <DashboardHostContainer>
+      <template #toolbar>
+        <div class="d-flex align-center mt-8 mb-4">
+          <h5 class="text-h5">
+            {{ t('platformDashboard.engine.widgetsTitle') }}
+          </h5>
+          <VSpacer />
+          <VBtn
+            v-if="dashboardStore.isDirty"
+            variant="tonal"
+            color="success"
+            size="small"
+            class="me-2"
+            @click="saveAndResolve"
+          >
+            <VIcon
+              start
+              icon="tabler-device-floppy"
+              size="18"
+            />
+            {{ t('platformDashboard.engine.saveLayout') }}
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            size="small"
+            @click="showCatalogDrawer = true"
+          >
+            <VIcon
+              start
+              icon="tabler-plus"
+              size="18"
+            />
+            {{ t('platformDashboard.engine.addWidget') }}
+          </VBtn>
+        </div>
+      </template>
 
-    <DashboardGrid
-      v-if="hasDashboardWidgets"
-      :layout="dashboardStore.layout"
-      :widget-data="dashboardStore.widgetData"
-      :widget-errors="dashboardStore.widgetErrors"
-      :catalog="dashboardStore.catalog"
-      :loading="dashboardStore.dataLoading"
-      :editable="true"
-      @update:layout="dashboardStore.updateLayout($event)"
-    />
+      <DashboardGrid
+        v-if="hasDashboardWidgets"
+        :layout="dashboardStore.layout"
+        :widget-data="dashboardStore.widgetData"
+        :widget-errors="dashboardStore.widgetErrors"
+        :catalog="dashboardStore.catalog"
+        :loading="dashboardStore.dataLoading"
+        :editable="true"
+        @update:layout="dashboardStore.updateLayout($event)"
+      />
 
-    <div
-      v-else-if="!dashboardStore.isLoading"
-      class="text-center pa-8 text-disabled"
-    >
-      {{ t('platformDashboard.engine.noWidgets') }}
-    </div>
+      <div
+        v-else-if="!dashboardStore.isLoading"
+        class="text-center pa-8 text-disabled"
+      >
+        {{ t('platformDashboard.engine.noWidgets') }}
+      </div>
+    </DashboardHostContainer>
 
     <!-- ═══ Catalog Drawer ═══ -->
     <VNavigationDrawer
@@ -271,5 +281,14 @@ const saveAndResolve = async () => {
         {{ t('platformDashboard.engine.allWidgetsAdded') }}
       </VCardText>
     </VNavigationDrawer>
+
+    <!-- ═══ Save Error ═══ -->
+    <VSnackbar
+      :model-value="!!dashboardStore.saveError"
+      color="error"
+      :timeout="5000"
+    >
+      {{ dashboardStore.saveError }}
+    </VSnackbar>
   </div>
 </template>

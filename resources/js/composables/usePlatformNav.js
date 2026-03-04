@@ -1,4 +1,3 @@
-import { useI18n } from 'vue-i18n'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useNavStore } from '@/core/stores/nav'
 
@@ -6,14 +5,14 @@ import { useNavStore } from '@/core/stores/nav'
  * Platform navigation items — manifest-driven, permission-filtered.
  *
  * Converts backend nav groups to flat nav items with headings.
+ * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  */
 export function usePlatformNav() {
-  const { t } = useI18n()
   const auth = usePlatformAuthStore()
   const navStore = useNavStore()
 
   const navItems = computed(() => {
-    return groupsToNavItems(navStore.platformGroups, auth, t)
+    return groupsToNavItems(navStore.platformGroups, auth)
   })
 
   const firstAccessibleRoute = computed(() => {
@@ -27,20 +26,20 @@ export function usePlatformNav() {
 
 /**
  * Convert backend groups to flat nav items with headings.
- * Uses t(group.titleKey) for i18n headings.
+ * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Last-barrier permission check only (backend already filtered).
  */
-function groupsToNavItems(groups, auth, t) {
+function groupsToNavItems(groups, auth) {
   const items = []
 
   for (const group of groups) {
     if (group.titleKey) {
-      items.push({ heading: t(group.titleKey) })
+      items.push({ heading: group.titleKey })
     }
 
     for (const item of group.items) {
       const navItem = {
-        title: t(`nav.platform.${item.key}`),
+        title: `nav.platform.${item.key}`,
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
@@ -49,7 +48,7 @@ function groupsToNavItems(groups, auth, t) {
       // Only set children when non-empty — Vuexy uses 'children' in item
       // to decide between VerticalNavLink vs VerticalNavGroup
       const children = (item.children || []).map(c => ({
-        title: t(`nav.platform.${c.key}`),
+        title: `nav.platform.${c.key}`,
         to: c.to,
         icon: { icon: c.icon },
       }))
