@@ -203,7 +203,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                       :model-value="documentType.code"
                       :label="t('common.code')"
                       disabled
-                      hint="Immutable after creation"
+                      :hint="t('platformDocumentTypes.immutableHint')"
                       persistent-hint
                     />
                   </VCol>
@@ -216,7 +216,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                       :model-value="documentType.scope === 'company_user' ? t('platformDocumentTypes.scopeCompanyUser') : t('platformDocumentTypes.scopeCompany')"
                       :label="t('platformDocumentTypes.scope')"
                       disabled
-                      hint="Immutable after creation"
+                      :hint="t('platformDocumentTypes.immutableHint')"
                       persistent-hint
                     />
                   </VCol>

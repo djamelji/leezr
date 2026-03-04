@@ -50,7 +50,8 @@
       "audit": "Journal d'audit",
       "payments": "Paiements",
       "billing": "Facturation",
-      "billing-settings": "Paramètres facturation"
+      "billing-settings": "Paramètres facturation",
+      "document-types": "Types de documents"
     },
     "company": {
       "dashboard": "Tableau de bord",
@@ -129,7 +130,8 @@
     "invitationPending": "Invitation en attente",
     "export": "Exporter",
     "import": "Importer",
-    "all": "Tous"
+    "all": "Tous",
+    "manage": "Gérer"
   },
 
   "dashboard": {
@@ -1467,7 +1469,9 @@
     "memberDocumentsCount": "Documents membre",
     "companyDocumentsCount": "Documents entreprise",
     "requestsCount": "Demandes workflow",
-    "usedInJobdomains": "Utilisé dans les métiers"
+    "usedInJobdomains": "Utilisé dans les métiers",
+    "codeHint": "Minuscules et underscores uniquement. Non modifiable après création.",
+    "immutableHint": "Non modifiable après création"
   },
 
   "platformCompanyDetail": {

@@ -50,7 +50,8 @@
       "audit": "Audit Logs",
       "payments": "Payments",
       "billing": "Billing",
-      "billing-settings": "Billing Settings"
+      "billing-settings": "Billing Settings",
+      "document-types": "Document Types"
     },
     "company": {
       "dashboard": "Dashboard",
@@ -129,7 +130,8 @@
     "invitationPending": "Invitation pending",
     "export": "Export",
     "import": "Import",
-    "all": "All"
+    "all": "All",
+    "manage": "Manage"
   },
 
   "dashboard": {
@@ -1467,7 +1469,9 @@
     "memberDocumentsCount": "Member documents",
     "companyDocumentsCount": "Company documents",
     "requestsCount": "Workflow requests",
-    "usedInJobdomains": "Used in Jobdomains"
+    "usedInJobdomains": "Used in Jobdomains",
+    "codeHint": "Lowercase, underscores only. Cannot be changed after creation.",
+    "immutableHint": "Immutable after creation"
   },
 
   "platformCompanyDetail": {

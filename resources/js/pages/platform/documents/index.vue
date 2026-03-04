@@ -180,10 +180,10 @@ const handleCreate = async () => {
   }
 }
 
-const scopeOptions = [
-  { title: 'Member Document', value: 'company_user' },
-  { title: 'Company Document', value: 'company' },
-]
+const scopeOptions = computed(() => [
+  { title: t('platformDocumentTypes.scopeCompanyUser'), value: 'company_user' },
+  { title: t('platformDocumentTypes.scopeCompany'), value: 'company' },
+])
 
 const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
 </script>
@@ -347,7 +347,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                   v-model="createForm.code"
                   :label="t('common.code')"
                   placeholder="e.g. work_permit"
-                  hint="Lowercase, underscores only. Cannot be changed after creation."
+                  :hint="t('platformDocumentTypes.codeHint')"
                   persistent-hint
                 />
               </VCol>
