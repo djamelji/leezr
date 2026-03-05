@@ -93,10 +93,11 @@ const openCredentials = module => {
   credentialsModule.value = module
   credentialsForm.value = {}
 
-  // Pre-fill empty fields from credential_fields
+  // Pre-fill with masked saved values, fallback to empty
+  const masked = module.credentials_masked || {}
   if (module.credential_fields) {
     for (const field of module.credential_fields) {
-      credentialsForm.value[field.key] = ''
+      credentialsForm.value[field.key] = masked[field.key] || ''
     }
   }
 

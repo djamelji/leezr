@@ -21,6 +21,19 @@ class PlatformPaymentGovernanceReadService
         $modules = $dbModules->map(function (PlatformPaymentModule $module) use ($registryManifests) {
             $manifest = $registryManifests[$module->provider_key] ?? null;
 
+            // Mask credential values for display (show first 8 + last 4 chars)
+            $maskedCredentials = [];
+            $rawCredentials = $module->credentials ?? [];
+            foreach ($rawCredentials as $key => $value) {
+                if (is_string($value) && strlen($value) > 12) {
+                    $maskedCredentials[$key] = substr($value, 0, 8) . '••••' . substr($value, -4);
+                } elseif (is_string($value) && strlen($value) > 0) {
+                    $maskedCredentials[$key] = '••••••••';
+                } else {
+                    $maskedCredentials[$key] = '';
+                }
+            }
+
             return [
                 'id' => $module->id,
                 'provider_key' => $module->provider_key,
@@ -29,6 +42,7 @@ class PlatformPaymentGovernanceReadService
                 'is_installed' => $module->is_installed,
                 'is_active' => $module->is_active,
                 'has_credentials' => !empty($module->credentials),
+                'credentials_masked' => $maskedCredentials,
                 'health_status' => $module->health_status,
                 'health_checked_at' => $module->health_checked_at?->toISOString(),
                 'sort_order' => $module->sort_order,

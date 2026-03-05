@@ -55,7 +55,20 @@ class PaymentGovernanceCrudService
     public static function updateModuleCredentials(string $providerKey, array $credentials): PlatformPaymentModule
     {
         $module = PlatformPaymentModule::where('provider_key', $providerKey)->firstOrFail();
-        $module->update(['credentials' => $credentials]);
+
+        // Merge: keep existing value if the submitted value contains mask characters
+        $existing = $module->credentials ?? [];
+        $merged = [];
+
+        foreach ($credentials as $key => $value) {
+            if (is_string($value) && str_contains($value, '••••') && isset($existing[$key])) {
+                $merged[$key] = $existing[$key]; // Keep original (not modified)
+            } else {
+                $merged[$key] = $value; // Use new value
+            }
+        }
+
+        $module->update(['credentials' => $merged]);
 
         return $module;
     }
