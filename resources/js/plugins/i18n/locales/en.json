@@ -1777,7 +1777,7 @@
     "noModulesInTab": "No modules in this section.",
     "noSearchResults": "No modules match your search.",
     "searchModuleHint": "Search a module",
-    "activatesDependents": "Unlocks {count} additional module(s)",
+    "requiredByModules": "Required by {modules}",
     "depIncluded": "included free",
     "perMonth": "mo",
     "pricingFree": "Included",

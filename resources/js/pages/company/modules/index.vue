@@ -209,6 +209,13 @@ const dependencyLabel = reqKey => {
   return { name: dep.name, label: t('companyModules.pricingContactSales'), color: 'secondary', icon: 'tabler-plus' }
 }
 
+const dependentNames = mod => {
+  if (!mod.dependents?.length) return null
+  return mod.dependents
+    .map(k => moduleStore.modules.find(m => m.key === k)?.name || k)
+    .join(', ')
+}
+
 // --- Actions ---
 
 const formatAmount = cents => {
@@ -474,7 +481,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </template>
 
                       <div
-                        v-if="mod.dependents?.length"
+                        v-if="dependentNames(mod)"
                         class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
@@ -483,7 +490,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
+                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -627,7 +634,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </template>
 
                       <div
-                        v-if="mod.dependents?.length"
+                        v-if="dependentNames(mod)"
                         class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
@@ -636,7 +643,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
+                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -737,7 +744,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </template>
 
                       <div
-                        v-if="mod.dependents?.length"
+                        v-if="dependentNames(mod)"
                         class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
@@ -746,7 +753,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
+                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -914,7 +921,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </template>
 
                       <div
-                        v-if="mod.dependents?.length"
+                        v-if="dependentNames(mod)"
                         class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
@@ -923,7 +930,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
+                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
                         </span>
                       </div>
                     </VCardText>
