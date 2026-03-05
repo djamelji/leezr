@@ -4,11 +4,13 @@ import { $api } from '@/utils/api'
 export const useModuleStore = defineStore('module', {
   state: () => ({
     _modules: [],
+    _companyPlanKey: null,
     _loaded: false,
   }),
 
   getters: {
     modules: state => state._modules,
+    companyPlanKey: state => state._companyPlanKey,
     activeModules: state => state._modules.filter(m => m.is_active),
 
     /**
@@ -50,6 +52,7 @@ export const useModuleStore = defineStore('module', {
       const data = await $api('/modules', { signal: options.signal })
 
       this._modules = data.modules
+      this._companyPlanKey = data.company_plan_key ?? null
       this._loaded = true
 
       return data.modules

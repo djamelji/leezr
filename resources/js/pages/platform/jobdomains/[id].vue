@@ -101,6 +101,38 @@ const isModuleSelected = moduleKey => {
   return defaultModuleKeys.value.has(moduleKey)
 }
 
+// ADR-213: Dependency helpers
+const modulesByKey = computed(() => {
+  const map = {}
+  for (const m of allModules.value) map[m.key] = m
+  return map
+})
+
+const moduleDependents = computed(() => {
+  const map = {}
+  for (const m of allModules.value) {
+    if (!m.requires?.length) continue
+    for (const reqKey of m.requires) {
+      if (!map[reqKey]) map[reqKey] = []
+      map[reqKey].push(m.key)
+    }
+  }
+  return map
+})
+
+const moduleRequiresNames = moduleKey => {
+  const mod = modulesByKey.value[moduleKey]
+  if (!mod?.requires?.length) return []
+  return mod.requires
+    .filter(k => modulesByKey.value[k]?.type !== 'core')
+    .map(k => modulesByKey.value[k]?.name || k)
+}
+
+const moduleDependentNames = moduleKey => {
+  const deps = moduleDependents.value[moduleKey] || []
+  return deps.map(k => modulesByKey.value[k]?.name || k)
+}
+
 // B4: Search and filter state
 const moduleSearch = ref('')
 const moduleTypeFilter = ref('all')
@@ -124,6 +156,7 @@ const filteredModules = computed(() => {
   return mods.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 })
 
+// ADR-213: Toggle with auto-dependency resolution (backend handles expansion/cascade)
 const toggleModule = async (moduleKey, enabled) => {
   if (!jobdomain.value) return
 
@@ -138,7 +171,22 @@ const toggleModule = async (moduleKey, enabled) => {
     })
 
     jobdomain.value = data.jobdomain
-    toast(data.message, 'success')
+
+    // ADR-213: Show feedback for auto-resolved dependencies
+    const autoAdded = data.auto_added || []
+    const autoRemoved = data.auto_removed || []
+
+    if (autoAdded.length > 0) {
+      const names = autoAdded.map(k => modulesByKey.value[k]?.name || k).join(', ')
+      toast(t('platformJobdomains.autoAddedModules', { modules: names }), 'info')
+    }
+    else if (autoRemoved.length > 0) {
+      const names = autoRemoved.map(k => modulesByKey.value[k]?.name || k).join(', ')
+      toast(t('platformJobdomains.autoRemovedModules', { modules: names }), 'warning')
+    }
+    else {
+      toast(data.message, 'success')
+    }
   }
   catch (error) {
     toast(error?.data?.message || t('platformJobdomains.failedToUpdateModules'), 'error')
@@ -1190,6 +1238,39 @@ onMounted(async () => {
                     <VCardText class="text-body-2 text-medium-emphasis pt-0 flex-grow-1">
                       {{ mod.description }}
                     </VCardText>
+                    <!-- ADR-213: Dependency indicators -->
+                    <VCardText
+                      v-if="moduleRequiresNames(mod.key).length || moduleDependentNames(mod.key).length"
+                      class="pt-0 pb-2"
+                    >
+                      <div
+                        v-if="moduleRequiresNames(mod.key).length"
+                        class="d-flex align-center gap-1 mb-1"
+                      >
+                        <VIcon
+                          icon="tabler-arrow-bar-to-right"
+                          size="14"
+                          color="warning"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('platformJobdomains.dependsOn') }} {{ moduleRequiresNames(mod.key).join(', ') }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="moduleDependentNames(mod.key).length"
+                        class="d-flex align-center gap-1"
+                      >
+                        <VIcon
+                          icon="tabler-arrow-bar-to-down"
+                          size="14"
+                          color="success"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('platformJobdomains.requiredBy') }} {{ moduleDependentNames(mod.key).join(', ') }}
+                        </span>
+                      </div>
+                    </VCardText>
+
                     <VCardText class="d-flex flex-wrap gap-1 pt-0">
                       <VChip
                         :color="mod.type === 'core' ? 'primary' : 'info'"

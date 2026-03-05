@@ -73,8 +73,9 @@ class ModuleCatalogReadModel
                     }
                 }
 
-                $isActive = $pm->is_enabled_globally
-                    && ($manifest->type === 'core' || ($cm !== null && $cm->is_enabled_for_company));
+                // ADR-209: Use ModuleGate (checks entitlement + activation reason)
+                // instead of raw DB flag which can be stale
+                $isActive = ModuleGate::isActive($company, $pm->key);
 
                 $type = $manifest->type;
                 $minPlan = $pm->min_plan_override ?? $manifest->minPlan;
@@ -107,6 +108,7 @@ class ModuleCatalogReadModel
                     'dependents' => $dependentsMap[$pm->key] ?? [],
                     'min_plan' => $minPlan,
                     'pricing_mode' => $pm->effectivePricingModeFor($company),
+                    'addon_pricing' => $pm->addon_pricing,
                     'icon_type' => $pm->icon_type ?? $manifest->iconType ?? 'tabler',
                     'icon_name' => $pm->icon_name ?? $manifest->iconRef ?? 'tabler-puzzle',
                     'activation_reasons' => ($activationReasons->get($pm->key) ?? collect())

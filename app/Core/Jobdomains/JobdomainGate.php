@@ -11,6 +11,7 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Models\Company;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\CompanyModuleActivationReason;
+use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Support\Facades\DB;
@@ -122,12 +123,23 @@ class JobdomainGate
             // ADR-190: Resolve presets with market overlay
             $presets = JobdomainPresetResolver::resolve($jobdomainKey, $company->market_key);
 
-            // Activate default modules
+            // Activate default modules + auto-resolve dependencies (ADR-211)
             $defaultModules = $presets->modules;
 
+            // Expand with transitive requires so dependencies are auto-activated
+            $allRequired = [];
+
+            foreach ($defaultModules as $moduleKey) {
+                foreach (ModuleActivationEngine::collectTransitiveRequires($moduleKey) as $reqKey) {
+                    if (! in_array($reqKey, $defaultModules, true)) {
+                        $allRequired[$reqKey][] = $moduleKey;
+                    }
+                }
+            }
+
+            // Activate explicit defaults with REASON_DIRECT
             foreach ($defaultModules as $moduleKey) {
                 if (ModuleGate::isEnabledGlobally($moduleKey)) {
-                    // Add activation reason (source of truth)
                     CompanyModuleActivationReason::firstOrCreate([
                         'company_id' => $company->id,
                         'module_key' => $moduleKey,
@@ -135,9 +147,27 @@ class JobdomainGate
                         'source_module_key' => null,
                     ]);
 
-                    // Sync cache (derived)
                     CompanyModule::updateOrCreate(
                         ['company_id' => $company->id, 'module_key' => $moduleKey],
+                        ['is_enabled_for_company' => true],
+                    );
+                }
+            }
+
+            // Activate auto-resolved dependencies with REASON_REQUIRED
+            foreach ($allRequired as $reqKey => $sourceKeys) {
+                if (ModuleGate::isEnabledGlobally($reqKey)) {
+                    foreach ($sourceKeys as $sourceKey) {
+                        CompanyModuleActivationReason::firstOrCreate([
+                            'company_id' => $company->id,
+                            'module_key' => $reqKey,
+                            'reason' => CompanyModuleActivationReason::REASON_REQUIRED,
+                            'source_module_key' => $sourceKey,
+                        ]);
+                    }
+
+                    CompanyModule::updateOrCreate(
+                        ['company_id' => $company->id, 'module_key' => $reqKey],
                         ['is_enabled_for_company' => true],
                     );
                 }

@@ -7647,4 +7647,137 @@ Le simple fait d'avoir un prix enregistré + ne pas être dans un jobdomain suff
 
 ---
 
+### ADR-210 — Affichage des prix modules sur les cartes company
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-206
+
+**Contexte** :
+Les cartes modules côté company n'affichaient aucune information tarifaire. L'utilisateur ne pouvait pas voir le prix d'un module avant de cliquer pour acheter. De plus, les modules avec dépendances ne montraient pas le coût des dépendances.
+
+**Décision** :
+- Exposer `addon_pricing` (JSON brut) dans la réponse du catalog pour que le frontend calcule les prix par modèle
+- Ajouter `company_plan_key` à la réponse API pour résoudre les prix `plan_flat`
+- Chaque carte module affiche son prix dans l'unité correcte (€/mois, €/utilisateur, €/appel API, etc.)
+- Pour les modules avec dépendances : afficher le prix de chaque dépendance ou "Offert" si déjà incluse/active
+- Tab "Included" : pas de prix affiché (modules gratuits)
+- Tab "Active" : dépendances affichées avec leur statut
+- 5 modèles de prix supportés : flat, plan_flat, per_seat, usage, tiered
+
+**Conséquences** :
+- Le prix est visible directement sur les cartes, pas besoin de cliquer pour voir le coût
+- Les dépendances déjà actives/incluses affichent "Offert", les autres leur prix propre
+- Le frontend utilise `addon_pricing` brut + `company_plan_key` pour un calcul côté client
+- Nouvelles clés i18n pour les unités de prix et métriques
+
+**Fichiers** :
+- `app/Core/Modules/ModuleCatalogReadModel.php` — ajout champ `addon_pricing`
+- `app/Modules/Core/Modules/Http/CompanyModuleController.php` — ajout `company_plan_key`
+- `resources/js/core/stores/module.js` — stockage `companyPlanKey`
+- `resources/js/pages/company/modules/index.vue` — helpers pricing + templates
+- `resources/js/plugins/i18n/locales/en.json` — clés prix
+- `resources/js/plugins/i18n/locales/fr.json` — clés prix
+
+---
+
+### ADR-211 — Auto-activation des dépendances dans les defaults jobdomain
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-208
+
+**Contexte** :
+`JobdomainGate::assignToCompany()` activait les modules par insertion directe (`REASON_DIRECT`) sans passer par `ModuleActivationEngine::enable()`. Conséquence : si un jobdomain avait `default_modules: ['logistics_tracking']` et que tracking requiert shipments, seul tracking était activé — shipments restait inactif.
+
+De plus, `EntitlementResolver` ne considérait comme entitled que les modules explicitement dans `default_modules`. Un module requis par un default (mais pas lui-même dans la liste) n'était pas entitled, donc `ModuleGate::isActive()` le bloquait.
+
+**Décision** :
+1. Dans `assignToCompany()`, calculer les dépendances transitives de tous les defaults avant activation
+2. Les defaults explicites reçoivent `REASON_DIRECT`, les dépendances auto-résolues reçoivent `REASON_REQUIRED` avec `source_module_key`
+3. `EntitlementResolver` Gate 4b : un module requis transitivement par un default jobdomain est entitled (source: `jobdomain_dependency`)
+
+**Conséquences** :
+- Les dépendances de modules defaults sont auto-activées à la création de la company
+- L'admin platform n'a pas besoin d'inclure manuellement toutes les dépendances dans `default_modules`
+- Le désactivation cascade (orphan cleanup) fonctionne correctement car les raisons `REASON_REQUIRED` sont tracées
+- Les tests de retrait de module des defaults doivent retirer aussi les modules qui en dépendent pour que le module perde son entitlement
+
+**Fichiers** :
+- `app/Core/Jobdomains/JobdomainGate.php` — expansion des dépendances + `REASON_REQUIRED`
+- `app/Core/Modules/EntitlementResolver.php` — Gate 4b dependency resolution
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — scénarios mis à jour
+
+---
+
+### ADR-212 — Entitlement addon : modules avec addon_pricing activables
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-206, ADR-211
+
+**Contexte** :
+Un module avec `addon_pricing` configuré mais absent des `default_modules` du jobdomain n'était pas entitled. `EntitlementResolver` Gate 4 ne le trouvait pas dans les defaults, et il n'y avait pas de gate pour les addons. Résultat : le module apparaissait `LOCKED_ADDON` mais ne pouvait jamais être activé — `ModuleActivationEngine::enable()` rejetait avec "not available".
+
+Cas concret : `logistics_fleet` (avec addon_pricing, hors defaults) requiert `logistics_shipments`. L'activation de fleet depuis l'UI échouait car fleet n'était pas entitled.
+
+**Décision** :
+- Ajouter Gate 5 dans `EntitlementResolver` : un module compatible (plan + jobdomain) avec `addon_pricing ≠ null` est entitled (source: `addon`)
+- Le display state passe de `LOCKED_ADDON` → `AVAILABLE` pour ces modules (entitled + non activé)
+- L'utilisateur peut activer directement, le quote dialog s'affiche si pricing_mode = addon
+- Les dépendances sont cascade-activées par `ModuleActivationEngine::enable()`
+
+**Conséquences** :
+- Les modules addon sont activables sans être dans les defaults jobdomain
+- `LOCKED_ADDON` ne s'applique plus aux modules avec addon_pricing compatibles (ils sont `AVAILABLE`)
+- Les gates plan (Gate 2) et jobdomain compat (Gate 3) restent bloquants
+- Le billing effectif (facturation) reste à implémenter — l'activation est possible mais gratuite pour l'instant
+
+**Fichiers** :
+- `app/Core/Modules/EntitlementResolver.php` — Gate 5 addon entitlement
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — test adapté LOCKED_ADDON → AVAILABLE
+
+---
+
+### ADR-213 — Résolution automatique des dépendances dans les defaults jobdomain (admin platform)
+
+**Date** : 2026-03-04
+
+**Contexte** :
+L'admin platform peut activer/désactiver des modules dans les `default_modules` d'un jobdomain.
+Mais il n'y avait aucune résolution de dépendances : activer `logistics_tracking` (qui requiert `logistics_shipments`)
+n'ajoutait pas automatiquement `shipments`. Et désactiver `shipments` laissait `tracking` dans les defaults
+sans sa dépendance satisfaite.
+
+**Décisions** :
+1. **ON (ajout)** : `UpdateJobdomainUseCase` expanse automatiquement avec les `requires` transitifs
+   - Activer `tracking` → auto-ajoute `shipments` aux defaults
+   - Les modules core ne sont pas ajoutés (toujours actifs)
+2. **OFF (retrait)** : Cascade-retrait itératif des modules dont les `requires` ne sont plus satisfaits
+   - Retirer `shipments` → auto-retire `tracking`, `fleet`, `analytics`
+   - Stable en O(n) itérations maximum
+3. **Feedback admin** : Le backend retourne `auto_added[]` et `auto_removed[]`
+   - Le frontend affiche un toast informatif avec les noms des modules ajoutés/retirés
+4. **Indicateurs visuels** : Chaque carte module affiche ses dépendances et ses dépendants
+   - "Nécessite : Shipments" et "Utilisé par : Tracking, Fleet"
+5. **Impact entreprises existantes** : Géré dynamiquement par `ModuleGate::isActive()` (ADR-204)
+   - Module retiré des defaults + a `addon_pricing` → reste accessible (ADR-212 Gate 5)
+   - Module retiré des defaults + pas d'`addon_pricing` → gate bloque immédiatement
+   - Nettoyage données : `modules:reconcile-entitlements` (existant)
+
+**Conséquences** :
+- L'admin ne peut plus créer de configurations incohérentes (dépendances manquantes)
+- Le retrait en cascade évite les modules orphelins dans les defaults
+- Les entreprises existantes sont protégées par le gate dynamique et la logique d'entitlement
+- `UpdateJobdomainUseCase::execute()` retourne maintenant un array (pas un `Jobdomain`)
+
+**Fichiers** :
+- `app/Modules/Platform/Jobdomains/UseCases/UpdateJobdomainUseCase.php` — résolution dépendances
+- `app/Modules/Platform/Jobdomains/Http/JobdomainController.php` — retourne auto_added/auto_removed
+- `resources/js/pages/platform/jobdomains/[id].vue` — feedback toast + indicateurs visuels
+- `resources/js/plugins/i18n/locales/{en,fr}.json` — clés i18n
+- `tests/Feature/JobdomainModuleDependencyTest.php` — 7 tests
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

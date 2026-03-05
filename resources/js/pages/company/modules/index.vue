@@ -142,6 +142,73 @@ const categoryChip = module => {
 const isLocked = module =>
   ['locked_plan', 'locked_addon', 'contact_sales'].includes(module.display_state)
 
+// --- Pricing helpers (ADR-210) ---
+
+const modulePriceLabel = mod => {
+  if (['included', 'active'].includes(mod.display_state)) return null
+  if (!mod.addon_pricing) return t('companyModules.pricingContactSales')
+
+  const { pricing_model, pricing_params, pricing_metric } = mod.addon_pricing
+  const planKey = moduleStore.companyPlanKey || 'starter'
+
+  if (pricing_model === 'flat') {
+    const price = pricing_params?.price_monthly
+    return price != null ? `${price} \u20AC/${t('companyModules.perMonth')}` : null
+  }
+
+  if (pricing_model === 'plan_flat') {
+    const price = pricing_params?.[planKey]
+    return price != null ? `${price} \u20AC/${t('companyModules.perMonth')}` : null
+  }
+
+  if (pricing_model === 'per_seat') {
+    const metricLabel = t(`companyModules.metric_${pricing_metric || 'users'}`)
+    const included = pricing_params?.included
+    const overage = pricing_params?.overage_unit_price
+
+    // Plan-based included seats + overage
+    if (included && typeof included === 'object') {
+      const qty = included[planKey] ?? Object.values(included)[0] ?? 0
+      const overagePrice = overage?.[planKey] ?? overage ?? null
+      if (overagePrice != null) {
+        return t('companyModules.pricingPerSeatIncluded', { count: qty, price: overagePrice, metric: metricLabel })
+      }
+
+      return t('companyModules.pricingPerSeatBase', { count: qty, metric: metricLabel })
+    }
+
+    // Simple per-unit
+    const price = pricing_params?.price_per_unit
+    return price != null ? `${price} \u20AC/${metricLabel}` : null
+  }
+
+  if (pricing_model === 'usage') {
+    const metricLabel = t(`companyModules.metric_${pricing_metric || 'units'}`)
+    const price = pricing_params?.price_per_unit
+    return price != null ? `${price} \u20AC/${metricLabel}` : null
+  }
+
+  if (pricing_model === 'tiered') {
+    return t('companyModules.pricingTiered')
+  }
+
+  return null
+}
+
+const dependencyLabel = reqKey => {
+  const dep = moduleStore.modules.find(m => m.key === reqKey)
+  if (!dep) return null
+
+  if (['included', 'active'].includes(dep.display_state))
+    return { name: dep.name, label: t('companyModules.depIncluded'), color: 'success', icon: 'tabler-check' }
+
+  const price = modulePriceLabel(dep)
+  if (price)
+    return { name: dep.name, label: price, color: 'warning', icon: 'tabler-plus' }
+
+  return { name: dep.name, label: t('companyModules.pricingContactSales'), color: 'secondary', icon: 'tabler-plus' }
+}
+
 // --- Actions ---
 
 const formatAmount = cents => {
@@ -378,10 +445,37 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ mod.description || '—' }}
                       </p>
 
-                      <!-- ADR-208: Dependency indicators -->
+                      <!-- ADR-210: Pricing + dependencies -->
+                      <div
+                        v-if="modulePriceLabel(mod)"
+                        class="mt-3"
+                      >
+                        <span class="text-subtitle-2 font-weight-bold">
+                          {{ modulePriceLabel(mod) }}
+                        </span>
+                      </div>
+
+                      <template v-if="mod.requires?.length">
+                        <div
+                          v-for="reqKey in mod.requires"
+                          :key="reqKey"
+                          class="d-flex align-center gap-1 mt-2"
+                        >
+                          <VIcon
+                            :icon="dependencyLabel(reqKey)?.icon || 'tabler-plus'"
+                            size="14"
+                            :color="dependencyLabel(reqKey)?.color || 'secondary'"
+                          />
+                          <span class="text-caption text-medium-emphasis">
+                            {{ dependencyLabel(reqKey)?.name }} —
+                            <span class="font-weight-medium">{{ dependencyLabel(reqKey)?.label }}</span>
+                          </span>
+                        </div>
+                      </template>
+
                       <div
                         v-if="mod.dependents?.length"
-                        class="d-flex align-center gap-1 mt-1"
+                        class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
                           icon="tabler-sitemap"
@@ -389,20 +483,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
-                        </span>
-                      </div>
-                      <div
-                        v-if="mod.requires?.length"
-                        class="d-flex align-center gap-1 mt-1"
-                      >
-                        <VIcon
-                          icon="tabler-link"
-                          size="16"
-                          color="secondary"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -527,7 +608,24 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ t('companyModules.stateIncluded') }}
                       </VChip>
 
-                      <!-- ADR-208: Dependency indicators -->
+                      <!-- ADR-210: Dependencies (included tab) -->
+                      <template v-if="mod.requires?.length">
+                        <div
+                          v-for="reqKey in mod.requires"
+                          :key="reqKey"
+                          class="d-flex align-center gap-1 mt-2"
+                        >
+                          <VIcon
+                            icon="tabler-check"
+                            size="14"
+                            color="success"
+                          />
+                          <span class="text-caption text-medium-emphasis">
+                            {{ dependencyLabel(reqKey)?.name }} — {{ t('companyModules.depIncluded') }}
+                          </span>
+                        </div>
+                      </template>
+
                       <div
                         v-if="mod.dependents?.length"
                         class="d-flex align-center gap-1 mt-2"
@@ -538,20 +636,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
-                        </span>
-                      </div>
-                      <div
-                        v-if="mod.requires?.length"
-                        class="d-flex align-center gap-1 mt-1"
-                      >
-                        <VIcon
-                          icon="tabler-link"
-                          size="16"
-                          color="secondary"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -633,7 +718,24 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ t('companyModules.stateActive') }}
                       </VChip>
 
-                      <!-- ADR-208: Dependency indicators -->
+                      <!-- ADR-210: Active dependencies -->
+                      <template v-if="mod.requires?.length">
+                        <div
+                          v-for="reqKey in mod.requires"
+                          :key="reqKey"
+                          class="d-flex align-center gap-1 mt-2"
+                        >
+                          <VIcon
+                            icon="tabler-check"
+                            size="14"
+                            color="success"
+                          />
+                          <span class="text-caption text-medium-emphasis">
+                            {{ dependencyLabel(reqKey)?.name }} — {{ dependencyLabel(reqKey)?.label }}
+                          </span>
+                        </div>
+                      </template>
+
                       <div
                         v-if="mod.dependents?.length"
                         class="d-flex align-center gap-1 mt-2"
@@ -644,20 +746,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
-                        </span>
-                      </div>
-                      <div
-                        v-if="mod.requires?.length"
-                        class="d-flex align-center gap-1 mt-1"
-                      >
-                        <VIcon
-                          icon="tabler-link"
-                          size="16"
-                          color="secondary"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
                         </span>
                       </div>
                     </VCardText>
@@ -793,10 +882,40 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ mod.description || '—' }}
                       </p>
 
-                      <!-- ADR-208: Dependency indicators -->
+                      <!-- ADR-210: Pricing + dependencies -->
+                      <div
+                        v-if="modulePriceLabel(mod)"
+                        class="mt-3"
+                      >
+                        <span
+                          class="text-subtitle-2 font-weight-bold"
+                          :class="{ 'text-disabled': isLocked(mod) }"
+                        >
+                          {{ modulePriceLabel(mod) }}
+                        </span>
+                      </div>
+
+                      <template v-if="mod.requires?.length">
+                        <div
+                          v-for="reqKey in mod.requires"
+                          :key="reqKey"
+                          class="d-flex align-center gap-1 mt-2"
+                        >
+                          <VIcon
+                            :icon="dependencyLabel(reqKey)?.icon || 'tabler-plus'"
+                            size="14"
+                            :color="dependencyLabel(reqKey)?.color || 'secondary'"
+                          />
+                          <span class="text-caption text-medium-emphasis">
+                            {{ dependencyLabel(reqKey)?.name }} —
+                            <span class="font-weight-medium">{{ dependencyLabel(reqKey)?.label }}</span>
+                          </span>
+                        </div>
+                      </template>
+
                       <div
                         v-if="mod.dependents?.length"
-                        class="d-flex align-center gap-1 mt-1"
+                        class="d-flex align-center gap-1 mt-2"
                       >
                         <VIcon
                           icon="tabler-sitemap"
@@ -804,20 +923,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           color="info"
                         />
                         <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
-                        </span>
-                      </div>
-                      <div
-                        v-if="mod.requires?.length"
-                        class="d-flex align-center gap-1 mt-1"
-                      >
-                        <VIcon
-                          icon="tabler-link"
-                          size="16"
-                          color="secondary"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                          {{ t('companyModules.activatesDependents', { count: mod.dependents.length }) }}
                         </span>
                       </div>
                     </VCardText>

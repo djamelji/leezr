@@ -5,6 +5,7 @@ namespace App\Modules\Core\Modules\Http;
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Modules\CompanyModule;
+use App\Core\Billing\CompanyEntitlements;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleCatalogReadModel;
 use App\Core\Modules\ModuleGate;
@@ -29,6 +30,7 @@ class CompanyModuleController
 
         return response()->json([
             'modules' => ModuleCatalogReadModel::forCompany($company),
+            'company_plan_key' => CompanyEntitlements::planKey($company),
         ]);
     }
 

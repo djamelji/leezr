@@ -68,12 +68,20 @@ class JobdomainController extends Controller
             'default_documents.*.order' => ['sometimes', 'integer', 'min:0'],
         ]);
 
-        $jobdomain = $useCase->execute(UpdateJobdomainData::fromValidated($id, $validated));
+        $result = $useCase->execute(UpdateJobdomainData::fromValidated($id, $validated));
 
-        return response()->json([
+        $response = [
             'message' => 'Job domain updated.',
-            'jobdomain' => $jobdomain,
-        ]);
+            'jobdomain' => $result['jobdomain'],
+        ];
+
+        // ADR-213: Include auto-resolved dependency changes for admin feedback
+        if (! empty($result['auto_added']) || ! empty($result['auto_removed'])) {
+            $response['auto_added'] = $result['auto_added'];
+            $response['auto_removed'] = $result['auto_removed'];
+        }
+
+        return response()->json($response);
     }
 
     public function destroy(int $id, DeleteJobdomainUseCase $useCase): JsonResponse

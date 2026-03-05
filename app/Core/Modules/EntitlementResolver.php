@@ -62,7 +62,19 @@ class EntitlementResolver
             return ['entitled' => true, 'source' => 'jobdomain', 'reason' => null];
         }
 
-        // Future: check addon purchases here
+        // Gate 4b (ADR-211): Module is a dependency of a jobdomain default
+        foreach ($defaultModules as $defaultKey) {
+            $requires = ModuleActivationEngine::collectTransitiveRequires($defaultKey);
+            if (in_array($moduleKey, $requires, true)) {
+                return ['entitled' => true, 'source' => 'jobdomain_dependency', 'reason' => null];
+            }
+        }
+
+        // Gate 5 (ADR-212): Module with addon_pricing is purchasable
+        // Compatible jobdomain + plan met → entitled via addon
+        if ($pm && $pm->addon_pricing !== null) {
+            return ['entitled' => true, 'source' => 'addon', 'reason' => null];
+        }
 
         return ['entitled' => false, 'source' => null, 'reason' => 'not_available'];
     }

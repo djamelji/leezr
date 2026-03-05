@@ -83,9 +83,11 @@ class ModuleEntitlementEnforcementTest extends TestCase
         ModuleActivationEngine::enable($this->company, 'logistics_shipments');
         $this->assertTrue(ModuleGate::isActive($this->company, 'logistics_shipments'));
 
-        // Platform admin removes shipments from jobdomain defaults
+        // Platform admin removes ALL logistics modules from defaults
+        // (removing shipments alone while keeping tracking/fleet/analytics
+        //  would keep shipments entitled via ADR-211 dependency resolution)
         $this->jobdomain->update([
-            'default_modules' => ['logistics_tracking', 'logistics_fleet', 'logistics_analytics'],
+            'default_modules' => [],
         ]);
         $this->company->unsetRelation('jobdomain');
 
@@ -131,9 +133,10 @@ class ModuleEntitlementEnforcementTest extends TestCase
         // Activate shipments
         ModuleActivationEngine::enable($this->company, 'logistics_shipments');
 
-        // Remove from defaults
+        // Remove ALL logistics modules from defaults (ADR-211: shipments stays entitled
+        // as dependency if tracking/fleet/analytics remain in defaults)
         $this->jobdomain->update([
-            'default_modules' => ['logistics_tracking', 'logistics_fleet', 'logistics_analytics'],
+            'default_modules' => [],
         ]);
 
         // Run reconciliation
@@ -165,9 +168,9 @@ class ModuleEntitlementEnforcementTest extends TestCase
         // Activate shipments
         ModuleActivationEngine::enable($this->company, 'logistics_shipments');
 
-        // Remove from defaults
+        // Remove ALL logistics from defaults
         $this->jobdomain->update([
-            'default_modules' => ['logistics_tracking', 'logistics_fleet', 'logistics_analytics'],
+            'default_modules' => [],
         ]);
 
         // Run dry-run
@@ -185,13 +188,12 @@ class ModuleEntitlementEnforcementTest extends TestCase
     }
 
     /**
-     * ADR-205/206: Module removed from defaults but still compatible.
-     * With addon_pricing → LOCKED_ADDON. Without → CONTACT_SALES.
+     * ADR-212: Module removed from defaults but has addon_pricing → AVAILABLE (entitled via addon).
+     * Without addon_pricing → CONTACT_SALES.
      */
-    public function test_display_state_shows_addon_not_contact_sales_when_removed_from_defaults(): void
+    public function test_display_state_shows_available_for_addon_module_removed_from_defaults(): void
     {
-        // Activate shipments and set addon_pricing
-        ModuleActivationEngine::enable($this->company, 'logistics_shipments');
+        // Set addon_pricing on shipments
         PlatformModule::where('key', 'logistics_shipments')
             ->update(['addon_pricing' => json_encode(['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 50]])]);
 
@@ -201,18 +203,18 @@ class ModuleEntitlementEnforcementTest extends TestCase
         $this->assertNotNull($shipments);
         $this->assertEquals(ModuleDisplayState::INCLUDED->value, $shipments['display_state']);
 
-        // Remove shipments from defaults (but keep it compatible with logistique)
+        // Remove ALL logistics from defaults
         $this->jobdomain->update([
-            'default_modules' => ['logistics_tracking', 'logistics_fleet', 'logistics_analytics'],
+            'default_modules' => [],
         ]);
         $this->company->unsetRelation('jobdomain');
 
-        // ADR-206: Module has addon_pricing → LOCKED_ADDON
+        // ADR-212: Module has addon_pricing → entitled via addon → AVAILABLE
         $catalog = ModuleCatalogReadModel::forCompany($this->company);
         $shipments = collect($catalog)->firstWhere('key', 'logistics_shipments');
         $this->assertNotNull($shipments, 'Module should still appear in catalog (compatible jobdomain)');
-        $this->assertEquals(ModuleDisplayState::LOCKED_ADDON->value, $shipments['display_state']);
-        $this->assertEquals('addon', $shipments['purchase_mode']);
+        $this->assertEquals(ModuleDisplayState::AVAILABLE->value, $shipments['display_state']);
+        $this->assertNull($shipments['purchase_mode']);
 
         // Without addon_pricing → CONTACT_SALES
         PlatformModule::where('key', 'logistics_shipments')

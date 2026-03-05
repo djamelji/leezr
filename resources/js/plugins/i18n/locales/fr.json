@@ -1436,7 +1436,11 @@
     "deleteOverlay": "Supprimer l'overlay",
     "confirmDeleteOverlay": "Supprimer toutes les surcharges marché pour {market} ?",
     "overrideModules": "Modules ajoutés",
-    "removeModules": "Modules retirés"
+    "removeModules": "Modules retirés",
+    "dependsOn": "Nécessite :",
+    "requiredBy": "Utilisé par :",
+    "autoAddedModules": "Inclus automatiquement : {modules} (dépendance requise)",
+    "autoRemovedModules": "Retiré automatiquement : {modules} (dépendance non satisfaite)"
   },
 
   "platformDocumentTypes": {
@@ -1773,8 +1777,20 @@
     "noModulesInTab": "Aucun module dans cette section.",
     "noSearchResults": "Aucun module ne correspond à votre recherche.",
     "searchModuleHint": "Rechercher un module",
-    "activatesModules": "Active {count} module(s) dépendant(s)",
-    "requiresModules": "Nécessite {count} module(s)"
+    "activatesDependents": "Débloque {count} module(s) supplémentaire(s)",
+    "depIncluded": "inclus gratuitement",
+    "perMonth": "mois",
+    "pricingFree": "Offert",
+    "pricingContactSales": "Sur devis",
+    "pricingTiered": "Tarification par paliers",
+    "pricingPerSeatIncluded": "{count} {metric} inclus, puis {price} \u20AC/{metric}",
+    "pricingPerSeatBase": "{count} {metric} inclus",
+    "metric_users": "utilisateur",
+    "metric_shipments": "envoi",
+    "metric_sms": "SMS",
+    "metric_api_calls": "appel API",
+    "metric_storage_gb": "Go",
+    "metric_units": "unité"
   },
 
   "themeSettings": {
