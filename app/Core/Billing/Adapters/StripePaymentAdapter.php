@@ -145,6 +145,12 @@ class StripePaymentAdapter implements PaymentProviderAdapter
 
         $secret = config('billing.stripe.webhook_secret');
 
+        // Fallback to DB credentials (admin UI)
+        if (! $secret) {
+            $module = \App\Core\Billing\PlatformPaymentModule::where('provider_key', 'stripe')->first();
+            $secret = $module?->credentials['webhook_secret'] ?? null;
+        }
+
         if (! $secret) {
             throw new \RuntimeException('Stripe webhook secret not configured.');
         }
@@ -260,6 +266,14 @@ class StripePaymentAdapter implements PaymentProviderAdapter
 
     private function setApiKey(): void
     {
-        \Stripe\Stripe::setApiKey(config('billing.stripe.secret'));
+        // DB credentials (admin UI) take priority over .env
+        $secret = config('billing.stripe.secret');
+
+        if (! $secret) {
+            $module = \App\Core\Billing\PlatformPaymentModule::where('provider_key', 'stripe')->first();
+            $secret = $module?->credentials['secret_key'] ?? null;
+        }
+
+        \Stripe\Stripe::setApiKey($secret);
     }
 }
