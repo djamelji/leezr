@@ -13,10 +13,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Unit tests for ModuleQuoteCalculator (ADR-116).
+ * Unit tests for ModuleQuoteCalculator (ADR-116/206).
  *
  * Uses real manifests with logistics modules.
  * logistics_tracking requires logistics_shipments.
+ *
+ * ADR-206: pricing_mode removed, uses addon_pricing JSON.
  */
 class ModuleQuoteCalculatorTest extends TestCase
 {
@@ -68,11 +70,11 @@ class ModuleQuoteCalculatorTest extends TestCase
 
     public function test_single_module_no_requires_included_pricing(): void
     {
-        // logistics_shipments with default pricing (not addon) → 0 charge
+        // logistics_shipments with no addon_pricing → 0 charge
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_shipments']);
 
         $this->assertEquals(0, $quote->total);
-        $this->assertEmpty($quote->lines); // Not addon → no line
+        $this->assertEmpty($quote->lines); // No addon_pricing → no line
         $this->assertEmpty($quote->included);
     }
 
@@ -81,9 +83,10 @@ class ModuleQuoteCalculatorTest extends TestCase
         // Set tracking to addon with flat pricing
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 15],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 15],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_tracking']);
@@ -99,9 +102,10 @@ class ModuleQuoteCalculatorTest extends TestCase
         // Set tracking to addon with plan_flat pricing
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'plan_flat',
-                'pricing_params' => ['starter' => 10, 'pro' => 20, 'business' => 30],
+                'addon_pricing' => [
+                    'pricing_model' => 'plan_flat',
+                    'pricing_params' => ['starter' => 10, 'pro' => 20, 'business' => 30],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_tracking']);
@@ -119,9 +123,10 @@ class ModuleQuoteCalculatorTest extends TestCase
         // tracking requires shipments
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_tracking']);
@@ -132,13 +137,13 @@ class ModuleQuoteCalculatorTest extends TestCase
 
     public function test_requires_not_billed_even_if_addon(): void
     {
-        // This scenario shouldn't happen due to pricing invariants,
-        // but the calculator still handles it correctly: only selected keys are billed
+        // ADR-206: dependency invariant removed, so this scenario is now normal
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_tracking']);
@@ -157,16 +162,18 @@ class ModuleQuoteCalculatorTest extends TestCase
 
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         PlatformModule::where('key', 'logistics_fleet')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 25],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 25],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany(
@@ -185,15 +192,17 @@ class ModuleQuoteCalculatorTest extends TestCase
         // Both tracking and fleet require shipments
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
         PlatformModule::where('key', 'logistics_fleet')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 25],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 25],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany(
@@ -212,9 +221,10 @@ class ModuleQuoteCalculatorTest extends TestCase
     {
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $keys = ['logistics_tracking', 'logistics_shipments'];
@@ -231,15 +241,17 @@ class ModuleQuoteCalculatorTest extends TestCase
 
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
         PlatformModule::where('key', 'logistics_fleet')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 25],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 25],
+                ],
             ]);
 
         $quote1 = ModuleQuoteCalculator::quoteForCompany(
@@ -300,9 +312,10 @@ class ModuleQuoteCalculatorTest extends TestCase
     {
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $quote = ModuleQuoteCalculator::quoteForCompany($this->company, ['logistics_tracking']);

@@ -8,6 +8,7 @@ use App\Company\RBAC\CompanyRole;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -48,6 +49,13 @@ class CompanyNavPermissionTest extends TestCase
 
         // Enable all company modules
         foreach (ModuleRegistry::forScope('company') as $key => $def) {
+            if ($def->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $this->company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+            }
             CompanyModule::updateOrCreate(
                 ['company_id' => $this->company->id, 'module_key' => $key],
                 ['is_enabled_for_company' => true],

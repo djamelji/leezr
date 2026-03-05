@@ -1184,12 +1184,16 @@
     "sourceGate": "Porte source :",
     "sourceGateInfo": "Doit être dans les default_modules du domaine d'activité (ou futur achat d'extension)",
     "pricing": "Tarification",
+    "addonPricing": "Tarification addon",
+    "addonPricingEnabled": "Vendable en addon",
+    "addonPricingDisabled": "Disponible uniquement via inclusion jobdomain",
+    "addonPricingHint": "Prix appliqué quand le module est vendu en dehors des défauts jobdomain.",
+    "addonPricingBlockedHint": "La tarification addon n'est pas disponible pour les modules {type}.",
+    "addonPricingJson": "addon_pricing (JSON)",
     "addonLabel": "+ Extension",
     "includedLabel": "Inclus",
     "internalLabel": "Interne",
     "platformType": "Plateforme",
-    "commercialMode": "Mode commercial",
-    "commercialModeHint": "Si défini sur « Extension payante », le prix configuré ci-dessous s'ajoute au prix de l'abonnement de base de l'entreprise.",
     "pricingStructure": "Structure tarifaire",
     "pricingUnit": "Unité de tarification",
     "pricingUnitHint": "Pour la tarification à l'usage ou par utilisateur, ceci définit ce qui est mesuré.",
@@ -1271,6 +1275,8 @@
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
     "perUser": "/utilisateur",
+    "compatibleJobdomainsOverride": "Domaines d'activité compatibles",
+    "compatibleJobdomainsHint": "Remplace le manifest. Vider pour utiliser le défaut.",
     "syncButton": "Synchroniser",
     "syncSuccess": "Registre des modules synchronisé avec succès.",
     "syncFailed": "Échec de la synchronisation du registre."
@@ -1766,7 +1772,9 @@
     "contactDescription": "Contactez notre équipe commerciale pour accéder à ce module.",
     "noModulesInTab": "Aucun module dans cette section.",
     "noSearchResults": "Aucun module ne correspond à votre recherche.",
-    "searchModuleHint": "Rechercher un module"
+    "searchModuleHint": "Rechercher un module",
+    "activatesModules": "Active {count} module(s) dépendant(s)",
+    "requiresModules": "Nécessite {count} module(s)"
   },
 
   "themeSettings": {

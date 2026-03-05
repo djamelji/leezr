@@ -29,24 +29,28 @@ const dependents = ref([])
 const companies = ref([])
 const compatibleJobdomainsDetail = ref(null)
 const includedByJobdomains = ref([])
+const availableJobdomains = ref([])
 
-// Editable platform config
+// Editable platform config (ADR-206: addon_pricing replaces pricing_mode/model/metric/params)
 const platformConfig = ref({
-  pricing_mode: null,
   is_listed: false,
   is_sellable: false,
-  pricing_model: null,
-  pricing_metric: null,
-  pricing_params: null,
+  addon_pricing: null,
   settings_schema: null,
   notes: null,
   display_name_override: null,
   description_override: null,
   min_plan_override: null,
   sort_order_override: null,
+  compatible_jobdomains_override: null,
   icon_type: null,
   icon_name: null,
 })
+
+// ADR-206: Addon pricing UI state (flattened for form ergonomics)
+const addonEnabled = ref(false)
+const pricingModel = ref(null)
+const pricingMetric = ref(null)
 
 // Manifest defaults (for persistent hints on override fields)
 const manifestDefaults = ref({
@@ -54,7 +58,11 @@ const manifestDefaults = ref({
   description: '',
   min_plan: null,
   sort_order: 0,
+  compatible_jobdomains: null,
 })
+
+// ADR-209: Hydration guard — prevents pricingModel watcher from resetting fields during load
+const hydrating = ref(false)
 
 // Snapshot for dirty detection
 const originalConfigSnapshot = ref('')
@@ -74,12 +82,6 @@ const expertPricingError = ref('')
 const expertSchemaError = ref('')
 
 // ─── Options (user-friendly labels) ─────────────────
-const pricingModeOptions = computed(() => [
-  { title: t('platformModules.includedInPlan'), value: 'included' },
-  { title: t('platformModules.paidAddon'), value: 'addon' },
-  { title: t('platformModules.internalNotCommercial'), value: 'internal' },
-])
-
 const pricingStructureOptions = computed(() => [
   { title: t('platformModules.fixedPrice'), value: 'flat' },
   { title: t('platformModules.priceVariesByPlan'), value: 'plan_flat' },
@@ -98,18 +100,24 @@ const pricingUnitOptions = computed(() => [
 ])
 
 // ─── Computed: is pricing editor active? ────────────
-const isPricingActive = computed(() => platformConfig.value.pricing_mode === 'addon')
+const isPricingActive = computed(() => addonEnabled.value)
+
+// ADR-206: Core/internal modules cannot have addon pricing
+const canHaveAddonPricing = computed(() => {
+  if (!mod.value) return false
+  return mod.value.type !== 'core' && mod.value.type !== 'internal'
+})
 
 // Metric should only show for usage/tiered models
 const showMetricSelector = computed(() => {
-  const m = platformConfig.value.pricing_model
+  const m = pricingModel.value
 
   return isPricingActive.value && (m === 'usage' || m === 'tiered')
 })
 
 // ─── Hydration ──────────────────────────────────────
 const hydratePricingFields = params => {
-  const model = platformConfig.value.pricing_model
+  const model = pricingModel.value
 
   // Reset all
   flatPrice.value = null
@@ -156,10 +164,7 @@ const hydratePricingFields = params => {
 
 // ─── Build pricing params from structured refs ──────
 const buildPricingParams = () => {
-  if (!isPricingActive.value)
-    return null
-
-  const model = platformConfig.value.pricing_model
+  const model = pricingModel.value
 
   if (!model)
     return null
@@ -199,20 +204,30 @@ const buildPricingParams = () => {
   return null
 }
 
+// ─── ADR-206: Build addon_pricing JSON ──────────────
+const buildAddonPricing = () => {
+  if (!addonEnabled.value || !pricingModel.value)
+    return null
+
+  return {
+    pricing_model: pricingModel.value,
+    pricing_metric: pricingMetric.value,
+    pricing_params: buildPricingParams(),
+  }
+}
+
 // ─── Current payload for dirty detection ────────────
 const currentPayload = computed(() => JSON.stringify({
-  pricing_mode: platformConfig.value.pricing_mode,
   is_listed: platformConfig.value.is_listed,
   is_sellable: platformConfig.value.is_sellable,
-  pricing_model: isPricingActive.value ? platformConfig.value.pricing_model : null,
-  pricing_metric: isPricingActive.value ? platformConfig.value.pricing_metric : null,
-  pricing_params: buildPricingParams(),
+  addon_pricing: buildAddonPricing(),
   settings_schema: platformConfig.value.settings_schema,
   notes: platformConfig.value.notes,
   display_name_override: platformConfig.value.display_name_override,
   description_override: platformConfig.value.description_override,
   min_plan_override: platformConfig.value.min_plan_override,
   sort_order_override: platformConfig.value.sort_order_override,
+  compatible_jobdomains_override: platformConfig.value.compatible_jobdomains_override,
   icon_type: platformConfig.value.icon_type,
   icon_name: platformConfig.value.icon_name,
 }))
@@ -221,7 +236,7 @@ const isDirty = computed(() => currentPayload.value !== originalConfigSnapshot.v
 
 // ─── Pricing preview ────────────────────────────────
 const metricLabel = computed(() => {
-  const m = platformConfig.value.pricing_metric
+  const m = pricingMetric.value
   const opt = pricingUnitOptions.value.find(o => o.value === m)
 
   return opt?.title || m || ''
@@ -237,30 +252,16 @@ const pricingModelIcon = computed(() => {
     tiered: 'tabler-chart-bar',
   }
 
-  return icons[platformConfig.value.pricing_model] || 'tabler-currency-dollar'
+  return icons[pricingModel.value] || 'tabler-currency-dollar'
 })
 
-const pricingModeColor = computed(() => {
-  const colors = {
-    included: 'primary',
-    addon: 'success',
-    internal: 'warning',
-  }
-
-  return colors[platformConfig.value.pricing_mode] || 'secondary'
-})
+const pricingModeColor = computed(() => addonEnabled.value ? 'success' : 'secondary')
 
 const pricingPreview = computed(() => {
-  const mode = platformConfig.value.pricing_mode
+  if (!addonEnabled.value)
+    return { type: 'none', text: t('platformModules.addonPricingDisabled') }
 
-  if (!mode || mode === 'internal')
-    return { type: 'none', text: t('platformModules.noRevenueImpact') }
-
-  if (mode === 'included')
-    return { type: 'included', text: t('platformModules.includedInSubscription') }
-
-  // mode === 'addon'
-  const model = platformConfig.value.pricing_model
+  const model = pricingModel.value
   const params = buildPricingParams()
 
   if (!model || !params)
@@ -307,10 +308,12 @@ const pricingPreview = computed(() => {
   return null
 })
 
-// ─── Lifecycle ──────────────────────────────────────
-onMounted(async () => {
+// ─── Data loading ───────────────────────────────────
+const loadModuleProfile = async key => {
+  isLoading.value = true
+
   try {
-    const data = await settingsStore.fetchModuleProfile(route.params.key)
+    const data = await settingsStore.fetchModuleProfile(key)
 
     mod.value = data.module
     dependents.value = data.dependents
@@ -318,6 +321,7 @@ onMounted(async () => {
     companiesLoaded.value = true
     compatibleJobdomainsDetail.value = data.compatible_jobdomains_detail
     includedByJobdomains.value = data.included_by_jobdomains
+    availableJobdomains.value = data.available_jobdomains ?? []
 
     // Hydrate manifest defaults (for persistent hints)
     if (data.manifest_defaults) {
@@ -327,9 +331,31 @@ onMounted(async () => {
     // Hydrate platform config
     if (data.platform_config) {
       platformConfig.value = { ...platformConfig.value, ...data.platform_config }
-      hydratePricingFields(data.platform_config.pricing_params)
+
+      // ADR-206: Hydrate addon pricing UI state from addon_pricing JSON
+      // Hydrating flag prevents pricingModel watcher from resetting fields
+      hydrating.value = true
+
+      const addon = data.platform_config.addon_pricing
+      if (addon) {
+        addonEnabled.value = true
+        pricingModel.value = addon.pricing_model || null
+        pricingMetric.value = addon.pricing_metric || null
+        hydratePricingFields(addon.pricing_params)
+      }
+      else {
+        addonEnabled.value = false
+        pricingModel.value = null
+        pricingMetric.value = null
+        hydratePricingFields(null)
+      }
+
       expertSchemaJson.value = JSON.stringify(data.platform_config.settings_schema || {}, null, 2)
     }
+
+    // Wait for watchers to flush before clearing hydration guard
+    await nextTick()
+    hydrating.value = false
 
     // Take dirty-detection snapshot
     originalConfigSnapshot.value = currentPayload.value
@@ -341,42 +367,50 @@ onMounted(async () => {
   finally {
     isLoading.value = false
   }
+}
+
+// ─── Lifecycle ──────────────────────────────────────
+onMounted(() => loadModuleProfile(route.params.key))
+
+// SPA: re-fetch when navigating between modules
+watch(() => route.params.key, newKey => {
+  if (newKey)
+    loadModuleProfile(newKey)
 })
 
-// ─── Watch pricing_mode changes — clear pricing when not addon ──
-watch(() => platformConfig.value.pricing_mode, (newMode, oldMode) => {
-  if (newMode !== oldMode && newMode !== 'addon') {
-    platformConfig.value.pricing_model = null
-    platformConfig.value.pricing_metric = null
-    hydratePricingFields(null)
-  }
-})
+// ADR-209: No watcher on addonEnabled — toggling OFF preserves pricing config.
+// The enabled flag inside addon_pricing JSON controls activation, not data.
 
-// ─── Watch pricing_model changes — enforce metric + reset fields ──
-watch(() => platformConfig.value.pricing_model, (newModel, oldModel) => {
+// ─── Watch pricingModel changes — enforce metric + reset fields ──
+watch(pricingModel, (newModel, oldModel) => {
+  if (hydrating.value) return // ADR-209: skip during hydration
   if (newModel !== oldModel) {
     hydratePricingFields(null)
 
     // Auto-correct metric
     if (newModel === 'flat' || newModel === 'plan_flat')
-      platformConfig.value.pricing_metric = 'none'
+      pricingMetric.value = 'none'
     else if (newModel === 'per_seat')
-      platformConfig.value.pricing_metric = 'users'
+      pricingMetric.value = 'users'
   }
 })
 
 // ─── Expert mode sync ───────────────────────────────
 watch(showExpertMode, on => {
   if (on) {
-    expertPricingJson.value = JSON.stringify(buildPricingParams() || {}, null, 2)
+    expertPricingJson.value = JSON.stringify(buildAddonPricing() || {}, null, 2)
     expertSchemaJson.value = JSON.stringify(platformConfig.value.settings_schema || {}, null, 2)
   }
   else {
     try {
       const parsed = JSON.parse(expertPricingJson.value || '{}')
 
-      platformConfig.value.pricing_params = parsed
-      hydratePricingFields(parsed)
+      if (parsed && parsed.pricing_model) {
+        addonEnabled.value = true
+        pricingModel.value = parsed.pricing_model
+        pricingMetric.value = parsed.pricing_metric || null
+        hydratePricingFields(parsed.pricing_params)
+      }
       expertPricingError.value = ''
     }
     catch (e) {
@@ -419,8 +453,12 @@ const saveConfig = async () => {
       try {
         const parsed = JSON.parse(expertPricingJson.value || '{}')
 
-        platformConfig.value.pricing_params = parsed
-        hydratePricingFields(parsed)
+        if (parsed && parsed.pricing_model) {
+          addonEnabled.value = true
+          pricingModel.value = parsed.pricing_model
+          pricingMetric.value = parsed.pricing_metric || null
+          hydratePricingFields(parsed.pricing_params)
+        }
       }
       catch (e) {
         toast(`Invalid pricing JSON: ${e.message}`, 'error')
@@ -440,18 +478,16 @@ const saveConfig = async () => {
     }
 
     const payload = {
-      pricing_mode: platformConfig.value.pricing_mode,
       is_listed: platformConfig.value.is_listed,
       is_sellable: platformConfig.value.is_sellable,
-      pricing_model: isPricingActive.value ? platformConfig.value.pricing_model : null,
-      pricing_metric: isPricingActive.value ? platformConfig.value.pricing_metric : null,
-      pricing_params: buildPricingParams(),
+      addon_pricing: buildAddonPricing(),
       settings_schema: platformConfig.value.settings_schema,
       notes: platformConfig.value.notes,
       display_name_override: platformConfig.value.display_name_override || null,
       description_override: platformConfig.value.description_override || null,
       min_plan_override: platformConfig.value.min_plan_override || null,
       sort_order_override: platformConfig.value.sort_order_override != null ? Number(platformConfig.value.sort_order_override) : null,
+      compatible_jobdomains_override: platformConfig.value.compatible_jobdomains_override?.length ? platformConfig.value.compatible_jobdomains_override : null,
       icon_type: platformConfig.value.icon_type || null,
       icon_name: platformConfig.value.icon_name || null,
     }
@@ -462,24 +498,42 @@ const saveConfig = async () => {
     const updated = data.module
 
     platformConfig.value = {
-      pricing_mode: updated.pricing_mode,
       is_listed: updated.is_listed,
       is_sellable: updated.is_sellable,
-      pricing_model: updated.pricing_model,
-      pricing_metric: updated.pricing_metric,
-      pricing_params: updated.pricing_params,
+      addon_pricing: updated.addon_pricing,
       settings_schema: updated.settings_schema,
       notes: updated.notes,
       display_name_override: updated.display_name_override,
       description_override: updated.description_override,
       min_plan_override: updated.min_plan_override,
       sort_order_override: updated.sort_order_override,
+      compatible_jobdomains_override: updated.compatible_jobdomains_override,
       icon_type: updated.icon_type,
       icon_name: updated.icon_name,
     }
 
-    hydratePricingFields(updated.pricing_params)
+    // Re-hydrate addon pricing UI state
+    hydrating.value = true
+
+    const updatedAddon = updated.addon_pricing
+    if (updatedAddon) {
+      addonEnabled.value = true
+      pricingModel.value = updatedAddon.pricing_model || null
+      pricingMetric.value = updatedAddon.pricing_metric || null
+      hydratePricingFields(updatedAddon.pricing_params)
+    }
+    else {
+      addonEnabled.value = false
+      pricingModel.value = null
+      pricingMetric.value = null
+      hydratePricingFields(null)
+    }
+
     expertSchemaJson.value = JSON.stringify(updated.settings_schema || {}, null, 2)
+
+    await nextTick()
+    hydrating.value = false
+
     originalConfigSnapshot.value = currentPayload.value
     toast(data.message, 'success')
   }
@@ -776,31 +830,41 @@ const planLabel = planKey => {
                 :color="pricingModeColor"
                 class="me-2"
               />
-              {{ t('platformModules.pricing') }}
+              {{ t('platformModules.addonPricing') }}
               <VChip
-                v-if="platformConfig.pricing_mode"
-                :color="pricingModeColor"
+                v-if="addonEnabled"
+                color="success"
                 size="x-small"
                 variant="tonal"
                 class="ms-2"
               >
-                {{ platformConfig.pricing_mode === 'addon' ? t('platformModules.addonLabel') : platformConfig.pricing_mode === 'included' ? t('platformModules.includedLabel') : t('platformModules.internalLabel') }}
+                {{ t('platformModules.addonLabel') }}
               </VChip>
             </VCardTitle>
             <VCardText>
-              <!-- Commercial Mode -->
-              <AppSelect
-                v-model="platformConfig.pricing_mode"
-                :items="pricingModeOptions"
-                :label="t('platformModules.commercialMode')"
-                clearable
+              <!-- ADR-207: Addon pricing toggle -->
+              <VSwitch
+                v-model="addonEnabled"
+                :label="addonEnabled ? t('platformModules.addonPricingEnabled') : t('platformModules.addonPricingDisabled')"
+                :disabled="!canHaveAddonPricing"
+                color="success"
+                hide-details
                 class="mb-2"
               />
-              <div class="text-body-2 text-medium-emphasis mb-4">
-                {{ t('platformModules.commercialModeHint') }}
+              <div
+                v-if="!canHaveAddonPricing"
+                class="text-body-2 text-warning mb-4"
+              >
+                {{ t('platformModules.addonPricingBlockedHint', { type: mod?.type }) }}
+              </div>
+              <div
+                v-else
+                class="text-body-2 text-medium-emphasis mb-4"
+              >
+                {{ t('platformModules.addonPricingHint') }}
               </div>
 
-              <!-- Pricing structure (only when addon) -->
+              <!-- Pricing structure (only when addon enabled) -->
               <template v-if="isPricingActive">
                 <VDivider class="mb-4" />
 
@@ -810,7 +874,7 @@ const planLabel = planKey => {
                     :md="showMetricSelector ? 6 : 12"
                   >
                     <AppSelect
-                      v-model="platformConfig.pricing_model"
+                      v-model="pricingModel"
                       :items="pricingStructureOptions"
                       :label="t('platformModules.pricingStructure')"
                       clearable
@@ -822,7 +886,7 @@ const planLabel = planKey => {
                     md="6"
                   >
                     <AppSelect
-                      v-model="platformConfig.pricing_metric"
+                      v-model="pricingMetric"
                       :items="pricingUnitOptions"
                       :label="t('platformModules.pricingUnit')"
                       clearable
@@ -834,12 +898,12 @@ const planLabel = planKey => {
                 </VRow>
 
                 <VDivider
-                  v-if="platformConfig.pricing_model"
+                  v-if="pricingModel"
                   class="my-4"
                 />
 
                 <!-- Flat -->
-                <template v-if="platformConfig.pricing_model === 'flat'">
+                <template v-if="pricingModel === 'flat'">
                   <div class="text-body-2 font-weight-medium mb-3">
                     {{ t('platformModules.flatMonthlyPrice') }}
                   </div>
@@ -859,7 +923,7 @@ const planLabel = planKey => {
                 </template>
 
                 <!-- Plan Flat -->
-                <template v-if="platformConfig.pricing_model === 'plan_flat'">
+                <template v-if="pricingModel === 'plan_flat'">
                   <div class="text-body-2 font-weight-medium mb-1">
                     {{ t('platformModules.planFlatPrice') }}
                   </div>
@@ -904,7 +968,7 @@ const planLabel = planKey => {
                 </template>
 
                 <!-- Per Seat -->
-                <template v-if="platformConfig.pricing_model === 'per_seat'">
+                <template v-if="pricingModel === 'per_seat'">
                   <div class="text-body-2 font-weight-medium mb-3">
                     {{ t('platformModules.includedSeats') }}
                   </div>
@@ -987,7 +1051,7 @@ const planLabel = planKey => {
                 </template>
 
                 <!-- Usage -->
-                <template v-if="platformConfig.pricing_model === 'usage'">
+                <template v-if="pricingModel === 'usage'">
                   <div class="text-body-2 font-weight-medium mb-3">
                     {{ t('platformModules.usageUnitCost') }}
                   </div>
@@ -1007,7 +1071,7 @@ const planLabel = planKey => {
                 </template>
 
                 <!-- Tiered -->
-                <template v-if="platformConfig.pricing_model === 'tiered'">
+                <template v-if="pricingModel === 'tiered'">
                   <div class="text-body-2 font-weight-medium mb-3">
                     {{ t('platformModules.additionalTiers') }}
                   </div>
@@ -1128,7 +1192,7 @@ const planLabel = planKey => {
             <VCardText>
               <AppTextarea
                 v-model="expertPricingJson"
-                :label="t('platformModules.pricingParamsJson')"
+                :label="t('platformModules.addonPricingJson')"
                 rows="6"
                 :error-messages="expertPricingError ? [expertPricingError] : []"
                 style="font-family: monospace;"
@@ -1342,36 +1406,22 @@ const planLabel = planKey => {
           <!-- Organize (read-only info) -->
           <VCard :title="t('platformModules.organize')">
             <VCardText>
-              <!-- Compatibility -->
+              <!-- Compatibility (editable override) -->
               <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.compatibility') }}
+                {{ t('platformModules.compatibleJobdomainsOverride') }}
               </div>
-              <template v-if="compatibleJobdomainsDetail === null">
-                <VAlert
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                  class="text-body-2 mb-4"
-                >
-                  {{ t('platformModules.allJobDomains') }}
-                </VAlert>
-              </template>
-              <template v-else-if="compatibleJobdomainsDetail.length">
-                <div class="d-flex flex-wrap gap-1 mb-4">
-                  <VChip
-                    v-for="jd in compatibleJobdomainsDetail"
-                    :key="jd.id"
-                    size="small"
-                    variant="tonal"
-                    :to="{ name: 'platform-jobdomains-id', params: { id: jd.id } }"
-                  >
-                    {{ jd.label }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noMatchingJobdomains') }}</span>
-              </template>
+              <VCombobox
+                v-model="platformConfig.compatible_jobdomains_override"
+                :items="availableJobdomains.map(jd => jd.key)"
+                :label="t('platformModules.compatibleJobdomainsOverride')"
+                :hint="platformConfig.compatible_jobdomains_override?.length ? t('platformModules.compatibleJobdomainsHint') : t('platformModules.manifestPrefix', { value: manifestDefaults.compatible_jobdomains?.join(', ') || t('platformModules.allJobDomains') })"
+                persistent-hint
+                multiple
+                chips
+                closable-chips
+                clearable
+                class="mb-4"
+              />
 
               <VDivider class="mb-4" />
 

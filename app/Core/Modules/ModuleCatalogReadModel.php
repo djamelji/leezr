@@ -41,10 +41,19 @@ class ModuleCatalogReadModel
         $jobdomain = $company->jobdomain;
         $companyPlan = CompanyEntitlements::planKey($company);
 
+        // ADR-208: Compute reverse dependency map (in-memory, no DB query)
+        $dependentsMap = [];
+
+        foreach (ModuleRegistry::forScope('company') as $k => $m) {
+            foreach ($m->requires as $req) {
+                $dependentsMap[$req][] = $k;
+            }
+        }
+
         return $platformModules
             ->sortBy(fn (PlatformModule $pm) => $pm->sort_order_override ?? $pm->sort_order)
             ->values()
-            ->map(function (PlatformModule $pm) use ($companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan) {
+            ->map(function (PlatformModule $pm) use ($company, $companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan, $dependentsMap) {
                 $cm = $companyModules->get($pm->key);
                 $capabilities = ModuleRegistry::capabilities($pm->key);
                 $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
@@ -54,10 +63,12 @@ class ModuleCatalogReadModel
                     return null;
                 }
 
-                // ADR-163: Exclude modules incompatible with company's jobdomain
+                // ADR-163/204: Exclude modules incompatible with company's jobdomain
                 // ADR-167a: jobdomain is always present — no null check
-                if ($manifest->compatibleJobdomains !== null) {
-                    if (! in_array($jobdomain->key, $manifest->compatibleJobdomains, true)) {
+                // ADR-203: DB override takes priority over manifest
+                $compatibleJobdomains = $pm->compatible_jobdomains_override ?? $manifest->compatibleJobdomains;
+                if ($compatibleJobdomains !== null) {
+                    if (! in_array($jobdomain->key, $compatibleJobdomains, true)) {
                         return null;
                     }
                 }
@@ -67,7 +78,6 @@ class ModuleCatalogReadModel
 
                 $type = $manifest->type;
                 $minPlan = $pm->min_plan_override ?? $manifest->minPlan;
-                $pricingMode = $pm->pricing_mode ?? 'included';
 
                 // ADR-163: Compute display state
                 $displayState = ModuleDisplayStateResolver::resolve(
@@ -88,14 +98,15 @@ class ModuleCatalogReadModel
                     'is_active' => $isActive,
                     'capabilities' => $capabilities?->toArray() ?? [],
                     'type' => $type,
-                    'category' => self::deriveCategory($type, $pricingMode, $minPlan, $manifest->compatibleJobdomains),
+                    'category' => self::deriveCategory($type, $pm->addon_pricing !== null, $minPlan, $manifest->compatibleJobdomains),
                     'settings_panels' => $capabilities?->settingsPanels ?? [],
                     'is_entitled' => $entitlement['entitled'],
                     'entitlement_source' => $entitlement['source'],
                     'entitlement_reason' => $entitlement['reason'],
                     'requires' => $manifest->requires,
+                    'dependents' => $dependentsMap[$pm->key] ?? [],
                     'min_plan' => $minPlan,
-                    'pricing_mode' => $pricingMode,
+                    'pricing_mode' => $pm->effectivePricingModeFor($company),
                     'icon_type' => $pm->icon_type ?? $manifest->iconType ?? 'tabler',
                     'icon_name' => $pm->icon_name ?? $manifest->iconRef ?? 'tabler-puzzle',
                     'activation_reasons' => ($activationReasons->get($pm->key) ?? collect())
@@ -119,12 +130,12 @@ class ModuleCatalogReadModel
             ->all();
     }
 
-    private static function deriveCategory(string $type, string $pricingMode, ?string $minPlan, ?array $compatibleJobdomains): string
+    private static function deriveCategory(string $type, bool $hasAddonPricing, ?string $minPlan, ?array $compatibleJobdomains): string
     {
         if ($type === 'core') {
             return 'core';
         }
-        if ($pricingMode === 'addon' && $minPlan !== null) {
+        if ($hasAddonPricing && $minPlan !== null) {
             return 'premium';
         }
         if ($compatibleJobdomains !== null) {

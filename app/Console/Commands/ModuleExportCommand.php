@@ -47,12 +47,9 @@ class ModuleExportCommand extends Command
             'bundles' => $manifest->bundles,
             'platform_module' => $platformModule ? $platformModule->only([
                 'is_enabled_globally',
-                'pricing_mode',
                 'is_listed',
                 'is_sellable',
-                'pricing_model',
-                'pricing_metric',
-                'pricing_params',
+                'addon_pricing',
                 'settings_schema',
                 'notes',
                 'display_name_override',

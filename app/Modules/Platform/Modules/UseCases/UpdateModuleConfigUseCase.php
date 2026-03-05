@@ -12,36 +12,16 @@ class UpdateModuleConfigUseCase
     /**
      * Update a module's commercial/ops configuration.
      *
-     * Handles pricing invariants:
-     * - Non-addon → clear pricing fields
-     * - Model-based metric auto-correction (flat→none, per_seat→users)
-     * - Pricing params validation per pricing model
-     * - ModulePricingPolicy enforcement
+     * ADR-206: addon_pricing is a single JSON field replacing
+     * pricing_mode + pricing_model + pricing_metric + pricing_params.
      */
     public function execute(string $key, array $validated): PlatformModule
     {
         $module = PlatformModule::where('key', $key)->firstOrFail();
 
-        // Consistency enforcement: if not addon, clear pricing fields
-        if (($validated['pricing_mode'] ?? null) !== 'addon') {
-            $validated['pricing_model'] = null;
-            $validated['pricing_metric'] = null;
-            $validated['pricing_params'] = null;
-        }
-
-        // Metric auto-correction based on pricing_model
-        if (in_array($validated['pricing_model'] ?? null, ['flat', 'plan_flat'], true)) {
-            $validated['pricing_metric'] = 'none';
-        } elseif (($validated['pricing_model'] ?? null) === 'per_seat') {
-            $validated['pricing_metric'] = 'users';
-        }
-
-        // Field-scoped pricing_params validation based on pricing_model
-        if (! empty($validated['pricing_model']) && ! empty($validated['pricing_params'])) {
-            $paramErrors = static::validatePricingParams(
-                $validated['pricing_model'],
-                $validated['pricing_params'],
-            );
+        // Validate addon_pricing structure if present
+        if (!empty($validated['addon_pricing'])) {
+            $paramErrors = static::validateAddonPricing($validated['addon_pricing']);
 
             if ($paramErrors->fails()) {
                 throw new ValidationException($paramErrors);
@@ -49,19 +29,49 @@ class UpdateModuleConfigUseCase
         }
 
         // Enforce pricing invariants before persisting
-        $proposedPricingMode = $validated['pricing_mode'] ?? $module->pricing_mode;
+        $proposedAddonPricing = array_key_exists('addon_pricing', $validated)
+            ? $validated['addon_pricing']
+            : $module->addon_pricing;
 
         try {
-            ModulePricingPolicy::assertProposedPricingMode($key, $proposedPricingMode);
+            ModulePricingPolicy::assertAddonPricing($key, $proposedAddonPricing);
         } catch (\RuntimeException $e) {
             throw ValidationException::withMessages([
-                'pricing_mode' => [$e->getMessage()],
+                'addon_pricing' => [$e->getMessage()],
             ]);
         }
 
         $module->update($validated);
 
         return $module;
+    }
+
+    /**
+     * Validate addon_pricing structure.
+     */
+    private static function validateAddonPricing(array $addonPricing): \Illuminate\Validation\Validator
+    {
+        $rules = [
+            'pricing_model' => ['required', 'string', 'in:flat,plan_flat,per_seat,usage,tiered'],
+            'pricing_metric' => ['nullable', 'string'],
+            'pricing_params' => ['nullable', 'array'],
+        ];
+
+        $validator = Validator::make($addonPricing, $rules);
+
+        if ($validator->fails()) {
+            return $validator;
+        }
+
+        // Field-scoped pricing_params validation based on pricing_model
+        $model = $addonPricing['pricing_model'];
+        $params = $addonPricing['pricing_params'] ?? [];
+
+        if (!empty($params)) {
+            return static::validatePricingParams($model, $params);
+        }
+
+        return $validator;
     }
 
     /**

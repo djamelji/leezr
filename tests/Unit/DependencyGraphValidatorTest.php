@@ -4,17 +4,17 @@ namespace Tests\Unit;
 
 use App\Core\Modules\DependencyGraphValidator;
 use App\Core\Modules\ModuleRegistry;
-use App\Core\Modules\PlatformModule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Unit tests for DependencyGraphValidator (ADR-115).
+ * Unit tests for DependencyGraphValidator (ADR-115/206).
  *
  * Tests:
  * - Cycle detection in the requires graph
- * - Pricing invariants (required modules cannot be addon-priced)
  * - Graph introspection
+ *
+ * ADR-206: Pricing invariants moved to ModulePricingPolicy.
  */
 class DependencyGraphValidatorTest extends TestCase
 {
@@ -38,7 +38,7 @@ class DependencyGraphValidatorTest extends TestCase
 
     public function test_validate_runs_without_error(): void
     {
-        // Full validation (cycles + pricing) should pass for current manifests
+        // Full validation (cycles only since ADR-206) should pass
         DependencyGraphValidator::validate();
         $this->assertTrue(true);
     }
@@ -62,40 +62,5 @@ class DependencyGraphValidatorTest extends TestCase
 
         // logistics_shipments has no requires
         $this->assertArrayNotHasKey('logistics_shipments', $graph);
-    }
-
-    // ─── Pricing invariants ─────────────────────────────────
-
-    public function test_pricing_invariant_passes_for_included_required_module(): void
-    {
-        // Ensure logistics_shipments (required by others) is not addon-priced
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'included']);
-
-        // Should not throw
-        DependencyGraphValidator::validatePricingInvariants();
-        $this->assertTrue(true);
-    }
-
-    public function test_pricing_invariant_fails_for_addon_required_module(): void
-    {
-        // Set logistics_shipments (required by tracking, fleet, analytics) to addon pricing
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'addon']);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/pricing_mode.*addon/i');
-
-        DependencyGraphValidator::validatePricingInvariants();
-    }
-
-    public function test_pricing_invariant_ok_for_internal_required_module(): void
-    {
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'internal']);
-
-        // Should not throw — internal is allowed
-        DependencyGraphValidator::validatePricingInvariants();
-        $this->assertTrue(true);
     }
 }

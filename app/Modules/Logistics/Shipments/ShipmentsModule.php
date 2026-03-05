@@ -56,6 +56,7 @@ class ShipmentsModule implements ModuleDefinition
             ],
             scope: 'company',
             type: 'addon',
+            compatibleJobdomains: ['logistique'],
         );
     }
 }

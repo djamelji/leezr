@@ -10,6 +10,7 @@ use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -60,6 +61,17 @@ class CompanyAccessPolicyTest extends TestCase
                 'module_key' => $key,
                 'is_enabled_for_company' => true,
             ]);
+        }
+
+        // ADR-204: Create activation reasons for company-scope non-core modules
+        foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
+            if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $this->company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+            }
         }
 
         // Administrative role (manager)
@@ -118,6 +130,9 @@ class CompanyAccessPolicyTest extends TestCase
 
     public function test_owner_cannot_bypass_module_check(): void
     {
+        CompanyModuleActivationReason::where('company_id', $this->company->id)
+            ->where('module_key', 'logistics_shipments')
+            ->delete();
         CompanyModule::where('company_id', $this->company->id)
             ->where('module_key', 'logistics_shipments')
             ->update(['is_enabled_for_company' => false]);
@@ -156,6 +171,9 @@ class CompanyAccessPolicyTest extends TestCase
 
     public function test_inactive_module_blocked(): void
     {
+        CompanyModuleActivationReason::where('company_id', $this->company->id)
+            ->where('module_key', 'logistics_shipments')
+            ->delete();
         CompanyModule::where('company_id', $this->company->id)
             ->where('module_key', 'logistics_shipments')
             ->update(['is_enabled_for_company' => false]);
@@ -234,6 +252,9 @@ class CompanyAccessPolicyTest extends TestCase
 
     public function test_middleware_module_blocks_when_inactive(): void
     {
+        CompanyModuleActivationReason::where('company_id', $this->company->id)
+            ->where('module_key', 'logistics_shipments')
+            ->delete();
         CompanyModule::where('company_id', $this->company->id)
             ->where('module_key', 'logistics_shipments')
             ->update(['is_enabled_for_company' => false]);

@@ -7401,4 +7401,250 @@ Message affiché : « Aucun widget disponible pour vos permissions ».
 
 ---
 
+## ADR-203 — ShipmentsModule compatibilité + compatible_jobdomains_override UI
+
+**Date** : 2026-03-04
+
+**Contexte** :
+1. `ShipmentsModule` était le seul module logistics sans `compatibleJobdomains: ['logistique']` — visible pour tous les jobdomains alors qu'il ne devrait être que pour logistique.
+2. La page platform `/modules/[key]` affichait les jobdomains compatibles en lecture seule. Le platform admin ne pouvait pas les modifier sans toucher le code.
+3. La navigation SPA entre modules (`/modules/X` → `/modules/Y`) ne rafraîchissait pas les données car `onMounted` ne se relançait pas.
+
+**Décisions** :
+1. Ajout `compatibleJobdomains: ['logistique']` au manifest `ShipmentsModule` — alignement avec Tracking, Fleet, Analytics.
+2. Nouvelle colonne `compatible_jobdomains_override` (json, nullable) sur `platform_modules` — pattern identique à `min_plan_override`.
+3. `EntitlementResolver` Gate 3 résout `$pm->compatible_jobdomains_override ?? $manifest->compatibleJobdomains`.
+4. `PlatformModuleReadModel::detail()` expose `compatible_jobdomains_override` dans `platform_config`, `available_jobdomains` pour le dropdown, et `manifest_defaults.compatible_jobdomains` pour le hint.
+5. Frontend : section Compatibility remplacée par `VCombobox` éditable (chips, clearable). Hint affiche le default manifest quand override est null.
+6. Extraction de `loadModuleProfile()` depuis `onMounted` + `watch(route.params.key)` pour le rechargement SPA.
+
+**Conséquences** :
+- ShipmentsModule n'est plus visible pour les companies hors jobdomain logistique.
+- Le platform admin peut restreindre ou élargir les jobdomains compatibles d'un module sans modifier le code.
+- La navigation SPA entre modules rafraîchit correctement les données.
+- Clear de l'override → fallback au manifest.
+
+**Fichiers** :
+- `app/Modules/Logistics/Shipments/ShipmentsModule.php` — ajout compatibleJobdomains
+- `database/migrations/2026_03_02_300001_add_compatible_jobdomains_override_to_platform_modules.php` — migration
+- `app/Core/Modules/PlatformModule.php` — fillable + cast
+- `app/Core/Modules/EntitlementResolver.php` — Gate 3 override ?? manifest
+- `app/Modules/Platform/Modules/ReadModels/PlatformModuleReadModel.php` — override resolution + available_jobdomains
+- `app/Modules/Platform/Modules/Http/ModuleController.php` — validation rules
+- `resources/js/pages/platform/modules/[key].vue` — VCombobox + SPA watch
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
+## ADR-204 — Module Entitlement Enforcement (Security Fix)
+
+**Date** : 2026-03-04
+
+**Contexte** :
+`ModuleGate::isActive()` lisait le cache `company_modules.is_enabled_for_company` comme source de vérité pour déterminer si un module était actif. Quand les conditions d'entitlement changeaient (suppression d'un module des defaults du jobdomain, modification de `compatible_jobdomains_override`), les companies conservaient un accès complet aux modules via le cache stale. C'est une faille de sécurité : les endpoints API restaient accessibles.
+
+**Décisions** :
+1. **ModuleGate réécrit** — Ordre d'évaluation strict :
+   - (1) Manifest lookup (ModuleRegistry, in-memory)
+   - (2) Global enablement (PlatformModule.is_enabled_globally)
+   - (3) Core bypass (modules core toujours actifs)
+   - (4) `EntitlementResolver::check()` — dynamique, jamais stale
+   - (5) `CompanyModuleActivationReason::exists()` — source de vérité activation
+   Le cache `company_modules.is_enabled_for_company` n'est JAMAIS consulté pour décider l'accès.
+2. **EntitlementResolver** accepte `?PlatformModule $platformModule = null` pour éviter double query.
+3. **ModuleCatalogReadModel** utilise `$pm->compatible_jobdomains_override ?? $manifest->compatibleJobdomains` (fix ADR-203).
+4. **Commande de réconciliation** `artisan modules:reconcile-entitlements` — outil de maintenance optionnel. Nettoie les activation_reasons stale et synchronise le cache. N'est PAS nécessaire pour la sécurité (le gate est dynamique).
+5. **Tests existants mis à jour** — Tous les tests qui créaient des `CompanyModule` (cache) sans `CompanyModuleActivationReason` ont été corrigés. Les tests de désactivation suppriment les activation_reasons (source de vérité) au lieu de juste mettre le cache à false.
+
+**Conséquences** :
+- La désactivation d'un module par changement de jobdomain est immédiate (pas besoin de réconciliation).
+- Le cache `company_modules` reste synchronisé par `ModuleActivationEngine` mais n'est jamais la source de vérité d'accès.
+- L'index `cmar_company_module` sur `(company_id, module_key)` garantit des performances optimales pour le `exists()`.
+- 6 nouveaux tests de sécurité + 12 tests existants adaptés.
+
+**Fichiers** :
+- `app/Core/Modules/ModuleGate.php` — réécriture de `isActive()` + ajout `isActiveForScope()`
+- `app/Core/Modules/EntitlementResolver.php` — paramètre optionnel `?PlatformModule`
+- `app/Core/Modules/ModuleCatalogReadModel.php` — DB override pour compatible_jobdomains
+- `app/Console/Commands/ReconcileModuleEntitlementsCommand.php` — nouveau
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — nouveau (6 tests)
+- `tests/Unit/NavBuilderTest.php` — activation reasons ajoutées
+- `tests/Feature/CompanyAccessPolicyTest.php` — activation reasons + déactivation via delete
+- `tests/Feature/CompanyNavPermissionTest.php` — activation reasons ajoutées
+- `tests/Feature/CompanyPermissionTest.php` — activation reasons + déactivation via delete
+- `tests/Feature/ModuleDependencyTest.php` — plan_key fix pour fleet
+- `tests/Feature/SecurityInvariantTest.php` — activation reasons + déactivation via delete
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
+## ADR-205 — Display State: not_available → LOCKED_ADDON (not CONTACT_SALES)
+
+**Date** : 2026-03-05
+
+**Contexte** :
+Après ADR-204, un module retiré des `jobdomain.default_modules` mais toujours compatible avec le jobdomain de la company affichait **"Contact Sales"** au lieu de **"Addon"**. Le `ModuleDisplayStateResolver` ne distinguait pas `reason='not_available'` (compatible, pas dans les defaults) de `reason='incompatible_jobdomain'` — tous les cas `entitled=false` non-addon tombaient dans le fallback `CONTACT_SALES`.
+
+**Décision** :
+Ajout d'un step 9 dans le pipeline du `ModuleDisplayStateResolver` :
+- `reason = 'not_available'` → `LOCKED_ADDON` (module compatible, disponible à l'achat addon)
+- `reason = 'incompatible_jobdomain'` → module exclu du catalog par `ModuleCatalogReadModel`
+- `reason = 'plan_required'` → déjà capturé par step 3 (`LOCKED_PLAN`)
+- Fallback (step 10) : `CONTACT_SALES` — uniquement pour les cas résiduels
+
+**Conséquences** :
+- Un module retiré des defaults mais compatible apparaît comme addon purchasable.
+- La distinction entre les raisons d'entitlement est correctement reflétée dans l'UI.
+- 2 nouveaux tests ajoutés.
+
+**Fichiers** :
+- `app/Core/Modules/ModuleDisplayStateResolver.php` — step 9 ajouté
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — 2 tests ajoutés
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
+## ADR-208 — Dependency Visualization on Module Cards
+
+**Date** : 2026-03-05
+
+**Contexte** :
+Les cartes modules côté company n'affichent pas les relations de dépendance. Un module comme `logistics_shipments` active automatiquement 3 modules dépendants (tracking, fleet, analytics) via cascade, mais l'utilisateur ne voit aucune indication visuelle de ce comportement.
+
+**Décision** :
+- Backend : `ModuleCatalogReadModel` calcule un `dependentsMap` inversé à partir des manifests (in-memory, pas de requête DB) et l'ajoute au champ `dependents` de chaque module.
+- Frontend : Badges visuels sur les cartes modules dans les 4 onglets :
+  - `tabler-sitemap` + "Activates N dependent module(s)" pour les modules ayant des dépendants
+  - `tabler-link` + "Requires N module(s)" pour les modules ayant des prérequis
+- Pas de changement de logique métier — pure amélioration UX.
+
+**Conséquences** :
+- Les utilisateurs voient clairement quels modules en activent d'autres.
+- Le champ `dependents` est disponible dans l'API catalog pour tout consommateur frontend.
+- 1 test ajouté vérifiant la présence de `dependents` dans le catalog.
+
+**Fichiers** :
+- `app/Core/Modules/ModuleCatalogReadModel.php` — ajout `dependentsMap` + champ `dependents`
+- `resources/js/pages/company/modules/index.vue` — badges visuels dans 4 onglets
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — test ajouté
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
+## ADR-206 : Module Pricing Simplification
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+
+**Contexte** :
+Le système module avait 4 colonnes de pricing redondantes (`pricing_mode`, `pricing_model`, `pricing_metric`, `pricing_params`) sur `platform_modules`. Le champ `pricing_mode` était manuellement géré mais logiquement dérivable de `jobdomain.default_modules`. Cela créait 4 conflits :
+1. Retirer un module des defaults du jobdomain ne mettait pas à jour `pricing_mode` → état périmé
+2. L'invariant de dépendance bloquait `pricing_mode='addon'` sur les modules requis par d'autres
+3. `pricing_mode='included'` était ambigu (inclus où ?)
+4. `DisplayStateResolver` avait deux chemins faisant la même chose (steps 4 et 9)
+
+**Décision** :
+- **Supprimer** la colonne `pricing_mode` de la DB (pas de cache, suppression totale)
+- **Consolider** `pricing_model` + `pricing_metric` + `pricing_params` dans un seul champ JSON `addon_pricing`
+- **Dériver** le pricing effectif à la volée : `core→included`, `internal→internal`, `in_defaults→included`, `addon_pricing≠null→addon`, `else→contact_sales`
+- **Supprimer** les invariants de dépendance-pricing (Rules 1 et 4) de `ModulePricingPolicy` — les modules requis PEUVENT avoir `addon_pricing`
+- **Simplifier** `DisplayStateResolver` de 10 étapes à 9 : le step 8 (`addon_pricing ≠ null → LOCKED_ADDON`) remplace les anciens steps 4 et 9
+- Garder 2 invariants : core et internal ne peuvent pas avoir `addon_pricing`
+
+**Conséquences** :
+- Une seule source de vérité pour le pricing : `jobdomain.default_modules` (inclusion) + `addon_pricing` (tarification explicite)
+- `PlatformModule::effectivePricingModeFor($company)` fournit le pricing dérivé en contexte
+- Le catalog API retourne `pricing_mode` comme valeur calculée (pas de rupture frontend)
+- `logistics_shipments` peut maintenant avoir `addon_pricing` malgré ses dépendants
+- Le billing n'est facturé que pour les modules explicitement achetés (pas les dépendances)
+
+**Fichiers** :
+- `database/migrations/2026_03_05_042510_simplify_module_pricing.php` — migration (add `addon_pricing`, drop 4 colonnes)
+- `app/Core/Modules/PlatformModule.php` — nouveau modèle avec `addon_pricing` + `effectivePricingModeFor()`
+- `app/Core/Modules/ModuleDisplayStateResolver.php` — pipeline 9 étapes simplifié
+- `app/Core/Modules/ModuleCatalogReadModel.php` — pricing_mode calculé, deriveCategory adapté
+- `app/Core/Modules/Pricing/ModuleQuoteCalculator.php` — lecture depuis `addon_pricing`
+- `app/Core/Modules/Pricing/ModulePricingPolicy.php` — 2 règles seulement (core/internal)
+- `app/Modules/Platform/Modules/UseCases/UpdateModuleConfigUseCase.php` — validation `addon_pricing`
+- `app/Modules/Platform/Modules/Http/ModuleController.php` — nouvelles règles de validation
+- `app/Core/Modules/DependencyGraphValidator.php` — pricing invariants retirés
+- `app/Modules/Platform/Modules/ReadModels/PlatformModuleReadModel.php` — platform_config adapté
+- `app/Console/Commands/ModuleExportCommand.php` — export adapté
+- `database/seeders/DevSeeder.php` — seeder adapté
+- `tests/Unit/ModulePricingPolicyTest.php` — réécrit pour 2 règles
+- `tests/Unit/ModuleQuoteCalculatorTest.php` — adapté pour `addon_pricing`
+- `tests/Feature/ModuleQuoteEndpointTest.php` — adapté pour `addon_pricing`
+- `tests/Feature/ModuleDisplayStateResolverTest.php` — step 4 retiré, step 8 ajouté
+- `tests/Unit/DependencyGraphValidatorTest.php` — pricing tests retirés
+- `tests/Feature/ModuleEntitlementEnforcementTest.php` — test ADR-205 adapté + test `effectivePricingModeFor`
+
+---
+
+## ADR-207 : Platform Module Configuration UX
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-206
+
+**Contexte** :
+Suite à ADR-206 (suppression de `pricing_mode` de la DB), la page admin plateforme des modules utilisait encore un VSelect pour `pricing_mode` (included/addon/internal) qui n'a plus de colonne correspondante.
+
+**Décision** :
+- **Remplacer** le sélecteur `pricing_mode` par un VSwitch "Addon Pricing" (ON/OFF)
+- VSwitch ON = le module a un `addon_pricing` JSON, OFF = null
+- Les modules core/internal ne peuvent pas activer le toggle (disabled avec explication)
+- Les champs de tarification (pricing_model, pricing_metric, pricing_params) sont présentés dans le même format mais stockés dans `addon_pricing` JSON
+- Le payload API envoie `addon_pricing` (JSON ou null) au lieu de 4 champs séparés
+- La section "Included By" (jobdomains) existait déjà dans le panneau latéral — aucun changement nécessaire
+
+**Conséquences** :
+- L'admin ne peut plus "choisir" un pricing mode — c'est dérivé automatiquement (ADR-206)
+- Le toggle reflète exactement la réalité DB : addon_pricing présent ou non
+- Les modules core/internal ne montrent jamais le toggle actif
+- Tous les i18n mis à jour (en + fr)
+
+**Fichiers** :
+- `resources/js/pages/platform/modules/[key].vue` — refonte pricing editor
+- `resources/js/plugins/i18n/locales/en.json` — 6 clés i18n ajoutées
+- `resources/js/plugins/i18n/locales/fr.json` — 6 clés i18n ajoutées
+- `docs/bmad/04-decisions.md` — cet ADR
+
+---
+
+## ADR-209 : Fix hydration race condition (Module Pricing Page)
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-207
+
+**Contexte** :
+La page admin module ([key].vue) avait un race condition : lors du chargement, le watcher `pricingModel` se déclenchait en async quand `pricingModel` passait de `null` à `'flat'`, appelant `hydratePricingFields(null)` et réinitialisant tous les prix à null **après** l'hydration correcte. Résultat : les prix configurés disparaissaient au rechargement.
+
+De plus, le flag `enabled` initialement envisagé dans `addon_pricing` a été abandonné. La dérivation ADR-206 est suffisante :
+- Module dans defaults jobdomain → INCLUDED (le prix est ignoré)
+- Module hors defaults + `addon_pricing ≠ null` → LOCKED_ADDON
+- Module hors defaults + `addon_pricing = null` → CONTACT_SALES
+
+Le simple fait d'avoir un prix enregistré + ne pas être dans un jobdomain suffit à déterminer le statut addon.
+
+**Décision** :
+- Ajouter un flag `hydrating` dans le frontend qui empêche le watcher `pricingModel` de reset les champs pendant l'hydration (load + save)
+- Supprimer le watcher `addonEnabled` qui détruisait les refs pricing au toggle OFF (les refs restent en mémoire pour la session)
+- Pas de flag `enabled` dans `addon_pricing` — la dérivation ADR-206 est la source de vérité
+
+**Conséquences** :
+- Les prix configurés persistent correctement au rechargement
+- Le watcher `pricingModel` ne reset les champs que lors d'un changement utilisateur (pas pendant l'hydration)
+- Les refs pricing restent en mémoire si l'admin toggle OFF puis re-toggle ON (UX session)
+- La logique backend reste inchangée : `addon_pricing !== null` = addon
+
+**Fichiers** :
+- `resources/js/pages/platform/modules/[key].vue` — hydrating guard, watcher addonEnabled supprimé
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

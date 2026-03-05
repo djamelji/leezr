@@ -71,7 +71,7 @@ class ModuleDisplayStateResolverTest extends TestCase
             'description' => 'A test module',
             'is_enabled_globally' => true,
             'sort_order' => 100,
-            'pricing_mode' => null,
+            'addon_pricing' => null,
             'min_plan_override' => null,
         ], $overrides));
     }
@@ -160,23 +160,7 @@ class ModuleDisplayStateResolverTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // Step 4: Addon not entitled → LOCKED_ADDON
-    // ═══════════════════════════════════════════════════════
-
-    public function test_addon_not_entitled_returns_locked_addon(): void
-    {
-        $manifest = $this->makeManifest();
-        $pm = $this->makePlatformModule(['pricing_mode' => 'addon']);
-
-        $state = ModuleDisplayStateResolver::resolve(
-            $manifest, $pm, $this->entitlement(false), false, $this->defaultJobdomain, 'starter',
-        );
-
-        $this->assertSame(ModuleDisplayState::LOCKED_ADDON, $state);
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // Step 5: Core module → INCLUDED
+    // Step 4 (ADR-206): Core module → INCLUDED
     // ═══════════════════════════════════════════════════════
 
     public function test_core_module_returns_included(): void
@@ -244,6 +228,24 @@ class ModuleDisplayStateResolverTest extends TestCase
         );
 
         $this->assertSame(ModuleDisplayState::AVAILABLE, $state);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Step 8 (ADR-206): addon_pricing ≠ null → LOCKED_ADDON
+    // ═══════════════════════════════════════════════════════
+
+    public function test_addon_pricing_returns_locked_addon(): void
+    {
+        $manifest = $this->makeManifest();
+        $pm = $this->makePlatformModule([
+            'addon_pricing' => ['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 10]],
+        ]);
+
+        $state = ModuleDisplayStateResolver::resolve(
+            $manifest, $pm, $this->entitlement(false), false, $this->defaultJobdomain, 'starter',
+        );
+
+        $this->assertSame(ModuleDisplayState::LOCKED_ADDON, $state);
     }
 
     // ═══════════════════════════════════════════════════════

@@ -105,6 +105,9 @@ class ModuleDependencyTest extends TestCase
 
     public function test_resolver_lists_all_active_dependents(): void
     {
+        // Fleet requires minPlan='pro'
+        $this->company->update(['plan_key' => 'pro']);
+
         $this->activateModule('logistics_shipments');
         $this->activateModule('logistics_tracking');
         $this->activateModule('logistics_fleet');

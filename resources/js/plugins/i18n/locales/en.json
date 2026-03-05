@@ -1184,12 +1184,16 @@
     "sourceGate": "Source gate:",
     "sourceGateInfo": "Must be in jobdomain's default_modules (or future addon purchase)",
     "pricing": "Pricing",
+    "addonPricing": "Addon Pricing",
+    "addonPricingEnabled": "Sellable as addon",
+    "addonPricingDisabled": "Available only via jobdomain inclusion",
+    "addonPricingHint": "Price applied when module is sold outside jobdomain defaults.",
+    "addonPricingBlockedHint": "Addon pricing is not available for {type} modules.",
+    "addonPricingJson": "addon_pricing (JSON)",
     "addonLabel": "+ Add-on",
     "includedLabel": "Included",
     "internalLabel": "Internal",
     "platformType": "Platform",
-    "commercialMode": "Commercial Mode",
-    "commercialModeHint": "If set to \"Paid Add-on\", the price configured below is added on top of the company's base subscription plan price.",
     "pricingStructure": "Pricing Structure",
     "pricingUnit": "Pricing Unit",
     "pricingUnitHint": "For usage-based or per-user pricing, this defines what is measured.",
@@ -1271,6 +1275,8 @@
     "pricingParamsJson": "pricing_params (JSON)",
     "settingsSchemaJson": "settings_schema (JSON)",
     "perUser": "/user",
+    "compatibleJobdomainsOverride": "Compatible Jobdomains",
+    "compatibleJobdomainsHint": "Override manifest. Clear to use default.",
     "syncButton": "Sync Modules",
     "syncSuccess": "Module registry synchronized successfully.",
     "syncFailed": "Failed to sync module registry."
@@ -1766,7 +1772,9 @@
     "contactDescription": "Contact our sales team to access this module.",
     "noModulesInTab": "No modules in this section.",
     "noSearchResults": "No modules match your search.",
-    "searchModuleHint": "Search a module"
+    "searchModuleHint": "Search a module",
+    "activatesModules": "Activates {count} dependent module(s)",
+    "requiresModules": "Requires {count} module(s)"
   },
 
   "themeSettings": {

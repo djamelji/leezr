@@ -24,7 +24,7 @@ class EntitlementResolver
      *   source: 'core' | 'jobdomain' | null
      *   reason: 'unknown_module' | 'plan_required' | 'incompatible_jobdomain' | 'not_available' | null
      */
-    public static function check(Company $company, string $moduleKey): array
+    public static function check(Company $company, string $moduleKey, ?PlatformModule $platformModule = null): array
     {
         $manifest = ModuleRegistry::definitions()[$moduleKey] ?? null;
 
@@ -44,10 +44,13 @@ class EntitlementResolver
             }
         }
 
-        // Gate 3: Jobdomain compatibility
+        // Gate 3: Jobdomain compatibility (DB override ?? manifest)
         // ADR-167a: jobdomain_key is always present — no null check
-        if ($manifest->compatibleJobdomains !== null) {
-            if (!in_array($company->jobdomain_key, $manifest->compatibleJobdomains, true)) {
+        $pm = $platformModule ?? PlatformModule::where('key', $moduleKey)->first();
+        $compatibleJobdomains = $pm?->compatible_jobdomains_override ?? $manifest->compatibleJobdomains;
+
+        if ($compatibleJobdomains !== null) {
+            if (!in_array($company->jobdomain_key, $compatibleJobdomains, true)) {
                 return ['entitled' => false, 'source' => null, 'reason' => 'incompatible_jobdomain'];
             }
         }

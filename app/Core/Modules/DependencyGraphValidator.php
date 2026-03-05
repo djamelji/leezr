@@ -8,8 +8,9 @@ use RuntimeException;
  * Validates the module dependency graph for structural integrity.
  *
  * - Detects cycles in the requires graph (DFS with coloring)
- * - Validates pricing invariants (required modules cannot be addon-priced)
  * - Run at boot/seed time to catch manifest errors early
+ *
+ * ADR-206: Pricing invariants moved to ModulePricingPolicy (addon_pricing-based).
  */
 class DependencyGraphValidator
 {
@@ -26,7 +27,6 @@ class DependencyGraphValidator
     public static function validate(): void
     {
         static::detectCycles();
-        static::validatePricingInvariants();
     }
 
     /**
@@ -46,48 +46,6 @@ class DependencyGraphValidator
         foreach ($definitions as $key => $manifest) {
             if ($colors[$key] === self::WHITE) {
                 static::dfs($key, $colors, $definitions, []);
-            }
-        }
-    }
-
-    /**
-     * Validate pricing invariant: a module that is required by another
-     * cannot have pricing_mode = 'addon'.
-     *
-     * Rationale: if module B requires module A, then A is auto-activated
-     * when B is activated. An addon-priced A would mean the company pays
-     * for A without explicitly choosing it. This is a billing hazard.
-     *
-     * @throws RuntimeException
-     */
-    public static function validatePricingInvariants(): void
-    {
-        $definitions = ModuleRegistry::definitions();
-
-        // Collect all module keys that are required by at least one other module
-        $requiredKeys = [];
-
-        foreach ($definitions as $key => $manifest) {
-            foreach ($manifest->requires as $reqKey) {
-                $requiredKeys[$reqKey][] = $key;
-            }
-        }
-
-        // Check pricing for each required module
-        foreach ($requiredKeys as $requiredKey => $dependentKeys) {
-            $platformModule = PlatformModule::where('key', $requiredKey)->first();
-
-            if (!$platformModule) {
-                continue; // Module not yet synced, skip
-            }
-
-            if ($platformModule->pricing_mode === 'addon') {
-                $dependentList = implode(', ', $dependentKeys);
-
-                throw new RuntimeException(
-                    "Pricing invariant violation: module '{$requiredKey}' is required by [{$dependentList}] "
-                    . "but has pricing_mode='addon'. Required modules must use 'included' or 'internal' pricing."
-                );
             }
         }
     }

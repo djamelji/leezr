@@ -12,6 +12,7 @@ use App\Core\Models\Company;
 use App\Core\Models\Shipment;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -69,6 +70,17 @@ class CompanyPermissionTest extends TestCase
                 'module_key' => $key,
                 'is_enabled_for_company' => true,
             ]);
+        }
+
+        // ADR-204: Create activation reasons for company-scope non-core modules
+        foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
+            if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $this->company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+            }
         }
 
         // Créer les rôles
@@ -220,6 +232,9 @@ class CompanyPermissionTest extends TestCase
     public function test_module_inactive_denies_even_with_permission(): void
     {
         // Désactiver le module logistics_shipments
+        CompanyModuleActivationReason::where('company_id', $this->company->id)
+            ->where('module_key', 'logistics_shipments')
+            ->delete();
         CompanyModule::where('company_id', $this->company->id)
             ->where('module_key', 'logistics_shipments')
             ->update(['is_enabled_for_company' => false]);
@@ -236,6 +251,9 @@ class CompanyPermissionTest extends TestCase
 
     public function test_module_inactive_denies_read_too(): void
     {
+        CompanyModuleActivationReason::where('company_id', $this->company->id)
+            ->where('module_key', 'logistics_shipments')
+            ->delete();
         CompanyModule::where('company_id', $this->company->id)
             ->where('module_key', 'logistics_shipments')
             ->update(['is_enabled_for_company' => false]);

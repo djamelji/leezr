@@ -103,8 +103,8 @@ class ModuleQuoteCalculator
         foreach ($selectedModuleKeys as $key) {
             $pm = PlatformModule::where('key', $key)->first();
 
-            if (!$pm || $pm->pricing_mode !== 'addon') {
-                // Not addon-priced → included in plan, no charge
+            if (!$pm || $pm->addon_pricing === null) {
+                // No addon pricing → included in plan, no charge
                 continue;
             }
 
@@ -115,7 +115,7 @@ class ModuleQuoteCalculator
                 key: $key,
                 title: $pm->display_name_override ?? $manifest->name,
                 amount: $amount,
-                pricingModel: $pm->pricing_model ?? 'flat',
+                pricingModel: $pm->addon_pricing['pricing_model'] ?? 'flat',
             );
 
             $total += $amount;
@@ -155,9 +155,10 @@ class ModuleQuoteCalculator
      */
     private static function computeAmount(PlatformModule $pm, string $companyPlanKey): int
     {
-        $params = $pm->pricing_params ?? [];
+        $addon = $pm->addon_pricing ?? [];
+        $params = $addon['pricing_params'] ?? [];
 
-        return match ($pm->pricing_model) {
+        return match ($addon['pricing_model'] ?? 'flat') {
             'flat' => (int) round(($params['price_monthly'] ?? 0) * 100),
             'plan_flat' => (int) round(($params[$companyPlanKey] ?? 0) * 100),
             default => 0,

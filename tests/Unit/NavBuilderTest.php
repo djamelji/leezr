@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Core\Models\Company;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Modules\ModuleManifest;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Navigation\NavBuilder;
@@ -223,6 +224,11 @@ class NavBuilderTest extends TestCase
 
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
             if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
                 CompanyModule::create([
                     'company_id' => $company->id,
                     'module_key' => $key,

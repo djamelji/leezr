@@ -377,6 +377,34 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <p class="text-body-2 text-medium-emphasis mb-3">
                         {{ mod.description || '—' }}
                       </p>
+
+                      <!-- ADR-208: Dependency indicators -->
+                      <div
+                        v-if="mod.dependents?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-sitemap"
+                          size="16"
+                          color="info"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="mod.requires?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-link"
+                          size="16"
+                          color="secondary"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                        </span>
+                      </div>
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">
@@ -498,6 +526,34 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       >
                         {{ t('companyModules.stateIncluded') }}
                       </VChip>
+
+                      <!-- ADR-208: Dependency indicators -->
+                      <div
+                        v-if="mod.dependents?.length"
+                        class="d-flex align-center gap-1 mt-2"
+                      >
+                        <VIcon
+                          icon="tabler-sitemap"
+                          size="16"
+                          color="info"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="mod.requires?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-link"
+                          size="16"
+                          color="secondary"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                        </span>
+                      </div>
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">
@@ -576,6 +632,34 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       >
                         {{ t('companyModules.stateActive') }}
                       </VChip>
+
+                      <!-- ADR-208: Dependency indicators -->
+                      <div
+                        v-if="mod.dependents?.length"
+                        class="d-flex align-center gap-1 mt-2"
+                      >
+                        <VIcon
+                          icon="tabler-sitemap"
+                          size="16"
+                          color="info"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="mod.requires?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-link"
+                          size="16"
+                          color="secondary"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                        </span>
+                      </div>
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">
@@ -708,6 +792,34 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       >
                         {{ mod.description || '—' }}
                       </p>
+
+                      <!-- ADR-208: Dependency indicators -->
+                      <div
+                        v-if="mod.dependents?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-sitemap"
+                          size="16"
+                          color="info"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.activatesModules', { count: mod.dependents.length }) }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="mod.requires?.length"
+                        class="d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="tabler-link"
+                          size="16"
+                          color="secondary"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.requiresModules', { count: mod.requires.length }) }}
+                        </span>
+                      </div>
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">

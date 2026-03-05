@@ -30,18 +30,13 @@ export function useCompanyNav() {
 
 /**
  * Convert backend groups to flat nav items.
- * Static items (Dashboard, Account Settings) added around groups.
+ * All items are module-driven (Dashboard included via core.dashboard manifest).
+ * Account Settings is the only static item (appended after groups).
  * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Frontend only applies last-barrier permission check.
  */
 function companyGroupsToNavItems(groups, auth) {
-  const items = [
-    {
-      title: 'nav.company.dashboard',
-      to: { name: 'dashboard' },
-      icon: { icon: 'tabler-smart-home' },
-    },
-  ]
+  const items = []
 
   for (const group of groups) {
     if (group.titleKey) {

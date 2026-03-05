@@ -11,7 +11,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Feature tests for GET /api/modules/quote endpoint (ADR-116).
+ * Feature tests for GET /api/modules/quote endpoint (ADR-116/206).
+ *
+ * ADR-206: pricing_mode removed, uses addon_pricing JSON.
  */
 class ModuleQuoteEndpointTest extends TestCase
 {
@@ -78,9 +80,10 @@ class ModuleQuoteEndpointTest extends TestCase
     {
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 15],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 15],
+                ],
             ]);
 
         $response = $this->actingAs($this->owner)
@@ -106,9 +109,10 @@ class ModuleQuoteEndpointTest extends TestCase
     {
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $response = $this->actingAs($this->owner)
@@ -131,15 +135,17 @@ class ModuleQuoteEndpointTest extends TestCase
 
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
         PlatformModule::where('key', 'logistics_fleet')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 25],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 25],
+                ],
             ]);
 
         $response = $this->actingAs($this->owner)
@@ -157,9 +163,10 @@ class ModuleQuoteEndpointTest extends TestCase
     {
         PlatformModule::where('key', 'logistics_tracking')
             ->update([
-                'pricing_mode' => 'addon',
-                'pricing_model' => 'flat',
-                'pricing_params' => ['price_monthly' => 10],
+                'addon_pricing' => [
+                    'pricing_model' => 'flat',
+                    'pricing_params' => ['price_monthly' => 10],
+                ],
             ]);
 
         $response1 = $this->actingAs($this->owner)

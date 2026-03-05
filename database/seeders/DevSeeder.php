@@ -13,6 +13,7 @@ use App\Core\Models\Company;
 use App\Core\Models\Shipment;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
+use App\Core\Modules\EntitlementResolver;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 use App\Platform\Models\PlatformRole;
@@ -101,13 +102,15 @@ class DevSeeder extends Seeder
         );
 
         // ─── Module activation for demo company ──────────────────
-        // Only activate company-scope modules (not platform.* or payments.*)
+        // Only activate entitled modules (respects jobdomain + plan gates)
         $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
 
         foreach ($companyModuleKeys as $key) {
+            $entitlement = EntitlementResolver::check($company, $key);
+
             CompanyModule::updateOrCreate(
                 ['company_id' => $company->id, 'module_key' => $key],
-                ['is_enabled_for_company' => true],
+                ['is_enabled_for_company' => $entitlement['entitled']],
             );
         }
 
@@ -251,13 +254,15 @@ class DevSeeder extends Seeder
             'description_override' => 'Track shipments in real time with live geolocation updates.',
             'icon_type' => 'tabler',
             'icon_name' => 'tabler-map-pin',
-            'pricing_mode' => 'addon',
             'is_listed' => true,
             'is_sellable' => true,
-            'pricing_model' => 'flat',
-            'pricing_metric' => 'none',
-            'pricing_params' => [
-                'price_monthly' => 29,
+            'addon_pricing' => [
+
+                'pricing_model' => 'flat',
+                'pricing_metric' => 'none',
+                'pricing_params' => [
+                    'price_monthly' => 29,
+                ],
             ],
             'notes' => 'Flat monthly add-on fee for real-time shipment tracking.',
         ]);
@@ -267,14 +272,16 @@ class DevSeeder extends Seeder
             'description_override' => 'Manage vehicles, drivers and maintenance schedules.',
             'icon_type' => 'tabler',
             'icon_name' => 'tabler-truck',
-            'pricing_mode' => 'addon',
             'is_listed' => true,
             'is_sellable' => true,
-            'pricing_model' => 'per_seat',
-            'pricing_metric' => 'users',
-            'pricing_params' => [
-                'included' => ['starter' => 5, 'pro' => 10, 'business' => 25],
-                'overage_unit_price' => ['starter' => 1, 'pro' => 0.8, 'business' => 0.6],
+            'addon_pricing' => [
+
+                'pricing_model' => 'per_seat',
+                'pricing_metric' => 'users',
+                'pricing_params' => [
+                    'included' => ['starter' => 5, 'pro' => 10, 'business' => 25],
+                    'overage_unit_price' => ['starter' => 1, 'pro' => 0.8, 'business' => 0.6],
+                ],
             ],
             'notes' => 'Per-seat pricing with plan-based included seats.',
         ]);
@@ -284,15 +291,17 @@ class DevSeeder extends Seeder
             'description_override' => 'Operational insights and performance dashboards.',
             'icon_type' => 'tabler',
             'icon_name' => 'tabler-chart-bar',
-            'pricing_mode' => 'addon',
             'is_listed' => true,
             'is_sellable' => true,
-            'pricing_model' => 'plan_flat',
-            'pricing_metric' => 'none',
-            'pricing_params' => [
-                'starter' => 49,
-                'pro' => 29,
-                'business' => 19,
+            'addon_pricing' => [
+
+                'pricing_model' => 'plan_flat',
+                'pricing_metric' => 'none',
+                'pricing_params' => [
+                    'starter' => 49,
+                    'pro' => 29,
+                    'business' => 19,
+                ],
             ],
             'notes' => 'Additional monthly price varies by plan tier.',
         ]);

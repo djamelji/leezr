@@ -10,7 +10,13 @@ use RuntimeException;
 use Tests\TestCase;
 
 /**
- * Unit tests for ModulePricingPolicy invariants (ADR-116).
+ * Unit tests for ModulePricingPolicy invariants (ADR-206).
+ *
+ * ADR-206 simplified invariants:
+ *   Rule 1: core → addon_pricing must be null
+ *   Rule 2: internal → addon_pricing must be null
+ *
+ * Dependency-based invariants (Rules 1/4 from ADR-116) removed.
  */
 class ModulePricingPolicyTest extends TestCase
 {
@@ -32,63 +38,31 @@ class ModulePricingPolicyTest extends TestCase
         $this->assertTrue(true);
     }
 
-    // ─── Rule 1: required module cannot be addon ────────────
+    // ─── Rule 1: core cannot have addon_pricing ─────────────
 
-    public function test_required_module_cannot_be_addon(): void
-    {
-        // logistics_shipments is required by tracking, fleet, analytics
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'addon']);
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/logistics_shipments.*required by/');
-
-        ModulePricingPolicy::assertInvariants();
-    }
-
-    public function test_required_module_can_be_included(): void
-    {
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'included']);
-
-        ModulePricingPolicy::assertInvariants();
-        $this->assertTrue(true);
-    }
-
-    public function test_required_module_can_be_internal(): void
-    {
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'internal']);
-
-        ModulePricingPolicy::assertInvariants();
-        $this->assertTrue(true);
-    }
-
-    // ─── Rule 2: core cannot be addon ───────────────────────
-
-    public function test_core_module_cannot_be_addon(): void
+    public function test_core_module_cannot_have_addon_pricing(): void
     {
         PlatformModule::where('key', 'core.members')
-            ->update(['pricing_mode' => 'addon']);
+            ->update(['addon_pricing' => json_encode(['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 10]])]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/core module.*addon/i');
+        $this->expectExceptionMessageMatches('/core module.*addon_pricing/i');
 
         ModulePricingPolicy::assertInvariants();
     }
 
-    public function test_core_module_can_be_included(): void
+    public function test_core_module_without_addon_pricing_passes(): void
     {
         PlatformModule::where('key', 'core.members')
-            ->update(['pricing_mode' => 'included']);
+            ->update(['addon_pricing' => null]);
 
         ModulePricingPolicy::assertInvariants();
         $this->assertTrue(true);
     }
 
-    // ─── Rule 3: internal must be internal ──────────────────
+    // ─── Rule 2: internal cannot have addon_pricing ─────────
 
-    public function test_internal_module_must_be_internal_pricing(): void
+    public function test_internal_module_cannot_have_addon_pricing(): void
     {
         // Find an internal module, or skip
         $internalKey = null;
@@ -104,71 +78,57 @@ class ModulePricingPolicyTest extends TestCase
         }
 
         PlatformModule::where('key', $internalKey)
-            ->update(['pricing_mode' => 'addon']);
+            ->update(['addon_pricing' => json_encode(['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 5]])]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/internal module/i');
+        $this->expectExceptionMessageMatches('/internal module.*addon_pricing/i');
 
         ModulePricingPolicy::assertInvariants();
     }
 
-    // ─── Rule 4: transitive requires not addon ──────────────
+    // ─── assertAddonPricing() ───────────────────────────────
 
-    public function test_transitive_require_cannot_be_addon(): void
-    {
-        // logistics_tracking requires logistics_shipments
-        // If logistics_shipments is addon → invariant violation
-        PlatformModule::where('key', 'logistics_shipments')
-            ->update(['pricing_mode' => 'addon']);
-
-        $this->expectException(RuntimeException::class);
-
-        ModulePricingPolicy::assertInvariants();
-    }
-
-    // ─── assertProposedPricingMode() ────────────────────────
-
-    public function test_proposed_addon_rejected_for_required_module(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/logistics_shipments.*required by/');
-
-        ModulePricingPolicy::assertProposedPricingMode('logistics_shipments', 'addon');
-    }
-
-    public function test_proposed_included_accepted_for_required_module(): void
-    {
-        ModulePricingPolicy::assertProposedPricingMode('logistics_shipments', 'included');
-        $this->assertTrue(true);
-    }
-
-    public function test_proposed_addon_accepted_for_leaf_module(): void
-    {
-        // logistics_tracking is not required by anyone
-        ModulePricingPolicy::assertProposedPricingMode('logistics_tracking', 'addon');
-        $this->assertTrue(true);
-    }
-
-    public function test_proposed_addon_rejected_for_core_module(): void
+    public function test_addon_pricing_rejected_for_core_module(): void
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessageMatches('/core module/i');
 
-        ModulePricingPolicy::assertProposedPricingMode('core.members', 'addon');
+        ModulePricingPolicy::assertAddonPricing('core.members', ['pricing_model' => 'flat']);
     }
 
-    // ─── Multiple modules graph validated ───────────────────
-
-    public function test_multiple_modules_graph_validated(): void
+    public function test_null_addon_pricing_accepted_for_core_module(): void
     {
-        // All default pricing should pass
-        ModulePricingPolicy::assertInvariants();
+        ModulePricingPolicy::assertAddonPricing('core.members', null);
+        $this->assertTrue(true);
+    }
 
-        // Set a non-required leaf to addon → should still pass
-        PlatformModule::where('key', 'logistics_tracking')
-            ->update(['pricing_mode' => 'addon']);
+    public function test_addon_pricing_accepted_for_leaf_module(): void
+    {
+        // logistics_tracking is not core/internal — addon_pricing is allowed
+        ModulePricingPolicy::assertAddonPricing('logistics_tracking', ['pricing_model' => 'flat']);
+        $this->assertTrue(true);
+    }
+
+    // ─── ADR-206: Required modules CAN have addon_pricing ───
+
+    public function test_required_module_can_have_addon_pricing(): void
+    {
+        // logistics_shipments is required by tracking, fleet, analytics
+        // ADR-206: dependency invariant removed — this is now allowed
+        PlatformModule::where('key', 'logistics_shipments')
+            ->update(['addon_pricing' => json_encode(['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 50]])]);
 
         ModulePricingPolicy::assertInvariants();
+        $this->assertTrue(true);
+    }
+
+    public function test_addon_pricing_on_module_with_dependents_accepted(): void
+    {
+        // assertAddonPricing should not block based on dependents
+        ModulePricingPolicy::assertAddonPricing(
+            'logistics_shipments',
+            ['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 50]],
+        );
         $this->assertTrue(true);
     }
 }

@@ -155,13 +155,19 @@ class PlatformModuleReadModel
             ->filter()
             ->values();
 
-        // Compatible jobdomains
+        // Compatible jobdomains (DB override ?? manifest)
+        $resolvedCompatibleJobdomains = $platformModule->compatible_jobdomains_override ?? $manifest->compatibleJobdomains;
         $compatibleJobdomains = null;
-        if ($manifest->compatibleJobdomains !== null) {
-            $compatibleJobdomains = Jobdomain::whereIn('key', $manifest->compatibleJobdomains)
+        if ($resolvedCompatibleJobdomains !== null) {
+            $compatibleJobdomains = Jobdomain::whereIn('key', $resolvedCompatibleJobdomains)
                 ->select('id', 'key', 'label')
                 ->get();
         }
+
+        // All available jobdomains (for the override dropdown)
+        $availableJobdomains = Jobdomain::select('id', 'key', 'label')
+            ->orderBy('label')
+            ->get();
 
         // Jobdomains that include this module by default
         $includedByJobdomains = Jobdomain::all()
@@ -179,7 +185,7 @@ class PlatformModuleReadModel
                 'type' => $manifest->type,
                 'scope' => $manifest->scope,
                 'surface' => $manifest->surface,
-                'compatible_jobdomains' => $manifest->compatibleJobdomains,
+                'compatible_jobdomains' => $resolvedCompatibleJobdomains,
                 'requires' => $manifest->requires,
                 'is_enabled_globally' => $platformModule->is_enabled_globally,
                 'permissions_count' => count($manifest->permissions),
@@ -194,20 +200,19 @@ class PlatformModuleReadModel
                 'description' => $manifest->description,
                 'min_plan' => $manifest->minPlan,
                 'sort_order' => $manifest->sortOrder,
+                'compatible_jobdomains' => $manifest->compatibleJobdomains,
             ],
             'platform_config' => $platformModule->only([
-                'pricing_mode',
                 'is_listed',
                 'is_sellable',
-                'pricing_model',
-                'pricing_metric',
-                'pricing_params',
+                'addon_pricing',
                 'settings_schema',
                 'notes',
                 'display_name_override',
                 'description_override',
                 'min_plan_override',
                 'sort_order_override',
+                'compatible_jobdomains_override',
                 'icon_type',
                 'icon_name',
             ]),
@@ -215,6 +220,7 @@ class PlatformModuleReadModel
             'companies' => $companies,
             'compatible_jobdomains_detail' => $compatibleJobdomains,
             'included_by_jobdomains' => $includedByJobdomains,
+            'available_jobdomains' => $availableJobdomains,
         ];
     }
 }
