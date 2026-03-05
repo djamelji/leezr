@@ -97,16 +97,17 @@ const allModules = computed(() => settingsStore.modules)
 const jdKey = computed(() => jobdomain.value?.key)
 const defaultModuleKeys = computed(() => new Set(jobdomain.value?.default_modules || []))
 
-const isModuleSelected = moduleKey => {
-  return defaultModuleKeys.value.has(moduleKey)
-}
-
 // ADR-213: Dependency helpers
 const modulesByKey = computed(() => {
   const map = {}
   for (const m of allModules.value) map[m.key] = m
   return map
 })
+
+const isModuleSelected = moduleKey => {
+  if (modulesByKey.value[moduleKey]?.type === 'core') return true
+  return defaultModuleKeys.value.has(moduleKey)
+}
 
 const moduleDependents = computed(() => {
   const map = {}
