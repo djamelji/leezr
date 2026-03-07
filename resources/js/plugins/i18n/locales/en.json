@@ -924,6 +924,7 @@
       "cardExpiry": "Exp. {month}/{year}",
       "or": "or",
       "card": "Card",
+      "sepa": "SEPA Direct Debit",
       "holderName": "Account holder name",
       "holderNamePlaceholder": "Full name of the account holder",
       "sepaMandate": "By confirming this payment, you authorize Leezr and Stripe, our payment provider, to send instructions to your bank to debit your account in accordance with these instructions. You are entitled to a refund under the terms of your agreement with your bank.",

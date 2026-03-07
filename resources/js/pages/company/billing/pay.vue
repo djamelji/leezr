@@ -39,13 +39,10 @@ const intentData = ref(null)
 
 // Saved payment methods
 const savedCards = ref([])
-const selectedMethod = ref('new') // 'new' or saved card provider_payment_method_id
+const selectedMethod = ref('new-card') // 'new-card', 'new-sepa', or saved card provider_payment_method_id
 const saveCard = ref(false)
 
-// New method sub-tab
-const newMethodTab = ref('card') // 'card' | 'sepa'
 const sepaName = ref('')
-const sepaEmail = ref('')
 
 // ── Load outstanding invoices + saved cards ──
 const load = async () => {
@@ -79,6 +76,9 @@ const load = async () => {
       const defaultCard = savedCards.value.find(c => c.is_default) || savedCards.value[0]
 
       selectedMethod.value = defaultCard.provider_payment_method_id || defaultCard.id
+    }
+    else {
+      selectedMethod.value = 'new-card'
     }
   }
   catch {
@@ -114,7 +114,7 @@ const allSelected = computed(() =>
   invoices.value.length > 0 && selectedIds.value.length === invoices.value.length,
 )
 
-const isNewMethod = computed(() => selectedMethod.value === 'new')
+const isNewMethod = computed(() => selectedMethod.value === 'new-card' || selectedMethod.value === 'new-sepa')
 
 const selectedSavedCard = computed(() =>
   savedCards.value.find(c => (c.provider_payment_method_id || c.id) === selectedMethod.value),
@@ -232,24 +232,12 @@ const initiatePayment = async () => {
   }
 }
 
-const mountStripeElements = result => {
+const mountStripeElements = async result => {
   if (!stripe) return
 
   elements = stripe.elements({
     fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700' }],
   })
-
-  // Card Element — number, exp, CVC only
-  if (cardElementRef.value) {
-    cardEl = elements.create('card', { style: elementStyle, hidePostalCode: true })
-    cardEl.mount(cardElementRef.value)
-  }
-
-  // IBAN Element — SEPA IBAN input
-  if (ibanElementRef.value) {
-    ibanEl = elements.create('iban', { style: elementStyle, supportedCountries: ['SEPA'] })
-    ibanEl.mount(ibanElementRef.value)
-  }
 
   // Payment Request Button — Apple Pay / Google Pay (native browser UI)
   const paymentRequest = stripe.paymentRequest({
@@ -327,14 +315,40 @@ const mountStripeElements = result => {
       isConfirming.value = false
     }
   })
+
+  // Mount card/iban if a new method is already selected
+  await nextTick()
+  mountActiveStripeElement()
 }
 
-// Watch for method switch — mount elements when switching to new
-watch(selectedMethod, async val => {
-  if (val === 'new' && stripe && clientSecret.value && !elements) {
-    await nextTick()
-    mountStripeElements(intentData.value)
+const mountActiveStripeElement = () => {
+  if (!elements) return
+
+  if (selectedMethod.value === 'new-card' && cardElementRef.value && !cardEl) {
+    cardEl = elements.create('card', { style: elementStyle, hidePostalCode: true })
+    cardEl.mount(cardElementRef.value)
   }
+  else if (selectedMethod.value === 'new-sepa' && ibanElementRef.value && !ibanEl) {
+    ibanEl = elements.create('iban', { style: elementStyle, supportedCountries: ['SEPA'] })
+    ibanEl.mount(ibanElementRef.value)
+  }
+}
+
+// Watch for payment method switch — mount/unmount Stripe elements
+watch(selectedMethod, async val => {
+  if (!stripe || !elements) return
+
+  if (cardEl) {
+    cardEl.destroy()
+    cardEl = null
+  }
+  if (ibanEl) {
+    ibanEl.destroy()
+    ibanEl = null
+  }
+
+  await nextTick()
+  mountActiveStripeElement()
 })
 
 const confirmPayment = async () => {
@@ -346,7 +360,7 @@ const confirmPayment = async () => {
   try {
     let error, paymentIntent
 
-    if (isNewMethod.value && newMethodTab.value === 'sepa') {
+    if (selectedMethod.value === 'new-sepa') {
       // New SEPA via IbanElement
       if (!ibanEl) return
       if (!sepaName.value.trim()) {
@@ -360,12 +374,11 @@ const confirmPayment = async () => {
           sepa_debit: ibanEl,
           billing_details: {
             name: sepaName.value.trim(),
-            email: sepaEmail.value.trim() || undefined,
           },
         },
       }))
     }
-    else if (isNewMethod.value) {
+    else if (selectedMethod.value === 'new-card') {
       // New card via CardElement
       if (!cardEl) return
       ;({ error, paymentIntent } = await stripe.confirmCardPayment(clientSecret.value, {
@@ -421,9 +434,9 @@ const goBack = () => {
     clientSecret.value = null
     paymentIntentId.value = null
     intentData.value = null
+    if (cardEl) { cardEl.destroy(); cardEl = null }
+    if (ibanEl) { ibanEl.destroy(); ibanEl = null }
     elements = null
-    cardEl = null
-    ibanEl = null
     prAvailable.value = false
   }
   else {
@@ -625,34 +638,27 @@ const goToBilling = () => {
                 {{ paymentError }}
               </VAlert>
 
-              <!-- Saved payment methods -->
-              <template v-if="savedCards.length > 0">
+              <VRadioGroup
+                v-model="selectedMethod"
+                hide-details
+              >
+                <!-- Saved payment methods -->
+                <template v-if="savedCards.length > 0">
                 <p class="text-body-2 font-weight-medium mb-3">
                   {{ t('companyBilling.pay.savedMethods') }}
                 </p>
 
-                <div class="d-flex flex-column gap-3 mb-4">
-                  <VCard
+                <div class="d-flex flex-column gap-3 mb-6">
+                  <VLabel
                     v-for="card in savedCards"
                     :key="card.id"
-                    :variant="selectedMethod === (card.provider_payment_method_id || card.id) ? 'outlined' : 'flat'"
-                    :color="selectedMethod === (card.provider_payment_method_id || card.id) ? 'primary' : undefined"
-                    class="cursor-pointer"
-                    :style="selectedMethod === (card.provider_payment_method_id || card.id)
-                      ? 'border-color: rgb(var(--v-theme-primary))'
-                      : 'border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity))'"
-                    @click="selectedMethod = card.provider_payment_method_id || card.id"
+                    class="custom-input custom-radio rounded cursor-pointer"
+                    :class="selectedMethod === (card.provider_payment_method_id || card.id) ? 'active' : ''"
                   >
-                    <VCardText class="d-flex align-center gap-3 pa-3">
-                      <VRadio
-                        :model-value="selectedMethod"
-                        :value="card.provider_payment_method_id || card.id"
-                        hide-details
-                        density="compact"
-                        @click.stop
-                        @update:model-value="selectedMethod = $event"
-                      />
-
+                    <div>
+                      <VRadio :value="card.provider_payment_method_id || card.id" />
+                    </div>
+                    <div class="flex-grow-1 d-flex align-center gap-3">
                       <VIcon
                         :icon="card.method_key === 'sepa_debit' ? 'tabler-building-bank' : brandIcon(card.brand)"
                         size="24"
@@ -689,98 +695,83 @@ const goToBilling = () => {
                       >
                         {{ t('companyBilling.pay.default') }}
                       </VChip>
-                    </VCardText>
-                  </VCard>
+                    </div>
+                  </VLabel>
                 </div>
               </template>
 
-              <!-- New payment method option -->
-              <VCard
-                :variant="isNewMethod ? 'outlined' : 'flat'"
-                :style="isNewMethod
-                  ? 'border-color: rgb(var(--v-theme-primary))'
-                  : 'border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity))'"
-                class="cursor-pointer"
-                @click="selectedMethod = 'new'"
+              <!-- New payment methods -->
+              <p class="text-body-2 font-weight-medium mb-3">
+                {{ t('companyBilling.pay.newMethod') }}
+              </p>
+
+              <!-- Apple Pay / Google Pay (native browser button) -->
+              <div
+                ref="prButtonRef"
+                class="mb-3"
+              />
+
+              <div
+                v-if="prAvailable"
+                class="d-flex align-center gap-3 mb-3"
               >
-                <VCardText class="pa-3">
-                  <div class="d-flex align-center gap-3 mb-0">
-                    <VRadio
-                      :model-value="selectedMethod"
-                      value="new"
-                      hide-details
-                      density="compact"
-                      @click.stop
-                      @update:model-value="selectedMethod = $event"
-                    />
-                    <VIcon
-                      icon="tabler-plus"
-                      size="24"
-                    />
-                    <span class="font-weight-medium">
-                      {{ t('companyBilling.pay.newMethod') }}
-                    </span>
+                <VDivider />
+                <span class="text-body-2 text-disabled text-no-wrap">{{ t('companyBilling.pay.or') }}</span>
+                <VDivider />
+              </div>
+
+              <div class="d-flex flex-column gap-3">
+                <!-- New Card -->
+                <VLabel
+                  class="custom-input custom-radio rounded cursor-pointer"
+                  :class="selectedMethod === 'new-card' ? 'active' : ''"
+                >
+                  <div>
+                    <VRadio value="new-card" />
                   </div>
-
-                  <template v-if="isNewMethod">
-                    <!-- Apple Pay / Google Pay (native browser button) -->
-                    <div
-                      ref="prButtonRef"
-                      class="mt-4"
-                    />
-
-                    <div
-                      v-if="prAvailable"
-                      class="d-flex align-center gap-3 my-3"
-                    >
-                      <VDivider />
-                      <span class="text-body-2 text-disabled text-no-wrap">{{ t('companyBilling.pay.or') }}</span>
-                      <VDivider />
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-center gap-x-4">
+                      <VIcon
+                        icon="tabler-credit-card"
+                        size="24"
+                      />
+                      <span class="font-weight-medium">{{ t('companyBilling.pay.card') }}</span>
                     </div>
-
-                    <!-- Card / SEPA toggle -->
-                    <VBtnToggle
-                      v-model="newMethodTab"
-                      mandatory
-                      density="compact"
-                      class="mb-4"
-                      :class="{ 'mt-4': !prAvailable }"
+                    <div
+                      v-if="selectedMethod === 'new-card'"
+                      class="mt-4"
+                      @click.stop
                     >
-                      <VBtn
-                        value="card"
-                        size="small"
-                      >
-                        <VIcon
-                          icon="tabler-credit-card"
-                          size="18"
-                          class="me-1"
-                        />
-                        {{ t('companyBilling.pay.card') }}
-                      </VBtn>
-                      <VBtn
-                        value="sepa"
-                        size="small"
-                      >
-                        <VIcon
-                          icon="tabler-building-bank"
-                          size="18"
-                          class="me-1"
-                        />
-                        SEPA
-                      </VBtn>
-                    </VBtnToggle>
-
-                    <!-- Card input -->
-                    <div v-show="newMethodTab === 'card'">
                       <div
                         ref="cardElementRef"
-                        class="pa-3"
-                        style="border: 1px solid rgba(47, 43, 61, 0.12); border-radius: 6px; min-height: 44px;"
+                        class="stripe-element-container"
                       />
                     </div>
+                  </div>
+                </VLabel>
 
-                    <!-- SEPA input -->
-                    <div v-show="newMethodTab === 'sepa'">
+                <!-- New SEPA -->
+                <VLabel
+                  class="custom-input custom-radio rounded cursor-pointer"
+                  :class="selectedMethod === 'new-sepa' ? 'active' : ''"
+                >
+                  <div>
+                    <VRadio value="new-sepa" />
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-center gap-x-4">
+                      <VIcon
+                        icon="tabler-building-bank"
+                        size="24"
+                      />
+                      <span class="font-weight-medium">{{ t('companyBilling.pay.sepa') }}</span>
+                    </div>
+
+                    <div
+                      v-if="selectedMethod === 'new-sepa'"
+                      class="mt-4"
+                      @click.stop
+                    >
                       <AppTextField
                         v-model="sepaName"
                         :label="t('companyBilling.pay.holderName')"
@@ -790,24 +781,29 @@ const goToBilling = () => {
 
                       <div
                         ref="ibanElementRef"
-                        class="pa-3"
-                        style="border: 1px solid rgba(47, 43, 61, 0.12); border-radius: 6px; min-height: 44px;"
+                        class="stripe-element-container"
                       />
 
-                      <p class="text-body-2 text-disabled mt-3" style="font-size: 12px; line-height: 1.4;">
+                      <p
+                        class="text-body-2 text-disabled mt-3"
+                        style="font-size: 12px; line-height: 1.4;"
+                      >
                         {{ t('companyBilling.pay.sepaMandate') }}
                       </p>
                     </div>
+                  </div>
+                </VLabel>
+              </div>
 
-                    <VCheckbox
-                      v-model="saveCard"
-                      :label="t('companyBilling.pay.saveForFuture')"
-                      hide-details
-                      class="mt-3"
-                    />
-                  </template>
-                </VCardText>
-              </VCard>
+              <!-- Save for future payments -->
+              <VCheckbox
+                v-if="isNewMethod"
+                v-model="saveCard"
+                :label="t('companyBilling.pay.saveForFuture')"
+                hide-details
+                class="mt-4"
+              />
+              </VRadioGroup>
 
               <!-- Pay button -->
               <VBtn
@@ -905,3 +901,22 @@ const goToBilling = () => {
     </template>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.stripe-element-container {
+  padding: 12px 14px;
+  border: 1px solid rgba(47, 43, 61, 0.12);
+  border-radius: 6px;
+  min-block-size: 44px;
+}
+
+.custom-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+
+  .v-radio {
+    margin-block-start: -0.45rem;
+  }
+}
+</style>

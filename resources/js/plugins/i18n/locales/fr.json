@@ -936,6 +936,7 @@
       "cardExpiry": "Exp. {month}/{year}",
       "or": "ou",
       "card": "Carte bancaire",
+      "sepa": "Prélèvement SEPA",
       "holderName": "Titulaire du compte",
       "holderNamePlaceholder": "Nom complet du titulaire",
       "sepaMandate": "En confirmant ce paiement, vous autorisez Leezr et Stripe, notre prestataire de paiement, à envoyer des instructions à votre banque pour débiter votre compte conformément à ces instructions. Vous bénéficiez d'un droit de remboursement selon les conditions de votre convention bancaire.",
