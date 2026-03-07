@@ -9156,4 +9156,30 @@ L'interface de facturation company avait 4 onglets (Payment Methods, Invoices, P
 
 ---
 
+### ADR-260 — Anti-stale-JS : no-cache HTML + version check au login (2026-03-08)
+
+**Contexte** : Après un deploy, les utilisateurs avec la page HTML encore en cache du navigateur chargent les anciens bundles JS (hash Vite différent). Résultat : login impossible, SyntaxError, ou comportement incohérent. L'utilisateur doit manuellement rafraîchir la page pour que ça marche.
+
+Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + détection dans `api.js` + router guard reload) mais ne protégeait pas le cas critique : la page de login elle-même est obsolète avant même le premier appel API.
+
+**Décisions** :
+- `NoCacheHeaders` middleware ajouté au catch-all SPA route (`routes/web.php`) → le navigateur ne cache JAMAIS le HTML → chaque page load récupère le HTML frais → références aux bons bundles Vite
+- `versionCheck.js` : utilitaire appelé au `onMounted` des pages login (company + platform) — fait un HEAD `/health` → compare `X-Build-Version` vs `VITE_APP_VERSION` → reload immédiat si mismatch
+- `AddBuildVersion` middleware ajouté au `/health` endpoint (il était dans le groupe `api` mais pas sur cette route `web`)
+- Chaîne complète : CI injecte `VITE_APP_VERSION=$SHA` au build + deploy injecte `APP_BUILD_VERSION=$SHA` dans `.env` → `config('app.build_version')` → `X-Build-Version` header → comparaison client/serveur
+
+**Conséquences** :
+- Après un deploy, la page suivante chargée par l'utilisateur récupère automatiquement le nouveau HTML + JS
+- La page de login détecte proactivement un JS obsolète et reload sans que l'utilisateur ne touche à rien
+- Aucun impact en dev local (`VITE_APP_VERSION` absent → check skipped)
+- Le mécanisme existant (router guard + sessionStorage `lzr:version-mismatch`) reste en place pour les navigations post-login
+
+**Fichiers modifiés** :
+- `routes/web.php` — NoCacheHeaders sur catch-all SPA + AddBuildVersion sur /health
+- `resources/js/utils/versionCheck.js` — nouveau utilitaire
+- `resources/js/pages/login.vue` — appel `checkVersionOnMount()`
+- `resources/js/pages/platform/login.vue` — appel `checkVersionOnMount()`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

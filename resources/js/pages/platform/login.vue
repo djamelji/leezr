@@ -3,6 +3,7 @@ const { t } = useI18n()
 
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useRuntimeStore } from '@/core/runtime/runtime'
+import { checkVersionOnMount } from '@/utils/versionCheck'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
 import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
@@ -23,6 +24,7 @@ definePage({
 })
 
 usePublicTheme()
+checkVersionOnMount()
 
 const platformAuth = usePlatformAuthStore()
 const runtime = useRuntimeStore()
