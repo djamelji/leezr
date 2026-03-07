@@ -9136,4 +9136,24 @@ L'interface de facturation company avait 4 onglets (Payment Methods, Invoices, P
 
 ---
 
+### ADR-259 — SessionGovernance resilience for API routes (2026-03-08)
+
+**Contexte** : 684 tests échouaient avec `Session store not set on request` (500). La cause : `SessionGovernance` middleware (ajouté aux routes company dans `bootstrap/app.php`) appelle `$request->session()->getId()` — ce qui crash quand le session middleware n'a pas tourné (routes API pures, tests sans session stateful). Le guard existant `config('session.driver') !== 'database'` était inefficace car un `config:cache` avec `SESSION_DRIVER=database` persistait.
+
+**Décisions** :
+- Ajout d'un guard `$request->hasSession()` AVANT l'accès à `$request->session()` — le middleware passe directement si aucune session n'est disponible
+- Ce guard protège contre les routes API sans session middleware, indépendamment du driver configuré
+- Le guard `config('session.driver') !== 'database'` reste en place comme première ligne de défense
+
+**Conséquences** :
+- `SessionGovernance` est résilient : fonctionne avec ou sans session, quel que soit le driver
+- Tous les tests passent (1611 pass, 9 skipped)
+- En production : les routes company stateful (SPA + Sanctum) continuent d'avoir le session governance
+- Les requêtes API sans session (webhooks, CLI) traversent le middleware sans erreur
+
+**Fichiers modifiés** :
+- `app/Http/Middleware/SessionGovernance.php` — ajout guard `hasSession()`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

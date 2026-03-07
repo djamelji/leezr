@@ -17,7 +17,12 @@ class SessionGovernance
             return $next($request);
         }
 
-        // ── Guard 2 : session ID must exist ──
+        // ── Guard 2 : session must be available (API requests without web middleware have none) ──
+        if (! $request->hasSession()) {
+            return $next($request);
+        }
+
+        // ── Guard 3 : session ID must exist ──
         $sessionId = $request->session()->getId();
         if (! $sessionId) {
             return $next($request);
