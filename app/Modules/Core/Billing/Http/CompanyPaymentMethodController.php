@@ -7,6 +7,7 @@ use App\Core\Billing\CompanyPaymentCustomer;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\DunningEngine;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\InvoicePayNowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -116,23 +117,54 @@ class CompanyPaymentMethodController
             return response()->json(['message' => 'Invoice not found.'], 404);
         }
 
-        if ($invoice->status !== 'overdue') {
-            return response()->json(['message' => 'Only overdue invoices can be retried.'], 422);
+        if (! in_array($invoice->status, ['open', 'overdue'])) {
+            return response()->json(['message' => 'Only open or overdue invoices can be paid.'], 422);
         }
 
-        $result = DunningEngine::retrySingleInvoice($invoice);
+        if ($invoice->amount_due <= 0) {
+            return response()->json(['message' => 'Invoice has no amount due.'], 422);
+        }
 
-        $messages = [
-            'paid' => 'Payment successful.',
-            'provider_attempted' => 'Payment submitted. Processing may take a moment.',
-            'retried' => 'Payment scheduled for retry.',
-            'exhausted' => 'All retry attempts exhausted.',
-            'skipped' => 'Invoice already processed.',
-        ];
+        // For overdue invoices: use DunningEngine (provider-first + wallet fallback)
+        if ($invoice->status === 'overdue') {
+            $result = DunningEngine::retrySingleInvoice($invoice);
 
-        return response()->json([
-            'result' => $result,
-            'message' => $messages[$result] ?? 'Retry completed.',
-        ]);
+            $messages = [
+                'paid' => 'Payment successful.',
+                'provider_attempted' => 'Payment submitted. Processing may take a moment.',
+                'retried' => 'Payment scheduled for retry.',
+                'exhausted' => 'All retry attempts exhausted.',
+                'skipped' => 'Invoice already processed.',
+            ];
+
+            return response()->json([
+                'result' => $result,
+                'message' => $messages[$result] ?? 'Retry completed.',
+            ]);
+        }
+
+        // For open invoices: use InvoicePayNowService (wallet + provider)
+        try {
+            $userId = $request->user()?->id;
+            $idempotencyKey = "manual-pay-{$invoice->id}-" . now()->timestamp;
+
+            $result = InvoicePayNowService::payNow($company, $idempotencyKey, $userId);
+
+            if (in_array($invoice->id, $result['paid_invoice_ids'])) {
+                return response()->json([
+                    'result' => 'paid',
+                    'message' => 'Payment successful.',
+                ]);
+            }
+
+            return response()->json([
+                'result' => 'partial',
+                'message' => 'Wallet credit applied but insufficient to cover full amount.',
+                'invoices_paid' => $result['invoices_paid'],
+                'wallet_used' => $result['wallet_used'],
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 }

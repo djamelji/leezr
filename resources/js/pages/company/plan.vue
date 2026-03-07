@@ -9,6 +9,7 @@ import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatMoney } from '@/utils/money'
+import { cacheRemove } from '@/core/runtime/cache'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -123,12 +124,6 @@ const confirmPlanChange = async () => {
       else {
         toast(t('companyPlan.changeApplied'), 'success')
       }
-
-      await Promise.all([
-        billingStore.fetchSubscription(),
-        billingStore.fetchNextInvoicePreview(),
-        auth.fetchUser(),
-      ])
     }
     else {
       // No subscription → use checkout endpoint (initial subscription)
@@ -148,11 +143,6 @@ const confirmPlanChange = async () => {
       else if (result.mode === 'redirect' && result.redirect_url) {
         window.location.href = result.redirect_url
       }
-
-      await Promise.all([
-        billingStore.fetchSubscription(),
-        auth.fetchUser(),
-      ])
     }
   }
   catch {
@@ -162,6 +152,14 @@ const confirmPlanChange = async () => {
     changingPlan.value = false
     pendingPlanKey.value = null
     billingStore.clearPlanChangePreview()
+
+    // Bust cache + refresh — real-time UI update without masking plan change result
+    cacheRemove('auth:companies')
+    await Promise.all([
+      billingStore.fetchSubscription(),
+      billingStore.fetchNextInvoicePreview(),
+      auth.fetchMyCompanies(),
+    ]).catch(() => {})
   }
 }
 
@@ -176,6 +174,11 @@ const cancelScheduledChange = async () => {
   }
   finally {
     cancellingScheduledChange.value = false
+    cacheRemove('auth:companies')
+    await Promise.all([
+      billingStore.fetchSubscription(),
+      auth.fetchMyCompanies(),
+    ]).catch(() => {})
   }
 }
 
@@ -302,15 +305,17 @@ const estimatedInvoice = computed(() => {
 
             <div v-if="currentPlan">
               <h3 class="text-body-1 text-high-emphasis font-weight-medium mb-1">
-                <span class="me-2">
-                  {{ planMonthlyDisplay(currentPlan) }} / {{ t('common.monthly').toLowerCase() }}
-                </span>
-                <span
-                  v-if="annualToggle && currentPlan.price_yearly > 0"
-                  class="text-body-2 text-disabled"
-                >
-                  ({{ yearlyTotal(currentPlan) }} / {{ t('common.annually').toLowerCase() }})
-                </span>
+                <template v-if="currentInterval === 'yearly'">
+                  <span class="me-2">
+                    {{ formatMoney(Math.floor(currentPlan.price_yearly / 12) * 100) }} / {{ t('common.monthly').toLowerCase() }}
+                  </span>
+                  <span class="text-body-2 text-disabled">
+                    ({{ formatMoney(currentPlan.price_yearly * 100) }} / {{ t('common.annually').toLowerCase() }})
+                  </span>
+                </template>
+                <template v-else>
+                  {{ formatMoney(currentPlan.price_monthly * 100) }} / {{ t('common.monthly').toLowerCase() }}
+                </template>
               </h3>
             </div>
 
@@ -811,13 +816,28 @@ const estimatedInvoice = computed(() => {
             </div>
           </div>
 
-          <!-- Timing -->
-          <div class="d-flex align-center gap-2 mb-4">
-            <VIcon icon="tabler-clock" size="18" />
-            <span class="text-body-2">
-              {{ t('companyPlan.planChangePreview.timing') }}:
-              <strong>{{ changePreview.timing === 'immediate' ? t('companyPlan.planChangePreview.immediate') : t('companyPlan.planChangePreview.endOfPeriod') }}</strong>
-            </span>
+          <!-- Timing + Fiscal context -->
+          <div class="d-flex flex-column gap-2 mb-4">
+            <div class="d-flex align-center gap-2">
+              <VIcon icon="tabler-clock" size="18" />
+              <span class="text-body-2">
+                {{ t('companyPlan.planChangePreview.timing') }}:
+                <strong>{{ changePreview.timing === 'immediate' ? t('companyPlan.planChangePreview.immediate') : t('companyPlan.planChangePreview.endOfPeriod') }}</strong>
+              </span>
+            </div>
+            <div class="d-flex align-center gap-2">
+              <VIcon icon="tabler-receipt-tax" size="18" />
+              <span class="text-body-2">
+                {{ t('companyPlan.planChangePreview.taxInfo') }}:
+                <strong>{{ t('companyPlan.planChangePreview.taxRate', { rate: (changePreview.tax_rate_bps / 100).toFixed(1), mode: changePreview.tax_mode }) }}</strong>
+              </span>
+            </div>
+            <div v-if="changePreview.market_name || changePreview.legal_status_name" class="d-flex align-center gap-2">
+              <VIcon icon="tabler-map-pin" size="18" />
+              <span class="text-body-2 text-disabled">
+                {{ [changePreview.market_name, changePreview.legal_status_name].filter(Boolean).join(' · ') }}
+              </span>
+            </div>
           </div>
 
           <!-- Proration breakdown (immediate only) -->
@@ -889,20 +909,29 @@ const estimatedInvoice = computed(() => {
                 </template>
               </VListItem>
 
-              <VListItem v-if="changePreview.immediate.tax_amount > 0">
+              <VListItem>
                 <VListItemTitle class="text-body-2 text-disabled">
                   {{ t('companyPlan.planChangePreview.tax') }}
                   <span v-if="changePreview.immediate.tax_rate_bps">({{ (changePreview.immediate.tax_rate_bps / 100).toFixed(1) }}%)</span>
                 </VListItemTitle>
                 <template #append>
-                  <span class="text-body-2">+{{ formatMoney(changePreview.immediate.tax_amount, { currency: changePreview.currency }) }}</span>
+                  <span class="text-body-2">{{ changePreview.immediate.tax_amount > 0 ? '+' : '' }}{{ formatMoney(changePreview.immediate.tax_amount, { currency: changePreview.currency }) }}</span>
                 </template>
               </VListItem>
 
-              <VListItem v-if="changePreview.immediate.estimated_wallet_credit > 0">
-                <VListItemTitle class="text-body-2 text-success">{{ t('companyPlan.planChangePreview.walletCredit') }}</VListItemTitle>
+              <!-- Wallet deduction (upgrade: wallet pays part of amount due) -->
+              <VListItem v-if="changePreview.immediate.wallet_deduction > 0">
+                <VListItemTitle class="text-body-2 text-success">{{ t('companyPlan.planChangePreview.walletDeduction') }}</VListItemTitle>
                 <template #append>
-                  <span class="text-body-2 text-success">-{{ formatMoney(changePreview.immediate.estimated_wallet_credit, { currency: changePreview.currency }) }}</span>
+                  <span class="text-body-2 text-success">-{{ formatMoney(changePreview.immediate.wallet_deduction, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <!-- Credit to wallet (downgrade: unused credit goes to wallet) -->
+              <VListItem v-if="changePreview.immediate.wallet_credit_added > 0">
+                <VListItemTitle class="text-body-2 text-success">{{ t('companyPlan.planChangePreview.walletCreditAdded') }}</VListItemTitle>
+                <template #append>
+                  <span class="text-body-2 text-success">+{{ formatMoney(changePreview.immediate.wallet_credit_added, { currency: changePreview.currency }) }}</span>
                 </template>
               </VListItem>
 
@@ -925,12 +954,44 @@ const estimatedInvoice = computed(() => {
             </VAlert>
           </template>
 
+          <!-- Wallet balance (always shown if > 0) -->
+          <template v-if="changePreview.wallet_balance > 0">
+            <div class="d-flex align-center gap-2 mt-3">
+              <VIcon icon="tabler-wallet" size="18" color="success" />
+              <span class="text-body-2">
+                {{ t('companyPlan.planChangePreview.walletBalance') }}:
+                <strong class="text-success">{{ formatMoney(changePreview.wallet_balance, { currency: changePreview.currency }) }}</strong>
+              </span>
+            </div>
+          </template>
+
           <!-- Next period preview -->
           <VDivider class="my-3" />
           <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.nextPeriod') }}</p>
           <VList density="compact" class="pa-0">
             <VListItem>
-              <VListItemTitle class="font-weight-medium">{{ t('companyPlan.planChangePreview.nextPeriodTotal') }} / {{ changePreview.next_period.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}</VListItemTitle>
+              <VListItemTitle class="text-body-2">{{ t('companyPlan.planChangePreview.subtotalHT') }}</VListItemTitle>
+              <template #append>
+                <span class="text-body-2">{{ formatMoney(changePreview.next_period.subtotal, { currency: changePreview.currency }) }}</span>
+              </template>
+            </VListItem>
+
+            <VListItem>
+              <VListItemTitle class="text-body-2 text-disabled">
+                {{ t('companyPlan.planChangePreview.tax') }}
+                <span v-if="changePreview.next_period.tax_rate_bps">({{ (changePreview.next_period.tax_rate_bps / 100).toFixed(1) }}%)</span>
+              </VListItemTitle>
+              <template #append>
+                <span class="text-body-2">{{ changePreview.next_period.tax_amount > 0 ? '+' : '' }}{{ formatMoney(changePreview.next_period.tax_amount, { currency: changePreview.currency }) }}</span>
+              </template>
+            </VListItem>
+
+            <VDivider />
+
+            <VListItem>
+              <VListItemTitle class="font-weight-medium">
+                {{ t('companyPlan.planChangePreview.totalTTC') }} / {{ changePreview.next_period.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}
+              </VListItemTitle>
               <template #append>
                 <span class="font-weight-medium">{{ formatMoney(changePreview.next_period.total, { currency: changePreview.currency }) }}</span>
               </template>

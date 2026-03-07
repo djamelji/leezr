@@ -173,6 +173,7 @@ class CompanyPaymentSetupController
 
         return [
             'id' => $p->id,
+            'provider_payment_method_id' => $p->provider_payment_method_id,
             'label' => $p->label,
             'is_default' => $p->is_default,
             'method_key' => $p->method_key,

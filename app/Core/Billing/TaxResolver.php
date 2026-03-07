@@ -2,19 +2,23 @@
 
 namespace App\Core\Billing;
 
-use App\Core\Markets\LegalStatus;
+use App\Core\Markets\Market;
 use App\Core\Models\Company;
 
 /**
  * Tax computation and rate resolution.
  *
- * Rate resolution priority:
- *   1. Company's LegalStatus → is_vat_applicable + vat_rate
+ * Rate resolution (ADR-254):
+ *   1. Company's Market → vat_rate_bps (country-level standard rate)
  *   2. Fallback: PlatformBillingPolicy.default_tax_rate_bps
  *
+ * The rate is the standard VAT rate of the country (market).
+ * The company's LegalStatus (SAS, auto-entrepreneur...) does NOT change the
+ * rate we charge — it only indicates whether the company itself is VAT-registered
+ * (is_vat_applicable), which is informational for invoice mentions.
+ *
  * Modes (from policy):
- *   - 'none': no tax applied (returns 0)
- *   - 'exclusive': tax added on top of subtotal
+ *   - 'exclusive': tax added on top of subtotal (B2B default)
  *   - 'inclusive': subtotal already includes tax (extract it)
  */
 class TaxResolver
@@ -22,26 +26,18 @@ class TaxResolver
     /**
      * Resolve the tax rate in basis points for a company.
      *
-     * Uses the company's legal status VAT rate when available,
-     * falls back to the global platform default otherwise.
+     * Uses the company's market standard VAT rate.
+     * Falls back to the global platform default if no market set.
      *
      * @return int Tax rate in basis points (2000 = 20%)
      */
     public static function resolveRateBps(Company $company): int
     {
-        if ($company->legal_status_key) {
-            $legalStatus = LegalStatus::where('key', $company->legal_status_key)
-                ->where('market_key', $company->market_key)
-                ->first();
+        if ($company->market_key) {
+            $market = Market::where('key', $company->market_key)->first();
 
-            if ($legalStatus) {
-                if (! $legalStatus->is_vat_applicable) {
-                    return 0;
-                }
-
-                if ($legalStatus->vat_rate !== null) {
-                    return (int) round($legalStatus->vat_rate * 100);
-                }
+            if ($market && $market->vat_rate_bps > 0) {
+                return $market->vat_rate_bps;
             }
         }
 
@@ -63,9 +59,8 @@ class TaxResolver
         $policy = PlatformBillingPolicy::instance();
 
         return match ($policy->tax_mode) {
-            'exclusive' => static::computeExclusive($subtotal, $rateBps),
             'inclusive' => static::computeInclusive($subtotal, $rateBps),
-            default => 0, // 'none'
+            default => static::computeExclusive($subtotal, $rateBps), // 'exclusive' is the B2B default
         };
     }
 

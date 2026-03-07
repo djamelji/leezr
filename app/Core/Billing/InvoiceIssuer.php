@@ -14,7 +14,7 @@ use RuntimeException;
  *   2. Compute subtotal from lines (invariant: SUM(lines) = subtotal)
  *   3. Apply tax via TaxResolver
  *   4. Compute amount = subtotal + tax_amount
- *   5. Apply wallet credit (if wallet_first + auto_apply)
+ *   5. Apply wallet credit (if auto_apply_wallet_credit)
  *   6. Compute amount_due = amount - wallet_credit_applied
  *   7. Assign sequential number (finalize)
  *   8. Freeze billing_snapshot
@@ -126,7 +126,7 @@ class InvoiceIssuer
             $company = $invoice->company;
             $policy = PlatformBillingPolicy::instance();
 
-            if ($policy->wallet_first && $policy->auto_apply_wallet_credit && $total > 0) {
+            if ($policy->auto_apply_wallet_credit && $total > 0) {
                 $walletBalance = WalletLedger::balance($company);
 
                 if ($walletBalance > 0) {
@@ -218,6 +218,7 @@ class InvoiceIssuer
             'company_legal_name' => $fieldValues['legal_name'] ?? $company->name,
             'market_key' => $company->market_key,
             'market_name' => $market?->name,
+            'market_locale' => $market?->locale ?? 'fr-FR',
             'currency' => $market?->currency ?? 'EUR',
             'legal_status_key' => $company->legal_status_key ?? null,
             'legal_status_name' => $legalStatus?->name,

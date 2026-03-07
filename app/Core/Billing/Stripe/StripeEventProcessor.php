@@ -13,6 +13,7 @@ use App\Core\Billing\CreditNote;
 use App\Core\Billing\CreditNoteIssuer;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\InvoiceBatchPayService;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\LedgerService;
 use App\Core\Billing\Payment;
@@ -117,6 +118,11 @@ class StripeEventProcessor
             return new WebhookHandlingResult(handled: false, error: 'Cannot resolve company.');
         }
 
+        // ADR-258: Batch pay (SEPA async confirmation via webhook)
+        if (($metadata['type'] ?? '') === 'invoice_batch_pay') {
+            return $this->handleBatchPaySucceeded($intent, $metadata, $companyId);
+        }
+
         $invoice = $this->resolveInvoice($metadata, $companyId);
         if (! $invoice) {
             return new WebhookHandlingResult(handled: false, error: 'Cannot resolve finalized invoice.');
@@ -188,6 +194,11 @@ class StripeEventProcessor
         $companyId = $this->resolveCompanyId($metadata, $stripeCustomerId);
         if (! $companyId) {
             return new WebhookHandlingResult(handled: false, error: 'Cannot resolve company.');
+        }
+
+        // ADR-258: Batch pay failure (SEPA rejection) — invoices unchanged, dunning handles it
+        if (($metadata['type'] ?? '') === 'invoice_batch_pay') {
+            return $this->handleBatchPayFailed($intent, $metadata, $companyId);
         }
 
         $invoice = $this->resolveInvoice($metadata, $companyId);
@@ -405,6 +416,78 @@ class StripeEventProcessor
         );
 
         return new WebhookHandlingResult(handled: true, action: 'setup_intent_synced');
+    }
+
+    // ── ADR-258: Batch pay webhook handlers ─────────────
+
+    private function handleBatchPaySucceeded(array $intent, array $metadata, int $companyId): WebhookHandlingResult
+    {
+        $company = Company::find($companyId);
+        if (! $company) {
+            return new WebhookHandlingResult(handled: false, error: 'Company not found.');
+        }
+
+        try {
+            $result = InvoiceBatchPayService::confirmPayment(
+                company: $company,
+                paymentIntentId: $intent['id'],
+            );
+
+            $this->audit->logPlatform(
+                AuditAction::WEBHOOK_PAYMENT_SYNCED,
+                'payment',
+                $intent['id'],
+                [
+                    'actorType' => 'system',
+                    'severity' => 'info',
+                    'metadata' => [
+                        'type' => 'invoice_batch_pay',
+                        'paid_invoice_ids' => $result['paid_invoice_ids'] ?? [],
+                        'total_paid' => $result['total_paid'] ?? 0,
+                    ],
+                ],
+            );
+
+            return new WebhookHandlingResult(handled: true, action: 'batch_payment_synced');
+        } catch (\Throwable $e) {
+            Log::channel('billing')->error('[billing] batch pay webhook processing failed', [
+                'payment_intent_id' => $intent['id'],
+                'company_id' => $companyId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return new WebhookHandlingResult(handled: false, error: $e->getMessage());
+        }
+    }
+
+    private function handleBatchPayFailed(array $intent, array $metadata, int $companyId): WebhookHandlingResult
+    {
+        $invoiceIds = array_map('intval', explode(',', $metadata['invoice_ids'] ?? ''));
+
+        Log::channel('billing')->warning('[billing] batch payment failed (async method rejected)', [
+            'company_id' => $companyId,
+            'payment_intent_id' => $intent['id'],
+            'invoice_ids' => $invoiceIds,
+            'failure_code' => $intent['last_payment_error']['code'] ?? null,
+        ]);
+
+        $this->audit->logPlatform(
+            AuditAction::WEBHOOK_PAYMENT_FAILED,
+            'payment',
+            $intent['id'],
+            [
+                'actorType' => 'system',
+                'severity' => 'warning',
+                'metadata' => [
+                    'type' => 'invoice_batch_pay',
+                    'company_id' => $companyId,
+                    'invoice_ids' => $invoiceIds,
+                    'failure_code' => $intent['last_payment_error']['code'] ?? null,
+                ],
+            ],
+        );
+
+        return new WebhookHandlingResult(handled: true, action: 'batch_payment_failed');
     }
 
     // ── Resolvers ────────────────────────────────────────

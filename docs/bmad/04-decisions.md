@@ -8898,4 +8898,242 @@ L'interface de facturation company avait 4 onglets (Payment Methods, Invoices, P
 
 ---
 
+## ADR-253 : interval_change_timing + preview fiscal transparency
+
+**Date** : 2026-03-07
+**Contexte** : Le changement d'intervalle (mensuel↔annuel) utilisait en dur `upgrade_timing` sans réglage dédié. La preview de changement de plan n'affichait ni contexte fiscal (tax_mode, taux résolu, market, statut juridique) ni breakdown de la prochaine période (subtotal + taxe + total). L'admin platform ne pouvait pas contrôler le timing des changements d'intervalle séparément des upgrades/downgrades.
+
+**Décision** :
+- Nouvelle colonne `interval_change_timing` dans `platform_billing_policies` (default: `immediate`)
+- Réglage dédié dans les settings platform (3 champs au lieu de 2 pour les timing policies)
+- Preview enrichie : `tax_mode`, `tax_rate_bps`, `market_name`, `legal_status_name`
+- Next period avec breakdown : sous-total HT + ligne taxe + total TTC
+- Ligne taxe toujours visible (même quand 0) avec explication du mode
+- Contexte market/legal status affiché dans la preview
+
+**Conséquences** :
+- L'admin platform peut configurer le timing des changements d'intervalle indépendamment
+- La preview est transparente sur la fiscalité appliquée (ou non)
+- L'utilisateur voit pourquoi la taxe est 0 (mode: aucun) vs appliquée (TVA 20% exclusive)
+- Le breakdown next period permet de vérifier le calcul
+
+**Fichiers modifiés** :
+- `database/migrations/2026_03_07_200001_...` — nouvelle colonne interval_change_timing
+- `app/Core/Billing/PlatformBillingPolicy.php` — +fillable
+- `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — +validation
+- `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — utilise interval_change_timing
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — interval_change_timing + preview enrichie
+- `resources/js/pages/platform/billing/settings/_SettingsGeneral.vue` — +champ
+- `resources/js/pages/company/plan.vue` — preview fiscal + next period breakdown
+- `resources/js/plugins/i18n/locales/{fr,en}.json` — +clés i18n
+
+---
+
+## ADR-254 : TVA market-driven, suppression tax_mode=none
+
+**Date** : 2026-03-07
+**Contexte** : Le taux de TVA était résolu depuis le `LegalStatus` de la company (ADR-251), ce qui était incorrect. Du point de vue de Leezr (SaaS B2B), on facture TOUJOURS la TVA au taux standard du pays — FR=20%, GB=20%. Le statut juridique (SAS, auto-entrepreneur) ne change pas le taux qu'on facture au client ; il indique seulement si le client est assujetti (pour les mentions légales sur la facture). L'option `tax_mode=none` n'avait pas de sens en B2B — la TVA est obligatoire.
+
+**Décision** :
+- Nouvelle colonne `vat_rate_bps` sur la table `markets` (taux TVA standard du pays)
+- `TaxResolver::resolveRateBps()` lit le taux depuis `Market.vat_rate_bps` (pas `LegalStatus`)
+- Suppression de `tax_mode=none` — seuls `exclusive` (B2B default, HT+TVA) et `inclusive` (TTC) restent
+- Migration auto-corrige `tax_mode=none` → `exclusive` pour les données existantes
+- `LegalStatus.is_vat_applicable` reste informatif (mention légale sur facture)
+- Fallback: `PlatformBillingPolicy.default_tax_rate_bps` si aucun market
+
+**Conséquences** :
+- Un client FR paie toujours TVA 20%, qu'il soit SAS ou auto-entrepreneur
+- La différence (SAS déduit, AE ne déduit pas) est côté client, pas côté Leezr
+- Les prix sont affichés HT (exclusive) par défaut, TVA ajoutée sur la facture
+- Préparé pour reverse charge EU (futur) : client EU avec n° TVA intra → 0%
+
+**Fichiers modifiés** :
+- `database/migrations/2026_03_07_200002_...` — +vat_rate_bps sur markets + migration none→exclusive
+- `app/Core/Markets/Market.php` — +fillable vat_rate_bps
+- `app/Core/Markets/MarketRegistry.php` — +vat_rate_bps dans seed + sync + import
+- `app/Core/Billing/TaxResolver.php` — resolveRateBps depuis Market, suppression mode none
+- `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — suppression none des TAX_MODE
+- `resources/js/pages/platform/billing/settings/_SettingsGeneral.vue` — suppression option none
+- `resources/js/pages/company/plan.vue` — suppression branches tax_mode=none
+- `tests/Unit/TaxResolverTest.php` — test none remplacé par test exclusive default
+- `tests/Feature/BillingNextInvoicePreviewTest.php` — totaux incluent la taxe 20%
+
+---
+
+## ADR-255 : Fix VCard abonnement actuel + timing inversés + days_remaining float
+
+**Date** : 2026-03-07
+**Contexte** : Trois problèmes identifiés lors des tests de changement de plan :
+
+1. **VCard abonnement actuel réactive au toggle** — La carte "Abonnement actuel" utilisait `planMonthlyDisplay()` qui dépend du toggle annuel/mensuel. Résultat : basculer le toggle changeait le prix affiché de l'abonnement en cours (29€ → 24€) sans aucune action. L'abonnement actuel est factuel, il ne doit jamais changer avec le toggle.
+
+2. **Timing upgrade/downgrade inversés en base** — Les valeurs en base étaient `upgrade_timing=end_of_period` et `downgrade_timing=immediate`, ce qui est l'inverse du comportement SaaS standard. Les defaults dans le code (migration + frontend) étaient corrects, mais les valeurs en base avaient été modifiées manuellement. Résultat : un upgrade Pro→Business était programmé au lieu d'être immédiat, perçu comme un échec.
+
+3. **`days_remaining` stocké en float** — Carbon v3 `diffInDays()` retourne un float. `ProrationCalculator` stockait cette valeur brute dans le snapshot de proration, créant des valeurs comme `30.965088317465277` dans les audit logs.
+
+4. **Desync plan_key après plan change** — Deux causes racines :
+   - `auth.fetchUser()` appelé après plan change **n'existe pas** dans le auth store (méthode fantôme). Erreur silencieuse via `.catch()`. Le `plan_key` dans `auth._companies` n'est jamais rafraîchi.
+   - Le cache `sessionStorage['lzr:auth:companies']` (TTL 5 min) retourne les données stales même sur hard refresh. Sans `cacheRemove('auth:companies')`, `fetchMyCompanies()` utilise le fast-path cache et ne touche jamais l'API.
+   - Résultat : VCard actuelle montre "Pro" alors que la DB et la facture estimée montrent "Business".
+
+**Décision** :
+- VCard abonnement actuel utilise `currentInterval` (depuis la subscription réelle) au lieu de `annualToggle`
+- Migration corrective pour swapper les timing inversés en base (uniquement si détectés inversés)
+- Cast `(int) round()` à la source dans `ProrationCalculator::compute()` (lignes 57-58)
+- Retrait du cast band-aid dans `CompanyBillingReadService` (redondant après fix source)
+- Refresh post plan-change : `cacheRemove('auth:companies')` + `auth.fetchMyCompanies()` (remplace `auth.fetchUser()` fantôme)
+- `Promise.all` refresh déplacé dans `finally` avec `await` + `.catch(() => {})` pour mise à jour temps réel sans masquer le résultat
+
+**Conséquences** :
+- Le prix affiché sur la VCard actuelle est toujours le prix réel, indépendant du toggle
+- Les upgrades sont immédiats (facture générée), les downgrades sont différés (fin de période)
+- Tous les consumers de `ProrationCalculator` reçoivent des entiers propres
+- Les audit logs stockent des valeurs lisibles (31 jours, pas 30.965...)
+- Après plan change, toute la page se met à jour en temps réel (cache invalidé + API re-fetch)
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/plan.vue` — VCard découplée du toggle + cacheRemove + fetchMyCompanies + Promise.all dans finally
+- `database/migrations/2026_03_07_200004_...` — correction timing inversés en base
+- `app/Core/Billing/ProrationCalculator.php` — cast int à la source pour days_remaining et total_days
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — retrait cast redondant
+
+---
+
+### ADR-256 — Redesign factures : template professionnel Vuexy (2026-03-07)
+
+**Contexte** : Les pages facture (company, platform, PDF) affichaient un rendu grossier — pas de logo, pas d'adresse client, pas de section "Invoice To" professionnelle. Le preset Vuexy `apps/invoice/preview/[id].vue` fournit un template professionnel avec logo, adresse, table stylée, totals alignés, et CSS print complet.
+
+**Décisions** :
+- Redesign des 3 fichiers facture en suivant le layout du preset Vuexy invoice preview
+- Utilisation du `billing_snapshot` pour les données client : raison sociale, adresse, email, TVA, SIRET, marché, statut juridique
+- Logo via composant `BrandLogo` (text "leezr." + dot coloré) — identique à la navbar
+- Header sans fond (pas de bg-var-theme-background), marges réduites (pa-4/pa-sm-8 au lieu de pa-6/pa-sm-12)
+- Section "Facturé à" à gauche + "Détails de facturation" à droite (échéance, période, marché, statut juridique, provider)
+- Dates formatées avec `market_locale` du billing_snapshot (ex: fr-FR → "7 mars 2026")
+- Tous les labels traduits via i18n : statuts (brouillon/en attente/en retard/payée), types (changement de plan/prorata/crédit), statuts paiement (réussi/échoué)
+- Bouton "Payer la facture" visible pour les factures `open` ET `overdue` (avant : seulement overdue)
+- Backend accepte maintenant `open` et `overdue` pour le retry/pay (pas seulement overdue)
+- `market_locale` ajouté au billing_snapshot pour localiser les dates côté frontend
+- `provider` ajouté à la réponse API invoiceDetail pour afficher le moyen de paiement
+- Table des lignes avec `invoice-preview-table` et CSS custom header du preset Vuexy
+- CSS print complet repris du preset (dark mode override, box-shadow none, print-row, nav hidden)
+- Blade PDF redesigné avec même structure visuelle (header avec logo texte, billing-row, totals)
+
+**Conséquences** :
+- Factures company et platform ont un rendu professionnel cohérent avec le design system Vuexy
+- Le PDF téléchargeable reprend le même layout visuel
+- Les données de facturation sont figées dans le snapshot (immutables, pas de drift)
+- Impression (Ctrl+P) produit un rendu propre sans sidebar/navigation
+- Les clients peuvent payer leurs factures "open" directement depuis la page facture
+- Toutes les dates sont dans la langue du market (plus de "Mar 7, 2026" en anglais pour un client français)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/InvoiceIssuer.php` — +market_locale dans buildBillingSnapshot()
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — +billing_snapshot, +notes, +provider dans invoiceDetail()
+- `app/Core/Billing/ReadModels/PlatformBillingReadService.php` — +notes dans invoiceDetail()
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — retryInvoice accepte open+overdue
+- `resources/js/pages/company/billing/invoices/[id].vue` — redesign complet + i18n + market locale + pay button
+- `resources/js/pages/platform/billing/invoices/[id].vue` — redesign complet + i18n + market locale
+- `resources/views/billing/invoice-pdf.blade.php` — redesign HTML/CSS professionnel
+- `resources/js/plugins/i18n/locales/fr.json` — +clés i18n (statuts, types, paiement, billing details)
+- `resources/js/plugins/i18n/locales/en.json` — +clés i18n
+- `tests/Feature/BillingLotETest.php` — test adapté pour accepter open+overdue
+
+---
+
+### ADR-257 — Page paiement de factures impayées avec Stripe Payment Element (2026-03-07)
+
+**Contexte** : Quand un client a des factures impayées (open, overdue, uncollectible) et clique "Réessayer le paiement" depuis l'overview billing, le système renvoyait un message d'erreur "Wallet credit applied but insufficient" sans possibilité de payer par carte. Il manquait une page de paiement complète avec sélection de factures, wallet credit en complément, et Stripe Payment Element (carte, Apple Pay, Google Pay, SEPA).
+
+**Décisions** :
+- Nouveau service `InvoiceBatchPayService` avec deux phases : `createPaymentIntent()` (wallet + Stripe PI) et `confirmPayment()` (distribution des paiements)
+- Si le wallet couvre tout → paiement immédiat sans Stripe (mode `wallet_paid`)
+- Si wallet insuffisant → PaymentIntent avec `automatic_payment_methods: ['enabled' => true]` et `confirm: false` (frontend confirme via Payment Element)
+- Wallet appliqué en premier, Stripe couvre le reste
+- `StripePaymentAdapter::createOnSessionPaymentIntent()` — différent du `collectInvoice()` off-session existant
+- `DunningEngine::checkReactivation()` rendu public pour réutilisation
+- Page `/company/billing/pay` avec layout 2 colonnes : sélection factures (checkboxes) + résumé paiement
+- Factures pré-sélectionnées, total dynamique, toggle wallet credit
+- Bouton "Réessayer le paiement" de l'overview redirige vers `/company/billing/pay`
+- `SetCompanyContext` bypass le blocage `isSuspended()` pour les routes billing payment (la page de paiement est le moyen de réactiver)
+- Controller attrape toutes les exceptions (pas seulement RuntimeException) pour un fallback 422 propre
+- 3 routes : `GET /billing/invoices/outstanding`, `POST /billing/invoices/pay`, `POST /billing/invoices/pay/confirm`
+
+**Conséquences** :
+- Les clients peuvent payer leurs factures impayées par carte, Apple Pay, Google Pay, SEPA, etc.
+- Le wallet credit est automatiquement déduit en complément
+- Les companies suspendues peuvent accéder à la page de paiement pour se réactiver
+- Après paiement complet, la company est automatiquement réactivée si toutes les factures outstanding sont réglées
+- 12 tests endpoint couvrent les cas : listing, isolation company, validation, wallet complet, multi-factures, Stripe requis, blocage cross-company, réactivation
+
+**Fichiers créés** :
+- `app/Core/Billing/InvoiceBatchPayService.php` — service batch pay (wallet + Stripe)
+- `app/Modules/Core/Billing/Http/InvoiceBatchPayController.php` — contrôleur 3 endpoints
+- `resources/js/pages/company/billing/pay.vue` — page de paiement avec Payment Element
+- `tests/Feature/InvoiceBatchPayTest.php` — 12 tests
+
+**Fichiers modifiés** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — +createOnSessionPaymentIntent() + wrapper protégé
+- `app/Core/Billing/DunningEngine.php` — checkReactivation() rendu public
+- `app/Company/Http/Middleware/SetCompanyContext.php` — bypass suspended pour billing/invoices/pay
+- `routes/company.php` — +3 routes batch pay
+- `resources/js/modules/company/billing/billing.store.js` — +3 actions + state outstanding
+- `resources/js/pages/company/billing/_BillingOverview.vue` — retry → /billing/pay
+- `resources/js/plugins/i18n/locales/fr.json` — +22 clés companyBilling.pay
+- `resources/js/plugins/i18n/locales/en.json` — +22 clés companyBilling.pay
+
+---
+
+### ADR-258 — Fix batch payment + UX intégrée paiement de factures (2026-03-07)
+
+**Contexte** : Trois bugs identifiés après ADR-257 :
+1. `Payment::create()` avec le même `provider_payment_id` pour chaque facture → crash unique constraint dès 2+ factures
+2. Bouton "Payer" sur la page facture appelait `retryInvoice()` (wallet-only) → "Wallet credit applied but insufficient" sans option carte
+3. Page de paiement affichait le Payment Element Stripe brut sans moyens enregistrés ni thème intégré
+
+**Décisions** :
+- `Payment::updateOrCreate()` avec suffixe `-inv-{invoiceId}` → unicité par facture + idempotent
+- Bouton "Payer" (page facture) redirige vers `/company/billing/pay?invoices={id}` au lieu d'appeler l'API directement
+- `canPay` étendu à `uncollectible` (les factures irrécouvrables sont payables par le client)
+- Page pay.vue redesignée : saved cards affichées comme radio buttons natifs Vuetify (VCard + VRadio) — zéro branding Stripe
+- **CardElement** au lieu de PaymentElement : juste numéro/exp/CVC, pas de Link, pas de country, pas de texte mandat
+- **PaymentRequestButton** pour Apple Pay / Google Pay (UI native navigateur, pas d'iframe Stripe)
+- `payment_method_types: ['card', 'sepa_debit']` au lieu de `automatic_payment_methods` → plus de Klarna/Amazon/Bancontact
+- Confirmation par saved card : `stripe.confirmCardPayment(secret, { payment_method: pmId })`
+- Confirmation par saved SEPA : `stripe.confirmSepaDebitPayment(secret, { payment_method: pmId })`
+- Confirmation par nouvelle carte : `stripe.confirmCardPayment(secret, { payment_method: { card: cardElement } })`
+- **SEPA async durable** : `confirmPayment()` accepte `processing` ET `succeeded`
+  - `succeeded` (carte, Apple Pay) → wallet + distribution + mark paid immédiatement
+  - `processing` (SEPA) → rien modifié en DB, return `mode: 'processing'`, frontend montre écran info
+  - Webhook `payment_intent.succeeded` → `StripeEventProcessor` détecte `type=invoice_batch_pay` → appelle `confirmPayment()` (maintenant `succeeded`)
+  - Webhook `payment_intent.payment_failed` → log + audit, factures inchangées, dunning engine continue normalement
+- `setup_future_usage: 'off_session'` sur le PaymentIntent → permet de sauvegarder le moyen
+- Checkbox "Enregistrer pour les paiements futurs" → `save_card: true` dans confirmPayment
+- Backend `savePaymentMethod()` : extrait card/SEPA details, dédoublonne par fingerprint, crée `CompanyPaymentProfile`
+- Query param `?invoices=` pour pré-sélectionner des factures spécifiques
+
+**Conséquences** :
+- Paiement de 2+ factures fonctionne sans crash duplicate
+- Les clients voient leurs moyens enregistrés + peuvent payer avec une nouvelle carte
+- L'interface est intégrée au thème Leezr (CardElement + PaymentRequestButton natif — zéro branding Stripe)
+- Les factures uncollectible sont payables et transitent correctement vers "paid"
+- Les companies suspendues peuvent payer et être réactivées automatiquement
+- SEPA : paiement async géré proprement — le webhook finalise quand le prélèvement aboutit
+- Si SEPA échoue : factures restent en l'état, le DunningEngine gère l'escalade (warning → grâce → suspension)
+- Apple Pay / Google Pay disponibles si configurés dans le Stripe Dashboard (domain verification requise)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/InvoiceBatchPayService.php` — fix duplicate + save_card + savePaymentMethod() + accept processing status
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — payment_method_types: ['card', 'sepa_debit'] + setup_future_usage
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — handleBatchPaySucceeded() + handleBatchPayFailed() pour webhooks async
+- `app/Modules/Core/Billing/Http/InvoiceBatchPayController.php` — param save_card
+- `resources/js/pages/company/billing/pay.vue` — CardElement + PaymentRequestButton + saved SEPA + processing step
+- `resources/js/pages/company/billing/invoices/[id].vue` — redirect /billing/pay + canPay uncollectible
+- `resources/js/modules/company/billing/billing.store.js` — confirmBatchPayment + save_card
+- `resources/js/plugins/i18n/locales/fr.json` — +9 clés
+- `resources/js/plugins/i18n/locales/en.json` — +9 clés
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

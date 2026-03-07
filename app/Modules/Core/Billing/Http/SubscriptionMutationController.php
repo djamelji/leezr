@@ -65,9 +65,9 @@ class SubscriptionMutationController
         $isUpgrade = PlanRegistry::level($validated['to_plan_key'])
             > PlanRegistry::level($subscription->plan_key);
 
-        // Interval-only changes use upgrade timing (typically immediate)
+        // Interval-only changes use their own timing setting
         $policyTiming = $isIntervalChange
-            ? ($policy->upgrade_timing ?? 'immediate')
+            ? ($policy->interval_change_timing ?? 'immediate')
             : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
 
         $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_REQUESTED, 'subscription', (string) $subscription->id, [

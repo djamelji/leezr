@@ -362,7 +362,7 @@ class SubscriptionMutationTest extends TestCase
     // PAY NOW
     // ═══════════════════════════════════════════════════════════════
 
-    public function test_pay_now_wallet_first_respected(): void
+    public function test_pay_now_auto_apply_wallet_respected(): void
     {
         // Disable auto-apply so invoices stay open during finalization
         $policy = PlatformBillingPolicy::instance();
@@ -381,7 +381,7 @@ class SubscriptionMutationTest extends TestCase
         $invoice = $this->createFinalizedInvoice(3000);
         $this->assertEquals('open', $invoice->status);
 
-        // Re-enable auto_apply so pay-now respects wallet_first
+        // Re-enable auto_apply so pay-now uses wallet credit
         $policy->update(['auto_apply_wallet_credit' => true]);
 
         $response = $this->actAs()->postJson('/api/billing/pay-now', [

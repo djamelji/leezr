@@ -16,10 +16,11 @@ const defaults = {
   credit_note_prefix: 'CN',
   credit_note_next_number: 1,
   invoice_due_days: 30,
-  tax_mode: 'none',
+  tax_mode: 'exclusive',
   default_tax_rate_bps: 0,
   upgrade_timing: 'immediate',
   downgrade_timing: 'end_of_period',
+  interval_change_timing: 'immediate',
 }
 
 const safeKeys = Object.keys(defaults)
@@ -88,10 +89,14 @@ const downgradeTimingOptions = computed(() => [
   { title: t('platformSettings.billing.endOfPeriod'), value: 'end_of_period' },
 ])
 
+const intervalChangeTimingOptions = computed(() => [
+  { title: t('platformSettings.billing.immediate'), value: 'immediate' },
+  { title: t('platformSettings.billing.endOfPeriod'), value: 'end_of_period' },
+])
+
 const taxModeOptions = computed(() => [
-  { title: t('platformSettings.billing.taxNone'), value: 'none' },
-  { title: t('platformSettings.billing.taxInclusive'), value: 'inclusive' },
   { title: t('platformSettings.billing.taxExclusive'), value: 'exclusive' },
+  { title: t('platformSettings.billing.taxInclusive'), value: 'inclusive' },
 ])
 
 const save = async () => {
@@ -254,7 +259,7 @@ const save = async () => {
         <VRow class="mb-2">
           <VCol
             cols="12"
-            md="6"
+            md="4"
           >
             <AppSelect
               v-model="form.upgrade_timing"
@@ -266,13 +271,25 @@ const save = async () => {
           </VCol>
           <VCol
             cols="12"
-            md="6"
+            md="4"
           >
             <AppSelect
               v-model="form.downgrade_timing"
               :label="t('billingSettings.general.downgradeTiming')"
               :items="downgradeTimingOptions"
               :hint="t('platformSettings.billing.timingFrozenHint')"
+              persistent-hint
+            />
+          </VCol>
+          <VCol
+            cols="12"
+            md="4"
+          >
+            <AppSelect
+              v-model="form.interval_change_timing"
+              :label="t('billingSettings.general.intervalChangeTiming')"
+              :items="intervalChangeTimingOptions"
+              :hint="t('platformSettings.billing.intervalChangeTimingHint')"
               persistent-hint
             />
           </VCol>

@@ -339,7 +339,6 @@ class BillingEngineAuditTest extends TestCase
         // Set policy to NOT allow negative wallet
         $policy = PlatformBillingPolicy::instance();
         $policy->update([
-            'wallet_first' => true,
             'auto_apply_wallet_credit' => true,
             'allow_negative_wallet' => false,
         ]);

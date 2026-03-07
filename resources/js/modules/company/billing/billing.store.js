@@ -12,6 +12,8 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     _setupIntent: null,
     _nextInvoicePreview: null,
     _planChangePreview: null,
+    _outstandingInvoices: [],
+    _outstandingWallet: { balance: 0, currency: 'EUR' },
   }),
 
   getters: {
@@ -24,6 +26,8 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     subscription: state => state._subscription,
     savedCards: state => state._savedCards,
     setupIntent: state => state._setupIntent,
+    outstandingInvoices: state => state._outstandingInvoices,
+    outstandingWallet: state => state._outstandingWallet,
   },
 
   actions: {
@@ -143,6 +147,30 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     async cancelScheduledPlanChange() {
       await $api('/billing/plan-change', { method: 'DELETE' })
       await this.fetchSubscription()
+    },
+
+    // ── Batch payment (ADR-257) ──
+    async fetchOutstandingInvoices() {
+      const data = await $api('/billing/invoices/outstanding')
+
+      this._outstandingInvoices = data.invoices
+      this._outstandingWallet = { balance: data.wallet_balance, currency: data.currency }
+
+      return data
+    },
+
+    async createBatchPayIntent(invoiceIds, useWallet = true) {
+      return await $api('/billing/invoices/pay', {
+        method: 'POST',
+        body: { invoice_ids: invoiceIds, use_wallet: useWallet },
+      })
+    },
+
+    async confirmBatchPayment(paymentIntentId, saveCard = false) {
+      return await $api('/billing/invoices/pay/confirm', {
+        method: 'POST',
+        body: { payment_intent_id: paymentIntentId, save_card: saveCard },
+      })
     },
 
     async cancelSubscription() {

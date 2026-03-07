@@ -11,7 +11,6 @@ const isSaving = ref(false)
 const loadError = ref(false)
 
 const defaults = {
-  wallet_first: true,
   allow_negative_wallet: false,
   auto_apply_wallet_credit: true,
   grace_period_days: 3,
@@ -142,17 +141,6 @@ const save = async () => {
         </h6>
 
         <div class="d-flex flex-column gap-4 mb-4">
-          <div class="d-flex align-center justify-space-between">
-            <VLabel for="wallet-first">
-              {{ t('billingSettings.policies.walletFirst') }}
-            </VLabel>
-            <VSwitch
-              id="wallet-first"
-              v-model="form.wallet_first"
-              hide-details
-            />
-          </div>
-
           <div class="d-flex align-center justify-space-between">
             <VLabel for="allow-negative">
               {{ t('billingSettings.policies.allowNegativeWallet') }}

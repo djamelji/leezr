@@ -53,9 +53,9 @@ class ProrationCalculator
             throw new RuntimeException('Change date must be within the billing period.');
         }
 
-        // Day-based proration
-        $totalDays = $periodStart->diffInDays($periodEnd);
-        $daysRemaining = $changeDate->diffInDays($periodEnd);
+        // Day-based proration (Carbon v3 returns float, cast to int)
+        $totalDays = (int) round($periodStart->diffInDays($periodEnd));
+        $daysRemaining = (int) round($changeDate->diffInDays($periodEnd));
 
         // Edge case: change on period start = full period, no proration needed
         if ($daysRemaining === $totalDays) {

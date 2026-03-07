@@ -13,6 +13,7 @@ class Market extends Model
         'key',
         'name',
         'currency',
+        'vat_rate_bps',
         'locale',
         'timezone',
         'dial_code',
@@ -24,6 +25,7 @@ class Market extends Model
     ];
 
     protected $casts = [
+        'vat_rate_bps' => 'integer',
         'is_active' => 'boolean',
         'is_default' => 'boolean',
         'sort_order' => 'integer',

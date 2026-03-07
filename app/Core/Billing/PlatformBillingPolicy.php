@@ -15,8 +15,8 @@ class PlatformBillingPolicy extends Model
     protected $table = 'platform_billing_policies';
 
     protected $fillable = [
-        'wallet_first', 'allow_negative_wallet', 'auto_apply_wallet_credit',
-        'upgrade_timing', 'downgrade_timing', 'proration_strategy',
+        'allow_negative_wallet', 'auto_apply_wallet_credit',
+        'upgrade_timing', 'downgrade_timing', 'interval_change_timing', 'proration_strategy',
         'grace_period_days', 'max_retry_attempts', 'retry_intervals_days', 'failure_action',
         'invoice_due_days', 'invoice_prefix', 'invoice_next_number',
         'credit_note_prefix', 'credit_note_next_number',
@@ -29,7 +29,6 @@ class PlatformBillingPolicy extends Model
     protected function casts(): array
     {
         return [
-            'wallet_first' => 'boolean',
             'allow_negative_wallet' => 'boolean',
             'auto_apply_wallet_credit' => 'boolean',
             'grace_period_days' => 'integer',

@@ -323,19 +323,21 @@ class BillingLotETest extends TestCase
         $response->assertJsonStructure(['result']);
     }
 
-    public function test_company_cannot_retry_non_overdue_invoice(): void
+    public function test_company_cannot_retry_paid_invoice(): void
     {
         $draft = InvoiceIssuer::createDraft($this->company, $this->subscription->id);
         InvoiceIssuer::addLine($draft, 'plan', 'Pro plan', 2900);
         $invoice = InvoiceIssuer::finalize($draft);
 
-        // Invoice is 'open', not 'overdue'
+        // Force status to 'paid' — cannot be retried
+        $invoice->update(['status' => 'paid', 'paid_at' => now()]);
+
         $response = $this->actingAs($this->owner)
             ->withHeaders(['X-Company-Id' => $this->company->id])
             ->postJson("/api/billing/invoices/{$invoice->id}/retry");
 
         $response->assertStatus(422);
-        $response->assertJson(['message' => 'Only overdue invoices can be retried.']);
+        $response->assertJson(['message' => 'Only open or overdue invoices can be paid.']);
     }
 
     // ── P1: Setup Intent — error handling ─────────────────

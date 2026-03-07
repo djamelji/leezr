@@ -322,9 +322,9 @@ class BillingReadApiTest extends TestCase
             ->assertJsonStructure(['data', 'total']);
     }
 
-    // ── 16. Invoice PDF: returns HTML for own invoice ──
+    // ── 16. Invoice PDF: returns PDF for own invoice ──
 
-    public function test_invoice_pdf_returns_html_for_own_invoice(): void
+    public function test_invoice_pdf_returns_pdf_for_own_invoice(): void
     {
         $invoice = $this->createFinalizedInvoice($this->companyA, $this->subscriptionA->id);
 
@@ -332,10 +332,7 @@ class BillingReadApiTest extends TestCase
             ->get("/api/billing/invoices/{$invoice->id}/pdf");
 
         $response->assertOk()
-            ->assertHeader('Content-Type', 'text/html; charset=UTF-8');
-
-        $this->assertStringContainsString($invoice->number, $response->getContent());
-        $this->assertStringContainsString('Company A', $response->getContent());
+            ->assertHeader('Content-Type', 'application/pdf');
     }
 
     // ── 17. Invoice PDF: 404 for other company's invoice ──

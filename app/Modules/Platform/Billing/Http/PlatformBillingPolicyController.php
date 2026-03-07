@@ -20,8 +20,9 @@ class PlatformBillingPolicyController
 {
     private const UPGRADE_TIMING = ['immediate', 'end_of_period', 'end_of_trial'];
     private const DOWNGRADE_TIMING = ['immediate', 'end_of_period'];
+    private const INTERVAL_CHANGE_TIMING = ['immediate', 'end_of_period'];
     private const PRORATION_STRATEGY = ['day_based', 'none'];
-    private const TAX_MODE = ['none', 'inclusive', 'exclusive'];
+    private const TAX_MODE = ['exclusive', 'inclusive'];
     private const FAILURE_ACTION = ['suspend', 'downgrade_to_starter', 'read_only'];
     private const ADDON_BILLING_INTERVAL = ['monthly', 'plan_aligned'];
 
@@ -36,13 +37,13 @@ class PlatformBillingPolicyController
     {
         $validated = $request->validate([
             // Wallet
-            'wallet_first' => ['sometimes', 'boolean'],
             'allow_negative_wallet' => ['sometimes', 'boolean'],
             'auto_apply_wallet_credit' => ['sometimes', 'boolean'],
 
             // Plan change timing
             'upgrade_timing' => ['sometimes', 'string', Rule::in(self::UPGRADE_TIMING)],
             'downgrade_timing' => ['sometimes', 'string', Rule::in(self::DOWNGRADE_TIMING)],
+            'interval_change_timing' => ['sometimes', 'string', Rule::in(self::INTERVAL_CHANGE_TIMING)],
             'proration_strategy' => ['sometimes', 'string', Rule::in(self::PRORATION_STRATEGY)],
 
             // Dunning

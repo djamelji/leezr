@@ -9,7 +9,7 @@ use RuntimeException;
 /**
  * ADR-135 D1: Pay open/overdue invoices using wallet credit.
  *
- * Wallet-first: policy.wallet_first controls whether wallet is used.
+ * Wallet: policy.auto_apply_wallet_credit controls whether wallet is used.
  * Idempotency: deterministic keys per invoice ("pay-now-{key}-inv-{id}").
  * Replay-safe: double call with same key → no double debit.
  */
@@ -62,7 +62,7 @@ class InvoicePayNowService
                 }
 
                 // Wallet-first payment
-                if ($policy->wallet_first) {
+                if ($policy->auto_apply_wallet_credit) {
                     $walletBalance = WalletLedger::balance($company);
 
                     if ($walletBalance > 0) {

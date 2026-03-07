@@ -1,4 +1,5 @@
 <script setup>
+import BrandLogo from '@/components/BrandLogo.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
@@ -13,6 +14,8 @@ const isLoading = ref(true)
 const error = ref(false)
 
 const invoice = computed(() => store.invoiceDetail)
+const snap = computed(() => invoice.value?.billing_snapshot || {})
+const marketLocale = computed(() => snap.value?.market_locale || 'fr-FR')
 
 const load = async () => {
   isLoading.value = true
@@ -34,18 +37,58 @@ const load = async () => {
 onMounted(load)
 
 // ── Helpers ──
-const statusColor = status => {
-  const colors = { draft: 'secondary', open: 'info', overdue: 'error', paid: 'success', voided: 'warning', uncollectible: 'error' }
+const isPastDue = computed(() => {
+  if (!invoice.value?.due_at) return false
+
+  return new Date(invoice.value.due_at) < new Date()
+})
+
+const statusColor = computed(() => {
+  const status = invoice.value?.status
+  if (status === 'open' && isPastDue.value) return 'error'
+
+  const colors = { draft: 'secondary', open: 'warning', overdue: 'error', paid: 'success', voided: 'secondary', uncollectible: 'error' }
 
   return colors[status] || 'secondary'
+})
+
+const statusLabel = computed(() => {
+  const status = invoice.value?.status
+  if (status === 'open' && isPastDue.value) return t('platformBilling.invoiceDetail.statusPastDue')
+  if (status === 'open') return t('platformBilling.invoiceDetail.statusOpen')
+
+  const key = `platformBilling.invoiceDetail.status${status?.charAt(0).toUpperCase()}${status?.slice(1)}`
+
+  return t(key, status)
+})
+
+const typeLabel = type => {
+  const map = {
+    plan_change: 'typePlanChange',
+    proration: 'typeProration',
+    credit: 'typeCredit',
+    charge: 'typeCharge',
+    addon: 'typeAddon',
+    renewal: 'typeRenewal',
+  }
+  const key = map[type]
+
+  return key ? t(`platformBilling.invoiceDetail.${key}`) : type
+}
+
+const paymentStatusLabel = status => {
+  const map = { succeeded: 'paymentSucceeded', failed: 'paymentFailed', pending: 'paymentPending' }
+  const key = map[status]
+
+  return key ? t(`platformBilling.invoiceDetail.${key}`) : status
 }
 
 const formatDate = dateStr => {
   if (!dateStr) return '—'
 
-  return new Date(dateStr).toLocaleDateString(undefined, {
+  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
   })
 }
@@ -53,9 +96,9 @@ const formatDate = dateStr => {
 const formatDateTime = dateStr => {
   if (!dateStr) return '—'
 
-  return new Date(dateStr).toLocaleDateString(undefined, {
+  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
@@ -88,7 +131,7 @@ const printInvoice = () => {
       v-else-if="error"
       type="error"
       variant="tonal"
-      class="mb-6"
+      class="mb-4"
     >
       <VAlertTitle>{{ t('platformBilling.invoiceDetail.notFound') }}</VAlertTitle>
       <p class="mb-4">
@@ -106,93 +149,167 @@ const printInvoice = () => {
     <!-- Content -->
     <template v-else-if="invoice">
       <VRow>
-        <!-- ═══ Main Content (9 cols) ═══ -->
+        <!-- Main Content (9 cols) -->
         <VCol
           cols="12"
           md="9"
         >
-          <VCard class="pa-6 pa-sm-12 mb-6">
+          <VCard class="invoice-preview-wrapper pa-4 pa-sm-8">
             <!-- Header -->
-            <div class="d-flex flex-wrap justify-space-between flex-column flex-sm-row bg-var-theme-background gap-6 rounded pa-6 mb-6">
+            <div class="invoice-header-preview d-flex flex-wrap justify-space-between flex-column flex-sm-row print-row gap-4 mb-4">
+              <!-- Left: Logo + Company -->
               <div>
-                <h4 class="text-h4 mb-2">
-                  {{ invoice.number || `#${invoice.id}` }}
-                </h4>
+                <BrandLogo size="lg" />
                 <div
                   v-if="invoice.company"
-                  class="text-body-1"
+                  class="mt-2"
                 >
-                  <h6 class="text-h6 font-weight-regular">
-                    {{ invoice.company.name }}
-                  </h6>
-                  <span class="text-disabled">{{ invoice.company.slug }}</span>
+                  <span class="text-body-1 font-weight-medium">{{ invoice.company.name }}</span>
+                  <span class="text-disabled ms-2">{{ invoice.company.slug }}</span>
                 </div>
               </div>
-              <div class="text-end">
+
+              <!-- Right: Invoice meta -->
+              <div class="text-sm-end">
+                <h6 class="font-weight-medium text-lg mb-2">
+                  {{ invoice.number || `#${invoice.id}` }}
+                </h6>
                 <VChip
-                  :color="statusColor(invoice.status)"
-                  size="large"
-                  class="mb-4"
+                  :color="statusColor"
+                  size="small"
+                  class="mb-2"
                 >
-                  {{ invoice.status }}
+                  {{ statusLabel }}
                 </VChip>
                 <div class="text-body-2">
-                  <div>{{ t('platformBilling.invoiceDetail.issuedAt') }}: {{ formatDate(invoice.issued_at) }}</div>
-                  <div>{{ t('platformBilling.invoiceDetail.dueAt') }}: {{ formatDate(invoice.due_at) }}</div>
+                  <div>{{ t('platformBilling.invoiceDetail.issuedAt') }} : {{ formatDate(invoice.issued_at) }}</div>
+                  <div>{{ t('platformBilling.invoiceDetail.dueAt') }} : {{ formatDate(invoice.due_at) }}</div>
                   <div v-if="invoice.paid_at">
-                    {{ t('platformBilling.invoiceDetail.paidAt') }}: {{ formatDate(invoice.paid_at) }}
+                    {{ t('platformBilling.invoiceDetail.paidAt') }} : {{ formatDate(invoice.paid_at) }}
                   </div>
                   <div v-if="invoice.voided_at">
-                    {{ t('platformBilling.invoiceDetail.voidedAt') }}: {{ formatDate(invoice.voided_at) }}
+                    {{ t('platformBilling.invoiceDetail.voidedAt') }} : {{ formatDate(invoice.voided_at) }}
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Period -->
-            <div
-              v-if="invoice.period_start && invoice.period_end"
-              class="mb-6"
-            >
-              <span class="text-body-2 text-disabled">{{ t('platformBilling.invoiceDetail.period') }}:</span>
-              <span class="ms-2">{{ formatDate(invoice.period_start) }} – {{ formatDate(invoice.period_end) }}</span>
-            </div>
+            <VDivider class="mb-4" />
 
-            <!-- Line Items -->
-            <h6 class="text-h6 mb-4">
-              {{ t('platformBilling.invoiceDetail.lineItems') }}
-            </h6>
-            <VTable
-              class="border text-high-emphasis overflow-hidden mb-6"
-              density="compact"
-            >
+            <!-- Invoice To + Billing Details -->
+            <VRow class="print-row mb-4">
+              <VCol class="text-no-wrap">
+                <h6 class="text-h6 mb-2">
+                  {{ t('platformBilling.invoiceDetail.invoiceTo') }}
+                </h6>
+                <p class="mb-0 font-weight-medium">
+                  {{ snap.company_legal_name || snap.company_name || '—' }}
+                </p>
+                <p
+                  v-if="snap.billing_address"
+                  class="mb-0 text-body-2"
+                >
+                  {{ snap.billing_address }}
+                </p>
+                <p
+                  v-if="snap.billing_email"
+                  class="mb-0 text-body-2"
+                >
+                  {{ snap.billing_email }}
+                </p>
+                <p
+                  v-if="snap.vat_number"
+                  class="mb-0 text-body-2"
+                >
+                  {{ t('platformBilling.invoiceDetail.vatNumber') }} : {{ snap.vat_number }}
+                </p>
+                <p
+                  v-if="snap.siret"
+                  class="mb-0 text-body-2"
+                >
+                  {{ t('platformBilling.invoiceDetail.siret') }} : {{ snap.siret }}
+                </p>
+              </VCol>
+
+              <VCol class="text-no-wrap">
+                <h6 class="text-h6 mb-2">
+                  {{ t('platformBilling.invoiceDetail.billingDetails') }}
+                </h6>
+                <table class="text-body-2">
+                  <tbody>
+                    <tr v-if="invoice.period_start && invoice.period_end">
+                      <td class="pe-4 text-disabled">
+                        {{ t('platformBilling.invoiceDetail.period') }}
+                      </td>
+                      <td>{{ formatDate(invoice.period_start) }} – {{ formatDate(invoice.period_end) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="pe-4 text-disabled">
+                        {{ t('platformBilling.invoiceDetail.dueAt') }}
+                      </td>
+                      <td>{{ formatDate(invoice.due_at) }}</td>
+                    </tr>
+                    <tr v-if="snap.market_name">
+                      <td class="pe-4 text-disabled">
+                        {{ t('platformBilling.invoiceDetail.market') }}
+                      </td>
+                      <td>{{ snap.market_name }}</td>
+                    </tr>
+                    <tr v-if="snap.legal_status_name">
+                      <td class="pe-4 text-disabled">
+                        {{ t('platformBilling.invoiceDetail.legalStatus') }}
+                      </td>
+                      <td>{{ snap.legal_status_name }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </VCol>
+            </VRow>
+
+            <!-- Line Items Table -->
+            <VTable class="invoice-preview-table border text-high-emphasis overflow-hidden mb-4">
               <thead>
                 <tr>
-                  <th>{{ t('platformBilling.invoiceDetail.lineDescription') }}</th>
-                  <th>{{ t('platformBilling.invoiceDetail.lineType') }}</th>
-                  <th class="text-center">
+                  <th scope="col">
+                    {{ t('platformBilling.invoiceDetail.lineDescription') }}
+                  </th>
+                  <th scope="col">
+                    {{ t('platformBilling.invoiceDetail.lineType') }}
+                  </th>
+                  <th
+                    scope="col"
+                    class="text-center"
+                  >
                     {{ t('platformBilling.invoiceDetail.lineQty') }}
                   </th>
-                  <th class="text-end">
+                  <th
+                    scope="col"
+                    class="text-end"
+                  >
                     {{ t('platformBilling.invoiceDetail.lineUnitPrice') }}
                   </th>
-                  <th class="text-end">
+                  <th
+                    scope="col"
+                    class="text-end"
+                  >
                     {{ t('platformBilling.invoiceDetail.lineTotal') }}
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="text-base">
                 <tr
                   v-for="line in invoice.lines"
                   :key="line.id"
                 >
-                  <td>{{ line.description }}</td>
-                  <td>
+                  <td class="text-no-wrap">
+                    {{ line.description }}
+                  </td>
+                  <td class="text-no-wrap">
                     <VChip
                       size="x-small"
                       color="secondary"
                     >
-                      {{ line.type }}
+                      {{ typeLabel(line.type) }}
                     </VChip>
                   </td>
                   <td class="text-center">
@@ -208,13 +325,24 @@ const printInvoice = () => {
               </tbody>
             </VTable>
 
-            <!-- Totals -->
-            <div class="d-flex justify-end">
-              <div style="min-inline-size: 280px;">
+            <!-- Totals + Note -->
+            <div class="d-flex justify-space-between flex-column flex-sm-row print-row">
+              <div class="mb-2">
+                <template v-if="invoice.notes">
+                  <h6 class="text-h6 mb-1">
+                    {{ t('platformBilling.invoiceDetail.notes') }} :
+                  </h6>
+                  <p class="text-body-2">
+                    {{ invoice.notes }}
+                  </p>
+                </template>
+              </div>
+
+              <div>
                 <table class="w-100">
                   <tbody>
                     <tr>
-                      <td class="pe-8 text-body-2">
+                      <td class="pe-16 text-body-2">
                         {{ t('platformBilling.invoiceDetail.subtotal') }}
                       </td>
                       <td class="text-end font-weight-medium">
@@ -222,7 +350,7 @@ const printInvoice = () => {
                       </td>
                     </tr>
                     <tr v-if="invoice.tax_amount">
-                      <td class="pe-8 text-body-2">
+                      <td class="pe-16 text-body-2">
                         {{ t('platformBilling.invoiceDetail.tax', { rate: taxPercent }) }}
                       </td>
                       <td class="text-end font-weight-medium">
@@ -230,7 +358,7 @@ const printInvoice = () => {
                       </td>
                     </tr>
                     <tr v-if="invoice.wallet_credit_applied">
-                      <td class="pe-8 text-body-2">
+                      <td class="pe-16 text-body-2">
                         {{ t('platformBilling.invoiceDetail.walletCredit') }}
                       </td>
                       <td class="text-end font-weight-medium text-success">
@@ -245,18 +373,21 @@ const printInvoice = () => {
                 <table class="w-100">
                   <tbody>
                     <tr>
-                      <td class="pe-8 text-body-1 font-weight-medium">
+                      <td class="pe-16 font-weight-medium">
                         {{ t('platformBilling.invoiceDetail.total') }}
                       </td>
-                      <td class="text-end text-body-1 font-weight-bold">
+                      <td class="text-end font-weight-bold">
                         {{ fmt(invoice.amount) }}
                       </td>
                     </tr>
                     <tr v-if="invoice.amount_due !== invoice.amount">
-                      <td class="pe-8 text-body-2">
+                      <td class="pe-16 text-body-2">
                         {{ t('platformBilling.invoiceDetail.amountDue') }}
                       </td>
-                      <td class="text-end font-weight-medium" :class="invoice.amount_due > 0 ? 'text-error' : 'text-success'">
+                      <td
+                        class="text-end font-weight-medium"
+                        :class="invoice.amount_due > 0 ? 'text-error' : 'text-success'"
+                      >
                         {{ fmt(invoice.amount_due) }}
                       </td>
                     </tr>
@@ -265,38 +396,29 @@ const printInvoice = () => {
               </div>
             </div>
 
-            <!-- Notes -->
-            <template v-if="invoice.notes">
-              <VDivider class="my-6 border-dashed" />
-              <p class="mb-0">
-                <span class="text-high-emphasis font-weight-medium me-1">{{ t('platformBilling.invoiceDetail.notes') }}:</span>
-                <span>{{ invoice.notes }}</span>
-              </p>
-            </template>
-
             <!-- Dunning info -->
             <template v-if="invoice.retry_count > 0">
-              <VDivider class="my-6 border-dashed" />
+              <VDivider class="my-4 border-dashed" />
               <div class="d-flex gap-4">
                 <VChip
                   color="warning"
                   size="small"
                 >
-                  {{ t('platformBilling.invoiceDetail.retryCount') }}: {{ invoice.retry_count }}
+                  {{ t('platformBilling.invoiceDetail.retryCount') }} : {{ invoice.retry_count }}
                 </VChip>
                 <VChip
                   v-if="invoice.next_retry_at"
                   color="info"
                   size="small"
                 >
-                  {{ t('platformBilling.invoiceDetail.nextRetry') }}: {{ formatDateTime(invoice.next_retry_at) }}
+                  {{ t('platformBilling.invoiceDetail.nextRetry') }} : {{ formatDateTime(invoice.next_retry_at) }}
                 </VChip>
               </div>
             </template>
           </VCard>
 
-          <!-- ═══ Payments ═══ -->
-          <VCard class="mb-6">
+          <!-- Payments -->
+          <VCard class="mt-4 mb-4">
             <VCardTitle>
               <VIcon
                 icon="tabler-cash"
@@ -307,7 +429,7 @@ const printInvoice = () => {
             <VCardText class="pa-0">
               <div
                 v-if="!invoice.payments?.length"
-                class="text-center pa-6 text-disabled"
+                class="text-center pa-4 text-disabled"
               >
                 {{ t('platformBilling.invoiceDetail.noPayments') }}
               </div>
@@ -335,10 +457,12 @@ const printInvoice = () => {
                         :color="p.status === 'succeeded' ? 'success' : p.status === 'failed' ? 'error' : 'warning'"
                         size="small"
                       >
-                        {{ p.status }}
+                        {{ paymentStatusLabel(p.status) }}
                       </VChip>
                     </td>
-                    <td>{{ p.provider }}</td>
+                    <td class="text-capitalize">
+                      {{ p.provider }}
+                    </td>
                     <td>
                       <code
                         v-if="p.provider_payment_id"
@@ -356,8 +480,8 @@ const printInvoice = () => {
             </VCardText>
           </VCard>
 
-          <!-- ═══ Credit Notes ═══ -->
-          <VCard class="mb-6">
+          <!-- Credit Notes -->
+          <VCard class="mb-4">
             <VCardTitle>
               <VIcon
                 icon="tabler-credit-card-refund"
@@ -368,7 +492,7 @@ const printInvoice = () => {
             <VCardText class="pa-0">
               <div
                 v-if="!invoice.credit_notes?.length"
-                class="text-center pa-6 text-disabled"
+                class="text-center pa-4 text-disabled"
               >
                 {{ t('platformBilling.invoiceDetail.noCreditNotes') }}
               </div>
@@ -410,7 +534,7 @@ const printInvoice = () => {
             </VCardText>
           </VCard>
 
-          <!-- ═══ Ledger Entries ═══ -->
+          <!-- Ledger Entries -->
           <VCard>
             <VCardTitle>
               <VIcon
@@ -422,7 +546,7 @@ const printInvoice = () => {
             <VCardText class="pa-0">
               <div
                 v-if="!invoice.ledger_entries?.length"
-                class="text-center pa-6 text-disabled"
+                class="text-center pa-4 text-disabled"
               >
                 {{ t('platformBilling.invoiceDetail.noLedgerEntries') }}
               </div>
@@ -473,7 +597,7 @@ const printInvoice = () => {
           </VCard>
         </VCol>
 
-        <!-- ═══ Sidebar (3 cols) ═══ -->
+        <!-- Sidebar (3 cols) -->
         <VCol
           cols="12"
           md="3"
@@ -510,7 +634,30 @@ const printInvoice = () => {
 </template>
 
 <style lang="scss">
+.invoice-preview-table {
+  --v-table-header-color: var(--v-theme-surface);
+
+  &.v-table .v-table__wrapper table thead tr th {
+    border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) !important;
+  }
+}
+
 @media print {
+  .v-theme--dark {
+    --v-theme-surface: 255, 255, 255;
+    --v-theme-on-surface: 47, 43, 61;
+    --v-theme-on-background: 47, 43, 61;
+  }
+
+  body {
+    background: none !important;
+  }
+
+  .invoice-header-preview,
+  .invoice-preview-wrapper {
+    padding: 0 !important;
+  }
+
   .v-navigation-drawer,
   .layout-vertical-nav,
   .app-customizer-toggler,
@@ -520,8 +667,20 @@ const printInvoice = () => {
     display: none;
   }
 
+  .v-card {
+    box-shadow: none !important;
+
+    .print-row {
+      flex-direction: row !important;
+    }
+  }
+
   .layout-content-wrapper {
     padding-inline-start: 0 !important;
+  }
+
+  .v-table__wrapper {
+    overflow: hidden !important;
   }
 
   .d-print-none {

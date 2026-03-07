@@ -30,7 +30,7 @@ class SetCompanyContext
             ], 404);
         }
 
-        if ($company->isSuspended()) {
+        if ($company->isSuspended() && !self::isSuspendedBypass($request)) {
             return response()->json([
                 'message' => 'This company is currently suspended.',
             ], 403);
@@ -63,5 +63,17 @@ class SetCompanyContext
         $request->attributes->set('company', $company);
 
         return $next($request);
+    }
+
+    /**
+     * ADR-257: Billing payment routes must remain accessible for suspended
+     * companies — that's how they pay outstanding invoices to reactivate.
+     */
+    private static function isSuspendedBypass(Request $request): bool
+    {
+        $path = $request->path();
+
+        return str_starts_with($path, 'api/billing/invoices/outstanding')
+            || str_starts_with($path, 'api/billing/invoices/pay');
     }
 }

@@ -73,7 +73,6 @@ class PlatformBillingPolicyTest extends TestCase
             ->assertJsonStructure([
                 'policy' => [
                     'id',
-                    'wallet_first',
                     'allow_negative_wallet',
                     'auto_apply_wallet_credit',
                     'upgrade_timing',
@@ -382,7 +381,6 @@ class PlatformBillingPolicyTest extends TestCase
         PlatformBillingPolicy::instance();
 
         $payload = [
-            'wallet_first' => false,
             'allow_negative_wallet' => true,
             'auto_apply_wallet_credit' => false,
             'upgrade_timing' => 'end_of_period',

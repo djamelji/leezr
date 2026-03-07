@@ -218,7 +218,7 @@ const cancelSubscription = async () => {
               variant="tonal"
               color="error"
               size="small"
-              :to="{ name: 'company-billing-tab', params: { tab: 'invoices' } }"
+              to="/company/billing/pay"
             >
               {{ t('companyBilling.overview.retryPayment') }}
             </VBtn>

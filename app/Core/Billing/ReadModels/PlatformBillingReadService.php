@@ -86,6 +86,7 @@ class PlatformBillingReadService
             'voided_at' => $invoice->voided_at?->toISOString(),
             'retry_count' => $invoice->retry_count,
             'next_retry_at' => $invoice->next_retry_at?->toISOString(),
+            'notes' => $invoice->notes,
             'billing_snapshot' => $invoice->billing_snapshot,
             'lines' => $invoice->lines->map(fn ($line) => [
                 'id' => $line->id,

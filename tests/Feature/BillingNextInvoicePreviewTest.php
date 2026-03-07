@@ -96,7 +96,10 @@ class BillingNextInvoicePreviewTest extends TestCase
 
         $plan = Plan::where('key', 'pro')->first();
         $this->assertEquals($plan->price_monthly, $preview['plan']['price']);
-        $this->assertEquals($plan->price_monthly, $preview['total']);
+
+        // Total includes 20% tax (FR market = 2000 bps, exclusive mode)
+        $expectedTax = (int) floor($plan->price_monthly * 2000 / 10000);
+        $this->assertEquals($plan->price_monthly + $expectedTax, $preview['total']);
     }
 
     // ── 3: Preview with plan + addons ─────────────────────
@@ -139,8 +142,9 @@ class BillingNextInvoicePreviewTest extends TestCase
         $this->assertCount(2, $preview['addons']);
 
         $plan = Plan::where('key', 'pro')->first();
-        $expectedTotal = $plan->price_monthly + 500 + 300;
-        $this->assertEquals($expectedTotal, $preview['total']);
+        $subtotal = $plan->price_monthly + 500 + 300;
+        $expectedTax = (int) floor($subtotal * 2000 / 10000);
+        $this->assertEquals($subtotal + $expectedTax, $preview['total']);
 
         // Each addon should have a name
         foreach ($preview['addons'] as $addon) {

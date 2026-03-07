@@ -30,6 +30,7 @@ declare module 'vue-router/auto-routes' {
     'company-billing-billing-payment-methods': RouteRecordInfo<'company-billing-billing-payment-methods', '/company/billing/_BillingPaymentMethods', Record<never, never>, Record<never, never>>,
     'company-billing-tab': RouteRecordInfo<'company-billing-tab', '/company/billing/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-billing-invoices-id': RouteRecordInfo<'company-billing-invoices-id', '/company/billing/invoices/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'company-billing-pay': RouteRecordInfo<'company-billing-pay', '/company/billing/pay', Record<never, never>, Record<never, never>>,
     'company-dashboard-dashboard-management': RouteRecordInfo<'company-dashboard-dashboard-management', '/company/dashboard/_DashboardManagement', Record<never, never>, Record<never, never>>,
     'company-dashboard-dashboard-operational': RouteRecordInfo<'company-dashboard-dashboard-operational', '/company/dashboard/_DashboardOperational', Record<never, never>, Record<never, never>>,
     'company-dashboard-plan-badge-widget': RouteRecordInfo<'company-dashboard-plan-badge-widget', '/company/dashboard/_PlanBadgeWidget', Record<never, never>, Record<never, never>>,

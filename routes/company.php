@@ -10,6 +10,7 @@ use App\Modules\Core\Billing\Http\CompanyBillingController;
 use App\Modules\Core\Billing\Http\CompanyPaymentMethodController;
 use App\Modules\Core\Billing\Http\CompanyPaymentSetupController;
 use App\Modules\Core\Billing\Http\CompanyPlanController;
+use App\Modules\Core\Billing\Http\InvoiceBatchPayController;
 use App\Modules\Core\Billing\Http\SubscriptionMutationController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
 use App\Modules\Core\Members\Http\MembershipController;
@@ -73,6 +74,7 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     // Billing details (ADR-124, ADR-135 LOT4)
     Route::get('/billing/overview', [CompanyBillingController::class, 'overview']);
     Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
+    Route::get('/billing/invoices/outstanding', [InvoiceBatchPayController::class, 'listOutstanding']);
     Route::get('/billing/invoices/{id}', [CompanyBillingController::class, 'invoiceDetail']);
     Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);
     Route::get('/billing/next-invoice-preview', [CompanyBillingController::class, 'nextInvoicePreview']);
@@ -90,6 +92,12 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::delete('/billing/saved-cards/{id}', [CompanyPaymentMethodController::class, 'deleteCard'])
         ->middleware('company.access:manage-structure');
     Route::put('/billing/saved-cards/{id}/default', [CompanyPaymentMethodController::class, 'setDefault'])
+        ->middleware('company.access:manage-structure');
+
+    // Batch invoice payment (ADR-257)
+    Route::post('/billing/invoices/pay', [InvoiceBatchPayController::class, 'createPaymentIntent'])
+        ->middleware('company.access:manage-structure');
+    Route::post('/billing/invoices/pay/confirm', [InvoiceBatchPayController::class, 'confirmPayment'])
         ->middleware('company.access:manage-structure');
 
     // Subscription mutations (ADR-135 D1, manage-structure required)

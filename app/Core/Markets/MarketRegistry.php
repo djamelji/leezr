@@ -33,6 +33,7 @@ class MarketRegistry
                 'FR' => [
                     'name' => 'France',
                     'currency' => 'EUR',
+                    'vat_rate_bps' => 2000,
                     'locale' => 'fr-FR',
                     'timezone' => 'Europe/Paris',
                     'dial_code' => '+33',
@@ -56,6 +57,7 @@ class MarketRegistry
                 'GB' => [
                     'name' => 'United Kingdom',
                     'currency' => 'GBP',
+                    'vat_rate_bps' => 2000,
                     'locale' => 'en-GB',
                     'timezone' => 'Europe/London',
                     'dial_code' => '+44',
@@ -117,6 +119,7 @@ class MarketRegistry
                 array_merge([
                     'name' => $def['name'],
                     'currency' => $def['currency'],
+                    'vat_rate_bps' => $def['vat_rate_bps'] ?? 0,
                     'locale' => $def['locale'],
                     'timezone' => $def['timezone'],
                     'dial_code' => $def['dial_code'],
@@ -234,6 +237,7 @@ class MarketRegistry
                 $marketData = [
                     'name' => $def['name'],
                     'currency' => $def['currency'] ?? 'USD',
+                    'vat_rate_bps' => $def['vat_rate_bps'] ?? 0,
                     'locale' => $def['locale'] ?? 'en-US',
                     'timezone' => $def['timezone'] ?? 'UTC',
                     'dial_code' => $def['dial_code'] ?? '+1',

@@ -254,14 +254,14 @@ class InvoiceDetailEndpointTest extends TestCase
     // Company PDF endpoint
     // ═══════════════════════════════════════════════════════
 
-    public function test_company_pdf_returns_html(): void
+    public function test_company_pdf_returns_pdf(): void
     {
         $response = $this->actingAs($this->owner)
             ->withHeaders(['X-Company-Id' => $this->company->id])
             ->get("/api/billing/invoices/{$this->invoice->id}/pdf");
 
         $response->assertOk();
-        $this->assertStringContainsString('text/html', $response->headers->get('content-type'));
+        $this->assertStringContainsString('application/pdf', $response->headers->get('content-type'));
     }
 
     public function test_company_pdf_requires_company_header(): void

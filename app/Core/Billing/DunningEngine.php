@@ -485,7 +485,7 @@ class DunningEngine
      *   - Company reverts to active if suspended and no more overdue/uncollectible invoices
      *   - Uncollectible invoices are terminal — reactivation requires admin intervention
      */
-    private static function checkReactivation(Company $company, ?int $subscriptionId): void
+    public static function checkReactivation(Company $company, ?int $subscriptionId): void
     {
         // Reactivate subscription if no remaining overdue invoices
         if ($subscriptionId) {

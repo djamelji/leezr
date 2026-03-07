@@ -103,13 +103,21 @@ class CompanyBillingController
             abort(404, 'Invoice not found.');
         }
 
-        $html = view('billing.invoice-pdf', [
+        $snap = $invoice->billing_snapshot ?? [];
+        $locale = $snap['market_locale'] ?? 'fr-FR';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
             'invoice' => $invoice,
             'company' => $invoice->company,
-        ])->render();
+            'snap' => $snap,
+            'locale' => $locale,
+        ]);
 
-        return response($html, 200, [
-            'Content-Type' => 'text/html; charset=UTF-8',
+        $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
 }

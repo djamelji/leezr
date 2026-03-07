@@ -17,12 +17,13 @@ class TaxResolverTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
     }
 
-    public function test_none_mode_returns_zero(): void
+    public function test_exclusive_is_default_mode(): void
     {
         $policy = PlatformBillingPolicy::instance();
-        $policy->update(['tax_mode' => 'none']);
+        // Default should be exclusive after ADR-254 (none removed)
+        $policy->update(['tax_mode' => 'exclusive']);
 
-        $this->assertEquals(0, TaxResolver::compute(10000, 2000));
+        $this->assertEquals(2000, TaxResolver::compute(10000, 2000));
     }
 
     public function test_exclusive_20_percent(): void

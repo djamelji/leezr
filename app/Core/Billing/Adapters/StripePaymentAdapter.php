@@ -423,6 +423,32 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         $this->callStripeDetachPaymentMethod($paymentMethodId);
     }
 
+    // ── On-session PaymentIntent (ADR-257) ──────────────
+
+    /**
+     * Create a PaymentIntent for on-session payment (user present).
+     * Unlike collectInvoice(), this is NOT auto-confirmed — the frontend
+     * confirms via Stripe Payment Element which supports card, Apple Pay, etc.
+     */
+    public function createOnSessionPaymentIntent(
+        int $amount,
+        string $currency,
+        Company $company,
+        array $metadata = [],
+    ): \Stripe\PaymentIntent {
+        $this->enforceRateLimit($company->id);
+        $this->setApiKey();
+
+        $stripeCustomer = $this->ensureStripeCustomer($company);
+
+        return $this->callStripeCreateOnSessionPaymentIntent(
+            $amount,
+            $currency,
+            $stripeCustomer->provider_customer_id,
+            $metadata,
+        );
+    }
+
     // ── Protected wrappers (testable) ────────────────────
 
     protected function callStripeCreateCheckoutSession(array $params, array $opts = [])
@@ -459,6 +485,18 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             'payment_method' => $paymentMethodId,
             'confirm' => true,
             'off_session' => true,
+            'metadata' => $metadata,
+        ]);
+    }
+
+    protected function callStripeCreateOnSessionPaymentIntent(int $amount, string $currency, string $customerId, array $metadata)
+    {
+        return \Stripe\PaymentIntent::create([
+            'amount' => $amount,
+            'currency' => $currency,
+            'customer' => $customerId,
+            'payment_method_types' => ['card', 'sepa_debit'],
+            'setup_future_usage' => 'off_session',
             'metadata' => $metadata,
         ]);
     }

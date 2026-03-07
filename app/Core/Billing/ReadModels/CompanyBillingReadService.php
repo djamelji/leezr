@@ -178,6 +178,9 @@ class CompanyBillingReadService
             'voided_at' => $invoice->voided_at?->toISOString(),
             'retry_count' => $invoice->retry_count,
             'next_retry_at' => $invoice->next_retry_at?->toISOString(),
+            'notes' => $invoice->notes,
+            'provider' => $invoice->provider,
+            'billing_snapshot' => $invoice->billing_snapshot,
             'lines' => $invoice->lines->map(fn ($line) => [
                 'id' => $line->id,
                 'type' => $line->type,
@@ -331,7 +334,7 @@ class CompanyBillingReadService
 
         // Wallet credit estimate — same logic as InvoiceIssuer::finalize()
         $estimatedWalletCredit = 0;
-        if ($policy->wallet_first && $policy->auto_apply_wallet_credit && $total > 0 && $walletBalance > 0) {
+        if ($policy->auto_apply_wallet_credit && $total > 0 && $walletBalance > 0) {
             $estimatedWalletCredit = min($walletBalance, $total);
         }
 
@@ -395,9 +398,9 @@ class CompanyBillingReadService
         $isUpgrade = $toLevel > $fromLevel;
         $isIntervalChange = $subscription->plan_key === $toPlanKey && $fromInterval !== $toInterval;
 
-        // Interval-only changes use upgrade timing (typically immediate)
+        // Interval-only changes use their own timing setting
         $timing = $isIntervalChange
-            ? ($policy->upgrade_timing ?? 'immediate')
+            ? ($policy->interval_change_timing ?? 'immediate')
             : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
 
         // Current plan price (for the subscription's current interval)
@@ -462,18 +465,24 @@ class CompanyBillingReadService
             $immediateDue = $proration['net'];
         }
 
-        // Tax on the immediate amount — resolved from company's LegalStatus (ADR-251)
+        // Tax on the immediate amount — resolved from company's Market (ADR-254)
         $taxRateBps = TaxResolver::resolveRateBps($company);
         $immediateTax = $immediateDue > 0 ? TaxResolver::compute($immediateDue, $taxRateBps) : 0;
         $immediateTotal = $immediateDue + $immediateTax;
 
+        // When proration is negative (downgrade credit), the credit goes to wallet
+        $estimatedWalletCredit_added = 0;
+        if ($immediateDue < 0) {
+            $estimatedWalletCredit_added = abs($immediateDue);
+        }
+
         // Wallet
         $walletBalance = WalletLedger::balance($company);
-        $estimatedWalletCredit = 0;
-        if ($policy->wallet_first && $policy->auto_apply_wallet_credit && $immediateTotal > 0 && $walletBalance > 0) {
-            $estimatedWalletCredit = min($walletBalance, $immediateTotal);
+        $estimatedWalletDeduction = 0;
+        if ($policy->auto_apply_wallet_credit && $immediateTotal > 0 && $walletBalance > 0) {
+            $estimatedWalletDeduction = min($walletBalance, $immediateTotal);
         }
-        $estimatedAmountDue = max(0, $immediateTotal - $estimatedWalletCredit);
+        $estimatedAmountDue = max(0, $immediateTotal - $estimatedWalletDeduction);
 
         // Next period preview (what the recurring invoice will look like)
         $nextPeriodTax = TaxResolver::compute($newPlanSubtotal, $taxRateBps);
@@ -481,12 +490,29 @@ class CompanyBillingReadService
 
         $wallet = WalletLedger::ensureWallet($company);
 
+        // Fiscal context — market & legal status info for the preview
+        $taxMode = $policy->tax_mode ?? 'none';
+        $market = $company->market_key
+            ? \App\Core\Markets\Market::where('key', $company->market_key)->first()
+            : null;
+        $legalStatus = ($company->legal_status_key && $company->market_key)
+            ? \App\Core\Markets\LegalStatus::where('key', $company->legal_status_key)
+                ->where('market_key', $company->market_key)
+                ->first()
+            : null;
+
         return [
             'is_estimate' => true,
             'timing' => $timing,
             'is_upgrade' => $isUpgrade,
             'is_interval_change' => $isIntervalChange,
             'currency' => $wallet->currency,
+
+            // Fiscal context
+            'tax_mode' => $taxMode,
+            'tax_rate_bps' => $taxRateBps,
+            'market_name' => $market?->name,
+            'legal_status_name' => $legalStatus?->name,
 
             // Current plan
             'from_plan' => [
@@ -518,14 +544,17 @@ class CompanyBillingReadService
             'addons_total_current' => $addonsTotalCurrent,
             'addons_total_new' => $addonsTotalNew,
 
+            // Wallet (always shown)
+            'wallet_balance' => $walletBalance,
+
             // Immediate financial impact
             'immediate' => [
                 'subtotal' => $immediateDue,
                 'tax_rate_bps' => $taxRateBps,
                 'tax_amount' => $immediateTax,
                 'total' => $immediateTotal,
-                'wallet_balance' => $walletBalance,
-                'estimated_wallet_credit' => $estimatedWalletCredit,
+                'wallet_deduction' => $estimatedWalletDeduction,
+                'wallet_credit_added' => $estimatedWalletCredit_added,
                 'estimated_amount_due' => $estimatedAmountDue,
             ],
 
@@ -534,6 +563,7 @@ class CompanyBillingReadService
                 'plan_price' => $newPriceCents,
                 'addons_total' => $addonsTotalNew,
                 'subtotal' => $newPlanSubtotal,
+                'tax_rate_bps' => $taxRateBps,
                 'tax_amount' => $nextPeriodTax,
                 'total' => $nextPeriodTotal,
                 'interval' => $toInterval,
