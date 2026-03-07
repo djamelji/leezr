@@ -34,6 +34,19 @@ const healthStatusLabel = status => {
   return translated !== key ? translated : status
 }
 
+const configStatusColor = status => {
+  const colors = { active: 'success', misconfigured: 'warning', disabled: 'secondary' }
+
+  return colors[status] || 'secondary'
+}
+
+const configStatusLabel = status => {
+  const key = `payments.config_${status}`
+  const translated = t(key)
+
+  return translated !== key ? translated : status
+}
+
 const moduleIcon = module => {
   return module.icon_ref || 'tabler-credit-card'
 }
@@ -97,11 +110,21 @@ const openCredentials = module => {
   const masked = module.credentials_masked || {}
   if (module.credential_fields) {
     for (const field of module.credential_fields) {
-      credentialsForm.value[field.key] = masked[field.key] || ''
+      credentialsForm.value[field.key] = masked[field.key] || (field.key === 'mode' ? 'test' : '')
     }
   }
 
   credentialsDialog.value = true
+}
+
+const hasMode = computed(() => {
+  return credentialsModule.value?.credential_fields?.some(f => f.key === 'mode')
+})
+
+const isFieldVisible = field => {
+  if (!field.when_mode) return true
+
+  return credentialsForm.value.mode === field.when_mode
 }
 
 const saveCredentials = async () => {
@@ -111,6 +134,7 @@ const saveCredentials = async () => {
     await store.updatePaymentModuleCredentials(credentialsModule.value.provider_key, credentialsForm.value)
     toast(t('payments.credentialsSaved'), 'success')
     credentialsDialog.value = false
+    await store.fetchPaymentModules()
   }
   catch (error) {
     toast(error?.data?.message || t('payments.failedToSaveCredentials'), 'error')
@@ -203,6 +227,26 @@ const checkHealth = async module => {
             </div>
 
             <div class="d-flex align-center gap-2">
+              <!-- Stripe mode badge -->
+              <VChip
+                v-if="module.stripe_mode"
+                size="small"
+                variant="tonal"
+                :color="module.stripe_mode === 'live' ? 'error' : 'info'"
+              >
+                {{ module.stripe_mode.toUpperCase() }}
+              </VChip>
+
+              <!-- Configuration status -->
+              <VChip
+                v-if="module.is_installed && module.configuration_status"
+                :color="configStatusColor(module.configuration_status)"
+                size="small"
+                variant="tonal"
+              >
+                {{ configStatusLabel(module.configuration_status) }}
+              </VChip>
+
               <!-- Health status -->
               <VChip
                 v-if="module.is_installed"
@@ -295,17 +339,48 @@ const checkHealth = async module => {
 
       <VCardText class="px-6">
         <template v-if="credentialsModule?.credential_fields?.length">
+          <!-- Mode toggle (if module has a mode field) -->
+          <div
+            v-if="hasMode"
+            class="mb-5"
+          >
+            <VSwitch
+              v-model="credentialsForm.mode"
+              :label="credentialsForm.mode === 'live' ? t('payments.modeLive') : t('payments.modeTest')"
+              true-value="live"
+              false-value="test"
+              :color="credentialsForm.mode === 'live' ? 'error' : 'info'"
+              inset
+            />
+
+            <VAlert
+              v-if="credentialsForm.mode === 'live'"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              icon="tabler-alert-triangle"
+              class="mt-3"
+            >
+              {{ t('payments.liveWarning') }}
+            </VAlert>
+          </div>
+
+          <!-- Credential fields (filtered by mode) -->
           <div
             v-for="field in credentialsModule.credential_fields"
             :key="field.key"
             class="mb-3"
           >
-            <AppTextField
-              v-model="credentialsForm[field.key]"
-              :label="field.label"
-              :type="field.type === 'password' ? 'password' : 'text'"
-              :placeholder="credentialsModule.has_credentials ? '••••••••' : ''"
-            />
+            <template v-if="field.type !== 'select' && isFieldVisible(field)">
+              <AppTextField
+                v-model="credentialsForm[field.key]"
+                :label="field.label"
+                :type="field.type === 'password' ? 'password' : 'text'"
+                :placeholder="credentialsModule.has_credentials ? '••••••••' : ''"
+                :hint="field.hint || ''"
+                persistent-hint
+              />
+            </template>
           </div>
         </template>
       </VCardText>

@@ -7,13 +7,17 @@ use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
 use App\Core\Plans\Plan;
 
 /**
  * Internal payment adapter — no external payment processing.
- * Creates subscriptions in 'pending' state for admin approval.
+ *
+ * Behaviour depends on PlatformBillingPolicy.admin_approval_required:
+ *   false (default SaaS) → subscription created as active/trialing immediately
+ *   true  (manual mode)  → subscription created as pending for admin approval
  */
 class InternalPaymentAdapter implements PaymentProviderAdapter
 {
@@ -32,35 +36,72 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
         return new HealthResult('healthy');
     }
 
-    public function createCheckout(Company $company, string $planKey): CheckoutResult
+    public function createCheckout(Company $company, string $planKey, string $interval = 'monthly'): CheckoutResult
     {
-        $existingPending = Subscription::where('company_id', $company->id)
-            ->where('status', 'pending')
-            ->exists();
+        $policy = PlatformBillingPolicy::instance();
+        $requiresApproval = $policy->admin_approval_required;
 
-        if ($existingPending) {
-            return new CheckoutResult(
-                mode: 'internal',
-                message: 'You already have a pending upgrade request. Please wait for administrator approval.',
-            );
+        if ($requiresApproval) {
+            $existingPending = Subscription::where('company_id', $company->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($existingPending) {
+                return new CheckoutResult(
+                    mode: 'internal',
+                    message: 'You already have a pending upgrade request. Please wait for administrator approval.',
+                );
+            }
         }
 
         $plan = Plan::where('key', $planKey)->first();
         $trialDays = $plan?->trial_days ?? 0;
 
+        if ($trialDays > 0) {
+            $status = 'trialing';
+        } elseif ($requiresApproval) {
+            $status = 'pending';
+        } else {
+            $status = 'active';
+        }
+
+        $isCurrent = in_array($status, ['active', 'trialing']);
+
+        if ($isCurrent) {
+            Subscription::where('company_id', $company->id)
+                ->where('is_current', 1)
+                ->update(['is_current' => null]);
+        }
+
+        $periodEnd = $interval === 'yearly' ? now()->addYear() : now()->addMonth();
+
         $subscription = Subscription::create([
             'company_id' => $company->id,
             'plan_key' => $planKey,
-            'status' => $trialDays > 0 ? 'trialing' : 'pending',
+            'interval' => $interval,
+            'status' => $status,
             'provider' => 'internal',
+            'is_current' => $isCurrent ? 1 : null,
             'trial_ends_at' => $trialDays > 0 ? now()->addDays($trialDays) : null,
-            'current_period_start' => $trialDays > 0 ? now() : null,
-            'current_period_end' => $trialDays > 0 ? now()->addDays($trialDays) : null,
+            'current_period_start' => $isCurrent ? now() : null,
+            'current_period_end' => $isCurrent
+                ? ($trialDays > 0 ? now()->addDays($trialDays) : $periodEnd)
+                : null,
         ]);
+
+        if ($status === 'active' || $status === 'trialing') {
+            $company->update(['plan_key' => $planKey]);
+        }
+
+        $message = match ($status) {
+            'pending' => 'Your upgrade request has been submitted. An administrator will review it shortly.',
+            'trialing' => "Your trial has started. You have {$trialDays} days to try the {$plan->name} plan.",
+            default => "Your plan has been upgraded to {$plan->name}.",
+        };
 
         return new CheckoutResult(
             mode: 'internal',
-            message: 'Your upgrade request has been submitted. An administrator will review it shortly.',
+            message: $message,
             subscriptionId: $subscription->id,
         );
     }
@@ -72,7 +113,7 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
 
     public function cancelSubscription(Subscription $subscription): void
     {
-        $subscription->update(['status' => 'cancelled']);
+        $subscription->update(['status' => 'cancelled', 'is_current' => null]);
     }
 
     public function handleWebhookEvent(array $payload, array $headers): WebhookHandlingResult

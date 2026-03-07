@@ -171,7 +171,7 @@ class AutoRepairEngine
                 'subscription_id' => $subscription?->id,
                 'invoice_id' => $invoiceId ? (int) $invoiceId : null,
                 'amount' => $details['stripe_amount'] ?? 0,
-                'currency' => 'eur',
+                'currency' => strtoupper($details['stripe_currency'] ?? config('billing.default_currency', 'EUR')),
                 'status' => 'succeeded',
                 'provider' => 'stripe',
                 'provider_payment_id' => $providerPaymentId,

@@ -7780,4 +7780,1122 @@ sans sa dépendance satisfaite.
 
 ---
 
+### ADR-220 — Company addon subscriptions + pending_payment status
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-206
+
+**Contexte** :
+Le système de billing interne gère les abonnements plans mais pas les modules addon payants. Il manquait une table dédiée pour tracer les abonnements addon par company (activation, prix, date). De plus, le flux Stripe Checkout nécessite un statut intermédiaire `pending_payment` — distinct du `pending` existant (approbation admin pour le provider internal).
+
+**Décision** :
+1. Table `company_addon_subscriptions` avec UNIQUE(company_id, module_key) — un seul enregistrement par module/company, réactivation par UPDATE
+2. Nouveau statut `pending_payment` pour les subscriptions en attente de paiement Stripe
+3. `pending_payment` est exclu des scopes `active()` et `current()` — la subscription n'est pas utilisable tant que le paiement n'est pas confirmé
+4. `scopePendingPayment()` et `isPendingPayment()` ajoutés au modèle Subscription
+
+**Conséquences** :
+- Les modules addon ont leur propre tracking indépendant des subscriptions plan
+- Le flow Stripe crée une subscription `pending_payment` → le webhook `checkout.session.completed` la passe en `active`
+- Pas de confusion avec `pending` (provider internal, approbation admin)
+- Aucun code existant impacté (tous les `whereIn` listaient explicitement les statuts)
+
+**Fichiers** :
+- `database/migrations/2026_03_05_100001_create_company_addon_subscriptions_table.php`
+- `app/Core/Billing/CompanyAddonSubscription.php`
+- `app/Core/Billing/Subscription.php` — scopePendingPayment, scopeCurrent, isPendingPayment
+
+---
+
+### ADR-221 — Subscription is_current uniqueness (MySQL NULL trick)
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-220
+
+**Contexte** :
+Rien n'empêchait au niveau base de données d'avoir deux subscriptions "courantes" pour la même company. Un bug applicatif pouvait créer des incohérences silencieuses (deux subscriptions actives).
+
+**Décision** :
+1. Colonne `is_current` : `TINYINT(1) UNSIGNED NULLABLE DEFAULT NULL`
+2. `is_current = 1` quand la subscription est la subscription courante, `NULL` sinon
+3. `UNIQUE(company_id, is_current)` — MySQL ignore les NULL dans les index uniques → au plus une subscription courante par company
+4. Backfill migration : `is_current = 1` pour la dernière subscription active/trialing de chaque company
+5. Tous les changements d'état (cancel, suspend, dunning failure) passent `is_current = null`
+
+**Conséquences** :
+- Garantie DB : impossible d'avoir deux subscriptions courantes pour la même company
+- Le pattern `is_current = 1 / NULL` est un idiome MySQL connu, performant avec l'index unique
+- `SubscriptionCanceller`, `DunningEngine`, `InternalPaymentAdapter`, `StripePaymentAdapter` maintiennent `is_current` dans leurs transactions
+- `scopeIsCurrent()` ajouté pour les requêtes explicites
+
+**Fichiers** :
+- `database/migrations/2026_03_05_100002_add_is_current_to_subscriptions_table.php`
+- `app/Core/Billing/Subscription.php` — is_current fillable, scopeIsCurrent
+- `app/Core/Billing/SubscriptionCanceller.php` — is_current => null
+- `app/Core/Billing/DunningEngine.php` — is_current => null (suspend + cancel)
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` — is_current => null
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — is_current => null
+
+---
+
+### ADR-222 — Stripe checkout, webhook handler, idempotency
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-220, ADR-221
+
+**Contexte** :
+`StripePaymentAdapter` avait des stubs pour `createCheckout()`, `cancelSubscription()`, et `handleCallback()`. Stripe est utilisé comme rail de paiement uniquement (pas de Stripe Subscriptions/Invoices). Le billing engine interne est master. Il manquait aussi des idempotency keys sur les appels Stripe SDK.
+
+**Décision** :
+1. **createCheckout()** : crée une Stripe Checkout Session (mode: payment, one-time), subscription en `pending_payment`, retourne `CheckoutResult(mode: 'redirect', redirectUrl)`. Idempotency key: `checkout_{subscription_id}_{plan_key}`
+2. **checkout.session.completed webhook** : active la subscription (`pending_payment → active`), crée invoice + payment, sync `company.plan_key`. Idempotent (si déjà active, skip).
+3. **cancelSubscription()** : local-only (pas d'appel Stripe API), sets `status = cancelled, is_current = null`. Stripe n'a pas de subscription à annuler.
+4. **collectInvoice() idempotency** : passe `idempotency_key: "collect_invoice_{invoice_id}"` à `PaymentIntent::create()`. Empêche les double-charges lors de retries dunning.
+5. **Protected wrapper pattern** : `callStripeCreateCheckoutSession()`, `callStripeCreateCustomer()` pour le mocking en test.
+
+**Conséquences** :
+- Le flux checkout complet fonctionne : company → createCheckout → redirect Stripe → paiement → webhook → subscription active
+- Pas de Stripe Subscriptions/Invoices — billing engine interne reste master
+- Idempotency Stripe sur checkout et collection → protection contre double-charges
+- `handleCallback()` retourne null (pas utilisé — les webhooks suffisent)
+- Le webhook handler est idempotent (replay-safe)
+
+**Fichiers** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — createCheckout, cancelSubscription, collectInvoice idempotency, wrappers
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — checkout.session.completed handler
+- `tests/Feature/BillingLotATest.php` — 16 tests
+
+---
+
+## ADR-230 — Billing interval parameter in checkout flow
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-222
+
+**Contexte** :
+Le toggle annuel/mensuel existait dans l'UI (`annualToggle` dans `register.vue` et `plan.vue`) mais n'était jamais envoyé au backend. L'interface `createCheckout()` n'acceptait pas de paramètre d'intervalle. `StripePaymentAdapter` hardcodait `'monthly'`.
+
+**Décision** :
+1. Ajouter `string $interval = 'monthly'` à `PaymentGatewayProvider::createCheckout()` et toutes les implémentations (Null, Internal, Stripe).
+2. `StripePaymentAdapter` utilise `$plan->price_yearly` ou `$plan->price_monthly` selon l'intervalle.
+3. `ChangePlanService::requestUpgrade()` accepte et passe `$interval`.
+4. `BillingCheckoutController` valide `billing_interval` (sometimes, in:monthly,yearly).
+5. `RegisterRequest` valide `billing_interval`.
+6. `RegisterCompanyData` DTO inclut `billingInterval`.
+7. Frontend envoie `billing_interval` basé sur `annualToggle`.
+
+**Conséquences** :
+- Les subscriptions trackent l'intervalle de facturation choisi par l'utilisateur.
+- Stripe checkout utilise le bon prix (mensuel ou annuel).
+- Backward-compatible : default = 'monthly'.
+
+**Fichiers** :
+- `app/Core/Billing/Contracts/PaymentGatewayProvider.php`
+- `app/Core/Billing/NullPaymentGateway.php`
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php`
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php`
+- `app/Core/Billing/ChangePlanService.php`
+- `app/Modules/Core/Billing/Http/BillingCheckoutController.php`
+- `app/Core/Auth/Requests/RegisterRequest.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyData.php`
+- `resources/js/pages/register.vue`
+- `resources/js/pages/company/plan.vue`
+- `resources/js/core/stores/auth.js`
+
+---
+
+## ADR-231 — Subscription created at registration
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-221, ADR-230
+
+**Contexte** :
+`RegisterCompanyUseCase` créait user + company + membership + jobdomain mais aucune subscription. Les companies naissaient sans abonnement, se basant uniquement sur `plan_key`. De plus, `NullPaymentGateway`, `InternalPaymentAdapter` et `ApproveSubscriptionUseCase` ne maintenaient pas `is_current` (introduit par ADR-221).
+
+**Décision** :
+1. **À l'inscription** : chaque company reçoit une subscription dès la création.
+   - Plan gratuit (prix = 0) → subscription `active`, `is_current=1`, directement dans la transaction.
+   - Plan avec trial → subscription `trialing`, `is_current=1`, directement dans la transaction.
+   - Plan payant sans trial → après la transaction, appel au `PaymentGatewayManager` → `createCheckout()` → possible redirect Stripe.
+2. **RegisterCompanyResult** : ajout du champ `?CheckoutResult $checkout`.
+3. **AuthController::register()** : inclut `checkout` dans la réponse JSON si présent.
+4. **Frontend** : si `data.checkout.redirect_url` → redirect au lieu de naviguer vers `/dashboard`.
+5. **Fix is_current partout** :
+   - `NullPaymentGateway` : deactivate previous + set `is_current=1` pour trialing.
+   - `InternalPaymentAdapter` : idem.
+   - `ApproveSubscriptionUseCase` : set `is_current=1` sur la subscription approuvée, clear les précédentes.
+
+**Conséquences** :
+- Toute company a une subscription dès la naissance.
+- Le redirect Stripe pendant l'inscription est possible (cas théorique : plan payant sans trial).
+- `is_current` est maintenu par tous les chemins de code.
+- Le frontend gère gracieusement le checkout redirect post-inscription.
+
+**Fichiers** :
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyResult.php`
+- `app/Modules/Infrastructure/Auth/Http/AuthController.php`
+- `app/Core/Billing/NullPaymentGateway.php`
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php`
+- `app/Core/Billing/PaymentGatewayManager.php`
+- `app/Modules/Platform/Billing/UseCases/ApproveSubscriptionUseCase.php`
+- `resources/js/pages/register.vue`
+- `resources/js/core/stores/auth.js`
+- `tests/Feature/BillingLotBTest.php`
+
+---
+
+## ADR-223 — Subscription Auto-Renewal (`billing:renew`)
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-221, ADR-231
+
+**Contexte** :
+Les subscriptions expirent quand `current_period_end` est atteint, mais aucun mécanisme automatique ne les renouvelle. Sans renouvellement, les companies perdent l'accès après la fin de période.
+
+**Décision** :
+1. **Commande `billing:renew`** : artisan command planifié quotidiennement, implémente `Isolatable` (cache lock anti-concurrence).
+2. **Pipeline** :
+   - Scan : `status IN ('active','trialing') AND is_current=1 AND current_period_end <= now()`
+   - Plans gratuits : extension de période directe via `extendPeriod()`, pas de facture.
+   - Plans payants : création de facture de renouvellement via `InvoiceIssuer` (createDraft → addLine → finalize).
+   - Paiement provider (hors transaction DB) : si Stripe, tentative off-session.
+   - Succès → record payment + extend period.
+   - Échec → facture reste `open`, le dunning gère les relances.
+3. **Idempotence** : garde `whereDate(period_start/end)` empêche la duplication de factures.
+4. **Transition `trialing → active`** : `extendPeriod()` convertit automatiquement au premier renouvellement.
+5. **Mode `--dry-run`** : liste les subs éligibles sans action.
+
+**Conséquences** :
+- Les subscriptions se renouvellent automatiquement sans intervention.
+- Les plans gratuits sont renouvelés sans facture (extension de période seulement).
+- Les plans payants créent une facture, tentent le paiement, et délèguent au dunning en cas d'échec.
+- Safe to run multiple times (idempotent + Isolatable).
+
+**Fichiers** :
+- `app/Console/Commands/BillingRenewCommand.php` (créé)
+- `routes/console.php` (modifié — ajout au scheduler)
+- `tests/Feature/BillingLotCTest.php` (créé — 10 tests)
+
+---
+
+## ADR-226 — Dunning Notifications (PaymentFailed + AccountSuspended)
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-223
+
+**Contexte** :
+Le `DunningEngine` gérait les relances de paiement et la suspension/annulation, mais sans aucune notification aux propriétaires de company. Les échecs de paiement et les suspensions étaient silencieux.
+
+**Décision** :
+1. **Notification `PaymentFailed`** : email envoyé au propriétaire quand un retry échoue mais des tentatives restent. Inclut le montant dû et un lien vers `/company/billing`.
+2. **Notification `AccountSuspended`** : email envoyé au propriétaire quand le compte est suspendu (max retries épuisés). Lien vers `/company/billing`.
+3. **Intégration DunningEngine** :
+   - `notifyPaymentFailed()` appelé après rescheduling d'un retry (wallet + provider échoués).
+   - `notifyAccountSuspended()` appelé dans `applyFailureAction()` uniquement si le company n'était pas déjà suspendu (idempotent).
+4. **Robustesse** : les deux notifications sont wrappées dans try/catch avec Log::warning pour éviter que l'échec d'envoi ne bloque le dunning.
+
+**Conséquences** :
+- Les propriétaires sont informés des échecs de paiement et peuvent mettre à jour leur moyen de paiement.
+- Les propriétaires sont informés quand leur compte est suspendu.
+- Le dunning ne crash jamais à cause d'un échec d'envoi de notification.
+
+**Fichiers** :
+- `app/Notifications/Billing/PaymentFailed.php` (créé)
+- `app/Notifications/Billing/AccountSuspended.php` (créé)
+- `app/Core/Billing/DunningEngine.php` (modifié — ajout notifications)
+- `tests/Feature/BillingLotCTest.php` (créé — tests dunning notifications)
+
+---
+
+## ADR-224 — Addon Module Billing
+
+- **Date** : 2026-03-05
+- **Statut** : Accepté
+- **Dépend de** : ADR-220, ADR-206, ADR-223
+
+**Contexte** :
+L'activation d'un module addon (`ModuleEnabled`) ne générait aucun événement de facturation. Les `CompanyAddonSubscription` existaient en tant que modèle (ADR-220) mais n'étaient jamais créées automatiquement. Les factures de renouvellement (`billing:renew`) ne contenaient que la ligne plan, sans les addons actifs. Désactiver un module ne créait aucun avoir.
+
+**Décision** :
+1. **`AddonBillingListener`** : écoute `ModuleEnabled`, vérifie `addon_pricing` sur `PlatformModule`, crée/met à jour `CompanyAddonSubscription`, génère une facture addon via `InvoiceIssuer` (wallet-first).
+2. **`AddonCreditListener`** : écoute `ModuleDisabled`, désactive l'addon subscription, calcule un avoir proratisé (jours restants / jours totaux), crée un `CreditNote` + crédite le wallet.
+3. **Renewal** : `billing:renew` inclut les lignes addon actives (`CompanyAddonSubscription.active()`) dans la facture de renouvellement, après la ligne plan.
+4. **Pricing** : réutilise la logique `flat`/`plan_flat` de `ModuleQuoteCalculator`.
+5. **Listeners** enregistrés manuellement dans `AppServiceProvider::boot()`.
+6. **Frontend** : le dialog de confirmation avec quote existait déjà — aucune modification frontend nécessaire.
+
+**Conséquences** :
+- Les addons génèrent des factures à l'activation.
+- Les addons sont inclus dans les factures de renouvellement.
+- Désactiver un addon crédite le wallet (prorata).
+- Le revenu addon est traçable par `type='addon'` + `module_key` dans `invoice_lines`.
+
+**Fichiers** :
+- `app/Core/Billing/Listeners/AddonBillingListener.php` (créé)
+- `app/Core/Billing/Listeners/AddonCreditListener.php` (créé)
+- `app/Providers/AppServiceProvider.php` (modifié — enregistrement listeners)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — lignes addon dans renouvellement)
+- `tests/Feature/BillingLotDTest.php` (créé — 7 tests)
+
+---
+
+## ADR-225 — Payment Method UX (Stripe SetupIntent + Company Retry)
+
+**Date** : 2026-03-05
+**Statut** : Implémenté (LOT E)
+
+**Contexte** :
+Les entreprises peuvent souscrire et payer via Stripe Checkout (ADR-222), mais ne peuvent pas enregistrer un moyen de paiement pour les charges off-session (renouvellements, dunning retries). `collectInvoice()` utilise `PaymentIntent::create(['off_session' => true])` qui nécessite un default payment method sur le customer Stripe. Les entreprises n'ont pas non plus de moyen de relancer elles-mêmes une facture en échec.
+
+**Décisions** :
+- D1 : Ajout de `createSetupIntent()` et `setDefaultPaymentMethod()` sur `StripePaymentAdapter` avec wrappers protégés testables
+- D2 : `ensureStripeCustomer()` rendu public (nécessaire par le contrôleur)
+- D3 : Nouveau contrôleur `CompanyPaymentMethodController` avec 3 actions : `createSetupIntent`, `savedCards`, `retryInvoice`
+- D4 : Webhook `setup_intent.succeeded` ajouté à `StripeEventProcessor` — stocke le payment profile, met à jour le default sur Stripe
+- D5 : Frontend avec `@stripe/stripe-js` — Stripe Elements CardElement pour ajouter une carte, bouton retry sur les factures overdue
+- D6 : Publishable key récupérée depuis `config('billing.stripe.key')` avec fallback DB `PlatformPaymentModule.credentials.publishable_key`
+
+**Conséquences** :
+- Les entreprises peuvent sauvegarder une carte pour les paiements off-session futurs
+- Le webhook `setup_intent.succeeded` stocke automatiquement le profil de paiement et configure le default sur Stripe
+- Les factures overdue peuvent être relancées par l'entreprise elle-même (via `DunningEngine::retrySingleInvoice`)
+- `CompanyPaymentProfile` est désormais utilisé activement (était créé mais inutilisé)
+- Nouvel audit action `WEBHOOK_SETUP_INTENT_SYNCED`
+
+**Fichiers** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — createSetupIntent, setDefaultPaymentMethod, retrievePaymentMethod, 3 wrappers, ensureStripeCustomer public)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (modifié — setup_intent.succeeded handler)
+- `app/Core/Audit/AuditAction.php` (modifié — WEBHOOK_SETUP_INTENT_SYNCED)
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` (créé)
+- `routes/company.php` (modifié — 3 nouvelles routes)
+- `resources/js/modules/company/billing/billing.store.js` (modifié — savedCards, createSetupIntent, retryInvoice)
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` (réécrit — Stripe Elements)
+- `resources/js/pages/company/billing/_BillingInvoices.vue` (modifié — bouton retry)
+- `tests/Feature/BillingLotETest.php` (créé — 8 tests)
+
+---
+
+## ADR-227 — Billing Observability & Operations (LOT F)
+
+**Date** : 2026-03-05
+**Statut** : Implémenté (LOT F)
+
+**Contexte** :
+Le moteur de billing est fonctionnellement complet (subscriptions, Stripe checkout, renouvellement, dunning, addons, payment methods). Cependant, un SaaS en production nécessite une observabilité opérationnelle : détection d'anomalies, suivi des flux billing, et métriques financières pour les admins plateforme.
+
+**Décisions** :
+- D1 : Commande `billing:health-check` — 4 vérifications structurelles (subscriptions sans facture, addons orphelins, factures open >30j, drift Stripe). Exit code 0/1 pour monitoring.
+- D2 : Channel `billing` dans `config/logging.php` — daily rotation 14 jours. Points de log dans BillingRenewCommand, DunningEngine, StripeEventProcessor, AddonBillingListener, AddonCreditListener.
+- D3 : Endpoint `GET /api/platform/billing/metrics` — calcule MRR, ARR, active/trialing subscriptions, addon MRR, churn rate. Widget `_BillingMetricsWidget.vue` ajouté au dashboard platform billing.
+- D4 : Plan page enrichie — affiche période en cours, prochain renouvellement, fin d'essai, statut de l'abonnement depuis les données subscription existantes.
+
+**Conséquences** :
+- `php artisan billing:health-check` peut être schedulé en cron pour alerting ops
+- Tous les flux billing sont tracés dans `storage/logs/billing.log` (séparé du log applicatif)
+- Les admins plateforme voient MRR/ARR/churn en temps réel
+- Les entreprises voient leurs informations d'abonnement détaillées sur la page plan
+
+**Fichiers** :
+- `app/Console/Commands/BillingHealthCheckCommand.php` (créé)
+- `app/Modules/Platform/Billing/Http/PlatformBillingMetricsController.php` (créé)
+- `resources/js/pages/platform/billing/_BillingMetricsWidget.vue` (créé)
+- `config/logging.php` (modifié — channel billing)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — billing logs)
+- `app/Core/Billing/DunningEngine.php` (modifié — billing logs)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (modifié — billing logs)
+- `app/Core/Billing/Listeners/AddonBillingListener.php` (modifié — billing logs)
+- `app/Core/Billing/Listeners/AddonCreditListener.php` (modifié — billing logs)
+- `routes/platform.php` (modifié — metrics route)
+- `resources/js/modules/platform-admin/billing/billing.store.js` (modifié — fetchMetrics)
+- `resources/js/pages/platform/billing/index.vue` (modifié — BillingMetricsWidget)
+- `resources/js/pages/company/plan.vue` (modifié — subscription details)
+- `tests/Feature/BillingLotFTest.php` (créé — 5 tests)
+
+---
+
+## ADR-228 — Webhook Recovery Pipeline
+
+**Date** : 2026-03-05
+**Statut** : Implémenté
+
+**Contexte** :
+Le webhook controller rejetait les événements Stripe de plus de 5 minutes (`created < time() - 300`), ce qui bloquait tout mécanisme de rattrapage. Les événements dont le traitement échouait (exception) retournaient un HTTP 500, provoquant des retries Stripe non contrôlés. Il n'existait aucun moyen de détecter un webhook manqué ni de relancer un événement en échec.
+
+**Décisions** :
+- D1 : Suppression du rejet temporel (lignes 64-68 du PaymentWebhookController). La vérification de fraîcheur Stripe native (tolérance 300s dans `constructEvent`) reste active pour la sécurité de la signature.
+- D2 : Dead Letter Queue — table `billing_webhook_dead_letters` avec UNIQUE(provider_key, event_id). Les exceptions de traitement créent un dead letter et retournent HTTP 200 (pas de retry Stripe incontrôlé).
+- D3 : Expected Confirmation Tracker — table `billing_expected_confirmations`. Chaque initiation Stripe (checkout, collectInvoice, setupIntent) crée une confirmation attendue avec `expected_by = now()+30min`. Le StripeEventProcessor résout automatiquement les confirmations à l'arrivée du webhook.
+- D4 : Commande `billing:recover-webhooks` — schedulée toutes les 10 minutes. Interroge Stripe pour les confirmations attendues en retard, synthétise un payload webhook et le traite via StripeEventProcessor.
+- D5 : Commande `billing:webhook-replay` — rejoue les dead letters en attente via StripeEventProcessor. Max 3 tentatives par dead letter. Supporte `--id=N` pour cibler un événement spécifique.
+- D6 : Les write points de confirmation attendue sont null-safe (mock-compatible) — ne créent la confirmation que si l'ID Stripe est disponible.
+
+**Conséquences** :
+- Les webhooks en retard sont acceptés et traités normalement
+- Les exceptions de traitement sont capturées dans la dead letter queue pour relance ultérieure
+- Les webhooks manqués sont détectés et récupérés automatiquement par polling toutes les 10 minutes
+- Le flux Stripe ne provoque plus de retries incontrôlés (toujours HTTP 200)
+- Les tests existants (StripeWebhookSecurityTest) mis à jour : `test_rejects_old_event_timestamp` → `test_accepts_old_event_timestamp`
+
+**Fichiers** :
+- `app/Modules/Infrastructure/Webhooks/Http/PaymentWebhookController.php` (modifié — suppression stale rejection, dead letter write)
+- `app/Core/Billing/BillingWebhookDeadLetter.php` (créé)
+- `app/Core/Billing/BillingExpectedConfirmation.php` (créé)
+- `database/migrations/2026_03_05_200001_create_billing_webhook_dead_letters_table.php` (créé)
+- `database/migrations/2026_03_05_200002_create_billing_expected_confirmations_table.php` (créé)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — expected confirmation write points, recovery helpers, 3 retrieve wrappers)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (modifié — resolveExpectedConfirmation)
+- `app/Console/Commands/BillingRecoverWebhooksCommand.php` (créé)
+- `app/Console/Commands/BillingWebhookReplayCommand.php` (créé)
+- `routes/console.php` (modifié — scheduler recover-webhooks every 10min)
+- `tests/Feature/StripeWebhookSecurityTest.php` (modifié — old event test)
+- `tests/Feature/BillingAdr228Test.php` (créé — 8 tests)
+
+---
+
+## ADR-229 — Checkout Session Lifecycle & Triple Recovery
+
+**Date** : 2026-03-05
+**Statut** : Implémenté
+
+**Contexte** :
+Le checkout Stripe créait une souscription `pending_payment` et redirigeait vers Stripe, mais ne traçait pas localement la session Checkout. Si le webhook `checkout.session.completed` échouait (réseau, crash, dead letter non rejouée), la souscription restait bloquée en `pending_payment` indéfiniment. Le code d'activation était dupliqué dans le webhook handler, empêchant toute réutilisation.
+
+**Décisions** :
+- D1 : Table `billing_checkout_sessions` — suivi local de chaque session Checkout avec UNIQUE(provider_key, provider_session_id). Write point dans `StripePaymentAdapter::createCheckout()`.
+- D2 : `CheckoutSessionActivator` — service partagé, fully idempotent (lockForUpdate + status check). Appelable depuis trois chemins indépendants.
+- D3 : Triple Recovery — trois chemins indépendants pour activer une souscription :
+  - Leg 1 : Webhook `checkout.session.completed` (via StripeEventProcessor, délégué au shared activator)
+  - Leg 2 : Polling UI `GET /billing/checkout/status?session_id=cs_xxx` (page succès interroge le backend)
+  - Leg 3 : Cron `billing:recover-checkouts` (toutes les 10 min, sessions > 10 min en statut `created`)
+- D4 : ActivationResult DTO — `{activated, reason, idempotent}` pour distinguer activation réelle vs noop idempotent.
+- D5 : Le `CheckoutStatusController` vérifie l'appartenance company (403 si session étrangère) et utilise le cache local avant de poller Stripe.
+
+**Conséquences** :
+- Une souscription `pending_payment` ne peut plus rester bloquée — trois chemins convergent vers l'activation
+- L'activation est idempotente quel que soit le nombre de legs qui se déclenchent
+- Le code d'activation est centralisé (DRY) — un seul point à maintenir
+- La page succès peut afficher un résultat immédiat via polling sans attendre le webhook
+
+**Fichiers** :
+- `database/migrations/2026_03_05_300001_create_billing_checkout_sessions_table.php` (créé)
+- `app/Core/Billing/BillingCheckoutSession.php` (créé)
+- `app/Core/Billing/CheckoutSessionActivator.php` (créé)
+- `app/Core/Billing/ActivationResult.php` (créé)
+- `app/Modules/Core/Billing/Http/CheckoutStatusController.php` (créé)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — write point checkout session)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` (modifié — délégation au shared activator)
+- `app/Console/Commands/BillingRecoverCheckoutsCommand.php` (créé)
+- `routes/company.php` (modifié — route polling)
+- `routes/console.php` (modifié — scheduler recover-checkouts every 10min)
+- `tests/Feature/BillingAdr229Test.php` (créé — 7 tests)
+
+---
+
+## ADR-233 — Billing Cron Resilience (Heartbeats + Ops Status)
+
+**Date** : 2026-03-05
+**Statut** : Implémenté
+
+**Contexte** :
+Les commandes billing cron (`billing:renew`, `billing:recover-webhooks`, `billing:recover-checkouts`) tournaient sans aucune observabilité. Impossible de savoir si un job avait tourné, quand, avec quel résultat. Aucun mécanisme de détection d'anomalies opérationnelles.
+
+**Décisions** :
+- D1 : Table `billing_job_heartbeats` avec PK = `job_key` (string). Helpers statiques `start(key)` et `finish(key, status, stats, error)` — idempotent via `updateOrCreate`.
+- D2 : Instrumentation de toutes les commandes billing critiques : `billing:renew`, `billing:recover-webhooks`, `billing:recover-checkouts` — `BillingJobHeartbeat::start()` au début, `finish()` à la fin.
+- D3 : Politique catch-up vérifiée — toutes les commandes utilisent des requêtes `<= now()` (pas d'égalité), garantissant le rattrapage automatique si un cron tourne en retard.
+- D4 : Commande `billing:ops-status` — dashboard opérationnel avec heartbeats + compteurs d'anomalies (checkouts stale > 1h, confirmations overdue, dead letters pending, invoices overdue, subs past_due/suspended). Exit code 0 = OK, 1 = anomalies.
+
+**Conséquences** :
+- Chaque exécution de job billing est tracée avec horodatage, statut et statistiques
+- La commande `billing:ops-status` permet un monitoring rapide de la santé billing
+- Les anomalies sont détectées automatiquement (exit code 1 pour intégration monitoring)
+- Le catch-up est intrinsèque — un cron en retard rattrape tout automatiquement
+
+**Fichiers** :
+- `database/migrations/2026_03_05_300002_create_billing_job_heartbeats_table.php` (créé)
+- `app/Core/Billing/BillingJobHeartbeat.php` (créé)
+- `app/Console/Commands/BillingOpsStatusCommand.php` (créé)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — heartbeat)
+- `app/Console/Commands/BillingRecoverWebhooksCommand.php` (modifié — heartbeat)
+- `app/Console/Commands/BillingRecoverCheckoutsCommand.php` (modifié — heartbeat)
+- `tests/Feature/BillingAdr233Test.php` (créé — 5 tests)
+
+---
+
+## ADR-232 — Subscription State Machine Guard
+
+**Date** : 2026-03-05
+**Statut** : Implémenté
+
+**Contexte** :
+Le modèle `Subscription` acceptait n'importe quelle valeur de `status` et n'importe quelle transition sans validation. Des transitions invalides (ex: `cancelled → active`, `active → trialing`) pouvaient passer silencieusement. L'invariant `is_current=1` n'était pas vérifié par rapport au statut — un bug pouvait créer un abonnement `cancelled` avec `is_current=1`, corrompant la logique métier.
+
+**Décisions** :
+- D1 : Constantes `STATES` et `TRANSITIONS` dans le modèle Subscription — carte exhaustive des transitions autorisées. États terminaux (`cancelled`, `expired`) sans transitions sortantes.
+- D2 : Guard dans `saving` event (model boot) — vérifie transitions + invariants :
+  - Transitions : sur `update` quand `status` change, vérifie `TRANSITIONS[old] contains new`
+  - Invariant 1 : `is_current=1` uniquement pour `trialing`, `active`, `past_due`
+  - Invariant 2 : `status` doit appartenir à `STATES`
+  - Comportement : `throw InvalidSubscriptionTransition` en test/local, `Log::critical` en prod
+- D3 : Méthodes de transition sur le modèle : `markActive()`, `markTrialing($date)`, `markPastDue()`, `markSuspended()`, `markCancelled()`, `markExpired()` — encapsulent les mises à jour status + is_current.
+- D4 : Le guard ne s'applique qu'aux opérations modèle (Eloquent save/update). Les mises à jour Query Builder (mass updates) contournent volontairement le guard — c'est le comportement Laravel standard.
+
+**Conséquences** :
+- Les transitions invalides sont bloquées (throw en dev/test, log critique en prod)
+- Les invariants `is_current` sont protégés dès la création du modèle
+- Les tests existants qui violaient la machine d'état ont été corrigés (BillingEngineAuditTest, PlanChangeExecutorTest)
+- Les méthodes de transition facilitent l'adoption progressive — le code existant continue de fonctionner
+
+**Fichiers** :
+- `app/Core/Billing/Subscription.php` (modifié — STATES, TRANSITIONS, booted guard, transition methods)
+- `app/Core/Billing/Exceptions/InvalidSubscriptionTransition.php` (créé)
+- `tests/Feature/BillingAdr232Test.php` (créé — 21 tests)
+- `tests/Feature/BillingEngineAuditTest.php` (modifié — test setup trialing)
+- `tests/Feature/PlanChangeExecutorTest.php` (modifié — test setup trialing)
+
+---
+
+## ADR-234 — Billing Production Hardening
+
+**Date** : 2026-03-05
+**Statut** : Implémenté
+
+**Contexte** :
+Après l'implémentation ADR-228/229/232/233, il manquait : un runbook opérationnel, des tests de scénarios staging (triple recovery end-to-end), la couverture heartbeat sur les commandes dunning et reconcile, et des corrections mineures (canal de log, test dead letter ops-status).
+
+**Décisions** :
+- D1 : Runbook production (`docs/runbooks/billing-production.md`) — invariants business, procédures incident, commandes, acceptance checklist.
+- D2 : Scénarios staging automatisés (`BillingTripleRecoveryTest`) — 5 scénarios : webhook lost + polling, webhook lost + cron, triple trigger idempotent, concurrent activations serialized, polling after cron cached.
+- D3 : Heartbeat ajouté à `billing:process-dunning` et `billing:reconcile` — toutes les commandes schedulées sont désormais monitorées.
+- D4 : Canal log corrigé dans `BillingRenewCommand` (ligne 76 : `Log::error` → `Log::channel('billing')->error`).
+- D5 : Log idempotent noop ajouté dans `CheckoutSessionActivator` pour distinguer activation réelle vs noop.
+- D6 : 3 tests ajoutés à `BillingAdr233Test` : dead letters pending → exit 1, process-dunning heartbeat, failed heartbeat → exit 1.
+
+**Conséquences** :
+- Ops ont un runbook complet pour la production billing
+- Triple recovery validé end-to-end par tests automatisés
+- 5 commandes schedulées couvertes par heartbeat (renew, dunning, reconcile, recover-webhooks, recover-checkouts)
+- Canal billing log cohérent sur toutes les commandes
+
+**Fichiers** :
+- `docs/runbooks/billing-production.md` (créé)
+- `docs/runbooks/staging-scenarios.md` (créé)
+- `tests/Feature/BillingTripleRecoveryTest.php` (créé — 5 tests)
+- `tests/Feature/BillingAdr233Test.php` (modifié — 3 tests ajoutés)
+- `app/Console/Commands/ProcessDunningCommand.php` (modifié — heartbeat)
+- `app/Console/Commands/BillingReconcileCommand.php` (modifié — heartbeat)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — log channel fix)
+- `app/Core/Billing/CheckoutSessionActivator.php` (modifié — log noop)
+
+---
+
+## ADR-235 — Market Based Billing Currency
+
+**Date** : 2026-03-05
+
+**Contexte** :
+LeeZR supporte plusieurs markets avec des currencies différentes (FR=EUR, GB=GBP). Or le billing utilisait une currency hardcodée ('EUR') ou `config('app.currency')` à de multiples endroits : WalletLedger, ModuleQuoteCalculator, StripePaymentAdapter checkout, CompanyBillingReadService overview/wallet. La policy "payments → currency" dans BillingConfigController contenait 'usd' par défaut — incohérent.
+
+L'architecture prévoit déjà : Company → market_key → Market.currency. Il fallait connecter cette chaîne au billing.
+
+**Décisions** :
+1. **Wallet** : `WalletLedger::ensureWallet()` utilise `$company->market->currency` comme currency (avec fallback `config('app.currency', 'EUR')`). Un wallet existant n'est jamais modifié.
+2. **Invoice** : `InvoiceIssuer::createDraft()` lit la currency depuis le wallet (transitif — déjà en place).
+3. **Quote** : `ModuleQuoteCalculator` utilise `WalletLedger::ensureWallet($company)->currency` au lieu de `config('app.currency')`.
+4. **Addon** : `AddonBillingListener` utilise `WalletLedger::ensureWallet($company)->currency` (déjà en place — transitif).
+5. **Stripe Checkout** : `StripePaymentAdapter::createCheckout()` utilise la currency du wallet au lieu de `'eur'` hardcodé.
+6. **Read Service** : `CompanyBillingReadService::overview()` et `wallet()` retournent la currency réelle du market/wallet.
+7. **Policy legacy** : champ `currency` supprimé de `BillingConfigController::POLICY_DEFAULTS` et de la validation `updatePolicies()`. La source de vérité est Market.currency.
+
+**Chaîne de dérivation** :
+```
+Company.market_key → Market.currency
+                   ↓
+        WalletLedger::ensureWallet() [création]
+                   ↓
+        CompanyWallet.currency
+                   ↓
+InvoiceIssuer → Invoice.currency → StripePaymentAdapter → Stripe API
+```
+
+**Conséquences** :
+- Le système supporte un SaaS multi-market multi-currency.
+- Pas de migration DB (la currency est dérivée à la création, pas stockée globalement).
+- Les wallets existants conservent leur currency (pas de re-derivation).
+- Les fallbacks défensifs `?? 'EUR'` dans LedgerService, StripeEventProcessor, CheckoutSessionActivator restent en place (sécurité — Stripe retourne la currency réelle).
+
+**Fichiers modifiés** :
+- `app/Core/Billing/WalletLedger.php` (ensureWallet + record)
+- `app/Core/Modules/Pricing/ModuleQuoteCalculator.php`
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (createCheckout)
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (overview + wallet)
+- `app/Modules/Platform/Billing/Http/BillingConfigController.php` (policies currency supprimé)
+- `tests/Feature/BillingCurrencyMarketTest.php` (créé — 9 tests)
+
+---
+
+## ADR-236 — Billing UX Simplification
+
+**Date** : 2026-03-05
+
+**Contexte** :
+L'interface de facturation company avait 4 onglets (Payment Methods, Invoices, Payments, Wallet) sans vue d'ensemble. L'utilisateur devait naviguer entre les onglets pour comprendre l'état de son abonnement. Côté platform, 9 onglets (dont Governance, Ledger, Forensics) rendaient la navigation complexe, sans tableau de bord synthétique ni vue de récupération.
+
+**Décisions** :
+
+**LOT UX-1 — Company Billing Overview** :
+1. **Endpoint enrichi** : `CompanyBillingReadService::overview()` retourne désormais `plan` (name, prices), `addons` (actifs), `trial` (days_remaining), `payment_method` (brand, last4, exp), `wallet_balance`, `outstanding_invoices/amount`, `currency`.
+2. **Composant `_BillingOverview.vue`** : 6 cartes — Current Plan, Next Billing, Payment Method, Wallet, Outstanding Invoices + alertes (payment issue, trial, cancellation pending).
+3. **Restructuration onglets** : Overview (défaut) → Invoices → Payment Methods. Suppression : Payments et Wallet (infos intégrées dans Overview).
+4. **Navigation** : Le lien sidebar Billing pointe désormais sur `overview` au lieu de `payment-methods`.
+
+**LOT UX-2 — Platform Billing Command Center** :
+1. **Endpoint `GET /platform/billing/recovery-status`** : Dead letters, stuck checkouts (>1h), overdue confirmations, overdue invoices, past-due subs, heartbeats, anomaly count, status.
+2. **Composant `_BillingDashboard.vue`** : KPI cards (MRR/ARR/Active/Trial/Addon/Churn) + System Health counters + alertes dynamiques.
+3. **Composant `_BillingRecovery.vue`** : Dead letters, stuck checkouts, overdue confirmations + heartbeats list + additional counters.
+4. **Restructuration** : Dashboard (défaut) → Subscriptions → Invoices → Dunning → Recovery + boutons Settings et Surveillance. Suppression des onglets principaux : Credit Notes, Payments, Wallets, Governance, Ledger, Forensics.
+5. **Page avancée "Surveillance"** : `/platform/billing/advanced/[tab]` — regroupe les 6 onglets retirés (Credit Notes, Payments, Wallets, Governance, Ledger, Forensics). Accessible via le bouton "Surveillance" (icône `tabler-device-analytics`, couleur warning) sur la page principale. Bouton retour vers la page billing principale.
+6. **Store** : `fetchRecoveryStatus()`, `_recoveryStatus`, `_recoveryLoading` ajoutés au platform billing store.
+
+**Contraintes respectées** :
+- Aucune modification de logique métier (lecture seule).
+- UI composée exclusivement de presets Vuexy (VCard, VAlert, VAvatar, VChip, VList, VRow/VCol).
+- i18n complet (en.json + fr.json).
+
+**Fichiers créés** :
+- `resources/js/pages/company/billing/_BillingOverview.vue`
+- `resources/js/pages/platform/billing/_BillingDashboard.vue`
+- `resources/js/pages/platform/billing/_BillingRecovery.vue`
+- `resources/js/pages/platform/billing/advanced/[tab].vue` (page Surveillance)
+- `tests/Feature/BillingOverviewEndpointTest.php` (8 tests)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (overview enrichi)
+- `app/Modules/Platform/Billing/Http/PlatformBillingController.php` (recoveryStatus)
+- `app/Modules/Core/Billing/CoreBillingModule.php` (nav link → overview)
+- `routes/platform.php` (recovery-status route)
+- `resources/js/pages/company/billing/[tab].vue` (3 tabs, overview default)
+- `resources/js/pages/platform/billing/index.vue` (5 tabs + boutons Surveillance et Settings)
+- `resources/js/modules/platform-admin/billing/billing.store.js` (fetchRecoveryStatus)
+- `resources/js/plugins/i18n/locales/en.json` (overview + dashboard + recovery + advanced keys)
+- `resources/js/plugins/i18n/locales/fr.json` (idem)
+
+---
+
+## ADR-237 : Billing Transparency UX — Next Invoice Preview
+
+- **Date** : 2026-03-05
+- **Contexte** : Les entreprises n'avaient aucune visibilité sur leur prochaine facture. Pas de détail plan + addons, pas d'estimation live sur la page plan, pas de colonnes estimées dans la vue platform admin.
+- **Décisions** :
+  - Endpoint `GET /billing/next-invoice-preview` : retourne currency, plan (name/price/interval), addons (name/price), total, next_billing_date, trial_remaining_days.
+  - Hero card "Prochaine Facture" dans BillingOverview : VList détaillé plan + addons + total.
+  - Trial UX : barre de progression + CTA "Ajouter moyen de paiement" si absent.
+  - Payment Failure UX : alerte rouge avec 2 boutons (Réessayer + Changer de moyen de paiement).
+  - Page Plan : carte "Prochaine facture estimée" sous la grille de plans.
+  - Platform Subscriptions : colonne "Est. Next" montrant le montant estimé (plan + addons) par abonnement.
+  - ReadModels enrichis : `CompanyBillingReadService::nextInvoicePreview()`, `PlatformBillingReadService::subscriptions()` avec estimated_next_amount.
+- **Conséquences** :
+  - Transparence facturation niveau SaaS leader.
+  - Preview calcule plan_price + addons server-side — cohérent avec la facturation réelle.
+  - Platform admin voit le revenu estimé par abonnement dans la table.
+  - 8 tests dans `BillingNextInvoicePreviewTest`.
+
+**Fichiers créés** :
+- `tests/Feature/BillingNextInvoicePreviewTest.php` (8 tests)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (nextInvoicePreview)
+- `app/Core/Billing/ReadModels/PlatformBillingReadService.php` (subscriptions avec estimated_next_amount)
+- `app/Modules/Core/Billing/Http/CompanyBillingController.php` (nextInvoicePreview endpoint)
+- `routes/company.php` (next-invoice-preview route)
+- `resources/js/modules/company/billing/billing.store.js` (fetchNextInvoicePreview)
+- `resources/js/pages/company/billing/_BillingOverview.vue` (hero card + trial + payment failure UX)
+- `resources/js/pages/company/plan.vue` (estimated invoice card)
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` (estimated_next_amount column)
+- `resources/js/plugins/i18n/locales/en.json` (nextInvoice + estimatedInvoice + estimatedNext keys)
+- `resources/js/plugins/i18n/locales/fr.json` (idem)
+
+---
+
+### ADR-238 — Billing Policy Realignment & Dead Code Cleanup (2026-03-07)
+
+- **Date** : 2026-03-07
+- **Contexte** :
+  - `admin_approval_required` était un switch mort stocké dans le JSON legacy `PlatformSetting.billing.policies` — jamais lu par aucun service de facturation.
+  - NullPaymentGateway créait TOUJOURS des abonnements `pending`, StripePaymentAdapter TOUJOURS auto-activait — indépendamment de la politique plateforme.
+  - Composants frontend orphelins (`_BillingPayments.vue`, `_BillingWallet.vue`), routes backend mortes, et actions store inutilisées.
+  - Devise EUR hardcodée dans 10+ fichiers billing backend.
+  - Onglet Payment Policies affichait des champs morts (`admin_approval_required`, `currency`).
+- **Décisions** :
+  - **LOT FIX-0** : Déplacer `admin_approval_required` vers `PlatformBillingPolicy` (colonne boolean, default=false). NullPaymentGateway et InternalPaymentAdapter lisent cette politique. Stripe ne requiert JAMAIS d'approbation après paiement.
+  - **LOT FIX-1** : Supprimer le code mort — 2 composants Vue orphelins, 4 routes backend, 4 méthodes controller/read-service, 5 state/getters/actions store.
+  - **LOT FIX-2** : Cohérence Platform ↔ Company — alertes pending approvals dans le dashboard billing, boutons approve/reject dans l'onglet subscriptions.
+  - **LOT FIX-3** : Nettoyer l'onglet Payment Policies — supprimer les champs `admin_approval_required` et `currency` du formulaire legacy.
+  - **LOT FIX-4** : Polish UX company billing — toast success/error sur retry invoice, correction CTA wallet, alerte pending non-fermable.
+  - **LOT FIX-5** : Centraliser la devise par défaut dans `config('billing.default_currency', 'EUR')` au lieu de hardcoder 'EUR' dans chaque fichier.
+- **Conséquences** :
+  - Comportement SaaS par défaut = entièrement automatique (admin_approval_required=false).
+  - Mode approbation manuelle disponible via toggle dans PlatformBillingPolicy.
+  - Stripe reste toujours auto-activate (pas d'approbation post-paiement).
+  - Code mort éliminé — surface de maintenance réduite.
+  - Devise configurable via `BILLING_DEFAULT_CURRENCY` env var.
+  - 10 tests dans `BillingAdminApprovalPolicyTest`.
+
+**Fichiers créés** :
+- `database/migrations/2026_03_06_100001_add_admin_approval_required_to_platform_billing_policies.php`
+- `tests/Feature/BillingAdminApprovalPolicyTest.php` (10 tests)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/PlatformBillingPolicy.php` — admin_approval_required fillable+cast
+- `app/Core/Billing/NullPaymentGateway.php` — policy-aware createCheckout
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` — policy-aware createCheckout
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — config currency fallback
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — config currency fallback (×2)
+- `app/Core/Billing/LedgerService.php` — config currency fallback (×4)
+- `app/Core/Billing/CheckoutSessionActivator.php` — config currency fallback
+- `app/Core/Billing/AutoRepairEngine.php` — config currency fallback (was critical hardcode)
+- `app/Core/Billing/ReconciliationEngine.php` — added stripe_currency to drift data
+- `app/Core/Billing/WalletLedger.php` — config currency fallback (×2)
+- `app/Core/Billing/Listeners/AddonCreditListener.php` — config currency fallback
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — removed dead methods (payments, wallet, paymentMethods, portalUrl)
+- `app/Modules/Core/Billing/Http/CompanyBillingController.php` — removed dead methods
+- `app/Modules/Platform/Billing/Http/PlatformBillingController.php` — pending_approvals count
+- `app/Modules/Platform/Billing/Http/BillingConfigController.php` — removed admin_approval_required from legacy policies
+- `config/billing.php` — added default_currency config
+- `routes/company.php` — removed 4 dead routes
+- `resources/js/modules/company/billing/billing.store.js` — removed dead state/getters/actions
+- `resources/js/modules/platform-admin/billing/billing.store.js` — removed dead policy defaults
+- `resources/js/pages/company/billing/_BillingInvoices.vue` — retry toast feedback
+- `resources/js/pages/company/billing/_BillingOverview.vue` — fixed wallet CTA
+- `resources/js/pages/company/plan.vue` — non-closable pending alert
+- `resources/js/pages/platform/billing/_BillingDashboard.vue` — pending approvals alert
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` — approve/reject actions
+- `resources/js/pages/platform/billing/index.vue` — switchTab event wiring
+- `resources/js/pages/platform/payments/_PaymentPoliciesTab.vue` — removed dead fields
+- `resources/js/plugins/i18n/locales/en.json` — new i18n keys
+- `resources/js/plugins/i18n/locales/fr.json` — new i18n keys
+
+**Fichiers supprimés** :
+- `resources/js/pages/company/billing/_BillingPayments.vue`
+- `resources/js/pages/company/billing/_BillingWallet.vue`
+
+---
+
+### ADR-238b — UX Billing : Payment Methods, SEPA, Billing Day, Invoice Retry (2026-03-07)
+
+- **Date** : 2026-03-07
+- **Contexte** :
+  - Setup-intent 500 quand Stripe mal configuré (pas de try-catch).
+  - Pas de gestion cartes (suppression, défaut) ni SEPA Direct Debit.
+  - Pas de choix date de prélèvement (billing anchor day).
+  - Pas de retry sur page facture détail.
+  - VCards billing overview non alignées.
+- **Décisions** :
+  - **P1** : Setup-intent try-catch + 422 (non configuré) / 503 (erreur Stripe).
+  - **P2** : DELETE /billing/saved-cards/{id} + PUT /billing/saved-cards/{id}/default — promotion automatique si suppression du default.
+  - **P3** : UI carte améliorée — picker carte/SEPA, boutons supprimer/défaut, dialog confirmation.
+  - **P4** : SEPA Direct Debit — adapter mandate_data, webhook polymorphe (card/sepa_debit), formulaire IBAN.
+  - **P5** : Billing anchor day — migration `billing_anchor_day`, endpoint PUT /billing/subscription/billing-day, AppSelect dans overview.
+  - **P6** : BillingRenewCommand aligne les périodes sur l'anchor day et prorate le prix pour les périodes de transition.
+  - **P7** : Bouton "Retry Payment" sur invoices/[id].vue pour les factures overdue.
+  - **P8** : VCards overview uniformisées (sm=6 md=4 lg=3, h-100).
+- **Conséquences** :
+  - 3 nouveaux endpoints company billing (delete card, set default, set billing day).
+  - SEPA via Stripe Elements v1 (IBAN Element).
+  - Proration automatique pour les périodes de transition anchor.
+  - 22 tests dans `BillingLotETest`.
+
+**Fichiers créés** :
+- `database/migrations/2026_03_07_100001_add_billing_anchor_day_to_subscriptions_table.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — P1+P2+P4b
+- `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — P5c
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — P2a+P4a (detach, SEPA setup)
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — P4c (SEPA webhook)
+- `app/Core/Billing/Subscription.php` — P5b (billing_anchor_day)
+- `app/Console/Commands/BillingRenewCommand.php` — P6 (anchor proration)
+- `routes/company.php` — P2d+P5d (3 routes)
+- `resources/js/modules/company/billing/billing.store.js` — P2+P4+P5 (actions)
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — P3+P4d (SEPA+cards)
+- `resources/js/pages/company/billing/_BillingOverview.vue` — P5e+P8 (billing day+grid)
+- `resources/js/pages/company/billing/invoices/[id].vue` — P7 (retry)
+- `resources/js/plugins/i18n/locales/en.json` — i18n
+- `resources/js/plugins/i18n/locales/fr.json` — i18n
+- `tests/Feature/BillingLotETest.php` — 22 tests
+
+## ADR-239 : Fallback multi-moyens de paiement dans le dunning
+
+- **Date** : 2026-03-07
+- **Contexte** : Le DunningEngine ne tentait qu'un seul moyen de paiement (charge client par défaut). Si la carte par défaut échouait, le wallet prenait le relais immédiatement, sans essayer la SEPA ou d'autres cartes enregistrées.
+- **Décisions** :
+  - D1 : Créer `PaymentMethodResolver` — résout les moyens ordonnés (default first, puis par id)
+  - D2 : `DunningEngine::attemptProviderPayment()` itère tous les moyens via `chargeInvoiceWithPaymentMethod()`, s'arrête au premier succès
+  - D3 : `StripePaymentAdapter::chargeInvoiceWithPaymentMethod()` — PaymentIntent avec PM explicite + confirm + off_session
+  - D4 : Logging structuré par tentative (method_key, is_default, succès/échec)
+  - D5 : UI info message quand >1 moyen de paiement enregistré
+- **Conséquences** : Si la carte décline, le SEPA est tenté automatiquement. Le wallet reste le dernier recours. Aucune modification de l'architecture globale — Core + Modules inchangés.
+
+**Fichiers créés** :
+- `app/Core/Billing/PaymentMethodResolver.php`
+
+**Fichiers modifiés** :
+- `app/Core/Billing/DunningEngine.php` — fallback multi-PM dans `attemptProviderPayment()`
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — `chargeInvoiceWithPaymentMethod()` + wrapper protégé
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — diagnostic logging setup-intent
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — VAlert fallback info
+- `resources/js/plugins/i18n/locales/en.json` — clé `fallbackInfo`
+- `resources/js/plugins/i18n/locales/fr.json` — clé `fallbackInfo`
+- `tests/Feature/BillingLotETest.php` — 3 tests fallback (25 total)
+
+## ADR-240 : Hardening défensif du flux SetupIntent
+
+- **Date** : 2026-03-07
+- **Contexte** : `/api/billing/setup-intent` renvoyait parfois le message générique `"An unexpected error occurred"` au lieu du message backend structuré. Cause : l'intercepteur `$api` (ofetch) affichait un toast hardcodé pour tous les 500+, ignorant le `message` du backend. De plus, l'adapter ne loggait pas les erreurs SDK avant de les propager.
+- **Décisions** :
+  - D1 : Controller — `Log::error` avec trace complète dans le catch `\Throwable`, au lieu de `Log::warning`
+  - D2 : Adapter — `resolveSecretKey()` protégé factorisé, `setApiKeyOrFail()` pour fail-fast, try/catch + `Log::error` autour du SDK call dans `createSetupIntent()` avec re-throw
+  - D3 : `api.js` — le handler 500+ utilise `response._data?.message` en priorité, fallback sur le message générique
+  - D4 : Frontend `_BillingPaymentMethods.vue` — extraction d'erreur enrichie (`e?.data?.message || e?.response?._data?.message || e?.message || fallback`)
+- **Conséquences** : Le message backend contrôlé (`"Payment service temporarily unavailable."` ou `"Payment provider not configured."`) est toujours affiché à l'utilisateur. Plus jamais de `"An unexpected error occurred"` pour les erreurs billing. Architecture inchangée.
+
+**Fichiers modifiés** :
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — Log::error + trace
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — resolveSecretKey(), setApiKeyOrFail(), try/catch+log dans createSetupIntent()
+- `resources/js/utils/api.js` — 500+ handler utilise backend message
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — extraction erreur enrichie
+- `tests/Feature/BillingLotETest.php` — +1 test SDK throw (26 total)
+
+---
+
+### ADR-241 — Stripe Environment Configuration System (2026-03-07)
+
+**Contexte** : Le module Stripe utilisait des clés à plat (`publishable_key`, `secret_key`) sans distinction test/live. Une clé restreinte (`mk_`) stockée en DB causait des 503 systématiques. L'admin n'avait aucun moyen de basculer entre environnements test et live.
+
+**Décisions** :
+1. **Credentials mode-based** — `module.json` définit des champs conditionnels (`test_publishable_key`, `live_secret_key`, etc.) avec `when_mode` pour la visibilité.
+2. **Model helpers** — `PlatformPaymentModule` expose `getStripeMode()`, `getStripePublishableKey()`, `getStripeSecretKey()`, `getConfigurationStatus()` avec fallback backward-compatible (clés plates si mode-based absentes).
+3. **Adapter resolution** — `StripePaymentAdapter.resolveSecretKey()` et `resolvePublishableKey()` passent par les helpers du module, puis fallback config.
+4. **Controller guard** — Validation format clé (`sk_test_` / `sk_live_`) avant tout appel Stripe. Erreur unifiée 422 "Stripe is not configured correctly."
+5. **Key format validation on save** — `PaymentModuleController.validateStripeKeyFormats()` vérifie les préfixes au moment de l'enregistrement des credentials.
+6. **Configuration status** — `PlatformPaymentGovernanceReadService` expose `configuration_status` (active/misconfigured/disabled) et `stripe_mode` dans le listing modules.
+7. **Admin UI** — Dialog credentials avec VSwitch TEST/LIVE, champs conditionnels, VAlert warning en mode LIVE. Badges mode + status configuration sur chaque module.
+
+**Conséquences** :
+- Un admin peut basculer test↔live sans perte de clés (chaque mode a ses propres champs)
+- Les erreurs de configuration sont détectées proactivement (misconfigured badge)
+- Plus aucun 503 pour cause de mauvaise clé : le controller refuse avant l'appel SDK
+- Backward-compatible : les installations avec clés plates continuent de fonctionner
+
+**Fichiers modifiés** :
+- `app/Core/Billing/PlatformPaymentModule.php` — helpers getStripeMode/Key/Status
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — resolveSecretKey/PublishableKey via module helpers
+- `app/Core/Billing/ReadModels/PlatformPaymentGovernanceReadService.php` — stripe_mode + configuration_status
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — format guard + module helpers
+- `app/Modules/Platform/Billing/Http/PaymentModuleController.php` — validateStripeKeyFormats()
+- `app/Modules/Payments/Stripe/module.json` — credential_fields mode-based avec when_mode
+- `resources/js/pages/platform/payments/_PaymentModulesTab.vue` — VSwitch TEST/LIVE, conditional fields, status badges
+- `resources/js/plugins/i18n/locales/en.json` — config_active/misconfigured/disabled, modeTest/modeLive, liveWarning
+- `resources/js/plugins/i18n/locales/fr.json` — traductions correspondantes
+- `tests/Feature/BillingLotETest.php` — +6 tests (mode, live, misconfigured, adapter, status, backward-compat)
+
+---
+
+### ADR-242 — Payment Method UX Hardening (2026-03-07)
+
+**Contexte** : L'UX paiement company avait 5 bugs critiques :
+1. Clés Stripe disparaissent après save/reopen du dialog admin (encrypted:array cast bypass)
+2. Carte enregistrée mais non affichée (race condition webhook)
+3. Formulaire carte demande le code postal (inutile en Europe)
+4. Pas de dédoublonnage carte (même carte ajoutée N fois)
+5. SEPA renvoie 503 générique sans message d'erreur réel
+
+**Décisions** :
+1. **encrypted:array cast** — `PaymentGovernanceCrudService` utilise `$module->credentials = $merged; $module->save();` au lieu de `->update()` qui bypass le cast. Backward-compat: masking mappe les anciennes clés plates vers les clés mode-préfixées.
+2. **Confirm synchrone** — Nouveau endpoint `POST /billing/confirm-setup-intent` appelé après `confirmCardSetup()`. Récupère le PM depuis Stripe, crée le `CompanyPaymentProfile` immédiatement. Le webhook reste un backup idempotent.
+3. **Postal code caché** — `hidePostalCode: true` dans les options Stripe Elements card.
+4. **Dédoublonnage fingerprint** — `confirmSetupIntent` vérifie si un profil avec le même fingerprint existe déjà. Si oui, détache le doublon et renvoie `{ duplicate: true }`.
+5. **SEPA erreurs Stripe** — `InvalidRequestException` retourne le message Stripe en 422. Les erreurs "Invalid API Key" retournent "Stripe is not configured correctly." en 503.
+6. **Controller split** — `CompanyPaymentSetupController` (setup-intent + confirm) séparé de `CompanyPaymentMethodController` (CRUD cards) pour respecter la limite 250 lignes.
+
+**Conséquences** :
+- Les clés admin sont persistées correctement et affichées au reopen
+- Les cartes apparaissent instantanément après enregistrement
+- Plus de code postal inutile sur le formulaire carte
+- Impossible d'ajouter la même carte deux fois (détection fingerprint)
+- Les erreurs SEPA montrent le vrai message Stripe
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Billing/PaymentGovernanceCrudService.php` — setter + save() au lieu de update()
+- `app/Core/Billing/ReadModels/PlatformPaymentGovernanceReadService.php` — backward-compat flat→mode keys
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — CRUD only, split
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — confirmSetupIntent, hidePostalCode, dedup UX
+- `resources/js/modules/company/billing/billing.store.js` — confirmSetupIntent action
+- `routes/company.php` — confirm-setup-intent route
+
+**Fichiers créés** :
+- `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` — setup-intent + confirm + formatProfile
+
+---
+
+### ADR-243 — Affichage réaliste des moyens de paiement (2026-03-07)
+
+**Contexte** : L'affichage des moyens de paiement était une simple VList avec des icônes Tabler. L'utilisateur veut un rendu réaliste imitant une carte physique (carte bleue) et un RIB bancaire (SEPA).
+
+**Décisions** :
+1. **Carte physique SVG** — VCard avec gradient par réseau (Visa bleu, Mastercard dark, Amex bleu), logos SVG inline (cercles Mastercard, texte VISA/AMEX), puce EMV dorée CSS, numéro masqué monospace, expiration, pays émetteur. Proportions réelles (aspect-ratio 1.586:1).
+2. **Metadata enrichie** — `extractProfileData()` et webhook `handleSetupIntentSucceeded()` extraient désormais `country` (pays émetteur) et `funding` (credit/debit/prepaid) de `$pm->card`.
+3. **SEPA RIB-style** — VCard bordered avec nom de banque résolu, BIC, pays, IBAN masqué monospace.
+4. **BicRegistry** — Classe statique `App\Core\Billing\BicRegistry` avec lookup des 25+ banques européennes courantes (BIC 4 chars → nom). Résolution dans `formatProfile()`.
+5. **SVG only** — Aucun PNG pour les logos réseau. Les logos sont des SVG inline directement dans le template Vue.
+
+**Conséquences** :
+- Affichage visuel riche des cartes et SEPA
+- Les IBAN SEPA affichent le nom de la banque (ex: "BNP Paribas" au lieu de "BNPA")
+- Les cartes montrent le type (CREDIT/DEBIT) et le pays émetteur
+- Pas de dépendance externe pour les logos (tout inline SVG)
+
+**Fichiers créés** :
+- `app/Core/Billing/BicRegistry.php` — Lookup BIC → nom de banque
+
+**Fichiers modifiés** :
+- `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` — +country, +funding, +bank_code, +bank_name
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — +country, +funding dans metadata card
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — Refonte complète SVG
+
+---
+
+### ADR-244 — LOT BILL-FINAL-1 : Correction des périodes hardcodées (2026-03-07)
+
+**Contexte** : L'audit billing a révélé que les durées de période étaient hardcodées (`addDays(30)`, `addDays(365)`, `addYear()` sans vérifier l'interval) dans 7 fichiers. Bug critique : `ApproveSubscriptionUseCase` utilisait `addYear()` pour TOUS les abonnements approuvés, donnant 12 mois à un abonnement mensuel. `RegisterCompanyUseCase` idem pour les plans gratuits. Les périodes 30/365 jours causaient des dérives progressives des dates de facturation (février = 28j, mois de 31j).
+
+**Décisions** :
+1. Remplacer tous les `addDays(30)` par `addMonth()` et `addDays(365)` par `addYear()` (Carbon natif)
+2. Remplacer `addYear()` non-conditionnel par `$interval === 'yearly' ? addYear() : addMonth()`
+3. Aucun helper abstrait — inline simple dans chaque fichier pour clarté
+
+**Conséquences** :
+- Les abonnements mensuels approuvés durent 1 mois (pas 1 an)
+- Les dates de facturation suivent le calendrier réel (28 fév → 28 mars, 31 jan → 28 fév)
+- Plus de dérive sur les mois de longueur variable
+- Toutes les souscriptions existantes conservent leurs dates actuelles (correction prospective)
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Billing/UseCases/ApproveSubscriptionUseCase.php` — interval-aware period
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — interval-aware free plan period
+- `app/Core/Billing/NullPaymentGateway.php` — addMonth()/addYear()
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` — addMonth()/addYear()
+- `app/Core/Billing/CheckoutSessionActivator.php` — addMonth()/addYear() + invoice period
+- `app/Core/Billing/PlanChangeExecutor.php` — addMonth()/addYear() for deferred execution
+- `app/Console/Commands/BillingRenewCommand.php` — addMonth()/addYear() fallback (anchor day path already correct)
+
+---
+
+### ADR-245 — LOT BILL-FINAL-2 : Preview Engine honnête (taxe + wallet + estimate) (2026-03-07)
+
+**Contexte** : L'audit billing a révélé que `nextInvoicePreview()` ne montrait que plan + addons (sous-total brut), sans taxe, sans wallet credit, et sans distinction "estimation". Le client voyait 100€ mais pouvait être facturé 120€ (TVA 20%) ou 70€ (wallet credit 50€). De plus, la barre de progression trial hardcodait 14 jours. Les addons dans `overview()` n'incluaient pas les noms de modules.
+
+**Décisions** :
+1. **Preview enrichie** — `nextInvoicePreview()` calcule désormais `subtotal`, `tax_amount` (via TaxResolver), `total`, `wallet_balance`, `estimated_wallet_credit` (même logique que InvoiceIssuer::finalize), `estimated_amount_due`, avec flag `is_estimate: true`
+2. **Overview addons enrichis** — `overview()` batch-load les noms de modules via PlatformModule
+3. **Trial total_days** — `overview()` renvoie `trial.total_days` depuis le Plan model (plus de hardcode 14)
+4. **Frontend aligné** — _BillingOverview.vue et plan.vue affichent désormais : sous-total, taxe (si > 0 avec %), wallet credit (si > 0 en vert), montant estimé à payer, disclaimer "estimation"
+5. **Terminologie** — "Next Invoice" → "Estimated Next Invoice", "Total" → "Estimated amount due"
+
+**Conséquences** :
+- Le client voit un montant réaliste intégrant taxe et wallet credit
+- Le disclaimer informe que le montant final peut varier
+- La barre de progression trial fonctionne pour tous les plans (pas seulement trial_days=14)
+- Même pipeline de calcul que InvoiceIssuer (source de vérité unique)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — preview enrichie + overview addons + trial total_days
+- `resources/js/pages/company/billing/_BillingOverview.vue` — tax + wallet + amount_due + trial fix
+- `resources/js/pages/company/plan.vue` — estimatedInvoice enrichi + template tax/wallet/amount_due
+- `resources/js/plugins/i18n/locales/en.json` — subtotal, tax, walletCredit, estimatedAmountDue, estimateDisclaimer
+- `resources/js/plugins/i18n/locales/fr.json` — traductions correspondantes
+
+---
+
+### ADR-246 — LOT BILL-FINAL-6 : Addons alignment (interval sync + cancel cleanup + invoice labels) (2026-03-07)
+
+**Contexte** : L'audit billing a révélé 3 problèmes liés aux addons :
+1. Quand une company change de plan ou d'intervalle (monthly↔yearly), les `CompanyAddonSubscription` actifs ne suivaient pas — interval et montant restaient sur l'ancien plan
+2. Quand une subscription était annulée en mode `immediate`, les addons restaient "actifs" (deactivated_at = null) — orphelins sans abonnement parent
+3. Les factures de renouvellement affichaient `"Addon: tracking"` (clé technique) au lieu du nom lisible du module
+
+**Décisions** :
+1. **Addon sync on plan change** — `PlanChangeExecutor::execute()` appelle désormais `syncAddonSubscriptions()` après mise à jour de la subscription. Pour chaque addon actif, recalcule `amount_cents` via `ModuleQuoteCalculator::computeAmount()` et aligne `interval` sur le nouvel intervalle (yearly = monthly × 12)
+2. **Addon deactivation on cancel** — `SubscriptionCanceller::cancel()` en mode `immediate` positionne `deactivated_at = now()` sur tous les addons actifs de la company (avec log)
+3. **Addon invoice labels** — `BillingRenewCommand` résout les noms de modules via batch `PlatformModule::whereIn()` et affiche `"Addon: Tracking"` au lieu de `"Addon: tracking"` (clé technique)
+
+**Conséquences** :
+- Un changement monthly→yearly recalcule automatiquement les montants addon (ex: 10€/mois → 120€/an)
+- Un downgrade de plan recalcule les addons selon la grille tarifaire du nouveau plan
+- Une annulation immédiate nettoie les addons — pas d'orphelins
+- Les factures affichent des noms lisibles pour les clients
+- La méthode `syncAddonSubscriptions()` est privée et transactionnelle (appelée dans le transaction de execute)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/PlanChangeExecutor.php` — +syncAddonSubscriptions() private method, called in execute()
+- `app/Core/Billing/SubscriptionCanceller.php` — +addon deactivation on immediate cancel
+- `app/Console/Commands/BillingRenewCommand.php` — +PlatformModule import, batch name resolution for addon invoice lines
+
+---
+
+### ADR-247 — LOT BILL-FINAL-5 : Plan Change Transparency (preview endpoint + proration UI) (2026-03-07)
+
+**Contexte** : Quand un utilisateur cliquait "Upgrade" ou "Downgrade", il voyait un simple ConfirmDialog ("Submit an upgrade request for the X plan?") sans aucune information financière : pas de proration, pas de tax, pas de wallet credit, pas de montant à payer. L'utilisateur découvrait le montant seulement à la facturation — inacceptable pour un SaaS commercial.
+
+**Décisions** :
+1. **Endpoint preview** — `GET /billing/plan-change-preview?to_plan_key=X&to_interval=Y` retourne un aperçu complet : from_plan, to_plan, timing (immediate/end_of_period), proration (credit/charge/net/days), addon impact (recalcul par plan), immediate due (subtotal/tax/wallet/amount_due), next period preview
+2. **ReadService method** — `CompanyBillingReadService::planChangePreview()` utilise exactement les mêmes calculs que `PlanChangeExecutor` (ProrationCalculator, ModuleQuoteCalculator, TaxResolver, WalletLedger)
+3. **Custom preview dialog** — Remplace le ConfirmDialog générique par un VDialog riche qui affiche : plan actuel → nouveau plan, timing, proration détaillée (crédit ancien plan, charge nouveau plan, net), addon impact, montant dû maintenant (subtotal/tax/wallet/amount_due), prochaine période récurrente
+4. **Preview-first flow** — Le bouton plan déclenche d'abord `fetchPlanChangePreview()`, affiche le dialog avec loading state, puis l'utilisateur confirme en connaissance de cause
+5. **Store enrichi** — `billing.store.js` ajoute `fetchPlanChangePreview()` et `clearPlanChangePreview()`
+
+**Conséquences** :
+- L'utilisateur voit le coût exact AVANT de confirmer un changement de plan
+- La proration est transparente : crédit pour les jours non utilisés de l'ancien plan, charge pour les jours restants du nouveau plan
+- Les addons sont recalculés selon le nouveau plan (ex: addon pricing plan_flat)
+- Le wallet credit est pris en compte dans le montant à payer
+- Pour les end_of_period, un message clair indique "aucun frais maintenant"
+- i18n complet (en + fr) avec 27 clés de traduction
+
+**Fichiers modifiés** :
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — +planChangePreview() method
+- `app/Modules/Core/Billing/Http/CompanyBillingController.php` — +planChangePreview() endpoint
+- `routes/company.php` — +GET /billing/plan-change-preview
+- `resources/js/modules/company/billing/billing.store.js` — +fetchPlanChangePreview(), +clearPlanChangePreview()
+- `resources/js/pages/company/plan.vue` — custom VDialog with proration breakdown, replaces ConfirmDialog
+- `resources/js/plugins/i18n/locales/en.json` — +27 planChangePreview keys
+- `resources/js/plugins/i18n/locales/fr.json` — +27 planChangePreview keys
+
+---
+
+## ADR-248 : Plan page toggle — initialisation depuis l'abonnement
+
+**Date** : 2026-03-07
+**Contexte** : Le toggle mensuel/annuel de la page plan était hardcodé à `true` (annuel) au lieu de refléter l'intervalle de l'abonnement courant.
+**Décision** : Après le fetch de la subscription dans `onMounted`, initialiser `annualToggle` depuis `billingStore.subscription.interval`.
+**Conséquences** : Le toggle affiche le bon état dès le chargement.
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/plan.vue` — init toggle depuis subscription.interval
+
+---
+
+## ADR-249 : Cancel subscription UI
+
+**Date** : 2026-03-07
+**Contexte** : Le backend `PUT /billing/subscription/cancel` existait (SubscriptionCanceller + SubscriptionMutationController) mais aucune UI ne permettait à la company de résilier.
+**Décision** :
+- Ajout d'un bouton "Résilier" dans la carte Current Plan de `_BillingOverview.vue`
+- Confirmation via VDialog avant appel API
+- Action `cancelSubscription()` dans le store billing avec idempotency key auto-générée
+- Bouton visible uniquement si subscription active/trialing et pas déjà en cancel_at_period_end
+- Message différent selon timing (immediate vs end_of_period, déterminé par PlatformBillingPolicy)
+
+**Conséquences** : Les companies peuvent résilier leur abonnement en self-service.
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/billing/_BillingOverview.vue` — +cancel button, +confirmation dialog, +canCancel computed
+- `resources/js/modules/company/billing/billing.store.js` — +cancelSubscription() action
+- `resources/js/plugins/i18n/locales/fr.json` — +7 clés cancel
+
+---
+
+## ADR-250 : Billing snapshot enrichi via FieldDefinitionCatalog
+
+**Date** : 2026-03-07
+**Contexte** : Les factures n'avaient aucune donnée fiscale spécifique à la company. Le billing_snapshot capturait seulement company_name et market_key.
+**Décision** :
+- PAS de table dédiée — les données fiscales (legal_name, vat_number, siret, adresse) sont des dynamic fields du FieldDefinitionCatalog (scope: company)
+- Pays et régime TVA dérivés du market_key et legal_status (is_vat_applicable, vat_rate)
+- InvoiceIssuer.buildBillingSnapshot() lit les field_values + LegalStatus pour construire le snapshot gelé
+- Les champs billing manquants (legal_name, billing_address, billing_city, billing_postal_code, billing_email) seront ajoutés au catalog
+
+**Conséquences** :
+- Cohérence avec le système de fields existant (DynamicFormRenderer, FieldResolverService)
+- Les champs apparaissent dans les paramètres company via le rendu dynamique standard
+- Pas de duplication de données
+
+**Fichiers modifiés** :
+- `app/Core/Billing/InvoiceIssuer.php` — buildBillingSnapshot enrichi (lit field_values + LegalStatus)
+
+---
+
+## ADR-251 : Tax rate résolu depuis LegalStatus (market-driven billing)
+
+**Date** : 2026-03-07
+**Contexte** : Le billing engine utilisait `PlatformBillingPolicy.default_tax_rate_bps` (taux global fixe) pour toutes les companies. Le taux de TVA réel dépend du statut juridique de la company (ex: SAS = 20%, Auto-entrepreneur = exonéré), stocké dans `legal_statuses.is_vat_applicable` + `vat_rate`. La devise dépend du market (`markets.currency`).
+
+**Décision** :
+- Ajout de `TaxResolver::resolveRateBps(Company)` : résout le taux depuis LegalStatus, fallback sur le taux global platform
+- 3 points corrigés : `InvoiceIssuer::createDraft()`, `CompanyBillingReadService::nextInvoicePreview()`, `CompanyBillingReadService::planChangePreview()`
+- Billing snapshot enrichi : `currency`, `market_name`, `legal_status_name` ajoutés au snapshot gelé
+- LegalStatus lookup filtré par `market_key` (évite collision de clés entre markets)
+- 5 champs billing ajoutés au FieldDefinitionCatalog (company scope) : `legal_name`, `billing_address`, `billing_city`, `billing_postal_code`, `billing_email`
+
+**Conséquences** :
+- Un auto-entrepreneur (FR) paie 0% TVA, une SAS paie 20% — automatiquement
+- La devise est celle du market (EUR pour FR, GBP pour GB)
+- Le snapshot facture contient toutes les données comptables gelées
+- `default_tax_rate_bps` reste comme fallback si aucun statut juridique n'est défini
+
+**Fichiers modifiés** :
+- `app/Core/Billing/TaxResolver.php` — +resolveRateBps(Company) + imports LegalStatus/Company
+- `app/Core/Billing/InvoiceIssuer.php` — createDraft() utilise resolveRateBps + snapshot enrichi (currency, market_name, legal_status_name)
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — 2 usages de default_tax_rate_bps remplacés par resolveRateBps
+- `app/Core/Fields/FieldDefinitionCatalog.php` — +5 champs billing (legal_name, billing_address, billing_city, billing_postal_code, billing_email)
+- `tests/Feature/FieldDefinitionTest.php` — count 24→29
+
+---
+
+## ADR-252 : Fix Plan Change UX — timing policy, pending visibility, interval switch, cancel
+
+**Date** : 2026-03-07
+**Contexte** : Le système de changement de plan avait un bug racine : `confirmPlanChange()` dans `plan.vue` appelait `POST /billing/checkout` (crée une NOUVELLE souscription via InternalPaymentAdapter) au lieu de `POST /billing/plan-change` (utilise PlanChangeExecutor avec timing policy). Conséquences : les réglages platform (`upgrade_timing`, `downgrade_timing`) étaient ignorés, pas de PlanChangeIntent créé, pas de visibilité sur les changements en cours, impossible de changer d'intervalle (mensuel↔annuel), impossible d'annuler un changement programmé.
+
+**Décision** :
+- **Backend** :
+  - `currentSubscription()` enrichi avec `scheduled_change` (query PlanChangeIntent schedulé)
+  - Garde same-plan relaxée : bloque seulement si plan ET interval identiques (pas juste le plan)
+  - Changement d'intervalle seul (même plan) traité comme upgrade pour le timing
+  - Nouvel endpoint `DELETE /billing/plan-change` pour annuler un changement programmé
+  - `planChangePreview()` : même logique interval-change, retourne `is_interval_change`
+- **Frontend** :
+  - `confirmPlanChange()` utilise `POST /billing/plan-change` quand subscription existe, fallback `POST /billing/checkout` pour souscription initiale
+  - Switch d'intervalle : boutons "Passer en annuel" / "Passer en mensuel" quand même plan + intervalle différent
+  - VAlert avec changement programmé + bouton annuler dans plan.vue et _BillingOverview.vue
+  - Suppression de `hasPendingSubscription` local au profit de `scheduledChange` depuis le backend
+
+**Conséquences** :
+- Les timing policies platform sont respectées (upgrade=end_of_period, downgrade=immediate, etc.)
+- Un PlanChangeIntent est créé pour chaque changement → traçabilité complète
+- L'utilisateur voit le changement programmé et peut l'annuler
+- Le switch mensuel↔annuel fonctionne comme un plan change normal
+- Un nouveau changement annule automatiquement le précédent (logique PlanChangeExecutor existante)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — +scheduled_change dans currentSubscription + fix interval-change preview
+- `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — Fix same-plan guard + cancelPlanChange()
+- `app/Core/Audit/AuditAction.php` — +PLAN_CHANGE_CANCELLED
+- `routes/company.php` — +DELETE /billing/plan-change
+- `resources/js/pages/company/plan.vue` — Fix confirm endpoint + interval switch + scheduled change display + cancel
+- `resources/js/pages/company/billing/_BillingOverview.vue` — +scheduled change alert + cancel
+- `resources/js/modules/company/billing/billing.store.js` — +cancelScheduledPlanChange action
+- `resources/js/plugins/i18n/locales/fr.json` — +clés i18n plan change
+- `tests/Feature/SubscriptionMutationTest.php` — message assertion updated
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

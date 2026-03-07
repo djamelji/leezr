@@ -84,15 +84,20 @@ class StripeWebhookSecurityTest extends TestCase
         $response->assertStatus(400);
     }
 
-    public function test_rejects_old_event_timestamp(): void
+    public function test_accepts_old_event_timestamp(): void
     {
-        $payload = $this->stripePayload(['created' => time() - 600]);
+        // ADR-228: stale rejection removed — old events are accepted for recovery
+        $eventId = 'evt_old_'.uniqid();
+        $payload = $this->stripePayload(['id' => $eventId, 'created' => time() - 600]);
         $signature = $this->validSignatureHeader($payload);
 
         $response = $this->postStripeWebhook($payload, $signature);
 
-        $response->assertStatus(400);
-        $response->assertJson(['message' => 'Event too old.']);
+        $response->assertOk();
+        $this->assertDatabaseHas('webhook_events', [
+            'provider_key' => 'stripe',
+            'event_id' => $eventId,
+        ]);
     }
 
     public function test_rejects_missing_event_id(): void

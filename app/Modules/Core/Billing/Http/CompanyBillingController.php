@@ -4,6 +4,7 @@ namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Billing\Invoice;
 use App\Core\Billing\ReadModels\CompanyBillingReadService;
+use App\Core\Plans\PlanRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -44,26 +45,6 @@ class CompanyBillingController
         return response()->json(['invoice' => $invoice]);
     }
 
-    public function payments(Request $request): JsonResponse
-    {
-        $company = $request->attributes->get('company');
-
-        $perPage = (int) $request->input('per_page', 15);
-
-        return response()->json(
-            CompanyBillingReadService::payments($company, $perPage),
-        );
-    }
-
-    public function wallet(Request $request): JsonResponse
-    {
-        $company = $request->attributes->get('company');
-
-        return response()->json(
-            CompanyBillingReadService::wallet($company),
-        );
-    }
-
     public function subscription(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -73,22 +54,39 @@ class CompanyBillingController
         ]);
     }
 
-    public function paymentMethods(Request $request): JsonResponse
+    public function nextInvoicePreview(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
 
-        return response()->json([
-            'methods' => CompanyBillingReadService::availablePaymentMethods($company),
-        ]);
+        $preview = CompanyBillingReadService::nextInvoicePreview($company);
+
+        if (!$preview) {
+            return response()->json(['preview' => null]);
+        }
+
+        return response()->json(['preview' => $preview]);
     }
 
-    public function portalUrl(Request $request): JsonResponse
+    public function planChangePreview(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
 
-        return response()->json([
-            'url' => CompanyBillingReadService::portalUrl($company),
+        $validated = $request->validate([
+            'to_plan_key' => ['required', 'string', 'in:' . implode(',', PlanRegistry::keys())],
+            'to_interval' => ['sometimes', 'string', 'in:monthly,yearly'],
         ]);
+
+        $preview = CompanyBillingReadService::planChangePreview(
+            $company,
+            $validated['to_plan_key'],
+            $validated['to_interval'] ?? 'monthly',
+        );
+
+        if (!$preview) {
+            return response()->json(['message' => 'No active subscription or invalid plan.'], 422);
+        }
+
+        return response()->json(['preview' => $preview]);
     }
 
     public function invoicePdf(Request $request, int $id): Response

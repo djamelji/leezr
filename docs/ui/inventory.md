@@ -23,6 +23,47 @@
 | Wizards | 3 patterns | `resources/ui/presets/pages/templates/wizard-examples/` |
 | Front | 10 sections | `resources/ui/presets/front/` |
 
+## Patterns UI métier documentés
+
+### Payment Method Card (ADR-243)
+
+Pattern pour afficher un moyen de paiement (carte bancaire ou SEPA) dans une grille uniforme.
+
+**Source** : `CardSolid.vue` (couleur) + `AccountSettingsBillingAndPlans.vue` (info card) adaptés.
+
+**Grid** : `VCol cols="12" sm="6"` — 2 par ligne dès tablette.
+
+**Structure** :
+```vue
+<VCard flat border class="h-100">
+  <VCardItem>
+    <template #prepend>
+      <VIcon :icon="..." size="28" class="me-2" />  <!-- Sans fond, theme-aware -->
+    </template>
+    <VCardTitle>...</VCardTitle>
+    <template #append>
+      <!-- Chips + IconBtn actions -->
+    </template>
+  </VCardItem>
+  <VCardText class="pt-0">
+    <!-- Détails : numéro masqué monospace, expiry, domiciliation -->
+  </VCardText>
+</VCard>
+```
+
+**Règles** :
+- Icône sans VAvatar (pas de fond), couleur héritée du texte (dark/light automatique)
+- `h-100` pour hauteur uniforme dans la grille
+- Numéro masqué en `font-family: 'Courier New', monospace; letter-spacing: 1px`
+- Carte : brand icon Tabler + numéro + expiry + funding chip + pays
+- SEPA : bank icon + holder name + IBAN masqué + domiciliation (banque, BIC, pays)
+- Badge défaut : `VChip size="x-small" color="success" variant="tonal"`
+- Border primary si défaut : `:style="pm.is_default ? 'border-color: rgb(var(--v-theme-primary))' : ''"`
+
+**Fichier** : `resources/js/pages/company/billing/_BillingPaymentMethods.vue`
+
+---
+
 ## Statut d'extraction
 
 | Catégorie | Extraits | Restants |

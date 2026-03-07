@@ -8,9 +8,12 @@
         "supported_methods": ["card", "sepa_debit", "ideal", "bancontact"],
         "requires_credentials": true,
         "credential_fields": [
-            {"key": "publishable_key", "label": "Publishable Key", "type": "text", "required": true},
-            {"key": "secret_key", "label": "Secret Key", "type": "password", "required": true},
-            {"key": "webhook_secret", "label": "Webhook Secret", "type": "password", "required": true}
+            {"key": "mode", "label": "Environment", "type": "select", "options": ["test", "live"], "required": true},
+            {"key": "test_publishable_key", "label": "Test Publishable Key", "type": "text", "when_mode": "test", "hint": "Starts with pk_test_"},
+            {"key": "test_secret_key", "label": "Test Secret Key", "type": "password", "when_mode": "test", "hint": "Starts with sk_test_"},
+            {"key": "live_publishable_key", "label": "Live Publishable Key", "type": "text", "when_mode": "live", "hint": "Starts with pk_live_"},
+            {"key": "live_secret_key", "label": "Live Secret Key", "type": "password", "when_mode": "live", "hint": "Starts with sk_live_"},
+            {"key": "webhook_secret", "label": "Webhook Secret", "type": "password", "required": true, "hint": "Starts with whsec_"}
         ],
         "icon": "tabler-brand-stripe"
     }

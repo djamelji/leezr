@@ -11,6 +11,7 @@ use App\Modules\Platform\Billing\Http\PaymentModuleController;
 use App\Modules\Platform\Billing\Http\PaymentMethodRuleController;
 use App\Modules\Platform\Billing\Http\PlatformBillingPolicyController;
 use App\Modules\Platform\Billing\Http\PlatformFinancialController;
+use App\Modules\Platform\Billing\Http\PlatformBillingMetricsController;
 use App\Modules\Platform\Billing\Http\PlatformBillingWidgetsController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
@@ -214,6 +215,12 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         // Billing widgets (ADR-147 D4e)
         Route::get('/billing/widgets', [PlatformBillingWidgetsController::class, 'index']);
         Route::get('/billing/widgets/{key}', [PlatformBillingWidgetsController::class, 'show']);
+
+        // Billing metrics — MRR/ARR dashboard (ADR-227)
+        Route::get('/billing/metrics', PlatformBillingMetricsController::class);
+
+        // Recovery status — ADR-236
+        Route::get('/billing/recovery-status', [PlatformBillingController::class, 'recoveryStatus']);
     });
 
     // Dashboard engine (ADR-149 D4e.3)

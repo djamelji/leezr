@@ -92,6 +92,26 @@ const downloadPdf = async () => {
 const printInvoice = () => {
   window.print()
 }
+
+// ── Retry payment ──
+const { toast } = useAppToast()
+const isRetrying = ref(false)
+
+const retryPayment = async () => {
+  isRetrying.value = true
+  try {
+    const data = await store.retryInvoice(invoice.value.id)
+
+    toast(data?.message || t('companyBilling.invoiceDetail.retrySuccess'), data?.result === 'paid' ? 'success' : 'info')
+    await store.fetchInvoiceDetail(route.params.id)
+  }
+  catch {
+    toast(t('companyBilling.invoiceDetail.retryFailed'), 'error')
+  }
+  finally {
+    isRetrying.value = false
+  }
+}
 </script>
 
 <template>
@@ -428,6 +448,18 @@ const printInvoice = () => {
                 @click="printInvoice"
               >
                 {{ t('companyBilling.invoiceDetail.print') }}
+              </VBtn>
+
+              <VBtn
+                v-if="invoice.status === 'overdue' && invoice.amount_due > 0"
+                block
+                color="error"
+                prepend-icon="tabler-credit-card"
+                class="mt-4"
+                :loading="isRetrying"
+                @click="retryPayment"
+              >
+                {{ t('companyBilling.invoiceDetail.retryPayment') }}
               </VBtn>
             </VCardText>
           </VCard>

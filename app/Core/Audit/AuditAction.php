@@ -110,6 +110,7 @@ final class AuditAction
     public const WEBHOOK_PAYMENT_SYNCED = 'webhook.payment_synced';
     public const WEBHOOK_PAYMENT_FAILED = 'webhook.payment_failed';
     public const WEBHOOK_REFUND_SYNCED = 'webhook.refund_synced';
+    public const WEBHOOK_SETUP_INTENT_SYNCED = 'webhook.setup_intent_synced';
 
     // ─── Period Closing & Financial Controls (ADR-143 D3g) ──
     public const BILLING_PERIOD_CLOSED = 'billing.period_closed';
@@ -119,6 +120,7 @@ final class AuditAction
     // ─── Subscription mutations (ADR-135 D1) ────────────
     public const PLAN_CHANGE_REQUESTED = 'subscription.plan_change_requested';
     public const PLAN_CHANGE_EXECUTED = 'subscription.plan_change_executed';
+    public const PLAN_CHANGE_CANCELLED = 'subscription.plan_change_cancelled';
     public const CANCEL_REQUESTED = 'subscription.cancel_requested';
     public const CANCEL_EXECUTED = 'subscription.cancel_executed';
     public const PAID_NOW = 'subscription.paid_now';

@@ -5,6 +5,7 @@ import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = useCompanyBillingStore()
+const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const statusFilter = ref('')
@@ -84,6 +85,24 @@ const loadInvoices = async (page = 1) => {
 
 const onPageChange = page => {
   loadInvoices(page)
+}
+
+const retryingInvoiceId = ref(null)
+
+const retryInvoice = async invoice => {
+  retryingInvoiceId.value = invoice.id
+  try {
+    const result = await store.retryInvoice(invoice.id)
+
+    toast(result?.message || t('companyBilling.retrySuccess'), 'success')
+    await loadInvoices(store.invoicePagination.current_page)
+  }
+  catch {
+    toast(t('companyBilling.retryFailed'), 'error')
+  }
+  finally {
+    retryingInvoiceId.value = null
+  }
 }
 
 const downloadPdf = async invoice => {
@@ -191,13 +210,25 @@ watch(statusFilter, () => loadInvoices(1))
         </template>
 
         <template #item.actions="{ item }">
-          <IconBtn
-            size="small"
-            :title="t('companyBilling.invoiceDownloadPdf')"
-            @click="downloadPdf(item)"
-          >
-            <VIcon icon="tabler-download" />
-          </IconBtn>
+          <div class="d-flex gap-1 justify-center">
+            <IconBtn
+              size="small"
+              :title="t('companyBilling.invoiceDownloadPdf')"
+              @click="downloadPdf(item)"
+            >
+              <VIcon icon="tabler-download" />
+            </IconBtn>
+            <VBtn
+              v-if="item.status === 'overdue'"
+              size="small"
+              variant="tonal"
+              color="warning"
+              :loading="retryingInvoiceId === item.id"
+              @click="retryInvoice(item)"
+            >
+              {{ t('companyBilling.retryPayment') }}
+            </VBtn>
+          </div>
         </template>
 
         <template #bottom>

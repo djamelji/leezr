@@ -4,6 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Models\Company;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -64,9 +65,22 @@ class SubscriptionCanceller
             if ($timing === 'immediate') {
                 $subscription->update([
                     'status' => 'cancelled',
+                    'is_current' => null,
                     'cancel_at_period_end' => false,
                     'metadata' => $newMeta,
                 ]);
+
+                // Deactivate all active addons
+                $deactivated = CompanyAddonSubscription::where('company_id', $subscription->company_id)
+                    ->active()
+                    ->update(['deactivated_at' => now()]);
+
+                if ($deactivated > 0) {
+                    Log::channel('billing')->info('Addons deactivated on subscription cancel', [
+                        'company_id' => $subscription->company_id,
+                        'count' => $deactivated,
+                    ]);
+                }
             } else {
                 // end_of_period
                 $subscription->update([

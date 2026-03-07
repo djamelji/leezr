@@ -41,7 +41,7 @@ class LedgerService
             $base = [
                 'company_id' => $invoice->company_id,
                 'entry_type' => 'invoice_issued',
-                'currency' => strtoupper($invoice->currency ?? 'EUR'),
+                'currency' => strtoupper($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 'reference_type' => 'invoice',
                 'reference_id' => $invoice->id,
                 'correlation_id' => $correlationId,
@@ -88,7 +88,7 @@ class LedgerService
             $base = [
                 'company_id' => $payment->company_id,
                 'entry_type' => 'payment_received',
-                'currency' => strtoupper($payment->currency ?? 'EUR'),
+                'currency' => strtoupper($payment->currency ?? config('billing.default_currency', 'EUR')),
                 'reference_type' => 'payment',
                 'reference_id' => $payment->id,
                 'correlation_id' => $correlationId,
@@ -135,7 +135,7 @@ class LedgerService
             $base = [
                 'company_id' => $creditNote->company_id,
                 'entry_type' => 'refund_issued',
-                'currency' => strtoupper($creditNote->currency ?? 'EUR'),
+                'currency' => strtoupper($creditNote->currency ?? config('billing.default_currency', 'EUR')),
                 'reference_type' => 'credit_note',
                 'reference_id' => $creditNote->id,
                 'correlation_id' => $correlationId,
@@ -182,7 +182,7 @@ class LedgerService
             $base = [
                 'company_id' => $invoice->company_id,
                 'entry_type' => 'writeoff',
-                'currency' => strtoupper($invoice->currency ?? 'EUR'),
+                'currency' => strtoupper($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 'reference_type' => 'invoice',
                 'reference_id' => $invoice->id,
                 'correlation_id' => $correlationId,

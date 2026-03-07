@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
+import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -12,12 +13,15 @@ const headers = computed(() => [
   { title: t('platformBilling.planKey'), key: 'plan_key' },
   { title: t('platformBilling.interval'), key: 'interval' },
   { title: t('platformBilling.status'), key: 'status', width: '130px' },
+  { title: t('platformBilling.estimatedNext'), key: 'estimated_next_amount', align: 'end', width: '140px' },
   { title: t('platformBilling.currentPeriodEnd'), key: 'current_period_end' },
   { title: t('platformBilling.cancelAtPeriodEnd'), key: 'cancel_at_period_end', align: 'center', width: '120px' },
+  { title: t('platformBilling.actions'), key: 'actions', sortable: false, align: 'center', width: '160px' },
 ])
 
 const statusOptions = computed(() => [
   { title: t('platformBilling.filterAll'), value: '' },
+  { title: t('platformBilling.statusPending'), value: 'pending' },
   { title: t('platformBilling.statusActive'), value: 'active' },
   { title: t('platformBilling.statusTrialing'), value: 'trialing' },
   { title: t('platformBilling.statusPastDue'), value: 'past_due' },
@@ -27,6 +31,7 @@ const statusOptions = computed(() => [
 
 const statusColor = status => {
   const colors = {
+    pending: 'info',
     active: 'success',
     trialing: 'info',
     past_due: 'error',
@@ -39,6 +44,7 @@ const statusColor = status => {
 
 const statusLabel = status => {
   const map = {
+    pending: 'statusPending',
     active: 'statusActive',
     trialing: 'statusTrialing',
     past_due: 'statusPastDue',
@@ -48,6 +54,8 @@ const statusLabel = status => {
 
   return t(`platformBilling.${map[status] || status}`)
 }
+
+const actionLoading = ref({})
 
 const formatDate = dateStr => {
   if (!dateStr) return '—'
@@ -65,6 +73,38 @@ const load = async (page = 1) => {
   }
   finally {
     isLoading.value = false
+  }
+}
+
+const { toast } = useAppToast()
+
+const handleApprove = async item => {
+  actionLoading.value = { ...actionLoading.value, [item.id]: 'approve' }
+  try {
+    await store.approveSubscription(item.id)
+    toast(t('platformBilling.toasts.approveSuccess'), 'success')
+    await load(store.allSubscriptionsPagination.current_page)
+  }
+  catch {
+    toast(t('platformBilling.errorGeneric'), 'error')
+  }
+  finally {
+    delete actionLoading.value[item.id]
+  }
+}
+
+const handleReject = async item => {
+  actionLoading.value = { ...actionLoading.value, [item.id]: 'reject' }
+  try {
+    await store.rejectSubscription(item.id)
+    toast(t('platformBilling.toasts.rejectSuccess'), 'success')
+    await load(store.allSubscriptionsPagination.current_page)
+  }
+  catch {
+    toast(t('platformBilling.errorGeneric'), 'error')
+  }
+  finally {
+    delete actionLoading.value[item.id]
   }
 }
 
@@ -146,6 +186,12 @@ watch(statusFilter, () => load(1))
           </VChip>
         </template>
 
+        <template #item.estimated_next_amount="{ item }">
+          <span class="font-weight-medium">
+            {{ formatMoney(item.estimated_next_amount ?? 0) }}
+          </span>
+        </template>
+
         <template #item.current_period_end="{ item }">
           {{ formatDate(item.current_period_end) }}
         </template>
@@ -162,6 +208,38 @@ watch(statusFilter, () => load(1))
             v-else
             class="text-disabled"
           >{{ t('platformBilling.no') }}</span>
+        </template>
+
+        <template #item.actions="{ item }">
+          <div
+            v-if="item.status === 'pending'"
+            class="d-flex gap-1 justify-center"
+          >
+            <VBtn
+              size="small"
+              color="success"
+              variant="tonal"
+              :loading="actionLoading[item.id] === 'approve'"
+              :disabled="!!actionLoading[item.id]"
+              @click="handleApprove(item)"
+            >
+              {{ t('platformBilling.actionApprove') }}
+            </VBtn>
+            <VBtn
+              size="small"
+              color="error"
+              variant="tonal"
+              :loading="actionLoading[item.id] === 'reject'"
+              :disabled="!!actionLoading[item.id]"
+              @click="handleReject(item)"
+            >
+              {{ t('platformBilling.actionReject') }}
+            </VBtn>
+          </div>
+          <span
+            v-else
+            class="text-disabled"
+          >—</span>
         </template>
 
         <template #bottom>

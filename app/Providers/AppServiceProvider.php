@@ -79,6 +79,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\Dashboard\Listeners\InjectModuleWidgets::class,
         );
 
+        // ADR-224: Addon billing — invoice on enable, credit on disable
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Core\Events\ModuleEnabled::class,
+            \App\Core\Billing\Listeners\AddonBillingListener::class,
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Core\Events\ModuleDisabled::class,
+            \App\Core\Billing\Listeners\AddonCreditListener::class,
+        );
+
         // ADR-081: Remove Vite hot file outside local — prevents production
         // from loading dev server assets (:5173) if the file leaks.
         if (! $this->app->environment('local')) {

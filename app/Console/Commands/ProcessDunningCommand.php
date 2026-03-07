@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\DunningEngine;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -23,6 +24,8 @@ class ProcessDunningCommand extends Command implements Isolatable
 
     public function handle(): int
     {
+        BillingJobHeartbeat::start('billing:process-dunning');
+
         $this->info('Processing overdue invoices...');
 
         $stats = DunningEngine::processOverdueInvoices();
@@ -35,6 +38,8 @@ class ProcessDunningCommand extends Command implements Isolatable
         if ($stats['exhausted'] > 0) {
             $this->warn("{$stats['exhausted']} invoice(s) marked uncollectible — failure action applied.");
         }
+
+        BillingJobHeartbeat::finish('billing:process-dunning', $stats['exhausted'] > 0 ? 'failed' : 'ok', $stats);
 
         return self::SUCCESS;
     }

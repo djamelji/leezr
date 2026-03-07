@@ -59,12 +59,55 @@ class PaymentModuleController
             'credentials' => ['required', 'array'],
         ]);
 
-        $module = PaymentGovernanceCrudService::updateModuleCredentials($providerKey, $validated['credentials']);
+        $credentials = $validated['credentials'];
+
+        // Stripe-specific key format validation
+        if ($providerKey === 'stripe') {
+            $errors = static::validateStripeKeyFormats($credentials);
+
+            if (! empty($errors)) {
+                return response()->json(['message' => implode(' ', $errors)], 422);
+            }
+        }
+
+        $module = PaymentGovernanceCrudService::updateModuleCredentials($providerKey, $credentials);
 
         return response()->json([
             'message' => 'Credentials updated.',
             'has_credentials' => true,
         ]);
+    }
+
+    private static function validateStripeKeyFormats(array $creds): array
+    {
+        $errors = [];
+        $mode = $creds['mode'] ?? 'test';
+
+        $checks = [
+            'test' => [
+                'test_publishable_key' => 'pk_test_',
+                'test_secret_key' => 'sk_test_',
+            ],
+            'live' => [
+                'live_publishable_key' => 'pk_live_',
+                'live_secret_key' => 'sk_live_',
+            ],
+        ];
+
+        foreach ($checks[$mode] ?? [] as $field => $prefix) {
+            $value = $creds[$field] ?? '';
+
+            // Skip masked values (user didn't change them)
+            if (str_contains($value, '••••') || $value === '') {
+                continue;
+            }
+
+            if (! str_starts_with($value, $prefix)) {
+                $errors[] = "{$field} must start with {$prefix}.";
+            }
+        }
+
+        return $errors;
     }
 
     public function health(string $providerKey): JsonResponse

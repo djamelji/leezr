@@ -186,9 +186,17 @@ class PlanChangeExecutorTest extends TestCase
 
     public function test_end_of_trial_transitions_to_active(): void
     {
-        $this->subscription->update([
+        // Replace active subscription with a trialing one (ADR-232: active → trialing is forbidden)
+        $this->subscription->markCancelled();
+        $this->subscription = Subscription::create([
+            'company_id' => $this->company->id,
+            'plan_key' => 'pro',
+            'interval' => 'monthly',
             'status' => 'trialing',
+            'is_current' => 1,
             'trial_ends_at' => Carbon::parse('2026-03-20'),
+            'current_period_start' => Carbon::parse('2026-03-01'),
+            'current_period_end' => Carbon::parse('2026-03-31'),
         ]);
 
         Carbon::setTestNow(Carbon::parse('2026-03-10'));

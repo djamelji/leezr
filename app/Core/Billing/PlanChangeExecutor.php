@@ -3,9 +3,12 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Modules\Pricing\ModuleQuoteCalculator;
+use App\Core\Modules\PlatformModule;
 use App\Core\Plans\PlanRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -226,9 +229,10 @@ class PlanChangeExecutor
 
             // For end_of_period/end_of_trial execution, reset the period
             if ($intent->timing !== 'immediate') {
-                $periodLength = $intent->interval_to === 'yearly' ? 365 : 30;
                 $updateData['current_period_start'] = now();
-                $updateData['current_period_end'] = now()->addDays($periodLength);
+                $updateData['current_period_end'] = $intent->interval_to === 'yearly'
+                    ? now()->addYear()
+                    : now()->addMonth();
             }
 
             // If subscription was trialing and trial ended, switch to active
@@ -241,6 +245,9 @@ class PlanChangeExecutor
 
             // Update company plan_key
             $company->update(['plan_key' => $intent->to_plan_key]);
+
+            // Sync addon intervals when interval or plan changes
+            static::syncAddonSubscriptions($company, $intent->to_plan_key, $intent->interval_to);
 
             // Mark intent as executed
             $intent->update([
@@ -274,5 +281,45 @@ class PlanChangeExecutor
         }
 
         return $executed;
+    }
+
+    /**
+     * Sync active addon subscriptions when plan/interval changes.
+     *
+     * Recalculates addon amount_cents based on new plan and interval.
+     * Yearly addons = monthly price × 12.
+     */
+    private static function syncAddonSubscriptions(Company $company, string $planKey, string $interval): void
+    {
+        $activeAddons = CompanyAddonSubscription::where('company_id', $company->id)
+            ->active()
+            ->get();
+
+        if ($activeAddons->isEmpty()) {
+            return;
+        }
+
+        foreach ($activeAddons as $addon) {
+            $module = PlatformModule::where('key', $addon->module_key)->first();
+
+            if (! $module) {
+                continue;
+            }
+
+            $monthlyAmount = ModuleQuoteCalculator::computeAmount($module, $planKey);
+            $periodAmount = $interval === 'yearly' ? $monthlyAmount * 12 : $monthlyAmount;
+
+            $addon->update([
+                'interval' => $interval,
+                'amount_cents' => $periodAmount,
+            ]);
+
+            Log::channel('billing')->info('Addon synced on plan change', [
+                'company_id' => $company->id,
+                'module_key' => $addon->module_key,
+                'interval' => $interval,
+                'amount_cents' => $periodAmount,
+            ]);
+        }
     }
 }

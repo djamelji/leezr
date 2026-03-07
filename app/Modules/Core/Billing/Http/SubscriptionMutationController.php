@@ -19,21 +19,12 @@ use RuntimeException;
 /**
  * ADR-135 D1: Company subscription mutation endpoints.
  *
- * Zero business logic here — orchestration only:
- *   1. Validate input
- *   2. Enforce policy constraints
- *   3. Delegate to service
- *   4. Audit
- *   5. Return response
+ * Zero business logic — orchestration only:
+ * validate → policy → delegate → audit → respond.
  */
 class SubscriptionMutationController
 {
-    /**
-     * POST /billing/plan-change
-     *
-     * Policy-driven: timing derived from PlatformBillingPolicy.
-     * Source of truth: PlanChangeIntent (never direct subscription mutation).
-     */
+    /** POST /billing/plan-change */
     public function planChange(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -44,9 +35,7 @@ class SubscriptionMutationController
 
         $company = $request->attributes->get('company');
 
-        // Idempotency: if intent already exists for this key, return it directly
         $existingIntent = PlanChangeIntent::where('idempotency_key', $validated['idempotency_key'])->first();
-
         if ($existingIntent) {
             return response()->json([
                 'message' => $existingIntent->isExecuted() ? 'Plan change executed.' : 'Plan change scheduled.',
@@ -56,7 +45,6 @@ class SubscriptionMutationController
 
         $policy = PlatformBillingPolicy::instance();
 
-        // Verify active subscription exists
         $subscription = Subscription::where('company_id', $company->id)
             ->whereIn('status', ['active', 'trialing'])
             ->latest()
@@ -66,31 +54,30 @@ class SubscriptionMutationController
             return response()->json(['message' => 'No active subscription.'], 422);
         }
 
-        // Reject same-plan change
-        if ($subscription->plan_key === $validated['to_plan_key']) {
-            return response()->json(['message' => 'Already on this plan.'], 422);
+        $toInterval = $validated['to_interval'] ?? 'monthly';
+
+        if ($subscription->plan_key === $validated['to_plan_key']
+            && ($subscription->interval ?? 'monthly') === $toInterval) {
+            return response()->json(['message' => 'Already on this plan and interval.'], 422);
         }
 
-        // Derive timing from policy
+        $isIntervalChange = $subscription->plan_key === $validated['to_plan_key'];
         $isUpgrade = PlanRegistry::level($validated['to_plan_key'])
             > PlanRegistry::level($subscription->plan_key);
-        $policyTiming = $isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing;
 
-        // Audit: requested
-        $audit->logCompany(
-            $company->id,
-            AuditAction::PLAN_CHANGE_REQUESTED,
-            'subscription',
-            (string) $subscription->id,
-            [
-                'metadata' => [
-                    'from_plan' => $subscription->plan_key,
-                    'to_plan' => $validated['to_plan_key'],
-                    'timing' => $policyTiming,
-                    'idempotency_key' => $validated['idempotency_key'],
-                ],
+        // Interval-only changes use upgrade timing (typically immediate)
+        $policyTiming = $isIntervalChange
+            ? ($policy->upgrade_timing ?? 'immediate')
+            : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
+
+        $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_REQUESTED, 'subscription', (string) $subscription->id, [
+            'metadata' => [
+                'from_plan' => $subscription->plan_key,
+                'to_plan' => $validated['to_plan_key'],
+                'timing' => $policyTiming,
+                'idempotency_key' => $validated['idempotency_key'],
             ],
-        );
+        ]);
 
         try {
             $intent = PlanChangeExecutor::schedule(
@@ -104,39 +91,24 @@ class SubscriptionMutationController
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Audit: executed (if immediate)
         if ($intent->isExecuted()) {
-            $audit->logCompany(
-                $company->id,
-                AuditAction::PLAN_CHANGE_EXECUTED,
-                'plan_change_intent',
-                (string) $intent->id,
-                [
-                    'metadata' => [
-                        'from_plan' => $intent->from_plan_key,
-                        'to_plan' => $intent->to_plan_key,
-                        'timing' => $policyTiming,
-                        'proration' => $intent->proration_snapshot,
-                    ],
+            $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_EXECUTED, 'plan_change_intent', (string) $intent->id, [
+                'metadata' => [
+                    'from_plan' => $intent->from_plan_key,
+                    'to_plan' => $intent->to_plan_key,
+                    'timing' => $policyTiming,
+                    'proration' => $intent->proration_snapshot,
                 ],
-            );
+            ]);
         }
 
         return response()->json([
-            'message' => $intent->isExecuted()
-                ? 'Plan change executed.'
-                : 'Plan change scheduled.',
+            'message' => $intent->isExecuted() ? 'Plan change executed.' : 'Plan change scheduled.',
             'intent' => $intent,
         ]);
     }
 
-    /**
-     * PUT /billing/subscription/cancel
-     *
-     * Timing derived from PlatformBillingPolicy.downgrade_timing:
-     *   - immediate: subscription cancelled now
-     *   - end_of_period: cancel_at_period_end = true
-     */
+    /** PUT /billing/subscription/cancel */
     public function cancel(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -145,18 +117,9 @@ class SubscriptionMutationController
 
         $company = $request->attributes->get('company');
 
-        // Audit: requested
-        $audit->logCompany(
-            $company->id,
-            AuditAction::CANCEL_REQUESTED,
-            'company',
-            (string) $company->id,
-            [
-                'metadata' => [
-                    'idempotency_key' => $validated['idempotency_key'],
-                ],
-            ],
-        );
+        $audit->logCompany($company->id, AuditAction::CANCEL_REQUESTED, 'company', (string) $company->id, [
+            'metadata' => ['idempotency_key' => $validated['idempotency_key']],
+        ]);
 
         try {
             $result = SubscriptionCanceller::cancel($company, $validated['idempotency_key']);
@@ -164,21 +127,14 @@ class SubscriptionMutationController
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Audit: executed (if not idempotent replay)
         if (!$result['idempotent']) {
-            $audit->logCompany(
-                $company->id,
-                AuditAction::CANCEL_EXECUTED,
-                'subscription',
-                (string) $result['subscription']->id,
-                [
-                    'metadata' => [
-                        'timing' => $result['timing'],
-                        'status' => $result['subscription']->status,
-                        'cancel_at_period_end' => $result['subscription']->cancel_at_period_end,
-                    ],
+            $audit->logCompany($company->id, AuditAction::CANCEL_EXECUTED, 'subscription', (string) $result['subscription']->id, [
+                'metadata' => [
+                    'timing' => $result['timing'],
+                    'status' => $result['subscription']->status,
+                    'cancel_at_period_end' => $result['subscription']->cancel_at_period_end,
                 ],
-            );
+            ]);
         }
 
         return response()->json([
@@ -190,12 +146,7 @@ class SubscriptionMutationController
         ]);
     }
 
-    /**
-     * POST /billing/pay-now
-     *
-     * Pays open/overdue invoices using wallet credit.
-     * Wallet-first policy respected.
-     */
+    /** POST /billing/pay-now */
     public function payNow(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -206,32 +157,21 @@ class SubscriptionMutationController
         $userId = $request->user()?->id;
 
         try {
-            $result = InvoicePayNowService::payNow(
-                $company,
-                $validated['idempotency_key'],
-                $userId,
-            );
+            $result = InvoicePayNowService::payNow($company, $validated['idempotency_key'], $userId);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Audit
         if ($result['invoices_paid'] > 0) {
-            $audit->logCompany(
-                $company->id,
-                AuditAction::PAID_NOW,
-                'company',
-                (string) $company->id,
-                [
-                    'metadata' => [
-                        'invoices_paid' => $result['invoices_paid'],
-                        'total_amount' => $result['total_amount'],
-                        'wallet_used' => $result['wallet_used'],
-                        'paid_invoice_ids' => $result['paid_invoice_ids'],
-                        'idempotency_key' => $validated['idempotency_key'],
-                    ],
+            $audit->logCompany($company->id, AuditAction::PAID_NOW, 'company', (string) $company->id, [
+                'metadata' => [
+                    'invoices_paid' => $result['invoices_paid'],
+                    'total_amount' => $result['total_amount'],
+                    'wallet_used' => $result['wallet_used'],
+                    'paid_invoice_ids' => $result['paid_invoice_ids'],
+                    'idempotency_key' => $validated['idempotency_key'],
                 ],
-            );
+            ]);
         }
 
         return response()->json([
@@ -239,6 +179,54 @@ class SubscriptionMutationController
             'invoices_paid' => $result['invoices_paid'],
             'total_amount' => $result['total_amount'],
             'wallet_used' => $result['wallet_used'],
+        ]);
+    }
+
+    /** DELETE /billing/plan-change */
+    public function cancelPlanChange(Request $request, AuditLogger $audit): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $intent = PlanChangeIntent::where('company_id', $company->id)
+            ->scheduled()
+            ->first();
+
+        if (!$intent) {
+            return response()->json(['message' => 'No scheduled plan change to cancel.'], 404);
+        }
+
+        $intent->update(['status' => 'cancelled']);
+
+        $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_CANCELLED, 'plan_change_intent', (string) $intent->id, [
+            'metadata' => [
+                'from_plan' => $intent->from_plan_key,
+                'to_plan' => $intent->to_plan_key,
+            ],
+        ]);
+
+        return response()->json(['message' => 'Scheduled plan change cancelled.']);
+    }
+
+    /** PUT /billing/subscription/billing-day */
+    public function setBillingDay(Request $request): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $validated = $request->validate([
+            'billing_anchor_day' => ['required', 'integer', 'in:1,5,10,15,20,25'],
+        ]);
+
+        $subscription = Subscription::where('company_id', $company->id)->isCurrent()->first();
+
+        if (! $subscription) {
+            return response()->json(['message' => 'No active subscription.'], 422);
+        }
+
+        $subscription->update(['billing_anchor_day' => $validated['billing_anchor_day']]);
+
+        return response()->json([
+            'message' => 'Billing day updated.',
+            'billing_anchor_day' => $validated['billing_anchor_day'],
         ]);
     }
 }

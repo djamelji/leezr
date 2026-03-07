@@ -30,13 +30,19 @@ class AuthController extends Controller
             $request->session()->regenerate();
         }
 
-        return response()->json([
+        $response = [
             'user' => $result->user,
             'company' => $result->company,
             'ui_theme' => UIResolverService::forCompany()->toArray(),
             'ui_session' => SessionSettingsPayload::fromSettings()->toFrontendArray(),
             'theme_preference' => ThemeResolver::resolve($result->user),
-        ], 201);
+        ];
+
+        if ($result->checkout) {
+            $response['checkout'] = $result->checkout->toArray();
+        }
+
+        return response()->json($response, 201);
     }
 
     public function login(LoginRequest $request): JsonResponse

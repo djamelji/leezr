@@ -6,7 +6,6 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
-use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Modules\ModuleRegistry;
@@ -174,24 +173,6 @@ class BillingReadApiTest extends TestCase
             ->assertJsonCount(1, 'invoice.lines');
     }
 
-    // ── 4. Company wallet: balance + transactions ──
-
-    public function test_company_wallet_returns_balance_and_transactions(): void
-    {
-        WalletLedger::credit(
-            $this->companyA, 5000, 'admin_adjustment',
-            actorType: 'platform_user', actorId: 1,
-        );
-
-        $response = $this->actAsCompanyA()
-            ->getJson('/api/billing/wallet');
-
-        $response->assertOk()
-            ->assertJsonStructure(['balance', 'currency', 'transactions'])
-            ->assertJsonPath('balance', 5000)
-            ->assertJsonCount(1, 'transactions');
-    }
-
     // ── 5. Company overview: aggregate data ──
 
     public function test_company_overview_returns_aggregate(): void
@@ -339,18 +320,6 @@ class BillingReadApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure(['data', 'total']);
-    }
-
-    // ── 15. Company wallet returns zero when no wallet ──
-
-    public function test_company_wallet_returns_zero_when_no_wallet(): void
-    {
-        $response = $this->actAsCompanyA()
-            ->getJson('/api/billing/wallet');
-
-        $response->assertOk()
-            ->assertJsonPath('balance', 0)
-            ->assertJsonPath('transactions', []);
     }
 
     // ── 16. Invoice PDF: returns HTML for own invoice ──

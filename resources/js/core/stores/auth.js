@@ -60,12 +60,12 @@ export const useAuthStore = defineStore('auth', {
       return Array.isArray(this.permissions) && this.permissions.includes(key)
     },
 
-    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key }) {
+    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval }) {
       await refreshCsrf()
 
       const data = await $api('/register', {
         method: 'POST',
-        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key },
+        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval },
       })
 
       this._persistUser(data.user)

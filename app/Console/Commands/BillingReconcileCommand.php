@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\ReconciliationEngine;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -36,6 +37,8 @@ class BillingReconcileCommand extends Command implements Isolatable
             $autoRepair = false;
         }
 
+        BillingJobHeartbeat::start('billing:reconcile');
+
         $this->info('Running billing reconciliation...');
 
         $result = ReconciliationEngine::reconcile($companyId, $dryRun, $autoRepair);
@@ -65,6 +68,8 @@ class BillingReconcileCommand extends Command implements Isolatable
                 $this->info("  Correlation ID: {$repairs['correlation_id']}");
             }
         }
+
+        BillingJobHeartbeat::finish('billing:reconcile', $result['summary']['total'] > 0 ? 'drift' : 'ok', $result['summary']);
 
         return self::SUCCESS;
     }

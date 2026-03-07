@@ -14,10 +14,8 @@ class ChangePlanService
         private readonly PaymentGatewayManager $gatewayManager,
     ) {}
 
-    public function requestUpgrade(Company $company, string $planKey): CheckoutResult
+    public function requestUpgrade(Company $company, string $planKey, string $interval = 'monthly'): CheckoutResult
     {
-        // TODO: Add validation preventing downgrade below current plan level if business logic requires it
-
-        return $this->gatewayManager->driver()->createCheckout($company, $planKey);
+        return $this->gatewayManager->driver()->createCheckout($company, $planKey, $interval);
     }
 }

@@ -5,7 +5,10 @@ namespace App\Core\Billing;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Models\Company;
+use App\Notifications\Billing\AccountSuspended;
+use App\Notifications\Billing\PaymentFailed;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -157,6 +160,13 @@ class DunningEngine
      */
     private static function attemptRetry(Invoice $invoice, PlatformBillingPolicy $policy): string
     {
+        Log::channel('billing')->info('Dunning retry attempt', [
+            'invoice_id' => $invoice->id,
+            'company_id' => $invoice->company_id,
+            'amount_due' => $invoice->amount_due,
+            'retry_count' => $invoice->retry_count,
+        ]);
+
         // Phase 1: Provider-first collection (OUTSIDE transaction — no lock during API call)
         $providerResult = static::attemptProviderPayment($invoice);
 
@@ -238,16 +248,20 @@ class DunningEngine
                 'next_retry_at' => now()->addDays($nextRetryDays),
             ]);
 
+            // ADR-226: Notify company owner of payment failure
+            static::notifyPaymentFailed($invoice);
+
             return 'retried';
         });
     }
 
     /**
-     * Attempt provider-first payment (Stripe charge, SEPA, etc.).
+     * Attempt provider-first payment with fallback across saved payment methods.
      *
      * Runs OUTSIDE DB::transaction to avoid holding row locks during API calls.
-     * Returns 'provider_attempted' if provider accepted the charge (webhook will finalize).
-     * Returns null if no provider or provider failed → caller falls back to wallet.
+     * Priority: default method first, then others ordered by id.
+     * Returns 'provider_attempted' if any method accepted the charge.
+     * Returns null if all methods fail → caller falls back to wallet.
      */
     private static function attemptProviderPayment(Invoice $invoice): ?string
     {
@@ -267,13 +281,61 @@ class DunningEngine
             return null;
         }
 
-        try {
-            $result = $adapter->collectInvoice($invoice, $invoice->company);
+        // Resolve all saved payment methods for fallback
+        $methods = PaymentMethodResolver::resolveForCompany($invoice->company);
 
-            return $result['status'] === 'succeeded' ? 'provider_attempted' : null;
-        } catch (\Throwable) {
-            return null; // Provider failed → wallet fallback
+        if ($methods->isEmpty()) {
+            // No saved methods — try default customer charge
+            try {
+                $result = $adapter->collectInvoice($invoice, $invoice->company);
+
+                return $result['status'] === 'succeeded' ? 'provider_attempted' : null;
+            } catch (\Throwable) {
+                return null;
+            }
         }
+
+        // Try each payment method in order (default first)
+        foreach ($methods as $method) {
+            if (! $method->provider_payment_method_id) {
+                continue;
+            }
+
+            Log::channel('billing')->info('[billing] fallback payment method attempt', [
+                'invoice_id' => $invoice->id,
+                'company_id' => $invoice->company_id,
+                'payment_method_id' => $method->provider_payment_method_id,
+                'method_key' => $method->method_key,
+                'is_default' => $method->is_default,
+            ]);
+
+            try {
+                $result = $adapter->chargeInvoiceWithPaymentMethod(
+                    $invoice,
+                    $method->provider_payment_method_id,
+                );
+
+                if ($result['status'] === 'succeeded') {
+                    return 'provider_attempted';
+                }
+
+                Log::channel('billing')->info('[billing] payment attempt failed', [
+                    'invoice_id' => $invoice->id,
+                    'payment_method_id' => $method->provider_payment_method_id,
+                    'method_key' => $method->method_key,
+                    'error' => $result['error'] ?? 'unknown',
+                ]);
+            } catch (\Throwable $e) {
+                Log::channel('billing')->info('[billing] payment attempt failed', [
+                    'invoice_id' => $invoice->id,
+                    'payment_method_id' => $method->provider_payment_method_id,
+                    'method_key' => $method->method_key,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return null; // All methods failed → wallet fallback
     }
 
     private static function resolveAdapter(string $provider): ?PaymentProviderAdapter
@@ -340,17 +402,20 @@ class DunningEngine
         if ($action === 'suspend') {
             // Subscription → suspended
             if ($subscription) {
-                $subscription->update(['status' => 'suspended']);
+                $subscription->update(['status' => 'suspended', 'is_current' => null]);
             }
 
             // Company → suspended (idempotent)
             if ($company->status !== 'suspended') {
                 $company->update(['status' => 'suspended']);
+
+                // ADR-226: Notify company owner of suspension
+                static::notifyAccountSuspended($company);
             }
         } elseif ($action === 'cancel') {
             // Subscription → cancelled
             if ($subscription) {
-                $subscription->update(['status' => 'cancelled']);
+                $subscription->update(['status' => 'cancelled', 'is_current' => null]);
             }
 
             // Cancel all scheduled PlanChangeIntents for this company
@@ -359,9 +424,54 @@ class DunningEngine
                 ->update(['status' => 'cancelled']);
 
             // Downgrade company to free tier
+            $wasSuspended = $company->status === 'suspended';
+
             $company->update([
                 'plan_key' => 'starter',
                 'status' => $company->status !== 'suspended' ? 'suspended' : $company->status,
+            ]);
+
+            // ADR-226: Notify company owner of suspension (only if newly suspended)
+            if (! $wasSuspended) {
+                static::notifyAccountSuspended($company);
+            }
+        }
+    }
+
+    /**
+     * ADR-226: Notify company owner of payment failure.
+     */
+    private static function notifyPaymentFailed(Invoice $invoice): void
+    {
+        try {
+            $owner = $invoice->company?->owner();
+
+            if ($owner) {
+                $owner->notify(new PaymentFailed($invoice));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[dunning] Failed to send PaymentFailed notification', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * ADR-226: Notify company owner of account suspension.
+     */
+    private static function notifyAccountSuspended(Company $company): void
+    {
+        try {
+            $owner = $company->owner();
+
+            if ($owner) {
+                $owner->notify(new AccountSuspended());
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[dunning] Failed to send AccountSuspended notification', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
             ]);
         }
     }

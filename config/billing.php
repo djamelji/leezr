@@ -15,6 +15,8 @@ return [
 
     'driver' => env('BILLING_DRIVER', 'null'),
 
+    'default_currency' => env('BILLING_DEFAULT_CURRENCY', 'EUR'),
+
     'stripe' => [
         'key'            => env('STRIPE_KEY'),
         'secret'         => env('STRIPE_SECRET'),

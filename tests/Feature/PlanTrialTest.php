@@ -67,9 +67,10 @@ class PlanTrialTest extends TestCase
     }
 
     /**
-     * Plan with trial_days=0 → subscription created as pending (no trial).
+     * Plan with trial_days=0 → subscription created as active (no trial, auto-approve).
+     * ADR-238: admin_approval_required defaults to false → auto-activate.
      */
-    public function test_plan_without_trial_creates_pending_subscription(): void
+    public function test_plan_without_trial_creates_active_subscription(): void
     {
         $plan = Plan::where('key', 'starter')->first();
         $this->assertEquals(0, $plan->trial_days);
@@ -86,7 +87,7 @@ class PlanTrialTest extends TestCase
 
         $subscription = Subscription::where('company_id', $company->id)->first();
 
-        $this->assertEquals('pending', $subscription->status);
+        $this->assertEquals('active', $subscription->status);
         $this->assertNull($subscription->trial_ends_at);
     }
 

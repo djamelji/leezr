@@ -2,12 +2,14 @@
 
 namespace App\Core\Billing\ReadModels;
 
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyWallet;
 use App\Core\Billing\CreditNote;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\LedgerEntry;
 use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
+use App\Core\Plans\Plan;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -205,7 +207,37 @@ class PlatformBillingReadService
             $query->where('company_id', $filters['company_id']);
         }
 
-        return $query->paginate(min($perPage, 100));
+        $paginator = $query->paginate(min($perPage, 100));
+
+        // Pre-load plan prices for all plan_keys in the page
+        $planKeys = collect($paginator->items())->pluck('plan_key')->unique()->filter();
+        $plans = Plan::whereIn('key', $planKeys)->get()->keyBy('key');
+
+        // Pre-load addon totals per company
+        $companyIds = collect($paginator->items())->pluck('company_id')->unique()->filter();
+        $addonTotals = CompanyAddonSubscription::whereIn('company_id', $companyIds)
+            ->active()
+            ->get()
+            ->groupBy('company_id')
+            ->map(fn ($addons) => $addons->sum('amount_cents'));
+
+        // Append estimated_next_amount to each subscription
+        $paginator->getCollection()->transform(function ($sub) use ($plans, $addonTotals) {
+            $plan = $plans->get($sub->plan_key);
+            $planPrice = 0;
+            if ($plan) {
+                $planPrice = $sub->interval === 'yearly'
+                    ? ($plan->price_yearly ?? 0)
+                    : ($plan->price_monthly ?? 0);
+            }
+
+            $addonsTotal = $addonTotals->get($sub->company_id, 0);
+            $sub->estimated_next_amount = $planPrice + $addonsTotal;
+
+            return $sub;
+        });
+
+        return $paginator;
     }
 
     /**

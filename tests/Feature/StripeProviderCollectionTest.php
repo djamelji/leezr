@@ -130,7 +130,7 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     $this->testRef->markCollectCalled();
 
@@ -326,7 +326,7 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     $this->amountRef = $amount;
                     $this->testRef->markCollectCalled();
@@ -377,7 +377,7 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     $this->metaRef = $metadata;
                     $this->testRef->markCollectCalled();
@@ -600,7 +600,7 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     return \Stripe\PaymentIntent::constructFrom([
                         'id' => 'pi_noop', 'amount' => $amount, 'amount_received' => $amount,

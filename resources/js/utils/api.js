@@ -107,9 +107,9 @@ export const $api = ofetch.create({
       return
     }
 
-    // 500+ Server errors
+    // 500+ Server errors — prefer backend message when available
     if (status >= 500) {
-      toast('An unexpected error occurred. Please try again.', 'error')
+      toast(response._data?.message || 'An unexpected error occurred. Please try again.', 'error')
     }
   },
 })

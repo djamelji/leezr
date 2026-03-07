@@ -3,6 +3,7 @@ definePage({ meta: { surface: 'structure', module: 'core.billing' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
@@ -12,6 +13,7 @@ import { formatMoney } from '@/utils/money'
 const { t } = useI18n()
 const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
+const billingStore = useCompanyBillingStore()
 const jobdomainStore = useJobdomainStore()
 const { toast } = useAppToast()
 const { plans, loading, fetchPlans } = usePublicPlans()
@@ -21,21 +23,45 @@ const storageInfo = computed(() => settingsStore.company?.storage ?? {})
 
 const annualToggle = ref(true)
 const changingPlan = ref(false)
-const isConfirmDialogVisible = ref(false)
+const isPreviewDialogVisible = ref(false)
 const pendingPlanKey = ref(null)
-const hasPendingSubscription = ref(false)
 const checkingPending = ref(true)
+const previewLoading = ref(false)
+const previewError = ref(false)
+const cancellingScheduledChange = ref(false)
 
 const currentPlanKey = computed(() => auth.currentCompany?.plan_key ?? 'starter')
 const currentPlan = computed(() => plans.value.find(p => p.key === currentPlanKey.value))
+const currentInterval = computed(() => sub.value?.interval ?? 'monthly')
+const selectedInterval = computed(() => annualToggle.value ? 'yearly' : 'monthly')
+const scheduledChange = computed(() => sub.value?.scheduled_change ?? null)
 
 onMounted(async () => {
   await Promise.all([
     fetchPlans(),
     settingsStore.fetchCompany(),
+    billingStore.fetchSubscription(),
+    billingStore.fetchNextInvoicePreview(),
   ])
+
+  // Initialize toggle from current subscription interval
+  if (billingStore.subscription?.interval)
+    annualToggle.value = billingStore.subscription.interval === 'yearly'
+
   checkingPending.value = false
 })
+
+const sub = computed(() => billingStore.subscription)
+
+const formatDate = dateStr => {
+  if (!dateStr) return null
+
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 const planColor = key => {
   const colors = { starter: 'secondary', pro: 'primary', business: 'warning' }
@@ -43,34 +69,90 @@ const planColor = key => {
   return colors[key] || 'primary'
 }
 
-const requestPlanChange = planKey => {
-  if (planKey === currentPlanKey.value) return
-  if (hasPendingSubscription.value) return
+const changePreview = computed(() => billingStore.planChangePreview)
+
+const requestPlanChange = async planKey => {
+  // Block only when both plan key AND interval are the same
+  if (planKey === currentPlanKey.value && selectedInterval.value === currentInterval.value) return
+
   pendingPlanKey.value = planKey
-  isConfirmDialogVisible.value = true
+  previewLoading.value = true
+  previewError.value = false
+  isPreviewDialogVisible.value = true
+
+  try {
+    await billingStore.fetchPlanChangePreview(planKey, selectedInterval.value)
+  }
+  catch {
+    previewError.value = true
+  }
+  finally {
+    previewLoading.value = false
+  }
 }
 
-const confirmPlanChange = async isConfirmed => {
-  if (!isConfirmed || !pendingPlanKey.value) {
-    pendingPlanKey.value = null
+const cancelPreview = () => {
+  isPreviewDialogVisible.value = false
+  pendingPlanKey.value = null
+  billingStore.clearPlanChangePreview()
+}
 
-    return
-  }
+const confirmPlanChange = async () => {
+  if (!pendingPlanKey.value) return
 
   changingPlan.value = true
 
   try {
-    const result = await $api('/billing/checkout', {
-      method: 'POST',
-      body: { plan_key: pendingPlanKey.value },
-    })
+    if (sub.value) {
+      // Existing subscription → use plan-change endpoint (PlanChangeExecutor)
+      const idempotencyKey = `plan-change-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const result = await $api('/billing/plan-change', {
+        method: 'POST',
+        body: {
+          idempotency_key: idempotencyKey,
+          to_plan_key: pendingPlanKey.value,
+          to_interval: selectedInterval.value,
+        },
+      })
 
-    if (result.mode === 'internal') {
-      hasPendingSubscription.value = true
-      toast(result.message, 'info')
+      isPreviewDialogVisible.value = false
+
+      if (result.intent?.status === 'scheduled') {
+        toast(t('companyPlan.changeScheduled'), 'info')
+      }
+      else {
+        toast(t('companyPlan.changeApplied'), 'success')
+      }
+
+      await Promise.all([
+        billingStore.fetchSubscription(),
+        billingStore.fetchNextInvoicePreview(),
+        auth.fetchUser(),
+      ])
     }
-    else if (result.mode === 'redirect' && result.redirect_url) {
-      window.location.href = result.redirect_url
+    else {
+      // No subscription → use checkout endpoint (initial subscription)
+      const result = await $api('/billing/checkout', {
+        method: 'POST',
+        body: {
+          plan_key: pendingPlanKey.value,
+          billing_interval: selectedInterval.value,
+        },
+      })
+
+      isPreviewDialogVisible.value = false
+
+      if (result.mode === 'internal') {
+        toast(result.message, 'info')
+      }
+      else if (result.mode === 'redirect' && result.redirect_url) {
+        window.location.href = result.redirect_url
+      }
+
+      await Promise.all([
+        billingStore.fetchSubscription(),
+        auth.fetchUser(),
+      ])
     }
   }
   catch {
@@ -79,7 +161,34 @@ const confirmPlanChange = async isConfirmed => {
   finally {
     changingPlan.value = false
     pendingPlanKey.value = null
+    billingStore.clearPlanChangePreview()
   }
+}
+
+const cancelScheduledChange = async () => {
+  cancellingScheduledChange.value = true
+  try {
+    await billingStore.cancelScheduledPlanChange()
+    toast(t('companyPlan.scheduledChange.cancelled'), 'success')
+  }
+  catch {
+    toast(t('companyPlan.scheduledChange.cancelFailed'), 'error')
+  }
+  finally {
+    cancellingScheduledChange.value = false
+  }
+}
+
+const planButtonLabel = plan => {
+  if (plan.key === currentPlanKey.value && selectedInterval.value !== currentInterval.value) {
+    return selectedInterval.value === 'yearly'
+      ? t('companyPlan.switchToAnnual')
+      : t('companyPlan.switchToMonthly')
+  }
+
+  return plan.level > (currentPlan.value?.level ?? 0)
+    ? t('common.upgrade')
+    : t('common.downgrade')
 }
 
 const displayPrice = (plan, annual) => {
@@ -99,23 +208,64 @@ const planMonthlyDisplay = plan => {
 const yearlyTotal = plan => {
   return formatMoney(plan.price_yearly * 100)
 }
+
+const preview = computed(() => billingStore.nextInvoicePreview)
+
+const estimatedInvoice = computed(() => {
+  const p = preview.value
+  if (!p) return null
+
+  const addonsTotal = p.addons?.reduce((sum, a) => sum + (a.price || 0), 0) ?? 0
+  const planPrice = p.plan?.price ?? 0
+
+  return {
+    planName: p.plan?.name,
+    planPrice,
+    addons: p.addons ?? [],
+    addonsTotal,
+    subtotal: p.subtotal ?? (planPrice + addonsTotal),
+    taxAmount: p.tax_amount ?? 0,
+    taxRateBps: p.tax_rate_bps ?? 0,
+    total: p.total ?? (planPrice + addonsTotal),
+    walletCredit: p.estimated_wallet_credit ?? 0,
+    amountDue: p.estimated_amount_due ?? p.total ?? (planPrice + addonsTotal),
+    currency: p.currency,
+    nextBillingDate: p.next_billing_date,
+    isEstimate: p.is_estimate ?? true,
+  }
+})
 </script>
 
 <template>
   <div>
-    <!-- Pending Approval Alert -->
+    <!-- Scheduled Plan Change Alert -->
     <VAlert
-      v-if="hasPendingSubscription"
-      type="warning"
+      v-if="scheduledChange"
+      type="info"
       variant="tonal"
       icon="tabler-clock"
       class="mb-6"
-      closable
     >
       <VAlertTitle class="mb-1">
-        {{ t('companyPlan.pendingApproval') }}
+        {{ t('companyPlan.scheduledChange.title') }}
       </VAlertTitle>
-      <span>{{ t('companyPlan.pendingMessage') }}</span>
+      <span>
+        {{ t('companyPlan.scheduledChange.message', {
+          plan: scheduledChange.to_plan_key,
+          date: formatDate(scheduledChange.effective_at),
+        }) }}
+      </span>
+      <template #append>
+        <VBtn
+          variant="outlined"
+          color="error"
+          size="small"
+          :loading="cancellingScheduledChange"
+          @click="cancelScheduledChange"
+        >
+          {{ t('companyPlan.scheduledChange.cancel') }}
+        </VBtn>
+      </template>
     </VAlert>
 
     <!-- Current Plan + Industry Profile -->
@@ -201,6 +351,77 @@ const yearlyTotal = plan => {
                   rounded
                   height="6"
                 />
+              </div>
+            </div>
+
+            <!-- Subscription period details -->
+            <div
+              v-if="sub"
+              class="mt-4"
+            >
+              <VDivider class="mb-4" />
+              <div class="d-flex flex-column gap-2">
+                <div
+                  v-if="sub.current_period_start && sub.current_period_end"
+                  class="d-flex align-center gap-2"
+                >
+                  <VIcon
+                    icon="tabler-calendar"
+                    size="18"
+                  />
+                  <span class="text-body-2">
+                    {{ t('companyPlan.currentPeriod') }}:
+                    <strong>{{ formatDate(sub.current_period_start) }} — {{ formatDate(sub.current_period_end) }}</strong>
+                  </span>
+                </div>
+
+                <div
+                  v-if="sub.current_period_end"
+                  class="d-flex align-center gap-2"
+                >
+                  <VIcon
+                    icon="tabler-refresh"
+                    size="18"
+                  />
+                  <span class="text-body-2">
+                    {{ t('companyPlan.nextRenewal') }}:
+                    <strong>{{ formatDate(sub.current_period_end) }}</strong>
+                  </span>
+                </div>
+
+                <div
+                  v-if="sub.trial_ends_at"
+                  class="d-flex align-center gap-2"
+                >
+                  <VIcon
+                    icon="tabler-clock"
+                    size="18"
+                    color="warning"
+                  />
+                  <span class="text-body-2">
+                    {{ t('companyPlan.trialEnds') }}:
+                    <strong>{{ formatDate(sub.trial_ends_at) }}</strong>
+                  </span>
+                </div>
+
+                <div
+                  v-if="sub.status"
+                  class="d-flex align-center gap-2"
+                >
+                  <VIcon
+                    icon="tabler-circle-check"
+                    size="18"
+                  />
+                  <span class="text-body-2">
+                    {{ t('companyPlan.subscriptionStatus') }}:
+                    <VChip
+                      size="x-small"
+                      :color="sub.status === 'active' ? 'success' : sub.status === 'trialing' ? 'warning' : 'error'"
+                    >
+                      {{ t(`subscriptionStatus.${sub.status}`) }}
+                    </VChip>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -396,7 +617,7 @@ const yearlyTotal = plan => {
                 </div>
 
                 <VBtn
-                  v-if="plan.key === currentPlanKey"
+                  v-if="plan.key === currentPlanKey && selectedInterval === currentInterval"
                   block
                   color="success"
                   variant="tonal"
@@ -407,13 +628,14 @@ const yearlyTotal = plan => {
                 <VBtn
                   v-else
                   block
-                  :color="plan.level > (currentPlan?.level ?? 0) ? 'primary' : 'secondary'"
+                  :color="plan.key === currentPlanKey
+                    ? 'info'
+                    : (plan.level > (currentPlan?.level ?? 0) ? 'primary' : 'secondary')"
                   :variant="plan.is_popular ? 'elevated' : 'tonal'"
                   :loading="changingPlan && pendingPlanKey === plan.key"
-                  :disabled="hasPendingSubscription"
                   @click="requestPlanChange(plan.key)"
                 >
-                  {{ hasPendingSubscription ? t('companyPlan.pendingApproval') : (plan.level > (currentPlan?.level ?? 0) ? t('common.upgrade') : t('common.downgrade')) }}
+                  {{ planButtonLabel(plan) }}
                 </VBtn>
               </VCardText>
             </VCard>
@@ -422,16 +644,320 @@ const yearlyTotal = plan => {
       </VCardText>
     </VCard>
 
-    <!-- Confirm Dialog -->
-    <ConfirmDialog
-      v-model:is-dialog-visible="isConfirmDialogVisible"
-      :confirmation-question="t('companyPlan.confirmUpgrade', { name: plans.find(p => p.key === pendingPlanKey)?.name || '' })"
-      :cancel-msg="t('companyPlan.requestCancelled')"
-      :cancel-title="t('common.cancel')"
-      :confirm-msg="t('companyPlan.requestSubmittedMessage')"
-      :confirm-title="t('companyPlan.requestSubmitted')"
-      @confirm="confirmPlanChange"
-    />
+    <!-- Estimated Next Invoice -->
+    <VCard
+      v-if="estimatedInvoice"
+      class="mt-6"
+    >
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            color="primary"
+            variant="tonal"
+            size="40"
+            rounded
+          >
+            <VIcon icon="tabler-file-invoice" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('companyPlan.estimatedInvoice') }}</VCardTitle>
+        <VCardSubtitle v-if="estimatedInvoice.nextBillingDate">
+          {{ formatDate(estimatedInvoice.nextBillingDate) }}
+        </VCardSubtitle>
+      </VCardItem>
+
+      <VCardText class="pa-0">
+        <VList density="compact">
+          <VListItem v-if="estimatedInvoice.planName">
+            <VListItemTitle class="font-weight-medium">
+              {{ estimatedInvoice.planName }}
+            </VListItemTitle>
+            <VListItemSubtitle>
+              {{ t('companyBilling.nextInvoice.planLabel') }}
+            </VListItemSubtitle>
+
+            <template #append>
+              <span class="font-weight-medium">
+                {{ formatMoney(estimatedInvoice.planPrice, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
+          <VListItem
+            v-for="addon in estimatedInvoice.addons"
+            :key="addon.module_key"
+          >
+            <VListItemTitle class="font-weight-medium">
+              {{ addon.name }}
+            </VListItemTitle>
+            <VListItemSubtitle>
+              {{ t('companyBilling.nextInvoice.addonLabel') }}
+            </VListItemSubtitle>
+
+            <template #append>
+              <span class="font-weight-medium">
+                +{{ formatMoney(addon.price, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
+          <VDivider />
+
+          <VListItem>
+            <VListItemTitle class="font-weight-medium">
+              {{ t('companyBilling.nextInvoice.subtotal') }}
+            </VListItemTitle>
+
+            <template #append>
+              <span class="font-weight-medium">
+                {{ formatMoney(estimatedInvoice.subtotal, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
+          <VListItem v-if="estimatedInvoice.taxAmount > 0">
+            <VListItemTitle class="text-body-2 text-disabled">
+              {{ t('companyBilling.nextInvoice.tax') }}
+              <span v-if="estimatedInvoice.taxRateBps">({{ (estimatedInvoice.taxRateBps / 100).toFixed(1) }}%)</span>
+            </VListItemTitle>
+
+            <template #append>
+              <span class="text-body-2">
+                +{{ formatMoney(estimatedInvoice.taxAmount, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
+          <VListItem v-if="estimatedInvoice.walletCredit > 0">
+            <VListItemTitle class="text-body-2 text-success">
+              {{ t('companyBilling.nextInvoice.walletCredit') }}
+            </VListItemTitle>
+
+            <template #append>
+              <span class="text-body-2 text-success">
+                -{{ formatMoney(estimatedInvoice.walletCredit, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
+          <VDivider />
+
+          <VListItem>
+            <VListItemTitle class="text-h6 font-weight-bold">
+              {{ t('companyBilling.nextInvoice.estimatedAmountDue') }}
+            </VListItemTitle>
+
+            <template #append>
+              <span class="text-h6 font-weight-bold">
+                {{ formatMoney(estimatedInvoice.amountDue, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+        </VList>
+      </VCardText>
+
+      <VCardText
+        v-if="estimatedInvoice.isEstimate"
+        class="pt-0"
+      >
+        <p class="text-caption text-disabled mb-0">
+          {{ t('companyBilling.nextInvoice.estimateDisclaimer') }}
+        </p>
+      </VCardText>
+    </VCard>
+
+    <!-- Plan Change Preview Dialog -->
+    <VDialog
+      v-model="isPreviewDialogVisible"
+      max-width="560"
+      persistent
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center gap-2 pa-5 pb-3">
+          <VAvatar
+            :color="changePreview?.is_upgrade ? 'success' : 'warning'"
+            variant="tonal"
+            size="40"
+            rounded
+          >
+            <VIcon :icon="changePreview?.is_upgrade ? 'tabler-trending-up' : 'tabler-trending-down'" />
+          </VAvatar>
+          {{ t('companyPlan.planChangePreview.title') }}
+        </VCardTitle>
+
+        <VCardText v-if="previewLoading" class="text-center pa-8">
+          <VProgressCircular indeterminate color="primary" class="mb-3" />
+          <p class="text-body-1">{{ t('companyPlan.planChangePreview.loading') }}</p>
+        </VCardText>
+
+        <VCardText v-else-if="previewError" class="text-center pa-8">
+          <VIcon icon="tabler-alert-triangle" color="error" size="48" class="mb-3" />
+          <p class="text-body-1">{{ t('companyPlan.planChangePreview.errorLoading') }}</p>
+        </VCardText>
+
+        <VCardText v-else-if="changePreview" class="pa-5 pt-0">
+          <!-- From → To -->
+          <div class="d-flex align-center justify-space-between mb-4 pa-3 rounded" style="background: rgba(var(--v-theme-on-surface), 0.04);">
+            <div class="text-center">
+              <p class="text-caption text-disabled mb-1">{{ t('companyPlan.planChangePreview.from') }}</p>
+              <VChip color="secondary" label size="small">{{ changePreview.from_plan.name }}</VChip>
+              <p class="text-caption mt-1">{{ formatMoney(changePreview.from_plan.price, { currency: changePreview.currency }) }}/{{ changePreview.from_plan.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}</p>
+            </div>
+            <VIcon icon="tabler-arrow-right" size="20" />
+            <div class="text-center">
+              <p class="text-caption text-disabled mb-1">{{ t('companyPlan.planChangePreview.to') }}</p>
+              <VChip :color="changePreview.is_upgrade ? 'success' : 'warning'" label size="small">{{ changePreview.to_plan.name }}</VChip>
+              <p class="text-caption mt-1">{{ formatMoney(changePreview.to_plan.price, { currency: changePreview.currency }) }}/{{ changePreview.to_plan.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}</p>
+            </div>
+          </div>
+
+          <!-- Timing -->
+          <div class="d-flex align-center gap-2 mb-4">
+            <VIcon icon="tabler-clock" size="18" />
+            <span class="text-body-2">
+              {{ t('companyPlan.planChangePreview.timing') }}:
+              <strong>{{ changePreview.timing === 'immediate' ? t('companyPlan.planChangePreview.immediate') : t('companyPlan.planChangePreview.endOfPeriod') }}</strong>
+            </span>
+          </div>
+
+          <!-- Proration breakdown (immediate only) -->
+          <template v-if="changePreview.timing === 'immediate' && changePreview.proration">
+            <VDivider class="mb-3" />
+            <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.proration') }}</p>
+            <p class="text-caption text-disabled mb-2">{{ t('companyPlan.planChangePreview.daysRemaining', { days: changePreview.proration.days_remaining }) }}</p>
+
+            <VList density="compact" class="pa-0">
+              <VListItem v-if="changePreview.proration.credit_old_plan > 0">
+                <VListItemTitle class="text-body-2 text-success">
+                  {{ t('companyPlan.planChangePreview.creditOldPlan', { name: changePreview.from_plan.name }) }}
+                </VListItemTitle>
+                <template #append>
+                  <span class="text-body-2 text-success">-{{ formatMoney(changePreview.proration.credit_old_plan, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <VListItem v-if="changePreview.proration.charge_new_plan > 0">
+                <VListItemTitle class="text-body-2">
+                  {{ t('companyPlan.planChangePreview.chargeNewPlan', { name: changePreview.to_plan.name }) }}
+                </VListItemTitle>
+                <template #append>
+                  <span class="text-body-2">+{{ formatMoney(changePreview.proration.charge_new_plan, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <VDivider />
+
+              <VListItem>
+                <VListItemTitle class="font-weight-medium">
+                  {{ t('companyPlan.planChangePreview.prorationNet') }}
+                </VListItemTitle>
+                <template #append>
+                  <span class="font-weight-medium" :class="changePreview.proration.net > 0 ? '' : 'text-success'">
+                    {{ changePreview.proration.net > 0 ? '+' : '' }}{{ formatMoney(changePreview.proration.net, { currency: changePreview.currency }) }}
+                  </span>
+                </template>
+              </VListItem>
+            </VList>
+          </template>
+
+          <!-- Addon impact -->
+          <template v-if="changePreview.addons?.length">
+            <VDivider class="my-3" />
+            <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.addonsImpact') }}</p>
+            <VList density="compact" class="pa-0">
+              <VListItem v-for="addon in changePreview.addons" :key="addon.module_key">
+                <VListItemTitle class="text-body-2">{{ addon.name }}</VListItemTitle>
+                <template #append>
+                  <span v-if="addon.difference !== 0" class="text-body-2" :class="addon.difference > 0 ? '' : 'text-success'">
+                    {{ formatMoney(addon.current_amount, { currency: changePreview.currency }) }} → {{ formatMoney(addon.new_amount, { currency: changePreview.currency }) }}
+                  </span>
+                  <span v-else class="text-body-2 text-disabled">{{ formatMoney(addon.current_amount, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+            </VList>
+          </template>
+
+          <!-- Due now (immediate) -->
+          <template v-if="changePreview.timing === 'immediate'">
+            <VDivider class="my-3" />
+            <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.dueNow') }}</p>
+            <VList density="compact" class="pa-0">
+              <VListItem>
+                <VListItemTitle class="text-body-2">{{ t('companyPlan.planChangePreview.subtotal') }}</VListItemTitle>
+                <template #append>
+                  <span class="text-body-2">{{ formatMoney(changePreview.immediate.subtotal, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <VListItem v-if="changePreview.immediate.tax_amount > 0">
+                <VListItemTitle class="text-body-2 text-disabled">
+                  {{ t('companyPlan.planChangePreview.tax') }}
+                  <span v-if="changePreview.immediate.tax_rate_bps">({{ (changePreview.immediate.tax_rate_bps / 100).toFixed(1) }}%)</span>
+                </VListItemTitle>
+                <template #append>
+                  <span class="text-body-2">+{{ formatMoney(changePreview.immediate.tax_amount, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <VListItem v-if="changePreview.immediate.estimated_wallet_credit > 0">
+                <VListItemTitle class="text-body-2 text-success">{{ t('companyPlan.planChangePreview.walletCredit') }}</VListItemTitle>
+                <template #append>
+                  <span class="text-body-2 text-success">-{{ formatMoney(changePreview.immediate.estimated_wallet_credit, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+
+              <VDivider />
+
+              <VListItem>
+                <VListItemTitle class="text-h6 font-weight-bold">{{ t('companyPlan.planChangePreview.estimatedAmountDue') }}</VListItemTitle>
+                <template #append>
+                  <span class="text-h6 font-weight-bold">{{ formatMoney(changePreview.immediate.estimated_amount_due, { currency: changePreview.currency }) }}</span>
+                </template>
+              </VListItem>
+            </VList>
+          </template>
+
+          <!-- No charge (end_of_period) -->
+          <template v-else>
+            <VDivider class="my-3" />
+            <VAlert type="info" variant="tonal" icon="tabler-info-circle" density="compact">
+              {{ t('companyPlan.planChangePreview.noImmediateCharge') }}
+            </VAlert>
+          </template>
+
+          <!-- Next period preview -->
+          <VDivider class="my-3" />
+          <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.nextPeriod') }}</p>
+          <VList density="compact" class="pa-0">
+            <VListItem>
+              <VListItemTitle class="font-weight-medium">{{ t('companyPlan.planChangePreview.nextPeriodTotal') }} / {{ changePreview.next_period.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}</VListItemTitle>
+              <template #append>
+                <span class="font-weight-medium">{{ formatMoney(changePreview.next_period.total, { currency: changePreview.currency }) }}</span>
+              </template>
+            </VListItem>
+          </VList>
+
+          <p class="text-caption text-disabled mt-3 mb-0">
+            {{ t('companyBilling.nextInvoice.estimateDisclaimer') }}
+          </p>
+        </VCardText>
+
+        <VCardActions class="pa-5 pt-2">
+          <VSpacer />
+          <VBtn variant="tonal" color="secondary" @click="cancelPreview">
+            {{ t('companyPlan.planChangePreview.cancel') }}
+          </VBtn>
+          <VBtn
+            :color="changePreview?.is_upgrade ? 'success' : 'warning'"
+            :loading="changingPlan"
+            :disabled="previewLoading || previewError"
+            @click="confirmPlanChange"
+          >
+            {{ t('companyPlan.planChangePreview.confirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 

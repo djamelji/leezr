@@ -126,6 +126,7 @@ class ReconciliationEngine
                     'company_id' => $companyId,
                     'details' => [
                         'stripe_amount' => $intent['amount'],
+                        'stripe_currency' => $intent['currency'] ?? null,
                         'stripe_status' => $intent['status'],
                     ],
                 ];

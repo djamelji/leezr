@@ -4,6 +4,7 @@ namespace App\Modules\Infrastructure\Webhooks\Http;
 
 use App\Core\Billing\Adapters\InternalPaymentAdapter;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\BillingWebhookDeadLetter;
 use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\PlatformPaymentModule;
 use App\Core\Billing\WebhookEvent;
@@ -61,13 +62,7 @@ class PaymentWebhookController
             return response()->json(['message' => 'Missing event type in payload.'], 400);
         }
 
-        // 7. Reject stale events (older than 5 minutes)
-        $eventCreated = $payload['created'] ?? null;
-        if ($eventCreated && $eventCreated < time() - 300) {
-            return response()->json(['message' => 'Event too old.'], 400);
-        }
-
-        // 8. Idempotency check: try to insert, catch duplicate
+        // 7. Idempotency check: try to insert, catch duplicate
         try {
             $webhookEvent = WebhookEvent::create([
                 'provider_key' => $providerKey,
@@ -80,7 +75,7 @@ class PaymentWebhookController
             return response()->json(['handled' => true, 'duplicate' => true]);
         }
 
-        // 9. Process within transaction
+        // 8. Process within transaction
         try {
             DB::transaction(function () use ($adapter, $webhookEvent, $payload, $request) {
                 $webhookEvent->update(['status' => 'processing']);
@@ -106,7 +101,18 @@ class PaymentWebhookController
                 'error_message' => $e->getMessage(),
             ]);
 
-            return response()->json(['handled' => false], 500);
+            // ADR-228: Dead letter — persist for later replay, always return 200
+            BillingWebhookDeadLetter::create([
+                'provider_key' => $providerKey,
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+                'payload' => $payload,
+                'error_message' => $e->getMessage(),
+                'failed_at' => now(),
+            ]);
+
+            // Always return 200 so Stripe does not retry (we handle replays ourselves)
+            return response()->json(['handled' => false, 'dead_lettered' => true]);
         }
     }
 

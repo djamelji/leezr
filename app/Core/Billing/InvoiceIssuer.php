@@ -42,7 +42,7 @@ class InvoiceIssuer
             'amount' => 0,
             'subtotal' => 0,
             'tax_amount' => 0,
-            'tax_rate_bps' => $policy->default_tax_rate_bps,
+            'tax_rate_bps' => TaxResolver::resolveRateBps($company),
             'wallet_credit_applied' => 0,
             'amount_due' => 0,
             'period_start' => $periodStart,
@@ -190,11 +190,43 @@ class InvoiceIssuer
      */
     private static function buildBillingSnapshot(Company $company): array
     {
+        $market = $company->market;
+
+        $legalStatus = $company->legal_status_key
+            ? \App\Core\Markets\LegalStatus::where('key', $company->legal_status_key)
+                ->where('market_key', $company->market_key)
+                ->first()
+            : null;
+
+        // Read billing fields from dynamic field_values
+        $fieldCodes = ['legal_name', 'vat_number', 'siret', 'billing_address', 'billing_city', 'billing_postal_code', 'billing_email'];
+        $fieldValues = \App\Core\Fields\FieldValue::where('model_type', 'company')
+            ->where('model_id', $company->id)
+            ->whereHas('definition', fn ($q) => $q->whereIn('code', $fieldCodes))
+            ->with('definition:id,code')
+            ->get()
+            ->pluck('value', 'definition.code')
+            ->toArray();
+
+        $address = implode(', ', array_filter([
+            $fieldValues['billing_address'] ?? null,
+            implode(' ', array_filter([$fieldValues['billing_postal_code'] ?? null, $fieldValues['billing_city'] ?? null])),
+        ]));
+
         return [
             'company_name' => $company->name,
-            'company_legal_name' => $company->legal_name ?? $company->name,
+            'company_legal_name' => $fieldValues['legal_name'] ?? $company->name,
             'market_key' => $company->market_key,
+            'market_name' => $market?->name,
+            'currency' => $market?->currency ?? 'EUR',
             'legal_status_key' => $company->legal_status_key ?? null,
+            'legal_status_name' => $legalStatus?->name,
+            'is_vat_applicable' => $legalStatus?->is_vat_applicable ?? false,
+            'vat_rate' => $legalStatus?->vat_rate,
+            'vat_number' => $fieldValues['vat_number'] ?? null,
+            'siret' => $fieldValues['siret'] ?? null,
+            'billing_address' => $address ?: null,
+            'billing_email' => $fieldValues['billing_email'] ?? null,
         ];
     }
 }

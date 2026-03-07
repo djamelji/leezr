@@ -22,6 +22,7 @@ class PlatformBillingPolicy extends Model
         'credit_note_prefix', 'credit_note_next_number',
         'tax_mode', 'default_tax_rate_bps',
         'free_trial_days',
+        'admin_approval_required',
         'addon_billing_interval',
     ];
 
@@ -39,6 +40,7 @@ class PlatformBillingPolicy extends Model
             'credit_note_next_number' => 'integer',
             'default_tax_rate_bps' => 'integer',
             'free_trial_days' => 'integer',
+            'admin_approval_required' => 'boolean',
         ];
     }
 

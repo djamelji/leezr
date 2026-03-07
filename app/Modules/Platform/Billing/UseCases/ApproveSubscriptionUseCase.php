@@ -33,14 +33,25 @@ class ApproveSubscriptionUseCase
             // Enforce one active subscription: expire any existing active
             Subscription::where('company_id', $company->id)
                 ->where('status', 'active')
-                ->update(['status' => 'expired', 'current_period_end' => now()]);
+                ->update(['status' => 'expired', 'current_period_end' => now(), 'is_current' => null]);
+
+            // Clear any other is_current
+            Subscription::where('company_id', $company->id)
+                ->where('is_current', 1)
+                ->where('id', '!=', $subscription->id)
+                ->update(['is_current' => null]);
 
             $this->billing->changePlan($company, $subscription->plan_key);
 
+            $periodEnd = $subscription->interval === 'yearly'
+                ? now()->addYear()
+                : now()->addMonth();
+
             $subscription->update([
                 'status' => 'active',
+                'is_current' => 1,
                 'current_period_start' => now(),
-                'current_period_end' => now()->addYear(),
+                'current_period_end' => $periodEnd,
             ]);
 
             return $subscription->fresh()->load('company:id,name,slug');

@@ -22,11 +22,11 @@ class WalletLedger
     /**
      * Ensure a wallet exists for the company. Creates one if not.
      */
-    public static function ensureWallet(Company $company, string $currency = 'EUR'): CompanyWallet
+    public static function ensureWallet(Company $company, ?string $currency = null): CompanyWallet
     {
         return CompanyWallet::firstOrCreate(
             ['company_id' => $company->id],
-            ['currency' => $currency, 'cached_balance' => 0],
+            ['currency' => $currency ?? $company->market?->currency ?? config('billing.default_currency', 'EUR'), 'cached_balance' => 0],
         );
     }
 
@@ -151,7 +151,7 @@ class WalletLedger
             // Ensure wallet exists
             $wallet = CompanyWallet::firstOrCreate(
                 ['company_id' => $company->id],
-                ['currency' => 'EUR', 'cached_balance' => 0],
+                ['currency' => $company->market?->currency ?? config('billing.default_currency', 'EUR'), 'cached_balance' => 0],
             );
 
             // Lock the wallet row

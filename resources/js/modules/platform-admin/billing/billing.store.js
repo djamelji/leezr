@@ -7,9 +7,7 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     _config: { driver: 'null', config: {} },
     _policies: {
       payment_required: false,
-      admin_approval_required: true,
       annual_only: false,
-      currency: 'usd',
       vat_enabled: false,
       vat_rate: 0,
     },
@@ -56,6 +54,14 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     _widgetsLoading: false,
     _widgetLoading: {},
     _widgetsPeriod: '30d',
+
+    // Billing metrics (ADR-227)
+    _metrics: null,
+    _metricsLoading: false,
+
+    // Recovery status (ADR-236)
+    _recoveryStatus: null,
+    _recoveryLoading: false,
   }),
 
   getters: {
@@ -105,6 +111,14 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     widgetsLoading: state => state._widgetsLoading,
     widgetLoading: state => state._widgetLoading,
     widgetsPeriod: state => state._widgetsPeriod,
+
+    // Billing metrics
+    metrics: state => state._metrics,
+    metricsLoading: state => state._metricsLoading,
+
+    // Recovery status
+    recoveryStatus: state => state._recoveryStatus,
+    recoveryLoading: state => state._recoveryLoading,
   },
 
   actions: {
@@ -747,6 +761,26 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
       await Promise.all(
         this._widgets.map(w => this.fetchWidget(w.key, companyId, period)),
       )
+    },
+
+    async fetchMetrics() {
+      this._metricsLoading = true
+      try {
+        this._metrics = await $platformApi('/billing/metrics')
+      }
+      finally {
+        this._metricsLoading = false
+      }
+    },
+
+    async fetchRecoveryStatus() {
+      this._recoveryLoading = true
+      try {
+        this._recoveryStatus = await $platformApi('/billing/recovery-status')
+      }
+      finally {
+        this._recoveryLoading = false
+      }
     },
   },
 })

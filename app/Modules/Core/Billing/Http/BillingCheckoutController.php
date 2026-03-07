@@ -14,10 +14,15 @@ class BillingCheckoutController
     {
         $validated = $request->validate([
             'plan_key' => ['required', 'string', Rule::in(PlanRegistry::keys())],
+            'billing_interval' => ['sometimes', 'string', Rule::in(['monthly', 'yearly'])],
         ]);
 
         $company = $request->attributes->get('company');
-        $result = $service->requestUpgrade($company, $validated['plan_key']);
+        $result = $service->requestUpgrade(
+            $company,
+            $validated['plan_key'],
+            $validated['billing_interval'] ?? 'monthly',
+        );
 
         return response()->json($result->toArray());
     }

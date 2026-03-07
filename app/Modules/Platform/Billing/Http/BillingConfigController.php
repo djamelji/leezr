@@ -67,9 +67,7 @@ class BillingConfigController
 
     private const POLICY_DEFAULTS = [
         'payment_required' => false,
-        'admin_approval_required' => true,
         'annual_only' => false,
-        'currency' => 'usd',
         'vat_enabled' => false,
         'vat_rate' => 0,
     ];
@@ -88,9 +86,7 @@ class BillingConfigController
     {
         $validated = $request->validate([
             'payment_required' => ['required', 'boolean'],
-            'admin_approval_required' => ['required', 'boolean'],
             'annual_only' => ['required', 'boolean'],
-            'currency' => ['required', 'string', 'in:usd,eur,gbp'],
             'vat_enabled' => ['required', 'boolean'],
             'vat_rate' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);

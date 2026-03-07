@@ -13,6 +13,7 @@ final class RegisterCompanyData
         public readonly string $jobdomainKey,
         public readonly ?string $planKey = null,
         public readonly ?string $marketKey = null,
+        public readonly ?string $billingInterval = 'monthly',
     ) {}
 
     public static function fromValidated(array $data): self
@@ -26,6 +27,7 @@ final class RegisterCompanyData
             jobdomainKey: $data['jobdomain_key'],
             planKey: $data['plan_key'] ?? null,
             marketKey: $data['market_key'] ?? null,
+            billingInterval: $data['billing_interval'] ?? 'monthly',
         );
     }
 }

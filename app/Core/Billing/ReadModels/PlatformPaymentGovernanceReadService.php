@@ -22,15 +22,31 @@ class PlatformPaymentGovernanceReadService
             $manifest = $registryManifests[$module->provider_key] ?? null;
 
             // Mask credential values for display (show first 8 + last 4 chars)
+            // Non-secret config keys are returned as-is
+            $nonSecretKeys = ['mode'];
             $maskedCredentials = [];
             $rawCredentials = $module->credentials ?? [];
             foreach ($rawCredentials as $key => $value) {
-                if (is_string($value) && strlen($value) > 12) {
+                if (in_array($key, $nonSecretKeys)) {
+                    $maskedCredentials[$key] = $value;
+                } elseif (is_string($value) && strlen($value) > 12) {
                     $maskedCredentials[$key] = substr($value, 0, 8) . '••••' . substr($value, -4);
                 } elseif (is_string($value) && strlen($value) > 0) {
                     $maskedCredentials[$key] = '••••••••';
                 } else {
                     $maskedCredentials[$key] = '';
+                }
+            }
+
+            // Stripe backward compat: map old flat keys to mode-prefixed keys
+            if ($module->provider_key === 'stripe') {
+                $mode = $rawCredentials['mode'] ?? 'test';
+
+                if (empty($maskedCredentials["{$mode}_publishable_key"]) && ! empty($maskedCredentials['publishable_key'])) {
+                    $maskedCredentials["{$mode}_publishable_key"] = $maskedCredentials['publishable_key'];
+                }
+                if (empty($maskedCredentials["{$mode}_secret_key"]) && ! empty($maskedCredentials['secret_key'])) {
+                    $maskedCredentials["{$mode}_secret_key"] = $maskedCredentials['secret_key'];
                 }
             }
 
@@ -43,6 +59,8 @@ class PlatformPaymentGovernanceReadService
                 'is_active' => $module->is_active,
                 'has_credentials' => !empty($module->credentials),
                 'credentials_masked' => $maskedCredentials,
+                'stripe_mode' => $module->provider_key === 'stripe' ? $module->getStripeMode() : null,
+                'configuration_status' => $module->getConfigurationStatus(),
                 'health_status' => $module->health_status,
                 'health_checked_at' => $module->health_checked_at?->toISOString(),
                 'sort_order' => $module->sort_order,

@@ -25,6 +25,7 @@ class RegisterRequest extends FormRequest
             'jobdomain_key' => ['required', 'string', 'exists:jobdomains,key'],
             'plan_key' => ['sometimes', 'nullable', 'string', Rule::in(PlanRegistry::keys())],
             'market_key' => ['sometimes', 'string', 'exists:markets,key'],
+            'billing_interval' => ['sometimes', 'string', Rule::in(['monthly', 'yearly'])],
         ];
     }
 }

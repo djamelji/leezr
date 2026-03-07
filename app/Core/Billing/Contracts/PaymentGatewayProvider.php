@@ -12,7 +12,7 @@ interface PaymentGatewayProvider
      * Initiate a checkout/upgrade flow for a company.
      * Creates a Subscription in 'pending' state.
      */
-    public function createCheckout(Company $company, string $planKey): CheckoutResult;
+    public function createCheckout(Company $company, string $planKey, string $interval = 'monthly'): CheckoutResult;
 
     /**
      * Handle provider callback/webhook.

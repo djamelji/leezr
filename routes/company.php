@@ -5,7 +5,10 @@ use App\Modules\Core\Dashboard\Http\CompanyDashboardWidgetController;
 use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
 use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Core\Billing\Http\BillingCheckoutController;
+use App\Modules\Core\Billing\Http\CheckoutStatusController;
 use App\Modules\Core\Billing\Http\CompanyBillingController;
+use App\Modules\Core\Billing\Http\CompanyPaymentMethodController;
+use App\Modules\Core\Billing\Http\CompanyPaymentSetupController;
 use App\Modules\Core\Billing\Http\CompanyPlanController;
 use App\Modules\Core\Billing\Http\SubscriptionMutationController;
 use App\Modules\Core\Members\Http\MemberCredentialController;
@@ -65,24 +68,40 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
 
     Route::post('/billing/checkout', BillingCheckoutController::class)
         ->middleware('company.access:manage-structure');
+    Route::get('/billing/checkout/status', CheckoutStatusController::class);
 
     // Billing details (ADR-124, ADR-135 LOT4)
     Route::get('/billing/overview', [CompanyBillingController::class, 'overview']);
     Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
     Route::get('/billing/invoices/{id}', [CompanyBillingController::class, 'invoiceDetail']);
-    Route::get('/billing/payments', [CompanyBillingController::class, 'payments']);
-    Route::get('/billing/wallet', [CompanyBillingController::class, 'wallet']);
     Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);
-    Route::get('/billing/payment-methods', [CompanyBillingController::class, 'paymentMethods']);
-    Route::get('/billing/portal-url', [CompanyBillingController::class, 'portalUrl']);
+    Route::get('/billing/next-invoice-preview', [CompanyBillingController::class, 'nextInvoicePreview']);
+    Route::get('/billing/plan-change-preview', [CompanyBillingController::class, 'planChangePreview']);
     Route::get('/billing/invoices/{id}/pdf', [CompanyBillingController::class, 'invoicePdf']);
+
+    // Payment methods & invoice retry (ADR-225, manage-structure required)
+    Route::post('/billing/setup-intent', [CompanyPaymentSetupController::class, 'createSetupIntent'])
+        ->middleware('company.access:manage-structure');
+    Route::post('/billing/confirm-setup-intent', [CompanyPaymentSetupController::class, 'confirmSetupIntent'])
+        ->middleware('company.access:manage-structure');
+    Route::get('/billing/saved-cards', [CompanyPaymentMethodController::class, 'savedCards']);
+    Route::post('/billing/invoices/{id}/retry', [CompanyPaymentMethodController::class, 'retryInvoice'])
+        ->middleware('company.access:manage-structure');
+    Route::delete('/billing/saved-cards/{id}', [CompanyPaymentMethodController::class, 'deleteCard'])
+        ->middleware('company.access:manage-structure');
+    Route::put('/billing/saved-cards/{id}/default', [CompanyPaymentMethodController::class, 'setDefault'])
+        ->middleware('company.access:manage-structure');
 
     // Subscription mutations (ADR-135 D1, manage-structure required)
     Route::post('/billing/plan-change', [SubscriptionMutationController::class, 'planChange'])
         ->middleware('company.access:manage-structure');
+    Route::delete('/billing/plan-change', [SubscriptionMutationController::class, 'cancelPlanChange'])
+        ->middleware('company.access:manage-structure');
     Route::put('/billing/subscription/cancel', [SubscriptionMutationController::class, 'cancel'])
         ->middleware('company.access:manage-structure');
     Route::post('/billing/pay-now', [SubscriptionMutationController::class, 'payNow'])
+        ->middleware('company.access:manage-structure');
+    Route::put('/billing/subscription/billing-day', [SubscriptionMutationController::class, 'setBillingDay'])
         ->middleware('company.access:manage-structure');
 });
 

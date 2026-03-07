@@ -35,6 +35,16 @@ class PaymentGatewayManager extends Manager
         return new NullPaymentGateway();
     }
 
+    protected function createStripeDriver(): Adapters\StripePaymentAdapter
+    {
+        return new Adapters\StripePaymentAdapter();
+    }
+
+    protected function createInternalDriver(): Adapters\InternalPaymentAdapter
+    {
+        return new Adapters\InternalPaymentAdapter();
+    }
+
     /**
      * Dynamically detect available payment gateway providers.
      * Scans module.json for "provides_payment_driver" field.

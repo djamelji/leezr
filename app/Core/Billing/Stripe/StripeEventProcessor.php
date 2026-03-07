@@ -4,15 +4,23 @@ namespace App\Core\Billing\Stripe;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\BillingExpectedConfirmation;
+use App\Core\Billing\CheckoutSessionActivator;
 use App\Core\Billing\CompanyPaymentCustomer;
+use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\CreditNote;
 use App\Core\Billing\CreditNoteIssuer;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\LedgerService;
 use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
+use App\Core\Plans\Plan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Processes Stripe webhook events into billing state changes (ADR-138 D3b).
@@ -23,9 +31,11 @@ use App\Core\Models\Company;
 class StripeEventProcessor
 {
     private const HANDLED_EVENTS = [
+        'checkout.session.completed',
         'payment_intent.succeeded',
         'payment_intent.payment_failed',
         'charge.refunded',
+        'setup_intent.succeeded',
     ];
 
     public function __construct(
@@ -35,6 +45,11 @@ class StripeEventProcessor
     public function process(array $payload): WebhookHandlingResult
     {
         $eventType = $payload['type'] ?? null;
+
+        Log::channel('billing')->info('Stripe webhook received', [
+            'type' => $eventType,
+            'id' => $payload['id'] ?? null,
+        ]);
 
         if (! in_array($eventType, self::HANDLED_EVENTS, true)) {
             return new WebhookHandlingResult(handled: false);
@@ -46,14 +61,50 @@ class StripeEventProcessor
             return new WebhookHandlingResult(handled: false, error: 'Missing data.object in payload.');
         }
 
+        // ADR-228: Resolve expected confirmation if one matches
+        $this->resolveExpectedConfirmation($eventType, $object);
+
         return match ($eventType) {
+            'checkout.session.completed' => $this->handleCheckoutSessionCompleted($object),
             'payment_intent.succeeded' => $this->handlePaymentSucceeded($object),
             'payment_intent.payment_failed' => $this->handlePaymentFailed($object),
             'charge.refunded' => $this->handleChargeRefunded($object),
+            'setup_intent.succeeded' => $this->handleSetupIntentSucceeded($object),
         };
     }
 
     // ── Handlers ─────────────────────────────────────────
+
+    private function handleCheckoutSessionCompleted(array $session): WebhookHandlingResult
+    {
+        // ADR-229: Delegate to shared activator (triple recovery)
+        $result = CheckoutSessionActivator::activateFromStripeSession($session);
+
+        if (! $result->activated && ! $result->idempotent) {
+            return new WebhookHandlingResult(handled: false, error: $result->reason);
+        }
+
+        $metadata = $session['metadata'] ?? [];
+        $subscriptionId = (int) ($metadata['subscription_id'] ?? 0);
+        $companyId = (int) ($metadata['company_id'] ?? 0);
+
+        $this->audit->logPlatform(
+            AuditAction::WEBHOOK_PAYMENT_SYNCED,
+            'subscription',
+            (string) $subscriptionId,
+            [
+                'actorType' => 'system',
+                'severity' => 'info',
+                'metadata' => [
+                    'plan_key' => $metadata['plan_key'] ?? null,
+                    'company_id' => $companyId,
+                    'action' => $result->reason,
+                ],
+            ],
+        );
+
+        return new WebhookHandlingResult(handled: true, action: $result->reason);
+    }
 
     private function handlePaymentSucceeded(array $intent): WebhookHandlingResult
     {
@@ -72,7 +123,7 @@ class StripeEventProcessor
         }
 
         $amount = $intent['amount_received'] ?? $intent['amount'];
-        $currency = strtoupper($intent['currency'] ?? 'EUR');
+        $currency = strtoupper($intent['currency'] ?? config('billing.default_currency', 'EUR'));
         $subscriptionId = $this->resolveSubscriptionId($invoice, $companyId);
 
         $payment = Payment::updateOrCreate(
@@ -145,7 +196,7 @@ class StripeEventProcessor
         }
 
         $amount = $intent['amount'] ?? 0;
-        $currency = strtoupper($intent['currency'] ?? 'EUR');
+        $currency = strtoupper($intent['currency'] ?? config('billing.default_currency', 'EUR'));
         $subscriptionId = $this->resolveSubscriptionId($invoice, $companyId);
 
         $payment = Payment::updateOrCreate(
@@ -262,6 +313,100 @@ class StripeEventProcessor
         return new WebhookHandlingResult(handled: true, action: 'refund_synced');
     }
 
+    private function handleSetupIntentSucceeded(array $setupIntent): WebhookHandlingResult
+    {
+        $paymentMethodId = $setupIntent['payment_method'] ?? null;
+        $metadata = $setupIntent['metadata'] ?? [];
+        $stripeCustomerId = $setupIntent['customer'] ?? null;
+
+        if (! $paymentMethodId) {
+            return new WebhookHandlingResult(handled: false, error: 'Missing payment_method on setup_intent.');
+        }
+
+        $companyId = $this->resolveCompanyId($metadata, $stripeCustomerId);
+
+        if (! $companyId) {
+            return new WebhookHandlingResult(handled: false, error: 'Cannot resolve company.');
+        }
+
+        // Retrieve payment method details from Stripe
+        $adapter = app(StripePaymentAdapter::class);
+        $pm = $adapter->retrievePaymentMethod($paymentMethodId);
+
+        $type = $pm->type ?? 'card';
+
+        if ($type === 'sepa_debit') {
+            $sepa = $pm->sepa_debit;
+            $profileMetadata = [
+                'type' => 'sepa_debit',
+                'bank_code' => $sepa?->bank_code ?? null,
+                'country' => $sepa?->country ?? null,
+                'last4' => $sepa?->last4 ?? '****',
+                'holder_name' => $pm->billing_details?->name ?? null,
+                'mandate_reference' => $setupIntent['mandate'] ?? null,
+                'mandate_status' => 'active',
+            ];
+            $methodKey = 'sepa_debit';
+            $label = 'SEPA •••• ' . ($sepa?->last4 ?? '****');
+        } else {
+            $card = $pm->card ?? null;
+            $profileMetadata = [
+                'brand' => $card?->brand ?? 'unknown',
+                'last4' => $card?->last4 ?? '****',
+                'exp_month' => $card?->exp_month,
+                'exp_year' => $card?->exp_year,
+                'fingerprint' => $card?->fingerprint,
+                'country' => $card?->country,
+                'funding' => $card?->funding,
+            ];
+            $methodKey = 'card';
+            $label = ucfirst($profileMetadata['brand']) . ' •••• ' . $profileMetadata['last4'];
+        }
+
+        // Unset previous default
+        CompanyPaymentProfile::where('company_id', $companyId)
+            ->where('is_default', true)
+            ->update(['is_default' => false]);
+
+        // Upsert the new payment profile
+        CompanyPaymentProfile::updateOrCreate(
+            [
+                'company_id' => $companyId,
+                'provider_key' => 'stripe',
+                'provider_payment_method_id' => $paymentMethodId,
+            ],
+            [
+                'method_key' => $methodKey,
+                'label' => $label,
+                'is_default' => true,
+                'metadata' => $profileMetadata,
+            ],
+        );
+
+        // Set as default on Stripe customer
+        if ($stripeCustomerId) {
+            $adapter->setDefaultPaymentMethod($stripeCustomerId, $paymentMethodId);
+        }
+
+        $this->audit->logPlatform(
+            AuditAction::WEBHOOK_SETUP_INTENT_SYNCED,
+            'payment_profile',
+            (string) $companyId,
+            [
+                'actorType' => 'system',
+                'severity' => 'info',
+                'metadata' => [
+                    'company_id' => $companyId,
+                    'payment_method_id' => $paymentMethodId,
+                    'method_key' => $methodKey,
+                    'last4' => $profileMetadata['last4'],
+                ],
+            ],
+        );
+
+        return new WebhookHandlingResult(handled: true, action: 'setup_intent_synced');
+    }
+
     // ── Resolvers ────────────────────────────────────────
 
     private function resolveCompanyId(array $metadata, ?string $stripeCustomerId): ?int
@@ -322,5 +467,24 @@ class StripeEventProcessor
             ->whereIn('status', ['active', 'trialing', 'past_due'])
             ->first()
             ?->id;
+    }
+
+    // ── ADR-228: Expected confirmation resolution ────────
+
+    private function resolveExpectedConfirmation(string $eventType, array $object): void
+    {
+        $objectId = $object['id'] ?? null;
+        if (! $objectId) {
+            return;
+        }
+
+        BillingExpectedConfirmation::where('provider_key', 'stripe')
+            ->where('expected_event_type', $eventType)
+            ->where('provider_reference', $objectId)
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'confirmed',
+                'confirmed_at' => now(),
+            ]);
     }
 }

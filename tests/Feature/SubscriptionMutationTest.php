@@ -222,7 +222,7 @@ class SubscriptionMutationTest extends TestCase
             'idempotency_key' => 'same-plan',
             'to_plan_key' => 'pro',
         ])->assertStatus(422)
-            ->assertJsonPath('message', 'Already on this plan.');
+            ->assertJsonPath('message', 'Already on this plan and interval.');
     }
 
     public function test_plan_change_no_subscription_returns_422(): void

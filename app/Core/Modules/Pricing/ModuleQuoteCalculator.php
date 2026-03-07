@@ -7,6 +7,7 @@ use App\Core\Models\Company;
 use App\Core\Modules\DependencyGraph;
 use App\Core\Modules\EntitlementResolver;
 use App\Core\Modules\ModuleGate;
+use App\Core\Billing\WalletLedger;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 use InvalidArgumentException;
@@ -38,10 +39,12 @@ class ModuleQuoteCalculator
      */
     public static function quoteForCompany(Company $company, array $selectedModuleKeys): Quote
     {
+        $currency = WalletLedger::ensureWallet($company)->currency;
+
         if (empty($selectedModuleKeys)) {
             return new Quote(
                 total: 0,
-                currency: config('app.currency', 'EUR'),
+                currency: $currency,
                 lines: [],
                 included: [],
             );
@@ -141,7 +144,7 @@ class ModuleQuoteCalculator
 
         return new Quote(
             total: $total,
-            currency: config('app.currency', 'EUR'),
+            currency: $currency,
             lines: $lines,
             included: $included,
         );
@@ -153,7 +156,7 @@ class ModuleQuoteCalculator
      * Supports: flat, plan_flat.
      * Other models return 0 (future: per_seat, usage, tiered).
      */
-    private static function computeAmount(PlatformModule $pm, string $companyPlanKey): int
+    public static function computeAmount(PlatformModule $pm, string $companyPlanKey): int
     {
         $addon = $pm->addon_pricing ?? [];
         $params = $addon['pricing_params'] ?? [];

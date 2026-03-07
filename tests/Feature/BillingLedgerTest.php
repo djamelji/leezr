@@ -100,7 +100,7 @@ class BillingLedgerTest extends TestCase
                     return [];
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     return \Stripe\PaymentIntent::constructFrom([
                         'id' => 'pi_mock_' . uniqid(),
@@ -461,7 +461,7 @@ class BillingLedgerTest extends TestCase
                     return [];
                 }
 
-                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata): \Stripe\PaymentIntent
+                protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     return \Stripe\PaymentIntent::constructFrom([
                         'id' => 'pi_mock_fail',

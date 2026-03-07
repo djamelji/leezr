@@ -78,7 +78,7 @@ const handleRegister = async () => {
   errors.value = {}
 
   try {
-    await auth.register({
+    const data = await auth.register({
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       email: form.value.email,
@@ -87,7 +87,15 @@ const handleRegister = async () => {
       company_name: form.value.company_name,
       jobdomain_key: selectedJobdomain.value || undefined,
       plan_key: selectedPlan.value || undefined,
+      billing_interval: annualToggle.value ? 'yearly' : 'monthly',
     })
+
+    // ADR-231: If checkout redirect needed (paid plan, no trial), redirect to payment
+    if (data.checkout?.redirect_url) {
+      window.location.href = data.checkout.redirect_url
+
+      return
+    }
 
     // ADR-160: Reset to cold, boot fully, THEN navigate.
     runtime.teardown()

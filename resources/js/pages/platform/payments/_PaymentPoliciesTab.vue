@@ -11,9 +11,7 @@ const policiesLoading = ref(false)
 
 const policiesForm = ref({
   payment_required: false,
-  admin_approval_required: true,
   annual_only: false,
-  currency: 'usd',
   vat_enabled: false,
   vat_rate: 0,
 })
@@ -27,12 +25,6 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-const currencyOptions = [
-  { title: 'USD ($)', value: 'usd' },
-  { title: 'EUR (\u20AC)', value: 'eur' },
-  { title: 'GBP (\u00A3)', value: 'gbp' },
-]
 
 const savePolicies = async () => {
   policiesLoading.value = true
@@ -84,31 +76,9 @@ const savePolicies = async () => {
           md="6"
         >
           <VSwitch
-            v-model="policiesForm.admin_approval_required"
-            :label="t('payments.adminApproval')"
-            class="mb-4"
-          />
-        </VCol>
-
-        <VCol
-          cols="12"
-          md="6"
-        >
-          <VSwitch
             v-model="policiesForm.annual_only"
             :label="t('payments.annualOnly')"
             class="mb-4"
-          />
-        </VCol>
-
-        <VCol
-          cols="12"
-          md="6"
-        >
-          <VSelect
-            v-model="policiesForm.currency"
-            :items="currencyOptions"
-            :label="t('payments.primaryCurrency')"
           />
         </VCol>
 
