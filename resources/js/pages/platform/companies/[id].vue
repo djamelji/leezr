@@ -9,7 +9,6 @@ import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
-import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import CompanyBioPanel from './_CompanyBioPanel.vue'
 import CompanyBillingTab from './_CompanyBillingTab.vue'
 import CompanyMembersTab from './_CompanyMembersTab.vue'
@@ -62,6 +61,17 @@ const overviewForm = ref({ name: '' })
 const dynamicFields = ref([])
 const dynamicForm = ref({})
 const overviewSaving = ref(false)
+
+// Group dynamic fields by section for structured display
+const fieldByCode = code => dynamicFields.value.find(f => f.code === code)
+const hasField = code => !!fieldByCode(code)
+
+const fiscalFields = computed(() =>
+  ['siret', 'vat_number', 'legal_form'].filter(hasField),
+)
+const billingAddressFields = computed(() =>
+  ['billing_address', 'billing_city', 'billing_postal_code', 'billing_email'].filter(hasField),
+)
 
 // ─── Wallet form ────────────────────────────────────
 const walletDialog = ref(false)
@@ -459,26 +469,23 @@ const tabs = computed(() => [
           <VWindow v-model="activeTab" class="mt-6 disable-tab-transition" :touch="false">
             <!-- ─── Overview ──────────────────────── -->
             <VWindowItem value="overview">
+              <!-- General info -->
               <VCard flat border>
+                <VCardTitle class="text-subtitle-1 font-weight-medium">
+                  {{ t('platformCompanyDetail.generalInfo') }}
+                </VCardTitle>
                 <VCardText>
                   <VRow>
                     <VCol cols="12" md="6">
                       <AppTextField
                         v-model="overviewForm.name"
-                        :label="t('common.name')"
+                        :label="t('platformCompanyDetail.companyName')"
                       />
                     </VCol>
                     <VCol cols="12" md="6">
                       <AppTextField
                         :model-value="company.slug"
                         :label="t('common.slug')"
-                        disabled
-                      />
-                    </VCol>
-                    <VCol cols="12" md="6">
-                      <AppTextField
-                        :model-value="formatDate(company.created_at)"
-                        :label="t('common.created')"
                         disabled
                       />
                     </VCol>
@@ -507,31 +514,83 @@ const tabs = computed(() => [
                         @update:model-value="requestPlanChange"
                       />
                     </VCol>
+                    <VCol cols="12" md="6">
+                      <AppTextField
+                        :model-value="formatDate(company.created_at)"
+                        :label="t('common.created')"
+                        disabled
+                      />
+                    </VCol>
                   </VRow>
-
-                  <template v-if="dynamicFields.length">
-                    <VDivider class="my-4" />
-                    <h6 class="text-h6 mb-4">
-                      {{ t('platformCompanyDetail.companyFields') }}
-                    </h6>
-                    <DynamicFormRenderer
-                      v-model="dynamicForm"
-                      :fields="dynamicFields"
-                    />
-                  </template>
-
-                  <VDivider class="my-4" />
-                  <div class="d-flex justify-end">
-                    <VBtn
-                      color="primary"
-                      :loading="overviewSaving"
-                      @click="saveOverview"
-                    >
-                      {{ t('common.save') }}
-                    </VBtn>
-                  </div>
                 </VCardText>
               </VCard>
+
+              <!-- Fiscal info -->
+              <VCard
+                v-if="fiscalFields.length"
+                flat
+                border
+                class="mt-4"
+              >
+                <VCardTitle class="text-subtitle-1 font-weight-medium">
+                  {{ t('platformCompanyDetail.fiscalInfo') }}
+                </VCardTitle>
+                <VCardText>
+                  <VRow>
+                    <VCol
+                      v-for="code in fiscalFields"
+                      :key="code"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="dynamicForm[code]"
+                        :label="fieldByCode(code)?.label"
+                        @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                  </VRow>
+                </VCardText>
+              </VCard>
+
+              <!-- Billing address -->
+              <VCard
+                v-if="billingAddressFields.length"
+                flat
+                border
+                class="mt-4"
+              >
+                <VCardTitle class="text-subtitle-1 font-weight-medium">
+                  {{ t('platformCompanyDetail.billingAddress') }}
+                </VCardTitle>
+                <VCardText>
+                  <VRow>
+                    <VCol
+                      v-for="code in billingAddressFields"
+                      :key="code"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="dynamicForm[code]"
+                        :label="fieldByCode(code)?.label"
+                        @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                  </VRow>
+                </VCardText>
+              </VCard>
+
+              <!-- Save -->
+              <div class="d-flex justify-end mt-4">
+                <VBtn
+                  color="primary"
+                  :loading="overviewSaving"
+                  @click="saveOverview"
+                >
+                  {{ t('common.save') }}
+                </VBtn>
+              </div>
             </VWindowItem>
 
             <!-- ─── Billing ───────────────────────── -->

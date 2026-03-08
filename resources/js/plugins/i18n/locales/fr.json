@@ -1816,7 +1816,10 @@
 
   "platformCompanyDetail": {
     "failedToLoad": "Échec du chargement du profil de l'entreprise.",
-    "companyFields": "Champs entreprise",
+    "generalInfo": "Informations générales",
+    "companyName": "Nom de l'entreprise",
+    "fiscalInfo": "Informations fiscales",
+    "billingAddress": "Adresse de facturation",
     "profileUpdated": "Profil de l'entreprise mis à jour.",
     "profileUpdateFailed": "Échec de la mise à jour du profil.",
     "overview": "Aperçu",

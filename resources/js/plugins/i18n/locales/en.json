@@ -1793,7 +1793,10 @@
 
   "platformCompanyDetail": {
     "failedToLoad": "Failed to load company profile.",
-    "companyFields": "Company fields",
+    "generalInfo": "General information",
+    "companyName": "Company name",
+    "fiscalInfo": "Fiscal information",
+    "billingAddress": "Billing address",
     "profileUpdated": "Company profile updated.",
     "profileUpdateFailed": "Failed to update profile.",
     "overview": "Overview",
