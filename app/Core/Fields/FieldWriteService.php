@@ -92,7 +92,7 @@ class FieldWriteService
                 }
 
                 // ADR-165: auto-normalize phone fields to E.164
-                if (in_array($code, ['phone', 'emergency_contact_phone']) && is_string($value) && $value !== '') {
+                if (in_array($code, ['phone', 'emergency_contact_phone', 'company_phone']) && is_string($value) && $value !== '') {
                     $value = PhoneNormalizerService::normalize($value, $dialCode);
                 }
 

@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformFieldsStore } from '@/modules/platform-admin/fields/fields.store'
+import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
@@ -13,6 +14,7 @@ definePage({
 
 const { t } = useI18n()
 const fieldsStore = usePlatformFieldsStore()
+const marketsStore = usePlatformMarketsStore()
 const { toast } = useAppToast()
 const isLoading = ref(true)
 const scopeFilter = ref('')
@@ -21,8 +23,15 @@ const scopeFilter = ref('')
 const isDefDrawerOpen = ref(false)
 const isDefEditMode = ref(false)
 const editingDef = ref(null)
-const defForm = ref({ code: '', scope: 'company', label: '', type: 'string', validation_rules: null, options: null, default_order: 0 })
+const defForm = ref({ code: '', scope: 'company', label: '', type: 'string', validation_rules: null, options: null, default_order: 0, translations: {} })
 const defLoading = ref(false)
+
+// ─── Languages for translations ──────────────────────
+const activeLanguages = computed(() =>
+  marketsStore.languages.filter(l => l.is_active).map(l => ({ code: l.code, name: l.name })),
+)
+
+const drawerLocale = ref('en')
 
 // ─── Activations state (platform_user scope) ────────
 const activeTab = ref('definitions')
@@ -82,6 +91,7 @@ onMounted(async () => {
     await Promise.all([
       fieldsStore.fetchFieldDefinitions(),
       fieldsStore.fetchFieldActivations(),
+      marketsStore.fetchLanguages(),
     ])
   }
   finally {
@@ -93,7 +103,8 @@ onMounted(async () => {
 const openCreateDefDrawer = () => {
   isDefEditMode.value = false
   editingDef.value = null
-  defForm.value = { code: '', scope: 'company', label: '', type: 'string', validation_rules: null, options: null, default_order: 0 }
+  defForm.value = { code: '', scope: 'company', label: '', type: 'string', validation_rules: null, options: null, default_order: 0, translations: {} }
+  drawerLocale.value = 'en'
   isDefDrawerOpen.value = true
 }
 
@@ -108,17 +119,24 @@ const openEditDefDrawer = def => {
     validation_rules: def.validation_rules,
     options: def.options,
     default_order: def.default_order,
+    translations: def.translations ? { ...def.translations } : {},
   }
+  drawerLocale.value = 'en'
   isDefDrawerOpen.value = true
 }
 
 const handleDefSubmit = async () => {
   defLoading.value = true
 
+  // Canonical label = translations.en or form label
+  const translations = { ...defForm.value.translations }
+  const canonicalLabel = translations.en || defForm.value.label
+
   try {
     if (isDefEditMode.value) {
       const data = await fieldsStore.updateFieldDefinition(editingDef.value.id, {
-        label: defForm.value.label,
+        label: canonicalLabel,
+        translations,
         validation_rules: defForm.value.validation_rules,
         options: defForm.value.options,
         default_order: Number(defForm.value.default_order) || 0,
@@ -130,7 +148,8 @@ const handleDefSubmit = async () => {
       const data = await fieldsStore.createFieldDefinition({
         code: defForm.value.code,
         scope: defForm.value.scope,
-        label: defForm.value.label,
+        label: canonicalLabel,
+        translations,
         type: defForm.value.type,
         default_order: Number(defForm.value.default_order) || 0,
       })
@@ -210,6 +229,13 @@ const updateOrder = async (def, order) => {
   }
 }
 
+const hasIncompleteTranslations = def => {
+  if (!activeLanguages.value.length) return false
+  const tr = def.translations || {}
+
+  return activeLanguages.value.some(lang => !tr[lang.code])
+}
+
 const scopeColor = scope => {
   const colors = {
     platform_user: 'info',
@@ -286,6 +312,17 @@ const scopeColor = scope => {
           >
             <template #item.code="{ item }">
               <code class="text-body-2">{{ item.code }}</code>
+            </template>
+
+            <template #item.label="{ item }">
+              {{ item.label }}
+              <VIcon
+                v-if="hasIncompleteTranslations(item)"
+                icon="tabler-language"
+                size="16"
+                color="warning"
+                class="ms-1"
+              />
             </template>
 
             <template #item.scope="{ item }">
@@ -489,7 +526,45 @@ const scopeColor = scope => {
               />
             </VCol>
 
-            <VCol cols="12">
+            <VCol
+              v-if="activeLanguages.length > 1"
+              cols="12"
+            >
+              <VBtnToggle
+                v-model="drawerLocale"
+                mandatory
+                density="compact"
+                color="primary"
+                class="mb-2"
+              >
+                <VBtn
+                  v-for="lang in activeLanguages"
+                  :key="lang.code"
+                  :value="lang.code"
+                  size="small"
+                >
+                  {{ lang.code.toUpperCase() }}
+                </VBtn>
+              </VBtnToggle>
+            </VCol>
+
+            <VCol
+              v-for="lang in activeLanguages"
+              :key="lang.code"
+              v-show="drawerLocale === lang.code"
+              cols="12"
+            >
+              <AppTextField
+                v-model="defForm.translations[lang.code]"
+                :label="`${t('common.label')} (${lang.code.toUpperCase()})`"
+                :placeholder="t('platformFields.fieldLabelPlaceholder')"
+              />
+            </VCol>
+
+            <VCol
+              v-if="!activeLanguages.length"
+              cols="12"
+            >
               <AppTextField
                 v-model="defForm.label"
                 :label="t('common.label')"

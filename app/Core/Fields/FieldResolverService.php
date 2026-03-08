@@ -31,7 +31,20 @@ class FieldResolverService
      *
      * @return array<int, array{code: string, label: string, type: string, options: array|null, required: bool, value: mixed, order: int, group?: string|null, sensitive?: bool}>
      */
-    public static function resolve(Model $model, string $scope, ?int $companyId = null, ?string $roleKey = null, bool $canReadSensitive = true, ?string $marketKey = null, ?string $category = null): array
+    /**
+     * Detect the preferred locale from the current HTTP request.
+     * X-Locale header → Accept-Language → 'en'
+     */
+    public static function requestLocale(): ?string
+    {
+        $request = request();
+
+        return $request->header('X-Locale')
+            ?? $request->getPreferredLanguage(['en', 'fr'])
+            ?? 'en';
+    }
+
+    public static function resolve(Model $model, string $scope, ?int $companyId = null, ?string $roleKey = null, bool $canReadSensitive = true, ?string $marketKey = null, ?string $category = null, ?string $locale = null): array
     {
         // Query 1: all definitions for this scope (platform + current company)
         $definitions = FieldDefinition::where('scope', $scope)
@@ -120,7 +133,7 @@ class FieldResolverService
 
             $result[] = [
                 'code' => $definition->code,
-                'label' => $definition->label,
+                'label' => $definition->resolvedLabel($locale),
                 'type' => $definition->type,
                 'options' => $definition->options,
                 'required' => $isRequired,

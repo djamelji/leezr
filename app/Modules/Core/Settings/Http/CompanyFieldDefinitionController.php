@@ -76,6 +76,8 @@ class CompanyFieldDefinitionController extends Controller
             'options' => ['required_if:type,select', 'array', 'min:1'],
             'options.*' => ['string', 'distinct', 'min:1'],
             'default_order' => ['sometimes', 'integer', 'min:0'],
+            'translations' => ['sometimes', 'array'],
+            'translations.*' => ['string', 'max:255'],
         ]);
 
         // Uniqueness within company
@@ -94,6 +96,7 @@ class CompanyFieldDefinitionController extends Controller
             'code' => $validated['code'],
             'scope' => $validated['scope'],
             'label' => $validated['label'],
+            'translations' => $validated['translations'] ?? null,
             'type' => $validated['type'],
             'validation_rules' => $validated['validation_rules'] ?? null,
             'options' => $validated['options'] ?? null,

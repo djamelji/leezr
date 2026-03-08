@@ -24,6 +24,7 @@ class CompanyUserProfileReadModel
             canReadSensitive: $canReadSensitive,
             marketKey: $company->market_key,
             category: $category,
+            locale: FieldResolverService::requestLocale(),
         );
 
         $required = array_filter($resolved, fn ($f) => $f['required']);

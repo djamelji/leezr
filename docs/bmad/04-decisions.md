@@ -9804,4 +9804,97 @@ Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + 
 
 ---
 
+### ADR-283 — Plan preview dialog enrichi + AppSelect alignment
+
+- **Date** : 2026-03-08
+- **Contexte** : Dans `/platform/companies/{id}`, le champ Abonnement utilisait `VSelect` au lieu de `AppSelect`, causant un décalage visuel par rapport aux autres champs (qui utilisent `AppTextField`). De plus, le dialogue de changement de plan n'affichait qu'un résumé basique (from → to + prorata simple) sans détails financiers (taxes, wallet, addons, prochaine période).
+- **Décision** :
+  - `VSelect` remplacé par `AppSelect` pour le champ abonnement — alignement visuel cohérent avec les App* wrappers
+  - Correction des noms de champs prorata : `proration.credit` → `proration.credit_old_plan`, `proration.charge` → `proration.charge_new_plan` (aligné avec le backend)
+  - Dialog enrichi avec toutes les données du backend `CompanyBillingReadService::planChangePreview()` :
+    - Comparaison visuelle des plans (prix, intervalle) en deux colonnes
+    - Badges upgrade/downgrade + timing (immédiat / fin de période)
+    - Détail prorata avec jours restants/total
+    - Sous-total, taxes (taux + montant), total
+    - Déduction wallet et crédit wallet ajouté (downgrade)
+    - Montant dû final (après wallet)
+    - Solde wallet actuel
+    - Impact sur les addons (prix avant/après avec différence)
+    - Aperçu de la prochaine période récurrente (plan + addons + taxes = total)
+  - 15 nouvelles clés i18n (en + fr) pour le dialogue enrichi
+- **Conséquences** : L'admin platform voit un aperçu financier complet avant de confirmer un changement de plan, avec toutes les lignes de facturation, la déduction wallet, les taxes et l'impact sur les addons.
+- **Fichiers** :
+  - `resources/js/pages/platform/companies/[id].vue` — AppSelect + dialogue enrichi
+  - `resources/js/plugins/i18n/locales/en.json` — +15 clés planPreview
+  - `resources/js/plugins/i18n/locales/fr.json` — +15 clés planPreview
+
+---
+
+### ADR-284 — Adresses structurées (entreprise + facturation) + téléphone + traductions FR
+- **Date** : 2026-03-08
+- **Contexte** : Les champs de facturation manquaient de traduction FR (labels anglais affichés), labels redondants ("Billing Address" vs "Rue"). Aucune adresse postale d'entreprise ni téléphone entreprise n'existait. Pas de mécanisme pour copier l'adresse entreprise vers la facturation.
+- **Décisions** :
+  - Ajout de 8 nouveaux champs company-scope dans `FieldDefinitionCatalog` : `company_address`, `company_complement`, `company_city`, `company_postal_code`, `company_region` (category: address), `company_phone` (category: contact), `billing_complement`, `billing_region` (category: billing)
+  - Raccourcissement des labels billing existants : "Billing Address" → "Street", "Billing City" → "City", etc.
+  - Normalisation E.164 du champ `company_phone` via `FieldWriteService` (même traitement que `phone` et `emergency_contact_phone`)
+  - 16 nouvelles clés `fieldLabels` en EN/FR + 4 clés de section dans `companySettings` et `platformCompanyDetail`
+  - Company profile overview restructuré en VCards séparées : Infos générales + phone, Adresse entreprise, Adresse de facturation (avec VSwitch "Identique à l'adresse de l'entreprise"), Champs restants (DynamicFormRenderer)
+  - Platform 360° enrichi de 2 nouvelles sections : Coordonnées (phone) et Adresse de l'entreprise
+  - DevSeeder enrichi avec données réalistes Leezr Logistics : SIRET, TVA, raison sociale, adresse complète (15 Rue de la Logistique, Lyon 69003), téléphone, email facturation
+- **Conséquences** : Les entreprises ont un système d'adresses professionnel avec adresse postale + facturation, téléphone normalisé E.164, labels courts traduits FR, et un VSwitch pour copier l'adresse entreprise vers la facturation. Le DevSeeder fournit une entreprise démo complète et réaliste.
+- **Fichiers** :
+  - `app/Core/Fields/FieldDefinitionCatalog.php` — +8 fields, renommage 4 labels
+  - `app/Core/Fields/FieldWriteService.php` — +company_phone dans la normalisation phone
+  - `resources/js/pages/company/profile/_CompanyProfileOverview.vue` — VCards séparées par section + VSwitch
+  - `resources/js/pages/platform/companies/[id].vue` — +2 sections (adresse entreprise + contact) + labels i18n
+  - `resources/js/plugins/i18n/locales/en.json` — +16 fieldLabels, +4 clés sections
+  - `resources/js/plugins/i18n/locales/fr.json` — +16 fieldLabels, +4 clés sections
+  - `database/seeders/DevSeeder.php` — données réalistes pour tous les champs company
+  - `tests/Feature/FieldDefinitionTest.php` — count ajusté 29→37
+
+---
+
+### ADR-285 — Labels de champs traduisibles via colonne JSON translations
+- **Date** : 2026-03-08
+- **Contexte** : Les labels de champs (`field_definitions.label`) étaient des strings anglais bruts. Le frontend faisait un lookup i18n via `fieldLabels` dans en.json/fr.json, mais ce mécanisme était redondant avec le backend et ne couvrait pas les champs custom. De plus, `legal_name` manquait dans `fiscalFields` sur la vue 360°.
+- **Décisions** :
+  - Ajout d'une colonne JSON `translations` sur `field_definitions` : `{"en": "VAT Number", "fr": "N° TVA"}`
+  - Helper `resolvedLabel(?string $locale)` sur le model avec fallback chain : `translations[$locale]` → `translations['en']` → `label`
+  - `FieldResolverService::resolve()` accepte un paramètre `?string $locale` et utilise `resolvedLabel($locale)` au lieu de `$definition->label`
+  - Helper statique `requestLocale()` : détecte la locale via header `X-Locale` → `Accept-Language` → `'en'`
+  - Frontend : header `X-Locale` injecté dans `api.js` et `platformApi.js` depuis le cookie `language`
+  - `FieldDefinitionCatalog` enrichi avec `translations` EN/FR pour les 37 champs système, `sync()` persiste les traductions
+  - Drawer `/platform/fields` : `VBtnToggle` langues + `AppTextField` par langue, `label` canonique = `translations['en']`
+  - Icône `tabler-language` warning dans la table si traductions incomplètes
+  - `DynamicFormRenderer`, `_CompanyProfileOverview`, `platform/companies/[id]` : suppression du lookup i18n `fieldLabels`, utilisation directe de `field.label` (déjà résolu server-side)
+  - Suppression de la section `fieldLabels` de en.json et fr.json (devenue inutile)
+  - Fix : ajout de `legal_name` dans `fiscalFields` sur `platform/companies/[id].vue`
+  - Controllers platform + company : validation `translations` array acceptée en store/update
+- **Conséquences** : Les labels sont traduits côté serveur selon la locale du client. Les champs custom peuvent aussi être traduits via le drawer admin. Zéro table supplémentaire. Le frontend est simplifié (plus de lookup i18n redondant).
+- **Fichiers** :
+  - `database/migrations/2026_03_08_120001_add_translations_to_field_definitions.php` — nouvelle colonne JSON
+  - `app/Core/Fields/FieldDefinition.php` — +translations fillable/cast, +resolvedLabel()
+  - `app/Core/Fields/FieldDefinitionCatalog.php` — +translations EN/FR pour 37 champs
+  - `app/Core/Fields/FieldResolverService.php` — +$locale param, +requestLocale()
+  - `app/Company/Fields/ReadModels/CompanyProfileReadModel.php` — locale passée
+  - `app/Company/Fields/ReadModels/CompanyUserProfileReadModel.php` — locale passée
+  - `app/Modules/Core/Members/Http/MembershipController.php` — locale passée
+  - `app/Modules/Platform/Companies/Http/CompanyController.php` — locale passée
+  - `app/Modules/Platform/Companies/Http/CompanyProfileAdminController.php` — locale passée
+  - `app/Modules/Platform/Users/ReadModels/UserProfileReadModel.php` — locale passée
+  - `app/Modules/Platform/Fields/Http/FieldDefinitionController.php` — +translations validation
+  - `app/Modules/Platform/Fields/UseCases/UpsertPlatformFieldUseCase.php` — audit translations
+  - `app/Modules/Core/Settings/Http/CompanyFieldDefinitionController.php` — +translations validation/create
+  - `resources/js/utils/api.js` — +X-Locale header
+  - `resources/js/utils/platformApi.js` — +X-Locale header
+  - `resources/js/pages/platform/fields.vue` — drawer toggle langues + icône warning
+  - `resources/js/core/components/DynamicFormRenderer.vue` — suppression lookup i18n
+  - `resources/js/pages/company/profile/_CompanyProfileOverview.vue` — suppression lookup i18n
+  - `resources/js/pages/platform/companies/[id].vue` — +legal_name, suppression lookup i18n
+  - `resources/js/plugins/i18n/locales/en.json` — suppression fieldLabels
+  - `resources/js/plugins/i18n/locales/fr.json` — suppression fieldLabels
+  - `tests/Feature/FieldDefinitionTest.php` — +7 tests translations
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

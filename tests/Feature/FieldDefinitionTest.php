@@ -47,7 +47,7 @@ class FieldDefinitionTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure(['field_definitions'])
-            ->assertJsonCount(29, 'field_definitions');
+            ->assertJsonCount(37, 'field_definitions');
     }
 
     public function test_can_filter_field_definitions_by_scope(): void
@@ -170,6 +170,82 @@ class FieldDefinitionTest extends TestCase
         $response->assertOk();
 
         $this->assertDatabaseMissing('field_definitions', ['id' => $field->id]);
+    }
+
+    // ─── Translations / resolvedLabel ───────────────────────
+
+    public function test_resolved_label_returns_locale_translation(): void
+    {
+        $field = FieldDefinition::where('code', 'vat_number')->first();
+
+        $this->assertEquals('N° TVA', $field->resolvedLabel('fr'));
+    }
+
+    public function test_resolved_label_falls_back_to_english(): void
+    {
+        $field = FieldDefinition::where('code', 'vat_number')->first();
+
+        // Remove FR translation to test fallback
+        $field->update(['translations' => ['en' => 'VAT Number']]);
+
+        $this->assertEquals('VAT Number', $field->resolvedLabel('fr'));
+    }
+
+    public function test_resolved_label_falls_back_to_label_when_no_translations(): void
+    {
+        $field = FieldDefinition::where('code', 'vat_number')->first();
+
+        $field->update(['translations' => null]);
+
+        $this->assertEquals('VAT Number', $field->resolvedLabel('fr'));
+    }
+
+    public function test_resolved_label_with_null_locale_returns_english_or_label(): void
+    {
+        $field = FieldDefinition::where('code', 'vat_number')->first();
+
+        $this->assertEquals('VAT Number', $field->resolvedLabel(null));
+    }
+
+    public function test_catalog_sync_persists_translations(): void
+    {
+        FieldDefinitionCatalog::sync();
+
+        $field = FieldDefinition::where('code', 'vat_number')->first();
+
+        $this->assertNotNull($field->translations);
+        $this->assertEquals('VAT Number', $field->translations['en']);
+        $this->assertEquals('N° TVA', $field->translations['fr']);
+    }
+
+    public function test_store_field_with_translations(): void
+    {
+        $response = $this->api('postJson', '/field-definitions', [
+            'code' => 'custom_translated',
+            'scope' => 'company',
+            'label' => 'Custom Field',
+            'type' => 'string',
+            'translations' => ['en' => 'Custom Field', 'fr' => 'Champ personnalisé'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('field_definition.translations.en', 'Custom Field')
+            ->assertJsonPath('field_definition.translations.fr', 'Champ personnalisé');
+    }
+
+    public function test_update_field_translations(): void
+    {
+        $field = FieldDefinition::where('code', 'siret')->first();
+
+        $response = $this->api('putJson', "/field-definitions/{$field->id}", [
+            'translations' => ['en' => 'SIRET Number', 'fr' => 'Numéro SIRET'],
+        ]);
+
+        $response->assertOk();
+
+        $field->refresh();
+        $this->assertEquals('SIRET Number', $field->translations['en']);
+        $this->assertEquals('Numéro SIRET', $field->translations['fr']);
     }
 
     // ─── Permission ───────────────────────────────────────

@@ -52,12 +52,12 @@ class UpsertPlatformFieldUseCase
     {
         $definition = FieldDefinition::whereNull('company_id')->findOrFail($id);
 
-        $before = $definition->only('label', 'validation_rules', 'options', 'default_order');
+        $before = $definition->only('label', 'translations', 'validation_rules', 'options', 'default_order');
         $definition->update($validated);
 
         $this->audit->logPlatform(
             AuditAction::FIELD_UPDATED, 'field_definition', (string) $definition->id,
-            ['diffBefore' => $before, 'diffAfter' => $definition->only('label', 'validation_rules', 'options', 'default_order')],
+            ['diffBefore' => $before, 'diffAfter' => $definition->only('label', 'translations', 'validation_rules', 'options', 'default_order')],
         );
 
         return $definition;

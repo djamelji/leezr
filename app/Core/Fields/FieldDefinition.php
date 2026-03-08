@@ -14,6 +14,7 @@ class FieldDefinition extends Model
         'code',
         'scope',
         'label',
+        'translations',
         'type',
         'validation_rules',
         'options',
@@ -25,11 +26,29 @@ class FieldDefinition extends Model
     protected function casts(): array
     {
         return [
+            'translations' => 'array',
             'validation_rules' => 'array',
             'options' => 'array',
             'is_system' => 'boolean',
             'created_by_platform' => 'boolean',
         ];
+    }
+
+    /**
+     * Resolve the label for a given locale with fallback chain:
+     * translations[$locale] → translations['en'] → label
+     */
+    public function resolvedLabel(?string $locale = null): string
+    {
+        if ($locale && !empty($this->translations[$locale])) {
+            return $this->translations[$locale];
+        }
+
+        if (!empty($this->translations['en'])) {
+            return $this->translations['en'];
+        }
+
+        return $this->label;
     }
 
     public const SCOPE_PLATFORM_USER = 'platform_user';

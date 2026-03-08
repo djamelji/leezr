@@ -33,7 +33,7 @@ const getFieldValue = code => {
   return props.modelValue[code] ?? null
 }
 
-// ADR-168b: label with required asterisk
+// ADR-285: label already resolved server-side with locale
 const fieldLabel = field => {
   return field.required ? `${field.label} *` : field.label
 }

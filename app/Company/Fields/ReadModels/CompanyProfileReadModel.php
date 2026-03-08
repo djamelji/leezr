@@ -25,6 +25,7 @@ class CompanyProfileReadModel
                 scope: FieldDefinition::SCOPE_COMPANY,
                 companyId: $company->id,
                 marketKey: $company->market_key,
+                locale: FieldResolverService::requestLocale(),
             ),
             'jobdomain_mandatory_fields' => static::mandatoryFieldsByJobdomain($company),
             'storage' => StorageQuotaService::usage($company),
@@ -46,12 +47,17 @@ class CompanyProfileReadModel
 
         $result = [];
 
+        $locale = FieldResolverService::requestLocale();
+
         foreach (FieldDefinitionCatalog::all() as $field) {
             $requiredByJobdomains = $field['validation_rules']['required_by_jobdomains'] ?? [];
             if (in_array($company->jobdomain_key, $requiredByJobdomains)) {
+                $translations = $field['translations'] ?? [];
+                $label = $translations[$locale] ?? $translations['en'] ?? $field['label'];
+
                 $result[] = [
                     'code' => $field['code'],
-                    'label' => $field['label'],
+                    'label' => $label,
                 ];
             }
         }

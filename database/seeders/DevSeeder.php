@@ -178,12 +178,33 @@ class DevSeeder extends Seeder
         }
 
         // ─── Sample field values ───────────────────────────────
-        $siret = FieldDefinition::where('code', 'siret')->first();
-        if ($siret) {
-            FieldValue::updateOrCreate(
-                ['field_definition_id' => $siret->id, 'model_type' => 'company', 'model_id' => $company->id],
-                ['value' => '12345678901234'],
-            );
+        $companyFieldValues = [
+            'siret' => '84726451300012',
+            'vat_number' => 'FR32847264513',
+            'legal_name' => 'Leezr Logistics SAS',
+            'legal_form' => 'SAS',
+            'company_address' => '15 Rue de la Logistique',
+            'company_complement' => 'Bâtiment B, 2e étage',
+            'company_city' => 'Lyon',
+            'company_postal_code' => '69003',
+            'company_region' => 'Auvergne-Rhône-Alpes',
+            'company_phone' => '+33 4 72 00 12 34',
+            'billing_address' => '15 Rue de la Logistique',
+            'billing_complement' => 'Bâtiment B, 2e étage',
+            'billing_city' => 'Lyon',
+            'billing_postal_code' => '69003',
+            'billing_region' => 'Auvergne-Rhône-Alpes',
+            'billing_email' => 'facturation@leezr-logistics.fr',
+        ];
+
+        foreach ($companyFieldValues as $code => $value) {
+            $def = FieldDefinition::where('code', $code)->whereNull('company_id')->first();
+            if ($def) {
+                FieldValue::updateOrCreate(
+                    ['field_definition_id' => $def->id, 'model_type' => 'company', 'model_id' => $company->id],
+                    ['value' => $value],
+                );
+            }
         }
 
         $phone = FieldDefinition::where('code', 'phone')->first();

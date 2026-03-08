@@ -66,11 +66,19 @@ const overviewSaving = ref(false)
 const fieldByCode = code => dynamicFields.value.find(f => f.code === code)
 const hasField = code => !!fieldByCode(code)
 
+const fieldLabel = code => fieldByCode(code)?.label || code
+
 const fiscalFields = computed(() =>
-  ['siret', 'vat_number', 'legal_form'].filter(hasField),
+  ['siret', 'vat_number', 'legal_name', 'legal_form'].filter(hasField),
+)
+const companyAddressFields = computed(() =>
+  ['company_address', 'company_complement', 'company_city', 'company_postal_code', 'company_region'].filter(hasField),
+)
+const contactFields = computed(() =>
+  ['company_phone'].filter(hasField),
 )
 const billingAddressFields = computed(() =>
-  ['billing_address', 'billing_city', 'billing_postal_code', 'billing_email'].filter(hasField),
+  ['billing_address', 'billing_complement', 'billing_city', 'billing_postal_code', 'billing_region', 'billing_email'].filter(hasField),
 )
 
 // ─── Wallet form ────────────────────────────────────
@@ -504,7 +512,7 @@ const tabs = computed(() => [
                       />
                     </VCol>
                     <VCol cols="12" md="6">
-                      <VSelect
+                      <AppSelect
                         v-model="planForm.plan_key"
                         :items="companiesStore.plans"
                         item-title="name"
@@ -545,8 +553,75 @@ const tabs = computed(() => [
                     >
                       <AppTextField
                         :model-value="dynamicForm[code]"
-                        :label="fieldByCode(code)?.label"
+                        :label="fieldLabel(code)"
                         @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                  </VRow>
+                </VCardText>
+              </VCard>
+
+              <!-- Contact -->
+              <VCard
+                v-if="contactFields.length"
+                flat
+                border
+                class="mt-4"
+              >
+                <VCardTitle class="text-subtitle-1 font-weight-medium">
+                  {{ t('platformCompanyDetail.contactInfo') }}
+                </VCardTitle>
+                <VCardText>
+                  <VRow>
+                    <VCol
+                      v-for="code in contactFields"
+                      :key="code"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="dynamicForm[code]"
+                        :label="fieldLabel(code)"
+                        @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                  </VRow>
+                </VCardText>
+              </VCard>
+
+              <!-- Company address -->
+              <VCard
+                v-if="companyAddressFields.length"
+                flat
+                border
+                class="mt-4"
+              >
+                <VCardTitle class="text-subtitle-1 font-weight-medium">
+                  {{ t('platformCompanyDetail.companyAddress') }}
+                </VCardTitle>
+                <VCardText>
+                  <VRow>
+                    <VCol
+                      v-for="code in companyAddressFields"
+                      :key="code"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="dynamicForm[code]"
+                        :label="fieldLabel(code)"
+                        @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                    <VCol
+                      v-if="company?.market_key"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="company.market_key"
+                        :label="t('platformCompanyDetail.country')"
+                        disabled
                       />
                     </VCol>
                   </VRow>
@@ -573,8 +648,19 @@ const tabs = computed(() => [
                     >
                       <AppTextField
                         :model-value="dynamicForm[code]"
-                        :label="fieldByCode(code)?.label"
+                        :label="fieldLabel(code)"
                         @update:model-value="dynamicForm[code] = $event"
+                      />
+                    </VCol>
+                    <VCol
+                      v-if="company?.market_key"
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        :model-value="company.market_key"
+                        :label="t('platformCompanyDetail.country')"
+                        disabled
                       />
                     </VCol>
                   </VRow>
@@ -804,7 +890,7 @@ const tabs = computed(() => [
     <!-- Plan Change Preview Dialog -->
     <VDialog
       v-model="showPlanPreview"
-      max-width="500"
+      max-width="600"
       persistent
     >
       <VCard>
@@ -818,57 +904,205 @@ const tabs = computed(() => [
         </VCardText>
 
         <VCardText v-else-if="planPreview">
-          <VList density="compact">
-            <VListItem>
-              <template #prepend>
-                <VIcon icon="tabler-arrow-right" size="20" />
-              </template>
-              <VListItemTitle>
-                {{ planPreview.from_plan?.name || '—' }} → {{ planPreview.to_plan?.name || '—' }}
-              </VListItemTitle>
-              <VListItemSubtitle>
-                {{ planPreview.is_upgrade ? t('platformCompanyDetail.planPreview.upgrade') : t('platformCompanyDetail.planPreview.downgrade') }}
-                · {{ planPreview.timing }}
-              </VListItemSubtitle>
-            </VListItem>
-          </VList>
+          <!-- Plan comparison -->
+          <div class="d-flex align-center justify-space-between pa-3 rounded" style="background: rgb(var(--v-theme-surface));">
+            <div class="text-center">
+              <div class="text-caption text-medium-emphasis">
+                {{ t('platformCompanyDetail.planPreview.currentPlan') }}
+              </div>
+              <div class="text-h6">
+                {{ planPreview.from_plan?.name }}
+              </div>
+              <div class="text-body-2">
+                {{ formatMoney(planPreview.from_plan?.price, { currency: planPreview.currency }) }}/{{ planPreview.from_plan?.interval === 'yearly' ? t('common.year') : t('common.month') }}
+              </div>
+            </div>
+            <VIcon icon="tabler-arrow-right" size="24" />
+            <div class="text-center">
+              <div class="text-caption text-medium-emphasis">
+                {{ t('platformCompanyDetail.planPreview.newPlan') }}
+              </div>
+              <div class="text-h6">
+                {{ planPreview.to_plan?.name }}
+              </div>
+              <div class="text-body-2">
+                {{ formatMoney(planPreview.to_plan?.price, { currency: planPreview.currency }) }}/{{ planPreview.to_plan?.interval === 'yearly' ? t('common.year') : t('common.month') }}
+              </div>
+            </div>
+          </div>
 
-          <!-- Proration -->
-          <template v-if="planPreview.proration">
-            <VDivider class="my-3" />
+          <!-- Timing badge -->
+          <div class="mt-3 mb-4">
+            <VChip
+              :color="planPreview.is_upgrade ? 'success' : 'warning'"
+              size="small"
+            >
+              {{ planPreview.is_upgrade ? t('platformCompanyDetail.planPreview.upgrade') : t('platformCompanyDetail.planPreview.downgrade') }}
+            </VChip>
+            <VChip size="small" variant="tonal" class="ms-2">
+              {{ planPreview.timing === 'immediate' ? t('platformCompanyDetail.planPreview.timingImmediate') : t('platformCompanyDetail.planPreview.timingEndOfPeriod') }}
+            </VChip>
+          </div>
+
+          <!-- Immediate billing details -->
+          <template v-if="planPreview.immediate && planPreview.timing === 'immediate'">
             <h6 class="text-h6 mb-2">
-              {{ t('platformCompanyDetail.planPreview.proration') }}
+              {{ t('platformCompanyDetail.planPreview.immediateBilling') }}
             </h6>
-            <div
-              v-if="planPreview.proration.credit > 0"
-              class="d-flex justify-space-between text-body-2 mb-1"
-            >
-              <span class="text-success">{{ t('platformCompanyDetail.planPreview.credit') }}</span>
-              <span class="text-success">-{{ formatMoney(planPreview.proration.credit, { currency: planPreview.currency }) }}</span>
-            </div>
-            <div
-              v-if="planPreview.proration.charge > 0"
-              class="d-flex justify-space-between text-body-2 mb-1"
-            >
-              <span>{{ t('platformCompanyDetail.planPreview.charge') }}</span>
-              <span>{{ formatMoney(planPreview.proration.charge, { currency: planPreview.currency }) }}</span>
-            </div>
+
+            <!-- Proration lines -->
+            <template v-if="planPreview.proration">
+              <div class="d-flex justify-space-between text-body-2 mb-1">
+                <span class="text-success">
+                  {{ t('platformCompanyDetail.planPreview.credit') }}
+                  <span class="text-medium-emphasis">({{ planPreview.proration.days_remaining }}/{{ planPreview.proration.total_days }} {{ t('platformCompanyDetail.planPreview.days') }})</span>
+                </span>
+                <span class="text-success">
+                  -{{ formatMoney(planPreview.proration.credit_old_plan, { currency: planPreview.currency }) }}
+                </span>
+              </div>
+              <div class="d-flex justify-space-between text-body-2 mb-1">
+                <span>{{ t('platformCompanyDetail.planPreview.charge') }}</span>
+                <span>{{ formatMoney(planPreview.proration.charge_new_plan, { currency: planPreview.currency }) }}</span>
+              </div>
+            </template>
+
             <VDivider class="my-2" />
-            <div class="d-flex justify-space-between text-body-1 font-weight-bold">
-              <span>{{ t('platformCompanyDetail.planPreview.net') }}</span>
-              <span :class="planPreview.proration.net > 0 ? '' : 'text-success'">
-                {{ formatMoney(Math.abs(planPreview.proration.net), { currency: planPreview.currency }) }}
-                {{ planPreview.proration.net > 0 ? t('platformCompanyDetail.planPreview.dueNow') : t('platformCompanyDetail.planPreview.credited') }}
+
+            <!-- Subtotal -->
+            <div class="d-flex justify-space-between text-body-2 mb-1">
+              <span>{{ t('platformCompanyDetail.planPreview.subtotal') }}</span>
+              <span>{{ formatMoney(planPreview.immediate.subtotal, { currency: planPreview.currency }) }}</span>
+            </div>
+
+            <!-- Tax -->
+            <div
+              v-if="planPreview.immediate.tax_amount > 0"
+              class="d-flex justify-space-between text-body-2 mb-1"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.tax') }} ({{ (planPreview.immediate.tax_rate_bps / 100).toFixed(1) }}%)</span>
+              <span>{{ formatMoney(planPreview.immediate.tax_amount, { currency: planPreview.currency }) }}</span>
+            </div>
+
+            <VDivider class="my-2" />
+
+            <!-- Total -->
+            <div class="d-flex justify-space-between text-body-1 font-weight-bold mb-1">
+              <span>{{ t('platformCompanyDetail.planPreview.total') }}</span>
+              <span>{{ formatMoney(planPreview.immediate.total, { currency: planPreview.currency }) }}</span>
+            </div>
+
+            <!-- Wallet deduction -->
+            <div
+              v-if="planPreview.immediate.wallet_deduction > 0"
+              class="d-flex justify-space-between text-body-2 text-success mb-1"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.walletDeduction') }}</span>
+              <span>-{{ formatMoney(planPreview.immediate.wallet_deduction, { currency: planPreview.currency }) }}</span>
+            </div>
+
+            <!-- Wallet credit added (downgrade) -->
+            <div
+              v-if="planPreview.immediate.wallet_credit_added > 0"
+              class="d-flex justify-space-between text-body-2 text-info mb-1"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.walletCreditAdded') }}</span>
+              <span>+{{ formatMoney(planPreview.immediate.wallet_credit_added, { currency: planPreview.currency }) }}</span>
+            </div>
+
+            <!-- Amount due after wallet -->
+            <div
+              v-if="planPreview.immediate.estimated_amount_due !== planPreview.immediate.total"
+              class="d-flex justify-space-between text-body-1 font-weight-bold mt-2"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.amountDue') }}</span>
+              <span :class="planPreview.immediate.estimated_amount_due > 0 ? 'text-error' : 'text-success'">
+                {{ formatMoney(Math.abs(planPreview.immediate.estimated_amount_due), { currency: planPreview.currency }) }}
               </span>
             </div>
           </template>
 
-          <!-- No proration (e.g. end of period) -->
+          <!-- End of period (deferred change) -->
           <template v-else>
-            <VDivider class="my-3" />
             <VAlert type="info" variant="tonal" density="compact">
               {{ t('platformCompanyDetail.planPreview.noImmediateImpact') }}
             </VAlert>
+          </template>
+
+          <!-- Wallet balance -->
+          <div
+            v-if="planPreview.wallet_balance != null"
+            class="d-flex justify-space-between text-body-2 pa-3 rounded mt-4"
+            style="background: rgb(var(--v-theme-surface));"
+          >
+            <span class="text-medium-emphasis">
+              <VIcon icon="tabler-wallet" size="16" class="me-1" />
+              {{ t('platformCompanyDetail.planPreview.walletBalance') }}
+            </span>
+            <span class="font-weight-medium">
+              {{ formatMoney(planPreview.wallet_balance, { currency: planPreview.currency }) }}
+            </span>
+          </div>
+
+          <!-- Addons impact -->
+          <template v-if="planPreview.addons?.length">
+            <VDivider class="my-4" />
+            <h6 class="text-h6 mb-2">
+              {{ t('platformCompanyDetail.planPreview.addonsImpact') }}
+            </h6>
+            <div
+              v-for="addon in planPreview.addons"
+              :key="addon.module_key"
+              class="d-flex justify-space-between text-body-2 mb-1"
+            >
+              <span>{{ addon.name }}</span>
+              <span>
+                {{ formatMoney(addon.current_amount, { currency: planPreview.currency }) }}
+                → {{ formatMoney(addon.new_amount, { currency: planPreview.currency }) }}
+                <VChip
+                  v-if="addon.difference !== 0"
+                  :color="addon.difference > 0 ? 'error' : 'success'"
+                  size="x-small"
+                  class="ms-1"
+                >
+                  {{ addon.difference > 0 ? '+' : '' }}{{ formatMoney(addon.difference, { currency: planPreview.currency }) }}
+                </VChip>
+              </span>
+            </div>
+          </template>
+
+          <!-- Next period preview -->
+          <template v-if="planPreview.next_period">
+            <VDivider class="my-4" />
+            <h6 class="text-h6 mb-2">
+              {{ t('platformCompanyDetail.planPreview.nextPeriod') }}
+              <span class="text-body-2 text-medium-emphasis font-weight-regular">
+                ({{ planPreview.next_period.interval === 'yearly' ? t('platformCompanyDetail.planPreview.perYear') : t('platformCompanyDetail.planPreview.perMonth') }})
+              </span>
+            </h6>
+            <div class="d-flex justify-space-between text-body-2 mb-1">
+              <span>{{ planPreview.to_plan?.name }}</span>
+              <span>{{ formatMoney(planPreview.next_period.plan_price, { currency: planPreview.currency }) }}</span>
+            </div>
+            <div
+              v-if="planPreview.next_period.addons_total > 0"
+              class="d-flex justify-space-between text-body-2 mb-1"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.addons') }}</span>
+              <span>{{ formatMoney(planPreview.next_period.addons_total, { currency: planPreview.currency }) }}</span>
+            </div>
+            <div
+              v-if="planPreview.next_period.tax_amount > 0"
+              class="d-flex justify-space-between text-body-2 mb-1"
+            >
+              <span>{{ t('platformCompanyDetail.planPreview.tax') }} ({{ (planPreview.next_period.tax_rate_bps / 100).toFixed(1) }}%)</span>
+              <span>{{ formatMoney(planPreview.next_period.tax_amount, { currency: planPreview.currency }) }}</span>
+            </div>
+            <VDivider class="my-2" />
+            <div class="d-flex justify-space-between text-body-1 font-weight-bold">
+              <span>{{ t('platformCompanyDetail.planPreview.total') }}</span>
+              <span>{{ formatMoney(planPreview.next_period.total, { currency: planPreview.currency }) }}</span>
+            </div>
           </template>
         </VCardText>
 

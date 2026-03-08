@@ -91,6 +91,7 @@ class CompanyController
                 scope: FieldDefinition::SCOPE_COMPANY,
                 companyId: $company->id,
                 marketKey: $company->market_key,
+                locale: FieldResolverService::requestLocale(),
             ),
             'owner' => $ownerMembership ? [
                 'name' => $ownerMembership->user?->display_name,

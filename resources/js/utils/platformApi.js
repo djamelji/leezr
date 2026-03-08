@@ -19,6 +19,16 @@ export const $platformApi = ofetch.create({
       }
     }
 
+    const locale = useCookie('language').value
+    if (locale) {
+      options.headers = options.headers || {}
+      if (options.headers instanceof Headers) {
+        options.headers.set('X-Locale', locale)
+      }
+      else {
+        options.headers['X-Locale'] = locale
+      }
+    }
   },
   onResponse({ response }) {
     // Session TTL resync — dispatch to governance composable (zero coupling)

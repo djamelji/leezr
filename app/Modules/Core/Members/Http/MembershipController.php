@@ -86,6 +86,7 @@ class MembershipController extends Controller
             roleKey: $roleKey,
             canReadSensitive: $canReadSensitive,
             marketKey: $company->market_key,
+            locale: FieldResolverService::requestLocale(),
         );
 
         return response()->json(['dynamic_fields' => $fields]);

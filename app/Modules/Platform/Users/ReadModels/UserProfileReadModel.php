@@ -23,6 +23,7 @@ class UserProfileReadModel
             'dynamic_fields' => FieldResolverService::resolve(
                 model: $user,
                 scope: FieldDefinition::SCOPE_PLATFORM_USER,
+                locale: FieldResolverService::requestLocale(),
             ),
         ];
     }

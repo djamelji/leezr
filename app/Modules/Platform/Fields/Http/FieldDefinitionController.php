@@ -28,6 +28,8 @@ class FieldDefinitionController
             'validation_rules' => ['sometimes', 'array'],
             'options' => ['sometimes', 'array'],
             'default_order' => ['sometimes', 'integer', 'min:0'],
+            'translations' => ['sometimes', 'array'],
+            'translations.*' => ['string', 'max:255'],
         ]);
 
         $definition = $useCase->execute(null, $validated);
@@ -45,6 +47,8 @@ class FieldDefinitionController
             'validation_rules' => ['sometimes', 'nullable', 'array'],
             'options' => ['sometimes', 'nullable', 'array'],
             'default_order' => ['sometimes', 'integer', 'min:0'],
+            'translations' => ['sometimes', 'array'],
+            'translations.*' => ['string', 'max:255'],
         ]);
 
         $definition = $useCase->execute($id, $validated);
