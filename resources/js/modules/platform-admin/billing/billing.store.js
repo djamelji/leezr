@@ -10,6 +10,7 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
       annual_only: false,
       vat_enabled: false,
       vat_rate: 0,
+      max_payment_methods: 4,
     },
     _subscriptions: [],
     _subscriptionsPagination: { current_page: 1, last_page: 1, total: 0 },

@@ -532,10 +532,10 @@ class BillingLedgerTest extends TestCase
     {
         $balance = LedgerService::trialBalance($this->company->id);
 
-        // After invoice issued: AR has positive balance, REVENUE has negative
-        $expectedAmount = round($this->invoice->amount_due / 100, 2);
-        $this->assertEquals($expectedAmount, $balance['AR']);
-        $this->assertEquals(-$expectedAmount, $balance['REVENUE']);
+        // After invoice issued: AR has positive balance (in cents), REVENUE has negative
+        $expectedCents = (float) $this->invoice->amount_due;
+        $this->assertEquals($expectedCents, $balance['AR']);
+        $this->assertEquals(-$expectedCents, $balance['REVENUE']);
     }
 
     public function test_trial_balance_after_payment_clears_ar(): void
@@ -557,9 +557,8 @@ class BillingLedgerTest extends TestCase
 
         // AR should be 0 (invoice debit + payment credit cancel out)
         $this->assertEquals(0, $balance['AR']);
-        // CASH should equal the payment
-        $expectedAmount = round($this->invoice->amount_due / 100, 2);
-        $this->assertEquals($expectedAmount, $balance['CASH']);
+        // CASH should equal the payment (in cents)
+        $this->assertEquals((float) $this->invoice->amount_due, $balance['CASH']);
     }
 
     public function test_trial_balance_after_refund(): void
@@ -585,10 +584,10 @@ class BillingLedgerTest extends TestCase
 
         $balance = LedgerService::trialBalance($this->company->id);
 
-        // REFUND should have positive balance
-        $this->assertEquals(5.00, $balance['REFUND']);
-        // CASH = payment - refund
-        $this->assertEquals(24.00, $balance['CASH']);
+        // REFUND should have positive balance (500 cents = 5.00€)
+        $this->assertEquals(500.0, $balance['REFUND']);
+        // CASH = payment - refund (2900 - 500 = 2400 cents)
+        $this->assertEquals(2400.0, $balance['CASH']);
     }
 
     public function test_trial_balance_after_writeoff(): void
@@ -599,9 +598,8 @@ class BillingLedgerTest extends TestCase
 
         // AR should be 0 (invoice debit + writeoff credit cancel out)
         $this->assertEquals(0, $balance['AR']);
-        // BAD_DEBT should equal the amount
-        $expectedAmount = round($this->invoice->amount_due / 100, 2);
-        $this->assertEquals($expectedAmount, $balance['BAD_DEBT']);
+        // BAD_DEBT should equal the amount (in cents)
+        $this->assertEquals((float) $this->invoice->amount_due, $balance['BAD_DEBT']);
     }
 
     // ═══════════════════════════════════════════════════════════

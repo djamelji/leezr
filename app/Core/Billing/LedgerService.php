@@ -335,12 +335,11 @@ class LedgerService
     }
 
     /**
-     * Convert cents integer to decimal for ledger (cents → decimal with 2 places).
-     * Our billing models store amounts in cents (integer).
-     * The ledger stores amounts as decimal(15,2).
+     * Normalize cents integer for ledger storage.
+     * Both billing models AND the ledger store amounts in cents (smallest currency unit).
      */
     private static function toCents(int $amountInCents): float
     {
-        return round($amountInCents / 100, 2);
+        return (float) $amountInCents;
     }
 }

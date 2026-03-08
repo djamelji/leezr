@@ -95,15 +95,27 @@ class PlatformSeeder extends Seeder
             PlatformSetting::create([
                 'theme' => ThemePayload::defaults()->toArray(),
                 'session' => SessionSettingsPayload::defaults()->toArray(),
-                'typography' => TypographyPayload::defaults()->toArray(),
+                'typography' => [
+                    'active_source' => 'google',
+                    'active_family_id' => null,
+                    'google_fonts_enabled' => true,
+                    'google_active_family' => 'Poppins',
+                    'google_weights' => [100, 200, 300, 400, 500, 600, 700, 800, 900],
+                    'headings_family_id' => null,
+                    'body_family_id' => null,
+                ],
                 'maintenance' => MaintenanceSettingsPayload::defaults()->toArray(),
             ]);
         }
 
-        // Seed default font family (idempotent)
+        // Seed default font families (idempotent)
         PlatformFontFamily::firstOrCreate(
             ['slug' => 'public-sans'],
             ['name' => 'Public Sans', 'source' => 'google', 'is_enabled' => true],
+        );
+        PlatformFontFamily::firstOrCreate(
+            ['slug' => 'poppins'],
+            ['name' => 'Poppins', 'source' => 'google', 'is_enabled' => true],
         );
     }
 }

@@ -1,4 +1,7 @@
 <script setup>
+/**
+ * ADR-271: Enhanced platform companies list with search, filters, KPI cards.
+ */
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
@@ -19,6 +22,50 @@ const { toast } = useAppToast()
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
+// Search & Filters
+const searchQuery = ref('')
+const statusFilter = ref('')
+const planFilter = ref('')
+const searchTimeout = ref(null)
+
+const statusItems = computed(() => [
+  { title: t('companies.allStatuses'), value: '' },
+  { title: t('common.active'), value: 'active' },
+  { title: t('companies.suspended'), value: 'suspended' },
+])
+
+const planItems = computed(() => [
+  { title: t('companies.allPlans'), value: '' },
+  ...companiesStore.plans.map(p => ({ title: p.name, value: p.key })),
+])
+
+const filters = computed(() => {
+  const f = {}
+  if (searchQuery.value) f.search = searchQuery.value
+  if (statusFilter.value) f.status = statusFilter.value
+  if (planFilter.value) f.plan_key = planFilter.value
+
+  return f
+})
+
+const fetchWithFilters = async (page = 1) => {
+  isLoading.value = true
+  try {
+    await companiesStore.fetchCompanies(page, filters.value)
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+// Debounced search
+watch(searchQuery, () => {
+  clearTimeout(searchTimeout.value)
+  searchTimeout.value = setTimeout(() => fetchWithFilters(), 400)
+})
+
+watch([statusFilter, planFilter], () => fetchWithFilters())
+
 const onRowClick = (_event, { item }) => {
   router.push({ name: 'platform-companies-id', params: { id: item.id } })
 }
@@ -26,7 +73,7 @@ const onRowClick = (_event, { item }) => {
 onMounted(async () => {
   try {
     await Promise.all([
-      companiesStore.fetchCompanies(),
+      companiesStore.fetchCompanies(1),
       companiesStore.fetchPlans(),
     ])
   }
@@ -97,15 +144,29 @@ const reactivate = async company => {
 }
 
 const onPageChange = async page => {
-  isLoading.value = true
-
-  try {
-    await companiesStore.fetchCompanies(page)
-  }
-  finally {
-    isLoading.value = false
-  }
+  await fetchWithFilters(page)
 }
+
+const kpiCards = computed(() => [
+  {
+    title: t('companies.stats.total'),
+    value: companiesStore.stats.total,
+    color: 'primary',
+    icon: 'tabler-building',
+  },
+  {
+    title: t('companies.stats.active'),
+    value: companiesStore.stats.total_active,
+    color: 'success',
+    icon: 'tabler-check',
+  },
+  {
+    title: t('companies.stats.suspended'),
+    value: companiesStore.stats.total_suspended,
+    color: 'error',
+    icon: 'tabler-ban',
+  },
+])
 
 const fmtDate = dateStr => {
   if (!dateStr)
@@ -117,17 +178,77 @@ const fmtDate = dateStr => {
 
 <template>
   <div>
+    <!-- KPI Cards -->
+    <VCard class="mb-6">
+      <VCardText>
+        <VRow>
+          <VCol
+            v-for="card in kpiCards"
+            :key="card.title"
+            cols="6"
+            md="4"
+          >
+            <VCard
+              flat
+              border
+              class="text-center pa-4"
+            >
+              <VAvatar
+                size="42"
+                variant="tonal"
+                :color="card.color"
+                class="mb-2"
+              >
+                <VIcon :icon="card.icon" />
+              </VAvatar>
+              <h4 class="text-h5 font-weight-bold">
+                {{ card.value }}
+              </h4>
+              <span class="text-body-2 text-disabled">{{ card.title }}</span>
+            </VCard>
+          </VCol>
+        </VRow>
+      </VCardText>
+    </VCard>
+
+    <!-- Companies Table -->
     <VCard>
       <VCardTitle class="d-flex align-center">
-        <VIcon
-          icon="tabler-building"
-          class="me-2"
-        />
+        <VIcon icon="tabler-building" class="me-2" />
         {{ t('companies.title') }}
       </VCardTitle>
       <VCardSubtitle>
         {{ t('companies.subtitle') }}
       </VCardSubtitle>
+
+      <!-- Search & Filters -->
+      <VCardText>
+        <VRow>
+          <VCol cols="12" md="6">
+            <AppTextField
+              v-model="searchQuery"
+              :placeholder="t('companies.searchPlaceholder')"
+              prepend-inner-icon="tabler-search"
+              clearable
+              hide-details
+            />
+          </VCol>
+          <VCol cols="6" md="3">
+            <AppSelect
+              v-model="statusFilter"
+              :items="statusItems"
+              hide-details
+            />
+          </VCol>
+          <VCol cols="6" md="3">
+            <AppSelect
+              v-model="planFilter"
+              :items="planItems"
+              hide-details
+            />
+          </VCol>
+        </VRow>
+      </VCardText>
 
       <VDataTable
         :headers="headers"
@@ -203,7 +324,7 @@ const fmtDate = dateStr => {
         <!-- Empty state -->
         <template #no-data>
           <div class="text-center pa-4 text-disabled">
-            {{ t('companies.noCompanies') }}
+            {{ searchQuery || statusFilter || planFilter ? t('companies.noSearchResults') : t('companies.noCompanies') }}
           </div>
         </template>
       </VDataTable>

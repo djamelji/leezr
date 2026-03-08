@@ -9234,4 +9234,574 @@ Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + 
 
 ---
 
+## ADR-263 : State machine strict — throw systématique en production
+
+**Date** : 2026-03-08
+**Contexte** : Le guard de transition de `Subscription` (`guardTransition()`) et le guard d'invariants (`guardInvariants()`) distinguaient l'environnement : `throw` en `testing`/`local`, `Log::critical` silencieux en production. Résultat : une transition invalide en production était loguée mais **la sauvegarde en base continuait**, permettant à la subscription d'atteindre un état incohérent (ex: `cancelled` → `active` sans passer par `suspended`). Même problème pour les invariants (`is_current=1` avec `status=cancelled`, ou statut inconnu).
+
+**Décision** :
+- `guardTransition()` et `guardInvariants()` **throw systématiquement** `InvalidSubscriptionTransition`, quel que soit l'environnement
+- Le `Log::channel('billing')->critical()` est conservé **avant** le throw (trace en logs + blocage)
+- Les 3 guards sont alignés : transition invalide, invariant `is_current`, statut inconnu
+- Le code appelant (controllers, services, commands) catch déjà les exceptions — pas de crash non-géré
+
+**Conséquences** :
+- Une transition invalide en production est **bloquée**, pas juste loguée — la donnée corrompue n'atteint jamais la base
+- Les bugs de machine à états sont détectés immédiatement (pas de corruption silencieuse à débuguer a posteriori)
+- Si un service tente une transition invalide, il reçoit une exception claire à gérer (retry, fallback, alerte)
+- Tout code existant qui provoquait des transitions invalides en production (et qui passait silencieusement) va maintenant échouer — c'est le comportement souhaité
+
+**Fichiers modifiés** :
+- `app/Core/Billing/Subscription.php` — `guardTransition()` et `guardInvariants()` : suppression du `if (app()->environment(...))`, throw systématique après log
+
+---
+
+## ADR-264 : billing:renew — guard cancel_at_period_end + cancellations automatiques
+
+**Date** : 2026-03-08
+**Contexte** : La commande `billing:renew` sélectionnait les subscriptions éligibles au renouvellement avec `whereIn('status', ['active', 'trialing'])->where('is_current', 1)->where('current_period_end', '<=', now())`. Cette requête **ne filtrait pas** `cancel_at_period_end = true`, ce qui signifiait qu'un abonnement marqué pour annulation en fin de période était quand même renouvelé (nouvelle facture + extension de période). L'annulation programmée par l'utilisateur était donc ignorée.
+
+**Décision** :
+- **Phase 0** ajoutée : `processCancellations()` — avant le renouvellement, trouver les subscriptions avec `cancel_at_period_end = true` ET `current_period_end <= now()`, et les marquer `cancelled` + `is_current = null` dans une transaction avec `lockForUpdate`
+- Les addons actifs de ces subscriptions sont désactivés (`deactivated_at = now()`)
+- **Requête de renouvellement** enrichie avec `->where(fn ($q) => $q->where('cancel_at_period_end', false)->orWhereNull('cancel_at_period_end'))` pour exclure les annulations en cours
+- Stats enrichies avec compteur `cancelled`
+- Logs billing pour chaque annulation effectuée
+- Support `--dry-run` pour les cancellations
+
+**Conséquences** :
+- Un utilisateur qui clique "Annuler à la fin de la période" voit son abonnement effectivement annulé quand la période expire
+- Plus de factures fantômes générées pour des abonnements en cours d'annulation
+- Les addons sont proprement désactivés lors de l'annulation
+- Le cron est idempotent : si l'abonnement est déjà `cancelled`, le `lockForUpdate` + guard de statut empêche le double traitement
+- La transition `active → cancelled` est valide dans la machine à états (ADR-232)
+
+**Fichiers modifiés** :
+- `app/Console/Commands/BillingRenewCommand.php` — +`processCancellations()`, filtre `cancel_at_period_end` dans la query de renouvellement, stats `cancelled`
+
+---
+
+### ADR-265 — Wallet split payment + provider remainder dans DunningEngine
+
+**Date** : 2026-03-08
+**Contexte** : Le DunningEngine ne supportait que le paiement intégral par wallet (tout-ou-rien). Si le wallet avait un solde partiel (ex: 1000 cents) et la facture devait 2900 cents, le paiement échouait entièrement. Le solde wallet était gaspillé et le client risquait la suspension alors qu'il avait du crédit disponible.
+
+**Décision** :
+- **Phase 2 (split payment)** ajoutée dans `attemptRetry()` entre le provider-first et le wallet fallback
+- `attemptSplitPayment()` — exécuté HORS transaction (pas de lock pendant l'appel Stripe API) :
+  - Vérifie que le wallet a un solde partiel (0 < balance < amount_due)
+  - Calcule le reste (remainder = amount_due - wallet_balance)
+  - Tente chaque méthode de paiement sauvegardée pour le montant restant via `chargeInvoiceWithPaymentMethod($invoice, $methodId, $remainder)`
+  - Retourne `{wallet_amount, provider_payment_id, provider_amount}` si succès, null sinon
+- `finalizeSplitPayment()` — exécuté DANS la transaction avec invoice verrouillée :
+  - Enregistre le paiement provider (Payment::updateOrCreate) en priorité (le paiement a déjà eu lieu)
+  - Débite le wallet pour la portion partielle avec clé d'idempotence `dunning-split-{invoice_id}-{retry_count}`
+  - Si le débit wallet échoue (solde changé entre-temps), le paiement provider est quand même enregistré pour audit trail
+  - Marque la facture payée + déclenche la réactivation
+- `StripePaymentAdapter::chargeInvoiceWithPaymentMethod()` enrichi avec paramètre optionnel `?int $amount = null` pour supporter les montants personnalisés
+
+**Conséquences** :
+- Augmente le taux de recouvrement en utilisant le crédit wallet disponible
+- Le flow est safe : provider outside tx, finalisation inside tx
+- Edge case wallet drainé entre phases : provider payment enregistré, facture reste overdue pour review admin
+- Backward-compatible : le paramètre $amount est optionnel, default = invoice->amount_due
+
+**Fichiers modifiés** :
+- `app/Core/Billing/DunningEngine.php` — +`attemptSplitPayment()`, +`finalizeSplitPayment()`, phase 2 dans `attemptRetry()`
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — `chargeInvoiceWithPaymentMethod(?int $amount = null)`
+- `tests/Feature/DunningEngineTest.php` — +2 tests (split sans provider, split avec wallet suffisant)
+
+---
+
+### ADR-266 — DLQ auto-escalation (Dead Letter Queue monitoring)
+
+**Date** : 2026-03-08
+**Contexte** : Les webhooks échoués sont stockés dans `billing_webhook_dead_letters` mais aucune alerte automatique n'est déclenchée quand la file d'attente grossit. Un administrateur pourrait ne pas remarquer une accumulation de webhooks non traités pendant des jours, causant des divergences entre l'état Stripe et l'état local.
+
+**Décision** :
+- Nouvelle commande `billing:check-dlq` avec option `--threshold=10` (default)
+- Compte les entrées `status = 'pending'` dans la table DLQ
+- Si count >= threshold : log CRITICAL `[billing:dlq] Dead letter queue threshold exceeded` avec pending_count, threshold, oldest_age, oldest_event_type
+- La commande retourne `EXIT_FAILURE` (code 1) en cas d'alerte pour intégration monitoring (Healthchecks.io, Grafana, etc.)
+- Intégré au BillingJobHeartbeat pour le suivi opérationnel
+- Schedulé `hourly()->withoutOverlapping()` dans `routes/console.php`
+- Implémente `Isolatable` (cache lock)
+
+**Conséquences** :
+- Les accumulations de webhooks morts sont détectées en < 1h
+- Le seuil est configurable par option CLI (peut être ajusté par environnement)
+- Le log CRITICAL permet le pickup par monitoring externe (Sentry, PagerDuty, etc.)
+- Les entrées `resolved`/`replayed` ne sont pas comptées
+
+**Fichiers créés/modifiés** :
+- `app/Console/Commands/BillingCheckDlqCommand.php` — nouvelle commande
+- `routes/console.php` — ajout schedule `billing:check-dlq` hourly
+- `tests/Feature/BillingCheckDlqCommandTest.php` — 5 tests
+
+---
+
+### ADR-267 — Rate limit 429 retry intelligent pour Stripe
+
+**Date** : 2026-03-08
+**Contexte** : Le `StripePaymentAdapter` avait un rate limiter local préventif (50 calls/60s par company), mais quand Stripe renvoyait une erreur 429 (rate limit), celle-ci était traitée comme n'importe quelle `ApiErrorException` — aucune distinction entre une erreur transitoire (429) et une erreur permanente (402 insufficient funds, 403 forbidden). Les paiements échouaient inutilement au lieu de réessayer après un backoff.
+
+**Décision** :
+- Nouveau helper `callWithRetry(callable $fn, int $maxRetries = 3)` dans `StripePaymentAdapter`
+- Catch spécifique de `\Stripe\Exception\RateLimitException` (sous-classe d'`ApiErrorException` pour les 429)
+- Backoff exponentiel : 1s, 2s, 4s (usleep)
+- Après épuisement des retries : log CRITICAL + re-throw de l'exception
+- Appliqué sur les méthodes critiques : `collectInvoice()` et `chargeInvoiceWithPaymentMethod()`
+- Les catch blocks distinguent maintenant `RateLimitException` (→ status `rate_limited`) de `ApiErrorException` générique (→ status `failed`)
+- Le rate limiter local (`enforceRateLimit()`) reste en place comme garde préventive
+
+**Conséquences** :
+- Les erreurs 429 transitoires sont automatiquement réessayées avec backoff
+- Les erreurs permanentes (402, 403, etc.) échouent immédiatement sans retry inutile
+- Le caller peut distinguer `rate_limited` de `failed` pour adapter son comportement
+- Max 3 retries × max 4s backoff = 7s de délai max — acceptable pour un cron batch
+- Backward-compatible : le status `rate_limited` est nouveau mais les callers existants traitent tout sauf `succeeded` comme un échec
+
+**Fichiers modifiés** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — +`callWithRetry()`, wrap `collectInvoice()` et `chargeInvoiceWithPaymentMethod()`, catch `RateLimitException` distinct
+
+---
+
+### ADR-268 — Modules upsell : wire @click handlers + confirmation UX
+
+**Date** : 2026-03-08
+**Contexte** : Dans la page `/company/modules`, les boutons "Upgrade to Plan" (`locked_plan`) et "Purchase Add-on" (`locked_addon`) étaient affichés mais n'avaient **aucun handler @click** — ils étaient donc purement décoratifs et inutilisables. De même, la désactivation d'un module se faisait sans confirmation, et aucun feedback de succès n'était donné après activation/désactivation.
+
+**Décision** :
+1. **`locked_plan` → navigateToPlanUpgrade(mod)** : redirige vers `/company/plan?suggest={plan_key}`
+2. **`locked_addon` → activateModule(mod)** : réutilise le flow existant (ADR-224) — quote dialog → confirmation → `ModuleEnabled` event → `AddonBillingListener` → facture addon
+3. **Plan suggestion UX** : `plan.vue` accepte le query param `?suggest=plan_key`, affiche un chip "Suggested" et un toast explicatif, highlight visuel (border warning) sur le plan suggéré
+4. **Confirmation de désactivation** : VDialog avec titre, message, alerte des modules dépendants si applicable, boutons Cancel/Deactivate
+5. **Toasts de succès** : après activation ("Module {name} activated successfully") et désactivation ("Module {name} deactivated successfully")
+6. **i18n** : nouvelles clés ajoutées en EN et FR (activatedSuccess, deactivatedSuccess, deactivateConfirmTitle, deactivateConfirmMessage, deactivateWillAffect, suggestUpgrade, suggested, scheduledChange.*)
+
+**Conséquences** :
+- Les 4 boutons broken (2 dans Tab Addons + 2 dans Tab All) sont maintenant fonctionnels
+- Le flow addon purchase existe déjà backend (ADR-224) → 0 changement backend nécessaire
+- La navigation modules → plan → upgrade est connectée end-to-end
+- L'UX de désactivation protège contre les clics accidentels et informe sur les impacts (dépendances)
+- Pas de régression : 1618 tests pass, build clean
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/modules/index.vue` — @click handlers, confirmation dialog, toasts, imports (useAppToast, useRouter)
+- `resources/js/pages/company/plan.vue` — query param `?suggest`, suggestion chip, border highlight, toast
+- `resources/js/plugins/i18n/locales/en.json` — +11 clés (companyModules.*, companyPlan.*)
+- `resources/js/plugins/i18n/locales/fr.json` — +11 clés (companyModules.*, companyPlan.*)
+
+---
+
+### ADR-269 — Company 360° Admin View (bio panel + tabs)
+
+**Date** : 2026-03-08
+**Contexte** : La page `/platform/companies/{id}` était minimaliste (2 tabs : Overview + Modules) et ne donnait aucune visibilité sur la facturation, les membres, ou l'historique d'activité d'une company. Un admin plateforme ne pouvait ni voir les factures, ni le solde wallet, ni les moyens de paiement, ni le statut dunning. La page était un dead-end pour la gestion commerciale.
+
+**Décision** :
+1. **Layout 360°** suivant le preset Vuexy User Detail : bio panel (gauche, cols 4) + contenu tabbé (droite, cols 8)
+2. **Bio panel** (`_CompanyBioPanel.vue`) : avatar, nom, slug, chips status+plan, métriques clés (membres, factures), détails (market, jobdomain, création, abonnement, wallet, profils incomplets), actions (suspend/reactivate)
+3. **5 tabs pill** : Overview, Billing, Modules, Members, Activity
+4. **Billing tab** (`_CompanyBillingTab.vue`) : carte abonnement (status, intervalle, fin de période, wallet), alerte dunning active, moyens de paiement, tableau factures (VDataTable)
+5. **Members tab** (`_CompanyMembersTab.vue`) : VDataTable avec nom, email, rôle, date d'ajout
+6. **Activity tab** (`_CompanyActivityTab.vue`) : VTimeline des PlatformAuditLog filtrés par company
+7. **Lazy loading** : les données billing, members, activity ne sont chargées que quand l'onglet est sélectionné
+8. **Backend** : 3 nouveaux endpoints (`billing`, `members`, `activity`) dans CompanyController, 4 nouvelles relations sur Company model (`invoices`, `paymentProfiles`, `payments`, `wallet`)
+9. **Navigation** : lien `?tab=billing` pour naviguer directement depuis la liste billing
+10. **i18n** : ~40 nouvelles clés EN/FR (bio.*, billing.*, members.*, activity.*)
+
+**Conséquences** :
+- L'admin plateforme a une vue complète 360° de chaque company (info, billing, modules, membres, activité)
+- Les données sont chargées à la demande (pas de N+1 sur la page initiale)
+- Le layout suit le pattern Vuexy standard (bio panel + tabs) pour une UX cohérente
+- La Billing tab permet de voir les factures, le dunning, le wallet et les moyens de paiement sans quitter la company
+- Prépare le terrain pour Sprint C (liens company dans les tables billing)
+
+**Fichiers créés** :
+- `resources/js/pages/platform/companies/_CompanyBioPanel.vue`
+- `resources/js/pages/platform/companies/_CompanyBillingTab.vue`
+- `resources/js/pages/platform/companies/_CompanyMembersTab.vue`
+- `resources/js/pages/platform/companies/_CompanyActivityTab.vue`
+
+**Fichiers modifiés** :
+- `resources/js/pages/platform/companies/[id].vue` — rewrite complet en layout 360°
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — +`billing()`, +`members()`, +`activity()`
+- `app/Core/Models/Company.php` — +`invoices()`, +`paymentProfiles()`, +`payments()`, +`wallet()`
+- `routes/platform.php` — +3 routes GET (billing, members, activity)
+- `resources/js/modules/platform-admin/companies/companies.store.js` — +3 actions fetch
+- `resources/js/plugins/i18n/locales/en.json` — ~40 clés
+- `resources/js/plugins/i18n/locales/fr.json` — ~40 clés
+
+---
+
+### ADR-270 — Platform Billing ↔ Company Connection (clickable links)
+
+**Date** : 2026-03-08
+**Contexte** : Les tables de facturation plateforme (invoices, subscriptions, dunning) affichaient le nom de la company en texte brut. Un admin ne pouvait pas naviguer directement vers la fiche company depuis la vue billing. Le backend retournait déjà `company:id,name,slug` via Eloquent eager loading — aucun changement backend nécessaire.
+
+**Décision** :
+- Remplacer les `<span>` par des `<RouterLink>` dans les 3 components billing
+- Le lien pointe vers `/platform/companies/{id}?tab=billing` pour atterrir directement sur l'onglet Billing du 360° (ADR-269)
+- Condition `v-if="item.company?.id"` pour les cas edge (invoice sans company)
+
+**Conséquences** :
+- L'admin peut naviguer billing → company → billing tab en un clic
+- Le flux complet est connecté end-to-end : billing dashboard → invoice → company 360° → billing detail
+- Aucun changement backend
+
+**Fichiers modifiés** :
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` — company name → RouterLink
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` — company name → RouterLink
+- `resources/js/pages/platform/billing/_BillingDunningTab.vue` — company name → RouterLink
+
+---
+
+### ADR-271 — Enhanced Platform Companies List (search, filters, KPIs)
+
+**Date** : 2026-03-08
+**Contexte** : La liste des companies plateforme (`/platform/companies`) affichait un tableau brut (nom, slug, statut, plan) sans aucune capacité de recherche ou filtrage. L'admin ne pouvait pas localiser rapidement une company parmi potentiellement des centaines.
+
+**Décision** :
+- Ajout de **3 KPI cards** au-dessus du tableau : total companies, actives, suspendues (agrégats légers côté backend)
+- Ajout d'une **barre de recherche** avec debounce 400ms (recherche par nom ou slug, LIKE côté SQL)
+- Ajout de **2 filtres** : statut (active/suspended) et plan (dynamique depuis `/plans`)
+- Backend `index()` enrichi pour accepter `search`, `status`, `plan_key` comme query params
+- Store enrichi avec `_stats` et `fetchCompanies(page, filters)` qui transmet les filtres
+- i18n complète (EN + FR) pour tous les nouveaux labels
+
+**Conséquences** :
+- L'admin localise une company en <1s via recherche ou filtres
+- Les KPI donnent une vue d'ensemble instantanée du parc companies
+- Les filtres sont composables (recherche + statut + plan simultanément)
+- 3 requêtes COUNT agrégées à chaque appel index — acceptable car tables indexées sur `status`
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — `index()` : +search/status/plan_key filters, +stats agrégats
+- `resources/js/modules/platform-admin/companies/companies.store.js` — +`_stats` state, +`stats` getter, `fetchCompanies` accepte filters
+- `resources/js/pages/platform/companies/index.vue` — rewrite : KPI cards + search + filters + pagination
+- `resources/js/plugins/i18n/locales/en.json` — +10 clés companies.*
+- `resources/js/plugins/i18n/locales/fr.json` — +10 clés companies.*
+
+---
+
+### ADR-272 — Transactional Email System + Plan Change Preview + Admin Wallet + Controller Extraction
+
+**Date** : 2026-03-08
+**Contexte** : Le système SaaS n'avait que 3 notifications email (dunning uniquement : PaymentFailed, AccountSuspended, AccountReactivated). Aucun email n'était envoyé pour les événements critiques : facture créée, paiement reçu, changement de plan, fin de trial, addon activé, carte expirant. De plus, le changement de plan admin dans la vue Company 360° faisait un `update(['plan_key' => ...])` brut sans preview de proration ni impact billing, et aucun geste commercial wallet (crédit/débit) n'était disponible.
+
+**Décision** :
+
+**1. Notifications transactionnelles** (6 nouvelles classes) :
+- `InvoiceCreated` — envoyée quand une facture est finalisée (status open). Sujet : "Invoice #{number} — {amount}"
+- `PaymentReceived` — envoyée quand une facture est payée. Sujet : "Payment received — {amount}"
+- `PlanChanged` — envoyée sur changement de plan. Sujet : "Plan changed: {old} → {new}"
+- `TrialExpiring` — envoyée 3 jours avant la fin du trial. Sujet : "Trial ending soon"
+- `AddonActivated` — envoyée quand un addon payant est activé. Sujet : "Add-on {name} activated"
+- `PaymentMethodExpiring` — envoyée quand une carte expire dans les 30 jours. Sujet : "Payment method expiring"
+
+**2. Dispatch points** :
+- `InvoiceIssuer::finalize()` → `InvoiceCreated` (open) ou `PaymentReceived` (paid) — **dispatché HORS transaction** pour éviter le caching de relations dans les tests
+- `BillingRenewCommand` → `PaymentReceived` après paiement Stripe réussi
+- `AddonBillingListener` → `AddonActivated` après création facture addon
+- `PlanChangeExecutor::execute()` → `PlanChanged` après exécution de l'intent
+
+**3. Commandes schedulées** :
+- `billing:check-expiring-cards` — daily, trouve les CompanyPaymentProfile expirant dans le mois courant ou suivant, idempotent via `metadata.expiry_notified`
+- `billing:check-trial-expiring` — daily, trouve les subscriptions trialing avec `trial_ends_at <= now()+3j`, idempotent via `metadata.trial_expiry_notified`
+
+**4. Plan change preview** :
+- Nouvel endpoint `GET /companies/{id}/plan-preview?plan_key=X&interval=Y` → appelle `CompanyBillingReadService::planChangePreview()` qui calcule proration, crédit, charge, impact net
+- Le plan change admin utilise `PlanChangeExecutor::schedule()` avec timing=immediate au lieu d'un `update()` brut, garantissant proration + facture automatique
+- Frontend : dialog de preview affichant upgrade/downgrade, crédit proration, charge nouveau plan, impact net, bouton de confirmation
+
+**5. Admin wallet adjustments** :
+- Nouvel endpoint `POST /companies/{id}/wallet` avec type (credit/debit), amount (cents), reason
+- Utilise `WalletLedger::credit()/debit()` avec source_type `admin_adjustment` + audit trail complet
+- Frontend : dialog wallet dans la Company 360° (type selector, montant, raison)
+
+**6. Controller extraction** :
+- Les 3 méthodes billing admin (`planChangePreview`, `updatePlan`, `adjustWallet`) extraites vers `CompanyBillingAdminController.php` pour respecter l'invariant 250 lignes max
+- `CompanyController` ramené de 312 → 188 lignes
+
+**Conséquences** :
+- Chaque événement billing génère un email au propriétaire de la company (7 types au total vs 3 avant)
+- Les notifications sont toujours dispatchées dans un try/catch safety wrapper — un échec email ne bloque jamais le flow billing
+- Le dispatch HORS transaction dans InvoiceIssuer évite le caching de relations Eloquent (bug identifié dans BillingPeriodGovernanceTest)
+- L'admin a un flow complet plan change : preview → confirmation → exécution → notification
+- L'admin peut faire des gestes commerciaux wallet (crédit/débit) avec raison auditée
+- L'architecture respecte le Single Responsibility : CompanyController (CRUD + read) vs CompanyBillingAdminController (billing actions)
+
+**Fichiers créés** :
+- `app/Notifications/Billing/InvoiceCreated.php`
+- `app/Notifications/Billing/PaymentReceived.php`
+- `app/Notifications/Billing/PlanChanged.php`
+- `app/Notifications/Billing/TrialExpiring.php`
+- `app/Notifications/Billing/AddonActivated.php`
+- `app/Notifications/Billing/PaymentMethodExpiring.php`
+- `app/Console/Commands/BillingCheckExpiringCardsCommand.php`
+- `app/Console/Commands/BillingCheckTrialExpiringCommand.php`
+- `app/Modules/Platform/Companies/Http/CompanyBillingAdminController.php`
+
+**Fichiers modifiés** :
+- `app/Core/Billing/InvoiceIssuer.php` — dispatch InvoiceCreated/PaymentReceived hors transaction
+- `app/Console/Commands/BillingRenewCommand.php` — dispatch PaymentReceived après Stripe payment
+- `app/Core/Billing/Listeners/AddonBillingListener.php` — dispatch AddonActivated
+- `app/Core/Billing/PlanChangeExecutor.php` — dispatch PlanChanged
+- `routes/console.php` — +2 commandes daily (expiring-cards, trial-expiring)
+- `routes/platform.php` — 3 routes billing admin → CompanyBillingAdminController
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — extraction 3 méthodes billing
+- `resources/js/pages/platform/companies/[id].vue` — plan preview dialog + wallet dialog
+- `resources/js/pages/platform/companies/_CompanyBillingTab.vue` — wallet adjust button
+- `resources/js/modules/platform-admin/companies/companies.store.js` — +fetchPlanChangePreview, +adjustWallet
+- `resources/js/pages/platform/companies/index.vue` — KPI cards alignement + filters cohérence
+- `resources/js/plugins/i18n/locales/en.json` — +clés planPreview.*, wallet.*
+- `resources/js/plugins/i18n/locales/fr.json` — +clés planPreview.*, wallet.*
+
+---
+
+## ADR-273 : Company 360° Admin Cockpit — Commercial-Grade
+
+- **Date** : 2026-03-08
+- **Contexte** : La vue company 360° (ADR-268/272) était une façade : 3 tabs en erreur (route cache stale), subscription invisible (is_current=null), aucune action admin sur invoices/subscription/payment methods, wallet sans historique, pas de KPIs par company.
+- **Décisions** :
+  1. **Route cache** : root cause des 3 tabs cassés — `php artisan route:clear` nécessaire après ajout de routes. Les routes billing/members/activity existaient dans `platform.php` mais n'étaient pas dans le cache.
+  2. **Subscription fallback** : `billing()` cherche d'abord `is_current=true`, sinon fallback sur status `active/trialing/past_due` (latest). Couvre les subscriptions pré-migration sans `is_current`.
+  3. **Owner dans bio panel** : `CompanyController::show()` eager-load la membership `role=owner` + user. Affiché dans `_CompanyBioPanel.vue`.
+  4. **Payment methods admin** : nouveau `CompanySubscriptionAdminController` (split du billing controller pour rester < 250 lignes). 3 endpoints : list, set-default (+ Stripe sync), delete (+ Stripe detach).
+  5. **Invoice actions** : câblage frontend des 4 endpoints existants (retry-payment, mark-paid-offline, void, credit-note) via menu 3-dot dans le tableau invoices. Dialog de confirmation pour actions destructives (void, credit-note).
+  6. **Subscription lifecycle** : 3 endpoints admin — cancel (end_of_period), undo-cancel, extend-trial (+N jours). Boutons contextuels selon l'état de la subscription.
+  7. **Wallet historique** : endpoint `walletHistory()` lisant `CompanyWalletTransaction` via wallet_id. Affiché en VDataTable density compact.
+  8. **KPI widgets company-scoped** : 3 widgets (revenue_mtd, ar_outstanding, failed_payments_7d) via batch resolve API avec `scope: 'company'`.
+  9. **Suspend dialog enrichi** : remplacement du `confirm()` natif par VDialog montrant l'impact (subscription, invoices impayées, blocage membres).
+  10. **Activity tab améliorée** : diffs lisibles (before→after), couleurs par catégorie (billing=info, module=success, suspension=error), affichage actor.
+  11. **Members tab** : badge owner doré (crown), emails mailto, bouton refresh.
+  12. **Tabs simples** : pas de modification URL (comme /platform/billing), juste `ref('overview')`.
+- **Conséquences** :
+  - L'admin a un cockpit fonctionnel end-to-end pour gérer une company
+  - Toutes les actions billing existantes sont accessibles depuis la vue company
+  - Controller split : `CompanyBillingAdminController` (plan+wallet) + `CompanySubscriptionAdminController` (PM+subscription)
+  - 8 nouvelles routes platform, 10 nouvelles store actions
+  - Phase 2.2 (dynamic fields dans overview) différée — info basique déjà affichée
+
+**Fichiers créés** :
+- `app/Modules/Platform/Companies/Http/CompanySubscriptionAdminController.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Companies/Http/CompanyBillingAdminController.php` — +walletHistory, allégé (PM+sub extraits)
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — show() +owner, billing() +subscription fallback
+- `routes/platform.php` — +8 routes (payment-methods, subscription lifecycle, wallet-history)
+- `resources/js/modules/platform-admin/companies/companies.store.js` — +10 actions
+- `resources/js/pages/platform/companies/[id].vue` — owner prop, suspend dialog, refreshBilling, tab simplification
+- `resources/js/pages/platform/companies/_CompanyBioPanel.vue` — +owner section
+- `resources/js/pages/platform/companies/_CompanyBillingTab.vue` — rewrite complet (KPI, sub actions, PM gestion, invoice actions, wallet historique)
+- `resources/js/pages/platform/companies/_CompanyMembersTab.vue` — owner badge, mailto, refresh
+- `resources/js/pages/platform/companies/_CompanyActivityTab.vue` — diffs lisibles, couleurs, actor
+- `resources/js/plugins/i18n/locales/en.json` — +30 clés billing/suspend/bio
+- `resources/js/plugins/i18n/locales/fr.json` — +30 clés billing/suspend/bio
+
+### ADR-274 — Company 360° Bugfixes + Addons + Admin Payment Setup
+
+**Date** : 2026-03-08
+**Contexte** : La vue 360° admin (ADR-273) avait plusieurs bugs : les noms des membres n'apparaissaient pas (User model a `first_name`/`last_name`, pas `name`), les KPI widgets affichaient 0 (le frontend lisait `.value` au lieu de `.revenue`/`.outstanding`/`.count`), les headers de tableaux étaient en dur en anglais, l'onglet modules ne montrait pas les addons souscrits, et il n'y avait aucun moyen d'ajouter un moyen de paiement depuis l'admin.
+
+**Décision** :
+
+**1. Fix noms membres + owner** :
+- `CompanyController::members()` : eager-load changé de `user:id,name,email` à `user:id,first_name,last_name,email`, mapping `display_name`
+- `CompanyController::show()` : même fix pour le owner dans le bio panel
+
+**2. Fix KPI widgets** :
+- `_CompanyBillingTab.vue` : `.value` remplacé par `.revenue` (revenue_mtd), `.outstanding` (ar_outstanding), `.count` (failed_payments_7d) — conformément aux retours des widgets `transform()`
+
+**3. Headers i18n** :
+- Tableaux invoices et wallet history : headers passés en `computed()` avec `t()` au lieu de strings en dur
+
+**4. Section addons souscrits** :
+- Backend : `CompanyController::show()` enrichi avec `addon_subscriptions` via `CompanyAddonSubscription::active()`
+- Frontend : nouvelle section « Add-ons souscrits » dans l'onglet modules avec nom, prix/intervalle, date d'activation
+
+**5. Admin payment method setup (Stripe)** :
+- Backend : `CompanySubscriptionAdminController::createSetupIntent()` crée un SetupIntent Stripe pour la company
+- Backend : `confirmPaymentMethod()` délègue à `CompanyPaymentSetupController::confirmSetupIntent()` existant
+- Frontend : bouton `+` dans la section Payment Methods, formulaire Stripe Card Element dans la même card
+- 2 nouvelles routes : `POST /companies/{id}/payment-methods/setup-intent` et `/confirm`
+
+**Conséquences** :
+- Les noms apparaissent correctement dans l'onglet Membres et le bio panel
+- Les KPI widgets reflètent les vraies valeurs (revenue, AR, failures)
+- L'admin peut ajouter des cartes bancaires directement depuis la vue 360°
+- Les addons souscrits sont visibles dans l'onglet Modules
+- 1618 tests passent, build clean
+
+**Fichiers** :
+- `app/Modules/Platform/Companies/Http/CompanyController.php` — show() + members() fix noms, addon_subscriptions
+- `app/Modules/Platform/Companies/Http/CompanySubscriptionAdminController.php` — +2 methods (createSetupIntent, confirmPaymentMethod)
+- `routes/platform.php` — +2 routes setup-intent/confirm
+- `resources/js/pages/platform/companies/[id].vue` — addonSubscriptions ref, section addons souscrits
+- `resources/js/pages/platform/companies/_CompanyBillingTab.vue` — fix KPIs, headers i18n, Stripe add card
+- `resources/js/modules/platform-admin/companies/companies.store.js` — +2 actions (createAdminSetupIntent, confirmAdminPaymentMethod)
+- `resources/js/plugins/i18n/locales/en.json` — +12 clés (addons, billing headers, payment setup)
+- `resources/js/plugins/i18n/locales/fr.json` — +12 clés FR
+
+---
+
+### ADR-275 : Token Economy — règle de lecture low-token pour agent IA (2026-03-08)
+
+**Contexte** : Les sessions d'agent IA gaspillent des milliers de tokens en lisant des fichiers entiers (400+ lignes) alors que seules 20-50 lignes sont pertinentes. Sur un projet de 1600+ fichiers, cela réduit la capacité de travail par session.
+
+**Décision** :
+- Interdire la lecture entière de fichiers sauf réécriture totale
+- Workflow obligatoire : `Grep` (cibler) → `Read offset+limit` (20-50 lignes) → `Edit`
+- Recherches larges déléguées à des subagents `Explore` pour protéger le contexte principal
+- Règle documentée dans `docs/bmad/07-dev-rules.md` section "Token Economy" et dans MEMORY.md
+
+**Conséquences** :
+- Réduction ~10x des tokens consommés par lecture de fichier
+- Sessions plus longues et plus productives
+- Discipline de ciblage avant modification
+
+**Fichiers** :
+- `docs/bmad/07-dev-rules.md` — section "Token Economy" ajoutée
+- `MEMORY.md` (agent) — section "Token Economy" ajoutée
+
+---
+
+### ADR-277 : Stripe payment module seeder + erreur paiement visible (2026-03-08)
+
+**Contexte** : Le module de paiement Stripe était perdu à chaque migration/seed. Le bouton "Continuer vers le paiement" sur `/company/billing/pay` retournait 422 silencieusement (erreur invisible car l'alerte n'était affichée que sur le step 2).
+
+**Décisions** :
+- `PaymentModuleSeeder` enrichi avec le module Stripe (test mode, credentials via `env()` avec fallback)
+- Seeder appelé dans `DatabaseSeeder` (système, pas demo) → survit aux migrations
+- Alerte d'erreur ajoutée sur le step `select` de la page de paiement
+- Write-off ledger ajouté dans `AdminAdvancedMutationService::forceDunningTransition(overdue → uncollectible)` — manquait
+
+**Conséquences** :
+- `php artisan db:seed` restaure toujours la config Stripe
+- Erreurs de paiement visibles immédiatement côté company
+- Cohérence : toute transition vers `uncollectible` enregistre le write-off au ledger
+
+**Fichiers** :
+- `database/seeders/PaymentModuleSeeder.php` — module Stripe + règle card ajoutés
+- `database/seeders/DatabaseSeeder.php` — appel PaymentModuleSeeder
+- `resources/js/pages/company/billing/pay.vue` — VAlert sur step select
+- `app/Core/Billing/AdminAdvancedMutationService.php` — write-off ledger dans forceDunningTransition
+
+---
+
+### ADR-278 : Seeders réalistes — FinanceDemoSeeder remplace BillingDemoSeeder (2026-03-08)
+
+**Contexte** : `BillingDemoSeeder` créait des factures DEMO avec des montants ledger incohérents (euros vs centimes), sans `subscription_id`, sans `period_start`/`period_end`, et sans `due_at` réalistes. Impossible de tester le cycle dunning end-to-end.
+
+**Décisions** :
+- `BillingDemoSeeder` retiré du cycle de seed (appel supprimé dans `DevSeeder`)
+- `FinanceDemoSeeder` refait : recherche par slug (pas par id), factures liées à la subscription, périodes et échéances réalistes, ledger via services (pas d'insert direct), facture de mars avec `due_at` dans le passé pour déclencher le dunning
+- `PaymentModuleSeeder` : carte test Visa 4242 seedée par slug, appelé une 2e fois après `DevSeeder` dans `DatabaseSeeder`
+- Tout idempotent : skip si les données existent déjà
+
+**Conséquences** :
+- `migrate:fresh --seed` crée un environnement complet : 3 factures (jan paid, fév paid+refund, mars overdue), carte Visa test, Stripe configuré
+- Le cycle dunning est testable end-to-end
+- AR ledger = factures impayées (cohérence parfaite)
+
+**Fichiers** :
+- `database/seeders/FinanceDemoSeeder.php` — rewrite complet
+- `database/seeders/PaymentModuleSeeder.php` — lookup par slug
+- `database/seeders/DevSeeder.php` — BillingDemoSeeder retiré
+- `database/seeders/DatabaseSeeder.php` — ordre ajusté
+
+---
+
+### ADR-279 : Guard suppression dernier moyen de paiement (2026-03-08)
+
+**Contexte** : Une company sans moyen de paiement ne peut pas payer ses factures et bloque le cycle dunning. Il faut empêcher la suppression du dernier moyen de paiement.
+
+**Décisions** :
+- Guard backend dans `CompanyPaymentMethodController::deleteCard()` — retourne 422 si `count <= 1`
+- Frontend : bouton supprimer disabled avec tooltip quand il n'y a qu'une carte
+- Toast affiche le message backend en cas d'erreur 422
+- L'admin platform n'est **pas** bloqué (il sait ce qu'il fait)
+- Test ajouté : `test_delete_last_card_blocked`
+
+**Conséquences** :
+- Minimum 1 moyen de paiement garanti par company
+- UX claire : bouton grisé + tooltip explicatif
+- Double protection : frontend (disabled) + backend (422)
+
+**Fichiers** :
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — guard count <= 1
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — disabled + tooltip + toast message
+- `resources/js/plugins/i18n/locales/en.json` — clé `cannotDeleteLastCard`
+- `resources/js/plugins/i18n/locales/fr.json` — idem FR
+- `tests/Feature/BillingLotETest.php` — +1 test
+
+---
+
+### ADR-280 — Max payment methods configurable via platform policy
+
+- **Date** : 2026-03-08
+- **Contexte** : Le nombre max de moyens de paiement par company était hardcodé à 4 dans le `confirmSetupIntent`. L'admin doit pouvoir configurer cette limite depuis les politiques de paiement platform (`/platform/payments`, onglet Politiques).
+- **Décision** :
+  - Ajout de `max_payment_methods` (default 4, min 1, max 10) dans les `POLICY_DEFAULTS` de `BillingConfigController`
+  - Validation ajoutée dans `updatePolicies()` (integer, min 1, max 10)
+  - Helper statique `CompanyPaymentMethodController::maxPaymentMethods()` lit la policy depuis `PlatformSetting->billing['policies']`
+  - `confirmSetupIntent` utilise ce helper au lieu du hardcoded 4
+  - L'API `savedCards()` renvoie `max_payment_methods` pour que le frontend l'utilise
+  - Store company stocke `_maxPaymentMethods` et l'expose via getter
+  - UI company : la card "Ajouter un autre moyen de paiement" (dashed border) est masquée quand le max est atteint
+  - UI platform : champ nombre dans `_PaymentPoliciesTab.vue` avec hint explicatif
+- **Conséquences** : L'admin contrôle le nombre max de moyens de paiement depuis les politiques. Le frontend et le backend sont alignés sur cette limite. Pas de migration nécessaire — le setting est dans le JSON blob `billing.policies` de `PlatformSetting`.
+- **Fichiers** :
+  - `app/Modules/Platform/Billing/Http/BillingConfigController.php` — POLICY_DEFAULTS + validation
+  - `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — `maxPaymentMethods()` + `savedCards()` enrichi
+  - `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` — guard dynamique
+  - `resources/js/modules/company/billing/billing.store.js` — `_maxPaymentMethods` + getter
+  - `resources/js/modules/platform-admin/billing/billing.store.js` — default state
+  - `resources/js/pages/platform/payments/_PaymentPoliciesTab.vue` — champ UI
+  - `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — card "ajouter" + guard
+  - `resources/js/plugins/i18n/locales/en.json` — clés i18n
+  - `resources/js/plugins/i18n/locales/fr.json` — idem FR
+
+---
+
+### ADR-281 — Seed Poppins font + Leezr Logistics SAS legal structure
+
+- **Date** : 2026-03-08
+- **Contexte** : Chaque `migrate:fresh --seed` perdait la configuration typographie (police Google Poppins) et la structure juridique SAS de Leezr Logistics, forçant une reconfiguration manuelle via l'UI.
+- **Décision** :
+  - `PlatformSeeder` : la typography seedée est maintenant `active_source: 'google'`, `google_fonts_enabled: true`, `google_active_family: 'Poppins'`, `google_weights: [100..900]` au lieu des defaults (local, disabled)
+  - `PlatformSeeder` : ajout de la font family `Poppins` (slug `poppins`, source `google`) en plus de `Public Sans`
+  - `DevSeeder` : `legal_status_key => 'sas'` ajouté à la company Leezr Logistics
+- **Conséquences** : Après `migrate:fresh --seed`, la police Poppins est activée et la company a sa structure juridique SAS. Pas de migration nécessaire — seeder-only.
+- **Fichiers** :
+  - `database/seeders/PlatformSeeder.php` — typography Poppins + font family
+  - `database/seeders/DevSeeder.php` — `legal_status_key => 'sas'`
+
+---
+
+### ADR-282 — Overview tab éditable + dynamic fields dans la vue company 360°
+
+- **Date** : 2026-03-08
+- **Contexte** : L'onglet Aperçu de `/platform/companies/{id}` affichait 5 champs en `disabled` sans les dynamic fields (billing_address, siret, vat_number, etc.). L'admin ne pouvait rien modifier. Les dynamic fields configurés dans `/platform/fields` étaient invisibles côté admin.
+- **Décision** :
+  - `CompanyController::show()` enrichi avec `dynamic_fields` via `FieldResolverService::resolve()`
+  - Nouveau `CompanyProfileAdminController::update()` accepte `name` + `dynamic_fields`, valide via `FieldValidationService::rules()`, écrit via `FieldWriteService::upsert()`, audit via `AuditLogger::logPlatform()`
+  - Controller séparé pour respecter l'invariant de 250 lignes max
+  - Le champ `name` est maintenant éditable (v-model), les autres champs de base restent disabled
+  - `DynamicFormRenderer` affiché sous les champs de base avec séparateur + titre "Champs entreprise"
+  - Bouton Save en bas du tab
+  - Route `PUT /companies/{id}` ajoutée dans le groupe companies
+- **Conséquences** : L'admin platform peut modifier le nom de la company et tous les dynamic fields activés (billing address, SIRET, TVA, etc.) directement depuis la vue 360°.
+- **Fichiers** :
+  - `app/Modules/Platform/Companies/Http/CompanyController.php` — `show()` enrichi
+  - `app/Modules/Platform/Companies/Http/CompanyProfileAdminController.php` — nouveau controller `update()`
+  - `routes/platform.php` — +1 route PUT + import
+  - `resources/js/modules/platform-admin/companies/companies.store.js` — +1 action
+  - `resources/js/pages/platform/companies/[id].vue` — Overview tab refactoré
+  - `resources/js/plugins/i18n/locales/en.json` — +3 clés
+  - `resources/js/plugins/i18n/locales/fr.json` — +3 clés
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

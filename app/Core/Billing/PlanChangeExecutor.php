@@ -6,6 +6,7 @@ use App\Core\Models\Company;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
 use App\Core\Plans\PlanRegistry;
+use App\Notifications\Billing\PlanChanged;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -254,6 +255,25 @@ class PlanChangeExecutor
                 'status' => 'executed',
                 'executed_at' => now(),
             ]);
+
+            // ADR-272: Notify company owner about plan change
+            try {
+                $owner = $company->owner();
+
+                if ($owner) {
+                    $plans = PlanRegistry::definitions();
+                    $oldName = $plans[$intent->from_plan_key]->name ?? $intent->from_plan_key;
+                    $newName = $plans[$intent->to_plan_key]->name ?? $intent->to_plan_key;
+
+                    $owner->notify(new PlanChanged($oldName, $newName));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[plan-change] Failed to send plan change notification', [
+                    'company_id' => $company->id,
+                    'intent_id' => $intent->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return $intent->fresh();
         });

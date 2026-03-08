@@ -96,9 +96,14 @@ onMounted(() => load())
         hide-default-footer
       >
         <template #item.company="{ item }">
-          <span class="font-weight-medium">
-            {{ item.company?.name || '—' }}
-          </span>
+          <RouterLink
+            v-if="item.company?.id"
+            :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+            class="font-weight-medium text-high-emphasis text-decoration-none"
+          >
+            {{ item.company.name }}
+          </RouterLink>
+          <span v-else class="font-weight-medium">—</span>
         </template>
 
         <template #item.status="{ item }">

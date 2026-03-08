@@ -84,6 +84,15 @@ class CompanyPaymentSetupController
         $company = $request->attributes->get('company');
         $paymentMethodId = $request->validate(['payment_method_id' => 'required|string'])['payment_method_id'];
 
+        // Guard: max payment methods per company (platform policy)
+        $max = CompanyPaymentMethodController::maxPaymentMethods();
+        $count = CompanyPaymentProfile::where('company_id', $company->id)->count();
+        if ($count >= $max) {
+            return response()->json([
+                'message' => "Maximum of {$max} payment methods allowed.",
+            ], 422);
+        }
+
         try {
             $adapter = app(StripePaymentAdapter::class);
             $pm = $adapter->retrievePaymentMethod($paymentMethodId);

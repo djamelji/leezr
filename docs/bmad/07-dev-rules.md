@@ -105,6 +105,21 @@ Les composants dans ces répertoires **doivent** être importés manuellement da
 - Pas de push sur main sans review
 - Branches feature : `feature/nom-feature`
 
+## Token Economy (agent IA)
+
+Règle : **ne jamais lire un fichier entier** sauf réécriture totale.
+
+| Besoin | Outil | Technique |
+|--------|-------|-----------|
+| Trouver un fichier | `Glob` | Pattern `**/*.php`, `**/billing/*.vue` |
+| Comprendre une zone | `Grep -C 3..5` | Cibler la fonction/classe exacte |
+| Lire pour modifier | `Read offset=L limit=30` | 20-50 lignes max autour de la cible |
+| Recherche large | Subagent `Explore` | Protège le contexte principal |
+
+**Workflow type** : `Grep pattern` → noter les lignes → `Read offset+limit` → `Edit`
+
+Justification : un fichier de 400 lignes lu en entier = ~2000 tokens gaspillés. Grep + Read ciblé = ~200 tokens pour le même résultat.
+
 ## Interdictions
 
 - Pas de `any` TypeScript

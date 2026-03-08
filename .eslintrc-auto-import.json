@@ -382,6 +382,7 @@
     "formatDateTime": true,
     "formatMoney": true,
     "useDashboardGrid": true,
-    "useDocumentHelpers": true
+    "useDocumentHelpers": true,
+    "checkVersionOnMount": true
   }
 }

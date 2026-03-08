@@ -93,6 +93,7 @@
     "status": "Status",
     "actions": "Actions",
     "created": "Created",
+    "joined": "Joined",
     "date": "Date",
     "level": "Level",
     "type": "Type",
@@ -123,6 +124,9 @@
     "sensitive": "Sensitive",
     "current": "Current",
     "total": "Total",
+    "refresh": "Refresh",
+    "success": "Success",
+    "role": "Role",
     "popular": "Popular",
     "operational": "Operational",
     "management": "Management",
@@ -131,7 +135,9 @@
     "export": "Export",
     "import": "Import",
     "all": "All",
-    "manage": "Manage"
+    "manage": "Manage",
+    "month": "month",
+    "year": "year"
   },
 
   "dashboard": {
@@ -212,6 +218,8 @@
     "primaryCurrency": "Primary Currency",
     "vatApplicable": "VAT applicable?",
     "vatRate": "VAT Rate (%)",
+    "maxPaymentMethods": "Max payment methods per company",
+    "maxPaymentMethodsHint": "Limit the number of payment methods a company can register (1-10).",
     "savePolicies": "Save Policies",
     "failedToUpdatePolicies": "Failed to update policies.",
     "subscriptionGovernance": "Subscription Governance",
@@ -870,6 +878,9 @@
     "ibanSaved": "Bank account saved successfully.",
     "cardDeleted": "Card removed.",
     "cardDeleteFailed": "Failed to remove card.",
+    "cannotDeleteLastCard": "You must keep at least one payment method.",
+    "addAnotherMethod": "Add another payment method",
+    "maxMethodsReached": "Maximum payment methods limit reached.",
     "defaultCardUpdated": "Default payment method updated.",
     "defaultCardFailed": "Failed to update default card.",
     "confirmDeleteCard": "Remove this card?",
@@ -957,7 +968,17 @@
     "failedToUpdatePlan": "Failed to update plan.",
     "companyReactivated": "Company reactivated.",
     "failedToReactivate": "Failed to reactivate company.",
-    "noCompanies": "No companies found."
+    "noCompanies": "No companies found.",
+    "noSearchResults": "No companies match your search criteria.",
+    "searchPlaceholder": "Search by name or slug…",
+    "allStatuses": "All statuses",
+    "allPlans": "All plans",
+    "suspended": "Suspended",
+    "stats": {
+      "total": "Total Companies",
+      "active": "Active",
+      "suspended": "Suspended"
+    }
   },
 
   "companyPlan": {
@@ -1024,6 +1045,19 @@
       "errorLoading": "Could not calculate preview. Please try again.",
       "upgrade": "Upgrade",
       "downgrade": "Downgrade"
+    },
+    "switchToAnnual": "Switch to Annual",
+    "switchToMonthly": "Switch to Monthly",
+    "changeScheduled": "Plan change scheduled. It will take effect at the end of the current period.",
+    "changeApplied": "Plan changed successfully!",
+    "suggestUpgrade": "Upgrade to {plan} to unlock the module you selected.",
+    "suggested": "Suggested",
+    "scheduledChange": {
+      "title": "Scheduled Plan Change",
+      "message": "Your plan will change to {plan} on {date}.",
+      "cancel": "Cancel Change",
+      "cancelled": "Scheduled plan change cancelled.",
+      "cancelFailed": "Failed to cancel scheduled change."
     }
   },
 
@@ -1759,6 +1793,9 @@
 
   "platformCompanyDetail": {
     "failedToLoad": "Failed to load company profile.",
+    "companyFields": "Company fields",
+    "profileUpdated": "Company profile updated.",
+    "profileUpdateFailed": "Failed to update profile.",
     "overview": "Overview",
     "modules": "Modules",
     "jobDomain": "Job Domain",
@@ -1775,6 +1812,9 @@
     "planGatedInfo": "Requires a plan upgrade to unlock.",
     "otherModules": "Other Modules",
     "otherModulesInfo": "Not currently available for this company.",
+    "subscribedAddons": "Subscribed Add-ons",
+    "subscribedAddonsInfo": "Modules the company is paying for as add-ons.",
+    "addonChip": "Addon",
     "coreChip": "Core",
     "includedChip": "Included",
     "requiresPlan": "Requires {plan}",
@@ -1782,7 +1822,113 @@
     "notAvailable": "Not available",
     "noModulesAvailable": "No modules available.",
     "failedToToggleModule": "Failed to toggle module.",
-    "incompleteProfiles": "{count} incomplete profile(s)"
+    "incompleteProfiles": "{count} incomplete profile(s)",
+    "backToList": "Back to companies",
+    "legalStatus": "Legal Status",
+    "failedToLoadBilling": "Failed to load billing data.",
+    "failedToLoadMembers": "Failed to load members.",
+    "failedToLoadActivity": "Failed to load activity log.",
+    "bio": {
+      "members": "Members",
+      "invoices": "Invoices",
+      "market": "Market",
+      "jobdomain": "Job Domain",
+      "created": "Created",
+      "subscription": "Subscription",
+      "wallet": "Wallet",
+      "profiles": "Profiles",
+      "owner": "Business Owner"
+    },
+    "billing": {
+      "tab": "Billing",
+      "subscription": "Subscription",
+      "interval": "Interval",
+      "periodEnd": "Period End",
+      "walletBalance": "Wallet Balance",
+      "noSubscription": "No active subscription.",
+      "dunningActive": "{count} invoice(s) in dunning",
+      "nextRetry": "Next retry",
+      "paymentMethods": "Payment Methods",
+      "noPaymentMethods": "No payment methods on file.",
+      "invoices": "Invoices",
+      "noInvoices": "No invoices yet.",
+      "default": "Default",
+      "expires": "Expires",
+      "setDefault": "Set as default",
+      "pmDefaultUpdated": "Default payment method updated.",
+      "pmDeleted": "Payment method removed.",
+      "pmActionFailed": "Payment method action failed.",
+      "retryPayment": "Retry payment",
+      "markPaidOffline": "Mark paid offline",
+      "voidInvoice": "Void invoice",
+      "issueCreditNote": "Issue credit note",
+      "invoiceActionFailed": "Invoice action failed.",
+      "confirmActionMessage": "Are you sure you want to {action} invoice {number}?",
+      "confirmAction": "Confirm",
+      "scheduleCancellation": "Schedule cancellation",
+      "undoCancel": "Undo cancellation",
+      "extendTrial": "Extend trial",
+      "trialDays": "Days to extend",
+      "extendTrialConfirm": "Extend",
+      "cancellationScheduled": "Cancellation is scheduled at the end of the current billing period.",
+      "suspendedByDunning": "Subscription suspended by dunning — check overdue invoices.",
+      "pastDueWarning": "Subscription is past due — payment retry pending.",
+      "subActionFailed": "Subscription action failed.",
+      "walletHistory": "Wallet Transactions",
+      "noWalletHistory": "No wallet transactions yet.",
+      "revenueMtd": "Revenue MTD",
+      "arOutstanding": "AR Outstanding",
+      "failedPayments7d": "Failed Payments (7d)",
+      "amount": "Amount",
+      "issued": "Issued",
+      "due": "Due",
+      "balance": "Balance",
+      "addPaymentMethod": "Add payment method",
+      "saveCard": "Save card",
+      "stripeNotConfigured": "Stripe is not configured.",
+      "pmAdded": "Payment method added."
+    },
+    "members": {
+      "tab": "Members",
+      "title": "Company Members",
+      "noMembers": "No members found."
+    },
+    "activity": {
+      "tab": "Activity",
+      "title": "Activity Log",
+      "noActivity": "No activity recorded yet."
+    },
+    "suspend": {
+      "title": "Suspend Company",
+      "message": "You are about to suspend {name}. This action has the following impacts:",
+      "activeSubscription": "Active subscription ({status}) — billing will continue",
+      "unpaidInvoices": "{count} unpaid invoice(s) in dunning",
+      "membersBlocked": "All members will lose access immediately"
+    },
+    "planPreview": {
+      "title": "Plan Change Preview",
+      "upgrade": "Upgrade",
+      "downgrade": "Downgrade",
+      "proration": "Billing Impact",
+      "credit": "Credit for unused plan",
+      "charge": "Charge for new plan",
+      "net": "Net",
+      "dueNow": "due now",
+      "credited": "credited to wallet",
+      "noImmediateImpact": "This change will take effect at the end of the current billing period.",
+      "noSubscription": "This company has no active subscription. The plan will be updated directly.",
+      "confirm": "Confirm Change"
+    },
+    "wallet": {
+      "title": "Wallet Adjustment",
+      "type": "Type",
+      "credit": "Credit (add funds)",
+      "debit": "Debit (remove funds)",
+      "amount": "Amount (€)",
+      "reason": "Reason",
+      "apply": "Apply"
+    },
+    "walletAdjustFailed": "Failed to adjust wallet."
   },
 
   "platformCompanyUsers": {
@@ -2065,7 +2211,12 @@
     "metric_sms": "SMS",
     "metric_api_calls": "API call",
     "metric_storage_gb": "GB",
-    "metric_units": "unit"
+    "metric_units": "unit",
+    "activatedSuccess": "{module} activated successfully.",
+    "deactivatedSuccess": "{module} deactivated successfully.",
+    "deactivateConfirmTitle": "Deactivate Module",
+    "deactivateConfirmMessage": "This will remove access to {module}. Any associated data will be preserved. Continue?",
+    "deactivateWillAffect": "The following dependent modules will also be affected: {modules}"
   },
 
   "themeSettings": {

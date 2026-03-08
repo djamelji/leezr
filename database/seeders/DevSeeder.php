@@ -18,7 +18,6 @@ use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
-use Database\Seeders\BillingDemoSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -61,7 +60,7 @@ class DevSeeder extends Seeder
 
         $company = Company::updateOrCreate(
             ['slug' => 'leezr-logistics'],
-            ['name' => 'Leezr Logistics', 'plan_key' => 'pro', 'market_key' => 'FR', 'jobdomain_key' => 'logistique'],
+            ['name' => 'Leezr Logistics', 'plan_key' => 'pro', 'market_key' => 'FR', 'jobdomain_key' => 'logistique', 'legal_status_key' => 'sas'],
         );
 
         $company->memberships()->updateOrCreate(
@@ -195,8 +194,7 @@ class DevSeeder extends Seeder
             );
         }
 
-        // ─── Billing demo data (invoices, payments, ledger entries) ─
-        $this->call(BillingDemoSeeder::class);
+        // Billing demo data is handled by FinanceDemoSeeder (called from DatabaseSeeder)
 
         // ─── Sample shipments (stable references for idempotency) ─
         Shipment::updateOrCreate(

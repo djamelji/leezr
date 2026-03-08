@@ -14,6 +14,7 @@ const policiesForm = ref({
   annual_only: false,
   vat_enabled: false,
   vat_rate: 0,
+  max_payment_methods: 4,
 })
 
 onMounted(async () => {
@@ -105,6 +106,21 @@ const savePolicies = async () => {
             min="0"
             max="100"
             suffix="%"
+          />
+        </VCol>
+
+        <VCol
+          cols="12"
+          md="6"
+        >
+          <AppTextField
+            v-model.number="policiesForm.max_payment_methods"
+            :label="t('payments.maxPaymentMethods')"
+            :hint="t('payments.maxPaymentMethodsHint')"
+            persistent-hint
+            type="number"
+            min="1"
+            max="10"
           />
         </VCol>
 

@@ -555,6 +555,17 @@ const goToBilling = () => {
 
             <VDivider />
 
+            <VAlert
+              v-if="paymentError"
+              type="error"
+              variant="tonal"
+              class="ma-4"
+              closable
+              @click:close="paymentError = ''"
+            >
+              {{ paymentError }}
+            </VAlert>
+
             <VTable density="comfortable">
               <thead>
                 <tr>

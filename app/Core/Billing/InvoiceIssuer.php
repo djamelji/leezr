@@ -3,7 +3,10 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Notifications\Billing\InvoiceCreated;
+use App\Notifications\Billing\PaymentReceived;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -97,7 +100,7 @@ class InvoiceIssuer
             throw new RuntimeException('Invoice is already finalized.');
         }
 
-        return DB::transaction(function () use ($invoice) {
+        $finalizedInvoice = DB::transaction(function () use ($invoice) {
             // Re-fetch to avoid stale state
             $invoice = Invoice::where('id', $invoice->id)->lockForUpdate()->first();
 
@@ -175,7 +178,7 @@ class InvoiceIssuer
             try {
                 LedgerService::recordInvoiceIssued($invoice);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('[ledger] invoice issued recording failed', [
+                Log::warning('[ledger] invoice issued recording failed', [
                     'invoice_id' => $invoice->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -183,6 +186,29 @@ class InvoiceIssuer
 
             return $invoice;
         });
+
+        // ADR-272: Notify company owner about new invoice / payment (outside transaction)
+        try {
+            $owner = $finalizedInvoice->company?->owner();
+
+            if ($owner) {
+                if ($finalizedInvoice->status === 'paid') {
+                    $owner->notify(new PaymentReceived($finalizedInvoice));
+                } else {
+                    $owner->notify(new InvoiceCreated($finalizedInvoice));
+                }
+            }
+
+            // Prevent cached company relation from leaking to callers
+            $finalizedInvoice->unsetRelation('company');
+        } catch (\Throwable $e) {
+            Log::warning('[billing] Failed to send invoice notification', [
+                'invoice_id' => $finalizedInvoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $finalizedInvoice;
     }
 
     /**

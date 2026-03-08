@@ -64,6 +64,11 @@ const fundingLabel = funding => {
 // ── Add Payment Method ──
 
 const showAddPicker = () => {
+  if (store.savedCards.length >= store.maxPaymentMethods) {
+    toast(t('companyBilling.maxMethodsReached'), 'warning')
+
+    return
+  }
   showMethodPicker.value = true
   showCardForm.value = false
   showSepaForm.value = false
@@ -250,8 +255,8 @@ const executeDelete = async () => {
     await store.deleteSavedCard(deletingCard.value.id)
     toast(t('companyBilling.cardDeleted'), 'success')
   }
-  catch {
-    toast(t('companyBilling.cardDeleteFailed'), 'error')
+  catch (err) {
+    toast(err?.data?.message || t('companyBilling.cardDeleteFailed'), 'error')
   }
   finally {
     deletingCard.value = null
@@ -343,7 +348,28 @@ const executeDelete = async () => {
                       size="18"
                     />
                   </IconBtn>
+                  <VTooltip
+                    v-if="store.savedCards.length <= 1"
+                    location="top"
+                  >
+                    <template #activator="{ props: tp }">
+                      <span v-bind="tp">
+                        <IconBtn
+                          size="small"
+                          color="error"
+                          disabled
+                        >
+                          <VIcon
+                            icon="tabler-trash"
+                            size="18"
+                          />
+                        </IconBtn>
+                      </span>
+                    </template>
+                    {{ t('companyBilling.cannotDeleteLastCard') }}
+                  </VTooltip>
                   <IconBtn
+                    v-else
                     size="small"
                     color="error"
                     :title="t('common.delete')"
@@ -425,21 +451,30 @@ const executeDelete = async () => {
           </VCard>
         </VCol>
 
-        <!-- Add button -->
+        <!-- Add another card -->
         <VCol
-          v-if="!showMethodPicker && !showCardForm && !showSepaForm"
+          v-if="store.savedCards.length < store.maxPaymentMethods && !showMethodPicker && !showCardForm && !showSepaForm"
           cols="12"
-          class="d-flex justify-end"
+          sm="6"
         >
-          <VBtn
-            size="small"
-            variant="tonal"
-            color="primary"
-            prepend-icon="tabler-plus"
+          <VCard
+            class="h-100 d-flex align-center justify-center cursor-pointer"
+            variant="outlined"
+            style="border-style: dashed; min-block-size: 120px;"
             @click="showAddPicker"
           >
-            {{ t('companyBilling.addPaymentMethod') }}
-          </VBtn>
+            <VCardText class="text-center pa-4">
+              <VIcon
+                icon="tabler-plus"
+                size="32"
+                color="primary"
+                class="mb-2"
+              />
+              <p class="text-body-2 text-medium-emphasis mb-0">
+                {{ t('companyBilling.addAnotherMethod') }}
+              </p>
+            </VCardText>
+          </VCard>
         </VCol>
       </VRow>
 

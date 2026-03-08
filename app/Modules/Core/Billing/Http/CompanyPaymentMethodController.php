@@ -8,6 +8,7 @@ use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\DunningEngine;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoicePayNowService;
+use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,17 @@ class CompanyPaymentMethodController
         $profiles = CompanyPaymentProfile::where('company_id', $company->id)->get();
         $cards = $profiles->map(fn ($p) => CompanyPaymentSetupController::formatProfile($p));
 
-        return response()->json(['cards' => $cards]);
+        return response()->json([
+            'cards' => $cards,
+            'max_payment_methods' => self::maxPaymentMethods(),
+        ]);
+    }
+
+    public static function maxPaymentMethods(): int
+    {
+        $policies = (PlatformSetting::instance()->billing ?? [])['policies'] ?? [];
+
+        return (int) ($policies['max_payment_methods'] ?? 4);
     }
 
     public function deleteCard(Request $request, int $id): JsonResponse
@@ -34,6 +45,14 @@ class CompanyPaymentMethodController
 
         if (! $profile) {
             return response()->json(['message' => 'Card not found.'], 404);
+        }
+
+        // Guard: at least one payment method must remain
+        $totalMethods = CompanyPaymentProfile::where('company_id', $company->id)->count();
+        if ($totalMethods <= 1) {
+            return response()->json([
+                'message' => 'You must keep at least one payment method.',
+            ], 422);
         }
 
         // Stripe detach best-effort

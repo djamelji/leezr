@@ -26,3 +26,12 @@ Schedule::command('billing:recover-webhooks')->everyTenMinutes()->withoutOverlap
 
 // Checkout recovery — every 10 minutes (ADR-229)
 Schedule::command('billing:recover-checkouts')->everyTenMinutes()->withoutOverlapping();
+
+// Dead letter queue monitoring — hourly (ADR-266)
+Schedule::command('billing:check-dlq')->hourly()->withoutOverlapping();
+
+// Card expiry notifications — daily (ADR-272)
+Schedule::command('billing:check-expiring-cards')->daily()->withoutOverlapping();
+
+// Trial expiry notifications — daily (ADR-272)
+Schedule::command('billing:check-trial-expiring')->daily()->withoutOverlapping();

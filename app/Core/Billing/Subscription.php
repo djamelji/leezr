@@ -76,16 +76,14 @@ class Subscription extends Model
         if (! in_array($newStatus, $allowed)) {
             $message = "Invalid subscription transition: {$oldStatus} → {$newStatus} (sub #{$subscription->id}, company #{$subscription->company_id})";
 
-            if (app()->environment('testing', 'local')) {
-                throw new InvalidSubscriptionTransition($message);
-            }
-
             Log::channel('billing')->critical($message, [
                 'subscription_id' => $subscription->id,
                 'company_id' => $subscription->company_id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
             ]);
+
+            throw new InvalidSubscriptionTransition($message);
         }
     }
 
@@ -98,30 +96,26 @@ class Subscription extends Model
         if ($isCurrent === 1 && ! in_array($status, self::CURRENT_ALLOWED_STATUSES)) {
             $message = "Invariant violation: is_current=1 with status={$status} (sub #{$subscription->id}, company #{$subscription->company_id})";
 
-            if (app()->environment('testing', 'local')) {
-                throw new InvalidSubscriptionTransition($message);
-            }
-
             Log::channel('billing')->critical($message, [
                 'subscription_id' => $subscription->id,
                 'company_id' => $subscription->company_id,
                 'status' => $status,
             ]);
+
+            throw new InvalidSubscriptionTransition($message);
         }
 
         // Invariant 2: status must be in STATES
         if (! in_array($status, self::STATES)) {
             $message = "Unknown subscription status: {$status} (sub #{$subscription->id}, company #{$subscription->company_id})";
 
-            if (app()->environment('testing', 'local')) {
-                throw new InvalidSubscriptionTransition($message);
-            }
-
             Log::channel('billing')->critical($message, [
                 'subscription_id' => $subscription->id,
                 'company_id' => $subscription->company_id,
                 'status' => $status,
             ]);
+
+            throw new InvalidSubscriptionTransition($message);
         }
     }
 

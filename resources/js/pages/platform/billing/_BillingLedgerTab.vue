@@ -126,7 +126,7 @@ const formatAmount = (amount, currency) => {
     style: 'currency',
     currency: currency || 'EUR',
     minimumFractionDigits: 2,
-  }).format(val)
+  }).format(val / 100)
 }
 
 const entryTypeColor = type => {

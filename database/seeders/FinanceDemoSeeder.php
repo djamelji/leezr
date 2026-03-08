@@ -8,18 +8,16 @@ use App\Core\Billing\FinancialSnapshot;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\LedgerService;
 use App\Core\Billing\Payment;
+use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Finance demo data for D4 stabilisation.
+ * Seeds realistic financial demo data for Leezr Logistics (company_id=2).
  *
- * Creates a complete financial scenario for Company #1:
- *   - Invoice #1 finalized (10000c) → payment → partial refund (3000c)
- *   - Invoice #2 finalized (5000c) → write-off
- *   - Drift audit log
- *   - Financial snapshot
+ * Creates invoices tied to the subscription with proper periods and due dates,
+ * so that the full dunning cycle can be tested end-to-end.
  *
  * All writes go through Core services — never inserts into ledger directly.
  */
@@ -27,89 +25,82 @@ class FinanceDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::first();
+        $company = Company::where('slug', 'leezr-logistics')->first();
 
         if (! $company) {
-            $this->command->warn('No company found — skipping FinanceDemoSeeder.');
+            $this->command->warn('Leezr Logistics not found — skipping FinanceDemoSeeder.');
 
             return;
         }
 
-        $this->command->info("Seeding finance demo for Company #{$company->id} ({$company->name})");
+        // Skip if already has invoices
+        if ($company->invoices()->exists()) {
+            $this->command->info("{$company->name} already has invoices — skipping FinanceDemoSeeder.");
 
-        // ── 1. Invoice #1 — 10000 cents (€100) ──────────────────────
-        $invoice1 = InvoiceIssuer::createDraft($company);
+            return;
+        }
 
-        InvoiceIssuer::addLine(
-            invoice: $invoice1,
-            type: 'subscription',
-            description: 'Demo monthly subscription',
-            unitAmount: 10000,
-            quantity: 1,
+        $subscription = Subscription::where('company_id', $company->id)->first();
+
+        if (! $subscription) {
+            $this->command->warn('No subscription for company #2 — skipping FinanceDemoSeeder.');
+
+            return;
+        }
+
+        $this->command->info("Seeding finance demo for {$company->name} (sub: {$subscription->plan_key}/{$subscription->interval})");
+
+        // ── 1. Invoice — January (paid) ────────────────────────────────
+        $inv1 = $this->createSubscriptionInvoice(
+            company: $company,
+            subscription: $subscription,
+            periodStart: '2026-01-01',
+            periodEnd: '2026-01-31',
+            issuedAt: '2026-01-01',
+            dueAt: '2026-01-31',
         );
 
-        $invoice1 = InvoiceIssuer::finalize($invoice1);
-        // → LedgerService::recordInvoiceIssued called automatically inside finalize()
+        $this->payInvoice($company, $inv1);
+        $this->command->info("  {$inv1->number} — paid — {$inv1->amount_due}c (Jan)");
 
-        $this->command->info("  Invoice #{$invoice1->number} finalized — {$invoice1->amount_due}c");
+        // ── 2. Invoice — February (paid + partial refund) ──────────────
+        $inv2 = $this->createSubscriptionInvoice(
+            company: $company,
+            subscription: $subscription,
+            periodStart: '2026-02-01',
+            periodEnd: '2026-02-28',
+            issuedAt: '2026-02-01',
+            dueAt: '2026-02-28',
+        );
 
-        // ── 2. Payment for Invoice #1 ────────────────────────────────
-        $payment = Payment::create([
-            'company_id' => $company->id,
-            'invoice_id' => $invoice1->id,
-            'provider' => 'internal',
-            'provider_payment_id' => 'demo_pay_' . Str::random(8),
-            'amount' => $invoice1->amount_due,
-            'currency' => $invoice1->currency,
-            'status' => 'succeeded',
-        ]);
+        $this->payInvoice($company, $inv2);
 
-        LedgerService::recordPaymentReceived($payment);
-
-        $invoice1->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
-
-        $this->command->info("  Payment recorded — {$payment->amount}c via {$payment->provider}");
-
-        // ── 3. Partial refund — 3000 cents (€30) ────────────────────
+        // Partial refund of 30€
         $creditNote = CreditNoteIssuer::createDraft(
             company: $company,
             amount: 3000,
-            reason: 'Demo partial refund',
-            invoiceId: $invoice1->id,
+            reason: 'Service interruption credit',
+            invoiceId: $inv2->id,
         );
 
         $creditNote = CreditNoteIssuer::issue($creditNote);
-
         LedgerService::recordRefundIssued($creditNote);
 
-        $this->command->info("  Credit note #{$creditNote->number} issued — 3000c");
+        $this->command->info("  {$inv2->number} — paid + credit note {$creditNote->number} (3000c) (Feb)");
 
-        // ── 4. Invoice #2 — 5000 cents (€50) → write-off ────────────
-        $invoice2 = InvoiceIssuer::createDraft($company);
-
-        InvoiceIssuer::addLine(
-            invoice: $invoice2,
-            type: 'addon',
-            description: 'Demo add-on charge',
-            unitAmount: 5000,
-            quantity: 1,
+        // ── 3. Invoice — March (overdue — due_at in the past) ──────────
+        $inv3 = $this->createSubscriptionInvoice(
+            company: $company,
+            subscription: $subscription,
+            periodStart: '2026-03-01',
+            periodEnd: '2026-03-31',
+            issuedAt: '2026-03-01',
+            dueAt: '2026-03-05', // Already past due → dunning will pick it up
         );
 
-        $invoice2 = InvoiceIssuer::finalize($invoice2);
-        // → LedgerService::recordInvoiceIssued called automatically
+        $this->command->info("  {$inv3->number} — open (overdue, due 5 mars) — {$inv3->amount_due}c (Mar)");
 
-        $invoice2->update([
-            'status' => 'uncollectible',
-        ]);
-
-        LedgerService::recordWriteOff($invoice2);
-
-        $this->command->info("  Invoice #{$invoice2->number} written off — {$invoice2->amount_due}c");
-
-        // ── 5. Drift audit log ───────────────────────────────────────
+        // ── 4. Drift audit log ─────────────────────────────────────────
         app(AuditLogger::class)->logPlatform(
             'billing.drift_detected',
             'company',
@@ -125,18 +116,16 @@ class FinanceDemoSeeder extends Seeder
             ],
         );
 
-        $this->command->info('  Drift audit log created');
-
-        // ── 6. Financial snapshot ────────────────────────────────────
+        // ── 5. Financial snapshot ──────────────────────────────────────
         FinancialSnapshot::create([
             'company_id' => $company->id,
             'trigger' => 'seed',
             'drift_type' => 'missing_local_payment',
             'entity_type' => 'payment',
-            'entity_id' => $payment->id,
+            'entity_id' => 0,
             'snapshot_data' => [
-                'invoice_id' => $invoice1->id,
-                'amount' => $invoice1->amount_due,
+                'invoice_id' => $inv1->id,
+                'amount' => $inv1->amount_due,
                 'status_before' => 'open',
                 'status_after' => 'paid',
             ],
@@ -144,9 +133,63 @@ class FinanceDemoSeeder extends Seeder
             'created_at' => now(),
         ]);
 
-        $this->command->info('  Financial snapshot created');
-
         $this->command->newLine();
         $this->command->info('Finance demo seed complete.');
+    }
+
+    private function createSubscriptionInvoice(
+        Company $company,
+        Subscription $subscription,
+        string $periodStart,
+        string $periodEnd,
+        string $issuedAt,
+        string $dueAt,
+    ): \App\Core\Billing\Invoice {
+        $draft = InvoiceIssuer::createDraft($company);
+
+        InvoiceIssuer::addLine(
+            invoice: $draft,
+            type: 'subscription',
+            description: ucfirst($subscription->plan_key) . ' plan — ' . $subscription->interval,
+            unitAmount: $subscription->interval === 'yearly'
+                ? ($subscription->plan->price_yearly ?? 11880)
+                : ($subscription->plan->price_monthly ?? 990),
+            quantity: 1,
+        );
+
+        $finalized = InvoiceIssuer::finalize($draft);
+
+        // Set proper dates and link to subscription
+        $finalized->update([
+            'subscription_id' => $subscription->id,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'issued_at' => $issuedAt,
+            'due_at' => $dueAt,
+        ]);
+
+        $finalized->refresh();
+
+        return $finalized;
+    }
+
+    private function payInvoice(Company $company, \App\Core\Billing\Invoice $invoice): void
+    {
+        $payment = Payment::create([
+            'company_id' => $company->id,
+            'invoice_id' => $invoice->id,
+            'provider' => 'internal',
+            'provider_payment_id' => 'demo_pay_' . Str::random(8),
+            'amount' => $invoice->amount_due,
+            'currency' => $invoice->currency,
+            'status' => 'succeeded',
+        ]);
+
+        LedgerService::recordPaymentReceived($payment);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $invoice->due_at,
+        ]);
     }
 }

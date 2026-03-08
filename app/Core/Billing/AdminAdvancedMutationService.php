@@ -235,6 +235,16 @@ class AdminAdvancedMutationService
                     'next_retry_at' => null,
                 ]);
 
+                // Ledger: record write-off (ADR-142 D3f)
+                try {
+                    LedgerService::recordWriteOff($invoice);
+                } catch (\Throwable $e) {
+                    Log::warning('[ledger] forced dunning writeoff recording failed', [
+                        'invoice_id' => $invoice->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 $policy = PlatformBillingPolicy::instance();
                 DunningEngine::applyFailureAction($invoice->company, $policy);
             }

@@ -186,7 +186,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         }
 
         try {
-            $intent = $this->callStripeCreatePaymentIntent(
+            $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntent(
                 $invoice->amount_due,
                 strtolower($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 $stripeCustomerId,
@@ -195,7 +195,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
                     'company_id' => (string) $company->id,
                 ], $metadata),
                 ['idempotency_key' => "collect_invoice_{$invoice->id}"],
-            );
+            ));
 
             // ADR-228: Track expected webhook confirmation
             $intentId = $intent->id ?? null;
@@ -215,6 +215,13 @@ class StripePaymentAdapter implements PaymentProviderAdapter
                 'status' => $intent->status === 'succeeded' ? 'succeeded' : 'failed',
                 'raw_response' => $intent->toArray(),
             ];
+        } catch (\Stripe\Exception\RateLimitException $e) {
+            return [
+                'provider_payment_id' => null,
+                'amount' => $invoice->amount_due,
+                'status' => 'rate_limited',
+                'raw_response' => ['error' => $e->getMessage()],
+            ];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             return [
                 'provider_payment_id' => null,
@@ -229,7 +236,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
      * Charge an invoice using a specific payment method.
      * Used by DunningEngine for fallback across multiple saved methods.
      */
-    public function chargeInvoiceWithPaymentMethod(Invoice $invoice, string $paymentMethodId): array
+    public function chargeInvoiceWithPaymentMethod(Invoice $invoice, string $paymentMethodId, ?int $amount = null): array
     {
         $company = $invoice->company;
         $this->enforceRateLimit($company->id);
@@ -244,9 +251,11 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             return ['status' => 'failed', 'error' => 'No Stripe customer found.'];
         }
 
+        $chargeAmount = $amount ?? $invoice->amount_due;
+
         try {
-            $intent = $this->callStripeCreatePaymentIntentWithMethod(
-                $invoice->amount_due,
+            $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntentWithMethod(
+                $chargeAmount,
                 strtolower($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 $stripeCustomerId,
                 $paymentMethodId,
@@ -255,13 +264,15 @@ class StripePaymentAdapter implements PaymentProviderAdapter
                     'company_id' => (string) $company->id,
                     'fallback' => 'true',
                 ],
-            );
+            ));
 
             return [
                 'provider_payment_id' => $intent->id,
                 'amount' => $intent->amount_received ?? $intent->amount,
                 'status' => $intent->status === 'succeeded' ? 'succeeded' : 'failed',
             ];
+        } catch (\Stripe\Exception\RateLimitException $e) {
+            return ['status' => 'rate_limited', 'error' => $e->getMessage()];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             return ['status' => 'failed', 'error' => $e->getMessage()];
         }
@@ -625,6 +636,45 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         }
 
         RateLimiter::hit($key, self::RATE_LIMIT_DECAY);
+    }
+
+    /**
+     * Execute a Stripe API call with automatic retry on 429 (rate limit).
+     * Exponential backoff: 1s, 2s, 4s.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $fn
+     * @return T
+     */
+    private function callWithRetry(callable $fn, int $maxRetries = 3): mixed
+    {
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            try {
+                return $fn();
+            } catch (\Stripe\Exception\RateLimitException $e) {
+                if ($attempt >= $maxRetries) {
+                    Log::channel('billing')->error('[stripe] Rate limit exhausted after retries', [
+                        'attempts' => $attempt + 1,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    throw $e;
+                }
+
+                $delay = (int) (pow(2, $attempt) * 1_000_000); // 1s, 2s, 4s
+
+                Log::channel('billing')->warning('[stripe] Rate limited (429), backing off', [
+                    'attempt' => $attempt + 1,
+                    'delay_seconds' => $delay / 1_000_000,
+                ]);
+
+                usleep($delay);
+            }
+        }
+
+        // Unreachable but satisfies static analysis
+        throw new \RuntimeException('callWithRetry: unreachable');
     }
 
     /**

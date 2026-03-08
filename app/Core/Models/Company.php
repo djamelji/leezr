@@ -3,6 +3,10 @@
 namespace App\Core\Models;
 
 use App\Company\RBAC\CompanyRole;
+use App\Core\Billing\CompanyPaymentProfile;
+use App\Core\Billing\CompanyWallet;
+use App\Core\Billing\Invoice;
+use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Markets\LegalStatus;
@@ -14,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Company extends Model
@@ -71,6 +76,26 @@ class Company extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function paymentProfiles(): HasMany
+    {
+        return $this->hasMany(CompanyPaymentProfile::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(CompanyWallet::class);
     }
 
     public function shipments(): HasMany

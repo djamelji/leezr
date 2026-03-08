@@ -424,6 +424,16 @@ class BillingLotETest extends TestCase
 
     public function test_delete_card_removes_profile(): void
     {
+        // Keep a second card so the guard allows deletion
+        CompanyPaymentProfile::create([
+            'company_id' => $this->company->id,
+            'provider_key' => 'stripe',
+            'method_key' => 'card',
+            'label' => 'Mastercard •••• 5555',
+            'is_default' => true,
+            'metadata' => ['brand' => 'mastercard', 'last4' => '5555'],
+        ]);
+
         $profile = CompanyPaymentProfile::create([
             'company_id' => $this->company->id,
             'provider_key' => 'stripe',
@@ -439,6 +449,25 @@ class BillingLotETest extends TestCase
             ->assertJsonPath('message', 'Card removed.');
 
         $this->assertDatabaseMissing('company_payment_profiles', ['id' => $profile->id]);
+    }
+
+    public function test_delete_last_card_blocked(): void
+    {
+        $profile = CompanyPaymentProfile::create([
+            'company_id' => $this->company->id,
+            'provider_key' => 'stripe',
+            'method_key' => 'card',
+            'label' => 'Visa •••• 4242',
+            'is_default' => true,
+            'metadata' => ['brand' => 'visa', 'last4' => '4242'],
+        ]);
+
+        $response = $this->actAs()->deleteJson("/api/billing/saved-cards/{$profile->id}");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'You must keep at least one payment method.');
+
+        $this->assertDatabaseHas('company_payment_profiles', ['id' => $profile->id]);
     }
 
     public function test_delete_card_404_other_company(): void

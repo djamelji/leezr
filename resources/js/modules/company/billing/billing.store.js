@@ -9,6 +9,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     _invoiceDetail: null,
     _subscription: null,
     _savedCards: [],
+    _maxPaymentMethods: 4,
     _setupIntent: null,
     _nextInvoicePreview: null,
     _planChangePreview: null,
@@ -25,6 +26,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     invoiceDetail: state => state._invoiceDetail,
     subscription: state => state._subscription,
     savedCards: state => state._savedCards,
+    maxPaymentMethods: state => state._maxPaymentMethods,
     setupIntent: state => state._setupIntent,
     outstandingInvoices: state => state._outstandingInvoices,
     outstandingWallet: state => state._outstandingWallet,
@@ -72,6 +74,8 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
       const data = await $api('/billing/saved-cards')
 
       this._savedCards = data.cards
+      if (data.max_payment_methods != null)
+        this._maxPaymentMethods = data.max_payment_methods
     },
 
     async createSetupIntent(method = 'card') {

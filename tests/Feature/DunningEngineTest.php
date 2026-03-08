@@ -681,4 +681,63 @@ class DunningEngineTest extends TestCase
         $command = new \App\Console\Commands\ProcessDunningCommand();
         $this->assertInstanceOf(\Illuminate\Contracts\Console\Isolatable::class, $command);
     }
+
+    // ── 21. ADR-265: Split payment — wallet partial + provider remainder ──
+
+    public function test_split_payment_wallet_partial_no_provider_falls_through(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-10'));
+
+        // Invoice for 2900, wallet has 1000 (partial), no provider on subscription
+        $invoice = $this->createOverdueInvoice(2900, Carbon::parse('2026-03-05')->toDateTimeString());
+
+        WalletLedger::credit(
+            $this->company, 1000, 'admin_topup',
+            actorType: 'platform_user', actorId: 1,
+        );
+
+        // Mark overdue
+        DunningEngine::processOverdueInvoices();
+
+        // Retry — wallet partial but no provider → should reschedule
+        Carbon::setTestNow(Carbon::parse('2026-03-11 01:00:00'));
+        DunningEngine::processOverdueInvoices();
+
+        $invoice->refresh();
+        $this->assertEquals('overdue', $invoice->status);
+        $this->assertEquals(1, $invoice->retry_count);
+
+        // Wallet NOT debited (split requires provider)
+        $this->assertEquals(1000, WalletLedger::balance($this->company));
+
+        Carbon::setTestNow();
+    }
+
+    // ── 22. ADR-265: Split payment with enough wallet covers full ──
+
+    public function test_split_payment_skipped_when_wallet_covers_full(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-10'));
+
+        $invoice = $this->createOverdueInvoice(2900, Carbon::parse('2026-03-05')->toDateTimeString());
+
+        // Credit more than invoice amount → full wallet payment
+        WalletLedger::credit(
+            $this->company, 5000, 'admin_topup',
+            actorType: 'platform_user', actorId: 1,
+        );
+
+        DunningEngine::processOverdueInvoices();
+
+        Carbon::setTestNow(Carbon::parse('2026-03-11 01:00:00'));
+        DunningEngine::processOverdueInvoices();
+
+        $invoice->refresh();
+        $this->assertEquals('paid', $invoice->status);
+
+        // Full wallet payment: 5000 - 2900 = 2100
+        $this->assertEquals(2100, WalletLedger::balance($this->company));
+
+        Carbon::setTestNow();
+    }
 }

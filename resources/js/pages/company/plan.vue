@@ -12,12 +12,16 @@ import { formatMoney } from '@/utils/money'
 import { cacheRemove } from '@/core/runtime/cache'
 
 const { t } = useI18n()
+const route = useRoute()
 const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
 const billingStore = useCompanyBillingStore()
 const jobdomainStore = useJobdomainStore()
 const { toast } = useAppToast()
 const { plans, loading, fetchPlans } = usePublicPlans()
+
+// Accept ?suggest=plan_key from modules upsell navigation
+const suggestedPlan = computed(() => route.query.suggest || null)
 
 const memberQuota = computed(() => settingsStore.company?.member_quota ?? { current: 0, limit: null })
 const storageInfo = computed(() => settingsStore.company?.storage ?? {})
@@ -48,6 +52,13 @@ onMounted(async () => {
   // Initialize toggle from current subscription interval
   if (billingStore.subscription?.interval)
     annualToggle.value = billingStore.subscription.interval === 'yearly'
+
+  // Show suggestion toast if navigated from modules page
+  if (suggestedPlan.value) {
+    const plan = plans.value.find(p => p.key === suggestedPlan.value)
+    if (plan)
+      toast(t('companyPlan.suggestUpgrade', { plan: plan.name }), 'info')
+  }
 
   checkingPending.value = false
 })
@@ -537,7 +548,10 @@ const estimatedInvoice = computed(() => {
             <VCard
               flat
               border
-              :class="plan.key === currentPlanKey ? 'border-primary border-opacity-100' : ''"
+              :class="{
+                'border-primary border-opacity-100': plan.key === currentPlanKey,
+                'border-warning border-opacity-100': suggestedPlan && plan.key === suggestedPlan && plan.key !== currentPlanKey,
+              }"
             >
               <VCardText
                 style="block-size: 2.5rem;"
@@ -550,6 +564,14 @@ const estimatedInvoice = computed(() => {
                   size="small"
                 >
                   {{ t('common.current') }}
+                </VChip>
+                <VChip
+                  v-else-if="suggestedPlan && plan.key === suggestedPlan"
+                  label
+                  color="warning"
+                  size="small"
+                >
+                  {{ t('companyPlan.suggested') }}
                 </VChip>
                 <VChip
                   v-else-if="plan.is_popular"

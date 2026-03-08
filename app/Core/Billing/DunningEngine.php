@@ -43,7 +43,7 @@ use RuntimeException;
  *   - Company suspension/cancellation is idempotent
  *   - retry_count increments exactly once per retry attempt
  *   - Voided invoices are never processed
- *   - Wallet payment is full-coverage only (no partial)
+ *   - Wallet supports split payment: partial wallet + provider remainder (ADR-265)
  */
 class DunningEngine
 {
@@ -186,8 +186,12 @@ class DunningEngine
             return 'provider_attempted';
         }
 
-        // Phase 2: Wallet fallback (existing transactional flow)
-        return DB::transaction(function () use ($invoice, $policy) {
+        // Phase 2: Split payment — wallet partial + provider remainder (ADR-265)
+        // Runs OUTSIDE transaction to avoid holding locks during Stripe API call
+        $splitResult = static::attemptSplitPayment($invoice);
+
+        // Phase 3: Wallet fallback + finalization (inside transaction)
+        return DB::transaction(function () use ($invoice, $policy, $splitResult) {
             $invoice = Invoice::where('id', $invoice->id)->lockForUpdate()->first();
 
             // Guard: only overdue invoices
@@ -198,7 +202,7 @@ class DunningEngine
             $maxRetries = $policy->max_retry_attempts;
             $newRetryCount = $invoice->retry_count + 1;
 
-            // Try wallet payment (full-coverage only)
+            // Try wallet payment (full-coverage)
             $paid = static::attemptWalletPayment($invoice);
 
             if ($paid) {
@@ -213,6 +217,15 @@ class DunningEngine
                 static::checkReactivation($invoice->company, $invoice->subscription_id);
 
                 return 'retried';
+            }
+
+            // ADR-265: Split payment succeeded — wallet partial + provider remainder
+            if ($splitResult !== null) {
+                $splitPaid = static::finalizeSplitPayment($invoice, $splitResult, $newRetryCount);
+
+                if ($splitPaid) {
+                    return 'retried';
+                }
             }
 
             // Payment failed — check if max retries exhausted
@@ -347,11 +360,8 @@ class DunningEngine
     }
 
     /**
-     * Attempt to pay the invoice using wallet balance.
+     * Attempt to pay the invoice using wallet balance (full-coverage).
      * Returns true if fully paid, false otherwise.
-     *
-     * Full-coverage only — partial not supported.
-     * If wallet_balance < amount_due → payment fails entirely (no partial).
      */
     private static function attemptWalletPayment(Invoice $invoice): bool
     {
@@ -379,6 +389,156 @@ class DunningEngine
         }
 
         return false;
+    }
+
+    /**
+     * ADR-265: Attempt split payment — wallet partial + provider remainder.
+     *
+     * Runs OUTSIDE transaction to avoid holding row locks during Stripe API calls.
+     * Only attempted when wallet has partial balance (0 < balance < amount_due).
+     *
+     * @return array{wallet_amount: int, provider_payment_id: string, provider_amount: int}|null
+     */
+    private static function attemptSplitPayment(Invoice $invoice): ?array
+    {
+        $company = $invoice->company;
+        $amountDue = $invoice->amount_due;
+
+        if ($amountDue <= 0) {
+            return null;
+        }
+
+        $walletBalance = WalletLedger::balance($company);
+
+        // No partial balance, or wallet covers full amount (handled by attemptWalletPayment)
+        if ($walletBalance <= 0 || $walletBalance >= $amountDue) {
+            return null;
+        }
+
+        $subscription = $invoice->subscription;
+
+        if (! $subscription || ! $subscription->provider || $subscription->provider === 'internal') {
+            return null;
+        }
+
+        $adapter = static::resolveAdapter($subscription->provider);
+
+        if (! $adapter) {
+            return null;
+        }
+
+        $remainder = $amountDue - $walletBalance;
+
+        // Try each payment method for the remainder amount
+        $methods = PaymentMethodResolver::resolveForCompany($company);
+
+        foreach ($methods as $method) {
+            if (! $method->provider_payment_method_id) {
+                continue;
+            }
+
+            Log::channel('billing')->info('[billing] split payment attempt', [
+                'invoice_id' => $invoice->id,
+                'company_id' => $company->id,
+                'wallet_amount' => $walletBalance,
+                'provider_remainder' => $remainder,
+                'payment_method_id' => $method->provider_payment_method_id,
+            ]);
+
+            try {
+                $result = $adapter->chargeInvoiceWithPaymentMethod(
+                    $invoice,
+                    $method->provider_payment_method_id,
+                    $remainder,
+                );
+
+                if ($result['status'] === 'succeeded') {
+                    return [
+                        'wallet_amount' => $walletBalance,
+                        'provider_payment_id' => $result['provider_payment_id'],
+                        'provider_amount' => $remainder,
+                    ];
+                }
+
+                Log::channel('billing')->info('[billing] split payment provider failed', [
+                    'invoice_id' => $invoice->id,
+                    'payment_method_id' => $method->provider_payment_method_id,
+                    'error' => $result['error'] ?? 'unknown',
+                ]);
+            } catch (\Throwable $e) {
+                Log::channel('billing')->info('[billing] split payment provider failed', [
+                    'invoice_id' => $invoice->id,
+                    'payment_method_id' => $method->provider_payment_method_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return null; // All methods failed
+    }
+
+    /**
+     * ADR-265: Finalize a split payment — debit wallet + record provider payment + mark paid.
+     *
+     * Called INSIDE transaction with invoice locked.
+     * Returns true if split payment finalized, false if wallet debit failed.
+     */
+    private static function finalizeSplitPayment(Invoice $invoice, array $splitResult, int $newRetryCount): bool
+    {
+        // Record provider payment first (it already happened — must not lose it)
+        Payment::updateOrCreate(
+            ['provider_payment_id' => $splitResult['provider_payment_id']],
+            [
+                'company_id' => $invoice->company_id,
+                'subscription_id' => $invoice->subscription_id,
+                'invoice_id' => $invoice->id,
+                'amount' => $splitResult['provider_amount'],
+                'currency' => $invoice->currency ?? 'EUR',
+                'status' => 'succeeded',
+                'provider' => $invoice->subscription?->provider ?? 'stripe',
+            ],
+        );
+
+        // Debit wallet for the partial amount
+        try {
+            WalletLedger::debit(
+                company: $invoice->company,
+                amount: $splitResult['wallet_amount'],
+                sourceType: 'dunning_split_payment',
+                sourceId: $invoice->id,
+                description: "Split payment (wallet portion) for invoice {$invoice->number}",
+                actorType: 'system',
+                idempotencyKey: "dunning-split-{$invoice->id}-{$invoice->retry_count}",
+            );
+        } catch (\Throwable $e) {
+            Log::channel('billing')->error('[billing] Split payment wallet debit failed after provider charged', [
+                'invoice_id' => $invoice->id,
+                'wallet_amount' => $splitResult['wallet_amount'],
+                'provider_amount' => $splitResult['provider_amount'],
+                'provider_payment_id' => $splitResult['provider_payment_id'],
+                'error' => $e->getMessage(),
+            ]);
+
+            // Provider payment is recorded — invoice stays overdue for admin review
+            return false;
+        }
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => now(),
+            'retry_count' => $newRetryCount,
+            'next_retry_at' => null,
+        ]);
+
+        static::checkReactivation($invoice->company, $invoice->subscription_id);
+
+        Log::channel('billing')->info('[billing] Split payment succeeded', [
+            'invoice_id' => $invoice->id,
+            'wallet_amount' => $splitResult['wallet_amount'],
+            'provider_amount' => $splitResult['provider_amount'],
+        ]);
+
+        return true;
     }
 
     /**
@@ -483,7 +643,7 @@ class DunningEngine
      * Rules:
      *   - Subscription reverts to active if no more overdue invoices for it
      *   - Company reverts to active if suspended and no more overdue/uncollectible invoices
-     *   - Uncollectible invoices are terminal — reactivation requires admin intervention
+     *   - Uncollectible invoices block reactivation until paid
      */
     public static function checkReactivation(Company $company, ?int $subscriptionId): void
     {

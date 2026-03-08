@@ -10,6 +10,7 @@ use App\Core\Billing\WalletLedger;
 use App\Core\Events\ModuleEnabled;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
+use App\Notifications\Billing\AddonActivated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -97,6 +98,20 @@ class AddonBillingListener
             'amount' => $amount,
             'invoice_id' => $invoice->id,
         ]);
-    }
 
+        // ADR-272: Notify company owner about addon activation
+        try {
+            $owner = $company->owner();
+
+            if ($owner) {
+                $owner->notify(new AddonActivated($moduleName, $invoice));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[addon-billing] Failed to send addon activation notification', [
+                'company_id' => $company->id,
+                'module_key' => $moduleKey,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }

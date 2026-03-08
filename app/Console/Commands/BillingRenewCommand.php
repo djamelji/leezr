@@ -12,6 +12,7 @@ use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
 use App\Core\Modules\PlatformModule;
 use App\Core\Plans\Plan;
+use App\Notifications\Billing\PaymentReceived;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
 use Illuminate\Support\Facades\DB;
@@ -41,11 +42,15 @@ class BillingRenewCommand extends Command implements Isolatable
         BillingJobHeartbeat::start('billing:renew');
 
         $dryRun = $this->option('dry-run');
-        $stats = ['eligible' => 0, 'renewed' => 0, 'invoiced' => 0, 'failed' => 0, 'skipped' => 0];
+        $stats = ['eligible' => 0, 'renewed' => 0, 'invoiced' => 0, 'failed' => 0, 'skipped' => 0, 'cancelled' => 0];
+
+        // Phase 0: Handle subscriptions marked for cancellation at period end
+        $this->processCancellations($dryRun, $stats);
 
         $subscriptions = Subscription::whereIn('status', ['active', 'trialing'])
             ->where('is_current', 1)
             ->where('current_period_end', '<=', now())
+            ->where(fn ($q) => $q->where('cancel_at_period_end', false)->orWhereNull('cancel_at_period_end'))
             ->with('company')
             ->get();
 
@@ -83,6 +88,7 @@ class BillingRenewCommand extends Command implements Isolatable
             }
         }
 
+        $this->info("Cancelled (end of period): {$stats['cancelled']}");
         $this->info("Renewed: {$stats['renewed']}");
         $this->info("Invoiced (payment pending): {$stats['invoiced']}");
         $this->info("Failed: {$stats['failed']}");
@@ -253,6 +259,20 @@ class BillingRenewCommand extends Command implements Isolatable
                         $this->extendPeriod($subscription, $newPeriodStart, $newPeriodEnd);
                         $this->line("  Renewed (stripe): company #{$company->id} — {$subscription->plan_key}");
 
+                        // ADR-272: Notify payment received
+                        try {
+                            $owner = $company->owner();
+
+                            if ($owner) {
+                                $owner->notify(new PaymentReceived($invoice->fresh()));
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('[billing:renew] Failed to send payment notification', [
+                                'invoice_id' => $invoice->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+
                         return 'renewed';
                     }
                 } catch (\Throwable $e) {
@@ -289,6 +309,72 @@ class BillingRenewCommand extends Command implements Isolatable
                 'trial_ends_at' => null,
             ]);
         });
+    }
+
+    /**
+     * Cancel subscriptions that are marked cancel_at_period_end and have reached their period end.
+     */
+    private function processCancellations(bool $dryRun, array &$stats): void
+    {
+        $toCancel = Subscription::whereIn('status', ['active', 'trialing'])
+            ->where('is_current', 1)
+            ->where('cancel_at_period_end', true)
+            ->where('current_period_end', '<=', now())
+            ->with('company')
+            ->get();
+
+        if ($toCancel->isEmpty()) {
+            return;
+        }
+
+        $this->info("Found {$toCancel->count()} subscription(s) marked for cancellation at period end.");
+
+        foreach ($toCancel as $subscription) {
+            if ($dryRun) {
+                $this->line("  [DRY-RUN] Cancel: company #{$subscription->company_id} — plan={$subscription->plan_key}");
+                $stats['cancelled']++;
+
+                continue;
+            }
+
+            try {
+                DB::transaction(function () use ($subscription) {
+                    $sub = Subscription::where('id', $subscription->id)->lockForUpdate()->first();
+
+                    if (! $sub || $sub->status === 'cancelled') {
+                        return;
+                    }
+
+                    $sub->update([
+                        'status' => 'cancelled',
+                        'is_current' => null,
+                        'cancel_at_period_end' => false,
+                    ]);
+
+                    // Deactivate active addons
+                    CompanyAddonSubscription::where('company_id', $sub->company_id)
+                        ->active()
+                        ->update(['deactivated_at' => now()]);
+                });
+
+                $stats['cancelled']++;
+                $this->line("  Cancelled: company #{$subscription->company_id} — {$subscription->plan_key}");
+
+                Log::channel('billing')->info('[billing:renew] Subscription cancelled at period end', [
+                    'subscription_id' => $subscription->id,
+                    'company_id' => $subscription->company_id,
+                    'plan_key' => $subscription->plan_key,
+                ]);
+            } catch (\Throwable $e) {
+                $stats['failed']++;
+                Log::channel('billing')->error('[billing:renew] Failed to cancel subscription at period end', [
+                    'subscription_id' => $subscription->id,
+                    'company_id' => $subscription->company_id,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->error("  Failed to cancel: subscription #{$subscription->id} — {$e->getMessage()}");
+            }
+        }
     }
 
     private function resolveAdapter(string $provider): ?PaymentProviderAdapter

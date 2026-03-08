@@ -93,6 +93,7 @@
     "status": "Statut",
     "actions": "Actions",
     "created": "Créé",
+    "joined": "Rejoint",
     "date": "Date",
     "level": "Niveau",
     "type": "Type",
@@ -123,6 +124,9 @@
     "sensitive": "Sensible",
     "current": "Actuel",
     "total": "Total",
+    "refresh": "Actualiser",
+    "success": "Succès",
+    "role": "Rôle",
     "popular": "Populaire",
     "operational": "Opérationnel",
     "management": "Gestion",
@@ -131,7 +135,9 @@
     "export": "Exporter",
     "import": "Importer",
     "all": "Tous",
-    "manage": "Gérer"
+    "manage": "Gérer",
+    "month": "mois",
+    "year": "an"
   },
 
   "dashboard": {
@@ -212,6 +218,8 @@
     "primaryCurrency": "Devise principale",
     "vatApplicable": "TVA applicable ?",
     "vatRate": "Taux de TVA (%)",
+    "maxPaymentMethods": "Nombre max de moyens de paiement par entreprise",
+    "maxPaymentMethodsHint": "Limite le nombre de moyens de paiement qu'une entreprise peut enregistrer (1-10).",
     "savePolicies": "Enregistrer les politiques",
     "failedToUpdatePolicies": "Échec de la mise à jour des politiques.",
     "subscriptionGovernance": "Gouvernance des abonnements",
@@ -882,6 +890,9 @@
     "ibanSaved": "Compte bancaire enregistré avec succès.",
     "cardDeleted": "Carte supprimée.",
     "cardDeleteFailed": "Échec de la suppression de la carte.",
+    "cannotDeleteLastCard": "Vous devez conserver au moins un moyen de paiement.",
+    "addAnotherMethod": "Ajouter un autre moyen de paiement",
+    "maxMethodsReached": "Nombre maximum de moyens de paiement atteint.",
     "defaultCardUpdated": "Moyen de paiement par défaut mis à jour.",
     "defaultCardFailed": "Échec de la mise à jour du moyen de paiement par défaut.",
     "confirmDeleteCard": "Supprimer cette carte ?",
@@ -969,7 +980,17 @@
     "failedToUpdatePlan": "Échec de la mise à jour de l'abonnement.",
     "companyReactivated": "Entreprise réactivée.",
     "failedToReactivate": "Échec de la réactivation de l'entreprise.",
-    "noCompanies": "Aucune entreprise trouvée."
+    "noCompanies": "Aucune entreprise trouvée.",
+    "noSearchResults": "Aucune entreprise ne correspond à vos critères de recherche.",
+    "searchPlaceholder": "Rechercher par nom ou slug…",
+    "allStatuses": "Tous les statuts",
+    "allPlans": "Tous les abonnements",
+    "suspended": "Suspendue",
+    "stats": {
+      "total": "Entreprises totales",
+      "active": "Actives",
+      "suspended": "Suspendues"
+    }
   },
 
   "companyPlan": {
@@ -1047,6 +1068,19 @@
       "errorLoading": "Impossible de calculer l'aperçu. Veuillez réessayer.",
       "upgrade": "Passer au plan supérieur",
       "downgrade": "Passer au plan inférieur"
+    },
+    "switchToAnnual": "Passer en annuel",
+    "switchToMonthly": "Passer en mensuel",
+    "changeScheduled": "Changement de plan programmé. Il prendra effet à la fin de la période en cours.",
+    "changeApplied": "Plan modifié avec succès !",
+    "suggestUpgrade": "Passez au plan {plan} pour débloquer le module sélectionné.",
+    "suggested": "Suggéré",
+    "scheduledChange": {
+      "title": "Changement de plan programmé",
+      "message": "Votre plan passera à {plan} le {date}.",
+      "cancel": "Annuler le changement",
+      "cancelled": "Changement de plan annulé.",
+      "cancelFailed": "Échec de l'annulation du changement programmé."
     }
   },
 
@@ -1782,6 +1816,9 @@
 
   "platformCompanyDetail": {
     "failedToLoad": "Échec du chargement du profil de l'entreprise.",
+    "companyFields": "Champs entreprise",
+    "profileUpdated": "Profil de l'entreprise mis à jour.",
+    "profileUpdateFailed": "Échec de la mise à jour du profil.",
     "overview": "Aperçu",
     "modules": "Modules",
     "jobDomain": "Domaine d'activité",
@@ -1798,6 +1835,9 @@
     "planGatedInfo": "Nécessitent une mise à niveau de l'abonnement pour être débloqués.",
     "otherModules": "Autres modules",
     "otherModulesInfo": "Non disponibles actuellement pour cette entreprise.",
+    "subscribedAddons": "Add-ons souscrits",
+    "subscribedAddonsInfo": "Modules que l'entreprise paie en tant qu'add-ons.",
+    "addonChip": "Addon",
     "coreChip": "Essentiel",
     "includedChip": "Inclus",
     "requiresPlan": "Requiert {plan}",
@@ -1805,7 +1845,113 @@
     "notAvailable": "Non disponible",
     "noModulesAvailable": "Aucun module disponible.",
     "failedToToggleModule": "Échec de l'activation/désactivation du module.",
-    "incompleteProfiles": "{count} profil(s) incomplet(s)"
+    "incompleteProfiles": "{count} profil(s) incomplet(s)",
+    "backToList": "Retour aux entreprises",
+    "legalStatus": "Statut juridique",
+    "failedToLoadBilling": "Échec du chargement des données de facturation.",
+    "failedToLoadMembers": "Échec du chargement des membres.",
+    "failedToLoadActivity": "Échec du chargement du journal d'activité.",
+    "bio": {
+      "members": "Membres",
+      "invoices": "Factures",
+      "market": "Marché",
+      "jobdomain": "Domaine d'activité",
+      "created": "Création",
+      "subscription": "Abonnement",
+      "wallet": "Portefeuille",
+      "profiles": "Profils",
+      "owner": "Propriétaire"
+    },
+    "billing": {
+      "tab": "Facturation",
+      "subscription": "Abonnement",
+      "interval": "Intervalle",
+      "periodEnd": "Fin de période",
+      "walletBalance": "Solde du portefeuille",
+      "noSubscription": "Aucun abonnement actif.",
+      "dunningActive": "{count} facture(s) en relance",
+      "nextRetry": "Prochaine tentative",
+      "paymentMethods": "Moyens de paiement",
+      "noPaymentMethods": "Aucun moyen de paiement enregistré.",
+      "invoices": "Factures",
+      "noInvoices": "Aucune facture pour le moment.",
+      "default": "Par défaut",
+      "expires": "Expire",
+      "setDefault": "Définir par défaut",
+      "pmDefaultUpdated": "Moyen de paiement par défaut mis à jour.",
+      "pmDeleted": "Moyen de paiement supprimé.",
+      "pmActionFailed": "Échec de l'action sur le moyen de paiement.",
+      "retryPayment": "Réessayer le paiement",
+      "markPaidOffline": "Marquer payé hors ligne",
+      "voidInvoice": "Annuler la facture",
+      "issueCreditNote": "Émettre un avoir",
+      "invoiceActionFailed": "Échec de l'action sur la facture.",
+      "confirmActionMessage": "Êtes-vous sûr de vouloir {action} la facture {number} ?",
+      "confirmAction": "Confirmer",
+      "scheduleCancellation": "Programmer la résiliation",
+      "undoCancel": "Annuler la résiliation",
+      "extendTrial": "Prolonger l'essai",
+      "trialDays": "Jours à prolonger",
+      "extendTrialConfirm": "Prolonger",
+      "cancellationScheduled": "La résiliation est programmée à la fin de la période de facturation en cours.",
+      "suspendedByDunning": "Abonnement suspendu par relance — vérifiez les factures impayées.",
+      "pastDueWarning": "Abonnement en retard — tentative de paiement en attente.",
+      "subActionFailed": "Échec de l'action sur l'abonnement.",
+      "walletHistory": "Transactions du portefeuille",
+      "noWalletHistory": "Aucune transaction pour le moment.",
+      "revenueMtd": "Revenu MTD",
+      "arOutstanding": "Créances en cours",
+      "failedPayments7d": "Paiements échoués (7j)",
+      "amount": "Montant",
+      "issued": "Émise le",
+      "due": "Échéance",
+      "balance": "Solde",
+      "addPaymentMethod": "Ajouter un moyen de paiement",
+      "saveCard": "Enregistrer la carte",
+      "stripeNotConfigured": "Stripe n'est pas configuré.",
+      "pmAdded": "Moyen de paiement ajouté."
+    },
+    "members": {
+      "tab": "Membres",
+      "title": "Membres de l'entreprise",
+      "noMembers": "Aucun membre trouvé."
+    },
+    "activity": {
+      "tab": "Activité",
+      "title": "Journal d'activité",
+      "noActivity": "Aucune activité enregistrée."
+    },
+    "suspend": {
+      "title": "Suspendre l'entreprise",
+      "message": "Vous êtes sur le point de suspendre {name}. Cette action a les impacts suivants :",
+      "activeSubscription": "Abonnement actif ({status}) — la facturation continuera",
+      "unpaidInvoices": "{count} facture(s) impayée(s) en relance",
+      "membersBlocked": "Tous les membres perdront l'accès immédiatement"
+    },
+    "planPreview": {
+      "title": "Aperçu du changement de plan",
+      "upgrade": "Mise à niveau",
+      "downgrade": "Rétrogradation",
+      "proration": "Impact facturation",
+      "credit": "Crédit pour le plan inutilisé",
+      "charge": "Frais pour le nouveau plan",
+      "net": "Net",
+      "dueNow": "dû maintenant",
+      "credited": "crédité au portefeuille",
+      "noImmediateImpact": "Ce changement prendra effet à la fin de la période de facturation en cours.",
+      "noSubscription": "Cette entreprise n'a pas d'abonnement actif. Le plan sera mis à jour directement.",
+      "confirm": "Confirmer le changement"
+    },
+    "wallet": {
+      "title": "Ajustement du portefeuille",
+      "type": "Type",
+      "credit": "Crédit (ajouter des fonds)",
+      "debit": "Débit (retirer des fonds)",
+      "amount": "Montant (€)",
+      "reason": "Motif",
+      "apply": "Appliquer"
+    },
+    "walletAdjustFailed": "Échec de l'ajustement du portefeuille."
   },
 
   "platformCompanyUsers": {
@@ -2088,7 +2234,12 @@
     "metric_sms": "SMS",
     "metric_api_calls": "appel API",
     "metric_storage_gb": "Go",
-    "metric_units": "unité"
+    "metric_units": "unité",
+    "activatedSuccess": "{module} activé avec succès.",
+    "deactivatedSuccess": "{module} désactivé avec succès.",
+    "deactivateConfirmTitle": "Désactiver le module",
+    "deactivateConfirmMessage": "Cela supprimera l'accès à {module}. Les données associées seront conservées. Continuer ?",
+    "deactivateWillAffect": "Les modules dépendants suivants seront également affectés : {modules}"
   },
 
   "themeSettings": {

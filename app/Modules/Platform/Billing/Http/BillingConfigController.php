@@ -70,6 +70,7 @@ class BillingConfigController
         'annual_only' => false,
         'vat_enabled' => false,
         'vat_rate' => 0,
+        'max_payment_methods' => 4,
     ];
 
     public function policies(): JsonResponse
@@ -89,6 +90,7 @@ class BillingConfigController
             'annual_only' => ['required', 'boolean'],
             'vat_enabled' => ['required', 'boolean'],
             'vat_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'max_payment_methods' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
         $policies = BillingConfigCrudService::updatePolicies($validated);

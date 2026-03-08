@@ -3,10 +3,14 @@ definePage({ meta: { surface: 'structure', module: 'core.modules' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
+import { useAppToast } from '@/composables/useAppToast'
+import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const moduleStore = useModuleStore()
+const { toast } = useAppToast()
+const router = useRouter()
 
 const isLoading = ref(true)
 const togglingKey = ref(null)
@@ -26,6 +30,10 @@ const quoteLoading = ref(false)
 const quoteData = ref(null)
 const quoteModuleKey = ref(null)
 const quoteModuleName = ref('')
+
+// Deactivation confirmation dialog
+const deactivateDialog = ref(false)
+const deactivateTarget = ref(null)
 
 const canManage = computed(() => auth.roleLevel === 'management')
 
@@ -251,9 +259,27 @@ const activateModule = async module => {
   await doToggle(module.key, false)
 }
 
-const deactivateModule = async module => {
-  errorMessage.value = ''
-  await doToggle(module.key, true)
+const navigateToPlanUpgrade = mod => {
+  router.push({ path: '/company/plan', query: { suggest: mod.upgrade_target_plan } })
+}
+
+const requestDeactivation = module => {
+  deactivateTarget.value = module
+  deactivateDialog.value = true
+}
+
+const confirmDeactivation = async () => {
+  deactivateDialog.value = false
+  if (deactivateTarget.value) {
+    errorMessage.value = ''
+    await doToggle(deactivateTarget.value.key, true)
+    deactivateTarget.value = null
+  }
+}
+
+const cancelDeactivation = () => {
+  deactivateDialog.value = false
+  deactivateTarget.value = null
 }
 
 const confirmQuoteEnable = async () => {
@@ -267,12 +293,17 @@ const doToggle = async (key, isCurrentlyEnabled) => {
   togglingKey.value = key
   errorMessage.value = ''
 
+  const mod = moduleStore.modules.find(m => m.key === key)
+  const modName = mod?.name || key
+
   try {
     if (isCurrentlyEnabled) {
       await moduleStore.disableModule(key)
+      toast(t('companyModules.deactivatedSuccess', { module: modName }), 'success')
     }
     else {
       await moduleStore.enableModule(key)
+      toast(t('companyModules.activatedSuccess', { module: modName }), 'success')
     }
   }
   catch (error) {
@@ -517,6 +548,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
+                        @click="navigateToPlanUpgrade(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-lock" />
@@ -530,6 +562,8 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
+                        :loading="togglingKey === mod.key"
+                        @click="activateModule(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-shopping-cart" />
@@ -777,7 +811,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="secondary"
                         size="small"
                         :loading="togglingKey === mod.key"
-                        @click="deactivateModule(mod)"
+                        @click="requestDeactivation(mod)"
                       >
                         {{ t('companyModules.deactivate') }}
                       </VBtn>
@@ -970,6 +1004,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
+                        @click="navigateToPlanUpgrade(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-lock" />
@@ -983,6 +1018,8 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
+                        :loading="togglingKey === mod.key"
+                        @click="activateModule(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-shopping-cart" />
@@ -1011,7 +1048,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="secondary"
                         size="small"
                         :loading="togglingKey === mod.key"
-                        @click="deactivateModule(mod)"
+                        @click="requestDeactivation(mod)"
                       >
                         {{ t('companyModules.deactivate') }}
                       </VBtn>
@@ -1033,6 +1070,58 @@ const doToggle = async (key, isCurrentlyEnabled) => {
         </template>
       </VCardText>
     </VCard>
+
+    <!-- Deactivation confirmation dialog -->
+    <VDialog
+      v-model="deactivateDialog"
+      max-width="420"
+      persistent
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center pt-5 px-6">
+          <VIcon
+            icon="tabler-alert-triangle"
+            color="warning"
+            class="me-2"
+          />
+          {{ t('companyModules.deactivateConfirmTitle') }}
+        </VCardTitle>
+
+        <VCardText class="px-6">
+          <p class="text-body-1">
+            {{ t('companyModules.deactivateConfirmMessage', { module: deactivateTarget?.name }) }}
+          </p>
+          <VAlert
+            v-if="deactivateTarget?.dependents?.length"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            {{ t('companyModules.deactivateWillAffect', { modules: dependentNames(deactivateTarget) }) }}
+          </VAlert>
+        </VCardText>
+
+        <VCardActions class="px-6 pb-5">
+          <VSpacer />
+          <VBtn
+            color="secondary"
+            variant="tonal"
+            @click="cancelDeactivation"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="elevated"
+            :loading="togglingKey === deactivateTarget?.key"
+            @click="confirmDeactivation"
+          >
+            {{ t('companyModules.deactivate') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <!-- Quote confirmation dialog -->
     <VDialog
