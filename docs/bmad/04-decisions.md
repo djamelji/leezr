@@ -9182,4 +9182,56 @@ Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + 
 
 ---
 
+### ADR-261 — Stripe credential management : DB fallback + masquage API (2026-03-05)
+
+**Contexte** : Deux bugs liés aux credentials Stripe configurées via l'admin UI (table `platform_payment_modules.credentials`) :
+1. `StripePaymentAdapter::setApiKey()` ne lisait que `config('billing.stripe.secret')` (`.env`). Sur le VPS où les clés Stripe sont saisies via l'admin UI et stockées en DB, `setApiKey()` passait `null` → toutes les opérations Stripe échouaient. Idem pour `verifyWebhookSignature()` et le webhook secret.
+2. À la réouverture du dialog de configuration Stripe dans l'admin, les champs credentials étaient vides car l'API ne renvoyait jamais les valeurs (sécurité). L'admin re-soumettait des champs vides → écrasait les credentials en DB.
+
+**Décisions** :
+- `setApiKey()` : lit `config('billing.stripe.secret')` en priorité, fallback vers `platform_payment_modules.credentials['secret_key']` si vide
+- `verifyWebhookSignature()` : même fallback pour `webhook_secret`
+- API `listModules()` : retourne `credentials_masked` avec les 8 premiers + 4 derniers caractères visibles (ex: `sk_live_4eC3••••xXqY`)
+- `updateModuleCredentials()` : merge intelligent — si la valeur soumise contient `••••`, on conserve la valeur originale en DB ; sinon on écrase avec la nouvelle valeur
+- Frontend : pré-remplit le dialog avec les valeurs masquées au lieu de champs vides
+
+**Conséquences** :
+- Les clés Stripe saisies via l'admin UI fonctionnent sans `.env`
+- L'admin peut voir quelles clés sont configurées (masquées) et ne les écrase plus par accident
+- La hiérarchie est : `.env` > DB (compatible avec les environnements qui utilisent l'un ou l'autre)
+- Les valeurs complètes ne transitent jamais dans les réponses API (sécurité)
+
+**Fichiers modifiés** :
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — fallback DB dans `setApiKey()` et `verifyWebhookSignature()`
+- `app/Core/Billing/ReadModels/PlatformPaymentGovernanceReadService.php` — `credentials_masked` dans `listModules()`
+- `app/Modules/Platform/Billing/PaymentGovernanceCrudService.php` — merge intelligent dans `updateModuleCredentials()`
+- `resources/js/pages/platform/payments/_PaymentModulesTab.vue` — pré-remplissage dialog avec valeurs masquées
+
+---
+
+### ADR-262 — Payment method selection : VRadioGroup + CustomRadio Vuexy (2026-03-07)
+
+**Contexte** : La page `pay.vue` (ADR-258) utilisait un `VBtnToggle` pour la sélection du moyen de paiement. Ce n'est pas un pattern Vuexy — la politique UI interdit d'inventer des composants. De plus, le `VBtnToggle` ne garantissait pas l'exclusivité mutuelle correcte entre saved cards, new card et new SEPA.
+
+**Décisions** :
+- Remplacer `VBtnToggle` par un `VRadioGroup` unique englobant toutes les options (saved cards + nouveau moyen)
+- Chaque saved card est un `VLabel.custom-input.custom-radio` (pattern Vuexy existant dans `resources/ui/presets/forms/`)
+- "Nouvelle carte" et "Nouveau SEPA" sont des radio options avec formulaires expansibles (`v-if` conditionnel)
+- Stripe `CardElement`/`IbanElement` : montage avec `v-if` au lieu de `v-show` pour un cycle de vie propre (mount/destroy)
+- Helper `mountActiveStripeElement` + watcher sur la sélection pour monter/démonter les éléments Stripe proprement
+- Suppression des refs inutilisées (`newMethodTab`, `sepaEmail`)
+
+**Conséquences** :
+- L'exclusivité mutuelle est garantie par le `VRadioGroup` natif (un seul moyen sélectionné à la fois)
+- Le pattern UI est conforme à la politique Vuexy (CustomRadio existant dans les presets)
+- Les éléments Stripe sont correctement montés/démontés sans memory leaks
+- L'UX est cohérente avec le reste de l'application (VRadio partout)
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/billing/pay.vue` — refactoring VBtnToggle → VRadioGroup + CustomRadio
+- `resources/js/plugins/i18n/locales/en.json` — +1 clé
+- `resources/js/plugins/i18n/locales/fr.json` — +1 clé
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
