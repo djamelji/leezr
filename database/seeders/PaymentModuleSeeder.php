@@ -57,9 +57,9 @@ class PaymentModuleSeeder extends Seeder
                     'is_active' => true,
                     'credentials' => [
                         'mode' => 'test',
-                        'test_publishable_key' => env('STRIPE_TEST_PUBLISHABLE_KEY', ''),
-                        'test_secret_key' => env('STRIPE_TEST_SECRET_KEY', ''),
-                        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', ''),
+                        'test_publishable_key' => env('STRIPE_TEST_PUBLISHABLE_KEY', 'pk_test_51T7WVLDI550p59YnWzGYzASGOQvruzkxPZtfxcR7GQ4vUWFndjE8MJyOra9AcFZsaOtorPg3HPaZ9IYLjmOqq2j100fNenvCy5'),
+                        'test_secret_key' => env('STRIPE_TEST_SECRET_KEY', 'sk_test_51T7WVLDI550p59Yntb7AnyRUcPgC10oJFlbDJcMoWBtlbktV7R18OTXtfKlOsepsrjsyyK6N5Jso640MP9WN2S8b00l9tihF6X'),
+                        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', 'whsec_y5DCO0mD6OzBbSAcUeky3eGfwHKTlsfc'),
                     ],
                     'health_status' => 'healthy',
                     'sort_order' => 1,
