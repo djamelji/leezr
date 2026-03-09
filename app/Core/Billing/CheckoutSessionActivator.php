@@ -85,14 +85,14 @@ class CheckoutSessionActivator
                 ->update(['is_current' => null]);
 
             $periodEnd = $subscription->interval === 'yearly' ? now()->addYear() : now()->addMonth();
-            $status = ($trialDays > 0) ? 'trialing' : 'active';
 
+            // ADR-286: Stripe checkout = payment already collected → always active, no trial
+            // Trial is only for internal/free registrations (RegisterCompanyUseCase)
             $subscription->update([
-                'status' => $status,
+                'status' => 'active',
                 'is_current' => 1,
                 'current_period_start' => now(),
                 'current_period_end' => $periodEnd,
-                'trial_ends_at' => ($trialDays > 0) ? now()->addDays($trialDays) : null,
             ]);
 
             // Create invoice

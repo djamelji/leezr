@@ -34,7 +34,7 @@ class BillingConfigCrudService
     public static function rejectSubscription(int $id): Subscription
     {
         $subscription = Subscription::where('status', 'pending')->findOrFail($id);
-        $subscription->update(['status' => 'cancelled']);
+        $subscription->update(['status' => 'rejected']);
 
         return $subscription->fresh()->load('company:id,name,slug');
     }

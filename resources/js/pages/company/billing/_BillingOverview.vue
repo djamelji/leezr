@@ -94,6 +94,23 @@ const cancelAtPeriodEnd = computed(() => overview.value?.subscription?.cancel_at
 
 const scheduledChange = computed(() => overview.value?.subscription?.scheduled_change)
 
+const pendingSub = computed(() => store.pendingSubscription)
+const isDismissing = ref(false)
+
+const dismissRejected = async () => {
+  isDismissing.value = true
+  try {
+    await store.dismissPendingSubscription()
+    toast(t('companyBilling.overview.rejectedDismissed'), 'success')
+  }
+  catch {
+    toast(t('companyBilling.overview.rejectedDismissFailed'), 'error')
+  }
+  finally {
+    isDismissing.value = false
+  }
+}
+
 const isCancellingChange = ref(false)
 
 const formatDate = dateStr => {
@@ -310,6 +327,49 @@ const cancelSubscription = async () => {
             @click="cancelScheduledPlanChange"
           >
             {{ t('companyBilling.overview.cancelScheduledChange') }}
+          </VBtn>
+        </template>
+      </VAlert>
+
+      <!-- Pending Upgrade Request (ADR-289) -->
+      <VAlert
+        v-if="pendingSub?.status === 'pending'"
+        type="warning"
+        variant="tonal"
+        prominent
+        class="mb-6"
+      >
+        <VAlertTitle>
+          {{ t('companyPlan.pendingApproval') }}
+        </VAlertTitle>
+        <span>
+          {{ t('companyPlan.pendingMessage', { plan: pendingSub.plan_key }) }}
+        </span>
+      </VAlert>
+
+      <!-- Rejected Upgrade Request (ADR-289) -->
+      <VAlert
+        v-if="pendingSub?.status === 'rejected'"
+        type="error"
+        variant="tonal"
+        prominent
+        class="mb-6"
+      >
+        <VAlertTitle>
+          {{ t('companyPlan.rejectedTitle') }}
+        </VAlertTitle>
+        <span>
+          {{ t('companyPlan.rejectedMessage', { plan: pendingSub.plan_key }) }}
+        </span>
+        <template #append>
+          <VBtn
+            variant="outlined"
+            color="error"
+            size="small"
+            :loading="isDismissing"
+            @click="dismissRejected"
+          >
+            {{ t('companyPlan.dismissRejected') }}
           </VBtn>
         </template>
       </VAlert>

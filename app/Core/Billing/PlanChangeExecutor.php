@@ -95,7 +95,11 @@ class PlanChangeExecutor
         // Compute proration snapshot
         $prorationSnapshot = null;
 
-        if ($timing === 'immediate' && $subscription->current_period_start && $subscription->current_period_end) {
+        // ADR-287: Skip proration during trial with continue_trial policy
+        $skipProration = $subscription->status === 'trialing'
+            && PlatformBillingPolicy::instance()->trial_plan_change_behavior === 'continue_trial';
+
+        if ($timing === 'immediate' && !$skipProration && $subscription->current_period_start && $subscription->current_period_end) {
             $plans = PlanRegistry::definitions();
 
             $fromPlan = $plans[$subscription->plan_key] ?? null;
@@ -174,8 +178,15 @@ class PlanChangeExecutor
             $company = $intent->company;
             $proration = $intent->proration_snapshot;
 
+            // ADR-287: Determine trial plan change behavior
+            $isTrialing = $subscription->status === 'trialing';
+            $trialBehavior = $isTrialing
+                ? PlatformBillingPolicy::instance()->trial_plan_change_behavior
+                : null;
+
             // Handle proration financial effects
-            if ($proration && $proration['net'] !== 0) {
+            // ADR-287: Skip proration during trial with continue_trial policy
+            if ($proration && $proration['net'] !== 0 && !($isTrialing && $trialBehavior === 'continue_trial')) {
                 if ($proration['net'] > 0) {
                     // Company owes money → create proration invoice
                     $invoice = InvoiceIssuer::createDraft(
@@ -228,18 +239,30 @@ class PlanChangeExecutor
                 'interval' => $intent->interval_to,
             ];
 
-            // For end_of_period/end_of_trial execution, reset the period
-            if ($intent->timing !== 'immediate') {
+            // ADR-287: Handle trialing subscription with immediate timing
+            if ($isTrialing && $intent->timing === 'immediate') {
+                if ($trialBehavior === 'end_trial') {
+                    // End trial: activate subscription, start new billing period
+                    $updateData['status'] = 'active';
+                    $updateData['trial_ends_at'] = null;
+                    $updateData['current_period_start'] = now();
+                    $updateData['current_period_end'] = $intent->interval_to === 'yearly'
+                        ? now()->addYear()
+                        : now()->addMonth();
+                }
+                // continue_trial: only plan_key/interval change, status & trial_ends_at preserved
+            } elseif ($intent->timing !== 'immediate') {
+                // For end_of_period/end_of_trial deferred execution, reset the period
                 $updateData['current_period_start'] = now();
                 $updateData['current_period_end'] = $intent->interval_to === 'yearly'
                     ? now()->addYear()
                     : now()->addMonth();
-            }
 
-            // If subscription was trialing and trial ended, switch to active
-            if ($subscription->status === 'trialing' && $intent->timing === 'end_of_trial') {
-                $updateData['status'] = 'active';
-                $updateData['trial_ends_at'] = null;
+                // If subscription was trialing and trial ended, switch to active
+                if ($subscription->status === 'trialing' && $intent->timing === 'end_of_trial') {
+                    $updateData['status'] = 'active';
+                    $updateData['trial_ends_at'] = null;
+                }
             }
 
             $subscription->update($updateData);

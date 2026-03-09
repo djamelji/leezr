@@ -26,10 +26,25 @@ class JobdomainRegistry
                 // ADR-169: default_fields only control activation + order.
                 // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
-                    // Company scope
+                    // Company scope — general
                     ['code' => 'siret', 'order' => 0],
                     ['code' => 'vat_number', 'order' => 1],
-                    ['code' => 'legal_form', 'order' => 2],
+                    ['code' => 'legal_name', 'order' => 3],
+                    // Company scope — billing
+                    ['code' => 'billing_address', 'order' => 4],
+                    ['code' => 'billing_complement', 'order' => 5],
+                    ['code' => 'billing_city', 'order' => 6],
+                    ['code' => 'billing_postal_code', 'order' => 7],
+                    ['code' => 'billing_region', 'order' => 8],
+                    ['code' => 'billing_email', 'order' => 9],
+                    // Company scope — address
+                    ['code' => 'company_address', 'order' => 100],
+                    ['code' => 'company_complement', 'order' => 101],
+                    ['code' => 'company_city', 'order' => 102],
+                    ['code' => 'company_postal_code', 'order' => 103],
+                    ['code' => 'company_region', 'order' => 104],
+                    // Company scope — contact
+                    ['code' => 'company_phone', 'order' => 110],
                     // Company User — identity
                     ['code' => 'job_title', 'order' => 10],
                     ['code' => 'birth_date', 'order' => 20],

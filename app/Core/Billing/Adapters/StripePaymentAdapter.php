@@ -56,86 +56,72 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         }
     }
 
+    /**
+     * ADR-302: Embedded payment — SetupIntent instead of Checkout Session redirect.
+     *
+     * For paid no-trial: creates pending_payment subscription + SetupIntent (card only).
+     * For trial: subscription already exists, just creates SetupIntent (card + SEPA).
+     */
     public function createCheckout(Company $company, string $planKey, string $interval = 'monthly'): CheckoutResult
     {
         $this->setApiKey();
 
-        $plan = Plan::where('key', $planKey)->firstOrFail();
+        // Check if a trialing subscription already exists (created in the DB transaction)
+        $existingSub = Subscription::where('company_id', $company->id)
+            ->where('plan_key', $planKey)
+            ->whereIn('status', ['trialing', 'active'])
+            ->latest()
+            ->first();
 
-        // Create subscription in pending_payment state (not yet current)
-        $subscription = DB::transaction(function () use ($company, $planKey, $interval) {
-            return Subscription::create([
-                'company_id' => $company->id,
-                'plan_key' => $planKey,
-                'interval' => $interval,
-                'status' => 'pending_payment',
-                'provider' => 'stripe',
-                'is_current' => null,
-            ]);
-        });
+        if ($existingSub) {
+            // Trial: just collect payment method for future billing
+            $subscription = $existingSub;
+            $allowedMethods = ['card', 'sepa_debit'];
+        } else {
+            // No trial: create pending_payment subscription
+            $subscription = DB::transaction(function () use ($company, $planKey, $interval) {
+                return Subscription::create([
+                    'company_id' => $company->id,
+                    'plan_key' => $planKey,
+                    'interval' => $interval,
+                    'status' => 'pending_payment',
+                    'provider' => 'stripe',
+                    'is_current' => null,
+                ]);
+            });
+            $allowedMethods = ['card'];
+        }
 
         // Ensure Stripe customer exists
         $stripeCustomer = $this->ensureStripeCustomer($company);
 
-        // Use correct price based on interval
-        $price = $interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly;
-
-        // ADR-235: Currency from company's market via wallet
-        $currency = strtolower(WalletLedger::ensureWallet($company)->currency);
-
-        // Create Checkout Session
-        $session = $this->callStripeCreateCheckoutSession([
-            'mode' => 'payment',
+        // Create SetupIntent for embedded Stripe Elements
+        $si = $this->callStripeCreateSetupIntent([
             'customer' => $stripeCustomer->provider_customer_id,
-            'line_items' => [[
-                'price_data' => [
-                    'currency' => $currency,
-                    'product_data' => ['name' => "{$plan->name} Plan"],
-                    'unit_amount' => $price,
-                ],
-                'quantity' => 1,
-            ]],
+            'usage' => 'off_session',
+            'payment_method_types' => $allowedMethods,
             'metadata' => [
                 'company_id' => (string) $company->id,
                 'subscription_id' => (string) $subscription->id,
                 'plan_key' => $planKey,
             ],
-            'success_url' => config('app.url') . '/company/billing?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => config('app.url') . '/company/plan',
-        ], [
-            'idempotency_key' => "checkout_{$subscription->id}_{$planKey}",
         ]);
 
         // ADR-228: Track expected webhook confirmation
-        $sessionId = $session->id ?? null;
-        if ($sessionId) {
-            BillingExpectedConfirmation::create([
-                'company_id' => $company->id,
-                'provider_key' => 'stripe',
-                'expected_event_type' => 'checkout.session.completed',
-                'provider_reference' => $sessionId,
-                'expected_by' => now()->addMinutes(30),
-            ]);
-
-            // ADR-229: Track checkout session locally for triple recovery
-            BillingCheckoutSession::updateOrCreate(
-                ['provider_key' => 'stripe', 'provider_session_id' => $sessionId],
-                [
-                    'company_id' => $company->id,
-                    'subscription_id' => $subscription->id,
-                    'status' => 'created',
-                    'metadata' => [
-                        'plan_key' => $planKey,
-                        'interval' => $interval,
-                    ],
-                ],
-            );
-        }
+        BillingExpectedConfirmation::create([
+            'company_id' => $company->id,
+            'provider_key' => 'stripe',
+            'expected_event_type' => 'setup_intent.succeeded',
+            'provider_reference' => $si->id,
+            'expected_by' => now()->addMinutes(30),
+        ]);
 
         return new CheckoutResult(
-            mode: 'redirect',
-            redirectUrl: $session->url,
+            mode: 'embedded',
             subscriptionId: $subscription->id,
+            clientSecret: $si->client_secret,
+            publishableKey: $this->resolvePublishableKey(),
+            trialChargeTiming: $existingSub ? PlatformBillingPolicy::instance()->trial_charge_timing : null,
         );
     }
 
@@ -188,7 +174,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         try {
             $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntent(
                 $invoice->amount_due,
-                strtolower($invoice->currency ?? config('billing.default_currency', 'EUR')),
+                strtoupper($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 $stripeCustomerId,
                 array_merge([
                     'invoice_id' => (string) $invoice->id,
@@ -256,7 +242,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         try {
             $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntentWithMethod(
                 $chargeAmount,
-                strtolower($invoice->currency ?? config('billing.default_currency', 'EUR')),
+                strtoupper($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 $stripeCustomerId,
                 $paymentMethodId,
                 [
@@ -264,6 +250,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
                     'company_id' => (string) $company->id,
                     'fallback' => 'true',
                 ],
+                ['idempotency_key' => "billing:invoice:{$invoice->id}:charge:{$paymentMethodId}"],
             ));
 
             return [
@@ -285,7 +272,10 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         $this->setApiKey();
 
         try {
-            $refund = $this->callStripeRefund($providerPaymentId, $amount, $metadata);
+            $idempotencyKey = "billing:refund:{$providerPaymentId}:{$amount}";
+            $refund = $this->callStripeRefund($providerPaymentId, $amount, $metadata, [
+                'idempotency_key' => $idempotencyKey,
+            ]);
 
             return [
                 'provider_refund_id' => $refund->id,
@@ -479,7 +469,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
     {
         return \Stripe\PaymentIntent::create([
             'amount' => $amount,
-            'currency' => $currency,
+            'currency' => strtolower($currency),
             'customer' => $customerId,
             'confirm' => true,
             'off_session' => true,
@@ -487,24 +477,24 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         ], $opts);
     }
 
-    protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata)
+    protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = [])
     {
         return \Stripe\PaymentIntent::create([
             'amount' => $amount,
-            'currency' => $currency,
+            'currency' => strtolower($currency),
             'customer' => $customerId,
             'payment_method' => $paymentMethodId,
             'confirm' => true,
             'off_session' => true,
             'metadata' => $metadata,
-        ]);
+        ], $opts);
     }
 
     protected function callStripeCreateOnSessionPaymentIntent(int $amount, string $currency, string $customerId, array $metadata)
     {
         return \Stripe\PaymentIntent::create([
             'amount' => $amount,
-            'currency' => $currency,
+            'currency' => strtolower($currency),
             'customer' => $customerId,
             'payment_method_types' => ['card', 'sepa_debit'],
             'setup_future_usage' => 'off_session',
@@ -512,13 +502,13 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         ]);
     }
 
-    protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+    protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
     {
         return \Stripe\Refund::create([
             'payment_intent' => $paymentIntentId,
             'amount' => $amount,
             'metadata' => $metadata,
-        ]);
+        ], $opts);
     }
 
     protected function callStripeListPaymentIntents(string $customerId, int $sinceTimestamp): array

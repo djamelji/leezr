@@ -64,6 +64,18 @@ onMounted(async () => {
 })
 
 const sub = computed(() => billingStore.subscription)
+const pendingSub = computed(() => billingStore.pendingSubscription)
+const hasPendingSubscription = computed(() => pendingSub.value?.status === 'pending')
+
+const dismissRejected = async () => {
+  try {
+    await billingStore.dismissPendingSubscription()
+    toast(t('companyPlan.rejectedDismissed'), 'success')
+  }
+  catch {
+    toast(t('companyPlan.failedToSubmit'), 'error')
+  }
+}
 
 const formatDate = dateStr => {
   if (!dateStr) return null
@@ -278,6 +290,44 @@ const estimatedInvoice = computed(() => {
           @click="cancelScheduledChange"
         >
           {{ t('companyPlan.scheduledChange.cancel') }}
+        </VBtn>
+      </template>
+    </VAlert>
+
+    <!-- Pending Upgrade Request (ADR-289) -->
+    <VAlert
+      v-if="pendingSub?.status === 'pending'"
+      type="warning"
+      variant="tonal"
+      icon="tabler-hourglass"
+      class="mb-6"
+    >
+      <VAlertTitle class="mb-1">
+        {{ t('companyPlan.pendingApproval') }}
+      </VAlertTitle>
+      <span>{{ t('companyPlan.pendingMessage', { plan: pendingSub.plan_key }) }}</span>
+    </VAlert>
+
+    <!-- Rejected Upgrade Request (ADR-289) -->
+    <VAlert
+      v-if="pendingSub?.status === 'rejected'"
+      type="error"
+      variant="tonal"
+      icon="tabler-x"
+      class="mb-6"
+    >
+      <VAlertTitle class="mb-1">
+        {{ t('companyPlan.rejectedTitle') }}
+      </VAlertTitle>
+      <span>{{ t('companyPlan.rejectedMessage', { plan: pendingSub.plan_key }) }}</span>
+      <template #append>
+        <VBtn
+          variant="outlined"
+          color="error"
+          size="small"
+          @click="dismissRejected"
+        >
+          {{ t('companyPlan.dismissRejected') }}
         </VBtn>
       </template>
     </VAlert>
@@ -619,6 +669,18 @@ const estimatedInvoice = computed(() => {
                   </VListItem>
                 </VList>
 
+                <!-- ADR-287: Trial badge -->
+                <VChip
+                  v-if="plan.trial_days > 0 && plan.key !== currentPlanKey"
+                  color="info"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="tabler-clock"
+                  class="mb-3"
+                >
+                  {{ t('companyPlan.freeTrialDays', { days: plan.trial_days }) }}
+                </VChip>
+
                 <!-- ADR-172: Concrete limits -->
                 <div class="text-start mb-4">
                   <div class="d-flex align-center gap-2 mb-1">
@@ -660,6 +722,7 @@ const estimatedInvoice = computed(() => {
                     : (plan.level > (currentPlan?.level ?? 0) ? 'primary' : 'secondary')"
                   :variant="plan.is_popular ? 'elevated' : 'tonal'"
                   :loading="changingPlan && pendingPlanKey === plan.key"
+                  :disabled="hasPendingSubscription"
                   @click="requestPlanChange(plan.key)"
                 >
                   {{ planButtonLabel(plan) }}

@@ -295,7 +295,7 @@ class InvoiceBatchPayTest extends TestCase
                 'invoice_ids' => [$invoice->id],
             ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(403);
     }
 
     // ── Confirm endpoint ──

@@ -160,6 +160,9 @@ class BillingLotBTest extends TestCase
 
     public function test_register_with_pro_creates_trialing_subscription(): void
     {
+        // ADR-303: skip checkout collection in this test (no Stripe mock)
+        \App\Core\Billing\PlatformBillingPolicy::instance()->update(['trial_requires_payment_method' => false]);
+
         $this->get('/sanctum/csrf-cookie');
 
         $response = $this->postJson('/api/register', [
@@ -235,6 +238,9 @@ class BillingLotBTest extends TestCase
 
     public function test_register_response_has_no_checkout_for_trial_plan(): void
     {
+        // ADR-303: when trial_requires_payment_method is false, no checkout in response
+        \App\Core\Billing\PlatformBillingPolicy::instance()->update(['trial_requires_payment_method' => false]);
+
         $this->get('/sanctum/csrf-cookie');
 
         $response = $this->postJson('/api/register', [

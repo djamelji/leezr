@@ -21,9 +21,11 @@ class PlatformBillingPolicy extends Model
         'invoice_due_days', 'invoice_prefix', 'invoice_next_number',
         'credit_note_prefix', 'credit_note_next_number',
         'tax_mode', 'default_tax_rate_bps',
-        'free_trial_days',
         'admin_approval_required',
         'addon_billing_interval',
+        'trial_plan_change_behavior',
+        'trial_requires_payment_method',
+        'trial_charge_timing',
     ];
 
     protected function casts(): array
@@ -38,8 +40,8 @@ class PlatformBillingPolicy extends Model
             'invoice_next_number' => 'integer',
             'credit_note_next_number' => 'integer',
             'default_tax_rate_bps' => 'integer',
-            'free_trial_days' => 'integer',
             'admin_approval_required' => 'boolean',
+            'trial_requires_payment_method' => 'boolean',
         ];
     }
 

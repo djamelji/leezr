@@ -19,10 +19,8 @@ class BillingModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing'], 'icon' => 'tabler-file-invoice', 'permission' => 'view_billing', 'group' => 'governance'],
-                    ['key' => 'payments', 'title' => 'Payments', 'to' => ['name' => 'platform-payments'], 'icon' => 'tabler-credit-card', 'permission' => 'manage_billing', 'group' => 'governance'],
-                    ['key' => 'billing-settings', 'title' => 'Billing Settings', 'to' => ['name' => 'platform-billing-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-settings', 'permission' => 'manage_billing', 'group' => 'governance'],
                 ],
-                routeNames: ['platform-billing', 'platform-payments', 'platform-billing-settings-tab', 'platform-billing-invoices-id'],
+                routeNames: ['platform-billing', 'platform-billing-invoices-id', 'platform-billing-advanced-tab'],
             ),
             permissions: [
                 ['key' => 'view_billing', 'label' => 'View Billing'],

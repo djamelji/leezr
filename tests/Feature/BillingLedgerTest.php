@@ -112,7 +112,7 @@ class BillingLedgerTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     return \Stripe\Refund::constructFrom([
                         'id' => 're_mock_' . uniqid(),
@@ -473,7 +473,7 @@ class BillingLedgerTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     return \Stripe\Refund::constructFrom([
                         'id' => 're_mock_fail',

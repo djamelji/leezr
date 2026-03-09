@@ -15,6 +15,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     _planChangePreview: null,
     _outstandingInvoices: [],
     _outstandingWallet: { balance: 0, currency: 'EUR' },
+    _pendingSubscription: null,
   }),
 
   getters: {
@@ -25,6 +26,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     invoicePagination: state => state._invoicePagination,
     invoiceDetail: state => state._invoiceDetail,
     subscription: state => state._subscription,
+    pendingSubscription: state => state._pendingSubscription,
     savedCards: state => state._savedCards,
     maxPaymentMethods: state => state._maxPaymentMethods,
     setupIntent: state => state._setupIntent,
@@ -37,6 +39,8 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
       const data = await $api('/billing/overview')
 
       this._overview = data
+      if ('pending_subscription' in data)
+        this._pendingSubscription = data.pending_subscription
     },
 
     async fetchInvoices({ page = 1, status, from, to } = {}) {
@@ -68,6 +72,8 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
       const data = await $api('/billing/subscription')
 
       this._subscription = data.subscription
+      if ('pending_subscription' in data)
+        this._pendingSubscription = data.pending_subscription
     },
 
     async fetchSavedCards() {
@@ -175,6 +181,11 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
         method: 'POST',
         body: { payment_intent_id: paymentIntentId, save_card: saveCard },
       })
+    },
+
+    async dismissPendingSubscription() {
+      await $api('/billing/pending-subscription', { method: 'DELETE' })
+      this._pendingSubscription = null
     },
 
     async cancelSubscription() {

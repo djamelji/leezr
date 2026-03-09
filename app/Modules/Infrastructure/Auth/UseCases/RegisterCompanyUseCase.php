@@ -4,9 +4,14 @@ namespace App\Modules\Infrastructure\Auth\UseCases;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\PaymentGatewayManager;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldWriteService;
 use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Plans\Plan;
@@ -24,8 +29,19 @@ class RegisterCompanyUseCase
         $planKey = $data->planKey ?? 'starter';
         $plan = Plan::where('key', $planKey)->first();
         $isFree = ! $plan || ($plan->price_monthly <= 0 && $plan->price_yearly <= 0);
-        $hasTrial = ($plan?->trial_days ?? 0) > 0;
         $interval = $data->billingInterval ?? 'monthly';
+
+        // Anti-abuse: check if this email already used a trial (any previous company)
+        $hasUsedTrial = false;
+        $existingUser = User::where('email', $data->email)->first();
+        if ($existingUser) {
+            $companyIds = $existingUser->companies()->pluck('companies.id');
+            $hasUsedTrial = $companyIds->isNotEmpty() && Subscription::whereIn('company_id', $companyIds)
+                ->whereNotNull('trial_ends_at')
+                ->exists();
+        }
+
+        $hasTrial = ! $hasUsedTrial && ($plan?->trial_days ?? 0) > 0;
 
         $result = DB::transaction(function () use ($data, $planKey, $plan, $isFree, $hasTrial, $interval) {
             $user = User::create([
@@ -60,6 +76,55 @@ class RegisterCompanyUseCase
             // ADR-100: Assign jobdomain + activate defaults (modules, fields, roles, dashboard)
             JobdomainGate::assignToCompany($company, $data->jobdomainKey);
 
+            // ADR-290: Set legal_status_key if provided
+            if ($data->legalStatusKey) {
+                $company->update(['legal_status_key' => $data->legalStatusKey]);
+            }
+
+            // ADR-290: Save dynamic company fields collected at registration
+            if (! empty($data->dynamicFields)) {
+                FieldWriteService::upsert(
+                    $company,
+                    $data->dynamicFields,
+                    FieldDefinition::SCOPE_COMPANY,
+                    $company->id,
+                    $company->market_key,
+                );
+            }
+
+            // ADR-300: Copy company address → billing address if toggle ON
+            if ($data->billingSameAsCompany && ! empty($data->dynamicFields)) {
+                $addressMap = [
+                    'company_address' => 'billing_address',
+                    'company_complement' => 'billing_complement',
+                    'company_city' => 'billing_city',
+                    'company_postal_code' => 'billing_postal_code',
+                    'company_region' => 'billing_region',
+                ];
+
+                $billingOverrides = [];
+                foreach ($addressMap as $src => $dst) {
+                    if (isset($data->dynamicFields[$src])) {
+                        $billingOverrides[$dst] = $data->dynamicFields[$src];
+                    }
+                }
+
+                if (! empty($billingOverrides)) {
+                    FieldWriteService::upsert(
+                        $company,
+                        $billingOverrides,
+                        FieldDefinition::SCOPE_COMPANY,
+                        $company->id,
+                        $company->market_key,
+                    );
+                }
+            }
+
+            // ADR-300: Activate selected addon modules at registration
+            foreach ($data->addonKeys as $addonKey) {
+                ModuleActivationEngine::enable($company, $addonKey);
+            }
+
             // ADR-231: Create subscription at registration
             if ($isFree) {
                 $freePeriodEnd = $interval === 'yearly'
@@ -77,7 +142,7 @@ class RegisterCompanyUseCase
                     'current_period_end' => $freePeriodEnd,
                 ]);
             } elseif ($hasTrial) {
-                Subscription::create([
+                $trialSub = Subscription::create([
                     'company_id' => $company->id,
                     'plan_key' => $planKey,
                     'interval' => $interval,
@@ -88,20 +153,57 @@ class RegisterCompanyUseCase
                     'current_period_end' => now()->addDays($plan->trial_days),
                     'trial_ends_at' => now()->addDays($plan->trial_days),
                 ]);
+
+                // ADR-286: Notify owner that trial has started
+                $user->notify(new \App\Notifications\Billing\TrialStarted($trialSub));
             }
             // Paid no-trial: handled after transaction via gateway
 
             return new RegisterCompanyResult($user, $company);
         });
 
-        // After transaction: paid no-trial → delegate to payment gateway
+        // After transaction: paid plan → collect payment method
+        // ADR-303: trial_requires_payment_method governs whether we ask for PM during trial
         $checkout = null;
-        if (! $isFree && ! $hasTrial) {
-            $checkout = $this->gateway->driver()->createCheckout(
-                $result->company,
-                $planKey,
-                $interval,
-            );
+        if (! $isFree) {
+            $policy = PlatformBillingPolicy::instance();
+            $skipCheckout = $hasTrial && ! $policy->trial_requires_payment_method;
+
+            // ADR-302: If trial + immediate charging → create plan invoice now
+            // ConfirmRegistrationPaymentController will charge all open invoices
+            if ($hasTrial && $policy->trial_charge_timing === 'immediate') {
+                $sub = Subscription::where('company_id', $result->company->id)
+                    ->where('is_current', 1)
+                    ->first();
+
+                if ($sub) {
+                    $price = $interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly;
+
+                    if ($price > 0) {
+                        $periodEnd = $interval === 'yearly'
+                            ? now()->addYear()
+                            : now()->addMonth();
+
+                        $invoice = InvoiceIssuer::createDraft(
+                            $result->company,
+                            $sub->id,
+                            now()->toDateString(),
+                            $periodEnd->toDateString(),
+                        );
+
+                        InvoiceIssuer::addLine($invoice, 'plan', "{$plan->name} plan", $price, 1);
+                        InvoiceIssuer::finalize($invoice);
+                    }
+                }
+            }
+
+            if (! $skipCheckout) {
+                $checkout = $this->gateway->driver()->createCheckout(
+                    $result->company,
+                    $planKey,
+                    $interval,
+                );
+            }
         }
 
         // Audit outside transaction — non-critical side-effect

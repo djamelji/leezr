@@ -3,6 +3,8 @@
 use App\Modules\Infrastructure\Auth\Http\AuthController;
 use App\Modules\Infrastructure\Auth\Http\PasswordResetController;
 use App\Modules\Infrastructure\Webhooks\Http\WebhookController;
+use App\Modules\Infrastructure\Public\Http\PublicAddonController;
+use App\Modules\Infrastructure\Public\Http\PublicFieldController;
 use App\Modules\Infrastructure\Public\Http\PublicPlanController;
 use App\Modules\Infrastructure\Public\Http\PublicI18nController;
 use App\Modules\Infrastructure\Public\Http\PublicMarketController;
@@ -14,6 +16,8 @@ use Illuminate\Support\Facades\Route;
 
 // Public (no auth) — rate limited
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/register/confirm-payment', \App\Modules\Infrastructure\Auth\Http\ConfirmRegistrationPaymentController::class)
+    ->middleware(['auth:sanctum', 'throttle:10,1']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15,1');
 Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
@@ -28,6 +32,8 @@ Route::get('/public/world', PublicWorldController::class)->middleware('throttle:
 Route::prefix('public')->middleware('throttle:30,1')->group(function () {
     Route::get('/plans', [PublicPlanController::class, 'index']);
     Route::get('/plans/preview', [PublicPlanController::class, 'preview']);
+    Route::get('/fields', [PublicFieldController::class, 'companyFields']);
+    Route::get('/addons', [PublicAddonController::class, 'index']);
 });
 
 // Public markets & i18n (ADR-104 — no auth)

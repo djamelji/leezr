@@ -296,6 +296,8 @@ class BillingRenewCommand extends Command implements Isolatable
      */
     private function extendPeriod(Subscription $subscription, $newStart, $newEnd): void
     {
+        $wasTrialing = $subscription->status === 'trialing';
+
         DB::transaction(function () use ($subscription, $newStart, $newEnd) {
             $sub = Subscription::where('id', $subscription->id)->lockForUpdate()->first();
 
@@ -309,6 +311,13 @@ class BillingRenewCommand extends Command implements Isolatable
                 'trial_ends_at' => null,
             ]);
         });
+
+        // ADR-286: Notify owner that trial has converted to active
+        if ($wasTrialing) {
+            $company = $subscription->company;
+            $owner = $company?->owner();
+            $owner?->notify(new \App\Notifications\Billing\TrialConverted($subscription));
+        }
     }
 
     /**

@@ -66,6 +66,15 @@ class InvoiceBatchPayController
             'use_wallet' => ['sometimes', 'boolean'],
         ]);
 
+        // P0: Ownership guard — every invoice must belong to this company
+        $foreignCount = Invoice::whereIn('id', $validated['invoice_ids'])
+            ->where('company_id', '!=', $company->id)
+            ->count();
+
+        if ($foreignCount > 0) {
+            return response()->json(['message' => 'Forbidden: invoice does not belong to this company.'], 403);
+        }
+
         try {
             $result = InvoiceBatchPayService::createPaymentIntent(
                 company: $company,

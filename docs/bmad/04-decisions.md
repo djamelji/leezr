@@ -9897,4 +9897,359 @@ Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + 
 
 ---
 
+### ADR-286 — Trial Period Production-Ready : admin config, anti-abus, notifications, cleanup
+- **Date** : 2026-03-08
+- **Contexte** : L'admin platform ne pouvait pas configurer `trial_days` sur les plans (champ existant en DB mais absent du controller/frontend). Le `CheckoutSessionActivator` appliquait un trial + créait une facture lors des paiements Stripe (double-billing potentiel à la conversion). Aucune protection anti-abus trial (cancel → re-register → trial infini). `PlatformBillingPolicy.free_trial_days` orphelin depuis ADR-265.
+- **Décisions** :
+  - `PlanCrudController` : ajout validation `trial_days` (integer, min:0, max:365) dans store/update
+  - Frontend `plans/[key].vue` : champ AppTextField number + i18n (plans.trialDays, trialDaysHint, trialDaysSuffix)
+  - **Politique Stripe checkout** : paiement Stripe = toujours `active` (pas de trial). Le trial est exclusivement pour les inscriptions internes via `RegisterCompanyUseCase` / `InternalPaymentAdapter`. Motif : Stripe checkout exige un paiement → le client a déjà payé → pas de trial.
+  - **Anti-abus trial** : `RegisterCompanyUseCase` vérifie si l'email est déjà associé à un User ayant une subscription avec `trial_ends_at`. Un owner ne peut bénéficier d'un trial qu'une seule fois, tous companies confondus.
+  - **DunningEngine** : guards explicites — `markOverdue()` ne transite plus les subscriptions `trialing` vers `past_due`, `applyFailureAction()` exclut les subscriptions `trialing`.
+  - **Notifications** : `TrialStarted` (envoyée à la création d'un sub trialing dans RegisterCompanyUseCase), `TrialConverted` (envoyée dans `BillingRenewCommand.extendPeriod()` quand trialing→active)
+  - **Cleanup** : suppression de `PlatformBillingPolicy.free_trial_days` (migration drop column, model, controller, test) — orphelin depuis ADR-265, remplacé par `Plan.trial_days`
+  - **Schedule** : `billing:check-trial-expiring` déjà schedulé daily (confirmé dans routes/console.php)
+- **Lifecycle complet du trial** :
+  1. Inscription interne → `RegisterCompanyUseCase` crée subscription `trialing` avec `trial_ends_at`
+  2. Notification `TrialStarted` envoyée au owner
+  3. J-3 : `billing:check-trial-expiring` envoie `TrialExpiring`
+  4. Expiration : `BillingRenewCommand` convertit trialing→active, crée la première facture, notification `TrialConverted`
+  5. Pas de facture ni dunning pendant le trial
+- **Conséquences** : Trial configurable par plan via l'admin. Pas de double-billing Stripe. Protection anti-abus par email/owner. Cycle complet de notifications (Started→Expiring→Converted). DunningEngine ne touche jamais les subscriptions en trial.
+- **Fichiers** :
+  - `app/Modules/Platform/Plans/Http/PlanCrudController.php` — +trial_days validation
+  - `resources/js/pages/platform/plans/[key].vue` — +champ trial_days + i18n
+  - `resources/js/plugins/i18n/locales/en.json` — +plans.trialDays/Hint/Suffix
+  - `resources/js/plugins/i18n/locales/fr.json` — +plans.trialDays/Hint/Suffix
+  - `app/Core/Billing/CheckoutSessionActivator.php` — toujours active (pas de trial Stripe)
+  - `app/Core/Billing/DunningEngine.php` — guards trialing exclus
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — anti-abus + notification TrialStarted
+  - `app/Console/Commands/BillingRenewCommand.php` — notification TrialConverted
+  - `app/Notifications/Billing/TrialStarted.php` — nouvelle notification
+  - `app/Notifications/Billing/TrialConverted.php` — nouvelle notification
+  - `app/Core/Billing/PlatformBillingPolicy.php` — suppression free_trial_days
+  - `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — suppression validation free_trial_days
+  - `database/migrations/2026_03_08_223344_drop_free_trial_days_from_platform_billing_policies.php` — drop column
+  - `tests/Feature/PlanTrialTest.php` — +7 tests (admin CRUD, Stripe active, anti-abus, notifications)
+  - `tests/Feature/PlatformBillingPolicyTest.php` — suppression free_trial_days des assertions
+
+---
+
+### ADR-287 — Trial Plan Change Policy + Badge + DevSeeder
+
+- **Date** : 2026-03-09
+- **Contexte** : ADR-286 a posé le trial admin config, anti-abus et notifications. Mais :
+  1. Les plan cards ne montrent pas les jours d'essai malgré les données disponibles
+  2. Pas de politique d'up/downgrade pendant trial — que fait-on quand une company en trial change de plan ?
+  3. Pas de company trial dans le DevSeeder — impossible de tester visuellement
+- **Décisions** :
+  1. **trial_plan_change_behavior** : nouveau champ dans `platform_billing_policies` — valeurs `continue_trial` (swap plan_key, garder trial_ends_at) ou `end_trial` (status=active, facturation immédiate)
+  2. **Proration skip** : pas de proration pendant trial avec `continue_trial` (pas de facturation)
+  3. **Timing override** : `end_of_period` est remplacé par `immediate` quand la subscription est en trialing (end_of_period = trial end, pas de sens d'attendre)
+  4. **Trial badge** : VChip info avec icône clock dans les plan cards (company/plan.vue et register.vue)
+  5. **DevSeeder** : nouvelle company "Trial Logistics" (trial@leezr.test) en plan pro, status trialing, trial_ends_at=now()+7
+  6. **Scénarios couverts** :
+     - S1: Trialing + upgrade + continue_trial → plan_key changé, status trialing, trial_ends_at inchangé
+     - S2: Trialing + upgrade + end_trial → status active, trial_ends_at null, nouvelle période
+     - S3: Trialing + downgrade + continue_trial → trial continue
+     - S4: end_of_period pendant trial → override à immediate
+     - S5: Active company change de plan → pas de trial (existant)
+- **Conséquences** :
+  - PlatformBillingPolicy expose le nouveau champ dans l'API settings
+  - PlanChangeExecutor consulte la policy pour décider du comportement trial
+  - SubscriptionMutationController override le timing pendant trial
+  - 5 nouveaux tests couvrent les scénarios
+- **Fichiers** :
+  - `database/migrations/2026_03_09_000001_add_trial_plan_change_behavior_to_platform_billing_policies.php` — nouveau champ
+  - `app/Core/Billing/PlatformBillingPolicy.php` — fillable
+  - `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — validation
+  - `app/Core/Billing/PlanChangeExecutor.php` — logique trial-aware (skip proration, continue/end trial)
+  - `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — timing override
+  - `database/seeders/DevSeeder.php` — company trial
+  - `resources/js/pages/company/plan.vue` — trial badge VChip
+  - `resources/js/pages/register.vue` — trial badge VChip
+  - `resources/js/pages/platform/billing/settings/_SettingsGeneral.vue` — trial_plan_change_behavior select
+  - `resources/js/plugins/i18n/locales/en.json` — i18n trial keys
+  - `resources/js/plugins/i18n/locales/fr.json` — i18n trial keys
+  - `tests/Feature/PlanTrialTest.php` — +5 tests trial plan change
+  - `tests/Feature/PlatformBillingPolicyTest.php` — ajout trial_plan_change_behavior dans structure
+
+---
+
+### ADR-288 — Consolidation Billing : 1 pôle, 0 doublons
+- **Date** : 2026-03-09
+- **Contexte** : Les réglages billing étaient éclatés sur 5 surfaces (billing hub, /platform/payments, /platform/billing/settings, /platform/settings/billing) avec des doublons massifs de champs et de logique. 3 navItems dans la sidebar (Billing, Payments, Billing Settings) au lieu d'un seul pôle.
+- **Décisions** :
+  1. **1 seul navItem** `billing` dans BillingModule (suppression de `payments` et `billing-settings`)
+  2. **Audit dans le hub** — onglet "Audit" réutilise `_BillingForensicsTab.vue` (pas de fichier dupliqué)
+  3. **Payment modules → page Modules** — section "Payment Modules" + "Payment Rules" dans l'onglet Platform de /platform/modules
+  4. **Réglages consolidés** — tout dans /platform/settings/billing : 4 rangées de VCards en grid 6/6 avec h-100 (même hauteur) : Invoice+Tax, Billing Timing+Trial, Wallet+Governance, Addon+Dunning
+  5. **Champs restaurés** — `interval_change_timing`, `proration_strategy`, `admin_approval_required` (jamais exposés en frontend) + `addon_billing_interval` (`plan_aligned` = défaut DB)
+  6. **Auto-save** — debounced (1.2s) au lieu de boutons Save/Reset isolés, indicateur de statut subtil (saving/saved)
+  7. **Fix TAX_MODE** — ajout de `'none'` dans le contrôleur (le défaut DB est `'none'` mais la validation le rejetait)
+  8. **Bouton Settings redirigé** — le hub billing redirige vers /platform/settings/billing au lieu de /platform/billing/settings (supprimé)
+  7. **Suppression /platform/payments** — 5 fichiers supprimés, contenu absorbé (modules → page Modules, rules → page Modules, policies → settings/billing, subscriptions → déjà dans hub)
+  8. **Suppression /platform/billing/settings** — 5 fichiers supprimés, contenu absorbé (general → settings/billing, providers → page Modules, policies → settings/billing, audit → hub via _BillingForensicsTab)
+- **Conséquences** :
+  - 1 item sidebar au lieu de 3
+  - 3 surfaces sans doublon au lieu de 5 avec doublons
+  - 0 code dupliqué (audit réutilise _BillingForensicsTab, pas de copie)
+  - 19/19 champs backend couverts en frontend (audit exhaustif : 0 orphelins)
+  - UX évoluée : 4 rangées de cards 6/6 avec icônes, auto-save, density compact, h-100
+  - Backend : fix TAX_MODE validation (ajout 'none'), aucune migration
+  - Tests ajustés : routeNames dans PageModuleAlignmentTest, override pour platform-billing-advanced-tab
+- **Fichiers** :
+  - `app/Modules/Platform/Billing/BillingModule.php` — 1 navItem, 3 routeNames
+  - `resources/js/pages/platform/billing/index.vue` — +tab audit (import _BillingForensicsTab), Settings → /platform/settings/billing
+  - `resources/js/pages/platform/modules/index.vue` — +sections Payment Modules + Rules
+  - `resources/js/pages/platform/modules/_PaymentModulesSection.vue` — CRÉÉ (fusion payments/_PaymentModulesTab + billing/settings/_SettingsProviders)
+  - `resources/js/pages/platform/modules/_PaymentRulesSection.vue` — CRÉÉ (ex payments/_PaymentRulesTab)
+  - `resources/js/pages/platform/settings/_SettingsBilling.vue` — REFONDU : 4 rangées 6/6, auto-save, +proration_strategy, +admin_approval_required, +interval_change_timing, +addon_billing_interval (plan_aligned)
+  - `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — TAX_MODE += 'none'
+  - `resources/js/plugins/i18n/locales/en.json` — clés audit, paymentModules, paymentRules, paymentPolicies, addon, interval
+  - `resources/js/plugins/i18n/locales/fr.json` — mêmes clés en français
+  - `tests/Feature/PageModuleAlignmentTest.php` — override platform-billing-advanced-tab, suppression platform-billing-settings-tab
+  - SUPPRIMÉS : payments/ (5 fichiers), billing/settings/ (5 fichiers), _BillingAuditTab.vue (doublon supprimé)
+
+---
+
+## ADR-289 : UX souscription pending & rejected (admin approval)
+
+- **Date** : 2026-03-08
+- **Contexte** : Quand `admin_approval_required = true`, le backend crée une souscription `status=pending` mais : company ne voit rien (currentSubscription() exclut pending), `hasPendingSubscription` dans plan.vue est undefined (bug), le rejet met `cancelled` (indistinguable d'une annulation volontaire), les clés i18n pendingApproval/pendingMessage existent mais ne sont jamais utilisées.
+- **Décisions** :
+  1. Nouveau statut `rejected` dans la state machine Subscription (pending → rejected autorisé)
+  2. `CompanyBillingReadService::pendingSubscription()` expose pending/rejected via les endpoints existants
+  3. Alertes VAlert dans BillingOverview et plan.vue pour informer la company
+  4. Bouton dismiss pour supprimer une souscription rejected et permettre une nouvelle demande
+  5. Blocage des boutons upgrade tant qu'une demande pending existe
+  6. `hasPendingSubscription` correctement défini dans plan.vue via le store billing
+- **Conséquences** :
+  - La state machine Subscription accepte le nouvel état `rejected` (terminal, aucune transition sortante)
+  - L'endpoint `DELETE /billing/pending-subscription` hard-delete la subscription rejected
+  - 3 nouveaux tests dans BillingAdminApprovalPolicyTest (reject, read service, dismiss)
+- **Fichiers** :
+  - `app/Core/Billing/Subscription.php` — STATES + TRANSITIONS: ajout `rejected`
+  - `app/Modules/Platform/Billing/BillingConfigCrudService.php` — `cancelled` → `rejected`
+  - `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — nouvelle méthode `pendingSubscription()`
+  - `app/Modules/Core/Billing/Http/CompanyBillingController.php` — expose `pending_subscription`, ajout `dismissPendingSubscription()`
+  - `routes/company.php` — `DELETE /billing/pending-subscription`
+  - `resources/js/modules/company/billing/billing.store.js` — `_pendingSubscription` state, getter, actions
+  - `resources/js/pages/company/billing/_BillingOverview.vue` — alertes pending/rejected
+  - `resources/js/pages/company/plan.vue` — fix `hasPendingSubscription`, blocage upgrade, alertes, dismiss
+  - `resources/js/plugins/i18n/locales/en.json` — clés rejected
+  - `resources/js/plugins/i18n/locales/fr.json` — clés rejected
+  - `tests/Feature/BillingAdminApprovalPolicyTest.php` — 3 nouveaux tests (#10, #11, #12)
+
+---
+
+## ADR-290 : Tunnel d'inscription commercial 5 étapes
+
+- **Date** : 2026-03-09
+- **Contexte** : L'inscription 3 étapes (Industrie → Plan → Compte) était trop légère. Après inscription, l'utilisateur devait immédiatement remplir les champs entreprise (SIRET, adresse facturation, etc.) dans les paramètres. Le preset logistique n'activait que 3 champs company-scope sur 16 disponibles. Besoin d'un tunnel commercial riche avec choix du jobdomaine, plan, champs entreprise dynamiques, et paiement.
+- **Décisions** :
+  1. Tunnel 5 étapes : Industrie+Pays → Plan → Entreprise → Compte → Récapitulatif+Paiement
+  2. Champs entreprise dynamiques résolus depuis le preset jobdomain via nouvelle API publique `GET /api/public/fields?jobdomain=X&market=Y`
+  3. Groupement par catégorie (general, billing, address, contact) via DynamicFormRenderer existant
+  4. `legal_status_key` comme AppSelect (colonne Company, pas un champ dynamique)
+  5. Validation per-step côté client + validation légère backend pour `dynamic_fields`
+  6. Preset logistique enrichi : +13 champs company-scope (total 16)
+  7. `FieldWriteService::upsert()` appelé dans `RegisterCompanyUseCase` après `JobdomainGate::assignToCompany()`
+- **Conséquences** :
+  - Nouvelle API publique `/api/public/fields` pour résoudre les champs avant inscription
+  - `RegisterCompanyData` DTO étendu avec `legalStatusKey` et `dynamicFields`
+  - `RegisterRequest` accepte `legal_status_key` et `dynamic_fields`
+  - `register.vue` réécrit de 3 à 5 étapes avec DynamicFormRenderer
+  - Backward compat : l'inscription sans champs dynamiques fonctionne toujours
+- **Fichiers** :
+  - `app/Modules/Infrastructure/Public/Http/PublicFieldController.php` — CRÉÉ, endpoint public fields
+  - `app/Core/Jobdomains/JobdomainRegistry.php` — preset logistique +13 champs company-scope
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyData.php` — +legalStatusKey, +dynamicFields
+  - `app/Core/Auth/Requests/RegisterRequest.php` — +legal_status_key, +dynamic_fields validation
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — save legal_status_key + FieldWriteService::upsert()
+  - `routes/api.php` — route /public/fields
+  - `resources/js/composables/usePublicFields.js` — CRÉÉ
+  - `resources/js/composables/usePublicMarkets.js` — CRÉÉ
+  - `resources/js/core/stores/auth.js` — +market_key, +legal_status_key, +dynamic_fields
+  - `resources/js/pages/register.vue` — réécriture 5 étapes
+  - `resources/js/plugins/i18n/locales/en.json` — clés register.*
+  - `resources/js/plugins/i18n/locales/fr.json` — clés register.*
+  - `tests/Feature/RegistrationTunnelTest.php` — CRÉÉ, 5 tests
+
+---
+
+## ADR-300 : Refactoring wizard inscription 6 étapes + addons + billing toggle
+
+- **Date** : 2026-03-09
+- **Contexte** : Le tunnel 5 étapes (ADR-290) présentait des problèmes UX :
+  market mal placé (dans Industrie au lieu d'Entreprise), step Entreprise trop
+  léger (manque champs billing, adresse, toggle facturation), doublon legal_form
+  / legal_status_key, pas d'étape addons, pas de total visible
+- **Décisions** :
+  1. **6 étapes** : Industrie → Plan → Addons → Entreprise → Compte → Récap
+  2. **Market dans Entreprise** (step 3) — le pays conditionne les champs légaux,
+     l'indicatif, les statuts, les taxes
+  3. **Suppression legal_form du preset logistique** — doublon de legal_status_key
+     (colonne Company liée au market). La FieldDefinition reste dans le catalog
+  4. **Toggle billing = company** : par défaut ON, copie server-side des champs
+     company_address → billing_address. Frontend : 2 DynamicFormRenderer séparés
+  5. **Étape Addons** : nouvelle route publique `GET /api/public/addons`.
+     Affiche modules avec addon_pricing, toggle on/off
+  6. **Addon billing = via events (Option B)** : RegisterCompanyUseCase appelle
+     ModuleActivationEngine::enable() pour chaque addon → AddonBillingListener
+     crée la facture. Le checkout Stripe ne couvre QUE le plan
+  7. **Trial visible** : badge "X jours d'essai gratuit" dans le récap quand
+     plan.trial_days > 0. Bouton "Créer mon compte" si trial, "Passer au
+     paiement" si paid sans trial
+- **Conséquences** :
+  - RegisterCompanyData gagne `addonKeys: string[]` et `billingSameAsCompany: bool`
+  - Nouvelle route publique /api/public/addons
+  - usePublicAddons.js nouveau composable
+  - register.vue passe de 5 à 6 VWindowItem
+  - legal_form retiré du preset logistique (15 → 14 fields company-scope)
+- **Fichiers** :
+  - `app/Modules/Infrastructure/Public/Http/PublicAddonController.php` — CRÉÉ
+  - `app/Core/Jobdomains/JobdomainRegistry.php` — retrait legal_form
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyData.php` — +addonKeys, +billingSameAsCompany
+  - `app/Core/Auth/Requests/RegisterRequest.php` — +addon_keys, +billing_same_as_company
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — +billing copy, +addon activation
+  - `routes/api.php` — route /public/addons
+  - `resources/js/composables/usePublicAddons.js` — CRÉÉ
+  - `resources/js/core/stores/auth.js` — +addon_keys, +billing_same_as_company
+  - `resources/js/pages/register.vue` — réécriture 6 étapes
+  - `resources/js/plugins/i18n/locales/en.json` — clés register.addons*, billing*, total*
+  - `resources/js/plugins/i18n/locales/fr.json` — clés register.addons*, billing*, total*
+  - `tests/Feature/RegistrationTunnelTest.php` — +4 tests (9 total)
+
+---
+
+## ADR-301 : Corrections post-ADR-300 — paiement Stripe, UX tunnel, i18n, fields drawer
+
+- **Date** : 2026-03-09
+- **Contexte** : Le tunnel 6 étapes (ADR-300) fonctionnait mais présentait des problèmes en runtime :
+  PaymentGatewayManager résolvait le driver 'null' au lieu de 'stripe' (credentials Stripe absentes),
+  admin_approval_required=true bloquait l'inscription, champs mal alignés dans le tunnel,
+  market affiché en CustomRadiosWithIcon trop encombrant, deadlock MySQL sur le cache,
+  tunnel en anglais par défaut, aucune détection automatique de la langue, onglets de langue
+  invisibles dans le drawer fields platform.
+- **Décisions** :
+  1. **PaymentGatewayManager fallback** — `getDefaultDriver()` interroge `PlatformPaymentModule::active()`
+     quand `PlatformSetting->billing['driver']` est null. Résout le bon provider (stripe) sans configuration manuelle
+  2. **Stripe test credentials en seeder** — hardcodés comme valeurs par défaut `env('STRIPE_*', 'pk_test_...')`
+     dans PaymentModuleSeeder. Ajout règle SEPA debit (priority 5), désactivation manual/internal
+  3. **admin_approval_required=false** — DevSeeder met `false` au lieu de `true`. L'approbation admin
+     est pour les upgrades post-inscription, pas pour l'inscription elle-même
+  4. **Champs alignés en grille** — chaque DynamicFormRenderer wrappé dans `<VRow>` + `cols="6"`.
+     Propriété `group` strippée des fields pré-filtrés pour supprimer les headers redondants
+  5. **Market en AppSelect** — remplace CustomRadiosWithIcon par un simple dropdown pays
+  6. **Cache file au lieu de database** — `CACHE_STORE=file` dans .env pour éviter les deadlocks
+     MySQL sur gap locks du throttle middleware
+  7. **Locale par défaut français** — `themeConfig.js` defaultLocale passé de 'en' à 'fr'
+  8. **i18n dynamique par market** — quand l'utilisateur change de market, le locale i18n et le cookie
+     langue s'adaptent automatiquement (FR→fr, GB→en)
+  9. **Détection navigateur** — `detectLocaleFromBrowser()` lit `navigator.language` pour pré-sélectionner
+     le market et la langue au chargement du tunnel
+  10. **Fields drawer : onglets langue** — remplacement VBtnToggle par VTabs + fix `l.code` → `l.key`
+      (le modèle Language utilise `key`, pas `code`). Ajout `native_name` dans le mapping
+  11. **i18n common.enabled/disabled** — ajout traductions manquantes pour les PaymentRules
+- **Conséquences** :
+  - Le tunnel d'inscription Pro redirige vers Stripe checkout au lieu d'afficher "En attente d'approbation"
+  - Les champs s'affichent correctement en grille 2 colonnes dans le step Entreprise
+  - Le tunnel s'affiche en français par défaut et s'adapte au market sélectionné
+  - Le drawer fields affiche les onglets de langue correctement
+  - Plus de deadlocks MySQL sur le cache
+- **Fichiers** :
+  - `app/Core/Billing/PaymentGatewayManager.php` — fallback PlatformPaymentModule dans getDefaultDriver()
+  - `database/seeders/PaymentModuleSeeder.php` — Stripe test keys hardcodés, +sepa_debit, -manual/internal
+  - `database/seeders/DevSeeder.php` — admin_approval_required=false
+  - `resources/js/pages/register.vue` — VRow wrapping, group stripping, AppSelect market, locale switching, browser detection
+  - `resources/js/pages/platform/fields.vue` — VTabs au lieu de VBtnToggle, fix l.code→l.key
+  - `resources/js/plugins/i18n/locales/en.json` — +common.enabled, +common.disabled
+  - `resources/js/plugins/i18n/locales/fr.json` — +common.enabled, +common.disabled
+  - `themeConfig.js` — defaultLocale: 'fr'
+  - `.env` — CACHE_STORE=file
+
+---
+
+## ADR-302 : Paiement embarqué Stripe + SEPA trials + réglages trial facturation
+
+- **Date** : 2026-03-09
+- **Contexte** : Le tunnel d'inscription redigeait vers Stripe Checkout (page externe) au lieu de garder l'utilisateur sur le site. De plus, les trials ne collectaient pas de moyen de paiement et le `annualToggle` était par défaut `true` (bug critique : toutes les inscriptions en yearly). Enfin aucun réglage platform ne permettait de configurer le comportement de facturation des trials.
+- **Décisions** :
+  1. **SetupIntent au lieu de Checkout Session** — `StripePaymentAdapter::createCheckout()` crée un `SetupIntent` avec `client_secret` renvoyé au frontend (mode `embedded`)
+  2. **Stripe Elements embarqué** — Card Element monté dans `register.vue` étape récap, adapté au thème dark/light
+  3. **SEPA pour les trials** — Quand un trial est en cours, `payment_method_types: ['card', 'sepa_debit']`. Hors trial : `['card']` uniquement
+  4. **ConfirmRegistrationPaymentController** — Nouveau endpoint `POST /register/confirm-payment` qui sauve le PM comme `CompanyPaymentProfile` et active la subscription si `pending_payment`
+  5. **annualToggle fix** — `ref(true)` → `ref(false)` pour que le tunnel démarre en mensuel
+  6. **Addon invoice period** — `AddonBillingListener` passe maintenant `period_start` et `period_end` à `InvoiceIssuer::createDraft()`
+  7. **Réglages trial platform** — 2 nouveaux champs dans `PlatformBillingPolicy` :
+     - `trial_requires_payment_method` (boolean, default `true`) : collecte PM à l'inscription
+     - `trial_charge_timing` (enum `immediate|end_of_trial`, default `end_of_trial`) : quand facturer
+  8. **UI Platform Settings** — Section Trial enrichie dans `_SettingsBilling.vue` avec VSwitch + AppSelect
+- **Conséquences** :
+  - L'utilisateur ne quitte jamais le site pendant l'inscription
+  - L'admin platform peut désactiver la collecte de PM pour les trials (inscription sans CB)
+  - L'admin peut choisir de facturer immédiatement ou à la fin du trial
+  - SEPA disponible uniquement pour les trials (confirmation async acceptable car pas de paiement immédiat)
+  - Addon activé pendant un trial : facture addon créée et payée immédiatement à la fin du tunnel (pas différée). Seul le plan est différé à la fin du trial
+  - `ConfirmRegistrationPaymentController` charge automatiquement TOUTES les factures ouvertes via `chargeInvoiceWithPaymentMethod` après sauvegarde du PM (addon immédiat + plan si `trial_charge_timing=immediate`)
+  - `trial_charge_timing=immediate` : `RegisterCompanyUseCase` crée une facture plan dès l'inscription (en plus de la subscription trialing). Le plan est facturé immédiatement mais le trial continue
+  - `trial_charge_timing=end_of_trial` : pas de facture plan à l'inscription, `billing:renew` la crée à la fin du trial
+  - `billingPolicy.trial_charge_timing` exposé dans `GET /api/public/plans` pour que le frontend affiche le bon montant avant le submit
+  - Récap tunnel : décomposition plan/addon avec montant immédiat vs différé selon le timing configuré
+  - Changement de market dans le tunnel : pas de blink (await fetch + prune des valeurs obsolètes)
+  - Sélecteur Card/SEPA : VRadioGroup inline (pas VBtnToggle qui causait collision)
+- **Fichiers** :
+  - `app/Core/Billing/Adapters/StripePaymentAdapter.php` — SetupIntent + SEPA
+  - `app/Core/Billing/CheckoutResult.php` — +clientSecret, +publishableKey
+  - `app/Core/Billing/PlatformBillingPolicy.php` — +trial_requires_payment_method, +trial_charge_timing
+  - `app/Core/Billing/Listeners/AddonBillingListener.php` — defer addon invoice during trial
+  - `app/Modules/Infrastructure/Auth/Http/ConfirmRegistrationPaymentController.php` — nouveau
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — conditionnel checkout trial
+  - `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — +validation trial fields
+  - `resources/js/pages/register.vue` — Stripe Elements + SEPA UI + annualToggle fix
+  - `resources/js/pages/platform/settings/_SettingsBilling.vue` — +trial settings
+  - `resources/js/core/stores/auth.js` — +confirmRegistrationPayment
+  - `database/migrations/2026_03_09_100001_add_trial_charge_timing_to_platform_billing_policies.php`
+  - `routes/api.php` — +POST /register/confirm-payment
+
+---
+
+## ADR-303 : P0 Financial Security Hardening
+
+- **Date** : 2026-03-09
+- **Contexte** : Audit complet du système billing (score 6.6/10). 6 vulnérabilités financières P0 identifiées : charges Stripe sans idempotency key (double-charge possible), remboursements sans idempotency key (double-refund possible), paiement batch sans validation d'ownership des factures (IDOR), absence de validation montant max sur refund/credit note admin, webhook `charge.dispute.created` non géré, et incohérence de casing devise entre appels Stripe et stockage interne.
+- **Décisions** :
+  1. **Idempotency key sur charge** — `callStripeCreatePaymentIntentWithMethod` accepte `$opts` (comme `callStripeCreatePaymentIntent`). Clé : `billing:invoice:{id}:charge:{paymentMethodId}` — stable, déterministe, unique par tentative
+  2. **Idempotency key sur refund** — `callStripeRefund` accepte `$opts`. Clé : `billing:refund:{providerPaymentId}:{amount}` — empêche le double-remboursement même en cas de retry réseau
+  3. **Ownership guard batch pay** — `InvoiceBatchPayController::createPaymentIntent` vérifie que **aucune** des `invoice_ids` n'appartient à une autre company. Retourne 403 explicite au lieu de silencieusement ignorer (défense en profondeur, le service filtrait déjà)
+  4. **Max amount validation admin** — Le contrôleur `PlatformAdvancedMutationController` vérifie `amount <= invoice.amount` **avant** d'appeler le service, pour refund et credit note. Retourne 422 (le service avait un guard RuntimeException → 409 en doublon)
+  5. **Webhook dispute** — `StripeEventProcessor` gère `charge.dispute.created` : log billing warning, audit log `WEBHOOK_DISPUTE_CREATED` avec severity critical, résolution company via Payment. Ne modifie PAS l'état subscription (conformément aux bonnes pratiques Stripe)
+  6. **Currency normalization** — Les sites d'appel passent `strtoupper()` (ISO 4217). Les méthodes protégées `callStripe*` appliquent `strtolower()` au dernier moment (Stripe exige lowercase). Élimine l'incohérence strtolower/strtoupper entre adapter et processor
+- **Conséquences** :
+  - Aucun changement de comportement métier — uniquement des guards de sécurité financière
+  - Les tests existants de signatures Stripe adaptés (`$opts = []` ajouté aux overrides dans 7 fichiers test)
+  - Le test `InvoiceBatchPayTest::pay_blocked_for_other_company` passe de 422 → 403 (code HTTP correct)
+  - 9 nouveaux tests dédiés dans `BillingP0SecurityTest`
+  - Suite complète : 1659 passed, 0 failed
+- **Fichiers** :
+  - `app/Core/Billing/Adapters/StripePaymentAdapter.php` — idempotency keys + currency normalization
+  - `app/Core/Billing/Stripe/StripeEventProcessor.php` — +handleDisputeCreated
+  - `app/Core/Billing/InvoiceBatchPayService.php` — currency strtoupper
+  - `app/Core/Audit/AuditAction.php` — +WEBHOOK_DISPUTE_CREATED
+  - `app/Modules/Core/Billing/Http/InvoiceBatchPayController.php` — ownership guard
+  - `app/Modules/Platform/Billing/Http/PlatformAdvancedMutationController.php` — max amount guards
+  - `tests/Feature/BillingP0SecurityTest.php` — 9 nouveaux tests
+  - `tests/Feature/AdminAdvancedMutationTest.php` — 409→422 ajusté
+  - `tests/Feature/InvoiceBatchPayTest.php` — 422→403 ajusté
+  - `tests/Feature/BillingReconciliationTest.php` — signature $opts
+  - `tests/Feature/BillingPeriodGovernanceTest.php` — signature $opts
+  - `tests/Feature/BillingAutoRepairTest.php` — signature $opts
+  - `tests/Feature/StripeProviderCollectionTest.php` — signature $opts
+  - `tests/Feature/BillingLedgerTest.php` — signature $opts
+  - `tests/Feature/StripeWebhookSecurityTest.php` — signature $opts
+  - `tests/Feature/BillingLotETest.php` — signature $opts
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

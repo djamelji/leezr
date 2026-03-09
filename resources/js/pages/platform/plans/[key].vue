@@ -33,6 +33,7 @@ const form = ref({
   price_yearly: 0,
   is_popular: false,
   is_active: true,
+  trial_days: 0,
 })
 
 // Features
@@ -71,6 +72,7 @@ const hydrateForm = () => {
     price_yearly: plan.price_yearly_dollars ?? plan.price_yearly / 100,
     is_popular: plan.is_popular,
     is_active: plan.is_active,
+    trial_days: plan.trial_days ?? 0,
   }
   featureLabels.value = [...(plan.feature_labels || [])]
   memberLimit.value = plan.limits?.members ?? null
@@ -318,6 +320,23 @@ const fmtDate = dateStr => {
                   type="number"
                   step="0.01"
                   min="0"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="3"
+              >
+                <AppTextField
+                  v-model.number="form.trial_days"
+                  :label="t('plans.trialDays')"
+                  :hint="t('plans.trialDaysHint')"
+                  persistent-hint
+                  type="number"
+                  min="0"
+                  max="365"
+                  :suffix="t('plans.trialDaysSuffix')"
                 />
               </VCol>
 

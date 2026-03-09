@@ -299,6 +299,9 @@ declare global {
   const usePreferredReducedMotion: typeof import('@vueuse/core')['usePreferredReducedMotion']
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
   const useProjection: typeof import('@vueuse/math')['useProjection']
+  const usePublicAddons: typeof import('./resources/js/composables/usePublicAddons.js')['usePublicAddons']
+  const usePublicFields: typeof import('./resources/js/composables/usePublicFields.js')['usePublicFields']
+  const usePublicMarkets: typeof import('./resources/js/composables/usePublicMarkets.js')['usePublicMarkets']
   const usePublicPlans: typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']
   const usePublicTheme: typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
@@ -681,6 +684,9 @@ declare module 'vue' {
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProjection: UnwrapRef<typeof import('@vueuse/math')['useProjection']>
+    readonly usePublicAddons: UnwrapRef<typeof import('./resources/js/composables/usePublicAddons.js')['usePublicAddons']>
+    readonly usePublicFields: UnwrapRef<typeof import('./resources/js/composables/usePublicFields.js')['usePublicFields']>
+    readonly usePublicMarkets: UnwrapRef<typeof import('./resources/js/composables/usePublicMarkets.js')['usePublicMarkets']>
     readonly usePublicPlans: UnwrapRef<typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']>
     readonly usePublicTheme: UnwrapRef<typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>

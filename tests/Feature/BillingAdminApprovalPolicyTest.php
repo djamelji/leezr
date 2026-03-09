@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Core\Billing\Adapters\InternalPaymentAdapter;
 use App\Core\Billing\NullPaymentGateway;
 use App\Core\Billing\PlatformBillingPolicy;
+use App\Core\Billing\ReadModels\CompanyBillingReadService;
 use App\Core\Billing\Subscription;
 use App\Core\Markets\MarketRegistry;
 use App\Core\Models\Company;
@@ -12,6 +13,7 @@ use App\Core\Models\User;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Plans\Plan;
 use App\Core\Plans\PlanRegistry;
+use App\Modules\Platform\Billing\BillingConfigCrudService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -242,7 +244,74 @@ class BillingAdminApprovalPolicyTest extends TestCase
         );
     }
 
-    // ── 10: Policy is read from PlatformBillingPolicy, not legacy JSON ──
+    // ── 10: Reject sets status to 'rejected' not 'cancelled' (ADR-289) ──
+
+    public function test_reject_subscription_sets_rejected_status(): void
+    {
+        $policy = PlatformBillingPolicy::instance();
+        $policy->update(['admin_approval_required' => true]);
+
+        Plan::where('key', 'pro')->update(['trial_days' => 0]);
+
+        $gateway = new NullPaymentGateway();
+        $result = $gateway->createCheckout($this->company, 'pro', 'monthly');
+        $this->assertNotNull($result->subscriptionId);
+
+        $sub = Subscription::find($result->subscriptionId);
+        $this->assertEquals('pending', $sub->status);
+
+        $rejected = BillingConfigCrudService::rejectSubscription($sub->id);
+        $this->assertEquals('rejected', $rejected->status);
+    }
+
+    // ── 11: pendingSubscription() returns pending/rejected (ADR-289) ──
+
+    public function test_pending_subscription_read_service_returns_pending(): void
+    {
+        $policy = PlatformBillingPolicy::instance();
+        $policy->update(['admin_approval_required' => true]);
+
+        Plan::where('key', 'pro')->update(['trial_days' => 0]);
+
+        $gateway = new NullPaymentGateway();
+        $result = $gateway->createCheckout($this->company, 'pro', 'monthly');
+
+        $pending = CompanyBillingReadService::pendingSubscription($this->company);
+        $this->assertNotNull($pending);
+        $this->assertEquals('pending', $pending['status']);
+        $this->assertEquals('pro', $pending['plan_key']);
+
+        // After rejection → still visible as rejected
+        BillingConfigCrudService::rejectSubscription($result->subscriptionId);
+        $rejected = CompanyBillingReadService::pendingSubscription($this->company);
+        $this->assertNotNull($rejected);
+        $this->assertEquals('rejected', $rejected['status']);
+    }
+
+    // ── 12: Dismiss rejected subscription (ADR-289) ──
+
+    public function test_dismiss_rejected_subscription(): void
+    {
+        $policy = PlatformBillingPolicy::instance();
+        $policy->update(['admin_approval_required' => true]);
+
+        Plan::where('key', 'pro')->update(['trial_days' => 0]);
+
+        $gateway = new NullPaymentGateway();
+        $result = $gateway->createCheckout($this->company, 'pro', 'monthly');
+        BillingConfigCrudService::rejectSubscription($result->subscriptionId);
+
+        // Dismissed → hard delete
+        $deleted = Subscription::where('company_id', $this->company->id)
+            ->where('status', 'rejected')
+            ->delete();
+        $this->assertEquals(1, $deleted);
+
+        // No more pending subscription visible
+        $this->assertNull(CompanyBillingReadService::pendingSubscription($this->company));
+    }
+
+    // ── 13: Policy is read from PlatformBillingPolicy, not legacy JSON (was #10) ──
 
     public function test_policy_read_from_platform_billing_policy_not_json(): void
     {

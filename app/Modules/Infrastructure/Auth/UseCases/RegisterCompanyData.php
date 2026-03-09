@@ -14,6 +14,10 @@ final class RegisterCompanyData
         public readonly ?string $planKey = null,
         public readonly ?string $marketKey = null,
         public readonly ?string $billingInterval = 'monthly',
+        public readonly ?string $legalStatusKey = null,
+        public readonly array $dynamicFields = [],
+        public readonly array $addonKeys = [],
+        public readonly bool $billingSameAsCompany = true,
     ) {}
 
     public static function fromValidated(array $data): self
@@ -28,6 +32,10 @@ final class RegisterCompanyData
             planKey: $data['plan_key'] ?? null,
             marketKey: $data['market_key'] ?? null,
             billingInterval: $data['billing_interval'] ?? 'monthly',
+            legalStatusKey: $data['legal_status_key'] ?? null,
+            dynamicFields: $data['dynamic_fields'] ?? [],
+            addonKeys: $data['addon_keys'] ?? [],
+            billingSameAsCompany: $data['billing_same_as_company'] ?? true,
         );
     }
 }

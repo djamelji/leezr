@@ -79,7 +79,9 @@ class AddonBillingListener
 
         // Phase 2: Create addon invoice (outside transaction — InvoiceIssuer has its own)
         $moduleName = $pm->display_name_override ?? $pm->name;
-        $invoice = InvoiceIssuer::createDraft($company, $subscription?->id);
+        $periodStart = now()->toDateString();
+        $periodEnd = ($interval === 'yearly' ? now()->addYear() : now()->addMonth())->toDateString();
+        $invoice = InvoiceIssuer::createDraft($company, $subscription?->id, $periodStart, $periodEnd);
 
         InvoiceIssuer::addLine(
             $invoice,

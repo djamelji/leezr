@@ -230,6 +230,30 @@ class CompanyBillingReadService
     }
 
     /**
+     * Pending or rejected subscription awaiting admin decision (ADR-289).
+     */
+    public static function pendingSubscription(Company $company): ?array
+    {
+        $subscription = Subscription::where('company_id', $company->id)
+            ->whereIn('status', ['pending', 'rejected'])
+            ->latest()
+            ->first();
+
+        if (!$subscription) {
+            return null;
+        }
+
+        return [
+            'id' => $subscription->id,
+            'plan_key' => $subscription->plan_key,
+            'interval' => $subscription->interval,
+            'status' => $subscription->status,
+            'created_at' => $subscription->created_at->toISOString(),
+            'updated_at' => $subscription->updated_at->toISOString(),
+        ];
+    }
+
+    /**
      * Current active/trialing/past_due subscription for the company.
      */
     public static function currentSubscription(Company $company): ?array

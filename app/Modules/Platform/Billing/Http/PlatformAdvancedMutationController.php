@@ -29,6 +29,11 @@ class PlatformAdvancedMutationController
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
 
+        // P0: Guard — refund amount cannot exceed invoice total
+        if ($request->integer('amount') > $invoice->amount) {
+            return response()->json(['message' => 'Refund amount exceeds invoice total.'], 422);
+        }
+
         try {
             $result = $this->service->refund(
                 $invoice,
@@ -110,6 +115,11 @@ class PlatformAdvancedMutationController
             'apply_to_wallet' => ['required', 'boolean'],
             'idempotency_key' => ['required', 'string', 'max:255'],
         ]);
+
+        // P0: Guard — credit note amount cannot exceed invoice total
+        if ($request->integer('amount') > $invoice->amount) {
+            return response()->json(['message' => 'Credit note amount exceeds invoice total.'], 422);
+        }
 
         try {
             $result = $this->service->issueCreditNote(

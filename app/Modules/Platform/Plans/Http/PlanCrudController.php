@@ -33,6 +33,7 @@ class PlanCrudController
             'feature_labels' => ['nullable', 'array'],
             'feature_labels.*' => ['string'],
             'limits' => ['nullable', 'array'],
+            'trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
 
         $plan = $useCase->execute(null, $validated);
@@ -59,6 +60,7 @@ class PlanCrudController
             'feature_labels' => ['nullable', 'array'],
             'feature_labels.*' => ['string'],
             'limits' => ['nullable', 'array'],
+            'trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
 
         $plan = $useCase->execute($id, $validated);

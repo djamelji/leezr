@@ -285,7 +285,7 @@ class AdminAdvancedMutationTest extends TestCase
                 'reason' => 'Too much',
                 'idempotency_key' => 'refund-exceed',
             ])
-            ->assertStatus(409)
+            ->assertStatus(422)
             ->assertJsonPath('message', 'Refund amount exceeds invoice total.');
     }
 

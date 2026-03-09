@@ -30,7 +30,7 @@ class PaymentModuleSeeder extends Seeder
             ],
         );
 
-        // Default rule: manual method via internal provider
+        // Default rule: manual method via internal provider (disabled — Stripe preferred)
         PlatformPaymentMethodRule::updateOrCreate(
             [
                 'method_key' => 'manual',
@@ -41,12 +41,13 @@ class PaymentModuleSeeder extends Seeder
             ],
             [
                 'priority' => 0,
-                'is_active' => true,
+                'is_active' => false,
             ],
         );
 
         // Stripe payment module (test mode for dev)
         if (app()->environment('local', 'testing')) {
+            // ADR-301: Stripe test credentials hardcoded for dev/test idempotency
             $stripeModule = PlatformPaymentModule::updateOrCreate(
                 ['provider_key' => 'stripe'],
                 [
@@ -76,6 +77,21 @@ class PaymentModuleSeeder extends Seeder
                 ],
                 [
                     'priority' => 10,
+                    'is_active' => true,
+                ],
+            );
+
+            // Default rule: SEPA Direct Debit via Stripe
+            PlatformPaymentMethodRule::updateOrCreate(
+                [
+                    'method_key' => 'sepa_debit',
+                    'provider_key' => 'stripe',
+                    'market_key' => null,
+                    'plan_key' => null,
+                    'interval' => null,
+                ],
+                [
+                    'priority' => 5,
                     'is_active' => true,
                 ],
             );

@@ -4,6 +4,7 @@ namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Billing\Invoice;
 use App\Core\Billing\ReadModels\CompanyBillingReadService;
+use App\Core\Billing\Subscription;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,9 +16,10 @@ class CompanyBillingController
     {
         $company = $request->attributes->get('company');
 
-        return response()->json(
+        return response()->json(array_merge(
             CompanyBillingReadService::overview($company),
-        );
+            ['pending_subscription' => CompanyBillingReadService::pendingSubscription($company)],
+        ));
     }
 
     public function invoices(Request $request): JsonResponse
@@ -51,7 +53,26 @@ class CompanyBillingController
 
         return response()->json([
             'subscription' => CompanyBillingReadService::currentSubscription($company),
+            'pending_subscription' => CompanyBillingReadService::pendingSubscription($company),
         ]);
+    }
+
+    /**
+     * Dismiss a rejected subscription so the company can request again (ADR-289).
+     */
+    public function dismissPendingSubscription(Request $request): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $deleted = Subscription::where('company_id', $company->id)
+            ->where('status', 'rejected')
+            ->delete();
+
+        if (!$deleted) {
+            return response()->json(['message' => 'No rejected subscription to dismiss.'], 404);
+        }
+
+        return response()->json(['message' => 'Rejected subscription dismissed.']);
     }
 
     public function nextInvoicePreview(Request $request): JsonResponse

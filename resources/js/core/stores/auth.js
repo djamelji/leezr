@@ -60,12 +60,12 @@ export const useAuthStore = defineStore('auth', {
       return Array.isArray(this.permissions) && this.permissions.includes(key)
     },
 
-    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval }) {
+    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company }) {
       await refreshCsrf()
 
       const data = await $api('/register', {
         method: 'POST',
-        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval },
+        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company },
       })
 
       this._persistUser(data.user)
@@ -84,6 +84,13 @@ export const useAuthStore = defineStore('auth', {
       this._sessionConfig = data.ui_session ?? null
 
       return data
+    },
+
+    async confirmRegistrationPayment(paymentMethodId, subscriptionId) {
+      return await $api('/register/confirm-payment', {
+        method: 'POST',
+        body: { payment_method_id: paymentMethodId, subscription_id: subscriptionId },
+      })
     },
 
     async login({ email, password }) {

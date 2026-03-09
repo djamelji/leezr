@@ -8,6 +8,7 @@ use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValue;
 use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Core\Models\Company;
 use App\Core\Models\Shipment;
@@ -99,6 +100,51 @@ class DevSeeder extends Seeder
                 'current_period_end' => now()->endOfMonth(),
             ],
         );
+
+        // ─── Trial company — ADR-287 ────────────────────────────
+        $trialOwner = User::updateOrCreate(
+            ['email' => 'trial@leezr.test'],
+            [
+                'first_name' => 'Claire',
+                'last_name' => 'Essai',
+                'password' => 'password',
+                'password_set_at' => now(),
+            ],
+        );
+
+        $trialCompany = Company::updateOrCreate(
+            ['slug' => 'trial-logistics'],
+            ['name' => 'Trial Logistics', 'plan_key' => 'pro', 'market_key' => 'FR', 'jobdomain_key' => 'logistique', 'legal_status_key' => 'sas'],
+        );
+
+        $trialCompany->memberships()->updateOrCreate(
+            ['user_id' => $trialOwner->id],
+            ['role' => 'owner'],
+        );
+
+        Subscription::updateOrCreate(
+            ['company_id' => $trialCompany->id, 'plan_key' => 'pro'],
+            [
+                'interval' => 'monthly',
+                'status' => 'trialing',
+                'provider' => 'internal',
+                'is_current' => 1,
+                'current_period_start' => now(),
+                'current_period_end' => now()->addDays(7),
+                'trial_ends_at' => now()->addDays(7),
+            ],
+        );
+
+        JobdomainGate::assignToCompany($trialCompany, 'logistique');
+
+        // Activate modules for trial company
+        foreach (array_keys(ModuleRegistry::forScope('company')) as $key) {
+            $entitlement = EntitlementResolver::check($trialCompany, $key);
+            CompanyModule::updateOrCreate(
+                ['company_id' => $trialCompany->id, 'module_key' => $key],
+                ['is_enabled_for_company' => $entitlement['entitled']],
+            );
+        }
 
         // ─── Module activation for demo company ──────────────────
         // Only activate entitled modules (respects jobdomain + plan gates)
@@ -212,6 +258,52 @@ class DevSeeder extends Seeder
             FieldValue::updateOrCreate(
                 ['field_definition_id' => $phone->id, 'model_type' => 'user', 'model_id' => $owner->id],
                 ['value' => '+33 6 12 34 56 78'],
+            );
+        }
+
+        // ─── Pending approval company — ADR-289 ──────────────────
+        // ADR-301: admin_approval is for upgrades only, not registration
+        // The pending company's subscription is seeded directly with status='pending'
+        PlatformBillingPolicy::instance()->update(['admin_approval_required' => false]);
+
+        $pendingOwner = User::updateOrCreate(
+            ['email' => 'pending@leezr.test'],
+            [
+                'first_name' => 'Marie',
+                'last_name' => 'Duval',
+                'password' => 'password',
+                'password_set_at' => now(),
+            ],
+        );
+
+        $pendingCompany = Company::updateOrCreate(
+            ['slug' => 'pending-approval-co'],
+            ['name' => 'Pending Approval Co', 'plan_key' => 'starter', 'market_key' => 'FR', 'jobdomain_key' => 'logistique', 'legal_status_key' => 'sarl'],
+        );
+
+        $pendingCompany->memberships()->updateOrCreate(
+            ['user_id' => $pendingOwner->id],
+            ['role' => 'owner'],
+        );
+
+        Subscription::updateOrCreate(
+            ['company_id' => $pendingCompany->id, 'plan_key' => 'business'],
+            [
+                'interval' => 'monthly',
+                'status' => 'pending',
+                'provider' => 'internal',
+                'current_period_start' => null,
+                'current_period_end' => null,
+            ],
+        );
+
+        JobdomainGate::assignToCompany($pendingCompany, 'logistique');
+
+        foreach (array_keys(ModuleRegistry::forScope('company')) as $key) {
+            $entitlement = EntitlementResolver::check($pendingCompany, $key);
+            CompanyModule::updateOrCreate(
+                ['company_id' => $pendingCompany->id, 'module_key' => $key],
+                ['is_enabled_for_company' => $entitlement['entitled']],
             );
         }
 

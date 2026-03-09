@@ -28,7 +28,7 @@ const defLoading = ref(false)
 
 // ─── Languages for translations ──────────────────────
 const activeLanguages = computed(() =>
-  marketsStore.languages.filter(l => l.is_active).map(l => ({ code: l.code, name: l.name })),
+  marketsStore.languages.filter(l => l.is_active).map(l => ({ code: l.key, name: l.name, native_name: l.native_name })),
 )
 
 const drawerLocale = ref('en')
@@ -530,22 +530,19 @@ const scopeColor = scope => {
               v-if="activeLanguages.length > 1"
               cols="12"
             >
-              <VBtnToggle
+              <VTabs
                 v-model="drawerLocale"
-                mandatory
                 density="compact"
-                color="primary"
                 class="mb-2"
               >
-                <VBtn
+                <VTab
                   v-for="lang in activeLanguages"
                   :key="lang.code"
                   :value="lang.code"
-                  size="small"
                 >
-                  {{ lang.code.toUpperCase() }}
-                </VBtn>
-              </VBtnToggle>
+                  {{ lang.native_name || lang.code.toUpperCase() }}
+                </VTab>
+              </VTabs>
             </VCol>
 
             <VCol

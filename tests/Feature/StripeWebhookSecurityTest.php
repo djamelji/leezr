@@ -151,7 +151,7 @@ class StripeWebhookSecurityTest extends TestCase
     {
         $adapter = new class extends StripePaymentAdapter
         {
-            protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+            protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
             {
                 return \Stripe\Refund::constructFrom([
                     'id' => 're_test_123',
@@ -173,7 +173,7 @@ class StripeWebhookSecurityTest extends TestCase
     {
         $adapter = new class extends StripePaymentAdapter
         {
-            protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+            protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
             {
                 throw \Stripe\Exception\InvalidRequestException::factory(
                     'No such payment_intent',

@@ -74,7 +74,7 @@ class InvoiceBatchPayService
         $adapter = app(StripePaymentAdapter::class);
         $intent = $adapter->createOnSessionPaymentIntent(
             amount: $remaining,
-            currency: strtolower($currency),
+            currency: strtoupper($currency),
             company: $company,
             metadata: [
                 'company_id' => (string) $company->id,

@@ -7,8 +7,7 @@ namespace App\Core\Billing;
  *
  * Modes:
  * - 'internal': No external redirect; show message to user (null provider)
- * - 'redirect': Redirect user to external payment page (Stripe, etc.)
- * - 'embedded': Render embedded payment form (future)
+ * - 'embedded': Render embedded Stripe Elements form on-site (ADR-302)
  */
 class CheckoutResult
 {
@@ -17,6 +16,9 @@ class CheckoutResult
         public readonly ?string $message = null,
         public readonly ?string $redirectUrl = null,
         public readonly ?int $subscriptionId = null,
+        public readonly ?string $clientSecret = null,
+        public readonly ?string $publishableKey = null,
+        public readonly ?string $trialChargeTiming = null,
     ) {}
 
     public function toArray(): array
@@ -26,6 +28,9 @@ class CheckoutResult
             'message' => $this->message,
             'redirect_url' => $this->redirectUrl,
             'subscription_id' => $this->subscriptionId,
+            'client_secret' => $this->clientSecret,
+            'publishable_key' => $this->publishableKey,
+            'trial_charge_timing' => $this->trialChargeTiming,
         ], fn ($v) => $v !== null);
     }
 }

@@ -219,16 +219,16 @@ class BillingLotATest extends TestCase
         $this->assertNull($sub->is_current);
     }
 
-    // ── A4: createCheckout (mocked Stripe) ──────────────
+    // ── A4: createCheckout — embedded SetupIntent (ADR-302) ──
 
-    public function test_create_checkout_returns_redirect_mode(): void
+    public function test_create_checkout_returns_embedded_mode(): void
     {
         $adapter = $this->createMockStripeAdapter();
 
         $result = $adapter->createCheckout($this->company, 'pro');
 
-        $this->assertEquals('redirect', $result->mode);
-        $this->assertNotNull($result->redirectUrl);
+        $this->assertEquals('embedded', $result->mode);
+        $this->assertNotNull($result->clientSecret);
         $this->assertNotNull($result->subscriptionId);
     }
 
@@ -244,7 +244,7 @@ class BillingLotATest extends TestCase
         $this->assertNull($sub->is_current);
     }
 
-    public function test_create_checkout_stripe_session_has_correct_metadata(): void
+    public function test_create_checkout_setup_intent_has_correct_metadata(): void
     {
         $capture = new \ArrayObject;
 
@@ -257,14 +257,15 @@ class BillingLotATest extends TestCase
                 $this->capture = $capture;
             }
 
-            protected function callStripeCreateCheckoutSession(array $params, array $opts = [])
+            protected function callStripeCreateSetupIntent(array $params, array $opts = [])
             {
                 $this->capture['params'] = $params;
 
-                $session = new \stdClass;
-                $session->url = 'https://checkout.stripe.com/test';
+                $si = new \stdClass;
+                $si->client_secret = 'seti_mock_secret';
+                $si->id = 'seti_mock_id';
 
-                return $session;
+                return $si;
             }
 
             protected function callStripeCreateCustomer(Company $company)
@@ -512,12 +513,13 @@ class BillingLotATest extends TestCase
     {
         return new class extends StripePaymentAdapter
         {
-            protected function callStripeCreateCheckoutSession(array $params, array $opts = [])
+            protected function callStripeCreateSetupIntent(array $params, array $opts = [])
             {
-                $session = new \stdClass;
-                $session->url = 'https://checkout.stripe.com/test';
+                $si = new \stdClass;
+                $si->client_secret = 'seti_mock_secret';
+                $si->id = 'seti_mock_id';
 
-                return $session;
+                return $si;
             }
 
             protected function callStripeCreateCustomer(Company $company)
@@ -526,6 +528,11 @@ class BillingLotATest extends TestCase
                 $customer->id = 'cus_mock_' . $company->id;
 
                 return $customer;
+            }
+
+            protected function resolvePublishableKey(): ?string
+            {
+                return 'pk_test_mock';
             }
 
             private function setApiKey(): void {}

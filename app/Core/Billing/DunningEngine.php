@@ -144,10 +144,10 @@ class DunningEngine
                 'next_retry_at' => now()->addDays($nextRetryDays),
             ]);
 
-            // Transition subscription to past_due
+            // Transition subscription to past_due (skip trialing — no dunning during trial)
             if ($invoice->subscription_id) {
                 Subscription::where('id', $invoice->subscription_id)
-                    ->whereIn('status', ['active', 'trialing'])
+                    ->where('status', 'active')
                     ->update(['status' => 'past_due']);
             }
         });
@@ -554,9 +554,9 @@ class DunningEngine
     {
         $action = $policy->failure_action;
 
-        // Find the active/trialing/past_due subscription
+        // Find the active/past_due subscription (skip trialing — no dunning during trial)
         $subscription = Subscription::where('company_id', $company->id)
-            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->whereIn('status', ['active', 'past_due'])
             ->first();
 
         if ($action === 'suspend') {

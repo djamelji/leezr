@@ -146,7 +146,7 @@ class StripeProviderCollectionTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     $this->testRef->markRefundCalled();
 
@@ -341,7 +341,7 @@ class StripeProviderCollectionTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     return \Stripe\Refund::constructFrom(['id' => 're_noop', 'amount' => $amount, 'status' => 'succeeded']);
                 }
@@ -392,7 +392,7 @@ class StripeProviderCollectionTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     return \Stripe\Refund::constructFrom(['id' => 're_noop', 'amount' => $amount, 'status' => 'succeeded']);
                 }
@@ -608,7 +608,7 @@ class StripeProviderCollectionTest extends TestCase
                     ]);
                 }
 
-                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata): \Stripe\Refund
+                protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
                 {
                     $this->refundAmountRef = $amount;
                     $this->testRef->markRefundCalled();

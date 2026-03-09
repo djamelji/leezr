@@ -4,6 +4,7 @@ import BillingSubscriptionsTab from './_BillingSubscriptionsTab.vue'
 import BillingInvoicesTab from './_BillingInvoicesTab.vue'
 import BillingDunningTab from './_BillingDunningTab.vue'
 import BillingRecovery from './_BillingRecovery.vue'
+import BillingAuditTab from './_BillingForensicsTab.vue'
 
 definePage({
   meta: {
@@ -24,6 +25,7 @@ const tabs = computed(() => [
   { title: t('platformBilling.tabs.invoices'), icon: 'tabler-file-invoice', value: 'invoices' },
   { title: t('platformBilling.tabs.dunning'), icon: 'tabler-alert-triangle', value: 'dunning' },
   { title: t('platformBilling.tabs.recovery'), icon: 'tabler-first-aid-kit', value: 'recovery' },
+  { title: t('platformBilling.tabs.audit'), icon: 'tabler-history', value: 'audit' },
 ])
 </script>
 
@@ -51,7 +53,7 @@ const tabs = computed(() => [
           variant="tonal"
           color="secondary"
           prepend-icon="tabler-settings"
-          :to="{ name: 'platform-billing-settings-tab', params: { tab: 'general' } }"
+          :to="{ name: 'platform-settings-tab', params: { tab: 'billing' } }"
         >
           {{ t('platformBilling.tabs.settings') }}
         </VBtn>
@@ -99,6 +101,10 @@ const tabs = computed(() => [
 
       <VWindowItem value="recovery">
         <BillingRecovery />
+      </VWindowItem>
+
+      <VWindowItem value="audit">
+        <BillingAuditTab />
       </VWindowItem>
     </VWindow>
   </div>

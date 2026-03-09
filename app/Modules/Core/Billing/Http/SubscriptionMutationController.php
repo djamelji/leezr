@@ -70,6 +70,11 @@ class SubscriptionMutationController
             ? ($policy->interval_change_timing ?? 'immediate')
             : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
 
+        // ADR-287: end_of_period is meaningless during trial → override to immediate
+        if ($subscription->status === 'trialing' && $policyTiming === 'end_of_period') {
+            $policyTiming = 'immediate';
+        }
+
         $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_REQUESTED, 'subscription', (string) $subscription->id, [
             'metadata' => [
                 'from_plan' => $subscription->plan_key,

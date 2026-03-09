@@ -2,6 +2,7 @@
 
 namespace App\Modules\Infrastructure\Public\Http;
 
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Plans\PlanRegistry;
@@ -24,9 +25,14 @@ class PublicPlanController extends Controller
             ->orderBy('label')
             ->get(['key', 'label', 'description']);
 
+        $policy = PlatformBillingPolicy::instance();
+
         return response()->json([
             'plans' => PlanRegistry::publicCatalog(),
             'jobdomains' => $jobdomains,
+            'billing_policy' => [
+                'trial_charge_timing' => $policy->trial_charge_timing,
+            ],
         ]);
     }
 

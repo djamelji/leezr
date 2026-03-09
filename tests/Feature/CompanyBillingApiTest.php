@@ -88,6 +88,6 @@ class CompanyBillingApiTest extends TestCase
             ->getJson('/api/billing/subscription');
 
         $response->assertOk()
-            ->assertExactJson(['subscription' => null]);
+            ->assertExactJson(['subscription' => null, 'pending_subscription' => null]);
     }
 }

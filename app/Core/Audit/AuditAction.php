@@ -111,6 +111,7 @@ final class AuditAction
     public const WEBHOOK_PAYMENT_FAILED = 'webhook.payment_failed';
     public const WEBHOOK_REFUND_SYNCED = 'webhook.refund_synced';
     public const WEBHOOK_SETUP_INTENT_SYNCED = 'webhook.setup_intent_synced';
+    public const WEBHOOK_DISPUTE_CREATED = 'webhook.dispute_created';
 
     // ─── Period Closing & Financial Controls (ADR-143 D3g) ──
     public const BILLING_PERIOD_CLOSED = 'billing.period_closed';

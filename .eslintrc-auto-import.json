@@ -383,6 +383,9 @@
     "formatMoney": true,
     "useDashboardGrid": true,
     "useDocumentHelpers": true,
-    "checkVersionOnMount": true
+    "checkVersionOnMount": true,
+    "usePublicFields": true,
+    "usePublicMarkets": true,
+    "usePublicAddons": true
   }
 }

@@ -1,6 +1,8 @@
 <script setup>
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import PaymentModulesSection from './_PaymentModulesSection.vue'
+import PaymentRulesSection from './_PaymentRulesSection.vue'
 
 definePage({
   meta: {
@@ -494,6 +496,29 @@ const onPlatformRowClick = (_event, { item }) => {
               </div>
             </template>
           </VDataTable>
+
+          <!-- Payment Modules Section -->
+          <VCardText>
+            <VDivider class="mb-6" />
+            <h6 class="text-h6 mb-4">
+              <VIcon
+                icon="tabler-credit-card"
+                class="me-2"
+              />
+              {{ t('platformModules.paymentModules') }}
+            </h6>
+            <PaymentModulesSection />
+
+            <VDivider class="my-6" />
+            <h6 class="text-h6 mb-4">
+              <VIcon
+                icon="tabler-list-check"
+                class="me-2"
+              />
+              {{ t('platformModules.paymentRules') }}
+            </h6>
+            <PaymentRulesSection />
+          </VCardText>
         </VWindowItem>
       </VWindow>
     </VCard>

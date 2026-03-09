@@ -36,6 +36,7 @@ class StripeEventProcessor
         'payment_intent.succeeded',
         'payment_intent.payment_failed',
         'charge.refunded',
+        'charge.dispute.created',
         'setup_intent.succeeded',
     ];
 
@@ -70,6 +71,7 @@ class StripeEventProcessor
             'payment_intent.succeeded' => $this->handlePaymentSucceeded($object),
             'payment_intent.payment_failed' => $this->handlePaymentFailed($object),
             'charge.refunded' => $this->handleChargeRefunded($object),
+            'charge.dispute.created' => $this->handleDisputeCreated($object),
             'setup_intent.succeeded' => $this->handleSetupIntentSucceeded($object),
         };
     }
@@ -322,6 +324,63 @@ class StripeEventProcessor
         );
 
         return new WebhookHandlingResult(handled: true, action: 'refund_synced');
+    }
+
+    /**
+     * Handle charge.dispute.created — log the dispute, notify admin, do NOT change subscription state.
+     */
+    private function handleDisputeCreated(array $dispute): WebhookHandlingResult
+    {
+        $chargeId = $dispute['charge'] ?? null;
+        $paymentIntentId = $dispute['payment_intent'] ?? null;
+        $amount = $dispute['amount'] ?? 0;
+        $currency = strtoupper($dispute['currency'] ?? config('billing.default_currency', 'EUR'));
+        $reason = $dispute['reason'] ?? 'unknown';
+        $disputeId = $dispute['id'] ?? null;
+
+        // Resolve company from the payment linked to this charge
+        $payment = null;
+        $companyId = null;
+
+        if ($paymentIntentId) {
+            $payment = Payment::where('provider_payment_id', $paymentIntentId)->first();
+            $companyId = $payment?->company_id;
+        }
+
+        if (! $companyId && $chargeId) {
+            $payment = Payment::where('provider_payment_id', $chargeId)->first();
+            $companyId = $payment?->company_id;
+        }
+
+        Log::channel('billing')->warning('Stripe dispute created', [
+            'dispute_id' => $disputeId,
+            'charge_id' => $chargeId,
+            'payment_intent_id' => $paymentIntentId,
+            'amount' => $amount,
+            'currency' => $currency,
+            'reason' => $reason,
+            'company_id' => $companyId,
+        ]);
+
+        // Audit log for platform admins
+        $this->audit->logPlatform(
+            AuditAction::WEBHOOK_DISPUTE_CREATED,
+            'payment',
+            (string) ($payment?->id ?? $paymentIntentId ?? $chargeId),
+            [
+                'severity' => 'critical',
+                'metadata' => [
+                    'dispute_id' => $disputeId,
+                    'charge_id' => $chargeId,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'reason' => $reason,
+                    'company_id' => $companyId,
+                ],
+            ],
+        );
+
+        return new WebhookHandlingResult(handled: true, action: 'dispute_created');
     }
 
     private function handleSetupIntentSucceeded(array $setupIntent): WebhookHandlingResult

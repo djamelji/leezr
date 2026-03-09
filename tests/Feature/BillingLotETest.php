@@ -787,7 +787,7 @@ class BillingLotETest extends TestCase
         $this->app->bind(StripePaymentAdapter::class, function () {
             return new class extends StripePaymentAdapter
             {
-                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata)
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = [])
                 {
                     if ($paymentMethodId === 'pm_card_fail') {
                         throw new \Stripe\Exception\CardException('Card declined', null, null, null, null, null);
@@ -863,7 +863,7 @@ class BillingLotETest extends TestCase
                     $this->tracker = $tracker;
                 }
 
-                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata)
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = [])
                 {
                     $this->tracker->attempted[] = $paymentMethodId;
 
@@ -928,7 +928,7 @@ class BillingLotETest extends TestCase
         $this->app->bind(StripePaymentAdapter::class, function () {
             return new class extends StripePaymentAdapter
             {
-                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata)
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = [])
                 {
                     throw new \Stripe\Exception\CardException('Declined', null, null, null, null, null);
                 }

@@ -23,8 +23,18 @@ class PaymentGatewayManager extends Manager
     {
         try {
             $settings = PlatformSetting::instance();
+            $driver = $settings->billing['driver'] ?? null;
 
-            return $settings->billing['driver'] ?? 'null';
+            if ($driver) {
+                return $driver;
+            }
+
+            // ADR-301: Fallback to active PlatformPaymentModule provider
+            $activeModule = PlatformPaymentModule::active()
+                ->orderByDesc('sort_order')
+                ->first();
+
+            return $activeModule?->provider_key ?? 'null';
         } catch (\Throwable) {
             return 'null';
         }

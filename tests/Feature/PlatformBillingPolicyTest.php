@@ -89,8 +89,8 @@ class PlatformBillingPolicyTest extends TestCase
                     'credit_note_next_number',
                     'tax_mode',
                     'default_tax_rate_bps',
-                    'free_trial_days',
                     'addon_billing_interval',
+                    'trial_plan_change_behavior',
                 ],
             ]);
     }
@@ -394,7 +394,6 @@ class PlatformBillingPolicyTest extends TestCase
             'invoice_prefix' => 'FAC',
             'tax_mode' => 'inclusive',
             'default_tax_rate_bps' => 2000,
-            'free_trial_days' => 14,
             'addon_billing_interval' => 'monthly',
         ];
 

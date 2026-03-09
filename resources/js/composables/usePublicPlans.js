@@ -7,6 +7,7 @@ import { $api } from '@/utils/api'
 export function usePublicPlans() {
   const plans = ref([])
   const jobdomains = ref([])
+  const billingPolicy = ref({})
   const loading = ref(false)
   const previewModules = ref([])
   const previewLoading = ref(false)
@@ -19,6 +20,7 @@ export function usePublicPlans() {
 
       plans.value = data.plans
       jobdomains.value = data.jobdomains
+      billingPolicy.value = data.billing_policy || {}
     }
     finally {
       loading.value = false
@@ -46,5 +48,5 @@ export function usePublicPlans() {
     }
   }
 
-  return { plans, jobdomains, loading, previewModules, previewLoading, fetchPlans, fetchPreview }
+  return { plans, jobdomains, billingPolicy, loading, previewModules, previewLoading, fetchPlans, fetchPreview }
 }

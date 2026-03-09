@@ -22,9 +22,11 @@ class PlatformBillingPolicyController
     private const DOWNGRADE_TIMING = ['immediate', 'end_of_period'];
     private const INTERVAL_CHANGE_TIMING = ['immediate', 'end_of_period'];
     private const PRORATION_STRATEGY = ['day_based', 'none'];
-    private const TAX_MODE = ['exclusive', 'inclusive'];
+    private const TAX_MODE = ['none', 'exclusive', 'inclusive'];
     private const FAILURE_ACTION = ['suspend', 'downgrade_to_starter', 'read_only'];
     private const ADDON_BILLING_INTERVAL = ['monthly', 'plan_aligned'];
+    private const TRIAL_PLAN_CHANGE_BEHAVIOR = ['continue_trial', 'end_trial'];
+    private const TRIAL_CHARGE_TIMING = ['immediate', 'end_of_trial'];
 
     public function show(): JsonResponse
     {
@@ -64,11 +66,13 @@ class PlatformBillingPolicyController
             'tax_mode' => ['sometimes', 'string', Rule::in(self::TAX_MODE)],
             'default_tax_rate_bps' => ['sometimes', 'integer', 'min:0', 'max:10000'],
 
-            // Trial
-            'free_trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
-
             // Addon
             'addon_billing_interval' => ['sometimes', 'string', Rule::in(self::ADDON_BILLING_INTERVAL)],
+
+            // Trial
+            'trial_plan_change_behavior' => ['sometimes', 'string', Rule::in(self::TRIAL_PLAN_CHANGE_BEHAVIOR)],
+            'trial_requires_payment_method' => ['sometimes', 'boolean'],
+            'trial_charge_timing' => ['sometimes', 'string', Rule::in(self::TRIAL_CHARGE_TIMING)],
         ]);
 
         $policy = $useCase->execute($validated);

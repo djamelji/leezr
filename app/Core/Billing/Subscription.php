@@ -14,19 +14,20 @@ class Subscription extends Model
     // ── States ────────────────────────────────────────────
     const STATES = [
         'pending_payment', 'pending', 'trialing', 'active',
-        'past_due', 'suspended', 'cancelled', 'expired',
+        'past_due', 'suspended', 'cancelled', 'expired', 'rejected',
     ];
 
-    // ── Allowed transitions (ADR-232) ────────────────────
+    // ── Allowed transitions (ADR-232, ADR-289: +rejected) ──
     const TRANSITIONS = [
         'pending_payment' => ['active', 'trialing'],
-        'pending'         => ['active', 'expired'],
+        'pending'         => ['active', 'expired', 'rejected'],
         'trialing'        => ['active', 'past_due', 'cancelled', 'suspended'],
         'active'          => ['past_due', 'cancelled', 'suspended', 'expired'],
         'past_due'        => ['active', 'suspended', 'cancelled'],
         'suspended'       => ['active'],
         'cancelled'       => [],
         'expired'         => [],
+        'rejected'        => [],
     ];
 
     // Statuses that allow is_current = 1

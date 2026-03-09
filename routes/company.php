@@ -77,6 +77,8 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::get('/billing/invoices/outstanding', [InvoiceBatchPayController::class, 'listOutstanding']);
     Route::get('/billing/invoices/{id}', [CompanyBillingController::class, 'invoiceDetail']);
     Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);
+    Route::delete('/billing/pending-subscription', [CompanyBillingController::class, 'dismissPendingSubscription'])
+        ->middleware('company.access:manage-structure');
     Route::get('/billing/next-invoice-preview', [CompanyBillingController::class, 'nextInvoicePreview']);
     Route::get('/billing/plan-change-preview', [CompanyBillingController::class, 'planChangePreview']);
     Route::get('/billing/invoices/{id}/pdf', [CompanyBillingController::class, 'invoicePdf']);
