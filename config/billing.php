@@ -25,6 +25,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Platform identity (ADR-310)
+    |--------------------------------------------------------------------------
+    |
+    | Market key and VAT number of the platform operator (seller).
+    | Used by TaxContextResolver for intra-EU reverse charge determination.
+    |
+    */
+
+    'platform' => [
+        'market_key' => env('PLATFORM_MARKET', 'FR'),
+        'vat_number' => env('PLATFORM_VAT_NUMBER'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Alerting (ADR-140 D3d)
     |--------------------------------------------------------------------------
     |
@@ -34,9 +49,10 @@ return [
     */
 
     'alerting' => [
-        'enabled'     => env('BILLING_ALERT_ENABLED', false),
-        'email'       => env('BILLING_ALERT_EMAIL'),
-        'webhook_url' => env('BILLING_ALERT_WEBHOOK'),
+        'enabled'           => env('BILLING_ALERT_ENABLED', false),
+        'email'             => env('BILLING_ALERT_EMAIL'),
+        'webhook_url'       => env('BILLING_ALERT_WEBHOOK'),
+        'slack_webhook_url' => env('BILLING_SLACK_WEBHOOK'),
     ],
 
     /*
@@ -70,5 +86,19 @@ return [
     */
 
     'writeoff_threshold' => (int) env('BILLING_WRITEOFF_THRESHOLD', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Metrics Export (ADR-311)
+    |--------------------------------------------------------------------------
+    |
+    | Bearer token for the Prometheus-format metrics endpoint.
+    | Leave empty to disable the endpoint.
+    |
+    */
+
+    'metrics' => [
+        'token' => env('BILLING_METRICS_TOKEN'),
+    ],
 
 ];

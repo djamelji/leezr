@@ -36,6 +36,9 @@ const defaults = {
   failure_action: 'suspend',
   addon_billing_interval: 'plan_aligned',
   admin_approval_required: false,
+  allow_sepa: true,
+  sepa_requires_trial: true,
+  sepa_first_failure_action: 'suspend',
 }
 
 const safeKeys = Object.keys(defaults)
@@ -177,6 +180,11 @@ const taxModeOptions = computed(() => [
 const addonBillingIntervalOptions = computed(() => [
   { title: t('platformSettings.billing.planAligned'), value: 'plan_aligned' },
   { title: t('platformSettings.billing.monthly'), value: 'monthly' },
+])
+
+const sepaFirstFailureActionOptions = computed(() => [
+  { title: t('platformSettings.billing.sepaSuspend'), value: 'suspend' },
+  { title: t('platformSettings.billing.sepaDunning'), value: 'dunning' },
 ])
 
 // ── Auto-save (debounced) ───────────────────────────────
@@ -518,6 +526,60 @@ const resetToDefaults = async () => {
           >
             {{ t('platformSettings.billing.trialUpgradeNote') }}
           </VAlert>
+        </VCardText>
+      </VCard>
+
+      <!-- ═══ SEPA Policy (ADR-325) ═══ -->
+      <VCard class="mb-6">
+        <VCardTitle class="d-flex align-center">
+          <VIcon
+            icon="tabler-building-bank"
+            class="me-2"
+          />
+          {{ t('platformSettings.billing.sepaSection') }}
+        </VCardTitle>
+
+        <VCardText>
+          <VRow>
+            <VCol
+              cols="12"
+              sm="4"
+            >
+              <VSwitch
+                v-model="form.allow_sepa"
+                :label="t('platformSettings.billing.allowSepa')"
+                :hint="t('platformSettings.billing.allowSepaHint')"
+                persistent-hint
+                color="primary"
+              />
+            </VCol>
+            <VCol
+              cols="12"
+              sm="4"
+            >
+              <VSwitch
+                v-model="form.sepa_requires_trial"
+                :label="t('platformSettings.billing.sepaRequiresTrial')"
+                :hint="t('platformSettings.billing.sepaRequiresTrialHint')"
+                persistent-hint
+                color="primary"
+                :disabled="!form.allow_sepa"
+              />
+            </VCol>
+            <VCol
+              cols="12"
+              sm="4"
+            >
+              <AppSelect
+                v-model="form.sepa_first_failure_action"
+                :label="t('platformSettings.billing.sepaFirstFailureAction')"
+                :items="sepaFirstFailureActionOptions"
+                :hint="t('platformSettings.billing.sepaFirstFailureActionHint')"
+                persistent-hint
+                :disabled="!form.allow_sepa"
+              />
+            </VCol>
+          </VRow>
         </VCardText>
       </VCard>
 

@@ -275,6 +275,7 @@ const saveAndResolve = async () => {
     </DashboardHostContainer>
 
     <!-- ═══ Catalog Drawer ═══ -->
+    <Teleport to="body">
     <VNavigationDrawer
       v-model="showCatalogDrawer"
       temporary
@@ -311,6 +312,7 @@ const saveAndResolve = async () => {
         {{ t('platformDashboard.engine.allWidgetsAdded') }}
       </VCardText>
     </VNavigationDrawer>
+    </Teleport>
 
     <!-- ═══ Save Error ═══ -->
     <VSnackbar

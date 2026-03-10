@@ -11,7 +11,7 @@ class Invoice extends Model
 {
     protected $fillable = [
         'subscription_id', 'company_id', 'number',
-        'amount', 'subtotal', 'tax_amount', 'tax_rate_bps',
+        'amount', 'subtotal', 'tax_amount', 'tax_rate_bps', 'tax_exemption_reason',
         'wallet_credit_applied', 'amount_due',
         'currency', 'status', 'provider', 'provider_invoice_id',
         'period_start', 'period_end', 'billing_snapshot',

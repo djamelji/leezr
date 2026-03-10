@@ -253,6 +253,7 @@ const onPageChange = async page => {
     </VCard>
 
     <!-- Create Drawer -->
+    <Teleport to="body">
     <VNavigationDrawer
       v-model="isDrawerOpen"
       temporary
@@ -385,5 +386,6 @@ const onPageChange = async page => {
         </VForm>
       </VCardText>
     </VNavigationDrawer>
+    </Teleport>
   </div>
 </template>

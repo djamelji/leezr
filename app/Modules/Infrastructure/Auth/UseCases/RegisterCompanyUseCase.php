@@ -4,10 +4,12 @@ namespace App\Modules\Infrastructure\Auth\UseCases;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
+use App\Modules\Core\Billing\Services\CouponService;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Jobdomains\JobdomainGate;
@@ -157,7 +159,27 @@ class RegisterCompanyUseCase
                 // ADR-286: Notify owner that trial has started
                 $user->notify(new \App\Notifications\Billing\TrialStarted($trialSub));
             }
-            // Paid no-trial: handled after transaction via gateway
+            // Paid no-trial: subscription created by createCheckout() after transaction
+
+            // ADR-320: Validate and attach coupon to subscription
+            $validatedCoupon = null;
+            if ($data->couponCode) {
+                $couponService = app(CouponService::class);
+                $result = $couponService->validate($data->couponCode, $company, $planKey, $interval);
+
+                if ($result['valid']) {
+                    $validatedCoupon = $result['coupon'];
+                    $sub = Subscription::where('company_id', $company->id)->where('is_current', 1)->first();
+
+                    if ($sub) {
+                        $durationMonths = $validatedCoupon->duration_months;
+                        $sub->update([
+                            'coupon_id' => $validatedCoupon->id,
+                            'coupon_months_remaining' => $durationMonths === 0 ? null : ($durationMonths ?? 1),
+                        ]);
+                    }
+                }
+            }
 
             return new RegisterCompanyResult($user, $company);
         });
@@ -192,6 +214,15 @@ class RegisterCompanyUseCase
                         );
 
                         InvoiceIssuer::addLine($invoice, 'plan', "{$plan->name} plan", $price, 1);
+
+                        // ADR-320: Apply coupon discount to initial invoice
+                        if ($sub->coupon_id) {
+                            $coupon = BillingCoupon::find($sub->coupon_id);
+                            if ($coupon) {
+                                InvoiceIssuer::applyCoupon($invoice, $coupon, $result->company);
+                            }
+                        }
+
                         InvoiceIssuer::finalize($invoice);
                     }
                 }
@@ -203,6 +234,26 @@ class RegisterCompanyUseCase
                     $planKey,
                     $interval,
                 );
+            }
+
+            // ADR-320: Attach coupon to paid no-trial subscription (created by createCheckout)
+            if (! $hasTrial && $data->couponCode) {
+                $couponService = app(CouponService::class);
+                $couponResult = $couponService->validate($data->couponCode, $result->company, $planKey, $interval);
+
+                if ($couponResult['valid']) {
+                    $sub = Subscription::where('company_id', $result->company->id)
+                        ->where('is_current', 1)
+                        ->first();
+
+                    if ($sub) {
+                        $durationMonths = $couponResult['coupon']->duration_months;
+                        $sub->update([
+                            'coupon_id' => $couponResult['coupon']->id,
+                            'coupon_months_remaining' => $durationMonths === 0 ? null : ($durationMonths ?? 1),
+                        ]);
+                    }
+                }
             }
         }
 

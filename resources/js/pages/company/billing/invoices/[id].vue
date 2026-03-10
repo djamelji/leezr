@@ -387,6 +387,20 @@ const payInvoice = () => {
                         {{ fmt(invoice.tax_amount) }}
                       </td>
                     </tr>
+                    <tr v-if="invoice.tax_exemption_reason">
+                      <td
+                        colspan="2"
+                        class="py-1"
+                      >
+                        <VChip
+                          color="info"
+                          variant="tonal"
+                          size="small"
+                        >
+                          {{ t('billing.tax_exemption.' + invoice.tax_exemption_reason) }}
+                        </VChip>
+                      </td>
+                    </tr>
                     <tr v-if="invoice.wallet_credit_applied">
                       <td class="pe-16 text-body-2">
                         {{ t('companyBilling.invoiceDetail.walletCredit') }}

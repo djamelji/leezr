@@ -18,6 +18,7 @@ final class RegisterCompanyData
         public readonly array $dynamicFields = [],
         public readonly array $addonKeys = [],
         public readonly bool $billingSameAsCompany = true,
+        public readonly ?string $couponCode = null,
     ) {}
 
     public static function fromValidated(array $data): self
@@ -36,6 +37,7 @@ final class RegisterCompanyData
             dynamicFields: $data['dynamic_fields'] ?? [],
             addonKeys: $data['addon_keys'] ?? [],
             billingSameAsCompany: $data['billing_same_as_company'] ?? true,
+            couponCode: $data['coupon_code'] ?? null,
         );
     }
 }

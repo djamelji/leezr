@@ -7,18 +7,15 @@ use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\LedgerEntry;
 use App\Core\Billing\Payment;
+use App\Core\Billing\PaymentPolicy;
 use App\Core\Billing\PlanChangeIntent;
 use App\Core\Billing\PlatformBillingPolicy;
-use App\Core\Billing\ProrationCalculator;
+use App\Core\Billing\PricingEngine;
 use App\Core\Billing\Subscription;
-use App\Core\Billing\TaxResolver;
 use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
-use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
 use App\Core\Plans\Plan;
-use App\Core\Plans\PlanRegistry;
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -114,6 +111,7 @@ class CompanyBillingReadService
             'outstanding_amount' => $outstandingAmount,
             'currency' => $currency,
             'payment_method' => $paymentMethod,
+            'allowed_payment_methods' => PaymentPolicy::allowedMethods($company),
         ];
     }
 
@@ -300,10 +298,12 @@ class CompanyBillingReadService
      * Uses the same tax/wallet logic as InvoiceIssuer::finalize() to produce
      * an honest estimate. Flagged with is_estimate=true.
      */
+    /** ADR-324: nextInvoicePreview via PricingEngine. */
     public static function nextInvoicePreview(Company $company): ?array
     {
         $subscription = Subscription::where('company_id', $company->id)
             ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->with('coupon')
             ->latest()
             ->first();
 
@@ -311,61 +311,29 @@ class CompanyBillingReadService
             return null;
         }
 
-        $wallet = WalletLedger::ensureWallet($company);
-        $currency = $wallet->currency;
+        $breakdown = PricingEngine::forCurrentPeriod($subscription, $company);
+
+        // Runtime: wallet estimation (not part of pricing)
         $walletBalance = WalletLedger::balance($company);
         $policy = PlatformBillingPolicy::instance();
+        $estimatedWalletCredit = ($policy->auto_apply_wallet_credit && $breakdown->total > 0 && $walletBalance > 0)
+            ? min($walletBalance, $breakdown->total)
+            : 0;
 
-        $planModel = Plan::where('key', $subscription->plan_key)->first();
-        $planPrice = 0;
-        $planData = null;
+        // Extract plan data from breakdown
+        $planLine = $breakdown->planLine();
+        $planData = $planLine ? [
+            'name' => str_replace(' plan', '', $planLine->description),
+            'price' => $planLine->unitAmount,
+            'interval' => $subscription->interval,
+        ] : null;
 
-        if ($planModel) {
-            $planPrice = $subscription->interval === 'yearly'
-                ? ($planModel->price_yearly ?? 0)
-                : ($planModel->price_monthly ?? 0);
-
-            $planData = [
-                'name' => $planModel->name,
-                'price' => $planPrice,
-                'interval' => $subscription->interval,
-            ];
-        }
-
-        // Active addons with module name (batch lookup)
-        $addonSubs = CompanyAddonSubscription::where('company_id', $company->id)
-            ->active()
-            ->get();
-
-        $addonModuleKeys = $addonSubs->pluck('module_key')->toArray();
-        $addonModuleNames = ! empty($addonModuleKeys)
-            ? PlatformModule::whereIn('key', $addonModuleKeys)->pluck('name', 'key')->toArray()
-            : [];
-
-        $addons = $addonSubs->map(fn ($addon) => [
-            'module_key' => $addon->module_key,
-            'name' => $addonModuleNames[$addon->module_key] ?? $addon->module_key,
-            'price' => $addon->amount_cents,
-        ])->toArray();
-
-        $addonsTotal = array_sum(array_column($addons, 'price'));
-        $subtotal = $planPrice + $addonsTotal;
-
-        // Tax — resolved from company's LegalStatus (ADR-251)
-        $taxRateBps = TaxResolver::resolveRateBps($company);
-        $taxAmount = TaxResolver::compute($subtotal, $taxRateBps);
-        $total = $subtotal + $taxAmount;
-
-        // Wallet credit estimate — same logic as InvoiceIssuer::finalize()
-        $estimatedWalletCredit = 0;
-        if ($policy->auto_apply_wallet_credit && $total > 0 && $walletBalance > 0) {
-            $estimatedWalletCredit = min($walletBalance, $total);
-        }
-
-        $estimatedAmountDue = $total - $estimatedWalletCredit;
-
-        // Next billing date
-        $nextBillingDate = $subscription->current_period_end?->toDateString();
+        // Extract addon data from breakdown
+        $addons = array_map(fn ($l) => [
+            'module_key' => $l->moduleKey,
+            'name' => $l->description,
+            'price' => $l->unitAmount,
+        ], $breakdown->addonLines());
 
         // Trial
         $trialRemainingDays = null;
@@ -375,17 +343,19 @@ class CompanyBillingReadService
 
         return [
             'is_estimate' => true,
-            'currency' => $currency,
+            'currency' => $breakdown->currency,
             'plan' => $planData,
             'addons' => $addons,
-            'subtotal' => $subtotal,
-            'tax_rate_bps' => $taxRateBps,
-            'tax_amount' => $taxAmount,
-            'total' => $total,
+            'coupon' => $breakdown->coupon?->toArray(),
+            'subtotal' => $breakdown->subtotal,
+            'tax_rate_bps' => $breakdown->taxRateBps,
+            'tax_exemption_reason' => $breakdown->taxExemptionReason,
+            'tax_amount' => $breakdown->taxAmount,
+            'total' => $breakdown->total,
             'wallet_balance' => $walletBalance,
             'estimated_wallet_credit' => $estimatedWalletCredit,
-            'estimated_amount_due' => $estimatedAmountDue,
-            'next_billing_date' => $nextBillingDate,
+            'estimated_amount_due' => $breakdown->total - $estimatedWalletCredit,
+            'next_billing_date' => $subscription->current_period_end?->toDateString(),
             'trial_remaining_days' => $trialRemainingDays,
         ];
     }
@@ -396,10 +366,12 @@ class CompanyBillingReadService
      * Shows the financial impact of switching from the current plan to a new plan
      * BEFORE the user confirms. Same calculation pipeline as PlanChangeExecutor.
      */
+    /** ADR-324: planChangePreview via PricingEngine. */
     public static function planChangePreview(Company $company, string $toPlanKey, string $toInterval = 'monthly'): ?array
     {
         $subscription = Subscription::where('company_id', $company->id)
             ->whereIn('status', ['active', 'trialing'])
+            ->with('coupon')
             ->latest()
             ->first();
 
@@ -407,114 +379,25 @@ class CompanyBillingReadService
             return null;
         }
 
+        $pcb = PricingEngine::forPlanChange($company, $subscription, $toPlanKey, $toInterval);
+
+        // Runtime: wallet
         $policy = PlatformBillingPolicy::instance();
-        $plans = PlanRegistry::definitions();
-        $fromPlan = $plans[$subscription->plan_key] ?? null;
-        $toPlan = $plans[$toPlanKey] ?? null;
-
-        if (!$fromPlan || !$toPlan) {
-            return null;
-        }
-
-        $fromLevel = $fromPlan['level'];
-        $toLevel = $toPlan['level'];
-        $fromInterval = $subscription->interval ?? 'monthly';
-        $isUpgrade = $toLevel > $fromLevel;
-        $isIntervalChange = $subscription->plan_key === $toPlanKey && $fromInterval !== $toInterval;
-
-        // Interval-only changes use their own timing setting
-        $timing = $isIntervalChange
-            ? ($policy->interval_change_timing ?? 'immediate')
-            : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
-
-        // Current plan price (for the subscription's current interval)
-        $oldPriceCents = ProrationCalculator::resolvePriceCents($fromPlan, $fromInterval);
-        $newPriceCents = ProrationCalculator::resolvePriceCents($toPlan, $toInterval);
-
-        // Proration (only for immediate changes with a valid period)
-        $proration = null;
-        if ($timing === 'immediate'
-            && $subscription->current_period_start
-            && $subscription->current_period_end
-            && $subscription->current_period_end->gt(now())
-        ) {
-            $proration = ProrationCalculator::compute(
-                oldPriceCents: $oldPriceCents,
-                newPriceCents: $newPriceCents,
-                periodStart: CarbonImmutable::instance($subscription->current_period_start),
-                periodEnd: CarbonImmutable::instance($subscription->current_period_end),
-                changeDate: CarbonImmutable::now(),
-            );
-        }
-
-        // Active addons: recalculate amounts for new plan + interval
-        $activeAddons = CompanyAddonSubscription::where('company_id', $company->id)
-            ->active()
-            ->get();
-
-        $addonModuleKeys = $activeAddons->pluck('module_key')->toArray();
-        $addonModuleNames = !empty($addonModuleKeys)
-            ? PlatformModule::whereIn('key', $addonModuleKeys)->pluck('name', 'key')->toArray()
-            : [];
-
-        $addonLines = [];
-        $addonsTotalCurrent = 0;
-        $addonsTotalNew = 0;
-
-        foreach ($activeAddons as $addon) {
-            $module = PlatformModule::where('key', $addon->module_key)->first();
-            $currentAmount = $addon->amount_cents;
-            $newMonthly = $module ? ModuleQuoteCalculator::computeAmount($module, $toPlanKey) : $currentAmount;
-            $newAmount = $toInterval === 'yearly' ? $newMonthly * 12 : $newMonthly;
-
-            $addonLines[] = [
-                'module_key' => $addon->module_key,
-                'name' => $addonModuleNames[$addon->module_key] ?? $addon->module_key,
-                'current_amount' => $currentAmount,
-                'new_amount' => $newAmount,
-                'difference' => $newAmount - $currentAmount,
-            ];
-
-            $addonsTotalCurrent += $currentAmount;
-            $addonsTotalNew += $newAmount;
-        }
-
-        // Build subtotal for the new plan's next period
-        $newPlanSubtotal = $newPriceCents + $addonsTotalNew;
-
-        // Immediate change: the amount due NOW is the proration net + addon difference
-        // End of period: amount due NOW is 0 (change happens later)
-        $immediateDue = 0;
-        if ($timing === 'immediate' && $proration) {
-            $immediateDue = $proration['net'];
-        }
-
-        // Tax on the immediate amount — resolved from company's Market (ADR-254)
-        $taxRateBps = TaxResolver::resolveRateBps($company);
-        $immediateTax = $immediateDue > 0 ? TaxResolver::compute($immediateDue, $taxRateBps) : 0;
-        $immediateTotal = $immediateDue + $immediateTax;
-
-        // When proration is negative (downgrade credit), the credit goes to wallet
-        $estimatedWalletCredit_added = 0;
-        if ($immediateDue < 0) {
-            $estimatedWalletCredit_added = abs($immediateDue);
-        }
-
-        // Wallet
         $walletBalance = WalletLedger::balance($company);
+
+        // Immediate financial impact
+        $immediateDue = $pcb->prorationDetails ? $pcb->prorationDetails['net'] : 0;
+        $immediateTax = $pcb->immediate?->taxAmount ?? 0;
+        $immediateTotal = $pcb->immediate?->total ?? 0;
+
+        $estimatedWalletCreditAdded = $immediateDue < 0 ? abs($immediateDue) : 0;
         $estimatedWalletDeduction = 0;
         if ($policy->auto_apply_wallet_credit && $immediateTotal > 0 && $walletBalance > 0) {
             $estimatedWalletDeduction = min($walletBalance, $immediateTotal);
         }
         $estimatedAmountDue = max(0, $immediateTotal - $estimatedWalletDeduction);
 
-        // Next period preview (what the recurring invoice will look like)
-        $nextPeriodTax = TaxResolver::compute($newPlanSubtotal, $taxRateBps);
-        $nextPeriodTotal = $newPlanSubtotal + $nextPeriodTax;
-
-        $wallet = WalletLedger::ensureWallet($company);
-
-        // Fiscal context — market & legal status info for the preview
+        // Fiscal context
         $taxMode = $policy->tax_mode ?? 'none';
         $market = $company->market_key
             ? \App\Core\Markets\Market::where('key', $company->market_key)->first()
@@ -525,74 +408,59 @@ class CompanyBillingReadService
                 ->first()
             : null;
 
+        // Addon totals
+        $addonsTotalCurrent = array_sum(array_column($pcb->addonLines, 'current_amount'));
+        $addonsTotalNew = array_sum(array_column($pcb->addonLines, 'new_amount'));
+
+        // Next period coupon discount
+        $nextCouponDiscount = $pcb->nextPeriod->discountLine()?->amount ?? 0;
+
         return [
             'is_estimate' => true,
-            'timing' => $timing,
-            'is_upgrade' => $isUpgrade,
-            'is_interval_change' => $isIntervalChange,
-            'currency' => $wallet->currency,
+            'timing' => $pcb->timing,
+            'is_upgrade' => $pcb->isUpgrade,
+            'is_interval_change' => $pcb->isIntervalChange,
+            'currency' => $pcb->currency,
 
-            // Fiscal context
             'tax_mode' => $taxMode,
-            'tax_rate_bps' => $taxRateBps,
+            'tax_rate_bps' => $pcb->nextPeriod->taxRateBps,
+            'tax_exemption_reason' => $pcb->nextPeriod->taxExemptionReason,
             'market_name' => $market?->name,
             'legal_status_name' => $legalStatus?->name,
 
-            // Current plan
-            'from_plan' => [
-                'key' => $subscription->plan_key,
-                'name' => $fromPlan['name'],
-                'price' => $oldPriceCents,
-                'interval' => $fromInterval,
-            ],
+            'from_plan' => $pcb->fromPlan,
+            'to_plan' => $pcb->toPlan,
 
-            // New plan
-            'to_plan' => [
-                'key' => $toPlanKey,
-                'name' => $toPlan['name'],
-                'price' => $newPriceCents,
-                'interval' => $toInterval,
-            ],
+            'active_coupon' => $pcb->activeCoupon?->toArray(),
 
-            // Proration (null if end_of_period or no valid period)
-            'proration' => $proration ? [
-                'credit_old_plan' => $proration['credit'],
-                'charge_new_plan' => $proration['charge'],
-                'net' => $proration['net'],
-                'days_remaining' => $proration['days_remaining'],
-                'total_days' => $proration['total_days'],
-            ] : null,
+            'proration' => $pcb->prorationDetails,
 
-            // Addon impact
-            'addons' => $addonLines,
+            'addons' => $pcb->addonLines,
             'addons_total_current' => $addonsTotalCurrent,
             'addons_total_new' => $addonsTotalNew,
 
-            // Wallet (always shown)
             'wallet_balance' => $walletBalance,
 
-            // Immediate financial impact
             'immediate' => [
-                'subtotal' => $immediateDue,
-                'tax_rate_bps' => $taxRateBps,
+                'subtotal' => $pcb->immediate?->subtotal ?? 0,
+                'tax_rate_bps' => $pcb->immediate?->taxRateBps ?? 0,
                 'tax_amount' => $immediateTax,
                 'total' => $immediateTotal,
                 'wallet_deduction' => $estimatedWalletDeduction,
-                'wallet_credit_added' => $estimatedWalletCredit_added,
+                'wallet_credit_added' => $estimatedWalletCreditAdded,
                 'estimated_amount_due' => $estimatedAmountDue,
             ],
 
-            // Next recurring period preview
             'next_period' => [
-                'plan_price' => $newPriceCents,
+                'plan_price' => $pcb->toPlan['price'],
+                'coupon_discount' => $nextCouponDiscount,
                 'addons_total' => $addonsTotalNew,
-                'subtotal' => $newPlanSubtotal,
-                'tax_rate_bps' => $taxRateBps,
-                'tax_amount' => $nextPeriodTax,
-                'total' => $nextPeriodTotal,
-                'interval' => $toInterval,
+                'subtotal' => $pcb->nextPeriod->subtotal,
+                'tax_rate_bps' => $pcb->nextPeriod->taxRateBps,
+                'tax_amount' => $pcb->nextPeriod->taxAmount,
+                'total' => $pcb->nextPeriod->total,
+                'interval' => $pcb->toPlan['interval'] ?? $toInterval,
             ],
         ];
     }
-
 }

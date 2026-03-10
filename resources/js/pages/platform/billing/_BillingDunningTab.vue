@@ -1,11 +1,16 @@
 <script setup>
+import StatusChip from '@/core/components/StatusChip.vue'
+import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
+const { toast } = useAppToast()
 
 const isLoading = ref(true)
+const search = ref('')
+const actionLoading = ref({})
 
 const headers = computed(() => [
   { title: t('platformBilling.company'), key: 'company', sortable: false },
@@ -15,11 +20,8 @@ const headers = computed(() => [
   { title: t('platformBilling.dueAt'), key: 'due_at' },
   { title: t('platformBilling.retryCount'), key: 'retry_count', align: 'center', width: '100px' },
   { title: t('platformBilling.nextRetry'), key: 'next_retry_at' },
+  { title: t('platformBilling.actions'), key: 'actions', sortable: false, align: 'center', width: '160px' },
 ])
-
-const statusColor = status => {
-  return status === 'overdue' ? 'error' : 'warning'
-}
 
 const statusLabel = status => {
   const map = { overdue: 'statusOverdue', uncollectible: 'statusUncollectible' }
@@ -44,10 +46,53 @@ const formatDateTime = dateStr => {
   })
 }
 
+const filteredDunning = computed(() => {
+  if (!search.value) return store.dunningInvoices
+  const q = search.value.toLowerCase()
+
+  return store.dunningInvoices.filter(d =>
+    d.company?.name?.toLowerCase().includes(q)
+    || d.number?.toLowerCase().includes(q),
+  )
+})
+
+const handleRetry = async item => {
+  actionLoading.value = { ...actionLoading.value, [item.id]: 'retry' }
+  try {
+    await store.retryInvoicePayment(item.id, {})
+    toast(t('platformBilling.toasts.retrySuccess'), 'success')
+    await load(store.dunningPagination.current_page)
+  }
+  catch {
+    toast(t('platformBilling.errorGeneric'), 'error')
+  }
+  finally {
+    delete actionLoading.value[item.id]
+  }
+}
+
+const handleEscalate = async item => {
+  actionLoading.value = { ...actionLoading.value, [item.id]: 'escalate' }
+  try {
+    await store.forceDunningTransition(item.id, { action: 'escalate' })
+    toast(t('platformBilling.toasts.escalateSuccess'), 'success')
+    await load(store.dunningPagination.current_page)
+  }
+  catch {
+    toast(t('platformBilling.errorGeneric'), 'error')
+  }
+  finally {
+    delete actionLoading.value[item.id]
+  }
+}
+
 const load = async (page = 1) => {
   isLoading.value = true
   try {
     await store.fetchDunning({ page })
+  }
+  catch {
+    toast(t('common.loadError'), 'error')
   }
   finally {
     isLoading.value = false
@@ -59,12 +104,21 @@ onMounted(() => load())
 
 <template>
   <VCard>
-    <VCardTitle>
+    <VCardTitle class="d-flex align-center flex-wrap gap-2">
       <VIcon
         icon="tabler-alert-triangle"
         class="me-2"
       />
       {{ t('platformBilling.tabs.dunning') }}
+      <VSpacer />
+      <AppTextField
+        v-model="search"
+        :placeholder="t('common.search')"
+        density="compact"
+        prepend-inner-icon="tabler-search"
+        style="max-inline-size: 220px;"
+        clearable
+      />
     </VCardTitle>
 
     <VCardText class="pa-0">
@@ -73,24 +127,16 @@ onMounted(() => load())
         type="table"
       />
 
-      <div
+      <EmptyState
         v-else-if="store.dunningInvoices.length === 0 && !isLoading"
-        class="text-center pa-6 text-disabled"
-      >
-        <VIcon
-          icon="tabler-mood-happy"
-          size="48"
-          class="mb-2"
-        />
-        <p class="text-body-1">
-          {{ t('platformBilling.noDunning') }}
-        </p>
-      </div>
+        icon="tabler-mood-happy"
+        :title="t('platformBilling.noDunning')"
+      />
 
       <VDataTable
         v-else
         :headers="headers"
-        :items="store.dunningInvoices"
+        :items="filteredDunning"
         :loading="isLoading"
         :items-per-page="store.dunningPagination.per_page"
         hide-default-footer
@@ -103,16 +149,19 @@ onMounted(() => load())
           >
             {{ item.company.name }}
           </RouterLink>
-          <span v-else class="font-weight-medium">—</span>
+          <span
+            v-else
+            class="font-weight-medium"
+          >—</span>
         </template>
 
         <template #item.status="{ item }">
-          <VChip
-            :color="statusColor(item.status)"
-            size="small"
+          <StatusChip
+            :status="item.status"
+            domain="invoice"
           >
             {{ statusLabel(item.status) }}
-          </VChip>
+          </StatusChip>
         </template>
 
         <template #item.amount_due="{ item }">
@@ -137,6 +186,31 @@ onMounted(() => load())
 
         <template #item.next_retry_at="{ item }">
           {{ formatDateTime(item.next_retry_at) }}
+        </template>
+
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1 justify-center">
+            <VBtn
+              size="small"
+              color="primary"
+              variant="tonal"
+              :loading="actionLoading[item.id] === 'retry'"
+              :disabled="!!actionLoading[item.id]"
+              @click="handleRetry(item)"
+            >
+              {{ t('platformBilling.dunningRetry') }}
+            </VBtn>
+            <VBtn
+              size="small"
+              color="error"
+              variant="tonal"
+              :loading="actionLoading[item.id] === 'escalate'"
+              :disabled="!!actionLoading[item.id]"
+              @click="handleEscalate(item)"
+            >
+              {{ t('platformBilling.dunningEscalate') }}
+            </VBtn>
+          </div>
         </template>
 
         <template #bottom>

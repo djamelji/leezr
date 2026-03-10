@@ -2,12 +2,14 @@
 import { loadStripe } from '@stripe/stripe-js'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { formatMoney } from '@/utils/money'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useCompanyBillingStore()
 const { toast } = useAppToast()
+const { track } = useAnalytics()
 
 // ── State ──
 const isLoading = ref(true)
@@ -44,6 +46,10 @@ const saveCard = ref(false)
 
 const sepaName = ref('')
 
+// ADR-325: Allowed payment methods from backend
+const allowedPaymentMethods = computed(() => store.overview?.allowed_payment_methods ?? ['card'])
+const showSepaOption = computed(() => allowedPaymentMethods.value.includes('sepa_debit'))
+
 // ── Load outstanding invoices + saved cards ──
 const load = async () => {
   isLoading.value = true
@@ -51,6 +57,7 @@ const load = async () => {
     const [outstanding] = await Promise.all([
       store.fetchOutstandingInvoices(),
       store.fetchSavedCards(),
+      store.fetchOverview(),
     ])
 
     invoices.value = outstanding.invoices || []
@@ -207,6 +214,7 @@ const initiatePayment = async () => {
       paidCount.value = result.paid_invoice_ids?.length || selectedIds.value.length
       step.value = 'success'
       toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
+      track('invoice_paid', { invoice_ids: result.paid_invoice_ids, amount: selectedTotal.value, method: 'wallet' })
 
       return
     }
@@ -306,6 +314,7 @@ const mountStripeElements = async result => {
         paidCount.value = backendResult.paid_invoice_ids?.length || 0
         step.value = 'success'
         toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
+        track('invoice_paid', { invoice_ids: backendResult.paid_invoice_ids, amount: selectedTotal.value, method: 'apple_google_pay' })
       }
     }
     catch (err) {
@@ -418,6 +427,9 @@ const confirmPayment = async () => {
       paidCount.value = result.paid_invoice_ids?.length || 0
       step.value = 'success'
       toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
+
+      const method = selectedMethod.value === 'new-card' ? 'card' : selectedMethod.value === 'new-sepa' ? 'sepa' : 'saved_card'
+      track('invoice_paid', { invoice_ids: result.paid_invoice_ids, amount: selectedTotal.value, method })
     }
   }
   catch (err) {
@@ -761,8 +773,9 @@ const goToBilling = () => {
                   </div>
                 </VLabel>
 
-                <!-- New SEPA -->
+                <!-- New SEPA — ADR-325: only shown if SEPA allowed by policy -->
                 <VLabel
+                  v-if="showSepaOption"
                   class="custom-input custom-radio rounded cursor-pointer"
                   :class="selectedMethod === 'new-sepa' ? 'active' : ''"
                 >

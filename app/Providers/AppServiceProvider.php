@@ -89,6 +89,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Core\Billing\Listeners\AddonCreditListener::class,
         );
 
+        // ADR-318: Rate limiter for async reconciliation jobs
+        \Illuminate\Support\Facades\RateLimiter::for('billing-reconcile', function (object $job) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(10);
+        });
+
         // ADR-081: Remove Vite hot file outside local — prevents production
         // from loading dev server assets (:5173) if the file leaks.
         if (! $this->app->environment('local')) {

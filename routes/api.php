@@ -5,6 +5,7 @@ use App\Modules\Infrastructure\Auth\Http\PasswordResetController;
 use App\Modules\Infrastructure\Webhooks\Http\WebhookController;
 use App\Modules\Infrastructure\Public\Http\PublicAddonController;
 use App\Modules\Infrastructure\Public\Http\PublicFieldController;
+use App\Modules\Infrastructure\Public\Http\PublicCouponController;
 use App\Modules\Infrastructure\Public\Http\PublicPlanController;
 use App\Modules\Infrastructure\Public\Http\PublicI18nController;
 use App\Modules\Infrastructure\Public\Http\PublicMarketController;
@@ -32,8 +33,10 @@ Route::get('/public/world', PublicWorldController::class)->middleware('throttle:
 Route::prefix('public')->middleware('throttle:30,1')->group(function () {
     Route::get('/plans', [PublicPlanController::class, 'index']);
     Route::get('/plans/preview', [PublicPlanController::class, 'preview']);
+    Route::post('/plans/estimate-registration', [PublicPlanController::class, 'estimateRegistration']);
     Route::get('/fields', [PublicFieldController::class, 'companyFields']);
     Route::get('/addons', [PublicAddonController::class, 'index']);
+    Route::post('/validate-coupon', PublicCouponController::class)->middleware('throttle:10,1');
 });
 
 // Public markets & i18n (ADR-104 — no auth)

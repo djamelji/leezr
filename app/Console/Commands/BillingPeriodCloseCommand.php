@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\HasCorrelationId;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\FinancialPeriod;
@@ -19,6 +20,8 @@ use RuntimeException;
  */
 class BillingPeriodCloseCommand extends Command implements Isolatable
 {
+    use HasCorrelationId;
+
     protected $signature = 'billing:period-close
         {company : Company ID}
         {start : Period start date (Y-m-d)}
@@ -29,6 +32,7 @@ class BillingPeriodCloseCommand extends Command implements Isolatable
 
     public function handle(AuditLogger $audit): int
     {
+        $this->initCorrelationId();
         $companyId = (int) $this->argument('company');
         $startDate = $this->argument('start');
         $endDate = $this->argument('end');

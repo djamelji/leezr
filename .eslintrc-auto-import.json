@@ -386,6 +386,8 @@
     "checkVersionOnMount": true,
     "usePublicFields": true,
     "usePublicMarkets": true,
-    "usePublicAddons": true
+    "usePublicAddons": true,
+    "useAnalytics": true,
+    "useTunnelPersistence": true
   }
 }

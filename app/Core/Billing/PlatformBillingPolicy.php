@@ -3,15 +3,20 @@
 namespace App\Core\Billing;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Singleton billing policy configuration.
  * Same pattern as PlatformSetting::instance().
  *
  * All billing behavior parameters are typed columns — not a JSON blob.
+ * Cached for 1 hour via Cache::remember (ADR-312).
  */
 class PlatformBillingPolicy extends Model
 {
+    private const CACHE_KEY = 'platform_billing_policy';
+
+    private const CACHE_TTL = 3600; // 1 hour
     protected $table = 'platform_billing_policies';
 
     protected $fillable = [
@@ -26,6 +31,9 @@ class PlatformBillingPolicy extends Model
         'trial_plan_change_behavior',
         'trial_requires_payment_method',
         'trial_charge_timing',
+        'allow_sepa',
+        'sepa_requires_trial',
+        'sepa_first_failure_action',
     ];
 
     protected function casts(): array
@@ -42,34 +50,53 @@ class PlatformBillingPolicy extends Model
             'default_tax_rate_bps' => 'integer',
             'admin_approval_required' => 'boolean',
             'trial_requires_payment_method' => 'boolean',
+            'allow_sepa' => 'boolean',
+            'sepa_requires_trial' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => static::clearCache());
+        static::deleted(fn () => static::clearCache());
     }
 
     /**
      * Singleton access — always returns the single row.
      * Creates it with defaults on first call.
+     * Cached for 1 hour (ADR-312).
      */
     public static function instance(): static
     {
-        $count = static::query()->count();
+        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
+            $count = static::query()->count();
 
-        if ($count > 1) {
-            throw new \RuntimeException(
-                "PlatformBillingPolicy singleton violated: {$count} rows found. Expected exactly 1."
-            );
-        }
+            if ($count > 1) {
+                throw new \RuntimeException(
+                    "PlatformBillingPolicy singleton violated: {$count} rows found. Expected exactly 1."
+                );
+            }
 
-        $existing = static::query()->first();
+            $existing = static::query()->first();
 
-        if ($existing) {
-            return $existing;
-        }
+            if ($existing) {
+                return $existing;
+            }
 
-        static::create([
-            'retry_intervals_days' => [1, 3, 7],
-        ]);
+            static::create([
+                'retry_intervals_days' => [1, 3, 7],
+            ]);
 
-        // Re-fetch to get DB-applied defaults
-        return static::query()->first();
+            // Re-fetch to get DB-applied defaults
+            return static::query()->first();
+        });
+    }
+
+    /**
+     * Clear the cached singleton (call after update).
+     */
+    public static function clearCache(): void
+    {
+        Cache::forget(self::CACHE_KEY);
     }
 }

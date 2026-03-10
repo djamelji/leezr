@@ -16,6 +16,11 @@ use App\Modules\Platform\Billing\Http\PlatformBillingPolicyController;
 use App\Modules\Platform\Billing\Http\PlatformFinancialController;
 use App\Modules\Platform\Billing\Http\PlatformBillingMetricsController;
 use App\Modules\Platform\Billing\Http\PlatformBillingWidgetsController;
+use App\Modules\Platform\Billing\Http\BillingMetricsExportController;
+use App\Modules\Platform\Billing\Http\BillingExportController;
+use App\Modules\Platform\Billing\Http\BillingBulkActionController;
+use App\Modules\Platform\Billing\Http\CouponCrudController;
+use App\Modules\Platform\Billing\Http\AuditExportController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
@@ -49,6 +54,10 @@ use App\Modules\Infrastructure\Theme\Http\PlatformThemePreferenceController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformAuthController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
 use Illuminate\Support\Facades\Route;
+
+// Metrics export — bearer token auth, no session guard (ADR-311)
+Route::get('/billing/metrics-export', BillingMetricsExportController::class)
+    ->middleware('module.active:platform.billing');
 
 // Platform auth — public (throttled)
 Route::post('/login', [PlatformAuthController::class, 'login'])
@@ -214,7 +223,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Billing read endpoints (ADR-135 LOT4)
     Route::middleware(['module.active:platform.billing', 'platform.permission:view_billing'])->group(function () {
         Route::get('/billing/invoices', [PlatformBillingController::class, 'invoices']);
+        Route::get('/billing/invoices/export', BillingExportController::class);
         Route::get('/billing/invoices/{id}', [PlatformBillingController::class, 'invoiceDetail']);
+        Route::get('/billing/invoices/{id}/pdf', [PlatformBillingController::class, 'invoicePdf']);
         Route::get('/billing/payments', [PlatformBillingController::class, 'payments']);
         Route::get('/billing/credit-notes', [PlatformBillingController::class, 'creditNotes']);
         Route::get('/billing/wallets', [PlatformBillingController::class, 'wallets']);
@@ -274,6 +285,16 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/billing/invoices/{invoice}/credit-note', [PlatformAdvancedMutationController::class, 'issueCreditNote']);
         Route::put('/billing/invoices/{invoice}/write-off', [PlatformAdvancedMutationController::class, 'writeOff']);
 
+        // Bulk actions (ADR-315)
+        Route::post('/billing/invoices/bulk-void', [BillingBulkActionController::class, 'bulkVoid']);
+        Route::post('/billing/invoices/bulk-retry', [BillingBulkActionController::class, 'bulkRetry']);
+
+        // Coupons CRUD (ADR-316)
+        Route::get('/billing/coupons', [CouponCrudController::class, 'index']);
+        Route::post('/billing/coupons', [CouponCrudController::class, 'store']);
+        Route::put('/billing/coupons/{id}', [CouponCrudController::class, 'update']);
+        Route::delete('/billing/coupons/{id}', [CouponCrudController::class, 'destroy']);
+
         Route::get('/billing/subscriptions', [BillingConfigController::class, 'subscriptions']);
         Route::put('/billing/subscriptions/{id}/approve', [BillingConfigController::class, 'approveSubscription']);
         Route::put('/billing/subscriptions/{id}/reject', [BillingConfigController::class, 'rejectSubscription']);
@@ -297,6 +318,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/billing/financial-periods/close', [PlatformFinancialController::class, 'closePeriod']);
         Route::put('/billing/companies/{id}/financial-freeze', [PlatformFinancialController::class, 'toggleFreeze']);
         Route::post('/billing/reconcile', [PlatformFinancialController::class, 'reconcile']);
+
+        // Audit export (ADR-311)
+        Route::get('/billing/audit-export', AuditExportController::class);
     });
 
     // Markets governance (ADR-104)

@@ -2,6 +2,8 @@
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
 import { formatMoney } from '@/utils/money'
+import EmptyState from '@/core/components/EmptyState.vue'
+import StatusChip from '@/core/components/StatusChip.vue'
 
 const { t } = useI18n()
 const store = useCompanyBillingStore()
@@ -78,6 +80,9 @@ const loadInvoices = async (page = 1) => {
       status: statusFilter.value || undefined,
     })
   }
+  catch {
+    toast(t('common.loadError'), 'error')
+  }
   finally {
     isLoading.value = false
   }
@@ -115,7 +120,7 @@ const downloadPdf = async invoice => {
     const a = document.createElement('a')
 
     a.href = url
-    a.download = `invoice-${invoice.number || invoice.id}.html`
+    a.download = `${invoice.number || `invoice-${invoice.id}`}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -151,19 +156,12 @@ watch(statusFilter, () => loadInvoices(1))
         type="table"
       />
 
-      <div
+      <EmptyState
         v-else-if="store.invoices.length === 0 && !isLoading"
-        class="text-center pa-6 text-disabled"
-      >
-        <VIcon
-          icon="tabler-file-invoice"
-          size="48"
-          class="mb-2"
-        />
-        <p class="text-body-1">
-          {{ t('companyBilling.noInvoices') }}
-        </p>
-      </div>
+        icon="tabler-file-invoice"
+        :title="t('companyBilling.noInvoices')"
+        :description="t('companyBilling.noInvoicesDescription')"
+      />
 
       <VDataTable
         v-else
@@ -183,12 +181,12 @@ watch(statusFilter, () => loadInvoices(1))
         </template>
 
         <template #item.status="{ item }">
-          <VChip
-            :color="statusColor(item.status)"
-            size="small"
+          <StatusChip
+            :status="item.status"
+            domain="invoice"
           >
             {{ statusLabel(item.status) }}
-          </VChip>
+          </StatusChip>
         </template>
 
         <template #item.period="{ item }">

@@ -27,6 +27,7 @@ class PlatformBillingPolicyController
     private const ADDON_BILLING_INTERVAL = ['monthly', 'plan_aligned'];
     private const TRIAL_PLAN_CHANGE_BEHAVIOR = ['continue_trial', 'end_trial'];
     private const TRIAL_CHARGE_TIMING = ['immediate', 'end_of_trial'];
+    private const SEPA_FIRST_FAILURE_ACTION = ['suspend', 'dunning'];
 
     public function show(): JsonResponse
     {
@@ -73,9 +74,16 @@ class PlatformBillingPolicyController
             'trial_plan_change_behavior' => ['sometimes', 'string', Rule::in(self::TRIAL_PLAN_CHANGE_BEHAVIOR)],
             'trial_requires_payment_method' => ['sometimes', 'boolean'],
             'trial_charge_timing' => ['sometimes', 'string', Rule::in(self::TRIAL_CHARGE_TIMING)],
+
+            // SEPA (ADR-325)
+            'allow_sepa' => ['sometimes', 'boolean'],
+            'sepa_requires_trial' => ['sometimes', 'boolean'],
+            'sepa_first_failure_action' => ['sometimes', 'string', Rule::in(self::SEPA_FIRST_FAILURE_ACTION)],
         ]);
 
         $policy = $useCase->execute($validated);
+
+        PlatformBillingPolicy::clearCache();
 
         return response()->json([
             'message' => 'Billing policy updated.',

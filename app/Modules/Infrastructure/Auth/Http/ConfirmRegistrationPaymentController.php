@@ -3,9 +3,12 @@
 namespace App\Modules\Infrastructure\Auth\Http;
 
 use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\Subscription;
+use App\Core\Plans\Plan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -112,11 +115,47 @@ class ConfirmRegistrationPaymentController extends Controller
 
         // Only activate if pending_payment (not trialing — trial stays as-is)
         if ($subscription->status === 'pending_payment') {
+            $periodStart = $subscription->current_period_start ?? now();
+            $periodEnd = $subscription->current_period_end
+                ?? ($subscription->interval === 'yearly' ? now()->addYear() : now()->addMonth());
+
             $subscription->update([
                 'status' => 'active',
-                'is_current' => true,
                 'started_at' => now(),
+                'current_period_start' => $periodStart,
+                'current_period_end' => $periodEnd,
             ]);
+
+            // Create initial invoice for the subscription
+            $plan = Plan::where('key', $subscription->plan_key)->first();
+
+            if ($plan) {
+                $price = $subscription->interval === 'yearly'
+                    ? $plan->price_yearly
+                    : $plan->price_monthly;
+
+                if ($price > 0) {
+                    $invoice = InvoiceIssuer::createDraft(
+                        $company,
+                        $subscription->id,
+                        $periodStart->toDateString(),
+                        $periodEnd->toDateString(),
+                    );
+
+                    InvoiceIssuer::addLine($invoice, 'plan', "{$plan->name} plan", $price, 1);
+
+                    // Apply coupon if attached to subscription
+                    if ($subscription->coupon_id) {
+                        $coupon = BillingCoupon::find($subscription->coupon_id);
+
+                        if ($coupon) {
+                            InvoiceIssuer::applyCoupon($invoice, $coupon, $company);
+                        }
+                    }
+
+                    InvoiceIssuer::finalize($invoice);
+                }
+            }
         }
 
         // ADR-302: Charge any open addon invoices immediately

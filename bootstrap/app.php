@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'maintenance.check' => \App\Modules\Platform\Maintenance\MaintenanceMode::class,
         ]);
 
+        $middleware->appendToGroup('api', \App\Http\Middleware\CorrelationIdMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\AddBuildVersion::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\NoCacheHeaders::class);
 

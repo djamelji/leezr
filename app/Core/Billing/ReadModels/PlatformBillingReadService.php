@@ -45,6 +45,14 @@ class PlatformBillingReadService
             $query->where('issued_at', '<=', $filters['to']);
         }
 
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('number', 'like', "%{$search}%")
+                    ->orWhereHas('company', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
         return $query->paginate(min($perPage, 100));
     }
 

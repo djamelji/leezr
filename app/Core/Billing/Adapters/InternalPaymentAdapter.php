@@ -135,4 +135,18 @@ class InternalPaymentAdapter implements PaymentProviderAdapter
     {
         throw new \RuntimeException('Internal provider does not support provider collection.');
     }
+
+    public function getDashboardLinks(
+        ?string $customerId = null,
+        ?string $subscriptionId = null,
+        ?string $invoiceId = null,
+        ?string $paymentId = null,
+    ): array {
+        return [
+            'customer_url' => null,
+            'subscription_url' => null,
+            'invoice_url' => null,
+            'payment_url' => null,
+        ];
+    }
 }

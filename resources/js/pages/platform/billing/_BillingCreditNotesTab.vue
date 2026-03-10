@@ -1,12 +1,16 @@
 <script setup>
+import StatusChip from '@/core/components/StatusChip.vue'
+import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
+const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const statusFilter = ref('')
+const search = ref('')
 
 const headers = computed(() => [
   { title: t('platformBilling.company'), key: 'company', sortable: false },
@@ -25,10 +29,10 @@ const statusOptions = computed(() => [
   { title: t('platformBilling.creditNoteStatusApplied'), value: 'applied' },
 ])
 
-const statusColor = status => {
-  const colors = { draft: 'secondary', issued: 'info', applied: 'success' }
-
-  return colors[status] || 'secondary'
+const creditNoteStatusMap = {
+  draft: 'secondary',
+  issued: 'info',
+  applied: 'success',
 }
 
 const statusLabel = status => {
@@ -43,6 +47,16 @@ const formatDate = dateStr => {
   return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+const filteredCreditNotes = computed(() => {
+  if (!search.value) return store.allCreditNotes
+  const q = search.value.toLowerCase()
+
+  return store.allCreditNotes.filter(cn =>
+    cn.company?.name?.toLowerCase().includes(q)
+    || cn.number?.toLowerCase().includes(q),
+  )
+})
+
 const load = async (page = 1) => {
   isLoading.value = true
   try {
@@ -50,6 +64,9 @@ const load = async (page = 1) => {
       page,
       status: statusFilter.value || undefined,
     })
+  }
+  catch {
+    toast(t('common.loadError'), 'error')
   }
   finally {
     isLoading.value = false
@@ -62,13 +79,21 @@ watch(statusFilter, () => load(1))
 
 <template>
   <VCard>
-    <VCardTitle class="d-flex align-center">
+    <VCardTitle class="d-flex align-center flex-wrap gap-2">
       <VIcon
         icon="tabler-receipt-refund"
         class="me-2"
       />
       {{ t('platformBilling.tabs.creditNotes') }}
       <VSpacer />
+      <AppTextField
+        v-model="search"
+        :placeholder="t('common.search')"
+        density="compact"
+        prepend-inner-icon="tabler-search"
+        style="max-inline-size: 220px;"
+        clearable
+      />
       <AppSelect
         v-model="statusFilter"
         :items="statusOptions"
@@ -83,45 +108,48 @@ watch(statusFilter, () => load(1))
         type="table"
       />
 
-      <div
+      <EmptyState
         v-else-if="store.allCreditNotes.length === 0 && !isLoading"
-        class="text-center pa-6 text-disabled"
-      >
-        <VIcon
-          icon="tabler-receipt-refund"
-          size="48"
-          class="mb-2"
-        />
-        <p class="text-body-1">
-          {{ t('platformBilling.noCreditNotes') }}
-        </p>
-      </div>
+        icon="tabler-receipt-refund"
+        :title="t('platformBilling.noCreditNotes')"
+      />
 
       <VDataTable
         v-else
         :headers="headers"
-        :items="store.allCreditNotes"
+        :items="filteredCreditNotes"
         :loading="isLoading"
         :items-per-page="store.allCreditNotesPagination.per_page"
         hide-default-footer
       >
         <template #item.company="{ item }">
-          <span class="font-weight-medium">
-            {{ item.company?.name || '—' }}
-          </span>
+          <RouterLink
+            v-if="item.company?.id"
+            :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+            class="font-weight-medium text-high-emphasis text-decoration-none"
+          >
+            {{ item.company.name }}
+          </RouterLink>
+          <span
+            v-else
+            class="font-weight-medium"
+          >—</span>
         </template>
 
         <template #item.status="{ item }">
           <VChip
-            :color="statusColor(item.status)"
+            :color="creditNoteStatusMap[item.status] || 'secondary'"
             size="small"
+            variant="tonal"
           >
             {{ statusLabel(item.status) }}
           </VChip>
         </template>
 
         <template #item.amount="{ item }">
-          {{ formatMoney(item.amount, { currency: item.currency }) }}
+          <span class="font-weight-medium">
+            {{ formatMoney(item.amount, { currency: item.currency }) }}
+          </span>
         </template>
 
         <template #item.issued_at="{ item }">

@@ -482,6 +482,7 @@ const scopeColor = scope => {
     </VWindow>
 
     <!-- ─── Create/Edit Definition Drawer ────────────── -->
+    <Teleport to="body">
     <VNavigationDrawer
       v-model="isDefDrawerOpen"
       temporary
@@ -598,5 +599,6 @@ const scopeColor = scope => {
         </VForm>
       </VCardText>
     </VNavigationDrawer>
+    </Teleport>
   </div>
 </template>

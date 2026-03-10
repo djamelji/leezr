@@ -1,4 +1,6 @@
 <script setup>
+import StatusChip from '@/core/components/StatusChip.vue'
+import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
@@ -29,19 +31,6 @@ const statusOptions = computed(() => [
   { title: t('platformBilling.statusSuspended'), value: 'suspended' },
 ])
 
-const statusColor = status => {
-  const colors = {
-    pending: 'info',
-    active: 'success',
-    trialing: 'info',
-    past_due: 'error',
-    cancelled: 'warning',
-    suspended: 'secondary',
-  }
-
-  return colors[status] || 'secondary'
-}
-
 const statusLabel = status => {
   const map = {
     pending: 'statusPending',
@@ -71,6 +60,9 @@ const load = async (page = 1) => {
       status: statusFilter.value || undefined,
     })
   }
+  catch {
+    toast(t('common.loadError'), 'error')
+  }
   finally {
     isLoading.value = false
   }
@@ -93,7 +85,19 @@ const handleApprove = async item => {
   }
 }
 
-const handleReject = async item => {
+const rejectTarget = ref(null)
+const isRejectDialogOpen = ref(false)
+
+const confirmReject = item => {
+  rejectTarget.value = item
+  isRejectDialogOpen.value = true
+}
+
+const handleReject = async () => {
+  const item = rejectTarget.value
+  if (!item) return
+
+  isRejectDialogOpen.value = false
   actionLoading.value = { ...actionLoading.value, [item.id]: 'reject' }
   try {
     await store.rejectSubscription(item.id)
@@ -105,6 +109,7 @@ const handleReject = async item => {
   }
   finally {
     delete actionLoading.value[item.id]
+    rejectTarget.value = null
   }
 }
 
@@ -135,19 +140,11 @@ watch(statusFilter, () => load(1))
         type="table"
       />
 
-      <div
+      <EmptyState
         v-else-if="store.allSubscriptions.length === 0 && !isLoading"
-        class="text-center pa-6 text-disabled"
-      >
-        <VIcon
-          icon="tabler-receipt-off"
-          size="48"
-          class="mb-2"
-        />
-        <p class="text-body-1">
-          {{ t('platformBilling.noSubscriptions') }}
-        </p>
-      </div>
+        icon="tabler-receipt-off"
+        :title="t('platformBilling.noSubscriptions')"
+      />
 
       <VDataTable
         v-else
@@ -183,12 +180,12 @@ watch(statusFilter, () => load(1))
         </template>
 
         <template #item.status="{ item }">
-          <VChip
-            :color="statusColor(item.status)"
-            size="small"
+          <StatusChip
+            :status="item.status"
+            domain="subscription"
           >
             {{ statusLabel(item.status) }}
-          </VChip>
+          </StatusChip>
         </template>
 
         <template #item.estimated_next_amount="{ item }">
@@ -236,7 +233,7 @@ watch(statusFilter, () => load(1))
               variant="tonal"
               :loading="actionLoading[item.id] === 'reject'"
               :disabled="!!actionLoading[item.id]"
-              @click="handleReject(item)"
+              @click="confirmReject(item)"
             >
               {{ t('platformBilling.actionReject') }}
             </VBtn>
@@ -265,4 +262,35 @@ watch(statusFilter, () => load(1))
       </VDataTable>
     </VCardText>
   </VCard>
+
+  <!-- Reject Confirm Dialog -->
+  <VDialog
+    v-model="isRejectDialogOpen"
+    max-width="460"
+  >
+    <VCard>
+      <VCardTitle class="text-h5 pa-5">
+        {{ t('platformBilling.rejectConfirmTitle') }}
+      </VCardTitle>
+      <VCardText>
+        {{ t('platformBilling.rejectConfirmText', { company: rejectTarget?.company?.name || '—' }) }}
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="text"
+          @click="isRejectDialogOpen = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="error"
+          variant="elevated"
+          @click="handleReject"
+        >
+          {{ t('platformBilling.actionReject') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 </template>

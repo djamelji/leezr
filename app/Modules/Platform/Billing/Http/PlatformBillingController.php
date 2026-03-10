@@ -11,6 +11,7 @@ use App\Core\Billing\ReadModels\PlatformBillingReadService;
 use App\Core\Billing\Subscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * Platform admin billing read endpoints.
@@ -20,7 +21,7 @@ class PlatformBillingController
 {
     public function invoices(Request $request): JsonResponse
     {
-        $filters = $this->sanitizeFilters($request, ['company_id', 'status', 'from', 'to']);
+        $filters = $this->sanitizeFilters($request, ['company_id', 'status', 'from', 'to', 'search']);
         $perPage = (int) $request->input('per_page', 20);
 
         return response()->json(
@@ -127,6 +128,35 @@ class PlatformBillingController
             'heartbeats' => $heartbeats,
             'anomalies' => $anomalies,
             'status' => $anomalies > 0 ? 'warning' : 'ok',
+        ]);
+    }
+
+    public function invoicePdf(int $id): Response
+    {
+        $invoice = Invoice::whereNotNull('finalized_at')
+            ->where('id', $id)
+            ->with(['lines', 'company'])
+            ->first();
+
+        if (!$invoice) {
+            abort(404, 'Invoice not found.');
+        }
+
+        $snap = $invoice->billing_snapshot ?? [];
+        $locale = $snap['market_locale'] ?? 'fr-FR';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
+            'invoice' => $invoice,
+            'company' => $invoice->company,
+            'snap' => $snap,
+            'locale' => $locale,
+        ]);
+
+        $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
 

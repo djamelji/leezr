@@ -1886,6 +1886,7 @@ onMounted(async () => {
       </VWindow>
 
       <!-- ─── Role Drawer ──────────────────────────────── -->
+      <Teleport to="body">
       <VNavigationDrawer
         v-model="isRoleDrawerOpen"
         temporary
@@ -2176,8 +2177,10 @@ onMounted(async () => {
           </VCardText>
         </div>
       </VNavigationDrawer>
+      </Teleport>
 
       <!-- ─── Field Config Drawer ──────────────────────── -->
+      <Teleport to="body">
       <VNavigationDrawer
         v-model="isFieldDrawerOpen"
         temporary
@@ -2332,6 +2335,7 @@ onMounted(async () => {
           </VCardText>
         </div>
       </VNavigationDrawer>
+      </Teleport>
 
       <!-- ─── Delete Confirmation Dialog ──────────────── -->
       <VDialog

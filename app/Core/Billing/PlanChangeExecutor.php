@@ -99,24 +99,20 @@ class PlanChangeExecutor
         $skipProration = $subscription->status === 'trialing'
             && PlatformBillingPolicy::instance()->trial_plan_change_behavior === 'continue_trial';
 
+        // ADR-324: Use PricingEngine for effective prices (coupon-aware proration)
         if ($timing === 'immediate' && !$skipProration && $subscription->current_period_start && $subscription->current_period_end) {
-            $plans = PlanRegistry::definitions();
+            $oldPrice = PricingEngine::effectivePriceCents($subscription);
+            $newPrice = PricingEngine::catalogPriceCents(
+                \App\Core\Plans\Plan::where('key', $toPlanKey)->first(), $toInterval
+            );
 
-            $fromPlan = $plans[$subscription->plan_key] ?? null;
-            $toPlan = $plans[$toPlanKey] ?? null;
-
-            if ($fromPlan && $toPlan) {
-                $oldPrice = ProrationCalculator::resolvePriceCents($fromPlan, $subscription->interval ?? 'monthly');
-                $newPrice = ProrationCalculator::resolvePriceCents($toPlan, $toInterval);
-
-                $prorationSnapshot = ProrationCalculator::compute(
-                    oldPriceCents: $oldPrice,
-                    newPriceCents: $newPrice,
-                    periodStart: CarbonImmutable::instance($subscription->current_period_start),
-                    periodEnd: CarbonImmutable::instance($subscription->current_period_end),
-                    changeDate: CarbonImmutable::now(),
-                );
-            }
+            $prorationSnapshot = ProrationCalculator::compute(
+                oldPriceCents: $oldPrice,
+                newPriceCents: $newPrice,
+                periodStart: CarbonImmutable::instance($subscription->current_period_start),
+                periodEnd: CarbonImmutable::instance($subscription->current_period_end),
+                changeDate: CarbonImmutable::now(),
+            );
         }
 
         $intent = PlanChangeIntent::create([
@@ -216,6 +212,14 @@ class PlanChangeExecutor
                         );
                     }
 
+                    // ADR-324: Apply coupon to proration invoice if active
+                    if ($subscription->coupon_id) {
+                        $coupon = BillingCoupon::find($subscription->coupon_id);
+                        if ($coupon && $coupon->isUsable()) {
+                            InvoiceIssuer::applyCoupon($invoice, $coupon, $company);
+                        }
+                    }
+
                     InvoiceIssuer::finalize($invoice);
                 } else {
                     // Company is owed money → credit wallet
@@ -233,11 +237,16 @@ class PlanChangeExecutor
                 }
             }
 
-            // Update subscription
+            // Update subscription — ADR-324: transfer coupon
             $updateData = [
                 'plan_key' => $intent->to_plan_key,
                 'interval' => $intent->interval_to,
             ];
+
+            if ($subscription->coupon_id) {
+                $updateData['coupon_id'] = $subscription->coupon_id;
+                $updateData['coupon_months_remaining'] = $subscription->coupon_months_remaining;
+            }
 
             // ADR-287: Handle trialing subscription with immediate timing
             if ($isTrialing && $intent->timing === 'immediate') {

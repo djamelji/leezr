@@ -7,6 +7,7 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\LedgerEntry;
 use App\Core\Billing\Payment;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -312,6 +313,18 @@ class PlatformBillingWidgetsReadService
      */
     public static function kpisDataset(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
     {
+        // Cache global KPIs for 10 minutes (ADR-312)
+        if ($scope === 'global') {
+            $cacheKey = 'billing_widgets:kpis_global:'.md5($from->toDateString().$to->toDateString());
+
+            return Cache::remember($cacheKey, 600, fn () => static::kpisDatasetRaw($scope, $companyId, $from, $to));
+        }
+
+        return static::kpisDatasetRaw($scope, $companyId, $from, $to);
+    }
+
+    private static function kpisDatasetRaw(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
+    {
         $revenueQuery = LedgerEntry::where('entry_type', 'invoice_issued')
             ->where('account_code', 'REVENUE')
             ->whereBetween('recorded_at', [$from, $to]);
@@ -354,6 +367,16 @@ class PlatformBillingWidgetsReadService
      * Risk dataset — failed payments, overdue invoices, failure reasons.
      */
     public static function riskDataset(string $scope, ?int $companyId): array
+    {
+        // Cache global risk data for 10 minutes (ADR-312)
+        if ($scope === 'global') {
+            return Cache::remember('billing_widgets:risk_global', 600, fn () => static::riskDatasetRaw($scope, $companyId));
+        }
+
+        return static::riskDatasetRaw($scope, $companyId);
+    }
+
+    private static function riskDatasetRaw(string $scope, ?int $companyId): array
     {
         $failedQuery = Payment::where('status', 'failed')
             ->where('created_at', '>=', now()->subDays(7));

@@ -21,6 +21,7 @@ class Market extends Model
         'flag_svg',
         'is_active',
         'is_default',
+        'is_eu',
         'sort_order',
     ];
 
@@ -28,6 +29,7 @@ class Market extends Model
         'vat_rate_bps' => 'integer',
         'is_active' => 'boolean',
         'is_default' => 'boolean',
+        'is_eu' => 'boolean',
         'sort_order' => 'integer',
     ];
 

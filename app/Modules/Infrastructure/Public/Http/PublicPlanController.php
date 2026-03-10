@@ -2,10 +2,14 @@
 
 namespace App\Modules\Infrastructure\Public\Http;
 
+use App\Core\Billing\BillingCoupon;
+use App\Core\Billing\PaymentPolicy;
 use App\Core\Billing\PlatformBillingPolicy;
+use App\Core\Billing\PricingEngine;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Plans\PlanRegistry;
+use App\Modules\Core\Billing\Services\CouponService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -101,5 +105,48 @@ class PublicPlanController extends Controller
             'jobdomain' => ['key' => $jobdomain->key, 'label' => $jobdomain->label],
             'modules' => $modules,
         ]);
+    }
+
+    /**
+     * POST /api/public/estimate-registration
+     * ADR-324: Returns a full PriceBreakdown for the registration tunnel.
+     */
+    public function estimateRegistration(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'plan_key' => ['required', 'string'],
+            'interval' => ['required', 'string', 'in:monthly,yearly'],
+            'market_key' => ['required', 'string'],
+            'coupon_code' => ['nullable', 'string'],
+            'addon_keys' => ['nullable', 'array'],
+            'addon_keys.*' => ['string'],
+        ]);
+
+        $coupon = null;
+        if (! empty($data['coupon_code'])) {
+            $coupon = BillingCoupon::where('code', $data['coupon_code'])->first();
+            if ($coupon && ! $coupon->isUsable()) {
+                $coupon = null;
+            }
+        }
+
+        $breakdown = PricingEngine::forRegistration(
+            planKey: $data['plan_key'],
+            interval: $data['interval'],
+            marketKey: $data['market_key'],
+            coupon: $coupon,
+            addonModuleKeys: $data['addon_keys'] ?? [],
+        );
+
+        // ADR-325: Include allowed payment methods for this context
+        $allowedMethods = PaymentPolicy::allowedMethodsForRegistration(
+            planKey: $data['plan_key'],
+            interval: $data['interval'],
+            marketKey: $data['market_key'],
+        );
+
+        return response()->json(array_merge($breakdown->toArray(), [
+            'allowed_payment_methods' => $allowedMethods,
+        ]));
     }
 }

@@ -10,6 +10,7 @@ use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\PaymentPolicy;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Stripe\StripeEventProcessor;
 use App\Core\Billing\Subscription;
@@ -76,21 +77,32 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         if ($existingSub) {
             // Trial: just collect payment method for future billing
             $subscription = $existingSub;
-            $allowedMethods = ['card', 'sepa_debit'];
         } else {
             // No trial: create pending_payment subscription
-            $subscription = DB::transaction(function () use ($company, $planKey, $interval) {
+            $periodEnd = $interval === 'yearly' ? now()->addYear() : now()->addMonth();
+
+            $subscription = DB::transaction(function () use ($company, $planKey, $interval, $periodEnd) {
                 return Subscription::create([
                     'company_id' => $company->id,
                     'plan_key' => $planKey,
                     'interval' => $interval,
                     'status' => 'pending_payment',
                     'provider' => 'stripe',
-                    'is_current' => null,
+                    'is_current' => 1,
+                    'current_period_start' => now(),
+                    'current_period_end' => $periodEnd,
                 ]);
             });
-            $allowedMethods = ['card'];
         }
+
+        // ADR-325: Resolve allowed methods via PaymentPolicy (replaces hardcoded card/sepa_debit)
+        $isTrial = $existingSub && $existingSub->status === 'trialing';
+        $allowedMethods = PaymentPolicy::allowedMethodsForContext(
+            marketKey: $company->market_key,
+            planKey: $planKey,
+            interval: $interval,
+            isTrial: $isTrial,
+        );
 
         // Ensure Stripe customer exists
         $stripeCustomer = $this->ensureStripeCustomer($company);
@@ -122,6 +134,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             clientSecret: $si->client_secret,
             publishableKey: $this->resolvePublishableKey(),
             trialChargeTiming: $existingSub ? PlatformBillingPolicy::instance()->trial_charge_timing : null,
+            allowedPaymentMethods: $allowedMethods,
         );
     }
 
@@ -370,8 +383,10 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             'metadata' => ['company_id' => (string) $company->id],
         ];
 
+        $opts = ['idempotency_key' => 'billing:setup_intent:' . $company->id . ':' . $methodType . ':' . now()->format('Y-m-d-H')];
+
         try {
-            $si = $this->callStripeCreateSetupIntent($params);
+            $si = $this->callStripeCreateSetupIntent($params, $opts);
         } catch (\Throwable $e) {
             Log::error('[billing] Stripe SetupIntent failed', [
                 'company_id' => $company->id,
@@ -442,11 +457,18 @@ class StripePaymentAdapter implements PaymentProviderAdapter
 
         $stripeCustomer = $this->ensureStripeCustomer($company);
 
+        $idempotencyKey = 'billing:on_session_pi:' . $company->id . ':' . $amount . ':' . md5(json_encode($metadata));
+
+        // ADR-325: Resolve allowed methods via PaymentPolicy
+        $allowedMethods = PaymentPolicy::allowedMethods($company);
+
         return $this->callStripeCreateOnSessionPaymentIntent(
             $amount,
             $currency,
             $stripeCustomer->provider_customer_id,
             $metadata,
+            ['idempotency_key' => $idempotencyKey],
+            $allowedMethods,
         );
     }
 
@@ -490,16 +512,16 @@ class StripePaymentAdapter implements PaymentProviderAdapter
         ], $opts);
     }
 
-    protected function callStripeCreateOnSessionPaymentIntent(int $amount, string $currency, string $customerId, array $metadata)
+    protected function callStripeCreateOnSessionPaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = [], array $allowedMethods = ['card'])
     {
         return \Stripe\PaymentIntent::create([
             'amount' => $amount,
             'currency' => strtolower($currency),
             'customer' => $customerId,
-            'payment_method_types' => ['card', 'sepa_debit'],
+            'payment_method_types' => $allowedMethods,
             'setup_future_usage' => 'off_session',
             'metadata' => $metadata,
-        ]);
+        ], $opts);
     }
 
     protected function callStripeRefund(string $paymentIntentId, int $amount, array $metadata, array $opts = []): \Stripe\Refund
@@ -605,11 +627,10 @@ class StripePaymentAdapter implements PaymentProviderAdapter
 
         $customer = $this->callStripeCreateCustomer($company);
 
-        return CompanyPaymentCustomer::create([
-            'company_id' => $company->id,
-            'provider_key' => 'stripe',
-            'provider_customer_id' => $customer->id,
-        ]);
+        return CompanyPaymentCustomer::firstOrCreate(
+            ['company_id' => $company->id, 'provider_key' => 'stripe'],
+            ['provider_customer_id' => $customer->id],
+        );
     }
 
     private static function rateLimitKey(?int $companyId = null): string
@@ -692,5 +713,25 @@ class StripePaymentAdapter implements PaymentProviderAdapter
     private function setApiKey(): void
     {
         \Stripe\Stripe::setApiKey($this->resolveSecretKey());
+    }
+
+    /**
+     * ADR-323: Build Stripe dashboard URLs for platform support tools.
+     * Keeps provider URL knowledge inside the adapter — frontend stays agnostic.
+     */
+    public function getDashboardLinks(
+        ?string $customerId = null,
+        ?string $subscriptionId = null,
+        ?string $invoiceId = null,
+        ?string $paymentId = null,
+    ): array {
+        $base = 'https://dashboard.stripe.com';
+
+        return [
+            'customer_url' => $customerId ? "{$base}/customers/{$customerId}" : null,
+            'subscription_url' => $subscriptionId ? "{$base}/subscriptions/{$subscriptionId}" : null,
+            'invoice_url' => $invoiceId ? "{$base}/invoices/{$invoiceId}" : null,
+            'payment_url' => $paymentId ? "{$base}/payments/{$paymentId}" : null,
+        ];
     }
 }

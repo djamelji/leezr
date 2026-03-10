@@ -4,6 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\PricingEngine;
 use App\Core\Models\Company;
 use App\Core\Plans\Plan;
 use Illuminate\Support\Facades\DB;
@@ -95,14 +96,22 @@ class CheckoutSessionActivator
                 'current_period_end' => $periodEnd,
             ]);
 
-            // Create invoice
+            // ADR-324: Create invoice via PricingEngine (DB prices + coupon, not Stripe amount)
+            $breakdown = PricingEngine::forCurrentPeriod($subscription, $company);
             $invoice = InvoiceIssuer::createDraft(
                 $company,
                 $subscription->id,
                 now()->toDateString(),
                 $periodEnd->toDateString(),
             );
-            InvoiceIssuer::addLine($invoice, 'plan', "{$planKey} plan", $amountTotal, 1);
+            foreach ($breakdown->toInvoiceLines() as $line) {
+                InvoiceIssuer::addLine(
+                    $invoice, $line['type'], $line['description'],
+                    $line['unitAmount'], $line['quantity'],
+                    moduleKey: $line['moduleKey'] ?? null,
+                    metadata: $line['metadata'] ?? null,
+                );
+            }
             $invoice = InvoiceIssuer::finalize($invoice);
 
             // Create payment record (idempotent via updateOrCreate)

@@ -1,4 +1,5 @@
 <script setup>
+import StatusChip from '@/core/components/StatusChip.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
@@ -10,7 +11,20 @@ const authStore = usePlatformAuthStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
+const loadError = ref(false)
 const statusFilter = ref('')
+const searchQuery = ref('')
+const dateFrom = ref(null)
+const dateTo = ref(null)
+const selectedInvoices = ref([])
+const bulkLoading = ref(false)
+
+// ── Debounced search ──────────────────────────────────
+let searchTimer = null
+const debouncedSearch = () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => load(1), 400)
+}
 
 const canManage = computed(() => authStore.hasPermission('manage_billing'))
 
@@ -73,12 +87,6 @@ const statusOptions = computed(() => [
   { title: t('platformBilling.statusVoided'), value: 'voided' },
 ])
 
-const statusColor = status => {
-  const colors = { draft: 'secondary', open: 'info', overdue: 'error', paid: 'success', voided: 'warning', uncollectible: 'error' }
-
-  return colors[status] || 'secondary'
-}
-
 const statusLabel = status => {
   const map = { draft: 'statusDraft', open: 'statusOpen', overdue: 'statusOverdue', paid: 'statusPaid', voided: 'statusVoided', uncollectible: 'statusUncollectible' }
 
@@ -94,11 +102,18 @@ const formatDate = dateStr => {
 // ── Data loading ───────────────────────────────────────
 const load = async (page = 1) => {
   isLoading.value = true
+  loadError.value = false
   try {
     await store.fetchAllInvoices({
       page,
       status: statusFilter.value || undefined,
+      search: searchQuery.value || undefined,
+      from: dateFrom.value || undefined,
+      to: dateTo.value || undefined,
     })
+  }
+  catch {
+    loadError.value = true
   }
   finally {
     isLoading.value = false
@@ -107,6 +122,8 @@ const load = async (page = 1) => {
 
 onMounted(() => load())
 watch(statusFilter, () => load(1))
+watch(dateFrom, () => load(1))
+watch(dateTo, () => load(1))
 
 // ── Error handler ──────────────────────────────────────
 const handleError = error => {
@@ -123,6 +140,7 @@ const handleError = error => {
 const confirmDialog = ref(false)
 const confirmAction = ref(null) // 'markPaid' | 'void' | 'retry' | 'writeOff'
 const confirmInvoice = ref(null)
+const confirmLoading = ref(false)
 
 const confirmTitle = computed(() => {
   const map = {
@@ -164,12 +182,16 @@ const openConfirm = (action, invoice) => {
 }
 
 const handleConfirm = async confirmed => {
-  confirmDialog.value = false
-  if (!confirmed || !confirmInvoice.value) return
+  if (!confirmed || !confirmInvoice.value) {
+    confirmDialog.value = false
+
+    return
+  }
 
   const invoice = confirmInvoice.value
   const action = confirmAction.value
 
+  confirmLoading.value = true
   try {
     if (action === 'markPaid') {
       await store.markPaidOffline(invoice.id, generateKey('mark-paid'))
@@ -190,6 +212,10 @@ const handleConfirm = async confirmed => {
   }
   catch (error) {
     handleError(error)
+  }
+  finally {
+    confirmLoading.value = false
+    confirmDialog.value = false
   }
 }
 
@@ -338,6 +364,56 @@ const submitCreditNote = async () => {
     creditNoteSaving.value = false
   }
 }
+
+// ── Export CSV ──────────────────────────────────────────
+const exportCsv = () => {
+  const params = new URLSearchParams()
+  if (statusFilter.value) params.set('status', statusFilter.value)
+  if (searchQuery.value) params.set('search', searchQuery.value)
+  if (dateFrom.value) params.set('from', dateFrom.value)
+  if (dateTo.value) params.set('to', dateTo.value)
+
+  window.open(`/api/platform/billing/invoices/export?${params}`, '_blank')
+}
+
+const downloadPdf = invoice => {
+  window.open(`/api/platform/billing/invoices/${invoice.id}/pdf`, '_blank')
+}
+
+// ── Bulk actions ────────────────────────────────────────
+const bulkVoid = async () => {
+  if (!selectedInvoices.value.length) return
+  bulkLoading.value = true
+  try {
+    const data = await store.bulkVoidInvoices(selectedInvoices.value)
+    toast(t('platformBilling.bulkVoidSuccess', { count: data.voided }), 'success')
+    selectedInvoices.value = []
+    await load(store.allInvoicesPagination.current_page)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    bulkLoading.value = false
+  }
+}
+
+const bulkRetry = async () => {
+  if (!selectedInvoices.value.length) return
+  bulkLoading.value = true
+  try {
+    const data = await store.bulkRetryInvoices(selectedInvoices.value)
+    toast(t('platformBilling.bulkRetrySuccess', { count: data.retried }), 'success')
+    selectedInvoices.value = []
+    await load(store.allInvoicesPagination.current_page)
+  }
+  catch (error) {
+    handleError(error)
+  }
+  finally {
+    bulkLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -349,13 +425,123 @@ const submitCreditNote = async () => {
       />
       {{ t('platformBilling.tabs.invoices') }}
       <VSpacer />
-      <AppSelect
-        v-model="statusFilter"
-        :items="statusOptions"
-        density="compact"
-        style="max-inline-size: 160px;"
-      />
+      <VBtn
+        variant="tonal"
+        size="small"
+        prepend-icon="tabler-download"
+        @click="exportCsv"
+      >
+        {{ t('platformBilling.exportCsv') }}
+      </VBtn>
     </VCardTitle>
+
+    <!-- Bulk actions bar -->
+    <VToolbar
+      v-if="selectedInvoices.length > 0"
+      color="primary"
+      density="compact"
+      class="px-4"
+    >
+      <span class="text-body-2">
+        {{ t('platformBilling.bulkSelected', { count: selectedInvoices.length }) }}
+      </span>
+      <VSpacer />
+      <VBtn
+        variant="text"
+        size="small"
+        :loading="bulkLoading"
+        @click="bulkVoid"
+      >
+        {{ t('platformBilling.bulkVoid') }}
+      </VBtn>
+      <VBtn
+        variant="text"
+        size="small"
+        :loading="bulkLoading"
+        @click="bulkRetry"
+      >
+        {{ t('platformBilling.bulkRetry') }}
+      </VBtn>
+      <VBtn
+        variant="text"
+        size="small"
+        @click="selectedInvoices = []"
+      >
+        {{ t('platformBilling.bulkClear') }}
+      </VBtn>
+    </VToolbar>
+
+    <VCardText>
+      <VRow
+        dense
+        class="mb-2"
+      >
+        <VCol
+          cols="12"
+          md="4"
+        >
+          <AppTextField
+            v-model="searchQuery"
+            :placeholder="t('platformBilling.searchInvoices')"
+            prepend-inner-icon="tabler-search"
+            density="compact"
+            clearable
+            @input="debouncedSearch"
+            @click:clear="searchQuery = ''; load(1)"
+          />
+        </VCol>
+        <VCol
+          cols="6"
+          md="2"
+        >
+          <AppSelect
+            v-model="statusFilter"
+            :items="statusOptions"
+            density="compact"
+          />
+        </VCol>
+        <VCol
+          cols="6"
+          md="3"
+        >
+          <AppDateTimePicker
+            v-model="dateFrom"
+            :placeholder="t('platformBilling.dateFrom')"
+            density="compact"
+            clearable
+          />
+        </VCol>
+        <VCol
+          cols="6"
+          md="3"
+        >
+          <AppDateTimePicker
+            v-model="dateTo"
+            :placeholder="t('platformBilling.dateTo')"
+            density="compact"
+            clearable
+          />
+        </VCol>
+      </VRow>
+    </VCardText>
+
+    <VAlert
+      v-if="loadError"
+      type="error"
+      variant="tonal"
+      class="mx-6 mb-4"
+    >
+      {{ t('common.loadError') }}
+      <template #append>
+        <VBtn
+          variant="text"
+          size="small"
+          @click="load"
+        >
+          {{ t('common.retry') }}
+        </VBtn>
+      </template>
+    </VAlert>
 
     <VCardText class="pa-0">
       <VSkeletonLoader
@@ -379,10 +565,14 @@ const submitCreditNote = async () => {
 
       <VDataTable
         v-else
+        v-model="selectedInvoices"
         :headers="headers"
         :items="store.allInvoices"
         :loading="isLoading"
         :items-per-page="store.allInvoicesPagination.per_page"
+        show-select
+        item-value="id"
+        return-object
         hide-default-footer
       >
         <template #item.company="{ item }">
@@ -406,12 +596,12 @@ const submitCreditNote = async () => {
         </template>
 
         <template #item.status="{ item }">
-          <VChip
-            :color="statusColor(item.status)"
-            size="small"
+          <StatusChip
+            :status="item.status"
+            domain="invoice"
           >
             {{ statusLabel(item.status) }}
-          </VChip>
+          </StatusChip>
         </template>
 
         <template #item.amount="{ item }">
@@ -488,6 +678,19 @@ const submitCreditNote = async () => {
                   />
                 </template>
                 <VListItemTitle>{{ t('platformBilling.actionEditNotes') }}</VListItemTitle>
+              </VListItem>
+
+              <VListItem
+                :disabled="!item.finalized_at"
+                @click="downloadPdf(item)"
+              >
+                <template #prepend>
+                  <VIcon
+                    icon="tabler-download"
+                    size="20"
+                  />
+                </template>
+                <VListItemTitle>{{ t('platformBilling.downloadPdf') }}</VListItemTitle>
               </VListItem>
 
               <VDivider class="my-1" />
@@ -587,6 +790,7 @@ const submitCreditNote = async () => {
   <VDialog
     v-model="confirmDialog"
     max-width="480"
+    :persistent="confirmLoading"
   >
     <VCard>
       <VCardTitle class="text-h6 pa-6 pb-2">
@@ -602,12 +806,14 @@ const submitCreditNote = async () => {
         <VBtn
           variant="tonal"
           color="secondary"
+          :disabled="confirmLoading"
           @click="handleConfirm(false)"
         >
           {{ t('common.cancel') }}
         </VBtn>
         <VBtn
           :color="confirmColor"
+          :loading="confirmLoading"
           @click="handleConfirm(true)"
         >
           {{ t('common.confirm') }}
@@ -726,19 +932,21 @@ const submitCreditNote = async () => {
         <p class="text-body-1 mb-4">
           {{ t('platformBilling.dialogs.dunning.body', { number: dunningInvoice?.number || '—' }) }}
         </p>
-        <VChip
-          color="info"
+        <StatusChip
+          :status="dunningInvoice?.status || 'open'"
+          domain="invoice"
           class="me-2"
         >
           {{ statusLabel(dunningInvoice?.status) }}
-        </VChip>
+        </StatusChip>
         <VIcon icon="tabler-arrow-right" />
-        <VChip
-          :color="dunningTarget(dunningInvoice) === 'uncollectible' ? 'error' : 'warning'"
+        <StatusChip
+          :status="dunningTarget(dunningInvoice)"
+          domain="invoice"
           class="ms-2"
         >
           {{ statusLabel(dunningTarget(dunningInvoice)) }}
-        </VChip>
+        </StatusChip>
       </VCardText>
       <VCardActions class="pa-6 pt-0">
         <VSpacer />

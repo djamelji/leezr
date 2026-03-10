@@ -170,6 +170,7 @@ declare global {
   const useAbility: typeof import('./resources/js/plugins/casl/composables/useAbility.js')['useAbility']
   const useAbs: typeof import('@vueuse/math')['useAbs']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
+  const useAnalytics: typeof import('./resources/js/composables/useAnalytics.js')['useAnalytics']
   const useAnimate: typeof import('@vueuse/core')['useAnimate']
   const useApi: typeof import('./resources/js/composables/useApi.js')['useApi']
   const useAppName: typeof import('./resources/js/composables/useAppName.js')['useAppName']
@@ -349,6 +350,7 @@ declare global {
   const useToggle: typeof import('@vueuse/core')['useToggle']
   const useTransition: typeof import('@vueuse/core')['useTransition']
   const useTrunc: typeof import('@vueuse/math')['useTrunc']
+  const useTunnelPersistence: typeof import('./resources/js/composables/useTunnelPersistence.js')['useTunnelPersistence']
   const useUrlSearchParams: typeof import('@vueuse/core')['useUrlSearchParams']
   const useUserMedia: typeof import('@vueuse/core')['useUserMedia']
   const useVModel: typeof import('@vueuse/core')['useVModel']
@@ -555,6 +557,7 @@ declare module 'vue' {
     readonly urlValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['urlValidator']>
     readonly useAbs: UnwrapRef<typeof import('@vueuse/math')['useAbs']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
+    readonly useAnalytics: UnwrapRef<typeof import('./resources/js/composables/useAnalytics.js')['useAnalytics']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useApi: UnwrapRef<typeof import('./resources/js/composables/useApi.js')['useApi']>
     readonly useAppName: UnwrapRef<typeof import('./resources/js/composables/useAppName.js')['useAppName']>
@@ -734,6 +737,7 @@ declare module 'vue' {
     readonly useToggle: UnwrapRef<typeof import('@vueuse/core')['useToggle']>
     readonly useTransition: UnwrapRef<typeof import('@vueuse/core')['useTransition']>
     readonly useTrunc: UnwrapRef<typeof import('@vueuse/math')['useTrunc']>
+    readonly useTunnelPersistence: UnwrapRef<typeof import('./resources/js/composables/useTunnelPersistence.js')['useTunnelPersistence']>
     readonly useUrlSearchParams: UnwrapRef<typeof import('@vueuse/core')['useUrlSearchParams']>
     readonly useUserMedia: UnwrapRef<typeof import('@vueuse/core')['useUserMedia']>
     readonly useVModel: UnwrapRef<typeof import('@vueuse/core')['useVModel']>

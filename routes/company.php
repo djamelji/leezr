@@ -2,11 +2,13 @@
 
 use App\Modules\Core\Dashboard\Http\CompanyDashboardLayoutController;
 use App\Modules\Core\Dashboard\Http\CompanyDashboardWidgetController;
+use App\Modules\Core\Dashboard\Http\OnboardingStatusController;
 use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
 use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Core\Billing\Http\BillingCheckoutController;
 use App\Modules\Core\Billing\Http\CheckoutStatusController;
 use App\Modules\Core\Billing\Http\CompanyBillingController;
+use App\Modules\Core\Billing\Http\CompanyBillingTimelineController;
 use App\Modules\Core\Billing\Http\CompanyPaymentMethodController;
 use App\Modules\Core\Billing\Http\CompanyPaymentSetupController;
 use App\Modules\Core\Billing\Http\CompanyPlanController;
@@ -61,6 +63,7 @@ Route::get('/dashboard/layout', [CompanyDashboardLayoutController::class, 'show'
 Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'update'])
     ->middleware('company.access:manage-structure');
 Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
+Route::get('/dashboard/onboarding', OnboardingStatusController::class);
 
 // ─── Company plan (ADR-100, module-gated) ─────────────────
 Route::middleware('company.access:use-module,core.billing')->group(function () {
@@ -82,6 +85,7 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::get('/billing/next-invoice-preview', [CompanyBillingController::class, 'nextInvoicePreview']);
     Route::get('/billing/plan-change-preview', [CompanyBillingController::class, 'planChangePreview']);
     Route::get('/billing/invoices/{id}/pdf', [CompanyBillingController::class, 'invoicePdf']);
+    Route::get('/billing/timeline', CompanyBillingTimelineController::class);
 
     // Payment methods & invoice retry (ADR-225, manage-structure required)
     Route::post('/billing/setup-intent', [CompanyPaymentSetupController::class, 'createSetupIntent'])

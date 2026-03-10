@@ -56,4 +56,17 @@ interface PaymentProviderAdapter extends PaymentGatewayProvider
      * @return array{provider_payment_id: string, amount: int, status: 'succeeded'|'failed', raw_response: array}
      */
     public function collectInvoice(Invoice $invoice, Company $company, array $metadata = []): array;
+
+    /**
+     * ADR-323: Build provider dashboard URLs for support tools.
+     * Frontend must NEVER construct provider-specific URLs.
+     *
+     * @return array{customer_url: ?string, subscription_url: ?string, invoice_url: ?string, payment_url: ?string}
+     */
+    public function getDashboardLinks(
+        ?string $customerId = null,
+        ?string $subscriptionId = null,
+        ?string $invoiceId = null,
+        ?string $paymentId = null,
+    ): array;
 }

@@ -236,6 +236,7 @@ const deleteRole = async role => {
     </VCard>
 
     <!-- Create/Edit Drawer -->
+    <Teleport to="body">
     <VNavigationDrawer
       v-model="isDrawerOpen"
       temporary
@@ -319,5 +320,6 @@ const deleteRole = async role => {
         </VCardText>
       </div>
     </VNavigationDrawer>
+    </Teleport>
   </div>
 </template>

@@ -1,11 +1,15 @@
 <script setup>
+import VueApexCharts from 'vue3-apexcharts'
+import { useTheme } from 'vuetify'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
+const vuetifyTheme = useTheme()
 
 const isLoading = ref(true)
+const loadError = ref(false)
 
 onMounted(async () => {
   try {
@@ -13,6 +17,9 @@ onMounted(async () => {
       store.fetchMetrics(),
       store.fetchRecoveryStatus(),
     ])
+  }
+  catch {
+    loadError.value = true
   }
   finally {
     isLoading.value = false
@@ -31,8 +38,48 @@ const kpiCards = computed(() => {
     { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning' },
     { title: t('platformBilling.metrics.addonRevenue'), value: formatMoney(m.addon_mrr), icon: 'tabler-puzzle', color: 'secondary' },
     { title: t('platformBilling.metrics.churn'), value: `${(m.churn_rate * 100).toFixed(1)}%`, icon: 'tabler-arrow-down-right', color: m.churn_rate > 0.05 ? 'error' : 'success' },
+    { title: t('platformBilling.metrics.trialConversion'), value: store.metrics?.trial_conversion_rate != null ? `${(store.metrics.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
   ]
 })
+
+// ── MRR Chart (ApexCharts line) ──
+const mrrChartOptions = computed(() => {
+  const currentTheme = vuetifyTheme.current.value.colors
+
+  return {
+    chart: {
+      type: 'area',
+      toolbar: { show: false },
+      sparkline: { enabled: false },
+    },
+    stroke: { curve: 'smooth', width: 2 },
+    fill: {
+      type: 'gradient',
+      gradient: { shadeIntensity: 0.6, opacityFrom: 0.5, opacityTo: 0.1 },
+    },
+    colors: [currentTheme.primary],
+    xaxis: {
+      categories: store.metrics?.mrr_history?.labels || [],
+      labels: { style: { fontSize: '11px' } },
+    },
+    yaxis: {
+      labels: {
+        formatter: val => formatMoney(val),
+        style: { fontSize: '11px' },
+      },
+    },
+    tooltip: {
+      y: { formatter: val => formatMoney(val) },
+    },
+    grid: { strokeDashArray: 5 },
+    dataLabels: { enabled: false },
+  }
+})
+
+const mrrChartSeries = computed(() => [{
+  name: 'MRR',
+  data: store.metrics?.mrr_history?.series || [],
+}])
 
 const recovery = computed(() => store.recoveryStatus)
 
@@ -103,6 +150,15 @@ const counters = computed(() => {
 
 <template>
   <div>
+    <VAlert
+      v-if="loadError"
+      type="error"
+      variant="tonal"
+      class="mb-4"
+    >
+      {{ t('common.loadError') }}
+    </VAlert>
+
     <VSkeletonLoader
       v-if="isLoading"
       type="card, card"
@@ -149,7 +205,7 @@ const counters = computed(() => {
               :key="card.title"
               cols="6"
               md="4"
-              lg="2"
+              lg
             >
               <VCard
                 flat
@@ -171,6 +227,28 @@ const counters = computed(() => {
               </VCard>
             </VCol>
           </VRow>
+        </VCardText>
+      </VCard>
+
+      <!-- MRR Trend Chart -->
+      <VCard
+        v-if="store.metrics?.mrr_history?.series?.length"
+        class="mb-6"
+      >
+        <VCardTitle>
+          <VIcon
+            icon="tabler-chart-area-line"
+            class="me-2"
+          />
+          {{ t('platformBilling.dashboard.mrrTrend') }}
+        </VCardTitle>
+        <VCardText>
+          <VueApexCharts
+            type="area"
+            height="280"
+            :options="mrrChartOptions"
+            :series="mrrChartSeries"
+          />
         </VCardText>
       </VCard>
 

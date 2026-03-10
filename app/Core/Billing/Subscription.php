@@ -31,13 +31,14 @@ class Subscription extends Model
     ];
 
     // Statuses that allow is_current = 1
-    const CURRENT_ALLOWED_STATUSES = ['trialing', 'active', 'past_due'];
+    const CURRENT_ALLOWED_STATUSES = ['trialing', 'active', 'past_due', 'pending_payment'];
 
     protected $fillable = [
         'company_id', 'plan_key', 'interval', 'status', 'provider',
         'provider_subscription_id', 'current_period_start',
         'current_period_end', 'trial_ends_at', 'cancel_at_period_end',
         'billing_anchor_day', 'is_current', 'metadata',
+        'coupon_id', 'coupon_months_remaining',
     ];
 
     protected function casts(): array
@@ -49,7 +50,13 @@ class Subscription extends Model
             'cancel_at_period_end' => 'boolean',
             'billing_anchor_day' => 'integer',
             'metadata' => 'array',
+            'coupon_months_remaining' => 'integer',
         ];
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(BillingCoupon::class, 'coupon_id');
     }
 
     // ── Boot: state machine guard ────────────────────────

@@ -138,6 +138,15 @@
         // Date formatter
         $fmtDate = fn($d) => $d ? \Carbon\Carbon::parse($d)->locale($locale)->isoFormat('D MMMM YYYY') : '—';
 
+        // Tax exemption labels
+        $exemptionLabels = $isFr ? [
+            'reverse_charge_intra_eu' => 'Autoliquidation TVA intra-UE — art. 283-2 CGI',
+            'export_extra_eu' => 'Exonération TVA — export hors UE',
+        ] : [
+            'reverse_charge_intra_eu' => 'Reverse charge — intra-EU B2B (art. 283-2 CGI)',
+            'export_extra_eu' => 'VAT exempt — export outside EU',
+        ];
+
         // Money formatter
         $cur = $snap['currency'] ?? $invoice->currency ?? 'EUR';
         $fmtMoney = fn($cents) => number_format($cents / 100, 2, ',', ' ') . ' ' . $cur;
@@ -269,6 +278,11 @@
                         <td class="label">{{ $l['tax'] }} ({{ number_format($invoice->tax_rate_bps / 100, 2) }}%)</td>
                         <td class="value">{{ $fmtMoney($invoice->tax_amount) }}</td>
                     </tr>
+                    @elseif($invoice->tax_exemption_reason)
+                    <tr>
+                        <td class="label">{{ $l['tax'] }}</td>
+                        <td class="value">{{ $fmtMoney(0) }}</td>
+                    </tr>
                     @endif
                     @if($invoice->wallet_credit_applied > 0)
                     <tr>
@@ -292,7 +306,18 @@
         </tr>
     </table>
 
+    @if($invoice->tax_exemption_reason && isset($exemptionLabels[$invoice->tax_exemption_reason]))
+    <div style="margin-top: 10px; padding: 6px 10px; background: #f5f5f9; border-radius: 4px; font-size: 10px; color: #555;">
+        {{ $exemptionLabels[$invoice->tax_exemption_reason] }}
+    </div>
+    @endif
+
     <div class="footer">
+        @php
+            $platformVat = config('billing.platform.vat_number');
+            $platformName = config('app.name', 'Leezr');
+        @endphp
+        <p>{{ $platformName }}{{ $platformVat ? ' — TVA : ' . $platformVat : '' }}</p>
         <p>{{ $l['generated'] }} {{ now()->locale($locale)->isoFormat('D MMMM YYYY [à] HH:mm') }}</p>
     </div>
 </body>

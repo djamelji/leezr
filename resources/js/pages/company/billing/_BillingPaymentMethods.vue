@@ -1,18 +1,22 @@
 <script setup>
 import { loadStripe } from '@stripe/stripe-js'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import EmptyState from '@/core/components/EmptyState.vue'
+import TrustBadges from '@/core/components/TrustBadges.vue'
 
 const { t } = useI18n()
 const store = useCompanyBillingStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
+const loadError = ref(false)
 const showMethodPicker = ref(false)
 const showCardForm = ref(false)
 const showSepaForm = ref(false)
 const selectedMethod = ref('card')
 const cardError = ref('')
 const isSaving = ref(false)
+const actionLoading = ref(null)
 
 // Card form
 let stripe = null
@@ -25,17 +29,28 @@ const ibanElementRef = ref(null)
 const sepaName = ref('')
 const sepaEmail = ref('')
 
+// ADR-325: Allowed payment methods from backend
+const allowedPaymentMethods = computed(() => store.overview?.allowed_payment_methods ?? ['card'])
+const showSepaOption = computed(() => allowedPaymentMethods.value.includes('sepa_debit'))
+
 // Delete confirmation
 const deletingCard = ref(null)
 
-onMounted(async () => {
+const fetchMethods = async () => {
+  isLoading.value = true
+  loadError.value = false
   try {
     await store.fetchSavedCards()
+  }
+  catch {
+    loadError.value = true
   }
   finally {
     isLoading.value = false
   }
-})
+}
+
+onMounted(fetchMethods)
 
 // ── Visual helpers ──
 
@@ -236,12 +251,16 @@ const closeForm = () => {
 // ── Set Default ──
 
 const setDefault = async card => {
+  actionLoading.value = `default-${card.id}`
   try {
     await store.setDefaultCard(card.id)
     toast(t('companyBilling.defaultCardUpdated'), 'success')
   }
   catch {
     toast(t('companyBilling.defaultCardFailed'), 'error')
+  }
+  finally {
+    actionLoading.value = null
   }
 }
 
@@ -251,6 +270,7 @@ const confirmDelete = card => { deletingCard.value = card }
 const cancelDelete = () => { deletingCard.value = null }
 
 const executeDelete = async () => {
+  actionLoading.value = `delete-${deletingCard.value.id}`
   try {
     await store.deleteSavedCard(deletingCard.value.id)
     toast(t('companyBilling.cardDeleted'), 'success')
@@ -259,6 +279,7 @@ const executeDelete = async () => {
     toast(err?.data?.message || t('companyBilling.cardDeleteFailed'), 'error')
   }
   finally {
+    actionLoading.value = null
     deletingCard.value = null
   }
 }
@@ -272,20 +293,32 @@ const executeDelete = async () => {
     />
 
     <template v-else>
-      <!-- Empty state -->
-      <VCard
-        v-if="store.savedCards.length === 0 && !showMethodPicker && !showCardForm && !showSepaForm"
-        class="text-center pa-6 text-disabled"
+      <!-- Load error -->
+      <VAlert
+        v-if="loadError"
+        type="error"
+        variant="tonal"
+        class="mb-4"
       >
-        <VCardText>
-          <VIcon
-            icon="tabler-credit-card-off"
-            size="48"
-            class="mb-2"
-          />
-          <p class="text-body-1">
-            {{ t('companyBilling.noPaymentMethods') }}
-          </p>
+        {{ t('common.loadError') }}
+        <template #append>
+          <VBtn
+            variant="text"
+            size="small"
+            @click="fetchMethods"
+          >
+            {{ t('common.retry') }}
+          </VBtn>
+        </template>
+      </VAlert>
+
+      <!-- Empty state -->
+      <VCard v-if="!loadError && store.savedCards.length === 0 && !showMethodPicker && !showCardForm && !showSepaForm">
+        <EmptyState
+          icon="tabler-credit-card"
+          :title="t('companyBilling.noPaymentMethods')"
+          :description="t('companyBilling.paymentSecurityNotice')"
+        >
           <VBtn
             variant="tonal"
             color="primary"
@@ -294,7 +327,7 @@ const executeDelete = async () => {
           >
             {{ t('companyBilling.addPaymentMethod') }}
           </VBtn>
-        </VCardText>
+        </EmptyState>
       </VCard>
 
       <!-- ═══ Payment Methods Grid ═══ -->
@@ -341,6 +374,8 @@ const executeDelete = async () => {
                     v-if="!pm.is_default"
                     size="small"
                     :title="t('companyBilling.setAsDefault')"
+                    :loading="actionLoading === `default-${pm.id}`"
+                    :disabled="!!actionLoading"
                     @click="setDefault(pm)"
                   >
                     <VIcon
@@ -509,6 +544,7 @@ const executeDelete = async () => {
               {{ t('companyBilling.addCardBtn') }}
             </VBtn>
             <VBtn
+              v-if="showSepaOption"
               variant="outlined"
               :color="selectedMethod === 'sepa_debit' ? 'primary' : 'secondary'"
               prepend-icon="tabler-building-bank"
@@ -565,6 +601,12 @@ const executeDelete = async () => {
               {{ t('common.cancel') }}
             </VBtn>
           </div>
+
+          <TrustBadges
+            variant="horizontal"
+            :show="['secure', 'gdpr']"
+            class="mt-4"
+          />
         </VCardText>
       </VCard>
 
@@ -609,6 +651,12 @@ const executeDelete = async () => {
               {{ t('common.cancel') }}
             </VBtn>
           </div>
+
+          <TrustBadges
+            variant="horizontal"
+            :show="['secure', 'gdpr']"
+            class="mt-4"
+          />
         </VCardText>
       </VCard>
     </template>
@@ -633,6 +681,7 @@ const executeDelete = async () => {
         </VBtn>
         <VBtn
           color="error"
+          :loading="actionLoading?.startsWith('delete-')"
           @click="executeDelete"
         >
           {{ t('common.delete') }}

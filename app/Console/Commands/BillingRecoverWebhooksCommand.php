@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\HasCorrelationId;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\BillingExpectedConfirmation;
 use App\Core\Billing\BillingJobHeartbeat;
@@ -20,12 +21,15 @@ use Illuminate\Support\Facades\Log;
  */
 class BillingRecoverWebhooksCommand extends Command implements Isolatable
 {
+    use HasCorrelationId;
+
     protected $signature = 'billing:recover-webhooks {--dry-run}';
 
     protected $description = 'Recover missed Stripe webhook events by polling pending expected confirmations';
 
     public function handle(StripePaymentAdapter $adapter, StripeEventProcessor $processor): int
     {
+        $this->initCorrelationId();
         BillingJobHeartbeat::start('billing:recover-webhooks');
 
         $dryRun = $this->option('dry-run');

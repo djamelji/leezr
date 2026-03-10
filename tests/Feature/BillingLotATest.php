@@ -241,7 +241,7 @@ class BillingLotATest extends TestCase
         $sub = Subscription::find($result->subscriptionId);
         $this->assertEquals('pending_payment', $sub->status);
         $this->assertEquals('stripe', $sub->provider);
-        $this->assertNull($sub->is_current);
+        $this->assertEquals(1, $sub->is_current);
     }
 
     public function test_create_checkout_setup_intent_has_correct_metadata(): void

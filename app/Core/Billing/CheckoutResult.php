@@ -19,6 +19,7 @@ class CheckoutResult
         public readonly ?string $clientSecret = null,
         public readonly ?string $publishableKey = null,
         public readonly ?string $trialChargeTiming = null,
+        public readonly ?array $allowedPaymentMethods = null,
     ) {}
 
     public function toArray(): array
@@ -31,6 +32,7 @@ class CheckoutResult
             'client_secret' => $this->clientSecret,
             'publishable_key' => $this->publishableKey,
             'trial_charge_timing' => $this->trialChargeTiming,
+            'allowed_payment_methods' => $this->allowedPaymentMethods,
         ], fn ($v) => $v !== null);
     }
 }

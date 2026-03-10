@@ -2,6 +2,7 @@
 import { loadStripe } from '@stripe/stripe-js'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
+import StatusChip from '@/core/components/StatusChip.vue'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -322,12 +323,23 @@ const pmBrandIcon = brand => {
 
 const walletTxColor = type => type === 'credit' ? 'success' : 'error'
 
+const copyToClipboard = async text => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast(t('common.copied'), 'success')
+  }
+  catch {
+    // fallback silently
+  }
+}
+
 const invoiceHeaders = computed(() => [
-  { title: '#', key: 'number', width: 100 },
+  { title: '#', key: 'number', width: 120 },
   { title: t('common.status'), key: 'status', width: 100 },
   { title: t('platformCompanyDetail.billing.amount'), key: 'amount_due', width: 120 },
   { title: t('platformCompanyDetail.billing.issued'), key: 'issued_at', width: 130 },
   { title: t('platformCompanyDetail.billing.due'), key: 'due_at', width: 130 },
+  { title: t('platformCompanyDetail.billing.paidAt'), key: 'paid_at', width: 130 },
   { title: '', key: 'actions', width: 60, sortable: false },
 ])
 
@@ -443,6 +455,99 @@ watch(() => props.billing, val => {
             </VCol>
           </VRow>
 
+          <!-- Provider & Trial Details -->
+          <VDivider class="my-3" />
+          <VRow class="mb-2">
+            <VCol cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.planKey') }}
+              </div>
+              <VChip size="small" color="primary" variant="tonal">
+                {{ billing.subscription.plan_key }}
+              </VChip>
+            </VCol>
+            <VCol cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.periodStart') }}
+              </div>
+              <span class="text-body-1">{{ formatDate(billing.subscription.current_period_start) }}</span>
+            </VCol>
+            <VCol v-if="billing.subscription.trial_ends_at" cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.trialEndsAt') }}
+              </div>
+              <span class="text-body-1">{{ formatDate(billing.subscription.trial_ends_at) }}</span>
+            </VCol>
+            <VCol v-if="billing.subscription.coupon" cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.activeCoupon') }}
+              </div>
+              <VChip size="small" color="info" variant="tonal">
+                {{ billing.subscription.coupon.code }}
+                <span class="ms-1 text-disabled">
+                  ({{ billing.subscription.coupon.type === 'percentage'
+                    ? `${billing.subscription.coupon.value}%`
+                    : formatMoney(billing.subscription.coupon.value, { currency: billing.currency })
+                  }})
+                </span>
+              </VChip>
+            </VCol>
+          </VRow>
+
+          <!-- Provider IDs (provider-agnostic: URLs from backend adapter) -->
+          <VRow v-if="billing.provider_customer_id || billing.subscription.provider_subscription_id" class="mb-2">
+            <VCol v-if="billing.provider_customer_id" cols="12" md="6">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.providerCustomerId') }}
+              </div>
+              <div class="d-flex align-center gap-1">
+                <code class="text-body-2">{{ billing.provider_customer_id }}</code>
+                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.provider_customer_id)">
+                  <VIcon icon="tabler-copy" size="14" />
+                </VBtn>
+                <VBtn
+                  v-if="billing.provider_links?.customer_url"
+                  icon
+                  size="x-small"
+                  variant="text"
+                  :href="billing.provider_links.customer_url"
+                  target="_blank"
+                  tag="a"
+                >
+                  <VIcon icon="tabler-external-link" size="14" />
+                  <VTooltip activator="parent">
+                    {{ t('platformCompanyDetail.billing.openInProvider') }}
+                  </VTooltip>
+                </VBtn>
+              </div>
+            </VCol>
+            <VCol v-if="billing.subscription.provider_subscription_id" cols="12" md="6">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.providerSubscriptionId') }}
+              </div>
+              <div class="d-flex align-center gap-1">
+                <code class="text-body-2">{{ billing.subscription.provider_subscription_id }}</code>
+                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.subscription.provider_subscription_id)">
+                  <VIcon icon="tabler-copy" size="14" />
+                </VBtn>
+                <VBtn
+                  v-if="billing.provider_links?.subscription_url"
+                  icon
+                  size="x-small"
+                  variant="text"
+                  :href="billing.provider_links.subscription_url"
+                  target="_blank"
+                  tag="a"
+                >
+                  <VIcon icon="tabler-external-link" size="14" />
+                  <VTooltip activator="parent">
+                    {{ t('platformCompanyDetail.billing.openInProvider') }}
+                  </VTooltip>
+                </VBtn>
+              </div>
+            </VCol>
+          </VRow>
+
           <!-- Subscription Actions -->
           <VDivider class="my-3" />
 
@@ -539,6 +644,60 @@ watch(() => props.billing, val => {
           </span>
         </div>
       </VAlert>
+
+      <!-- Last Payment Diagnostics -->
+      <VCard v-if="billing.last_payment" class="mb-4" flat border>
+        <VCardTitle class="d-flex align-center">
+          <VIcon icon="tabler-stethoscope" class="me-2" />
+          {{ t('platformCompanyDetail.billing.diagnostics') }}
+        </VCardTitle>
+        <VCardText>
+          <VRow>
+            <VCol cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.lastPaymentAmount') }}
+              </div>
+              <span class="text-body-1 font-weight-medium">
+                {{ formatMoney(billing.last_payment.amount, { currency: billing.last_payment.currency || billing.currency }) }}
+              </span>
+            </VCol>
+            <VCol cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.lastPaymentStatus') }}
+              </div>
+              <StatusChip :status="billing.last_payment.status" domain="payment" size="small" />
+            </VCol>
+            <VCol cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.lastPaymentDate') }}
+              </div>
+              <span class="text-body-1">{{ formatDate(billing.last_payment.created_at) }}</span>
+            </VCol>
+            <VCol v-if="billing.last_payment.provider_payment_id" cols="6" md="3">
+              <div class="text-body-2 text-disabled mb-1">
+                {{ t('platformCompanyDetail.billing.providerPaymentId') }}
+              </div>
+              <div class="d-flex align-center gap-1">
+                <code class="text-body-2 text-truncate" style="max-inline-size: 140px;">{{ billing.last_payment.provider_payment_id }}</code>
+                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.last_payment.provider_payment_id)">
+                  <VIcon icon="tabler-copy" size="14" />
+                </VBtn>
+                <VBtn
+                  v-if="billing.provider_links?.payment_url"
+                  icon
+                  size="x-small"
+                  variant="text"
+                  :href="billing.provider_links.payment_url"
+                  target="_blank"
+                  tag="a"
+                >
+                  <VIcon icon="tabler-external-link" size="14" />
+                </VBtn>
+              </div>
+            </VCol>
+          </VRow>
+        </VCardText>
+      </VCard>
 
       <!-- Payment Methods -->
       <VCard class="mb-4" flat border>
@@ -680,12 +839,20 @@ watch(() => props.billing, val => {
           hide-default-footer
         >
           <template #item.number="{ item }">
-            <span class="font-weight-medium">{{ item.number || '—' }}</span>
+            <a
+              v-if="item.provider_url"
+              :href="item.provider_url"
+              class="font-weight-medium text-primary text-decoration-none"
+              target="_blank"
+              rel="noopener"
+            >
+              {{ item.number || '—' }}
+              <VIcon icon="tabler-external-link" size="12" class="ms-1" />
+            </a>
+            <span v-else class="font-weight-medium">{{ item.number || '—' }}</span>
           </template>
           <template #item.status="{ item }">
-            <VChip :color="statusColor(item.status)" size="x-small">
-              {{ item.status }}
-            </VChip>
+            <StatusChip :status="item.status" domain="invoice" size="x-small" />
           </template>
           <template #item.amount_due="{ item }">
             {{ formatMoney(item.amount_due, { currency: billing.currency }) }}
@@ -695,6 +862,10 @@ watch(() => props.billing, val => {
           </template>
           <template #item.due_at="{ item }">
             {{ item.due_at ? formatDate(item.due_at) : '—' }}
+          </template>
+          <template #item.paid_at="{ item }">
+            <span v-if="item.paid_at" class="text-success">{{ formatDate(item.paid_at) }}</span>
+            <span v-else class="text-disabled">—</span>
           </template>
           <template #item.actions="{ item }">
             <VMenu v-if="['open', 'overdue', 'paid'].includes(item.status)">

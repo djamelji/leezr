@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\HasCorrelationId;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
+use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\Contracts\PaymentProviderAdapter;
@@ -33,60 +35,77 @@ use Illuminate\Support\Facades\Log;
  */
 class BillingRenewCommand extends Command implements Isolatable
 {
-    protected $signature = 'billing:renew {--dry-run}';
+    use HasCorrelationId;
+
+    protected $signature = 'billing:renew {--dry-run} {--async} {--ids= : Comma-separated subscription IDs (used by queue jobs)}';
 
     protected $description = 'Auto-renew subscriptions that have reached their period end';
 
     public function handle(): int
     {
+        $this->initCorrelationId();
         BillingJobHeartbeat::start('billing:renew');
 
         $dryRun = $this->option('dry-run');
+
+        if ($this->option('async')) {
+            return $this->handleAsync();
+        }
+
         $stats = ['eligible' => 0, 'renewed' => 0, 'invoiced' => 0, 'failed' => 0, 'skipped' => 0, 'cancelled' => 0];
 
         // Phase 0: Handle subscriptions marked for cancellation at period end
         $this->processCancellations($dryRun, $stats);
 
-        $subscriptions = Subscription::whereIn('status', ['active', 'trialing'])
+        $query = Subscription::whereIn('status', ['active', 'trialing'])
             ->where('is_current', 1)
             ->where('current_period_end', '<=', now())
             ->where(fn ($q) => $q->where('cancel_at_period_end', false)->orWhereNull('cancel_at_period_end'))
-            ->with('company')
-            ->get();
+            ->with(['company', 'company.market']);
 
-        $stats['eligible'] = $subscriptions->count();
+        // ADR-318: Filter by specific IDs when called from queue job
+        if ($ids = $this->option('ids')) {
+            $idList = array_map('intval', explode(',', $ids));
+            $query->whereIn('id', $idList);
+        }
+
+        $stats['eligible'] = $query->count();
         $this->info("Found {$stats['eligible']} subscription(s) eligible for renewal.");
         Log::channel('billing')->info('billing:renew started', ['eligible' => $stats['eligible']]);
 
         if ($dryRun) {
-            foreach ($subscriptions as $sub) {
-                $this->line("  [DRY-RUN] Company #{$sub->company_id} — plan={$sub->plan_key} interval={$sub->interval} expired={$sub->current_period_end}");
-            }
+            $query->chunkById(50, function ($batch) {
+                foreach ($batch as $sub) {
+                    $this->line("  [DRY-RUN] Company #{$sub->company_id} — plan={$sub->plan_key} interval={$sub->interval} expired={$sub->current_period_end}");
+                }
+            });
 
             return self::SUCCESS;
         }
 
-        foreach ($subscriptions as $subscription) {
-            try {
-                $result = $this->renewSubscription($subscription);
+        $query->chunkById(50, function ($batch) use (&$stats) {
+            foreach ($batch as $subscription) {
+                try {
+                    $result = $this->renewSubscription($subscription);
 
-                if ($result === 'renewed') {
-                    $stats['renewed']++;
-                } elseif ($result === 'invoiced') {
-                    $stats['invoiced']++;
-                } else {
-                    $stats['skipped']++;
+                    if ($result === 'renewed') {
+                        $stats['renewed']++;
+                    } elseif ($result === 'invoiced') {
+                        $stats['invoiced']++;
+                    } else {
+                        $stats['skipped']++;
+                    }
+                } catch (\Throwable $e) {
+                    $stats['failed']++;
+                    Log::channel('billing')->error('[billing:renew] Failed to renew subscription', [
+                        'subscription_id' => $subscription->id,
+                        'company_id' => $subscription->company_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $this->error("  Failed: subscription #{$subscription->id} — {$e->getMessage()}");
                 }
-            } catch (\Throwable $e) {
-                $stats['failed']++;
-                Log::channel('billing')->error('[billing:renew] Failed to renew subscription', [
-                    'subscription_id' => $subscription->id,
-                    'company_id' => $subscription->company_id,
-                    'error' => $e->getMessage(),
-                ]);
-                $this->error("  Failed: subscription #{$subscription->id} — {$e->getMessage()}");
             }
-        }
+        });
 
         $this->info("Cancelled (end of period): {$stats['cancelled']}");
         $this->info("Renewed: {$stats['renewed']}");
@@ -97,6 +116,29 @@ class BillingRenewCommand extends Command implements Isolatable
         Log::channel('billing')->info('billing:renew finished', $stats);
 
         BillingJobHeartbeat::finish('billing:renew', $stats['failed'] > 0 ? 'failed' : 'ok', $stats);
+
+        return self::SUCCESS;
+    }
+
+    private function handleAsync(): int
+    {
+        $this->info('Dispatching renewal jobs to queue...');
+
+        $dispatched = 0;
+
+        Subscription::whereIn('status', ['active', 'trialing'])
+            ->where('is_current', 1)
+            ->where('current_period_end', '<=', now())
+            ->where(fn ($q) => $q->where('cancel_at_period_end', false)->orWhereNull('cancel_at_period_end'))
+            ->select('id')
+            ->chunkById(50, function ($batch) use (&$dispatched) {
+                \App\Jobs\Billing\RenewSubscriptionBatchJob::dispatch($batch->pluck('id'));
+                $dispatched++;
+            });
+
+        $this->info("Dispatched {$dispatched} batch job(s) to 'billing' queue.");
+
+        BillingJobHeartbeat::finish('billing:renew', 'dispatched', ['batches' => $dispatched]);
 
         return self::SUCCESS;
     }
@@ -208,6 +250,28 @@ class BillingRenewCommand extends Command implements Isolatable
                         1,
                         moduleKey: $addon->module_key,
                     );
+                }
+            }
+
+            // ADR-320: Apply coupon discount if subscription has an active coupon
+            if ($subscription->coupon_id) {
+                $coupon = BillingCoupon::find($subscription->coupon_id);
+
+                if ($coupon && $coupon->isUsable()) {
+                    InvoiceIssuer::applyCoupon($invoice, $coupon, $company);
+
+                    // Decrement months remaining (null = unlimited)
+                    if ($subscription->coupon_months_remaining !== null) {
+                        $remaining = $subscription->coupon_months_remaining - 1;
+                        $subscription->update([
+                            'coupon_months_remaining' => $remaining,
+                            'coupon_id' => $remaining <= 0 ? null : $subscription->coupon_id,
+                        ]);
+                    }
+                }
+                else {
+                    // Coupon expired or exhausted — detach
+                    $subscription->update(['coupon_id' => null, 'coupon_months_remaining' => null]);
                 }
             }
 

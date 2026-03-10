@@ -3,11 +3,14 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Modules\Core\Billing\Services\TaxContextResolver;
 use App\Notifications\Billing\InvoiceCreated;
 use App\Notifications\Billing\PaymentReceived;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use App\Core\Billing\BillingCoupon;
+use App\Modules\Core\Billing\Services\CouponService;
 
 /**
  * Creates and finalizes invoices.
@@ -36,6 +39,7 @@ class InvoiceIssuer
         ?string $periodEnd = null,
     ): Invoice {
         $policy = PlatformBillingPolicy::instance();
+        $taxContext = TaxContextResolver::resolve($company);
 
         return Invoice::create([
             'company_id' => $company->id,
@@ -45,7 +49,8 @@ class InvoiceIssuer
             'amount' => 0,
             'subtotal' => 0,
             'tax_amount' => 0,
-            'tax_rate_bps' => TaxResolver::resolveRateBps($company),
+            'tax_rate_bps' => $taxContext->taxRateBps,
+            'tax_exemption_reason' => $taxContext->exemptionReason,
             'wallet_credit_applied' => 0,
             'amount_due' => 0,
             'period_start' => $periodStart,
@@ -87,6 +92,52 @@ class InvoiceIssuer
             'metadata' => $metadata,
             'created_at' => now(),
         ]);
+    }
+
+    /**
+     * Apply a coupon discount to a draft invoice.
+     * Adds a negative line for the discount amount.
+     *
+     * @throws RuntimeException If invoice is already finalized
+     */
+    public static function applyCoupon(Invoice $invoice, BillingCoupon $coupon, Company $company): int
+    {
+        if ($invoice->isFinalized()) {
+            throw new RuntimeException('Cannot apply coupon to a finalized invoice.');
+        }
+
+        // One coupon per invoice — non-stackable
+        if ($invoice->coupon_id) {
+            throw new RuntimeException('A coupon is already applied to this invoice.');
+        }
+
+        $couponService = app(CouponService::class);
+
+        // Only count positive lines (plan + addons), ignore existing discounts
+        $currentSubtotal = (int) $invoice->lines()->where('amount', '>', 0)->sum('amount');
+        $discount = $couponService->calculateDiscount($coupon, $currentSubtotal);
+
+        if ($discount <= 0) {
+            return 0;
+        }
+
+        // Add negative line for the discount
+        static::addLine(
+            $invoice,
+            'discount',
+            "Coupon: {$coupon->code}",
+            -$discount,
+            1,
+            metadata: ['coupon_id' => $coupon->id, 'coupon_code' => $coupon->code],
+        );
+
+        // Record coupon usage
+        $couponService->recordUsage($coupon, $invoice, $company, $discount);
+
+        // Link coupon to invoice
+        $invoice->update(['coupon_id' => $coupon->id]);
+
+        return $discount;
     }
 
     /**

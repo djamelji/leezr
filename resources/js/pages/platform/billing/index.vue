@@ -5,6 +5,7 @@ import BillingInvoicesTab from './_BillingInvoicesTab.vue'
 import BillingDunningTab from './_BillingDunningTab.vue'
 import BillingRecovery from './_BillingRecovery.vue'
 import BillingAuditTab from './_BillingForensicsTab.vue'
+import BillingCouponsTab from './_BillingCouponsTab.vue'
 
 definePage({
   meta: {
@@ -26,6 +27,7 @@ const tabs = computed(() => [
   { title: t('platformBilling.tabs.dunning'), icon: 'tabler-alert-triangle', value: 'dunning' },
   { title: t('platformBilling.tabs.recovery'), icon: 'tabler-first-aid-kit', value: 'recovery' },
   { title: t('platformBilling.tabs.audit'), icon: 'tabler-history', value: 'audit' },
+  { title: t('platformBilling.tabs.coupons'), icon: 'tabler-ticket', value: 'coupons' },
 ])
 </script>
 
@@ -105,6 +107,10 @@ const tabs = computed(() => [
 
       <VWindowItem value="audit">
         <BillingAuditTab />
+      </VWindowItem>
+
+      <VWindowItem value="coupons">
+        <BillingCouponsTab />
       </VWindowItem>
     </VWindow>
   </div>

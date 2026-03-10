@@ -4,6 +4,45 @@ import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billi
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
 
+// ── Audit export ────────────────────────────────────────
+const showExportDialog = ref(false)
+const exportStartDate = ref('')
+const exportEndDate = ref('')
+const exportFormat = ref('csv')
+const exportLoading = ref(false)
+
+const doExport = async () => {
+  if (!exportStartDate.value || !exportEndDate.value) return
+
+  exportLoading.value = true
+  try {
+    const params = new URLSearchParams({
+      start_date: exportStartDate.value,
+      end_date: exportEndDate.value,
+      format: exportFormat.value,
+    })
+
+    const response = await fetch(`/api/platform/billing/audit-export?${params}`, {
+      headers: { 'Accept': exportFormat.value === 'csv' ? 'text/csv' : 'application/json' },
+    })
+
+    if (!response.ok) throw new Error('Export failed')
+
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = `audit-export-${exportStartDate.value}.${exportFormat.value}`
+    a.click()
+    window.URL.revokeObjectURL(url)
+    showExportDialog.value = false
+  }
+  finally {
+    exportLoading.value = false
+  }
+}
+
 // ── Company selector ───────────────────────────────────
 const companyId = ref('')
 
@@ -153,6 +192,76 @@ const formatAmount = (amount, currency) => {
 
 <template>
   <div>
+    <!-- Export button -->
+    <div class="d-flex justify-end mb-4">
+      <VBtn
+        prepend-icon="tabler-download"
+        variant="tonal"
+        @click="showExportDialog = true"
+      >
+        {{ t('platformBilling.forensics.export') }}
+      </VBtn>
+    </div>
+
+    <!-- Export dialog -->
+    <VDialog
+      v-model="showExportDialog"
+      max-width="450"
+    >
+      <VCard :title="t('platformBilling.forensics.exportTitle')">
+        <VCardText>
+          <VRow>
+            <VCol cols="6">
+              <AppTextField
+                v-model="exportStartDate"
+                :label="t('platformBilling.forensics.startDate')"
+                type="date"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model="exportEndDate"
+                :label="t('platformBilling.forensics.endDate')"
+                type="date"
+              />
+            </VCol>
+            <VCol cols="12">
+              <VBtnToggle
+                v-model="exportFormat"
+                mandatory
+                variant="outlined"
+                density="compact"
+              >
+                <VBtn value="csv">
+                  CSV
+                </VBtn>
+                <VBtn value="json">
+                  JSON
+                </VBtn>
+              </VBtnToggle>
+            </VCol>
+          </VRow>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="showExportDialog = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="exportLoading"
+            :disabled="!exportStartDate || !exportEndDate"
+            @click="doExport"
+          >
+            {{ t('platformBilling.forensics.export') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
     <!-- Company selector -->
     <VCard class="mb-6">
       <VCardText>

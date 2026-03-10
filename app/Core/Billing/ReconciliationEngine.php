@@ -27,12 +27,12 @@ class ReconciliationEngine
      * @param  int|null  $companyId  Limit to a single company (null = all Stripe companies)
      * @param  bool  $dryRun  If true, skip audit logging and auto-repair mutations
      * @param  bool  $autoRepair  If true, attempt auto-repair of safe drift types (ADR-141)
+     * @param  \Carbon\Carbon|null  $since  Incremental: only reconcile since this timestamp (ADR-318)
      * @return array{drifts: array, summary: array{total: int, by_type: array}, repairs?: array}
      */
-    public static function reconcile(?int $companyId = null, bool $dryRun = false, bool $autoRepair = false): array
+    public static function reconcile(?int $companyId = null, bool $dryRun = false, bool $autoRepair = false, ?\Carbon\Carbon $since = null): array
     {
         $adapter = app(StripePaymentAdapter::class);
-        $sinceTimestamp = now()->subDays(30)->timestamp;
         $allDrifts = [];
 
         // Find companies with Stripe payment customers
@@ -45,6 +45,13 @@ class ReconciliationEngine
         $customers = $query->get();
 
         foreach ($customers as $customer) {
+            // ADR-318: Incremental reconciliation — use last_reconciled_at if no explicit $since
+            $sinceTimestamp = $since
+                ? $since->timestamp
+                : ($customer->last_reconciled_at
+                    ? $customer->last_reconciled_at->timestamp
+                    : now()->subDays(30)->timestamp);
+
             try {
                 $stripeIntents = $adapter->listPaymentIntents($customer->company_id, $sinceTimestamp);
             } catch (\Throwable) {
@@ -54,6 +61,11 @@ class ReconciliationEngine
 
             $drifts = static::detectDrifts($customer->company_id, $stripeIntents);
             $allDrifts = array_merge($allDrifts, $drifts);
+
+            // ADR-318: Update last_reconciled_at after successful reconciliation
+            if (! $dryRun) {
+                $customer->update(['last_reconciled_at' => now()]);
+            }
         }
 
         // Build summary

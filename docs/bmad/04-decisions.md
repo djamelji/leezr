@@ -10252,4 +10252,686 @@ Le mécanisme `X-Build-Version` existait déjà (`AddBuildVersion` middleware + 
 
 ---
 
+### ADR-290 — Phase 0 : Instrumentation analytics + persistence tunnel (2026-03-09)
+
+**Contexte** : Aucune instrumentation analytics dans le tunnel d'inscription ni les pages billing. Pas de persistence de l'état du tunnel (refresh = données perdues). Impossible de mesurer le taux de conversion.
+
+**Décisions** :
+1. Composable `useAnalytics` (dataLayer GA4 + console.debug en dev)
+2. Composable `useTunnelPersistence` (sessionStorage, auto-save debounced 500ms)
+3. 18 événements instrumentés : registration_started/abandoned/completed, step_viewed/completed, plan_selected, addon_toggled, payment_method_selected, payment_initiated/succeeded/failed, plan_change_viewed/previewed/confirmed, trial_banner_seen, invoice_viewed, invoice_paid
+4. Persistence restaure l'état complet sauf mot de passe
+
+**Conséquences** :
+- Funnel analytics mesurable dès connexion à GA4/PostHog
+- Utilisateurs ne perdent plus leurs données sur refresh
+- Aucun impact backend
+
+**Fichiers** :
+- `resources/js/composables/useAnalytics.js` (nouveau)
+- `resources/js/composables/useTunnelPersistence.js` (nouveau)
+- `resources/js/pages/register.vue` (modifié — 12 track points + persistence)
+- `resources/js/pages/company/plan.vue` (modifié — 3 track points)
+- `resources/js/pages/company/billing/_BillingOverview.vue` (modifié — 1 track point)
+- `resources/js/pages/company/billing/pay.vue` (modifié — 3 track points)
+
+---
+
+### ADR-312 — Performance billing : indexes, cache singleton, chunking (2026-03-09)
+
+**Contexte** : DunningEngine et BillingRenewCommand chargent TOUTES les factures/subscriptions en mémoire (→ problème à 10K+ companies). PlatformBillingPolicy singleton requêté ~500-2000 fois/jour sans cache. Pas d'index sur les colonnes de scan batch (current_period_end, due_at).
+
+**Décisions** :
+1. 4 indexes DB : `idx_sub_renewal_scan`, `idx_inv_dunning_overdue`, `idx_inv_company_list`, `idx_ledger_aggregates`
+2. `PlatformBillingPolicy::instance()` wrappé dans `Cache::remember()` (TTL 1h), `clearCache()` appelé après update
+3. DunningEngine : eager loading `company` + `subscription`, `chunkById(100)` phase 1, `chunkById(50)` phase 2
+4. BillingRenewCommand : `chunkById(50)`, eager loading `company.market`
+5. Dashboard widgets : cache 10 min sur `kpisDataset` et `riskDataset` (scope global)
+6. BillingOverview splitté en 5 sous-composants
+
+**Conséquences** :
+- Scan batch passe de full table scan à index scan
+- Mémoire bornée par taille de chunk (50-100 records max)
+- Singleton DB : 0 query après premier accès (pendant 1h)
+- Dashboard admin : 0 query redondante pendant 10 min
+
+**Fichiers** :
+- `database/migrations/2026_03_10_100010_add_billing_performance_indexes.php` (nouveau)
+- `app/Core/Billing/PlatformBillingPolicy.php` (modifié — cache + clearCache)
+- `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` (modifié — clearCache)
+- `app/Core/Billing/DunningEngine.php` (modifié — eager loading + chunkById)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — chunkById + eager loading)
+- `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php` (modifié — cache)
+- `resources/js/pages/company/billing/_BillingOverview*.vue` (splitté en 5)
+- `tests/Feature/BillingPerformanceTest.php` (nouveau — 4 tests)
+
+---
+
+### ADR-310 — Conformité fiscale EU : TaxContextResolver, validation VIES, reverse charge, export (2026-03-09)
+
+**Contexte** : Les factures appliquaient un taux TVA unique (default_tax_rate_bps de la policy) sans distinction pays. Aucun reverse charge B2B intra-EU, aucune exemption export extra-EU. Non-conforme aux règles TVA EU pour un SaaS B2B multi-pays.
+
+**Décisions** :
+1. Colonne `markets.is_eu` (boolean) — 27 pays EU marqués automatiquement via migration inline
+2. Colonne `invoices.tax_exemption_reason` (string nullable) — `reverse_charge_intra_eu` | `export_extra_eu`
+3. Table `billing_vat_checks` — cache VIES validation (TTL 7 jours, unique index vat_number+country_code)
+4. `VatValidationService` — appel VIES SOAP avec cache DB, fallback graceful si VIES indisponible (assume valid)
+5. `TaxContext` DTO — value object portant taxRateBps, exemptionReason, buyerIsEu, sellerIsEu, buyerVatNumber
+6. `TaxContextResolver` — résout 5 cas : même pays, B2B intra-EU VAT valide, B2C intra-EU, extra-EU, VIES indisponible
+7. Fallback domestique : si company sans market_key → taux standard (TaxResolver::resolveRateBps)
+8. Config `billing.platform.market_key` (env PLATFORM_MARKET, default FR) + `billing.platform.vat_number`
+9. InvoiceIssuer et previews (nextInvoice, planChange) utilisent TaxContextResolver
+10. N° TVA company lu depuis dynamic fields (`field_values` code=vat_number), pas de colonne dédiée sur companies
+
+**5 cas fiscaux** :
+| Cas | Seller | Buyer | VAT | Taux | Exemption |
+|-----|--------|-------|-----|------|-----------|
+| 1 - Même pays | FR | FR | — | 2000 bps | null |
+| 2 - B2B intra-EU | FR | DE | valide | 0 | reverse_charge_intra_eu |
+| 3a - B2B intra-EU invalide | FR | DE | invalide | 1900 bps | null |
+| 3b - B2C intra-EU | FR | DE | aucun | 1900 bps | null |
+| 4 - Extra-EU | FR | GB | — | 0 | export_extra_eu |
+| 5 - VIES down | FR | DE | présent | 0 | reverse_charge_intra_eu (fallback) |
+
+**Conséquences** :
+- Conformité TVA EU complète pour SaaS B2B/B2C multi-pays
+- Factures portent la mention légale d'exemption (reverse charge art. 283-2 CGI, export)
+- Validation VIES asynchrone (cache DB 7 jours, pas de blocage si VIES down)
+- Frontend affiche VChip exemption sur previews, plan change et détail facture
+
+**Fichiers** :
+- `database/migrations/2026_03_10_100020_add_is_eu_to_markets.php` (nouveau)
+- `database/migrations/2026_03_10_100021_add_tax_exemption_to_invoices.php` (nouveau)
+- `database/migrations/2026_03_10_100022_create_billing_vat_checks_table.php` (nouveau)
+- `app/Core/Billing/VatCheck.php` (nouveau)
+- `app/Core/Billing/Invoice.php` (modifié — fillable tax_exemption_reason)
+- `app/Core/Markets/Market.php` (modifié — fillable/cast is_eu)
+- `app/Core/Markets/MarketRegistry.php` (modifié — is_eu dans seedDefaults + sync)
+- `app/Modules/Core/Billing/DTOs/TaxContext.php` (nouveau)
+- `app/Modules/Core/Billing/Services/VatValidationService.php` (nouveau)
+- `app/Modules/Core/Billing/Services/TaxContextResolver.php` (nouveau)
+- `app/Core/Billing/InvoiceIssuer.php` (modifié — TaxContextResolver)
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (modifié — TaxContextResolver)
+- `config/billing.php` (modifié — section platform)
+- `resources/js/pages/company/billing/_BillingNextInvoice.vue` (modifié — VChip exemption)
+- `resources/js/pages/company/plan.vue` (modifié — VChip exemption)
+- `resources/js/pages/company/billing/invoices/[id].vue` (modifié — VChip exemption)
+- `resources/js/plugins/i18n/locales/en.json` (modifié — 4 clés exemption)
+- `resources/js/plugins/i18n/locales/fr.json` (modifié — 4 clés exemption)
+- `tests/Feature/TaxContextResolverTest.php` (nouveau — 6 tests)
+- `tests/Feature/VatValidationServiceTest.php` (nouveau — 5 tests)
+- `tests/Feature/InvoiceTaxExemptionTest.php` (nouveau — 3 tests)
+
+---
+
+### ADR-311 — Observabilité : correlation IDs, metrics Prometheus, audit export (2026-03-09)
+
+**Contexte** : Aucun mécanisme de corrélation entre requests HTTP et logs. Pas de metrics exportables pour monitoring externe. Pas d'export des logs d'audit pour compliance.
+
+**Décisions** :
+1. `CorrelationIdMiddleware` — lit/génère `X-Correlation-Id` sur chaque request API, ajoute au contexte Log
+2. `HasCorrelationId` trait — correlation ID pour les commandes Console billing (5 commandes)
+3. `BillingMetricsExportController` — endpoint Prometheus text/plain, auth par bearer token (`billing.metrics.token`)
+4. `AuditExportController` — export JSON/CSV des `platform_audit_logs`, filtré par date, limité à 10K entries, streamé en CSV
+5. Config `billing.alerting.slack_webhook_url` + `billing.metrics.token` ajoutés
+6. Bouton "Exporter" dans l'onglet Audit/Forensics de la page platform billing
+
+**Métriques Prometheus exposées** :
+- `billing_subscriptions_total{status}` — par statut (active, trialing, past_due, suspended, cancelled)
+- `billing_invoices_total{status}` — par statut (open, overdue, paid, voided, draft)
+- `billing_revenue_month_cents` — revenue du mois en cours (depuis ledger)
+- `billing_wallet_balance_total_cents` — solde total des wallets
+- `billing_dead_letters_pending` — DLQ webhooks en attente
+- `billing_heartbeat_last_run{job}` — timestamp dernier run par job billing
+
+**Conséquences** :
+- Correlation ID tracé de bout en bout (HTTP → Log → Audit)
+- Monitoring Prometheus/Grafana possible sans accès DB
+- Audit logs exportables pour compliance RGPD/audit financier
+- Aucun impact performance (middleware léger, metrics via COUNT/SUM SQL)
+
+**Fichiers** :
+- `app/Http/Middleware/CorrelationIdMiddleware.php` (nouveau)
+- `app/Console/Concerns/HasCorrelationId.php` (nouveau)
+- `app/Modules/Platform/Billing/Http/BillingMetricsExportController.php` (nouveau)
+- `app/Modules/Platform/Billing/Http/AuditExportController.php` (nouveau)
+- `bootstrap/app.php` (modifié — middleware api group)
+- `config/billing.php` (modifié — slack_webhook_url + metrics.token)
+- `routes/platform.php` (modifié — 2 routes ajoutées)
+- `app/Console/Commands/Billing{Renew,Reconcile,RecoverWebhooks,RecoverCheckouts,PeriodClose}Command.php` (modifié — trait)
+- `resources/js/pages/platform/billing/_BillingForensicsTab.vue` (modifié — bouton + dialog export)
+- `tests/Feature/CorrelationIdTest.php` (nouveau — 3 tests)
+- `tests/Feature/BillingMetricsExportTest.php` (nouveau — 3 tests)
+- `tests/Feature/AuditExportTest.php` (nouveau — 4 tests)
+
+---
+
+### ADR-319 — UX Premium : composants réutilisables, cohérence visuelle billing (2026-03-09)
+
+**Contexte** : L'audit UX global révèle un score de 4/10 avec des patterns inconsistants (empty states, status chips, affichage monétaire, headers de section, badges confiance). Chaque page réinvente ses propres patterns visuels, créant une dette UX croissante et une perception peu professionnelle.
+
+**Décisions** :
+
+1. **5 composants réutilisables créés** dans `resources/js/core/components/` :
+   - `EmptyState.vue` — état vide unifié avec icône/illustration, titre, description, CTA optionnel, slot
+   - `StatusChip.vue` — VChip coloré par domaine (subscription/invoice/payment) avec mapping couleur centralisé
+   - `MoneyDisplay.vue` — affichage monétaire formaté (centimes → devise, tailles sm/md/lg, signe +/-)
+   - `SectionHeader.vue` — header section avec icône dans VAvatar + titre + sous-titre + slot actions
+   - `TrustBadges.vue` — badges confiance (paiement sécurisé, RGPD, sans engagement, essai gratuit)
+
+2. **i18n enrichi** — 25 nouvelles clés en/fr :
+   - `trust.*` (4 clés) — labels badges confiance
+   - `billingStatus.*` (7 clés) — statuts abonnement traduits
+   - `invoiceStatus.*` (5 clés) — statuts facture traduits
+   - `lineType.*` (6 clés) — types de ligne facture traduits
+   - `paymentError.*` (3 clés) — erreurs paiement actionnables
+
+3. **Déploiement** :
+   - `EmptyState` remplace les empty states ad-hoc dans `_BillingPaymentMethods.vue`, `_BillingInvoices.vue`, `_BillingOverview.vue`
+   - `TrustBadges` ajouté dans `_BillingPaymentMethods.vue` sous les formulaires Stripe
+   - `StatusChip` remplace les fonctions `statusColor()` inline + VChip manuels dans `_BillingSubscriptionsTab.vue` et `_BillingInvoicesTab.vue`
+
+**Conséquences** :
+- Cohérence visuelle sur toutes les pages billing (même couleurs, même patterns)
+- Maintenance simplifiée : modifier un composant = impact global
+- Nouveaux développements plus rapides (assembler au lieu de réinventer)
+- Score UX empty states passe de inconsistant à unifié
+- Pas de changement de comportement fonctionnel
+
+**Fichiers** :
+- `resources/js/core/components/EmptyState.vue` (nouveau)
+- `resources/js/core/components/StatusChip.vue` (nouveau)
+- `resources/js/core/components/MoneyDisplay.vue` (nouveau)
+- `resources/js/core/components/SectionHeader.vue` (nouveau)
+- `resources/js/core/components/TrustBadges.vue` (nouveau)
+- `resources/js/plugins/i18n/locales/en.json` (modifié — 25 clés ajoutées)
+- `resources/js/plugins/i18n/locales/fr.json` (modifié — 25 clés ajoutées)
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` (modifié — EmptyState + TrustBadges)
+- `resources/js/pages/company/billing/_BillingInvoices.vue` (modifié — EmptyState)
+- `resources/js/pages/company/billing/_BillingOverview.vue` (modifié — EmptyState)
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` (modifié — StatusChip)
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` (modifié — StatusChip)
+
+---
+
+### ADR-313 — Tunnel d'inscription premium : split composants, UX conversion, trust signals (2026-03-09)
+
+**Contexte** : Le tunnel d'inscription est un monolithe de 1612 LOC (`register.vue`), difficile à maintenir et optimiser. L'audit UX donne un score de 3.5/10 : pas de plan recommandé visuellement distinct, pas de signaux de confiance, pas de messaging trial clair, CTA générique.
+
+**Décisions** :
+
+1. **Split register.vue en 7 fichiers** (piège BMAD-UI-001 respecté) :
+   - `register.vue` supprimé → `register/index.vue` (orchestrateur ~350 LOC)
+   - 6 sous-composants `_RegisterStep*.vue` (Industry, Plan, Addons, Company, Account, Summary)
+   - Chaque sous-composant utilise `defineModel()` pour les v-model bidirectionnels
+   - Aucun `definePage()` dans les sous-composants (convention `_*.vue`)
+   - Stripe : les refs DOM sont exposées via `defineExpose()`, la logique reste dans le parent
+
+2. **UX premium Step Plan** :
+   - Plan `is_popular` : `elevation="8"` + badge "Recommandé" `variant="elevated"`
+   - Features : icônes `tabler-check` vertes au lieu de `tabler-circle-filled` gris
+   - Trial : `VAlert type="success"` au lieu d'un petit `VChip info`
+   - Toggle annuel : badge "Économisez X%" en `VChip color="success"`
+
+3. **UX premium Step Summary** :
+   - Pricing breakdown dans `VCard variant="outlined"` (au lieu de `tonal primary`)
+   - Trial : `VAlert success` "À payer aujourd'hui : 0,00 €" + date premier paiement
+   - CTA : `size="x-large"` + `VIcon tabler-lock` + texte contextuel (trial/payant/gratuit)
+   - `TrustBadges` sous chaque CTA (secure, gdpr, cancel, trial selon contexte)
+
+4. **Phase 0 (analytics + persistence)** : déjà implémentée — `useAnalytics` + `useTunnelPersistence` composables.
+
+5. **i18n** : 6 nouvelles clés en/fr (recommended, annualSaving, dueToday, firstPaymentAfterTrial, addonsDueNow, startFreeTrial)
+
+**Conséquences** :
+- Maintenabilité : chaque step est éditable indépendamment
+- Conversion : signaux visuels forts sur le plan recommandé + messaging trial clair
+- Confiance : TrustBadges visibles au moment de la décision de paiement
+- Pas de changement fonctionnel : mêmes données, mêmes API, mêmes tests backend
+- Route `/register` inchangée (auto-routing `register/index.vue`)
+
+**Fichiers** :
+- `resources/js/pages/register.vue` (supprimé)
+- `resources/js/pages/register/index.vue` (nouveau — orchestrateur)
+- `resources/js/pages/register/_RegisterStepIndustry.vue` (nouveau)
+- `resources/js/pages/register/_RegisterStepPlan.vue` (nouveau)
+- `resources/js/pages/register/_RegisterStepAddons.vue` (nouveau)
+- `resources/js/pages/register/_RegisterStepCompany.vue` (nouveau)
+- `resources/js/pages/register/_RegisterStepAccount.vue` (nouveau)
+- `resources/js/pages/register/_RegisterStepSummary.vue` (nouveau)
+- `resources/js/plugins/i18n/locales/en.json` (modifié — 6 clés)
+- `resources/js/plugins/i18n/locales/fr.json` (modifié — 6 clés)
+
+---
+
+### ADR-314 — Expérience company premium : onboarding widget, billing timeline, empty states (2026-03-09)
+
+**Contexte** : Le dashboard company affiche un système de widgets dynamiques (DashboardGrid) mais manque d'onboarding guidé pour les nouvelles companies. L'onglet billing n'a que 3 tabs (overview, invoices, payment-methods) sans historique d'activité. Score UX dashboard : 1.5/10.
+
+**Décisions** :
+1. **Onboarding widget** — `_OnboardingWidget.vue` basé sur le preset Vuexy EcommerceCongratulationsJohn : card welcome avec illustration + checklist 5 étapes (account, plan, profile, payment, member). Endpoint `GET /company/dashboard/onboarding` renvoie les étapes et leur statut.
+2. **Billing timeline** — `_BillingTimeline.vue` basé sur le preset Vuexy CardAdvanceActivityTimeline : VTimeline density=compact, 20 derniers événements billing filtrés depuis CompanyAuditLog. Endpoint `GET /company/billing/timeline`. 4ème tab "Activity" ajouté dans billing.
+3. **Empty states** — Déjà améliorés dans LOT UX (ADR-319) avec le composant EmptyState réutilisable.
+4. **i18n** — 9 clés onboarding + 22 clés billingTimeline + 1 clé tab dans les deux locales.
+
+**Conséquences** :
+- Les nouvelles companies voient un guide de démarrage avec progression visuelle
+- La checklist se masque automatiquement quand toutes les étapes sont complétées
+- L'historique billing est consultable sans droits admin (scoped à la company)
+- 19 types d'événements billing mappés avec icônes et couleurs
+
+**Fichiers** :
+- `app/Modules/Core/Dashboard/Http/OnboardingStatusController.php` (nouveau)
+- `app/Modules/Core/Billing/Http/CompanyBillingTimelineController.php` (nouveau)
+- `resources/js/pages/company/dashboard/_OnboardingWidget.vue` (nouveau)
+- `resources/js/pages/company/billing/_BillingTimeline.vue` (nouveau)
+- `resources/js/pages/dashboard.vue` (modifié — import OnboardingWidget)
+- `resources/js/pages/company/billing/[tab].vue` (modifié — tab Activity)
+- `routes/company.php` (modifié — 2 routes)
+- `resources/js/plugins/i18n/locales/{en,fr}.json` (modifié — 32 clés)
+
+---
+
+### ADR-315 — Expérience admin premium : KPIs enrichis, recherche, export CSV, bulk actions (2026-03-09)
+
+**Contexte** : Le dashboard admin platform a 6 KPIs basiques sans graphe tendance. Les invoices n'ont qu'un filtre status. Pas d'export CSV ni de bulk actions. Score admin UX : 6.5/10.
+
+**Décisions** :
+1. **MRR History** — Graphe ApexCharts area sur 12 mois, données calculées dans `PlatformBillingMetricsController::mrrHistory()` (subscriptions actives à chaque fin de mois × prix plan).
+2. **Trial Conversion Rate** — Nouveau KPI : % des subscriptions trial converties en active sur les 90 derniers jours.
+3. **Recherche invoices** — Filtre `search` (LIKE sur number + company name via `whereHas`), filtres `from`/`to` sur `issued_at`. Debounced 400ms côté frontend.
+4. **Export CSV** — `BillingExportController` retourne un `StreamedResponse` avec chunking par 200, BOM UTF-8 pour Excel. Mêmes filtres que la liste.
+5. **Bulk actions** — `BillingBulkActionController` : bulk-void et bulk-retry, max 50 invoices par action, idempotency keys par item, validation status.
+6. **VDataTable checkboxes** — `show-select` + barre d'actions `VToolbar` conditionnelle.
+
+**Conséquences** :
+- L'admin voit l'évolution MRR + taux de conversion trial en un coup d'œil
+- La recherche par numéro de facture ou nom company est instantanée (debounced)
+- L'export CSV passe par streaming (pas de memory limit sur gros volumes)
+- Les bulk actions sont limitées à 50 items (protection contre abus)
+- Route export placée AVANT `{id}` pour éviter conflit de capture Laravel
+
+**Fichiers** :
+- `app/Modules/Platform/Billing/Http/PlatformBillingMetricsController.php` (modifié — mrrHistory, trialConversionRate)
+- `app/Modules/Platform/Billing/Http/BillingExportController.php` (nouveau)
+- `app/Modules/Platform/Billing/Http/BillingBulkActionController.php` (nouveau)
+- `app/Core/Billing/ReadModels/PlatformBillingReadService.php` (modifié — filtre search)
+- `app/Modules/Platform/Billing/Http/PlatformBillingController.php` (modifié — filtre search)
+- `resources/js/pages/platform/billing/_BillingDashboard.vue` (modifié — MRR chart, trial conversion KPI)
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` (modifié — search, date range, export, bulk)
+- `resources/js/modules/platform-admin/billing/billing.store.js` (modifié — fetchAllInvoices filters, bulk actions)
+- `routes/platform.php` (modifié — 3 routes)
+- `resources/js/plugins/i18n/locales/{en,fr}.json` (modifié — 15 clés)
+
+---
+
+### ADR-316 — Fonctionnalités commerciales : coupons, PDF factures conformes (2026-03-09)
+
+**Contexte :** Le plan premium prévoit deux fonctionnalités commerciales clés : système de coupons promotionnels et génération PDF de factures conformes EU.
+
+**Décisions :**
+1. **Système de coupons** : 3 tables (billing_coupons, billing_coupon_usages, coupon_id FK sur invoices). Types : percentage (valeur en basis points, 2000 = 20%) et fixed_amount (valeur en centimes). Validation publique pour le tunnel d'inscription (rate limited 10 req/min). CRUD admin platform. Coupon avec usages = soft-deactivation au lieu de suppression.
+2. **CouponService** : méthodes validate/apply/calculateDiscount. Validation vérifie : existence, activité, expiration, épuisement, applicabilité plan, utilisation unique par company.
+3. **Champ code promo tunnel** : composant `_RegisterStepSummary.vue` enrichi avec AppTextField + bouton "Appliquer", affichage de la réduction dans le pricing breakdown, code transmis au backend via `coupon_code` dans le payload register.
+4. **PDF factures** : backend déjà en place (dompdf v3.1.1 installé, route company + vue Blade existantes). Ajouts : route platform pour admin, mention d'exemption fiscale (reverse charge, export extra-EU), coordonnées vendeur dans le footer. Bug fix : extension `.html` → `.pdf` dans le download de la liste invoices.
+5. **Admin coupons tab** : nouvel onglet "Coupons" dans la page platform billing avec VDataTable + drawer create/edit. Utilise `$platformApi` directement (pas via store).
+
+**Conséquences :**
+- 3 nouvelles migrations (coupons, coupon_usages, FK invoices)
+- 23 nouveaux tests (18 coupon + 5 PDF) — tous green
+- Suite complète : 1710 tests, 0 failures
+- Build clean
+
+**Fichiers :**
+- `database/migrations/2026_03_10_100030_create_billing_coupons_table.php` (nouveau)
+- `database/migrations/2026_03_10_100031_create_billing_coupon_usages_table.php` (nouveau)
+- `database/migrations/2026_03_10_100032_add_coupon_id_to_invoices.php` (nouveau)
+- `app/Core/Billing/BillingCoupon.php` (nouveau)
+- `app/Core/Billing/BillingCouponUsage.php` (nouveau)
+- `app/Modules/Core/Billing/Services/CouponService.php` (nouveau)
+- `app/Modules/Platform/Billing/Http/CouponCrudController.php` (nouveau)
+- `app/Modules/Infrastructure/Public/Http/PublicCouponController.php` (nouveau)
+- `resources/js/pages/platform/billing/_BillingCouponsTab.vue` (nouveau)
+- `resources/js/pages/platform/billing/index.vue` (modifié — tab + VWindowItem coupons)
+- `resources/js/pages/register/_RegisterStepSummary.vue` (modifié — champ code promo + validation)
+- `resources/js/pages/register/index.vue` (modifié — passe coupon_code au register)
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` (modifié — bouton Download PDF)
+- `resources/js/pages/company/billing/_BillingInvoices.vue` (modifié — extension .pdf)
+- `resources/views/billing/invoice-pdf.blade.php` (modifié — exemption fiscale + footer vendeur)
+- `app/Modules/Platform/Billing/Http/PlatformBillingController.php` (modifié — méthode invoicePdf)
+- `routes/platform.php` (modifié — routes coupons + invoice PDF)
+- `routes/api.php` (modifié — route publique validate-coupon)
+- `resources/js/plugins/i18n/locales/{en,fr}.json` (modifié — clés coupons + downloadPdf)
+- `tests/Feature/CouponTest.php` (nouveau — 18 tests)
+- `tests/Feature/InvoicePdfTest.php` (nouveau — 5 tests)
+
+---
+
+### ADR-317 — Stabilisation architecture : split DunningEngine + split billing store (2026-03-09)
+
+**Contexte :** DunningEngine.php (679 LOC) et le platform billing Pinia store (811 LOC) étaient des fichiers monolithiques difficiles à maintenir. Aucun changement de comportement — refactoring pur de séparation de responsabilités.
+
+**Décisions :**
+1. **Split DunningEngine** (679 → 240 LOC orchestrateur + 3 sous-services) :
+   - `Dunning/DunningRetryStrategy.php` (~260 LOC) — payment attempts (provider, wallet, split)
+   - `Dunning/DunningTransitioner.php` (~130 LOC) — state transitions (markOverdue, applyFailureAction, checkReactivation)
+   - `Dunning/DunningNotifier.php` (~50 LOC) — notifications (payment failed, account suspended)
+   - DunningEngine conserve `processOverdueInvoices()` et `retrySingleInvoice()` comme API publique, délègue aux sous-services.
+   - Méthodes publiques `applyFailureAction()` et `checkReactivation()` conservées sur DunningEngine pour rétro-compatibilité.
+2. **Split platform billing store** (811 → ~90 LOC façade + 4 sub-stores) :
+   - `billing-subscriptions.store.js` (~170 LOC) — providers, config, policies, subscriptions, payment modules/rules
+   - `billing-invoices.store.js` (~270 LOC) — invoice detail, mutations, read-only data, bulk actions
+   - `billing-financial.store.js` (~160 LOC) — ledger, trial balance, periods, timeline, snapshots, drift, freeze, reconcile
+   - `billing-metrics.store.js` (~90 LOC) — widgets, metrics, recovery
+   - Façade utilise Pinia setup syntax avec `storeToRefs` + délégation d'actions — 16 consommateurs inchangés.
+   - Sub-stores ré-exportés pour accès direct dans le nouveau code.
+
+**Conséquences :**
+- 0 test modifié — 1710 tests passent sans changement
+- Build clean
+- Rétro-compatibilité totale : DunningEngine et usePlatformPaymentsStore exposent la même API publique
+- Les fichiers Core peuvent être testés unitairement par sous-service
+
+**Fichiers :**
+- `app/Core/Billing/DunningEngine.php` (réécrit — 679 → 240 LOC orchestrateur)
+- `app/Core/Billing/Dunning/DunningRetryStrategy.php` (nouveau)
+- `app/Core/Billing/Dunning/DunningTransitioner.php` (nouveau)
+- `app/Core/Billing/Dunning/DunningNotifier.php` (nouveau)
+- `resources/js/modules/platform-admin/billing/billing.store.js` (réécrit — façade ~90 LOC)
+- `resources/js/modules/platform-admin/billing/billing-subscriptions.store.js` (nouveau)
+- `resources/js/modules/platform-admin/billing/billing-invoices.store.js` (nouveau)
+- `resources/js/modules/platform-admin/billing/billing-financial.store.js` (nouveau)
+- `resources/js/modules/platform-admin/billing/billing-metrics.store.js` (nouveau)
+
+---
+
+### ADR-318 — Scalabilité avancée : queue jobs billing, réconciliation incrémentale (2026-03-09)
+
+**Contexte :** À l'échelle 10K+ companies, les commandes billing synchrones (dunning, renewal, reconcile) deviennent des goulots. La réconciliation Stripe scanne 30 jours fixes pour chaque company, gaspillant des appels API.
+
+**Décisions :**
+1. **3 queue jobs billing** : `ProcessDunningBatchJob` (queue `billing`, retry 3× backoff [60, 300, 900]), `RenewSubscriptionBatchJob` (queue `billing`, retry 3×), `ReconcileCompanyJob` (queue `billing-slow`, rate limited 10/min). Chaque job traite un batch d'IDs ou une company individuelle.
+2. **Flag `--async`** sur les 3 commandes (`billing:process-dunning`, `billing:renew`, `billing:reconcile`). Par défaut synchrone (backward compat). Avec `--async`, dispatch des jobs vers les queues dédiées.
+3. **Flag `--ids=`** sur `billing:renew` pour filtrer par subscription IDs — utilisé par les jobs de batch.
+4. **Réconciliation incrémentale** : `ReconciliationEngine::reconcile()` accepte `?Carbon $since` (4ème paramètre). Utilise `CompanyPaymentCustomer.last_reconciled_at` comme point de départ si pas de `$since` explicite. Mise à jour de `last_reconciled_at` après chaque réconciliation réussie (sauf dry-run).
+5. **Rate limiter `billing-reconcile`** : 10 jobs/minute, enregistré dans `AppServiceProvider::boot()`, utilisé par `ReconcileCompanyJob` via middleware `RateLimited`.
+
+**Conséquences :**
+- Sans `--async` : comportement identique à avant (backward compat)
+- Avec `--async` : scalabilité horizontale via workers de queue
+- Réconciliation incrémentale : réduit les appels Stripe de ~30× (ne scanne que depuis le dernier run)
+- 1 migration (last_reconciled_at), réversible
+- 5 nouveaux tests (async dispatch + batch processing + incremental)
+- Suite complète : 1715 tests, 0 failures
+
+**Fichiers :**
+- `app/Jobs/Billing/ProcessDunningBatchJob.php` (nouveau)
+- `app/Jobs/Billing/RenewSubscriptionBatchJob.php` (nouveau)
+- `app/Jobs/Billing/ReconcileCompanyJob.php` (nouveau)
+- `app/Console/Commands/ProcessDunningCommand.php` (modifié — `--async` + `handleAsync()`)
+- `app/Console/Commands/BillingRenewCommand.php` (modifié — `--async` + `--ids=` + `handleAsync()`)
+- `app/Console/Commands/BillingReconcileCommand.php` (modifié — `--async` + `handleAsync()`)
+- `app/Core/Billing/ReconciliationEngine.php` (modifié — `$since` param + incremental)
+- `app/Core/Billing/CompanyPaymentCustomer.php` (modifié — `last_reconciled_at` fillable + cast)
+- `app/Providers/AppServiceProvider.php` (modifié — rate limiter `billing-reconcile`)
+- `database/migrations/2026_03_09_210137_add_last_reconciled_at_to_company_payment_customers.php` (nouveau)
+- `tests/Feature/BillingAsyncJobsTest.php` (nouveau — 5 tests)
+
+---
+
+### ADR-319 — Production Hardening : idempotency, error handling, job monitoring (2026-03-10)
+
+**Contexte** : Audit final pré-production sur 7 axes critiques. Score initial 7.2/10, avec 3 bloquants identifiés : (1) `createOnSessionPaymentIntent` sans idempotency key = double charge possible, (2) frontend coupon tab sans feedback visuel, (3) jobs billing sans méthode `failed()` = échecs silencieux. Plus 4 problèmes importants d'error handling frontend.
+
+**Décisions** :
+1. **Idempotency key `createOnSessionPaymentIntent`** — Clé : `billing:on_session_pi:{company_id}:{amount}:{md5(metadata)}`. Protège contre le double-clic utilisateur. La méthode `callStripeCreateOnSessionPaymentIntent` accepte maintenant `$opts`
+2. **Idempotency key `createSetupIntent`** — Clé : `billing:setup_intent:{company_id}:{method_type}:{hour}`. Fenêtre horaire pour permettre plusieurs SetupIntents dans la journée
+3. **Race condition `ensureStripeCustomer`** — Remplacé `create()` par `firstOrCreate()` pour éliminer le doublon client Stripe en cas de requêtes concurrentes
+4. **Coupon tab feedback** — Ajouté `useAppToast` + try/catch sur `saveCoupon`/`deleteCoupon` + toast success/error + VAlert load error + loading indicator delete + validation `:rules` required
+5. **Job `failed()` methods** — `ProcessDunningBatchJob`, `RenewSubscriptionBatchJob`, `ReconcileCompanyJob` logguent `Log::critical` avec contexte (invoice_ids, subscription_ids, company_id) quand un job échoue définitivement après 3 tentatives
+6. **Error handling frontend** — 4 pages corrigées : `_BillingOverview.vue` (loadError + retry + dismissRejected refresh), `_BillingPaymentMethods.vue` (loadError + actionLoading delete/setDefault), `_BillingInvoicesTab.vue` (loadError + confirmLoading dialog), `plan.vue` (loadError + fetchData extraction + dismissingRejected loading)
+7. **i18n** — Ajouté clés `common.error`, `common.loadError`, `common.retry`, `validation.required` + `coupons.updated/created/deleted` (en + fr)
+
+**Conséquences** :
+- Score Stripe idempotency : 7/10 → 9.5/10 (toutes les opérations monétaires protégées)
+- Score frontend UX : 5/10 → 7.5/10 (error handling cohérent, feedback systématique)
+- Score monitoring jobs : 5/10 → 7/10 (failed() + Log::critical, manque encore supervisor config)
+- Aucun changement de comportement métier
+- 1715 tests, 0 failures
+- Build clean
+
+**Fichiers :**
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (modifié — 3 idempotency fixes)
+- `app/Jobs/Billing/ProcessDunningBatchJob.php` (modifié — +failed())
+- `app/Jobs/Billing/RenewSubscriptionBatchJob.php` (modifié — +failed())
+- `app/Jobs/Billing/ReconcileCompanyJob.php` (modifié — +failed())
+- `resources/js/pages/platform/billing/_BillingCouponsTab.vue` (modifié — toast + catch + validation + loadError)
+- `resources/js/pages/company/billing/_BillingOverview.vue` (modifié — loadError + retry + dismissRejected)
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` (modifié — loadError + actionLoading)
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` (modifié — loadError + confirmLoading)
+- `resources/js/pages/company/plan.vue` (modifié — loadError + fetchData + dismissingRejected)
+- `resources/js/plugins/i18n/locales/en.json` (modifié — +7 clés)
+- `resources/js/plugins/i18n/locales/fr.json` (modifié — +7 clés)
+
+---
+
+### ADR-320 — Système coupon enrichi + intégration backend (2026-03-10)
+
+**Contexte** : Le système coupon était cosmétique uniquement — validé en frontend mais jamais appliqué en backend. Bug timezone : starts_at/expires_at comparés comme instants UTC au lieu de jours calendaires.
+
+**Décisions** :
+- Fix timezone : `startOfDay()` comparisons dans `isExpired()` et `isUsable()` (sémantique jour calendaire)
+- 7 nouveaux champs coupon : description, max_uses_per_company, applicable_billing_cycles, applicable_addon_keys, addon_mode, duration_months, first_purchase_only
+- Tracking coupon sur subscriptions : coupon_id + coupon_months_remaining (FK, décompte)
+- CouponService::validate() enrichi : billing_cycle_mismatch, first_purchase_only, usage_limit_per_company
+- InvoiceIssuer::applyCoupon() : ligne négative discount + enregistrement usage
+- RegisterCompanyUseCase : valide coupon, attache à subscription, applique sur facture initiale
+- BillingRenewCommand : applique coupon sur renouvellement, décrémente compteur, détache si épuisé
+- CouponCrudController enrichi pour store/update avec nouveaux champs
+- Drawer UX 6 sections : Information, Réduction, Validité, Applicabilité, Limites, Résumé dynamique
+- Teleport to body pour overlay complète du drawer
+- 37 nouvelles clés i18n FR/EN
+- Drop colonne morte min_plan_level
+
+**Conséquences** :
+- Le coupon est désormais appliqué end-to-end : validation → subscription → facture → renouvellement
+- Coupons multi-mois avec décompte automatique
+- Timezone-safe : un coupon starts_at 10 mars est utilisable dès le 10 mars, quel que soit le fuseau
+
+**Fichiers** :
+- `database/migrations/2026_03_11_000001_enrich_billing_coupons_table.php` (NEW)
+- `database/migrations/2026_03_11_000002_add_coupon_tracking_to_subscriptions.php` (NEW)
+- `app/Core/Billing/BillingCoupon.php`
+- `app/Core/Billing/Subscription.php`
+- `app/Core/Billing/InvoiceIssuer.php`
+- `app/Modules/Core/Billing/Services/CouponService.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyData.php`
+- `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php`
+- `app/Core/Auth/Requests/RegisterRequest.php`
+- `app/Console/Commands/BillingRenewCommand.php`
+- `app/Modules/Platform/Billing/Http/CouponCrudController.php`
+- `app/Modules/Infrastructure/Public/Http/PublicCouponController.php`
+- `resources/js/pages/platform/billing/_BillingCouponsTab.vue`
+- `resources/js/plugins/i18n/locales/en.json`
+- `resources/js/plugins/i18n/locales/fr.json`
+- `tests/Feature/CouponTimezoneTest.php` (NEW)
+- `tests/Feature/CouponEnrichmentTest.php` (NEW)
+- `tests/Feature/CouponIntegrationTest.php` (NEW)
+
+---
+
+## ADR-321 : Cohérence UX billing — overlay, error handling, StatusChip, i18n, confirm dialogs
+
+- **Date** : 2026-03-10
+- **Contexte** : Audit UX du système billing (lot B plan SaaS 10/10). Drawers platform clippés par `overflow:hidden` de `@layouts/` (non modifiable). Pages billing sans error handling réseau. Statuts affichés avec VChip inline au lieu du composant partagé StatusChip. Strings hardcodées en anglais. Actions destructrices (reject subscription) sans dialog de confirmation. Empty states ad-hoc au lieu du composant EmptyState.
+- **Décisions** :
+  1. **Teleport drawer** — Tous les VNavigationDrawer platform wrappés dans `<Teleport to="body">` pour contourner overflow:hidden de `@layouts/`. 6 fichiers, 7 instances de drawer. Contrainte : `@core/` et `@layouts/` non modifiables
+  2. **Error handling P1** — 4 pages enrichies avec try/catch + toast/VAlert : `register/index.vue` (fetchPlans/fetchMarkets .catch()), `_BillingInvoices.vue` (catch dans loadInvoices), `_BillingDashboard.vue` (loadError ref + VAlert), `_BillingSubscriptionsTab.vue` (catch dans load)
+  3. **StatusChip cohérent** — Remplacement des VChip inline par `<StatusChip domain="...">` dans `_BillingInvoices.vue` (domain=invoice) et `plan.vue` (domain=subscription). `_BillingSubscriptionsTab.vue` utilisait déjà StatusChip
+  4. **Strings i18n** — 2 strings hardcodées remplacées par clés i18n : `_BillingPaymentMethods.vue` (paymentSecurityNotice) et `_BillingInvoices.vue` (noInvoicesDescription). + clés register.loadError et register.registrationSuccess
+  5. **Confirm dialog reject** — `_BillingSubscriptionsTab.vue` : VDialog de confirmation avant rejet de souscription. Action irréversible → obligatoire
+  6. **EmptyState cohérent** — `_BillingSubscriptionsTab.vue` : remplacement div custom par composant EmptyState
+  7. **Toast inscription** — `register/index.vue` : toast succès après création de compte (2 chemins : direct et post-paiement)
+  8. **Labels addon coupon** — Labels « Ciblage addons » renommés en « Périmètre de la remise » (plus professionnel)
+- **Conséquences** :
+  - Aucun changement fonctionnel backend — uniquement UX/frontend
+  - Pattern Teleport systématisé pour tous les drawers platform (prévient les futurs bugs overlay)
+  - Error handling réseau visible pour l'utilisateur (plus de loaders infinis silencieux)
+  - Composants partagés (StatusChip, EmptyState) systématiquement utilisés → cohérence visuelle garantie
+  - 1727 tests green, build clean
+- **Fichiers** :
+  - `resources/js/pages/platform/fields.vue` — +Teleport drawer
+  - `resources/js/pages/platform/users/index.vue` — +Teleport drawer
+  - `resources/js/pages/platform/roles.vue` — +Teleport drawer
+  - `resources/js/pages/platform/index.vue` — +Teleport drawer
+  - `resources/js/pages/platform/jobdomains/[id].vue` — +Teleport 2 drawers
+  - `resources/js/pages/platform/billing/_BillingDashboard.vue` — +error handling
+  - `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` — +error handling, +EmptyState, +confirm dialog reject
+  - `resources/js/pages/company/billing/_BillingInvoices.vue` — +StatusChip, +error handling, +i18n
+  - `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — +i18n
+  - `resources/js/pages/company/plan.vue` — +StatusChip
+  - `resources/js/pages/register/index.vue` — +error handling, +toast succès
+  - `resources/js/plugins/i18n/locales/fr.json` — +8 clés
+  - `resources/js/plugins/i18n/locales/en.json` — +8 clés
+
+---
+
+## ADR-322 : Pages billing enrichies — search, company links, StatusChip, actions, EmptyState
+
+- **Date** : 2026-03-10
+- **Contexte** : 5 pages admin billing/companies étaient des squelettes minimaux (~100-160 LOC) sans recherche, liens cliquables, error handling, ni actions opérationnelles. Incohérence avec les pages plus matures du système.
+- **Décisions** :
+  1. **WalletsTab** — +search par company, +RouterLink company→detail billing, +EmptyState, +error handling (catch+toast), +coloration negative balance (red)
+  2. **PaymentsTab** — +search par company/provider_payment_id, +RouterLink company, +StatusChip(domain=payment), +EmptyState, +error handling, +colonne payment method (brand/last4)
+  3. **CreditNotesTab** — +search par company/numéro, +RouterLink company, +VChip tonal statut, +EmptyState, +error handling
+  4. **DunningTab** — +search par company/numéro, +StatusChip(domain=invoice), +EmptyState, +error handling, +colonne actions avec boutons Retry (retryInvoicePayment) et Escalate (forceDunningTransition)
+  5. **CompanyMembersTab** — +search par nom/email, +filtre rôle (AppSelect), +EmptyState, +i18n rôles (Owner→t('roles.owner')), +i18n labels VChip
+  6. **Namespace roles i18n** — nouveau bloc `roles: { owner, management, employee }` dans fr.json et en.json
+- **Conséquences** :
+  - Pattern cohérent : toutes les pages billing admin disposent de search, company links, error handling, EmptyState
+  - Actions dunning opérationnelles directement depuis l'onglet (retry, escalate) — plus besoin de naviguer vers le détail company
+  - Aucun changement backend — uniquement frontend
+  - 1727 tests green, build clean
+- **Fichiers** :
+  - `resources/js/pages/platform/billing/_BillingWalletsTab.vue` — enrichi
+  - `resources/js/pages/platform/billing/_BillingPaymentsTab.vue` — enrichi
+  - `resources/js/pages/platform/billing/_BillingCreditNotesTab.vue` — enrichi
+  - `resources/js/pages/platform/billing/_BillingDunningTab.vue` — enrichi + actions
+  - `resources/js/pages/platform/companies/_CompanyMembersTab.vue` — enrichi
+  - `resources/js/plugins/i18n/locales/fr.json` — +roles, +dunning actions, +escalateSuccess
+  - `resources/js/plugins/i18n/locales/en.json` — idem
+
+---
+
+### ADR-323 — Lot D : Company billing detail — outils support platform + provider-agnostic links (2026-03-10)
+
+- **Contexte** : L'admin platform avait besoin d'outils support enrichis pour diagnostiquer les problèmes billing d'une company : IDs fournisseur, coupon actif, dernier paiement, factures cliquables. Le frontend construisait initialement les URLs Stripe en dur, violant l'abstraction Payment Gateway.
+- **Décisions** :
+  1. **`PaymentProviderAdapter::getDashboardLinks()`** : Nouvelle méthode dans l'interface contract. Chaque adapter (Stripe, Internal) construit ses propres URLs dashboard. Le frontend ne connaît jamais le provider.
+  2. **Backend enrichi** : `CompanyController::billing()` retourne `provider_customer_id`, `provider_links` (customer_url, subscription_url, payment_url), `last_payment`, coupon eager-loaded sur subscription, et `provider_url` sur chaque invoice.
+  3. **Frontend provider-agnostic** : Utilise `billing.provider_links.*` et `item.provider_url` — zéro référence à `stripe.com` dans `resources/js/pages/`.
+  4. **StatusChip + paid_at** : Invoices affichent StatusChip domain=invoice, colonne paid_at, et lien vers le provider dashboard.
+  5. **Diagnostics card** : Nouveau card avec last payment (montant, status, date, provider payment ID copyable).
+  6. **Controller < 250 LOC** : Extraction de `resolveProviderLinks()` pour respecter l'invariant ControllerSizeInvariantTest.
+- **Conséquences** :
+  - Architecture provider-agnostic respectée : changement de provider = uniquement backend, frontend inchangé
+  - Admin platform dispose d'outils de diagnostic billing complets sans quitter la fiche company
+  - 1733 tests green (6 nouveaux dans CompanyBillingDetailTest), build clean
+- **Fichiers** :
+  - `app/Core/Billing/Contracts/PaymentProviderAdapter.php` — +getDashboardLinks()
+  - `app/Core/Billing/Adapters/StripePaymentAdapter.php` — implémentation Stripe
+  - `app/Core/Billing/Adapters/InternalPaymentAdapter.php` — implémentation null
+  - `app/Modules/Platform/Companies/Http/CompanyController.php` — billing() enrichi + resolveProviderLinks()
+  - `resources/js/pages/platform/companies/_CompanyBillingTab.vue` — provider IDs, diagnostics, paid_at, StatusChip
+  - `resources/js/plugins/i18n/locales/en.json` — +provider keys, +diagnostics, +copied
+  - `resources/js/plugins/i18n/locales/fr.json` — idem
+  - `tests/Feature/CompanyBillingDetailTest.php` — 6 tests
+
+---
+
+### ADR-324 — Lot E : PricingEngine centralisé — centre de contrôle financier (2026-03-10)
+
+- **Contexte** : Audit complet du moteur de pricing par 3 agents parallèles a identifié 6 incohérences financières critiques. Cause racine : chaque service (previews, executors, activators) construisait ses propres lignes de prix ad-hoc. Résultat : (1) proration calculée sur prix catalogue au lieu du prix effectif (avec coupon), (2) planChangePreview ignorait le coupon dans next_period, (3) nextInvoicePreview ignorait le coupon actif, (4) PlanChangeExecutor ne transférait pas le coupon et ne l'appliquait pas sur la facture proration, (5) CheckoutSessionActivator utilisait le montant Stripe au lieu des prix DB, (6) tunnel d'inscription sans TVA.
+- **Décisions** :
+  1. **DTOs structurés** : `PriceLine`, `PriceBreakdown`, `CouponInfo`, `PlanChangeBreakdown` — 4 readonly classes dans `app/Core/Billing/DTOs/`. `PriceBreakdown` calcule subtotal, taxAmount, total dans le constructeur. `toInvoiceLines()` produit un format compatible InvoiceIssuer. `toArray()` produit le JSON pour les previews.
+  2. **PricingEngine** : Classe statique centralisée avec 3 méthodes : `forCurrentPeriod()` (abonnement courant + addons + coupon + tax), `forPlanChange()` (proration + next period + coupon transféré), `forRegistration()` (pré-company, tax via market_key). Helpers : `catalogPriceCents()` (prix Plan DB), `effectivePriceCents()` (catalogue - coupon).
+  3. **Previews migrées** : `CompanyBillingReadService::nextInvoicePreview()` et `planChangePreview()` délèguent à PricingEngine au lieu de calculer ad-hoc. Le JSON inclut désormais `coupon`, `active_coupon`, `coupon_discount`.
+  4. **PlanChangeExecutor corrigé** : `schedule()` utilise `effectivePriceCents` pour le crédit proration (au lieu du catalogue). `execute()` applique `InvoiceIssuer::applyCoupon()` sur la facture proration et transfère `coupon_id` + `coupon_months_remaining` sur la nouvelle souscription.
+  5. **CheckoutSessionActivator corrigé** : Remplace `InvoiceIssuer::addLine(…, $amountTotal)` par `PricingEngine::forCurrentPeriod()` → `toInvoiceLines()`. La facture reflète les prix DB + coupon, pas le montant Stripe.
+  6. **Endpoint estimation inscription** : `POST /api/public/plans/estimate-registration` — accepte plan_key, interval, market_key, coupon_code?, addon_keys[]. Retourne un `PriceBreakdown` complet (HT + TVA + TTC).
+  7. **Frontend enrichi** : `_RegisterStepSummary.vue` appelle l'endpoint et affiche sous-total HT, TVA (taux %), exemption fiscale, total TTC. `plan.vue` affiche le coupon dans la prochaine facture et dans le plan change preview (coupon conservé + discount next period).
+- **Conséquences** :
+  - Un seul moteur produit un seul objet structuré → previews, factures et calculs consomment exactement la même structure
+  - 5 concepts de prix formalisés : catalogue (Plan DB), discount (coupon), effectif (catalogue - discount), tax (TaxResolver), snapshot (InvoiceLine)
+  - Migration P2 restante : BillingRenewCommand + RegisterCompanyUseCase → PricingEngine (fonctionnent déjà correctement)
+  - 1747 tests green (14 nouveaux), build clean
+- **Fichiers** :
+  - `app/Core/Billing/DTOs/PriceLine.php` — NOUVEAU
+  - `app/Core/Billing/DTOs/PriceBreakdown.php` — NOUVEAU
+  - `app/Core/Billing/DTOs/CouponInfo.php` — NOUVEAU
+  - `app/Core/Billing/DTOs/PlanChangeBreakdown.php` — NOUVEAU
+  - `app/Core/Billing/PricingEngine.php` — NOUVEAU (~300 LOC)
+  - `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — réécriture previews
+  - `app/Core/Billing/PlanChangeExecutor.php` — fix proration + coupon transfer
+  - `app/Core/Billing/CheckoutSessionActivator.php` — fix prix DB vs Stripe
+  - `app/Modules/Infrastructure/Public/Http/PublicPlanController.php` — +estimateRegistration()
+  - `routes/api.php` — +route estimate-registration
+  - `resources/js/pages/register/index.vue` — +prop selectedMarketKey
+  - `resources/js/pages/register/_RegisterStepSummary.vue` — affichage HT/TVA/TTC
+  - `resources/js/pages/company/plan.vue` — coupon dans previews
+  - `resources/js/plugins/i18n/locales/en.json` — +12 clés
+  - `resources/js/plugins/i18n/locales/fr.json` — +12 clés
+  - `tests/Feature/PricingEngineTest.php` — 9 tests NOUVEAU
+  - `tests/Feature/RegistrationEstimateTest.php` — 5 tests NOUVEAU
+
+---
+
+## ADR-325 : Payment Policy System — Gouvernance centralisée des moyens de paiement
+
+- **Date** : 2026-03-10
+- **Statut** : Accepté
+
+### Contexte
+
+Audit complet du système de paiement : 80% de l'infrastructure existait (PaymentOrchestrator, PlatformPaymentMethodRule, PaymentModuleSeeder, 9 tests) mais n'était PAS connectée aux flux réels. 3 hardcodings backend (StripePaymentAdapter lignes 79/96, 508) et 3 hardcodings frontend (registration, pay page, payment methods) décidaient des méthodes autorisées de façon implicite.
+
+### Décisions
+
+1. **PaymentPolicy façade** — classe statique combinant PaymentOrchestrator (rules DB) + PlatformBillingPolicy (politique SEPA) pour résoudre les méthodes autorisées par contexte
+2. **3 colonnes SEPA dans PlatformBillingPolicy** — `allow_sepa` (bool), `sepa_requires_trial` (bool), `sepa_first_failure_action` (suspend|dunning)
+3. **3 corrections StripePaymentAdapter** — remplacement des hardcodings par PaymentPolicy
+4. **API exposure** — `allowed_payment_methods` dans estimate-registration, billing overview, et CheckoutResult
+5. **Frontend dynamique** — SEPA affiché uniquement si autorisé par le backend (plus de v-if="hasTrial" hardcodé)
+6. **Platform admin settings** — section SEPA dans _SettingsBilling.vue avec 3 contrôles
+7. **SEPA first payment failure** — DunningEngine suspend immédiatement si policy=suspend et premier paiement SEPA
+
+### Conséquences
+
+- Les méthodes de paiement sont 100% pilotées par la DB (rules + policy)
+- L'admin platform peut activer/désactiver SEPA, conditionner à un trial, et choisir le comportement en cas d'échec
+- Le frontend ne décide jamais des méthodes disponibles — il consomme l'API
+- PaymentOrchestrator (existant) est maintenant connecté aux flux réels via PaymentPolicy
+
+### Fichiers
+
+- `database/migrations/2026_03_11_100001_add_sepa_policy_to_platform_billing_policies.php` — NOUVEAU
+- `app/Core/Billing/PaymentPolicy.php` — NOUVEAU (façade centralisée)
+- `app/Core/Billing/PlatformBillingPolicy.php` — +3 champs SEPA
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` — fix 3 hardcodings
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — +allowed_payment_methods
+- `app/Core/Billing/CheckoutResult.php` — +allowedPaymentMethods
+- `app/Core/Billing/DunningEngine.php` — +SEPA first failure logic
+- `app/Modules/Infrastructure/Public/Http/PublicPlanController.php` — +allowed_methods in estimate
+- `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php` — +3 validation rules
+- `resources/js/pages/register/_RegisterStepSummary.vue` — dynamique SEPA
+- `resources/js/pages/company/billing/pay.vue` — filtrage dynamique
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — filtrage dynamique
+- `resources/js/pages/platform/settings/_SettingsBilling.vue` — +section SEPA
+- `resources/js/plugins/i18n/locales/{en,fr}.json` — +9 clés SEPA
+- `tests/Feature/PaymentPolicyTest.php` — 7 tests NOUVEAU
+- `tests/Feature/PaymentPolicyApiTest.php` — 2 tests NOUVEAU
+- `tests/Feature/SepaFirstPaymentFailureTest.php` — 2 tests NOUVEAU
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -9,7 +9,9 @@ import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatMoney } from '@/utils/money'
+import StatusChip from '@/core/components/StatusChip.vue'
 import { cacheRemove } from '@/core/runtime/cache'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -19,6 +21,7 @@ const billingStore = useCompanyBillingStore()
 const jobdomainStore = useJobdomainStore()
 const { toast } = useAppToast()
 const { plans, loading, fetchPlans } = usePublicPlans()
+const { track } = useAnalytics()
 
 // Accept ?suggest=plan_key from modules upsell navigation
 const suggestedPlan = computed(() => route.query.suggest || null)
@@ -34,6 +37,8 @@ const checkingPending = ref(true)
 const previewLoading = ref(false)
 const previewError = ref(false)
 const cancellingScheduledChange = ref(false)
+const loadError = ref(false)
+const dismissingRejected = ref(false)
 
 const currentPlanKey = computed(() => auth.currentCompany?.plan_key ?? 'starter')
 const currentPlan = computed(() => plans.value.find(p => p.key === currentPlanKey.value))
@@ -41,39 +46,56 @@ const currentInterval = computed(() => sub.value?.interval ?? 'monthly')
 const selectedInterval = computed(() => annualToggle.value ? 'yearly' : 'monthly')
 const scheduledChange = computed(() => sub.value?.scheduled_change ?? null)
 
-onMounted(async () => {
-  await Promise.all([
-    fetchPlans(),
-    settingsStore.fetchCompany(),
-    billingStore.fetchSubscription(),
-    billingStore.fetchNextInvoicePreview(),
-  ])
+const fetchData = async () => {
+  loadError.value = false
+  checkingPending.value = true
 
-  // Initialize toggle from current subscription interval
-  if (billingStore.subscription?.interval)
-    annualToggle.value = billingStore.subscription.interval === 'yearly'
+  try {
+    await Promise.all([
+      fetchPlans(),
+      settingsStore.fetchCompany(),
+      billingStore.fetchSubscription(),
+      billingStore.fetchNextInvoicePreview(),
+    ])
 
-  // Show suggestion toast if navigated from modules page
-  if (suggestedPlan.value) {
-    const plan = plans.value.find(p => p.key === suggestedPlan.value)
-    if (plan)
-      toast(t('companyPlan.suggestUpgrade', { plan: plan.name }), 'info')
+    // Initialize toggle from current subscription interval
+    if (billingStore.subscription?.interval)
+      annualToggle.value = billingStore.subscription.interval === 'yearly'
+
+    // Show suggestion toast if navigated from modules page
+    if (suggestedPlan.value) {
+      const plan = plans.value.find(p => p.key === suggestedPlan.value)
+      if (plan)
+        toast(t('companyPlan.suggestUpgrade', { plan: plan.name }), 'info')
+    }
+
+    track('plan_change_viewed', { current_plan: currentPlanKey.value })
   }
+  catch {
+    loadError.value = true
+  }
+  finally {
+    checkingPending.value = false
+  }
+}
 
-  checkingPending.value = false
-})
+onMounted(fetchData)
 
 const sub = computed(() => billingStore.subscription)
 const pendingSub = computed(() => billingStore.pendingSubscription)
 const hasPendingSubscription = computed(() => pendingSub.value?.status === 'pending')
 
 const dismissRejected = async () => {
+  dismissingRejected.value = true
   try {
     await billingStore.dismissPendingSubscription()
     toast(t('companyPlan.rejectedDismissed'), 'success')
   }
   catch {
     toast(t('companyPlan.failedToSubmit'), 'error')
+  }
+  finally {
+    dismissingRejected.value = false
   }
 }
 
@@ -106,6 +128,16 @@ const requestPlanChange = async planKey => {
 
   try {
     await billingStore.fetchPlanChangePreview(planKey, selectedInterval.value)
+
+    const cp = billingStore.planChangePreview
+    if (cp) {
+      track('plan_change_previewed', {
+        from: currentPlanKey.value,
+        to: planKey,
+        timing: cp.timing,
+        amount_due: cp.amount_due,
+      })
+    }
   }
   catch {
     previewError.value = true
@@ -123,6 +155,12 @@ const cancelPreview = () => {
 
 const confirmPlanChange = async () => {
   if (!pendingPlanKey.value) return
+
+  track('plan_change_confirmed', {
+    from: currentPlanKey.value,
+    to: pendingPlanKey.value,
+    timing: changePreview.value?.timing,
+  })
 
   changingPlan.value = true
 
@@ -249,6 +287,7 @@ const estimatedInvoice = computed(() => {
     planPrice,
     addons: p.addons ?? [],
     addonsTotal,
+    coupon: p.coupon ?? null,
     subtotal: p.subtotal ?? (planPrice + addonsTotal),
     taxAmount: p.tax_amount ?? 0,
     taxRateBps: p.tax_rate_bps ?? 0,
@@ -264,6 +303,25 @@ const estimatedInvoice = computed(() => {
 
 <template>
   <div>
+    <!-- Load Error -->
+    <VAlert
+      v-if="loadError"
+      type="error"
+      variant="tonal"
+      class="mb-6"
+    >
+      {{ t('common.loadError') }}
+      <template #append>
+        <VBtn
+          variant="text"
+          size="small"
+          @click="fetchData"
+        >
+          {{ t('common.retry') }}
+        </VBtn>
+      </template>
+    </VAlert>
+
     <!-- Scheduled Plan Change Alert -->
     <VAlert
       v-if="scheduledChange"
@@ -325,6 +383,7 @@ const estimatedInvoice = computed(() => {
           variant="outlined"
           color="error"
           size="small"
+          :loading="dismissingRejected"
           @click="dismissRejected"
         >
           {{ t('companyPlan.dismissRejected') }}
@@ -480,12 +539,13 @@ const estimatedInvoice = computed(() => {
                   />
                   <span class="text-body-2">
                     {{ t('companyPlan.subscriptionStatus') }}:
-                    <VChip
+                    <StatusChip
+                      :status="sub.status"
+                      domain="subscription"
                       size="x-small"
-                      :color="sub.status === 'active' ? 'success' : sub.status === 'trialing' ? 'warning' : 'error'"
                     >
                       {{ t(`subscriptionStatus.${sub.status}`) }}
-                    </VChip>
+                    </StatusChip>
                   </span>
                 </div>
               </div>
@@ -791,6 +851,20 @@ const estimatedInvoice = computed(() => {
             </template>
           </VListItem>
 
+          <!-- Coupon discount -->
+          <VListItem v-if="estimatedInvoice.coupon">
+            <VListItemTitle class="font-weight-medium text-success">
+              <VIcon icon="tabler-ticket" size="16" start />
+              {{ t('companyBilling.nextInvoice.couponLabel') }}: {{ estimatedInvoice.coupon.code }}
+            </VListItemTitle>
+
+            <template #append>
+              <span class="font-weight-medium text-success">
+                -{{ formatMoney(estimatedInvoice.coupon.discount, { currency: estimatedInvoice.currency }) }}
+              </span>
+            </template>
+          </VListItem>
+
           <VDivider />
 
           <VListItem>
@@ -816,6 +890,19 @@ const estimatedInvoice = computed(() => {
                 +{{ formatMoney(estimatedInvoice.taxAmount, { currency: estimatedInvoice.currency }) }}
               </span>
             </template>
+          </VListItem>
+
+          <!-- Tax exemption -->
+          <VListItem v-if="preview?.tax_exemption_reason">
+            <VListItemTitle>
+              <VChip
+                color="info"
+                variant="tonal"
+                size="small"
+              >
+                {{ t('billing.tax_exemption.' + preview.tax_exemption_reason) }}
+              </VChip>
+            </VListItemTitle>
           </VListItem>
 
           <VListItem v-if="estimatedInvoice.walletCredit > 0">
@@ -917,6 +1004,16 @@ const estimatedInvoice = computed(() => {
                 <strong>{{ t('companyPlan.planChangePreview.taxRate', { rate: (changePreview.tax_rate_bps / 100).toFixed(1), mode: changePreview.tax_mode }) }}</strong>
               </span>
             </div>
+            <div v-if="changePreview.tax_exemption_reason" class="d-flex align-center gap-2">
+              <VIcon icon="tabler-certificate" size="18" />
+              <VChip
+                color="info"
+                variant="tonal"
+                size="small"
+              >
+                {{ t('billing.tax_exemption.' + changePreview.tax_exemption_reason) }}
+              </VChip>
+            </div>
             <div v-if="changePreview.market_name || changePreview.legal_status_name" class="d-flex align-center gap-2">
               <VIcon icon="tabler-map-pin" size="18" />
               <span class="text-body-2 text-disabled">
@@ -924,6 +1021,22 @@ const estimatedInvoice = computed(() => {
               </span>
             </div>
           </div>
+
+          <!-- Active coupon info -->
+          <VAlert
+            v-if="changePreview.active_coupon"
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <div class="d-flex align-center gap-2">
+              <VIcon icon="tabler-ticket" size="18" />
+              <span class="text-body-2">
+                {{ t('companyPlan.planChangePreview.couponKept', { code: changePreview.active_coupon.code }) }}
+              </span>
+            </div>
+          </VAlert>
 
           <!-- Proration breakdown (immediate only) -->
           <template v-if="changePreview.timing === 'immediate' && changePreview.proration">
@@ -1058,6 +1171,15 @@ const estimatedInvoice = computed(() => {
               <VListItemTitle class="text-body-2">{{ t('companyPlan.planChangePreview.subtotalHT') }}</VListItemTitle>
               <template #append>
                 <span class="text-body-2">{{ formatMoney(changePreview.next_period.subtotal, { currency: changePreview.currency }) }}</span>
+              </template>
+            </VListItem>
+
+            <VListItem v-if="changePreview.next_period.coupon_discount">
+              <VListItemTitle class="text-body-2 text-success">
+                {{ t('companyPlan.planChangePreview.couponDiscount') }}
+              </VListItemTitle>
+              <template #append>
+                <span class="text-body-2 text-success">{{ t('companyPlan.planChangePreview.includedInSubtotal') }}</span>
               </template>
             </VListItem>
 

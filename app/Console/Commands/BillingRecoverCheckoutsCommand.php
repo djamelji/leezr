@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\HasCorrelationId;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\BillingCheckoutSession;
 use App\Core\Billing\BillingJobHeartbeat;
@@ -21,12 +22,15 @@ use Illuminate\Support\Facades\Log;
  */
 class BillingRecoverCheckoutsCommand extends Command implements Isolatable
 {
+    use HasCorrelationId;
+
     protected $signature = 'billing:recover-checkouts {--dry-run}';
 
     protected $description = 'Recover missed checkout sessions by polling Stripe';
 
     public function handle(StripePaymentAdapter $adapter): int
     {
+        $this->initCorrelationId();
         BillingJobHeartbeat::start('billing:recover-checkouts');
 
         $dryRun = $this->option('dry-run');
