@@ -99,6 +99,8 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
         ->middleware('company.access:manage-structure');
     Route::put('/billing/saved-cards/{id}/default', [CompanyPaymentMethodController::class, 'setDefault'])
         ->middleware('company.access:manage-structure');
+    Route::put('/billing/saved-cards/{id}/debit-day', [CompanyPaymentMethodController::class, 'setDebitDay'])
+        ->middleware('company.access:manage-structure');
 
     // Batch invoice payment (ADR-257)
     Route::post('/billing/invoices/pay', [InvoiceBatchPayController::class, 'createPaymentIntent'])

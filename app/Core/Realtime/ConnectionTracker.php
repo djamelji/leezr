@@ -26,23 +26,26 @@ class ConnectionTracker
             return true; // Allow connection if Redis is unavailable
         }
 
-        $maxPerCompany = config('realtime.max_streams_per_company', 100);
-        $maxGlobal = config('realtime.max_streams_global', 500);
-
-        // Check company limit
-        $companyCount = (int) $conn->get(self::companyCountKey($companyId));
-        if ($companyCount >= $maxPerCompany) {
-            return false;
-        }
-
-        // Check global limit
-        $globalCount = (int) $conn->get(self::globalCountKey());
-        if ($globalCount >= $maxGlobal) {
-            return false;
-        }
-
-        // Register connection
         $activeKey = self::activeKey($userId, $companyId);
+        $alreadyConnected = (bool) $conn->get($activeKey);
+
+        // Only check limits for NEW connections (not reconnects from same user)
+        if (! $alreadyConnected) {
+            $maxPerCompany = config('realtime.max_streams_per_company', 100);
+            $maxGlobal = config('realtime.max_streams_global', 500);
+
+            $companyCount = (int) $conn->get(self::companyCountKey($companyId));
+            if ($companyCount >= $maxPerCompany) {
+                return false;
+            }
+
+            $globalCount = (int) $conn->get(self::globalCountKey());
+            if ($globalCount >= $maxGlobal) {
+                return false;
+            }
+        }
+
+        // Register/refresh connection
         $conn->set($activeKey, json_encode([
             'user_id' => $userId,
             'company_id' => $companyId,
@@ -51,11 +54,14 @@ class ConnectionTracker
         ]));
         $conn->expire($activeKey, self::ACTIVE_TTL);
 
-        $conn->incr(self::companyCountKey($companyId));
-        $conn->expire(self::companyCountKey($companyId), self::ACTIVE_TTL);
+        // Only increment counters for genuinely new connections
+        if (! $alreadyConnected) {
+            $conn->incr(self::companyCountKey($companyId));
+            $conn->expire(self::companyCountKey($companyId), self::ACTIVE_TTL);
 
-        $conn->incr(self::globalCountKey());
-        $conn->expire(self::globalCountKey(), self::ACTIVE_TTL);
+            $conn->incr(self::globalCountKey());
+            $conn->expire(self::globalCountKey(), self::ACTIVE_TTL);
+        }
 
         return true;
     }

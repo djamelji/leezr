@@ -130,6 +130,20 @@ class CompanyPaymentSetupController
             ->where('is_default', true)
             ->update(['is_default' => false]);
 
+        // ADR-328 S4: Store SEPA mandate acceptance metadata
+        if ($methodKey === 'sepa_debit') {
+            $profileMetadata['mandate_accepted_at'] = now()->toIso8601String();
+            $profileMetadata['mandate_reference'] = 'MNDT-' . $company->id . '-' . \Illuminate\Support\Str::random(8);
+        }
+
+        // Merge with existing metadata to preserve mandate/debit-day data across updates
+        $existing = CompanyPaymentProfile::where('company_id', $company->id)
+            ->where('provider_key', 'stripe')
+            ->where('provider_payment_method_id', $paymentMethodId)
+            ->first();
+
+        $mergedMetadata = array_merge($existing?->metadata ?? [], $profileMetadata);
+
         $profile = CompanyPaymentProfile::updateOrCreate(
             [
                 'company_id' => $company->id,
@@ -140,7 +154,7 @@ class CompanyPaymentSetupController
                 'method_key' => $methodKey,
                 'label' => $label,
                 'is_default' => true,
-                'metadata' => $profileMetadata,
+                'metadata' => $mergedMetadata,
             ],
         );
 

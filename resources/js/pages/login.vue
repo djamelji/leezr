@@ -2,7 +2,7 @@
 const { t } = useI18n()
 
 import { useAuthStore } from '@/core/stores/auth'
-import { useRuntimeStore } from '@/core/runtime/runtime'
+import { useAppName } from '@/composables/useAppName'
 import { safeRedirect } from '@/utils/safeRedirect'
 import { checkVersionOnMount } from '@/utils/versionCheck'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
@@ -26,9 +26,8 @@ definePage({
 usePublicTheme()
 checkVersionOnMount()
 
+const appName = useAppName()
 const auth = useAuthStore()
-const runtime = useRuntimeStore()
-const router = useRouter()
 const route = useRoute()
 
 const form = ref({
@@ -41,30 +40,28 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const handleLogin = async () => {
+  if (isLoading.value) return
   isLoading.value = true
   errorMessage.value = ''
 
+  // ADR-331: Login API isolé. En cas de succès, reload complet vers le
+  // dashboard — évite tout chunk error post-login (import dynamique de la
+  // page cible avec des chunks potentiellement périmés).
   try {
     await auth.login({
       email: form.value.email,
       password: form.value.password,
     })
-
-    // ADR-160: Reset to cold, boot fully, THEN navigate.
-    // This ensures layout mounts with nav + modules already hydrated.
-    runtime.teardown()
-    await runtime.boot('company')
-
-    const redirect = safeRedirect(route.query.redirect, '/dashboard')
-
-    await router.replace(redirect)
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('auth.invalidCredentials')
-  }
-  finally {
     isLoading.value = false
+
+    return
   }
+
+  // Login réussi — reload complet (le boot runtime se fera au chargement frais)
+  window.location.href = safeRedirect(route.query.redirect, '/dashboard')
 }
 
 const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
@@ -75,9 +72,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
     </div>
   </RouterLink>
 
@@ -123,7 +117,7 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            {{ t('auth.welcomeTo', { app: themeConfig.app.title }) }}
+            {{ t('auth.welcomeTo', { app: appName }) }}
           </h4>
           <p class="mb-0">
             {{ t('auth.signInSubtitle') }}

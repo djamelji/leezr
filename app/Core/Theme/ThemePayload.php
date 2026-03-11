@@ -22,11 +22,27 @@ final class ThemePayload
 
     public static function defaults(): self
     {
+        // ADR-332: Read platform colors from PlatformSetting when available.
+        // Uses first() instead of instance() to avoid singleton violation in tests.
+        $primary = '#7367F0';
+        $darken = '#675DD8';
+
+        try {
+            $settings = \App\Platform\Models\PlatformSetting::query()->first();
+
+            if ($settings) {
+                $primary = $settings->theme['primary_color'] ?? $primary;
+                $darken = $settings->theme['primary_darken_color'] ?? $darken;
+            }
+        } catch (\Throwable) {
+            // During migrations or tests without DB — use hardcoded fallback
+        }
+
         return new self(
             theme: 'system',
             skin: 'default',
-            primaryColor: '#7367F0',
-            primaryDarkenColor: '#675DD8',
+            primaryColor: $primary,
+            primaryDarkenColor: $darken,
             layout: 'vertical',
             navCollapsed: false,
             semiDark: false,

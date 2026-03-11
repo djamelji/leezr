@@ -283,23 +283,16 @@ class JobdomainGate
                 }
             }
 
-            // Clone dashboard defaults if company has no layout (ADR-149)
+            // Clone jobdomain dashboard defaults as company base layout (ADR-149, ADR-327)
+            // This provides the ideal default layout for each trade/jobdomain.
+            // The smart default builder (frontend) is only a fallback when no jobdomain default exists.
             $dashboardDefault = \App\Modules\Dashboard\JobdomainDashboardDefault::where('jobdomain_id', $jobdomain->id)->first();
 
-            if ($dashboardDefault && !\App\Modules\Dashboard\CompanyDashboardLayout::where('company_id', $company->id)->exists()) {
+            if ($dashboardDefault && !\App\Modules\Dashboard\CompanyDashboardLayout::where('company_id', $company->id)->whereNull('user_id')->exists()) {
                 \App\Modules\Dashboard\CompanyDashboardLayout::create([
                     'company_id' => $company->id,
+                    'user_id' => null,
                     'layout_json' => $dashboardDefault->layout_json,
-                ]);
-                \Log::info('[Dashboard] Cloned jobdomain dashboard default', [
-                    'company_id' => $company->id,
-                    'jobdomain_id' => $jobdomain->id,
-                    'widget_count' => count($dashboardDefault->layout_json),
-                ]);
-            } elseif ($dashboardDefault) {
-                \Log::info('[Dashboard] Company already has layout, skip clone', [
-                    'company_id' => $company->id,
-                    'jobdomain_id' => $jobdomain->id,
                 ]);
             }
 

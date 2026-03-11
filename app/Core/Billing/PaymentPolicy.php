@@ -20,6 +20,8 @@ class PaymentPolicy
 {
     /**
      * Allowed payment methods for an existing company.
+     * ADR-328: sepa_requires_trial only applies to the registration tunnel,
+     * not to existing companies — they keep SEPA if allow_sepa is true.
      *
      * @return string[] e.g. ['card', 'sepa_debit']
      */
@@ -29,18 +31,17 @@ class PaymentPolicy
             ->where('is_current', 1)
             ->first();
 
-        $isTrial = $subscription && $subscription->status === 'trialing';
-
         return static::allowedMethodsForContext(
             marketKey: $company->market_key,
             planKey: $subscription?->plan_key,
             interval: $subscription?->interval,
-            isTrial: $isTrial,
         );
     }
 
     /**
      * Allowed payment methods for the registration tunnel (pre-company).
+     * ADR-328: sepa_requires_trial filter applies HERE only — controls whether
+     * SEPA is offered during signup based on whether the plan has a trial period.
      *
      * @return string[] e.g. ['card', 'sepa_debit']
      */
@@ -49,22 +50,35 @@ class PaymentPolicy
         string $interval,
         string $marketKey,
     ): array {
-        $policy = PlatformBillingPolicy::instance();
-
-        // During registration, trial status depends on plan config
-        $plan = \App\Core\Plans\Plan::where('key', $planKey)->first();
-        $isTrial = $plan && $plan->trial_days > 0;
-
-        return static::allowedMethodsForContext(
+        $methods = static::allowedMethodsForContext(
             marketKey: $marketKey,
             planKey: $planKey,
             interval: $interval,
-            isTrial: $isTrial,
         );
+
+        // ADR-328: Apply sepa_requires_trial only for the registration tunnel
+        $policy = PlatformBillingPolicy::instance();
+
+        if ($policy->sepa_requires_trial && in_array('sepa_debit', $methods, true)) {
+            $plan = \App\Core\Plans\Plan::where('key', $planKey)->first();
+            $hasTrial = $plan && $plan->trial_days > 0;
+
+            if (! $hasTrial) {
+                $methods = array_values(array_filter($methods, fn ($m) => $m !== 'sepa_debit'));
+            }
+        }
+
+        if (empty($methods)) {
+            $methods = ['card'];
+        }
+
+        return $methods;
     }
 
     /**
-     * Core resolution: PaymentOrchestrator rules + SEPA policy filter.
+     * Core resolution: PaymentOrchestrator rules + global SEPA master switch.
+     * Note: sepa_requires_trial is NOT applied here — it only applies in the
+     * registration tunnel via allowedMethodsForRegistration().
      *
      * @return string[] e.g. ['card', 'sepa_debit']
      */
@@ -72,21 +86,16 @@ class PaymentPolicy
         ?string $marketKey = null,
         ?string $planKey = null,
         ?string $interval = null,
-        bool $isTrial = false,
     ): array {
         // Step 1: Resolve from DB rules via PaymentOrchestrator
         $resolved = PaymentOrchestrator::resolveMethodsForContext($marketKey, $planKey, $interval);
         $methods = array_column($resolved, 'method_key');
 
-        // Step 2: Apply SEPA policy filter
+        // Step 2: Apply global SEPA master switch only
         $policy = PlatformBillingPolicy::instance();
 
-        if (in_array('sepa_debit', $methods, true)) {
-            if (! $policy->allow_sepa) {
-                $methods = array_values(array_filter($methods, fn ($m) => $m !== 'sepa_debit'));
-            } elseif ($policy->sepa_requires_trial && ! $isTrial) {
-                $methods = array_values(array_filter($methods, fn ($m) => $m !== 'sepa_debit'));
-            }
+        if (in_array('sepa_debit', $methods, true) && ! $policy->allow_sepa) {
+            $methods = array_values(array_filter($methods, fn ($m) => $m !== 'sepa_debit'));
         }
 
         // Guarantee at least 'card'

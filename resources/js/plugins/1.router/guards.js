@@ -123,10 +123,14 @@ export const setupGuards = router => {
   // Uses el.click() instead of class removal so the Vue click handler
   // in VerticalNavLayout resets the reactive refs (isOverlayNavActive,
   // isLayoutOverlayVisible) — class-only removal gets re-added by Vue.
+  // ADR-330b: Overlay cleanup after navigation.
+  // NOTE: lzr-chunk-error is NOT removed here — it must persist until either:
+  //   1. Post-mount cleanup (main.js) confirms Vue mounted successfully
+  //   2. Smart refresh reloads the page entirely
+  // Removing it in afterEach caused "blank page" because Vue partially mounts,
+  // router navigates (afterEach fires), overlay disappears, but sub-components
+  // still fail → user sees empty page for several seconds.
   router.afterEach(() => {
-    // Chunk error overlay (raw DOM, not managed by Vue)
-    document.getElementById('lzr-chunk-error')?.remove()
-
     // Layout overlay stuck in visible state — dismiss at ALL breakpoints.
     // The VerticalNav watcher already handles intentional nav close on
     // route change, so this is purely a safety net for stuck overlays.

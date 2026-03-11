@@ -163,7 +163,10 @@ class DashboardGridV2Test extends TestCase
         $response->assertOk();
 
         $widgets = $response->json('widgets');
-        $this->assertEmpty($widgets, 'Company catalog must exclude platform-audience widgets.');
+        $platformWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'platform');
+        $this->assertEmpty($platformWidgets, 'Company catalog must exclude platform-audience widgets.');
+        $companyWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'company');
+        $this->assertCount(5, $companyWidgets, 'Company catalog must include compliance widgets (ADR-327).');
     }
 
     // ── Company: batch resolve forces company scope ──
@@ -260,12 +263,12 @@ class DashboardGridV2Test extends TestCase
 
     public function test_company_dashboard_layout_roundtrip(): void
     {
-        // 1. Catalog returns empty (billing widgets are platform-audience only)
+        // 1. Catalog returns compliance widgets (billing are platform-audience only, ADR-327)
         $catalog = $this->actAsCompany($this->owner)
             ->getJson('/api/dashboard/widgets/catalog');
 
         $catalog->assertOk();
-        $this->assertEmpty($catalog->json('widgets'));
+        $this->assertCount(5, $catalog->json('widgets'), 'Company catalog must include 5 compliance widgets.');
 
         // 2. Layout CRUD still works (seeded/jobdomain layouts may reference any widget)
         $layout = [

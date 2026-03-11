@@ -39,6 +39,11 @@ trait WidgetLayoutDefaults
         return 'platform';
     }
 
+    public function resolution(): string
+    {
+        return 'server';
+    }
+
     public function datasetKey(): ?string
     {
         return null;

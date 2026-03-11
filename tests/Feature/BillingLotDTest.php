@@ -146,8 +146,9 @@ class BillingLotDTest extends TestCase
         $this->assertNotNull($addon->deactivated_at, 'Addon should be deactivated');
     }
 
-    public function test_disabling_addon_creates_credit_note(): void
+    public function test_disabling_addon_does_not_create_credit_note(): void
     {
+        // ADR-328 S7: No prorated credit on deactivation
         CompanyAddonSubscription::create([
             'company_id' => $this->company->id,
             'module_key' => 'logistics_tracking',
@@ -160,15 +161,10 @@ class BillingLotDTest extends TestCase
         ModuleDisabled::dispatch($this->company, 'logistics_tracking');
 
         $creditNote = CreditNote::where('company_id', $this->company->id)->first();
+        $this->assertNull($creditNote, 'No credit note should be created on deactivation (ADR-328 S7)');
 
-        $this->assertNotNull($creditNote, 'Credit note should be created');
-        $this->assertGreaterThan(0, $creditNote->amount, 'Credit amount should be positive');
-        $this->assertEquals('applied', $creditNote->status);
-        $this->assertNotNull($creditNote->wallet_transaction_id, 'Wallet should be credited');
-
-        // Wallet balance should reflect the credit
         $balance = WalletLedger::balance($this->company);
-        $this->assertEquals($creditNote->amount, $balance);
+        $this->assertEquals(0, $balance, 'Wallet should remain unchanged');
     }
 
     // ── D3: Renewal includes addon lines ─────────────────────

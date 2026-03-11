@@ -34,6 +34,7 @@ class DashboardWidgetController extends Controller
                 'tags' => $w->tags(),
                 'component' => $w->component(),
                 'audience' => $w->audience(),
+                'resolution' => $w->resolution(),
             ])->values()->all(),
         ]);
     }

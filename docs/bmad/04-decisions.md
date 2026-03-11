@@ -10934,4 +10934,300 @@ Audit complet du système de paiement : 80% de l'infrastructure existait (Paymen
 
 ---
 
+## ADR-326 : Per-user company dashboard layouts
+
+- **Date** : 2026-03-10
+- **Contexte** : Le dashboard company stockait le layout dans `company_dashboard_layouts` scopé par `company_id` uniquement — tous les membres d'une company partageaient un seul layout. Problèmes : (1) les customisations d'un user écrasaient celles des autres, (2) sur refresh, le layout pouvait être perdu si `fetchLayout()` échouait silencieusement (pas de `catch`), déclenchant un bootstrap qui écrasait la config sauvegardée en DB. Le dashboard platform, lui, stockait correctement par `user_id`.
+- **Décisions** :
+  1. **Layout per-user** : ajout de `user_id` nullable à `company_dashboard_layouts`, index unique composite `(company_id, user_id)`. Les rows avec `user_id=NULL` deviennent des defaults company (jobdomain templates, auto-inject modules).
+  2. **Résolution en cascade** : `CompanyDashboardLayout::resolveForUser(companyId, userId)` → cherche d'abord le layout user-specific, puis le default company (`user_id=NULL`), puis retourne null.
+  3. **Save toujours per-user** : le PUT `/dashboard/layout` crée/met à jour un row `(company_id, user_id)` — jamais le default.
+  4. **Defaults company préservés** : `JobdomainGate` et `InjectModuleWidgets` continuent de modifier le default company (`user_id=NULL`). Les users qui n'ont pas customisé héritent automatiquement du default via la cascade.
+  5. **SurfaceEngine résilient** : ajout de `catch` à `fetchLayout()` + flag `_fetchLayoutSucceeded` — le bootstrap (`applyDefaultLayout` + `saveLayout`) ne se déclenche que si le fetch a réussi ET le layout est vide. Prévient l'écrasement silencieux sur erreur réseau/timing.
+- **Conséquences** :
+  - Chaque membre a son propre dashboard, persisté en DB, portable entre postes de travail
+  - Les templates jobdomain servent de point de départ commun (first-load fallback)
+  - L'activation de module enrichit le default company → nouveaux membres en bénéficient
+  - Les users existants avec layout customisé ne sont pas impactés par les injections de modules
+- **Fichiers** :
+  - `database/migrations/2026_03_10_204928_add_user_id_to_company_dashboard_layouts.php` — migration NOUVEAU
+  - `app/Modules/Dashboard/CompanyDashboardLayout.php` — +user_id, +resolveForUser()
+  - `app/Modules/Core/Dashboard/Http/CompanyDashboardLayoutController.php` — show/update par (company_id, user_id)
+  - `app/Modules/Dashboard/Listeners/InjectModuleWidgets.php` — cible explicitement user_id=NULL
+  - `app/Core/Jobdomains/JobdomainGate.php` — cible explicitement user_id=NULL
+  - `resources/js/core/surface-engine/useSurfaceEngine.js` — +catch, +_fetchLayoutSucceeded
+  - `resources/js/modules/company/dashboard/dashboard.store.js` — bootstrap guard
+  - `resources/js/modules/platform-admin/dashboard/dashboard.store.js` — bootstrap guard (cohérence)
+
+---
+
+### ADR-327 — Dashboard Company : persistance widgets + smart default layout
+- **Date** : 2026-03-10
+- **Contexte** : Les widgets company ne persistaient jamais au refresh. Cause racine : tous les billing widgets avaient `audience: 'platform'` → le catalog company backend était VIDE. Les 5 compliance widgets étaient injectés client-only → `saveLayout()` les excluait → rien n'était sauvé en DB.
+- **Décisions** :
+  1. **`resolution()` sur WidgetManifest** : nouveau champ `'server'|'client'` — les widgets client-resolved ne sont pas envoyés au batch resolve backend, mais sont persistés en DB comme tout autre widget
+  2. **5 compliance widget manifests backend** : `ComplianceRateWidget`, `CompliancePendingWidget`, `ComplianceOverdueWidget`, `ComplianceRolesWidget`, `ComplianceTypesWidget` — module `core.dashboard`, audience `company`, resolution `client`
+  3. **Suppression `_clientOnlyKeys`** : le concept n'existe plus dans le SurfaceEngine. Le filtre se fait via `resolution` du catalog.
+  4. **Filtre audience dans `catalogForUser`** : la méthode platform ne retourne que les widgets `audience in ['platform','both']`
+  5. **Smart Default Layout Builder** : fallback frontend quand aucun layout n'existe en DB — prend max 4 KPIs + 2 listes + 1 chart du catalog
+  6. **Cascade de layout** : (a) per-user DB → (b) company default from jobdomain (user_id=NULL) → (c) smart default builder frontend
+  7. **Jobdomain dashboard defaults conservés** : le clonage `JobdomainDashboardDefault` → `CompanyDashboardLayout` reste la source primaire de layout par défaut. Le smart builder n'est qu'un fallback.
+- **Conséquences** :
+  - Les widgets company sont maintenant persistés et survivent au refresh
+  - Nouveau user sur une company avec jobdomain = reçoit le layout par défaut du jobdomain
+  - Nouveau user sur une company sans jobdomain default = reçoit le smart default
+  - Les modules futurs ajoutent des widgets via `WidgetManifest` avec le bon `audience` — le système les intègre automatiquement
+- **Fichiers** :
+  - `app/Modules/Dashboard/Contracts/WidgetManifest.php` — +`resolution()`
+  - `app/Modules/Dashboard/Contracts/WidgetLayoutDefaults.php` — +`resolution()` default='server'
+  - `app/Modules/Dashboard/Widgets/Compliance{Rate,Pending,Overdue,Roles,Types}Widget.php` — NOUVEAUX
+  - `app/Modules/Dashboard/widgets.php` — +5 compliance classes
+  - `app/Modules/Dashboard/DashboardWidgetRegistry.php` — +filtre audience dans catalogForUser
+  - `app/Modules/Core/Dashboard/Http/CompanyDashboardWidgetController.php` — +resolution dans catalog
+  - `app/Modules/Platform/Dashboard/Http/DashboardWidgetController.php` — +resolution dans catalog
+  - `resources/js/core/surface-engine/useSurfaceEngine.js` — suppression _clientOnlyKeys, filtre par resolution
+  - `resources/js/modules/company/dashboard/dashboard.store.js` — smart default builder, suppression clientCatalog
+  - `resources/js/pages/dashboard.vue` — suppression COMPLIANCE_CATALOG hardcodé
+  - `resources/js/components/dashboard/widgetProfiles.js` — clés compliance dotées
+  - `app/Core/Jobdomains/JobdomainGate.php` — clonage jobdomain conservé avec commentaire ADR-327
+  - `resources/js/plugins/i18n/locales/{en,fr}.json` — +10 clés widgets compliance
+
+---
+
+### ADR-328 — Addon Billing Hardening (9 sujets)
+
+- **Date** : 2026-03-12
+- **Contexte** : Test terrain (activation addon Leezr Logistics) révèle 9 incohérences : facture addon standalone, absence de garde trial, billing_anchor_day fantôme, mandat SEPA implicite, aucune planification de prélèvement différé, PDF différent du web. Structuré en 4 lots (G→H→I→J).
+
+- **Décisions** :
+
+  **LOT G — Gardes backend** :
+  - **S5** : Trial + addon = pas de facturation. `AddonBillingListener` vérifie `isTrialing()` → crée le `CompanyAddonSubscription` (tracking) mais skip la facture. Le premier renouvellement post-trial inclut automatiquement les addons.
+  - **S7** : Désactivation addon = `deactivated_at` set, pas d'avoir proraté. `AddonCreditListener` simplifié : ni CreditNote ni WalletLedger. Scope `active()` exclut du renouvellement suivant.
+  - **S6** : Échec paiement addon = dunning company-level. Pas de désactivation per-module (rejeté par l'utilisateur). DunningEngine traite déjà toutes les factures uniformément.
+
+  **LOT H — Facture annexe** :
+  - **S1** : Migration `add_parent_invoice_id_to_invoices` : `parent_invoice_id` FK nullable + `annexe_suffix` varchar(5). `Invoice::displayNumber()` = `{parent.number}-{suffix}`. `InvoiceNumbering::nextAnnexeSuffix()` incrémente A→B→C sans consommer la séquence globale. `InvoiceIssuer::createAnnexeDraft()` crée une annexe liée à la facture principale de la période courante. `AddonBillingListener` préfère annexe quand facture principale existe.
+
+  **LOT I — SEPA hardening** :
+  - **S2** : Migration `create_scheduled_debits_table` + modèle `ScheduledDebit` + `ScheduledDebitService::maybeSchedule()`. Si PM par défaut = SEPA + `preferred_debit_day` → crée un ScheduledDebit au lieu du paiement immédiat. Commande `billing:collect-scheduled` traite les debits échus quotidiennement.
+  - **S3** : Migration `add_preferred_debit_day_to_company_payment_profiles`. Date de prélèvement déplacée de `_BillingCards` vers `_BillingPaymentMethods` (par IBAN, pas global). Route `PUT /billing/saved-cards/{id}/debit-day`.
+  - **S4** : Mandat SEPA explicite par VCheckbox (remplace texte implicite). Backend stocke `mandate_accepted_at` dans metadata. `StripePaymentAdapter::collectInvoice()` garde : SEPA sans mandat = échec immédiat.
+  - **S8** : Route `GET /platform/billing/scheduled-debits` + composant `_BillingScheduledDebitsTab.vue`. Table paginée avec filtres (statut, date, company). Ajouté comme onglet dans le dashboard billing platform.
+
+  **LOT J — PDF = web** :
+  - **S9** : Template Blade enrichi pour matcher le Vue : sections paiements, avoirs, référence annexe (parent + enfants), `displayNumber()`. Controllers enrichis pour charger `parentInvoice`, `annexes`, `creditNotes`, `payments`.
+
+- **Conséquences** :
+  - 3 nouvelles migrations, 2 nouveaux modèles, 1 nouvelle commande artisan
+  - Annexes : numérotation INV-YYYY-NNNNNN-A/B/C sans consommer la séquence globale
+  - SEPA : mandat obligatoire, prélèvement différé configurable, admin visibility
+  - Addon lifecycle : trial = gratuit, désactivation = sans remboursement
+  - PDF facture : parité visuelle avec la page web Vue
+  - Tests : +27 tests (BillingLotGTest 6, BillingLotHTest 8, BillingLotITest 13), +1 régression BillingLotDTest adaptée
+
+- **Fichiers** :
+  - `app/Core/Billing/Listeners/AddonBillingListener.php` — S5+S1 trial guard + annexe
+  - `app/Core/Billing/Listeners/AddonCreditListener.php` — S7 simplifié
+  - `app/Core/Billing/DunningEngine.php` — S6 docblock
+  - `app/Core/Billing/Invoice.php` — S1 parent_invoice_id, displayNumber, isAnnexe
+  - `app/Core/Billing/InvoiceNumbering.php` — S1 nextAnnexeSuffix
+  - `app/Core/Billing/InvoiceIssuer.php` — S1+S2 createAnnexeDraft, scheduledDebit hook
+  - `app/Core/Billing/ScheduledDebit.php` — S2 nouveau modèle
+  - `app/Core/Billing/ScheduledDebitService.php` — S2 nouveau service
+  - `app/Core/Billing/CompanyPaymentProfile.php` — S3 preferred_debit_day
+  - `app/Core/Billing/Adapters/StripePaymentAdapter.php` — S4 mandate guard + import
+  - `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — S1 annexe dans réponse
+  - `app/Console/Commands/BillingCollectScheduledCommand.php` — S2 nouvelle commande
+  - `app/Console/Commands/BillingRenewCommand.php` — S2 skip collect si scheduled
+  - `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — S3 setDebitDay
+  - `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` — S4 mandate metadata
+  - `app/Modules/Core/Billing/Http/CompanyBillingController.php` — S9 enrichir PDF data
+  - `app/Modules/Platform/Billing/Http/PlatformBillingController.php` — S8+S9 scheduledDebits + PDF
+  - `resources/js/pages/company/billing/_BillingCards.vue` — S3 retrait billing_anchor_day
+  - `resources/js/pages/company/billing/_BillingOverview.vue` — S3 retrait billingDayOptions
+  - `resources/js/pages/company/billing/_BillingPaymentMethods.vue` — S3+S4 debit day + mandate
+  - `resources/js/pages/platform/billing/index.vue` — S8 onglet scheduled debits
+  - `resources/js/pages/platform/billing/_BillingScheduledDebitsTab.vue` — S8 nouveau composant
+  - `resources/js/core/components/StatusChip.vue` — S8 domaine scheduledDebit
+  - `resources/js/modules/company/billing/billing.store.js` — S3 action setDebitDay
+  - `resources/views/billing/invoice-pdf.blade.php` — S9 paiements + avoirs + annexes
+  - `resources/js/plugins/i18n/locales/{en,fr}.json` — S3+S4+S8 i18n keys
+  - `routes/company.php` — S3 route PUT debit-day
+  - `routes/platform.php` — S8 route GET scheduled-debits
+  - `database/migrations/2026_03_12_100001_add_parent_invoice_id_to_invoices.php`
+  - `database/migrations/2026_03_12_100002_add_preferred_debit_day_to_company_payment_profiles.php`
+  - `database/migrations/2026_03_12_100003_create_scheduled_debits_table.php`
+  - `tests/Feature/BillingLotGTest.php` — 6 tests
+  - `tests/Feature/BillingLotHTest.php` — 8 tests
+  - `tests/Feature/BillingLotITest.php` — 13 tests
+  - `tests/Feature/BillingLotDTest.php` — régression adaptée (S7)
+
+**Post-implémentation S10** : correction scope `sepa_requires_trial`
+- `sepa_requires_trial` ne s'applique QU'au tunnel d'inscription (plans sans trial → pas de SEPA à l'inscription), PAS aux entreprises existantes
+- `PaymentPolicy::allowedMethodsForContext()` ne filtre plus par trial — uniquement `allow_sepa` master switch
+- `PaymentPolicy::allowedMethodsForRegistration()` applique `sepa_requires_trial` + vérifie `plan.trial_days > 0`
+- `PaymentPolicy::allowedMethods(Company)` retourne toujours SEPA si `allow_sepa=true` (indépendant du statut trial)
+- `StripePaymentAdapter::createCheckout()` utilise `allowedMethodsForRegistration()` (contexte tunnel)
+- Fichiers : `PaymentPolicy.php`, `StripePaymentAdapter.php`, `PaymentPolicyTest.php` (8 tests)
+- `_SettingsBilling.vue` et `CompanyPaymentSetupController.php` corrigés (metadata merge)
+
+**Post-implémentation S11** : SEPA wizard 2 étapes + CORE_BILLING_FIELDS + UX polish
+- `_BillingPaymentMethods.vue` : wizard SEPA en 2 étapes (Step 1 : titulaire + IBAN, Step 2 : mandat + date prélèvement)
+- Titulaire du compte pré-rempli avec le nom de la company, éditable (cas auto-entrepreneurs)
+- Email SEPA auto-résolu : billing_email dynamic field → owner email fallback (plus de champ email)
+- `CompanyBillingReadService::overview()` : ajout `billing_email` dans la réponse
+- `JobdomainRegistry::CORE_BILLING_FIELDS` : fields billing (siret, vat_number, legal_name, billing_address/city/postal/region/complement, billing_email) auto-mergés dans tous les jobdomains via `sync()` et `get()`
+- `_SettingsBilling.vue` : hints dynamiques réactifs (3 états : On/Off/Disabled) pour `sepa_requires_trial`, `allow_sepa`, `sepa_first_failure_action`
+- Mandat SEPA : police `text-caption` (réduite de moitié)
+- Picker de moyen de paiement intégré dans le même VRow que les cartes existantes (VCol sm=6)
+- Fichiers : `_BillingPaymentMethods.vue`, `CompanyBillingReadService.php`, `JobdomainRegistry.php`, `_SettingsBilling.vue`, i18n `{en,fr}.json`
+
+**Post-implémentation S12** : SEPA UX hardening + Stripe resilience + Payment UX polish
+
+*Thème/Dark mode Stripe :*
+- Stripe IBAN et Card elements reçoivent dynamiquement `color` via `useTheme()` (Vuetify) — texte blanc en dark, noir en light
+- `isDark` computed réactif, recalculé à chaque changement de thème
+
+*Wizard SEPA — layout fixes :*
+- `v-if` → `v-show` pour les étapes wizard : Stripe IBAN element reste monté (invisible quand retour step 2→1)
+- Retiré `d-flex flex-column` des divs `v-show` (override `display: none`)
+- Wizard compacté (pa-3, density compact, small buttons, x-small chips) sans toucher aux cartes existantes
+
+*Payment cards — hauteur uniforme :*
+- Classe `.payment-card` avec `aspect-ratio: 1.9` pour ratio proportionnel
+- Wizard et cartes SEPA/carte maintiennent la même hauteur visuelle
+
+*Debit day select — UX :*
+- Remplacé AppSelect verbose par layout inline : "Prélèvement" + select compact
+- Items : "à émission de facture" (value: null, défaut), "le 1 du mois", "le 5 du mois"...
+- Fix NaN : `Number(null)` → ternaire `pm.preferred_debit_day ? Number(...) : null`
+
+*Debit day — sécurité :*
+- Changement de `preferred_debit_day` = effet au prochain prélèvement uniquement
+- `setDebitDay()` ne modifie JAMAIS les `ScheduledDebit` pending du mois en cours
+- Simplifié : update `CompanyPaymentProfile.preferred_debit_day`, pas de touch aux debits
+
+*Stripe idempotency key — fix 400 errors :*
+- `StripePaymentAdapter::createSetupIntent()` : idempotency key hourly → unique par appel
+- Format : `billing:setup_intent:{company}:{method}:{Y-m-d-H-i-s}:{Str::random(8)}`
+- Fix : même setup intent (consumed) retourné dans la même heure → Stripe 400
+- Frontend : `store._setupIntent = null` (pas `store.setupIntent` — getter Pinia read-only)
+
+*Delete payment method — UX :*
+- Dialog contextuel : texte "carte" vs "compte bancaire" selon `method_key`
+- i18n : `confirmDeleteSepa`, `confirmDeleteSepaDesc`, `sepaDeleted`, `sepaDeleteFailed`
+- Promotion auto du défaut : `deleteSavedCard()` promeut le plus ancien restant comme défaut
+
+*Mandat SEPA — texte :*
+- Retiré "et son prestataire de paiement"
+- `{appName}` interpolation dans le texte du mandat (plus de "Leezr" hardcodé)
+- `appName = import.meta.env.VITE_APP_NAME || 'Leezr'`
+
+*i18n :*
+- Ajouté `common.next`, `common.previous` (manquaient, causaient des clefs non traduites)
+- Bouton SEPA : "Enregistrer" + `prepend-icon="tabler-building-bank"` (raccourci)
+
+*Config app name :*
+- `.env` : `APP_NAME=Leezr` (était vide)
+- `themeConfig.js` : `title: import.meta.env.VITE_APP_NAME || 'Leezr'` (était vide)
+- Note : source de vérité future = `PlatformSetting.general.app_name` (pas encore centralisé)
+
+*Fichiers :*
+- `resources/js/pages/company/billing/_BillingPaymentMethods.vue` (dark mode, v-show, wizard compact, debit day, delete dialog, mandate text, aspect-ratio)
+- `app/Core/Billing/Adapters/StripePaymentAdapter.php` (idempotency key fix)
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` (setDebitDay security)
+- `resources/js/modules/company/billing/billing.store.js` (delete promotion, _setupIntent null)
+- `resources/js/plugins/i18n/locales/{en,fr}.json` (common.next/previous, SEPA keys, debit day keys, mandate appName)
+- `themeConfig.js`, `.env` (app name)
+
+## ADR-329 : Loader & Splash Screen — Logo texte + couleurs dynamiques
+- **Date** : 2026-03-09
+- **Contexte** : Le splash screen affichait un SVG Vuexy (formes géométriques) avec la couleur violet #7367F0 hardcodée au lieu du logo texte de la plateforme et de sa couleur configurée. La police plateforme n'était pas injectée pour les visiteurs non connectés.
+- **Décisions** :
+  - Remplacer le SVG Vuexy par le texte `{{ $appName }}.` centré dans le cercle animé (même style que BrandLogo.vue)
+  - Toutes les couleurs via CSS variables (`--initial-loader-bg`, `--initial-loader-color`, `--initial-loader-text-color`, `--lzr-font-family`)
+  - Injecter `PlatformSetting` côté PHP (Blade) : `app_name`, `primary_color`, typographie
+  - `TypographyResolverService::forPlatform()` comme fallback quand localStorage est vide (visiteurs non connectés)
+  - Cache buster sur `loader.css` : `?v={{ filemtime(public_path('loader.css')) }}`
+  - Préfixe localStorage = `-` (correspond à `namespaceConfig` avec `themeConfig.app.title = ''`)
+  - `window.__APP_VERSION__` injecté par Blade pour le error reporting
+- **Fichiers** : `application.blade.php`, `public/loader.css`
+
+## ADR-330 : Version Check & Chunk Error UX — Détection automatique + smart refresh
+- **Date** : 2026-03-09
+- **Contexte** : Lors d'un déploiement, le loader tournait indéfiniment. Plusieurs rafraîchissements manuels étaient nécessaires pour voir le popup "nouvelle version". Le reload silencieux empêchait l'overlay d'apparaître. Après smart refresh, 3 overlays apparaissaient en cascade (Vite pas prêt → scripts échouent → overlay × 3).
+- **Décisions** :
+  - Overlay immédiat (plus de reload silencieux) avec bouton "Rafraîchir"
+  - Smart refresh (`__lzrSmartRefresh`) : poll `/api/public/version` jusqu'à réponse OK, puis reload
+  - Auto-retry silencieux : après smart refresh, si scripts échouent encore, retry 3s × 5 max (pas d'overlay)
+  - Grace period 20s via sessionStorage (`lzr:refreshed`, `lzr:retries`)
+  - Détection Blade : script error listener (capture phase) + timer failsafe 10s
+  - Détection Vue montée : `startVersionPolling()` poll `/api/public/version` toutes les 60s + visibilitychange
+  - Polling compare uniquement `build_version` — en dev les deux côtés retournent 'dev' → pas de faux positif
+  - Détection dev : Vite HMR WebSocket disconnect (`import.meta.hot.on('vite:ws:disconnect')`) avec délai 5s
+  - Post-mount cleanup : annule le boot timer, supprime les overlays stale
+  - bfcache guard : `pageshow` event → reload si `event.persisted` (Chrome back-forward cache)
+  - Endpoint `/api/public/version` : retourne `{ version }` depuis `config('app.build_version')`, throttle 60/min
+- **Fichiers** : `main.js`, `versionCheck.js`, `application.blade.php`, `routes/api.php`
+
+## ADR-331 : Login Resilience — CSRF + double-click + full reload post-login
+- **Date** : 2026-03-09
+- **Contexte** : Échecs aléatoires à la connexion (race condition CSRF, double-click, chunk errors post-login lors de l'import dynamique de la page cible).
+- **Décisions** :
+  - `refreshCsrf()` : micro-délai 50ms après fetch pour laisser le browser traiter Set-Cookie
+  - Guard anti double-click : `if (isLoading.value) return` en tête de `handleLogin()`
+  - Post-login : `window.location.href` (full page reload) au lieu de `router.replace()` — élimine tout chunk error post-login
+  - Suppression des imports inutilisés (`useRuntimeStore`, `router`) dans les pages login
+  - `safeRedirect()` pour valider le `redirect` query param
+- **Fichiers** : `csrf.js`, `login.vue`, `platform/login.vue`
+
+## ADR-332 : Theme Color Fallback — Couleur plateforme comme fallback Vuetify
+- **Date** : 2026-03-09
+- **Contexte** : `staticPrimaryColor` était hardcodé à `#7367F0` (violet Vuexy). Les pages non connectées affichaient le violet au lieu de la couleur plateforme configurée dans Settings > Theme.
+- **Décisions** :
+  - `window.__PLATFORM_PRIMARY__` injecté par Blade depuis `PlatformSetting.theme.primary_color`
+  - `staticPrimaryColor` (theme.js) : lit `window.__PLATFORM_PRIMARY__`, fallback `#7367F0`
+  - `ThemePayload::defaults()` : lit `PlatformSetting.theme.primary_color` via `first()` (pas `instance()` pour éviter singleton violation en tests)
+  - `themeConfig.app.title` reste `''` — BrandLogo gère l'affichage du nom
+  - Source de vérité : `PlatformSetting` (general.app_name, theme.primary_color) — accessible via `/api/public/theme` côté frontend
+- **Fichiers** : `theme.js`, `ThemePayload.php`, `application.blade.php`
+
+---
+
+## ADR-330b : Solidification chunk error & overlay — audit et 3 fixes racine
+- **Date** : 2026-03-09
+- **Contexte** : Après l'implémentation initiale d'ADR-330, le système restait fragile en dev : popups multiples lors d'un restart Vite, page vide entre les reloads, boucles de rechargement. Un audit complet des 10 points d'entrée d'overlay/reload a identifié 3 causes racine.
+- **Décisions** :
+  - **CR1** `router.onError` faisait `window.location.reload()` directement, bypassing tous les guards (flags mémoire, grace period). Fix : déléguer à `window.__lzrShowVersionOverlay()` (Blade, single-fire, grace period).
+  - **CR2** `router.afterEach` supprimait `#lzr-chunk-error` à chaque navigation. Quand Vue montait partiellement après un reload, l'overlay disparaissait → page vide. Fix : ne plus supprimer l'overlay dans afterEach — seul le post-mount cleanup (main.js) le fait après un mount réussi.
+  - **CR3** Tous les reloads utilisaient `location.pathname` nu → pas de cache-busting → le navigateur servait des chunks Vite stale. Fix : `location.pathname + '?_r=' + Date.now()` partout.
+  - **i18n** : `@` dans les emails des fichiers de traduction (fr.json, en.json) causait des erreurs vue-i18n "Invalid linked format". Fix : échapper avec `{'@'}`.
+- **Architecture overlay consolidée** : un seul point de création d'overlay (`__lzrShowVersionOverlay` dans Blade), tous les handlers délèguent (main.js `handleChunkError`, router.onError, versionCheck.js, HMR disconnect).
+- **Fichiers** : `1.router/index.js`, `1.router/guards.js`, `application.blade.php`, `main.js`, `versionCheck.js`, `en.json`, `fr.json`
+
+### ADR-330c — Simplification radicale overlay chunk error (2026-03-12)
+
+- **Date** : 2026-03-12
+- **Contexte** : Malgré ADR-330b, le système overlay restait instable : popups multiples (2 avant login, 3 après), page vide entre les reloads, `?_r=` visible dans l'URL. Cause racine : 6 variables d'état + grace period avec retries silencieux + timing race entre `app.mount()` synchrone et chunk errors asynchrones.
+- **Décisions** :
+  - **Simplification 6 → 3 variables d'état** : `__lzrOverlayFired` (JS memory, single-fire overlay), `_chunkErrorHandled` (JS memory, single-fire report), `lzr:stale` (sessionStorage timestamp, TTL 60s). Suppression de `lzr:refreshed`, `lzr:retries`, `lzr:overlay-active`.
+  - **Suppression du grace period** : le grace period (retries silencieux de 20s) causait des reloads invisibles perçus comme des popups supplémentaires. Supprimé de `__lzrShowVersionOverlay()`, `handleChunkError()`, `isInGracePeriod()`.
+  - **Health check robuste** (remplace `setTimeout(2000)`) : Phase 1 = `router.isReady()` (attend résolution route initiale, chunk errors route-level déjà détectés). Phase 2 = `requestIdleCallback({ timeout: 5000 })` (attend idle browser, couvre sub-components lazy). Fallback = `setTimeout(3000)` si pas de `requestIdleCallback`.
+  - **TTL sur `lzr:stale`** : stocke un timestamp au lieu de `'1'`. Auto-clean si > 60s (Blade inline script au boot). Évite le blocage permanent si Vue ne boot jamais complètement.
+  - **Suppression `?_r=` cache-busting** : `NoCacheHeaders` middleware déjà en place sur le HTML SPA. Tous les `location.href + '?_r='` → `location.replace(location.pathname)`.
+  - **Pas de re-show overlay immédiat** : sur page load avec `lzr:stale`, le loader affiche "Mise à jour en cours…" mais ne crée PAS d'overlay. La détection d'erreur naturelle (script error listener, chunk error handler, boot timer 10s) décide. Si Vite est revenu → Vue boot clean → health check clear `lzr:stale`.
+- **Conséquences** :
+  - Architecture simplifiée : 8 entry points → `__lzrShowVersionOverlay()` (single-fire) → 1 overlay max par page load
+  - Plus de reloads silencieux, plus de boucles, plus de page vide
+  - URL propre après Rafraîchir (pas de query parameter)
+  - `router.isReady()` importé directement dans `main.js` (ES module singleton, même instance)
+- **Fichiers** :
+  - `resources/views/application.blade.php` — lzr:stale TTL, overlay simplifié, smart refresh sans ?_r=
+  - `resources/js/main.js` — import router, handleChunkError simplifié, health check robuste
+  - `resources/js/utils/versionCheck.js` — suppression isInGracePeriod, simplification showOverlay
+  - `resources/js/plugins/1.router/index.js` — fallback location.replace au lieu de reload
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

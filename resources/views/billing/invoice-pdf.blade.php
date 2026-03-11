@@ -108,6 +108,16 @@
             'notes' => 'Notes',
             'dueNotice' => 'En attente de paiement — échéance dépassée',
             'generated' => 'Généré le',
+            'payments' => 'Paiements',
+            'creditNotes' => 'Avoirs',
+            'amount' => 'Montant',
+            'status' => 'Statut',
+            'provider' => 'Fournisseur',
+            'date' => 'Date',
+            'number' => 'Numéro',
+            'reason' => 'Motif',
+            'annexeOf' => 'Annexe de',
+            'annexes' => 'Annexes',
         ] : [
             'invoice' => 'Invoice',
             'issuedAt' => 'Issued',
@@ -133,6 +143,16 @@
             'notes' => 'Notes',
             'dueNotice' => 'Payment pending — past due',
             'generated' => 'Generated on',
+            'payments' => 'Payments',
+            'creditNotes' => 'Credit Notes',
+            'amount' => 'Amount',
+            'status' => 'Status',
+            'provider' => 'Provider',
+            'date' => 'Date',
+            'number' => 'Number',
+            'reason' => 'Reason',
+            'annexeOf' => 'Annexe of',
+            'annexes' => 'Annexes',
         ];
 
         // Date formatter
@@ -164,7 +184,7 @@
                 <div class="logo">leezr<span class="dot">.</span></div>
             </td>
             <td class="header-right">
-                <div class="invoice-number">{{ $invoice->number }}</div>
+                <div class="invoice-number">{{ $invoice->displayNumber() ?: $invoice->number }}</div>
                 <div>
                     <span class="status status-{{ $displayStatus }}">{{ $statusLabels[$displayStatus] ?? ucfirst($displayStatus) }}</span>
                 </div>
@@ -309,6 +329,85 @@
     @if($invoice->tax_exemption_reason && isset($exemptionLabels[$invoice->tax_exemption_reason]))
     <div style="margin-top: 10px; padding: 6px 10px; background: #f5f5f9; border-radius: 4px; font-size: 10px; color: #555;">
         {{ $exemptionLabels[$invoice->tax_exemption_reason] }}
+    </div>
+    @endif
+
+    <!-- ADR-328 S1: Annexe reference -->
+    @if($invoice->isAnnexe() && $invoice->parentInvoice)
+    <div style="margin-top: 10px; padding: 6px 10px; background: #f5f5f9; border-radius: 4px; font-size: 10px; color: #555;">
+        {{ $l['annexeOf'] }} : {{ $invoice->parentInvoice->number }}
+    </div>
+    @endif
+
+    @if($invoice->annexes && $invoice->annexes->count() > 0)
+    <div style="margin-top: 10px; padding: 6px 10px; background: #f5f5f9; border-radius: 4px; font-size: 10px; color: #555;">
+        <strong>{{ $l['annexes'] }} :</strong>
+        @foreach($invoice->annexes as $annexe)
+            {{ $annexe->displayNumber() }}@if(!$loop->last), @endif
+        @endforeach
+    </div>
+    @endif
+
+    <!-- ADR-328 S9: Payments section (matching Vue design) -->
+    @if(isset($payments) && $payments->count() > 0)
+    <div style="margin-top: 15px;">
+        <h3 style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">{{ $l['payments'] }}</h3>
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>{{ $l['amount'] }}</th>
+                    <th>{{ $l['status'] }}</th>
+                    <th>{{ $l['provider'] }}</th>
+                    <th>{{ $l['date'] }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($payments as $payment)
+                <tr>
+                    <td>{{ $fmtMoney($payment->amount) }}</td>
+                    <td>
+                        @php
+                            $payStatusLabels = $isFr
+                                ? ['succeeded' => 'Réussi', 'failed' => 'Échoué', 'pending' => 'En attente', 'refunded' => 'Remboursé']
+                                : ['succeeded' => 'Succeeded', 'failed' => 'Failed', 'pending' => 'Pending', 'refunded' => 'Refunded'];
+                        @endphp
+                        <span class="type-chip">{{ $payStatusLabels[$payment->status] ?? ucfirst($payment->status) }}</span>
+                    </td>
+                    <td>{{ ucfirst($payment->provider ?? '—') }}</td>
+                    <td>{{ $fmtDate($payment->created_at) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    <!-- ADR-328 S9: Credit Notes section (matching Vue design) -->
+    @if($invoice->creditNotes && $invoice->creditNotes->count() > 0)
+    <div style="margin-top: 15px;">
+        <h3 style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">{{ $l['creditNotes'] }}</h3>
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>{{ $l['number'] }}</th>
+                    <th>{{ $l['amount'] }}</th>
+                    <th>{{ $l['status'] }}</th>
+                    <th>{{ $l['reason'] }}</th>
+                    <th>{{ $l['date'] }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($invoice->creditNotes as $cn)
+                <tr>
+                    <td>{{ $cn->number ?? '—' }}</td>
+                    <td>{{ $fmtMoney($cn->amount) }}</td>
+                    <td><span class="type-chip">{{ ucfirst($cn->status) }}</span></td>
+                    <td>{{ $cn->reason ?? '—' }}</td>
+                    <td>{{ $fmtDate($cn->issued_at ?? $cn->created_at) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
     @endif
 

@@ -1,3 +1,14 @@
+@php
+  $platform = \App\Platform\Models\PlatformSetting::instance();
+  $appName = strtolower($platform->general['app_name'] ?? 'leezr');
+  $primaryColor = $platform->theme['primary_color'] ?? '#7367F0';
+  // Resolve platform typography for pre-Vue font injection (non-logged-in visitors)
+  try {
+      $typography = \App\Core\Typography\TypographyResolverService::forPlatform();
+  } catch (\Throwable) {
+      $typography = ['active_source' => null, 'active_family_name' => null, 'font_faces' => [], 'google_weights' => []];
+  }
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,44 +16,43 @@
   <link rel="icon" href="{{ asset('favicon.ico') }}" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leezr</title>
-  <link rel="stylesheet" type="text/css" href="{{ asset('loader.css') }}" />
+  <title>{{ ucfirst($appName) }}</title>
+  <link rel="stylesheet" type="text/css" href="{{ asset('loader.css') }}?v={{ filemtime(public_path('loader.css')) }}" />
   @vite(['resources/js/main.js'])
 </head>
 
 <body>
   <div id="app">
     <div id="loading-bg">
-      <div class="loading-logo">
-        <!-- SVG Logo -->
-        <svg width="86" height="48" viewBox="0 0 34 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd"
-            d="M0.00183571 0.3125V7.59485C0.00183571 7.59485 -0.141502 9.88783 2.10473 11.8288L14.5469 23.6837L21.0172 23.6005L19.9794 10.8126L17.5261 7.93369L9.81536 0.3125H0.00183571Z"
-            fill="var(--initial-loader-color)"
-/>
-          <path opacity="0.06" fill-rule="evenodd" clip-rule="evenodd"
-            d="M8.17969 17.7762L13.3027 3.75173L17.589 8.02192L8.17969 17.7762Z" fill="#161616"
-/>
-          <path opacity="0.06" fill-rule="evenodd" clip-rule="evenodd"
-            d="M8.58203 17.2248L14.8129 5.24231L17.6211 8.05247L8.58203 17.2248Z" fill="#161616"
-/>
-          <path fill-rule="evenodd" clip-rule="evenodd"
-            d="M8.25781 17.6914L25.1339 0.3125H33.9991V7.62657C33.9991 7.62657 33.8144 10.0645 32.5743 11.3686L21.0179 23.6875H14.5487L8.25781 17.6914Z"
-            fill="var(--initial-loader-color)"
-/>
-        </svg>
-      </div>
-      <div class=" loading">
+      <div class="loading">
         <div class="effect-1 effects"></div>
         <div class="effect-2 effects"></div>
         <div class="effect-3 effects"></div>
+        <span class="loading-brand">
+          <span class="loading-brand-text">{{ $appName }}</span><span class="loading-brand-dot">.</span>
+        </span>
+      </div>
+      <!-- ADR-330: During smart refresh, show "mise à jour" message below the spinner -->
+      <div id="loading-update-msg" style="display:none;text-align:center;margin-block-start:1.5rem;font-family:var(--lzr-font-family,Public Sans,sans-serif)">
+        <p style="margin:0;color:var(--initial-loader-text-color,#2F2B3D);opacity:.68;font-size:.875rem">Mise à jour en cours…</p>
       </div>
     </div>
   </div>
-  
   <script>
-    const loaderColor = localStorage.getItem('Leezr-initial-loader-bg') || '#FFFFFF'
-    const primaryColor = localStorage.getItem('Leezr-initial-loader-color') || '#7367F0'
+    // ADR-330c: Show update message if app was marked stale (TTL 60s)
+    var __staleTs = sessionStorage.getItem('lzr:stale')
+    if (__staleTs && Date.now() - parseInt(__staleTs) < 60000) {
+      var updateMsg = document.getElementById('loading-update-msg');
+      if (updateMsg) updateMsg.style.display = 'block';
+    } else if (__staleTs) {
+      sessionStorage.removeItem('lzr:stale')
+    }
+  </script>
+
+  <script>
+    // ADR-329: Le préfixe localStorage correspond à namespaceConfig (themeConfig.app.title + '-')
+    const loaderColor = localStorage.getItem('-initial-loader-bg') || '#FFFFFF'
+    const primaryColor = localStorage.getItem('-initial-loader-color') || '{{ $primaryColor }}'
 
     if (loaderColor)
       document.documentElement.style.setProperty('--initial-loader-bg', loaderColor)
@@ -50,16 +60,90 @@
     if (primaryColor)
       document.documentElement.style.setProperty('--initial-loader-color', primaryColor)
 
-    // Typography early init — reads localStorage, sets CSS custom property
-    // and injects @font-face / Google link before Vue mounts → no font flash.
-    // The SCSS variable $font-family-custom uses var(--lzr-font-family, "Public Sans")
-    // so setting the property is enough — every element picks it up naturally.
+    // ADR-329: Text color contrasts with background (matches BrandLogo on-surface)
+    var isDarkBg = loaderColor && loaderColor.toLowerCase() !== '#ffffff' && loaderColor.toLowerCase() !== '#fff'
+    document.documentElement.style.setProperty('--initial-loader-text-color', isDarkBg ? '#E1DEF5' : '#2F2B3D')
+
+    // ADR-329 K3: Inject build version for error reporting
+    window.__APP_VERSION__ = @json(config('app.build_version', 'dev'));
+    // ADR-332 N1: Inject platform primary color for Vuetify fallback
+    window.__PLATFORM_PRIMARY__ = '{{ $primaryColor }}';
+
+    // ADR-330: Overlay + smart refresh (solidified — single-fire guard).
+    // CRITICAL: __lzrOverlayFired ensures only ONE overlay ever appears per page load.
+    // Multiple script errors or chunk failures can call this function simultaneously.
+    var __lzrOverlayFired = false
+
+    function __lzrShowVersionOverlay() {
+      // ADR-330c: Atomic single-fire guard — first caller wins, all others no-ops
+      if (__lzrOverlayFired) return
+      __lzrOverlayFired = true
+
+      // Mark app as stale (timestamp) — persists across navigations.
+      // Cleared by successful Vue boot (health check in main.js).
+      sessionStorage.setItem('lzr:stale', String(Date.now()))
+      if (document.getElementById('lzr-chunk-error')) return
+      var overlay = document.createElement('div')
+      overlay.id = 'lzr-chunk-error'
+      overlay.innerHTML = '<style>@keyframes lzr-bar{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}</style>'
+        + '<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)">'
+        + '<div style="font-family:var(--lzr-font-family,Public Sans,sans-serif);background:var(--initial-loader-bg,#fff);padding:2rem;border-radius:8px;text-align:center;max-width:360px;min-width:300px">'
+        + '<h3 style="margin:0 0 .5rem;color:var(--initial-loader-text-color,#2F2B3D)">Application mise \u00e0 jour</h3>'
+        + '<div id="lzr-chunk-progress" style="display:none;width:100%;height:3px;background:rgba(128,128,128,.15);border-radius:2px;overflow:hidden;margin:1rem 0"><div style="width:25%;height:100%;background:var(--initial-loader-color,#7367F0);border-radius:2px;animation:lzr-bar 1.2s ease-in-out infinite"></div></div>'
+        + '<p id="lzr-chunk-msg" style="margin:0 0 1rem;color:var(--initial-loader-text-color,#2F2B3D);opacity:.68">Une nouvelle version est disponible.</p>'
+        + '<button id="lzr-chunk-btn" onclick="__lzrSmartRefresh()" style="padding:.5rem 1.5rem;border:none;border-radius:4px;background:var(--initial-loader-color,#7367F0);color:#fff;cursor:pointer;font-size:1rem">Rafra\u00eechir</button>'
+        + '</div></div>'
+      document.body.appendChild(overlay)
+    }
+
+    // ADR-330c: Smart refresh — poll server, then clean reload (no ?_r= parameter).
+    function __lzrSmartRefresh() {
+      var btn = document.getElementById('lzr-chunk-btn')
+      var msg = document.getElementById('lzr-chunk-msg')
+      var progress = document.getElementById('lzr-chunk-progress')
+      if (btn) { btn.disabled = true; btn.style.display = 'none' }
+      if (msg) { msg.textContent = 'Connexion au serveur\u2026' }
+      if (progress) { progress.style.display = 'block' }
+
+      function tryReload() {
+        fetch('/api/public/version', { cache: 'no-store' })
+          .then(function(r) { if (r.ok) location.replace(location.pathname); else setTimeout(tryReload, 1000) })
+          .catch(function() { setTimeout(tryReload, 1000) })
+      }
+      tryReload()
+    }
+
+    // ADR-330c: No immediate overlay re-show on page load.
+    // If lzr:stale is set, the loader shows "Mise à jour en cours…".
+    // If Vite is still down, error detection (script error / chunk error / boot timer)
+    // will naturally show the overlay. If Vite is back, Vue boots clean → health check
+    // clears lzr:stale. This avoids the "double popup" on login → dashboard navigation.
+
+    // 1. Script error listener (capture phase) — détecte immédiatement si main.js/chunks échouent
+    window.addEventListener('error', function(e) {
+      if (e.target && e.target.tagName === 'SCRIPT' && document.getElementById('loading-bg')) {
+        __lzrShowVersionOverlay()
+      }
+    }, true)
+
+    // 2. Timer 10s — si le JS n'a pas monté Vue dans les 10s
+    window.__LZR_BOOT_TIMER__ = setTimeout(function() {
+      if (!document.getElementById('loading-bg')) return
+      __lzrShowVersionOverlay()
+    }, 10000)
+
+    // Typography early init — reads localStorage first, then falls back to
+    // platform settings injected by PHP (for non-logged-in visitors).
     ;(function() {
       try {
         var raw = localStorage.getItem('lzr-typography')
-        if (!raw) return
-        var t = JSON.parse(raw)
-        if (!t.active_family_name) return
+        var t = raw ? JSON.parse(raw) : null
+
+        // Fallback: platform typography from PHP (server-side resolved)
+        if (!t || !t.active_family_name) {
+          t = @json($typography)
+        }
+        if (!t || !t.active_family_name) return
 
         if (t.active_source === 'local' && t.font_faces) {
           var css = ''
@@ -88,6 +172,6 @@
         document.documentElement.style.setProperty('--lzr-font-family', '"' + t.active_family_name + '"')
       } catch(e) {}
     })()
-    </script>
-  </body>
+  </script>
+</body>
 </html>

@@ -114,8 +114,15 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     },
 
     async deleteSavedCard(id) {
+      const deleted = this._savedCards.find(c => c.id === id)
+
       await $api(`/billing/saved-cards/${id}`, { method: 'DELETE' })
       this._savedCards = this._savedCards.filter(c => c.id !== id)
+
+      // Backend promotes oldest remaining as default — mirror locally
+      if (deleted?.is_default && this._savedCards.length > 0) {
+        this._savedCards[0].is_default = true
+      }
     },
 
     async setDefaultCard(id) {
@@ -129,8 +136,14 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
       return data
     },
 
-    async setBillingDay(day) {
-      await $api('/billing/subscription/billing-day', { method: 'PUT', body: { billing_anchor_day: day } })
+    async setDebitDay(profileId, day) {
+      await $api(`/billing/saved-cards/${profileId}/debit-day`, {
+        method: 'PUT',
+        body: { preferred_debit_day: day },
+      })
+      this._savedCards = this._savedCards.map(c =>
+        c.id === profileId ? { ...c, preferred_debit_day: day } : c,
+      )
     },
 
     async fetchNextInvoicePreview() {

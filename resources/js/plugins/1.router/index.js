@@ -33,7 +33,10 @@ const router = createRouter({
 
 setupGuards(router)
 
-// ADR-046 F3: Catch chunk load failures during navigation
+// ADR-046 F3 + ADR-330b: Catch chunk load failures during navigation.
+// Delegates to Blade's centralized overlay instead of doing a blind reload.
+// A direct reload() here bypasses all guards (_chunkErrorHandled, __lzrOverlayFired,
+// grace period) and resets JS-memory flags → causes reload loops and multiple popups.
 router.onError(error => {
   const msg = String(error?.message || '')
   if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('Failed to fetch dynamically imported module')) {
@@ -54,7 +57,12 @@ router.onError(error => {
       // Fire-and-forget
     }
 
-    window.location.reload()
+    if (typeof window.__lzrShowVersionOverlay === 'function') {
+      window.__lzrShowVersionOverlay()
+    }
+    else {
+      location.replace(location.pathname)
+    }
   }
 })
 

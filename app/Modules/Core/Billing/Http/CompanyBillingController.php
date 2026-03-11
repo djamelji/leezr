@@ -117,7 +117,7 @@ class CompanyBillingController
         $invoice = Invoice::where('company_id', $company->id)
             ->where('id', $id)
             ->whereNotNull('finalized_at')
-            ->with(['lines', 'company'])
+            ->with(['lines', 'company', 'parentInvoice', 'annexes', 'creditNotes'])
             ->first();
 
         if (!$invoice) {
@@ -127,11 +127,15 @@ class CompanyBillingController
         $snap = $invoice->billing_snapshot ?? [];
         $locale = $snap['market_locale'] ?? 'fr-FR';
 
+        // ADR-328 S9: Load payments for PDF rendering
+        $payments = \App\Core\Billing\Payment::where('invoice_id', $invoice->id)->get();
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
             'invoice' => $invoice,
             'company' => $invoice->company,
             'snap' => $snap,
             'locale' => $locale,
+            'payments' => $payments,
         ]);
 
         $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';

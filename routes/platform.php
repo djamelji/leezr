@@ -250,6 +250,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Recovery status — ADR-236
         Route::get('/billing/recovery-status', [PlatformBillingController::class, 'recoveryStatus']);
+
+        // Scheduled debits (ADR-328 S8)
+        Route::get('/billing/scheduled-debits', [PlatformBillingController::class, 'scheduledDebits']);
     });
 
     // Dashboard engine (ADR-149 D4e.3)

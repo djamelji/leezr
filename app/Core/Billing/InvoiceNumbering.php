@@ -43,6 +43,26 @@ class InvoiceNumbering
     }
 
     /**
+     * ADR-328: Assign the next annexe suffix for a parent invoice.
+     * Does NOT consume the global invoice sequence.
+     *
+     * @return string A, B, C, ..., Z, AA, AB, ...
+     */
+    public static function nextAnnexeSuffix(Invoice $parentInvoice): string
+    {
+        $lastSuffix = Invoice::where('parent_invoice_id', $parentInvoice->id)
+            ->orderByDesc('annexe_suffix')
+            ->value('annexe_suffix');
+
+        if (! $lastSuffix) {
+            return 'A';
+        }
+
+        // PHP ++ on strings: A→B, Z→AA, AA→AB
+        return ++$lastSuffix;
+    }
+
+    /**
      * Assign the next credit note number.
      */
     public static function nextCreditNoteNumber(): string

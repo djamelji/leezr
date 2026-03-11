@@ -1,11 +1,51 @@
 /**
- * ADR-260: Pre-flight version check for login pages.
+ * ADR-330: Version check — detects new production deploys.
  *
- * On mount, fires a HEAD request to /api/health to read X-Build-Version.
- * If the server version differs from the baked-in client version,
- * triggers an immediate page reload to pick up the new JS bundles.
+ * Two mechanisms:
+ *   1. checkVersionOnMount() — pre-flight for login pages (ADR-260)
+ *   2. startVersionPolling() — polls /api/public/version every 60s
+ *      Compares build_version — only triggers in production (dev = 'dev' both sides).
  *
- * This prevents stale-JS login failures after a deploy.
+ * For dev mode, server restarts are detected by:
+ *   - Blade boot timer (10s) if Vue fails to mount
+ *   - Script error listener if main.js fails to load
+ *   - Chunk error handler if dynamic imports fail during navigation
+ *   - Vite HMR WebSocket reconnect (built-in)
+ */
+
+let pollingTimer = null
+
+function showOverlay() {
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null }
+
+  // ADR-330c: Delegate to Blade's centralized overlay (single-fire guard + lzr:stale).
+  if (typeof window.__lzrShowVersionOverlay === 'function') {
+    window.__lzrShowVersionOverlay()
+  }
+}
+
+async function checkVersion() {
+  if (document.getElementById('lzr-chunk-error')) return
+
+  try {
+    const res = await fetch('/api/public/version', { cache: 'no-store' })
+    const data = await res.json()
+    const clientVersion = window.__APP_VERSION__
+
+    // Only compare in production (both sides have real versions, not 'dev')
+    if (clientVersion && clientVersion !== 'dev'
+      && data.version && data.version !== 'dev'
+      && data.version !== clientVersion) {
+      showOverlay()
+    }
+  }
+  catch {
+    // Server unreachable — transient, don't show overlay
+  }
+}
+
+/**
+ * Pre-flight version check for login pages (ADR-260).
  */
 export function checkVersionOnMount() {
   const clientVersion = import.meta.env.VITE_APP_VERSION
@@ -20,8 +60,22 @@ export function checkVersionOnMount() {
         window.location.reload()
       }
     }
-    catch {
-      // Network error — skip check, login will work or fail on its own
+    catch {}
+  })
+}
+
+/**
+ * Start version polling (production only — dev versions are always 'dev').
+ * Polls every 60s + on visibilitychange.
+ */
+export function startVersionPolling() {
+  if (pollingTimer) return
+
+  pollingTimer = setInterval(checkVersion, 60_000)
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkVersion()
     }
   })
 }

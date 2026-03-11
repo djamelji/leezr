@@ -286,6 +286,18 @@ class BillingRenewCommand extends Command implements Isolatable
             return 'renewed';
         }
 
+        // ADR-328 S2: Check if debit was scheduled (SEPA preferred_debit_day)
+        $scheduledDebit = \App\Core\Billing\ScheduledDebit::where('invoice_id', $invoice->id)
+            ->pending()
+            ->first();
+
+        if ($scheduledDebit) {
+            $this->extendPeriod($subscription, $newPeriodStart, $newPeriodEnd);
+            $this->line("  Scheduled SEPA debit: company #{$company->id} — debit on {$scheduledDebit->debit_date->toDateString()}");
+
+            return 'invoiced';
+        }
+
         // Phase 2: Attempt provider payment (outside transaction — no DB lock during API)
         if ($subscription->provider && $subscription->provider !== 'internal') {
             $adapter = $this->resolveAdapter($subscription->provider);

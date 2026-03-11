@@ -44,6 +44,9 @@ interface WidgetManifest
     /** Target audience: 'platform' | 'company' | 'both' */
     public function audience(): string;
 
+    /** Data resolution strategy: 'server' (batch-resolved backend) | 'client' (frontend store) */
+    public function resolution(): string;
+
     /**
      * Resolve widget data.
      *

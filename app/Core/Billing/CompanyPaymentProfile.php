@@ -12,13 +12,14 @@ class CompanyPaymentProfile extends Model
     protected $fillable = [
         'company_id', 'provider_key', 'method_key',
         'provider_payment_method_id', 'label',
-        'is_default', 'metadata',
+        'is_default', 'preferred_debit_day', 'metadata',
     ];
 
     protected function casts(): array
     {
         return [
             'is_default' => 'boolean',
+            'preferred_debit_day' => 'integer',
             'metadata' => 'array',
         ];
     }

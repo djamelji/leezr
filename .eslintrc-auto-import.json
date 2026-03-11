@@ -388,6 +388,7 @@
     "usePublicMarkets": true,
     "usePublicAddons": true,
     "useAnalytics": true,
-    "useTunnelPersistence": true
+    "useTunnelPersistence": true,
+    "startVersionPolling": true
   }
 }

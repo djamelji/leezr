@@ -23,4 +23,11 @@ return [
 
     // Timeseries (ADR-156)
     \App\Modules\Dashboard\Widgets\BillingCashflowTrendWidget::class,
+
+    // Compliance — company-side, client-resolved (ADR-327)
+    \App\Modules\Dashboard\Widgets\ComplianceRateWidget::class,
+    \App\Modules\Dashboard\Widgets\CompliancePendingWidget::class,
+    \App\Modules\Dashboard\Widgets\ComplianceOverdueWidget::class,
+    \App\Modules\Dashboard\Widgets\ComplianceRolesWidget::class,
+    \App\Modules\Dashboard\Widgets\ComplianceTypesWidget::class,
 ];

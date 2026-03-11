@@ -12,7 +12,24 @@ use App\Core\Fields\TagDictionary;
 class JobdomainRegistry
 {
     /**
+     * Core billing fields — injected into EVERY jobdomain automatically.
+     * Billing is a platform-level concern, not jobdomain-specific.
+     */
+    public const CORE_BILLING_FIELDS = [
+        ['code' => 'siret', 'order' => 0],
+        ['code' => 'vat_number', 'order' => 1],
+        ['code' => 'legal_name', 'order' => 3],
+        ['code' => 'billing_address', 'order' => 4],
+        ['code' => 'billing_complement', 'order' => 5],
+        ['code' => 'billing_city', 'order' => 6],
+        ['code' => 'billing_postal_code', 'order' => 7],
+        ['code' => 'billing_region', 'order' => 8],
+        ['code' => 'billing_email', 'order' => 9],
+    ];
+
+    /**
      * All jobdomain definitions (hardcoded, not in DB).
+     * CORE_BILLING_FIELDS are auto-merged into every jobdomain's default_fields.
      */
     public static function definitions(): array
     {
@@ -26,17 +43,6 @@ class JobdomainRegistry
                 // ADR-169: default_fields only control activation + order.
                 // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
-                    // Company scope — general
-                    ['code' => 'siret', 'order' => 0],
-                    ['code' => 'vat_number', 'order' => 1],
-                    ['code' => 'legal_name', 'order' => 3],
-                    // Company scope — billing
-                    ['code' => 'billing_address', 'order' => 4],
-                    ['code' => 'billing_complement', 'order' => 5],
-                    ['code' => 'billing_city', 'order' => 6],
-                    ['code' => 'billing_postal_code', 'order' => 7],
-                    ['code' => 'billing_region', 'order' => 8],
-                    ['code' => 'billing_email', 'order' => 9],
                     // Company scope — address
                     ['code' => 'company_address', 'order' => 100],
                     ['code' => 'company_complement', 'order' => 101],
@@ -274,7 +280,19 @@ class JobdomainRegistry
      */
     public static function get(string $key): ?array
     {
-        return static::definitions()[$key] ?? null;
+        $definition = static::definitions()[$key] ?? null;
+        if ($definition === null) {
+            return null;
+        }
+
+        // Merge CORE_BILLING_FIELDS (consistent with sync())
+        $coreFields = static::CORE_BILLING_FIELDS;
+        $jobdomainFields = $definition['default_fields'] ?? [];
+        $coreCodes = array_column($coreFields, 'code');
+        $jobdomainOnly = array_filter($jobdomainFields, fn ($f) => ! in_array($f['code'], $coreCodes));
+        $definition['default_fields'] = array_merge($coreFields, array_values($jobdomainOnly));
+
+        return $definition;
     }
 
     /**
@@ -284,13 +302,23 @@ class JobdomainRegistry
     public static function sync(): void
     {
         foreach (static::definitions() as $key => $definition) {
+            // Merge core billing fields with jobdomain-specific fields
+            $coreFields = static::CORE_BILLING_FIELDS;
+            $jobdomainFields = $definition['default_fields'] ?? [];
+
+            // Deduplicate: jobdomain-specific fields override core if same code
+            $coreCodes = array_column($coreFields, 'code');
+            $jobdomainOnly = array_filter($jobdomainFields, fn ($f) => ! in_array($f['code'], $coreCodes));
+
+            $mergedFields = array_merge($coreFields, array_values($jobdomainOnly));
+
             Jobdomain::updateOrCreate(
                 ['key' => $key],
                 [
                     'label' => $definition['label'],
                     'description' => $definition['description'] ?? null,
                     'default_modules' => $definition['default_modules'] ?? [],
-                    'default_fields' => $definition['default_fields'] ?? [],
+                    'default_fields' => $mergedFields,
                     'default_roles' => $definition['default_roles'] ?? [],
                 ],
             );

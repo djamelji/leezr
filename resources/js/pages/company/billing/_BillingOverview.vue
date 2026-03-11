@@ -129,15 +129,6 @@ const canCancel = computed(() => {
   return (status === 'active' || status === 'trialing') && !cancelAtPeriodEnd.value
 })
 
-const billingDayOptions = [
-  { title: '1', value: 1 },
-  { title: '5', value: 5 },
-  { title: '10', value: 10 },
-  { title: '15', value: 15 },
-  { title: '20', value: 20 },
-  { title: '25', value: 25 },
-]
-
 // ── Actions ────────────────────────────────────────────────────
 const isDismissing = ref(false)
 const isCancellingChange = ref(false)
@@ -171,17 +162,6 @@ const cancelScheduledPlanChange = async () => {
   }
   finally {
     isCancellingChange.value = false
-  }
-}
-
-const updateBillingDay = async day => {
-  try {
-    await store.setBillingDay(day)
-    toast(t('companyBilling.overview.billingDayUpdated'), 'success')
-    await store.fetchOverview()
-  }
-  catch {
-    toast(t('companyBilling.overview.billingDayFailed'), 'error')
   }
 }
 
@@ -265,9 +245,7 @@ const cancelSubscription = async () => {
         :payment-method="paymentMethod"
         :payment-method-label="paymentMethodLabel"
         :wallet-balance="walletBalance"
-        :billing-day-options="billingDayOptions"
         @open-cancel-dialog="isCancelDialogVisible = true"
-        @update-billing-day="updateBillingDay"
       />
     </template>
 

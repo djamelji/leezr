@@ -29,6 +29,13 @@ const colorMaps = {
     pending: 'warning',
     refunded: 'info',
   },
+  scheduledDebit: {
+    pending: 'warning',
+    processing: 'info',
+    collected: 'success',
+    failed: 'error',
+    cancelled: 'secondary',
+  },
 }
 
 const chipColor = computed(() => {

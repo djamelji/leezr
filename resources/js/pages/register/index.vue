@@ -10,6 +10,7 @@ import { usePublicPlans } from '@/composables/usePublicPlans'
 import { usePublicFields } from '@/composables/usePublicFields'
 import { usePublicMarkets } from '@/composables/usePublicMarkets'
 import { usePublicAddons } from '@/composables/usePublicAddons'
+import { useAppName } from '@/composables/useAppName'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useTunnelPersistence } from '@/composables/useTunnelPersistence'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
@@ -37,6 +38,7 @@ definePage({
 })
 
 usePublicTheme()
+const appName = useAppName()
 
 const auth = useAuthStore()
 const runtime = useRuntimeStore()
@@ -583,9 +585,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
     </div>
   </RouterLink>
 

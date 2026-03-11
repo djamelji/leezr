@@ -14,19 +14,10 @@ const complianceStore = useCompanyComplianceStore()
 
 const canEdit = computed(() => auth.hasPermission('manage-structure'))
 
-// ── Compliance catalog entries (client-only, no backend) ──
-const COMPLIANCE_CATALOG = [
-  { key: 'ComplianceRate', component: 'ComplianceRate', label_key: 'compliance.complianceRate', description_key: 'compliance.complianceRateDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
-  { key: 'CompliancePending', component: 'CompliancePending', label_key: 'compliance.pending', description_key: 'compliance.pendingDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
-  { key: 'ComplianceOverdue', component: 'ComplianceOverdue', label_key: 'compliance.overdue', description_key: 'compliance.overdueDesc', scope: 'company', layout: { default_w: 3, default_h: 2 } },
-  { key: 'ComplianceRoles', component: 'ComplianceRoles', label_key: 'compliance.roles', description_key: 'compliance.rolesDesc', scope: 'company', layout: { default_w: 6, default_h: 4 } },
-  { key: 'ComplianceTypes', component: 'ComplianceTypes', label_key: 'compliance.types', description_key: 'compliance.typesDesc', scope: 'company', layout: { default_w: 6, default_h: 4 } },
-]
-
 onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)
-  // Pass compliance catalog so bootstrap can pick from it (ADR-201)
-  dashboardStore.loadDashboard(COMPLIANCE_CATALOG)
+  // Compliance widgets now come from backend catalog (ADR-327)
+  dashboardStore.loadDashboard()
   complianceStore.fetchQueue()
 })
 
@@ -70,30 +61,6 @@ const acceptSuggestion = suggestion => {
 
 <template>
   <div>
-    <!-- ═══ Welcome Header ═══ -->
-    <VCard class="mb-6">
-      <VCardTitle>
-        {{ t('dashboard.welcome', { name: auth.user?.display_name }) }}
-      </VCardTitle>
-      <VCardText>
-        <p
-          v-if="auth.currentCompany"
-          class="mb-0"
-        >
-          {{ auth.roleLevel === 'management'
-            ? t('dashboard.viewingCompany', { name: auth.currentCompany.name })
-            : t('dashboard.workingIn', { name: auth.currentCompany.name })
-          }}
-        </p>
-        <p
-          v-else
-          class="mb-0"
-        >
-          {{ t('dashboard.loadingCompany') }}
-        </p>
-      </VCardText>
-    </VCard>
-
     <OnboardingWidget />
 
     <PlanBadgeWidget class="mb-6" />

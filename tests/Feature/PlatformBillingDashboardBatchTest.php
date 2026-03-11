@@ -361,8 +361,12 @@ class PlatformBillingDashboardBatchTest extends TestCase
     public function test_company_catalog_excludes_platform_widgets(): void
     {
         $catalog = DashboardWidgetRegistry::catalogForCompany($this->company);
+        $platformWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'platform');
 
-        $this->assertEmpty($catalog, 'Platform-audience billing widgets must not appear in company catalog');
+        $this->assertEmpty($platformWidgets, 'Platform-audience billing widgets must not appear in company catalog');
+        // Compliance widgets (audience=company) are expected (ADR-327)
+        $companyWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'company');
+        $this->assertCount(5, $companyWidgets);
     }
 
     // ── T8: Scope=company filters by company_id ──

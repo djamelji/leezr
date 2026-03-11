@@ -24,8 +24,8 @@ html {
   box-sizing: border-box;
   border: 3px solid transparent;
   border-radius: 50%;
-  block-size: 55px;
-  inline-size: 55px;
+  block-size: 180px;
+  inline-size: 180px;
 }
 
 .loading .effect-1,
@@ -54,6 +54,35 @@ html {
 
 .loading .effects {
   transition: all 0.3s ease;
+}
+
+/* Brand logo centered inside the spinner */
+.loading-brand {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.loading-brand-text,
+.loading-brand-dot {
+  font-family: var(--lzr-font-family, "Public Sans", sans-serif);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  text-transform: lowercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.loading-brand-text {
+  color: var(--initial-loader-text-color, #2F2B3D);
+}
+
+.loading-brand-dot {
+  color: var(--initial-loader-color, #7367F0);
 }
 
 @keyframes rotate {

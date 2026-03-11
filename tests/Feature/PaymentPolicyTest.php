@@ -16,10 +16,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ADR-325: PaymentPolicy facade tests.
+ * ADR-325 + ADR-328: PaymentPolicy facade tests.
  *
  * Tests centralized payment method resolution combining
  * PaymentOrchestrator rules + PlatformBillingPolicy SEPA filters.
+ *
+ * ADR-328: sepa_requires_trial only applies in registration tunnel,
+ * not for existing companies.
  */
 class PaymentPolicyTest extends TestCase
 {
@@ -68,7 +71,6 @@ class PaymentPolicyTest extends TestCase
             marketKey: 'FR',
             planKey: 'pro',
             interval: 'monthly',
-            isTrial: false,
         );
 
         $this->assertContains('card', $methods);
@@ -77,24 +79,20 @@ class PaymentPolicyTest extends TestCase
     public function test_sepa_allowed_when_policy_allows(): void
     {
         $policy = PlatformBillingPolicy::instance();
-        $policy->update([
-            'allow_sepa' => true,
-            'sepa_requires_trial' => false,
-        ]);
+        $policy->update(['allow_sepa' => true]);
         PlatformBillingPolicy::clearCache();
 
         $methods = PaymentPolicy::allowedMethodsForContext(
             marketKey: 'FR',
             planKey: 'pro',
             interval: 'monthly',
-            isTrial: false,
         );
 
         $this->assertContains('card', $methods);
         $this->assertContains('sepa_debit', $methods);
     }
 
-    public function test_sepa_blocked_when_policy_disallows(): void
+    public function test_sepa_blocked_when_master_switch_off(): void
     {
         $policy = PlatformBillingPolicy::instance();
         $policy->update(['allow_sepa' => false]);
@@ -104,14 +102,17 @@ class PaymentPolicyTest extends TestCase
             marketKey: 'FR',
             planKey: 'pro',
             interval: 'monthly',
-            isTrial: true,
         );
 
         $this->assertContains('card', $methods);
         $this->assertNotContains('sepa_debit', $methods);
     }
 
-    public function test_sepa_requires_trial_filters_non_trial(): void
+    /**
+     * ADR-328: sepa_requires_trial does NOT affect allowedMethodsForContext.
+     * It only applies in the registration tunnel.
+     */
+    public function test_sepa_requires_trial_does_not_affect_context(): void
     {
         $policy = PlatformBillingPolicy::instance();
         $policy->update([
@@ -120,38 +121,22 @@ class PaymentPolicyTest extends TestCase
         ]);
         PlatformBillingPolicy::clearCache();
 
+        // Even with sepa_requires_trial=true, context method returns SEPA
         $methods = PaymentPolicy::allowedMethodsForContext(
             marketKey: 'FR',
             planKey: 'pro',
             interval: 'monthly',
-            isTrial: false,
         );
 
         $this->assertContains('card', $methods);
-        $this->assertNotContains('sepa_debit', $methods);
+        $this->assertContains('sepa_debit', $methods, 'sepa_requires_trial should not filter allowedMethodsForContext');
     }
 
-    public function test_sepa_requires_trial_allows_trial(): void
-    {
-        $policy = PlatformBillingPolicy::instance();
-        $policy->update([
-            'allow_sepa' => true,
-            'sepa_requires_trial' => true,
-        ]);
-        PlatformBillingPolicy::clearCache();
-
-        $methods = PaymentPolicy::allowedMethodsForContext(
-            marketKey: 'FR',
-            planKey: 'pro',
-            interval: 'monthly',
-            isTrial: true,
-        );
-
-        $this->assertContains('card', $methods);
-        $this->assertContains('sepa_debit', $methods);
-    }
-
-    public function test_allowed_methods_for_company_with_trial(): void
+    /**
+     * ADR-328: Existing company always gets SEPA if allow_sepa=true,
+     * regardless of sepa_requires_trial and subscription status.
+     */
+    public function test_existing_company_gets_sepa_regardless_of_trial_policy(): void
     {
         $policy = PlatformBillingPolicy::instance();
         $policy->update([
@@ -162,8 +147,8 @@ class PaymentPolicyTest extends TestCase
 
         $owner = User::factory()->create();
         $company = Company::create([
-            'name' => 'SEPA Test Co',
-            'slug' => 'sepa-test-co',
+            'name' => 'Active Co',
+            'slug' => 'active-co',
             'plan_key' => 'pro',
             'status' => 'active',
             'jobdomain_key' => 'logistique',
@@ -171,25 +156,28 @@ class PaymentPolicyTest extends TestCase
         ]);
         $company->memberships()->create(['user_id' => $owner->id, 'role' => 'owner']);
 
+        // Active subscription (NOT trialing)
         Subscription::create([
             'company_id' => $company->id,
             'plan_key' => 'pro',
             'interval' => 'monthly',
-            'status' => 'trialing',
+            'status' => 'active',
             'is_current' => 1,
             'provider' => 'stripe',
             'current_period_start' => now(),
             'current_period_end' => now()->addMonth(),
-            'trial_ends_at' => now()->addDays(14),
         ]);
 
         $methods = PaymentPolicy::allowedMethods($company);
 
         $this->assertContains('card', $methods);
-        $this->assertContains('sepa_debit', $methods);
+        $this->assertContains('sepa_debit', $methods, 'Active company should see SEPA even with sepa_requires_trial=true');
     }
 
-    public function test_allowed_methods_for_registration(): void
+    /**
+     * ADR-328: Registration with trial plan + sepa_requires_trial=true → SEPA allowed.
+     */
+    public function test_registration_with_trial_plan_gets_sepa(): void
     {
         $policy = PlatformBillingPolicy::instance();
         $policy->update([
@@ -199,6 +187,12 @@ class PaymentPolicyTest extends TestCase
         PlatformBillingPolicy::clearCache();
 
         // Pro plan has trial_days > 0 in seed data
+        $plan = \App\Core\Plans\Plan::where('key', 'pro')->first();
+
+        if (! $plan || $plan->trial_days <= 0) {
+            $this->markTestSkipped('Pro plan does not have trial days configured');
+        }
+
         $methods = PaymentPolicy::allowedMethodsForRegistration(
             planKey: 'pro',
             interval: 'monthly',
@@ -206,6 +200,57 @@ class PaymentPolicyTest extends TestCase
         );
 
         $this->assertContains('card', $methods);
-        // SEPA depends on whether the plan has a trial
+        $this->assertContains('sepa_debit', $methods);
+    }
+
+    /**
+     * ADR-328: Registration with no-trial plan + sepa_requires_trial=true → SEPA blocked.
+     */
+    public function test_registration_without_trial_plan_blocks_sepa(): void
+    {
+        $policy = PlatformBillingPolicy::instance();
+        $policy->update([
+            'allow_sepa' => true,
+            'sepa_requires_trial' => true,
+        ]);
+        PlatformBillingPolicy::clearCache();
+
+        // Starter plan has trial_days = 0
+        $plan = \App\Core\Plans\Plan::where('key', 'starter')->first();
+
+        if (! $plan || $plan->trial_days > 0) {
+            $this->markTestSkipped('Starter plan has trial days, cannot test non-trial SEPA block');
+        }
+
+        $methods = PaymentPolicy::allowedMethodsForRegistration(
+            planKey: 'starter',
+            interval: 'monthly',
+            marketKey: 'FR',
+        );
+
+        $this->assertContains('card', $methods);
+        $this->assertNotContains('sepa_debit', $methods, 'SEPA should be blocked for non-trial plans during registration');
+    }
+
+    /**
+     * ADR-328: Registration with sepa_requires_trial=false → SEPA always allowed.
+     */
+    public function test_registration_sepa_always_when_policy_off(): void
+    {
+        $policy = PlatformBillingPolicy::instance();
+        $policy->update([
+            'allow_sepa' => true,
+            'sepa_requires_trial' => false,
+        ]);
+        PlatformBillingPolicy::clearCache();
+
+        $methods = PaymentPolicy::allowedMethodsForRegistration(
+            planKey: 'starter',
+            interval: 'monthly',
+            marketKey: 'FR',
+        );
+
+        $this->assertContains('card', $methods);
+        $this->assertContains('sepa_debit', $methods, 'SEPA should be available when sepa_requires_trial=false');
     }
 }

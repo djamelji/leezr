@@ -6,6 +6,7 @@ use App\Core\Billing\BillingCheckoutSession;
 use App\Core\Billing\BillingExpectedConfirmation;
 use App\Core\Billing\CheckoutResult;
 use App\Core\Billing\CompanyPaymentCustomer;
+use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\DTOs\HealthResult;
 use App\Core\Billing\DTOs\WebhookHandlingResult;
@@ -20,6 +21,7 @@ use App\Core\Plans\Plan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 /**
  * Stripe payment adapter — SDK live (ADR-137/138/139/140/222).
@@ -95,13 +97,11 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             });
         }
 
-        // ADR-325: Resolve allowed methods via PaymentPolicy (replaces hardcoded card/sepa_debit)
-        $isTrial = $existingSub && $existingSub->status === 'trialing';
-        $allowedMethods = PaymentPolicy::allowedMethodsForContext(
-            marketKey: $company->market_key,
+        // ADR-328: Use registration-scoped method — sepa_requires_trial only applies here
+        $allowedMethods = PaymentPolicy::allowedMethodsForRegistration(
             planKey: $planKey,
-            interval: $interval,
-            isTrial: $isTrial,
+            interval: $interval ?? 'monthly',
+            marketKey: $company->market_key ?? 'fr',
         );
 
         // Ensure Stripe customer exists
@@ -167,6 +167,22 @@ class StripePaymentAdapter implements PaymentProviderAdapter
 
     public function collectInvoice(Invoice $invoice, Company $company, array $metadata = []): array
     {
+        // ADR-328 S4: Block SEPA payments without explicit mandate acceptance (before any Stripe call)
+        $defaultPm = CompanyPaymentProfile::where('company_id', $company->id)
+            ->where('is_default', true)
+            ->first();
+
+        if ($defaultPm && $defaultPm->method_key === 'sepa_debit') {
+            if (empty($defaultPm->metadata['mandate_accepted_at'])) {
+                return [
+                    'provider_payment_id' => null,
+                    'amount' => $invoice->amount_due,
+                    'status' => 'failed',
+                    'raw_response' => ['error' => 'SEPA mandate not accepted.'],
+                ];
+            }
+        }
+
         $this->enforceRateLimit($company->id);
         $this->setApiKey();
 
@@ -383,7 +399,7 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             'metadata' => ['company_id' => (string) $company->id],
         ];
 
-        $opts = ['idempotency_key' => 'billing:setup_intent:' . $company->id . ':' . $methodType . ':' . now()->format('Y-m-d-H')];
+        $opts = ['idempotency_key' => 'billing:setup_intent:' . $company->id . ':' . $methodType . ':' . now()->format('Y-m-d-H-i-s') . ':' . Str::random(8)];
 
         try {
             $si = $this->callStripeCreateSetupIntent($params, $opts);

@@ -12,10 +12,9 @@ const props = defineProps({
   paymentMethod: { type: Object, default: null },
   paymentMethodLabel: { type: String, default: null },
   walletBalance: { type: String, default: '—' },
-  billingDayOptions: { type: Array, required: true },
 })
 
-const emit = defineEmits(['open-cancel-dialog', 'update-billing-day'])
+const emit = defineEmits(['open-cancel-dialog'])
 
 const { t } = useI18n()
 </script>
@@ -232,42 +231,6 @@ const { t } = useI18n()
       </VCard>
     </VCol>
 
-    <!-- Card — Billing Settings -->
-    <VCol
-      cols="12"
-      sm="6"
-      md="4"
-      lg="3"
-    >
-      <VCard class="h-100">
-        <VCardItem>
-          <template #prepend>
-            <VAvatar
-              color="warning"
-              variant="tonal"
-              size="40"
-              rounded
-            >
-              <VIcon icon="tabler-calendar" />
-            </VAvatar>
-          </template>
-
-          <VCardTitle>{{ t('companyBilling.overview.billingSettings') }}</VCardTitle>
-        </VCardItem>
-
-        <VCardText>
-          <p class="text-body-2 text-disabled mb-3">
-            {{ t('companyBilling.overview.billingDayDesc') }}
-          </p>
-
-          <AppSelect
-            :model-value="overview?.subscription?.billing_anchor_day || ''"
-            :items="billingDayOptions"
-            :label="t('companyBilling.overview.billingDay')"
-            @update:model-value="emit('update-billing-day', $event)"
-          />
-        </VCardText>
-      </VCard>
-    </VCol>
+    <!-- ADR-328 S3: billing day moved to _BillingPaymentMethods.vue (per IBAN) -->
   </VRow>
 </template>

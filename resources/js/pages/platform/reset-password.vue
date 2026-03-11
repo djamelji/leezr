@@ -1,6 +1,7 @@
 <script setup>
 const { t } = useI18n()
 
+import { useAppName } from '@/composables/useAppName'
 import { usePasswordStrength } from '@/composables/usePasswordStrength'
 import { $platformApi } from '@/utils/platformApi'
 import { refreshCsrf } from '@/utils/csrf'
@@ -21,6 +22,7 @@ definePage({
 })
 
 usePublicTheme()
+const appName = useAppName()
 
 const route = useRoute()
 const router = useRouter()
@@ -78,9 +80,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   <RouterLink to="/platform">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
     </div>
   </RouterLink>
 

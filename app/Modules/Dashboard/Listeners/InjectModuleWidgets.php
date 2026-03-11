@@ -30,8 +30,8 @@ class InjectModuleWidgets
             return;
         }
 
-        // Get current company layout
-        $layoutRow = CompanyDashboardLayout::where('company_id', $company->id)->first();
+        // Get company default layout (user_id=NULL) — per-user layouts are separate (ADR-326)
+        $layoutRow = CompanyDashboardLayout::where('company_id', $company->id)->whereNull('user_id')->first();
         $existing = $layoutRow?->layout_json ?? [];
 
         // Filter out widgets already in layout
@@ -58,7 +58,7 @@ class InjectModuleWidgets
         // Save updated layout if anything was packed
         if (count($result['packed']) > count($existing)) {
             CompanyDashboardLayout::updateOrCreate(
-                ['company_id' => $company->id],
+                ['company_id' => $company->id, 'user_id' => null],
                 ['layout_json' => $result['packed']],
             );
         }

@@ -23,7 +23,7 @@ const stepMeta = {
 
 onMounted(async () => {
   try {
-    const { data } = await useApi('/company/dashboard/onboarding')
+    const { data } = await useApi('/dashboard/onboarding')
     steps.value = data.value?.steps || []
   }
   catch {

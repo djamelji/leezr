@@ -75,7 +75,8 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     await Promise.all([engine.fetchCatalog(), engine.fetchLayout()])
 
     // Safety net: empty layout (edge case) → starter from catalog
-    if (!engine._layout.value.length && engine._catalog.value.length) {
+    // Only if fetchLayout succeeded — never overwrite on fetch error (ADR-326)
+    if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
       applyDefaultLayout()
       await engine.saveLayout()
     }

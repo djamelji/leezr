@@ -14,11 +14,15 @@ class CompanyDashboardLayoutController extends Controller
 {
     /**
      * GET /api/company/dashboard/layout
+     *
+     * Resolves per-user layout, falling back to company default (ADR-326).
      */
     public function show(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $layout = CompanyDashboardLayout::where('company_id', $company->id)->first();
+        $userId = $request->user()->id;
+
+        $layout = CompanyDashboardLayout::resolveForUser($company->id, $userId);
         $tiles = $layout?->layout_json ?? [];
 
         return response()->json([
@@ -52,9 +56,10 @@ class CompanyDashboardLayoutController extends Controller
         }
 
         $companyId = $request->attributes->get('company')->id;
+        $userId = $request->user()->id;
 
         CompanyDashboardLayout::updateOrCreate(
-            ['company_id' => $companyId],
+            ['company_id' => $companyId, 'user_id' => $userId],
             ['layout_json' => $validated['layout']],
         );
 

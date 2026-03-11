@@ -8,6 +8,8 @@ use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\DunningEngine;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoicePayNowService;
+use App\Core\Billing\ScheduledDebit;
+use App\Core\Billing\ScheduledDebitService;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -185,5 +187,43 @@ class CompanyPaymentMethodController
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * ADR-328 S3: Set preferred debit day for a SEPA payment profile.
+     * PUT /billing/saved-cards/{id}/debit-day
+     */
+    public function setDebitDay(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $validated = $request->validate([
+            'preferred_debit_day' => ['nullable', 'integer', 'in:1,5,10,15,20,25'],
+        ]);
+
+        $profile = CompanyPaymentProfile::where('id', $id)
+            ->where('company_id', $company->id)
+            ->first();
+
+        if (! $profile) {
+            return response()->json(['message' => 'Payment method not found.'], 404);
+        }
+
+        if ($profile->method_key !== 'sepa_debit') {
+            return response()->json(['message' => 'Debit day is only available for SEPA payment methods.'], 422);
+        }
+
+        $newDay = $validated['preferred_debit_day'];
+        $profile->update(['preferred_debit_day' => $newDay]);
+
+        // ADR-328: Pending debits for this profile are NOT modified.
+        // The current month's scheduled debit executes as planned.
+        // The new preferred_debit_day takes effect on the NEXT invoice only.
+        // This prevents abuse (changing date repeatedly to delay payment).
+
+        return response()->json([
+            'message' => 'Preferred debit day updated.',
+            'preferred_debit_day' => $newDay,
+        ]);
     }
 }

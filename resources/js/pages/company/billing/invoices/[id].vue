@@ -197,7 +197,7 @@ const payInvoice = () => {
               <!-- Right: Invoice meta -->
               <div class="text-sm-end">
                 <h6 class="font-weight-medium text-lg mb-2">
-                  {{ invoice.number || `#${invoice.id}` }}
+                  {{ invoice.display_number || invoice.number || `#${invoice.id}` }}
                 </h6>
                 <VChip
                   :color="statusColor"
@@ -541,6 +541,65 @@ const payInvoice = () => {
                     </td>
                     <td>{{ cn.reason || '—' }}</td>
                     <td>{{ formatDate(cn.issued_at) }}</td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </VCardText>
+          </VCard>
+
+          <!-- Annexe reference -->
+          <VAlert
+            v-if="invoice.is_annexe && invoice.parent_number"
+            type="info"
+            variant="tonal"
+            class="mt-4"
+          >
+            {{ t('companyBilling.invoiceDetail.annexeOf') }} :
+            <router-link :to="{ name: '/company/billing/invoices/[id]', params: { id: invoice.parent_invoice_id } }">
+              {{ invoice.parent_number }}
+            </router-link>
+          </VAlert>
+
+          <!-- Annexes list -->
+          <VCard
+            v-if="invoice.annexes?.length"
+            class="mt-4"
+          >
+            <VCardTitle>
+              <VIcon
+                icon="tabler-file-plus"
+                class="me-2"
+              />
+              {{ t('companyBilling.invoiceDetail.annexes') }}
+            </VCardTitle>
+            <VCardText class="pa-0">
+              <VTable density="compact">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{{ t('companyBilling.invoiceDetail.annexeAmount') }}</th>
+                    <th>{{ t('companyBilling.invoiceDetail.annexeStatus') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="annexe in invoice.annexes"
+                    :key="annexe.id"
+                  >
+                    <td>
+                      <router-link :to="{ name: '/company/billing/invoices/[id]', params: { id: annexe.id } }">
+                        {{ annexe.display_number }}
+                      </router-link>
+                    </td>
+                    <td>{{ fmt(annexe.amount) }}</td>
+                    <td>
+                      <VChip
+                        :color="annexe.status === 'paid' ? 'success' : 'warning'"
+                        size="small"
+                      >
+                        {{ annexe.status }}
+                      </VChip>
+                    </td>
                   </tr>
                 </tbody>
               </VTable>

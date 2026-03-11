@@ -46,6 +46,27 @@ const form = reactive({ ...defaults })
 let snapshot = JSON.stringify(defaults)
 let isLoadingData = true
 
+// ── Dynamic SEPA hints ────────────────────────────────
+const sepaRequiresTrialHint = computed(() => {
+  if (!form.allow_sepa) return t('platformSettings.billing.sepaRequiresTrialHintDisabled')
+
+  return form.sepa_requires_trial
+    ? t('platformSettings.billing.sepaRequiresTrialHintOn')
+    : t('platformSettings.billing.sepaRequiresTrialHintOff')
+})
+
+const sepaFirstFailureHint = computed(() =>
+  form.allow_sepa
+    ? t('platformSettings.billing.sepaFirstFailureActionHint')
+    : t('platformSettings.billing.sepaDisabledHint'),
+)
+
+const allowSepaHint = computed(() =>
+  form.allow_sepa
+    ? t('platformSettings.billing.allowSepaHintEnabled')
+    : t('platformSettings.billing.allowSepaHintDisabled'),
+)
+
 const serverInvoiceNext = ref(1)
 const serverCreditNoteNext = ref(1)
 
@@ -548,7 +569,7 @@ const resetToDefaults = async () => {
               <VSwitch
                 v-model="form.allow_sepa"
                 :label="t('platformSettings.billing.allowSepa')"
-                :hint="t('platformSettings.billing.allowSepaHint')"
+                :hint="allowSepaHint"
                 persistent-hint
                 color="primary"
               />
@@ -560,7 +581,7 @@ const resetToDefaults = async () => {
               <VSwitch
                 v-model="form.sepa_requires_trial"
                 :label="t('platformSettings.billing.sepaRequiresTrial')"
-                :hint="t('platformSettings.billing.sepaRequiresTrialHint')"
+                :hint="sepaRequiresTrialHint"
                 persistent-hint
                 color="primary"
                 :disabled="!form.allow_sepa"
@@ -574,7 +595,7 @@ const resetToDefaults = async () => {
                 v-model="form.sepa_first_failure_action"
                 :label="t('platformSettings.billing.sepaFirstFailureAction')"
                 :items="sepaFirstFailureActionOptions"
-                :hint="t('platformSettings.billing.sepaFirstFailureActionHint')"
+                :hint="sepaFirstFailureHint"
                 persistent-hint
                 :disabled="!form.allow_sepa"
               />

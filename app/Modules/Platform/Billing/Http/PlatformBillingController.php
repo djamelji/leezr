@@ -135,7 +135,7 @@ class PlatformBillingController
     {
         $invoice = Invoice::whereNotNull('finalized_at')
             ->where('id', $id)
-            ->with(['lines', 'company'])
+            ->with(['lines', 'company', 'parentInvoice', 'annexes', 'creditNotes'])
             ->first();
 
         if (!$invoice) {
@@ -144,12 +144,14 @@ class PlatformBillingController
 
         $snap = $invoice->billing_snapshot ?? [];
         $locale = $snap['market_locale'] ?? 'fr-FR';
+        $payments = \App\Core\Billing\Payment::where('invoice_id', $invoice->id)->get();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
             'invoice' => $invoice,
             'company' => $invoice->company,
             'snap' => $snap,
             'locale' => $locale,
+            'payments' => $payments,
         ]);
 
         $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
@@ -169,5 +171,24 @@ class PlatformBillingController
         }
 
         return $filters;
+    }
+
+    /**
+     * ADR-328 S8: List scheduled SEPA debits for platform admin.
+     */
+    public function scheduledDebits(Request $request): JsonResponse
+    {
+        $query = \App\Core\Billing\ScheduledDebit::with([
+            'company:id,name,slug',
+            'invoice:id,number',
+            'paymentProfile:id,label,method_key',
+        ])
+            ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
+            ->when($request->input('from'), fn ($q, $d) => $q->where('debit_date', '>=', $d))
+            ->when($request->input('to'), fn ($q, $d) => $q->where('debit_date', '<=', $d))
+            ->when($request->input('company_id'), fn ($q, $id) => $q->where('company_id', $id))
+            ->orderBy('debit_date');
+
+        return response()->json($query->paginate($request->input('per_page', 25)));
     }
 }

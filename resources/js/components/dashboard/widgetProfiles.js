@@ -31,14 +31,14 @@ const WIDGET_PROFILES = {
   'billing.revenue_trend': 'chart',
   'billing.cashflow_trend_30d': 'chart',
 
-  // Company compliance — KPI
-  ComplianceRate: 'kpi',
-  CompliancePending: 'kpi',
-  ComplianceOverdue: 'kpi',
+  // Company compliance — KPI (ADR-327: keys now use dot notation)
+  'compliance.rate': 'kpi',
+  'compliance.pending': 'kpi',
+  'compliance.overdue': 'kpi',
 
   // Company compliance — List
-  ComplianceRoles: 'list',
-  ComplianceTypes: 'list',
+  'compliance.roles': 'list',
+  'compliance.types': 'list',
 }
 
 /**

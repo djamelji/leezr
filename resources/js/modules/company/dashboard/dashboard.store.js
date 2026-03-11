@@ -26,43 +26,73 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
   }
 
   /**
-   * Bootstrap starter layout from catalog when dashboard is empty (ADR-201).
-   * Picks 3 KPIs + 1 list/chart from available catalog.
-   * Idempotent: only called when engine._layout.value is empty.
+   * Smart Default Layout Builder (ADR-327).
+   *
+   * Arranges all available company widgets into a pleasant default layout:
+   *   Row 0: KPIs (small widgets, default_w ≤ 4, default_h ≤ 2) — up to 4 across
+   *   Row 1: Lists (medium, 4 < default_w ≤ 6) — 2 side-by-side
+   *   Row 2: Charts (large, default_w > 6) — full-width
    */
-  function applyDefaultLayout() {
+  function buildSmartDefaultLayout() {
     const catalog = engine._catalog.value
-    const kpis = catalog.filter(w => (w.layout?.default_w || 4) <= 4)
+
+    const kpis = catalog.filter(w => (w.layout?.default_w || 4) <= 4 && (w.layout?.default_h || 4) <= 2)
     const lists = catalog.filter(w => {
       const dw = w.layout?.default_w || 4
+      const dh = w.layout?.default_h || 4
 
-      return dw > 4 && dw <= 6
+      return dw > 4 && dw <= 6 && dh > 2
     })
     const charts = catalog.filter(w => (w.layout?.default_w || 4) > 6)
 
-    const picks = [
-      ...kpis.slice(0, 3),
-      ...(lists[0] ? [lists[0]] : charts.slice(0, 1)),
-    ]
+    const layout = []
+    let y = 0
 
-    for (const entry of picks) {
-      engine.addWidget(entry)
+    // Row 1: KPIs (up to 4 across, h=2)
+    const kpiPicks = kpis.slice(0, 4)
+    let x = 0
+
+    for (const w of kpiPicks) {
+      const dw = w.layout?.default_w || 3
+
+      layout.push({ key: w.key, x, y, w: dw, h: 2, scope: 'company', config: w.default_config || {} })
+      x += dw
     }
+    if (kpiPicks.length) y += 2
+
+    // Row 2: Lists (2 side-by-side, h=4)
+    const listPicks = lists.slice(0, 2)
+
+    x = 0
+    for (const w of listPicks) {
+      const dw = w.layout?.default_w || 6
+
+      layout.push({ key: w.key, x, y, w: dw, h: 4, scope: 'company', config: w.default_config || {} })
+      x += dw
+    }
+    if (listPicks.length) y += 4
+
+    // Row 3: Charts (full-width, h=4)
+    for (const w of charts.slice(0, 1)) {
+      layout.push({ key: w.key, x: 0, y, w: 12, h: 4, scope: 'company', config: w.default_config || {} })
+      y += 4
+    }
+
+    engine._layout.value = layout
+    engine._dirty.value = true
   }
 
   // Override loadDashboard to include suggestions fetch + bootstrap
-  // clientCatalog: client-only entries (e.g. compliance) injected BEFORE bootstrap check
-  async function loadDashboard(clientCatalog = []) {
+  async function loadDashboard() {
     await Promise.all([engine.fetchCatalog(), engine.fetchLayout(), fetchSuggestions()])
 
-    // Inject client-only catalog entries so bootstrap can pick from them
-    if (clientCatalog.length) {
-      engine.injectCatalogEntries(clientCatalog)
-    }
-
-    // Bootstrap: empty layout at first login → starter from catalog
-    if (!engine._layout.value.length && engine._catalog.value.length) {
-      applyDefaultLayout()
+    // Layout resolution cascade (ADR-327):
+    //   1. Per-user layout (DB) → already loaded by fetchLayout
+    //   2. Company default from jobdomain (DB, user_id=NULL) → backend resolveForUser fallback
+    //   3. Smart default builder (frontend, fallback when no DB layout at all)
+    // Only if fetchLayout succeeded — never overwrite on fetch error (ADR-326)
+    if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
+      buildSmartDefaultLayout()
       await engine.saveLayout()
     }
 

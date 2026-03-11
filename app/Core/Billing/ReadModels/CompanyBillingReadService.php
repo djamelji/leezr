@@ -101,6 +101,20 @@ class CompanyBillingReadService
             'exp_year' => $defaultCard->metadata['exp_year'] ?? null,
         ] : null;
 
+        // Billing email: dynamic field → owner email fallback
+        $billingEmail = \App\Core\Fields\FieldValue::where('model_type', 'company')
+            ->where('model_id', $company->id)
+            ->whereHas('definition', fn ($q) => $q->where('code', 'billing_email'))
+            ->value('value');
+
+        if (! $billingEmail) {
+            $billingEmail = $company->memberships()
+                ->where('role', 'owner')
+                ->with('user:id,email')
+                ->first()
+                ?->user?->email;
+        }
+
         return [
             'subscription' => $subscription,
             'plan' => $plan,
@@ -112,6 +126,7 @@ class CompanyBillingReadService
             'currency' => $currency,
             'payment_method' => $paymentMethod,
             'allowed_payment_methods' => PaymentPolicy::allowedMethods($company),
+            'billing_email' => $billingEmail,
         ];
     }
 
@@ -147,7 +162,7 @@ class CompanyBillingReadService
      */
     public static function invoiceDetail(Company $company, int $invoiceId): ?array
     {
-        $invoice = Invoice::with(['lines', 'creditNotes'])
+        $invoice = Invoice::with(['lines', 'creditNotes', 'parentInvoice', 'annexes'])
             ->where('company_id', $company->id)
             ->where('id', $invoiceId)
             ->first();
@@ -159,6 +174,18 @@ class CompanyBillingReadService
         return [
             'id' => $invoice->id,
             'number' => $invoice->number,
+            'display_number' => $invoice->displayNumber(),
+            'is_annexe' => $invoice->isAnnexe(),
+            'parent_invoice_id' => $invoice->parent_invoice_id,
+            'parent_number' => $invoice->parentInvoice?->number,
+            'annexe_suffix' => $invoice->annexe_suffix,
+            'annexes' => $invoice->annexes->map(fn ($a) => [
+                'id' => $a->id,
+                'display_number' => $a->displayNumber(),
+                'amount' => $a->amount,
+                'status' => $a->status,
+                'issued_at' => $a->issued_at?->toISOString(),
+            ])->toArray(),
             'status' => $invoice->status,
             'amount' => $invoice->amount,
             'subtotal' => $invoice->subtotal,

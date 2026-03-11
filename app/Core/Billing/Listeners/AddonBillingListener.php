@@ -4,6 +4,7 @@ namespace App\Core\Billing\Listeners;
 
 use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyEntitlements;
+use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\Subscription;
 use App\Core\Billing\WalletLedger;
@@ -16,13 +17,17 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * ADR-224: Creates addon subscription + invoice when a paid module is enabled.
+ * ADR-328 S5: Trial guard — subscription tracked but no invoice during trial.
+ * ADR-328 S1: Addon invoice = annexe of main subscription invoice when possible.
  *
  * Pipeline:
  *   1. Check if module has addon_pricing → skip if not
  *   2. Compute amount (flat/plan_flat pricing)
  *   3. Create/update CompanyAddonSubscription (inside transaction)
- *   4. Create addon invoice (InvoiceIssuer pipeline — wallet-first)
- *   5. If wallet doesn't cover it → invoice stays open for dunning
+ *   4. ADR-328 S5: If trialing → stop here (first post-trial renewal includes addon lines)
+ *   5. ADR-328 S1: If main invoice exists for current period → create annexe
+ *      Otherwise create standalone invoice (pre-renewal case)
+ *   6. If wallet doesn't cover it → invoice stays open for dunning
  */
 class AddonBillingListener
 {
@@ -77,11 +82,36 @@ class AddonBillingListener
             );
         });
 
+        // ADR-328 S5: Trial guard — track addon but defer billing to first post-trial renewal
+        if ($subscription && $subscription->isTrialing()) {
+            Log::channel('billing')->info('Addon activated during trial — no invoice', [
+                'company_id' => $company->id,
+                'module_key' => $moduleKey,
+                'amount' => $amount,
+            ]);
+
+            return;
+        }
+
         // Phase 2: Create addon invoice (outside transaction — InvoiceIssuer has its own)
+        // ADR-328 S1: Prefer annexe of the current period's main invoice
         $moduleName = $pm->display_name_override ?? $pm->name;
         $periodStart = now()->toDateString();
         $periodEnd = ($interval === 'yearly' ? now()->addYear() : now()->addMonth())->toDateString();
-        $invoice = InvoiceIssuer::createDraft($company, $subscription?->id, $periodStart, $periodEnd);
+
+        $mainInvoice = $subscription
+            ? Invoice::where('subscription_id', $subscription->id)
+                ->whereNull('parent_invoice_id')
+                ->whereNotNull('finalized_at')
+                ->where('period_start', '<=', now())
+                ->where('period_end', '>=', now())
+                ->latest('finalized_at')
+                ->first()
+            : null;
+
+        $invoice = $mainInvoice
+            ? InvoiceIssuer::createAnnexeDraft($mainInvoice, $company, $periodStart, $periodEnd)
+            : InvoiceIssuer::createDraft($company, $subscription?->id, $periodStart, $periodEnd);
 
         InvoiceIssuer::addLine(
             $invoice,

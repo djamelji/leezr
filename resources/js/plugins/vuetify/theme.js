@@ -1,4 +1,6 @@
-export const staticPrimaryColor = '#7367F0'
+// ADR-332: Read platform primary color injected by Blade (application.blade.php)
+// Falls back to Vuexy default if not available (SSR, tests, etc.)
+export const staticPrimaryColor = (typeof window !== 'undefined' && window.__PLATFORM_PRIMARY__) || '#7367F0'
 export const staticPrimaryDarkenColor = '#675DD8'
 export const themes = {
   light: {

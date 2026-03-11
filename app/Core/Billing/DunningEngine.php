@@ -47,6 +47,9 @@ use Illuminate\Support\Facades\Log;
  *   - retry_count increments exactly once per retry attempt
  *   - Voided invoices are never processed
  *   - Wallet supports split payment: partial wallet + provider remainder (ADR-265)
+ *   - ADR-328 S6: Addon invoices (standalone or annexe) are dunned identically to
+ *     subscription invoices. There is NO per-module deactivation on payment failure.
+ *     The only escalation is company-level suspension via DunningTransitioner.
  */
 class DunningEngine
 {

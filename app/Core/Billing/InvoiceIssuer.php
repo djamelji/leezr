@@ -60,6 +60,46 @@ class InvoiceIssuer
     }
 
     /**
+     * ADR-328: Create an annexe draft invoice linked to a finalized parent.
+     * Does NOT consume the global invoice number sequence.
+     *
+     * @throws RuntimeException If parent is not finalized
+     */
+    public static function createAnnexeDraft(
+        Invoice $parentInvoice,
+        Company $company,
+        ?string $periodStart = null,
+        ?string $periodEnd = null,
+    ): Invoice {
+        if (! $parentInvoice->isFinalized()) {
+            throw new RuntimeException('Cannot create annexe for unfinalized parent invoice.');
+        }
+
+        $policy = PlatformBillingPolicy::instance();
+        $taxContext = TaxContextResolver::resolve($company);
+        $suffix = InvoiceNumbering::nextAnnexeSuffix($parentInvoice);
+
+        return Invoice::create([
+            'parent_invoice_id' => $parentInvoice->id,
+            'annexe_suffix' => $suffix,
+            'company_id' => $company->id,
+            'subscription_id' => $parentInvoice->subscription_id,
+            'currency' => WalletLedger::ensureWallet($company)->currency,
+            'status' => 'draft',
+            'amount' => 0,
+            'subtotal' => 0,
+            'tax_amount' => 0,
+            'tax_rate_bps' => $taxContext->taxRateBps,
+            'tax_exemption_reason' => $taxContext->exemptionReason,
+            'wallet_credit_applied' => 0,
+            'amount_due' => 0,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'due_at' => now()->addDays($policy->invoice_due_days),
+        ]);
+    }
+
+    /**
      * Add a line to a draft invoice.
      *
      * @throws RuntimeException If invoice is already finalized
@@ -201,8 +241,10 @@ class InvoiceIssuer
             // 5. Amount due
             $amountDue = $total - $walletCreditApplied;
 
-            // 6. Assign number
-            $number = InvoiceNumbering::nextInvoiceNumber();
+            // 6. Assign number (annexes use parent number + suffix, no global sequence)
+            $number = $invoice->isAnnexe()
+                ? null  // annexe display number is computed from parent
+                : InvoiceNumbering::nextInvoiceNumber();
 
             // 7. Freeze billing snapshot
             $snapshot = static::buildBillingSnapshot($company);
@@ -257,6 +299,18 @@ class InvoiceIssuer
                 'invoice_id' => $finalizedInvoice->id,
                 'error' => $e->getMessage(),
             ]);
+        }
+
+        // ADR-328 S2: Maybe schedule deferred SEPA debit
+        if ($finalizedInvoice->amount_due > 0 && $finalizedInvoice->status === 'open') {
+            try {
+                ScheduledDebitService::maybeSchedule($finalizedInvoice);
+            } catch (\Throwable $e) {
+                Log::warning('[billing] Failed to schedule debit', [
+                    'invoice_id' => $finalizedInvoice->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $finalizedInvoice;

@@ -2,7 +2,7 @@
 const { t } = useI18n()
 
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
-import { useRuntimeStore } from '@/core/runtime/runtime'
+import { useAppName } from '@/composables/useAppName'
 import { checkVersionOnMount } from '@/utils/versionCheck'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
@@ -26,9 +26,8 @@ definePage({
 usePublicTheme()
 checkVersionOnMount()
 
+const appName = useAppName()
 const platformAuth = usePlatformAuthStore()
-const runtime = useRuntimeStore()
-const router = useRouter()
 
 const form = ref({
   email: '',
@@ -40,27 +39,26 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 const handleLogin = async () => {
+  if (isLoading.value) return
   isLoading.value = true
   errorMessage.value = ''
 
+  // ADR-331: Login API isolé + reload complet post-login.
   try {
     await platformAuth.login({
       email: form.value.email,
       password: form.value.password,
     })
-
-    // ADR-160: Reset to cold, boot fully, THEN navigate.
-    runtime.teardown()
-    await runtime.boot('platform')
-
-    await router.replace('/platform')
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('auth.invalidCredentials')
-  }
-  finally {
     isLoading.value = false
+
+    return
   }
+
+  // Login réussi — reload complet (le boot runtime se fera au chargement frais)
+  window.location.href = '/platform'
 }
 
 const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
@@ -71,9 +69,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   <RouterLink to="/platform">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
     </div>
   </RouterLink>
 

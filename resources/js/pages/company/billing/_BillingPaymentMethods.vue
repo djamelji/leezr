@@ -1,12 +1,19 @@
 <script setup>
 import { loadStripe } from '@stripe/stripe-js'
+import { useTheme } from 'vuetify'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { useAuthStore } from '@/core/stores/auth'
 import EmptyState from '@/core/components/EmptyState.vue'
 import TrustBadges from '@/core/components/TrustBadges.vue'
 
 const { t } = useI18n()
 const store = useCompanyBillingStore()
+const authStore = useAuthStore()
 const { toast } = useAppToast()
+const vuetifyTheme = useTheme()
+
+const isDark = computed(() => vuetifyTheme.current.value.dark)
+const appName = import.meta.env.VITE_APP_NAME || 'Leezr'
 
 const isLoading = ref(true)
 const loadError = ref(false)
@@ -17,6 +24,7 @@ const selectedMethod = ref('card')
 const cardError = ref('')
 const isSaving = ref(false)
 const actionLoading = ref(null)
+const sepaStep = ref(1)
 
 // Card form
 let stripe = null
@@ -27,7 +35,35 @@ const cardElementRef = ref(null)
 let ibanElement = null
 const ibanElementRef = ref(null)
 const sepaName = ref('')
-const sepaEmail = ref('')
+const mandateAccepted = ref(false)
+const sepaPreferredDay = ref(null)
+
+// ADR-328 S3: Preferred debit day options (per IBAN)
+const debitDayItems = [
+  { title: t('companyBilling.debitOnInvoice'), value: null },
+  { title: t('companyBilling.dayOfMonth', { day: 1 }), value: 1 },
+  { title: t('companyBilling.dayOfMonth', { day: 5 }), value: 5 },
+  { title: t('companyBilling.dayOfMonth', { day: 10 }), value: 10 },
+  { title: t('companyBilling.dayOfMonth', { day: 15 }), value: 15 },
+  { title: t('companyBilling.dayOfMonth', { day: 20 }), value: 20 },
+  { title: t('companyBilling.dayOfMonth', { day: 25 }), value: 25 },
+]
+
+const debitDayLoading = ref(null)
+
+const updateDebitDay = async (profileId, day) => {
+  debitDayLoading.value = profileId
+  try {
+    await store.setDebitDay(profileId, day)
+    toast(t('companyBilling.debitDayUpdated'), 'success')
+  }
+  catch {
+    toast(t('companyBilling.debitDayFailed'), 'error')
+  }
+  finally {
+    debitDayLoading.value = null
+  }
+}
 
 // ADR-325: Allowed payment methods from backend
 const allowedPaymentMethods = computed(() => store.overview?.allowed_payment_methods ?? ['card'])
@@ -40,7 +76,10 @@ const fetchMethods = async () => {
   isLoading.value = true
   loadError.value = false
   try {
-    await store.fetchSavedCards()
+    await Promise.all([
+      store.fetchSavedCards(),
+      store.overview ? Promise.resolve() : store.fetchOverview(),
+    ])
   }
   catch {
     loadError.value = true
@@ -112,10 +151,24 @@ const openForm = async method => {
     await nextTick()
 
     if (method === 'sepa_debit') {
+      // Pré-remplir avec le nom de l'entreprise, modifiable par l'utilisateur
+      if (!sepaName.value) {
+        sepaName.value = authStore.currentCompany?.name || ''
+      }
       showSepaForm.value = true
       showCardForm.value = false
       await nextTick()
-      ibanElement = elements.create('iban', { supportedCountries: ['SEPA'] })
+      ibanElement = elements.create('iban', {
+        supportedCountries: ['SEPA'],
+        style: {
+          base: {
+            fontSize: '16px',
+            color: isDark.value ? '#E7E3FCDE' : '#424242',
+            '::placeholder': { color: isDark.value ? '#E7E3FC61' : '#aab7c4' },
+          },
+          invalid: { color: '#FF4C51' },
+        },
+      })
       ibanElement.mount(ibanElementRef.value)
     }
     else {
@@ -127,9 +180,10 @@ const openForm = async method => {
         style: {
           base: {
             fontSize: '16px',
-            color: '#424242',
-            '::placeholder': { color: '#aab7c4' },
+            color: isDark.value ? '#E7E3FCDE' : '#424242',
+            '::placeholder': { color: isDark.value ? '#E7E3FC61' : '#aab7c4' },
           },
+          invalid: { color: '#FF4C51' },
         },
       })
       cardElement.mount(cardElementRef.value)
@@ -143,8 +197,20 @@ const openForm = async method => {
 // ── Save Card ──
 
 const saveCard = async () => {
-  if (!stripe || !cardElement || !store.setupIntent?.client_secret)
+  if (!stripe || !cardElement)
     return
+
+  // Recreate setup intent if missing or consumed
+  if (!store.setupIntent?.client_secret) {
+    try {
+      await store.createSetupIntent('card')
+    }
+    catch {
+      cardError.value = t('companyBilling.setupIntentFailed')
+
+      return
+    }
+  }
 
   isSaving.value = true
   cardError.value = ''
@@ -156,6 +222,7 @@ const saveCard = async () => {
 
     if (error) {
       cardError.value = error.message
+      store._setupIntent = null
 
       return
     }
@@ -172,46 +239,74 @@ const saveCard = async () => {
   }
   catch (e) {
     cardError.value = e?.data?.message || e?.message || t('companyBilling.setupIntentFailed')
+    store._setupIntent = null
   }
   finally {
     isSaving.value = false
   }
 }
 
+// ── SEPA step navigation ──
+
+const goToSepaStep2 = () => {
+  if (!sepaName.value.trim()) {
+    cardError.value = t('companyBilling.sepaNameRequired')
+    return
+  }
+  cardError.value = ''
+  sepaStep.value = 2
+}
+
 // ── Save SEPA ──
 
 const saveSepa = async () => {
-  if (!stripe || !ibanElement || !store.setupIntent?.client_secret)
+  if (!stripe || !ibanElement)
     return
 
-  if (!sepaName.value.trim() || !sepaEmail.value.trim()) {
-    cardError.value = t('companyBilling.sepaFieldsRequired')
+  // Recreate setup intent if missing or consumed
+  if (!store.setupIntent?.client_secret) {
+    try {
+      await store.createSetupIntent('sepa_debit')
+    }
+    catch {
+      cardError.value = t('companyBilling.setupIntentFailed')
 
-    return
+      return
+    }
   }
 
   isSaving.value = true
   cardError.value = ''
 
   try {
+    const billingEmail = store.overview?.billing_email || authStore.user?.email || ''
+
     const { error, setupIntent } = await stripe.confirmSepaDebitSetup(store.setupIntent.client_secret, {
       payment_method: {
         sepa_debit: ibanElement,
         billing_details: {
-          name: sepaName.value,
-          email: sepaEmail.value,
+          name: sepaName.value.trim(),
+          email: billingEmail,
         },
       },
     })
 
     if (error) {
       cardError.value = error.message
+      // Setup intent is consumed after error — clear so next attempt creates a new one
+      store._setupIntent = null
 
       return
     }
 
     // Confirm synchronously — creates profile without waiting for webhook
     const result = await store.confirmSetupIntent(setupIntent.payment_method)
+
+    // Set preferred debit day if chosen
+    if (sepaPreferredDay.value && result.card?.id) {
+      try { await store.setDebitDay(result.card.id, sepaPreferredDay.value) }
+      catch { /* non-blocking */ }
+    }
 
     closeForm()
 
@@ -222,6 +317,7 @@ const saveSepa = async () => {
   }
   catch (e) {
     cardError.value = e?.data?.message || e?.message || t('companyBilling.setupIntentFailed')
+    store._setupIntent = null
   }
   finally {
     isSaving.value = false
@@ -236,7 +332,9 @@ const closeForm = () => {
   showSepaForm.value = false
   cardError.value = ''
   sepaName.value = ''
-  sepaEmail.value = ''
+  mandateAccepted.value = false
+  sepaPreferredDay.value = null
+  sepaStep.value = 1
 
   if (cardElement) {
     cardElement.unmount()
@@ -270,13 +368,15 @@ const confirmDelete = card => { deletingCard.value = card }
 const cancelDelete = () => { deletingCard.value = null }
 
 const executeDelete = async () => {
+  const isSepa = deletingCard.value?.method_key === 'sepa_debit'
+
   actionLoading.value = `delete-${deletingCard.value.id}`
   try {
     await store.deleteSavedCard(deletingCard.value.id)
-    toast(t('companyBilling.cardDeleted'), 'success')
+    toast(t(isSepa ? 'companyBilling.sepaDeleted' : 'companyBilling.cardDeleted'), 'success')
   }
   catch (err) {
-    toast(err?.data?.message || t('companyBilling.cardDeleteFailed'), 'error')
+    toast(err?.data?.message || t(isSepa ? 'companyBilling.sepaDeleteFailed' : 'companyBilling.cardDeleteFailed'), 'error')
   }
   finally {
     actionLoading.value = null
@@ -331,7 +431,10 @@ const executeDelete = async () => {
       </VCard>
 
       <!-- ═══ Payment Methods Grid ═══ -->
-      <VRow v-if="store.savedCards.length > 0">
+      <VRow
+        v-if="store.savedCards.length > 0"
+        align="start"
+      >
         <VCol
           v-for="pm in store.savedCards"
           :key="pm.id"
@@ -339,7 +442,7 @@ const executeDelete = async () => {
           sm="6"
         >
           <VCard
-            class="h-100"
+            class="payment-card d-flex flex-column"
             :style="pm.is_default ? 'border-color: rgb(var(--v-theme-primary))' : ''"
           >
             <VCardItem>
@@ -419,7 +522,7 @@ const executeDelete = async () => {
               </template>
             </VCardItem>
 
-            <VCardText class="pt-0">
+            <VCardText class="pt-0 flex-grow-1">
               <!-- Card details -->
               <template v-if="pm.method_key === 'card'">
                 <div class="d-flex align-center gap-2 mb-2">
@@ -481,21 +584,36 @@ const executeDelete = async () => {
                     </div>
                   </div>
                 </div>
+
+                <!-- ADR-328 S3: Preferred debit day per IBAN -->
+                <div class="d-flex align-center gap-2 mt-3">
+                  <span class="text-body-2 text-disabled">{{ t('companyBilling.debitOn') }}</span>
+                  <AppSelect
+                    :model-value="pm.preferred_debit_day ? Number(pm.preferred_debit_day) : null"
+                    :items="debitDayItems"
+                    density="compact"
+                    style="max-inline-size: 180px;"
+                    :loading="debitDayLoading === pm.id"
+                    :disabled="!!debitDayLoading"
+                    hide-details
+                    @update:model-value="val => updateDebitDay(pm.id, val)"
+                  />
+                </div>
               </template>
             </VCardText>
           </VCard>
         </VCol>
 
-        <!-- Add another card -->
+        <!-- Add another card (dashed placeholder) — replaced by picker/form when clicked -->
         <VCol
           v-if="store.savedCards.length < store.maxPaymentMethods && !showMethodPicker && !showCardForm && !showSepaForm"
           cols="12"
           sm="6"
         >
           <VCard
-            class="h-100 d-flex align-center justify-center cursor-pointer"
+            class="payment-card d-flex align-center justify-center cursor-pointer"
             variant="outlined"
-            style="border-style: dashed; min-block-size: 120px;"
+            style="border-style: dashed;"
             @click="showAddPicker"
           >
             <VCardText class="text-center pa-4">
@@ -508,6 +626,211 @@ const executeDelete = async () => {
               <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('companyBilling.addAnotherMethod') }}
               </p>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <!-- Picker / Form (replaces dashed card in-place) -->
+        <VCol
+          v-if="showMethodPicker || showCardForm || showSepaForm"
+          cols="12"
+          sm="6"
+        >
+          <!-- Method type picker -->
+          <VCard
+            v-if="showMethodPicker"
+            class="payment-card d-flex flex-column justify-center"
+          >
+            <VCardText class="pa-3">
+              <p class="text-body-2 mb-3">
+                {{ t('companyBilling.choosePaymentType') }}
+              </p>
+              <div class="d-flex gap-2">
+                <VBtn
+                  variant="outlined"
+                  size="small"
+                  :color="selectedMethod === 'card' ? 'primary' : 'secondary'"
+                  prepend-icon="tabler-credit-card"
+                  @click="openForm('card')"
+                >
+                  {{ t('companyBilling.addCardBtn') }}
+                </VBtn>
+                <VBtn
+                  v-if="showSepaOption"
+                  variant="outlined"
+                  size="small"
+                  :color="selectedMethod === 'sepa_debit' ? 'primary' : 'secondary'"
+                  prepend-icon="tabler-building-bank"
+                  @click="openForm('sepa_debit')"
+                >
+                  {{ t('companyBilling.addIbanBtn') }}
+                </VBtn>
+              </div>
+              <VBtn
+                variant="text"
+                size="small"
+                class="mt-2"
+                @click="closeForm"
+              >
+                {{ t('common.cancel') }}
+              </VBtn>
+            </VCardText>
+          </VCard>
+
+          <!-- Error alert -->
+          <VAlert
+            v-if="cardError"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            {{ cardError }}
+          </VAlert>
+
+          <!-- Card form -->
+          <VCard
+            v-if="showCardForm"
+            class="payment-card d-flex flex-column"
+          >
+            <VCardText class="pa-3 flex-grow-1 d-flex flex-column">
+              <div
+                ref="cardElementRef"
+                class="pa-3 rounded border"
+                style="min-block-size: 38px;"
+              />
+
+              <div class="d-flex gap-2 mt-3">
+                <VBtn
+                  color="primary"
+                  size="small"
+                  :loading="isSaving"
+                  @click="saveCard"
+                >
+                  {{ t('companyBilling.saveCard') }}
+                </VBtn>
+                <VBtn
+                  variant="tonal"
+                  size="small"
+                  @click="closeForm"
+                >
+                  {{ t('common.cancel') }}
+                </VBtn>
+              </div>
+
+              <TrustBadges
+                variant="horizontal"
+                :show="['secure', 'gdpr']"
+                class="mt-auto"
+              />
+            </VCardText>
+          </VCard>
+
+          <!-- SEPA form -->
+          <VCard
+            v-if="showSepaForm"
+            class="payment-card d-flex flex-column"
+          >
+            <VCardText class="pa-3 flex-grow-1 d-flex flex-column">
+              <!-- Step indicator -->
+              <div class="d-flex align-center gap-2 mb-2">
+                <VChip
+                  :color="sepaStep === 1 ? 'primary' : 'success'"
+                  size="x-small"
+                  :variant="sepaStep === 1 ? 'elevated' : 'tonal'"
+                >
+                  1
+                </VChip>
+                <VDivider
+                  class="flex-grow-0"
+                  style="inline-size: 24px;"
+                />
+                <VChip
+                  :color="sepaStep === 2 ? 'primary' : 'default'"
+                  size="x-small"
+                  :variant="sepaStep === 2 ? 'elevated' : 'tonal'"
+                >
+                  2
+                </VChip>
+              </div>
+
+              <!-- Step 1: Titulaire + IBAN -->
+              <div v-show="sepaStep === 1">
+                <AppTextField
+                  v-model="sepaName"
+                  :label="t('companyBilling.accountHolder')"
+                  density="compact"
+                  class="mb-2"
+                />
+                <div
+                  ref="ibanElementRef"
+                  class="pa-3 rounded border mb-2"
+                  style="min-block-size: 38px;"
+                />
+                <div class="d-flex gap-2 mt-2">
+                  <VBtn
+                    color="primary"
+                    size="small"
+                    @click="goToSepaStep2"
+                  >
+                    {{ t('common.next') }}
+                  </VBtn>
+                  <VBtn
+                    variant="tonal"
+                    size="small"
+                    @click="closeForm"
+                  >
+                    {{ t('common.cancel') }}
+                  </VBtn>
+                </div>
+              </div>
+
+              <!-- Step 2: Mandat + date prélèvement + validation -->
+              <div v-show="sepaStep === 2">
+                <VCheckbox
+                  v-model="mandateAccepted"
+                  class="mb-1"
+                  density="compact"
+                >
+                  <template #label>
+                    <span class="text-caption">{{ t('companyBilling.sepaMandateCheckbox', { appName }) }}</span>
+                  </template>
+                </VCheckbox>
+
+                <AppSelect
+                  v-model="sepaPreferredDay"
+                  :items="debitDayItems"
+                  :label="t('companyBilling.preferredDebitDay')"
+                  density="compact"
+                  class="mb-2"
+                />
+
+                <div class="d-flex gap-2 mt-2">
+                  <VBtn
+                    variant="tonal"
+                    size="small"
+                    @click="sepaStep = 1"
+                  >
+                    {{ t('common.previous') }}
+                  </VBtn>
+                  <VBtn
+                    color="primary"
+                    size="small"
+                    :loading="isSaving"
+                    :disabled="!mandateAccepted"
+                    prepend-icon="tabler-building-bank"
+                    @click="saveSepa"
+                  >
+                    {{ t('companyBilling.saveIban') }}
+                  </VBtn>
+                  <VBtn
+                    variant="tonal"
+                    size="small"
+                    @click="closeForm"
+                  >
+                    {{ t('common.cancel') }}
+                  </VBtn>
+                </div>
+              </div>
             </VCardText>
           </VCard>
         </VCol>
@@ -524,141 +847,6 @@ const executeDelete = async () => {
       >
         {{ t('companyBilling.fallbackInfo') }}
       </VAlert>
-
-      <!-- Method type picker -->
-      <VCard
-        v-if="showMethodPicker"
-        class="mt-4"
-      >
-        <VCardText>
-          <p class="text-body-2 mb-3">
-            {{ t('companyBilling.choosePaymentType') }}
-          </p>
-          <div class="d-flex gap-2">
-            <VBtn
-              variant="outlined"
-              :color="selectedMethod === 'card' ? 'primary' : 'secondary'"
-              prepend-icon="tabler-credit-card"
-              @click="openForm('card')"
-            >
-              {{ t('companyBilling.addCardBtn') }}
-            </VBtn>
-            <VBtn
-              v-if="showSepaOption"
-              variant="outlined"
-              :color="selectedMethod === 'sepa_debit' ? 'primary' : 'secondary'"
-              prepend-icon="tabler-building-bank"
-              @click="openForm('sepa_debit')"
-            >
-              {{ t('companyBilling.addIbanBtn') }}
-            </VBtn>
-          </div>
-          <VBtn
-            variant="text"
-            size="small"
-            class="mt-2"
-            @click="closeForm"
-          >
-            {{ t('common.cancel') }}
-          </VBtn>
-        </VCardText>
-      </VCard>
-
-      <!-- Error alert -->
-      <VAlert
-        v-if="cardError"
-        type="error"
-        variant="tonal"
-        class="mt-4 mb-4"
-      >
-        {{ cardError }}
-      </VAlert>
-
-      <!-- Card form -->
-      <VCard
-        v-if="showCardForm"
-        class="mt-4"
-      >
-        <VCardText>
-          <div
-            ref="cardElementRef"
-            class="pa-4 rounded border"
-            style="min-block-size: 44px;"
-          />
-
-          <div class="d-flex gap-2 mt-4">
-            <VBtn
-              color="primary"
-              :loading="isSaving"
-              @click="saveCard"
-            >
-              {{ t('companyBilling.saveCard') }}
-            </VBtn>
-            <VBtn
-              variant="tonal"
-              @click="closeForm"
-            >
-              {{ t('common.cancel') }}
-            </VBtn>
-          </div>
-
-          <TrustBadges
-            variant="horizontal"
-            :show="['secure', 'gdpr']"
-            class="mt-4"
-          />
-        </VCardText>
-      </VCard>
-
-      <!-- SEPA form -->
-      <VCard
-        v-if="showSepaForm"
-        class="mt-4"
-      >
-        <VCardText>
-          <AppTextField
-            v-model="sepaName"
-            :label="t('companyBilling.accountHolder')"
-            class="mb-3"
-          />
-          <AppTextField
-            v-model="sepaEmail"
-            :label="t('companyBilling.email')"
-            type="email"
-            class="mb-3"
-          />
-          <div
-            ref="ibanElementRef"
-            class="pa-4 rounded border mb-3"
-            style="min-block-size: 44px;"
-          />
-          <p class="text-body-2 text-disabled mb-3">
-            {{ t('companyBilling.sepaMandate') }}
-          </p>
-
-          <div class="d-flex gap-2">
-            <VBtn
-              color="primary"
-              :loading="isSaving"
-              @click="saveSepa"
-            >
-              {{ t('companyBilling.saveIban') }}
-            </VBtn>
-            <VBtn
-              variant="tonal"
-              @click="closeForm"
-            >
-              {{ t('common.cancel') }}
-            </VBtn>
-          </div>
-
-          <TrustBadges
-            variant="horizontal"
-            :show="['secure', 'gdpr']"
-            class="mt-4"
-          />
-        </VCardText>
-      </VCard>
     </template>
   </div>
 
@@ -669,8 +857,8 @@ const executeDelete = async () => {
     @update:model-value="!$event && cancelDelete()"
   >
     <VCard>
-      <VCardTitle>{{ t('companyBilling.confirmDeleteCard') }}</VCardTitle>
-      <VCardText>{{ t('companyBilling.confirmDeleteCardDesc') }}</VCardText>
+      <VCardTitle>{{ deletingCard?.method_key === 'sepa_debit' ? t('companyBilling.confirmDeleteSepa') : t('companyBilling.confirmDeleteCard') }}</VCardTitle>
+      <VCardText>{{ deletingCard?.method_key === 'sepa_debit' ? t('companyBilling.confirmDeleteSepaDesc') : t('companyBilling.confirmDeleteCardDesc') }}</VCardText>
       <VCardActions>
         <VSpacer />
         <VBtn
@@ -690,3 +878,9 @@ const executeDelete = async () => {
     </VCard>
   </VDialog>
 </template>
+
+<style scoped>
+.payment-card {
+  aspect-ratio: 1.9;
+}
+</style>

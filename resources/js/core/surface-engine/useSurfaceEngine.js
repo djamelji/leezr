@@ -18,7 +18,6 @@ export function createSurfaceEngine(config) {
 
   // ── State ──────────────────────────────────────────────────────────
 
-  const _clientOnlyKeys = new Set()
   const _catalog = ref([])
   const _catalogLoading = ref(false)
   const _layout = ref([])
@@ -27,6 +26,7 @@ export function createSurfaceEngine(config) {
   const _widgetErrors = ref({})
   const _dataLoading = ref(false)
   const _dirty = ref(false)
+  const _fetchLayoutSucceeded = ref(false)
 
   // ── Getters ────────────────────────────────────────────────────────
 
@@ -40,6 +40,15 @@ export function createSurfaceEngine(config) {
   const isDirty = computed(() => _dirty.value)
   const isLoading = computed(() => _catalogLoading.value || _layoutLoading.value || _dataLoading.value)
   const hasDashboardWidgets = computed(() => _layout.value.length > 0)
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+
+  /** Check if a widget key is client-resolved (resolution: 'client' in catalog) */
+  function _isClientResolved(key) {
+    const entry = _catalog.value.find(w => w.key === key)
+
+    return entry?.resolution === 'client'
+  }
 
   // ── Actions ────────────────────────────────────────────────────────
 
@@ -58,12 +67,18 @@ export function createSurfaceEngine(config) {
 
   async function fetchLayout() {
     _layoutLoading.value = true
+    _fetchLayoutSucceeded.value = false
 
     try {
       const data = await apiFn('/dashboard/layout')
 
       _layout.value = data.layout
       _dirty.value = false
+      _fetchLayoutSucceeded.value = true
+    }
+    catch (err) {
+      // Swallow error — keep _layout as-is to prevent bootstrap overwrite (ADR-326)
+      console.warn('[SurfaceEngine] fetchLayout failed:', err?.message || err)
     }
     finally {
       _layoutLoading.value = false
@@ -77,25 +92,12 @@ export function createSurfaceEngine(config) {
     _saveError.value = null
 
     try {
-      // Filter out client-only widgets (e.g. compliance) that the backend doesn't know about
-      const persistable = _layout.value.filter(t => !_clientOnlyKeys.has(t.key))
-
-      // Nothing to persist — mark clean without API call
-      if (!persistable.length) {
-        _dirty.value = false
-
-        return
-      }
-
       const data = await apiFn('/dashboard/layout', {
         method: 'PUT',
-        body: { layout: persistable },
+        body: { layout: _layout.value },
       })
 
-      // Merge backend response with client-only tiles (preserve their positions)
-      const clientOnly = _layout.value.filter(t => _clientOnlyKeys.has(t.key))
-
-      _layout.value = [...data.layout, ...clientOnly]
+      _layout.value = data.layout
       _dirty.value = false
     }
     catch (err) {
@@ -106,25 +108,26 @@ export function createSurfaceEngine(config) {
 
   async function resolveWidgets() {
     if (!_layout.value.length) return
-    if (_layout.value.every(t => _clientOnlyKeys.has(t.key))) return
+
+    // Only request data for server-resolved widgets (ADR-327)
+    const serverWidgets = _layout.value.filter(t => !_isClientResolved(t.key))
+
+    if (!serverWidgets.length) return
 
     _dataLoading.value = true
     _widgetErrors.value = {}
 
     try {
-      // Only request data for backend-registered widgets
-      const requests = _layout.value
-        .filter(item => !_clientOnlyKeys.has(item.key))
-        .map(item => {
-          const req = { key: item.key, period: item.config?.period || '30d' }
+      const requests = serverWidgets.map(item => {
+        const req = { key: item.key, period: item.config?.period || '30d' }
 
-          if (scopeStrategy === 'explicit') {
-            req.scope = item.scope
-            req.company_id = item.config?.company_id || null
-          }
+        if (scopeStrategy === 'explicit') {
+          req.scope = item.scope
+          req.company_id = item.config?.company_id || null
+        }
 
-          return req
-        })
+        return req
+      })
 
       const data = await apiFn('/dashboard/widgets/data', {
         method: 'POST',
@@ -197,26 +200,10 @@ export function createSurfaceEngine(config) {
     _dirty.value = true
   }
 
-  /**
-   * Inject catalog entries client-side (e.g. compliance widgets).
-   * Deduplicates by key — entries already present are skipped.
-   * Injected entries are marked as client-only: excluded from save and resolve.
-   *
-   * @param {import('./surfaceEngine.types').WidgetCatalogEntry[]} entries
-   */
-  function injectCatalogEntries(entries) {
-    for (const entry of entries) {
-      _clientOnlyKeys.add(entry.key)
-      if (!_catalog.value.find(w => w.key === entry.key)) {
-        _catalog.value.push(entry)
-      }
-    }
-  }
-
   return {
     // Internal refs (for surface-specific extensions to access)
     _catalog, _catalogLoading, _layout, _layoutLoading,
-    _widgetData, _widgetErrors, _dataLoading, _dirty, _saveError,
+    _widgetData, _widgetErrors, _dataLoading, _dirty, _saveError, _fetchLayoutSucceeded,
 
     // Getters
     catalog, catalogLoading, layout, layoutLoading,
@@ -226,6 +213,5 @@ export function createSurfaceEngine(config) {
     // Actions
     fetchCatalog, fetchLayout, saveLayout, resolveWidgets,
     loadDashboard, addWidget, removeWidget, updateLayout,
-    injectCatalogEntries,
   }
 }

@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Invoice extends Model
 {
     protected $fillable = [
-        'subscription_id', 'company_id', 'number',
+        'subscription_id', 'parent_invoice_id', 'company_id', 'number', 'annexe_suffix',
         'amount', 'subtotal', 'tax_amount', 'tax_rate_bps', 'tax_exemption_reason',
-        'wallet_credit_applied', 'amount_due',
+        'wallet_credit_applied', 'amount_due', 'coupon_id',
         'currency', 'status', 'provider', 'provider_invoice_id',
         'period_start', 'period_end', 'billing_snapshot',
         'issued_at', 'due_at', 'paid_at',
@@ -64,6 +64,40 @@ class Invoice extends Model
     public function creditNotes(): HasMany
     {
         return $this->hasMany(CreditNote::class);
+    }
+
+    public function parentInvoice(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_invoice_id');
+    }
+
+    public function annexes(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_invoice_id');
+    }
+
+    // ── Accessors ──
+
+    /**
+     * ADR-328: Display number includes annexe suffix when present.
+     * Example: INV-2026-000001-A
+     */
+    public function displayNumber(): string
+    {
+        if ($this->annexe_suffix && $this->parent_invoice_id) {
+            $parentNumber = $this->relationLoaded('parentInvoice')
+                ? $this->parentInvoice->number
+                : self::where('id', $this->parent_invoice_id)->value('number');
+
+            return $parentNumber . '-' . $this->annexe_suffix;
+        }
+
+        return $this->number ?? '';
+    }
+
+    public function isAnnexe(): bool
+    {
+        return $this->parent_invoice_id !== null;
     }
 
     // ── Guards ──

@@ -42,6 +42,11 @@ final class DashboardWidgetRegistry
         return array_values(array_filter(
             static::all(),
             function (WidgetManifest $w) use ($user) {
+                // Widget must target platform audience
+                if (!in_array($w->audience(), ['platform', 'both'], true)) {
+                    return false;
+                }
+
                 // Module must be globally enabled
                 if (!ModuleGate::isEnabledGlobally($w->module())) {
                     return false;

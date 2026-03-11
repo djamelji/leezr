@@ -2,6 +2,7 @@
 const { t } = useI18n()
 
 import { $api } from '@/utils/api'
+import { useAppName } from '@/composables/useAppName'
 import { refreshCsrf } from '@/utils/csrf'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2ForgotPasswordIllustrationDark from '@images/pages/auth-v2-forgot-password-illustration-dark.png'
@@ -20,6 +21,7 @@ definePage({
 })
 
 usePublicTheme()
+const appName = useAppName()
 
 const email = ref('')
 const isLoading = ref(false)
@@ -58,9 +60,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
   <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
-      <h1 class="auth-title">
-        {{ themeConfig.app.title }}
-      </h1>
     </div>
   </RouterLink>
 

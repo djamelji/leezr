@@ -103,7 +103,7 @@ export function createRealtimeClient(options) {
       _reconnectAttempts = 0
       _connected = true
       if (import.meta.env.DEV) {
-        console.log('[realtime] SSE connected', { companyId: options.companyId })
+        console.debug('[realtime] SSE connected', { companyId: options.companyId })
       }
       options.onConnected?.()
     })

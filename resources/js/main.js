@@ -2,6 +2,8 @@ import { createApp } from 'vue'
 import App from '@/App.vue'
 import { registerPlugins } from '@core/utils/plugins'
 import { initErrorReporter } from '@/core/runtime/errorReporter'
+import { startVersionPolling } from '@/utils/versionCheck'
+import { router } from '@/plugins/1.router'
 
 // Styles
 import '@core-scss/template/index.scss'
@@ -22,7 +24,13 @@ window.addEventListener('pageshow', event => {
   }
 })
 
-// ─── Chunk Resilience (ADR-045d + ADR-075 + ADR-046 F3) ──
+// ─── Chunk Resilience (ADR-045d + ADR-075 + ADR-046 F3 + ADR-330) ──
+// CRITICAL: Module-level flag — ensures handleChunkError fires ONCE per page load.
+// Multiple async components can fail simultaneously (e.g. Vuetify virtual modules after
+// Vite restart), each triggering a separate unhandledrejection. Without this flag,
+// each call would create its own retry timer → cascading reloads → multiple popups.
+let _chunkErrorHandled = false
+
 function reportChunkFailure(message) {
   try {
     const payload = JSON.stringify({
@@ -44,34 +52,16 @@ function reportChunkFailure(message) {
 }
 
 function handleChunkError(errorMessage) {
-  // ADR-046 F3: Log chunk failure before any reload
+  // ADR-330c: Single-fire — only the FIRST chunk error per page load takes action
+  if (_chunkErrorHandled) return
+  _chunkErrorHandled = true
+
   reportChunkFailure(errorMessage || 'Unknown chunk error')
 
-  const key = 'lzr:chunk-reload'
-  const last = Number(sessionStorage.getItem(key) || 0)
-  const now = Date.now()
-
-  if (now - last > 10_000) {
-    sessionStorage.setItem(key, String(now))
-    window.location.reload()
-
-    return
+  // Delegate to Blade's centralized overlay (single-fire guard + lzr:stale persistence).
+  if (typeof window.__lzrShowVersionOverlay === 'function') {
+    window.__lzrShowVersionOverlay()
   }
-
-  // 2nd failure within 10s — clear key so next manual refresh starts clean
-  sessionStorage.removeItem(key)
-
-  const el = document.createElement('div')
-
-  el.id = 'lzr-chunk-error'
-  el.innerHTML = `<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)">
-    <div style="background:#fff;padding:2rem;border-radius:8px;text-align:center;max-width:360px">
-      <h3 style="margin:0 0 .5rem">Application mise \u00e0 jour</h3>
-      <p style="margin:0 0 1rem;color:#666">Une nouvelle version est disponible.</p>
-      <button onclick="sessionStorage.removeItem('lzr:chunk-reload');location.href=location.pathname" style="padding:.5rem 1.5rem;border:none;border-radius:4px;background:#7367F0;color:#fff;cursor:pointer;font-size:1rem">Rafra\u00eechir</button>
-    </div>
-  </div>`
-  document.body.appendChild(el)
 }
 
 window.addEventListener('vite:preloadError', event => {
@@ -97,9 +87,61 @@ registerPlugins(app)
 app.mount('#app')
 
 // ─── Post-mount cleanup ──────────────────────────────────
-// If Vue mounted successfully, any chunk error overlay is stale — remove it.
-// Layout overlay: use .click() so the Vue handler resets the reactive refs.
-document.getElementById('lzr-chunk-error')?.remove()
+// Cancel the Blade failsafe timer — Vue mounted successfully.
+if (window.__LZR_BOOT_TIMER__) clearTimeout(window.__LZR_BOOT_TIMER__)
+
+// Layout overlays (nav drawer) — always clean up, unrelated to chunk errors.
 document.querySelectorAll('.layout-overlay.visible').forEach(el => {
   el.click()
 })
+
+// ADR-330c: Health check in 2 phases (replaces the unreliable immediate cleanup).
+// Phase 1 — router.isReady(): waits for initial route resolution. Route-level chunk
+//   errors have already fired _chunkErrorHandled / __lzrOverlayFired by this point.
+// Phase 2 — requestIdleCallback: waits for browser idle (no pending tasks).
+//   Covers sub-component lazy imports that fail after mount. 5s timeout as safety net.
+// Why not a fixed setTimeout? app.mount() is synchronous — it completes BEFORE async
+// fetch 404s (e.g., Vuetify virtual modules). A fixed timer risks running too early.
+router.isReady().then(() => {
+  const cleanup = () => {
+    if (_chunkErrorHandled || window.__lzrOverlayFired) return
+    document.getElementById('lzr-chunk-error')?.remove()
+    sessionStorage.removeItem('lzr:stale')
+  }
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(cleanup, { timeout: 5000 })
+  }
+  else {
+    setTimeout(cleanup, 3000)
+  }
+})
+
+// ADR-330: Start live version polling — detects server restarts and new deploys.
+startVersionPolling()
+
+// ─── Dev server restart detection (ADR-330) ────────────────
+// In dev mode, Vite HMR WebSocket disconnect = server restart.
+// Delayed activation (15s) — avoids false positives during initial HMR connection.
+// In production, import.meta.hot is undefined — this block is tree-shaken.
+if (import.meta.hot) {
+  setTimeout(() => {
+    let wsDisconnectTimer = null
+
+    import.meta.hot.on('vite:ws:disconnect', () => {
+      if (wsDisconnectTimer) return
+      wsDisconnectTimer = setTimeout(() => {
+        if (typeof window.__lzrShowVersionOverlay === 'function') {
+          window.__lzrShowVersionOverlay()
+        }
+      }, 5000)
+    })
+
+    import.meta.hot.on('vite:ws:connect', () => {
+      if (wsDisconnectTimer) {
+        clearTimeout(wsDisconnectTimer)
+        wsDisconnectTimer = null
+      }
+    })
+  }, 15000)
+}

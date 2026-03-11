@@ -23,6 +23,11 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15
 Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
 
+// ADR-330: Lightweight version endpoint for live version polling
+Route::get('/public/version', fn () => response()->json([
+    'version' => config('app.build_version', 'dev'),
+]))->middleware('throttle:60,1');
+
 // Public theme (primary color + typography for unauthenticated pages)
 Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:30,1');
 
