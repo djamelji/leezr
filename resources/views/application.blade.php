@@ -69,20 +69,19 @@
     // ADR-332 N1: Inject platform primary color for Vuetify fallback
     window.__PLATFORM_PRIMARY__ = '{{ $primaryColor }}';
 
-    // ADR-330: Overlay + smart refresh (solidified — single-fire guard).
-    // CRITICAL: __lzrOverlayFired ensures only ONE overlay ever appears per page load.
-    // Multiple script errors or chunk failures can call this function simultaneously.
-    var __lzrOverlayFired = false
+    // ADR-341: Overlay + smart refresh — sessionStorage-based single-fire guard.
+    // Uses sessionStorage instead of JS var so the guard SURVIVES page reloads.
+    // This is the ROOT FIX for the "5 popups in 3 minutes" reload loop.
+    var __lzrOverlayFired = sessionStorage.getItem('lzr:update-shown') === 'true'
 
     function __lzrShowVersionOverlay() {
-      // ADR-330c: Atomic single-fire guard — first caller wins, all others no-ops
+      // Guard: already shown (survives reloads via sessionStorage)
       if (__lzrOverlayFired) return
-      __lzrOverlayFired = true
-
-      // Mark app as stale (timestamp) — persists across navigations.
-      // Cleared by successful Vue boot (health check in main.js).
-      sessionStorage.setItem('lzr:stale', String(Date.now()))
       if (document.getElementById('lzr-chunk-error')) return
+      __lzrOverlayFired = true
+      sessionStorage.setItem('lzr:update-shown', 'true')
+      sessionStorage.setItem('lzr:stale', String(Date.now()))
+
       var overlay = document.createElement('div')
       overlay.id = 'lzr-chunk-error'
       overlay.innerHTML = '<style>@keyframes lzr-bar{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}</style>'
@@ -96,7 +95,8 @@
       document.body.appendChild(overlay)
     }
 
-    // ADR-330c: Smart refresh — poll server, then clean reload (no ?_r= parameter).
+    // ADR-341: Smart refresh — clear ALL version state, then clean reload.
+    // Clearing lzr:update-shown BEFORE reload allows the new page to detect future deploys.
     function __lzrSmartRefresh() {
       var btn = document.getElementById('lzr-chunk-btn')
       var msg = document.getElementById('lzr-chunk-msg')
@@ -107,8 +107,18 @@
 
       function tryReload() {
         fetch('/api/public/version', { cache: 'no-store' })
-          .then(function(r) { if (r.ok) location.replace(location.pathname); else setTimeout(tryReload, 1000) })
-          .catch(function() { setTimeout(tryReload, 1000) })
+          .then(function(r) {
+            if (r.ok) {
+              // Clear ALL version state — the new page starts fresh
+              sessionStorage.removeItem('lzr:update-shown')
+              sessionStorage.removeItem('lzr:stale')
+              sessionStorage.removeItem('lzr:version-mismatch')
+              location.replace(location.pathname)
+            } else {
+              setTimeout(tryReload, 2000)
+            }
+          })
+          .catch(function() { setTimeout(tryReload, 2000) })
       }
       tryReload()
     }

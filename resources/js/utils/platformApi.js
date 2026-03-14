@@ -46,7 +46,7 @@ export const $platformApi = ofetch.create({
     const clientVersion = import.meta.env.VITE_APP_VERSION
     if (!clientVersion || clientVersion === '__dev__') return
 
-    if (serverVersion !== clientVersion) {
+    if (serverVersion !== clientVersion && !sessionStorage.getItem('lzr:update-shown')) {
       sessionStorage.setItem('lzr:version-mismatch', serverVersion)
     }
   },

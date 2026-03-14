@@ -105,8 +105,13 @@ document.querySelectorAll('.layout-overlay.visible').forEach(el => {
 router.isReady().then(() => {
   const cleanup = () => {
     if (_chunkErrorHandled || window.__lzrOverlayFired) return
+
+    // ADR-341: Boot succeeded with new assets — clear ALL version state.
+    // This proves the reload worked: Vue mounted, router resolved, no chunk errors.
     document.getElementById('lzr-chunk-error')?.remove()
     sessionStorage.removeItem('lzr:stale')
+    sessionStorage.removeItem('lzr:update-shown')
+    sessionStorage.removeItem('lzr:version-mismatch')
   }
 
   if (typeof requestIdleCallback === 'function') {

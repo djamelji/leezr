@@ -56,14 +56,14 @@ export const $api = ofetch.create({
       }))
     }
 
-    // Build version mismatch detection
+    // Build version mismatch detection (ADR-341: deduped, respects overlay state)
     const serverVersion = response.headers.get('x-build-version')
     if (!serverVersion || serverVersion === 'dev') return
 
     const clientVersion = import.meta.env.VITE_APP_VERSION
     if (!clientVersion || clientVersion === '__dev__') return
 
-    if (serverVersion !== clientVersion) {
+    if (serverVersion !== clientVersion && !sessionStorage.getItem('lzr:update-shown')) {
       sessionStorage.setItem('lzr:version-mismatch', serverVersion)
     }
   },

@@ -9,11 +9,15 @@ import { safeRedirect } from '@/utils/safeRedirect'
 
 export const setupGuards = router => {
   router.beforeEach(async to => {
-    // Version mismatch check (ADR-045e)
+    // Version mismatch check (ADR-045e / ADR-341)
+    // Instead of an immediate reload (which loops), show the overlay once.
     const mismatch = sessionStorage.getItem('lzr:version-mismatch')
     if (mismatch) {
       sessionStorage.removeItem('lzr:version-mismatch')
-      window.location.reload()
+
+      if (typeof window.__lzrShowVersionOverlay === 'function') {
+        window.__lzrShowVersionOverlay()
+      }
 
       return false
     }
