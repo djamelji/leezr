@@ -302,7 +302,7 @@ const fmtDate = dateStr => {
               >
                 <AppTextField
                   v-model.number="form.price_monthly"
-                  :label="t('plans.monthlyPrice')"
+                  :label="t('plans.monthlyPriceHT')"
                   type="number"
                   step="0.01"
                   min="0"
@@ -316,7 +316,7 @@ const fmtDate = dateStr => {
               >
                 <AppTextField
                   v-model.number="form.price_yearly"
-                  :label="t('plans.yearlyPrice')"
+                  :label="t('plans.yearlyPriceHT')"
                   type="number"
                   step="0.01"
                   min="0"

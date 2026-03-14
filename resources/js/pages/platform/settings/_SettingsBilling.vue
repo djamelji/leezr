@@ -35,6 +35,11 @@ const defaults = {
   retry_intervals_days: [1, 3, 7],
   failure_action: 'suspend',
   addon_billing_interval: 'plan_aligned',
+  addon_deactivation_timing: 'end_of_period',
+  trial_expiry_notification_days: 3,
+  payment_method_expiry_check_days: 30,
+  reconciliation_lookback_days: 30,
+  default_billing_interval: 'monthly',
   admin_approval_required: false,
   allow_sepa: true,
   sepa_requires_trial: true,
@@ -201,6 +206,16 @@ const taxModeOptions = computed(() => [
 const addonBillingIntervalOptions = computed(() => [
   { title: t('platformSettings.billing.planAligned'), value: 'plan_aligned' },
   { title: t('platformSettings.billing.monthly'), value: 'monthly' },
+])
+
+const addonDeactivationTimingOptions = computed(() => [
+  { title: t('platformSettings.billing.deactivationImmediate'), value: 'immediate' },
+  { title: t('platformSettings.billing.deactivationEndOfPeriod'), value: 'end_of_period' },
+])
+
+const defaultBillingIntervalOptions = computed(() => [
+  { title: t('platformSettings.billing.monthly'), value: 'monthly' },
+  { title: t('platformSettings.billing.yearly'), value: 'yearly' },
 ])
 
 const sepaFirstFailureActionOptions = computed(() => [
@@ -414,6 +429,14 @@ const resetToDefaults = async () => {
                 :items="addonBillingIntervalOptions"
                 :hint="t('platformSettings.billing.addonBillingIntervalHint')"
                 persistent-hint
+                class="mb-4"
+              />
+              <AppSelect
+                v-model="form.addon_deactivation_timing"
+                :label="t('platformSettings.billing.addonDeactivationTiming')"
+                :items="addonDeactivationTimingOptions"
+                :hint="t('platformSettings.billing.addonDeactivationTimingHint')"
+                persistent-hint
               />
             </VCardText>
           </VCard>
@@ -547,6 +570,72 @@ const resetToDefaults = async () => {
           >
             {{ t('platformSettings.billing.trialUpgradeNote') }}
           </VAlert>
+        </VCardText>
+      </VCard>
+
+      <!-- ═══ Operational Parameters (ADR-341) ═══ -->
+      <VCard class="mb-6">
+        <VCardTitle class="d-flex align-center">
+          <VIcon
+            icon="tabler-settings"
+            class="me-2"
+          />
+          {{ t('platformSettings.billing.operationalSection') }}
+        </VCardTitle>
+
+        <VCardText>
+          <VRow>
+            <VCol
+              cols="12"
+              sm="6"
+              md="3"
+            >
+              <AppSelect
+                v-model="form.default_billing_interval"
+                :label="t('platformSettings.billing.defaultBillingInterval')"
+                :items="defaultBillingIntervalOptions"
+              />
+            </VCol>
+            <VCol
+              cols="12"
+              sm="6"
+              md="3"
+            >
+              <AppTextField
+                v-model.number="form.trial_expiry_notification_days"
+                :label="t('platformSettings.billing.trialExpiryNotificationDays')"
+                type="number"
+                :min="1"
+                :max="30"
+              />
+            </VCol>
+            <VCol
+              cols="12"
+              sm="6"
+              md="3"
+            >
+              <AppTextField
+                v-model.number="form.payment_method_expiry_check_days"
+                :label="t('platformSettings.billing.paymentMethodExpiryCheckDays')"
+                type="number"
+                :min="1"
+                :max="90"
+              />
+            </VCol>
+            <VCol
+              cols="12"
+              sm="6"
+              md="3"
+            >
+              <AppTextField
+                v-model.number="form.reconciliation_lookback_days"
+                :label="t('platformSettings.billing.reconciliationLookbackDays')"
+                type="number"
+                :min="1"
+                :max="365"
+              />
+            </VCol>
+          </VRow>
         </VCardText>
       </VCard>
 

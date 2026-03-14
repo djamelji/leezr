@@ -1,11 +1,11 @@
 <script setup>
 import { loadStripe } from '@stripe/stripe-js'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { invoiceStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
 import { useAnalytics } from '@/composables/useAnalytics'
 
 const { t } = useI18n()
-const route = useRoute()
 const router = useRouter()
 const store = useCompanyBillingStore()
 const { toast } = useAppToast()
@@ -25,6 +25,23 @@ const isCreatingIntent = ref(false)
 const isConfirming = ref(false)
 const paymentError = ref('')
 const paidCount = ref(0)
+const countdown = ref(10)
+let countdownTimer = null
+
+const startCountdown = () => {
+  countdown.value = 10
+  countdownTimer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(countdownTimer)
+      goToBilling()
+    }
+  }, 1000)
+}
+
+onBeforeUnmount(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
 
 // Stripe
 let stripe = null
@@ -65,13 +82,11 @@ const load = async () => {
     currency.value = outstanding.currency || 'EUR'
     savedCards.value = store.savedCards || []
 
-    // Pre-select from query param or all
-    const queryInvoices = route.query.invoices
-    if (queryInvoices) {
-      const ids = String(queryInvoices).split(',').map(Number).filter(Boolean)
-
+    // ADR-336: Pre-select from store (set by invoice list/detail page) or select all
+    const preSelected = store.consumePreSelectedInvoices()
+    if (preSelected.length > 0) {
       selectedIds.value = invoices.value
-        .filter(inv => ids.includes(inv.id))
+        .filter(inv => preSelected.includes(inv.id))
         .map(inv => inv.id)
     }
     else {
@@ -128,12 +143,6 @@ const selectedSavedCard = computed(() =>
 )
 
 const fmt = amount => formatMoney(amount, { currency: currency.value })
-
-const statusColor = status => {
-  const colors = { open: 'warning', overdue: 'error', uncollectible: 'error' }
-
-  return colors[status] || 'secondary'
-}
 
 const statusLabel = status => {
   const key = `companyBilling.pay.status${status?.charAt(0).toUpperCase()}${status?.slice(1)}`
@@ -213,6 +222,7 @@ const initiatePayment = async () => {
     if (result.mode === 'wallet_paid') {
       paidCount.value = result.paid_invoice_ids?.length || selectedIds.value.length
       step.value = 'success'
+      startCountdown()
       toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
       track('invoice_paid', { invoice_ids: result.paid_invoice_ids, amount: selectedTotal.value, method: 'wallet' })
 
@@ -313,6 +323,7 @@ const mountStripeElements = async result => {
       else {
         paidCount.value = backendResult.paid_invoice_ids?.length || 0
         step.value = 'success'
+        startCountdown()
         toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
         track('invoice_paid', { invoice_ids: backendResult.paid_invoice_ids, amount: selectedTotal.value, method: 'apple_google_pay' })
       }
@@ -426,6 +437,7 @@ const confirmPayment = async () => {
     else {
       paidCount.value = result.paid_invoice_ids?.length || 0
       step.value = 'success'
+      startCountdown()
       toast(t('companyBilling.pay.success', { count: paidCount.value }), 'success')
 
       const method = selectedMethod.value === 'new-card' ? 'card' : selectedMethod.value === 'new-sepa' ? 'sepa' : 'saved_card'
@@ -506,8 +518,11 @@ const goToBilling = () => {
       <h5 class="text-h5 mb-2">
         {{ t('companyBilling.pay.successTitle') }}
       </h5>
-      <p class="text-body-1 mb-4">
+      <p class="text-body-1 mb-2">
         {{ t('companyBilling.pay.success', { count: paidCount }) }}
+      </p>
+      <p class="text-body-2 text-disabled mb-4">
+        {{ t('companyBilling.pay.redirectCountdown', { seconds: countdown }) }}
       </p>
       <VBtn
         color="primary"
@@ -616,7 +631,7 @@ const goToBilling = () => {
                   </td>
                   <td>
                     <VChip
-                      :color="statusColor(inv.status)"
+                      :color="invoiceStatusColor(inv.status)"
                       size="x-small"
                     >
                       {{ statusLabel(inv.status) }}

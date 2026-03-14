@@ -11228,6 +11228,348 @@ Audit complet du système de paiement : 80% de l'infrastructure existait (Paymen
   - `resources/js/utils/versionCheck.js` — suppression isInGracePeriod, simplification showOverlay
   - `resources/js/plugins/1.router/index.js` — fallback location.replace au lieu de reload
 
+### ADR-331 — Invoice PDF professional rewrite (2026-03-12)
+
+- **Date** : 2026-03-12
+- **Contexte** : Le template PDF de facture (`invoice-pdf.blade.php`) était basique : pas de marges, police par défaut DomPDF, pas de mentions légales, apparence très différente de la page Vue `/company/billing/invoices/:id`.
+- **Décisions** :
+  1. **Réécriture complète** du template Blade pour correspondre visuellement à la page Vue (card-style, palette Vuexy #7367F0/#2F2B3D)
+  2. **Polices embarquées** — le PDF charge la police plateforme (Google Fonts ou @font-face local) pour que le rendu soit identique même sur un PC sans la police installée. `config/dompdf.php` → `enable_remote: true`
+  3. **Fallback résilient** — si le chargement de police échoue (réseau, cache DomPDF), le controller re-rend le PDF avec DejaVu Sans (police DomPDF intégrée). Zéro crash.
+  4. **Mentions légales françaises** — footer avec identité plateforme (SIRET, RCS, capital, TVA intracommunautaire) et conditions légales (délai de paiement, pénalités de retard art. L441-10, indemnité de recouvrement 40€ art. D441-5). Données depuis `config/billing.platform` via variables d'environnement.
+  5. **Marges professionnelles** — `@page { margin: 50px 55px 80px 55px }` avec footer positionné en position fixe
+  6. **Données enrichies** — affichage des paiements, annexes, avoirs, snapshot fiscal complet
+- **Conséquences** :
+  - PDF visuellement aligné avec la page web de détail facture
+  - Police garantie embarquée dans le PDF (pas de dépendance au poste client)
+  - Conformité commerciale française (mentions obligatoires)
+  - 5 tests InvoicePdfTest green (dont fallback police en environnement de test)
+- **Fichiers** :
+  - `resources/views/billing/invoice-pdf.blade.php` — template complet réécrit (~430 lignes)
+  - `app/Modules/Core/Billing/Http/CompanyBillingController.php` — typography + platformConfig + fallback
+  - `config/dompdf.php` — publié, `enable_remote: true`
+  - `config/billing.php` — identité légale plateforme (legal_name, siret, rcs, capital, address, email)
+
+---
+
+### ADR-332 — Descriptions de lignes facture localisées et enrichies
+
+- **Date** : 2026-03-13
+- **Contexte** : Les 18 points de création de lignes de facture utilisaient des descriptions anglaises hardcodées ("Credit for unused Pro plan", "Pro plan renewal", etc.) même pour les clients du market FR. Le `billing_snapshot` capturait `market_locale` mais ne l'utilisait jamais pour les descriptions.
+- **Décisions** :
+  1. Créer `InvoiceLineDescriptor` — service centralisé de génération de descriptions localisées (FR/EN)
+  2. Résoudre le locale via `$company->market->locale` ou `Market::where('key', $key)->value('locale')`
+  3. Enrichir les prorations avec dates et durée : "Crédit Pro non utilisé (13 avr. → 30 avr. — 18 j.)"
+  4. Accepter `CarbonInterface` (pas `Carbon`) pour compatibilité Carbon/CarbonImmutable
+  5. Ajouter `string $locale = 'fr-FR'` aux méthodes publiques de `PricingEngine`
+- **Conséquences** :
+  - Les factures sont désormais dans la langue du market du client
+  - Les prorations incluent le contexte temporel (dates, nb de jours)
+  - Rétro-compatible : les factures existantes gardent leurs descriptions anglaises (frozen dans InvoiceLine)
+- **Fichiers** :
+  - `app/Core/Billing/InvoiceLineDescriptor.php` — **créé** — service de descriptions localisées
+  - `app/Core/Billing/PricingEngine.php` — 9 descriptions + paramètre `$locale` sur 3 méthodes
+  - `app/Core/Billing/PlanChangeExecutor.php` — 2 descriptions proration
+  - `app/Console/Commands/BillingRenewCommand.php` — 2 descriptions (plan renewal, addon)
+  - `app/Core/Billing/Listeners/AddonBillingListener.php` — 1 description addon
+  - `app/Core/Billing/InvoiceIssuer.php` — 1 description coupon
+  - `app/Modules/Infrastructure/Auth/UseCases/RegisterCompanyUseCase.php` — 1 description plan
+  - `app/Modules/Infrastructure/Auth/Http/ConfirmRegistrationPaymentController.php` — 1 description plan
+  - `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — 2 callers passent locale
+  - `app/Core/Billing/CheckoutSessionActivator.php` — 1 caller passe locale
+  - `app/Modules/Infrastructure/Public/Http/PublicPlanController.php` — 1 caller passe locale
+
+---
+
+### ADR-333 — Fix TVA coherence + auto-charge paiement carte (2026-03-13)
+
+**Contexte :** Trois bugs critiques dans le système billing :
+1. `PlatformBillingPolicy.tax_mode` changé à `inclusive` par erreur ; `InvoiceIssuer::finalize()` et `PriceBreakdown` ne gèrent pas ce mode correctement → double taxation ou sous-taxation.
+2. Aucun auto-charge carte après finalisation de facture ; seul le SEPA avec `preferred_debit_day` est géré. Les factures proration (plan change) et addon restent `open` indéfiniment.
+3. `display_number` absent de la liste JSON des factures (annexes affichées sans suffixe).
+
+**Décisions :**
+- D1 : `PriceBreakdown` délègue à `TaxResolver::compute()` au lieu de hardcoder la formule exclusive. Le `total` dépend du `tax_mode` : exclusive → `subtotal + tax`, inclusive → `subtotal`.
+- D2 : `InvoiceIssuer::finalize()` calcule le total en respectant `tax_mode` (même logique que D1).
+- D3 : Migration corrective : reset `tax_mode='exclusive'`, recalcule les factures affectées (INV-09..12).
+- D4 : Nouveau `InvoiceAutoChargeService` — extrait le pattern de charge de `BillingRenewCommand` en service réutilisable. Pipeline : guard → SEPA check → adapter.collectInvoice → Payment.updateOrCreate.
+- D5 : Auto-charge intégré dans `PlanChangeExecutor::schedule()`, `executeScheduled()`, `AddonBillingListener`, et `BillingRenewCommand` (refactoré).
+- D6 : `Invoice` model ajoute `display_number` aux `$appends` pour inclusion automatique dans le JSON.
+- D7 : Bouton retry dans la liste factures cohérent avec la page détail (`open` + `overdue`).
+
+**Contrainte critique :** Les appels Stripe DOIVENT être exécutés HORS transaction DB. `InvoiceAutoChargeService::attempt()` est appelé après que les transactions DB ont commité.
+
+**Conséquences :**
+- Le calcul TVA est correct quel que soit le `tax_mode` (exclusive ou inclusive)
+- Tous les flux créant des factures (renouvellement, plan change, addon) tentent automatiquement le paiement carte
+- Les factures annexes s'affichent correctement dans toutes les vues
+- Convention documentée : les prix plans sont TOUJOURS HT (B2B France)
+
+**Fichiers :**
+- `app/Core/Billing/DTOs/PriceBreakdown.php` — fix calcul TVA mode-aware
+- `app/Core/Billing/InvoiceIssuer.php` — fix total computation dans finalize()
+- `app/Core/Billing/Invoice.php` — ajout `display_number` aux `$appends`
+- `app/Core/Billing/InvoiceAutoChargeService.php` — **créé** — service auto-charge
+- `app/Core/Billing/PlanChangeExecutor.php` — auto-charge après execute() + méthode `autoChargeLatestInvoice`
+- `app/Core/Billing/Listeners/AddonBillingListener.php` — auto-charge après finalize
+- `app/Console/Commands/BillingRenewCommand.php` — refactoré vers InvoiceAutoChargeService, imports nettoyés
+- `resources/js/pages/company/billing/_BillingInvoices.vue` — display_number + retry button cohérent
+- `database/migrations/2026_03_13_000001_fix_tax_mode_and_recalculate_invoices.php` — **créé** — corrective
+
+---
+
+### ADR-334 — Fix wallet payment visibility + retry button redirect (2026-03-13)
+
+**Contexte :** Après ADR-333, deux problèmes UX restaient : (1) INV-2026-000013, payée entièrement par wallet credit, affichait "Aucun paiement enregistré" sur la page détail et le PDF — trompeur pour une facture `paid`. (2) Le bouton "Réessayer le paiement" dans la liste des factures appelait `retryInvoice()` → `InvoicePayNowService::payNow()` (wallet-only), retournant "Wallet credit applied but insufficient" sans option carte. L'ADR-258 avait prescrit la redirection vers `/company/billing/pay?invoices={id}`, mais seule la page détail `[id].vue` avait été mise à jour.
+
+**Décisions :**
+1. **D1** — `_BillingInvoices.vue` : remplacer `retryInvoice()` (appel API wallet-only) par `goToPay()` (redirect vers `/company/billing/pay?invoices={id}`), alignement ADR-258
+2. **D2** — `invoices/[id].vue` : dans la section "Paiements", afficher le wallet credit comme première ligne du tableau quand `wallet_credit_applied > 0` (montant, statut "Réussi", provider "Crédit portefeuille", date = paid_at ou finalized_at)
+3. **D3** — `invoice-pdf.blade.php` : même logique dans le PDF — wallet credit affiché comme entrée de paiement dans le tableau, condition d'affichage élargie pour inclure `wallet_credit_applied > 0`
+4. **D4** — Clés i18n existantes réutilisées (`companyBilling.invoiceDetail.walletCredit`), pas de nouvelles clés nécessaires
+
+**Conséquences :**
+- Les factures payées uniquement par wallet affichent maintenant un paiement visible (page + PDF)
+- Le bouton retry depuis la liste redirige vers la page de paiement complète (carte + wallet + SEPA)
+- Plus de message "Wallet credit applied but insufficient" depuis la liste des factures
+
+**Fichiers :**
+- `resources/js/pages/company/billing/_BillingInvoices.vue` — retry → redirect pay page
+- `resources/js/pages/company/billing/invoices/[id].vue` — wallet credit dans section paiements
+- `resources/views/billing/invoice-pdf.blade.php` — wallet credit dans section paiements PDF
+
+---
+
+### ADR-335 — Wallet credit FIFO breakdown + failed payments + padding UX (2026-03-09)
+
+**Contexte :**
+Trois problèmes UX sur la page détail facture (`/company/billing/invoices/:id`) :
+1. **Wallet credit opaque** : quand le portefeuille paie une facture, le client voit "Crédit portefeuille : -20,59 €" sans savoir d'où vient l'argent (downgrade credit, refund, etc.)
+2. **Paiements échoués invisibles** : `InvoiceAutoChargeService` ne créait un `Payment` record que sur succès — les tentatives échouées n'étaient pas tracées
+3. **Padding manquant** : `VCardText class="pa-0"` sur les sections paiements/avoirs/annexes → visuellement tassé
+
+**Décisions :**
+- D1 : Ajout `WalletLedger::computeFifoBreakdown()` — algorithme FIFO qui trace quelles transactions credit ont financé un debit wallet donné
+- D2 : Le breakdown est stocké dans `CompanyWalletTransaction.metadata.sources` au moment du `finalize()` dans `InvoiceIssuer`
+- D3 : `InvoiceAutoChargeService` enregistre un `Payment` avec `status='failed'` sur chaque tentative échouée (catch + résultat non-succeeded)
+- D4 : Les failed payments sont visibles sur la **page** facture mais **exclus du PDF** (filtre `where('status', '!=', 'failed')`)
+- D5 : L'API `invoiceDetail()` expose `wallet_credit_sources` (array FIFO) pour le frontend
+- D6 : Padding PDF : marges internes sur les section-cards (`margin: 6px 8px`)
+- D7 : Descriptions wallet enrichies via `InvoiceLineDescriptor::walletProrationCredit()` — noms de plans, dates, jours (ex: "Crédit prorata Business → Starter (13 mars → 31 mars — 19 j.)")
+- D8 : Fallback FIFO pour factures pré-ADR-335 : `reconstructFifoBreakdown()` replay credits/debits antérieurs
+- D9 : Sous-lignes breakdown alignées sur 4 colonnes (pas de colspan) — page + PDF
+
+**Conséquences :**
+- Le client voit la ventilation détaillée de chaque crédit wallet utilisé (origine, montant, date, période, jours)
+- Les tentatives de paiement échouées sont tracées et visibles côté client (transparence)
+- Les factures PDF restent "propres" (pas de failed payments, pas de bruit)
+- Le breakdown est calculé une seule fois au finalize (pas de recalcul à chaque lecture) ; fallback pour les factures historiques
+- Les factures existantes (avant ADR-335) affichent le breakdown grâce au recalcul FIFO à la volée
+
+**Fichiers :**
+- `app/Core/Billing/WalletLedger.php` — `+computeFifoBreakdown()`
+- `app/Core/Billing/InvoiceIssuer.php` — stockage breakdown dans metadata au finalize
+- `app/Core/Billing/InvoiceAutoChargeService.php` — `+recordFailedPayment()`, appels dans catch + non-succeeded
+- `app/Core/Billing/InvoiceLineDescriptor.php` — `+walletProrationCredit()` descriptions riches
+- `app/Core/Billing/PlanChangeExecutor.php` — description wallet enrichie avec noms/dates/jours
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — `+walletCreditSources()` public + `reconstructFifoBreakdown()` fallback
+- `app/Modules/Core/Billing/Http/CompanyBillingController.php` — filtre failed du PDF, `walletCreditSources()` partagé
+- `resources/js/pages/company/billing/invoices/[id].vue` — breakdown FIFO 4 colonnes, failed payments visibles
+- `resources/views/billing/invoice-pdf.blade.php` — breakdown wallet 4 colonnes + marges section-cards
+- `resources/js/plugins/i18n/locales/{fr,en}.json` — clés i18n wallet/failed
+
+---
+
+### ADR-336 — Provider-agnostic auto-charge (résolution depuis CompanyPaymentProfile) (2026-03-09)
+
+**Contexte :**
+Les factures de proration (upgrade/downgrade) restaient impayées même quand la company avait une carte par défaut. Cause : `InvoiceAutoChargeService` et `DunningRetryStrategy` lisaient `subscription.provider` — qui valait `'internal'` pour les subscriptions créées via registration (trial, free, seeder). Le guard `if ($provider === 'internal') return 'skipped'` bloquait tout auto-charge. De plus, 5 copies de `resolveAdapter()` avec un `match` hardcodé `'stripe' => ...` rendaient l'ajout de nouveaux providers impossible sans modifier 5 fichiers.
+
+**Décisions :**
+- D1 : Ajout `PaymentGatewayManager::adapterFor(string $providerKey)` — résolution centralisée via le Manager Laravel (IoC-aware, mockable)
+- D2 : `InvoiceAutoChargeService::attempt()` fallback sur `CompanyPaymentProfile.provider_key` quand `subscription.provider` est `internal` ou `null`
+- D3 : `DunningRetryStrategy::attemptProviderPayment()` et `attemptSplitPayment()` — même fallback, résolution adapter par profil
+- D4 : Suppression de 5 copies de `resolveAdapter()` (hardcodé) au profit de `PaymentGatewayManager::adapterFor()`
+- D5 : `createStripeDriver()` et `createInternalDriver()` utilisent `app()` au lieu de `new` — permet le mock en tests
+
+**Conséquences :**
+- Les subscriptions `internal` sont maintenant auto-chargées si la company a un profil de paiement
+- L'ajout d'un nouveau provider (ex: PayPal) ne nécessite qu'un `createPaypalDriver()` dans `PaymentGatewayManager`
+- Le dunning itère les profils par `provider_key` — chaque méthode peut utiliser un provider différent
+- Rétro-compatible : les subscriptions avec `provider='stripe'` continuent de fonctionner (fast path)
+
+**Fichiers :**
+- `app/Core/Billing/PaymentGatewayManager.php` — `+adapterFor()`, `createStripeDriver`/`createInternalDriver` via `app()`
+- `app/Core/Billing/InvoiceAutoChargeService.php` — fallback CompanyPaymentProfile, suppression `resolveAdapter`
+- `app/Core/Billing/Dunning/DunningRetryStrategy.php` — fallback CompanyPaymentProfile, suppression `resolveAdapter`
+- `app/Core/Billing/AdminAdvancedMutationService.php` — `PaymentGatewayManager::adapterFor()`
+- `app/Modules/Platform/Billing/PaymentGovernanceCrudService.php` — `PaymentGatewayManager::adapterFor()`
+- `app/Modules/Infrastructure/Webhooks/Http/PaymentWebhookController.php` — `PaymentGatewayManager::adapterFor()`
+
+---
+
+### ADR-337 — Wallet credit TTC lors d'un downgrade (2026-03-13)
+
+**Contexte :**
+Un aller-retour downgrade + upgrade coûtait la TVA à l'utilisateur. Cause : le crédit wallet lors d'un downgrade était stocké en HT (`abs(proration.net)`), mais la facture de l'upgrade est émise en TTC (subtotal + TVA). Le wallet ne couvrait que le montant HT → 5,80€ de TVA perdus sur un round-trip.
+
+**Décisions :**
+- D1 : Le crédit wallet lors d'un downgrade inclut désormais la TVA (`creditHt + TaxResolver::compute(creditHt, rateBps)`)
+- D2 : En mode `tax_mode='inclusive'`, le crédit reste inchangé (le subtotal contient déjà la taxe)
+- D3 : `CompanyBillingReadService::planChangePreview()` — même calcul TTC pour le `estimatedWalletCreditAdded`
+
+**Conséquences :**
+- Un round-trip downgrade+upgrade ne coûte plus la différence de TVA
+- Le wallet reflète fidèlement le montant TTC que la company avait payé initialement
+
+**Fichiers :**
+- `app/Core/Billing/PlanChangeExecutor.php` — crédit wallet TTC (lignes 237-249)
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — preview wallet credit TTC
+
+---
+
+### ADR-338 — Next invoice preview: sources FIFO du crédit wallet (2026-03-13)
+
+**Contexte :**
+Après un changement de plan (downgrade), le crédit de proration s'affiche comme "Crédit compte: -29,04€" dans la prochaine facture estimée, sans aucune indication de l'origine du crédit. L'utilisateur voit un montant réduit sans comprendre pourquoi.
+
+**Décisions :**
+- D1 : Réutiliser `WalletLedger::computeFifoBreakdown()` dans `nextInvoicePreview()` pour ajouter `estimated_wallet_credit_sources`
+- D2 : Afficher les sources en sous-items indentés (`VListItem` + `ps-8` + `text-caption text-disabled`) sous la ligne "Crédit compte"
+- D3 : Les descriptions viennent directement de la BD (déjà localisées à l'écriture par `InvoiceLineDescriptor`) — aucune clé i18n supplémentaire
+
+**Conséquences :**
+- L'utilisateur voit l'origine de chaque crédit (ex: "Crédit prorata Business → Pro (13 mars – 31 mars 2026, 18 jours)")
+- Pattern identique à la page détail facture (sous-rows wallet FIFO, ADR-335)
+- Coût : 2 queries supplémentaires uniquement quand le wallet a un solde > 0
+
+**Fichiers :**
+- `app/Core/Billing/ReadModels/CompanyBillingReadService.php` — +`estimated_wallet_credit_sources` via `computeFifoBreakdown`
+- `resources/js/pages/company/billing/_BillingNextInvoice.vue` — sous-items sources indentés
+- `tests/Feature/BillingNextInvoicePreviewTest.php` — +2 tests (sources présentes / absentes)
+
+---
+
+### ADR-339 — Invariant amount_due=0 quand status=paid + fix nom module Tracking (2026-03-13)
+
+**Contexte :**
+Plusieurs chemins de code marquaient une facture comme `status='paid'` sans remettre `amount_due` à 0. Résultat : facture affichée "Payée" avec un solde restant (ex: 5,76€). Le module `logistics_tracking` s'affichait aussi comme "Tracking" au lieu de "Real-Time Tracking" dans le manifeste.
+
+**Décisions :**
+- D1 : Invariant strict — chaque `'status' => 'paid'` DOIT inclure `'amount_due' => 0`
+- D2 : Corrigé dans 6 fichiers : `InvoiceAutoChargeService`, `StripeEventProcessor`, `DunningEngine`, `AdminInvoiceMutationService`, `AutoRepairEngine`, `InvoicePayNowService`
+- D3 : Module `TrackingModule` renommé `name: 'Real-Time Tracking'`
+
+**Conséquences :**
+- Plus d'incohérence entre statut payé et montant dû
+- L'affichage plateforme du module est correct
+
+**Fichiers :**
+- `app/Core/Billing/InvoiceAutoChargeService.php` — +`amount_due => 0`
+- `app/Core/Billing/Stripe/StripeEventProcessor.php` — +`amount_due => 0`
+- `app/Core/Billing/DunningEngine.php` — +`amount_due => 0`
+- `app/Core/Billing/AdminInvoiceMutationService.php` — +`amount_due => 0`
+- `app/Core/Billing/AutoRepairEngine.php` — +`amount_due => 0`
+- `app/Core/Billing/InvoicePayNowService.php` — +`amount_due => 0` (2 occurrences)
+- `app/Modules/Logistics/Tracking/TrackingModule.php` — `name: 'Real-Time Tracking'`
+
+---
+
+### ADR-340 — Cohérence billing UX : TVA, HT/TTC, résiliation, idempotence (2026-03-13)
+
+**Contexte :**
+L'audit exhaustif de tous les flux billing (addon, plan, registration, résiliation) a révélé un manque d'homogénéité systémique : prix HT affichés sans mention, dialogs transactionnels sans breakdown fiscal, dialog de résiliation vide d'infos financières, re-souscription addon créant des factures en double.
+
+**Décisions :**
+- D1 : Quote addon enrichi — le backend retourne `subtotal`, `tax_rate_bps`, `tax_amount`, `total_ttc`, `tax_mode` en plus du quote existant
+- D2 : Module index retourne `addon_subscriptions` actives (montant, devise, interval, period_end) pour le dialog de désactivation
+- D3 : Nouvel endpoint `GET /billing/subscription/cancel-preview` — retourne timing, period_end, plan, addons actifs, solde wallet
+- D4 : Guard d'idempotence dans `AddonBillingListener` — skip si addon déjà facturé pour la période en cours (hors void)
+- D5 : Cancel dialog enrichi — timing politique, date fin, impact addons, solde wallet conservé
+- D6 : Quote dialog avec breakdown fiscal — sous-total HT, taxe (X%), total TTC, alerte facturation immédiate
+- D7 : Deactivation dialog enrichi — date fin addon, pas de remboursement proraté
+- D8 : Badge "(HT)" sur tous les prix catalogue — registration (plan+addons), company (plan+billing), platform (plans index+edit, dashboard KPIs)
+- D9 : Labels "(HT)" sur les champs de saisie prix plan côté platform admin
+
+**Conséquences :**
+- Tous les prix sont clairement identifiés HT ou TTC selon le contexte
+- Les dialogs transactionnels montrent le breakdown fiscal complet
+- Pas de double facturation lors de re-souscription addon
+- Le dialog de résiliation informe des conséquences financières
+
+**Fichiers :**
+- `app/Modules/Core/Modules/Http/ModuleQuoteController.php` — enrichissement TVA
+- `app/Modules/Core/Modules/Http/CompanyModuleController.php` — addon_subscriptions dans index()
+- `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — cancelPreview() + cancel() enrichi
+- `app/Core/Billing/Listeners/AddonBillingListener.php` — guard idempotence
+- `routes/company.php` — route cancel-preview
+- `resources/js/core/stores/module.js` — _addonSubscriptions + getAddonSub
+- `resources/js/pages/company/modules/index.vue` — quote TTC + deactivation enrichi
+- `resources/js/pages/company/billing/_BillingCancelDialog.vue` — infos financières
+- `resources/js/pages/company/billing/_BillingOverview.vue` — openCancelDialog avec preview
+- `resources/js/pages/company/billing/_BillingCards.vue` — badge HT
+- `resources/js/pages/company/plan.vue` — badge HT
+- `resources/js/pages/register/_RegisterStepPlan.vue` — badge HT
+- `resources/js/pages/register/_RegisterStepAddons.vue` — badge HT
+- `resources/js/pages/platform/plans/index.vue` — badge HT
+- `resources/js/pages/platform/plans/[key].vue` — labels prix HT
+- `resources/js/pages/platform/billing/_BillingDashboard.vue` — KPIs HT
+- `resources/js/plugins/i18n/locales/en.json` — +14 clés i18n
+- `resources/js/plugins/i18n/locales/fr.json` — +14 clés i18n
+- `tests/Feature/BillingLotJTest.php` — 4 tests (34 assertions)
+
+---
+
+## ADR-341 : Billing hardening — zero hardcode, grace period, UX coherence
+
+- **Date** : 2026-03-13
+- **Contexte** : Audit approfondi (90+ fichiers) post-ADR-340 révèle 15 valeurs hardcodées, absence de grace period addon, status colors divergents, et i18n cassé dans le quote dialog modules.
+- **Décisions** :
+  1. **5 colonnes PlatformBillingPolicy** : `addon_deactivation_timing` (immediate|end_of_period), `trial_expiry_notification_days` (default 3), `payment_method_expiry_check_days` (default 30), `reconciliation_lookback_days` (default 30), `default_billing_interval` (monthly|yearly)
+  2. **Grace period addon** : Quand `addon_deactivation_timing = end_of_period`, `deactivated_at = activated_at + interval`. Le scope `active()` inclut les addons en grace period (`deactivated_at > now()`). La réactivation pendant grace period clear `deactivated_at` sans créer de nouvelle facture.
+  3. **Préservation `activated_at`** : Réactivation d'un addon déjà existant ne reset plus `activated_at` si l'addon est juste désactivé (deactivated_at ≠ null).
+  4. **Quote endpoint enrichi** : Retourne `already_invoiced` (bool) et `grace_period` (bool) pour guider le frontend.
+  5. **6 hardcodes backend supprimés** : trial expiry notification (BillingCheckTrialExpiringCommand), reconciliation lookback (ReconciliationEngine ×2), default interval (SubscriptionMutationController, BillingCheckoutController, CompanyBillingController), dead code `started_at` (ConfirmRegistrationPaymentController).
+  6. **Status colors centralisés** : `utils/billing.js` — source unique pour `invoiceStatusColor()` et `subscriptionStatusColor()`. Remplace 4 mappings locaux divergents. `open` = warning partout.
+  7. **Math.round standardisé** : `plan.vue` aligne sur `Math.round(price_yearly/12 * 100)` au lieu de `Math.floor(...) * 100`.
+  8. **formatMoney avec currency** : Dashboard KPIs passent toujours `{ currency: m.currency || 'EUR' }`.
+  9. **i18n corrigé** : `companyBilling.planChangePreview.*` → `companyPlan.planChangePreview.*` (3 clés). 14 nouvelles clés i18n FR+EN.
+  10. **Frontend reactivation dialog** : Dialog spécifique "Réactiver sans frais" pour les addons en grace period, au lieu du quote dialog avec prix.
+  11. **Crédit proraté wallet (immediate)** : Quand `addon_deactivation_timing = immediate`, le listener calcule le prorata jours restants/jours totaux × montant et crédite le wallet de la company. Formule : `amount_cents × remaining_days / total_period_days`.
+  12. **Deactivation preview endpoint** : `GET /api/modules/{key}/deactivation-preview` — retourne timing, montant crédit proraté (HT + TVA + TTC), date de fin, infos addon. Permet au frontend d'afficher un preview avant confirmation.
+  13. **Frontend deactivation preview** : Le dialog de désactivation fetch le preview et affiche conditionnellement : (immediate) crédit proraté + désactivation immédiate, (end_of_period) date de fin + pas de remboursement, (inclus dans plan) aucun impact billing.
+- **Conséquences** : Moteur billing configurable à 100% via PlatformBillingPolicy. Plus aucun comportement billing hardcodé dans le code. Grace period addon protège contre la double facturation. Désactivation immédiate = crédit proraté automatique sur wallet. Preview UX avant toute action (activation = quote, désactivation = credit preview). 14 tests, 76 assertions. Settings UI opérationnel avec 5 nouveaux paramètres.
+- **Fichiers** (27) :
+  - `database/migrations/2026_03_13_100001_add_billing_hardening_columns_to_platform_billing_policies.php` (NEW)
+  - `app/Core/Billing/PlatformBillingPolicy.php`
+  - `app/Modules/Platform/Billing/Http/PlatformBillingPolicyController.php`
+  - `app/Core/Billing/CompanyAddonSubscription.php`
+  - `app/Core/Billing/Listeners/AddonCreditListener.php`
+  - `app/Core/Billing/Listeners/AddonBillingListener.php`
+  - `app/Modules/Core/Modules/Http/ModuleQuoteController.php`
+  - `app/Modules/Core/Modules/Http/CompanyModuleController.php`
+  - `app/Console/Commands/BillingCheckTrialExpiringCommand.php`
+  - `app/Core/Billing/ReconciliationEngine.php`
+  - `app/Modules/Core/Billing/Http/SubscriptionMutationController.php`
+  - `app/Modules/Core/Billing/Http/BillingCheckoutController.php`
+  - `app/Modules/Core/Billing/Http/CompanyBillingController.php`
+  - `app/Modules/Infrastructure/Auth/Http/ConfirmRegistrationPaymentController.php`
+  - `resources/js/pages/company/modules/index.vue`
+  - `resources/js/pages/platform/settings/_SettingsBilling.vue`
+  - `resources/js/pages/platform/billing/_BillingDashboard.vue`
+  - `resources/js/pages/company/plan.vue`
+  - `resources/js/pages/company/billing/_BillingInvoices.vue`
+  - `resources/js/pages/company/billing/invoices/[id].vue`
+  - `resources/js/pages/company/billing/pay.vue`
+  - `resources/js/pages/company/billing/_BillingOverview.vue`
+  - `resources/js/utils/billing.js` (NEW)
+  - `resources/js/core/stores/module.js`
+  - `app/Modules/Core/Modules/Http/ModuleDeactivationPreviewController.php` (NEW)
+  - `routes/company.php`
+  - `resources/js/plugins/i18n/locales/en.json`
+  - `resources/js/plugins/i18n/locales/fr.json`
+  - `tests/Feature/BillingLotJTest.php`
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

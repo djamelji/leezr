@@ -6,7 +6,10 @@ use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\Subscription;
+use App\Core\Billing\InvoiceAutoChargeService;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\WalletLedger;
 use App\Core\Events\ModuleEnabled;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
@@ -66,19 +69,40 @@ class AddonBillingListener
             ->where('is_current', 1)
             ->first();
 
-        $interval = $subscription?->interval ?? 'monthly';
+        $interval = $subscription?->interval ?? (PlatformBillingPolicy::instance()->default_billing_interval ?? 'monthly');
+
+        // ADR-341: Grace period guard — if addon has future deactivated_at, just reactivate (clear deactivated_at)
+        $existingAddon = CompanyAddonSubscription::where('company_id', $company->id)
+            ->where('module_key', $moduleKey)
+            ->first();
+
+        if ($existingAddon && $existingAddon->deactivated_at && $existingAddon->deactivated_at->gt(now())) {
+            $existingAddon->update(['deactivated_at' => null]);
+            Log::channel('billing')->info('Addon reactivated during grace period — no new invoice', [
+                'company_id' => $company->id,
+                'module_key' => $moduleKey,
+            ]);
+
+            return;
+        }
 
         // Phase 1: Create/update addon subscription (inside transaction)
-        DB::transaction(function () use ($company, $moduleKey, $amount, $interval) {
+        DB::transaction(function () use ($company, $moduleKey, $amount, $interval, $existingAddon) {
+            $data = [
+                'amount_cents' => $amount,
+                'currency' => WalletLedger::ensureWallet($company)->currency,
+                'interval' => $interval,
+                'deactivated_at' => null,
+            ];
+
+            // ADR-341: Preserve original activated_at on reactivation
+            if (! $existingAddon || $existingAddon->deactivated_at !== null) {
+                $data['activated_at'] = now();
+            }
+
             CompanyAddonSubscription::updateOrCreate(
                 ['company_id' => $company->id, 'module_key' => $moduleKey],
-                [
-                    'amount_cents' => $amount,
-                    'currency' => WalletLedger::ensureWallet($company)->currency,
-                    'interval' => $interval,
-                    'activated_at' => now(),
-                    'deactivated_at' => null,
-                ],
+                $data,
             );
         });
 
@@ -88,6 +112,24 @@ class AddonBillingListener
                 'company_id' => $company->id,
                 'module_key' => $moduleKey,
                 'amount' => $amount,
+            ]);
+
+            return;
+        }
+
+        // ADR-340: Idempotency guard — skip if addon already invoiced for current period
+        $existingAddonInvoice = Invoice::whereHas('lines', fn ($q) => $q->where('module_key', $moduleKey))
+            ->where('company_id', $company->id)
+            ->where('period_start', '<=', now())
+            ->where('period_end', '>=', now())
+            ->whereNotIn('status', ['void'])
+            ->first();
+
+        if ($existingAddonInvoice) {
+            Log::channel('billing')->info('Addon already invoiced for current period — skipping', [
+                'company_id' => $company->id,
+                'module_key' => $moduleKey,
+                'existing_invoice_id' => $existingAddonInvoice->id,
             ]);
 
             return;
@@ -113,16 +155,21 @@ class AddonBillingListener
             ? InvoiceIssuer::createAnnexeDraft($mainInvoice, $company, $periodStart, $periodEnd)
             : InvoiceIssuer::createDraft($company, $subscription?->id, $periodStart, $periodEnd);
 
+        $desc = InvoiceLineDescriptor::resolve($company->market?->locale ?? 'fr-FR');
+
         InvoiceIssuer::addLine(
             $invoice,
             'addon',
-            "{$moduleName} addon",
+            $desc->addon($moduleName),
             $amount,
             1,
             moduleKey: $moduleKey,
         );
 
         $invoice = InvoiceIssuer::finalize($invoice);
+
+        // ADR-333: Auto-charge addon invoice (OUTSIDE transaction)
+        InvoiceAutoChargeService::attempt($invoice, $subscription);
 
         Log::channel('billing')->info('Addon activation invoice created', [
             'company_id' => $company->id,

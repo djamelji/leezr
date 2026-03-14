@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Notifications\Billing\TrialExpiring;
 use Illuminate\Console\Command;
@@ -9,7 +10,7 @@ use Illuminate\Contracts\Console\Isolatable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * ADR-272: Check for subscriptions with trials expiring within 3 days.
+ * ADR-272/341: Check for subscriptions with trials expiring within configurable days.
  *
  * Dispatches TrialExpiring notification to company owner.
  * Idempotent: stores notification flag in subscription metadata.
@@ -18,12 +19,13 @@ class BillingCheckTrialExpiringCommand extends Command implements Isolatable
 {
     protected $signature = 'billing:check-trial-expiring {--dry-run}';
 
-    protected $description = 'Notify company owners about trials expiring in 3 days';
+    protected $description = 'Notify company owners about expiring trials';
 
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
-        $threshold = now()->addDays(3);
+        $days = PlatformBillingPolicy::instance()->trial_expiry_notification_days ?? 3;
+        $threshold = now()->addDays($days);
 
         $subscriptions = Subscription::where('status', 'trialing')
             ->where('is_current', 1)
@@ -38,7 +40,7 @@ class BillingCheckTrialExpiringCommand extends Command implements Isolatable
                 return empty($meta['trial_expiry_notified']);
             });
 
-        $this->info("Found {$subscriptions->count()} trial(s) expiring within 3 days.");
+        $this->info("Found {$subscriptions->count()} trial(s) expiring within {$days} days.");
         $notified = 0;
 
         foreach ($subscriptions as $subscription) {

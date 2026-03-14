@@ -257,14 +257,14 @@ const planButtonLabel = plan => {
 
 const displayPrice = (plan, annual) => {
   const cents = annual ? plan.price_yearly : plan.price_monthly * 100
-  const monthlyFromAnnual = annual ? Math.floor(plan.price_yearly / 12) * 100 : plan.price_monthly * 100
+  const monthlyFromAnnual = annual ? Math.round(plan.price_yearly / 12 * 100) : plan.price_monthly * 100
 
   return formatMoney(annual ? monthlyFromAnnual : cents)
 }
 
 const planMonthlyDisplay = plan => {
   if (annualToggle.value)
-    return formatMoney(Math.floor(plan.price_yearly / 12) * 100)
+    return formatMoney(Math.round(plan.price_yearly / 12 * 100))
 
   return formatMoney(plan.price_monthly * 100)
 }
@@ -427,7 +427,7 @@ const estimatedInvoice = computed(() => {
               <h3 class="text-body-1 text-high-emphasis font-weight-medium mb-1">
                 <template v-if="currentInterval === 'yearly'">
                   <span class="me-2">
-                    {{ formatMoney(Math.floor(currentPlan.price_yearly / 12) * 100) }} / {{ t('common.monthly').toLowerCase() }}
+                    {{ formatMoney(Math.round(currentPlan.price_yearly / 12 * 100)) }} / {{ t('common.monthly').toLowerCase() }}
                   </span>
                   <span class="text-body-2 text-disabled">
                     ({{ formatMoney(currentPlan.price_yearly * 100) }} / {{ t('common.annually').toLowerCase() }})
@@ -706,6 +706,7 @@ const estimatedInvoice = computed(() => {
                     {{ planMonthlyDisplay(plan) }}
                   </span>
                   <span class="text-body-1 font-weight-medium">{{ t('common.perMonth') }}</span>
+                  <span class="text-caption text-disabled ms-1">{{ t('common.exclTax') }}</span>
                 </div>
 
                 <VList
@@ -729,9 +730,9 @@ const estimatedInvoice = computed(() => {
                   </VListItem>
                 </VList>
 
-                <!-- ADR-287: Trial badge -->
+                <!-- ADR-287: Trial badge — only for new subscriptions, not upgrades/downgrades -->
                 <VChip
-                  v-if="plan.trial_days > 0 && plan.key !== currentPlanKey"
+                  v-if="plan.trial_days > 0 && !sub"
                   color="info"
                   variant="tonal"
                   size="small"

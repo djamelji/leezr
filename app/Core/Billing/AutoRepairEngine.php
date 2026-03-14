@@ -348,6 +348,7 @@ class AutoRepairEngine
             $invoice->update([
                 'status' => 'paid',
                 'paid_at' => now(),
+                'amount_due' => 0,
                 'metadata' => array_merge($invoice->metadata ?? [], [
                     'auto_repaired' => true,
                     'previous_status' => $oldStatus,

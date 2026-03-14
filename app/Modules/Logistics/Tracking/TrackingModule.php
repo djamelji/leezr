@@ -12,7 +12,7 @@ class TrackingModule implements ModuleDefinition
     {
         return new ModuleManifest(
             key: 'logistics_tracking',
-            name: 'Tracking',
+            name: 'Real-Time Tracking',
             description: 'Real-time shipment tracking and notifications',
             surface: 'operations',
             sortOrder: 110,

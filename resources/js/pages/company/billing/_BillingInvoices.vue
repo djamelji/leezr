@@ -1,11 +1,13 @@
 <script setup>
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
+import { invoiceStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
 import EmptyState from '@/core/components/EmptyState.vue'
 import StatusChip from '@/core/components/StatusChip.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const store = useCompanyBillingStore()
 const { toast } = useAppToast()
 
@@ -29,18 +31,6 @@ const statusOptions = computed(() => [
   { title: t('companyBilling.invoiceStatusPaid'), value: 'paid' },
   { title: t('companyBilling.invoiceStatusVoided'), value: 'voided' },
 ])
-
-const statusColor = status => {
-  const colors = {
-    draft: 'secondary',
-    open: 'info',
-    overdue: 'error',
-    paid: 'success',
-    voided: 'warning',
-  }
-
-  return colors[status] || 'secondary'
-}
 
 const statusLabel = status => {
   const labels = {
@@ -92,22 +82,10 @@ const onPageChange = page => {
   loadInvoices(page)
 }
 
-const retryingInvoiceId = ref(null)
-
-const retryInvoice = async invoice => {
-  retryingInvoiceId.value = invoice.id
-  try {
-    const result = await store.retryInvoice(invoice.id)
-
-    toast(result?.message || t('companyBilling.retrySuccess'), 'success')
-    await loadInvoices(store.invoicePagination.current_page)
-  }
-  catch {
-    toast(t('companyBilling.retryFailed'), 'error')
-  }
-  finally {
-    retryingInvoiceId.value = null
-  }
+// ADR-334/336: Redirect to pay page with pre-selected invoice via store (no query param)
+const goToPay = invoice => {
+  store.setPreSelectedInvoices([invoice.id])
+  router.push('/company/billing/pay')
 }
 
 const downloadPdf = async invoice => {
@@ -176,7 +154,7 @@ watch(statusFilter, () => loadInvoices(1))
             :to="`/company/billing/invoices/${item.id}`"
             class="text-body-1 font-weight-medium text-primary text-decoration-none"
           >
-            {{ item.number }}
+            {{ item.display_number || item.number }}
           </RouterLink>
         </template>
 
@@ -217,12 +195,11 @@ watch(statusFilter, () => loadInvoices(1))
               <VIcon icon="tabler-download" />
             </IconBtn>
             <VBtn
-              v-if="item.status === 'overdue'"
+              v-if="['open', 'overdue'].includes(item.status) && item.amount_due > 0"
               size="small"
               variant="tonal"
               color="warning"
-              :loading="retryingInvoiceId === item.id"
-              @click="retryInvoice(item)"
+              @click="goToPay(item)"
             >
               {{ t('companyBilling.retryPayment') }}
             </VBtn>

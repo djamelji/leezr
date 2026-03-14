@@ -5,6 +5,8 @@ export const useModuleStore = defineStore('module', {
   state: () => ({
     _modules: [],
     _companyPlanKey: null,
+    _addonSubscriptions: [], // ADR-340
+    _addonDeactivationTiming: 'end_of_period', // ADR-341: policy-driven
     _loaded: false,
   }),
 
@@ -37,6 +39,14 @@ export const useModuleStore = defineStore('module', {
     isActive: state => key => {
       return state._modules.some(m => m.key === key && m.is_active)
     },
+
+    /** ADR-340: Get addon subscription info for deactivation dialog */
+    getAddonSub: state => key => {
+      return state._addonSubscriptions.find(s => s.module_key === key) ?? null
+    },
+
+    /** ADR-341: Policy-driven deactivation timing */
+    addonDeactivationTiming: state => state._addonDeactivationTiming,
   },
 
   actions: {
@@ -53,6 +63,8 @@ export const useModuleStore = defineStore('module', {
 
       this._modules = data.modules
       this._companyPlanKey = data.company_plan_key ?? null
+      this._addonSubscriptions = data.addon_subscriptions ?? []
+      this._addonDeactivationTiming = data.addon_deactivation_timing ?? 'end_of_period'
       this._loaded = true
 
       return data.modules
@@ -65,6 +77,9 @@ export const useModuleStore = defineStore('module', {
 
       this._modules = data.modules
 
+      // ADR-341: Refresh addon subscriptions after toggle
+      await this.fetchModules()
+
       return data.modules
     },
 
@@ -74,6 +89,9 @@ export const useModuleStore = defineStore('module', {
       })
 
       this._modules = data.modules
+
+      // ADR-341: Refresh addon subscriptions after toggle
+      await this.fetchModules()
 
       return data.modules
     },
@@ -95,8 +113,14 @@ export const useModuleStore = defineStore('module', {
       return await $api(`/modules/quote?${params}`)
     },
 
+    async fetchDeactivationPreview(key) {
+      return await $api(`/modules/${key}/deactivation-preview`)
+    },
+
     reset() {
       this._modules = []
+      this._addonSubscriptions = []
+      this._addonDeactivationTiming = 'end_of_period'
       this._loaded = false
     },
   },

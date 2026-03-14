@@ -52,6 +52,7 @@ class AdminInvoiceMutationService
             $invoice->update([
                 'status' => 'paid',
                 'paid_at' => now(),
+                'amount_due' => 0,
             ]);
 
             Payment::create([

@@ -2,6 +2,7 @@
 import BrandLogo from '@/components/BrandLogo.vue'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
+import { invoiceStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
@@ -48,9 +49,7 @@ const statusColor = computed(() => {
   const status = invoice.value?.status
   if (status === 'open' && isPastDue.value) return 'error'
 
-  const colors = { draft: 'secondary', open: 'warning', overdue: 'error', paid: 'success', voided: 'secondary' }
-
-  return colors[status] || 'secondary'
+  return invoiceStatusColor(status)
 })
 
 const statusLabel = computed(() => {
@@ -109,7 +108,7 @@ const formatDateTime = dateStr => {
 const taxPercent = computed(() => {
   if (!invoice.value?.tax_rate_bps) return 0
 
-  return (invoice.value.tax_rate_bps / 100).toFixed(2)
+  return (invoice.value.tax_rate_bps / 100).toFixed(1)
 })
 
 const fmt = (amount, currency) => formatMoney(amount, { currency: currency || invoice.value?.currency })
@@ -144,9 +143,10 @@ const printInvoice = () => {
   window.print()
 }
 
-// ── Pay — redirect to payment page ──
+// ADR-334/336: Redirect to pay page with pre-selected invoice via store (no query param)
 const payInvoice = () => {
-  router.push(`/company/billing/pay?invoices=${invoice.value.id}`)
+  store.setPreSelectedInvoices([invoice.value.id])
+  router.push('/company/billing/pay')
 }
 </script>
 
@@ -450,10 +450,10 @@ const payInvoice = () => {
               />
               {{ t('companyBilling.invoiceDetail.payments') }}
             </VCardTitle>
-            <VCardText class="pa-0">
+            <VCardText>
               <div
-                v-if="!invoice.payments?.length"
-                class="text-center pa-4 text-disabled"
+                v-if="!invoice.payments?.length && !invoice.wallet_credit_applied"
+                class="text-center text-disabled"
               >
                 {{ t('companyBilling.invoiceDetail.noPayments') }}
               </div>
@@ -470,6 +470,36 @@ const payInvoice = () => {
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- ADR-334: Wallet credit as payment entry -->
+                  <tr v-if="invoice.wallet_credit_applied > 0">
+                    <td>{{ fmt(invoice.wallet_credit_applied) }}</td>
+                    <td>
+                      <VChip
+                        color="success"
+                        size="small"
+                      >
+                        {{ paymentStatusLabel('succeeded') }}
+                      </VChip>
+                    </td>
+                    <td>{{ t('companyBilling.invoiceDetail.walletCredit') }}</td>
+                    <td>{{ invoice.paid_at ? formatDateTime(invoice.paid_at) : formatDateTime(invoice.finalized_at) }}</td>
+                  </tr>
+                  <!-- ADR-335: Wallet credit FIFO breakdown -->
+                  <tr
+                    v-for="(src, idx) in (invoice.wallet_credit_sources || [])"
+                    :key="`wallet-src-${idx}`"
+                  >
+                    <td class="ps-6 text-body-2 text-disabled">
+                      {{ fmt(src.amount) }}
+                    </td>
+                    <td class="text-body-2 text-disabled" />
+                    <td class="text-body-2 text-disabled">
+                      {{ src.description }}
+                    </td>
+                    <td class="text-body-2 text-disabled">
+                      {{ src.created_at ? formatDateTime(src.created_at) : '' }}
+                    </td>
+                  </tr>
                   <tr
                     v-for="p in (invoice.payments || [])"
                     :key="p.id"
@@ -502,10 +532,10 @@ const payInvoice = () => {
               />
               {{ t('companyBilling.invoiceDetail.creditNotes') }}
             </VCardTitle>
-            <VCardText class="pa-0">
+            <VCardText>
               <div
                 v-if="!invoice.credit_notes?.length"
-                class="text-center pa-4 text-disabled"
+                class="text-center text-disabled"
               >
                 {{ t('companyBilling.invoiceDetail.noCreditNotes') }}
               </div>
@@ -572,7 +602,7 @@ const payInvoice = () => {
               />
               {{ t('companyBilling.invoiceDetail.annexes') }}
             </VCardTitle>
-            <VCardText class="pa-0">
+            <VCardText>
               <VTable density="compact">
                 <thead>
                   <tr>

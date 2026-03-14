@@ -176,8 +176,9 @@ class DunningEngineTest extends TestCase
         $this->assertNotNull($invoice->paid_at);
         $this->assertNull($invoice->next_retry_at);
 
-        // Wallet debited
-        $this->assertEquals(5000 - $invoice->amount_due, WalletLedger::balance($this->company));
+        // Wallet debited (amount_due is 0 after paid — original amount was 2900)
+        $this->assertEquals(0, $invoice->amount_due);
+        $this->assertEquals(5000 - 2900, WalletLedger::balance($this->company));
 
         // Subscription reactivated
         $this->subscription->refresh();

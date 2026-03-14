@@ -2,9 +2,7 @@
 
 namespace App\Modules\Platform\Billing;
 
-use App\Core\Billing\Adapters\InternalPaymentAdapter;
-use App\Core\Billing\Adapters\StripePaymentAdapter;
-use App\Core\Billing\Contracts\PaymentProviderAdapter;
+use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PlatformPaymentMethodRule;
 use App\Core\Billing\PlatformPaymentModule;
 use Illuminate\Validation\ValidationException;
@@ -80,7 +78,7 @@ class PaymentGovernanceCrudService
     public static function checkModuleHealth(string $providerKey): array
     {
         $module = PlatformPaymentModule::where('provider_key', $providerKey)->firstOrFail();
-        $adapter = static::resolveAdapter($providerKey);
+        $adapter = PaymentGatewayManager::adapterFor($providerKey);
 
         if (! $adapter) {
             throw ValidationException::withMessages([
@@ -121,14 +119,4 @@ class PaymentGovernanceCrudService
         PlatformPaymentMethodRule::findOrFail($id)->delete();
     }
 
-    // ── Internal ─────────────────────────────────────
-
-    private static function resolveAdapter(string $providerKey): ?PaymentProviderAdapter
-    {
-        return match ($providerKey) {
-            'internal' => new InternalPaymentAdapter(),
-            'stripe' => new StripePaymentAdapter(),
-            default => null,
-        };
-    }
 }

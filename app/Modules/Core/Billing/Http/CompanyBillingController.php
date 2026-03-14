@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Billing\Invoice;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\ReadModels\CompanyBillingReadService;
 use App\Core\Billing\Subscription;
 use App\Core\Plans\PlanRegistry;
@@ -100,7 +101,7 @@ class CompanyBillingController
         $preview = CompanyBillingReadService::planChangePreview(
             $company,
             $validated['to_plan_key'],
-            $validated['to_interval'] ?? 'monthly',
+            $validated['to_interval'] ?? PlatformBillingPolicy::instance()->default_billing_interval,
         );
 
         if (!$preview) {
@@ -128,19 +129,76 @@ class CompanyBillingController
         $locale = $snap['market_locale'] ?? 'fr-FR';
 
         // ADR-328 S9: Load payments for PDF rendering
-        $payments = \App\Core\Billing\Payment::where('invoice_id', $invoice->id)->get();
+        // ADR-335: Exclude failed payments from PDF (visible on page only)
+        $payments = \App\Core\Billing\Payment::where('invoice_id', $invoice->id)
+            ->where('status', '!=', 'failed')
+            ->get();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
+        // Resolve platform typography for font embedding in PDF.
+        // DomPDF needs TTF (not WOFF2). For Google Fonts, fetch the CSS with
+        // an old user-agent so Google serves TTF @font-face declarations.
+        try {
+            $typography = \App\Core\Typography\TypographyResolverService::forPlatform();
+        } catch (\Throwable) {
+            $typography = ['active_family_name' => null, 'active_source' => null];
+        }
+
+        $fontFaceCss = null;
+        $fontFamily = $typography['active_family_name'] ?? null;
+        $fontSource = $typography['active_source'] ?? null;
+
+        if ($fontFamily && $fontSource === 'google') {
+            try {
+                $url = 'https://fonts.googleapis.com/css2?family='
+                    . urlencode($fontFamily) . ':wght@300;400;500;600;700&display=swap';
+                $ctx = stream_context_create([
+                    'http' => ['header' => "User-Agent: Mozilla/4.0\r\n", 'timeout' => 5],
+                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+                ]);
+                $fontFaceCss = @file_get_contents($url, false, $ctx);
+                if ($fontFaceCss === false) {
+                    $fontFaceCss = null;
+                }
+            } catch (\Throwable) {
+                $fontFaceCss = null;
+            }
+        }
+
+        // Resolve platform primary color for PDF branding
+        try {
+            $primaryColor = \App\Core\Theme\UIResolverService::forPlatform()->primaryColor;
+        } catch (\Throwable) {
+            $primaryColor = '#7367F0';
+        }
+
+        // ADR-335: Wallet credit FIFO breakdown for PDF (with fallback for pre-ADR-335 invoices)
+        $walletSources = CompanyBillingReadService::walletCreditSources($invoice);
+
+        $viewData = [
             'invoice' => $invoice,
             'company' => $invoice->company,
             'snap' => $snap,
             'locale' => $locale,
             'payments' => $payments,
-        ]);
+            'walletSources' => $walletSources,
+            'typography' => $typography,
+            'fontFaceCss' => $fontFaceCss,
+            'primaryColor' => $primaryColor,
+            'platformConfig' => config('billing.platform'),
+        ];
+
+        // Render PDF with font fallback: if custom font fails (network, cache),
+        // retry with safe DejaVu Sans to guarantee PDF generation.
+        try {
+            $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $viewData)->output();
+        } catch (\Throwable) {
+            $viewData['typography'] = ['active_family_name' => null, 'active_source' => null];
+            $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $viewData)->output();
+        }
 
         $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
 
-        return response($pdf->output(), 200, [
+        return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);

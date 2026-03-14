@@ -26,10 +26,11 @@ readonly class PriceBreakdown
         public ?CouponInfo $coupon = null,
     ) {
         $this->subtotal = array_sum(array_map(fn (PriceLine $l) => $l->amount, $this->lines));
-        $this->taxAmount = $this->subtotal > 0
-            ? (int) floor($this->subtotal * $this->taxRateBps / 10000)
-            : 0;
-        $this->total = $this->subtotal + $this->taxAmount;
+        $this->taxAmount = \App\Core\Billing\TaxResolver::compute($this->subtotal, $this->taxRateBps);
+        $taxMode = \App\Core\Billing\PlatformBillingPolicy::instance()->tax_mode;
+        $this->total = $taxMode === 'inclusive'
+            ? $this->subtotal
+            : $this->subtotal + $this->taxAmount;
     }
 
     /** Positive lines only (plan + addons). */

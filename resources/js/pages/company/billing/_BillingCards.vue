@@ -61,6 +61,7 @@ const { t } = useI18n()
 
           <p class="text-body-2 text-disabled mb-4">
             {{ planPrice }} / {{ planInterval }}
+            <span class="text-caption ms-1">{{ t('common.exclTax') }}</span>
           </p>
 
           <div class="d-flex gap-2">

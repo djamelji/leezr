@@ -97,7 +97,7 @@ class CheckoutSessionActivator
             ]);
 
             // ADR-324: Create invoice via PricingEngine (DB prices + coupon, not Stripe amount)
-            $breakdown = PricingEngine::forCurrentPeriod($subscription, $company);
+            $breakdown = PricingEngine::forCurrentPeriod($subscription, $company, $company->market?->locale ?? 'fr-FR');
             $invoice = InvoiceIssuer::createDraft(
                 $company,
                 $subscription->id,

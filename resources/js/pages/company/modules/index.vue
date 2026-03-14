@@ -4,6 +4,7 @@ definePage({ meta: { surface: 'structure', module: 'core.modules' } })
 import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
+import { formatMoney } from '@/utils/money'
 import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
@@ -34,6 +35,14 @@ const quoteModuleName = ref('')
 // Deactivation confirmation dialog
 const deactivateDialog = ref(false)
 const deactivateTarget = ref(null)
+const deactivatePreview = ref(null)
+const deactivatePreviewLoading = ref(false)
+
+// ADR-341: Grace period reactivation dialog
+const reactivateDialog = ref(false)
+const reactivateModuleKey = ref(null)
+const reactivateModuleName = ref('')
+const reactivateDeactivateDate = ref(null)
 
 const canManage = computed(() => auth.roleLevel === 'management')
 
@@ -226,15 +235,32 @@ const dependentNames = mod => {
 
 // --- Actions ---
 
-const formatAmount = cents => {
-  return (cents / 100).toFixed(2)
+const formatPeriodEnd = dateStr => {
+  if (!dateStr) return ''
+
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 const activateModule = async module => {
   errorMessage.value = ''
 
-  // Addon pricing → fetch quote first
+  // Addon pricing → check grace period first, then fetch quote
   if (module.pricing_mode === 'addon') {
+    // ADR-341: Check if addon is in grace period (deactivated_at in the future)
+    const addonSub = moduleStore.getAddonSub(module.key)
+    if (addonSub?.deactivated_at && new Date(addonSub.deactivated_at) > new Date()) {
+      reactivateModuleKey.value = module.key
+      reactivateModuleName.value = module.name
+      reactivateDeactivateDate.value = addonSub.deactivated_at
+      reactivateDialog.value = true
+
+      return
+    }
+
     quoteModuleKey.value = module.key
     quoteModuleName.value = module.name
     quoteLoading.value = true
@@ -259,13 +285,33 @@ const activateModule = async module => {
   await doToggle(module.key, false)
 }
 
+const confirmReactivation = async () => {
+  reactivateDialog.value = false
+  await doToggle(reactivateModuleKey.value, false)
+}
+
 const navigateToPlanUpgrade = mod => {
   router.push({ path: '/company/plan', query: { suggest: mod.upgrade_target_plan } })
 }
 
-const requestDeactivation = module => {
+const requestDeactivation = async module => {
   deactivateTarget.value = module
+  deactivatePreview.value = null
   deactivateDialog.value = true
+
+  // Fetch deactivation preview for addon modules
+  if (module.pricing_mode === 'addon') {
+    deactivatePreviewLoading.value = true
+    try {
+      deactivatePreview.value = await moduleStore.fetchDeactivationPreview(module.key)
+    }
+    catch {
+      // Fallback — dialog still works without preview
+    }
+    finally {
+      deactivatePreviewLoading.value = false
+    }
+  }
 }
 
 const confirmDeactivation = async () => {
@@ -280,6 +326,7 @@ const confirmDeactivation = async () => {
 const cancelDeactivation = () => {
   deactivateDialog.value = false
   deactivateTarget.value = null
+  deactivatePreview.value = null
 }
 
 const confirmQuoteEnable = async () => {
@@ -1091,6 +1138,156 @@ const doToggle = async (key, isCurrentlyEnabled) => {
           <p class="text-body-1">
             {{ t('companyModules.deactivateConfirmMessage', { module: deactivateTarget?.name }) }}
           </p>
+
+          <!-- ADR-341: Deactivation preview — loaded from backend -->
+          <VSkeletonLoader
+            v-if="deactivatePreviewLoading"
+            type="list-item-three-line"
+            class="mt-3"
+          />
+
+          <!-- Addon billing breakdown -->
+          <template v-else-if="deactivatePreview?.has_addon">
+            <!-- Timing badge -->
+            <VAlert
+              :type="deactivatePreview.timing === 'immediate' ? 'warning' : 'info'"
+              variant="tonal"
+              density="compact"
+              class="mt-3"
+            >
+              <div class="text-body-2 font-weight-medium">
+                {{ deactivatePreview.timing === 'immediate'
+                  ? t('companyModules.deactivateImmediate')
+                  : t('companyModules.deactivateActiveUntil', { date: formatPeriodEnd(deactivatePreview.active_until) })
+                }}
+              </div>
+            </VAlert>
+
+            <!-- Billing breakdown table -->
+            <VTable
+              density="compact"
+              class="mt-3 text-body-2 billing-breakdown"
+            >
+              <tbody>
+                <!-- Period -->
+                <tr>
+                  <td class="text-disabled">
+                    {{ t('companyModules.previewPeriod') }}
+                  </td>
+                  <td class="text-end font-weight-medium">
+                    {{ formatPeriodEnd(deactivatePreview.period_start) }} → {{ formatPeriodEnd(deactivatePreview.period_end) }}
+                  </td>
+                </tr>
+
+                <!-- Days used / total -->
+                <tr>
+                  <td class="text-disabled">
+                    {{ t('companyModules.previewDaysUsed') }}
+                  </td>
+                  <td class="text-end font-weight-medium">
+                    {{ deactivatePreview.days_used }} / {{ deactivatePreview.total_days }} {{ t('companyModules.previewDays') }}
+                  </td>
+                </tr>
+
+                <!-- Amount paid -->
+                <tr>
+                  <td class="text-disabled">
+                    {{ t('companyModules.previewAmountPaid') }}
+                  </td>
+                  <td class="text-end font-weight-medium">
+                    {{ formatMoney(deactivatePreview.amount_paid_ht, { currency: deactivatePreview.currency }) }} {{ t('companyModules.previewHT') }}
+                  </td>
+                </tr>
+
+                <!-- Consumed -->
+                <tr>
+                  <td class="text-disabled">
+                    {{ t('companyModules.previewConsumed') }}
+                  </td>
+                  <td class="text-end font-weight-medium">
+                    {{ formatMoney(deactivatePreview.consumed_ht, { currency: deactivatePreview.currency }) }} {{ t('companyModules.previewHT') }}
+                    <span class="text-disabled ms-1">({{ deactivatePreview.days_used }} j.)</span>
+                  </td>
+                </tr>
+
+                <!-- Separator -->
+                <tr v-if="deactivatePreview.timing === 'immediate' && deactivatePreview.credit_ht > 0">
+                  <td colspan="2">
+                    <VDivider />
+                  </td>
+                </tr>
+
+                <!-- Credit (immediate only) -->
+                <tr
+                  v-if="deactivatePreview.timing === 'immediate' && deactivatePreview.credit_ht > 0"
+                  class="text-success"
+                >
+                  <td class="font-weight-bold">
+                    {{ t('companyModules.previewCredit') }}
+                  </td>
+                  <td class="text-end font-weight-bold">
+                    + {{ formatMoney(deactivatePreview.credit_ht, { currency: deactivatePreview.currency }) }} {{ t('companyModules.previewHT') }}
+                  </td>
+                </tr>
+
+                <!-- Credit TTC (if tax exclusive) -->
+                <tr
+                  v-if="deactivatePreview.timing === 'immediate' && deactivatePreview.credit_ht > 0 && deactivatePreview.tax_rate_bps > 0"
+                  class="text-success"
+                >
+                  <td class="text-disabled font-weight-regular">
+                    {{ t('companyModules.previewCreditTTC') }}
+                  </td>
+                  <td class="text-end text-disabled font-weight-regular">
+                    + {{ formatMoney(deactivatePreview.credit_ttc, { currency: deactivatePreview.currency }) }} {{ t('companyModules.previewTTC') }}
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
+
+            <!-- Wallet impact -->
+            <VAlert
+              v-if="deactivatePreview.timing === 'immediate' && deactivatePreview.credit_ht > 0"
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mt-3"
+            >
+              <div class="text-body-2">
+                {{ t('companyModules.previewWalletCredit', {
+                  amount: formatMoney(deactivatePreview.credit_ht, { currency: deactivatePreview.currency }),
+                  balance: formatMoney(deactivatePreview.wallet_balance_after, { currency: deactivatePreview.currency }),
+                }) }}
+              </div>
+            </VAlert>
+
+            <!-- No refund (end_of_period) -->
+            <VAlert
+              v-if="deactivatePreview.timing === 'end_of_period'"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-3"
+            >
+              <div class="text-body-2">
+                {{ t('companyModules.deactivateNoRefund') }}
+              </div>
+            </VAlert>
+          </template>
+
+          <!-- Non-addon modules (included in plan) -->
+          <VAlert
+            v-else-if="deactivatePreview && !deactivatePreview.has_addon"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="text-body-2">
+              {{ t('companyModules.deactivateIncludedInPlan') }}
+            </div>
+          </VAlert>
+
           <VAlert
             v-if="deactivateTarget?.dependents?.length"
             type="warning"
@@ -1123,6 +1320,40 @@ const doToggle = async (key, isCurrentlyEnabled) => {
       </VCard>
     </VDialog>
 
+    <!-- ADR-341: Grace period reactivation dialog (no charge) -->
+    <VDialog
+      v-model="reactivateDialog"
+      max-width="420"
+    >
+      <VCard>
+        <VCardTitle>{{ t('companyModules.reactivateTitle', { module: reactivateModuleName }) }}</VCardTitle>
+        <VCardText>
+          <VAlert
+            type="info"
+            variant="tonal"
+            class="mb-4"
+          >
+            {{ t('companyModules.reactivateNoCharge', { date: formatPeriodEnd(reactivateDeactivateDate) }) }}
+          </VAlert>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="reactivateDialog = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            @click="confirmReactivation"
+          >
+            {{ t('companyModules.reactivateConfirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
     <!-- Quote confirmation dialog -->
     <VDialog
       v-model="quoteDialog"
@@ -1147,6 +1378,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
           </div>
 
           <template v-else-if="quoteData">
+            <!-- ADR-340: Line items HT -->
             <div
               v-for="line in quoteData.lines"
               :key="line.key"
@@ -1154,25 +1386,58 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             >
               <span class="text-body-1">{{ line.title }}</span>
               <span class="text-body-1 font-weight-medium">
-                {{ formatAmount(line.amount) }} {{ quoteData.currency }}/{{ t('companyModules.quoteMonth') }}
+                {{ formatMoney(line.amount, { currency: quoteData.currency }) }}/{{ t('companyModules.quoteMonth') }}
               </span>
             </div>
 
             <VDivider class="my-3" />
 
-            <div class="d-flex justify-space-between align-center">
-              <span class="text-body-1 font-weight-bold">{{ t('common.total') }}</span>
-              <span class="text-body-1 font-weight-bold">
-                {{ formatAmount(quoteData.total) }} {{ quoteData.currency }}/{{ t('companyModules.quoteMonth') }}
+            <!-- ADR-340: Tax breakdown -->
+            <div class="d-flex justify-space-between align-center py-1">
+              <span class="text-body-2 text-medium-emphasis">{{ t('companyPlan.planChangePreview.subtotalHT') }}</span>
+              <span class="text-body-2">
+                {{ formatMoney(quoteData.subtotal, { currency: quoteData.currency }) }}
               </span>
             </div>
 
+            <div
+              v-if="quoteData.tax_amount > 0"
+              class="d-flex justify-space-between align-center py-1"
+            >
+              <span class="text-body-2 text-medium-emphasis">
+                {{ t('companyPlan.planChangePreview.tax') }} ({{ (quoteData.tax_rate_bps / 100).toFixed(1) }}%)
+              </span>
+              <span class="text-body-2">
+                +{{ formatMoney(quoteData.tax_amount, { currency: quoteData.currency }) }}
+              </span>
+            </div>
+
+            <VDivider class="my-2" />
+
+            <div class="d-flex justify-space-between align-center">
+              <span class="text-body-1 font-weight-bold">{{ t('companyPlan.planChangePreview.totalTTC') }}</span>
+              <span class="text-body-1 font-weight-bold">
+                {{ formatMoney(quoteData.total_ttc, { currency: quoteData.currency }) }}/{{ t('companyModules.quoteMonth') }}
+              </span>
+            </div>
+
+            <!-- ADR-340: Charged immediately notice -->
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+            >
+              {{ t('companyModules.quoteChargedImmediately') }}
+            </VAlert>
+
+            <!-- ADR-340: Included modules (no charge) -->
             <div
               v-if="quoteData.included.length"
               class="mt-4"
             >
               <span class="text-body-2 text-medium-emphasis">
-                {{ t('companyModules.quoteIncludes') }}
+                {{ t('companyModules.quoteIncludesNoCharge') }}
               </span>
               <div class="d-flex flex-wrap gap-1 mt-1">
                 <VChip

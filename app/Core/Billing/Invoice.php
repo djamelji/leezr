@@ -44,6 +44,13 @@ class Invoice extends Model
         ];
     }
 
+    protected $appends = ['display_number'];
+
+    public function getDisplayNumberAttribute(): string
+    {
+        return $this->displayNumber();
+    }
+
     // ── Relationships ──
 
     public function subscription(): BelongsTo

@@ -212,6 +212,7 @@ class DunningEngine
                 $invoice->update([
                     'status' => 'paid',
                     'paid_at' => now(),
+                    'amount_due' => 0,
                     'retry_count' => $newRetryCount,
                     'next_retry_at' => null,
                 ]);

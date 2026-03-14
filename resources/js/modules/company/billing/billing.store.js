@@ -16,6 +16,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     _outstandingInvoices: [],
     _outstandingWallet: { balance: 0, currency: 'EUR' },
     _pendingSubscription: null,
+    _preSelectedInvoiceIds: [],
   }),
 
   getters: {
@@ -32,9 +33,24 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     setupIntent: state => state._setupIntent,
     outstandingInvoices: state => state._outstandingInvoices,
     outstandingWallet: state => state._outstandingWallet,
+    preSelectedInvoiceIds: state => state._preSelectedInvoiceIds,
   },
 
   actions: {
+    /** ADR-336: Set invoice IDs to pre-select on pay page, then navigate. */
+    setPreSelectedInvoices(ids) {
+      this._preSelectedInvoiceIds = ids
+    },
+
+    /** ADR-336: Consume pre-selected IDs (returns and clears). */
+    consumePreSelectedInvoices() {
+      const ids = [...this._preSelectedInvoiceIds]
+
+      this._preSelectedInvoiceIds = []
+
+      return ids
+    },
+
     async fetchOverview() {
       const data = await $api('/billing/overview')
 

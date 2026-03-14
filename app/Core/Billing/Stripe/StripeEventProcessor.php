@@ -156,6 +156,7 @@ class StripeEventProcessor
             $invoice->update([
                 'status' => 'paid',
                 'paid_at' => now(),
+                'amount_due' => 0,
             ]);
         }
 

@@ -4,8 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
-use App\Core\Billing\Adapters\StripePaymentAdapter;
-use App\Core\Billing\Contracts\PaymentProviderAdapter;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -81,7 +80,7 @@ class AdminAdvancedMutationService
         $providerRefundId = null;
 
         if ($providerPayment) {
-            $adapter = static::resolveAdapter($providerPayment->provider);
+            $adapter = PaymentGatewayManager::adapterFor($providerPayment->provider);
 
             if ($adapter) {
                 $refundResult = $adapter->refund($providerPayment->provider_payment_id, $amount, [
@@ -423,11 +422,4 @@ class AdminAdvancedMutationService
         }
     }
 
-    private static function resolveAdapter(string $provider): ?PaymentProviderAdapter
-    {
-        return match ($provider) {
-            'stripe' => app(StripePaymentAdapter::class),
-            default => null,
-        };
-    }
 }

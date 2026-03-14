@@ -3,18 +3,15 @@
 namespace App\Console\Commands;
 
 use App\Console\Concerns\HasCorrelationId;
-use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\CompanyAddonSubscription;
-use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
-use App\Core\Billing\Payment;
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\Subscription;
 use App\Core\Modules\PlatformModule;
 use App\Core\Plans\Plan;
-use App\Notifications\Billing\PaymentReceived;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
 use Illuminate\Support\Facades\DB;
@@ -222,10 +219,13 @@ class BillingRenewCommand extends Command implements Isolatable
                 $newPeriodEnd->toDateString(),
             );
 
+            $locale = $company->market?->locale ?? 'fr-FR';
+            $desc = InvoiceLineDescriptor::resolve($locale);
+
             InvoiceIssuer::addLine(
                 $invoice,
                 'plan',
-                "{$plan->name} plan renewal",
+                $desc->planRenewal($plan->name),
                 $price,
                 1,
             );
@@ -245,7 +245,7 @@ class BillingRenewCommand extends Command implements Isolatable
                     InvoiceIssuer::addLine(
                         $invoice,
                         'addon',
-                        "Addon: {$moduleName}",
+                        $desc->addon($moduleName),
                         $addon->amount_cents,
                         1,
                         moduleKey: $addon->module_key,
@@ -298,71 +298,18 @@ class BillingRenewCommand extends Command implements Isolatable
             return 'invoiced';
         }
 
-        // Phase 2: Attempt provider payment (outside transaction — no DB lock during API)
-        if ($subscription->provider && $subscription->provider !== 'internal') {
-            $adapter = $this->resolveAdapter($subscription->provider);
+        // Phase 2: Attempt provider payment (ADR-333 — via InvoiceAutoChargeService)
+        $chargeResult = \App\Core\Billing\InvoiceAutoChargeService::attempt($invoice, $subscription);
 
-            if ($adapter) {
-                try {
-                    $result = $adapter->collectInvoice($invoice, $company, [
-                        'renewal' => 'true',
-                        'subscription_id' => (string) $subscription->id,
-                    ]);
+        if ($chargeResult === 'paid') {
+            $this->extendPeriod($subscription, $newPeriodStart, $newPeriodEnd);
+            $this->line("  Renewed (provider): company #{$company->id} — {$subscription->plan_key}");
 
-                    if ($result['status'] === 'succeeded') {
-                        // Record payment
-                        DB::transaction(function () use ($invoice, $company, $subscription, $result) {
-                            Payment::updateOrCreate(
-                                ['provider_payment_id' => $result['provider_payment_id']],
-                                [
-                                    'company_id' => $company->id,
-                                    'subscription_id' => $subscription->id,
-                                    'invoice_id' => $invoice->id,
-                                    'amount' => $result['amount'],
-                                    'currency' => $invoice->currency ?? 'EUR',
-                                    'status' => 'succeeded',
-                                    'provider' => $subscription->provider,
-                                ],
-                            );
-
-                            $invoice->update([
-                                'status' => 'paid',
-                                'paid_at' => now(),
-                            ]);
-                        });
-
-                        // Extend period
-                        $this->extendPeriod($subscription, $newPeriodStart, $newPeriodEnd);
-                        $this->line("  Renewed (stripe): company #{$company->id} — {$subscription->plan_key}");
-
-                        // ADR-272: Notify payment received
-                        try {
-                            $owner = $company->owner();
-
-                            if ($owner) {
-                                $owner->notify(new PaymentReceived($invoice->fresh()));
-                            }
-                        } catch (\Throwable $e) {
-                            Log::warning('[billing:renew] Failed to send payment notification', [
-                                'invoice_id' => $invoice->id,
-                                'error' => $e->getMessage(),
-                            ]);
-                        }
-
-                        return 'renewed';
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('[billing:renew] Provider payment failed', [
-                        'subscription_id' => $subscription->id,
-                        'invoice_id' => $invoice->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+            return 'renewed';
         }
 
         // Payment failed or no provider — invoice stays open, dunning will handle retries
-        $this->line("  Invoiced: company #{$company->id} — invoice #{$invoice->id} awaiting payment");
+        $this->line("  Invoiced: company #{$company->id} — invoice #{$invoice->id} awaiting payment ({$chargeResult})");
 
         return 'invoiced';
     }
@@ -460,13 +407,5 @@ class BillingRenewCommand extends Command implements Isolatable
                 $this->error("  Failed to cancel: subscription #{$subscription->id} — {$e->getMessage()}");
             }
         }
-    }
-
-    private function resolveAdapter(string $provider): ?PaymentProviderAdapter
-    {
-        return match ($provider) {
-            'stripe' => app(StripePaymentAdapter::class),
-            default => null,
-        };
     }
 }

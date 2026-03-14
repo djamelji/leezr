@@ -1,6 +1,8 @@
 <script setup>
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { subscriptionStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
+import { $api } from '@/utils/api'
 import { useAnalytics } from '@/composables/useAnalytics'
 import EmptyState from '@/core/components/EmptyState.vue'
 import BillingAlerts from './_BillingAlerts.vue'
@@ -112,16 +114,7 @@ const cancelAtPeriodEnd = computed(() => overview.value?.subscription?.cancel_at
 const scheduledChange = computed(() => overview.value?.subscription?.scheduled_change)
 const pendingSub = computed(() => store.pendingSubscription)
 
-const statusColor = computed(() => {
-  const colors = {
-    active: 'success',
-    trialing: 'info',
-    past_due: 'error',
-    pending_payment: 'warning',
-  }
-
-  return colors[subscriptionStatus.value] || 'secondary'
-})
+const statusColor = computed(() => subscriptionStatusColor(subscriptionStatus.value))
 
 const canCancel = computed(() => {
   const status = subscriptionStatus.value
@@ -134,6 +127,18 @@ const isDismissing = ref(false)
 const isCancellingChange = ref(false)
 const isCancelDialogVisible = ref(false)
 const isCancelling = ref(false)
+const cancelPreview = ref(null)
+
+// ADR-340: Fetch cancel preview before opening dialog
+const openCancelDialog = async () => {
+  try {
+    cancelPreview.value = await $api('/billing/subscription/cancel-preview')
+  }
+  catch {
+    cancelPreview.value = null
+  }
+  isCancelDialogVisible.value = true
+}
 
 const dismissRejected = async () => {
   isDismissing.value = true
@@ -245,7 +250,7 @@ const cancelSubscription = async () => {
         :payment-method="paymentMethod"
         :payment-method-label="paymentMethodLabel"
         :wallet-balance="walletBalance"
-        @open-cancel-dialog="isCancelDialogVisible = true"
+        @open-cancel-dialog="openCancelDialog"
       />
     </template>
 
@@ -262,6 +267,7 @@ const cancelSubscription = async () => {
     <BillingCancelDialog
       :is-visible="isCancelDialogVisible"
       :is-cancelling="isCancelling"
+      :cancel-preview="cancelPreview"
       @update:is-visible="isCancelDialogVisible = $event"
       @confirm="cancelSubscription"
     />

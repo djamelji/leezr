@@ -85,6 +85,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
               {{ formatMoney(annualToggle ? Math.round(plan.price_yearly / 12 * 100) : plan.price_monthly * 100) }}
             </span>
             <span class="text-body-1 font-weight-medium">{{ t('common.perMonth') }}</span>
+            <span class="text-caption text-disabled ms-1">{{ t('common.exclTax') }}</span>
           </div>
 
           <!-- Annual savings badge -->

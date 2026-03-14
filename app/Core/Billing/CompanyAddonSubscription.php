@@ -41,6 +41,56 @@ class CompanyAddonSubscription extends Model
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->whereNull('deactivated_at');
+        return $query->where(function ($q) {
+            $q->whereNull('deactivated_at')
+                ->orWhere('deactivated_at', '>', now());
+        });
+    }
+
+    public function scopePendingDeactivation(Builder $query): Builder
+    {
+        return $query->whereNotNull('deactivated_at')
+            ->where('deactivated_at', '>', now());
+    }
+
+    /**
+     * ADR-341: Calculate the period end date for this addon subscription.
+     */
+    public function periodEnd(): ?\Carbon\Carbon
+    {
+        if (! $this->activated_at) {
+            return null;
+        }
+
+        return $this->interval === 'yearly'
+            ? $this->activated_at->copy()->addYear()
+            : $this->activated_at->copy()->addMonth();
+    }
+
+    /**
+     * ADR-341: Calculate prorated credit in cents for immediate deactivation.
+     *
+     * Formula: amount_cents × (remaining_days / total_period_days)
+     * Returns 0 if period already ended or no activated_at.
+     */
+    public function proratedCreditCents(): int
+    {
+        $periodEnd = $this->periodEnd();
+        if (! $periodEnd || $periodEnd->lte(now())) {
+            return 0;
+        }
+
+        $periodStart = $this->activated_at;
+        $totalDays = $periodStart->diffInDays($periodEnd);
+        if ($totalDays <= 0) {
+            return 0;
+        }
+
+        $remainingDays = now()->diffInDays($periodEnd, false);
+        if ($remainingDays <= 0) {
+            return 0;
+        }
+
+        return (int) round($this->amount_cents * $remainingDays / $totalDays);
     }
 }

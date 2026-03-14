@@ -66,6 +66,7 @@ declare global {
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const integerValidator: typeof import('./resources/js/@core/utils/validators.js')['integerValidator']
+  const invoiceStatusColor: typeof import('./resources/js/utils/billing.js')['invoiceStatusColor']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isEmpty: typeof import('./resources/js/@core/utils/helpers.js')['isEmpty']
   const isEmptyArray: typeof import('./resources/js/@core/utils/helpers.js')['isEmptyArray']
@@ -148,6 +149,7 @@ declare global {
   const shallowRef: typeof import('vue')['shallowRef']
   const startVersionPolling: typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']
   const storeToRefs: typeof import('pinia')['storeToRefs']
+  const subscriptionStatusColor: typeof import('./resources/js/utils/billing.js')['subscriptionStatusColor']
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
   const templateRef: typeof import('@vueuse/core')['templateRef']
@@ -456,6 +458,7 @@ declare module 'vue' {
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly integerValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['integerValidator']>
+    readonly invoiceStatusColor: UnwrapRef<typeof import('./resources/js/utils/billing.js')['invoiceStatusColor']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isEmpty: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isEmpty']>
     readonly isEmptyArray: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isEmptyArray']>
@@ -537,6 +540,7 @@ declare module 'vue' {
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly startVersionPolling: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
+    readonly subscriptionStatusColor: UnwrapRef<typeof import('./resources/js/utils/billing.js')['subscriptionStatusColor']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>

@@ -50,7 +50,7 @@ class ReconciliationEngine
                 ? $since->timestamp
                 : ($customer->last_reconciled_at
                     ? $customer->last_reconciled_at->timestamp
-                    : now()->subDays(30)->timestamp);
+                    : now()->subDays(PlatformBillingPolicy::instance()->reconciliation_lookback_days ?? 30)->timestamp);
 
             try {
                 $stripeIntents = $adapter->listPaymentIntents($customer->company_id, $sinceTimestamp);
@@ -118,7 +118,7 @@ class ReconciliationEngine
         // Index local payments by provider_payment_id (last 30 days, provider=stripe)
         $localPayments = Payment::where('company_id', $companyId)
             ->where('provider', 'stripe')
-            ->where('created_at', '>=', now()->subDays(30))
+            ->where('created_at', '>=', now()->subDays(PlatformBillingPolicy::instance()->reconciliation_lookback_days ?? 30))
             ->get()
             ->keyBy('provider_payment_id');
 

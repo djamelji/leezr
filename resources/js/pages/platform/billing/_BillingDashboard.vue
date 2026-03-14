@@ -32,11 +32,11 @@ const kpiCards = computed(() => {
   if (!m) return []
 
   return [
-    { title: 'MRR', value: formatMoney(m.mrr), icon: 'tabler-trending-up', color: 'primary' },
-    { title: 'ARR', value: formatMoney(m.arr), icon: 'tabler-chart-bar', color: 'success' },
+    { title: t('platformBilling.metrics.mrrHT'), value: formatMoney(m.mrr, { currency: m.currency || 'EUR' }), icon: 'tabler-trending-up', color: 'primary' },
+    { title: t('platformBilling.metrics.arrHT'), value: formatMoney(m.arr, { currency: m.currency || 'EUR' }), icon: 'tabler-chart-bar', color: 'success' },
     { title: t('platformBilling.metrics.activeSubscriptions'), value: m.active_subscriptions, icon: 'tabler-receipt', color: 'info' },
     { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning' },
-    { title: t('platformBilling.metrics.addonRevenue'), value: formatMoney(m.addon_mrr), icon: 'tabler-puzzle', color: 'secondary' },
+    { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency: m.currency || 'EUR' }), icon: 'tabler-puzzle', color: 'secondary' },
     { title: t('platformBilling.metrics.churn'), value: `${(m.churn_rate * 100).toFixed(1)}%`, icon: 'tabler-arrow-down-right', color: m.churn_rate > 0.05 ? 'error' : 'success' },
     { title: t('platformBilling.metrics.trialConversion'), value: store.metrics?.trial_conversion_rate != null ? `${(store.metrics.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
   ]

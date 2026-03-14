@@ -2,10 +2,8 @@
 
 namespace App\Modules\Infrastructure\Webhooks\Http;
 
-use App\Core\Billing\Adapters\InternalPaymentAdapter;
-use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\BillingWebhookDeadLetter;
-use App\Core\Billing\Contracts\PaymentProviderAdapter;
+use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PlatformPaymentModule;
 use App\Core\Billing\WebhookEvent;
 use Illuminate\Http\JsonResponse;
@@ -32,7 +30,7 @@ class PaymentWebhookController
         }
 
         // 2. Resolve adapter early (needed for signature verification)
-        $adapter = static::resolveAdapter($providerKey);
+        $adapter = PaymentGatewayManager::adapterFor($providerKey);
 
         if (! $adapter) {
             return response()->json(['handled' => false, 'error' => 'No adapter.'], 422);
@@ -116,12 +114,4 @@ class PaymentWebhookController
         }
     }
 
-    private static function resolveAdapter(string $providerKey): ?PaymentProviderAdapter
-    {
-        return match ($providerKey) {
-            'internal' => new InternalPaymentAdapter(),
-            'stripe' => new StripePaymentAdapter(),
-            default => null,
-        };
-    }
 }

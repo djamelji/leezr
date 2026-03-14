@@ -238,7 +238,7 @@ class BillingNextInvoicePreviewTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            'preview' => ['currency', 'plan', 'addons', 'total'],
+            'preview' => ['currency', 'plan', 'addons', 'total', 'estimated_wallet_credit_sources'],
         ]);
     }
 
@@ -252,5 +252,67 @@ class BillingNextInvoicePreviewTest extends TestCase
 
         $response->assertOk();
         $response->assertJson(['preview' => null]);
+    }
+
+    // ── 9: ADR-338 — Preview includes wallet credit sources ──
+
+    public function test_preview_includes_wallet_credit_sources(): void
+    {
+        Subscription::create([
+            'company_id' => $this->company->id,
+            'plan_key' => 'pro',
+            'interval' => 'monthly',
+            'status' => 'active',
+            'provider' => 'stripe',
+            'is_current' => 1,
+            'current_period_start' => now(),
+            'current_period_end' => now()->addMonth(),
+        ]);
+
+        WalletLedger::credit(
+            company: $this->company,
+            amount: 2000,
+            sourceType: 'plan_change_proration',
+            sourceId: 1,
+            description: 'Crédit prorata Business → Pro',
+            actorType: 'system',
+            idempotencyKey: 'test-proration-credit',
+        );
+
+        $preview = CompanyBillingReadService::nextInvoicePreview($this->company);
+
+        $this->assertNotNull($preview);
+        $this->assertGreaterThan(0, $preview['estimated_wallet_credit']);
+        $this->assertArrayHasKey('estimated_wallet_credit_sources', $preview);
+        $this->assertNotEmpty($preview['estimated_wallet_credit_sources']);
+
+        $source = $preview['estimated_wallet_credit_sources'][0];
+        $this->assertEquals('plan_change_proration', $source['source_type']);
+        $this->assertEquals('Crédit prorata Business → Pro', $source['description']);
+        $this->assertArrayHasKey('amount', $source);
+        $this->assertArrayHasKey('created_at', $source);
+    }
+
+    // ── 10: ADR-338 — Preview returns empty sources without wallet ──
+
+    public function test_preview_returns_empty_sources_without_wallet(): void
+    {
+        Subscription::create([
+            'company_id' => $this->company->id,
+            'plan_key' => 'pro',
+            'interval' => 'monthly',
+            'status' => 'active',
+            'provider' => 'stripe',
+            'is_current' => 1,
+            'current_period_start' => now(),
+            'current_period_end' => now()->addMonth(),
+        ]);
+
+        $preview = CompanyBillingReadService::nextInvoicePreview($this->company);
+
+        $this->assertNotNull($preview);
+        $this->assertArrayHasKey('estimated_wallet_credit_sources', $preview);
+        $this->assertEmpty($preview['estimated_wallet_credit_sources']);
+        $this->assertEquals(0, $preview['estimated_wallet_credit']);
     }
 }

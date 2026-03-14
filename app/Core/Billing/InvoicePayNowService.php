@@ -52,7 +52,7 @@ class InvoicePayNowService
                 if ($remaining <= 0) {
                     // Fully covered by prior wallet credit — just mark paid
                     if (in_array($invoice->status, ['open', 'overdue'])) {
-                        $invoice->update(['status' => 'paid', 'paid_at' => now()]);
+                        $invoice->update(['status' => 'paid', 'paid_at' => now(), 'amount_due' => 0]);
                         $invoicesPaid++;
                         $paidInvoiceIds[] = $invoice->id;
                         $totalAmount += $invoice->amount;
@@ -90,7 +90,7 @@ class InvoicePayNowService
                 }
 
                 if ($remaining <= 0) {
-                    $invoice->update(['status' => 'paid', 'paid_at' => now()]);
+                    $invoice->update(['status' => 'paid', 'paid_at' => now(), 'amount_due' => 0]);
                     $invoicesPaid++;
                     $paidInvoiceIds[] = $invoice->id;
                     $totalAmount += $invoice->amount;

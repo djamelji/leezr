@@ -34,8 +34,14 @@ return [
     */
 
     'platform' => [
-        'market_key' => env('PLATFORM_MARKET', 'FR'),
-        'vat_number' => env('PLATFORM_VAT_NUMBER'),
+        'market_key'  => env('PLATFORM_MARKET', 'FR'),
+        'vat_number'  => env('PLATFORM_VAT_NUMBER'),
+        'legal_name'  => env('PLATFORM_LEGAL_NAME', 'Leezr SAS'),
+        'siret'       => env('PLATFORM_SIRET'),
+        'rcs'         => env('PLATFORM_RCS'),
+        'capital'     => env('PLATFORM_CAPITAL'),
+        'address'     => env('PLATFORM_ADDRESS'),
+        'email'       => env('PLATFORM_EMAIL'),
     ],
 
     /*

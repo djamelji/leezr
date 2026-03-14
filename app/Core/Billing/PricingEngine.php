@@ -13,6 +13,7 @@ use App\Core\Modules\PlatformModule;
 use App\Core\Plans\Plan;
 use App\Modules\Core\Billing\Services\CouponService;
 use App\Modules\Core\Billing\Services\TaxContextResolver;
+use App\Core\Billing\InvoiceLineDescriptor;
 use Carbon\CarbonImmutable;
 
 /**
@@ -32,8 +33,9 @@ class PricingEngine
      *
      * Consumers: nextInvoicePreview, CheckoutSessionActivator, BillingRenewCommand (P2).
      */
-    public static function forCurrentPeriod(Subscription $subscription, Company $company): PriceBreakdown
+    public static function forCurrentPeriod(Subscription $subscription, Company $company, string $locale = 'fr-FR'): PriceBreakdown
     {
+        $desc = InvoiceLineDescriptor::resolve($locale);
         $plan = Plan::where('key', $subscription->plan_key)->first();
         $planPriceCents = static::catalogPriceCents($plan, $subscription->interval);
 
@@ -43,7 +45,7 @@ class PricingEngine
         if ($planPriceCents > 0) {
             $lines[] = new PriceLine(
                 type: 'plan',
-                description: ($plan->name ?? $subscription->plan_key).' plan',
+                description: $desc->plan($plan->name ?? $subscription->plan_key),
                 unitAmount: $planPriceCents,
             );
         }
@@ -60,7 +62,7 @@ class PricingEngine
         foreach ($addonSubs as $addon) {
             $lines[] = new PriceLine(
                 type: 'addon',
-                description: $addonModuleNames[$addon->module_key] ?? $addon->module_key,
+                description: $desc->addon($addonModuleNames[$addon->module_key] ?? $addon->module_key),
                 unitAmount: $addon->amount_cents,
                 moduleKey: $addon->module_key,
             );
@@ -80,7 +82,7 @@ class PricingEngine
                 if ($discount > 0) {
                     $lines[] = new PriceLine(
                         type: 'discount',
-                        description: "Coupon: {$coupon->code}",
+                        description: $desc->coupon($coupon->code),
                         unitAmount: -$discount,
                         metadata: ['coupon_id' => $coupon->id, 'coupon_code' => $coupon->code],
                     );
@@ -120,7 +122,9 @@ class PricingEngine
         Subscription $subscription,
         string $toPlanKey,
         string $toInterval = 'monthly',
+        string $locale = 'fr-FR',
     ): PlanChangeBreakdown {
+        $desc = InvoiceLineDescriptor::resolve($locale);
         $plans = Plan::whereIn('key', [$subscription->plan_key, $toPlanKey])->get()->keyBy('key');
         $fromPlan = $plans[$subscription->plan_key] ?? null;
         $toPlan = $plans[$toPlanKey] ?? null;
@@ -207,7 +211,7 @@ class PricingEngine
             if ($proration['credit'] > 0) {
                 $immediateLines[] = new PriceLine(
                     type: 'proration',
-                    description: "Credit for unused {$fromPlan->name} plan",
+                    description: $desc->prorationCredit($fromPlan->name, CarbonImmutable::now(), CarbonImmutable::instance($subscription->current_period_end), $proration['days_remaining']),
                     unitAmount: -$proration['credit'],
                 );
             }
@@ -215,7 +219,7 @@ class PricingEngine
             if ($proration['charge'] > 0) {
                 $immediateLines[] = new PriceLine(
                     type: 'proration',
-                    description: "Charge for remaining {$toPlan->name} plan",
+                    description: $desc->prorationCharge($toPlan->name, CarbonImmutable::now(), CarbonImmutable::instance($subscription->current_period_end), $proration['days_remaining']),
                     unitAmount: $proration['charge'],
                 );
             }
@@ -232,7 +236,7 @@ class PricingEngine
         $nextLines = [];
         $nextLines[] = new PriceLine(
             type: 'plan',
-            description: "{$toPlan->name} plan",
+            description: $desc->plan($toPlan->name),
             unitAmount: $newPriceCatalog,
         );
 
@@ -252,7 +256,7 @@ class PricingEngine
 
             $nextLines[] = new PriceLine(
                 type: 'addon',
-                description: $addonModuleNames[$addon->module_key] ?? $addon->module_key,
+                description: $desc->addon($addonModuleNames[$addon->module_key] ?? $addon->module_key),
                 unitAmount: $newAmount,
                 moduleKey: $addon->module_key,
             );
@@ -277,7 +281,7 @@ class PricingEngine
             if ($nextDiscount > 0) {
                 $nextLines[] = new PriceLine(
                     type: 'discount',
-                    description: "Coupon: {$coupon->code}",
+                    description: $desc->coupon($coupon->code),
                     unitAmount: -$nextDiscount,
                     metadata: ['coupon_id' => $coupon->id, 'coupon_code' => $coupon->code],
                 );
@@ -338,7 +342,9 @@ class PricingEngine
         string $marketKey,
         ?BillingCoupon $coupon = null,
         array $addonModuleKeys = [],
+        string $locale = 'fr-FR',
     ): PriceBreakdown {
+        $desc = InvoiceLineDescriptor::resolve($locale);
         $plan = Plan::where('key', $planKey)->first();
         if (! $plan) {
             throw new \RuntimeException("Plan not found: {$planKey}");
@@ -351,7 +357,7 @@ class PricingEngine
         if ($planPriceCents > 0) {
             $lines[] = new PriceLine(
                 type: 'plan',
-                description: "{$plan->name} plan",
+                description: $desc->plan($plan->name),
                 unitAmount: $planPriceCents,
             );
         }
@@ -371,7 +377,7 @@ class PricingEngine
             if ($amount > 0) {
                 $lines[] = new PriceLine(
                     type: 'addon',
-                    description: $module->display_name_override ?? $moduleKey,
+                    description: $desc->addon($module->display_name_override ?? $moduleKey),
                     unitAmount: $amount,
                     moduleKey: $moduleKey,
                 );
@@ -387,7 +393,7 @@ class PricingEngine
             if ($discount > 0) {
                 $lines[] = new PriceLine(
                     type: 'discount',
-                    description: "Coupon: {$coupon->code}",
+                    description: $desc->coupon($coupon->code),
                     unitAmount: -$discount,
                     metadata: ['coupon_id' => $coupon->id, 'coupon_code' => $coupon->code],
                 );

@@ -6,6 +6,7 @@ use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\InvoiceIssuer;
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
@@ -14,6 +15,7 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Modules\ModuleActivationEngine;
+use App\Core\Markets\Market;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Plans\Plan;
@@ -213,7 +215,9 @@ class RegisterCompanyUseCase
                             $periodEnd->toDateString(),
                         );
 
-                        InvoiceIssuer::addLine($invoice, 'plan', "{$plan->name} plan", $price, 1);
+                        $desc = InvoiceLineDescriptor::resolve(Market::where('key', $marketKey)->value('locale') ?? 'fr-FR');
+
+                        InvoiceIssuer::addLine($invoice, 'plan', $desc->plan($plan->name), $price, 1);
 
                         // ADR-320: Apply coupon discount to initial invoice
                         if ($sub->coupon_id) {

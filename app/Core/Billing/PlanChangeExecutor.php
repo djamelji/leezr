@@ -5,7 +5,9 @@ namespace App\Core\Billing;
 use App\Core\Models\Company;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
+use App\Core\Plans\Plan;
 use App\Core\Plans\PlanRegistry;
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Notifications\Billing\PlanChanged;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -130,7 +132,12 @@ class PlanChangeExecutor
 
         // If immediate, execute right away
         if ($timing === 'immediate') {
-            return static::execute($intent);
+            $intent = static::execute($intent);
+
+            // ADR-333: Auto-charge proration invoice (OUTSIDE transaction)
+            static::autoChargeLatestInvoice($company);
+
+            return $intent;
         }
 
         return $intent;
@@ -180,6 +187,10 @@ class PlanChangeExecutor
                 ? PlatformBillingPolicy::instance()->trial_plan_change_behavior
                 : null;
 
+            // Resolve locale-aware invoice line descriptions
+            $locale = $company->market?->locale ?? 'fr-FR';
+            $desc = InvoiceLineDescriptor::resolve($locale);
+
             // Handle proration financial effects
             // ADR-287: Skip proration during trial with continue_trial policy
             if ($proration && $proration['net'] !== 0 && !($isTrialing && $trialBehavior === 'continue_trial')) {
@@ -196,7 +207,7 @@ class PlanChangeExecutor
                         InvoiceIssuer::addLine(
                             invoice: $invoice,
                             type: 'proration',
-                            description: "Credit for unused {$intent->from_plan_key} plan",
+                            description: $desc->prorationCredit(Plan::where('key', $intent->from_plan_key)->value('name') ?? $intent->from_plan_key, now(), $subscription->current_period_end, $proration['days_remaining']),
                             unitAmount: -$proration['credit'],
                             quantity: 1,
                         );
@@ -206,7 +217,7 @@ class PlanChangeExecutor
                         InvoiceIssuer::addLine(
                             invoice: $invoice,
                             type: 'proration',
-                            description: "Charge for remaining {$intent->to_plan_key} plan",
+                            description: $desc->prorationCharge(Plan::where('key', $intent->to_plan_key)->value('name') ?? $intent->to_plan_key, now(), $subscription->current_period_end, $proration['days_remaining']),
                             unitAmount: $proration['charge'],
                             quantity: 1,
                         );
@@ -223,14 +234,34 @@ class PlanChangeExecutor
                     InvoiceIssuer::finalize($invoice);
                 } else {
                     // Company is owed money → credit wallet
-                    $creditAmount = abs($proration['net']);
+                    // ADR-337: Credit must be TTC (include tax) — the company originally
+                    // paid TTC, so the refund must also be TTC. Otherwise a round-trip
+                    // downgrade+upgrade costs the company the tax difference.
+                    $creditHt = abs($proration['net']);
+                    $taxRateBps = TaxResolver::resolveRateBps($company);
+                    $creditTax = TaxResolver::compute($creditHt, $taxRateBps);
+                    $policy = PlatformBillingPolicy::instance();
+                    $creditAmount = $policy->tax_mode === 'inclusive'
+                        ? $creditHt  // inclusive: subtotal already contains tax
+                        : $creditHt + $creditTax;
+
+                    // ADR-335: Rich description with plan names, dates and days
+                    $fromName = Plan::where('key', $intent->from_plan_key)->value('name') ?? $intent->from_plan_key;
+                    $toName = Plan::where('key', $intent->to_plan_key)->value('name') ?? $intent->to_plan_key;
+                    $walletDesc = $desc->walletProrationCredit(
+                        $fromName,
+                        $toName,
+                        now(),
+                        $subscription->current_period_end,
+                        $proration['days_remaining'] ?? null,
+                    );
 
                     WalletLedger::credit(
                         company: $company,
                         amount: $creditAmount,
                         sourceType: 'plan_change_proration',
                         sourceId: $intent->id,
-                        description: "Proration credit: {$intent->from_plan_key} → {$intent->to_plan_key}",
+                        description: $walletDesc,
                         actorType: 'system',
                         idempotencyKey: "plan-change-credit-{$intent->id}",
                     );
@@ -326,6 +357,9 @@ class PlanChangeExecutor
             try {
                 static::execute($intent);
                 $executed++;
+
+                // ADR-333: Auto-charge proration invoice (OUTSIDE transaction)
+                static::autoChargeLatestInvoice($intent->company);
             } catch (RuntimeException) {
                 // Log but don't halt batch — other intents should still execute
                 continue;
@@ -373,5 +407,30 @@ class PlanChangeExecutor
                 'amount_cents' => $periodAmount,
             ]);
         }
+    }
+
+    /**
+     * ADR-333: Auto-charge the most recent open invoice for a company.
+     * Must be called OUTSIDE any DB transaction.
+     */
+    private static function autoChargeLatestInvoice(Company $company): void
+    {
+        $invoice = Invoice::where('company_id', $company->id)
+            ->where('status', 'open')
+            ->where('amount_due', '>', 0)
+            ->whereNotNull('finalized_at')
+            ->latest('id')
+            ->first();
+
+        if (! $invoice) {
+            return;
+        }
+
+        $subscription = Subscription::where('company_id', $company->id)
+            ->whereIn('status', ['active', 'trialing'])
+            ->latest()
+            ->first();
+
+        InvoiceAutoChargeService::attempt($invoice, $subscription);
     }
 }

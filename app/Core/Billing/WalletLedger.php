@@ -111,6 +111,93 @@ class WalletLedger
     }
 
     /**
+     * ADR-335: Compute FIFO allocation of wallet credits for a given debit amount.
+     *
+     * Walks through all credits (oldest first), consumes them with existing debits,
+     * then allocates the new debit across remaining credit balances.
+     *
+     * @return array<int, array{amount: int, source_type: string, source_id: ?int, description: ?string, created_at: string}>
+     */
+    public static function computeFifoBreakdown(Company $company, int $debitAmount): array
+    {
+        $wallet = CompanyWallet::where('company_id', $company->id)->first();
+
+        if (! $wallet || $debitAmount <= 0) {
+            return [];
+        }
+
+        // All credits ordered FIFO
+        $credits = CompanyWalletTransaction::where('wallet_id', $wallet->id)
+            ->where('type', 'credit')
+            ->orderBy('created_at')
+            ->get();
+
+        // All existing debits ordered FIFO (to consume credits)
+        $debits = CompanyWalletTransaction::where('wallet_id', $wallet->id)
+            ->where('type', 'debit')
+            ->orderBy('created_at')
+            ->get();
+
+        // Track remaining balance per credit transaction
+        $remaining = [];
+
+        foreach ($credits as $credit) {
+            $remaining[$credit->id] = [
+                'balance' => $credit->amount,
+                'source_type' => $credit->source_type,
+                'source_id' => $credit->source_id,
+                'description' => $credit->description,
+                'created_at' => $credit->created_at?->toIso8601String(),
+            ];
+        }
+
+        // Consume credits with existing debits (FIFO)
+        foreach ($debits as $debit) {
+            $toConsume = $debit->amount;
+
+            foreach ($remaining as $creditId => &$entry) {
+                if ($toConsume <= 0) {
+                    break;
+                }
+
+                $consumed = min($toConsume, $entry['balance']);
+                $entry['balance'] -= $consumed;
+                $toConsume -= $consumed;
+
+                if ($entry['balance'] <= 0) {
+                    unset($remaining[$creditId]);
+                }
+            }
+
+            unset($entry);
+        }
+
+        // Allocate the new debit across remaining credit balances
+        $sources = [];
+        $toAllocate = $debitAmount;
+
+        foreach ($remaining as $entry) {
+            if ($toAllocate <= 0) {
+                break;
+            }
+
+            $allocated = min($toAllocate, $entry['balance']);
+
+            $sources[] = [
+                'amount' => $allocated,
+                'source_type' => $entry['source_type'],
+                'source_id' => $entry['source_id'],
+                'description' => $entry['description'],
+                'created_at' => $entry['created_at'],
+            ];
+
+            $toAllocate -= $allocated;
+        }
+
+        return $sources;
+    }
+
+    /**
      * Core write operation — always runs inside a DB transaction with row lock.
      *
      * Hard guard: system-initiated writes (actorType = 'system') MUST provide

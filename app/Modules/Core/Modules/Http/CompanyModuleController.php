@@ -5,6 +5,7 @@ namespace App\Modules\Core\Modules\Http;
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Core\Fields\FieldDefinitionCatalog;
 use App\Core\Modules\CompanyModule;
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleCatalogReadModel;
@@ -28,9 +29,29 @@ class CompanyModuleController
     {
         $company = $request->attributes->get('company');
 
+        // ADR-340: Include active addon subscriptions for deactivation dialog UX
+        $addonSubs = CompanyAddonSubscription::where('company_id', $company->id)
+            ->active()
+            ->get()
+            ->keyBy('module_key');
+
+        $policy = \App\Core\Billing\PlatformBillingPolicy::instance();
+
         return response()->json([
             'modules' => ModuleCatalogReadModel::forCompany($company),
             'company_plan_key' => CompanyEntitlements::planKey($company),
+            'addon_deactivation_timing' => $policy->addon_deactivation_timing ?? 'end_of_period',
+            'addon_subscriptions' => $addonSubs->map(fn ($s) => [
+                'module_key' => $s->module_key,
+                'amount_cents' => $s->amount_cents,
+                'currency' => $s->currency,
+                'interval' => $s->interval,
+                'activated_at' => $s->activated_at?->toISOString(),
+                'deactivated_at' => $s->deactivated_at?->toISOString(),
+                'period_end' => $s->interval === 'yearly'
+                    ? $s->activated_at?->addYear()->toDateString()
+                    : $s->activated_at?->addMonth()->toDateString(),
+            ])->values(),
         ]);
     }
 

@@ -2,10 +2,9 @@
 
 namespace App\Core\Billing\Dunning;
 
-use App\Core\Billing\Adapters\StripePaymentAdapter;
-use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\Payment;
+use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PaymentMethodResolver;
 use App\Core\Billing\WalletLedger;
 use Illuminate\Support\Facades\Log;
@@ -31,23 +30,23 @@ class DunningRetryStrategy
             return null;
         }
 
-        $subscription = $invoice->subscription;
-
-        if (! $subscription || ! $subscription->provider || $subscription->provider === 'internal') {
-            return null;
-        }
-
-        $adapter = static::resolveAdapter($subscription->provider);
-
-        if (! $adapter) {
-            return null;
-        }
-
-        // Resolve all saved payment methods for fallback
+        // ADR-336: Resolve payment methods from company profiles (provider-agnostic)
         $methods = PaymentMethodResolver::resolveForCompany($invoice->company);
 
         if ($methods->isEmpty()) {
-            // No saved methods — try default customer charge
+            // No saved methods — try subscription provider's default customer charge
+            $subscription = $invoice->subscription;
+
+            if (! $subscription || ! $subscription->provider || $subscription->provider === 'internal') {
+                return null;
+            }
+
+            $adapter = PaymentGatewayManager::adapterFor($subscription->provider);
+
+            if (! $adapter) {
+                return null;
+            }
+
             try {
                 $result = $adapter->collectInvoice($invoice, $invoice->company);
 
@@ -57,9 +56,15 @@ class DunningRetryStrategy
             }
         }
 
-        // Try each payment method in order (default first)
+        // Try each payment method in order (default first), resolve adapter per profile provider_key
         foreach ($methods as $method) {
             if (! $method->provider_payment_method_id) {
+                continue;
+            }
+
+            $adapter = PaymentGatewayManager::adapterFor($method->provider_key);
+
+            if (! $adapter) {
                 continue;
             }
 
@@ -68,6 +73,7 @@ class DunningRetryStrategy
                 'company_id' => $invoice->company_id,
                 'payment_method_id' => $method->provider_payment_method_id,
                 'method_key' => $method->method_key,
+                'provider_key' => $method->provider_key,
                 'is_default' => $method->is_default,
             ]);
 
@@ -156,25 +162,19 @@ class DunningRetryStrategy
             return null;
         }
 
-        $subscription = $invoice->subscription;
-
-        if (! $subscription || ! $subscription->provider || $subscription->provider === 'internal') {
-            return null;
-        }
-
-        $adapter = static::resolveAdapter($subscription->provider);
-
-        if (! $adapter) {
-            return null;
-        }
-
         $remainder = $amountDue - $walletBalance;
 
-        // Try each payment method for the remainder amount
+        // ADR-336: Resolve payment methods from company profiles (provider-agnostic)
         $methods = PaymentMethodResolver::resolveForCompany($company);
 
         foreach ($methods as $method) {
             if (! $method->provider_payment_method_id) {
+                continue;
+            }
+
+            $adapter = PaymentGatewayManager::adapterFor($method->provider_key);
+
+            if (! $adapter) {
                 continue;
             }
 
@@ -184,6 +184,7 @@ class DunningRetryStrategy
                 'wallet_amount' => $walletBalance,
                 'provider_remainder' => $remainder,
                 'payment_method_id' => $method->provider_payment_method_id,
+                'provider_key' => $method->provider_key,
             ]);
 
             try {
@@ -198,6 +199,7 @@ class DunningRetryStrategy
                         'wallet_amount' => $walletBalance,
                         'provider_payment_id' => $result['provider_payment_id'],
                         'provider_amount' => $remainder,
+                        'provider_key' => $method->provider_key,
                     ];
                 }
 
@@ -236,7 +238,7 @@ class DunningRetryStrategy
                 'amount' => $splitResult['provider_amount'],
                 'currency' => $invoice->currency ?? 'EUR',
                 'status' => 'succeeded',
-                'provider' => $invoice->subscription?->provider ?? 'stripe',
+                'provider' => $splitResult['provider_key'] ?? $invoice->subscription?->provider ?? 'stripe',
             ],
         );
 
@@ -282,11 +284,4 @@ class DunningRetryStrategy
         return true;
     }
 
-    public static function resolveAdapter(string $provider): ?PaymentProviderAdapter
-    {
-        return match ($provider) {
-            'stripe' => app(StripePaymentAdapter::class),
-            default => null,
-        };
-    }
 }

@@ -180,7 +180,7 @@ const navigateToPlan = key => {
                 <span
                   v-if="priceIsPositive(plan)"
                   class="text-disabled mb-2"
-                >{{ t('common.perMonth') }}</span>
+                >{{ t('common.perMonth') }} <span class="text-caption">{{ t('common.exclTax') }}</span></span>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ const navigateToPlan = key => {
               v-if="yearlyPriceIsPositive(plan)"
               class="text-center text-disabled text-body-2 mb-4"
             >
-              {{ formatYearlyPrice(plan) }}
+              {{ formatYearlyPrice(plan) }} <span class="text-caption">{{ t('common.exclTax') }}</span>
             </p>
             <div
               v-else

@@ -7,6 +7,7 @@ use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\Subscription;
 use App\Core\Plans\Plan;
 use Illuminate\Http\JsonResponse;
@@ -121,7 +122,6 @@ class ConfirmRegistrationPaymentController extends Controller
 
             $subscription->update([
                 'status' => 'active',
-                'started_at' => now(),
                 'current_period_start' => $periodStart,
                 'current_period_end' => $periodEnd,
             ]);
@@ -142,7 +142,9 @@ class ConfirmRegistrationPaymentController extends Controller
                         $periodEnd->toDateString(),
                     );
 
-                    InvoiceIssuer::addLine($invoice, 'plan', "{$plan->name} plan", $price, 1);
+                    $desc = InvoiceLineDescriptor::resolve($company->market?->locale ?? 'fr-FR');
+
+                    InvoiceIssuer::addLine($invoice, 'plan', $desc->plan($plan->name), $price, 1);
 
                     // Apply coupon if attached to subscription
                     if ($subscription->coupon_id) {

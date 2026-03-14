@@ -2,6 +2,7 @@
 
 namespace App\Core\Billing;
 
+use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Models\Company;
 use App\Modules\Core\Billing\Services\TaxContextResolver;
 use App\Notifications\Billing\InvoiceCreated;
@@ -162,10 +163,12 @@ class InvoiceIssuer
         }
 
         // Add negative line for the discount
+        $desc = InvoiceLineDescriptor::resolve($company->market?->locale ?? 'fr-FR');
+
         static::addLine(
             $invoice,
             'discount',
-            "Coupon: {$coupon->code}",
+            $desc->coupon($coupon->code),
             -$discount,
             1,
             metadata: ['coupon_id' => $coupon->id, 'coupon_code' => $coupon->code],
@@ -212,8 +215,11 @@ class InvoiceIssuer
             $taxRateBps = $invoice->tax_rate_bps;
             $taxAmount = TaxResolver::compute($subtotal, $taxRateBps);
 
-            // 3. Total
-            $total = $subtotal + $taxAmount;
+            // 3. Total (ADR-333 — mode-aware)
+            $policy = PlatformBillingPolicy::instance();
+            $total = $policy->tax_mode === 'inclusive'
+                ? $subtotal
+                : $subtotal + $taxAmount;
 
             // 4. Apply wallet credit (wallet-first)
             $walletCreditApplied = 0;
@@ -226,6 +232,9 @@ class InvoiceIssuer
                 if ($walletBalance > 0) {
                     $walletCreditApplied = min($walletBalance, $total);
 
+                    // ADR-335: Compute FIFO breakdown before debiting (same transaction, same lock)
+                    $breakdown = WalletLedger::computeFifoBreakdown($company, $walletCreditApplied);
+
                     WalletLedger::debit(
                         company: $company,
                         amount: $walletCreditApplied,
@@ -234,6 +243,7 @@ class InvoiceIssuer
                         description: "Wallet credit applied to invoice",
                         actorType: 'system',
                         idempotencyKey: "invoice-wallet-{$invoice->id}",
+                        metadata: ! empty($breakdown) ? ['sources' => $breakdown] : null,
                     );
                 }
             }

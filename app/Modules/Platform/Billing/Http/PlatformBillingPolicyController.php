@@ -25,6 +25,8 @@ class PlatformBillingPolicyController
     private const TAX_MODE = ['none', 'exclusive', 'inclusive'];
     private const FAILURE_ACTION = ['suspend', 'downgrade_to_starter', 'read_only'];
     private const ADDON_BILLING_INTERVAL = ['monthly', 'plan_aligned'];
+    private const ADDON_DEACTIVATION_TIMING = ['immediate', 'end_of_period'];
+    private const BILLING_INTERVALS = ['monthly', 'yearly'];
     private const TRIAL_PLAN_CHANGE_BEHAVIOR = ['continue_trial', 'end_trial'];
     private const TRIAL_CHARGE_TIMING = ['immediate', 'end_of_trial'];
     private const SEPA_FIRST_FAILURE_ACTION = ['suspend', 'dunning'];
@@ -69,6 +71,13 @@ class PlatformBillingPolicyController
 
             // Addon
             'addon_billing_interval' => ['sometimes', 'string', Rule::in(self::ADDON_BILLING_INTERVAL)],
+            'addon_deactivation_timing' => ['sometimes', 'string', Rule::in(self::ADDON_DEACTIVATION_TIMING)],
+
+            // Operational
+            'trial_expiry_notification_days' => ['sometimes', 'integer', 'min:1', 'max:30'],
+            'payment_method_expiry_check_days' => ['sometimes', 'integer', 'min:1', 'max:90'],
+            'reconciliation_lookback_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'default_billing_interval' => ['sometimes', 'string', Rule::in(self::BILLING_INTERVALS)],
 
             // Trial
             'trial_plan_change_behavior' => ['sometimes', 'string', Rule::in(self::TRIAL_PLAN_CHANGE_BEHAVIOR)],

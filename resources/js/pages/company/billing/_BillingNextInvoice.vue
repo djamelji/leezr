@@ -7,6 +7,16 @@ defineProps({
 })
 
 const { t } = useI18n()
+
+const formatDate = dateStr => {
+  if (!dateStr) return ''
+
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 </script>
 
 <template>
@@ -163,6 +173,26 @@ const { t } = useI18n()
           <template #append>
             <span class="text-body-2 text-success">
               -{{ formatMoney(preview.estimated_wallet_credit, { currency: preview.currency }) }}
+            </span>
+          </template>
+        </VListItem>
+
+        <!-- ADR-338: Wallet credit FIFO sources breakdown -->
+        <VListItem
+          v-for="(src, idx) in (preview.estimated_wallet_credit_sources || [])"
+          :key="`wallet-src-${idx}`"
+          class="ps-8"
+        >
+          <VListItemTitle class="text-caption text-disabled">
+            {{ src.description }}
+          </VListItemTitle>
+          <VListItemSubtitle class="text-caption text-disabled">
+            {{ formatDate(src.created_at) }}
+          </VListItemSubtitle>
+
+          <template #append>
+            <span class="text-caption text-disabled">
+              -{{ formatMoney(src.amount, { currency: preview.currency }) }}
             </span>
           </template>
         </VListItem>

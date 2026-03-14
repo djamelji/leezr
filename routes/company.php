@@ -19,6 +19,7 @@ use App\Modules\Core\Members\Http\MembershipController;
 use App\Modules\Core\Members\Http\UserProfileController;
 use App\Modules\Core\Audit\Http\CompanyAuditLogController;
 use App\Modules\Core\Modules\Http\CompanyModuleController;
+use App\Modules\Core\Modules\Http\ModuleDeactivationPreviewController;
 use App\Modules\Core\Modules\Http\ModuleQuoteController;
 use App\Modules\Core\Settings\Http\CompanyController;
 use App\Modules\Core\Theme\Http\ThemePreferenceController;
@@ -112,6 +113,8 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::post('/billing/plan-change', [SubscriptionMutationController::class, 'planChange'])
         ->middleware('company.access:manage-structure');
     Route::delete('/billing/plan-change', [SubscriptionMutationController::class, 'cancelPlanChange'])
+        ->middleware('company.access:manage-structure');
+    Route::get('/billing/subscription/cancel-preview', [SubscriptionMutationController::class, 'cancelPreview'])
         ->middleware('company.access:manage-structure');
     Route::put('/billing/subscription/cancel', [SubscriptionMutationController::class, 'cancel'])
         ->middleware('company.access:manage-structure');
@@ -249,6 +252,7 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
     Route::put('/modules/{key}/settings', [CompanyModuleController::class, 'updateSettings'])
         ->middleware('company.access:use-permission,modules.manage');
     Route::get('/modules/quote', ModuleQuoteController::class);
+    Route::get('/modules/{key}/deactivation-preview', ModuleDeactivationPreviewController::class);
 });
 
 // ─── Audit log (module-gated, admin permission) ─────────

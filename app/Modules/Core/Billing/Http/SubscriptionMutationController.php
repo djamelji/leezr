@@ -4,27 +4,23 @@ namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\InvoicePayNowService;
 use App\Core\Billing\PlanChangeExecutor;
 use App\Core\Billing\PlanChangeIntent;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Core\Billing\SubscriptionCanceller;
+use App\Core\Billing\WalletLedger;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 
-/**
- * ADR-135 D1: Company subscription mutation endpoints.
- *
- * Zero business logic — orchestration only:
- * validate → policy → delegate → audit → respond.
- */
+/** ADR-135 D1: Company subscription mutation endpoints. */
 class SubscriptionMutationController
 {
-    /** POST /billing/plan-change */
     public function planChange(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -54,7 +50,7 @@ class SubscriptionMutationController
             return response()->json(['message' => 'No active subscription.'], 422);
         }
 
-        $toInterval = $validated['to_interval'] ?? 'monthly';
+        $toInterval = $validated['to_interval'] ?? $policy->default_billing_interval;
 
         if ($subscription->plan_key === $validated['to_plan_key']
             && ($subscription->interval ?? 'monthly') === $toInterval) {
@@ -88,7 +84,7 @@ class SubscriptionMutationController
             $intent = PlanChangeExecutor::schedule(
                 company: $company,
                 toPlanKey: $validated['to_plan_key'],
-                toInterval: $validated['to_interval'] ?? 'monthly',
+                toInterval: $toInterval,
                 timing: $policyTiming,
                 idempotencyKey: $validated['idempotency_key'],
             );
@@ -113,7 +109,6 @@ class SubscriptionMutationController
         ]);
     }
 
-    /** PUT /billing/subscription/cancel */
     public function cancel(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -142,16 +137,37 @@ class SubscriptionMutationController
             ]);
         }
 
+        $sub = $result['subscription'];
+
         return response()->json([
-            'message' => $result['timing'] === 'immediate'
-                ? 'Subscription cancelled.'
-                : 'Subscription will cancel at period end.',
-            'subscription' => $result['subscription'],
+            'message' => $result['timing'] === 'immediate' ? 'Subscription cancelled.' : 'Subscription will cancel at period end.',
+            'subscription' => $sub,
             'timing' => $result['timing'],
+            'period_end' => $sub->current_period_end?->toDateString(),
+            'active_addons_count' => CompanyAddonSubscription::where('company_id', $company->id)->active()->count(),
         ]);
     }
 
-    /** POST /billing/pay-now */
+    public function cancelPreview(Request $request): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $sub = Subscription::where('company_id', $company->id)->whereIn('status', ['active', 'trialing'])->latest()->first();
+        if (! $sub) {
+            return response()->json(['message' => 'No active subscription.'], 404);
+        }
+
+        $activeAddons = CompanyAddonSubscription::where('company_id', $company->id)->active()->get();
+
+        return response()->json([
+            'timing' => PlatformBillingPolicy::instance()->downgrade_timing,
+            'period_end' => $sub->current_period_end?->toDateString(),
+            'plan_name' => $sub->plan_key,
+            'interval' => $sub->interval,
+            'active_addons' => $activeAddons->map(fn ($a) => ['module_key' => $a->module_key, 'amount_cents' => $a->amount_cents])->values(),
+            'wallet_balance' => WalletLedger::balance($company),
+        ]);
+    }
+
     public function payNow(Request $request, AuditLogger $audit): JsonResponse
     {
         $validated = $request->validate([
@@ -159,10 +175,9 @@ class SubscriptionMutationController
         ]);
 
         $company = $request->attributes->get('company');
-        $userId = $request->user()?->id;
 
         try {
-            $result = InvoicePayNowService::payNow($company, $validated['idempotency_key'], $userId);
+            $result = InvoicePayNowService::payNow($company, $validated['idempotency_key'], $request->user()?->id);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -187,7 +202,6 @@ class SubscriptionMutationController
         ]);
     }
 
-    /** DELETE /billing/plan-change */
     public function cancelPlanChange(Request $request, AuditLogger $audit): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -212,7 +226,6 @@ class SubscriptionMutationController
         return response()->json(['message' => 'Scheduled plan change cancelled.']);
     }
 
-    /** PUT /billing/subscription/billing-day */
     public function setBillingDay(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');

@@ -2,6 +2,7 @@
 
 namespace App\Core\Billing;
 
+use App\Core\Billing\Contracts\PaymentProviderAdapter;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Support\Manager;
@@ -47,12 +48,29 @@ class PaymentGatewayManager extends Manager
 
     protected function createStripeDriver(): Adapters\StripePaymentAdapter
     {
-        return new Adapters\StripePaymentAdapter();
+        return app(Adapters\StripePaymentAdapter::class);
     }
 
     protected function createInternalDriver(): Adapters\InternalPaymentAdapter
     {
-        return new Adapters\InternalPaymentAdapter();
+        return app(Adapters\InternalPaymentAdapter::class);
+    }
+
+    /**
+     * ADR-336: Centralized adapter resolution by provider key.
+     *
+     * Replaces 5+ hardcoded match statements scattered across services.
+     * Uses the Manager's driver() method so new providers are auto-discovered.
+     */
+    public static function adapterFor(string $providerKey): ?PaymentProviderAdapter
+    {
+        try {
+            $driver = app(self::class)->driver($providerKey);
+
+            return $driver instanceof PaymentProviderAdapter ? $driver : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

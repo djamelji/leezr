@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Billing\ChangePlanService;
+use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class BillingCheckoutController
         $result = $service->requestUpgrade(
             $company,
             $validated['plan_key'],
-            $validated['billing_interval'] ?? 'monthly',
+            $validated['billing_interval'] ?? PlatformBillingPolicy::instance()->default_billing_interval,
         );
 
         return response()->json($result->toArray());

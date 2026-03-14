@@ -67,6 +67,7 @@ const addonsTotalPrice = computed(() => {
         <div class="d-flex align-center gap-3">
           <span class="text-body-1 font-weight-medium">
             {{ formatMoney(addon.price) }}{{ t('common.perMonth') }}
+            <span class="text-caption text-disabled ms-1">{{ t('common.exclTax') }}</span>
           </span>
           <VSwitch
             :model-value="selectedAddons.includes(addon.key)"
@@ -83,6 +84,7 @@ const addonsTotalPrice = computed(() => {
       <span class="text-body-1">{{ t('register.addonsTotal') }} :</span>
       <span class="text-h6 text-primary ms-2">
         {{ formatMoney(addonsTotalPrice) }}{{ t('common.perMonth') }}
+        <span class="text-caption text-disabled ms-1">{{ t('common.exclTax') }}</span>
       </span>
     </div>
   </template>

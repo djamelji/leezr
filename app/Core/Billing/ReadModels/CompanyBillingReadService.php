@@ -12,6 +12,8 @@ use App\Core\Billing\PlanChangeIntent;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\PricingEngine;
 use App\Core\Billing\Subscription;
+use App\Core\Billing\TaxResolver;
+use App\Core\Billing\CompanyWalletTransaction;
 use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
 use App\Core\Modules\PlatformModule;
@@ -192,6 +194,7 @@ class CompanyBillingReadService
             'tax_amount' => $invoice->tax_amount,
             'tax_rate_bps' => $invoice->tax_rate_bps,
             'wallet_credit_applied' => $invoice->wallet_credit_applied,
+            'wallet_credit_sources' => static::walletCreditSources($invoice),
             'amount_due' => $invoice->amount_due,
             'currency' => $invoice->currency,
             'period_start' => $invoice->period_start?->toDateString(),
@@ -338,7 +341,7 @@ class CompanyBillingReadService
             return null;
         }
 
-        $breakdown = PricingEngine::forCurrentPeriod($subscription, $company);
+        $breakdown = PricingEngine::forCurrentPeriod($subscription, $company, $company->market?->locale ?? 'fr-FR');
 
         // Runtime: wallet estimation (not part of pricing)
         $walletBalance = WalletLedger::balance($company);
@@ -346,6 +349,11 @@ class CompanyBillingReadService
         $estimatedWalletCredit = ($policy->auto_apply_wallet_credit && $breakdown->total > 0 && $walletBalance > 0)
             ? min($walletBalance, $breakdown->total)
             : 0;
+
+        // ADR-338: FIFO breakdown of wallet credit sources for UX transparency
+        $estimatedWalletCreditSources = ($estimatedWalletCredit > 0)
+            ? WalletLedger::computeFifoBreakdown($company, $estimatedWalletCredit)
+            : [];
 
         // Extract plan data from breakdown
         $planLine = $breakdown->planLine();
@@ -381,6 +389,7 @@ class CompanyBillingReadService
             'total' => $breakdown->total,
             'wallet_balance' => $walletBalance,
             'estimated_wallet_credit' => $estimatedWalletCredit,
+            'estimated_wallet_credit_sources' => $estimatedWalletCreditSources,
             'estimated_amount_due' => $breakdown->total - $estimatedWalletCredit,
             'next_billing_date' => $subscription->current_period_end?->toDateString(),
             'trial_remaining_days' => $trialRemainingDays,
@@ -406,7 +415,7 @@ class CompanyBillingReadService
             return null;
         }
 
-        $pcb = PricingEngine::forPlanChange($company, $subscription, $toPlanKey, $toInterval);
+        $pcb = PricingEngine::forPlanChange($company, $subscription, $toPlanKey, $toInterval, $company->market?->locale ?? 'fr-FR');
 
         // Runtime: wallet
         $policy = PlatformBillingPolicy::instance();
@@ -417,7 +426,15 @@ class CompanyBillingReadService
         $immediateTax = $pcb->immediate?->taxAmount ?? 0;
         $immediateTotal = $pcb->immediate?->total ?? 0;
 
-        $estimatedWalletCreditAdded = $immediateDue < 0 ? abs($immediateDue) : 0;
+        // ADR-337: Wallet credit must be TTC (same as PlanChangeExecutor)
+        $estimatedWalletCreditAdded = 0;
+        if ($immediateDue < 0) {
+            $creditHt = abs($immediateDue);
+            $creditTax = TaxResolver::compute($creditHt, $pcb->immediate?->taxRateBps ?? 0);
+            $estimatedWalletCreditAdded = ($policy->tax_mode ?? 'none') === 'inclusive'
+                ? $creditHt
+                : $creditHt + $creditTax;
+        }
         $estimatedWalletDeduction = 0;
         if ($policy->auto_apply_wallet_credit && $immediateTotal > 0 && $walletBalance > 0) {
             $estimatedWalletDeduction = min($walletBalance, $immediateTotal);
@@ -489,5 +506,115 @@ class CompanyBillingReadService
                 'interval' => $pcb->toPlan['interval'] ?? $toInterval,
             ],
         ];
+    }
+
+    /**
+     * ADR-335: Retrieve FIFO wallet credit sources for an invoice.
+     *
+     * If the debit transaction has stored sources (metadata), use those.
+     * Otherwise (pre-ADR-335 invoices), reconstruct the FIFO breakdown
+     * by replaying credits/debits up to the transaction date.
+     */
+    public static function walletCreditSources(Invoice $invoice): array
+    {
+        if (! $invoice->wallet_credit_applied || $invoice->wallet_credit_applied <= 0) {
+            return [];
+        }
+
+        $walletDebit = CompanyWalletTransaction::where('source_type', 'invoice_payment')
+            ->where('source_id', $invoice->id)
+            ->first();
+
+        if (! $walletDebit) {
+            return [];
+        }
+
+        // Fast path: stored breakdown
+        if (! empty($walletDebit->metadata['sources'])) {
+            return $walletDebit->metadata['sources'];
+        }
+
+        // Fallback: reconstruct FIFO for pre-ADR-335 invoices
+        return static::reconstructFifoBreakdown($walletDebit);
+    }
+
+    /**
+     * Reconstruct FIFO breakdown for a historical wallet debit.
+     *
+     * Replays all credits and prior debits up to (but excluding) this debit,
+     * then allocates this debit's amount across remaining credit balances.
+     */
+    private static function reconstructFifoBreakdown(CompanyWalletTransaction $debit): array
+    {
+        $credits = CompanyWalletTransaction::where('wallet_id', $debit->wallet_id)
+            ->where('type', 'credit')
+            ->where('created_at', '<=', $debit->created_at)
+            ->orderBy('created_at')
+            ->get();
+
+        $priorDebits = CompanyWalletTransaction::where('wallet_id', $debit->wallet_id)
+            ->where('type', 'debit')
+            ->where('id', '!=', $debit->id)
+            ->where('created_at', '<=', $debit->created_at)
+            ->orderBy('created_at')
+            ->get();
+
+        // Track remaining balance per credit
+        $remaining = [];
+
+        foreach ($credits as $credit) {
+            $remaining[$credit->id] = [
+                'balance' => $credit->amount,
+                'source_type' => $credit->source_type,
+                'source_id' => $credit->source_id,
+                'description' => $credit->description,
+                'created_at' => $credit->created_at?->toIso8601String(),
+            ];
+        }
+
+        // Consume with prior debits (FIFO)
+        foreach ($priorDebits as $prior) {
+            $toConsume = $prior->amount;
+
+            foreach ($remaining as $creditId => &$entry) {
+                if ($toConsume <= 0) {
+                    break;
+                }
+
+                $consumed = min($toConsume, $entry['balance']);
+                $entry['balance'] -= $consumed;
+                $toConsume -= $consumed;
+
+                if ($entry['balance'] <= 0) {
+                    unset($remaining[$creditId]);
+                }
+            }
+
+            unset($entry);
+        }
+
+        // Allocate this debit across remaining credit balances
+        $sources = [];
+        $toAllocate = $debit->amount;
+
+        foreach ($remaining as $entry) {
+            if ($toAllocate <= 0) {
+                break;
+            }
+
+            $allocated = min($toAllocate, $entry['balance']);
+
+            $sources[] = [
+                'amount' => $allocated,
+                'source_type' => $entry['source_type'],
+                'source_id' => $entry['source_id'],
+                'description' => $entry['description'],
+                'created_at' => $entry['created_at'],
+            ];
+
+            $toAllocate -= $allocated;
+        }
+
+        return $sources;
     }
 }

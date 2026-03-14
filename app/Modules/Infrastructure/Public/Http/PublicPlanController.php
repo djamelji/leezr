@@ -130,12 +130,15 @@ class PublicPlanController extends Controller
             }
         }
 
+        $marketLocale = \App\Core\Markets\Market::where('key', $data['market_key'])->value('locale') ?? 'fr-FR';
+
         $breakdown = PricingEngine::forRegistration(
             planKey: $data['plan_key'],
             interval: $data['interval'],
             marketKey: $data['market_key'],
             coupon: $coupon,
             addonModuleKeys: $data['addon_keys'] ?? [],
+            locale: $marketLocale,
         );
 
         // ADR-325: Include allowed payment methods for this context
