@@ -87,8 +87,9 @@ registerPlugins(app)
 app.mount('#app')
 
 // ─── Post-mount cleanup ──────────────────────────────────
-// Cancel the Blade failsafe timer — Vue mounted successfully.
+// Cancel the Blade failsafe timers — Vue mounted successfully.
 if (window.__LZR_BOOT_TIMER__) clearTimeout(window.__LZR_BOOT_TIMER__)
+if (window.__LZR_AUTO_RETRY__) clearTimeout(window.__LZR_AUTO_RETRY__)
 
 // Layout overlays (nav drawer) — always clean up, unrelated to chunk errors.
 document.querySelectorAll('.layout-overlay.visible').forEach(el => {

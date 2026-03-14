@@ -95,22 +95,24 @@
       document.body.appendChild(overlay)
     }
 
-    // ADR-341: Smart refresh — clear ALL version state, then clean reload.
-    // Clearing lzr:update-shown BEFORE reload allows the new page to detect future deploys.
+    // ADR-341: Smart refresh — keep lzr:update-shown during reload.
+    // The flag STAYS set so the new page load is PROTECTED against chunk errors
+    // that fire before Vue boots. Only main.js cleanup (after successful boot)
+    // clears the flag — proving the new assets actually loaded.
     function __lzrSmartRefresh() {
       var btn = document.getElementById('lzr-chunk-btn')
       var msg = document.getElementById('lzr-chunk-msg')
       var progress = document.getElementById('lzr-chunk-progress')
       if (btn) { btn.disabled = true; btn.style.display = 'none' }
-      if (msg) { msg.textContent = 'Connexion au serveur\u2026' }
+      if (msg) { msg.textContent = 'Mise \u00e0 jour en cours\u2026' }
       if (progress) { progress.style.display = 'block' }
 
       function tryReload() {
         fetch('/api/public/version', { cache: 'no-store' })
           .then(function(r) {
             if (r.ok) {
-              // Clear ALL version state — the new page starts fresh
-              sessionStorage.removeItem('lzr:update-shown')
+              // Only clear stale + mismatch. Keep lzr:update-shown as guard.
+              // main.js cleanup will clear it after Vue boots successfully.
               sessionStorage.removeItem('lzr:stale')
               sessionStorage.removeItem('lzr:version-mismatch')
               location.replace(location.pathname)
@@ -123,11 +125,20 @@
       tryReload()
     }
 
-    // ADR-330c: No immediate overlay re-show on page load.
-    // If lzr:stale is set, the loader shows "Mise à jour en cours…".
-    // If Vite is still down, error detection (script error / chunk error / boot timer)
-    // will naturally show the overlay. If Vite is back, Vue boots clean → health check
-    // clears lzr:stale. This avoids the "double popup" on login → dashboard navigation.
+    // ADR-341: If page loads with lzr:update-shown (post-refresh but Vue hasn't booted yet),
+    // auto-retry reload every 3s instead of showing another popup. The user already clicked
+    // "Rafraîchir" once — no need to ask again, just keep trying silently.
+    if (sessionStorage.getItem('lzr:update-shown') === 'true') {
+      var __lzrAutoRetryTimer = setTimeout(function() {
+        // Only auto-retry if Vue HASN'T booted (loading-bg still visible)
+        if (!document.getElementById('loading-bg')) return
+        fetch('/api/public/version', { cache: 'no-store' })
+          .then(function(r) { if (r.ok) location.replace(location.pathname) })
+          .catch(function() {})
+      }, 3000)
+      // Cancel if Vue boots successfully
+      window.__LZR_AUTO_RETRY__ = __lzrAutoRetryTimer
+    }
 
     // 1. Script error listener (capture phase) — détecte immédiatement si main.js/chunks échouent
     window.addEventListener('error', function(e) {
