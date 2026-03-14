@@ -97,6 +97,13 @@ export default defineConfig({
       '@configured-variables': fileURLToPath(new URL('./resources/styles/variables/_template.scss', import.meta.url)),
     },
   },
+  // ADR-342: Pre-transform main entry on server start so vite-plugin-vuetify
+  // registers virtual SASS modules before the browser requests them.
+  server: {
+    warmup: {
+      clientFiles: ['./resources/js/main.js'],
+    },
+  },
   build: {
     chunkSizeWarningLimit: 5000,
   },

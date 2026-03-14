@@ -2,7 +2,7 @@
 @use "@styles/variables/vuetify.scss";
 
 @mixin elevation($z, $important: false) {
-  box-shadow: map.get(vuetify.$shadow-key-umbra, $z), map.get(vuetify.$shadow-key-penumbra, $z), map.get(vuetify.$shadow-key-ambient, $z) if($important, !important, null);
+  box-shadow: map.get(vuetify.$shadow-key-umbra, $z), map.get(vuetify.$shadow-key-penumbra, $z), map.get(vuetify.$shadow-key-ambient, $z) if(sass($important): !important; else: null);
 }
 
 // #region before-pseudo
@@ -29,7 +29,7 @@
   #{$component} {
     box-shadow: none !important;
     // stylelint-disable-next-line annotation-no-unknown
-    #{$border-property}: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) if($important, !important, null);
+    #{$border-property}: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)) if(sass($important): !important; else: null);
   }
 }
 

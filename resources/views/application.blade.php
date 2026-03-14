@@ -22,31 +22,45 @@
 </head>
 
 <body>
-  <div id="app">
-    <div id="loading-bg">
-      <div class="loading">
-        <div class="effect-1 effects"></div>
-        <div class="effect-2 effects"></div>
-        <div class="effect-3 effects"></div>
-        <span class="loading-brand">
-          <span class="loading-brand-text">{{ $appName }}</span><span class="loading-brand-dot">.</span>
-        </span>
+  <!-- ADR-342: Boot screen — persistent overlay OUTSIDE #app.
+       Survives Vue mount → invisible auto-reload, no blinking.
+       Removed by main.js only after full boot readiness confirmed. -->
+  <div id="lzr-boot-screen">
+    <div class="loading">
+      <div class="effect-1 effects"></div>
+      <div class="effect-2 effects"></div>
+      <div class="effect-3 effects"></div>
+      <span class="loading-brand">
+        <span class="loading-brand-text">{{ $appName }}</span><span class="loading-brand-dot">.</span>
+      </span>
+    </div>
+    <div class="lzr-boot-footer">
+      <div class="lzr-boot-progress">
+        <div class="lzr-boot-progress-bar"></div>
       </div>
-      <!-- ADR-330: During smart refresh, show "mise à jour" message below the spinner -->
-      <div id="loading-update-msg" style="display:none;text-align:center;margin-block-start:1.5rem;font-family:var(--lzr-font-family,Public Sans,sans-serif)">
-        <p style="margin:0;color:var(--initial-loader-text-color,#2F2B3D);opacity:.68;font-size:.875rem">Mise à jour en cours…</p>
-      </div>
+      <p class="lzr-boot-status" id="lzr-boot-status"></p>
     </div>
   </div>
+
+  <div id="app"></div>
+
   <script>
-    // ADR-330c: Show update message if app was marked stale (TTL 60s)
-    var __staleTs = sessionStorage.getItem('lzr:stale')
-    if (__staleTs && Date.now() - parseInt(__staleTs) < 60000) {
-      var updateMsg = document.getElementById('loading-update-msg');
-      if (updateMsg) updateMsg.style.display = 'block';
-    } else if (__staleTs) {
-      sessionStorage.removeItem('lzr:stale')
-    }
+    // ADR-342: Show retry status on boot screen
+    ;(function() {
+      var status = document.getElementById('lzr-boot-status')
+      // Stale/update state — show "Mise à jour en cours..."
+      var staleTs = sessionStorage.getItem('lzr:stale')
+      if (staleTs && Date.now() - parseInt(staleTs) < 60000) {
+        if (status) status.textContent = 'Mise \u00e0 jour en cours\u2026'
+      } else if (staleTs) {
+        sessionStorage.removeItem('lzr:stale')
+      }
+      // Dev retry count
+      var devRetries = sessionStorage.getItem('lzr:dev-retry')
+      if (devRetries) {
+        if (status) status.textContent = 'Initialisation\u2026 (' + devRetries + '/3)'
+      }
+    })()
   </script>
 
   <script>
@@ -71,10 +85,14 @@
 
     // ADR-341: Overlay + smart refresh — sessionStorage-based single-fire guard.
     // Uses sessionStorage instead of JS var so the guard SURVIVES page reloads.
-    // This is the ROOT FIX for the "5 popups in 3 minutes" reload loop.
     var __lzrOverlayFired = sessionStorage.getItem('lzr:update-shown') === 'true'
 
     function __lzrShowVersionOverlay() {
+      // ADR-342: In dev, Vite HMR handles reconnection — no overlay needed
+      if (window.__APP_VERSION__ === 'dev') {
+        console.log('[lzr:version] Dev mode — skipping overlay (Vite HMR manages reconnection)')
+        return
+      }
       // Guard: already shown (survives reloads via sessionStorage)
       if (__lzrOverlayFired) return
       if (document.getElementById('lzr-chunk-error')) return
@@ -96,9 +114,6 @@
     }
 
     // ADR-341: Smart refresh — keep lzr:update-shown during reload.
-    // The flag STAYS set so the new page load is PROTECTED against chunk errors
-    // that fire before Vue boots. Only main.js cleanup (after successful boot)
-    // clears the flag — proving the new assets actually loaded.
     function __lzrSmartRefresh() {
       var btn = document.getElementById('lzr-chunk-btn')
       var msg = document.getElementById('lzr-chunk-msg')
@@ -111,8 +126,6 @@
         fetch('/api/public/version', { cache: 'no-store' })
           .then(function(r) {
             if (r.ok) {
-              // Only clear stale + mismatch. Keep lzr:update-shown as guard.
-              // main.js cleanup will clear it after Vue boots successfully.
               sessionStorage.removeItem('lzr:stale')
               sessionStorage.removeItem('lzr:version-mismatch')
               location.replace(location.pathname)
@@ -125,31 +138,70 @@
       tryReload()
     }
 
-    // ADR-341: If page loads with lzr:update-shown (post-refresh but Vue hasn't booted yet),
-    // auto-retry reload every 3s instead of showing another popup. The user already clicked
-    // "Rafraîchir" once — no need to ask again, just keep trying silently.
-    if (sessionStorage.getItem('lzr:update-shown') === 'true') {
-      var __lzrAutoRetryTimer = setTimeout(function() {
-        // Only auto-retry if Vue HASN'T booted (loading-bg still visible)
-        if (!document.getElementById('loading-bg')) return
-        fetch('/api/public/version', { cache: 'no-store' })
-          .then(function(r) { if (r.ok) location.replace(location.pathname) })
-          .catch(function() {})
-      }, 3000)
-      // Cancel if Vue boots successfully
-      window.__LZR_AUTO_RETRY__ = __lzrAutoRetryTimer
+    // ADR-342: Recurring auto-retry with backoff (replaces one-shot timer).
+    // IMPORTANT: Function defined OUTSIDE if-block so boot timer & script error
+    // listener can call it regardless of initial state.
+    function __lzrPostRefreshRetry() {
+      if (window.__lzrVueMounted) return  // Vue booted → stop
+      var retryCount = parseInt(sessionStorage.getItem('lzr:retry-count') || '0', 10)
+      if (retryCount >= 5) {
+        // Max retries reached — give up, clear state
+        sessionStorage.removeItem('lzr:update-shown')
+        sessionStorage.removeItem('lzr:retry-count')
+        sessionStorage.removeItem('lzr:stale')
+        return
+      }
+      sessionStorage.setItem('lzr:retry-count', String(retryCount + 1))
+      var delay = Math.min(3000 + retryCount * 2000, 10000)
+      setTimeout(function() {
+        if (window.__lzrVueMounted) return
+        location.replace(location.pathname)
+      }, delay)
     }
 
-    // 1. Script error listener (capture phase) — détecte immédiatement si main.js/chunks échouent
+    if (sessionStorage.getItem('lzr:update-shown') === 'true') {
+      // Show update status on boot screen
+      var bootStatus = document.getElementById('lzr-boot-status')
+      if (bootStatus) bootStatus.textContent = 'Mise \u00e0 jour en cours\u2026'
+      // First retry after 3s (recurring via __lzrPostRefreshRetry backoff)
+      window.__LZR_AUTO_RETRY__ = setTimeout(__lzrPostRefreshRetry, 3000)
+    }
+
+    // 1. Script error listener (capture phase) — détecte si main.js/chunks échouent
     window.addEventListener('error', function(e) {
-      if (e.target && e.target.tagName === 'SCRIPT' && document.getElementById('loading-bg')) {
+      if (e.target && e.target.tagName === 'SCRIPT' && !window.__lzrVueMounted) {
+        // Post-refresh: auto-retry handles recovery, no popup
+        if (sessionStorage.getItem('lzr:update-shown') === 'true') return
         __lzrShowVersionOverlay()
       }
     }, true)
 
     // 2. Timer 10s — si le JS n'a pas monté Vue dans les 10s
     window.__LZR_BOOT_TIMER__ = setTimeout(function() {
-      if (!document.getElementById('loading-bg')) return
+      if (window.__lzrVueMounted) return
+      // Dev: auto-reload silently (Vuetify virtual modules need a warm restart).
+      // Max 3 attempts to avoid infinite loop if Vite is truly down.
+      if (window.__APP_VERSION__ === 'dev') {
+        var devRetries = parseInt(sessionStorage.getItem('lzr:dev-retry') || '0', 10)
+        if (devRetries < 3) {
+          sessionStorage.setItem('lzr:dev-retry', String(devRetries + 1))
+          var status = document.getElementById('lzr-boot-status')
+          if (status) status.textContent = 'Initialisation\u2026 (' + (devRetries + 1) + '/3)'
+          console.warn('[lzr:boot] Dev: Vuetify modules not ready — auto-reload attempt ' + (devRetries + 1) + '/3')
+          location.reload()
+        } else {
+          sessionStorage.removeItem('lzr:dev-retry')
+          console.error('[lzr:boot] Dev: 3 reload attempts failed. Check pnpm dev:all is running.')
+          var status = document.getElementById('lzr-boot-status')
+          if (status) status.textContent = '\u00c9chec apr\u00e8s 3 tentatives. V\u00e9rifiez pnpm dev:all.'
+        }
+        return
+      }
+      // Prod: post-refresh retry or overlay
+      if (sessionStorage.getItem('lzr:update-shown') === 'true') {
+        __lzrPostRefreshRetry()
+        return
+      }
       __lzrShowVersionOverlay()
     }, 10000)
 

@@ -7,16 +7,19 @@ html {
   overflow-y: scroll;
 }
 
-#loading-bg {
-  position: absolute;
+/* ADR-342: Boot screen — fixed overlay outside #app.
+   Survives Vue mount → no blinking during auto-reload.
+   Removed by main.js after full boot readiness. */
+#lzr-boot-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99997;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--initial-loader-bg, #fff);
-  block-size: 100%;
-  gap: 1rem 0;
-  inline-size: 100%;
+  transition: opacity 0.3s ease;
 }
 
 .loading {
@@ -85,6 +88,41 @@ html {
   color: var(--initial-loader-color, #7367F0);
 }
 
+/* Boot footer — progress bar + status text at the bottom */
+.lzr-boot-footer {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  width: min(80%, 300px);
+}
+
+.lzr-boot-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(128, 128, 128, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.lzr-boot-progress-bar {
+  width: 25%;
+  height: 100%;
+  background: var(--initial-loader-color, #7367F0);
+  border-radius: 2px;
+  animation: lzr-progress 1.5s ease-in-out infinite;
+}
+
+.lzr-boot-status {
+  margin: 0;
+  font-family: var(--lzr-font-family, "Public Sans", sans-serif);
+  font-size: 0.8125rem;
+  color: var(--initial-loader-text-color, #2F2B3D);
+  opacity: 0.55;
+}
+
 @keyframes rotate {
   0% {
     transform: rotate(0deg);
@@ -104,5 +142,15 @@ html {
   100% {
     opacity: 1;
     transform: rotate(1turn);
+  }
+}
+
+@keyframes lzr-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(500%);
   }
 }

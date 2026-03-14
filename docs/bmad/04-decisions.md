@@ -11572,4 +11572,49 @@ L'audit exhaustif de tous les flux billing (addon, plan, registration, résiliat
 
 ---
 
+### ADR-342 — Boot screen resilience & version check (2026-03-09)
+
+**Contexte** : Le système de boot et de détection de mises à jour souffrait de plusieurs défauts :
+1. **Blinking** — le loader (`#loading-bg`) était dans `#app`, détruit par `app.mount()` → flash blanc avant rendu
+2. **SASS virtual module 404** — `vite-plugin-vuetify` crée des modules virtuels (ex: `virtual:plugin-vuetify:components/VBadge.sass`) qui 404 sur cold start car pas encore servis
+3. **Popups en boucle** — le HMR disconnect déclenchait l'overlay version en dev (timeout 5s trop court)
+4. **Page blanche post-refresh** — `requestIdleCallback` finalisait le boot avant l'arrivée des 404 réseau → erreur classée "post-boot" → aucune recovery
+5. **Navigation retry infini** — `router.push(to)` retry échoue car le module graph Vite ne re-enregistre pas un module 404
+6. **State stuck** — `lzr:update-shown` bloquait le cleanup dans `main.js` → version check mort définitivement
+7. **Sass deprecation warnings** — `sass-embedded` ≥1.98 flag `if()` comme deprecated, venant de Vuetify source et `@core` SCSS (non modifiables)
+
+**Décisions** :
+1. **Boot screen hors `#app`** — `#lzr-boot-screen` est un overlay `position: fixed` AVANT `<div id="app">`, survit au mount Vue
+2. **2-phase boot readiness** — Phase 1 : `router.isReady()` → Phase 2 : délai 2s (dev) ou `requestIdleCallback` (prod) → THEN remove boot screen
+3. **`_bootComplete` flag** — distingue boot-phase (auto-reload derrière boot screen) vs post-boot (router full-nav)
+4. **Dev : full page navigation** — `router.onError` → `location.href = to.fullPath` (pas de retry, le boot screen rend ça invisible)
+5. **Dev : pas d'overlay** — `__lzrShowVersionOverlay()` skip en dev (Vite HMR gère la reconnexion)
+6. **Dev : auto-reload boot** — max 3 tentatives via `lzr:dev-retry` (sessionStorage), statut affiché sur boot screen
+7. **HMR timeout 30s** — au lieu de 5s, laisse Vite le temps de restart sans popup
+8. **`sass-embedded`** — remplace `sass` pour les virtual modules + build 2× plus rapide (~7s vs ~12s)
+9. **`server.warmup`** — pré-transforme `main.js` au démarrage serveur pour que vite-plugin-vuetify enregistre ses modules
+10. **Fix `if-function` deprecation at source** — migration `if($cond, $a, $b)` → `if(sass($cond): $a; else: $b)` (CSS if syntax) dans `@core` SCSS (2 fichiers) + pnpm patch Vuetify (10 fichiers, 18 occurrences). Zéro `silenceDeprecations` nécessaire
+
+**Conséquences** :
+- Boot screen visible jusqu'à confirmation totale de readiness — jamais de flash blanc
+- En dev : chunk error pendant boot → reload silencieux (invisible, boot screen reste) → max 3 tentatives
+- En dev : chunk error post-boot (navigation) → full page nav vers la route cible (boot screen = transition smooth)
+- En dev : HMR disconnect → log console uniquement, pas d'overlay
+- En prod : overlay unique + smart refresh avec backoff (max 5 retries)
+- Build propre, 0 warnings de deprecation
+- sessionStorage keys : `lzr:dev-retry` (dev boot), `lzr:update-shown` / `lzr:stale` / `lzr:retry-count` (prod), `lzr:version-mismatch` (API)
+
+**Fichiers** :
+- `public/loader.css` — refonte complète (#lzr-boot-screen, progress bar, status text)
+- `resources/views/application.blade.php` — boot screen hors #app, dev skip overlay, retry backoff
+- `resources/js/main.js` — _bootComplete flag, dev auto-reload, 2-phase finalizeBoot, HMR 30s
+- `resources/js/plugins/1.router/index.js` — dev: location.href, prod: report + overlay
+- `vite.config.js` — server.warmup
+- `package.json` — sass → sass-embedded, vite-plugin-vuetify 2.1.3, pnpm patchedDependencies
+- `patches/vuetify.patch` — 10 fichiers: `if()` → `if(sass(): ; else: )` dans styles/tools/ (7) + components/ (3)
+- `resources/styles/@core/base/_mixins.scss` — `if()` → `if(sass(): ; else: )` (2 occurrences)
+- `resources/styles/@core/base/_utils.scss` — `if()` → `if(sass(): ; else: )` (1 occurrence)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

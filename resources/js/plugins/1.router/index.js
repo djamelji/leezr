@@ -33,13 +33,23 @@ const router = createRouter({
 
 setupGuards(router)
 
-// ADR-046 F3 + ADR-330b: Catch chunk load failures during navigation.
-// Delegates to Blade's centralized overlay instead of doing a blind reload.
-// A direct reload() here bypasses all guards (_chunkErrorHandled, __lzrOverlayFired,
-// grace period) and resets JS-memory flags → causes reload loops and multiple popups.
-router.onError(error => {
+// ADR-046 F3 + ADR-330b + ADR-342: Catch chunk load failures during navigation.
+router.onError((error, to) => {
   const msg = String(error?.message || '')
   if (msg.includes('Loading chunk') || msg.includes('ChunkLoadError') || msg.includes('Failed to fetch dynamically imported module')) {
+    // ADR-342: Dev mode — full page navigation to target route.
+    // Vuetify virtual SASS module 404s can't be fixed by router.push retry
+    // (vite-plugin-vuetify doesn't re-serve failed virtual modules).
+    // A full page load forces Vite to rebuild its module graph.
+    // Boot screen (outside #app) provides smooth transition — no flash.
+    if (import.meta.env.DEV && to) {
+      console.warn('[lzr:nav] Chunk error — full navigation to', to.fullPath)
+      location.href = to.fullPath
+
+      return
+    }
+
+    // Production: report + show overlay
     try {
       const payload = JSON.stringify({
         type: 'chunk_load_failure',
