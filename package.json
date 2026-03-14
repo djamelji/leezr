@@ -130,8 +130,7 @@
       "vue-demi"
     ],
     "patchedDependencies": {
-      "vuetify@3.10.8": "patches/vuetify.patch",
-      "vuetify": "patches/vuetify.patch"
+      "vuetify@3.10.8": "patches/vuetify.patch"
     }
   }
 }
