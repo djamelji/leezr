@@ -68,7 +68,7 @@ function timeAgo(dateStr) {
   if (diffHours < 24) return t('notifications.timeHourAgo', { n: diffHours })
   if (diffDays < 7) return t('notifications.timeDayAgo', { n: diffDays })
 
-  return date.toLocaleDateString('fr-FR')
+  return date.toLocaleDateString()
 }
 </script>
 

@@ -30,6 +30,7 @@ const statusColors = {
 
 const priorityColors = {
   low: 'secondary',
+  medium: 'info',
   normal: 'info',
   high: 'warning',
   urgent: 'error',

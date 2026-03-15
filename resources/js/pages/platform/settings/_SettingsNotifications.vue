@@ -127,7 +127,7 @@ const toggleActive = async topic => {
           size="small"
           class="me-1"
         >
-          {{ ch === 'in_app' ? 'In-App' : 'Email' }}
+          {{ ch === 'in_app' ? t('notifications.channelInApp') : t('notifications.channelEmail') }}
         </VChip>
       </template>
 
@@ -175,7 +175,7 @@ const toggleActive = async topic => {
             </div>
             <VCheckbox
               :model-value="editForm.default_channels.includes('in_app')"
-              label="In-App"
+              :label="t('notifications.channelInApp')"
               hide-details
               @update:model-value="v => {
                 if (v) editForm.default_channels.push('in_app')
@@ -184,7 +184,7 @@ const toggleActive = async topic => {
             />
             <VCheckbox
               :model-value="editForm.default_channels.includes('email')"
-              label="Email"
+              :label="t('notifications.channelEmail')"
               hide-details
               @update:model-value="v => {
                 if (v) editForm.default_channels.push('email')
