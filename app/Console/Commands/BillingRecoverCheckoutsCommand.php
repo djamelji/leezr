@@ -45,6 +45,8 @@ class BillingRecoverCheckoutsCommand extends Command implements Isolatable
         Log::channel('billing')->info('billing:recover-checkouts started', ['stale' => $stale->count()]);
 
         if ($stale->isEmpty()) {
+            BillingJobHeartbeat::finish('billing:recover-checkouts', 'ok', []);
+
             return self::SUCCESS;
         }
 

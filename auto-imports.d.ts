@@ -20,6 +20,7 @@ declare global {
   const avatarText: typeof import('./resources/js/@core/utils/formatters.js')['avatarText']
   const betweenValidator: typeof import('./resources/js/@core/utils/validators.js')['betweenValidator']
   const checkVersionOnMount: typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']
+  const clearVersionState: typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -411,6 +412,7 @@ declare module 'vue' {
     readonly avatarText: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['betweenValidator']>
     readonly checkVersionOnMount: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']>
+    readonly clearVersionState: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>

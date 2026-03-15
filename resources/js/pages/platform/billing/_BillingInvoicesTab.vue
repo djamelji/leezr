@@ -417,6 +417,23 @@ const bulkRetry = async () => {
 </script>
 
 <template>
+  <VAlert
+    type="info"
+    variant="tonal"
+    density="compact"
+    class="mb-4"
+  >
+    <VAlertTitle>
+      <VIcon
+        icon="tabler-file-invoice"
+        size="20"
+        class="me-2"
+      />
+      {{ t('platformBilling.invoices.headerTitle') }}
+    </VAlertTitle>
+    {{ t('platformBilling.invoices.headerDesc') }}
+  </VAlert>
+
   <VCard>
     <VCardTitle class="d-flex align-center">
       <VIcon

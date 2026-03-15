@@ -16,6 +16,7 @@ use App\Core\Fields\FieldWriteService;
 use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Markets\Market;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Plans\Plan;
@@ -159,7 +160,17 @@ class RegisterCompanyUseCase
                 ]);
 
                 // ADR-286: Notify owner that trial has started
-                $user->notify(new \App\Notifications\Billing\TrialStarted($trialSub));
+                NotificationDispatcher::send(
+                    topicKey: 'billing.trial_started',
+                    recipients: [$user],
+                    payload: [
+                        'plan_name' => $planKey,
+                        'trial_days' => $plan->trial_days,
+                        'trial_ends_at' => $trialSub->trial_ends_at->toDateString(),
+                    ],
+                    company: $company,
+                    mailNotification: new \App\Notifications\Billing\TrialStarted($trialSub),
+                );
             }
             // Paid no-trial: subscription created by createCheckout() after transaction
 

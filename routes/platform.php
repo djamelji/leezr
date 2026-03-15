@@ -20,7 +20,9 @@ use App\Modules\Platform\Billing\Http\BillingMetricsExportController;
 use App\Modules\Platform\Billing\Http\BillingExportController;
 use App\Modules\Platform\Billing\Http\BillingBulkActionController;
 use App\Modules\Platform\Billing\Http\CouponCrudController;
+use App\Modules\Platform\Notifications\Http\PlatformNotificationController;
 use App\Modules\Platform\Billing\Http\AuditExportController;
+use App\Modules\Platform\Billing\Http\PlatformRecoveryController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
@@ -47,12 +49,17 @@ use App\Modules\Platform\Translations\Http\OverrideController;
 use App\Modules\Platform\Settings\Http\WorldSettingsController;
 use App\Modules\Platform\Documents\Http\DocumentTypeCatalogController;
 use App\Modules\Platform\Realtime\Http\RealtimeGovernanceController;
+use App\Modules\Platform\Notifications\Http\PlatformNotificationTopicController;
 use App\Modules\Platform\Audit\Http\PlatformAuditLogController;
 use App\Modules\Platform\Security\Http\SecurityAlertController;
 use App\Modules\Infrastructure\Navigation\Http\NavController;
 use App\Modules\Infrastructure\Theme\Http\PlatformThemePreferenceController;
+use App\Modules\Infrastructure\AdminAuth\Http\PlatformAccountController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformAuthController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
+use App\Modules\Infrastructure\AdminAuth\Http\PlatformTwoFactorController;
+use App\Modules\Platform\Support\Http\PlatformSupportTicketController;
+use App\Modules\Platform\Support\Http\PlatformSupportMessageController;
 use Illuminate\Support\Facades\Route;
 
 // Metrics export — bearer token auth, no session guard (ADR-311)
@@ -62,6 +69,8 @@ Route::get('/billing/metrics-export', BillingMetricsExportController::class)
 // Platform auth — public (throttled)
 Route::post('/login', [PlatformAuthController::class, 'login'])
     ->middleware('throttle:15,1');
+Route::post('/2fa/verify', [PlatformAuthController::class, 'verify2fa'])
+    ->middleware('throttle:5,1');
 Route::post('/forgot-password', [PlatformPasswordResetController::class, 'forgotPassword'])
     ->middleware('throttle:5,1');
 Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPassword'])
@@ -69,12 +78,36 @@ Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPa
 
 // Authenticated platform routes
 Route::middleware(['auth:platform', 'session.governance'])->group(function () {
+    // Routes exempt from 2FA requirement (needed for setup + basic auth)
     Route::get('/me', [PlatformAuthController::class, 'me']);
     Route::get('/nav', [NavController::class, 'platform']);
     Route::post('/logout', [PlatformAuthController::class, 'logout']);
 
+    // My Account (ADR-350) — exempt from 2FA so admins can set it up
+    Route::put('/me/profile', [PlatformAccountController::class, 'updateProfile']);
+    Route::put('/me/password', [PlatformAccountController::class, 'updatePassword']);
+    Route::get('/me/notification-preferences', [PlatformAccountController::class, 'notificationPreferences']);
+    Route::put('/me/notification-preferences', [PlatformAccountController::class, 'updateNotificationPreferences']);
+
+    // My notifications inbox (in-app notifications for the logged-in admin)
+    Route::get('/me/notifications', [PlatformNotificationController::class, 'index']);
+    Route::get('/me/notifications/unread-count', [PlatformNotificationController::class, 'unreadCount']);
+    Route::post('/me/notifications/{id}/read', [PlatformNotificationController::class, 'markRead']);
+    Route::post('/me/notifications/read-all', [PlatformNotificationController::class, 'markAllRead']);
+    Route::delete('/me/notifications/{id}', [PlatformNotificationController::class, 'destroy']);
+
+    // 2FA management (ADR-351) — exempt from 2FA (needed to enable it)
+    Route::post('/2fa/enable', [PlatformTwoFactorController::class, 'enable']);
+    Route::post('/2fa/confirm', [PlatformTwoFactorController::class, 'confirm']);
+    Route::delete('/2fa', [PlatformTwoFactorController::class, 'disable']);
+    Route::post('/2fa/backup-codes', [PlatformTwoFactorController::class, 'regenerateBackupCodes']);
+    Route::get('/2fa/status', [PlatformTwoFactorController::class, 'status']);
+
     // Theme preference (ADR-159, no module gate — platform admins always have it)
     Route::put('/theme-preference', [PlatformThemePreferenceController::class, 'update']);
+
+    // All routes below require 2FA to be enabled (ADR-351)
+    Route::middleware(['platform.2fa'])->group(function () {
 
     // Companies
     Route::middleware(['module.active:platform.companies', 'platform.permission:manage_companies'])->group(function () {
@@ -324,6 +357,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Audit export (ADR-311)
         Route::get('/billing/audit-export', AuditExportController::class);
+
+        // Recovery operations (ADR-345)
+        Route::post('/billing/recover-checkouts', [PlatformRecoveryController::class, 'recoverCheckouts']);
+        Route::post('/billing/recover-webhooks', [PlatformRecoveryController::class, 'recoverWebhooks']);
+        Route::post('/billing/replay-dead-letters', [PlatformRecoveryController::class, 'replayAllDeadLetters']);
+        Route::post('/billing/replay-dead-letters/{id}', [PlatformRecoveryController::class, 'replayDeadLetter']);
+        Route::get('/billing/dead-letters', [PlatformRecoveryController::class, 'listDeadLetters']);
     });
 
     // Markets governance (ADR-104)
@@ -421,6 +461,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         });
     });
 
+    // Notification topic governance
+    Route::middleware(['module.active:platform.notifications', 'platform.permission:manage_notifications'])->group(function () {
+        Route::get('/notifications/topics', [PlatformNotificationTopicController::class, 'index']);
+        Route::put('/notifications/topics/{key}', [PlatformNotificationTopicController::class, 'update']);
+        Route::put('/notifications/topics/{key}/toggle', [PlatformNotificationTopicController::class, 'toggle']);
+    });
+
     // Heartbeat (session keepalive — governance middleware handles TTL header)
     Route::post('/heartbeat', fn () => response()->noContent());
 
@@ -437,4 +484,20 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);
         Route::delete('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'destroy']);
     });
+
+    // ── Support Tickets ─────────────────────────────────────────
+    Route::middleware(['module.active:platform.support', 'platform.permission:manage_support'])->group(function () {
+        Route::get('/support/metrics', [PlatformSupportTicketController::class, 'metrics']);
+        Route::get('/support/tickets', [PlatformSupportTicketController::class, 'index']);
+        Route::get('/support/tickets/{id}', [PlatformSupportTicketController::class, 'show']);
+        Route::put('/support/tickets/{id}/assign', [PlatformSupportTicketController::class, 'assign']);
+        Route::put('/support/tickets/{id}/resolve', [PlatformSupportTicketController::class, 'resolve']);
+        Route::put('/support/tickets/{id}/close', [PlatformSupportTicketController::class, 'close']);
+        Route::put('/support/tickets/{id}/priority', [PlatformSupportTicketController::class, 'updatePriority']);
+        Route::get('/support/tickets/{id}/messages', [PlatformSupportMessageController::class, 'index']);
+        Route::post('/support/tickets/{id}/messages', [PlatformSupportMessageController::class, 'store']);
+        Route::post('/support/tickets/{id}/internal-notes', [PlatformSupportMessageController::class, 'storeInternal']);
+    });
+
+    }); // end platform.2fa
 });

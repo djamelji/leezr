@@ -91,6 +91,11 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', () => {
     fetchAllWidgets: met.fetchAllWidgets,
     fetchMetrics: met.fetchMetrics,
     fetchRecoveryStatus: met.fetchRecoveryStatus,
+    recoverCheckouts: met.recoverCheckouts,
+    recoverWebhooks: met.recoverWebhooks,
+    replayAllDeadLetters: met.replayAllDeadLetters,
+    replayDeadLetter: met.replayDeadLetter,
+    fetchDeadLetters: met.fetchDeadLetters,
   }
 })
 

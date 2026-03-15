@@ -108,7 +108,7 @@ const tabs = computed(() => [
       </VWindowItem>
 
       <VWindowItem value="recovery">
-        <BillingRecovery />
+        <BillingRecovery @switch-tab="tab => activeTab = tab" />
       </VWindowItem>
 
       <VWindowItem value="audit">

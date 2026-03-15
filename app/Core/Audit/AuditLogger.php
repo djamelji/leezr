@@ -2,6 +2,7 @@
 
 namespace App\Core\Audit;
 
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
 use App\Core\Realtime\TopicRegistry;
@@ -176,8 +177,24 @@ class AuditLogger
         }
 
         try {
+            // Platform-level alert: route to configured email + in-app via NotificationDispatcher
+            // Also dispatch mail via on-demand notification for the configured alert email
             Notification::route('mail', $email)
                 ->notify(new BillingCriticalAlert($log));
+
+            // In-app notification for platform admins who are actual users
+            $platformAdmins = PlatformUser::whereHas('roles', fn ($q) => $q->where('key', 'super_admin'))
+                ->get();
+
+            if ($platformAdmins->isNotEmpty()) {
+                NotificationDispatcher::send(
+                    topicKey: 'security.alert',
+                    recipients: $platformAdmins,
+                    payload: ['audit_id' => $log->id, 'action' => $log->action, 'severity' => $log->severity],
+                    company: null,
+                    mailNotification: null,
+                );
+            }
         } catch (\Throwable $e) {
             Log::warning('[audit] critical alert dispatch failed', [
                 'audit_id' => $log->id,

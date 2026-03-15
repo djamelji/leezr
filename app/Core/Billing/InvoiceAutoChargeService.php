@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\PaymentReceived;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -108,7 +109,17 @@ class InvoiceAutoChargeService
                 // Notify payment received (outside transaction)
                 try {
                     $owner = $company->owner();
-                    $owner?->notify(new PaymentReceived($invoice->fresh()));
+                    $freshInvoice = $invoice->fresh();
+
+                    if ($owner) {
+                        NotificationDispatcher::send(
+                            topicKey: 'billing.payment_received',
+                            recipients: [$owner],
+                            payload: ['invoice_id' => $freshInvoice->id, 'amount' => $freshInvoice->formatted_total],
+                            company: $company,
+                            mailNotification: new PaymentReceived($freshInvoice),
+                        );
+                    }
                 } catch (\Throwable $e) {
                     Log::warning('[auto-charge] Failed to send payment notification', [
                         'invoice_id' => $invoice->id,

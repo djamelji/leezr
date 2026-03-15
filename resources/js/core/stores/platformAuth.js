@@ -15,6 +15,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     _hydrated: false,
     _sessionConfig: null,
     _appMeta: null,
+    _twoFactorEnabled: false,
   }),
 
   getters: {
@@ -27,6 +28,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     isSuperAdmin: state => Array.isArray(state._roles) && state._roles.includes('super_admin'),
     sessionConfig: state => state._sessionConfig,
     appMeta: state => state._appMeta,
+    twoFactorEnabled: state => state._twoFactorEnabled,
   },
 
   actions: {
@@ -64,6 +66,28 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         body: { email, password },
       })
 
+      // ADR-351: 2FA required — don't persist yet
+      if (data.requires_2fa) {
+        return data
+      }
+
+      this._hydrateFromLoginResponse(data)
+
+      return data
+    },
+
+    async verify2fa(code) {
+      const data = await $platformApi('/2fa/verify', {
+        method: 'POST',
+        body: { code },
+      })
+
+      this._hydrateFromLoginResponse(data)
+
+      return data
+    },
+
+    _hydrateFromLoginResponse(data) {
       this._persistUser(data.user)
       this._persistRoles(data.roles || [])
       this._persistPermissions(data.permissions || [])
@@ -73,8 +97,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       this._sessionConfig = data.ui_session ?? null
       this._appMeta = data.app_meta ?? null
       if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)
-
-      return data
+      this._twoFactorEnabled = data.two_factor_enabled ?? false
     },
 
     async logout() {
@@ -93,6 +116,24 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
       postBroadcast('logout')
     },
 
+    async updateProfile({ first_name, last_name, email }) {
+      const data = await $platformApi('/me/profile', {
+        method: 'PUT',
+        body: { first_name, last_name, email },
+      })
+
+      this._persistUser(data.user)
+
+      return data.user
+    },
+
+    async updatePassword({ current_password, password, password_confirmation }) {
+      await $platformApi('/me/password', {
+        method: 'PUT',
+        body: { current_password, password, password_confirmation },
+      })
+    },
+
     async fetchMe({ signal } = {}) {
       try {
         const data = await $platformApi('/me', { _authCheck: true, signal })
@@ -106,6 +147,7 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
         this._sessionConfig = data.ui_session ?? null
         this._appMeta = data.app_meta ?? null
         if (data.app_meta?.app_name) setAppName(data.app_meta.app_name)
+        this._twoFactorEnabled = data.two_factor_enabled ?? false
         this._hydrated = true
 
         return data.user

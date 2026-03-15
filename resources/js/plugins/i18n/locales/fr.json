@@ -24,7 +24,6 @@
   "Fleet": "Flotte",
   "Shortcut": "Raccourci",
   "Appointments": "Rendez-vous",
-
   "nav": {
     "groups": {
       "management": "Gestion",
@@ -51,7 +50,9 @@
       "payments": "Paiements",
       "billing": "Facturation",
       "billing-settings": "Paramètres facturation",
-      "document-types": "Types de documents"
+      "document-types": "Types de documents",
+      "notifications": "Notifications",
+      "support": "Support"
     },
     "company": {
       "dashboard": "Tableau de bord",
@@ -65,16 +66,46 @@
       "shipments": "Expéditions",
       "my-deliveries": "Mes livraisons",
       "company-profile": "Profil entreprise",
-      "account-settings": "Paramètres du compte"
+      "account-settings": "Paramètres du compte",
+      "support": "Support"
     }
   },
-
   "roles": {
-    "owner": "Propriétaire",
+    "title": "Rôles de l'entreprise",
+    "subtitle": "Définissez qui peut faire quoi dans votre entreprise.",
+    "addRole": "Ajouter un rôle",
+    "newRole": "Nouveau rôle",
+    "editRole": "Modifier le rôle",
+    "roleName": "Nom du rôle",
+    "roleNamePlaceholder": "ex. Dispatcher, Comptable",
+    "roleLevel": "Niveau du rôle",
+    "operational": "Opérationnel",
+    "operationalDescription": "Peut gérer uniquement le travail quotidien.",
     "management": "Gestion",
-    "employee": "Employé"
+    "managementDescription": "Peut gérer l'équipe et la configuration de l'entreprise.",
+    "managementTooltip": "Les rôles de gestion peuvent configurer la structure de l'entreprise et les paramètres sensibles.",
+    "capabilities": "Capacités",
+    "simpleView": "Vue simple",
+    "advanced": "Avancé",
+    "coreTeamCompany": "Essentiel — Équipe et entreprise",
+    "platformModules": "Modules plateforme",
+    "confirmDelete": "Supprimer le rôle « {name} » ?",
+    "failedToDelete": "Échec de la suppression du rôle.",
+    "noRoles": "Aucun rôle pour le moment. Créez-en un pour commencer.",
+    "addonModules": "Modules complémentaires",
+    "disabledModules": "Modules désactivés",
+    "moduleInactive": "Désactivé",
+    "unbundledPermissions": "Permissions",
+    "fieldConfiguration": "Configuration des champs",
+    "fieldConfigTooltip": "Configurez quels champs sont visibles et obligatoires pour les membres avec ce rôle. Les champs non listés restent visibles par défaut.",
+    "fieldProfile": "Profil champs",
+    "visible": "Visible",
+    "order": "Ordre",
+    "group": "Groupe",
+    "noFieldConfig": "Aucune configuration de champs",
+    "sensitiveData": "Accès aux données sensibles",
+    "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)"
   },
-
   "common": {
     "save": "Enregistrer",
     "saveChanges": "Enregistrer les modifications",
@@ -152,13 +183,25 @@
     "retry": "Réessayer",
     "copied": "Copié dans le presse-papier",
     "next": "Suivant",
-    "previous": "Précédent"
+    "previous": "Précédent",
+    "logout": "Déconnexion"
   },
-
+  "platformAccount": {
+    "myAccount": "Mon compte",
+    "tabAccount": "Compte",
+    "tabSecurity": "Sécurité",
+    "tabNotifications": "Notifications",
+    "profileInfo": "Informations du profil",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "E-mail",
+    "profileUpdated": "Profil mis à jour avec succès.",
+    "failedToUpdateProfile": "Impossible de mettre à jour le profil.",
+    "notificationsDesc": "Gérez vos préférences de notifications pour les événements platform."
+  },
   "validation": {
     "required": "Ce champ est requis"
   },
-
   "dashboard": {
     "welcome": "Bienvenue, {name}",
     "viewingCompany": "Vous consultez {name}.",
@@ -169,7 +212,6 @@
     "currentPlan": "Abonnement actuel :",
     "upgrade": "Passer au supérieur"
   },
-
   "plans": {
     "title": "Abonnements",
     "subtitle": "Gérez votre catalogue d'abonnements et la tarification.",
@@ -222,7 +264,6 @@
     "keyHint": "Minuscules et underscores uniquement. Ne peut pas être modifié ultérieurement.",
     "namePlaceholder": "ex. Enterprise"
   },
-
   "payments": {
     "title": "Paiements",
     "subtitle": "Modules de paiement, politiques commerciales et gouvernance des abonnements.",
@@ -316,7 +357,6 @@
     "specificity": "Spécificité",
     "supportedMethods": "Méthodes supportées"
   },
-
   "platformBilling": {
     "title": "Aperçu facturation",
     "subtitle": "Données de facturation inter-entreprises, factures, paiements et relances.",
@@ -337,7 +377,32 @@
       "coupons": "Coupons",
       "scheduledDebits": "Prélèvements programmés"
     },
+    "subscriptions": {
+      "headerTitle": "Abonnements",
+      "headerDesc": "Tous les abonnements actifs, en essai ou en attente. Approuvez ou rejetez les demandes d'abonnement nécessitant une approbation admin.",
+      "searchPlaceholder": "Rechercher par entreprise ou plan…",
+      "viewCompany": "Voir l'entreprise",
+      "viewInvoices": "Voir les factures"
+    },
+    "invoices": {
+      "headerTitle": "Factures",
+      "headerDesc": "Toutes les factures finalisées. Filtrez par statut, période ou entreprise. Actions : marquer payée, annuler, rembourser, relancer ou passer en perte."
+    },
+    "dunning": {
+      "headerTitle": "Relances",
+      "headerDesc": "Factures en retard dans le cycle de relance. Relancez le paiement ou escaladez vers le statut irrécovrable.",
+      "totalAtRisk": "Montant total à risque",
+      "invoiceCount": "{count} facture(s) en recouvrement",
+      "daysOverdue": "Jours de retard",
+      "filterOverdue": "En retard",
+      "filterUncollectible": "Irrécouvrables",
+      "writeOffTitle": "Passer en perte",
+      "writeOffConfirm": "Passer cette facture en perte ? Cette action est irréversible.",
+      "writeOff": "Passer en perte"
+    },
     "scheduledDebits": {
+      "headerTitle": "Prélèvements programmés",
+      "headerDesc": "Prélèvements SEPA programmés. Les prélèvements apparaissent ici lorsqu'une facture est émise avec un mode de paiement de type débit direct.",
       "company": "Entreprise",
       "amount": "Montant",
       "debitDate": "Date de prélèvement",
@@ -345,9 +410,24 @@
       "invoice": "Facture",
       "status": "Statut",
       "empty": "Aucun prélèvement programmé",
-      "count": "{count} prélèvement(s) programmé(s)"
+      "emptyExplained": "Aucune entreprise n'utilise actuellement le prélèvement SEPA. Les prélèvements apparaîtront ici automatiquement.",
+      "count": "{count} prélèvement(s) programmé(s)",
+      "statusPending": "En attente",
+      "statusProcessing": "En cours",
+      "statusCollected": "Collecté",
+      "statusFailed": "Échoué",
+      "statusCancelled": "Annulé",
+      "daysUntil": "Jours avant",
+      "inDays": "dans {days}j",
+      "past": "Passé"
     },
     "dashboard": {
+      "headerTitle": "Vue d'ensemble facturation",
+      "headerDesc": "Indicateurs financiers clés, santé du système et alertes en temps réel. Ce tableau de bord montre le MRR, ARR, taux de churn et signale les anomalies nécessitant une action.",
+      "refresh": "Actualiser",
+      "lastRefreshed": "Dernière maj : {time}",
+      "metricsError": "Impossible de charger les indicateurs financiers.",
+      "recoveryError": "Impossible de charger l'état de santé.",
       "systemHealth": "Santé du système",
       "deadLetters": "Lettres mortes",
       "stuckCheckouts": "Checkouts bloqués",
@@ -362,6 +442,10 @@
       "mrrTrend": "Évolution MRR (12 mois)"
     },
     "recovery": {
+      "headerTitle": "Récupération système",
+      "headerDesc": "État de santé du système de facturation. Surveille les webhooks échoués, sessions de paiement bloquées et confirmations en retard.",
+      "refresh": "Actualiser",
+      "lastChecked": "Vérifié à {time}",
       "allOk": "Tous les systèmes sont opérationnels — aucune anomalie détectée.",
       "anomaliesDetected": "{count} anomalie(s) détectée(s) — vérification requise.",
       "deadLetters": "Lettres mortes",
@@ -375,7 +459,28 @@
       "lastRun": "Dernière exécution",
       "additionalCounters": "Compteurs additionnels",
       "overdueInvoices": "Factures en retard",
-      "pastDueSubs": "Abonnements en souffrance"
+      "pastDueSubs": "Abonnements en souffrance",
+      "stuckCheckoutDetail": "{count} checkout(s) bloqué(s)",
+      "overdueConfirmationDetail": "{count} confirmation(s) en retard",
+      "deadLetterDetail": "{count} lettre(s) morte(s)",
+      "heartbeatsExplain": "Les battements de cœur apparaissent après la première exécution des tâches cron de facturation (billing:renew, billing:process-dunning, etc.).",
+      "lastCheckedAt": "Dernière vérification : {time}",
+      "viewDunning": "Voir les relances",
+      "recoverCheckouts": "Récupérer",
+      "recoverWebhooks": "Récupérer",
+      "replayAll": "Tout rejouer",
+      "replayAllTitle": "Rejouer toutes les lettres mortes",
+      "replayAllConfirm": "Vous allez rejouer {count} lettre(s) morte(s) en attente. Cette opération est idempotente et sécurisée. Continuer ?",
+      "toastCheckouts": "{activated} activé(s), {expired} expiré(s), {failed} échoué(s)",
+      "toastWebhooks": "{recovered} récupéré(s), {expired} expiré(s), {failed} échoué(s)",
+      "toastReplayAll": "{replayed} rejoué(s), {failed} échoué(s)",
+      "deadLettersTable": "Lettres mortes en attente",
+      "noDeadLetters": "Aucune lettre morte en attente.",
+      "deadLetterCount": "{count} lettre(s) morte(s)",
+      "dlEventType": "Type d'événement",
+      "dlError": "Erreur",
+      "dlFailedAt": "Échoué le",
+      "dlAttempts": "Tentatives"
     },
     "advanced": {
       "button": "Surveillance",
@@ -442,6 +547,9 @@
     "statusTrialing": "Essai",
     "statusPastDue": "En retard",
     "statusCancelled": "Annulé",
+    "statusPendingPayment": "En attente de paiement",
+    "statusRejected": "Rejeté",
+    "statusExpired": "Expiré",
     "statusSuspended": "Suspendu",
     "yes": "Oui",
     "no": "Non",
@@ -588,6 +696,8 @@
       "typeAdjustment": "Ajustement"
     },
     "forensics": {
+      "headerTitle": "Audit & Forensique",
+      "headerDesc": "Chronologie détaillée des événements de facturation par entreprise. Sélectionnez une entreprise pour visualiser l'historique des factures, paiements, avoirs et snapshots.",
       "companyId": "ID Entreprise",
       "companyIdPlaceholder": "Saisir l'ID de l'entreprise…",
       "timeline": "Chronologie des événements",
@@ -619,7 +729,9 @@
       "export": "Exporter",
       "exportTitle": "Exporter les logs d'audit",
       "startDate": "Date début",
-      "endDate": "Date fin"
+      "endDate": "Date fin",
+      "searchCompany": "Entreprise",
+      "searchCompanyPlaceholder": "Tapez un nom d'entreprise…"
     },
     "invoiceDetail": {
       "title": "Détail de la facture",
@@ -752,9 +864,79 @@
     "bulkRetry": "Relancer le paiement",
     "bulkClear": "Désélectionner",
     "bulkVoidSuccess": "{count} facture(s) annulée(s) avec succès.",
-    "bulkRetrySuccess": "{count} facture(s) relancée(s) avec succès."
+    "bulkRetrySuccess": "{count} facture(s) relancée(s) avec succès.",
+    "coupons": {
+      "headerTitle": "Coupons de réduction",
+      "headerDesc": "Gérez les codes de réduction applicables aux abonnements. Définissez le type (pourcentage ou montant fixe), la durée, les plans éligibles et les limites d'utilisation.",
+      "confirmDeleteTitle": "Supprimer le coupon",
+      "title": "Coupons",
+      "create": "Créer un coupon",
+      "edit": "Modifier le coupon",
+      "save": "Enregistrer",
+      "code": "Code",
+      "name": "Nom",
+      "type": "Type",
+      "value": "Valeur",
+      "valueBps": "Valeur (points de base, ex: 2000 = 20%)",
+      "valueCents": "Valeur (centimes)",
+      "maxUses": "Utilisations max",
+      "unlimited": "Illimité",
+      "usage": "Utilisation",
+      "status": "Statut",
+      "startsAt": "Début",
+      "expiresAt": "Expiration",
+      "isActive": "Actif",
+      "actions": "Actions",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce coupon ? Cette action est irréversible.",
+      "emptyTitle": "Aucun coupon",
+      "emptyDesc": "Créez votre premier code promo pour offrir des réductions.",
+      "status_active": "Actif",
+      "status_inactive": "Inactif",
+      "status_expired": "Expiré",
+      "status_exhausted": "Épuisé",
+      "status_scheduled": "Programmé",
+      "updated": "Coupon mis à jour avec succès",
+      "created": "Coupon créé avec succès",
+      "deleted": "Coupon supprimé avec succès",
+      "sectionInfo": "Informations",
+      "sectionDiscount": "Réduction",
+      "sectionValidity": "Validité",
+      "sectionApplicability": "Ciblage & périmètre",
+      "sectionLimits": "Limites",
+      "sectionSummary": "Résumé",
+      "description": "Description",
+      "descriptionHint": "Notes admin (non visibles pour les clients)",
+      "typePercentage": "Pourcentage",
+      "typeFixedAmount": "Montant fixe",
+      "durationMonths": "Durée",
+      "durationOnce": "Facture unique",
+      "durationForever": "Illimité (chaque facture)",
+      "durationNMonths": "{n} mois",
+      "billingCycles": "Cycles de facturation",
+      "allCycles": "Tous les cycles",
+      "monthlyOnly": "Mensuel uniquement",
+      "yearlyOnly": "Annuel uniquement",
+      "applicablePlans": "Plans applicables",
+      "allPlans": "Tous les plans",
+      "addonMode": "Périmètre de la remise",
+      "addonModeNone": "Abonnement uniquement",
+      "addonModeInclude": "Abonnement + modules sélectionnés",
+      "addonModeExclude": "Tout sauf certains modules",
+      "applicableAddons": "Modules concernés",
+      "maxUsesPerCompany": "Utilisations max par entreprise",
+      "maxUsesPerCompanyHint": "Vide = 1 utilisation par entreprise",
+      "firstPurchaseOnly": "Premier achat uniquement",
+      "firstPurchaseOnlyHint": "Uniquement pour les entreprises sans abonnement antérieur",
+      "summaryPrefix": "Ce coupon offre",
+      "summaryPercent": "{value}% de réduction",
+      "summaryFixed": "{value} de réduction",
+      "summaryAllPlans": "sur tous les plans",
+      "summarySpecificPlans": "sur {plans}",
+      "summaryForever": "sur chaque facture",
+      "summaryOnce": "sur la première facture",
+      "summaryMonths": "pendant {n} mois"
+    }
   },
-
   "companyBilling": {
     "title": "Facturation",
     "tabs": {
@@ -1046,7 +1228,6 @@
       "processingMessage": "Votre paiement par prélèvement est en cours de traitement. Vous recevrez une confirmation lorsqu'il sera finalisé (généralement 2 à 5 jours ouvrés)."
     }
   },
-
   "subscriptionStatus": {
     "pending": "En attente d'approbation",
     "active": "Actif",
@@ -1056,7 +1237,6 @@
     "past_due": "En retard",
     "rejected": "Refusé"
   },
-
   "companies": {
     "title": "Entreprises",
     "subtitle": "Gérez toutes les entreprises de la plateforme.",
@@ -1083,7 +1263,6 @@
       "suspended": "Suspendues"
     }
   },
-
   "companyPlan": {
     "pendingApproval": "En attente d'approbation",
     "pendingMessage": "Votre demande de mise à niveau vers l'abonnement {plan} a été soumise et est en attente d'approbation par un administrateur.",
@@ -1117,14 +1296,14 @@
     "estimatedInvoice": "Prochaine facture estimée",
     "switchToAnnual": "Passer en annuel",
     "switchToMonthly": "Passer en mensuel",
-    "changeScheduled": "Le changement est programmé pour la fin de la période.",
-    "changeApplied": "Le changement de plan a été appliqué.",
+    "changeScheduled": "Changement de plan programmé. Il prendra effet à la fin de la période en cours.",
+    "changeApplied": "Plan modifié avec succès !",
     "scheduledChange": {
       "title": "Changement de plan programmé",
-      "message": "Votre abonnement passera au plan {plan} le {date}.",
-      "cancel": "Annuler",
-      "cancelled": "Le changement programmé a été annulé.",
-      "cancelFailed": "Échec de l'annulation du changement."
+      "message": "Votre plan passera à {plan} le {date}.",
+      "cancel": "Annuler le changement",
+      "cancelled": "Changement de plan annulé.",
+      "cancelFailed": "Échec de l'annulation du changement programmé."
     },
     "planChangePreview": {
       "title": "Résumé du changement de plan",
@@ -1168,21 +1347,9 @@
       "upgrade": "Passer au plan supérieur",
       "downgrade": "Passer au plan inférieur"
     },
-    "switchToAnnual": "Passer en annuel",
-    "switchToMonthly": "Passer en mensuel",
-    "changeScheduled": "Changement de plan programmé. Il prendra effet à la fin de la période en cours.",
-    "changeApplied": "Plan modifié avec succès !",
     "suggestUpgrade": "Passez au plan {plan} pour débloquer le module sélectionné.",
-    "suggested": "Suggéré",
-    "scheduledChange": {
-      "title": "Changement de plan programmé",
-      "message": "Votre plan passera à {plan} le {date}.",
-      "cancel": "Annuler le changement",
-      "cancelled": "Changement de plan annulé.",
-      "cancelFailed": "Échec de l'annulation du changement programmé."
-    }
+    "suggested": "Suggéré"
   },
-
   "members": {
     "title": "Membres de l'équipe",
     "addMember": "Ajouter un membre",
@@ -1256,7 +1423,6 @@
     "unlimitedMembers": "Membres illimités",
     "memberLimitReached": "Limite de membres atteinte. Mettez à niveau votre abonnement pour ajouter plus de membres."
   },
-
   "credentials": {
     "title": "Identifiants",
     "forceReset": "Forcer la réinitialisation du mot de passe",
@@ -1276,7 +1442,6 @@
     "savePassword": "Enregistrer le mot de passe",
     "failedToSetPassword": "Échec de la définition du mot de passe."
   },
-
   "companySettings": {
     "title": "Paramètres de l'entreprise",
     "companyName": "Nom de l'entreprise",
@@ -1321,7 +1486,6 @@
       "email": "facturation{'@'}entreprise.fr"
     }
   },
-
   "companyProfile": {
     "overview": "Vue d'ensemble",
     "documents": "Documents",
@@ -1333,44 +1497,6 @@
     "companyVaultHint": "Téléversez et gérez les documents de l'entreprise.",
     "noCompanyDocuments": "Aucun document entreprise disponible. Utilisez « Gérer les types » pour activer des types de documents."
   },
-
-  "roles": {
-    "title": "Rôles de l'entreprise",
-    "subtitle": "Définissez qui peut faire quoi dans votre entreprise.",
-    "addRole": "Ajouter un rôle",
-    "newRole": "Nouveau rôle",
-    "editRole": "Modifier le rôle",
-    "roleName": "Nom du rôle",
-    "roleNamePlaceholder": "ex. Dispatcher, Comptable",
-    "roleLevel": "Niveau du rôle",
-    "operational": "Opérationnel",
-    "operationalDescription": "Peut gérer uniquement le travail quotidien.",
-    "management": "Gestion",
-    "managementDescription": "Peut gérer l'équipe et la configuration de l'entreprise.",
-    "managementTooltip": "Les rôles de gestion peuvent configurer la structure de l'entreprise et les paramètres sensibles.",
-    "capabilities": "Capacités",
-    "simpleView": "Vue simple",
-    "advanced": "Avancé",
-    "coreTeamCompany": "Essentiel — Équipe et entreprise",
-    "platformModules": "Modules plateforme",
-    "confirmDelete": "Supprimer le rôle « {name} » ?",
-    "failedToDelete": "Échec de la suppression du rôle.",
-    "noRoles": "Aucun rôle pour le moment. Créez-en un pour commencer.",
-    "addonModules": "Modules complémentaires",
-    "disabledModules": "Modules désactivés",
-    "moduleInactive": "Désactivé",
-    "unbundledPermissions": "Permissions",
-    "fieldConfiguration": "Configuration des champs",
-    "fieldConfigTooltip": "Configurez quels champs sont visibles et obligatoires pour les membres avec ce rôle. Les champs non listés restent visibles par défaut.",
-    "fieldProfile": "Profil champs",
-    "visible": "Visible",
-    "order": "Ordre",
-    "group": "Groupe",
-    "noFieldConfig": "Aucune configuration de champs",
-    "sensitiveData": "Accès aux données sensibles",
-    "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)"
-  },
-
   "fieldGroups": {
     "identity": "Identité",
     "contact": "Contact",
@@ -1379,7 +1505,6 @@
     "driving": "Conduite",
     "dispatch": "Exploitation"
   },
-
   "fieldOptions": {
     "contract_type": {
       "CDI": "CDI",
@@ -1420,61 +1545,172 @@
       "remote": "Télétravail"
     }
   },
-
   "permissionCatalog": {
     "modules": {
-      "core.settings": { "name": "Paramètres", "description": "Nom et configuration de l'entreprise" },
-      "core.roles": { "name": "Rôles", "description": "Rôles et attribution des permissions" },
-      "core.jobdomain": { "name": "Secteur d'activité", "description": "Profil sectoriel de l'entreprise" },
-      "core.members": { "name": "Membres", "description": "Membres de l'équipe et gestion des utilisateurs" },
-      "core.modules": { "name": "Catalogue de modules", "description": "Parcourir et activer les modules" },
-      "core.billing": { "name": "Plan et facturation", "description": "Plan de l'entreprise et facturation" },
-      "logistics_shipments": { "name": "Expéditions", "description": "Expéditions logistiques avec suivi de statut" }
+      "core.settings": {
+        "name": "Paramètres",
+        "description": "Nom et configuration de l'entreprise"
+      },
+      "core.roles": {
+        "name": "Rôles",
+        "description": "Rôles et attribution des permissions"
+      },
+      "core.jobdomain": {
+        "name": "Secteur d'activité",
+        "description": "Profil sectoriel de l'entreprise"
+      },
+      "core.members": {
+        "name": "Membres",
+        "description": "Membres de l'équipe et gestion des utilisateurs"
+      },
+      "core.modules": {
+        "name": "Catalogue de modules",
+        "description": "Parcourir et activer les modules"
+      },
+      "core.billing": {
+        "name": "Plan et facturation",
+        "description": "Plan de l'entreprise et facturation"
+      },
+      "logistics_shipments": {
+        "name": "Expéditions",
+        "description": "Expéditions logistiques avec suivi de statut"
+      }
     },
     "bundles": {
-      "settings.company_info": { "label": "Informations entreprise", "hint": "Voir le nom et la configuration de l'entreprise." },
-      "settings.company_management": { "label": "Gestion entreprise", "hint": "Modifier le nom, l'adresse et les paramètres de l'entreprise." },
-      "roles.governance": { "label": "Gouvernance des rôles", "hint": "Voir, créer, modifier et supprimer les rôles avec leurs permissions." },
-      "jobdomain.info": { "label": "Informations secteur", "hint": "Voir le profil sectoriel de l'entreprise." },
-      "jobdomain.management": { "label": "Gestion du secteur", "hint": "Modifier le profil sectoriel de l'entreprise." },
-      "members.team_access": { "label": "Accès à l'équipe", "hint": "Voir l'équipe et inviter de nouveaux membres." },
-      "members.team_management": { "label": "Gestion de l'équipe", "hint": "Modifier les profils, attribuer les rôles et gérer les identifiants." },
-      "modules.management": { "label": "Gestion des modules", "hint": "Activer ou désactiver les modules de l'entreprise." },
-      "billing.management": { "label": "Plan et facturation", "hint": "Modifier le plan de l'entreprise et gérer la facturation." },
-      "shipments.operations": { "label": "Opérations d'expédition", "hint": "Voir, créer, gérer le statut et assigner les expéditions." },
-      "shipments.administration": { "label": "Administration des expéditions", "hint": "Configurer les champs personnalisés et supprimer les expéditions." },
-      "shipments.delivery": { "label": "Opérations de livraison", "hint": "Voir les expéditions assignées et mettre à jour leur statut." }
+      "settings.company_info": {
+        "label": "Informations entreprise",
+        "hint": "Voir le nom et la configuration de l'entreprise."
+      },
+      "settings.company_management": {
+        "label": "Gestion entreprise",
+        "hint": "Modifier le nom, l'adresse et les paramètres de l'entreprise."
+      },
+      "roles.governance": {
+        "label": "Gouvernance des rôles",
+        "hint": "Voir, créer, modifier et supprimer les rôles avec leurs permissions."
+      },
+      "jobdomain.info": {
+        "label": "Informations secteur",
+        "hint": "Voir le profil sectoriel de l'entreprise."
+      },
+      "jobdomain.management": {
+        "label": "Gestion du secteur",
+        "hint": "Modifier le profil sectoriel de l'entreprise."
+      },
+      "members.team_access": {
+        "label": "Accès à l'équipe",
+        "hint": "Voir l'équipe et inviter de nouveaux membres."
+      },
+      "members.team_management": {
+        "label": "Gestion de l'équipe",
+        "hint": "Modifier les profils, attribuer les rôles et gérer les identifiants."
+      },
+      "modules.management": {
+        "label": "Gestion des modules",
+        "hint": "Activer ou désactiver les modules de l'entreprise."
+      },
+      "billing.management": {
+        "label": "Plan et facturation",
+        "hint": "Modifier le plan de l'entreprise et gérer la facturation."
+      },
+      "shipments.operations": {
+        "label": "Opérations d'expédition",
+        "hint": "Voir, créer, gérer le statut et assigner les expéditions."
+      },
+      "shipments.administration": {
+        "label": "Administration des expéditions",
+        "hint": "Configurer les champs personnalisés et supprimer les expéditions."
+      },
+      "shipments.delivery": {
+        "label": "Opérations de livraison",
+        "hint": "Voir les expéditions assignées et mettre à jour leur statut."
+      }
     },
     "permissions": {
-      "settings.view": { "label": "Voir les paramètres", "hint": "Consulter le nom et la configuration de l'entreprise." },
-      "settings.manage": { "label": "Gérer les paramètres", "hint": "Modifier le nom, l'adresse et la configuration." },
-      "roles.view": { "label": "Voir les rôles", "hint": "Consulter la liste des rôles et leurs permissions." },
-      "roles.manage": { "label": "Gérer les rôles", "hint": "Créer, modifier et supprimer les rôles." },
-      "jobdomain.view": { "label": "Voir le secteur", "hint": "Consulter le profil sectoriel de l'entreprise." },
-      "jobdomain.manage": { "label": "Gérer le secteur", "hint": "Modifier le profil sectoriel de l'entreprise." },
-      "members.view": { "label": "Voir les membres", "hint": "Consulter la liste et les profils des membres." },
-      "members.invite": { "label": "Inviter des membres", "hint": "Envoyer des invitations à de nouveaux membres." },
-      "members.manage": { "label": "Gérer les membres", "hint": "Modifier les profils, attribuer les rôles et supprimer." },
-      "members.credentials": { "label": "Gérer les identifiants", "hint": "Réinitialiser les mots de passe et gérer les accès." },
-      "modules.manage": { "label": "Gérer les modules", "hint": "Activer ou désactiver les modules de l'entreprise." },
-      "billing.manage": { "label": "Gérer la facturation", "hint": "Modifier le plan et gérer la facturation." },
-      "shipments.view": { "label": "Voir les expéditions", "hint": "Consulter la liste et les détails des expéditions." },
-      "shipments.create": { "label": "Créer des expéditions", "hint": "Ajouter de nouvelles expéditions." },
-      "shipments.manage_status": { "label": "Gérer le statut", "hint": "Mettre à jour le statut et le flux des expéditions." },
-      "shipments.assign": { "label": "Assigner les expéditions", "hint": "Assigner les expéditions aux membres." },
-      "shipments.view_own": { "label": "Voir mes livraisons", "hint": "Voir uniquement les expéditions qui me sont assignées." },
-      "shipments.manage_fields": { "label": "Gérer les champs", "hint": "Configurer les champs personnalisés des expéditions." },
-      "shipments.delete": { "label": "Supprimer des expéditions", "hint": "Supprimer définitivement des expéditions." }
+      "settings.view": {
+        "label": "Voir les paramètres",
+        "hint": "Consulter le nom et la configuration de l'entreprise."
+      },
+      "settings.manage": {
+        "label": "Gérer les paramètres",
+        "hint": "Modifier le nom, l'adresse et la configuration."
+      },
+      "roles.view": {
+        "label": "Voir les rôles",
+        "hint": "Consulter la liste des rôles et leurs permissions."
+      },
+      "roles.manage": {
+        "label": "Gérer les rôles",
+        "hint": "Créer, modifier et supprimer les rôles."
+      },
+      "jobdomain.view": {
+        "label": "Voir le secteur",
+        "hint": "Consulter le profil sectoriel de l'entreprise."
+      },
+      "jobdomain.manage": {
+        "label": "Gérer le secteur",
+        "hint": "Modifier le profil sectoriel de l'entreprise."
+      },
+      "members.view": {
+        "label": "Voir les membres",
+        "hint": "Consulter la liste et les profils des membres."
+      },
+      "members.invite": {
+        "label": "Inviter des membres",
+        "hint": "Envoyer des invitations à de nouveaux membres."
+      },
+      "members.manage": {
+        "label": "Gérer les membres",
+        "hint": "Modifier les profils, attribuer les rôles et supprimer."
+      },
+      "members.credentials": {
+        "label": "Gérer les identifiants",
+        "hint": "Réinitialiser les mots de passe et gérer les accès."
+      },
+      "modules.manage": {
+        "label": "Gérer les modules",
+        "hint": "Activer ou désactiver les modules de l'entreprise."
+      },
+      "billing.manage": {
+        "label": "Gérer la facturation",
+        "hint": "Modifier le plan et gérer la facturation."
+      },
+      "shipments.view": {
+        "label": "Voir les expéditions",
+        "hint": "Consulter la liste et les détails des expéditions."
+      },
+      "shipments.create": {
+        "label": "Créer des expéditions",
+        "hint": "Ajouter de nouvelles expéditions."
+      },
+      "shipments.manage_status": {
+        "label": "Gérer le statut",
+        "hint": "Mettre à jour le statut et le flux des expéditions."
+      },
+      "shipments.assign": {
+        "label": "Assigner les expéditions",
+        "hint": "Assigner les expéditions aux membres."
+      },
+      "shipments.view_own": {
+        "label": "Voir mes livraisons",
+        "hint": "Voir uniquement les expéditions qui me sont assignées."
+      },
+      "shipments.manage_fields": {
+        "label": "Gérer les champs",
+        "hint": "Configurer les champs personnalisés des expéditions."
+      },
+      "shipments.delete": {
+        "label": "Supprimer des expéditions",
+        "hint": "Supprimer définitivement des expéditions."
+      }
     }
   },
-
   "jobdomain": {
     "title": "Profil sectoriel",
     "currentProfile": "Profil actuel :",
     "noProfileAssigned": "Aucun profil sectoriel assigné. Contactez le support pour configurer le profil de votre entreprise.",
     "immutableNotice": "Votre profil sectoriel est verrouillé et ne peut pas être modifié. Contactez le support ou créez une nouvelle entreprise si vous avez besoin d'un profil différent."
   },
-
   "platformUsers": {
     "title": "Utilisateurs plateforme",
     "subtitle": "Gérez les employés de la plateforme et leurs rôles.",
@@ -1503,7 +1739,6 @@
     "failedToDeleteUser": "Échec de la suppression de l'utilisateur.",
     "allPermissions": "Toutes les permissions (structurelles)"
   },
-
   "platformRoles": {
     "title": "Rôles plateforme",
     "subtitle": "Gérez les rôles de la plateforme et leurs permissions.",
@@ -1521,7 +1756,6 @@
     "confirmDeleteRole": "Supprimer le rôle « {name} » ?",
     "failedToDeleteRole": "Échec de la suppression du rôle."
   },
-
   "platformFields": {
     "fieldDefinitions": "Définitions de champs",
     "platformUserActivations": "Activations utilisateur plateforme",
@@ -1553,7 +1787,6 @@
     "codeHint": "Minuscules et underscores uniquement. Immuable après création.",
     "fieldLabelPlaceholder": "Libellé du champ"
   },
-
   "platformModules": {
     "title": "Modules plateforme",
     "subtitle": "Gérez la disponibilité des modules globalement. Cliquez sur un module pour plus de détails.",
@@ -1701,7 +1934,6 @@
     "paymentModules": "Modules de paiement",
     "paymentRules": "Règles de routage"
   },
-
   "billingSettings": {
     "title": "Paramètres de facturation",
     "subtitle": "Configurer la facturation, les fournisseurs, les politiques et l'audit.",
@@ -1742,7 +1974,6 @@
     },
     "saved": "Paramètres enregistrés."
   },
-
   "platformJobdomains": {
     "title": "Domaines d'activité",
     "addJobDomain": "Ajouter un domaine d'activité",
@@ -1863,7 +2094,6 @@
     "autoAddedModules": "Inclus automatiquement : {modules} (dépendance requise)",
     "autoRemovedModules": "Retiré automatiquement : {modules} (dépendance non satisfaite)"
   },
-
   "platformDocumentTypes": {
     "title": "Types de documents",
     "label": "Libellé",
@@ -1904,7 +2134,6 @@
     "codeHint": "Minuscules et underscores uniquement. Non modifiable après création.",
     "immutableHint": "Non modifiable après création"
   },
-
   "platformCompanyDetail": {
     "failedToLoad": "Échec du chargement du profil de l'entreprise.",
     "generalInfo": "Informations générales",
@@ -2077,13 +2306,11 @@
     },
     "walletAdjustFailed": "Échec de l'ajustement du portefeuille."
   },
-
   "platformCompanyUsers": {
     "title": "Utilisateurs d'entreprise",
     "subtitle": "Supervision en lecture seule des utilisateurs d'entreprise sur tous les espaces.",
     "noUsers": "Aucun utilisateur d'entreprise trouvé."
   },
-
   "platformSettings": {
     "general": {
       "saving": "Enregistrement...",
@@ -2113,7 +2340,8 @@
       "world": "Monde",
       "sessions": "Sessions",
       "maintenance": "Maintenance",
-      "billing": "Facturation"
+      "billing": "Facturation",
+      "notifications": "Notifications"
     },
     "session": {
       "title": "Gouvernance des sessions",
@@ -2326,7 +2554,6 @@
       "operationalSection": "Paramètres opérationnels"
     }
   },
-
   "companyModules": {
     "title": "Modules",
     "subtitle": "Gérez les modules disponibles pour votre entreprise.",
@@ -2421,7 +2648,7 @@
     "pricingFree": "Offert",
     "pricingContactSales": "Sur devis",
     "pricingTiered": "Tarification par paliers",
-    "pricingPerSeatIncluded": "{count} {metric} inclus, puis {price} \u20AC/{metric}",
+    "pricingPerSeatIncluded": "{count} {metric} inclus, puis {price} €/{metric}",
     "pricingPerSeatBase": "{count} {metric} inclus",
     "metric_users": "utilisateur",
     "metric_shipments": "envoi",
@@ -2438,7 +2665,6 @@
     "reactivateNoCharge": "Cet addon est encore actif jusqu'au {date}. Réactivation sans frais supplémentaires.",
     "reactivateConfirm": "Réactiver"
   },
-
   "themeSettings": {
     "title": "Visibilité du sélecteur de thème",
     "subtitle": "Choisissez quels rôles peuvent voir le sélecteur Clair / Sombre dans l'en-tête.",
@@ -2448,7 +2674,6 @@
     "failedToUpdate": "Échec de la mise à jour de la visibilité du thème.",
     "failedToLoad": "Échec du chargement des paramètres de visibilité du thème."
   },
-
   "shipments": {
     "title": "Expéditions",
     "newShipment": "Nouvelle expédition",
@@ -2496,7 +2721,6 @@
     "all": "Toutes",
     "shipment": "Expédition"
   },
-
   "deliveries": {
     "title": "Mes livraisons",
     "filterByStatus": "Filtrer par statut",
@@ -2523,7 +2747,6 @@
     "failedToChangeStatus": "Échec du changement de statut.",
     "all": "Toutes"
   },
-
   "forbidden": {
     "title": "Accès restreint",
     "message": "Cette section est réservée aux rôles de gestion.",
@@ -2531,7 +2754,6 @@
     "goBack": "Retour",
     "goToDashboard": "Aller au tableau de bord"
   },
-
   "platformDashboard": {
     "title": "Tableau de bord plateforme",
     "statsError": "Certaines statistiques n'ont pas pu être chargées.",
@@ -2560,7 +2782,6 @@
       "resizeHint": "Glissez la poignée pour redimensionner"
     }
   },
-
   "companyDashboard": {
     "title": "Tableau de bord",
     "widgetsTitle": "Widgets",
@@ -2574,49 +2795,46 @@
     "suggestionsApprove": "Ajouter",
     "suggestionsDismiss": "Ignorer"
   },
-
   "compliance": {
-    "complianceRate": "Taux de conformit\u00e9",
+    "complianceRate": "Taux de conformité",
     "complianceRateDesc": "Pourcentage de documents soumis",
     "pending": "En attente",
     "pendingDesc": "Documents en attente de soumission",
     "overdue": "En retard",
     "overdueDesc": "Demandes de plus de 48h",
-    "roles": "Conformit\u00e9 par r\u00f4le",
-    "rolesDesc": "Demandes de documents group\u00e9es par r\u00f4le",
-    "types": "Conformit\u00e9 par type",
-    "typesDesc": "Demandes de documents group\u00e9es par type",
+    "roles": "Conformité par rôle",
+    "rolesDesc": "Demandes de documents groupées par rôle",
+    "types": "Conformité par type",
+    "typesDesc": "Demandes de documents groupées par type",
     "widgets": {
-      "rate": "Taux de conformit\u00e9",
+      "rate": "Taux de conformité",
       "rateDesc": "Pourcentage global de documents soumis",
       "pending": "Documents en attente",
       "pendingDesc": "Nombre de documents en attente de soumission",
       "overdue": "Documents en retard",
       "overdueDesc": "Demandes de documents de plus de 48 heures",
-      "roles": "Conformit\u00e9 par r\u00f4le",
-      "rolesDesc": "Statut de conformit\u00e9 group\u00e9 par r\u00f4le",
-      "types": "Conformit\u00e9 par type",
-      "typesDesc": "Statut de conformit\u00e9 group\u00e9 par type"
+      "roles": "Conformité par rôle",
+      "rolesDesc": "Statut de conformité groupé par rôle",
+      "types": "Conformité par type",
+      "typesDesc": "Statut de conformité groupé par type"
     },
     "awaitingSubmission": "En attente de soumission",
     "olderThan48h": "Plus de 48h",
     "submitted": "soumis",
     "total": "total",
     "noData": "Aucune demande de document",
-    "noRole": "Aucun r\u00f4le",
-    "rolesWithPending": "r\u00f4les avec demandes en attente",
+    "noRole": "Aucun rôle",
+    "rolesWithPending": "rôles avec demandes en attente",
     "typesWithPending": "types avec demandes en attente",
     "membersConcerned": "{count} membre(s)",
     "pendingRequests": "{count} en attente"
   },
-
   "dashboardGrid": {
     "noSpaceToPlaceWidget": "Pas assez d'espace pour placer le widget. Essayez de supprimer ou redimensionner d'autres widgets.",
     "invalidPlacement": "Placement invalide. Le widget a été remis à sa position précédente.",
     "maxHeightReached": "Hauteur maximale du widget atteinte (6 lignes).",
     "minWidgetRequired": "Au moins un widget est requis."
   },
-
   "auth": {
     "login": "Connexion",
     "email": "E-mail",
@@ -2644,9 +2862,34 @@
     "createAccount": "Créer un compte",
     "registrationFailed": "L'inscription a échoué.",
     "alreadyHaveAccount": "Vous avez déjà un compte ?",
-    "signInInstead": "Connectez-vous"
+    "signInInstead": "Connectez-vous",
+    "twoStepVerification": "Vérification en deux étapes",
+    "enter2faCode": "Saisissez le code de votre application d'authentification.",
+    "enter6DigitCode": "Entrez votre code de sécurité à 6 chiffres",
+    "verifyCode": "Vérifier le code",
+    "invalidCode": "Code de vérification invalide."
   },
-
+  "twoFactor": {
+    "title": "Authentification à deux facteurs",
+    "description": "Ajoutez une couche de sécurité supplémentaire à votre compte en utilisant une application d'authentification.",
+    "requiredWarning": "L'authentification à deux facteurs est obligatoire pour les administrateurs platform. Veuillez l'activer pour continuer.",
+    "active": "2FA activé",
+    "enable": "Activer la 2FA",
+    "disable": "Désactiver la 2FA",
+    "enabledSuccess": "L'authentification à deux facteurs a été activée avec succès.",
+    "disabledSuccess": "L'authentification à deux facteurs a été désactivée.",
+    "setupTitle": "Configurer l'application d'authentification",
+    "scanQrCode": "Scannez ce QR code avec votre application d'authentification (Google Authenticator, Authy, 1Password...).",
+    "manualEntry": "Saisie manuelle",
+    "verificationCode": "Code de vérification",
+    "verify": "Vérifier",
+    "disableTitle": "Désactiver la 2FA",
+    "disableWarning": "Êtes-vous sûr de vouloir désactiver l'authentification à deux facteurs ? Votre compte sera moins sécurisé.",
+    "regenerateBackupCodes": "Régénérer les codes de secours",
+    "backupCodesTitle": "Codes de secours",
+    "backupCodesDesc": "Conservez ces codes dans un endroit sûr. Chaque code ne peut être utilisé qu'une seule fois.",
+    "backupCodesWarning": "Ces codes ne seront plus affichés. Enregistrez-les maintenant."
+  },
   "register": {
     "industryStep": "Secteur d'activité",
     "industryStepSubtitle": "Votre secteur",
@@ -2739,7 +2982,6 @@
     "registrationSuccess": "Votre compte a été créé avec succès ! Bienvenue.",
     "pleaseCorrectErrors": "Veuillez corriger les erreurs ci-dessous pour continuer."
   },
-
   "onboarding": {
     "welcome": "Bienvenue {name} !",
     "setupPrompt": "Configurez votre espace en 5 minutes",
@@ -2751,7 +2993,6 @@
     "paymentMethod": "Ajouter un moyen de paiement",
     "inviteMember": "Inviter un collaborateur"
   },
-
   "landing": {
     "signIn": "Se connecter",
     "startFree": "Commencer gratuitement",
@@ -2797,18 +3038,15 @@
     "allRightsReserved": "Tous droits réservés.",
     "privacy": "Confidentialité"
   },
-
   "errorPage": {
     "pageNotFound": "Page introuvable",
     "description": "Nous n'avons pas pu trouver la page que vous recherchez.",
     "backToHome": "Retour à l'accueil"
   },
-
   "maintenancePage": {
     "enterYourEmail": "Saisissez votre adresse e-mail",
     "onTheList": "Vous êtes inscrit. Nous vous notifierons lorsque nous serons de retour en ligne."
   },
-
   "accountSettings": {
     "account": "Compte",
     "security": "Sécurité",
@@ -2839,7 +3077,6 @@
     "themeSystem": "Système",
     "documents": "Documents"
   },
-
   "audience": {
     "confirmingSubscription": "Confirmation de votre inscription...",
     "subscriptionConfirmed": "Inscription confirmée !",
@@ -2852,10 +3089,8 @@
     "emailRemovedFrom": "Votre adresse e-mail {email} a été retirée de {list}.",
     "unsubscribeInvalidDesc": "Ce lien de désinscription n'est plus valide."
   },
-
   "approveConfirm": "Approuver la mise à niveau vers « {plan} » pour {company} ?",
   "rejectConfirm": "Rejeter la demande de mise à niveau pour {company} ?",
-
   "fields": {
     "category": {
       "base": "Informations générales",
@@ -2867,7 +3102,6 @@
     "profileIncomplete": "{filled} sur {total} champs obligatoires renseignés",
     "profileIncompleteShort": "Profil incomplet"
   },
-
   "runtime": {
     "cold": "Initialisation...",
     "auth": "Vérification de votre session...",
@@ -2878,7 +3112,6 @@
       "retry": "Réessayer"
     }
   },
-
   "$vuetify": {
     "badge": "Badge",
     "noDataText": "Aucune donnée disponible",
@@ -2949,7 +3182,6 @@
       "volume": "Volume"
     }
   },
-
   "markets": {
     "title": "Marchés",
     "addMarket": "Ajouter un marché",
@@ -2983,7 +3215,6 @@
     "deleted": "Marché supprimé",
     "cannotDeactivate": "Impossible de désactiver : des entreprises utilisent ce marché"
   },
-
   "legalStatuses": {
     "title": "Statuts juridiques",
     "addStatus": "Ajouter un statut juridique",
@@ -2998,7 +3229,6 @@
     "saved": "Statut juridique enregistré",
     "deleted": "Statut juridique supprimé"
   },
-
   "languages": {
     "title": "Langues",
     "addLanguage": "Ajouter une langue",
@@ -3021,7 +3251,6 @@
       "noStats": "Aucune donnée de traduction"
     }
   },
-
   "translations": {
     "title": "Traductions",
     "import": "Importer",
@@ -3036,7 +3265,6 @@
     "namespace": "Espace de noms",
     "locale": "Locale"
   },
-
   "translatePage": {
     "title": "Gestion des traductions",
     "tabs": {
@@ -3071,7 +3299,6 @@
     "selectLocaleToImport": "Sélectionnez une langue à importer",
     "overridesEmpty": "Aucune surcharge pour ce marché. Les surcharges permettent de personnaliser les traductions pour un marché spécifique sans modifier les traductions globales."
   },
-
   "marketImport": {
     "title": "Importer des marchés",
     "preview": "Aperçu des modifications",
@@ -3082,7 +3309,6 @@
     "noChanges": "Aucun changement détecté",
     "applied": "Import appliqué"
   },
-
   "international": {
     "title": "International",
     "tabs": {
@@ -3092,7 +3318,6 @@
       "fxRates": "Taux de change"
     }
   },
-
   "fxRates": {
     "title": "Taux de change",
     "baseCurrency": "Base",
@@ -3112,7 +3337,20 @@
     "active": "Actif",
     "stopped": "Arrêté",
     "connections": "Connexions",
-    "topics": "Topics",
+    "topics": {
+      "rbac.changed": "Permissions modifiées",
+      "modules.changed": "Modules modifiés",
+      "plan.changed": "Forfait modifié",
+      "jobdomain.changed": "Secteur modifié",
+      "members.changed": "Membres modifiés",
+      "member.joined": "Membre ajouté",
+      "member.removed": "Membre retiré",
+      "role.assigned": "Rôle attribué",
+      "module.activated": "Module activé",
+      "module.deactivated": "Module désactivé",
+      "security.alert": "Alerte sécurité",
+      "audit.logged": "Audit enregistré"
+    },
     "activeConnections": "Connexions actives",
     "user": "ID Utilisateur",
     "company": "ID Société",
@@ -3128,20 +3366,6 @@
     "metricTopic": "Topic",
     "metricCategory": "Catégorie",
     "metricCount": "Total",
-    "topics": {
-      "rbac.changed": "Permissions modifiées",
-      "modules.changed": "Modules modifiés",
-      "plan.changed": "Forfait modifié",
-      "jobdomain.changed": "Secteur modifié",
-      "members.changed": "Membres modifiés",
-      "member.joined": "Membre ajouté",
-      "member.removed": "Membre retiré",
-      "role.assigned": "Rôle attribué",
-      "module.activated": "Module activé",
-      "module.deactivated": "Module désactivé",
-      "security.alert": "Alerte sécurité",
-      "audit.logged": "Audit enregistré"
-    },
     "categories": {
       "invalidation": "Invalidation",
       "domain": "Domaine",
@@ -3210,7 +3434,6 @@
     "high": "Élevé",
     "critical": "Critique"
   },
-
   "documents": {
     "title": "Documents",
     "myDocuments": "Mes documents",
@@ -3233,7 +3456,7 @@
     "noFileUploaded": "Aucun fichier téléversé",
     "fileInfo": "{name} ({size})",
     "maxSize": "Max {size} Mo",
-    "acceptedTypes": "Acceptés : {types}",
+    "acceptedTypes": "Types de fichiers acceptés",
     "type": {
       "id_card": "Carte d'identité",
       "driving_license": "Permis de conduire",
@@ -3282,7 +3505,6 @@
     "systemDocument": "Système",
     "documentLabel": "Libellé du document",
     "maxFileSizeMb": "Taille max (Mo)",
-    "acceptedTypes": "Types de fichiers acceptés",
     "customTypeCreated": "Type de document personnalisé créé.",
     "customTypeArchived": "Type de document archivé.",
     "customTypeDeleted": "Type de document supprimé.",
@@ -3365,73 +3587,152 @@
     "addonSubscribed": "Module complémentaire activé",
     "addonUnsubscribed": "Module complémentaire retiré"
   },
-
-  "coupons": {
-    "title": "Coupons",
-    "create": "Créer un coupon",
-    "edit": "Modifier le coupon",
-    "save": "Enregistrer",
-    "code": "Code",
-    "name": "Nom",
-    "type": "Type",
-    "value": "Valeur",
-    "valueBps": "Valeur (points de base, ex: 2000 = 20%)",
-    "valueCents": "Valeur (centimes)",
-    "maxUses": "Utilisations max",
-    "unlimited": "Illimité",
-    "usage": "Utilisation",
+  "notifications": {
+    "inbox": "Notifications",
+    "preferences": "Préférences",
+    "preferencesDesc": "Choisissez les notifications que vous recevez et leur canal.",
+    "markAllRead": "Tout marquer comme lu",
+    "unreadOnly": "Non lues uniquement",
+    "empty": "Aucune notification.",
+    "unread": "non lue | non lues",
+    "searchPlaceholder": "Rechercher une notification...",
+    "dismiss": "Supprimer",
+    "notificationCenter": "Centre de notifications",
+    "notificationCenterDesc": "Retrouvez l'historique de toutes vos notifications.",
+    "newSingle": "Nouveau",
+    "newCount": "{n} nouvelles notifications",
+    "open": "Ouvrir",
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
+    "topicManagement": "Sujets de notification",
+    "topicManagementDesc": "Configurez les sujets, les canaux et les paramètres de livraison des notifications.",
+    "editTopic": "Modifier le sujet",
+    "topic": "Sujet",
+    "category": "Catégorie",
+    "scope": "Portée",
+    "severity": "Sévérité",
+    "defaultChannels": "Canaux par défaut",
+    "deliveries7d": "Livraisons (7j)",
+    "active": "Actif",
+    "label": "Libellé",
+    "icon": "Icône",
+    "sortOrder": "Ordre de tri",
+    "title": "Notifications",
+    "new": "Nouveau | Nouveaux",
+    "viewAll": "Voir toutes les notifications",
+    "noNotifications": "Aucune notification",
+    "markAllRead": "Tout marquer comme lu",
+    "markAllUnread": "Tout marquer comme non lu",
+    "timeJustNow": "À l'instant",
+    "timeMinAgo": "Il y a {n} min",
+    "timeHourAgo": "Il y a {n}h",
+    "timeDayAgo": "Il y a {n}j",
+    "categoryAll": "Toutes",
+    "categoryBilling": "Facturation",
+    "categoryMembers": "Membres",
+    "categoryModules": "Modules",
+    "categorySecurity": "Sécurité",
+    "categorySupport": "Support",
+    "categorySystem": "Système",
+    "billing_payment_failed_title": "Paiement échoué",
+    "billing_payment_failed_body": "Une tentative de paiement pour la facture #{invoice_id} a échoué.",
+    "billing_invoice_created_title": "Nouvelle facture",
+    "billing_invoice_created_body": "La facture #{invoice_id} de {amount} a été créée.",
+    "billing_payment_received_title": "Paiement reçu",
+    "billing_payment_received_body": "Un paiement de {amount} a été reçu.",
+    "billing_plan_changed_title": "Plan modifié",
+    "billing_plan_changed_body": "Votre plan a été changé pour {plan_name}.",
+    "billing_trial_expiring_title": "Essai expirant",
+    "billing_trial_expiring_body": "Votre essai expire dans {days} jours.",
+    "billing_trial_started_title": "Essai démarré",
+    "billing_trial_started_body": "Votre essai a commencé. Bienvenue !",
+    "billing_trial_converted_title": "Essai converti",
+    "billing_trial_converted_body": "Votre essai a été converti en abonnement actif.",
+    "billing_payment_method_expiring_title": "Moyen de paiement expirant",
+    "billing_payment_method_expiring_body": "Votre moyen de paiement se terminant par {last4} expire bientôt.",
+    "billing_account_suspended_title": "Compte suspendu",
+    "billing_account_suspended_body": "Votre compte a été suspendu en raison de factures impayées.",
+    "billing_addon_activated_title": "Module activé",
+    "billing_addon_activated_body": "Le module {module_name} a été activé.",
+    "members_invited_title": "Membre invité",
+    "members_invited_body": "{member_name} a été invité à rejoindre l'équipe.",
+    "members_joined_title": "Membre rejoint",
+    "members_joined_body": "{member_name} a rejoint l'équipe.",
+    "members_removed_title": "Membre retiré",
+    "members_removed_body": "{member_name} a été retiré de l'équipe.",
+    "members_role_changed_title": "Rôle modifié",
+    "members_role_changed_body": "Le rôle de {member_name} a été changé pour {role_name}.",
+    "modules_activated_title": "Module activé",
+    "modules_activated_body": "Le module {module_name} a été activé.",
+    "modules_deactivated_title": "Module désactivé",
+    "modules_deactivated_body": "Le module {module_name} a été désactivé.",
+    "security_alert_title": "Alerte de sécurité",
+    "security_alert_body": "Un événement de sécurité a été détecté.",
+    "platform_new_subscription_title": "Nouvel abonnement",
+    "platform_new_subscription_body": "{company_name} a souscrit au plan {plan_name}.",
+    "platform_plan_changed_title": "Changement de plan",
+    "platform_plan_changed_body": "{company_name} est passée de {old_plan} à {new_plan}.",
+    "platform_cancellation_requested_title": "Demande de résiliation",
+    "platform_cancellation_requested_body": "{company_name} a demandé la résiliation.",
+    "platform_payment_failed_alert_title": "Échec de paiement",
+    "platform_payment_failed_alert_body": "Paiement échoué pour {company_name} (facture #{invoice_id}).",
+    "platform_new_company_registered_title": "Nouvelle entreprise",
+    "platform_new_company_registered_body": "{company_name} vient de s'inscrire.",
+    "platform_trial_expired_title": "Essai expiré",
+    "platform_trial_expired_body": "L'essai de {company_name} a expiré sans conversion.",
+    "platform_account_suspended_title": "Compte suspendu",
+    "platform_account_suspended_body": "Le compte de {company_name} a été suspendu.",
+    "scopeCompany": "Entreprise",
+    "scopePlatform": "Plateforme",
+    "scopeBoth": "Les deux"
+  },
+  "support": {
+    "myTickets": "Mes tickets",
+    "allTickets": "Tous les tickets",
+    "newTicket": "Nouveau ticket",
+    "subject": "Sujet",
+    "subjectPlaceholder": "Décrivez brièvement votre problème",
+    "message": "Message",
+    "messagePlaceholder": "Décrivez votre problème en détail...",
     "status": "Statut",
-    "startsAt": "Début",
-    "expiresAt": "Expiration",
-    "isActive": "Actif",
+    "priority": "Priorité",
+    "category": "Catégorie",
+    "company": "Entreprise",
+    "lastMessage": "Dernier message",
+    "assignedTo": "Assigné à",
+    "createdAt": "Créé le",
+    "createdBy": "Créé par",
+    "firstResponse": "Première réponse",
+    "conversation": "Conversation",
+    "backToTickets": "Retour aux tickets",
+    "send": "Envoyer",
+    "reply": "Répondre",
+    "typeMessage": "Tapez votre message...",
+    "typeReply": "Tapez votre réponse...",
+    "typeInternalNote": "Note interne (invisible au client)...",
+    "internalNote": "Note interne",
+    "platformTeam": "Équipe Support",
+    "customer": "Client",
+    "you": "Vous",
+    "ticketClosed": "Ce ticket est fermé. Vous ne pouvez plus y répondre.",
+    "assignToMe": "M'assigner ce ticket",
+    "resolve": "Résoudre",
+    "close": "Fermer",
     "actions": "Actions",
-    "confirmDelete": "Supprimer ce coupon ?",
-    "emptyTitle": "Aucun coupon",
-    "emptyDesc": "Créez votre premier code promo pour offrir des réductions.",
-    "status_active": "Actif",
-    "status_inactive": "Inactif",
-    "status_expired": "Expiré",
-    "status_exhausted": "Épuisé",
-    "status_scheduled": "Programmé",
-    "updated": "Coupon mis à jour avec succès",
-    "created": "Coupon créé avec succès",
-    "deleted": "Coupon supprimé avec succès",
-    "sectionInfo": "Informations",
-    "sectionDiscount": "Réduction",
-    "sectionValidity": "Validité",
-    "sectionApplicability": "Ciblage & périmètre",
-    "sectionLimits": "Limites",
-    "sectionSummary": "Résumé",
-    "description": "Description",
-    "descriptionHint": "Notes admin (non visibles pour les clients)",
-    "typePercentage": "Pourcentage",
-    "typeFixedAmount": "Montant fixe",
-    "durationMonths": "Durée",
-    "durationOnce": "Facture unique",
-    "durationForever": "Illimité (chaque facture)",
-    "durationNMonths": "{n} mois",
-    "billingCycles": "Cycles de facturation",
-    "allCycles": "Tous les cycles",
-    "monthlyOnly": "Mensuel uniquement",
-    "yearlyOnly": "Annuel uniquement",
-    "applicablePlans": "Plans applicables",
-    "allPlans": "Tous les plans",
-    "addonMode": "Périmètre de la remise",
-    "addonModeNone": "Abonnement uniquement",
-    "addonModeInclude": "Abonnement + modules sélectionnés",
-    "addonModeExclude": "Tout sauf certains modules",
-    "applicableAddons": "Modules concernés",
-    "maxUsesPerCompany": "Utilisations max par entreprise",
-    "maxUsesPerCompanyHint": "Vide = 1 utilisation par entreprise",
-    "firstPurchaseOnly": "Premier achat uniquement",
-    "firstPurchaseOnlyHint": "Uniquement pour les entreprises sans abonnement antérieur",
-    "summaryPrefix": "Ce coupon offre",
-    "summaryPercent": "{value}% de réduction",
-    "summaryFixed": "{value} de réduction",
-    "summaryAllPlans": "sur tous les plans",
-    "summarySpecificPlans": "sur {plans}",
-    "summaryForever": "sur chaque facture",
-    "summaryOnce": "sur la première facture",
-    "summaryMonths": "pendant {n} mois"
+    "unassigned": "Non assigné",
+    "searchPlaceholder": "Rechercher par sujet ou entreprise...",
+    "statusOpen": "Ouvert",
+    "statusInProgress": "En cours",
+    "statusWaitingCustomer": "Attente client",
+    "statusResolved": "Résolu",
+    "statusClosed": "Fermé",
+    "priorityLow": "Basse",
+    "priorityNormal": "Normale",
+    "priorityHigh": "Haute",
+    "priorityUrgent": "Urgente",
+    "categoryGeneral": "Général",
+    "categoryTechnical": "Technique",
+    "categoryBilling": "Facturation",
+    "noTicketsYet": "Aucun ticket pour le moment"
   }
 }

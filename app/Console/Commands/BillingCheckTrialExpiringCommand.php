@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\TrialExpiring;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -63,7 +64,17 @@ class BillingCheckTrialExpiringCommand extends Command implements Isolatable
             }
 
             try {
-                $owner->notify(new TrialExpiring($subscription));
+                NotificationDispatcher::send(
+                    topicKey: 'billing.trial_expiring',
+                    recipients: [$owner],
+                    payload: [
+                        'plan_name' => $subscription->plan_key,
+                        'trial_ends_at' => $subscription->trial_ends_at->toDateString(),
+                        'days_remaining' => (int) now()->diffInDays($subscription->trial_ends_at, false),
+                    ],
+                    company: $company,
+                    mailNotification: new TrialExpiring($subscription),
+                );
 
                 // Mark as notified
                 $meta = $subscription->metadata ?? [];

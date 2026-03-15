@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
+import { $platformApi } from '@/utils/platformApi'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -44,7 +45,34 @@ const doExport = async () => {
 }
 
 // ── Company selector ───────────────────────────────────
-const companyId = ref('')
+const companyId = ref(null)
+const companySearch = ref('')
+const companyOptions = ref([])
+const companySearchLoading = ref(false)
+
+let searchTimeout = null
+
+const searchCompanies = async query => {
+  if (!query || query.length < 2) {
+    companyOptions.value = []
+
+    return
+  }
+  companySearchLoading.value = true
+  try {
+    const data = await $platformApi('/companies', { params: { search: query } })
+
+    companyOptions.value = (data.data || []).map(c => ({ id: c.id, name: c.name, slug: c.slug }))
+  }
+  finally {
+    companySearchLoading.value = false
+  }
+}
+
+watch(companySearch, val => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => searchCompanies(val), 300)
+})
 
 // ── Timeline ───────────────────────────────────────────
 const timelineDays = ref(30)
@@ -192,6 +220,23 @@ const formatAmount = (amount, currency) => {
 
 <template>
   <div>
+    <VAlert
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
+      <VAlertTitle>
+        <VIcon
+          icon="tabler-history"
+          size="20"
+          class="me-2"
+        />
+        {{ t('platformBilling.forensics.headerTitle') }}
+      </VAlertTitle>
+      {{ t('platformBilling.forensics.headerDesc') }}
+    </VAlert>
+
     <!-- Export button -->
     <div class="d-flex justify-end mb-4">
       <VBtn
@@ -268,15 +313,29 @@ const formatAmount = (amount, currency) => {
         <VRow>
           <VCol
             cols="12"
-            md="4"
+            md="6"
           >
-            <AppTextField
+            <AppAutocomplete
               v-model="companyId"
-              :label="t('platformBilling.forensics.companyId')"
-              type="number"
-              :placeholder="t('platformBilling.forensics.companyIdPlaceholder')"
+              v-model:search="companySearch"
+              :items="companyOptions"
+              item-title="name"
+              item-value="id"
+              :label="t('platformBilling.forensics.searchCompany')"
+              :placeholder="t('platformBilling.forensics.searchCompanyPlaceholder')"
+              :loading="companySearchLoading"
               density="compact"
-            />
+              clearable
+              no-filter
+            >
+              <template #item="{ props: itemProps, item }">
+                <VListItem v-bind="itemProps">
+                  <template #subtitle>
+                    {{ item.raw.slug }}
+                  </template>
+                </VListItem>
+              </template>
+            </AppAutocomplete>
           </VCol>
         </VRow>
       </VCardText>

@@ -389,6 +389,9 @@
     "usePublicAddons": true,
     "useAnalytics": true,
     "useTunnelPersistence": true,
-    "startVersionPolling": true
+    "startVersionPolling": true,
+    "clearVersionState": true,
+    "invoiceStatusColor": true,
+    "subscriptionStatusColor": true
   }
 }

@@ -10,6 +10,7 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\Subscription;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Modules\PlatformModule;
 use App\Core\Plans\Plan;
 use Illuminate\Console\Command;
@@ -339,7 +340,16 @@ class BillingRenewCommand extends Command implements Isolatable
         if ($wasTrialing) {
             $company = $subscription->company;
             $owner = $company?->owner();
-            $owner?->notify(new \App\Notifications\Billing\TrialConverted($subscription));
+
+            if ($owner) {
+                NotificationDispatcher::send(
+                    topicKey: 'billing.trial_converted',
+                    recipients: [$owner],
+                    payload: ['plan_name' => $subscription->plan_key, 'company_name' => $company->name],
+                    company: $company,
+                    mailNotification: new \App\Notifications\Billing\TrialConverted($subscription),
+                );
+            }
         }
     }
 

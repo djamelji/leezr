@@ -20,6 +20,7 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 Route::post('/register/confirm-payment', \App\Modules\Infrastructure\Auth\Http\ConfirmRegistrationPaymentController::class)
     ->middleware(['auth:sanctum', 'throttle:10,1']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15,1');
+Route::post('/2fa/verify', [AuthController::class, 'verify2fa'])->middleware('throttle:5,1');
 Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
 

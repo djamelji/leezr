@@ -47,7 +47,7 @@ class BillingModule implements ModuleDefinition
             type: 'platform',
             visibility: 'visible',
             iconRef: 'tabler-credit-card',
-            settingsRoute: 'platform-billing-settings-tab',
+            settingsRoute: null,
         );
     }
 }

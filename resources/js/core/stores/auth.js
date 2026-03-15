@@ -101,6 +101,26 @@ export const useAuthStore = defineStore('auth', {
         body: { email, password },
       })
 
+      // ADR-351: 2FA required — don't persist yet
+      if (data.requires_2fa) {
+        return data
+      }
+
+      this._persistUser(data.user)
+      applyTheme(data.ui_theme, data.theme_preference)
+      useThemeStore().init(data.theme_preference, 'company')
+      this._sessionConfig = data.ui_session ?? null
+      await this.fetchMyCompanies()
+
+      return data
+    },
+
+    async verify2fa(code) {
+      const data = await $api('/2fa/verify', {
+        method: 'POST',
+        body: { code },
+      })
+
       this._persistUser(data.user)
       applyTheme(data.ui_theme, data.theme_preference)
       useThemeStore().init(data.theme_preference, 'company')

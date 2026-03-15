@@ -4,7 +4,7 @@ namespace App\Modules\Platform\Dashboard\Http;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Dashboard\DashboardWidgetRegistry;
-use App\Modules\Platform\Billing\ReadModels\PlatformBillingDashboardReadService;
+use App\Core\Billing\ReadModels\PlatformBillingDashboardReadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;

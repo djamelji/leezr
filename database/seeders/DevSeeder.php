@@ -33,6 +33,9 @@ class DevSeeder extends Seeder
 
     public function run(): void
     {
+        // ─── Notification topics (system-level registry sync) ────
+        $this->call(NotificationTopicSeeder::class);
+
         // ─── Platform scope — demo platform admin ────────────────
         $platformUser = PlatformUser::updateOrCreate(
             ['email' => 'admin@leezr.com'],

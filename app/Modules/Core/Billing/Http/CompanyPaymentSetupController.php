@@ -3,7 +3,6 @@
 namespace App\Modules\Core\Billing\Http;
 
 use App\Core\Billing\Adapters\StripePaymentAdapter;
-use App\Core\Billing\BicRegistry;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Billing\PlatformPaymentModule;
 use Illuminate\Http\JsonResponse;
@@ -120,7 +119,7 @@ class CompanyPaymentSetupController
 
                 return response()->json([
                     'message' => 'Payment method already saved.',
-                    'card' => self::formatProfile($existing),
+                    'card' => $existing->toCardArray(),
                     'duplicate' => true,
                 ]);
             }
@@ -160,7 +159,7 @@ class CompanyPaymentSetupController
 
         return response()->json([
             'message' => 'Payment method saved.',
-            'card' => self::formatProfile($profile),
+            'card' => $profile->toCardArray(),
         ]);
     }
 
@@ -190,25 +189,4 @@ class CompanyPaymentSetupController
         ];
     }
 
-    public static function formatProfile(CompanyPaymentProfile $p): array
-    {
-        $bankCode = $p->metadata['bank_code'] ?? null;
-
-        return [
-            'id' => $p->id,
-            'provider_payment_method_id' => $p->provider_payment_method_id,
-            'label' => $p->label,
-            'is_default' => $p->is_default,
-            'method_key' => $p->method_key,
-            'brand' => $p->metadata['brand'] ?? null,
-            'last4' => $p->metadata['last4'] ?? null,
-            'exp_month' => $p->metadata['exp_month'] ?? null,
-            'exp_year' => $p->metadata['exp_year'] ?? null,
-            'country' => $p->metadata['country'] ?? null,
-            'funding' => $p->metadata['funding'] ?? null,
-            'bank_code' => $bankCode,
-            'bank_name' => $bankCode ? BicRegistry::resolve($bankCode) : null,
-            'holder_name' => $p->metadata['holder_name'] ?? null,
-        ];
-    }
 }

@@ -21,6 +21,9 @@ use App\Modules\Core\Audit\Http\CompanyAuditLogController;
 use App\Modules\Core\Modules\Http\CompanyModuleController;
 use App\Modules\Core\Modules\Http\ModuleDeactivationPreviewController;
 use App\Modules\Core\Modules\Http\ModuleQuoteController;
+use App\Modules\Core\Notifications\Http\NotificationController;
+use App\Modules\Core\Notifications\Http\NotificationPreferenceController;
+use App\Modules\Infrastructure\Auth\Http\TwoFactorController;
 use App\Modules\Core\Settings\Http\CompanyController;
 use App\Modules\Core\Theme\Http\ThemePreferenceController;
 use App\Modules\Core\Theme\Http\ThemeRoleVisibilityController;
@@ -31,6 +34,8 @@ use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
 use App\Modules\Core\Settings\Http\CompanyFieldDefinitionController;
 use App\Modules\Core\Jobdomain\Http\CompanyJobdomainController;
 use App\Modules\Core\Roles\Http\CompanyRoleController;
+use App\Modules\Core\Support\Http\SupportTicketController;
+use App\Modules\Core\Support\Http\SupportMessageController;
 use App\Modules\Logistics\Shipments\Http\MyDeliveryController;
 use App\Modules\Logistics\Shipments\Http\ShipmentController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +70,24 @@ Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'updat
     ->middleware('company.access:manage-structure');
 Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
 Route::get('/dashboard/onboarding', OnboardingStatusController::class);
+
+// ─── Notification inbox (core — always active) ────────────
+Route::get('/notifications', [NotificationController::class, 'index']);
+Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+// ─── Notification preferences ─────────────────────────────
+Route::get('/notifications/preferences', [NotificationPreferenceController::class, 'index']);
+Route::put('/notifications/preferences', [NotificationPreferenceController::class, 'update']);
+
+// ─── Two-Factor Authentication (ADR-351) ──────────────────
+Route::post('/2fa/enable', [TwoFactorController::class, 'enable']);
+Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']);
+Route::delete('/2fa', [TwoFactorController::class, 'disable']);
+Route::post('/2fa/backup-codes', [TwoFactorController::class, 'regenerateBackupCodes']);
+Route::get('/2fa/status', [TwoFactorController::class, 'status']);
 
 // ─── Company plan (ADR-100, module-gated) ─────────────────
 Route::middleware('company.access:use-module,core.billing')->group(function () {
@@ -282,4 +305,18 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
         ->middleware('company.access:use-permission,shipments.view_own');
     Route::put('/my-deliveries/{id}/status', [MyDeliveryController::class, 'updateStatus'])
         ->middleware('company.access:use-permission,shipments.manage_status');
+});
+
+// ── Support Tickets ─────────────────────────────────────────
+Route::middleware('company.access:use-module,core.support')->group(function () {
+    Route::get('/support/tickets', [SupportTicketController::class, 'index'])
+        ->middleware('company.access:use-permission,support.view');
+    Route::post('/support/tickets', [SupportTicketController::class, 'store'])
+        ->middleware('company.access:use-permission,support.create');
+    Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show'])
+        ->middleware('company.access:use-permission,support.view');
+    Route::get('/support/tickets/{id}/messages', [SupportMessageController::class, 'index'])
+        ->middleware('company.access:use-permission,support.view');
+    Route::post('/support/tickets/{id}/messages', [SupportMessageController::class, 'store'])
+        ->middleware('company.access:use-permission,support.create');
 });

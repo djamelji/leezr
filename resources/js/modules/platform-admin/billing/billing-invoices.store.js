@@ -126,13 +126,14 @@ export const usePlatformBillingInvoicesStore = defineStore('platformBillingInvoi
       }
     },
 
-    async fetchAllSubscriptions({ page = 1, company_id, status, plan_key } = {}) {
+    async fetchAllSubscriptions({ page = 1, company_id, status, plan_key, search } = {}) {
       const params = new URLSearchParams()
 
       params.set('page', page)
       if (company_id) params.set('company_id', company_id)
       if (status) params.set('status', status)
       if (plan_key) params.set('plan_key', plan_key)
+      if (search) params.set('search', search)
 
       const data = await $platformApi(`/billing/all-subscriptions?${params}`)
 

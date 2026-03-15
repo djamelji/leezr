@@ -29,7 +29,7 @@ class CompanySubscriptionAdminController
             ->orderByDesc('is_default')
             ->get();
 
-        $cards = $profiles->map(fn ($p) => CompanyPaymentSetupController::formatProfile($p));
+        $cards = $profiles->map(fn ($p) => $p->toCardArray());
 
         return response()->json(['cards' => $cards]);
     }

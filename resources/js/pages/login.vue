@@ -38,20 +38,27 @@ const form = ref({
 const isPasswordVisible = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const requires2fa = ref(false)
+const otpCode = ref('')
 
 const handleLogin = async () => {
   if (isLoading.value) return
   isLoading.value = true
   errorMessage.value = ''
 
-  // ADR-331: Login API isolé. En cas de succès, reload complet vers le
-  // dashboard — évite tout chunk error post-login (import dynamique de la
-  // page cible avec des chunks potentiellement périmés).
   try {
-    await auth.login({
+    const data = await auth.login({
       email: form.value.email,
       password: form.value.password,
     })
+
+    // ADR-351: If 2FA is required, show OTP input
+    if (data?.requires_2fa) {
+      requires2fa.value = true
+      isLoading.value = false
+
+      return
+    }
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('auth.invalidCredentials')
@@ -61,6 +68,24 @@ const handleLogin = async () => {
   }
 
   // Login réussi — reload complet (le boot runtime se fera au chargement frais)
+  window.location.href = safeRedirect(route.query.redirect, '/dashboard')
+}
+
+const handleVerify2fa = async () => {
+  if (isLoading.value) return
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    await auth.verify2fa(otpCode.value)
+  }
+  catch (error) {
+    errorMessage.value = error?.data?.message || t('auth.invalidCode')
+    isLoading.value = false
+
+    return
+  }
+
   window.location.href = safeRedirect(route.query.redirect, '/dashboard')
 }
 
@@ -117,10 +142,10 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
-            {{ t('auth.welcomeTo', { app: appName }) }}
+            {{ requires2fa ? t('auth.twoStepVerification') : t('auth.welcomeTo', { app: appName }) }}
           </h4>
           <p class="mb-0">
-            {{ t('auth.signInSubtitle') }}
+            {{ requires2fa ? t('auth.enter2faCode') : t('auth.signInSubtitle') }}
           </p>
         </VCardText>
         <VCardText>
@@ -134,9 +159,12 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
             {{ errorMessage }}
           </VAlert>
 
-          <VForm @submit.prevent="handleLogin">
+          <!-- Login form -->
+          <VForm
+            v-if="!requires2fa"
+            @submit.prevent="handleLogin"
+          >
             <VRow>
-              <!-- email -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.email"
@@ -147,7 +175,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 />
               </VCol>
 
-              <!-- password -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.password"
@@ -177,7 +204,6 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 </VBtn>
               </VCol>
 
-              <!-- create account -->
               <VCol
                 cols="12"
                 class="text-body-1 text-center"
@@ -191,6 +217,49 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
                 >
                   {{ t('auth.createAccount') }}
                 </RouterLink>
+              </VCol>
+            </VRow>
+          </VForm>
+
+          <!-- 2FA verification form -->
+          <VForm
+            v-else
+            @submit.prevent="handleVerify2fa"
+          >
+            <VRow>
+              <VCol cols="12">
+                <p class="text-body-1 mb-2">
+                  {{ t('auth.enter6DigitCode') }}
+                </p>
+                <VOtpInput
+                  v-model="otpCode"
+                  type="number"
+                  class="pa-0"
+                  @finish="handleVerify2fa"
+                />
+              </VCol>
+
+              <VCol cols="12">
+                <VBtn
+                  block
+                  type="submit"
+                  :loading="isLoading"
+                >
+                  {{ t('auth.verifyCode') }}
+                </VBtn>
+              </VCol>
+
+              <VCol
+                cols="12"
+                class="text-center"
+              >
+                <a
+                  href="#"
+                  class="text-primary text-body-2"
+                  @click.prevent="requires2fa = false; otpCode = ''; errorMessage = ''"
+                >
+                  {{ t('auth.backToLogin') }}
+                </a>
               </VCol>
             </VRow>
           </VForm>

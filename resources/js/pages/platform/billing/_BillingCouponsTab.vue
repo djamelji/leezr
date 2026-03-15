@@ -18,6 +18,8 @@ const isDrawerOpen = ref(false)
 const editingCoupon = ref(null)
 const isSaving = ref(false)
 const isDeleting = ref(null)
+const deleteDialog = ref(false)
+const couponToDelete = ref(null)
 
 const defaultForm = {
   code: '',
@@ -215,9 +217,16 @@ const saveCoupon = async () => {
   }
 }
 
-const deleteCoupon = async coupon => {
-  if (!confirm(t('coupons.confirmDelete'))) return
+const confirmDeleteCoupon = coupon => {
+  couponToDelete.value = coupon
+  deleteDialog.value = true
+}
 
+const deleteCoupon = async () => {
+  const coupon = couponToDelete.value
+  if (!coupon) return
+
+  deleteDialog.value = false
   isDeleting.value = coupon.id
   try {
     await $platformApi(`/billing/coupons/${coupon.id}`, { method: 'DELETE' })
@@ -229,6 +238,7 @@ const deleteCoupon = async coupon => {
   }
   finally {
     isDeleting.value = null
+    couponToDelete.value = null
   }
 }
 
@@ -242,7 +252,25 @@ onMounted(async () => {
 </script>
 
 <template>
-  <VCard>
+  <div>
+    <VAlert
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
+      <VAlertTitle>
+        <VIcon
+          icon="tabler-ticket"
+          size="20"
+          class="me-2"
+        />
+        {{ t('platformBilling.coupons.headerTitle') }}
+      </VAlertTitle>
+      {{ t('platformBilling.coupons.headerDesc') }}
+    </VAlert>
+
+    <VCard>
     <VCardText>
       <div class="d-flex align-center justify-space-between mb-4">
         <h6 class="text-h6">
@@ -338,7 +366,7 @@ onMounted(async () => {
             size="small"
             color="error"
             :loading="isDeleting === item.id"
-            @click="deleteCoupon(item)"
+            @click="confirmDeleteCoupon(item)"
           >
             <VIcon icon="tabler-trash" />
           </VBtn>
@@ -613,4 +641,34 @@ onMounted(async () => {
       </VCard>
     </VNavigationDrawer>
   </Teleport>
+
+  <!-- Delete confirmation dialog -->
+  <VDialog
+    v-model="deleteDialog"
+    max-width="400"
+  >
+    <VCard :title="t('coupons.confirmDeleteTitle')">
+      <VCardText>
+        {{ t('coupons.confirmDelete') }}
+        <strong v-if="couponToDelete">{{ couponToDelete.code }}</strong>
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="text"
+          @click="deleteDialog = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="error"
+          variant="elevated"
+          @click="deleteCoupon"
+        >
+          {{ t('common.delete') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+  </div>
 </template>

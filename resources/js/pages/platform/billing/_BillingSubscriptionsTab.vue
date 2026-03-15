@@ -9,6 +9,8 @@ const store = usePlatformPaymentsStore()
 
 const isLoading = ref(true)
 const statusFilter = ref('')
+const searchQuery = ref('')
+let searchDebounce = null
 
 const headers = computed(() => [
   { title: t('platformBilling.company'), key: 'company', sortable: false },
@@ -24,6 +26,7 @@ const headers = computed(() => [
 const statusOptions = computed(() => [
   { title: t('platformBilling.filterAll'), value: '' },
   { title: t('platformBilling.statusPending'), value: 'pending' },
+  { title: t('platformBilling.statusPendingPayment'), value: 'pending_payment' },
   { title: t('platformBilling.statusActive'), value: 'active' },
   { title: t('platformBilling.statusTrialing'), value: 'trialing' },
   { title: t('platformBilling.statusPastDue'), value: 'past_due' },
@@ -34,11 +37,14 @@ const statusOptions = computed(() => [
 const statusLabel = status => {
   const map = {
     pending: 'statusPending',
+    pending_payment: 'statusPendingPayment',
     active: 'statusActive',
     trialing: 'statusTrialing',
     past_due: 'statusPastDue',
     cancelled: 'statusCancelled',
     suspended: 'statusSuspended',
+    rejected: 'statusRejected',
+    expired: 'statusExpired',
   }
 
   return t(`platformBilling.${map[status] || status}`)
@@ -58,6 +64,7 @@ const load = async (page = 1) => {
     await store.fetchAllSubscriptions({
       page,
       status: statusFilter.value || undefined,
+      search: searchQuery.value || undefined,
     })
   }
   catch {
@@ -115,24 +122,66 @@ const handleReject = async () => {
 
 onMounted(() => load())
 watch(statusFilter, () => load(1))
+watch(searchQuery, () => {
+  clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => load(1), 400)
+})
 </script>
 
 <template>
+  <VAlert
+    type="info"
+    variant="tonal"
+    density="compact"
+    class="mb-4"
+  >
+    <VAlertTitle>
+      <VIcon
+        icon="tabler-receipt"
+        size="20"
+        class="me-2"
+      />
+      {{ t('platformBilling.subscriptions.headerTitle') }}
+    </VAlertTitle>
+    {{ t('platformBilling.subscriptions.headerDesc') }}
+  </VAlert>
+
   <VCard>
-    <VCardTitle class="d-flex align-center">
+    <VCardTitle>
       <VIcon
         icon="tabler-receipt"
         class="me-2"
       />
       {{ t('platformBilling.tabs.subscriptions') }}
-      <VSpacer />
-      <AppSelect
-        v-model="statusFilter"
-        :items="statusOptions"
-        density="compact"
-        style="max-inline-size: 160px;"
-      />
     </VCardTitle>
+
+    <VCardText class="pb-0">
+      <VRow>
+        <VCol
+          cols="12"
+          md="3"
+        >
+          <AppSelect
+            v-model="statusFilter"
+            :items="statusOptions"
+            :label="t('platformBilling.status')"
+            density="compact"
+          />
+        </VCol>
+        <VCol
+          cols="12"
+          md="4"
+        >
+          <AppTextField
+            v-model="searchQuery"
+            :label="t('common.search')"
+            density="compact"
+            prepend-inner-icon="tabler-search"
+            clearable
+          />
+        </VCol>
+      </VRow>
+    </VCardText>
 
     <VCardText class="pa-0">
       <VSkeletonLoader
@@ -213,35 +262,37 @@ watch(statusFilter, () => load(1))
         </template>
 
         <template #item.actions="{ item }">
-          <div
-            v-if="item.status === 'pending'"
-            class="d-flex gap-1 justify-center"
-          >
+          <div class="d-flex gap-1 justify-center">
+            <template v-if="item.status === 'pending'">
+              <VBtn
+                size="small"
+                color="success"
+                variant="tonal"
+                :loading="actionLoading[item.id] === 'approve'"
+                :disabled="!!actionLoading[item.id]"
+                @click="handleApprove(item)"
+              >
+                {{ t('platformBilling.actionApprove') }}
+              </VBtn>
+              <VBtn
+                size="small"
+                color="error"
+                variant="tonal"
+                :loading="actionLoading[item.id] === 'reject'"
+                :disabled="!!actionLoading[item.id]"
+                @click="confirmReject(item)"
+              >
+                {{ t('platformBilling.actionReject') }}
+              </VBtn>
+            </template>
             <VBtn
-              size="small"
-              color="success"
-              variant="tonal"
-              :loading="actionLoading[item.id] === 'approve'"
-              :disabled="!!actionLoading[item.id]"
-              @click="handleApprove(item)"
-            >
-              {{ t('platformBilling.actionApprove') }}
-            </VBtn>
-            <VBtn
-              size="small"
-              color="error"
-              variant="tonal"
-              :loading="actionLoading[item.id] === 'reject'"
-              :disabled="!!actionLoading[item.id]"
-              @click="confirmReject(item)"
-            >
-              {{ t('platformBilling.actionReject') }}
-            </VBtn>
+              v-if="item.company?.id"
+              size="x-small"
+              variant="text"
+              icon="tabler-building"
+              :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+            />
           </div>
-          <span
-            v-else
-            class="text-disabled"
-          >—</span>
         </template>
 
         <template #bottom>

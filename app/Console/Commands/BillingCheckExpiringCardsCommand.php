@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Core\Billing\CompanyPaymentProfile;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\PaymentMethodExpiring;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -88,7 +89,18 @@ class BillingCheckExpiringCardsCommand extends Command implements Isolatable
             }
 
             try {
-                $owner->notify(new PaymentMethodExpiring($profile));
+                NotificationDispatcher::send(
+                    topicKey: 'billing.payment_method_expiring',
+                    recipients: [$owner],
+                    payload: [
+                        'brand' => $meta['brand'] ?? null,
+                        'last4' => $meta['last4'] ?? null,
+                        'exp_month' => $meta['exp_month'] ?? null,
+                        'exp_year' => $meta['exp_year'] ?? null,
+                    ],
+                    company: $company,
+                    mailNotification: new PaymentMethodExpiring($profile),
+                );
 
                 // Mark as notified to ensure idempotency
                 $meta['expiry_notified'] = $now->toDateString();

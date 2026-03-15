@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNavStore } from '@/core/stores/nav'
 import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
+import NotificationToast from '@/layouts/components/NotificationToast.vue'
 import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import NavBarI18n from '@core/components/I18n.vue'
@@ -40,4 +41,5 @@ const activeWidgets = computed(() => {
   />
   <NavbarShortcuts />
   <NavBarNotifications class="me-1" />
+  <NotificationToast />
 </template>

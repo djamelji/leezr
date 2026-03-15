@@ -98,6 +98,7 @@ Le jobdomain remplit cinq roles distincts :
 │  Espace client (tenant)                          │
 │  - User (table partagee, lies via memberships)   │
 │  - Roles : owner / admin / user (actuel)         │
+│  - Futur : clients d'une company (B2B2C, module dedie)  │
 │  - Roles organisationnels par jobdomain (cible)  │
 │  - Guard : auth:sanctum + company.context        │
 │  - Modules actifs : business + core              │
@@ -112,6 +113,13 @@ Le jobdomain remplit cinq roles distincts :
 - Aucun controller Platform dans Company, aucun controller Company dans Platform
 - Un PlatformUser n'a jamais de company membership
 - Un User n'a jamais de platform_roles
+
+**Regles de ciblage notifications** (ADR-347) :
+- Notifications Platform → PlatformUser uniquement (alertes SaaS, securite, monitoring)
+- Notifications Company → User via membership uniquement (billing, membres, modules)
+- Un User ne recoit que les notifications des companies dont il est membre
+- Un PlatformUser ne recoit jamais de notifications company et inversement
+- Futur : les clients d'une company pourront recevoir des notifications via un module dedie
 
 ### Couches applicatives
 

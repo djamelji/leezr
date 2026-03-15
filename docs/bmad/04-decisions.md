@@ -11617,4 +11617,468 @@ L'audit exhaustif de tous les flux billing (addon, plan, registration, résiliat
 
 ---
 
+### ADR-343 — Audit & enrichissement page /platform/billing (2026-03-14)
+
+**Contexte** : La page admin `/platform/billing` (8 onglets) souffrait de plusieurs défauts :
+1. **Dashboard cassé** — `Promise.all([fetchMetrics(), fetchRecoveryStatus()])` : si l'un échoue, TOUT le dashboard affiche "Impossible de charger les données" (blanket catch)
+2. **Aucune explication** — les 8 onglets n'expliquent pas leur but, déroutant pour un admin non-technique
+3. **Bugs mineurs** — dunning escalate envoie le mauvais payload (`{ action: 'escalate' }` vs `{ target_status: 'uncollectible' }`), statuts scheduled debits hardcodés en anglais, coupons utilise `confirm()` natif
+4. **Backend fragile** — le metrics controller crash si une table est vide ou inaccessible
+
+**Décisions** :
+1. **Promise.allSettled()** — remplace `Promise.all()` dans le dashboard. Deux refs d'erreur indépendantes (`metricsError` + `recoveryError`), chaque section charge ou échoue indépendamment
+2. **VAlert descriptif par onglet** — pattern standard `<VAlert type="info" variant="tonal" density="compact">` avec titre + description expliquant le but de chaque onglet (8 onglets × 2 clés i18n)
+3. **Backend try/catch granulaire** — chaque query sensible dans `PlatformBillingMetricsController` est wrappée individuellement, retourne 0 en cas d'erreur au lieu de 500
+4. **Dunning payload corrigé** — `handleEscalate` envoie `{ target_status: 'uncollectible', idempotency_key: ... }` conforme au backend `forceDunningTransition`
+5. **i18n scheduled debits** — statuts traduits via `t()` au lieu de strings hardcodées en anglais
+6. **VDialog coupons** — remplace `confirm()` natif par un `VDialog` conforme au pattern projet (`deleteDialog` ref + `couponToDelete` ref)
+7. **Refresh + timestamp** — dashboard et recovery ont un bouton actualiser avec `lastRefreshed` timestamp
+8. **Currency from backend** — le backend inclut `currency: 'EUR'` dans la réponse, utilisé côté front pour formater les montants
+
+**Conséquences** :
+- Dashboard résilient : une section peut charger même si l'autre échoue
+- Chaque onglet auto-documenté pour les admins
+- UX cohérente (VDialog au lieu de confirm() natif)
+- Toutes les chaînes visibles traduites en FR et EN (~30 clés i18n)
+
+**Fichiers** :
+- `resources/js/pages/platform/billing/_BillingDashboard.vue` — Promise.allSettled, VAlert, refresh, erreurs granulaires
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` — VAlert header
+- `resources/js/pages/platform/billing/_BillingInvoicesTab.vue` — VAlert header
+- `resources/js/pages/platform/billing/_BillingDunningTab.vue` — VAlert header, fix payload escalate
+- `resources/js/pages/platform/billing/_BillingScheduledDebitsTab.vue` — VAlert header, i18n statuts, empty state
+- `resources/js/pages/platform/billing/_BillingRecovery.vue` — VAlert header, refresh + timestamp
+- `resources/js/pages/platform/billing/_BillingForensicsTab.vue` — VAlert header
+- `resources/js/pages/platform/billing/_BillingCouponsTab.vue` — VAlert header, VDialog suppression
+- `app/Modules/Platform/Billing/Http/PlatformBillingMetricsController.php` — try/catch granulaire, currency
+- `resources/js/plugins/i18n/locales/fr.json` — ~30 clés platformBilling.*
+- `resources/js/plugins/i18n/locales/en.json` — ~30 clés platformBilling.*
+
+---
+
+### ADR-344 — Évolution /platform/billing : onglets production-ready (2026-03-14)
+
+**Contexte** : Suite à ADR-343 (audit cosmétique), les onglets billing restaient sous-exploités : pas de filtres riches, pas d'actions inline, pas de summary cards, layout décalé. L'onglet Factures (Invoices) servait de standard qualité cible. Les bugs critiques incluaient : dashboard crash (`cancelled_at` column inexistante), clé i18n `statusPendingPayment` manquante, forensics dupliqué dans /advanced.
+
+**Décisions** :
+
+1. **A1 — Fix dashboard crash** : Suppression du `where('cancelled_at', ...)` dans `mrrHistory()` — la colonne n'existe pas, le filtre `whereIn('status', ['active', 'past_due'])` suffit. Ajout `mrr_previous_month` dans la réponse metrics.
+2. **A2 — Fix `pending_payment`** : Ajout dans `statusLabel()` map + `statusOptions` filter + clé i18n FR/EN.
+3. **A3 — Forensics doublon** : Retrait de l'onglet forensics de `/platform/billing/advanced/[tab].vue` (il reste dans l'onglet Audit principal).
+4. **B2 — Subscriptions enrichi** : Filtres déplacés en VRow/VCol sous le titre. Ajout recherche debounced 400ms par entreprise/plan. Bouton "voir l'entreprise" pour chaque ligne (pas seulement pending).
+5. **B3 — Dunning enrichi** : Summary card "montant à risque" en haut. Filtre status overdue/uncollectible. Colonne "jours de retard" calculée. Actions icon buttons (retry, escalate, write-off, view company). Dialog de confirmation write-off avec idempotency key.
+6. **B4 — Scheduled debits** : Layout fix — filtres déplacés de VCardTitle vers VCardText avec VRow/VCol. Colonne "jours avant exécution" calculée. Bouton action "voir l'entreprise".
+7. **B5 — Recovery enrichi** : Détail des anomalies dans VAlert (stuck checkouts, overdue confirmations, dead letters). Boutons drill-down vers onglets dunning/subscriptions via emit('switchTab'). Empty state heartbeats enrichi avec explication cron. Timestamp "dernière vérification".
+8. **B6 — Forensics autocomplete** : Remplacement saisie ID brut par AppAutocomplete alimenté par `$platformApi('/companies')` avec debounce 300ms.
+
+**Conséquences** :
+- Tous les onglets ont des filtres en VRow/VCol (consistant avec Invoices)
+- Actions inline avec idempotency keys et loading guards par ligne
+- Navigation inter-onglets via emit('switchTab')
+- ~25 nouvelles clés i18n FR + EN
+
+**Fichiers** :
+- `app/Modules/Platform/Billing/Http/PlatformBillingMetricsController.php` — fix cancelled_at + mrr_previous_month
+- `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue` — search, filtres VRow, view company
+- `resources/js/pages/platform/billing/_BillingDunningTab.vue` — summary card, status filter, days overdue, write-off dialog
+- `resources/js/pages/platform/billing/_BillingScheduledDebitsTab.vue` — layout fix, daysUntil, actions
+- `resources/js/pages/platform/billing/_BillingRecovery.vue` — anomaly details, drill-down, heartbeats explain, lastRefreshed
+- `resources/js/pages/platform/billing/_BillingForensicsTab.vue` — AppAutocomplete company search
+- `resources/js/pages/platform/billing/advanced/[tab].vue` — forensics tab removed
+- `resources/js/pages/platform/billing/index.vue` — switchTab wiring on BillingRecovery
+- `resources/js/plugins/i18n/locales/fr.json` — ~25 clés platformBilling.*
+- `resources/js/plugins/i18n/locales/en.json` — ~25 clés platformBilling.*
+
+---
+
+### ADR-345 — Recovery Tab : centre de commande opérationnel (2026-03-14)
+
+**Contexte** : L'onglet Recovery affichait des compteurs (dead letters, stuck checkouts, overdue confirmations) en lecture seule. Les actions de récupération nécessitaient le CLI (`billing:recover-checkouts`, `billing:recover-webhooks`, `billing:webhook-replay`). Les admins platform demandent des actions directes depuis l'UI.
+
+**Décisions** :
+
+1. **PlatformRecoveryController** : 5 endpoints HTTP wrappant les commandes artisan existantes via `Artisan::call()`. Parse du stdout pour extraire les stats (activated/expired/failed, recovered/expired/failed, replayed/failed). Endpoint `listDeadLetters()` requête directement le modèle `BillingWebhookDeadLetter`.
+2. **Routes** : 5 routes dans le groupe `manage_billing` existant (même middleware chain `module.active:platform.billing` + `platform.permission:manage_billing`).
+3. **Store** : Extension de `billing-metrics.store.js` avec 5 actions (`recoverCheckouts`, `recoverWebhooks`, `replayAllDeadLetters`, `replayDeadLetter`, `fetchDeadLetters`) + state `_deadLetters` / `_deadLettersPagination`. Facade store `billing.store.js` mise à jour.
+4. **UI Recovery enrichi** : Bouton d'action conditionnel sur chaque card compteur (visible si compteur > 0). Table `VDataTable` pour les dead letters (event_type, error tronqué, failed_at, tentatives /3, replay individuel). Dialog de confirmation avant replay massif. Toast structuré avec détail stats après chaque action. Auto-refresh des compteurs après chaque opération.
+5. **Guards** : Replay individuel refuse si `status !== 'pending'` ou `replay_attempts >= 3` (HTTP 422). Les commandes artisan sont `Isolatable` (pas de doublon concurrent).
+
+**Conséquences** :
+- Les admins platform gèrent les incidents billing directement depuis l'UI
+- Pattern réutilisable : HTTP → Artisan::call → parse stdout → JSON response
+- Les commandes artisan restent la source de vérité métier (pas de duplication de logique)
+- ~17 nouvelles clés i18n FR + EN
+
+**Fichiers** :
+- `app/Modules/Platform/Billing/Http/PlatformRecoveryController.php` — nouveau, 5 endpoints
+- `routes/platform.php` — 5 routes ajoutées dans manage_billing
+- `resources/js/modules/platform-admin/billing/billing-metrics.store.js` — 5 actions + state dead letters
+- `resources/js/modules/platform-admin/billing/billing.store.js` — facade expose 5 nouvelles actions
+- `resources/js/pages/platform/billing/_BillingRecovery.vue` — boutons action, table dead letters, dialog replay
+- `resources/js/plugins/i18n/locales/fr.json` — ~17 clés recovery.*
+- `resources/js/plugins/i18n/locales/en.json` — ~17 clés recovery.*
+
+---
+
+### ADR-346 — Audit architectural + corrections modularité (2026-03-15)
+
+**Contexte** : Audit complet de l'architecture modulaire (Platform + Company + Core) pour identifier les violations des règles BMAD : isolation inter-modules, pas de HTTP dans Core, pas de couplage cross-module.
+
+**Violations corrigées (7)** :
+
+1. **V1 (HAUTE) — Dashboard→Billing cross-module import** : `PlatformBillingDashboardReadService` déplacé de `app/Modules/Platform/Billing/ReadModels/` vers `app/Core/Billing/ReadModels/` (namespace `App\Core\Billing\ReadModels`). Import dans `DashboardWidgetController` mis à jour.
+
+2. **V2 (HAUTE) — Settings→Members cross-module import** : 5 fichiers UseCases document (DownloadCompanyDocumentUseCase, UploadCompanyDocumentUseCase, UploadCompanyDocumentData, DownloadCompanyDocumentResult, UploadCompanyDocumentResult) déplacés de `app/Modules/Core/Members/UseCases/` vers `app/Core/Documents/UseCases/`. Imports dans `CompanyDocumentController` mis à jour.
+
+3. **V3 (HAUTE) — FormRequests dans Core** : `LoginRequest` et `RegisterRequest` déplacés de `app/Core/Auth/Requests/` vers `app/Modules/Infrastructure/Auth/Http/Requests/`. Imports dans `AuthController` mis à jour.
+
+4. **V4 (HAUTE) — Middleware EnsureModuleActive dans Core** : Déplacé de `app/Core/Modules/` vers `app/Http/Middleware/` (middleware partagé cross-scope comme `SessionGovernance`). Ajout des imports `ModuleGate` et `ModuleRegistry`. Registration dans `bootstrap/app.php` mise à jour.
+
+5. **V6 (MOYENNE) — BillingModule.settingsRoute mort** : `settingsRoute: 'platform-billing-settings-tab'` changé en `null` car la page settings billing a été supprimée (réintégrée dans platform/settings). Test `PlatformBillingModuleToggleTest` ajusté.
+
+6. **V-NEW — CompanySubscriptionAdminController→CompanyPaymentSetupController** : Méthode `formatProfile()` extraite vers `CompanyPaymentProfile::toCardArray()` (model Core). Méthode statique supprimée du controller. 3 callers mis à jour. Le `confirmSetupIntent` delegation reste (refactor service futur).
+
+7. **V9 (BASSE) — Répertoires vides** : Suppression de `app/Core/Auth/Requests/`, `app/Core/Settings/Http/`, `app/Core/Plans/Http/`, `app/Core/Markets/Http/`, `app/Core/Http/Middleware/`, `app/Core/Tenancy/`.
+
+**Violations non confirmées (faux positifs)** :
+- V5 (Maintenance sans ModuleDefinition) — correct : sous-panel de Settings, pas un module autonome
+- V7 (Shipment dans Core/Models) — correct : modèle partagé dans Core
+- V8 (Dashboard dual namespace) — correct : séparation intentionnelle Platform vs Company
+
+**Violation résiduelle documentée** :
+- `CompanySubscriptionAdminController` ligne 245 : `app(CompanyPaymentSetupController::class)->confirmSetupIntent()` — delegation HTTP cross-module. Fix futur : extraire en `PaymentMethodConfirmationService` dans `app/Core/Billing/Services/`.
+
+**Conséquences** :
+- Isolation inter-modules stricte (1 seule violation résiduelle documentée)
+- Core ne contient plus de code HTTP (FormRequests, Middleware)
+- 31 ModuleDefinition correctement déclarés
+- 1802 tests pass, build clean
+
+**Fichiers** :
+- `app/Core/Billing/ReadModels/PlatformBillingDashboardReadService.php` (déplacé)
+- `app/Core/Documents/UseCases/*.php` (5 fichiers déplacés)
+- `app/Core/Billing/CompanyPaymentProfile.php` (ajout `toCardArray()`)
+- `app/Modules/Infrastructure/Auth/Http/Requests/LoginRequest.php` (déplacé)
+- `app/Modules/Infrastructure/Auth/Http/Requests/RegisterRequest.php` (déplacé)
+- `app/Http/Middleware/EnsureModuleActive.php` (déplacé)
+- `app/Modules/Platform/Billing/BillingModule.php` (settingsRoute null)
+- `app/Modules/Platform/Dashboard/Http/DashboardWidgetController.php` (import)
+- `app/Modules/Core/Settings/Http/CompanyDocumentController.php` (imports)
+- `app/Modules/Infrastructure/Auth/Http/AuthController.php` (imports)
+- `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` (cleanup formatProfile)
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` (toCardArray)
+- `app/Modules/Platform/Companies/Http/CompanySubscriptionAdminController.php` (toCardArray)
+- `bootstrap/app.php` (middleware alias)
+- `tests/Feature/PlatformBillingModuleToggleTest.php` (assertNull settingsRoute)
+
+---
+
+### ADR-347 — Module Notification Center realtime-first (2026-03-15)
+
+**Contexte** : L'infrastructure SSE realtime (ADR-125/126) est complète mais les notifications métier n'y sont pas connectées. NavBarNotifications.vue affiche des données mock. Les 11 notifications billing sont email-only. Aucune notification n'est persistée en base.
+
+**Décisions** :
+1. Module core `core.notifications` (company scope) + module internal `platform.notifications` (admin scope)
+2. Architecture realtime-first : NotificationDispatcher → EventEnvelope::notification → SSE → store._push() (< 100ms)
+3. Persistence DB via table `notification_events` (survit au reload, pagination serveur)
+4. Gouvernance Platform : table `notification_topics` avec Registry → Seeder → DB → Platform admin configure
+5. Préférences utilisateur par topic par canal (in_app, email) via `notification_preferences`
+6. 3 champs ajoutés post-plan : `event_uuid` (déduplication SSE), `delivered_at` (analytics), `severity` (couleur UI directe)
+7. Migration des 12 appels `->notify()` existants vers `NotificationDispatcher::send()` (backward-compatible)
+8. Règle BMAD ancrée : notifications Platform → PlatformUser, notifications Company → User via membership
+
+**Conséquences** :
+- 24 topics initiaux : billing company × 10, members × 4, modules × 2, security × 1 (both), platform billing × 7
+- NavBarNotifications.vue connecté au store realtime (plus de mock)
+- Boot runtime : fetchUnreadCount() léger pour badge navbar immédiat
+- Emails continuent de fonctionner via le mailNotification passthrough du Dispatcher
+- severity dénormalisée dans notification_events (migration _100004) pour accès rapide API
+- Traductions backend : `lang/fr/notifications.php` + `lang/en/notifications.php` (rendu par NotificationRenderer)
+- Phase 2 : push web, SMS, templates éditables, analytics, annonces broadcast
+
+**Pattern module-driven notification topics** :
+Chaque module qui émet des notifications doit :
+1. Appeler `NotificationTopicRegistry::register([...])` dans son `boot()` ou `ServiceProvider`
+2. Ajouter les traductions Laravel dans `lang/{locale}/notifications.php`
+3. Ajouter les traductions frontend dans `fr.json` / `en.json` (clés `notifications.{topic_key_underscored}_{title|body}`)
+4. Appeler `NotificationDispatcher::send()` depuis sa logique métier
+5. Documenter les topics dans l'ADR du module
+
+**Topics à ajouter par module (TODO)** :
+- `core.members` : member.password_reset, member.access_revoked
+- `logistics_shipments` : shipment.created, shipment.delivered, shipment.delayed
+- `core.support` (futur) : support.ticket_created, support.ticket_replied, support.ticket_resolved
+- Chaque nouveau module addon : déclarer ses topics dans son ModuleDefinition
+
+**Fichiers** :
+- `app/Core/Notifications/` — 6 fichiers (3 models, registry, dispatcher, renderer)
+- `database/migrations/2026_03_15_10000*` — 4 migrations (topics, events, preferences, severity)
+- `database/seeders/NotificationTopicSeeder.php`
+- `app/Modules/Platform/Notifications/` — module + controller
+- `app/Modules/Core/Notifications/` — module + 2 controllers
+- `resources/js/core/stores/notification.js` — refonte SSE + API
+- `resources/js/layouts/components/NavBarNotifications.vue` — refonte store
+- `resources/js/pages/platform/notifications/index.vue` — admin topics
+- `resources/js/pages/company/notifications/index.vue` — inbox + préférences
+
+### ADR-348 — Notifications polymorphiques Platform + Company (2026-03-15)
+
+**Contexte** : La table `notification_events` utilisait une FK `user_id → users.id`, mais les notifications platform ciblent des `PlatformUser` (table `platform_users`). Résultat : les notifications platform admin n'étaient jamais reçues (constraint violation silencieuse).
+
+**Décisions** :
+1. Rendre `notification_events` polymorphique : `recipient_type` + `recipient_id` remplacent `user_id`
+2. Utiliser `$recipient->getMorphClass()` (pas `get_class()`) — le Core reste agnostique du type concret
+3. Index composé `(recipient_type, recipient_id, company_id, read_at, created_at)` pour les requêtes inbox
+4. `scopeForRecipient(Builder, Model)` remplace `scopeForUser` — nommage universel
+5. `PlatformNotificationController` (5 endpoints sous `/me/notifications/*`) pour l'inbox admin
+6. Module `platform.notifications` ajouté aux `UNGATED_MODULES` (pas de gating module requis)
+
+**Conséquences** :
+- Un seul système de dispatch pour Company (User) et Platform (PlatformUser)
+- NotificationDispatcher stocke `recipient_type` + `recipient_id` via morph map Laravel
+- NotificationController company filtre par `forRecipient($user)->where('company_id', ...)`
+- PlatformNotificationController filtre par `forRecipient($platformAdmin)`
+- Migration consolidée dans `2026_03_15_100002_create_notification_events_table.php`
+
+**Fichiers** :
+- `app/Core/Notifications/NotificationEvent.php` — `recipient()` MorphTo, `scopeForRecipient()`
+- `app/Core/Notifications/NotificationDispatcher.php` — `recipient_type` + `recipient_id`
+- `database/migrations/2026_03_15_100002_*` — schema polymorphique consolidé
+- `app/Modules/Platform/Notifications/Http/PlatformNotificationController.php` — 5 actions
+- `app/Modules/Core/Notifications/Http/NotificationController.php` — adapté `forRecipient`
+- `routes/platform.php` — 5 routes `/me/notifications/*`
+
+### ADR-349 — Polling platform robuste (setTimeout récursif) (2026-03-15)
+
+**Contexte** : Le polling `setInterval(15s)` pour les notifications platform causait un gel SPA : requêtes accumulées si timeout > 15s, 401 déclenchant `teardown()` + redirect pendant que l'intervalle continuait à fire.
+
+**Décisions** :
+1. Remplacer `setInterval` par `setTimeout` récursif — le prochain tick ne démarre qu'après completion
+2. Passer `{ _authCheck: true }` → un 401 est silencieux (pas de teardown/redirect)
+3. Gardes `scope === 'platform'` + `isReady` → arrêt automatique si déconnexion ou scope switch
+4. Intervalle 30s (au lieu de 15s) — suffisant pour des notifications non-critiques
+5. `fetchUnreadCount()` accepte `opts` propagés à `_call()` → `$platformApi` reçoit `_authCheck`
+6. `_loaded = true` même en cas d'échec → débloque le `watchOnce` de NavBarNotifications
+
+**Conséquences** :
+- Zéro accumulation de requêtes (pas de fire-and-forget)
+- Pas de cascade 401 → teardown → redirect pendant le polling
+- `_stopPlatformNotifPoll()` utilise `clearTimeout` (pas `clearInterval`)
+- Auto-fetch recent quand `unreadCount > 0` + pas d'items → badge + dropdown se remplissent
+
+**Fichiers** :
+- `resources/js/core/runtime/runtime.js` — `_startPlatformNotifPoll()` / `_stopPlatformNotifPoll()`
+- `resources/js/core/stores/notification.js` — `fetchUnreadCount(opts)`, `_call(path, opts)`, `_loaded` catch
+
+### ADR-350 — NavBarNotifications : template inline + i18n + UX (2026-03-15)
+
+**Contexte** : Le composant `@core/Notifications.vue` (Vuexy framework, non modifiable) avait 4 problèmes : dropdown ne se fermait pas au clic, notification restait après navigation, "View All" ne naviguait nulle part, textes hardcodés en anglais.
+
+**Décisions** :
+1. Inliner le template dans `NavBarNotifications.vue` (basé sur le pattern @core mais indépendant)
+2. `v-model="isMenuOpen"` sur VMenu → fermeture programmatique au clic notification
+3. `store.markRead(id)` + `router.push(link)` au clic → notification marquée lue + navigation
+4. Toutes les chaînes via `t('notifications.*')` — 6 clés i18n (title, new, viewAll, noNotifications, markAllRead, markAllUnread)
+5. `viewAll()` navigue vers `platform-notifications` ou `company-notifications` selon `_platformMode`
+6. Watch réactif sur `store.unreadCount` comme filet de sécurité pour le polling platform
+7. `timeAgo()` locale avec traductions (justNow, minAgo, hourAgo, dayAgo)
+
+**Conséquences** :
+- Politique UI respectée : `@core/` non modifié, template répliqué dans le composant métier
+- Dropdown ferme immédiatement au clic sur une notification
+- Navigation vers le lien de la notification (ex: `/platform/support/{id}`)
+- Interface 100% traduite FR/EN
+- `toggleReadUnread` et `markAllReadOrUnread` fonctionnent localement (optimistic UI)
+
+**Fichiers** :
+- `resources/js/layouts/components/NavBarNotifications.vue` — template inline complet
+- `resources/js/plugins/i18n/locales/fr.json` — 6 clés `notifications.*`
+- `resources/js/plugins/i18n/locales/en.json` — 6 clés `notifications.*`
+- `app/Core/Realtime/TopicRegistry.php` — +1 topic `notification.created`
+- `lang/fr/notifications.php` + `lang/en/notifications.php` — traductions backend
+- `routes/platform.php` — +3 routes
+- `routes/company.php` — +7 routes
+- 10 fichiers billing — migration ->notify() vers Dispatcher
+
+### ADR-351 — Notification Toast avec aspiration vers la cloche (2026-03-15)
+
+**Contexte** : Quand une notification arrive (polling platform ou SSE company), il n'y avait aucun feedback visuel immédiat. L'utilisateur ne voyait le badge rouge qu'après polling, sans comprendre qu'une notification venait d'arriver.
+
+**Décisions** :
+1. Toast intégré dans la navbar (pas de Teleport to="body") — `position: absolute` relatif à `.layout-navbar` (sticky)
+2. `block-size: 100%` sur le container et le toast → s'adapte à la hauteur exacte de `.navbar-content-container` (compatible floating/elevated)
+3. Background via `rgb(var(--v-theme-surface))` → dark/light mode natif sans VCard
+4. Animation slide-in depuis le bord droit de la navbar : `translateX(100%)` clippé par `overflow: hidden`
+5. Animation aspiration vers la cloche : `getBoundingClientRect()` calcule dx/dy, puis `translate(dx, dy) scale(0)` avec `cubic-bezier(0.6, 0, 1, 0.4)` (accélération = effet aspiration)
+6. Bell pulse CSS `@keyframes bell-pulse` après absorption
+7. **Un seul toast à la fois** : `_queueToast()` incrémente `_count` si un toast existe déjà → affiche "X nouvelles notifications"
+8. `badgeUnreadCount` = `_unreadCount - somme(_count)` → le badge rouge n'apparaît qu'APRÈS la disparition du toast
+9. Toast cliquable → navigue toujours vers `/platform/notifications` ou `/company/notifications` (pas vers la ressource individuelle)
+10. Auto-dismiss après 6s via `setTimeout` + fly-to-bell
+
+**Conséquences** :
+- Feedback visuel immédiat sur nouvelle notification
+- Aucune accumulation de toasts (collapse en un seul)
+- Badge rouge cohérent (apparaît après absorption du toast)
+- Theming dark/light respecté sans composant Vuetify lourd
+- Animation fluide et organique
+
+**Fichiers** :
+- `resources/js/layouts/components/NotificationToast.vue` — nouveau composant
+- `resources/js/layouts/components/NavbarGlobalWidgets.vue` — intégration
+- `resources/js/core/stores/notification.js` — `_toastQueue`, `_queueToast()`, `_dismissToast()`, `badgeUnreadCount`
+- `resources/js/layouts/components/NavBarNotifications.vue` — `badgeUnreadCount` pour le dot
+- `resources/js/plugins/i18n/locales/fr.json` — clé `notifications.newCount`
+- `resources/js/plugins/i18n/locales/en.json` — clé `notifications.newCount`
+
+### ADR-352 — Notification Center page (VTimeline) + relocation Topic Management (2026-03-15)
+
+**Contexte** : La page `/platform/notifications` affichait la configuration des topics (admin config), pas l'historique des notifications. L'utilisateur attendait un centre de notifications moderne.
+
+**Décisions** :
+1. `/platform/notifications/index.vue` réécrit en page inbox/historique utilisant le preset Vuexy `VTimeline` (`density="compact"`, `side="end"`, `align="start"`)
+2. Topic management déplacé vers `/platform/settings/` onglet "Notifications" (`_SettingsNotifications.vue`)
+3. Filtres par catégorie via chips avec icônes (icon-only sur mobile via `d-none d-sm-inline`)
+4. Switch "Non lues uniquement" placé dans le header de la timeline card (à côté du refresh)
+5. Blocs timeline entièrement cliquables (`.notif-timeline-item` avec hover background)
+6. Pagination via `VPagination` liée à `store.fetchPage()`
+7. Même pattern appliqué à `/company/notifications/index.vue` (inbox + onglet préférences)
+8. Footer "View All" dans le dropdown NavBarNotifications toujours visible (même sans notifications)
+
+**Conséquences** :
+- Séparation claire : inbox (historique) vs config (settings)
+- UI 100% preset Vuexy (VTimeline de CardAdvanceActivityTimeline)
+- Responsive : chips icon-only sur mobile
+- Cohérence platform/company
+
+**Fichiers** :
+- `resources/js/pages/platform/notifications/index.vue` — inbox VTimeline
+- `resources/js/pages/company/notifications/index.vue` — inbox VTimeline + préférences
+- `resources/js/pages/platform/settings/_SettingsNotifications.vue` — topic management
+- `resources/js/pages/platform/settings/[tab].vue` — +1 onglet notifications
+
+---
+
+## ADR-350 : Platform My Account
+
+- **Date** : 2026-03-15
+- **Contexte** : Les admins platform n'avaient aucune page pour gérer leur profil, mot de passe ou préférences de notifications.
+- **Décisions** :
+  - Page `/platform/account/[tab]` avec 3 onglets (account, security, notifications)
+  - Pattern identique à company `account-settings/[tab].vue` (VTabs pill + VWindow)
+  - Contrôleur `PlatformAccountController` — PUT /me/profile, PUT /me/password, GET/PUT /me/notification-preferences
+  - Table `platform_notification_preferences` séparée (FK vers platform_users, pas de collision d'IDs)
+  - Topics platform-scoped filtrés via `NotificationTopic::forScope('platform')` (retourne aussi scope=both)
+  - Lien "Mon compte" dans le dropdown `PlatformUserProfile.vue`
+  - Store `platformAuth.js` étendu avec `updateProfile()` et `updatePassword()`
+- **Fichiers** :
+  - `app/Modules/Infrastructure/AdminAuth/Http/PlatformAccountController.php` — créé
+  - `app/Core/Notifications/PlatformNotificationPreference.php` — créé
+  - `database/migrations/2026_03_15_200001_create_platform_notification_preferences_table.php` — créé
+  - `resources/js/pages/platform/account/[tab].vue` — créé
+  - `resources/js/pages/platform/account/_AccountGeneral.vue` — créé
+  - `resources/js/pages/platform/account/_AccountSecurity.vue` — créé
+  - `resources/js/pages/platform/account/_AccountNotifications.vue` — créé
+  - `resources/js/core/stores/platformAuth.js` — modifié (+2 actions)
+  - `resources/js/layouts/components/PlatformUserProfile.vue` — modifié (lien Mon compte)
+  - `routes/platform.php` — modifié (+4 routes /me/*)
+  - i18n fr.json + en.json — section `platformAccount.*` (~15 clés)
+
+---
+
+## ADR-351 : Two-Factor Authentication (TOTP)
+
+- **Date** : 2026-03-15
+- **Contexte** : Aucune authentification à deux facteurs n'était implémentée. Les admins platform gèrent des données sensibles et doivent être sécurisés.
+- **Décisions** :
+  - Dépendance : `pragmarx/google2fa-laravel` (TOTP standard, Google Authenticator compatible)
+  - Table polymorphique `two_factor_credentials` (authenticatable_type + authenticatable_id)
+  - Champs encryptés : `secret` (cast encrypted), `backup_codes` (cast encrypted:array)
+  - `TwoFactorService` centralisé : enable → confirm → verify | disable | regenerateBackupCodes
+  - 10 backup codes générés au setup, consommés à l'usage (one-time use)
+  - Login flow modifié (company + platform) : credentials check manuel → si 2FA activé, session `2fa_pending_*_user_id` → POST /2fa/verify
+  - Middleware `RequirePlatform2FA` (alias `platform.2fa`) — vérifie `PlatformSetting->general['require_2fa']`
+  - Routes platform exemptées du middleware : /me, /nav, /logout, /me/*, /2fa/*, /theme-preference
+  - Toutes les autres routes platform sont dans le groupe `platform.2fa`
+  - Frontend login : step 2FA avec `VOtpInput` (preset Vuexy) — company et platform
+  - Section 2FA dans `_AccountSecurity.vue` (company + platform) : setup dialog (QR code), disable dialog, backup codes dialog
+  - QR code via API externe `api.qrserver.com` (pas de dépendance PHP pour génération d'image)
+  - Réponse `/me` platform inclut `two_factor_enabled: bool` pour détection frontend
+  - Store `platformAuth` : getter `twoFactorEnabled`, state `_twoFactorEnabled`
+- **Conséquences** :
+  - L'admin platform peut activer l'obligation 2FA via PlatformSetting `require_2fa`
+  - Si activé, les admins sans 2FA reçoivent 403 avec redirect vers /platform/account/security
+  - Les company users peuvent activer 2FA optionnellement (pas obligatoire)
+- **Fichiers** :
+  - `app/Core/Auth/TwoFactorCredential.php` — créé
+  - `app/Core/Auth/TwoFactorService.php` — créé
+  - `app/Modules/Infrastructure/Auth/Http/TwoFactorController.php` — créé (company)
+  - `app/Modules/Infrastructure/AdminAuth/Http/PlatformTwoFactorController.php` — créé
+  - `app/Http/Middleware/RequirePlatform2FA.php` — créé
+  - `database/migrations/2026_03_15_200002_create_two_factor_credentials_table.php` — créé
+  - `app/Modules/Infrastructure/Auth/Http/AuthController.php` — modifié (login 2FA + verify2fa)
+  - `app/Modules/Infrastructure/AdminAuth/Http/PlatformAuthController.php` — modifié (login 2FA + verify2fa + /me two_factor_enabled)
+  - `bootstrap/app.php` — modifié (+alias platform.2fa)
+  - `routes/platform.php` — modifié (+5 routes 2FA, +groupe platform.2fa)
+  - `routes/company.php` — modifié (+5 routes 2FA)
+  - `routes/api.php` — modifié (+1 route /2fa/verify)
+  - `resources/js/pages/login.vue` — modifié (step 2FA)
+  - `resources/js/pages/platform/login.vue` — modifié (step 2FA)
+  - `resources/js/pages/platform/account/_AccountSecurity.vue` — modifié (section 2FA)
+  - `resources/js/views/pages/account-settings/AccountSettingsSecurity.vue` — modifié (section 2FA)
+  - `resources/js/core/stores/auth.js` — modifié (+verify2fa)
+  - `resources/js/core/stores/platformAuth.js` — modifié (+verify2fa, +_twoFactorEnabled)
+  - i18n fr.json + en.json — sections `auth.twoStep*`, `twoFactor.*` (~20 clés)
+
+---
+
+## ADR-352 : Module Support (Ticket & Chat)
+
+- **Date** : 2026-03-15
+- **Contexte** : Les companies ont besoin d'un canal de communication avec le support platform. Aucun système de tickets n'existait. Le preset Vuexy chat fournit les patterns UI nécessaires.
+- **Décision** :
+  - **2 modules** : `core.support` (company scope) + `platform.support` (platform scope, governance surface)
+  - **2 modèles domain** : `SupportTicket` (uuid, status, priority, category, SLA timestamps) + `SupportMessage` (polymorphique sender_type company_user/platform_admin, is_internal)
+  - **Statuts ticket** : open → in_progress → waiting_customer → resolved → closed
+  - **Priorités** : low, normal, high, urgent
+  - **Catégories** : general, technical, billing
+  - **SLA tracking** : `first_response_at`, `last_message_at`, `resolved_at`, `closed_by_platform_user_id`
+  - **Notes internes** : `is_internal=true` — visibles uniquement par platform admins
+  - **Auto-behaviors** : réponse platform → status waiting_customer + auto-assign ; réponse company → reopen si waiting_customer ; première réponse platform → first_response_at
+  - **Notifications via ADR-347** : 4 topics support (ticket_created, ticket_replied, ticket_resolved, ticket_assigned) dans NotificationTopicRegistry
+  - **Permissions company** : `support.view`, `support.create` (bundle `support.access`, owner par défaut)
+  - **Permissions platform** : `manage_support`, `assign_support` (bundle `support.admin`)
+  - **Frontend** : pages chat-style avec messages gauche/droite, onglets reply/note interne (platform), dialog création ticket (company)
+- **Conséquences** :
+  - 2 nouvelles tables DB : `support_tickets`, `support_messages`
+  - CompanyPermissionTest mis à jour (+2 permissions dans la liste opérationnelle)
+  - PageModuleAlignmentTest mis à jour (+2 overrides route→page pour [id] dynamique)
+  - 13 tests dédiés dans SupportTicketTest couvrant CRUD, isolation company, notes internes, métriques, reopen automatique
+- **Fichiers** :
+  - `app/Core/Support/SupportTicket.php` — créé (modèle)
+  - `app/Core/Support/SupportMessage.php` — créé (modèle)
+  - `database/migrations/2026_03_15_300001_create_support_tickets_table.php` — créé
+  - `database/migrations/2026_03_15_300002_create_support_messages_table.php` — créé
+  - `app/Modules/Core/Support/SupportModule.php` — créé (module company)
+  - `app/Modules/Platform/Support/PlatformSupportModule.php` — créé (module platform)
+  - `app/Modules/Core/Support/Http/SupportTicketController.php` — créé
+  - `app/Modules/Core/Support/Http/SupportMessageController.php` — créé
+  - `app/Modules/Platform/Support/Http/PlatformSupportTicketController.php` — créé
+  - `app/Modules/Platform/Support/Http/PlatformSupportMessageController.php` — créé
+  - `routes/company.php` — modifié (+5 routes /support/tickets)
+  - `routes/platform.php` — modifié (+9 routes /support)
+  - `app/Core/Notifications/NotificationTopicRegistry.php` — modifié (+4 topics support)
+  - `resources/js/modules/company/support/support.store.js` — créé
+  - `resources/js/modules/platform-admin/support/support.store.js` — créé
+  - `resources/js/pages/company/support/index.vue` — créé
+  - `resources/js/pages/company/support/[id].vue` — créé
+  - `resources/js/pages/platform/support/index.vue` — créé
+  - `resources/js/pages/platform/support/[id].vue` — créé
+  - i18n fr.json + en.json — section `support.*` (~46 clés), `nav.company.support`, `nav.platform.support`
+  - `tests/Feature/SupportTicketTest.php` — créé (13 tests)
+  - `tests/Feature/CompanyPermissionTest.php` — modifié (+2 permissions dans liste attendue)
+  - `tests/Feature/PageModuleAlignmentTest.php` — modifié (+2 overrides route→page)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

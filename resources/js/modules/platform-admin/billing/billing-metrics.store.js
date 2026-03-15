@@ -17,6 +17,11 @@ export const usePlatformBillingMetricsStore = defineStore('platformBillingMetric
     // Recovery status (ADR-236)
     _recoveryStatus: null,
     _recoveryLoading: false,
+
+    // Dead letters (ADR-345)
+    _deadLetters: [],
+    _deadLettersPagination: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+    _deadLettersLoading: false,
   }),
 
   getters: {
@@ -29,6 +34,9 @@ export const usePlatformBillingMetricsStore = defineStore('platformBillingMetric
     metricsLoading: state => state._metricsLoading,
     recoveryStatus: state => state._recoveryStatus,
     recoveryLoading: state => state._recoveryLoading,
+    deadLetters: state => state._deadLetters,
+    deadLettersPagination: state => state._deadLettersPagination,
+    deadLettersLoading: state => state._deadLettersLoading,
   },
 
   actions: {
@@ -90,6 +98,43 @@ export const usePlatformBillingMetricsStore = defineStore('platformBillingMetric
       }
       finally {
         this._recoveryLoading = false
+      }
+    },
+
+    // Recovery operations (ADR-345)
+    async recoverCheckouts() {
+      return await $platformApi('/billing/recover-checkouts', { method: 'POST' })
+    },
+
+    async recoverWebhooks() {
+      return await $platformApi('/billing/recover-webhooks', { method: 'POST' })
+    },
+
+    async replayAllDeadLetters() {
+      return await $platformApi('/billing/replay-dead-letters', { method: 'POST' })
+    },
+
+    async replayDeadLetter(id) {
+      return await $platformApi(`/billing/replay-dead-letters/${id}`, { method: 'POST' })
+    },
+
+    async fetchDeadLetters(page = 1) {
+      this._deadLettersLoading = true
+      try {
+        const data = await $platformApi('/billing/dead-letters', {
+          params: { page, per_page: 20 },
+        })
+
+        this._deadLetters = data.data || []
+        this._deadLettersPagination = {
+          current_page: data.current_page,
+          per_page: data.per_page,
+          total: data.total,
+          last_page: data.last_page,
+        }
+      }
+      finally {
+        this._deadLettersLoading = false
       }
     },
   },

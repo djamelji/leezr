@@ -2,6 +2,7 @@
 import SettingsBilling from './_SettingsBilling.vue'
 import SettingsGeneral from './_SettingsGeneral.vue'
 import SettingsMaintenance from './_SettingsMaintenance.vue'
+import SettingsNotifications from './_SettingsNotifications.vue'
 import SettingsSession from './_SettingsSession.vue'
 import SettingsTheme from './_SettingsTheme.vue'
 
@@ -28,6 +29,7 @@ const tabs = computed(() => [
   { title: t('platformSettings.tabs.sessions'), icon: 'tabler-clock-shield', tab: 'sessions' },
   { title: t('platformSettings.tabs.maintenance'), icon: 'tabler-barrier-block', tab: 'maintenance' },
   { title: t('platformSettings.tabs.billing'), icon: 'tabler-receipt-2', tab: 'billing' },
+  { title: t('platformSettings.tabs.notifications'), icon: 'tabler-bell-cog', tab: 'notifications' },
 ])
 </script>
 
@@ -75,6 +77,10 @@ const tabs = computed(() => [
 
       <VWindowItem value="billing">
         <SettingsBilling />
+      </VWindowItem>
+
+      <VWindowItem value="notifications">
+        <SettingsNotifications />
       </VWindowItem>
     </VWindow>
   </div>

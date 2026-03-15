@@ -5,8 +5,10 @@ namespace App\Modules\Infrastructure\Auth\Http;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Auth\ReadModels\UserCompaniesReadModel;
-use App\Core\Auth\Requests\LoginRequest;
-use App\Core\Auth\Requests\RegisterRequest;
+use App\Core\Auth\TwoFactorService;
+use App\Core\Models\User;
+use App\Modules\Infrastructure\Auth\Http\Requests\LoginRequest;
+use App\Modules\Infrastructure\Auth\Http\Requests\RegisterRequest;
 use App\Core\Security\SecurityDetector;
 use App\Core\Settings\SessionSettingsPayload;
 use App\Core\Theme\ThemeResolver;
@@ -17,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -49,8 +52,10 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
-        if (!Auth::attempt($credentials)) {
-            // ADR-129: detect suspicious login attempts by IP
+        // Manual credential check (don't log in yet if 2FA is needed)
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             SecurityDetector::check('suspicious.login_attempts', $request->ip());
 
             app(AuditLogger::class)->logPlatform(
@@ -65,11 +70,57 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // ADR-351: Check if 2FA is enabled
+        $twoFactor = app(TwoFactorService::class);
+        if ($twoFactor->isEnabled($user)) {
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+                $request->session()->put('2fa_pending_user_id', $user->id);
+            }
+
+            return response()->json([
+                'requires_2fa' => true,
+            ]);
+        }
+
+        // No 2FA — log in normally
+        Auth::login($user);
+
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
 
-        $user = Auth::user();
+        return $this->buildLoginResponse($user, $request);
+    }
+
+    public function verify2fa(Request $request): JsonResponse
+    {
+        $request->validate(['code' => ['required', 'string']]);
+
+        $userId = $request->session()->get('2fa_pending_user_id');
+        if (!$userId) {
+            return response()->json(['message' => 'No pending 2FA verification.'], 422);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 422);
+        }
+
+        $twoFactor = app(TwoFactorService::class);
+        if (!$twoFactor->verify($user, $request->code)) {
+            return response()->json(['message' => 'Invalid verification code.'], 422);
+        }
+
+        $request->session()->forget('2fa_pending_user_id');
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return $this->buildLoginResponse($user, $request);
+    }
+
+    private function buildLoginResponse(User $user, Request $request): JsonResponse
+    {
         $membership = $user->memberships()->first();
 
         if ($membership) {

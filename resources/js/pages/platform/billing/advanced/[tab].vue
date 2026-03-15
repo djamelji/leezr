@@ -4,7 +4,6 @@ import BillingPaymentsTab from '../_BillingPaymentsTab.vue'
 import BillingWalletsTab from '../_BillingWalletsTab.vue'
 import BillingGovernanceTab from '../_BillingGovernanceTab.vue'
 import BillingLedgerTab from '../_BillingLedgerTab.vue'
-import BillingForensicsTab from '../_BillingForensicsTab.vue'
 
 definePage({
   meta: {
@@ -30,7 +29,6 @@ const tabs = computed(() => [
   { title: t('platformBilling.tabs.wallets'), icon: 'tabler-wallet', tab: 'wallets' },
   { title: t('platformBilling.tabs.governance'), icon: 'tabler-shield-check', tab: 'governance' },
   { title: t('platformBilling.tabs.ledger'), icon: 'tabler-book', tab: 'ledger' },
-  { title: t('platformBilling.tabs.forensics'), icon: 'tabler-search', tab: 'forensics' },
 ])
 </script>
 
@@ -97,10 +95,6 @@ const tabs = computed(() => [
 
       <VWindowItem value="ledger">
         <BillingLedgerTab />
-      </VWindowItem>
-
-      <VWindowItem value="forensics">
-        <BillingForensicsTab />
       </VWindowItem>
     </VWindow>
   </div>

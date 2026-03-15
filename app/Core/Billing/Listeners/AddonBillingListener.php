@@ -14,6 +14,7 @@ use App\Core\Billing\WalletLedger;
 use App\Core\Events\ModuleEnabled;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\AddonActivated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -183,7 +184,13 @@ class AddonBillingListener
             $owner = $company->owner();
 
             if ($owner) {
-                $owner->notify(new AddonActivated($moduleName, $invoice));
+                NotificationDispatcher::send(
+                    topicKey: 'billing.addon_activated',
+                    recipients: [$owner],
+                    payload: ['module_name' => $moduleName, 'invoice_id' => $invoice->id, 'amount' => $invoice->formatted_total],
+                    company: $company,
+                    mailNotification: new AddonActivated($moduleName, $invoice),
+                );
             }
         } catch (\Throwable $e) {
             Log::warning('[addon-billing] Failed to send addon activation notification', [

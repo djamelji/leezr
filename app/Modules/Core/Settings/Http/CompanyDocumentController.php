@@ -3,9 +3,9 @@
 namespace App\Modules\Core\Settings\Http;
 
 use App\Core\Documents\ReadModels\CompanyDocumentReadModel;
-use App\Modules\Core\Members\UseCases\DownloadCompanyDocumentUseCase;
-use App\Modules\Core\Members\UseCases\UploadCompanyDocumentData;
-use App\Modules\Core\Members\UseCases\UploadCompanyDocumentUseCase;
+use App\Core\Documents\UseCases\DownloadCompanyDocumentUseCase;
+use App\Core\Documents\UseCases\UploadCompanyDocumentData;
+use App\Core\Documents\UseCases\UploadCompanyDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;

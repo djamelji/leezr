@@ -18,6 +18,7 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
     // ADR-149: modules whose routes are intentionally ungated (always accessible)
     private const UNGATED_MODULES = [
         'core.dashboard',
+        'core.notifications',
     ];
 
     public function test_all_company_module_routes_have_module_gate(): void

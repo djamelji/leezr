@@ -1,85 +1,55 @@
 <script setup>
-import VueApexCharts from 'vue3-apexcharts'
-import { useTheme } from 'vuetify'
+import ApexChartRevenueTrend from '../../../../ui/presets/charts/apex-chart/ApexChartRevenueTrend.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
-const vuetifyTheme = useTheme()
 
 const isLoading = ref(true)
-const loadError = ref(false)
+const metricsError = ref(false)
+const recoveryError = ref(false)
+const lastRefreshed = ref(null)
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      store.fetchMetrics(),
-      store.fetchRecoveryStatus(),
-    ])
-  }
-  catch {
-    loadError.value = true
-  }
-  finally {
-    isLoading.value = false
-  }
-})
+async function loadData() {
+  isLoading.value = true
+  metricsError.value = false
+  recoveryError.value = false
+
+  const results = await Promise.allSettled([
+    store.fetchMetrics(),
+    store.fetchRecoveryStatus(),
+  ])
+
+  if (results[0].status === 'rejected') metricsError.value = true
+  if (results[1].status === 'rejected') recoveryError.value = true
+
+  lastRefreshed.value = new Date()
+  isLoading.value = false
+}
+
+onMounted(loadData)
 
 const kpiCards = computed(() => {
   const m = store.metrics
 
   if (!m) return []
 
+  const currency = m.currency || 'EUR'
+
   return [
-    { title: t('platformBilling.metrics.mrrHT'), value: formatMoney(m.mrr, { currency: m.currency || 'EUR' }), icon: 'tabler-trending-up', color: 'primary' },
-    { title: t('platformBilling.metrics.arrHT'), value: formatMoney(m.arr, { currency: m.currency || 'EUR' }), icon: 'tabler-chart-bar', color: 'success' },
+    { title: t('platformBilling.metrics.mrrHT'), value: formatMoney(m.mrr, { currency }), icon: 'tabler-trending-up', color: 'primary' },
+    { title: t('platformBilling.metrics.arrHT'), value: formatMoney(m.arr, { currency }), icon: 'tabler-chart-bar', color: 'success' },
     { title: t('platformBilling.metrics.activeSubscriptions'), value: m.active_subscriptions, icon: 'tabler-receipt', color: 'info' },
     { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning' },
-    { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency: m.currency || 'EUR' }), icon: 'tabler-puzzle', color: 'secondary' },
+    { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency }), icon: 'tabler-puzzle', color: 'secondary' },
     { title: t('platformBilling.metrics.churn'), value: `${(m.churn_rate * 100).toFixed(1)}%`, icon: 'tabler-arrow-down-right', color: m.churn_rate > 0.05 ? 'error' : 'success' },
-    { title: t('platformBilling.metrics.trialConversion'), value: store.metrics?.trial_conversion_rate != null ? `${(store.metrics.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
+    { title: t('platformBilling.metrics.trialConversion'), value: m.trial_conversion_rate != null ? `${(m.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
   ]
 })
 
-// ── MRR Chart (ApexCharts line) ──
-const mrrChartOptions = computed(() => {
-  const currentTheme = vuetifyTheme.current.value.colors
-
-  return {
-    chart: {
-      type: 'area',
-      toolbar: { show: false },
-      sparkline: { enabled: false },
-    },
-    stroke: { curve: 'smooth', width: 2 },
-    fill: {
-      type: 'gradient',
-      gradient: { shadeIntensity: 0.6, opacityFrom: 0.5, opacityTo: 0.1 },
-    },
-    colors: [currentTheme.primary],
-    xaxis: {
-      categories: store.metrics?.mrr_history?.labels || [],
-      labels: { style: { fontSize: '11px' } },
-    },
-    yaxis: {
-      labels: {
-        formatter: val => formatMoney(val),
-        style: { fontSize: '11px' },
-      },
-    },
-    tooltip: {
-      y: { formatter: val => formatMoney(val) },
-    },
-    grid: { strokeDashArray: 5 },
-    dataLabels: { enabled: false },
-  }
-})
-
-const mrrChartSeries = computed(() => [{
-  name: 'MRR',
-  data: store.metrics?.mrr_history?.series || [],
-}])
+const mrrLabels = computed(() => store.metrics?.mrr_history?.labels || [])
+const mrrSeries = computed(() => store.metrics?.mrr_history?.series || [])
 
 const recovery = computed(() => store.recoveryStatus)
 
@@ -146,17 +116,71 @@ const counters = computed(() => {
     { title: t('platformBilling.dashboard.overdueInvoices'), value: r.overdue_invoices, color: r.overdue_invoices > 0 ? 'error' : 'success', icon: 'tabler-file-invoice' },
   ]
 })
+
+const refreshLabel = computed(() => {
+  if (!lastRefreshed.value) return ''
+
+  return t('platformBilling.dashboard.lastRefreshed', {
+    time: lastRefreshed.value.toLocaleTimeString(),
+  })
+})
 </script>
 
 <template>
   <div>
+    <!-- Tab purpose -->
     <VAlert
-      v-if="loadError"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
+      <VAlertTitle>
+        <VIcon
+          icon="tabler-layout-dashboard"
+          size="20"
+          class="me-2"
+        />
+        {{ t('platformBilling.dashboard.headerTitle') }}
+      </VAlertTitle>
+      {{ t('platformBilling.dashboard.headerDesc') }}
+    </VAlert>
+
+    <!-- Section errors (granular) -->
+    <VAlert
+      v-if="metricsError"
       type="error"
       variant="tonal"
       class="mb-4"
     >
-      {{ t('common.loadError') }}
+      {{ t('platformBilling.dashboard.metricsError') }}
+      <template #append>
+        <VBtn
+          size="small"
+          variant="text"
+          @click="loadData"
+        >
+          {{ t('platformBilling.dashboard.refresh') }}
+        </VBtn>
+      </template>
+    </VAlert>
+
+    <VAlert
+      v-if="recoveryError"
+      type="warning"
+      variant="tonal"
+      class="mb-4"
+    >
+      {{ t('platformBilling.dashboard.recoveryError') }}
+      <template #append>
+        <VBtn
+          size="small"
+          variant="text"
+          @click="loadData"
+        >
+          {{ t('platformBilling.dashboard.refresh') }}
+        </VBtn>
+      </template>
     </VAlert>
 
     <VSkeletonLoader
@@ -190,13 +214,33 @@ const counters = computed(() => {
       </VAlert>
 
       <!-- KPI Cards -->
-      <VCard class="mb-6">
-        <VCardTitle>
-          <VIcon
-            icon="tabler-report-money"
-            class="me-2"
-          />
-          {{ t('platformBilling.metrics.title') }}
+      <VCard
+        v-if="!metricsError"
+        class="mb-6"
+      >
+        <VCardTitle class="d-flex align-center justify-space-between">
+          <span>
+            <VIcon
+              icon="tabler-report-money"
+              class="me-2"
+            />
+            {{ t('platformBilling.metrics.title') }}
+          </span>
+          <span class="d-flex align-center gap-x-2">
+            <span
+              v-if="refreshLabel"
+              class="text-body-2 text-disabled"
+            >
+              {{ refreshLabel }}
+            </span>
+            <VBtn
+              icon="tabler-refresh"
+              size="small"
+              variant="text"
+              :loading="isLoading"
+              @click="loadData"
+            />
+          </span>
         </VCardTitle>
         <VCardText>
           <VRow>
@@ -232,7 +276,7 @@ const counters = computed(() => {
 
       <!-- MRR Trend Chart -->
       <VCard
-        v-if="store.metrics?.mrr_history?.series?.length"
+        v-if="!metricsError && store.metrics?.mrr_history?.series?.length"
         class="mb-6"
       >
         <VCardTitle>
@@ -243,17 +287,18 @@ const counters = computed(() => {
           {{ t('platformBilling.dashboard.mrrTrend') }}
         </VCardTitle>
         <VCardText>
-          <VueApexCharts
-            type="area"
-            height="280"
-            :options="mrrChartOptions"
-            :series="mrrChartSeries"
+          <ApexChartRevenueTrend
+            :labels="mrrLabels"
+            :series="mrrSeries"
+            series-name="MRR"
+            :y-formatter="val => formatMoney(val)"
+            :height="280"
           />
         </VCardText>
       </VCard>
 
       <!-- System Health -->
-      <VCard>
+      <VCard v-if="!recoveryError">
         <VCardTitle>
           <VIcon
             icon="tabler-activity-heartbeat"

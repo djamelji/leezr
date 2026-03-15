@@ -40,6 +40,7 @@ let _scheduler = null
 let _visibilityInitialized = false
 let _lastHiddenAt = 0
 let _pollTimer = null
+let _platformNotifPollTimer = null
 const NAV_POLL_MS = 30_000 // 30 seconds
 
 // ADR-125: SSE realtime client
@@ -180,9 +181,26 @@ export const useRuntimeStore = defineStore('runtime', {
       // Await the bootMachine promise — resolves on commit() or fail()
       await promise
 
-      // ADR-125: Start SSE after boot completes for company scope
+      // Post-boot: non-critical hydration
       if (bootMachine.isReady.value && scope === 'company') {
+        // ADR-125: Start SSE for realtime events
         this._initRealtime()
+
+        // ADR-347: Fetch notification unread count for navbar badge (non-blocking)
+        const notifStore = resolveStore('notification')
+
+        notifStore.setPlatformMode(false)
+        notifStore.fetchUnreadCount().catch(() => {})
+      }
+
+      if (bootMachine.isReady.value && scope === 'platform') {
+        const notifStore = resolveStore('notification')
+
+        notifStore.setPlatformMode(true)
+        notifStore.fetchUnreadCount().catch(() => {})
+
+        // Platform has no SSE stream — poll every 15s for notifications
+        this._startPlatformNotifPoll()
       }
     },
 
@@ -193,6 +211,7 @@ export const useRuntimeStore = defineStore('runtime', {
     teardown() {
       this._disconnectRealtime()
       this._stopNavPoll()
+      this._stopPlatformNotifPoll()
       this._ensureScheduler()
       _scheduler.requestTeardown()
       bootMachine.teardown()
@@ -215,9 +234,13 @@ export const useRuntimeStore = defineStore('runtime', {
       // Await bootMachine promise
       if (promise) await promise
 
-      // Reconnect SSE for the new company
+      // Reset notification state for the new company + reconnect SSE
       if (bootMachine.isReady.value) {
+        const notifStore = resolveStore('notification')
+
+        notifStore.$reset()
         this._initRealtime()
+        notifStore.fetchUnreadCount().catch(() => {})
       }
     },
 
@@ -493,6 +516,39 @@ export const useRuntimeStore = defineStore('runtime', {
       if (_pollTimer) {
         clearInterval(_pollTimer)
         _pollTimer = null
+      }
+    },
+
+    // Platform notification polling (no SSE available for platform scope)
+    // Uses recursive setTimeout to prevent request accumulation.
+    _startPlatformNotifPoll() {
+      this._stopPlatformNotifPoll()
+
+      const poll = async () => {
+        // Stop if scope changed or runtime no longer ready
+        if (bootMachine.scope.value !== 'platform' || !bootMachine.isReady.value) {
+          _platformNotifPollTimer = null
+
+          return
+        }
+
+        try {
+          await resolveStore('notification').fetchUnreadCount({ _authCheck: true })
+        }
+        catch { /* logged inside store */ }
+
+        // Schedule next tick only after completion (no accumulation)
+        _platformNotifPollTimer = setTimeout(poll, 30_000)
+      }
+
+      // First tick in 30s (boot already called fetchUnreadCount)
+      _platformNotifPollTimer = setTimeout(poll, 30_000)
+    },
+
+    _stopPlatformNotifPoll() {
+      if (_platformNotifPollTimer) {
+        clearTimeout(_platformNotifPollTimer)
+        _platformNotifPollTimer = null
       }
     },
 

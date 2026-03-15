@@ -44,6 +44,8 @@ class BillingRecoverWebhooksCommand extends Command implements Isolatable
         Log::channel('billing')->info('billing:recover-webhooks started', ['overdue' => $overdue->count()]);
 
         if ($overdue->isEmpty()) {
+            BillingJobHeartbeat::finish('billing:recover-webhooks', 'ok', []);
+
             return self::SUCCESS;
         }
 

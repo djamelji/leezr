@@ -27,9 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'company.context' => \App\Company\Http\Middleware\SetCompanyContext::class,
             'company.access' => \App\Company\Http\Middleware\EnsureCompanyAccess::class,
-            'module.active' => \App\Core\Modules\EnsureModuleActive::class,
+            'module.active' => \App\Http\Middleware\EnsureModuleActive::class,
 
             'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
+            'platform.2fa' => \App\Http\Middleware\RequirePlatform2FA::class,
 
             'session.governance' => \App\Http\Middleware\SessionGovernance::class,
 

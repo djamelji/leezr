@@ -17,18 +17,20 @@ const headers = computed(() => [
   { title: t('platformBilling.scheduledDebits.company'), key: 'company', sortable: false },
   { title: t('platformBilling.scheduledDebits.amount'), key: 'amount', align: 'end' },
   { title: t('platformBilling.scheduledDebits.debitDate'), key: 'debit_date' },
+  { title: t('platformBilling.scheduledDebits.daysUntil'), key: 'days_until', width: '100px', align: 'center' },
   { title: t('platformBilling.scheduledDebits.paymentMethod'), key: 'payment_profile', sortable: false },
   { title: t('platformBilling.scheduledDebits.invoice'), key: 'invoice', sortable: false },
   { title: t('platformBilling.scheduledDebits.status'), key: 'status', width: '130px' },
+  { title: t('platformBilling.actions'), key: 'actions', sortable: false, align: 'center', width: '100px' },
 ])
 
-const statusOptions = [
-  { title: 'Pending', value: 'pending' },
-  { title: 'Processing', value: 'processing' },
-  { title: 'Collected', value: 'collected' },
-  { title: 'Failed', value: 'failed' },
-  { title: 'Cancelled', value: 'cancelled' },
-]
+const statusOptions = computed(() => [
+  { title: t('platformBilling.scheduledDebits.statusPending'), value: 'pending' },
+  { title: t('platformBilling.scheduledDebits.statusProcessing'), value: 'processing' },
+  { title: t('platformBilling.scheduledDebits.statusCollected'), value: 'collected' },
+  { title: t('platformBilling.scheduledDebits.statusFailed'), value: 'failed' },
+  { title: t('platformBilling.scheduledDebits.statusCancelled'), value: 'cancelled' },
+])
 
 const formatDate = dateStr => {
   if (!dateStr) return '—'
@@ -38,6 +40,13 @@ const formatDate = dateStr => {
     month: 'short',
     day: 'numeric',
   })
+}
+
+const daysUntil = debitDate => {
+  if (!debitDate) return null
+  const diff = new Date(debitDate).getTime() - Date.now()
+
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
 const filteredItems = computed(() => {
@@ -82,31 +91,60 @@ onMounted(() => load())
 </script>
 
 <template>
+  <VAlert
+    type="info"
+    variant="tonal"
+    density="compact"
+    class="mb-4"
+  >
+    <VAlertTitle>
+      <VIcon
+        icon="tabler-calendar-event"
+        size="20"
+        class="me-2"
+      />
+      {{ t('platformBilling.scheduledDebits.headerTitle') }}
+    </VAlertTitle>
+    {{ t('platformBilling.scheduledDebits.headerDesc') }}
+  </VAlert>
+
   <VCard>
-    <VCardTitle class="d-flex align-center flex-wrap gap-2">
+    <VCardTitle>
       <VIcon
         icon="tabler-calendar-event"
         class="me-2"
       />
       {{ t('platformBilling.tabs.scheduledDebits') }}
-      <VSpacer />
-      <AppSelect
-        v-model="statusFilter"
-        :items="statusOptions"
-        :label="t('platformBilling.status')"
-        density="compact"
-        clearable
-        style="max-inline-size: 160px;"
-      />
-      <AppTextField
-        v-model="search"
-        :placeholder="t('common.search')"
-        density="compact"
-        prepend-inner-icon="tabler-search"
-        style="max-inline-size: 220px;"
-        clearable
-      />
     </VCardTitle>
+
+    <VCardText class="pb-0">
+      <VRow>
+        <VCol
+          cols="12"
+          md="3"
+        >
+          <AppSelect
+            v-model="statusFilter"
+            :items="statusOptions"
+            :label="t('platformBilling.status')"
+            density="compact"
+            clearable
+          />
+        </VCol>
+        <VCol
+          cols="12"
+          md="4"
+        >
+          <AppTextField
+            v-model="search"
+            :label="t('common.search')"
+            density="compact"
+            prepend-inner-icon="tabler-search"
+            clearable
+          />
+        </VCol>
+      </VRow>
+    </VCardText>
 
     <VCardText class="pa-0">
       <VSkeletonLoader
@@ -118,6 +156,7 @@ onMounted(() => load())
         v-else-if="items.length === 0 && !isLoading"
         icon="tabler-calendar-off"
         :title="t('platformBilling.scheduledDebits.empty')"
+        :description="t('platformBilling.scheduledDebits.emptyExplained')"
       />
 
       <VDataTable
@@ -152,6 +191,20 @@ onMounted(() => load())
           {{ formatDate(item.debit_date) }}
         </template>
 
+        <template #item.days_until="{ item }">
+          <VChip
+            v-if="daysUntil(item.debit_date) !== null && daysUntil(item.debit_date) >= 0"
+            :color="daysUntil(item.debit_date) <= 3 ? 'warning' : 'info'"
+            size="small"
+          >
+            {{ t('platformBilling.scheduledDebits.inDays', { days: daysUntil(item.debit_date) }) }}
+          </VChip>
+          <span
+            v-else
+            class="text-disabled"
+          >{{ t('platformBilling.scheduledDebits.past') }}</span>
+        </template>
+
         <template #item.payment_profile="{ item }">
           <template v-if="item.payment_profile">
             <VIcon
@@ -174,8 +227,20 @@ onMounted(() => load())
             :status="item.status"
             domain="scheduledDebit"
           >
-            {{ item.status }}
+            {{ t(`platformBilling.scheduledDebits.status${item.status.charAt(0).toUpperCase() + item.status.slice(1)}`) }}
           </StatusChip>
+        </template>
+
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1">
+            <VBtn
+              v-if="item.company?.id"
+              size="x-small"
+              variant="text"
+              icon="tabler-building"
+              :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+            />
+          </div>
         </template>
 
         <template #bottom>

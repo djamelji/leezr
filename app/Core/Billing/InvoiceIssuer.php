@@ -4,6 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Models\Company;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Modules\Core\Billing\Services\TaxContextResolver;
 use App\Notifications\Billing\InvoiceCreated;
 use App\Notifications\Billing\PaymentReceived;
@@ -292,13 +293,26 @@ class InvoiceIssuer
 
         // ADR-272: Notify company owner about new invoice / payment (outside transaction)
         try {
-            $owner = $finalizedInvoice->company?->owner();
+            $company = $finalizedInvoice->company;
+            $owner = $company?->owner();
 
             if ($owner) {
                 if ($finalizedInvoice->status === 'paid') {
-                    $owner->notify(new PaymentReceived($finalizedInvoice));
+                    NotificationDispatcher::send(
+                        topicKey: 'billing.payment_received',
+                        recipients: [$owner],
+                        payload: ['invoice_id' => $finalizedInvoice->id, 'amount' => $finalizedInvoice->formatted_total],
+                        company: $company,
+                        mailNotification: new PaymentReceived($finalizedInvoice),
+                    );
                 } else {
-                    $owner->notify(new InvoiceCreated($finalizedInvoice));
+                    NotificationDispatcher::send(
+                        topicKey: 'billing.invoice_created',
+                        recipients: [$owner],
+                        payload: ['invoice_id' => $finalizedInvoice->id, 'amount' => $finalizedInvoice->formatted_total],
+                        company: $company,
+                        mailNotification: new InvoiceCreated($finalizedInvoice),
+                    );
                 }
             }
 

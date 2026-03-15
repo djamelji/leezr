@@ -5,6 +5,7 @@ namespace App\Core\Billing;
 use App\Core\Models\Company;
 use App\Core\Modules\Pricing\ModuleQuoteCalculator;
 use App\Core\Modules\PlatformModule;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Plans\Plan;
 use App\Core\Plans\PlanRegistry;
 use App\Core\Billing\InvoiceLineDescriptor;
@@ -328,7 +329,13 @@ class PlanChangeExecutor
                     $oldName = $plans[$intent->from_plan_key]->name ?? $intent->from_plan_key;
                     $newName = $plans[$intent->to_plan_key]->name ?? $intent->to_plan_key;
 
-                    $owner->notify(new PlanChanged($oldName, $newName));
+                    NotificationDispatcher::send(
+                        topicKey: 'billing.plan_changed',
+                        recipients: [$owner],
+                        payload: ['from_plan' => $oldName, 'to_plan' => $newName],
+                        company: $company,
+                        mailNotification: new PlanChanged($oldName, $newName),
+                    );
                 }
             } catch (\Throwable $e) {
                 Log::warning('[plan-change] Failed to send plan change notification', [

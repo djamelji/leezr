@@ -33,4 +33,29 @@ class CompanyPaymentProfile extends Model
     {
         return $query->where('is_default', true);
     }
+
+    /**
+     * Format this profile for API response (card/SEPA display).
+     */
+    public function toCardArray(): array
+    {
+        $bankCode = $this->metadata['bank_code'] ?? null;
+
+        return [
+            'id' => $this->id,
+            'provider_payment_method_id' => $this->provider_payment_method_id,
+            'label' => $this->label,
+            'is_default' => $this->is_default,
+            'method_key' => $this->method_key,
+            'brand' => $this->metadata['brand'] ?? null,
+            'last4' => $this->metadata['last4'] ?? null,
+            'exp_month' => $this->metadata['exp_month'] ?? null,
+            'exp_year' => $this->metadata['exp_year'] ?? null,
+            'country' => $this->metadata['country'] ?? null,
+            'funding' => $this->metadata['funding'] ?? null,
+            'bank_code' => $bankCode,
+            'bank_name' => $bankCode ? BicRegistry::resolve($bankCode) : null,
+            'holder_name' => $this->metadata['holder_name'] ?? null,
+        ];
+    }
 }

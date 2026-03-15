@@ -12,16 +12,26 @@ class PlatformBillingMetricsController
 {
     public function __invoke(): JsonResponse
     {
-        $activeSubscriptions = Subscription::whereIn('status', ['active', 'past_due'])
-            ->where('is_current', 1)
-            ->get();
+        try {
+            $activeSubscriptions = Subscription::whereIn('status', ['active', 'past_due'])
+                ->where('is_current', 1)
+                ->get();
 
-        $trialingSubscriptions = Subscription::where('status', 'trialing')
-            ->where('is_current', 1)
-            ->count();
+            $trialingSubscriptions = Subscription::where('status', 'trialing')
+                ->where('is_current', 1)
+                ->count();
+        } catch (\Throwable) {
+            $activeSubscriptions = collect();
+            $trialingSubscriptions = 0;
+        }
 
         // MRR: sum of monthly-equivalent price for all active subscriptions
-        $plans = Plan::all()->keyBy('key');
+        try {
+            $plans = Plan::all()->keyBy('key');
+        } catch (\Throwable) {
+            $plans = collect();
+        }
+
         $mrr = 0;
 
         foreach ($activeSubscriptions as $sub) {
@@ -40,15 +50,23 @@ class PlatformBillingMetricsController
         }
 
         // Addon MRR: sum of active addon subscriptions (monthly amounts)
-        $addonMrr = (int) CompanyAddonSubscription::active()->sum('amount_cents');
+        try {
+            $addonMrr = (int) CompanyAddonSubscription::active()->sum('amount_cents');
+        } catch (\Throwable) {
+            $addonMrr = 0;
+        }
 
         // ARR
         $arr = ($mrr + $addonMrr) * 12;
 
         // Churn: subscriptions cancelled in last 30 days / total active
-        $cancelledLast30 = Subscription::where('status', 'cancelled')
-            ->where('updated_at', '>=', now()->subDays(30))
-            ->count();
+        try {
+            $cancelledLast30 = Subscription::where('status', 'cancelled')
+                ->where('updated_at', '>=', now()->subDays(30))
+                ->count();
+        } catch (\Throwable) {
+            $cancelledLast30 = 0;
+        }
 
         $totalActive = $activeSubscriptions->count() + $trialingSubscriptions;
         $churnRate = $totalActive > 0 ? round($cancelledLast30 / $totalActive, 4) : 0;
@@ -56,18 +74,23 @@ class PlatformBillingMetricsController
         // MRR history: monthly MRR for the last 12 months (ADR-315)
         $mrrHistory = $this->mrrHistory($plans);
 
+        // MRR previous month for comparison (ADR-344)
+        $mrrPreviousMonth = $mrrHistory['series'][count($mrrHistory['series']) - 2] ?? 0;
+
         // Trial conversion rate (ADR-315)
         $trialConversion = $this->trialConversionRate();
 
         return response()->json([
             'mrr' => $mrr,
             'arr' => $arr,
+            'mrr_previous_month' => $mrrPreviousMonth,
             'active_subscriptions' => $activeSubscriptions->count(),
             'trialing_subscriptions' => $trialingSubscriptions,
             'addon_mrr' => $addonMrr,
             'churn_rate' => $churnRate,
             'mrr_history' => $mrrHistory,
             'trial_conversion_rate' => $trialConversion,
+            'currency' => 'EUR',
         ]);
     }
 
@@ -86,13 +109,10 @@ class PlatformBillingMetricsController
             $labels[] = $monthLabel;
 
             // Subscriptions that were active at this month-end
+            // Note: status filter already excludes cancelled subscriptions
             $subs = Subscription::where('is_current', 1)
                 ->whereIn('status', ['active', 'past_due'])
                 ->where('created_at', '<=', $monthEnd)
-                ->where(function ($q) use ($monthEnd) {
-                    $q->whereNull('cancelled_at')
-                        ->orWhere('cancelled_at', '>', $monthEnd);
-                })
                 ->get(['plan_key', 'interval']);
 
             $monthMrr = 0;

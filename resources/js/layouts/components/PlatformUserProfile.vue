@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
+const { t } = useI18n()
 const platformAuth = usePlatformAuthStore()
 
 const userData = computed(() => platformAuth.user)
@@ -60,6 +61,15 @@ const logout = async () => {
 
           <VDivider class="my-2" />
 
+          <VListItem
+            :to="{ name: 'platform-account-tab', params: { tab: 'account' } }"
+            prepend-icon="tabler-settings"
+          >
+            <VListItemTitle>{{ t('platformAccount.myAccount') }}</VListItemTitle>
+          </VListItem>
+
+          <VDivider class="my-2" />
+
           <div class="px-4 py-2">
             <VBtn
               block
@@ -68,7 +78,7 @@ const logout = async () => {
               append-icon="tabler-logout"
               @click="logout"
             >
-              Logout
+              {{ t('common.logout') }}
             </VBtn>
           </div>
         </VList>

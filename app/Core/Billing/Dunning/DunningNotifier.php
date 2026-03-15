@@ -4,6 +4,7 @@ namespace App\Core\Billing\Dunning;
 
 use App\Core\Billing\Invoice;
 use App\Core\Models\Company;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\AccountSuspended;
 use App\Notifications\Billing\PaymentFailed;
 use Illuminate\Support\Facades\Log;
@@ -22,10 +23,17 @@ class DunningNotifier
     public static function notifyPaymentFailed(Invoice $invoice): void
     {
         try {
-            $owner = $invoice->company?->owner();
+            $company = $invoice->company;
+            $owner = $company?->owner();
 
             if ($owner) {
-                $owner->notify(new PaymentFailed($invoice));
+                NotificationDispatcher::send(
+                    topicKey: 'billing.payment_failed',
+                    recipients: [$owner],
+                    payload: ['invoice_id' => $invoice->id, 'amount' => $invoice->formatted_total],
+                    company: $company,
+                    mailNotification: new PaymentFailed($invoice),
+                );
             }
         } catch (\Throwable $e) {
             Log::warning('[dunning] Failed to send PaymentFailed notification', [
@@ -44,7 +52,13 @@ class DunningNotifier
             $owner = $company->owner();
 
             if ($owner) {
-                $owner->notify(new AccountSuspended());
+                NotificationDispatcher::send(
+                    topicKey: 'billing.account_suspended',
+                    recipients: [$owner],
+                    payload: ['company_id' => $company->id, 'company_name' => $company->name],
+                    company: $company,
+                    mailNotification: new AccountSuspended(),
+                );
             }
         } catch (\Throwable $e) {
             Log::warning('[dunning] Failed to send AccountSuspended notification', [

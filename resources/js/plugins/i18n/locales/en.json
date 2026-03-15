@@ -24,7 +24,6 @@
   "Fleet": "Fleet",
   "Shortcut": "Shortcut",
   "Appointments": "Appointments",
-
   "nav": {
     "groups": {
       "management": "Management",
@@ -51,7 +50,9 @@
       "payments": "Payments",
       "billing": "Billing",
       "billing-settings": "Billing Settings",
-      "document-types": "Document Types"
+      "document-types": "Document Types",
+      "notifications": "Notifications",
+      "support": "Support"
     },
     "company": {
       "dashboard": "Dashboard",
@@ -65,16 +66,46 @@
       "shipments": "Shipments",
       "my-deliveries": "My Deliveries",
       "company-profile": "Company Profile",
-      "account-settings": "Account Settings"
+      "account-settings": "Account Settings",
+      "support": "Support"
     }
   },
-
   "roles": {
-    "owner": "Owner",
+    "title": "Company Roles",
+    "subtitle": "Define who can do what in your company.",
+    "addRole": "Add Role",
+    "newRole": "New Role",
+    "editRole": "Edit Role",
+    "roleName": "Role Name",
+    "roleNamePlaceholder": "e.g. Dispatcher, Accountant",
+    "roleLevel": "Role Level",
+    "operational": "Operational",
+    "operationalDescription": "Can manage daily work only.",
     "management": "Management",
-    "employee": "Employee"
+    "managementDescription": "Can manage team and company configuration.",
+    "managementTooltip": "Management roles can configure company structure and sensitive settings.",
+    "capabilities": "Capabilities",
+    "simpleView": "Simple view",
+    "advanced": "Advanced",
+    "coreTeamCompany": "Core — Team & Company",
+    "platformModules": "Platform Modules",
+    "confirmDelete": "Delete role \"{name}\"?",
+    "failedToDelete": "Failed to delete role.",
+    "noRoles": "No roles yet. Create one to get started.",
+    "addonModules": "Addon Modules",
+    "disabledModules": "Disabled Modules",
+    "moduleInactive": "Disabled",
+    "unbundledPermissions": "Permissions",
+    "fieldConfiguration": "Field Configuration",
+    "fieldConfigTooltip": "Configure which fields are visible and required for members with this role. Unlisted fields remain visible by default.",
+    "fieldProfile": "Field profile",
+    "visible": "Visible",
+    "order": "Order",
+    "group": "Group",
+    "noFieldConfig": "No field configuration",
+    "sensitiveData": "Sensitive Data Access",
+    "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)"
   },
-
   "common": {
     "save": "Save",
     "saveChanges": "Save Changes",
@@ -152,13 +183,25 @@
     "retry": "Retry",
     "copied": "Copied to clipboard",
     "next": "Next",
-    "previous": "Previous"
+    "previous": "Previous",
+    "logout": "Logout"
   },
-
+  "platformAccount": {
+    "myAccount": "My Account",
+    "tabAccount": "Account",
+    "tabSecurity": "Security",
+    "tabNotifications": "Notifications",
+    "profileInfo": "Profile Information",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "profileUpdated": "Profile updated successfully.",
+    "failedToUpdateProfile": "Failed to update profile.",
+    "notificationsDesc": "Manage your notification preferences for platform events."
+  },
   "validation": {
     "required": "This field is required"
   },
-
   "dashboard": {
     "welcome": "Welcome, {name}",
     "viewingCompany": "You are viewing {name}.",
@@ -169,7 +212,6 @@
     "currentPlan": "Current Plan:",
     "upgrade": "Upgrade"
   },
-
   "plans": {
     "title": "Plans",
     "subtitle": "Manage your plan catalog and pricing.",
@@ -222,7 +264,6 @@
     "keyHint": "Lowercase, underscores only. Cannot be changed later.",
     "namePlaceholder": "e.g. Enterprise"
   },
-
   "payments": {
     "title": "Payments",
     "subtitle": "Payment modules, commercial policies and subscription governance.",
@@ -316,7 +357,6 @@
     "specificity": "Specificity",
     "supportedMethods": "Supported Methods"
   },
-
   "platformBilling": {
     "title": "Billing Overview",
     "subtitle": "Cross-company billing data, invoices, payments and dunning.",
@@ -337,7 +377,32 @@
       "coupons": "Coupons",
       "scheduledDebits": "Scheduled Debits"
     },
+    "subscriptions": {
+      "headerTitle": "Subscriptions",
+      "headerDesc": "All active, trialing or pending subscriptions. Approve or reject subscriptions pending admin approval.",
+      "searchPlaceholder": "Search by company or plan…",
+      "viewCompany": "View company",
+      "viewInvoices": "View invoices"
+    },
+    "invoices": {
+      "headerTitle": "Invoices",
+      "headerDesc": "All finalized invoices. Filter by status, period or company. Actions: mark paid, void, refund, retry or write off."
+    },
+    "dunning": {
+      "headerTitle": "Dunning",
+      "headerDesc": "Overdue invoices in the dunning cycle. Retry payment or escalate to uncollectible status.",
+      "totalAtRisk": "Total amount at risk",
+      "invoiceCount": "{count} invoice(s) in collection",
+      "daysOverdue": "Days overdue",
+      "filterOverdue": "Overdue",
+      "filterUncollectible": "Uncollectible",
+      "writeOffTitle": "Write Off Invoice",
+      "writeOffConfirm": "Write off this invoice as uncollectible? This action is irreversible.",
+      "writeOff": "Write Off"
+    },
     "scheduledDebits": {
+      "headerTitle": "Scheduled Debits",
+      "headerDesc": "Scheduled SEPA debits. Debits appear here when an invoice is issued with a direct debit payment method.",
       "company": "Company",
       "amount": "Amount",
       "debitDate": "Debit Date",
@@ -345,9 +410,24 @@
       "invoice": "Invoice",
       "status": "Status",
       "empty": "No scheduled debits",
-      "count": "{count} scheduled debit(s)"
+      "emptyExplained": "No companies currently use SEPA direct debit. Debits will appear here automatically.",
+      "count": "{count} scheduled debit(s)",
+      "statusPending": "Pending",
+      "statusProcessing": "Processing",
+      "statusCollected": "Collected",
+      "statusFailed": "Failed",
+      "statusCancelled": "Cancelled",
+      "daysUntil": "Days until",
+      "inDays": "in {days}d",
+      "past": "Past"
     },
     "dashboard": {
+      "headerTitle": "Billing Overview",
+      "headerDesc": "Key financial indicators, system health and real-time alerts. This dashboard shows MRR, ARR, churn rate and flags anomalies requiring action.",
+      "refresh": "Refresh",
+      "lastRefreshed": "Last refreshed: {time}",
+      "metricsError": "Could not load financial indicators.",
+      "recoveryError": "Could not load health status.",
       "systemHealth": "System Health",
       "deadLetters": "Dead Letters",
       "stuckCheckouts": "Stuck Checkouts",
@@ -362,6 +442,10 @@
       "mrrTrend": "MRR Trend (12 months)"
     },
     "recovery": {
+      "headerTitle": "System Recovery",
+      "headerDesc": "Billing system health status. Monitors failed webhooks, stuck checkout sessions and overdue confirmations.",
+      "refresh": "Refresh",
+      "lastChecked": "Checked at {time}",
       "allOk": "All systems operational — no anomalies detected.",
       "anomaliesDetected": "{count} anomaly(ies) detected — review required.",
       "deadLetters": "Dead Letters",
@@ -375,7 +459,28 @@
       "lastRun": "Last run",
       "additionalCounters": "Additional Counters",
       "overdueInvoices": "Overdue Invoices",
-      "pastDueSubs": "Past-due Subscriptions"
+      "pastDueSubs": "Past-due Subscriptions",
+      "stuckCheckoutDetail": "{count} stuck checkout(s)",
+      "overdueConfirmationDetail": "{count} overdue confirmation(s)",
+      "deadLetterDetail": "{count} dead letter(s)",
+      "heartbeatsExplain": "Heartbeats appear after billing cron tasks run for the first time (billing:renew, billing:process-dunning, etc.).",
+      "lastCheckedAt": "Last checked: {time}",
+      "viewDunning": "View dunning",
+      "recoverCheckouts": "Recover",
+      "recoverWebhooks": "Recover",
+      "replayAll": "Replay all",
+      "replayAllTitle": "Replay all dead letters",
+      "replayAllConfirm": "You are about to replay {count} pending dead letter(s). This operation is idempotent and safe. Continue?",
+      "toastCheckouts": "{activated} activated, {expired} expired, {failed} failed",
+      "toastWebhooks": "{recovered} recovered, {expired} expired, {failed} failed",
+      "toastReplayAll": "{replayed} replayed, {failed} failed",
+      "deadLettersTable": "Pending dead letters",
+      "noDeadLetters": "No pending dead letters.",
+      "deadLetterCount": "{count} dead letter(s)",
+      "dlEventType": "Event type",
+      "dlError": "Error",
+      "dlFailedAt": "Failed at",
+      "dlAttempts": "Attempts"
     },
     "advanced": {
       "button": "Surveillance",
@@ -442,6 +547,9 @@
     "statusTrialing": "Trial",
     "statusPastDue": "Past Due",
     "statusCancelled": "Cancelled",
+    "statusPendingPayment": "Pending Payment",
+    "statusRejected": "Rejected",
+    "statusExpired": "Expired",
     "statusSuspended": "Suspended",
     "yes": "Yes",
     "no": "No",
@@ -588,6 +696,8 @@
       "typeAdjustment": "Adjustment"
     },
     "forensics": {
+      "headerTitle": "Audit & Forensics",
+      "headerDesc": "Detailed billing event timeline by company. Select a company to view the history of invoices, payments, credit notes and snapshots.",
       "companyId": "Company ID",
       "companyIdPlaceholder": "Enter company ID…",
       "timeline": "Event Timeline",
@@ -619,7 +729,9 @@
       "export": "Export",
       "exportTitle": "Export Audit Logs",
       "startDate": "Start date",
-      "endDate": "End date"
+      "endDate": "End date",
+      "searchCompany": "Company",
+      "searchCompanyPlaceholder": "Type a company name…"
     },
     "invoiceDetail": {
       "title": "Invoice Detail",
@@ -752,9 +864,79 @@
     "bulkRetry": "Retry payment",
     "bulkClear": "Clear",
     "bulkVoidSuccess": "{count} invoice(s) voided successfully.",
-    "bulkRetrySuccess": "{count} invoice(s) retried successfully."
+    "bulkRetrySuccess": "{count} invoice(s) retried successfully.",
+    "coupons": {
+      "headerTitle": "Discount Coupons",
+      "headerDesc": "Manage discount codes applicable to subscriptions. Define type (percentage or fixed amount), duration, eligible plans and usage limits.",
+      "confirmDeleteTitle": "Delete coupon",
+      "title": "Coupons",
+      "create": "Create Coupon",
+      "edit": "Edit Coupon",
+      "save": "Save",
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
+      "value": "Value",
+      "valueBps": "Value (basis points, e.g. 2000 = 20%)",
+      "valueCents": "Value (cents)",
+      "maxUses": "Max uses",
+      "unlimited": "Unlimited",
+      "usage": "Usage",
+      "status": "Status",
+      "startsAt": "Starts at",
+      "expiresAt": "Expires at",
+      "isActive": "Active",
+      "actions": "Actions",
+      "confirmDelete": "Are you sure you want to delete this coupon? This action is irreversible.",
+      "emptyTitle": "No coupons yet",
+      "emptyDesc": "Create your first promo code to offer discounts.",
+      "status_active": "Active",
+      "status_inactive": "Inactive",
+      "status_expired": "Expired",
+      "status_exhausted": "Exhausted",
+      "status_scheduled": "Scheduled",
+      "updated": "Coupon updated successfully",
+      "created": "Coupon created successfully",
+      "deleted": "Coupon deleted successfully",
+      "sectionInfo": "Information",
+      "sectionDiscount": "Discount",
+      "sectionValidity": "Validity",
+      "sectionApplicability": "Targeting & scope",
+      "sectionLimits": "Limits",
+      "sectionSummary": "Summary",
+      "description": "Description",
+      "descriptionHint": "Admin notes (not shown to customers)",
+      "typePercentage": "Percentage",
+      "typeFixedAmount": "Fixed amount",
+      "durationMonths": "Duration",
+      "durationOnce": "Single invoice",
+      "durationForever": "Unlimited (every invoice)",
+      "durationNMonths": "{n} months",
+      "billingCycles": "Billing cycles",
+      "allCycles": "All cycles",
+      "monthlyOnly": "Monthly only",
+      "yearlyOnly": "Yearly only",
+      "applicablePlans": "Applicable plans",
+      "allPlans": "All plans",
+      "addonMode": "Discount scope",
+      "addonModeNone": "Subscription only",
+      "addonModeInclude": "Subscription + selected modules",
+      "addonModeExclude": "Everything except certain modules",
+      "applicableAddons": "Targeted modules",
+      "maxUsesPerCompany": "Max uses per company",
+      "maxUsesPerCompanyHint": "Leave empty = 1 use per company",
+      "firstPurchaseOnly": "First purchase only",
+      "firstPurchaseOnlyHint": "Only for companies without prior subscription",
+      "summaryPrefix": "This coupon offers",
+      "summaryPercent": "{value}% off",
+      "summaryFixed": "{value} off",
+      "summaryAllPlans": "on all plans",
+      "summarySpecificPlans": "on {plans}",
+      "summaryForever": "on every invoice",
+      "summaryOnce": "on the first invoice",
+      "summaryMonths": "for {n} months"
+    }
   },
-
   "companyBilling": {
     "title": "Billing",
     "tabs": {
@@ -1041,7 +1223,6 @@
       "processingMessage": "Your direct debit payment is being processed. You'll receive a confirmation when it's finalized (usually 2–5 business days)."
     }
   },
-
   "subscriptionStatus": {
     "pending": "Pending Approval",
     "active": "Active",
@@ -1051,7 +1232,6 @@
     "past_due": "Past Due",
     "rejected": "Rejected"
   },
-
   "companies": {
     "title": "Companies",
     "subtitle": "Manage all companies on the platform.",
@@ -1078,7 +1258,6 @@
       "suspended": "Suspended"
     }
   },
-
   "companyPlan": {
     "pendingApproval": "Pending Approval",
     "pendingMessage": "Your upgrade request for the {plan} plan has been submitted and is awaiting administrator approval.",
@@ -1166,7 +1345,6 @@
       "cancelFailed": "Failed to cancel scheduled change."
     }
   },
-
   "members": {
     "title": "Team Members",
     "addMember": "Add Member",
@@ -1240,7 +1418,6 @@
     "unlimitedMembers": "Unlimited members",
     "memberLimitReached": "Member limit reached. Upgrade your plan to add more members."
   },
-
   "credentials": {
     "title": "Credentials",
     "forceReset": "Force Password Reset",
@@ -1260,7 +1437,6 @@
     "savePassword": "Save Password",
     "failedToSetPassword": "Failed to set password."
   },
-
   "companySettings": {
     "title": "Company Settings",
     "companyName": "Company Name",
@@ -1305,7 +1481,6 @@
       "email": "billing{'@'}company.com"
     }
   },
-
   "companyProfile": {
     "overview": "Overview",
     "documents": "Documents",
@@ -1317,44 +1492,6 @@
     "companyVaultHint": "Upload and manage company-level documents.",
     "noCompanyDocuments": "No company documents available. Use \"Manage Types\" to activate document types."
   },
-
-  "roles": {
-    "title": "Company Roles",
-    "subtitle": "Define who can do what in your company.",
-    "addRole": "Add Role",
-    "newRole": "New Role",
-    "editRole": "Edit Role",
-    "roleName": "Role Name",
-    "roleNamePlaceholder": "e.g. Dispatcher, Accountant",
-    "roleLevel": "Role Level",
-    "operational": "Operational",
-    "operationalDescription": "Can manage daily work only.",
-    "management": "Management",
-    "managementDescription": "Can manage team and company configuration.",
-    "managementTooltip": "Management roles can configure company structure and sensitive settings.",
-    "capabilities": "Capabilities",
-    "simpleView": "Simple view",
-    "advanced": "Advanced",
-    "coreTeamCompany": "Core — Team & Company",
-    "platformModules": "Platform Modules",
-    "confirmDelete": "Delete role \"{name}\"?",
-    "failedToDelete": "Failed to delete role.",
-    "noRoles": "No roles yet. Create one to get started.",
-    "addonModules": "Addon Modules",
-    "disabledModules": "Disabled Modules",
-    "moduleInactive": "Disabled",
-    "unbundledPermissions": "Permissions",
-    "fieldConfiguration": "Field Configuration",
-    "fieldConfigTooltip": "Configure which fields are visible and required for members with this role. Unlisted fields remain visible by default.",
-    "fieldProfile": "Field profile",
-    "visible": "Visible",
-    "order": "Order",
-    "group": "Group",
-    "noFieldConfig": "No field configuration",
-    "sensitiveData": "Sensitive Data Access",
-    "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)"
-  },
-
   "fieldGroups": {
     "identity": "Identity",
     "contact": "Contact",
@@ -1363,7 +1500,6 @@
     "driving": "Driving",
     "dispatch": "Dispatching"
   },
-
   "fieldOptions": {
     "contract_type": {
       "CDI": "Permanent (CDI)",
@@ -1404,61 +1540,172 @@
       "remote": "Remote"
     }
   },
-
   "permissionCatalog": {
     "modules": {
-      "core.settings": { "name": "Company Settings", "description": "Company name and configuration" },
-      "core.roles": { "name": "Roles", "description": "Company roles and permission assignments" },
-      "core.jobdomain": { "name": "Industry Profile", "description": "Company industry profile and sector" },
-      "core.members": { "name": "Members", "description": "Team members and user management" },
-      "core.modules": { "name": "Module Catalog", "description": "Browse and toggle company modules" },
-      "core.billing": { "name": "Plan & Billing", "description": "Company plan and billing management" },
-      "logistics_shipments": { "name": "Shipments", "description": "Logistics shipments with status workflow" }
+      "core.settings": {
+        "name": "Company Settings",
+        "description": "Company name and configuration"
+      },
+      "core.roles": {
+        "name": "Roles",
+        "description": "Company roles and permission assignments"
+      },
+      "core.jobdomain": {
+        "name": "Industry Profile",
+        "description": "Company industry profile and sector"
+      },
+      "core.members": {
+        "name": "Members",
+        "description": "Team members and user management"
+      },
+      "core.modules": {
+        "name": "Module Catalog",
+        "description": "Browse and toggle company modules"
+      },
+      "core.billing": {
+        "name": "Plan & Billing",
+        "description": "Company plan and billing management"
+      },
+      "logistics_shipments": {
+        "name": "Shipments",
+        "description": "Logistics shipments with status workflow"
+      }
     },
     "bundles": {
-      "settings.company_info": { "label": "Company Information", "hint": "View company name and configuration." },
-      "settings.company_management": { "label": "Company Management", "hint": "Change company name, address, and settings." },
-      "roles.governance": { "label": "Role Governance", "hint": "View, create, edit, and delete roles with permission assignments." },
-      "jobdomain.info": { "label": "Industry Information", "hint": "View the company industry profile." },
-      "jobdomain.management": { "label": "Industry Management", "hint": "Change the company industry profile and sector." },
-      "members.team_access": { "label": "Team Access", "hint": "View the team and invite new members." },
-      "members.team_management": { "label": "Team Management", "hint": "Edit profiles, assign roles, and manage credentials." },
-      "modules.management": { "label": "Module Management", "hint": "Enable or disable company modules." },
-      "billing.management": { "label": "Plan & Billing", "hint": "Change company plan and manage billing." },
-      "shipments.operations": { "label": "Shipment Operations", "hint": "View, create, manage status, and assign shipments." },
-      "shipments.administration": { "label": "Shipment Administration", "hint": "Configure custom fields and delete shipments." },
-      "shipments.delivery": { "label": "Delivery Operations", "hint": "View assigned shipments and update their status." }
+      "settings.company_info": {
+        "label": "Company Information",
+        "hint": "View company name and configuration."
+      },
+      "settings.company_management": {
+        "label": "Company Management",
+        "hint": "Change company name, address, and settings."
+      },
+      "roles.governance": {
+        "label": "Role Governance",
+        "hint": "View, create, edit, and delete roles with permission assignments."
+      },
+      "jobdomain.info": {
+        "label": "Industry Information",
+        "hint": "View the company industry profile."
+      },
+      "jobdomain.management": {
+        "label": "Industry Management",
+        "hint": "Change the company industry profile and sector."
+      },
+      "members.team_access": {
+        "label": "Team Access",
+        "hint": "View the team and invite new members."
+      },
+      "members.team_management": {
+        "label": "Team Management",
+        "hint": "Edit profiles, assign roles, and manage credentials."
+      },
+      "modules.management": {
+        "label": "Module Management",
+        "hint": "Enable or disable company modules."
+      },
+      "billing.management": {
+        "label": "Plan & Billing",
+        "hint": "Change company plan and manage billing."
+      },
+      "shipments.operations": {
+        "label": "Shipment Operations",
+        "hint": "View, create, manage status, and assign shipments."
+      },
+      "shipments.administration": {
+        "label": "Shipment Administration",
+        "hint": "Configure custom fields and delete shipments."
+      },
+      "shipments.delivery": {
+        "label": "Delivery Operations",
+        "hint": "View assigned shipments and update their status."
+      }
     },
     "permissions": {
-      "settings.view": { "label": "View Settings", "hint": "See company name and configuration." },
-      "settings.manage": { "label": "Manage Settings", "hint": "Change company name, address, and configuration." },
-      "roles.view": { "label": "View Roles", "hint": "See role list and permission assignments." },
-      "roles.manage": { "label": "Manage Roles", "hint": "Create, edit, delete roles and assign permissions." },
-      "jobdomain.view": { "label": "View Industry", "hint": "See the company industry profile." },
-      "jobdomain.manage": { "label": "Manage Industry", "hint": "Change the company industry profile and sector." },
-      "members.view": { "label": "View Members", "hint": "See the team member list and profiles." },
-      "members.invite": { "label": "Invite Members", "hint": "Send invitations to new team members." },
-      "members.manage": { "label": "Manage Members", "hint": "Edit profiles, assign roles, and remove members." },
-      "members.credentials": { "label": "Manage Credentials", "hint": "Reset passwords and manage login access." },
-      "modules.manage": { "label": "Manage Modules", "hint": "Enable or disable company modules." },
-      "billing.manage": { "label": "Manage Billing", "hint": "Change company plan and manage billing." },
-      "shipments.view": { "label": "View Shipments", "hint": "See the shipments list and details." },
-      "shipments.create": { "label": "Create Shipments", "hint": "Add new shipments to the system." },
-      "shipments.manage_status": { "label": "Manage Shipment Status", "hint": "Update shipment status and workflow." },
-      "shipments.assign": { "label": "Assign Shipments", "hint": "Assign shipments to team members." },
-      "shipments.view_own": { "label": "View Own Deliveries", "hint": "See only shipments assigned to you." },
-      "shipments.manage_fields": { "label": "Manage Shipment Fields", "hint": "Configure custom fields on shipments." },
-      "shipments.delete": { "label": "Delete Shipments", "hint": "Permanently remove shipments from the system." }
+      "settings.view": {
+        "label": "View Settings",
+        "hint": "See company name and configuration."
+      },
+      "settings.manage": {
+        "label": "Manage Settings",
+        "hint": "Change company name, address, and configuration."
+      },
+      "roles.view": {
+        "label": "View Roles",
+        "hint": "See role list and permission assignments."
+      },
+      "roles.manage": {
+        "label": "Manage Roles",
+        "hint": "Create, edit, delete roles and assign permissions."
+      },
+      "jobdomain.view": {
+        "label": "View Industry",
+        "hint": "See the company industry profile."
+      },
+      "jobdomain.manage": {
+        "label": "Manage Industry",
+        "hint": "Change the company industry profile and sector."
+      },
+      "members.view": {
+        "label": "View Members",
+        "hint": "See the team member list and profiles."
+      },
+      "members.invite": {
+        "label": "Invite Members",
+        "hint": "Send invitations to new team members."
+      },
+      "members.manage": {
+        "label": "Manage Members",
+        "hint": "Edit profiles, assign roles, and remove members."
+      },
+      "members.credentials": {
+        "label": "Manage Credentials",
+        "hint": "Reset passwords and manage login access."
+      },
+      "modules.manage": {
+        "label": "Manage Modules",
+        "hint": "Enable or disable company modules."
+      },
+      "billing.manage": {
+        "label": "Manage Billing",
+        "hint": "Change company plan and manage billing."
+      },
+      "shipments.view": {
+        "label": "View Shipments",
+        "hint": "See the shipments list and details."
+      },
+      "shipments.create": {
+        "label": "Create Shipments",
+        "hint": "Add new shipments to the system."
+      },
+      "shipments.manage_status": {
+        "label": "Manage Shipment Status",
+        "hint": "Update shipment status and workflow."
+      },
+      "shipments.assign": {
+        "label": "Assign Shipments",
+        "hint": "Assign shipments to team members."
+      },
+      "shipments.view_own": {
+        "label": "View Own Deliveries",
+        "hint": "See only shipments assigned to you."
+      },
+      "shipments.manage_fields": {
+        "label": "Manage Shipment Fields",
+        "hint": "Configure custom fields on shipments."
+      },
+      "shipments.delete": {
+        "label": "Delete Shipments",
+        "hint": "Permanently remove shipments from the system."
+      }
     }
   },
-
   "jobdomain": {
     "title": "Industry Profile",
     "currentProfile": "Current profile:",
     "noProfileAssigned": "No industry profile assigned yet. Contact support to configure your company profile.",
     "immutableNotice": "Your industry profile is locked and cannot be changed. Contact support or create a new company if you need a different profile."
   },
-
   "platformUsers": {
     "title": "Platform Users",
     "subtitle": "Manage platform employees and their roles.",
@@ -1487,7 +1734,6 @@
     "failedToDeleteUser": "Failed to delete user.",
     "allPermissions": "All permissions (structural)"
   },
-
   "platformRoles": {
     "title": "Platform Roles",
     "subtitle": "Manage platform roles and their permissions.",
@@ -1505,7 +1751,6 @@
     "confirmDeleteRole": "Delete role \"{name}\"?",
     "failedToDeleteRole": "Failed to delete role."
   },
-
   "platformFields": {
     "fieldDefinitions": "Field Definitions",
     "platformUserActivations": "Platform User Activations",
@@ -1537,7 +1782,6 @@
     "codeHint": "Lowercase, underscores only. Immutable after creation.",
     "fieldLabelPlaceholder": "Field Label"
   },
-
   "platformModules": {
     "title": "Platform Modules",
     "subtitle": "Manage module availability globally. Click a module for details.",
@@ -1685,7 +1929,6 @@
     "paymentModules": "Payment Modules",
     "paymentRules": "Payment Rules"
   },
-
   "billingSettings": {
     "title": "Billing Settings",
     "subtitle": "Configure billing, providers, policies and audit.",
@@ -1726,7 +1969,6 @@
     },
     "saved": "Settings saved successfully."
   },
-
   "platformJobdomains": {
     "title": "Job Domains",
     "addJobDomain": "Add Job Domain",
@@ -1847,7 +2089,6 @@
     "autoAddedModules": "Auto-included: {modules} (required dependency)",
     "autoRemovedModules": "Auto-removed: {modules} (unmet dependency)"
   },
-
   "platformDocumentTypes": {
     "title": "Document Types",
     "label": "Label",
@@ -1888,7 +2129,6 @@
     "codeHint": "Lowercase, underscores only. Cannot be changed after creation.",
     "immutableHint": "Immutable after creation"
   },
-
   "platformCompanyDetail": {
     "failedToLoad": "Failed to load company profile.",
     "generalInfo": "General information",
@@ -2061,13 +2301,11 @@
     },
     "walletAdjustFailed": "Failed to adjust wallet."
   },
-
   "platformCompanyUsers": {
     "title": "Company Users",
     "subtitle": "Read-only supervision of company users across all tenants.",
     "noUsers": "No company users found."
   },
-
   "platformSettings": {
     "general": {
       "saving": "Saving...",
@@ -2097,7 +2335,8 @@
       "world": "World",
       "sessions": "Sessions",
       "maintenance": "Maintenance",
-      "billing": "Billing"
+      "billing": "Billing",
+      "notifications": "Notifications"
     },
     "session": {
       "title": "Session Governance",
@@ -2310,7 +2549,6 @@
       "operationalSection": "Operational Parameters"
     }
   },
-
   "companyModules": {
     "title": "Modules",
     "subtitle": "Manage the modules available for your company.",
@@ -2405,7 +2643,7 @@
     "pricingFree": "Included",
     "pricingContactSales": "Contact sales",
     "pricingTiered": "Tiered pricing",
-    "pricingPerSeatIncluded": "{count} {metric} included, then {price} \u20AC/{metric}",
+    "pricingPerSeatIncluded": "{count} {metric} included, then {price} €/{metric}",
     "pricingPerSeatBase": "{count} {metric} included",
     "metric_users": "user",
     "metric_shipments": "shipment",
@@ -2422,7 +2660,6 @@
     "reactivateNoCharge": "This addon is still active until {date}. Reactivating at no additional cost.",
     "reactivateConfirm": "Reactivate"
   },
-
   "themeSettings": {
     "title": "Theme Toggle Visibility",
     "subtitle": "Choose which roles can see the Light / Dark mode toggle in the header.",
@@ -2432,7 +2669,6 @@
     "failedToUpdate": "Failed to update theme visibility.",
     "failedToLoad": "Failed to load theme visibility settings."
   },
-
   "shipments": {
     "title": "Shipments",
     "newShipment": "New Shipment",
@@ -2480,7 +2716,6 @@
     "all": "All",
     "shipment": "Shipment"
   },
-
   "deliveries": {
     "title": "My Deliveries",
     "filterByStatus": "Filter by status",
@@ -2507,7 +2742,6 @@
     "failedToChangeStatus": "Failed to change status.",
     "all": "All"
   },
-
   "forbidden": {
     "title": "Access restricted",
     "message": "This section is reserved for management roles.",
@@ -2515,7 +2749,6 @@
     "goBack": "Go back",
     "goToDashboard": "Go to dashboard"
   },
-
   "platformDashboard": {
     "title": "Platform Dashboard",
     "statsError": "Some statistics could not be loaded.",
@@ -2544,7 +2777,6 @@
       "resizeHint": "Drag handle to resize"
     }
   },
-
   "companyDashboard": {
     "title": "Dashboard",
     "widgetsTitle": "Widgets",
@@ -2558,7 +2790,6 @@
     "suggestionsApprove": "Add",
     "suggestionsDismiss": "Dismiss"
   },
-
   "compliance": {
     "complianceRate": "Compliance Rate",
     "complianceRateDesc": "Percentage of submitted documents",
@@ -2593,14 +2824,12 @@
     "membersConcerned": "{count} member(s)",
     "pendingRequests": "{count} pending"
   },
-
   "dashboardGrid": {
     "noSpaceToPlaceWidget": "Not enough space to place the widget. Try removing or resizing other widgets.",
     "invalidPlacement": "Invalid placement. The widget was reverted to its previous position.",
     "maxHeightReached": "Maximum widget height reached (6 rows).",
     "minWidgetRequired": "At least one widget is required."
   },
-
   "auth": {
     "login": "Login",
     "email": "Email",
@@ -2628,9 +2857,34 @@
     "createAccount": "Create an account",
     "registrationFailed": "Registration failed.",
     "alreadyHaveAccount": "Already have an account?",
-    "signInInstead": "Sign in instead"
+    "signInInstead": "Sign in instead",
+    "twoStepVerification": "Two-Step Verification",
+    "enter2faCode": "Enter the code from your authenticator app.",
+    "enter6DigitCode": "Type your 6 digit security code",
+    "verifyCode": "Verify Code",
+    "invalidCode": "Invalid verification code."
   },
-
+  "twoFactor": {
+    "title": "Two-Factor Authentication",
+    "description": "Add an extra layer of security to your account using an authenticator app.",
+    "requiredWarning": "Two-factor authentication is required for platform administrators. Please enable it to continue.",
+    "active": "2FA Enabled",
+    "enable": "Enable 2FA",
+    "disable": "Disable 2FA",
+    "enabledSuccess": "Two-factor authentication has been enabled successfully.",
+    "disabledSuccess": "Two-factor authentication has been disabled.",
+    "setupTitle": "Set Up Authenticator App",
+    "scanQrCode": "Scan this QR code with your authenticator app (Google Authenticator, Authy, 1Password...).",
+    "manualEntry": "Manual Entry",
+    "verificationCode": "Verification Code",
+    "verify": "Verify",
+    "disableTitle": "Disable 2FA",
+    "disableWarning": "Are you sure you want to disable two-factor authentication? Your account will be less secure.",
+    "regenerateBackupCodes": "Regenerate Backup Codes",
+    "backupCodesTitle": "Backup Codes",
+    "backupCodesDesc": "Store these codes in a safe place. Each code can only be used once.",
+    "backupCodesWarning": "These codes will not be shown again. Save them now."
+  },
   "register": {
     "industryStep": "Industry",
     "industryStepSubtitle": "Your sector",
@@ -2723,7 +2977,6 @@
     "registrationSuccess": "Your account has been created successfully! Welcome.",
     "pleaseCorrectErrors": "Please correct the errors below to continue."
   },
-
   "onboarding": {
     "welcome": "Welcome {name}!",
     "setupPrompt": "Set up your workspace in 5 minutes",
@@ -2735,7 +2988,6 @@
     "paymentMethod": "Add a payment method",
     "inviteMember": "Invite a team member"
   },
-
   "landing": {
     "signIn": "Sign In",
     "startFree": "Start Free",
@@ -2781,18 +3033,15 @@
     "allRightsReserved": "All rights reserved.",
     "privacy": "Privacy"
   },
-
   "errorPage": {
     "pageNotFound": "Page Not Found",
     "description": "We couldn't find the page you are looking for.",
     "backToHome": "Back to Home"
   },
-
   "maintenancePage": {
     "enterYourEmail": "Enter your email",
     "onTheList": "You're on the list. We'll notify you when we're back online."
   },
-
   "accountSettings": {
     "account": "Account",
     "security": "Security",
@@ -2823,7 +3072,6 @@
     "themeSystem": "System",
     "documents": "Documents"
   },
-
   "audience": {
     "confirmingSubscription": "Confirming your subscription...",
     "subscriptionConfirmed": "Subscription confirmed!",
@@ -2836,10 +3084,8 @@
     "emailRemovedFrom": "Your email {email} has been removed from {list}.",
     "unsubscribeInvalidDesc": "This unsubscribe link is no longer valid."
   },
-
   "approveConfirm": "Approve upgrade to \"{plan}\" for {company}?",
   "rejectConfirm": "Reject upgrade request for {company}?",
-
   "fields": {
     "category": {
       "base": "General Information",
@@ -2851,7 +3097,6 @@
     "profileIncomplete": "{filled} of {total} required fields filled",
     "profileIncompleteShort": "Incomplete profile"
   },
-
   "runtime": {
     "cold": "Initializing...",
     "auth": "Verifying your session...",
@@ -2932,7 +3177,6 @@
       "volume": "Volume"
     }
   },
-
   "markets": {
     "title": "Markets",
     "addMarket": "Add Market",
@@ -2966,7 +3210,6 @@
     "deleted": "Market deleted",
     "cannotDeactivate": "Cannot deactivate: companies are using this market"
   },
-
   "legalStatuses": {
     "title": "Legal Statuses",
     "addStatus": "Add Legal Status",
@@ -2981,7 +3224,6 @@
     "saved": "Legal status saved",
     "deleted": "Legal status deleted"
   },
-
   "languages": {
     "title": "Languages",
     "addLanguage": "Add Language",
@@ -3004,7 +3246,6 @@
       "noStats": "No translation data yet"
     }
   },
-
   "translations": {
     "title": "Translations",
     "import": "Import",
@@ -3019,7 +3260,6 @@
     "namespace": "Namespace",
     "locale": "Locale"
   },
-
   "translatePage": {
     "title": "Translation Management",
     "tabs": {
@@ -3054,7 +3294,6 @@
     "selectLocaleToImport": "Select a locale to import",
     "overridesEmpty": "No overrides for this market yet. Overrides let you customize translations for a specific market without changing the global translations."
   },
-
   "marketImport": {
     "title": "Import Markets",
     "preview": "Preview Changes",
@@ -3065,7 +3304,6 @@
     "noChanges": "No changes detected",
     "applied": "Import applied"
   },
-
   "international": {
     "title": "International",
     "tabs": {
@@ -3075,7 +3313,6 @@
       "fxRates": "FX Rates"
     }
   },
-
   "fxRates": {
     "title": "Exchange Rates",
     "baseCurrency": "Base",
@@ -3095,7 +3332,20 @@
     "active": "Active",
     "stopped": "Stopped",
     "connections": "Connections",
-    "topics": "Topics",
+    "topics": {
+      "rbac.changed": "Permissions changed",
+      "modules.changed": "Modules changed",
+      "plan.changed": "Plan changed",
+      "jobdomain.changed": "Industry changed",
+      "members.changed": "Members changed",
+      "member.joined": "Member joined",
+      "member.removed": "Member removed",
+      "role.assigned": "Role assigned",
+      "module.activated": "Module activated",
+      "module.deactivated": "Module deactivated",
+      "security.alert": "Security alert",
+      "audit.logged": "Audit logged"
+    },
     "activeConnections": "Active Connections",
     "user": "User ID",
     "company": "Company ID",
@@ -3111,20 +3361,6 @@
     "metricTopic": "Topic",
     "metricCategory": "Category",
     "metricCount": "Count",
-    "topics": {
-      "rbac.changed": "Permissions changed",
-      "modules.changed": "Modules changed",
-      "plan.changed": "Plan changed",
-      "jobdomain.changed": "Industry changed",
-      "members.changed": "Members changed",
-      "member.joined": "Member joined",
-      "member.removed": "Member removed",
-      "role.assigned": "Role assigned",
-      "module.activated": "Module activated",
-      "module.deactivated": "Module deactivated",
-      "security.alert": "Security alert",
-      "audit.logged": "Audit logged"
-    },
     "categories": {
       "invalidation": "Invalidation",
       "domain": "Domain",
@@ -3193,7 +3429,6 @@
     "high": "High",
     "critical": "Critical"
   },
-
   "documents": {
     "title": "Documents",
     "myDocuments": "My Documents",
@@ -3216,7 +3451,7 @@
     "noFileUploaded": "No file uploaded",
     "fileInfo": "{name} ({size})",
     "maxSize": "Max {size} MB",
-    "acceptedTypes": "Accepted: {types}",
+    "acceptedTypes": "Accepted file types",
     "type": {
       "id_card": "Identity Card",
       "driving_license": "Driving License",
@@ -3265,7 +3500,6 @@
     "systemDocument": "System",
     "documentLabel": "Document label",
     "maxFileSizeMb": "Max file size (MB)",
-    "acceptedTypes": "Accepted file types",
     "customTypeCreated": "Custom document type created.",
     "customTypeArchived": "Document type archived.",
     "customTypeDeleted": "Document type deleted.",
@@ -3348,73 +3582,152 @@
     "addonSubscribed": "Add-on activated",
     "addonUnsubscribed": "Add-on removed"
   },
-
-  "coupons": {
-    "title": "Coupons",
-    "create": "Create Coupon",
-    "edit": "Edit Coupon",
-    "save": "Save",
-    "code": "Code",
-    "name": "Name",
-    "type": "Type",
-    "value": "Value",
-    "valueBps": "Value (basis points, e.g. 2000 = 20%)",
-    "valueCents": "Value (cents)",
-    "maxUses": "Max uses",
-    "unlimited": "Unlimited",
-    "usage": "Usage",
+  "notifications": {
+    "inbox": "Notifications",
+    "preferences": "Preferences",
+    "preferencesDesc": "Choose which notifications you receive and how.",
+    "markAllRead": "Mark all as read",
+    "unreadOnly": "Unread only",
+    "empty": "No notifications yet.",
+    "unread": "unread",
+    "searchPlaceholder": "Search notifications...",
+    "dismiss": "Dismiss",
+    "notificationCenter": "Notification Center",
+    "notificationCenterDesc": "Browse your full notification history.",
+    "newSingle": "New",
+    "newCount": "{n} new notifications",
+    "open": "Open",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "topicManagement": "Notification Topics",
+    "topicManagementDesc": "Configure notification topics, channels, and delivery settings.",
+    "editTopic": "Edit Topic",
+    "topic": "Topic",
+    "category": "Category",
+    "scope": "Scope",
+    "severity": "Severity",
+    "defaultChannels": "Default Channels",
+    "deliveries7d": "Deliveries (7d)",
+    "active": "Active",
+    "label": "Label",
+    "icon": "Icon",
+    "sortOrder": "Sort Order",
+    "title": "Notifications",
+    "new": "New",
+    "viewAll": "View All Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read",
+    "markAllUnread": "Mark all as unread",
+    "timeJustNow": "Just now",
+    "timeMinAgo": "{n} min ago",
+    "timeHourAgo": "{n}h ago",
+    "timeDayAgo": "{n}d ago",
+    "categoryAll": "All",
+    "categoryBilling": "Billing",
+    "categoryMembers": "Members",
+    "categoryModules": "Modules",
+    "categorySecurity": "Security",
+    "categorySupport": "Support",
+    "categorySystem": "System",
+    "billing_payment_failed_title": "Payment Failed",
+    "billing_payment_failed_body": "A payment attempt for invoice #{invoice_id} has failed.",
+    "billing_invoice_created_title": "New Invoice",
+    "billing_invoice_created_body": "Invoice #{invoice_id} for {amount} has been created.",
+    "billing_payment_received_title": "Payment Received",
+    "billing_payment_received_body": "Payment of {amount} has been received.",
+    "billing_plan_changed_title": "Plan Changed",
+    "billing_plan_changed_body": "Your plan has been changed to {plan_name}.",
+    "billing_trial_expiring_title": "Trial Expiring",
+    "billing_trial_expiring_body": "Your trial expires in {days} days.",
+    "billing_trial_started_title": "Trial Started",
+    "billing_trial_started_body": "Your trial has started. Welcome!",
+    "billing_trial_converted_title": "Trial Converted",
+    "billing_trial_converted_body": "Your trial has been converted to an active subscription.",
+    "billing_payment_method_expiring_title": "Payment Method Expiring",
+    "billing_payment_method_expiring_body": "Your payment method ending in {last4} expires soon.",
+    "billing_account_suspended_title": "Account Suspended",
+    "billing_account_suspended_body": "Your account has been suspended due to unpaid invoices.",
+    "billing_addon_activated_title": "Add-on Activated",
+    "billing_addon_activated_body": "The module {module_name} has been activated.",
+    "members_invited_title": "Member Invited",
+    "members_invited_body": "{member_name} has been invited to join.",
+    "members_joined_title": "Member Joined",
+    "members_joined_body": "{member_name} has joined the team.",
+    "members_removed_title": "Member Removed",
+    "members_removed_body": "{member_name} has been removed from the team.",
+    "members_role_changed_title": "Role Changed",
+    "members_role_changed_body": "{member_name}'s role has been changed to {role_name}.",
+    "modules_activated_title": "Module Activated",
+    "modules_activated_body": "The module {module_name} has been activated.",
+    "modules_deactivated_title": "Module Deactivated",
+    "modules_deactivated_body": "The module {module_name} has been deactivated.",
+    "security_alert_title": "Security Alert",
+    "security_alert_body": "A security event has been detected.",
+    "platform_new_subscription_title": "New Subscription",
+    "platform_new_subscription_body": "{company_name} subscribed to {plan_name}.",
+    "platform_plan_changed_title": "Plan Changed",
+    "platform_plan_changed_body": "{company_name} changed from {old_plan} to {new_plan}.",
+    "platform_cancellation_requested_title": "Cancellation Requested",
+    "platform_cancellation_requested_body": "{company_name} requested cancellation.",
+    "platform_payment_failed_alert_title": "Payment Failed",
+    "platform_payment_failed_alert_body": "Payment failed for {company_name} (invoice #{invoice_id}).",
+    "platform_new_company_registered_title": "New Company Registered",
+    "platform_new_company_registered_body": "{company_name} just registered.",
+    "platform_trial_expired_title": "Trial Expired",
+    "platform_trial_expired_body": "Trial for {company_name} expired without conversion.",
+    "platform_account_suspended_title": "Account Suspended",
+    "platform_account_suspended_body": "Account for {company_name} suspended.",
+    "scopeCompany": "Company",
+    "scopePlatform": "Platform",
+    "scopeBoth": "Both"
+  },
+  "support": {
+    "myTickets": "My Tickets",
+    "allTickets": "All Tickets",
+    "newTicket": "New Ticket",
+    "subject": "Subject",
+    "subjectPlaceholder": "Briefly describe your issue",
+    "message": "Message",
+    "messagePlaceholder": "Describe your issue in detail...",
     "status": "Status",
-    "startsAt": "Starts at",
-    "expiresAt": "Expires at",
-    "isActive": "Active",
+    "priority": "Priority",
+    "category": "Category",
+    "company": "Company",
+    "lastMessage": "Last Message",
+    "assignedTo": "Assigned To",
+    "createdAt": "Created",
+    "createdBy": "Created By",
+    "firstResponse": "First Response",
+    "conversation": "Conversation",
+    "backToTickets": "Back to Tickets",
+    "send": "Send",
+    "reply": "Reply",
+    "typeMessage": "Type your message...",
+    "typeReply": "Type your reply...",
+    "typeInternalNote": "Internal note (not visible to customer)...",
+    "internalNote": "Internal Note",
+    "platformTeam": "Support Team",
+    "customer": "Customer",
+    "you": "You",
+    "ticketClosed": "This ticket is closed. You can no longer reply.",
+    "assignToMe": "Assign to Me",
+    "resolve": "Resolve",
+    "close": "Close",
     "actions": "Actions",
-    "confirmDelete": "Delete this coupon?",
-    "emptyTitle": "No coupons yet",
-    "emptyDesc": "Create your first promo code to offer discounts.",
-    "status_active": "Active",
-    "status_inactive": "Inactive",
-    "status_expired": "Expired",
-    "status_exhausted": "Exhausted",
-    "status_scheduled": "Scheduled",
-    "updated": "Coupon updated successfully",
-    "created": "Coupon created successfully",
-    "deleted": "Coupon deleted successfully",
-    "sectionInfo": "Information",
-    "sectionDiscount": "Discount",
-    "sectionValidity": "Validity",
-    "sectionApplicability": "Targeting & scope",
-    "sectionLimits": "Limits",
-    "sectionSummary": "Summary",
-    "description": "Description",
-    "descriptionHint": "Admin notes (not shown to customers)",
-    "typePercentage": "Percentage",
-    "typeFixedAmount": "Fixed amount",
-    "durationMonths": "Duration",
-    "durationOnce": "Single invoice",
-    "durationForever": "Unlimited (every invoice)",
-    "durationNMonths": "{n} months",
-    "billingCycles": "Billing cycles",
-    "allCycles": "All cycles",
-    "monthlyOnly": "Monthly only",
-    "yearlyOnly": "Yearly only",
-    "applicablePlans": "Applicable plans",
-    "allPlans": "All plans",
-    "addonMode": "Discount scope",
-    "addonModeNone": "Subscription only",
-    "addonModeInclude": "Subscription + selected modules",
-    "addonModeExclude": "Everything except certain modules",
-    "applicableAddons": "Targeted modules",
-    "maxUsesPerCompany": "Max uses per company",
-    "maxUsesPerCompanyHint": "Leave empty = 1 use per company",
-    "firstPurchaseOnly": "First purchase only",
-    "firstPurchaseOnlyHint": "Only for companies without prior subscription",
-    "summaryPrefix": "This coupon offers",
-    "summaryPercent": "{value}% off",
-    "summaryFixed": "{value} off",
-    "summaryAllPlans": "on all plans",
-    "summarySpecificPlans": "on {plans}",
-    "summaryForever": "on every invoice",
-    "summaryOnce": "on the first invoice",
-    "summaryMonths": "for {n} months"
+    "unassigned": "Unassigned",
+    "searchPlaceholder": "Search by subject or company...",
+    "statusOpen": "Open",
+    "statusInProgress": "In Progress",
+    "statusWaitingCustomer": "Waiting Customer",
+    "statusResolved": "Resolved",
+    "statusClosed": "Closed",
+    "priorityLow": "Low",
+    "priorityNormal": "Normal",
+    "priorityHigh": "High",
+    "priorityUrgent": "Urgent",
+    "categoryGeneral": "General",
+    "categoryTechnical": "Technical",
+    "categoryBilling": "Billing",
+    "noTicketsYet": "No tickets yet"
   }
 }

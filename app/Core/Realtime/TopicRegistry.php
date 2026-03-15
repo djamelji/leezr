@@ -113,6 +113,15 @@ final class TopicRegistry
             'targeting' => 'company',
             'version' => 2,
         ],
+
+        // ─── Notification topics ───────────────────────────────
+        'notification.created' => [
+            'description' => 'A new in-app notification was created for a user',
+            'invalidates' => [],
+            'categories' => ['notification'],
+            'targeting' => 'user',
+            'version' => 2,
+        ],
     ];
 
     /**

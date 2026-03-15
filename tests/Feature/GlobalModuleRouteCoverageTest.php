@@ -22,6 +22,8 @@ class GlobalModuleRouteCoverageTest extends TestCase
     // ADR-149: modules whose routes are intentionally ungated (always accessible)
     private const UNGATED_MODULES = [
         'core.dashboard',
+        'core.notifications',
+        'platform.notifications',
     ];
 
     public function test_all_module_routes_have_activation_middleware(): void

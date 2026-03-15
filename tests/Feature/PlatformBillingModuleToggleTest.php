@@ -142,7 +142,7 @@ class PlatformBillingModuleToggleTest extends TestCase
         $this->assertNotNull($manifest);
         $this->assertEquals('platform', $manifest->type);
         $this->assertEquals('admin', $manifest->scope);
-        $this->assertNotNull($manifest->settingsRoute);
+        $this->assertNull($manifest->settingsRoute); // ADR-345: billing settings page removed, nav item suffices
     }
 
     // ── C7: Granular permissions exist after sync ───────────────
