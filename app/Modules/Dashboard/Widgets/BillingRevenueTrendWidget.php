@@ -123,4 +123,9 @@ class BillingRevenueTrendWidget implements WidgetManifest
             'chart' => $dataset['revenue_trend'],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

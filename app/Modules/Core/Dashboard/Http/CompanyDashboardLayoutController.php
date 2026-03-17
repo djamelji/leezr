@@ -20,9 +20,14 @@ class CompanyDashboardLayoutController extends Controller
     public function show(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $userId = $request->user()->id;
+        $user = $request->user();
+        $membership = $user->membershipFor($company);
 
-        $layout = CompanyDashboardLayout::resolveForUser($company->id, $userId);
+        $layout = CompanyDashboardLayout::resolveForUser(
+            $company->id,
+            $user->id,
+            $membership?->company_role_id
+        );
         $tiles = $layout?->layout_json ?? [];
 
         return response()->json([

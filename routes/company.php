@@ -320,3 +320,5 @@ Route::middleware('company.access:use-module,core.support')->group(function () {
     Route::post('/support/tickets/{id}/messages', [SupportMessageController::class, 'store'])
         ->middleware('company.access:use-permission,support.create');
 });
+
+// ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

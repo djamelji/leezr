@@ -28,6 +28,16 @@ class SupportModule implements ModuleDefinition
                 ],
                 routeNames: ['company-support', 'company-support-id'],
                 middlewareKey: 'core.support',
+                footerLinks: [
+                    [
+                        'key' => 'footer-support',
+                        'label' => 'footer.support',
+                        'to' => ['name' => 'company-support'],
+                        'icon' => 'tabler-headset',
+                        'permission' => 'support.view',
+                        'sortOrder' => 10,
+                    ],
+                ],
             ),
             permissions: [
                 ['key' => 'support.view', 'label' => 'View support tickets'],

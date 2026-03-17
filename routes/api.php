@@ -4,6 +4,7 @@ use App\Modules\Infrastructure\Auth\Http\AuthController;
 use App\Modules\Infrastructure\Auth\Http\PasswordResetController;
 use App\Modules\Infrastructure\Webhooks\Http\WebhookController;
 use App\Modules\Infrastructure\Public\Http\PublicAddonController;
+use App\Modules\Infrastructure\Public\Http\HelpCenterController;
 use App\Modules\Infrastructure\Public\Http\PublicFieldController;
 use App\Modules\Infrastructure\Public\Http\PublicCouponController;
 use App\Modules\Infrastructure\Public\Http\PublicPlanController;
@@ -43,6 +44,15 @@ Route::prefix('public')->middleware('throttle:30,1')->group(function () {
     Route::get('/fields', [PublicFieldController::class, 'companyFields']);
     Route::get('/addons', [PublicAddonController::class, 'index']);
     Route::post('/validate-coupon', PublicCouponController::class)->middleware('throttle:10,1');
+});
+
+// Help Center — unified API (ADR-356 — optional auth via session cookies)
+Route::prefix('help-center')->middleware('throttle:60,1')->group(function () {
+    Route::get('/', [HelpCenterController::class, 'index']);
+    Route::get('/search', [HelpCenterController::class, 'search']);
+    Route::get('/topic/{slug}', [HelpCenterController::class, 'topic']);
+    Route::get('/article/{topicSlug}/{articleSlug}', [HelpCenterController::class, 'article']);
+    Route::post('/article/{id}/feedback', [HelpCenterController::class, 'feedback']);
 });
 
 // Public markets & i18n (ADR-104 — no auth)

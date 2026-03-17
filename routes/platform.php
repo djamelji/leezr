@@ -499,5 +499,26 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/support/tickets/{id}/internal-notes', [PlatformSupportMessageController::class, 'storeInternal']);
     });
 
+    // ── Documentation ───────────────────────────────────────────
+    Route::middleware(['module.active:platform.documentation', 'platform.permission:manage_documentation'])->group(function () {
+        Route::get('/documentation/topics', [\App\Modules\Platform\Documentation\Http\PlatformDocTopicController::class, 'index']);
+        Route::post('/documentation/topics', [\App\Modules\Platform\Documentation\Http\PlatformDocTopicController::class, 'store']);
+        Route::get('/documentation/topics/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocTopicController::class, 'show']);
+        Route::put('/documentation/topics/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocTopicController::class, 'update']);
+        Route::delete('/documentation/topics/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocTopicController::class, 'destroy']);
+        Route::get('/documentation/articles', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'index']);
+        Route::post('/documentation/articles', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'store']);
+        Route::get('/documentation/articles/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'show']);
+        Route::put('/documentation/articles/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'update']);
+        Route::delete('/documentation/articles/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'destroy']);
+        Route::get('/documentation/feedback-stats', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'feedbackStats']);
+        Route::get('/documentation/search-misses', [\App\Modules\Platform\Documentation\Http\PlatformDocArticleController::class, 'searchMisses']);
+        Route::get('/documentation/groups', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'index']);
+        Route::post('/documentation/groups', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'store']);
+        Route::get('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'show']);
+        Route::put('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'update']);
+        Route::delete('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'destroy']);
+    });
+
     }); // end platform.2fa
 });

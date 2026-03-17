@@ -28,6 +28,16 @@ class PlatformSupportModule implements ModuleDefinition
                     ],
                 ],
                 routeNames: ['platform-support', 'platform-support-id'],
+                footerLinks: [
+                    [
+                        'key' => 'footer-support',
+                        'label' => 'footer.support',
+                        'to' => ['name' => 'platform-support'],
+                        'icon' => 'tabler-headset',
+                        'permission' => 'manage_support',
+                        'sortOrder' => 10,
+                    ],
+                ],
             ),
             permissions: [
                 ['key' => 'manage_support', 'label' => 'Manage Support Tickets'],

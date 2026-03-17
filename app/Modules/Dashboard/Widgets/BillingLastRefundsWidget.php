@@ -99,4 +99,9 @@ class BillingLastRefundsWidget implements WidgetManifest
             'items' => $dataset['last_refunds'] ?? [],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

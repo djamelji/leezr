@@ -99,4 +99,9 @@ class BillingPendingDunningWidget implements WidgetManifest
             'count' => $dataset['pending_dunning'] ?? 0,
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

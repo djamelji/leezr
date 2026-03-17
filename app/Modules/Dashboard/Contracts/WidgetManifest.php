@@ -68,4 +68,11 @@ interface WidgetManifest
      * @param array $context  The widget request context
      */
     public function transform(array $dataset, array $context): array;
+
+    /**
+     * ADR-357: Allowed role archetypes, or null for all.
+     *
+     * @return string[]|null  e.g. ['management', 'operations_center'] or null
+     */
+    public function archetypes(): ?array;
 }

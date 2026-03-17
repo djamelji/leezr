@@ -12081,4 +12081,259 @@ Chaque module qui émet des notifications doit :
 
 ---
 
+## ADR-353 : Footer Links comme Capability Module
+
+- **Date** : 2026-03-17
+- **Contexte** : Le footer était hardcodé dans `Footer.vue` avec des liens statiques identiques pour les deux scopes. Les liens ne respectaient ni les permissions ni l'activation des modules. Besoin d'un footer dynamique, module-driven, filtré par permissions, avec séparation stricte des scopes.
+- **Décision** :
+  - **Nouvelle capability** : `footerLinks: []` ajoutée à `Capabilities` (purement déclaratif, Core immutable)
+  - **FooterLinkBuilder** : nouveau builder miroir de `HeaderWidgetBuilder`, pipeline `ModuleRegistry → modules actifs → capabilities.footerLinks → filtre permissions → sortOrder → output normalisé`
+  - **Séparation de scope stricte** : `forAdmin()` utilise `ModuleRegistry::forScope('admin')` (uniquement modules admin), `forCompany()` utilise `ModuleRegistry::forScope('company')` (uniquement modules company) — contrairement à `HeaderWidgetBuilder::forAdmin()` qui collecte depuis tous les scopes
+  - **Structure d'un footer link** : `{key, label (clé i18n), to (route vue-router) | href (URL externe), icon, permission, sortOrder}`
+  - **NavController** enrichi : réponse `/nav` contient désormais `{groups, header_widgets, footer_links}`
+  - **Frontend** : `nav.js` store stocke `_platformFooterLinks` / `_companyFooterLinks`, `Footer.vue` consomme dynamiquement via `navStore` + `t(link.label)` pour l'i18n
+  - **SupportModule** et **PlatformSupportModule** déclarent chacun leur footer link (permission-gated)
+- **Conséquences** :
+  - Footer respecte les permissions (pas de lien Support si user n'a pas `support.view`)
+  - Footer respecte l'activation des modules (module désactivé = lien absent)
+  - Extensible : tout module peut déclarer ses footer links dans son manifest
+  - Prépare le terrain pour le module Documentation (ADR-354 à venir)
+  - 9 tests dédiés dans FooterLinkCapabilityTest
+- **Fichiers** :
+  - `app/Core/Modules/Capabilities.php` — modifié (+footerLinks property)
+  - `app/Core/Navigation/FooterLinkBuilder.php` — créé (miroir de HeaderWidgetBuilder)
+  - `app/Modules/Infrastructure/Navigation/Http/NavController.php` — modifié (+footer_links dans réponse)
+  - `app/Modules/Core/Support/SupportModule.php` — modifié (+footerLinks)
+  - `app/Modules/Platform/Support/PlatformSupportModule.php` — modifié (+footerLinks)
+  - `resources/js/core/stores/nav.js` — modifié (+footer link state/getters)
+  - `resources/js/layouts/components/Footer.vue` — réécrit (consomme navStore, zéro hardcode)
+  - `tests/Feature/FooterLinkCapabilityTest.php` — créé (9 tests)
+  - i18n fr.json + en.json — clés `footer.support`, `footer.documentation`
+
+---
+
+## ADR-354 : Module Documentation (Knowledge Base)
+
+- **Date** : 2026-03-17
+- **Contexte** : Besoin d'un centre d'aide intégré pour réduire les demandes de support humain. La plateforme admin doit pouvoir gérer des topics et articles à destination des companies et/ou de l'admin. Les companies consultent la documentation en lecture seule avec un widget de feedback « Cet article vous a-t-il aidé ? ». L'audience (platform|company|both) permet de ne jamais exposer la documentation de gestion interne aux companies.
+- **Décision** :
+  - **3 modèles Core** : `DocumentationTopic` (titre, slug, icon, audience, published), `DocumentationArticle` (title, content HTML, excerpt, audience, published, unique topic_id+slug), `DocumentationFeedback` (article_id, user_type, user_id, helpful bool, comment — unique par user par article, upsert pattern)
+  - **Migration unique** : 3 tables (`documentation_topics`, `documentation_articles`, `documentation_feedbacks`), index FULLTEXT MySQL conditionnel (skip sur SQLite tests), cascadeOnDelete depuis topic vers articles vers feedbacks
+  - **2 modules distincts** : `core.documentation` (scope company, read-only, permission `documentation.view`) et `platform.documentation` (scope admin, CRUD, permissions `manage_documentation` + `view_documentation`)
+  - **Company controller** : 5 endpoints read-only — `index()` topics publiés audience=company|both, `show(slug)` topic+articles, `article(topicSlug, articleSlug)` détail+feedback stats, `search(q)` LIKE search, `feedback(id)` upsert POST
+  - **Platform controllers** : CRUD topics + CRUD articles + `feedbackStats()` trié par ratio négatif (collection-level filter pour compatibilité SQLite)
+  - **Frontend** : Pinia stores company (lecture) + platform (CRUD), Help Center landing (AppSearchHeader + VCard grid), topic detail (VList articles + ArticleView inline), feedback widget (pouce haut/bas + commentaire optionnel si non), platform CRUD (VDataTable + VNavigationDrawer)
+  - **UI** : adaptée des presets HelpCenterLandingKnowledgeBase + article detail — assemblage sans invention
+  - **i18n** : section `documentation.*` (35 clés) + `nav.platform.documentation` + `nav.company.documentation` en FR et EN
+  - **Footer links** : les deux modules déclarent des `footerLinks` via Capabilities (ADR-353)
+- **Conséquences** :
+  - Platform admin peut créer/gérer topics + articles avec audience targeting
+  - Companies voient uniquement les articles publiés pour leur audience
+  - Le feedback « Cet article vous a-t-il aidé ? » permet de mesurer la pertinence
+  - Platform admin peut consulter les stats feedback et identifier les articles à améliorer
+  - Le module est entièrement permission-gated et module-gated
+  - 21 tests dédiés dans DocumentationModuleTest (module registration, CRUD, audience isolation, feedback upsert, search, feedback stats, slug dedup)
+- **Fichiers** :
+  - `app/Core/Documentation/DocumentationTopic.php` — créé
+  - `app/Core/Documentation/DocumentationArticle.php` — créé
+  - `app/Core/Documentation/DocumentationFeedback.php` — créé
+  - `database/migrations/2026_03_17_100001_create_documentation_tables.php` — créé
+  - `app/Modules/Core/Documentation/DocumentationModule.php` — créé
+  - `app/Modules/Core/Documentation/Http/DocumentationController.php` — créé
+  - `app/Modules/Platform/Documentation/PlatformDocumentationModule.php` — créé
+  - `app/Modules/Platform/Documentation/Http/PlatformDocTopicController.php` — créé
+  - `app/Modules/Platform/Documentation/Http/PlatformDocArticleController.php` — créé
+  - `routes/company.php` — modifié (+5 routes documentation)
+  - `routes/platform.php` — modifié (+routes documentation)
+  - `resources/js/modules/company/documentation/documentation.store.js` — créé
+  - `resources/js/modules/platform-admin/documentation/documentation.store.js` — créé
+  - `resources/js/pages/company/documentation/index.vue` — créé (Help Center landing)
+  - `resources/js/pages/company/documentation/[slug].vue` — créé (topic detail + articles)
+  - `resources/js/pages/company/documentation/_ArticleView.vue` — créé (article + feedback widget)
+  - `resources/js/pages/platform/documentation/index.vue` — créé (topics CRUD)
+  - `resources/js/pages/platform/documentation/[slug].vue` — créé (topic detail + articles CRUD)
+  - `resources/js/plugins/i18n/locales/en.json` — modifié (+documentation keys)
+  - `resources/js/plugins/i18n/locales/fr.json` — modifié (+documentation keys)
+  - `tests/Feature/DocumentationModuleTest.php` — créé (21 tests)
+
+---
+
+### ADR-355 — Help Center SaaS : 4 audiences, 3 surfaces, groupes, recherche live
+
+**Date** : 2026-03-17
+
+**Contexte** :
+Le module Documentation initial (ADR-354) ne proposait que 2 audiences (platform/company), une UI générique sans preset Vuexy, et aucun accès public. L'utilisateur veut un vrai Help Center SaaS-grade avec accès public, recherche live, escalade support, et gouvernance platform complète.
+
+**Décisions** :
+1. **4 audiences** (`platform`, `company`, `public`, `both`) — `scopeForAudience()` avec match expression sur Topic, Article et Group
+2. **3 surfaces de rendu** : Public `/help-center` (layout blank, pas d'auth), Company `/company/documentation` (layout default), Platform `/platform/documentation` (layout platform + CRUD admin)
+3. **DocumentationGroup** — nouveau modèle pour organiser les topics en groupes visuels (titre, icône, audience, sort_order, is_published)
+4. **DocumentationSearchLog** — nouveau modèle pour tracker les recherches (query, results_count, audience, user_type, user_id) — permet aux admins platform de voir les "missed searches"
+5. **API publique** — `/api/public/help-center/*` (4 endpoints, throttle:30,1, aucune auth) pour landing, topic, article, search
+6. **Recherche live** — debounce 300ms côté front, recherche LIKE côté back, logging automatique dans SearchLog
+7. **Escalade support** — si 0 résultats : afficher "Ouvrir un ticket" (redirige `/company/support` pour company, `/login` pour public)
+8. **Feedback intelligent** — widget thumbs up/down + commentaire optionnel, visible connecté uniquement, stats feedback en onglet platform
+9. **Onglets platform** — 4 onglets : Topics, Groupes, Feedback, Recherches manquées
+10. **Activation rétroactive** — migration active `core.documentation` pour toutes les companies existantes + ajout dans `default_modules`
+11. **Preset Vuexy** — pages publiques et company utilisent le pattern Help Center / Knowledge Base de Vuexy (hero search, grille topics, layout 8/4 article)
+12. **Composable dédié** — `usePublicHelpCenter.js` pour les pages publiques (pas de store Pinia, appels API directs)
+
+**Conséquences** :
+- Documentation accessible sans connexion pour les articles audience=public|both
+- Platform admin peut cibler la création de contenu grâce aux stats de recherches manquées
+- Le feedback aide à identifier les articles à améliorer
+- Les topics orphelins (sans groupe) restent visibles dans une section "ungrouped"
+- La suppression d'un groupe orpheline ses topics, ne les supprime pas
+
+**Fichiers** :
+- `app/Core/Documentation/DocumentationGroup.php` — créé (modèle groupe)
+- `app/Core/Documentation/DocumentationSearchLog.php` — créé (modèle search log)
+- `database/migrations/2026_03_17_200001_add_groups_and_public_audience.php` — créé
+- `app/Core/Documentation/DocumentationTopic.php` — modifié (group_id, 4-audience scope)
+- `app/Core/Documentation/DocumentationArticle.php` — modifié (4-audience scope)
+- `app/Core/Jobdomains/JobdomainRegistry.php` — modifié (+core.documentation dans default_modules)
+- `app/Modules/Platform/Documentation/Http/PlatformDocGroupController.php` — créé (CRUD groupes)
+- `app/Modules/Platform/Documentation/Http/PlatformDocTopicController.php` — modifié (+public audience, +group_id)
+- `app/Modules/Platform/Documentation/Http/PlatformDocArticleController.php` — modifié (+public audience, +searchMisses)
+- `app/Modules/Infrastructure/Public/Http/PublicDocumentationController.php` — créé (API publique)
+- `app/Modules/Core/Documentation/Http/DocumentationController.php` — modifié (groupes + search log)
+- `routes/api.php` — modifié (+4 routes public help-center)
+- `routes/platform.php` — modifié (+6 routes groupes + search-misses)
+- `resources/js/composables/usePublicHelpCenter.js` — créé
+- `resources/js/modules/platform-admin/documentation/documentation.store.js` — modifié (+groupes, +searchMisses)
+- `resources/js/modules/company/documentation/documentation.store.js` — modifié (groupes + search format)
+- `resources/js/pages/help-center/index.vue` — créé (landing publique)
+- `resources/js/pages/help-center/[topicSlug]/index.vue` — créé (topic public)
+- `resources/js/pages/help-center/[topicSlug]/[articleSlug].vue` — créé (article public)
+- `resources/js/pages/help-center/_HelpCenterHeader.vue` — créé
+- `resources/js/pages/help-center/_HelpCenterKnowledgeBase.vue` — créé
+- `resources/js/pages/help-center/_HelpCenterFooter.vue` — créé
+- `resources/js/pages/help-center/_HelpCenterSearchResults.vue` — créé
+- `resources/js/pages/help-center/_ArticleFeedback.vue` — créé
+- `resources/js/pages/company/documentation/index.vue` — réécrit (Help Center style)
+- `resources/js/pages/company/documentation/[slug].vue` — réécrit (layout 8/4 + feedback)
+- `resources/js/pages/platform/documentation/index.vue` — réécrit (4 onglets admin)
+- `resources/js/plugins/i18n/locales/en.json` — modifié (+40 clés documentation)
+- `resources/js/plugins/i18n/locales/fr.json` — modifié (+40 clés documentation)
+- `tests/Feature/DocumentationModuleTest.php` — modifié (+11 tests, 32 total)
+
+---
+
+### ADR-356 — Help Center : surface unique, 3 audiences, API unifiée, footer nav
+
+**Date** : 2026-03-17
+
+**Contexte** :
+L'ADR-355 avait dupliqué le Help Center en 2 surfaces séparées (`/help-center/` public + `/company/documentation/` company) avec 4 audiences (`platform`, `company`, `public`, `both`). L'utilisateur veut une surface unique à `/help-center/` qui s'adapte à l'état d'auth, 3 audiences seulement, et le lien dans le footer (pas la sidebar).
+
+**Décisions** :
+1. **Surface unique** `/help-center/` avec `layout: 'blank'`, `public: true` — PAS de nav verticale, pas de pages company séparées
+2. **API unifiée** `/api/help-center/*` — détection automatique de l'audience via `Auth::guard('platform')` / `Auth::guard('web')` — 5 endpoints (index, search, topic, article, feedback)
+3. **3 audiences** : `platform` (admins only), `company` (company users only), `public` (visible à tous y compris anonymes + company users). La valeur `both` est supprimée.
+4. **Scope filtering** : anonymous → `public` seul, company user → `company` + `public`, platform admin → `platform` seul
+5. **Header adaptatif** : détection via cookies (`platformUserData`, `userData`) — boutons "Retour vers la plateforme" / "Retour vers mon espace" / "Se connecter"
+6. **Footer nav** : lien Help Center dans le footer (via `href: '/help-center'`), plus de navItem sidebar pour company
+7. **Suppression** : `PublicDocumentationController`, company `DocumentationController`, pages company documentation, store company documentation, composable `usePublicHelpCenter`
+8. **Migration** : `2026_03_17_300001` consolide `both` → `public` dans topics/articles/groups
+
+**Conséquences** :
+- Un seul point d'entrée pour le Help Center, adapté automatiquement au contexte
+- Les cookies persistent lors du switch de scope (même si les stores Pinia sont reset)
+- Le feedback nécessite une auth (401 si anonyme)
+- La recherche est loguée avec l'audience détectée
+
+**Fichiers** :
+- `app/Modules/Infrastructure/Public/Http/HelpCenterController.php` — créé (remplace 2 controllers)
+- `app/Modules/Infrastructure/Public/Http/PublicDocumentationController.php` — supprimé
+- `app/Modules/Core/Documentation/Http/DocumentationController.php` — supprimé
+- `database/migrations/2026_03_17_300001_consolidate_audience_values.php` — créé
+- `routes/api.php` — modifié (routes /api/help-center/*)
+- `routes/company.php` — modifié (suppression routes /documentation/*)
+- `app/Core/Documentation/DocumentationTopic.php` — modifié (scopeForAudience 3 audiences)
+- `app/Core/Documentation/DocumentationArticle.php` — modifié (idem)
+- `app/Core/Documentation/DocumentationGroup.php` — modifié (idem)
+- `app/Modules/Platform/Documentation/Http/PlatformDoc*Controller.php` — modifié (validation sans 'both')
+- `app/Modules/Core/Documentation/DocumentationModule.php` — modifié (footer href, suppression navItems)
+- `app/Modules/Platform/Documentation/PlatformDocumentationModule.php` — modifié (footer href)
+- `resources/js/composables/useHelpCenter.js` — créé (remplace usePublicHelpCenter)
+- `resources/js/composables/usePublicHelpCenter.js` — supprimé
+- `resources/js/modules/company/documentation/documentation.store.js` — supprimé
+- `resources/js/pages/help-center/_HelpCenterHeader.vue` — réécrit (auth cookies)
+- `resources/js/pages/help-center/_*.vue` — modifiés (suppression prop surface)
+- `resources/js/pages/company/documentation/` — supprimé (3 fichiers)
+- `resources/js/pages/platform/documentation/index.vue` — modifié (3 audiences)
+- `resources/js/plugins/i18n/locales/{en,fr}.json` — modifié (returnToPlatform, returnToSpace, footer.helpCenter)
+- `tests/Feature/DocumentationModuleTest.php` — réécrit (33 tests, 92 assertions)
+
+---
+
+### ADR-357 — Espaces par Archetype : `/dashboard` vs `/home`
+
+**Date** : 2026-03-17
+**Statut** : Implémenté
+
+**Contexte** :
+Tous les utilisateurs atterrissaient sur `/dashboard`, quel que soit leur rôle. Le routing binaire `is_administrative` ne reflétait pas la richesse des rôles jobdomain. Un dispatcher (non-admin) gère un centre d'opérations et devait voir le dashboard, pas l'espace terrain. Un chauffeur voyait le même écran qu'un gérant.
+
+**Décisions** :
+
+1. **Deux concepts séparés** :
+   - `is_administrative` → contrôle l'accès aux routes **structure** (nav filtering, surface guard). Inchangé.
+   - `archetype` → détermine le **workspace** (quelle page d'accueil). Nouveau rôle.
+
+2. **4 archetypes standard** (renommés depuis les anciens `driver`/`dispatcher`) :
+   - `management` → `/dashboard` (Manager, Gérant, Owner)
+   - `operations_center` → `/dashboard` (Dispatcher, Chef d'opérations)
+   - `individual_business` → `/dashboard` (Styliste, Artisan indépendant — futur)
+   - `field_worker` → `/home` (Chauffeur, Livreur, Technicien terrain)
+
+3. **WorkspaceResolver backend** : service dédié `WorkspaceResolver::resolve(?string $archetype): string`. Le frontend ne contient AUCUNE logique métier de résolution — il lit simplement le champ `workspace` renvoyé par le backend.
+
+4. **DashboardCatalogService** : service explicite `forArchetype(Company, ?string)` — inputs clairs, déterministe, testable. Remplace le filtrage implicite qui dépendait du contexte requête.
+
+5. **Widget `archetypes()`** : chaque widget déclare quels archetypes le voient (null = tous). Ajouté à l'interface `WidgetManifest`.
+
+6. **Migration safe** : mapping versionné (`ARCHETYPE_MAP`), détection d'archetypes inconnus, logging, rollback. Pas de wild UPDATE.
+
+7. **Clean URLs** : `sessionStorage` remplace `?redirect=` pour les deep links post-login. `resolvePostLoginRedirect(workspace)` gère la cascade sessionStorage → workspace landing.
+
+8. **Layout par rôle** : cascade enrichie user → role → company → smart builder. Colonne `company_role_id` ajoutée à `company_dashboard_layouts`. Chaque rôle jobdomain seed son propre layout par défaut.
+
+9. **Page `/home`** : workspace opérationnel utilisant le même `DashboardGrid` et `SurfaceEngine` que `/dashboard`, mais avec un layout compact (widgets empilés verticalement, pleine largeur).
+
+**Conséquences** :
+- Les chauffeurs atterrissent sur `/home` avec un espace adapté
+- Les dispatchers atterrissent sur `/dashboard` (operations_center ≠ field_worker)
+- Cross-guards : `/dashboard` → redirige field_worker vers `/home` et vice versa
+- Le backend est la source de vérité pour la résolution workspace
+- Extensible : ajouter un archetype = ajouter une entrée dans `HOME_ARCHETYPES`
+- Navigation inchangée (filtrage par `is_administrative` reste intact)
+
+**Fichiers** :
+- `database/migrations/2026_03_17_100001_standardize_role_archetypes.php` — créé (migration safe renommage)
+- `database/migrations/2026_03_17_100002_add_role_to_dashboard_layouts.php` — créé (company_role_id + unique composite)
+- `app/Core/Auth/WorkspaceResolver.php` — créé (résolution workspace)
+- `app/Modules/Dashboard/DashboardCatalogService.php` — créé (catalog explicite)
+- `app/Core/Auth/ReadModels/UserCompaniesReadModel.php` — modifié (expose archetype + workspace)
+- `app/Modules/Dashboard/Contracts/WidgetManifest.php` — modifié (archetypes())
+- `app/Modules/Dashboard/Widgets/*.php` — modifié (17 widgets, archetypes(): null)
+- `app/Modules/Core/Dashboard/Http/CompanyDashboardWidgetController.php` — modifié (DashboardCatalogService)
+- `app/Modules/Core/Dashboard/Http/CompanyDashboardLayoutController.php` — modifié (company_role_id)
+- `app/Modules/Dashboard/CompanyDashboardLayout.php` — modifié (resolveForUser cascade 3 niveaux)
+- `app/Core/Jobdomains/JobdomainRegistry.php` — modifié (archetypes renommés, dashboard_widgets, fix sync default_documents)
+- `app/Core/Jobdomains/JobdomainGate.php` — modifié (seeder layouts par rôle)
+- `app/Console/Commands/BackfillRoleArchetypesCommand.php` — modifié (nouveaux noms)
+- `resources/js/pages/home.vue` — créé (espace opérationnel)
+- `resources/js/modules/company/home/home.store.js` — créé (store SurfaceEngine)
+- `resources/js/core/stores/auth.js` — modifié (getter workspace)
+- `resources/js/plugins/1.router/guards.js` — modifié (sessionStorage, cross-guards)
+- `resources/js/pages/login.vue` — modifié (resolvePostLoginRedirect)
+- `resources/js/utils/safeRedirect.js` — modifié (resolvePostLoginRedirect)
+- `resources/js/pages/company/403.vue` — modifié (fallback workspace-aware)
+- `resources/js/plugins/i18n/locales/{fr,en}.json` — modifié (clés home.*)
+- `tests/Feature/TagBasedMandatoryTest.php` — modifié (nouveaux noms archetypes)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

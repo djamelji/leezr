@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Dashboard\Http;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Dashboard\DashboardCatalogService;
 use App\Modules\Dashboard\DashboardWidgetRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,11 @@ class CompanyDashboardWidgetController extends Controller
     public function catalog(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $widgets = DashboardWidgetRegistry::catalogForCompany($company);
+        $user = $request->user();
+        $membership = $user->membershipFor($company);
+        $archetype = $membership?->companyRole?->archetype;
+
+        $widgets = DashboardCatalogService::forArchetype($company, $archetype);
 
         return response()->json([
             'widgets' => collect($widgets)->map(fn ($w) => [

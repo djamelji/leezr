@@ -288,7 +288,7 @@ class JobdomainGate
             // The smart default builder (frontend) is only a fallback when no jobdomain default exists.
             $dashboardDefault = \App\Modules\Dashboard\JobdomainDashboardDefault::where('jobdomain_id', $jobdomain->id)->first();
 
-            if ($dashboardDefault && !\App\Modules\Dashboard\CompanyDashboardLayout::where('company_id', $company->id)->whereNull('user_id')->exists()) {
+            if ($dashboardDefault && !\App\Modules\Dashboard\CompanyDashboardLayout::where('company_id', $company->id)->whereNull('user_id')->whereNull('company_role_id')->exists()) {
                 \App\Modules\Dashboard\CompanyDashboardLayout::create([
                     'company_id' => $company->id,
                     'user_id' => null,
@@ -296,10 +296,64 @@ class JobdomainGate
                 ]);
             }
 
+            // ADR-357: Seed per-role dashboard layouts from jobdomain role definitions
+            foreach ($defaultRoles as $roleKey => $roleDef) {
+                if (empty($roleDef['dashboard_widgets'])) {
+                    continue;
+                }
+
+                $role = CompanyRole::where('company_id', $company->id)->where('key', $roleKey)->first();
+                if (!$role) {
+                    continue;
+                }
+
+                $tiles = self::buildLayoutFromWidgetKeys($roleDef['dashboard_widgets']);
+
+                \App\Modules\Dashboard\CompanyDashboardLayout::updateOrCreate(
+                    ['company_id' => $company->id, 'user_id' => null, 'company_role_id' => $role->id],
+                    ['layout_json' => $tiles]
+                );
+            }
+
             // Refresh the relation
             $company->load('jobdomains');
 
             return $jobdomain;
         });
+    }
+
+    /**
+     * ADR-357: Build a simple layout array from widget keys.
+     * Stacks widgets vertically, 12 columns wide, 4 rows high.
+     *
+     * @param  string[]  $widgetKeys
+     * @return array<array{key: string, x: int, y: int, w: int, h: int, scope: string, config: array}>
+     */
+    private static function buildLayoutFromWidgetKeys(array $widgetKeys): array
+    {
+        $tiles = [];
+        $y = 0;
+
+        foreach ($widgetKeys as $key) {
+            $widget = \App\Modules\Dashboard\DashboardWidgetRegistry::find($key);
+            $layout = $widget?->layout() ?? [];
+
+            $w = $layout['default_w'] ?? 4;
+            $h = $layout['default_h'] ?? 4;
+
+            $tiles[] = [
+                'key' => $key,
+                'x' => 0,
+                'y' => $y,
+                'w' => $w,
+                'h' => $h,
+                'scope' => 'company',
+                'config' => [],
+            ];
+
+            $y += $h;
+        }
+
+        return $tiles;
     }
 }

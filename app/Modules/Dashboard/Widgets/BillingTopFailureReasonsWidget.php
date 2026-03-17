@@ -99,4 +99,9 @@ class BillingTopFailureReasonsWidget implements WidgetManifest
             'reasons' => $dataset['top_failure_reasons'] ?? [],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

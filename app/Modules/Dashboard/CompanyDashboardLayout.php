@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyDashboardLayout extends Model
 {
-    protected $fillable = ['company_id', 'user_id', 'layout_json'];
+    protected $fillable = ['company_id', 'user_id', 'company_role_id', 'layout_json'];
 
     protected function casts(): array
     {
@@ -28,18 +28,41 @@ class CompanyDashboardLayout extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Resolve layout for a specific user in a company (ADR-326).
-     *
-     * Priority: user-specific → company default (user_id=NULL) → null.
-     */
-    public static function resolveForUser(int $companyId, int $userId): ?self
+    public function companyRole(): BelongsTo
     {
-        return static::where('company_id', $companyId)
+        return $this->belongsTo(\App\Company\RBAC\CompanyRole::class);
+    }
+
+    /**
+     * Resolve layout for a specific user in a company (ADR-326, ADR-357).
+     *
+     * Priority: user-specific → role-specific → company default → null.
+     */
+    public static function resolveForUser(int $companyId, int $userId, ?int $companyRoleId = null): ?self
+    {
+        // 1. User-specific layout
+        $userLayout = static::where('company_id', $companyId)
             ->where('user_id', $userId)
-            ->first()
-            ?? static::where('company_id', $companyId)
+            ->first();
+        if ($userLayout) {
+            return $userLayout;
+        }
+
+        // 2. Role-specific default
+        if ($companyRoleId) {
+            $roleLayout = static::where('company_id', $companyId)
                 ->whereNull('user_id')
+                ->where('company_role_id', $companyRoleId)
                 ->first();
+            if ($roleLayout) {
+                return $roleLayout;
+            }
+        }
+
+        // 3. Company default (user_id=NULL, company_role_id=NULL)
+        return static::where('company_id', $companyId)
+            ->whereNull('user_id')
+            ->whereNull('company_role_id')
+            ->first();
     }
 }

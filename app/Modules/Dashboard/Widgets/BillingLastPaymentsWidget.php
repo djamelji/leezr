@@ -99,4 +99,9 @@ class BillingLastPaymentsWidget implements WidgetManifest
             'items' => $dataset['last_payments'] ?? [],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

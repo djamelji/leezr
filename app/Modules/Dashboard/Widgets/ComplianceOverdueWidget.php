@@ -90,4 +90,9 @@ class ComplianceOverdueWidget implements WidgetManifest
     {
         return [];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

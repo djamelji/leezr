@@ -1,11 +1,20 @@
 <script setup>
 definePage({ meta: { surface: 'structure' } })
 
+import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyNav } from '@/composables/useCompanyNav'
 
 const { t } = useI18n()
 const router = useRouter()
+const auth = useAuthStore()
 const { firstAccessibleRoute } = useCompanyNav()
+
+// ADR-357: Fallback uses workspace-appropriate landing
+const fallbackRoute = computed(() =>
+  firstAccessibleRoute.value !== '/'
+    ? firstAccessibleRoute.value
+    : auth.workspace === 'home' ? '/home' : '/dashboard',
+)
 
 const countdown = ref(5)
 let timer = null
@@ -15,7 +24,7 @@ onMounted(() => {
     countdown.value--
     if (countdown.value <= 0) {
       clearInterval(timer)
-      router.replace(firstAccessibleRoute.value)
+      router.replace(fallbackRoute.value)
     }
   }, 1000)
 })
@@ -71,7 +80,7 @@ onUnmounted(() => {
           </VBtn>
           <VBtn
             color="primary"
-            :to="firstAccessibleRoute"
+            :to="fallbackRoute"
           >
             {{ t('forbidden.goToDashboard') }}
           </VBtn>

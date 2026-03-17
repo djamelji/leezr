@@ -291,9 +291,9 @@ class TagBasedMandatoryTest extends TestCase
         $driverRole->refresh();
         $dispatcherRole->refresh();
 
-        $this->assertEquals('driver', $driverRole->archetype);
+        $this->assertEquals('field_worker', $driverRole->archetype);
         $this->assertEquals([TagDictionary::DRIVING], $driverRole->required_tags);
-        $this->assertEquals('dispatcher', $dispatcherRole->archetype);
+        $this->assertEquals('operations_center', $dispatcherRole->archetype);
         $this->assertEquals([TagDictionary::DISPATCHING], $dispatcherRole->required_tags);
     }
 
@@ -304,7 +304,7 @@ class TagBasedMandatoryTest extends TestCase
             'key' => 'driver',
             'name' => 'Driver',
             'is_system' => true,
-            'archetype' => 'driver',
+            'archetype' => 'field_worker',
             'required_tags' => [TagDictionary::DRIVING],
         ]);
 

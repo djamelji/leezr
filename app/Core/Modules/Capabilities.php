@@ -13,6 +13,7 @@ final class Capabilities
         public readonly ?string $middlewareKey = null,
         public readonly array $headerWidgets = [],
         public readonly array $settingsPanels = [],
+        public readonly array $footerLinks = [],
     ) {}
 
     public function toArray(): array
@@ -23,6 +24,7 @@ final class Capabilities
             'middleware_key' => $this->middlewareKey,
             'header_widgets' => $this->headerWidgets,
             'settings_panels' => $this->settingsPanels,
+            'footer_links' => $this->footerLinks,
         ];
     }
 }

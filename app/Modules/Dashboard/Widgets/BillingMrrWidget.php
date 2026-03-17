@@ -103,4 +103,9 @@ class BillingMrrWidget implements WidgetManifest
             'meta' => $mrr === null ? ['not_supported' => true] : [],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

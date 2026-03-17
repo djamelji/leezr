@@ -3,7 +3,7 @@ const { t } = useI18n()
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useAppName } from '@/composables/useAppName'
-import { safeRedirect } from '@/utils/safeRedirect'
+import { resolvePostLoginRedirect } from '@/utils/safeRedirect'
 import { checkVersionOnMount } from '@/utils/versionCheck'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
@@ -67,8 +67,8 @@ const handleLogin = async () => {
     return
   }
 
-  // Login réussi — reload complet (le boot runtime se fera au chargement frais)
-  window.location.href = safeRedirect(route.query.redirect, '/dashboard')
+  // ADR-357: Login réussi — redirect based on backend-resolved workspace
+  window.location.href = resolvePostLoginRedirect(auth.workspace)
 }
 
 const handleVerify2fa = async () => {
@@ -86,7 +86,7 @@ const handleVerify2fa = async () => {
     return
   }
 
-  window.location.href = safeRedirect(route.query.redirect, '/dashboard')
+  window.location.href = resolvePostLoginRedirect(auth.workspace)
 }
 
 const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)

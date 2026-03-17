@@ -101,4 +101,9 @@ class BillingCashflowTrendWidget implements WidgetManifest
             'chart' => $dataset['cashflow_trend'] ?? ['labels' => [], 'series' => []],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

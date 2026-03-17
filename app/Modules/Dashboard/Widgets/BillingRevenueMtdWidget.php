@@ -100,4 +100,9 @@ class BillingRevenueMtdWidget implements WidgetManifest
             'revenue' => $dataset['revenue'] ?? 0,
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

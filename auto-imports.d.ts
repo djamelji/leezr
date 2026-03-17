@@ -137,6 +137,7 @@ declare global {
   const requiredValidator: typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']
   const resetTypography: typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']
   const resolveComponent: typeof import('vue')['resolveComponent']
+  const resolvePostLoginRedirect: typeof import('./resources/js/utils/safeRedirect.js')['resolvePostLoginRedirect']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('./resources/js/@core/utils/vuetify.js')['resolveVuetifyTheme']
@@ -253,6 +254,7 @@ declare global {
   const useGamepad: typeof import('@vueuse/core')['useGamepad']
   const useGenerateImageVariant: typeof import('./resources/js/@core/composable/useGenerateImageVariant.js')['useGenerateImageVariant']
   const useGeolocation: typeof import('@vueuse/core')['useGeolocation']
+  const useHelpCenter: typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']
   const useI18n: typeof import('vue-i18n')['useI18n']
   const useId: typeof import('vue')['useId']
   const useIdle: typeof import('@vueuse/core')['useIdle']
@@ -306,6 +308,7 @@ declare global {
   const useProjection: typeof import('@vueuse/math')['useProjection']
   const usePublicAddons: typeof import('./resources/js/composables/usePublicAddons.js')['usePublicAddons']
   const usePublicFields: typeof import('./resources/js/composables/usePublicFields.js')['usePublicFields']
+  const usePublicHelpCenter: typeof import('./resources/js/composables/usePublicHelpCenter.js')['usePublicHelpCenter']
   const usePublicMarkets: typeof import('./resources/js/composables/usePublicMarkets.js')['usePublicMarkets']
   const usePublicPlans: typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']
   const usePublicTheme: typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']
@@ -313,6 +316,7 @@ declare global {
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
   const useResponsiveLeftSidebar: typeof import('./resources/js/@core/composable/useResponsiveSidebar.js')['useResponsiveLeftSidebar']
+  const useReturnNavigation: typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']
   const useRound: typeof import('@vueuse/math')['useRound']
   const useRoute: typeof import('vue-router/auto')['useRoute']
   const useRouter: typeof import('vue-router/auto')['useRouter']
@@ -529,6 +533,7 @@ declare module 'vue' {
     readonly requiredValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']>
     readonly resetTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly resolvePostLoginRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['resolvePostLoginRedirect']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('./resources/js/@core/utils/vuetify.js')['resolveVuetifyTheme']>
@@ -644,6 +649,7 @@ declare module 'vue' {
     readonly useGamepad: UnwrapRef<typeof import('@vueuse/core')['useGamepad']>
     readonly useGenerateImageVariant: UnwrapRef<typeof import('./resources/js/@core/composable/useGenerateImageVariant.js')['useGenerateImageVariant']>
     readonly useGeolocation: UnwrapRef<typeof import('@vueuse/core')['useGeolocation']>
+    readonly useHelpCenter: UnwrapRef<typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
@@ -704,6 +710,7 @@ declare module 'vue' {
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useResponsiveLeftSidebar: UnwrapRef<typeof import('./resources/js/@core/composable/useResponsiveSidebar.js')['useResponsiveLeftSidebar']>
+    readonly useReturnNavigation: UnwrapRef<typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']>
     readonly useRound: UnwrapRef<typeof import('@vueuse/math')['useRound']>
     readonly useRoute: UnwrapRef<typeof import('vue-router/auto')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router/auto')['useRouter']>

@@ -90,4 +90,9 @@ class CompliancePendingWidget implements WidgetManifest
     {
         return [];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

@@ -8,6 +8,8 @@ export const useNavStore = defineStore('nav', {
     _companyGroups: [],
     _platformWidgets: [],
     _companyWidgets: [],
+    _platformFooterLinks: [],
+    _companyFooterLinks: [],
     _platformLoaded: false,
     _companyLoaded: false,
   }),
@@ -17,6 +19,8 @@ export const useNavStore = defineStore('nav', {
     companyGroups: state => state._companyGroups,
     platformWidgets: state => state._platformWidgets,
     companyWidgets: state => state._companyWidgets,
+    platformFooterLinks: state => state._platformFooterLinks,
+    companyFooterLinks: state => state._companyFooterLinks,
     platformLoaded: state => state._platformLoaded,
     companyLoaded: state => state._companyLoaded,
 
@@ -35,6 +39,7 @@ export const useNavStore = defineStore('nav', {
 
       this._platformGroups = data.groups
       this._platformWidgets = data.header_widgets || []
+      this._platformFooterLinks = data.footer_links || []
       this._platformLoaded = true
 
       return data.groups
@@ -52,6 +57,7 @@ export const useNavStore = defineStore('nav', {
 
       this._companyGroups = data.groups
       this._companyWidgets = data.header_widgets || []
+      this._companyFooterLinks = data.footer_links || []
       this._companyLoaded = true
 
       return data.groups
@@ -62,6 +68,8 @@ export const useNavStore = defineStore('nav', {
       this._companyGroups = []
       this._platformWidgets = []
       this._companyWidgets = []
+      this._platformFooterLinks = []
+      this._companyFooterLinks = []
       this._platformLoaded = false
       this._companyLoaded = false
     },

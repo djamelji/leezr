@@ -5,7 +5,6 @@ import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
 import { useWorldStore } from '@/core/stores/world'
 import { useAppToast } from '@/composables/useAppToast'
-import { safeRedirect } from '@/utils/safeRedirect'
 
 export const setupGuards = router => {
   router.beforeEach(async to => {
@@ -90,11 +89,27 @@ export const setupGuards = router => {
     const auth = useAuthStore()
 
     if (to.meta.unauthenticatedOnly) {
-      return auth.isLoggedIn ? '/dashboard' : undefined
+      // ADR-357: Redirect to correct workspace
+      return auth.isLoggedIn
+        ? (auth.workspace === 'home' ? '/home' : '/dashboard')
+        : undefined
     }
 
     if (!auth.isLoggedIn) {
-      return { path: '/login', query: { redirect: safeRedirect(to.fullPath) } }
+      // ADR-357: Clean URLs — sessionStorage instead of ?redirect=
+      if (to.fullPath !== '/dashboard' && to.fullPath !== '/home' && to.fullPath !== '/') {
+        sessionStorage.setItem('auth_redirect', to.fullPath)
+      }
+
+      return { path: '/login' }
+    }
+
+    // ADR-357: Workspace cross-guard — redirect to correct space
+    if (to.path === '/dashboard' && auth.workspace === 'home') {
+      return { path: '/home' }
+    }
+    if (to.path === '/home' && auth.workspace === 'dashboard') {
+      return { path: '/dashboard' }
     }
 
     // Surface guard — structure routes require tenant hydration + management level

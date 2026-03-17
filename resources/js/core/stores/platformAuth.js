@@ -34,7 +34,16 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
   actions: {
     _persistUser(user) {
       this._user = user
-      useCookie('platformUserData').value = user
+
+      // Strip loaded relations (roles.permissions) — they have their own cookies.
+      // Without this, the cookie exceeds 4KB and the browser silently drops it.
+      if (user) {
+        const { roles, permissions, ...userData } = user
+        useCookie('platformUserData').value = userData
+      }
+      else {
+        useCookie('platformUserData').value = null
+      }
     },
 
     _persistRoles(roles) {

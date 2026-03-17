@@ -90,4 +90,9 @@ class ComplianceRolesWidget implements WidgetManifest
     {
         return [];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

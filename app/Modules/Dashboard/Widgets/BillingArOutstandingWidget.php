@@ -117,4 +117,9 @@ class BillingArOutstandingWidget implements WidgetManifest
             'outstanding' => $dataset['outstanding'],
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

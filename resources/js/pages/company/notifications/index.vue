@@ -81,12 +81,14 @@ function timeAgo(dateStr) {
           class="me-2"
         />
         {{ t('notifications.inbox') }}
-        <VBadge
+        <VChip
           v-if="store.unreadCount > 0"
-          :content="store.unreadCount"
           color="error"
+          size="x-small"
           class="ms-2"
-        />
+        >
+          {{ store.unreadCount }}
+        </VChip>
       </VTab>
       <VTab value="preferences">
         <VIcon

@@ -41,6 +41,12 @@ export const useAuthStore = defineStore('auth', {
 
       return company?.is_administrative ? 'management' : 'operational'
     },
+    // ADR-357: Workspace resolved by backend — NO business logic in frontend
+    workspace: state => {
+      const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
+
+      return company?.workspace || 'dashboard'
+    },
   },
 
   actions: {

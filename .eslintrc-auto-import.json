@@ -392,6 +392,10 @@
     "startVersionPolling": true,
     "clearVersionState": true,
     "invoiceStatusColor": true,
-    "subscriptionStatusColor": true
+    "subscriptionStatusColor": true,
+    "usePublicHelpCenter": true,
+    "useHelpCenter": true,
+    "useReturnNavigation": true,
+    "resolvePostLoginRedirect": true
   }
 }

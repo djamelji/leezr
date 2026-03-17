@@ -26,3 +26,22 @@ export function safeRedirect(redirect, fallback = '/dashboard') {
 
   return redirect
 }
+
+/**
+ * ADR-357: Resolve post-login redirect.
+ * 1. Check sessionStorage for deep link (set by router guard)
+ * 2. Otherwise, redirect to workspace landing page
+ *
+ * @param {string} workspace — 'dashboard' or 'home' (from backend)
+ * @returns {string} — safe redirect path
+ */
+export function resolvePostLoginRedirect(workspace = 'dashboard') {
+  const savedRedirect = sessionStorage.getItem('auth_redirect')
+  sessionStorage.removeItem('auth_redirect')
+
+  if (savedRedirect) {
+    return safeRedirect(savedRedirect, workspace === 'home' ? '/home' : '/dashboard')
+  }
+
+  return workspace === 'home' ? '/home' : '/dashboard'
+}

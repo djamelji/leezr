@@ -587,8 +587,9 @@ class CompanyPermissionTest extends TestCase
             'shipments.manage_fields',
         ], $adminPerms);
 
-        // 13 operational permissions (includes core.theme + core.support)
+        // 14 operational permissions (includes core.theme + core.support + core.documentation)
         $this->assertEquals([
+            'documentation.view',
             'jobdomain.view',
             'members.invite',
             'members.view',

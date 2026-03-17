@@ -199,6 +199,9 @@ class PageModuleAlignmentTest extends TestCase
             'company-profile-tab' => $base . '/company/profile/[tab].vue',
             'platform-support-id' => $base . '/platform/support/[id].vue',
             'company-support-id' => $base . '/company/support/[id].vue',
+            'company-documentation-slug' => $base . '/company/documentation/[slug].vue',
+            'company-documentation-article' => null, // article view is inline via _ArticleView.vue sub-component
+            'platform-documentation-slug' => $base . '/platform/documentation/[slug].vue',
         ];
 
         if (isset($overrides[$routeName])) {

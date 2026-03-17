@@ -135,4 +135,9 @@ class BillingRefundRatioWidget implements WidgetManifest
             'ratio' => $ratio,
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

@@ -1,3 +1,27 @@
+<script setup>
+import { useNavStore } from '@/core/stores/nav'
+
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const navStore = useNavStore()
+
+const isPlatform = computed(() => !!route.meta?.platform)
+
+const footerLinks = computed(() => {
+  const links = isPlatform.value
+    ? navStore.platformFooterLinks
+    : navStore.companyFooterLinks
+
+  return (links || []).slice().sort((a, b) => a.sortOrder - b.sortOrder)
+})
+
+const navigate = link => {
+  if (link.to) router.push(link.to)
+  else if (link.href) window.open(link.href, '_blank')
+}
+</script>
+
 <template>
   <div class="h-100 d-flex align-center justify-md-space-between justify-center">
     <!-- 👉 Footer: left content -->
@@ -19,11 +43,18 @@
       >leezr.com</a>
     </span>
     <!-- 👉 Footer: right content -->
-    <span class="d-md-flex gap-x-4 text-primary d-none">
-      <a href="#">Lien 1</a>
-      <a href="#">Lien 2</a>
-      <a href="#">Lien 3</a>
-      <a href="#">Lien 4</a>
+    <span
+      v-if="footerLinks.length"
+      class="d-md-flex gap-x-4 text-primary d-none"
+    >
+      <a
+        v-for="link in footerLinks"
+        :key="link.key"
+        class="cursor-pointer"
+        @click="navigate(link)"
+      >
+        {{ t(link.label) }}
+      </a>
     </span>
   </div>
 </template>

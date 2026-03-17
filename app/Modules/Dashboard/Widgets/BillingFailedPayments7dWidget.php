@@ -99,4 +99,9 @@ class BillingFailedPayments7dWidget implements WidgetManifest
             'count' => $dataset['failed_payments_7d'] ?? 0,
         ];
     }
+
+    public function archetypes(): ?array
+    {
+        return null;
+    }
 }

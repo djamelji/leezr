@@ -39,7 +39,7 @@ class JobdomainRegistry
                 'description' => 'Transport, fleet management, dispatch',
                 'landing_route' => '/',
                 'nav_profile' => 'logistique',
-                'default_modules' => ['core.theme', 'core.members', 'core.settings', 'logistics_shipments'],
+                'default_modules' => ['core.theme', 'core.members', 'core.settings', 'logistics_shipments', 'core.documentation'],
                 // ADR-169: default_fields only control activation + order.
                 // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
@@ -85,18 +85,18 @@ class JobdomainRegistry
                     ['code' => 'kbis', 'order' => 30],
                     ['code' => 'insurance_certificate', 'order' => 40],
                 ],
-                // ADR-170: Semantic archetypes for tag-based mandatory resolution
+                // ADR-170 + ADR-357: Semantic archetypes for tag-based mandatory + workspace resolution
                 'archetypes' => [
-                    'driver' => ['label' => 'Conducteur / Chauffeur', 'default_tags' => [TagDictionary::DRIVING]],
-                    'dispatcher' => ['label' => 'Exploitant / Dispatcher', 'default_tags' => [TagDictionary::DISPATCHING]],
+                    'field_worker' => ['label' => 'Conducteur / Chauffeur', 'default_tags' => [TagDictionary::DRIVING]],
+                    'operations_center' => ['label' => 'Exploitant / Dispatcher', 'default_tags' => [TagDictionary::DISPATCHING]],
                     'management' => ['label' => 'Manager / Direction', 'default_tags' => [TagDictionary::MANAGEMENT]],
-                    'operational' => ['label' => 'Opérationnel', 'default_tags' => []],
                 ],
                 'default_roles' => [
                     'manager' => [
                         'name' => 'Manager',
                         'archetype' => 'management',
                         'is_administrative' => true,
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
@@ -140,8 +140,9 @@ class JobdomainRegistry
                     ],
                     'dispatcher' => [
                         'name' => 'Dispatcher',
-                        'archetype' => 'dispatcher',
+                        'archetype' => 'operations_center',
                         'is_administrative' => false,
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access',
@@ -184,7 +185,8 @@ class JobdomainRegistry
                     ],
                     'driver' => [
                         'name' => 'Driver',
-                        'archetype' => 'driver',
+                        'archetype' => 'field_worker',
+                        'dashboard_widgets' => ['compliance.rate'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access',
@@ -228,6 +230,7 @@ class JobdomainRegistry
                         'name' => 'Operations Manager',
                         'archetype' => 'management',
                         'is_administrative' => true,
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
@@ -320,6 +323,7 @@ class JobdomainRegistry
                     'default_modules' => $definition['default_modules'] ?? [],
                     'default_fields' => $mergedFields,
                     'default_roles' => $definition['default_roles'] ?? [],
+                    'default_documents' => $definition['default_documents'] ?? [],
                 ],
             );
         }

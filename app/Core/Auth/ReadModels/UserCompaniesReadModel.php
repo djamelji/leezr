@@ -2,6 +2,7 @@
 
 namespace App\Core\Auth\ReadModels;
 
+use App\Core\Auth\WorkspaceResolver;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\User;
 
@@ -30,15 +31,19 @@ class UserCompaniesReadModel
             ];
 
             if ($membership->companyRole) {
+                $archetype = $membership->companyRole->archetype;
                 $data['company_role'] = [
                     'id' => $membership->companyRole->id,
                     'key' => $membership->companyRole->key,
                     'name' => $membership->companyRole->name,
                     'is_administrative' => (bool) $membership->companyRole->is_administrative,
+                    'archetype' => $archetype,
                     'permissions' => $membership->companyRole->permissions->pluck('key')->values(),
                 ];
+                $data['workspace'] = WorkspaceResolver::resolve($archetype);
             } else {
                 $data['company_role'] = null;
+                $data['workspace'] = 'dashboard';
             }
 
             return $data;

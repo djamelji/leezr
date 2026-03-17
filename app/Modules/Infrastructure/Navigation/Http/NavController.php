@@ -2,6 +2,7 @@
 
 namespace App\Modules\Infrastructure\Navigation\Http;
 
+use App\Core\Navigation\FooterLinkBuilder;
 use App\Core\Navigation\HeaderWidgetBuilder;
 use App\Core\Navigation\NavBuilder;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class NavController
         return response()->json([
             'groups' => NavBuilder::forAdmin($permissions),
             'header_widgets' => HeaderWidgetBuilder::forAdmin($permissions),
+            'footer_links' => FooterLinkBuilder::forAdmin($permissions),
         ]);
     }
 
@@ -65,6 +67,7 @@ class NavController
         return response()->json([
             'groups' => NavBuilder::forCompany($company, $permissions, $roleLevel),
             'header_widgets' => HeaderWidgetBuilder::forCompany($company, $permissions),
+            'footer_links' => FooterLinkBuilder::forCompany($company, $permissions),
         ]);
     }
 }
