@@ -39,6 +39,22 @@ const WIDGET_PROFILES = {
   // Company compliance — List
   'compliance.roles': 'list',
   'compliance.types': 'list',
+
+  // Company onboarding + plan (ADR-372)
+  'onboarding.setup': 'kpi',
+  'billing.plan_badge': 'kpi',
+
+  // Operations — shipment KPIs (ADR-374)
+  'shipments.today': 'kpi',
+  'shipments.in_transit': 'kpi',
+  'shipments.late': 'kpi',
+  'shipments.unassigned': 'kpi',
+  'drivers.active': 'kpi',
+
+  // Operations — delivery KPIs (ADR-374)
+  'deliveries.my_today': 'kpi',
+  'deliveries.next': 'kpi',
+  'deliveries.completed_today': 'kpi',
 }
 
 /**

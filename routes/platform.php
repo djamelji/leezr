@@ -411,11 +411,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Bundles CRUD
         Route::get('/translations', [TranslationController::class, 'index']);
-        Route::get('/translations/{locale}/{namespace}', [TranslationController::class, 'show']);
         Route::put('/translations/{id}', [TranslationController::class, 'update']);
         Route::post('/translations/import-preview', [TranslationController::class, 'importPreview']);
         Route::post('/translations/import-apply', [TranslationController::class, 'importApply']);
         Route::get('/translations/export/{locale}', [TranslationController::class, 'export']);
+        Route::get('/translations/{locale}/{namespace}', [TranslationController::class, 'show']);
 
         // Market overrides
         Route::get('/translations/overrides/{marketKey}/{locale}', [OverrideController::class, 'index']);

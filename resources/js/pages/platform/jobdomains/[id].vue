@@ -2,6 +2,7 @@
 import { usePlatformJobdomainsStore } from '@/modules/platform-admin/jobdomains/jobdomains.store'
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import DocumentScopeChip from '@/views/shared/documents/DocumentScopeChip.vue'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
@@ -22,6 +23,7 @@ const router = useRouter()
 const jobdomainsStore = usePlatformJobdomainsStore()
 const settingsStore = usePlatformSettingsStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -319,7 +321,14 @@ const createFieldInline = async () => {
 
 const deleteFieldInline = async field => {
   if (!field.id || field.is_system) return
-  if (!confirm(t('platformJobdomains.confirmDeleteField', { label: field.label }))) return
+  const ok = await confirm({
+    question: t('platformJobdomains.confirmDeleteField', { label: field.label }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok) return
 
   try {
     await jobdomainsStore.deleteField(field.id)
@@ -703,7 +712,14 @@ const handleRoleDrawerSubmit = async () => {
 }
 
 const deletePresetRole = async role => {
-  if (!confirm(t('platformJobdomains.confirmRemoveRole', { name: role.name })))
+  const ok2 = await confirm({
+    question: t('platformJobdomains.confirmRemoveRole', { name: role.name }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok2)
     return
 
   const current = { ...(jobdomain.value.default_roles || {}) }
@@ -2512,5 +2528,7 @@ onMounted(async () => {
         </VCard>
       </VDialog>
     </template>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

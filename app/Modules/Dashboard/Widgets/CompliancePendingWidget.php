@@ -73,7 +73,7 @@ class CompliancePendingWidget implements WidgetManifest
 
     public function permissions(): array
     {
-        return [];
+        return ['members.view'];
     }
 
     public function capabilities(): array

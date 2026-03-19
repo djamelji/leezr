@@ -166,13 +166,15 @@ class DashboardGridV2Test extends TestCase
         $platformWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'platform');
         $this->assertEmpty($platformWidgets, 'Company catalog must exclude platform-audience widgets.');
         $companyWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'company');
-        $this->assertCount(5, $companyWidgets, 'Company catalog must include compliance widgets (ADR-327).');
+        $this->assertCount(7, $companyWidgets, 'Company catalog must include company-audience widgets: 5 compliance + onboarding + plan badge (ADR-327, ADR-372).');
     }
 
     // ── Company: batch resolve forces company scope ──
 
-    public function test_company_batch_resolve_forces_company_scope(): void
+    public function test_company_batch_resolve_rejects_platform_only_widgets(): void
     {
+        // ADR-371: batchResolve now filters through user's catalog.
+        // Platform-only widgets are not in the company catalog.
         $response = $this->actAsCompany($this->owner)
             ->postJson('/api/dashboard/widgets/data', [
                 'widgets' => [
@@ -183,8 +185,7 @@ class DashboardGridV2Test extends TestCase
         $response->assertOk();
 
         $result = $response->json('results.0');
-        $this->assertArrayHasKey('data', $result);
-        $this->assertEquals('company', $result['data']['scope']);
+        $this->assertEquals('not_found', $result['error']);
     }
 
     // ── Company: layout CRUD ──
@@ -263,12 +264,12 @@ class DashboardGridV2Test extends TestCase
 
     public function test_company_dashboard_layout_roundtrip(): void
     {
-        // 1. Catalog returns compliance widgets (billing are platform-audience only, ADR-327)
+        // 1. Catalog returns company-audience widgets (platform billing are excluded, ADR-327 + ADR-372)
         $catalog = $this->actAsCompany($this->owner)
             ->getJson('/api/dashboard/widgets/catalog');
 
         $catalog->assertOk();
-        $this->assertCount(5, $catalog->json('widgets'), 'Company catalog must include 5 compliance widgets.');
+        $this->assertCount(7, $catalog->json('widgets'), 'Company catalog must include 7 company-audience widgets (5 compliance + onboarding + plan badge).');
 
         // 2. Layout CRUD still works (seeded/jobdomain layouts may reference any widget)
         $layout = [

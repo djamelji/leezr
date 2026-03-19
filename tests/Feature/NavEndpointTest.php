@@ -338,7 +338,7 @@ class NavEndpointTest extends TestCase
             }
         }
 
-        // All active company module nav items (non-operationalOnly) should be present
+        // All active company module nav items should be present (ADR-373: operationalOnly removed)
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
             if ($manifest->visibility !== 'visible') {
                 continue;
@@ -349,11 +349,6 @@ class NavEndpointTest extends TestCase
             }
 
             foreach ($manifest->capabilities->navItems as $item) {
-                // Skip operationalOnly items for management roleLevel
-                if (!empty($item['operationalOnly'])) {
-                    continue;
-                }
-
                 $this->assertContains($item['key'], $navKeys,
                     "Company nav should include '{$item['key']}' from module '{$key}'");
             }

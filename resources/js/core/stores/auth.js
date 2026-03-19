@@ -4,6 +4,7 @@ import { applyTheme } from '@/composables/useApplyTheme'
 import { useThemeStore } from '@/modules/core/theme/theme.store'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
+import { cacheClear } from '@/core/runtime/cache'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -116,6 +117,7 @@ export const useAuthStore = defineStore('auth', {
       applyTheme(data.ui_theme, data.theme_preference)
       useThemeStore().init(data.theme_preference, 'company')
       this._sessionConfig = data.ui_session ?? null
+      cacheClear() // Clear stale SWR cache before fetching new user's companies
       await this.fetchMyCompanies()
 
       return data
@@ -131,6 +133,7 @@ export const useAuthStore = defineStore('auth', {
       applyTheme(data.ui_theme, data.theme_preference)
       useThemeStore().init(data.theme_preference, 'company')
       this._sessionConfig = data.ui_session ?? null
+      cacheClear() // Clear stale SWR cache before fetching new user's companies
       await this.fetchMyCompanies()
 
       return data
@@ -148,6 +151,7 @@ export const useAuthStore = defineStore('auth', {
       this._companies = []
       this._persistCompanyId(null)
       this._hydrated = false
+      cacheClear() // Prevent stale SWR cache from serving old user's data after re-login
       postBroadcast('logout')
     },
 

@@ -33,6 +33,22 @@ const map = {
   ComplianceOverdue: defineAsyncComponent(() => import('@/views/company-dashboard/_OverdueWidget.vue')),
   ComplianceRoles: defineAsyncComponent(() => import('@/views/company-dashboard/_RolesWidget.vue')),
   ComplianceTypes: defineAsyncComponent(() => import('@/views/company-dashboard/_TypesWidget.vue')),
+
+  // Onboarding + Plan badge (ADR-372: pipeline-driven)
+  OnboardingSetup: defineAsyncComponent(() => import('@/pages/company/dashboard/_OnboardingWidget.vue')),
+  PlanBadge: defineAsyncComponent(() => import('@/pages/company/dashboard/_PlanBadgeWidget.vue')),
+
+  // Operations — shipment KPIs (ADR-374)
+  ShipmentsToday: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsTodayWidget.vue')),
+  ShipmentsInTransit: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsInTransitWidget.vue')),
+  ShipmentsLate: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsLateWidget.vue')),
+  ShipmentsUnassigned: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsUnassignedWidget.vue')),
+  DriversActive: defineAsyncComponent(() => import('@/views/company-dashboard/_DriversActiveWidget.vue')),
+
+  // Operations — delivery KPIs (ADR-374)
+  DeliveriesMyToday: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesMyTodayWidget.vue')),
+  DeliveriesNext: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesNextWidget.vue')),
+  DeliveriesCompletedToday: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesCompletedTodayWidget.vue')),
 }
 
 export function resolveWidgetComponent(componentKey) {

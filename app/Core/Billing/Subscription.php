@@ -21,7 +21,7 @@ class Subscription extends Model
     const TRANSITIONS = [
         'pending_payment' => ['active', 'trialing'],
         'pending'         => ['active', 'expired', 'rejected'],
-        'trialing'        => ['active', 'past_due', 'cancelled', 'suspended'],
+        'trialing'        => ['active', 'past_due', 'cancelled', 'suspended', 'expired'],
         'active'          => ['past_due', 'cancelled', 'suspended', 'expired'],
         'past_due'        => ['active', 'suspended', 'cancelled'],
         'suspended'       => ['active'],

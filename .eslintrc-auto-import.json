@@ -396,6 +396,9 @@
     "usePublicHelpCenter": true,
     "useHelpCenter": true,
     "useReturnNavigation": true,
-    "resolvePostLoginRedirect": true
+    "resolvePostLoginRedirect": true,
+    "useSessionExpired": true,
+    "useConfirm": true,
+    "useGlobalLoading": true
   }
 }

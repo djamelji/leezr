@@ -147,6 +147,22 @@ class StripeWebhookSecurityTest extends TestCase
         $this->assertDatabaseCount('webhook_events', 1);
     }
 
+    public function test_rejects_missing_webhook_secret(): void
+    {
+        // Clear both config and database secret
+        config(['billing.stripe.webhook_secret' => null]);
+        PlatformPaymentModule::where('provider_key', 'stripe')
+            ->update(['credentials' => null]);
+
+        $payload = $this->stripePayload();
+        $signature = 't='.time().',v1=fake_signature';
+
+        $response = $this->postStripeWebhook($payload, $signature);
+
+        $response->assertStatus(400);
+        $response->assertJsonFragment(['message' => 'Stripe webhook secret not configured.']);
+    }
+
     public function test_refund_calls_stripe_api_success(): void
     {
         $adapter = new class extends StripePaymentAdapter

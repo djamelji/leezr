@@ -3,10 +3,12 @@ import { useConfigStore } from '@core/stores/config'
 import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import { useSessionGovernance } from '@/composables/useSessionGovernance'
+import { useSessionExpired } from '@/composables/useSessionExpired'
 import { useAuthStore } from '@/core/stores/auth'
 import { useRuntimeStore, bootMachine } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
 import SessionTimeoutWarning from './components/SessionTimeoutWarning.vue'
+import SessionExpiredDialog from './components/SessionExpiredDialog.vue'
 
 const DefaultLayoutWithHorizontalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithHorizontalNav.vue'))
 const DefaultLayoutWithVerticalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithVerticalNav.vue'))
@@ -25,6 +27,7 @@ injectSkinClasses()
 const auth = useAuthStore()
 const runtime = useRuntimeStore()
 const session = useSessionGovernance()
+const { isSessionExpired, loginUrl } = useSessionExpired()
 
 watch(() => [bootMachine.isReady.value, auth.sessionConfig], ([ready, config]) => {
   if (ready && config) {
@@ -82,6 +85,11 @@ watch([
     :is-dialog-visible="session.isWarningVisible.value"
     :remaining-seconds="session.remainingSeconds.value"
     @extend="session.extendSession"
+  />
+
+  <SessionExpiredDialog
+    :is-dialog-visible="isSessionExpired"
+    :login-url="loginUrl"
   />
 </template>
 

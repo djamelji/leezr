@@ -155,13 +155,21 @@ class ModuleRegistry
     public static function resolveBundles(array $bundleKeys): array
     {
         $permissionKeys = [];
+        $resolvedBundleKeys = [];
 
         foreach (static::forScope('company') as $manifest) {
             foreach ($manifest->bundles as $bundle) {
                 if (in_array($bundle['key'], $bundleKeys, true)) {
                     $permissionKeys = array_merge($permissionKeys, $bundle['permissions']);
+                    $resolvedBundleKeys[] = $bundle['key'];
                 }
             }
+        }
+
+        // ADR-375: Log unknown bundle keys for drift detection
+        $unknownBundles = array_diff($bundleKeys, $resolvedBundleKeys);
+        if (! empty($unknownBundles)) {
+            \Illuminate\Support\Facades\Log::warning('[ModuleRegistry] Unknown bundle keys: ' . implode(', ', $unknownBundles));
         }
 
         return array_unique($permissionKeys);

@@ -20,8 +20,10 @@ class CompanyDashboardWidgetController extends Controller
         $user = $request->user();
         $membership = $user->membershipFor($company);
         $archetype = $membership?->companyRole?->archetype;
+        $isOwner = $user->isOwnerOf($company);
+        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->permissions->pluck('key')->all() ?? []);
 
-        $widgets = DashboardCatalogService::forArchetype($company, $archetype);
+        $widgets = DashboardCatalogService::forArchetype($company, $archetype, $userPermissions, $isOwner);
 
         return response()->json([
             'widgets' => collect($widgets)->map(fn ($w) => [
@@ -45,6 +47,7 @@ class CompanyDashboardWidgetController extends Controller
      * POST /api/company/dashboard/widgets/data
      *
      * Batch resolve widgets. Always company-scoped (company_id from context).
+     * ADR-371: Only resolves widgets the user has access to (filtered by catalog).
      */
     public function batchResolve(Request $request): JsonResponse
     {
@@ -55,9 +58,27 @@ class CompanyDashboardWidgetController extends Controller
         ]);
 
         $company = $request->attributes->get('company');
+        $user = $request->user();
+        $membership = $user->membershipFor($company);
+        $archetype = $membership?->companyRole?->archetype;
+        $isOwner = $user->isOwnerOf($company);
+        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->permissions->pluck('key')->all() ?? []);
+
+        // Build allowed widget keys from filtered catalog
+        $allowedKeys = collect(DashboardCatalogService::forArchetype($company, $archetype, $userPermissions, $isOwner))
+            ->map(fn ($w) => $w->key())
+            ->all();
+
         $results = [];
 
         foreach ($validated['widgets'] as $req) {
+            // Reject widgets not in user's catalog
+            if (!in_array($req['key'], $allowedKeys, true)) {
+                $results[] = ['key' => $req['key'], 'error' => 'not_found'];
+
+                continue;
+            }
+
             $widget = DashboardWidgetRegistry::find($req['key']);
 
             if (!$widget) {

@@ -4,6 +4,7 @@
  */
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import { formatDate } from '@/utils/datetime'
 
 definePage({
@@ -19,6 +20,7 @@ const { t } = useI18n()
 const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
@@ -93,7 +95,14 @@ const headers = computed(() => [
 ])
 
 const suspend = async company => {
-  if (!confirm(t('companies.confirmSuspend', { name: company.name })))
+  const ok = await confirm({
+    question: t('companies.confirmSuspend', { name: company.name }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('companies.companySuspended'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   actionLoading.value = company.id
@@ -341,5 +350,7 @@ const fmtDate = dateStr => {
         />
       </VCardText>
     </VCard>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

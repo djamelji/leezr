@@ -1,6 +1,7 @@
 <script setup>
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
@@ -20,6 +21,7 @@ const props = defineProps({
 
 const { t } = useI18n()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const { formatFileSize, fileFormatIcon, fileFormatLabel } = useDocumentHelpers()
 
 const memberDocuments = ref([])
@@ -101,7 +103,14 @@ const handleDocUpload = async (code, file) => {
 }
 
 const handleDocDelete = async code => {
-  if (!confirm(t('documents.deleteConfirm'))) return
+  const ok = await confirm({
+    question: t('documents.deleteConfirm'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.deleted'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok) return
   try {
     await $api(`/company/members/${props.memberId}/documents/${code}`, { method: 'DELETE' })
     toast(t('documents.deleted'), 'success')
@@ -453,4 +462,6 @@ const handleViewerDownload = async () => {
     @reject="handleViewerReject"
     @download="handleViewerDownload"
   />
+
+  <ConfirmDialogComponent />
 </template>

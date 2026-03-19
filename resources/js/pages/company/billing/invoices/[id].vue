@@ -1,4 +1,12 @@
 <script setup>
+definePage({
+  meta: {
+    surface: 'structure',
+    module: 'core.billing',
+    navActiveLink: 'company-billing-tab',
+  },
+})
+
 import BrandLogo from '@/components/BrandLogo.vue'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'

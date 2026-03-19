@@ -71,11 +71,11 @@ export const $api = ofetch.create({
     const status = response.status
     const { toast } = useAppToast()
 
-    // 401 Unauthenticated — purge + broadcast + hard redirect
+    // 401 Unauthenticated — purge + broadcast + show expired dialog
     if (status === 401) {
       if (options._authCheck) return
 
-      // Broadcast session-expired to all tabs (synchronous — fires before redirect)
+      // Broadcast session-expired to all tabs
       const { postBroadcast } = await import('@/core/runtime/broadcast')
       postBroadcast('session-expired')
 
@@ -87,8 +87,9 @@ export const $api = ofetch.create({
         useRuntimeStore().teardown()
       } catch {}
 
-      // Hard redirect (not router.push) for full JS cleanup
-      window.location.href = '/login'
+      // Show expired dialog instead of hard redirect (ADR-358b)
+      const { useSessionExpired } = await import('@/composables/useSessionExpired')
+      useSessionExpired().trigger('/login')
 
       return
     }

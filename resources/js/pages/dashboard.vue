@@ -4,8 +4,6 @@ import { useCompanyDashboardStore } from '@/modules/company/dashboard/dashboard.
 import { useCompanyComplianceStore } from '@/modules/company/dashboard/compliance.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
-import PlanBadgeWidget from '@/pages/company/dashboard/_PlanBadgeWidget.vue'
-import OnboardingWidget from '@/pages/company/dashboard/_OnboardingWidget.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -61,10 +59,6 @@ const acceptSuggestion = suggestion => {
 
 <template>
   <div>
-    <OnboardingWidget />
-
-    <PlanBadgeWidget class="mb-6" />
-
     <!-- ═══ Suggestions Banner ═══ -->
     <VAlert
       v-if="pendingSuggestions.length"

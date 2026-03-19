@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', \App\Http\Middleware\CorrelationIdMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\AddBuildVersion::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\NoCacheHeaders::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\SecurityHeadersMiddleware::class);
 
         $middleware->statefulApi();
     })

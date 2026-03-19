@@ -2,6 +2,7 @@
 import CompanyDocumentActivationCatalog from '@/views/pages/company-settings/CompanyDocumentActivationCatalog.vue'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
   isDrawerOpen: {
@@ -19,13 +20,21 @@ const emit = defineEmits(['update:isDrawerOpen', 'createCustom'])
 const { t } = useI18n()
 const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const companyDocumentActivations = computed(() =>
   settingsStore.documentActivations?.company_documents || [],
 )
 
 const handleArchiveCustom = async code => {
-  if (!confirm(t('documents.confirmArchive')))
+  const ok = await confirm({
+    question: t('documents.confirmArchive'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.customTypeArchived'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -39,7 +48,14 @@ const handleArchiveCustom = async code => {
 }
 
 const handleDeleteCustom = async code => {
-  if (!confirm(t('documents.confirmDelete')))
+  const ok = await confirm({
+    question: t('documents.confirmDelete'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.customTypeDeleted'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -103,4 +119,6 @@ const handleClose = () => {
       </VCard>
     </div>
   </VNavigationDrawer>
+
+  <ConfirmDialogComponent />
 </template>

@@ -77,9 +77,10 @@ class CompanyNavRealtimeTest extends TestCase
 
     public function test_nav_reflects_permission_removal_on_next_request(): void
     {
-        // Step 1: Alice has billing.manage → should see 'plan' nav item
+        // ADR-376: Plan merged into Billing tab — check 'billing' nav item instead
+        // Step 1: Alice has billing.manage → should see 'billing' nav item
         $navBefore = $this->navKeysFor($this->alice);
-        $this->assertContains('plan', $navBefore, 'Alice should see plan (has billing.manage)');
+        $this->assertContains('billing', $navBefore, 'Alice should see billing (has billing.manage)');
 
         // Step 2: Owner removes billing.manage from Alice's role
         $billingPermId = CompanyPermission::where('key', 'billing.manage')->value('id');
@@ -87,27 +88,28 @@ class CompanyNavRealtimeTest extends TestCase
         $newPerms = array_values(array_filter($currentPerms, fn ($id) => $id !== $billingPermId));
         $this->role->permissions()->sync($newPerms);
 
-        // Step 3: Alice's VERY NEXT /api/nav call should NOT include 'plan'
+        // Step 3: Alice's VERY NEXT /api/nav call should NOT include 'billing'
         $navAfter = $this->navKeysFor($this->alice);
-        $this->assertNotContains('plan', $navAfter, 'After removing billing.manage, Alice should NOT see plan');
+        $this->assertNotContains('billing', $navAfter, 'After removing billing.manage, Alice should NOT see billing');
     }
 
     public function test_nav_reflects_permission_addition_on_next_request(): void
     {
+        // ADR-376: Plan merged into Billing tab — check 'billing' nav item instead
         // Start with a stripped-down role (no billing.manage)
         $nonBillingPerms = CompanyPermission::where('key', '!=', 'billing.manage')->pluck('id')->toArray();
         $this->role->permissions()->sync($nonBillingPerms);
 
-        // Step 1: Alice without billing.manage → no 'plan'
+        // Step 1: Alice without billing.manage → no 'billing'
         $navBefore = $this->navKeysFor($this->alice);
-        $this->assertNotContains('plan', $navBefore, 'Alice should NOT see plan without billing.manage');
+        $this->assertNotContains('billing', $navBefore, 'Alice should NOT see billing without billing.manage');
 
         // Step 2: Add billing.manage back
         $this->role->permissions()->sync(CompanyPermission::pluck('id')->toArray());
 
         // Step 3: Immediate next call reflects the change
         $navAfter = $this->navKeysFor($this->alice);
-        $this->assertContains('plan', $navAfter, 'After adding billing.manage, Alice should see plan');
+        $this->assertContains('billing', $navAfter, 'After adding billing.manage, Alice should see billing');
     }
 
     public function test_my_companies_reflects_role_level_change_on_next_request(): void

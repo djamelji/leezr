@@ -36,5 +36,8 @@ Schedule::command('billing:check-expiring-cards')->daily()->withoutOverlapping()
 // Trial expiry notifications — daily (ADR-272)
 Schedule::command('billing:check-trial-expiring')->daily()->withoutOverlapping();
 
+// Trial auto-expiration — daily (ADR-360)
+Schedule::command('billing:expire-trials')->daily()->withoutOverlapping();
+
 // Scheduled SEPA debits collection — daily at 06:00 (ADR-328 S2)
 Schedule::command('billing:collect-scheduled')->dailyAt('06:00')->withoutOverlapping();

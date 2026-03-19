@@ -30,4 +30,20 @@ return [
     \App\Modules\Dashboard\Widgets\ComplianceOverdueWidget::class,
     \App\Modules\Dashboard\Widgets\ComplianceRolesWidget::class,
     \App\Modules\Dashboard\Widgets\ComplianceTypesWidget::class,
+
+    // Onboarding + Plan (ADR-372: pipeline-driven, client-resolved)
+    \App\Modules\Dashboard\Widgets\OnboardingSetupWidget::class,
+    \App\Modules\Dashboard\Widgets\PlanBadgeWidget::class,
+
+    // Operations — shipment KPIs, server-resolved (ADR-374)
+    \App\Modules\Dashboard\Widgets\ShipmentsTodayWidget::class,
+    \App\Modules\Dashboard\Widgets\ShipmentsInTransitWidget::class,
+    \App\Modules\Dashboard\Widgets\ShipmentsLateWidget::class,
+    \App\Modules\Dashboard\Widgets\ShipmentsUnassignedWidget::class,
+    \App\Modules\Dashboard\Widgets\DriversActiveWidget::class,
+
+    // Operations — delivery KPIs, server-resolved (ADR-374)
+    \App\Modules\Dashboard\Widgets\DeliveriesMyTodayWidget::class,
+    \App\Modules\Dashboard\Widgets\DeliveriesNextWidget::class,
+    \App\Modules\Dashboard\Widgets\DeliveriesCompletedTodayWidget::class,
 ];

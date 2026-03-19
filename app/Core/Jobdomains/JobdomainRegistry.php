@@ -96,7 +96,7 @@ class JobdomainRegistry
                         'name' => 'Manager',
                         'archetype' => 'management',
                         'is_administrative' => true,
-                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles'],
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
@@ -104,6 +104,8 @@ class JobdomainRegistry
                             'roles.governance',
                             'jobdomain.info', 'jobdomain.management',
                             'shipments.operations', 'shipments.administration',
+                            'billing.management',
+                            'support.access',
                         ],
                         'fields' => [
                             // identity
@@ -141,14 +143,15 @@ class JobdomainRegistry
                     'dispatcher' => [
                         'name' => 'Dispatcher',
                         'archetype' => 'operations_center',
-                        'is_administrative' => false,
-                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending'],
+                        'is_administrative' => true, // ADR-373: surface access for structure pages (billing still blocked by use-permission)
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'shipments.unassigned', 'drivers.active'],
                         'bundles' => [
                             'theme.full',
-                            'members.team_access',
+                            'members.team_access', 'members.team_management',
                             'settings.company_info',
                             'shipments.operations',
                             'shipments.delivery',
+                            'support.access', // ADR-373: Dispatcher can view/create support tickets
                         ],
                         'fields' => [
                             // identity
@@ -186,7 +189,7 @@ class JobdomainRegistry
                     'driver' => [
                         'name' => 'Driver',
                         'archetype' => 'field_worker',
-                        'dashboard_widgets' => ['compliance.rate'],
+                        'dashboard_widgets' => ['compliance.rate', 'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access',
@@ -230,7 +233,7 @@ class JobdomainRegistry
                         'name' => 'Operations Manager',
                         'archetype' => 'management',
                         'is_administrative' => true,
-                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles'],
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active'],
                         'bundles' => [
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',

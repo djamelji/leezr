@@ -10,6 +10,7 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoicePayNowService;
 use App\Core\Billing\ScheduledDebit;
 use App\Core\Billing\ScheduledDebitService;
+use App\Modules\Core\Billing\UseCases\DeletePaymentMethodUseCase;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,48 +41,12 @@ class CompanyPaymentMethodController
     public function deleteCard(Request $request, int $id): JsonResponse
     {
         $company = $request->attributes->get('company');
+        $result = DeletePaymentMethodUseCase::execute($company, $id);
 
-        $profile = CompanyPaymentProfile::where('id', $id)
-            ->where('company_id', $company->id)
-            ->first();
-
-        if (! $profile) {
-            return response()->json(['message' => 'Card not found.'], 404);
-        }
-
-        // Guard: at least one payment method must remain
-        $totalMethods = CompanyPaymentProfile::where('company_id', $company->id)->count();
-        if ($totalMethods <= 1) {
-            return response()->json([
-                'message' => 'You must keep at least one payment method.',
-            ], 422);
-        }
-
-        // Stripe detach best-effort
-        if ($profile->provider_payment_method_id) {
-            try {
-                $adapter = app(StripePaymentAdapter::class);
-                $adapter->detachPaymentMethod($profile->provider_payment_method_id);
-            } catch (\Throwable $e) {
-                Log::warning('[billing] Stripe detach failed', [
-                    'profile_id' => $profile->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        $wasDefault = $profile->is_default;
-        $profile->delete();
-
-        // Promote next card if deleted was default
-        if ($wasDefault) {
-            CompanyPaymentProfile::where('company_id', $company->id)
-                ->orderBy('id')
-                ->first()
-                ?->update(['is_default' => true]);
-        }
-
-        return response()->json(['message' => 'Card removed.']);
+        return response()->json(
+            ['message' => $result['message']],
+            $result['code'],
+        );
     }
 
     public function setDefault(Request $request, int $id): JsonResponse

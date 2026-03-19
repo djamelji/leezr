@@ -186,7 +186,21 @@
     "copied": "Copied to clipboard",
     "next": "Next",
     "previous": "Previous",
-    "logout": "Logout"
+    "logout": "Logout",
+    "confirm": "Confirm",
+    "areYouSure": "Are you sure?",
+    "actionConfirmed": "Action confirmed",
+    "actionCancelled": "Action cancelled",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "inactive": "Inactive",
+    "none": "None",
+    "title": "Title",
+    "sortOrder": "Sort Order",
+    "createSuccess": "Created successfully.",
+    "updateSuccess": "Updated successfully.",
+    "deleteSuccess": "Deleted successfully.",
+    "operationCancelled": "Operation cancelled."
   },
   "platformAccount": {
     "myAccount": "My Account",
@@ -942,6 +956,7 @@
   "companyBilling": {
     "title": "Billing",
     "tabs": {
+      "plan": "Plan",
       "overview": "Overview",
       "paymentMethods": "Payment Methods",
       "invoices": "Invoices",
@@ -2357,7 +2372,10 @@
       "rememberMeNotice": "Remember Me will be available with the upcoming authentication upgrade (Passport/Sanctum).",
       "mustBeLessThanTimeout": "Must be less than idle timeout.",
       "failedToSave": "Failed to save session settings.",
-      "resetSuccess": "Session settings reset to defaults."
+      "resetSuccess": "Session settings reset to defaults.",
+      "expiredTitle": "Session Expired",
+      "expiredMessage": "Your session has expired due to inactivity. Please log in again to continue.",
+      "reconnect": "Log In Again"
     },
     "theme": {
       "title": "Platform Theme Settings",
@@ -2716,7 +2734,27 @@
     "failedToAssign": "Failed to assign shipment.",
     "failedToCreate": "Failed to create shipment.",
     "all": "All",
-    "shipment": "Shipment"
+    "shipment": "Shipment",
+    "widgets": {
+      "today": "Shipments Today",
+      "todayDesc": "Shipments scheduled for today",
+      "inTransit": "In Transit",
+      "inTransitDesc": "Shipments currently in transit",
+      "late": "Late Shipments",
+      "lateDesc": "In-transit shipments past scheduled time",
+      "unassigned": "Unassigned",
+      "unassignedDesc": "Shipments with no driver assigned",
+      "driversActive": "Active Drivers",
+      "driversActiveDesc": "Drivers currently on delivery",
+      "myToday": "My Deliveries Today",
+      "myTodayDesc": "Your deliveries scheduled for today",
+      "nextDelivery": "Next Delivery",
+      "nextDeliveryDesc": "Your next upcoming delivery",
+      "noUpcoming": "No upcoming delivery",
+      "completedToday": "Completed Today",
+      "completedTodayDesc": "Your completed deliveries today",
+      "noData": "No data available"
+    }
   },
   "deliveries": {
     "title": "My Deliveries",

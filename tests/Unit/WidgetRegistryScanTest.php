@@ -72,12 +72,12 @@ class WidgetRegistryScanTest extends TestCase
         $company->jobdomains()->attach($jobdomain->id);
 
         // Billing widgets are audience='platform' → must NOT appear in company catalog
-        // Compliance widgets are audience='company' → they DO appear (ADR-327)
+        // Company-audience widgets (compliance + onboarding + plan badge) DO appear (ADR-327, ADR-372)
         $catalog = DashboardWidgetRegistry::catalogForCompany($company);
         $platformWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'platform');
         $this->assertEmpty($platformWidgets, 'Platform-audience widgets must not appear in company catalog.');
         $companyWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'company');
-        $this->assertCount(5, $companyWidgets, 'Compliance widgets must appear in company catalog.');
+        $this->assertCount(7, $companyWidgets, 'Company-audience widgets (5 compliance + onboarding + plan badge) must appear in company catalog.');
     }
 
     public function test_widgets_have_audience_field(): void

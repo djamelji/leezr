@@ -19,7 +19,7 @@ class ShipmentsModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view', 'surface' => 'operations'],
-                    ['key' => 'my-deliveries', 'title' => 'My Deliveries', 'to' => ['name' => 'company-my-deliveries'], 'icon' => 'tabler-truck-delivery', 'permission' => 'shipments.view_own', 'surface' => 'operations', 'operationalOnly' => true],
+                    ['key' => 'my-deliveries', 'title' => 'My Deliveries', 'to' => ['name' => 'company-my-deliveries'], 'icon' => 'tabler-truck-delivery', 'permission' => 'shipments.view_own', 'surface' => 'operations'], // ADR-373: operationalOnly removed — permission is the generic filter
                 ],
                 routeNames: ['company-shipments', 'company-shipments-create', 'company-shipments-id', 'company-my-deliveries', 'company-my-deliveries-id'],
                 middlewareKey: 'logistics_shipments',

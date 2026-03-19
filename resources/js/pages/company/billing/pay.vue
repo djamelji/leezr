@@ -1,4 +1,12 @@
 <script setup>
+definePage({
+  meta: {
+    surface: 'structure',
+    module: 'core.billing',
+    navActiveLink: 'company-billing-tab',
+  },
+})
+
 import { loadStripe } from '@stripe/stripe-js'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { invoiceStatusColor } from '@/utils/billing'

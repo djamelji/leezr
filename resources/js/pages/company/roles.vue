@@ -5,6 +5,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import PermissionMatrix from '@/pages/shared/_PermissionMatrix.vue'
 
 const { t } = useI18n()
@@ -12,6 +13,7 @@ const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
 const membersStore = useMembersStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const isLoading = ref(true)
 const actionLoading = ref(null)
@@ -179,7 +181,14 @@ const handleDrawerSubmit = async () => {
 }
 
 const deleteRole = async role => {
-  if (!confirm(t('roles.confirmDelete', { name: role.name })))
+  const ok = await confirm({
+    question: t('roles.confirmDelete', { name: role.name }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   actionLoading.value = role.id
@@ -531,5 +540,7 @@ const deleteRole = async role => {
         </VCardText>
       </div>
     </VNavigationDrawer>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

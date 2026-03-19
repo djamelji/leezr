@@ -129,8 +129,11 @@ class PlatformBillingModuleToggleTest extends TestCase
         $catalog = DashboardWidgetRegistry::catalogForCompany($company);
         $keys = array_map(fn ($w) => $w->key(), $catalog);
 
-        $billingWidgets = array_filter($keys, fn ($k) => str_starts_with($k, 'billing.'));
-        $this->assertEmpty($billingWidgets, 'Platform billing widgets must never appear in company catalog');
+        // Platform-audience billing widgets must be excluded,
+        // but company-audience billing widgets (plan_badge) are allowed (ADR-372)
+        $platformBillingWidgets = array_filter($keys, fn ($k) => str_starts_with($k, 'billing.') && $k !== 'billing.plan_badge');
+        $this->assertEmpty($platformBillingWidgets, 'Platform billing widgets must never appear in company catalog');
+        $this->assertContains('billing.plan_badge', $keys, 'Company-audience billing widget plan_badge must appear in company catalog');
     }
 
     // ── C6: Module manifest declares type platform ──────────────

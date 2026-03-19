@@ -1,9 +1,17 @@
 <script setup>
+import { useGlobalLoading } from '@/composables/useGlobalLoading'
+
 const bufferValue = ref(20)
 const progressValue = ref(10)
 const isFallbackState = ref(false)
 const interval = ref()
 const showProgress = ref(false)
+
+// Global loading state (API calls via useGlobalLoading / useAsyncState)
+const globalLoading = useGlobalLoading()
+
+// Show the progress bar when either route transition OR global API loading is active
+const shouldShow = computed(() => showProgress.value || globalLoading.isLoading.value)
 
 watch([
   progressValue,
@@ -13,6 +21,24 @@ watch([
     progressValue.value = 82
   startBuffer()
 })
+
+// When global loading starts/stops (and no route transition is active), drive the bar
+watch(globalLoading.isLoading, active => {
+  if (isFallbackState.value) return // route transition owns the bar
+  if (active) {
+    progressValue.value = 10
+    startBuffer()
+  }
+  else {
+    progressValue.value = 100
+    setTimeout(() => {
+      clearInterval(interval.value)
+      progressValue.value = 0
+      bufferValue.value = 20
+    }, 300)
+  }
+})
+
 function startBuffer() {
   clearInterval(interval.value)
   interval.value = setInterval(() => {
@@ -46,9 +72,9 @@ defineExpose({
 </script>
 
 <template>
-  <!-- loading state via #fallback slot -->
+  <!-- loading state via #fallback slot OR global API loading -->
   <div
-    v-if="showProgress"
+    v-if="shouldShow"
     class="position-fixed"
     style="z-index: 9999; inset-block-start: 0; inset-inline: 0 0;"
   >

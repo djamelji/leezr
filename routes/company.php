@@ -53,10 +53,11 @@ Route::middleware(['company.access:use-module,core.theme', 'company.access:use-p
     Route::put('/theme-preference', [ThemePreferenceController::class, 'update']);
 });
 
-// ─── Theme role visibility (ADR-161) ──────────────
+// ─── Theme role visibility (ADR-161, ADR-371: PUT requires roles.manage) ──────────────
 Route::middleware(['company.access:use-module,core.theme', 'company.access:manage-structure'])->group(function () {
     Route::get('/theme/role-visibility', [ThemeRoleVisibilityController::class, 'index']);
-    Route::put('/theme/role-visibility', [ThemeRoleVisibilityController::class, 'update']);
+    Route::put('/theme/role-visibility', [ThemeRoleVisibilityController::class, 'update'])
+        ->middleware('company.access:use-permission,roles.manage');
 });
 
 // ─── Realtime SSE stream (ADR-125, no module gate) ────────
@@ -89,16 +90,18 @@ Route::delete('/2fa', [TwoFactorController::class, 'disable']);
 Route::post('/2fa/backup-codes', [TwoFactorController::class, 'regenerateBackupCodes']);
 Route::get('/2fa/status', [TwoFactorController::class, 'status']);
 
-// ─── Company plan (ADR-100, module-gated) ─────────────────
-Route::middleware('company.access:use-module,core.billing')->group(function () {
+// ─── Company plan & billing (ADR-100, ADR-371: billing.manage on ALL routes) ────
+Route::middleware(['company.access:use-module,core.billing', 'company.access:use-permission,billing.manage', 'throttle:60,1'])->group(function () {
+    // Plan change (manage-structure + billing.manage)
     Route::put('/company/plan', [CompanyPlanController::class, 'update'])
         ->middleware('company.access:manage-structure');
 
+    // Checkout (manage-structure + billing.manage)
     Route::post('/billing/checkout', BillingCheckoutController::class)
         ->middleware('company.access:manage-structure');
     Route::get('/billing/checkout/status', CheckoutStatusController::class);
 
-    // Billing details (ADR-124, ADR-135 LOT4)
+    // Billing details (ADR-124, ADR-135 LOT4 — billing.manage required for all reads)
     Route::get('/billing/overview', [CompanyBillingController::class, 'overview']);
     Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
     Route::get('/billing/invoices/outstanding', [InvoiceBatchPayController::class, 'listOutstanding']);
@@ -111,7 +114,7 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::get('/billing/invoices/{id}/pdf', [CompanyBillingController::class, 'invoicePdf']);
     Route::get('/billing/timeline', CompanyBillingTimelineController::class);
 
-    // Payment methods & invoice retry (ADR-225, manage-structure required)
+    // Payment methods & invoice retry (ADR-225, manage-structure + billing.manage)
     Route::post('/billing/setup-intent', [CompanyPaymentSetupController::class, 'createSetupIntent'])
         ->middleware('company.access:manage-structure');
     Route::post('/billing/confirm-setup-intent', [CompanyPaymentSetupController::class, 'confirmSetupIntent'])
@@ -126,13 +129,13 @@ Route::middleware('company.access:use-module,core.billing')->group(function () {
     Route::put('/billing/saved-cards/{id}/debit-day', [CompanyPaymentMethodController::class, 'setDebitDay'])
         ->middleware('company.access:manage-structure');
 
-    // Batch invoice payment (ADR-257)
+    // Batch invoice payment (ADR-257, manage-structure + billing.manage)
     Route::post('/billing/invoices/pay', [InvoiceBatchPayController::class, 'createPaymentIntent'])
         ->middleware('company.access:manage-structure');
     Route::post('/billing/invoices/pay/confirm', [InvoiceBatchPayController::class, 'confirmPayment'])
         ->middleware('company.access:manage-structure');
 
-    // Subscription mutations (ADR-135 D1, manage-structure required)
+    // Subscription mutations (ADR-135 D1, manage-structure + billing.manage)
     Route::post('/billing/plan-change', [SubscriptionMutationController::class, 'planChange'])
         ->middleware('company.access:manage-structure');
     Route::delete('/billing/plan-change', [SubscriptionMutationController::class, 'cancelPlanChange'])

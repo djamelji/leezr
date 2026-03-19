@@ -2,7 +2,7 @@
 import { useNotificationStore } from '@/core/stores/notification'
 import NotificationPreferences from './_NotificationPreferences.vue'
 
-definePage({ meta: { surface: 'structure', module: 'core.notifications' } })
+definePage({ meta: { module: 'core.notifications' } })
 
 const { t } = useI18n()
 const router = useRouter()

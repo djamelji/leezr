@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Core\Security\AlertTypeRegistry;
 use App\Core\Security\SecurityAlert;
 use App\Core\Security\SecurityDetector;
+use App\Platform\Models\PlatformUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,6 +14,19 @@ class SecurityDetectionTest extends TestCase
     use RefreshDatabase;
 
     protected bool $seed = true;
+
+    private PlatformUser $platformAdmin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->platformAdmin = PlatformUser::create([
+            'name' => 'Test Admin',
+            'email' => 'sectest-admin@test.com',
+            'password' => bcrypt('password'),
+        ]);
+    }
 
     private function redisAvailable(): bool
     {
@@ -163,7 +177,7 @@ class SecurityDetectionTest extends TestCase
 
         $alert->update([
             'status' => 'acknowledged',
-            'acknowledged_by' => 1,
+            'acknowledged_by' => $this->platformAdmin->id,
             'acknowledged_at' => now(),
         ]);
 
@@ -177,14 +191,14 @@ class SecurityDetectionTest extends TestCase
             'severity' => 'medium',
             'evidence' => ['test' => true],
             'status' => 'acknowledged',
-            'acknowledged_by' => 1,
+            'acknowledged_by' => $this->platformAdmin->id,
             'acknowledged_at' => now(),
             'created_at' => now(),
         ]);
 
         $alert->update([
             'status' => 'resolved',
-            'resolved_by' => 1,
+            'resolved_by' => $this->platformAdmin->id,
             'resolved_at' => now(),
         ]);
 

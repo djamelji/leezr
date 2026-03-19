@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { $api } from '@/utils/api'
+import { useAuthStore } from '@/core/stores/auth'
 import { createSurfaceEngine } from '@/core/surface-engine/useSurfaceEngine'
 
 export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
@@ -91,9 +92,14 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     //   2. Company default from jobdomain (DB, user_id=NULL) → backend resolveForUser fallback
     //   3. Smart default builder (frontend, fallback when no DB layout at all)
     // Only if fetchLayout succeeded — never overwrite on fetch error (ADR-326)
+    // Only auto-save if user can manage-structure (PUT /dashboard/layout requires it)
     if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
       buildSmartDefaultLayout()
-      await engine.saveLayout()
+
+      const auth = useAuthStore()
+      if (auth.hasPermission('manage-structure')) {
+        await engine.saveLayout()
+      }
     }
 
     await engine.resolveWidgets()

@@ -218,7 +218,12 @@ class NavBuilderTest extends TestCase
         $this->assertNotContains('company-profile', $opKeys, 'Operational should not see structure items');
     }
 
-    public function test_for_company_operational_only_hidden_from_management(): void
+    /**
+     * ADR-373: my-deliveries no longer has operationalOnly — permission is the generic filter.
+     * Management with bypass (null permissions) sees my-deliveries.
+     * Operational with bypass also sees my-deliveries.
+     */
+    public function test_for_company_my_deliveries_visible_for_both_role_levels(): void
     {
         $company = Company::create(['name' => 'OpOnly Co', 'slug' => 'oponly-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
@@ -237,17 +242,17 @@ class NavBuilderTest extends TestCase
             }
         }
 
-        // Management should NOT see operationalOnly items (e.g., my-deliveries)
+        // Management with bypass sees my-deliveries (ADR-373: operationalOnly removed)
         $mgmtGroups = NavBuilder::forCompany($company, null, 'management');
         $mgmtKeys = $this->extractItemKeys($mgmtGroups);
 
-        $this->assertNotContains('my-deliveries', $mgmtKeys, 'Management should not see operationalOnly items');
+        $this->assertContains('my-deliveries', $mgmtKeys, 'Management should see my-deliveries (operationalOnly removed, ADR-373)');
 
-        // Operational SHOULD see operationalOnly items (with permission bypass)
+        // Operational with bypass also sees my-deliveries
         $opGroups = NavBuilder::forCompany($company, null, 'operational');
         $opKeys = $this->extractItemKeys($opGroups);
 
-        $this->assertContains('my-deliveries', $opKeys, 'Operational should see operationalOnly items');
+        $this->assertContains('my-deliveries', $opKeys, 'Operational should see my-deliveries');
     }
 
     // ═══════════════════════════════════════════════════════

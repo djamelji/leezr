@@ -8,6 +8,7 @@ use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\InvoicePayNowService;
 use App\Core\Billing\PlanChangeExecutor;
 use App\Core\Billing\PlanChangeIntent;
+use App\Core\Billing\PlanChangeTimingResolver;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Core\Billing\SubscriptionCanceller;
@@ -57,19 +58,8 @@ class SubscriptionMutationController
             return response()->json(['message' => 'Already on this plan and interval.'], 422);
         }
 
-        $isIntervalChange = $subscription->plan_key === $validated['to_plan_key'];
-        $isUpgrade = PlanRegistry::level($validated['to_plan_key'])
-            > PlanRegistry::level($subscription->plan_key);
-
-        // Interval-only changes use their own timing setting
-        $policyTiming = $isIntervalChange
-            ? ($policy->interval_change_timing ?? 'immediate')
-            : ($isUpgrade ? $policy->upgrade_timing : $policy->downgrade_timing);
-
-        // ADR-287: end_of_period is meaningless during trial → override to immediate
-        if ($subscription->status === 'trialing' && $policyTiming === 'end_of_period') {
-            $policyTiming = 'immediate';
-        }
+        $resolved = PlanChangeTimingResolver::resolve($subscription, $validated['to_plan_key'], $toInterval, $policy);
+        $policyTiming = $resolved['timing'];
 
         $audit->logCompany($company->id, AuditAction::PLAN_CHANGE_REQUESTED, 'subscription', (string) $subscription->id, [
             'metadata' => [

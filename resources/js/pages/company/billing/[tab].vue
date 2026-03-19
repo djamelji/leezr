@@ -4,6 +4,8 @@ import BillingOverview from './_BillingOverview.vue'
 import BillingPaymentMethods from './_BillingPaymentMethods.vue'
 import BillingTimeline from './_BillingTimeline.vue'
 
+const BillingPlan = defineAsyncComponent(() => import('./_BillingPlan.vue'))
+
 definePage({
   meta: {
     surface: 'structure',
@@ -21,9 +23,10 @@ const activeTab = computed({
 })
 
 const tabs = computed(() => [
+  { title: t('companyBilling.tabs.plan'), icon: 'tabler-credit-card', tab: 'plan' },
   { title: t('companyBilling.tabs.overview'), icon: 'tabler-layout-dashboard', tab: 'overview' },
   { title: t('companyBilling.tabs.invoices'), icon: 'tabler-file-invoice', tab: 'invoices' },
-  { title: t('companyBilling.tabs.paymentMethods'), icon: 'tabler-credit-card', tab: 'payment-methods' },
+  { title: t('companyBilling.tabs.paymentMethods'), icon: 'tabler-credit-card-pay', tab: 'payment-methods' },
   { title: t('companyBilling.tabs.activity'), icon: 'tabler-history', tab: 'activity' },
 ])
 </script>
@@ -54,6 +57,10 @@ const tabs = computed(() => [
       class="mt-6 disable-tab-transition"
       :touch="false"
     >
+      <VWindowItem value="plan">
+        <BillingPlan />
+      </VWindowItem>
+
       <VWindowItem value="overview">
         <BillingOverview />
       </VWindowItem>

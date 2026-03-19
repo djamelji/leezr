@@ -2,6 +2,7 @@
 import { usePlatformFieldsStore } from '@/modules/platform-admin/fields/fields.store'
 import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 definePage({
   meta: {
@@ -16,6 +17,7 @@ const { t } = useI18n()
 const fieldsStore = usePlatformFieldsStore()
 const marketsStore = usePlatformMarketsStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const isLoading = ref(true)
 const scopeFilter = ref('')
 
@@ -168,7 +170,14 @@ const handleDefSubmit = async () => {
 
 const deleteDef = async def => {
   if (def.is_system) return
-  if (!confirm(t('platformFields.confirmDeleteDef', { code: def.code }))) return
+  const ok = await confirm({
+    question: t('platformFields.confirmDeleteDef', { code: def.code }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok) return
 
   try {
     const data = await fieldsStore.deleteFieldDefinition(def.id)
@@ -600,5 +609,7 @@ const scopeColor = scope => {
       </VCardText>
     </VNavigationDrawer>
     </Teleport>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

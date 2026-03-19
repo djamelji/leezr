@@ -1,6 +1,7 @@
 <script setup>
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import CompanyDocumentActivationCatalog from './CompanyDocumentActivationCatalog.vue'
 import CompanyDocumentsVault from './CompanyDocumentsVault.vue'
 import CreateCustomDocumentDialog from './CreateCustomDocumentDialog.vue'
@@ -24,6 +25,7 @@ const emit = defineEmits(['refreshActivations', 'refreshDocuments'])
 
 const { t } = useI18n()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const settingsStore = useCompanySettingsStore()
 
 const isCreateDialogVisible = ref(false)
@@ -41,7 +43,14 @@ const handleCreateCustom = async payload => {
 }
 
 const handleArchiveCustom = async code => {
-  if (!confirm(t('documents.confirmArchive')))
+  const ok = await confirm({
+    question: t('documents.confirmArchive'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.customTypeArchived'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -55,7 +64,14 @@ const handleArchiveCustom = async code => {
 }
 
 const handleDeleteCustom = async code => {
-  if (!confirm(t('documents.confirmDelete')))
+  const ok = await confirm({
+    question: t('documents.confirmDelete'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.customTypeDeleted'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -165,4 +181,6 @@ const hasVaultDocuments = computed(() => props.companyDocuments.length > 0)
     v-model:is-dialog-visible="isCreateDialogVisible"
     @created="handleCreateCustom"
   />
+
+  <ConfirmDialogComponent />
 </template>

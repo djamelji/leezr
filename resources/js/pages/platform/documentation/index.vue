@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformDocumentationStore } from '@/modules/platform-admin/documentation/documentation.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 definePage({
   meta: {
@@ -15,6 +16,7 @@ const { t } = useI18n()
 const router = useRouter()
 const docStore = usePlatformDocumentationStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const activeTab = ref('topics')
 const isLoading = ref(true)
@@ -201,7 +203,14 @@ const handleTopicSubmit = async () => {
 }
 
 const deleteTopic = async topic => {
-  if (!confirm(t('documentation.confirmDeleteTopic', { title: topic.title }))) return
+  const ok = await confirm({
+    question: t('documentation.confirmDeleteTopic', { title: topic.title }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok) return
   try {
     await docStore.deleteTopic(topic.id)
     toast(t('common.deleteSuccess'), 'success')
@@ -260,7 +269,14 @@ const handleGroupSubmit = async () => {
 }
 
 const deleteGroup = async group => {
-  if (!confirm(t('documentation.confirmDeleteGroup', { title: group.title }))) return
+  const ok = await confirm({
+    question: t('documentation.confirmDeleteGroup', { title: group.title }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok) return
   try {
     await docStore.deleteGroup(group.id)
     toast(t('common.deleteSuccess'), 'success')
@@ -717,5 +733,7 @@ const feedbackRatio = item => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

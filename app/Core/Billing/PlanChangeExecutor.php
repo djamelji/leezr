@@ -266,6 +266,21 @@ class PlanChangeExecutor
                         actorType: 'system',
                         idempotencyKey: "plan-change-credit-{$intent->id}",
                     );
+
+                    // ADR-358: Issue credit note document for downgrade proration
+                    $cn = CreditNoteIssuer::createDraft(
+                        company: $company,
+                        amount: $creditAmount,
+                        reason: $walletDesc,
+                        metadata: [
+                            'source' => 'plan_change_proration',
+                            'intent_id' => $intent->id,
+                            'subscription_id' => $subscription->id,
+                            'from_plan' => $intent->from_plan_key,
+                            'to_plan' => $intent->to_plan_key,
+                        ],
+                    );
+                    CreditNoteIssuer::issue($cn);
                 }
             }
 

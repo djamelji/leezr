@@ -364,4 +364,220 @@ class SupportTicketTest extends TestCase
 
         $this->assertEquals('open', $ticket->fresh()->status);
     }
+
+    // ── NEW: Enrichment tests (+10) ────────────────────────────
+
+    public function test_create_ticket_validation_rejects_missing_fields(): void
+    {
+        // Missing both subject and body
+        $this->actingAs($this->owner)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->postJson('/api/support/tickets', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['subject', 'body']);
+    }
+
+    public function test_create_ticket_validation_rejects_invalid_category(): void
+    {
+        $this->actingAs($this->owner)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->postJson('/api/support/tickets', [
+                'subject' => 'Test',
+                'body' => 'Body text',
+                'category' => 'nonexistent_category',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['category']);
+    }
+
+    public function test_platform_admin_can_update_ticket_priority(): void
+    {
+        $ticket = SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Priority test',
+            'priority' => 'normal',
+        ]);
+
+        $this->actingAs($this->admin, 'platform')
+            ->putJson("/api/platform/support/tickets/{$ticket->id}/priority", [
+                'priority' => 'urgent',
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['priority' => 'urgent']);
+
+        $this->assertEquals('urgent', $ticket->fresh()->priority);
+    }
+
+    public function test_platform_admin_can_filter_tickets_by_status(): void
+    {
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Open ticket',
+            'status' => 'open',
+        ]);
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Closed ticket',
+            'status' => 'closed',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'platform')
+            ->getJson('/api/platform/support/tickets?status=open')
+            ->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Open ticket', $response->json('data.0.subject'));
+    }
+
+    public function test_platform_admin_can_filter_tickets_by_priority(): void
+    {
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Urgent ticket',
+            'priority' => 'urgent',
+        ]);
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Low ticket',
+            'priority' => 'low',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'platform')
+            ->getJson('/api/platform/support/tickets?priority=urgent')
+            ->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Urgent ticket', $response->json('data.0.subject'));
+    }
+
+    public function test_platform_admin_can_search_tickets_by_subject(): void
+    {
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Billing issue with invoice',
+        ]);
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Technical bug report',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'platform')
+            ->getJson('/api/platform/support/tickets?search=invoice')
+            ->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Billing issue with invoice', $response->json('data.0.subject'));
+    }
+
+    public function test_platform_reply_auto_assigns_unassigned_ticket(): void
+    {
+        $ticket = SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Auto-assign test',
+            'assigned_to_platform_user_id' => null,
+        ]);
+
+        $this->actingAs($this->admin, 'platform')
+            ->postJson("/api/platform/support/tickets/{$ticket->id}/messages", [
+                'body' => 'Hello, we are looking into this.',
+            ])
+            ->assertStatus(201);
+
+        $fresh = $ticket->fresh();
+        $this->assertEquals($this->admin->id, $fresh->assigned_to_platform_user_id);
+        $this->assertEquals('waiting_customer', $fresh->status);
+    }
+
+    public function test_platform_admin_can_assign_ticket_to_another_admin(): void
+    {
+        $ticket = SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Delegate test',
+        ]);
+
+        $otherAdmin = PlatformUser::create([
+            'first_name' => 'Other',
+            'last_name' => 'Agent',
+            'email' => 'other-agent@test.com',
+            'password' => 'P@ssw0rd!Strong',
+        ]);
+
+        $this->actingAs($this->admin, 'platform')
+            ->putJson("/api/platform/support/tickets/{$ticket->id}/assign", [
+                'platform_user_id' => $otherAdmin->id,
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['assigned_to_platform_user_id' => $otherAdmin->id]);
+    }
+
+    public function test_company_user_can_view_single_ticket(): void
+    {
+        $ticket = SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Show detail test',
+            'category' => 'billing',
+            'priority' => 'high',
+        ]);
+
+        $this->actingAs($this->owner)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->getJson("/api/support/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonFragment(['subject' => 'Show detail test'])
+            ->assertJsonFragment(['category' => 'billing'])
+            ->assertJsonFragment(['priority' => 'high']);
+    }
+
+    public function test_close_records_closed_by_admin_and_resolved_at(): void
+    {
+        $ticket = SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Close tracking test',
+            'status' => 'in_progress',
+        ]);
+
+        $this->actingAs($this->admin, 'platform')
+            ->putJson("/api/platform/support/tickets/{$ticket->id}/close")
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'closed']);
+
+        $fresh = $ticket->fresh();
+        $this->assertEquals($this->admin->id, $fresh->closed_by_platform_user_id);
+        $this->assertNotNull($fresh->resolved_at);
+    }
+
+    public function test_company_user_can_filter_tickets_by_status(): void
+    {
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Open one',
+            'status' => 'open',
+        ]);
+        SupportTicket::create([
+            'company_id' => $this->company->id,
+            'created_by_user_id' => $this->owner->id,
+            'subject' => 'Resolved one',
+            'status' => 'resolved',
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->getJson('/api/support/tickets?status=resolved')
+            ->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Resolved one', $response->json('data.0.subject'));
+    }
 }

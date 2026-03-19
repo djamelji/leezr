@@ -8,6 +8,7 @@ import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -16,6 +17,7 @@ const settingsStore = useCompanySettingsStore()
 const jobdomainStore = useJobdomainStore()
 const router = useRouter()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const isDrawerOpen = ref(false)
 const errorMessage = ref('')
@@ -108,7 +110,14 @@ const handleMemberAdded = () => {
 }
 
 const removeMember = async member => {
-  if (!confirm(t('members.confirmRemove', { name: member.user.display_name })))
+  const ok = await confirm({
+    question: t('members.confirmRemove', { name: member.user.display_name }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('members.memberRemoved'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -1184,6 +1193,8 @@ const typeOptions = computed(() => [
         </VCardActions>
       </VCard>
     </VDialog>
+
+    <ConfirmDialogComponent />
   </div>
 </template>
 

@@ -3,6 +3,7 @@ import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.stor
 import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const { t } = useI18n()
 
@@ -20,6 +21,7 @@ const usersStore = usePlatformUsersStore()
 const rolesStore = usePlatformRolesStore()
 const platformAuthStore = usePlatformAuthStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
@@ -98,7 +100,14 @@ const handleDrawerSubmit = async () => {
 }
 
 const deleteUser = async user => {
-  if (!confirm(t('platformUsers.confirmDeleteUser', { name: user.display_name })))
+  const ok = await confirm({
+    question: t('platformUsers.confirmDeleteUser', { name: user.display_name }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   actionLoading.value = user.id
@@ -387,5 +396,7 @@ const onPageChange = async page => {
       </VCardText>
     </VNavigationDrawer>
     </Teleport>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

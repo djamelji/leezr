@@ -1,4 +1,5 @@
 <script setup>
+import DOMPurify from 'dompurify'
 import { useHelpCenter } from '@/composables/useHelpCenter'
 import { useReturnNavigation } from '@/composables/useReturnNavigation'
 import ArticleFeedback from '../_ArticleFeedback.vue'
@@ -29,6 +30,10 @@ const lastUpdated = computed(() => {
   const d = new Date(article.value.article.updated_at)
 
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+})
+
+const sanitizedContent = computed(() => {
+  return DOMPurify.sanitize(article.value?.article?.content ?? '')
 })
 </script>
 
@@ -64,7 +69,7 @@ const lastUpdated = computed(() => {
             <VDivider class="my-6" />
             <div
               class="mb-6 text-body-1 article-content"
-              v-html="article.article?.content"
+              v-html="sanitizedContent"
             />
 
             <!-- Feedback widget -->

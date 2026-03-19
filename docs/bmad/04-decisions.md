@@ -12336,4 +12336,631 @@ Tous les utilisateurs atterrissaient sur `/dashboard`, quel que soit leur rôle.
 
 ---
 
+### ADR-358 — Security Headers Middleware (Sprint 0 — Refondation)
+
+**Date** : 2026-03-18
+**Statut** : Implémenté
+
+**Contexte** :
+L'audit de refondation a identifié 5 security headers HTTP manquants sur toutes les réponses API :
+CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
+
+**Décisions** :
+1. Créer `SecurityHeadersMiddleware` dans le groupe `api` (affecte toutes les routes API)
+2. `X-Content-Type-Options: nosniff` — empêche le MIME-type sniffing
+3. `Referrer-Policy: strict-origin-when-cross-origin` — contrôle la fuite du referrer
+4. `Permissions-Policy: camera=(), microphone=(), geolocation=()` — restreint les APIs navigateur
+5. `Strict-Transport-Security` — production uniquement (max-age=1 an, includeSubDomains)
+6. `Content-Security-Policy` — whitelist explicite : self + Stripe (js.stripe.com, api.stripe.com) + Iconify API
+7. CSP autorise `unsafe-inline` et `unsafe-eval` pour Vue.js/Vuetify (restriction progressive ultérieure)
+
+**Conséquences** :
+- Toutes les réponses API incluent les 5 headers (4 en dev, 5 en prod)
+- Stripe Checkout/Elements fonctionnent grâce au whitelist CSP
+- HSTS absent en dev/staging pour éviter le lock HTTPS sur localhost
+
+**Fichiers** :
+- `app/Http/Middleware/SecurityHeadersMiddleware.php` — créé
+- `bootstrap/app.php` — ajout appendToGroup('api')
+- `tests/Feature/SecurityHeadersTest.php` — 8 tests (1 par header + edge cases)
+
+---
+
+### ADR-359 — Session Expired Dialog (Sprint 0 — Refondation)
+
+**Date** : 2026-03-18
+**Statut** : Implémenté
+
+**Contexte** :
+Quand un 401 survenait (session expirée côté serveur), l'utilisateur subissait un hard redirect
+vers `/login` sans explication. Ceci était désorientant, surtout après une longue inactivité.
+Le système avait déjà un `SessionTimeoutWarning` (countdown pré-expiration, ADR-074) mais
+aucun feedback post-expiration.
+
+**Décisions** :
+1. Créer `SessionExpiredDialog.vue` — dialog persistant avec message i18n + bouton "Se reconnecter"
+2. Créer composable `useSessionExpired` — flag global réactif (`isSessionExpired`, `loginUrl`, `trigger()`)
+3. Modifier les API interceptors (`api.js`, `platformApi.js`) : remplacer le hard redirect par `trigger(url)`
+4. Monter le dialog dans les deux layouts (`default.vue`, `platform.vue`)
+5. Le dialog redirige vers la bonne URL de login (`/login` ou `/platform/login`) au clic
+6. Le cleanup cookies + teardown runtime reste AVANT le dialog (pas de fuite de session)
+
+**Conséquences** :
+- L'utilisateur voit "Session expirée" avec explication AVANT d'être redirigé
+- UX cohérente entre company et platform (même dialog, URL différente)
+- Le hard redirect se fait au clic du bouton, pas automatiquement
+
+**Fichiers** :
+- `resources/js/layouts/components/SessionExpiredDialog.vue` — créé
+- `resources/js/composables/useSessionExpired.js` — créé
+- `resources/js/utils/api.js` — modifié (trigger au lieu de hard redirect)
+- `resources/js/utils/platformApi.js` — modifié (idem)
+- `resources/js/layouts/default.vue` — modifié (import + mount dialog)
+- `resources/js/layouts/platform.vue` — modifié (idem)
+- `resources/js/plugins/i18n/locales/fr.json` — +3 clés session.expired*
+- `resources/js/plugins/i18n/locales/en.json` — +3 clés session.expired*
+
+---
+
+### ADR-360 — Trial Auto-Expiration (2026-03-18)
+
+**Contexte** :
+Les subscriptions en statut `trialing` restaient indéfiniment dans cet état après expiration de `trial_ends_at`. Aucun mécanisme automatique ne les transitionnait vers `expired`. Le command `billing:check-trial-expiring` ne fait que notifier — il ne modifie pas le statut.
+
+**Décisions** :
+1. Créer `BillingExpireTrialsCommand` (`billing:expire-trials`) — exécuté daily
+2. Query : `status=trialing AND is_current=1 AND trial_ends_at IS NOT NULL AND trial_ends_at <= now()`
+3. Appelle `$subscription->markExpired()` pour chaque subscription trouvée
+4. Ajouter la transition `trialing → expired` dans `Subscription::TRANSITIONS` (manquante)
+5. Support `--dry-run` (pattern existant), `Isolatable` pour éviter concurrence
+6. Log channel `billing` pour chaque expiration
+
+**Conséquences** :
+- Les trials expirent automatiquement — plus de subscriptions trialing orphelines
+- La transition `trialing → expired` est désormais validée par la machine à états
+- Séparation claire : notification (check-trial-expiring) vs action (expire-trials)
+- Le schedule daily est suffisant (pas besoin de précision horaire)
+
+**Fichiers** :
+- `app/Console/Commands/BillingExpireTrialsCommand.php` — créé
+- `app/Core/Billing/Subscription.php` — modifié (TRANSITIONS: trialing +expired)
+- `routes/console.php` — modifié (schedule daily)
+- `tests/Feature/BillingTrialExpirationTest.php` — créé (8 tests)
+
+---
+
+### ADR-361 — Colonnes polymorphes intentionnelles (2026-03-18)
+
+**Contexte** :
+L'audit de refondation a identifié des colonnes `*_id` sans contrainte FK dans certaines tables. L'analyse montre que ces colonnes sont **intentionnellement polymorphes** — elles référencent plusieurs tables distinctes via un discriminant `*_type`.
+
+**Colonnes concernées** :
+
+| Table | Colonne ID | Discriminant | Tables cibles | Nullable |
+|-------|-----------|-------------|---------------|----------|
+| `company_wallet_transactions` | `actor_id` | `actor_type` (user, system, admin) | `users`, `platform_users`, null (system) | Oui |
+| `company_wallet_transactions` | `source_id` | `source_type` (credit_note, invoice_payment, refund, proration_credit, admin_adjustment) | `invoices`, `credit_notes`, etc. | Oui |
+| `notification_events` | `recipient_id` | `recipient_type` | `users`, `platform_users` | Non |
+
+**Décisions** :
+1. **Pas de FK sur ces colonnes** — une FK ne peut pointer que vers une seule table
+2. L'intégrité est garantie au **niveau applicatif** :
+   - `WalletLedger::record()` est le seul point d'écriture pour wallet transactions
+   - `NotificationDispatcher::send()` est le seul point d'écriture pour notification events
+3. Ce pattern est un **discriminated union** (pas un morphTo Eloquent) — architecture intentionnelle
+4. `field_definitions.company_id` a déjà une FK `cascadeOnDelete` (migration `2026_02_13_950002`)
+
+**Conséquences** :
+- Aucune migration FK nécessaire pour ces colonnes
+- L'intégrité dépend des couches service (pas de delete cascade automatique)
+- Si un user/platform_user est supprimé, les transactions historiques conservent l'actor_id orphelin (acceptable pour l'audit trail)
+- Pattern documenté pour référence future
+
+---
+
+### ADR-362 — Service Extractions Sprint 1 (2026-03-18)
+
+**Contexte** :
+Plusieurs controllers concentraient de la logique métier (calculs, résolution, extraction de données). Le plan de refondation exige que les controllers soient passifs (validation + dispatch + response) et que la logique soit dans Core/ ou UseCases/.
+
+**Décisions** :
+1. **BillingMetricsCalculationService** — extrait toute la logique de calcul MRR/ARR/churn/trial conversion de `PlatformBillingMetricsController` vers `app/Core/Billing/BillingMetricsCalculationService.php`
+2. **PlanChangeTimingResolver** — extrait la résolution timing (upgrade/downgrade/interval change + trial override ADR-287) de `SubscriptionMutationController` vers `app/Core/Billing/PlanChangeTimingResolver.php`
+3. **DeletePaymentMethodUseCase** — extrait la logique de suppression de carte (guard min 1, Stripe detach, default promotion) de `CompanyPaymentMethodController` vers `app/Modules/Core/Billing/UseCases/DeletePaymentMethodUseCase.php`
+4. **StripePaymentMethodDataExtractor** — extrait le mapping Stripe PM → CompanyPaymentProfile de `CompanyPaymentSetupController` vers `app/Core/Billing/Adapters/StripePaymentMethodDataExtractor.php`
+
+**Conséquences** :
+- Controllers réduits à validation + dispatch + HTTP response (pattern passif)
+- Services testables unitairement sans dépendance HTTP
+- Pas de changement de comportement (refactoring pur)
+- 1936 tests passent, build clean
+
+**Fichiers créés** :
+- `app/Core/Billing/BillingMetricsCalculationService.php`
+- `app/Core/Billing/PlanChangeTimingResolver.php`
+- `app/Modules/Core/Billing/UseCases/DeletePaymentMethodUseCase.php`
+- `app/Core/Billing/Adapters/StripePaymentMethodDataExtractor.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Billing/Http/PlatformBillingMetricsController.php` — simplifié (1 ligne)
+- `app/Modules/Core/Billing/Http/SubscriptionMutationController.php` — timing via resolver
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — deleteCard via UseCase
+- `app/Modules/Core/Billing/Http/CompanyPaymentSetupController.php` — extractProfileData supprimé, utilise Extractor
+
+---
+
+### ADR-363 — Pending State is Active — Admin Approval Workflow (2026-03-17)
+
+**Contexte** :
+L'audit de refondation Sprint 1 a identifié l'état `pending` dans la machine à états des souscriptions comme potentiellement du code mort. Après analyse, cet état est **activement utilisé** par le workflow d'approbation admin (ADR-289).
+
+**Décision** :
+L'état `pending` est **intentionnellement actif** et ne nécessite aucun nettoyage. Son cycle de vie est :
+1. `pending_payment` → paiement reçu
+2. → `pending` (en attente d'approbation admin, quand `admin_approval_required=true`)
+3. → `active` (approuvé) ou `rejected` (refusé)
+
+Ce workflow est implémenté dans `InternalPaymentAdapter::createCheckout()` qui crée des souscriptions en état `pending` lorsque l'approbation admin est requise. L'état est consommé par les services backend, les endpoints API, l'UI frontend (affichage du statut) et l'interface admin plateforme (actions d'approbation/rejet).
+
+**Conséquences** :
+- La machine à états conserve `pending` comme état valide — pas de suppression
+- Les tests existants vérifient déjà l'usage de cet état dans le workflow admin
+- Toute future modification de la machine à états doit préserver le chemin `pending_payment → pending → active/rejected`
+- Cet ADR clôture le point d'audit « état pending potentiellement mort »
+
+**Fichiers** :
+- `app/Core/Billing/Adapters/InternalPaymentAdapter.php` — crée les souscriptions `pending`
+- `app/Core/Billing/Subscription.php` — définit `pending` dans la machine à états
+
+---
+
+---
+
+### ADR-364 — Automatic Credit Note on Downgrade Proration (2026-03-18)
+
+**Contexte** :
+Lorsqu'un downgrade avec proration crée un crédit wallet, aucun document comptable (credit note) n'était émis. Le wallet recevait le crédit via `WalletLedger::credit()` mais il manquait la trace documentaire formelle exigée par la comptabilité.
+
+**Décision** :
+Après le `WalletLedger::credit()` dans `PlanChangeExecutor::execute()`, on émet automatiquement une credit note via `CreditNoteIssuer::createDraft()` + `CreditNoteIssuer::issue()`. La credit note est créée au statut **issued** (pas applied) car le crédit wallet est déjà effectué par l'appel direct à `WalletLedger::credit()`. On ne fait pas `issueAndApply()` pour éviter un double crédit wallet. La credit note porte dans ses `metadata` : `source`, `intent_id`, `subscription_id`, `from_plan`, `to_plan`.
+
+**Conditions** :
+- La credit note n'est émise que lorsque le montant de proration credit est > 0
+- Uniquement sur downgrade immédiat avec proration (net < 0)
+- Les downgrades différés (end_of_period) n'ont pas de proration et ne créent pas de credit note
+
+**Conséquences** :
+- Chaque downgrade proration produit désormais un document comptable traçable
+- Le montant de la credit note correspond au montant TTC crédité au wallet (ADR-337)
+- Les metadata permettent de relier la credit note à l'intent et à la subscription
+- 3 tests ajoutés : credit note créée sur downgrade, pas de credit note sur upgrade, pas de credit note sur downgrade différé
+
+**Fichiers** :
+- `app/Core/Billing/PlanChangeExecutor.php` — ajout de l'appel CreditNoteIssuer après WalletLedger::credit()
+- `tests/Feature/PlanChangeExecutorCreditNoteTest.php` — 3 tests de vérification
+
+---
+
+### ADR-365 — Webhook Recovery Poller Already Implemented (2026-03-18)
+
+**Contexte** :
+Le plan de refondation Sprint 1 (tâches #27 et #28) prévoyait la création d'un webhook recovery poller (`BillingPollMissedEventsCommand`) et de tests de replay. L'audit a révélé que ce système existe déjà en production sous un design supérieur.
+
+**Décision** :
+Aucune création nécessaire. Le système de recovery existant (ADR-228/229) est complet :
+- `BillingRecoverWebhooksCommand` — poller toutes les 10 min pour `BillingExpectedConfirmation` overdue
+- `BillingRecoverCheckoutsCommand` — recovery pour les checkout sessions stale
+- Pipeline triple recovery : webhook + polling client + cron recovery
+- Dead letter queue (`BillingWebhookDeadLetter`) avec replay command (`billing:webhook-replay`)
+- Design supérieur au plan initial : ciblage par `BillingExpectedConfirmation` plutôt que polling brut de tous les events Stripe
+
+**Couverture tests existante** :
+- `BillingTripleRecoveryTest` — 5 tests (polling activates, cron activates, triple trigger idempotent, concurrent serialized, polling after cron noop)
+- `BillingAdr228Test` — 8 tests (old event accepted, graceful failure, dead letter, expected confirmation lifecycle, recovery dry-run, replay, max attempts)
+
+**Conséquences** :
+- Tâches #27 et #28 marquées comme déjà implémentées
+- 13 tests couvrent le système de recovery webhook end-to-end
+- Aucun code supplémentaire nécessaire
+
+**Fichiers** :
+- `app/Console/Commands/BillingRecoverWebhooksCommand.php` — poller existant
+- `app/Console/Commands/BillingRecoverCheckoutsCommand.php` — recovery checkout
+- `tests/Feature/BillingTripleRecoveryTest.php` — 5 tests triple recovery
+- `tests/Feature/BillingAdr228Test.php` — 8 tests ADR-228
+
+---
+
+### ADR-366 — Enrichissement SupportTicketTest (+11 tests) (2026-03-18)
+
+**Contexte** :
+Le fichier `SupportTicketTest` contenait 13 tests couvrant les opérations de base (CRUD ticket, messages, notes internes, métriques). L'audit du système de support a révélé des fonctionnalités non testées : validation des entrées, filtrage par statut/priorité/recherche, mise à jour de priorité, auto-assignation lors d'une réponse platform, assignation à un autre admin, et traçabilité de la fermeture.
+
+**Décision** :
+Ajout de 11 tests au fichier existant `SupportTicketTest.php`, portant le total à 24 tests (67 assertions). Les tests ajoutés couvrent :
+1. Validation : champs requis manquants, catégorie invalide
+2. Platform admin : mise à jour priorité, filtrage par statut, filtrage par priorité, recherche par sujet
+3. Auto-assignation : réponse platform auto-assigne un ticket non-assigné + passe en waiting_customer
+4. Assignation déléguée : assignation à un autre platform user
+5. Company side : vue détaillée d'un ticket, filtrage par statut
+6. Traçabilité : fermeture enregistre closed_by_platform_user_id et resolved_at
+
+**Conséquences** :
+- 24 tests SupportTicket, 0 failures
+- Suite complète : 2050 tests, 0 failures
+- Couverture complète des endpoints company et platform du module support
+
+**Fichiers** :
+- `tests/Feature/SupportTicketTest.php` — 11 tests ajoutés (24 total)
+
+---
+
+### ADR-367 — Sprint 4 Test Coverage Blitz Complete (2026-03-18)
+
+**Contexte** :
+Le plan de refondation identifiait 7 modules avec zéro tests et un objectif de > 2100 tests. Sprint 4 visait à combler tous ces trous de couverture en une seule passe intensive.
+
+**Décision** :
+8 fichiers de tests créés/enrichis couvrant les modules sans couverture. Chaque test file vérifie le CRUD complet, la validation, les gardes de sécurité et les edge cases.
+
+**Résultats** :
+
+| # | Module | Tests | Assertions | Fichier |
+|---|--------|-------|------------|---------|
+| #30 | Platform Roles CRUD | 18 | 55 | `PlatformRolesCrudTest.php` |
+| #31 | Notification System | 30 | 86 | `NotificationSystemTest.php` |
+| #32 | Audience Module | 34 | 87 | `AudienceModuleTest.php` |
+| #33 | Shipment Workflow | 18 | 53 | `ShipmentWorkflowTest.php` |
+| #34 | Platform Markets CRUD | 15 | 61 | `PlatformMarketsCrudTest.php` |
+| #35 | Platform Translations | 16 | 78 | `PlatformTranslationsTest.php` |
+| #36 | Company Suspension | 15 | 43 | `CompanySuspensionTest.php` |
+| #37 | Support Tickets (+11) | 11 | 22 | `SupportTicketTest.php` (enrichi) |
+| **Total Sprint 4** | **8 modules** | **157 tests** | **485 assertions** | |
+
+**Score final** : 2096 tests, 0 failures, 7450 assertions, build clean.
+
+**Conséquences** :
+- Zéro module sans tests dans le projet
+- Couverture Roles, Notifications, Audience, Shipments, Markets, Translations, Suspension, Support
+- Fix route ordering pour translations (wildcard après littéral)
+- Confiance déploiement renforcée — régression impossible sur les modules critiques
+
+**Fichiers** :
+- `tests/Feature/PlatformRolesCrudTest.php` — 18 tests
+- `tests/Feature/NotificationSystemTest.php` — 30 tests
+- `tests/Feature/AudienceModuleTest.php` — 34 tests
+- `tests/Feature/ShipmentWorkflowTest.php` — 18 tests
+- `tests/Feature/PlatformMarketsCrudTest.php` — 15 tests
+- `tests/Feature/PlatformTranslationsTest.php` — 16 tests
+- `tests/Feature/CompanySuspensionTest.php` — 15 tests
+- `tests/Feature/SupportTicketTest.php` — enrichi (+11)
+- `routes/platform.php` — fix route ordering translations
+
+---
+
+### ADR-368 — Sprint 5 Fondation UX Complete (2026-03-18)
+
+**Contexte** :
+L'audit UX révélait : pas de composable standardisé pour les états async, pas de composant ErrorState, 16 appels `window.confirm()` natifs, 2 pages sans `definePage()`, et un bundle CSS icônes de 2.8 MB (6012 icônes Tabler dont ~280 utilisées).
+
+**Décision** :
+Standardisation complète de la couche UX en 5 STEPs atomiques, sans logique métier, sans modification du design system Vuexy.
+
+**STEP 1 — Fondations** :
+- `useAsyncState()` composable : loading / error / data / retry / isEmpty, option `globalLoading`
+- `ErrorState.vue` : composant réutilisable, i18n ready, emit `retry`, cohérent avec EmptyState existant
+
+**STEP 2 — Feedback system** :
+- `useConfirm()` composable : encapsule ConfirmDialog en Promise-based API
+- 4 clés i18n ajoutées : `common.confirm`, `common.areYouSure`, `common.actionConfirmed`, `common.actionCancelled` (EN + FR)
+
+**STEP 3 — Loading systémique** :
+- `useGlobalLoading()` composable : compteur singleton, start/stop/wrap, computed `isLoading`
+- `AppLoadingIndicator.vue` modifié pour réagir au loading global en plus du Suspense
+- `useAsyncState` intègre le global loading via option `globalLoading: true`
+
+**STEP 4 — Refactor ciblé** :
+- 16 `window.confirm()` remplacés par `useConfirm()` dans 12 fichiers Vue
+- `definePage()` ajouté sur `dashboard.vue` et `home.vue`
+
+**STEP 5 — Performance (ROLLBACK)** :
+- Plugin `vite-plugin-icon-purge` créé puis **supprimé** : le scan statique des icônes rate les usages dynamiques (`:icon="variable"`), causant des icônes manquantes en production
+- Approche abandonnée : le risque de régression UI > le gain de performance
+- Les 2.8 MB d'icônes Tabler restent intégralement dans le bundle (comme avant Sprint 5)
+- Optimisation icons reportée à une approche plus sûre (PurgeCSS post-build avec safelist exhaustive)
+
+**Correctif i18n (post-audit)** :
+- 10 clés `common.*` manquantes identifiées et ajoutées : `activate`, `deactivate`, `inactive`, `none`, `title`, `sortOrder`, `createSuccess`, `updateSuccess`, `deleteSuccess`, `operationCancelled`
+- Ajoutées en EN et FR
+
+**Conséquences** :
+- 0 `window.confirm()` restant dans le projet
+- 0 clé i18n manquante dans les dialogs de confirmation
+- EmptyState + ErrorState disponibles (infrastructure)
+- useAsyncState + useGlobalLoading disponibles (infrastructure)
+- Aucune régression : 2096 tests, build clean
+- UI identique à avant Sprint 5 pour les icônes
+
+**Fichiers créés** :
+- `resources/js/composables/useAsyncState.js`
+- `resources/js/composables/useConfirm.js`
+- `resources/js/composables/useGlobalLoading.js`
+- `resources/js/core/components/ErrorState.vue`
+
+**Fichiers modifiés** :
+- `resources/js/components/AppLoadingIndicator.vue` — intégration global loading
+- `resources/js/plugins/i18n/locales/en.json` — 14 clés ajoutées (4 confirm + 10 common manquantes)
+- `resources/js/plugins/i18n/locales/fr.json` — 14 clés ajoutées (4 confirm + 10 common manquantes)
+- `resources/js/pages/dashboard.vue` — definePage() ajouté
+- `resources/js/pages/home.vue` — definePage() ajouté
+- 12 fichiers Vue — window.confirm() → useConfirm()
+
+**Fichiers supprimés (rollback)** :
+- `resources/js/plugins/iconify/vite-plugin-icon-purge.js` — supprimé, causait des icônes manquantes
+
+---
+
+### ADR-369 — Rollback definePage() + Fix auto-save dashboard (2026-03-18)
+
+**Date** : 2026-03-18
+
+**Contexte** :
+Sprint 5 STEP 4 avait ajouté `definePage({ meta: { module: 'core.dashboard', surface: 'analytics' } })` sur `dashboard.vue` et `home.vue`. Cela causait 2 bugs critiques :
+1. Le guard `guards.js` vérifie `moduleStore.isActive(to.meta.module)` — `core.dashboard` n'est PAS un module activable, c'est un composant core → la page est bloquée avec toast "Module not available"
+2. `loadDashboard()` du store appelle `engine.saveLayout()` automatiquement pour les premiers utilisateurs (smart default layout) → `PUT /dashboard/layout` exige `company.access:manage-structure` → 403 "Administrative role required" pour les rôles non-administratifs
+
+**Décisions** :
+1. **Rollback** `definePage()` de `dashboard.vue` et `home.vue` — ces pages core n'ont pas besoin de `meta.module` (elles sont toujours accessibles)
+2. **Fix** `loadDashboard()` — vérifier `auth.hasPermission('manage-structure')` avant l'auto-save du smart default layout
+3. Les pages core (`/dashboard`, `/home`) ne doivent JAMAIS avoir de `meta.module` car le module guard les bloquerait
+
+**Conséquences** :
+- Bob (rôle driver, archetype field_worker) peut accéder au dashboard sans erreur 403
+- Le smart default layout est affiché localement pour les non-admins mais pas persisté en DB
+- Le workspace cross-guard (ADR-357) redirige correctement vers `/home` pour les archétypes `field_worker`
+
+**Fichiers modifiés** :
+- `resources/js/pages/dashboard.vue` — `definePage()` supprimé
+- `resources/js/pages/home.vue` — `definePage()` supprimé
+- `resources/js/modules/company/dashboard/dashboard.store.js` — import `useAuthStore`, guard `hasPermission('manage-structure')` avant `saveLayout()`
+
+---
+
+### ADR-370 — Tests invariants CI pipeline d'accès (2026-03-19)
+
+**Date** : 2026-03-19
+
+**Contexte** :
+Le pipeline d'accès Leezr souffre de failles structurelles : routes sensibles protégées uniquement par `manage-structure`, widgets avec permissions WRITE pour des opérations READ, pages frontend sans meta. Avant toute correction, il faut poser des filets de sécurité CI qui détectent les régressions.
+
+**Décisions** :
+1. **AccessPipelineInvariantsTest** — 7 invariants CI couvrant : bundle keys valides (INV-PERM-001), permissions navItems (INV-PERM-003), permissions widgets (INV-WIDGET-001), widgets READ/WRITE (INV-WIDGET-002), manage-structure seul (INV-MANAGE-001), billing.manage exhaustif (INV-BILLING-001)
+2. **FrontendAccessInvariantsTest** — 3 invariants frontend : pas d'import hardcodé dashboard (INV-FE-001), pas de nav hardcodé (INV-FE-002), billing sub-routes definePage (INV-FE-003)
+3. Tests skip-until par phase — chaque phase déskip ses invariants
+4. **Règles fondamentales formalisées** (R1-R4) :
+   - R1: `is_administrative` = accès surface structure UNIQUEMENT (jamais contenu sensible)
+   - R2: Aucune route sensible ne repose sur `manage-structure` seul
+   - R3: Modèle multi-jobdomain générique (rôle stable, contexte dynamique)
+   - R4: Permission sémantique stricte (READ pour lecture, WRITE pour mutation)
+
+**Conséquences** :
+- INV-PERM-001, INV-PERM-003, INV-WIDGET-001 passent immédiatement (aucune anomalie structurelle)
+- 7 invariants skip attendent les phases 1-6 pour être activés
+- Toute régression future sera détectée par CI
+
+**Fichiers créés** :
+- `tests/Feature/AccessPipelineInvariantsTest.php`
+- `tests/Feature/FrontendAccessInvariantsTest.php`
+
+---
+
+### ADR-371 — Hardening manage-structure exhaustif + billing.manage sur toutes routes (2026-03-19)
+
+**Date** : 2026-03-19
+
+**Contexte** :
+Les routes billing étaient protégées uniquement par `use-module:core.billing` (lectures) ou `manage-structure` (mutations). Tout utilisateur is_administrative pouvait lire les données billing et muter. Les compliance widgets exigeaient `members.manage` (WRITE) pour une opération de lecture. Le batchResolve ne vérifiait pas les permissions utilisateur.
+
+**Décisions** :
+1. **`billing.manage` sur TOUTES les routes billing** (28 routes) — ajouté au groupe middleware. Dispatcher (pas billing.manage) ne peut plus lire ni muter billing.
+2. **Manager preset : `billing.management` + `support.access` ajoutés** — prérequis au hardening pour ne pas casser l'accès Manager.
+3. **Theme role visibility PUT** : ajout `use-permission:roles.manage` en plus de `manage-structure`.
+4. **batchResolve filtré par catalogue** — ne résout que les widgets autorisés pour l'utilisateur (permissions + archetype + module).
+5. **Compliance widgets** : `members.manage` → `members.view` (4 fichiers — lecture seule, permission READ correcte).
+6. **Pages billing sub-routes** (`invoices/[id].vue`, `pay.vue`) : ajout `definePage({ meta: { surface: 'structure', module: 'core.billing' } })`.
+7. **Page audit** : ajout `surface: 'structure'` dans meta.
+8. **ManageStructureHardeningTest** : 14 tests vérifiant le blocage Dispatcher/Driver sur billing et role visibility.
+9. **Invariants activés** : INV-WIDGET-002, INV-MANAGE-001, INV-BILLING-001, INV-FE-003 passent.
+
+**Conséquences** :
+- Owner ✓ (bypass), Manager ✓ (billing.manage), Dispatcher ✗ (403), Driver ✗ (403)
+- Aucune route sensible ne dépend de `manage-structure` seul
+- Widget batchResolve sécurisé par catalogue filtré
+
+**Fichiers modifiés** :
+- `routes/company.php` — billing group + role visibility hardened
+- `app/Core/Jobdomains/JobdomainRegistry.php` — Manager bundles
+- `app/Modules/Core/Dashboard/Http/CompanyDashboardWidgetController.php` — batchResolve filtré
+- `app/Modules/Dashboard/Widgets/Compliance{Pending,Overdue,Roles,Types}Widget.php` — permissions fix
+- `resources/js/pages/company/billing/invoices/[id].vue` — definePage
+- `resources/js/pages/company/billing/pay.vue` — definePage
+- `resources/js/pages/company/audit/index.vue` — surface added
+
+**Fichiers créés** :
+- `tests/Feature/ManageStructureHardeningTest.php`
+
+---
+
+### ADR-372 — Widgets pipeline-driven + onboarding filtré par permissions (2026-03-19)
+
+**Contexte** : Les widgets OnboardingSetup et PlanBadge étaient importés statiquement dans `dashboard.vue`, hors du pipeline de catalogue. L'onboarding affichait les mêmes 5 étapes à tous les utilisateurs, indépendamment de leurs permissions.
+
+**Décisions** :
+1. **Widgets pipeline-driven** : OnboardingSetupWidget et PlanBadgeWidget créés comme WidgetManifest, enregistrés dans `widgets.php`, avec permissions et archetypes déclarés. Imports statiques retirés de `dashboard.vue`.
+2. **Onboarding filtré** : Chaque étape déclare une permission requise (`billing.manage`, `settings.manage`, `members.invite`, ou `null`). Le backend filtre les étapes visibles selon les permissions de l'utilisateur. Owner voit tout (bypass).
+3. **Catalogue company = 7 widgets** : 5 compliance + onboarding.setup + billing.plan_badge.
+4. **INV-FE-001 activé** : Invariant CI vérifie qu'aucun widget n'est hardcodé dans dashboard.vue.
+5. **INV-WIDGET-002 smart exception** : Modules sans permission READ alternative (ex: billing n'a que billing.manage) sont exemptés de la règle "read-only widgets use READ permissions".
+
+**Conséquences** :
+- Dispatcher (sans billing.manage ni settings.manage) : voit 2 steps onboarding (account_created + invite_member)
+- Manager (avec billing.manage + settings.manage) : voit 5 steps
+- Tout nouveau widget doit passer par le pipeline (WidgetManifest + widgets.php + widgetComponentMap.js + widgetProfiles.js)
+
+**Fichiers créés** :
+- `app/Modules/Dashboard/Widgets/OnboardingSetupWidget.php`
+- `app/Modules/Dashboard/Widgets/PlanBadgeWidget.php`
+- `tests/Feature/OnboardingFilteredTest.php`
+
+**Fichiers modifiés** :
+- `resources/js/pages/dashboard.vue` — retrait imports statiques
+- `app/Modules/Dashboard/widgets.php` — registration
+- `resources/js/components/dashboard/widgetComponentMap.js` — async components
+- `resources/js/components/dashboard/widgetProfiles.js` — profiles
+- `app/Modules/Core/Dashboard/Http/OnboardingStatusController.php` — filtrage permissions
+- `tests/Feature/AccessPipelineInvariantsTest.php` — déskip INV-FE-001
+- `tests/Feature/FrontendAccessInvariantsTest.php` — déskip INV-FE-001
+
+---
+
+### ADR-373 — Modèle Dispatcher administratif + pattern multi-jobdomain contextuel (2026-03-19)
+
+**Contexte** : Le Dispatcher était `is_administrative=false`, ce qui l'excluait des pages structure (Members, Company Profile) qu'il devait pourtant pouvoir consulter en lecture. L'item nav `my-deliveries` utilisait un flag `operationalOnly` spécifique qui masquait l'item pour les rôles management — logique métier dans le mécanisme de navigation.
+
+**Décisions** :
+1. **Dispatcher `is_administrative: true`** — accède à la surface structure (roleLevel=management dans NavBuilder), mais reste bloqué sur les données sensibles (billing, roles, modules) par `use-permission` sur les routes (ADR-371).
+2. **`operationalOnly` retiré** du nav item my-deliveries. La permission `shipments.view_own` est le filtre générique multi-jobdomain. Owner voit my-deliveries par bypass (données vides acceptées).
+3. **`support.access` ajouté** au preset Dispatcher — peut voir et créer des tickets support.
+4. **Pattern multi-jobdomain** : Un rôle administratif peut être assigné contextuellement à une tâche opérationnelle. Le rôle ne change pas — seul le contexte d'exécution change. L'accès contextuel est contrôlé par une permission `*_view_own` + assignation backend.
+
+**Conséquences** :
+- Dispatcher voit : Dashboard, Members (lecture), Company Profile (lecture), Shipments, My Deliveries, Support, Account Settings
+- Dispatcher ne voit PAS : Billing, Roles, Modules, Audit
+- Dispatcher ne peut PAS lire billing overview (403) ni muter billing (403)
+- Owner voit my-deliveries dans la nav (bypass) — item vide acceptable
+- Le flag `operationalOnly` reste dans NavItem/NavBuilder pour usage futur, mais aucun nav item ne l'utilise actuellement
+
+**Fichiers modifiés** :
+- `app/Core/Jobdomains/JobdomainRegistry.php` — Dispatcher `is_administrative: true` + `support.access`
+- `app/Modules/Logistics/Shipments/ShipmentsModule.php` — retrait `operationalOnly` de my-deliveries
+- `tests/Feature/ManageStructureHardeningTest.php` — Dispatcher `is_administrative: true`
+- `tests/Feature/OnboardingFilteredTest.php` — Dispatcher `is_administrative: true`
+- `tests/Unit/NavBuilderTest.php` — test mis à jour pour refléter my-deliveries visible pour management
+- `tests/Feature/NavEndpointTest.php` — retrait skip operationalOnly
+
+**Fichiers créés** :
+- `tests/Feature/DispatcherRoleModelTest.php` — 9 tests (nav + API)
+
+---
+
+### ADR-374 — Widgets opérations logistique (2026-03-19)
+
+**Contexte** : Le dashboard company ne montrait aucune métrique liée aux opérations logistiques. Le plan d'accès (ADR-370→373) a posé le pipeline complet (permissions, archetypes, catalogue filtré). Il faut maintenant exploiter ce pipeline pour les rôles opérationnels (Manager, Dispatcher, Driver).
+
+**Décisions** :
+1. **8 widgets server-resolved** créés dans le module `logistics_shipments`, catégorie `operations` :
+   - **Shipment KPIs** (archetypes management + operations_center) : `shipments.today` (scheduled today), `shipments.in_transit` (status in_transit), `shipments.late` (in_transit + past scheduled_at), `shipments.unassigned` (no assigned_to_user_id, perm `shipments.assign`), `drivers.active` (distinct assigned drivers today, perm `shipments.assign`)
+   - **Delivery KPIs** (archetype field_worker) : `deliveries.my_today` (user-scoped, perm `shipments.view_own`), `deliveries.next` (next planned shipment for user), `deliveries.completed_today` (completed/total ratio for user)
+2. **Presets `dashboard_widgets` mis à jour** dans JobdomainRegistry : Manager (7 widgets : 5 compliance + 4 ops), Dispatcher (7 : 2 compliance + 5 ops), Driver (4 : 1 compliance + 3 delivery), Ops Manager (idem Manager).
+3. **Frontend** : 8 composants Vue KPI dans `views/company-dashboard/`, enregistrés dans `widgetComponentMap.js` + `widgetProfiles.js` (profil `kpi`).
+4. **i18n** : clés `shipments.widgets.*` ajoutées en EN + FR.
+5. **Filtrage par rôle vérifié** : Owner voit les 15 widgets company (7 base + 8 ops), Manager voit les shipment KPIs (pas delivery), Dispatcher voit les 5 shipment KPIs, Driver voit uniquement les 3 delivery KPIs.
+
+**Conséquences** :
+- Le dashboard devient exploitable pour les 4 rôles logistiques
+- Les widgets n'apparaissent QUE si le module `logistics_shipments` est actif pour la company
+- Les tests existants (count=7) ne cassent pas car ils n'activent pas le module logistique
+- 12 nouveaux tests dans `OperationsWidgetsTest` couvrent registration, catalogue par rôle, résolution serveur, et batch API
+
+**Fichiers créés** :
+- `app/Modules/Dashboard/Widgets/Shipments{Today,InTransit,Late,Unassigned}Widget.php`
+- `app/Modules/Dashboard/Widgets/DriversActiveWidget.php`
+- `app/Modules/Dashboard/Widgets/Deliveries{MyToday,Next,CompletedToday}Widget.php`
+- `resources/js/views/company-dashboard/_Shipments{Today,InTransit,Late,Unassigned}Widget.vue`
+- `resources/js/views/company-dashboard/_DriversActiveWidget.vue`
+- `resources/js/views/company-dashboard/_Deliveries{MyToday,Next,CompletedToday}Widget.vue`
+- `tests/Feature/OperationsWidgetsTest.php` — 12 tests
+
+**Fichiers modifiés** :
+- `app/Modules/Dashboard/widgets.php` — 8 widget registrations
+- `resources/js/components/dashboard/widgetComponentMap.js` — 8 async imports
+- `resources/js/components/dashboard/widgetProfiles.js` — 8 profils 'kpi'
+- `resources/js/plugins/i18n/locales/{en,fr}.json` — clés `shipments.widgets.*`
+- `app/Core/Jobdomains/JobdomainRegistry.php` — presets `dashboard_widgets` mis à jour
+
+---
+
+### ADR-375 — Preset reconciliation engine (2026-03-19)
+
+**Contexte** : Quand les presets de rôles/permissions évoluent dans `JobdomainRegistry` (ex: ADR-371 ajout `billing.management`, ADR-373 Dispatcher `is_administrative: true`), les companies existantes ne sont PAS mises à jour automatiquement. Elles conservent les anciennes permissions, créant un drift silencieux entre anciennes et nouvelles companies.
+
+**Décisions** :
+1. **`PresetReconciler`** : service central qui compare les rôles/permissions actuels d'une company avec le preset canonique de son jobdomain. Mode dry-run par défaut, apply optionnel.
+2. **`ReconciliationReport`** : value object catégorisant chaque rôle en `upToDate`, `drifted` (fixable), ou `skipped` (custom). Porte aussi des warnings (bundles inconnus, rôles orphelins).
+3. **`CompanyPresetSnapshot`** : table + modèle qui capture un snapshot des rôles/permissions à chaque registration (`trigger=registration`) ou reconciliation (`trigger=reconcile_apply`). Permet l'audit et le rollback manuel.
+4. **Commande Artisan `permissions:reconcile`** : `--company=`, `--jobdomain=`, `--apply`, `--json`. Retourne exit code 1 si drift détecté en dry-run (utile pour CI).
+5. **Snapshot automatique** à la registration dans `JobdomainGate::assignToCompany()`.
+6. **`ModuleRegistry::resolveBundles()`** logge les bundle keys inconnus pour détecter les incompatibilités entre presets et modules.
+7. **Non-destructif** pour les rôles custom (`is_system=false` → skippés). Seuls les rôles système sont réconciliés.
+
+**Principes** :
+- Dry-run obligatoire avant apply en production
+- Snapshot AVANT apply (permet rollback)
+- Rôles custom jamais touchés
+- Rôles manquants créés à l'apply
+- Rôles orphelins (en DB mais pas dans preset) signalés en warning
+- Drift de `is_administrative` et `archetype` détecté en plus des permissions
+
+**Conséquences** :
+- Le drift de permissions peut être détecté et corrigé à tout moment
+- L'intégration dans le deploy (P5.9) nécessite une validation staging manuelle avant activation
+- 17 tests couvrent : dry-run, apply, custom skip, missing role, orphan, artisan command, registration snapshot, is_administrative drift
+
+**Fichiers créés** :
+- `app/Core/Jobdomains/PresetReconciler.php`
+- `app/Core/Jobdomains/ReconciliationReport.php`
+- `app/Core/Jobdomains/CompanyPresetSnapshot.php`
+- `app/Console/Commands/PresetReconcileCommand.php`
+- `database/migrations/2026_03_19_035530_create_company_preset_snapshots_table.php`
+- `tests/Feature/PresetReconcileTest.php` — 17 tests
+
+**Fichiers modifiés** :
+- `app/Core/Jobdomains/JobdomainGate.php` — snapshot à la registration
+- `app/Core/Modules/ModuleRegistry.php` — log bundles inconnus dans `resolveBundles()`
+
+---
+
+### ADR-376 — Navigation manifest-driven + fusion Plan/Billing + workspace fix (2026-03-19)
+
+**Contexte** : Le pipeline de navigation avait un item hardcodé (Account Settings dans `useCompanyNav.js`), deux items séparés Plan et Billing dans la sidebar, une page morte `settings.vue`, et un bug de workspace redirect causé par le cache SWR non nettoyé au logout.
+
+**Décisions** :
+
+1. **Fusion Plan/Billing** : Un seul nav item `billing` dans `CoreBillingModule` (suppression du nav item `plan`). Plan devient le 1er tab de `billing/[tab].vue`. L'ancienne page `plan.vue` redirige vers `billing/plan`.
+2. **Account Settings manifest-driven** : Nav item ajouté dans `SettingsModule.navItems` avec `group: 'account'`, `sort: 900`. Le bloc hardcodé dans `useCompanyNav.js` est supprimé. Le NavBuilder résout le groupe `account` en fin de sidebar.
+3. **Notifications universelles** : `surface: 'structure'` retiré de `notifications/index.vue` — les notifications sont accessibles à tous les rôles (management et operational).
+4. **settings.vue supprimée** : Page morte qui ne faisait que rediriger vers `company-profile`.
+5. **Fix workspace SWR cache** : `cacheClear()` ajouté dans `auth.login()`, `auth.verify2fa()`, et `auth.logout()`. Cause racine : le logout ne vidait pas le sessionStorage (le BroadcastChannel n'envoie qu'aux AUTRES onglets), le login direct `fetchMyCompanies()` ne met pas à jour le cache SWR, et le boot post-reload servait des données d'un ancien utilisateur avec `workspace: 'home'`.
+6. **Dispatcher `members.team_management`** : Bundle ajouté au preset `logistique` dispatcher pour accéder à la gestion des membres (cohérent avec rôle gestion).
+
+**Conséquences** :
+- Invariant : zéro nav item hardcodé dans le frontend
+- Règle : toute nouvelle section de navigation DOIT être déclarée dans un module manifest
+- Le cross-guard workspace fonctionne correctement même après changement d'utilisateur dans le même onglet
+- Plan accessible via `/company/billing/plan` (tab), ancien URL redirigé
+
+**Fichiers** :
+- `app/Modules/Core/Billing/CoreBillingModule.php` — un seul navItem `billing`
+- `app/Modules/Core/Settings/SettingsModule.php` — navItem `account-settings` ajouté
+- `resources/js/composables/useCompanyNav.js` — bloc hardcodé supprimé
+- `resources/js/pages/company/billing/[tab].vue` — tab `plan` ajouté
+- `resources/js/pages/company/billing/_BillingPlan.vue` — contenu de plan.vue extrait
+- `resources/js/pages/company/plan.vue` — réduit à un redirect
+- `resources/js/pages/company/notifications/index.vue` — surface retirée
+- `resources/js/pages/company/settings.vue` — supprimée
+- `resources/js/core/stores/auth.js` — `cacheClear()` dans login/logout/verify2fa
+- `app/Core/Jobdomains/JobdomainRegistry.php` — `members.team_management` ajouté au dispatcher
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

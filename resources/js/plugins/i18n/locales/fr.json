@@ -186,7 +186,21 @@
     "copied": "Copié dans le presse-papier",
     "next": "Suivant",
     "previous": "Précédent",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "confirm": "Confirmer",
+    "areYouSure": "Êtes-vous sûr ?",
+    "actionConfirmed": "Action confirmée",
+    "actionCancelled": "Action annulée",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "inactive": "Inactif",
+    "none": "Aucun",
+    "title": "Titre",
+    "sortOrder": "Ordre de tri",
+    "createSuccess": "Créé avec succès.",
+    "updateSuccess": "Mis à jour avec succès.",
+    "deleteSuccess": "Supprimé avec succès.",
+    "operationCancelled": "Opération annulée."
   },
   "platformAccount": {
     "myAccount": "Mon compte",
@@ -942,6 +956,7 @@
   "companyBilling": {
     "title": "Facturation",
     "tabs": {
+      "plan": "Abonnement",
       "overview": "Vue d'ensemble",
       "paymentMethods": "Moyens de paiement",
       "invoices": "Factures",
@@ -2362,7 +2377,10 @@
       "rememberMeNotice": "« Se souvenir de moi » sera disponible avec la prochaine mise à jour d'authentification (Passport/Sanctum).",
       "mustBeLessThanTimeout": "Doit être inférieur au délai d'inactivité.",
       "failedToSave": "Échec de l'enregistrement des paramètres de session.",
-      "resetSuccess": "Paramètres de session réinitialisés aux valeurs par défaut."
+      "resetSuccess": "Paramètres de session réinitialisés aux valeurs par défaut.",
+      "expiredTitle": "Session expirée",
+      "expiredMessage": "Votre session a expiré en raison d'une inactivité prolongée. Veuillez vous reconnecter pour continuer.",
+      "reconnect": "Se reconnecter"
     },
     "theme": {
       "title": "Paramètres du thème de la plateforme",
@@ -2721,7 +2739,27 @@
     "failedToAssign": "Échec de l'assignation de l'expédition.",
     "failedToCreate": "Échec de la création de l'expédition.",
     "all": "Toutes",
-    "shipment": "Expédition"
+    "shipment": "Expédition",
+    "widgets": {
+      "today": "Expéditions du jour",
+      "todayDesc": "Expéditions planifiées pour aujourd'hui",
+      "inTransit": "En transit",
+      "inTransitDesc": "Expéditions actuellement en transit",
+      "late": "En retard",
+      "lateDesc": "Expéditions en transit dépassant l'heure prévue",
+      "unassigned": "Non assignées",
+      "unassignedDesc": "Expéditions sans chauffeur assigné",
+      "driversActive": "Chauffeurs actifs",
+      "driversActiveDesc": "Chauffeurs actuellement en livraison",
+      "myToday": "Mes livraisons du jour",
+      "myTodayDesc": "Vos livraisons planifiées pour aujourd'hui",
+      "nextDelivery": "Prochaine livraison",
+      "nextDeliveryDesc": "Votre prochaine livraison à venir",
+      "noUpcoming": "Aucune livraison à venir",
+      "completedToday": "Complétées aujourd'hui",
+      "completedTodayDesc": "Vos livraisons complétées aujourd'hui",
+      "noData": "Aucune donnée disponible"
+    }
   },
   "deliveries": {
     "title": "Mes livraisons",

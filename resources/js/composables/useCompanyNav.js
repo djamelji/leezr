@@ -30,8 +30,8 @@ export function useCompanyNav() {
 
 /**
  * Convert backend groups to flat nav items.
- * All items are module-driven (Dashboard included via core.dashboard manifest).
- * Account Settings is the only static item (appended after groups).
+ * All items are manifest-driven — NO hardcoded items.
+ * Account Settings comes from SettingsModule (group: 'account').
  * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Frontend only applies last-barrier permission check.
  */
@@ -66,13 +66,6 @@ function companyGroupsToNavItems(groups, auth) {
       items.push(navItem)
     }
   }
-
-  items.push({ heading: 'nav.groups.account' })
-  items.push({
-    title: 'nav.company.account-settings',
-    to: { name: 'account-settings-tab', params: { tab: 'account' } },
-    icon: { icon: 'tabler-settings' },
-  })
 
   return items.filter(item => {
     if (item.heading) return true

@@ -1,6 +1,7 @@
 <script setup>
 import { usePlatformDocumentationStore } from '@/modules/platform-admin/documentation/documentation.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 definePage({
   meta: {
@@ -16,6 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const docStore = usePlatformDocumentationStore()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const topicId = computed(() => route.params.slug)
 const isLoading = ref(true)
@@ -127,7 +129,14 @@ const handleSubmit = async () => {
 }
 
 const deleteArticle = async article => {
-  if (!confirm(t('documentation.confirmDeleteArticle', { title: article.title })))
+  const ok = await confirm({
+    question: t('documentation.confirmDeleteArticle', { title: article.title }),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('common.deleteSuccess'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+  if (!ok)
     return
 
   try {
@@ -337,5 +346,7 @@ const goBack = () => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <ConfirmDialogComponent />
   </div>
 </template>

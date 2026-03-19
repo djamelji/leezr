@@ -315,6 +315,9 @@ class JobdomainGate
                 );
             }
 
+            // ADR-375: Snapshot roles + permissions at registration time
+            CompanyPresetSnapshot::capture($company, 'registration');
+
             // Refresh the relation
             $company->load('jobdomains');
 

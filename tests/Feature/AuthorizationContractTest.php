@@ -157,9 +157,7 @@ class AuthorizationContractTest extends TestCase
 
         $navKeys = $this->extractNavKeys($response->json('groups'));
 
-        $this->assertContains('plan', $navKeys,
-            'Administrative role WITH billing.manage must see Plan nav item');
-
+        // ADR-376: Plan merged into Billing tab — single nav item
         $this->assertContains('billing', $navKeys,
             'Administrative role WITH billing.manage must see Billing nav item');
     }
@@ -186,9 +184,7 @@ class AuthorizationContractTest extends TestCase
 
         $navKeys = $this->extractNavKeys($response->json('groups'));
 
-        $this->assertContains('plan', $navKeys,
-            'Owner must see Plan nav item even without CompanyRole');
-
+        // ADR-376: Plan merged into Billing tab — single nav item
         $this->assertContains('billing', $navKeys,
             'Owner must see Billing nav item even without CompanyRole');
     }
@@ -225,9 +221,7 @@ class AuthorizationContractTest extends TestCase
         $groups = NavBuilder::forCompany($this->company, null, 'management');
         $navKeys = $this->extractNavKeys($groups);
 
-        $this->assertContains('plan', $navKeys,
-            'null permissions (owner) must show all items');
-
+        // ADR-376: Plan merged into Billing tab — single nav item
         $this->assertContains('billing', $navKeys,
             'null permissions (owner) must show all items');
     }
