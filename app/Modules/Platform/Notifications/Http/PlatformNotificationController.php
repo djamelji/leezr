@@ -3,6 +3,7 @@
 namespace App\Modules\Platform\Notifications\Http;
 
 use App\Core\Notifications\NotificationEvent;
+use App\Core\Notifications\NotificationTopicRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,10 +19,19 @@ class PlatformNotificationController
         if ($request->has('unread_only') && $request->boolean('unread_only')) {
             $query->unread();
         }
+        if ($request->filled('category')) {
+            $query->where('topic_key', 'like', $request->input('category') . '.%');
+        }
 
         $perPage = min((int) $request->input('per_page', 20), 50);
+        $paginated = $query->paginate($perPage);
 
-        return response()->json($query->paginate($perPage));
+        // ADR-382: include permission-filtered categories
+        $allowedCategories = NotificationTopicRegistry::platformCategoriesForAdmin($admin);
+        $response = $paginated->toArray();
+        $response['available_categories'] = $allowedCategories;
+
+        return response()->json($response);
     }
 
     public function unreadCount(Request $request): JsonResponse

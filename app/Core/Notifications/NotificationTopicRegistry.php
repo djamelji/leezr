@@ -2,6 +2,10 @@
 
 namespace App\Core\Notifications;
 
+use App\Core\Models\Company;
+use App\Core\Models\User;
+use App\Platform\Models\PlatformUser;
+
 /**
  * Declarative registry of all notification topics.
  * Single source of truth for what notification topics exist.
@@ -10,6 +14,101 @@ namespace App\Core\Notifications;
 class NotificationTopicRegistry
 {
     private static array $topics = [];
+
+    /**
+     * Category → required company permission mapping.
+     * null = universal (all users see it).
+     * Single source of truth for permission gating — ADR-382.
+     */
+    public const CATEGORY_PERMISSIONS = [
+        'billing' => 'billing.manage',
+        'members' => 'members.view',
+        'modules' => 'modules.manage',
+        'security' => null,
+        'support' => 'support.view',
+        'system' => null,
+    ];
+
+    /**
+     * Category → required platform permission mapping — ADR-382.
+     * null = universal (all platform admins receive it).
+     */
+    public const PLATFORM_CATEGORY_PERMISSIONS = [
+        'billing' => 'view_billing',
+        'support' => 'manage_support',
+        'security' => null,
+        'system' => null,
+    ];
+
+    /** Categories where in_app channel is forced-on (cannot be disabled). */
+    public const LOCKED_CATEGORIES = ['security'];
+
+    /** Commercial bundle metadata per category (company). */
+    public const BUNDLE_META = [
+        'billing' => ['icon' => 'tabler-receipt-2', 'color' => 'warning'],
+        'members' => ['icon' => 'tabler-users', 'color' => 'info'],
+        'modules' => ['icon' => 'tabler-puzzle', 'color' => 'primary'],
+        'security' => ['icon' => 'tabler-shield-lock', 'color' => 'error'],
+        'support' => ['icon' => 'tabler-headset', 'color' => 'success'],
+    ];
+
+    /** Bundle metadata per category (platform). */
+    public const PLATFORM_BUNDLE_META = [
+        'billing' => ['icon' => 'tabler-credit-card', 'color' => 'warning'],
+        'support' => ['icon' => 'tabler-headset', 'color' => 'success'],
+        'security' => ['icon' => 'tabler-shield-lock', 'color' => 'error'],
+        'system' => ['icon' => 'tabler-settings-cog', 'color' => 'primary'],
+    ];
+
+    public static function permissionForCategory(string $category): ?string
+    {
+        return static::CATEGORY_PERMISSIONS[$category] ?? null;
+    }
+
+    /**
+     * Return company-scoped categories that a user has permission to access.
+     * Owner sees all.
+     */
+    public static function categoriesForUser(User $user, Company $company): array
+    {
+        // Use DB (NotificationTopic model) — the in-memory registry is only populated during seeding
+        $allCategories = NotificationTopic::active()
+            ->forScope('company')
+            ->distinct()
+            ->pluck('category');
+
+        if ($user->isOwnerOf($company)) {
+            return $allCategories->values()->all();
+        }
+
+        return $allCategories->filter(function ($cat) use ($user, $company) {
+            $perm = static::CATEGORY_PERMISSIONS[$cat] ?? null;
+
+            return $perm === null || $user->hasCompanyPermission($company, $perm);
+        })->values()->all();
+    }
+
+    /**
+     * Return platform-scoped categories that a platform admin has permission to access.
+     * Super admin sees all. — ADR-382.
+     */
+    public static function platformCategoriesForAdmin(PlatformUser $admin): array
+    {
+        $allCategories = NotificationTopic::active()
+            ->forScope('platform')
+            ->distinct()
+            ->pluck('category');
+
+        if ($admin->isSuperAdmin()) {
+            return $allCategories->values()->all();
+        }
+
+        return $allCategories->filter(function ($cat) use ($admin) {
+            $perm = static::PLATFORM_CATEGORY_PERMISSIONS[$cat] ?? null;
+
+            return $perm === null || $admin->hasPermission($perm);
+        })->values()->all();
+    }
 
     public static function register(array $topics): void
     {

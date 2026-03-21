@@ -17,23 +17,14 @@ class PlatformSupportModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 92,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'support',
-                        'title' => 'Support',
-                        'to' => ['name' => 'platform-support'],
-                        'icon' => 'tabler-headset',
-                        'permission' => 'manage_support',
-                        'group' => 'governance',
-                    ],
-                ],
+                navItems: [],
                 routeNames: ['platform-support', 'platform-support-id'],
                 footerLinks: [
                     [
                         'key' => 'footer-support',
                         'label' => 'footer.support',
                         'to' => ['name' => 'platform-support'],
-                        'icon' => 'tabler-headset',
+                        'icon' => 'tabler-message-circle-cog',
                         'permission' => 'manage_support',
                         'sortOrder' => 10,
                     ],

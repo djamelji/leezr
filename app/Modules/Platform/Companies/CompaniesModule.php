@@ -18,10 +18,9 @@ class CompaniesModule implements ModuleDefinition
             sortOrder: 10,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'companies', 'title' => 'Companies', 'to' => ['name' => 'platform-companies'], 'icon' => 'tabler-building', 'permission' => 'manage_companies'],
-                    ['key' => 'company-users', 'title' => 'Company Users', 'to' => ['name' => 'platform-company-users'], 'icon' => 'tabler-users-group', 'permission' => 'view_company_users'],
+                    ['key' => 'platform-supervision', 'title' => 'Supervision', 'to' => ['name' => 'platform-supervision-tab', 'params' => ['tab' => 'companies']], 'icon' => 'tabler-building', 'permission' => 'manage_companies'],
                 ],
-                routeNames: ['platform-companies', 'platform-companies-id', 'platform-company-users'],
+                routeNames: ['platform-supervision-tab', 'platform-companies-id'],
             ),
             permissions: [
                 ['key' => 'manage_companies', 'label' => 'Manage Companies'],

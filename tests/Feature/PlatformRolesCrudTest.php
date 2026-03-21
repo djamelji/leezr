@@ -43,7 +43,7 @@ class PlatformRolesCrudTest extends TestCase
             ->assertJsonCount(2, 'roles');
     }
 
-    public function test_list_roles_includes_users_count_and_permissions(): void
+    public function test_list_roles_includes_enriched_fields(): void
     {
         $response = $this->actingAs($this->platformAdmin, 'platform')
             ->getJson('/api/platform/roles');
@@ -54,20 +54,135 @@ class PlatformRolesCrudTest extends TestCase
         foreach ($roles as $role) {
             $this->assertArrayHasKey('users_count', $role);
             $this->assertArrayHasKey('permissions', $role);
+            $this->assertArrayHasKey('is_system', $role);
+            $this->assertArrayHasKey('access_level', $role);
+            $this->assertArrayHasKey('permissions_count', $role);
+            $this->assertArrayHasKey('permissions_grouped', $role);
+            $this->assertArrayHasKey('users_sample', $role);
+            $this->assertIsArray($role['users_sample']);
         }
     }
 
-    public function test_list_roles_ordered_by_key(): void
+    public function test_roles_ordered_super_admin_first(): void
     {
+        PlatformRole::create(['key' => 'aaa_first_alpha', 'name' => 'AAA']);
+
         $response = $this->actingAs($this->platformAdmin, 'platform')
             ->getJson('/api/platform/roles');
 
         $response->assertOk();
 
         $keys = collect($response->json('roles'))->pluck('key')->toArray();
-        $sorted = $keys;
-        sort($sorted);
-        $this->assertEquals($sorted, $keys);
+        $this->assertEquals('super_admin', $keys[0], 'super_admin must be first');
+        $this->assertEquals('admin', $keys[1], 'admin must be second');
+    }
+
+    public function test_super_admin_has_full_access_level(): void
+    {
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->getJson('/api/platform/roles');
+
+        $superAdmin = collect($response->json('roles'))->firstWhere('key', 'super_admin');
+
+        $this->assertEquals('full_access', $superAdmin['access_level']);
+        $this->assertTrue($superAdmin['is_system']);
+        $this->assertGreaterThan(0, $superAdmin['permissions_count']);
+    }
+
+    public function test_admin_has_administration_level(): void
+    {
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->getJson('/api/platform/roles');
+
+        $admin = collect($response->json('roles'))->firstWhere('key', 'admin');
+
+        $this->assertEquals('administration', $admin['access_level']);
+        $this->assertTrue($admin['is_system']);
+    }
+
+    public function test_custom_role_with_admin_perms_has_management_level(): void
+    {
+        $adminPerm = PlatformPermission::where('is_admin', true)->first();
+
+        if (!$adminPerm) {
+            $this->markTestSkipped('No is_admin permission found in platform catalog.');
+        }
+
+        $role = PlatformRole::create(['key' => 'manager_test', 'name' => 'Manager Test']);
+        $role->permissions()->attach($adminPerm->id);
+
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->getJson('/api/platform/roles');
+
+        $manager = collect($response->json('roles'))->firstWhere('key', 'manager_test');
+
+        $this->assertEquals('management', $manager['access_level']);
+        $this->assertFalse($manager['is_system']);
+    }
+
+    public function test_permissions_grouped_by_module(): void
+    {
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->getJson('/api/platform/roles');
+
+        $admin = collect($response->json('roles'))->firstWhere('key', 'admin');
+
+        $this->assertNotEmpty($admin['permissions_grouped']);
+
+        foreach ($admin['permissions_grouped'] as $group) {
+            $this->assertArrayHasKey('module_key', $group);
+            $this->assertArrayHasKey('module_name', $group);
+            $this->assertArrayHasKey('module_icon', $group);
+            $this->assertArrayHasKey('permissions', $group);
+            $this->assertNotEmpty($group['permissions']);
+
+            foreach ($group['permissions'] as $perm) {
+                $this->assertArrayHasKey('id', $perm);
+                $this->assertArrayHasKey('key', $perm);
+                $this->assertArrayHasKey('label', $perm);
+                $this->assertArrayHasKey('is_admin', $perm);
+            }
+        }
+    }
+
+    public function test_store_returns_enriched_role(): void
+    {
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->postJson('/api/platform/roles', [
+                'key' => 'enriched_test',
+                'name' => 'Enriched Test',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonStructure([
+                'role' => [
+                    'id', 'key', 'name', 'is_system', 'access_level',
+                    'permissions_count', 'users_count', 'permissions_grouped',
+                ],
+            ]);
+
+        $this->assertFalse($response->json('role.is_system'));
+        $this->assertEquals('custom', $response->json('role.access_level'));
+    }
+
+    public function test_update_returns_enriched_role(): void
+    {
+        $role = PlatformRole::create(['key' => 'update_enriched', 'name' => 'Before']);
+        $perm = PlatformPermission::first();
+        $role->permissions()->attach($perm->id);
+
+        $response = $this->actingAs($this->platformAdmin, 'platform')
+            ->putJson("/api/platform/roles/{$role->id}", [
+                'name' => 'After',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('role.name', 'After')
+            ->assertJsonStructure([
+                'role' => [
+                    'is_system', 'access_level', 'permissions_count', 'permissions_grouped',
+                ],
+            ]);
     }
 
     // ─── STORE ────────────────────────────────────────────

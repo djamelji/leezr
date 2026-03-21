@@ -4,15 +4,25 @@ namespace App\Modules\Platform\Companies\Http;
 
 use App\Core\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CompanyUserController
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $users = User::with('companies')
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $query = User::with('companies')
+            ->orderByDesc('created_at');
 
-        return response()->json($users);
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = min((int) $request->input('per_page', 20), 100);
+
+        return response()->json($query->paginate($perPage));
     }
 }

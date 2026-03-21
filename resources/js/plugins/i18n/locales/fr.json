@@ -13,6 +13,8 @@
   "Companies": "Entreprises",
   "Company Users": "Utilisateurs d'entreprise",
   "Platform Users": "Utilisateurs plateforme",
+  "Access Management": "Gestion des accès",
+  "Supervision": "Supervision",
   "Job Domains": "Domaines d'activité",
   "Custom Fields": "Champs personnalisés",
   "Payments": "Paiements",
@@ -34,10 +36,8 @@
     },
     "platform": {
       "dashboard": "Tableau de bord",
-      "companies": "Entreprises",
-      "company-users": "Utilisateurs d'entreprise",
-      "platform-users": "Utilisateurs plateforme",
-      "roles": "Rôles",
+      "platform-supervision": "Supervision",
+      "platform-access": "Gestion des accès",
       "modules": "Modules",
       "plans": "Plans",
       "fields": "Champs personnalisés",
@@ -46,7 +46,6 @@
       "international": "International",
       "security": "Sécurité",
       "realtime": "Temps réel",
-      "audit": "Journal d'audit",
       "payments": "Paiements",
       "billing": "Facturation",
       "billing-settings": "Paramètres facturation",
@@ -174,6 +173,7 @@
     "management": "Gestion",
     "operationFailed": "L'opération a échoué.",
     "invitationPending": "Invitation en attente",
+    "show": "Afficher",
     "export": "Exporter",
     "import": "Importer",
     "all": "Tous",
@@ -226,7 +226,13 @@
     "myTasks": "Mes tâches",
     "tasksPlaceholder": "Vos tâches et livraisons assignées apparaîtront ici.",
     "currentPlan": "Abonnement actuel :",
-    "upgrade": "Passer au supérieur"
+    "upgrade": "Passer au supérieur",
+    "widgets": {
+      "onboarding": "Configuration initiale",
+      "onboardingDesc": "Étapes de mise en route de votre entreprise",
+      "planBadge": "Abonnement actuel",
+      "planBadgeDesc": "Votre abonnement et son statut"
+    }
   },
   "plans": {
     "title": "Abonnements",
@@ -1271,6 +1277,8 @@
     "noCompanies": "Aucune entreprise trouvée.",
     "noSearchResults": "Aucune entreprise ne correspond à vos critères de recherche.",
     "searchPlaceholder": "Rechercher par nom ou slug…",
+    "filterByStatus": "Filtrer par statut",
+    "filterByPlan": "Filtrer par plan",
     "allStatuses": "Tous les statuts",
     "allPlans": "Tous les abonnements",
     "suspended": "Suspendue",
@@ -1754,7 +1762,15 @@
     "useAccountSettings": "Utilisez les paramètres de votre compte pour modifier vos propres identifiants.",
     "confirmDeleteUser": "Supprimer l'utilisateur plateforme « {name} » ?",
     "failedToDeleteUser": "Échec de la suppression de l'utilisateur.",
-    "allPermissions": "Toutes les permissions (structurelles)"
+    "allPermissions": "Toutes les permissions (structurelles)",
+    "user": "Utilisateur",
+    "role": "Rôles",
+    "searchPlaceholder": "Rechercher…",
+    "filterByRole": "Filtrer par rôle",
+    "filterByStatus": "Filtrer par statut"
+  },
+  "platformAccess": {
+    "title": "Gestion des accès"
   },
   "platformRoles": {
     "title": "Rôles plateforme",
@@ -1771,7 +1787,21 @@
     "allPermissionsInfo": "Toutes les permissions (structurelles) — non modifiables.",
     "noRoles": "Aucun rôle trouvé.",
     "confirmDeleteRole": "Supprimer le rôle « {name} » ?",
-    "failedToDeleteRole": "Échec de la suppression du rôle."
+    "failedToDeleteRole": "Échec de la suppression du rôle.",
+    "viewRole": "Détails du rôle",
+    "permissionsCount": "{count} permissions",
+    "noPermissions": "Aucune permission assignée.",
+    "accessLevel": "Niveau d'accès",
+    "totalUsers": "{count} utilisateurs | {count} utilisateur | {count} utilisateurs",
+    "addRoleDesc": "Ajoutez un nouveau rôle s'il n'existe pas encore.",
+    "accessLevels": {
+      "full_access": "Accès complet",
+      "administration": "Administration",
+      "management": "Gestion",
+      "standard": "Standard",
+      "limited": "Limité",
+      "custom": "Personnalisé"
+    }
   },
   "platformFields": {
     "fieldDefinitions": "Définitions de champs",
@@ -2326,7 +2356,10 @@
   "platformCompanyUsers": {
     "title": "Utilisateurs d'entreprise",
     "subtitle": "Supervision en lecture seule des utilisateurs d'entreprise sur tous les espaces.",
-    "noUsers": "Aucun utilisateur d'entreprise trouvé."
+    "noUsers": "Aucun utilisateur d'entreprise trouvé.",
+    "user": "Utilisateur",
+    "companies": "Entreprises",
+    "searchPlaceholder": "Rechercher…"
   },
   "platformSettings": {
     "general": {
@@ -3686,6 +3719,20 @@
     "categorySecurity": "Sécurité",
     "categorySupport": "Support",
     "categorySystem": "Système",
+    "bundle": {
+      "billing": { "label": "Facturation et paiements", "description": "Factures, paiements, abonnement et alertes de facturation" },
+      "members": { "label": "Équipe", "description": "Invitations, arrivées, départs et changements de rôle" },
+      "modules": { "label": "Modules", "description": "Activation et désactivation de modules" },
+      "security": { "label": "Sécurité", "description": "Alertes de sécurité et connexions suspectes" },
+      "support": { "label": "Support", "description": "Réponses et résolutions de vos tickets" }
+    },
+    "lockedNotice": "Les notifications de sécurité en application ne peuvent pas être désactivées.",
+    "platformBundle": {
+      "billing": { "label": "Facturation et abonnements", "description": "Nouveaux abonnements, changements de plan, échecs de paiement et alertes facturation" },
+      "support": { "label": "Tickets support", "description": "Nouveaux tickets, assignations et escalades" },
+      "security": { "label": "Sécurité", "description": "Alertes de sécurité et activité suspecte" },
+      "system": { "label": "Système", "description": "Inscriptions d'entreprises, expirations d'essai et événements système" }
+    },
     "billing_payment_failed_title": "Paiement échoué",
     "billing_payment_failed_body": "Une tentative de paiement pour la facture #{invoice_id} a échoué.",
     "billing_invoice_created_title": "Nouvelle facture",

@@ -17,10 +17,8 @@ class AuditModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 93,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'audit', 'title' => 'Audit Logs', 'to' => ['name' => 'platform-audit'], 'icon' => 'tabler-file-search', 'permission' => 'view_audit_logs'],
-                ],
-                routeNames: ['platform-audit'],
+                navItems: [],
+                routeNames: ['platform-access-tab', 'platform-supervision-tab'],
             ),
             permissions: [
                 ['key' => 'view_audit_logs', 'label' => 'View Audit Logs'],

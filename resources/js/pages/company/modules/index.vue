@@ -480,7 +480,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                 </div>
               </div>
 
-              <VRow v-if="addonModules.length">
+              <VRow v-if="addonModules.length" class="card-grid card-grid-md">
                 <VCol
                   v-for="mod in addonModules"
                   :key="mod.key"
@@ -492,7 +492,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                   <VCard
                     flat
                     border
-                    class="h-100 d-flex flex-column"
+                    class="d-flex flex-column"
                   >
                     <VCardText class="flex-grow-1">
                       <div class="d-flex justify-space-between align-center mb-4">
@@ -648,7 +648,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
             <!-- Tab 1: Included -->
             <VWindowItem :value="1">
-              <VRow v-if="includedModules.length">
+              <VRow v-if="includedModules.length" class="card-grid card-grid-md">
                 <VCol
                   v-for="mod in includedModules"
                   :key="mod.key"
@@ -659,7 +659,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                   <VCard
                     flat
                     border
-                    class="h-100 d-flex flex-column"
+                    class="d-flex flex-column"
                   >
                     <VCardText class="flex-grow-1">
                       <div class="d-flex justify-space-between align-center mb-4">
@@ -758,7 +758,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
             <!-- Tab 2: Active -->
             <VWindowItem :value="2">
-              <VRow v-if="activeModules.length">
+              <VRow v-if="activeModules.length" class="card-grid card-grid-md">
                 <VCol
                   v-for="mod in activeModules"
                   :key="mod.key"
@@ -769,7 +769,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                   <VCard
                     flat
                     border
-                    class="h-100 d-flex flex-column"
+                    class="d-flex flex-column"
                   >
                     <VCardText class="flex-grow-1">
                       <div class="d-flex justify-space-between align-center mb-4">
@@ -914,7 +914,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                 />
               </div>
 
-              <VRow v-if="allFilteredModules.length">
+              <VRow v-if="allFilteredModules.length" class="card-grid card-grid-md">
                 <VCol
                   v-for="mod in allFilteredModules"
                   :key="mod.key"
@@ -925,7 +925,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                   <VCard
                     flat
                     border
-                    class="h-100 d-flex flex-column"
+                    class="d-flex flex-column"
                   >
                     <VCardText class="flex-grow-1">
                       <div class="d-flex justify-space-between align-start mb-4">

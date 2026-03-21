@@ -17,10 +17,8 @@ class RolesModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 30,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'roles', 'title' => 'Roles', 'to' => ['name' => 'platform-roles'], 'icon' => 'tabler-shield-lock', 'permission' => 'manage_roles'],
-                ],
-                routeNames: ['platform-roles'],
+                navItems: [],
+                routeNames: ['platform-access-tab'],
             ),
             permissions: [
                 ['key' => 'manage_roles', 'label' => 'Manage Roles'],

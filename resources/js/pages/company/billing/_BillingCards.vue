@@ -20,7 +20,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <VRow>
+  <VRow class="card-grid card-grid-sm">
     <!-- Card — Current Plan -->
     <VCol
       cols="12"
@@ -28,7 +28,7 @@ const { t } = useI18n()
       md="4"
       lg="3"
     >
-      <VCard class="h-100">
+      <VCard>
         <VCardItem>
           <template #prepend>
             <VAvatar
@@ -94,7 +94,7 @@ const { t } = useI18n()
       md="4"
       lg="3"
     >
-      <VCard class="h-100">
+      <VCard>
         <VCardItem>
           <template #prepend>
             <VAvatar
@@ -146,7 +146,7 @@ const { t } = useI18n()
       md="4"
       lg="3"
     >
-      <VCard class="h-100">
+      <VCard>
         <VCardItem>
           <template #prepend>
             <VAvatar
@@ -186,7 +186,7 @@ const { t } = useI18n()
       md="4"
       lg="3"
     >
-      <VCard class="h-100">
+      <VCard>
         <VCardItem>
           <template #prepend>
             <VAvatar

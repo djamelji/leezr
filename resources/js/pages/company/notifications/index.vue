@@ -20,14 +20,31 @@ const severityColors = {
   error: 'error',
 }
 
-const categories = [
-  { title: t('notifications.categoryAll'), value: null, icon: 'tabler-bell' },
-  { title: t('notifications.categoryBilling'), value: 'billing', icon: 'tabler-receipt-2' },
-  { title: t('notifications.categoryMembers'), value: 'members', icon: 'tabler-users' },
-  { title: t('notifications.categoryModules'), value: 'modules', icon: 'tabler-puzzle' },
-  { title: t('notifications.categorySecurity'), value: 'security', icon: 'tabler-shield-lock' },
-  { title: t('notifications.categorySupport'), value: 'support', icon: 'tabler-headset' },
-]
+// ADR-382: categories filtered by user permissions
+const allCategoryDefs = {
+  billing: { icon: 'tabler-receipt-2', titleKey: 'notifications.categoryBilling' },
+  members: { icon: 'tabler-users', titleKey: 'notifications.categoryMembers' },
+  modules: { icon: 'tabler-puzzle', titleKey: 'notifications.categoryModules' },
+  security: { icon: 'tabler-shield-lock', titleKey: 'notifications.categorySecurity' },
+  support: { icon: 'tabler-headset', titleKey: 'notifications.categorySupport' },
+}
+
+const categories = computed(() => {
+  const cats = [{ title: t('notifications.categoryAll'), value: null, icon: 'tabler-bell' }]
+
+  for (const cat of store.availableCategories) {
+    const def = allCategoryDefs[cat]
+    if (def) cats.push({ title: t(def.titleKey), value: cat, icon: def.icon })
+  }
+
+  return cats
+})
+
+// Reset active category if permission changes
+watch(() => store.availableCategories, newCats => {
+  if (activeCategory.value && !newCats.includes(activeCategory.value))
+    activeCategory.value = null
+})
 
 const fetchData = () => {
   const filters = {}

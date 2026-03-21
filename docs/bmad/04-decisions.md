@@ -12834,8 +12834,8 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 4. **Pattern multi-jobdomain** : Un rôle administratif peut être assigné contextuellement à une tâche opérationnelle. Le rôle ne change pas — seul le contexte d'exécution change. L'accès contextuel est contrôlé par une permission `*_view_own` + assignation backend.
 
 **Conséquences** :
-- Dispatcher voit : Dashboard, Members (lecture), Company Profile (lecture), Shipments, My Deliveries, Support, Account Settings
-- Dispatcher ne voit PAS : Billing, Roles, Modules, Audit
+- Dispatcher voit : Dashboard, Members (lecture), Company Profile (lecture), Shipments, My Deliveries, Account Settings
+- Dispatcher ne voit PAS : Billing, Roles, Modules, Audit, Support (sidebar — accès via footer link uniquement, voir ADR-377)
 - Dispatcher ne peut PAS lire billing overview (403) ni muter billing (403)
 - Owner voit my-deliveries dans la nav (bypass) — item vide acceptable
 - Le flag `operationalOnly` reste dans NavItem/NavBuilder pour usage futur, mais aucun nav item ne l'utilise actuellement
@@ -12960,6 +12960,234 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 - `resources/js/pages/company/settings.vue` — supprimée
 - `resources/js/core/stores/auth.js` — `cacheClear()` dans login/logout/verify2fa
 - `app/Core/Jobdomains/JobdomainRegistry.php` — `members.team_management` ajouté au dispatcher
+
+---
+
+### ADR-377 — Support : pas d'item sidebar, accès via footer uniquement (2026-03-19)
+
+**Contexte** : Les modules `core.support` (company) et `platform.support` (platform) déclaraient chacun un `navItem` dans leur manifest, ce qui affichait un lien "Support" dans la sidebar des deux surfaces. Ce n'est pas souhaité — le support est un service secondaire, pas une section de navigation principale.
+
+**Décisions** :
+1. **`navItems: []`** dans `SupportModule` (company) et `PlatformSupportModule` (platform) — aucun item dans la sidebar.
+2. **`footerLinks` conservés** — le support reste accessible via les liens en pied de page.
+3. **`routeNames` et permissions conservés** — les pages `/company/support` et `/platform/support` restent accessibles par URL directe et via les footer links.
+4. **Icônes footer différenciées** — Support utilise `tabler-message-circle-cog` (signalement problème), Help Center utilise `tabler-lifebuoy` (assistance autonome). Les deux modules Documentation (company + platform) sont mis à jour.
+
+**Conséquences** :
+- Aucun rôle ne voit "Support" dans la sidebar (ni company, ni platform)
+- L'accès au support se fait exclusivement via le footer link (permission `support.view` côté company, `manage_support` côté platform)
+- Les deux liens footer sont visuellement distincts : triangle d'aide (support tickets) vs bouée de sauvetage (help center)
+- Le test `DispatcherRoleModelTest` est mis à jour : `test_dispatcher_does_not_see_support_nav_item`
+- Le test `PlatformModuleNavContractTest` exclut `platform.support` de la vérification routeNames↔navItems
+
+**Fichiers modifiés** :
+- `app/Modules/Core/Support/SupportModule.php` — `navItems: []`, icon `tabler-message-circle-cog`
+- `app/Modules/Platform/Support/PlatformSupportModule.php` — `navItems: []`, icon `tabler-message-circle-cog`
+- `app/Modules/Core/Documentation/DocumentationModule.php` — icon `tabler-lifebuoy`
+- `app/Modules/Platform/Documentation/PlatformDocumentationModule.php` — icon `tabler-lifebuoy`
+- `tests/Feature/DispatcherRoleModelTest.php` — assertion inversée
+- `tests/Feature/PlatformModuleNavContractTest.php` — `platform.support` dans allowlist
+
+---
+
+### ADR-378 — Refactor page Platform Roles : approche SaaS (2026-03-20)
+
+**Contexte** : La page `platform/roles.vue` affichait toutes les permissions comme chips bruts dans le tableau — illisible avec 20+ permissions. L'objectif : interface SaaS-grade avec tableau résumé, badges d'accès dérivés serveur, et détail permissions groupé par module dans un drawer.
+
+**Décisions** :
+1. **`PlatformRoleReadModel` enrichi** : chaque rôle retourne `is_system` (dérivé du key), `access_level` (calculé serveur), `permissions_count`, `permissions_grouped` (groupé par module avec icon/name).
+2. **`access_level` serveur-only** : `full_access` (super_admin bypass), `administration` (toutes perms), `management` (≥1 perm is_admin), `standard` (perms sans is_admin), `limited` (<50% non-admin), `custom` (0 perms). Jamais calculé côté frontend.
+3. **`super_admin` cas spécial** : pas de pivot permissions en DB (bypass structurel), mais le read model charge TOUTES les permissions pour l'affichage.
+4. **Tri hiérarchique** : super_admin → admin → alphabétique (SQLite-compatible).
+5. **Layout card-grid** (preset `RoleCards.vue`) : chaque rôle = VCard dans une grille `VCol cols=12 sm=6 lg=4`. Affiche users count, access level badge, role name + icon, key chip, permissions count. Dernière card "Add New Role" avec illustration (même preset).
+6. **View drawer** : `_PermissionDetail.vue` — read-only, permissions groupées par module (VList + VListSubheader pattern Vuexy). Ouvert par clic sur la card.
+7. **Edit drawer** : inchangé, `_PermissionMatrix.vue` toujours utilisé. Bouton edit masqué pour rôles système.
+8. **`enrich()` method** : utilisé par `store()` et `update()` pour retourner le même shape enrichi au store Pinia.
+
+**Conséquences** :
+- Pattern card-grid fidèle au preset Vuexy `RoleCards.vue` (pas de VDataTable custom)
+- Clic sur une card ouvre le detail drawer (permissions groupées par module)
+- Rôles système non éditables (bouton masqué), super_admin non supprimable
+- 2163 tests green, build clean, 6 nouveaux tests ajoutés
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Roles/ReadModels/PlatformRoleReadModel.php` — réécriture complète (130 lignes)
+- `app/Modules/Platform/Roles/Http/RoleController.php` — store/update → `enrich()`
+- `resources/js/pages/platform/roles.vue` — réécriture card-grid (preset RoleCards.vue) + view drawer
+- `tests/Feature/PlatformRolesCrudTest.php` — 6 tests ajoutés, 2 adaptés
+
+**Fichiers créés** :
+- `resources/js/pages/platform/_PermissionDetail.vue` — viewer read-only permissions groupées
+
+---
+
+### ADR-379 — Card Grid System : tailles standardisées XS/S/M/L (2026-03-20)
+
+**Contexte** : Les grilles de cards dans l'application avaient des hauteurs incohérentes. Certaines pages utilisaient `h-100` manuellement, d'autres pas du tout. L'utilisateur demande un système de tailles standardisé pour ne plus avoir à uniformiser au cas par cas.
+
+**Décisions** :
+1. **Système `.card-grid` dans `resources/styles/styles.scss`** : classe utilitaire sur `VRow` qui force `block-size: 100%` + `display: flex; flex-direction: column` sur tous les VCard enfants directs.
+2. **4 tailles via `card-grid-{xs|sm|md|lg}`** : min-height respectivement 120px, 180px, 280px, 400px. Appliquée en complément de `.card-grid` sur le VRow.
+3. **Flex layout automatique** : le dernier `VCardText` reçoit `flex-grow: 1`, poussant les actions/boutons en bas de card.
+4. **Migration** : toutes les pages utilisant `h-100` manuel sur VCard ont été migrées vers `card-grid`. Les `h-100` manuels sont supprimés.
+5. **Page roles** : `card-grid card-grid-sm` — ajout des avatars utilisateurs (initiales via `users_sample` depuis le backend) fidèle au preset `RoleCards.vue`. Permissions count affiché sous le nom en `text-caption`.
+6. **Backend `users_sample`** : `PlatformRoleReadModel` retourne les 4 premiers users (initiales + nom) pour chaque rôle.
+
+**Taille par usage** :
+| Taille | min-height | Usage |
+|--------|-----------|-------|
+| `xs` | 120px | KPI/stats cards (dashboard, billing metrics) |
+| `sm` | 180px | Info cards (roles, topics, billing cards, settings pairs) |
+| `md` | 280px | Content cards (plans, modules, rich content) |
+| `lg` | 400px | Detailed cards (rarement utilisé) |
+
+**Conséquences** :
+- Plus jamais besoin de `h-100` manuel sur les VCard — `card-grid` sur le VRow suffit
+- Toutes les cards dans un même VRow ont la même hauteur
+- Convention projet : toute grille de cards DOIT utiliser `card-grid card-grid-{size}`
+- 2163 tests green, build clean
+
+**Fichiers modifiés** :
+- `resources/styles/styles.scss` — système card-grid (nouveau contenu)
+- `resources/js/pages/platform/roles.vue` — card-grid-sm + avatars + permissions count
+- `resources/js/pages/platform/index.vue` — card-grid-xs
+- `resources/js/pages/platform/companies/index.vue` — card-grid-xs
+- `resources/js/pages/platform/billing/_BillingDashboard.vue` — card-grid-xs
+- `resources/js/pages/platform/billing/_BillingMetricsWidget.vue` — card-grid-xs
+- `resources/js/pages/platform/settings/_SettingsBilling.vue` — card-grid-sm (×2)
+- `resources/js/pages/company/billing/_BillingCards.vue` — card-grid-sm
+- `resources/js/pages/company/billing/_BillingPlan.vue` — card-grid-sm + card-grid-md
+- `resources/js/pages/company/modules/index.vue` — card-grid-md (×4)
+- `resources/js/pages/register/_RegisterStepPlan.vue` — card-grid-md
+- `resources/js/pages/help-center/_HelpCenterKnowledgeBase.vue` — card-grid-sm (×2)
+- `resources/js/pages/index.vue` — card-grid-sm
+- `app/Modules/Platform/Roles/ReadModels/PlatformRoleReadModel.php` — users_sample
+- `tests/Feature/PlatformRolesCrudTest.php` — assertion users_sample
+
+---
+
+### ADR-380 — Platform Access : fusion Users + Roles en tabs (2026-03-20)
+
+**Contexte** : Les pages `/platform/users` et `/platform/roles` étaient deux pages séparées dans la sidebar. L'utilisateur demande une page unifiée à onglets pour une expérience SaaS-grade.
+
+**Décisions** :
+1. Nouveau répertoire `platform/access/` avec `[tab].vue` (page maître pattern `settings/[tab].vue`)
+2. `_UsersTab.vue` refactoré fidèlement au preset `UserList.vue` : barre de filtres (recherche + rôle + statut), avatars initiales, status chips label, menu 3-dot actions
+3. `_RolesTab.vue` extrait de `roles.vue` (card grid existant, inchangé)
+4. `_PermissionDetail.vue` déplacé dans `access/`
+5. Redirections `/platform/users` → `/platform/access/users` et `/platform/roles` → `/platform/access/roles`
+6. `UsersModule` possède le nav item « Access Management » (fusion des deux items)
+7. `RolesModule` : `navItems: []`, piggyback sur la page `platform-access-tab`
+8. `users/[id].vue` conservé à son URL originale, back link mis à jour vers `/platform/access/users`
+9. Contrainte routing : `[tab].vue` et `[id].vue` au même niveau conflictuent — résolue par répertoire séparé `access/`
+
+**Conséquences** :
+- Un seul item sidebar « Access Management » au lieu de deux
+- URLs stables via redirections
+- Les endpoints API backend restent inchangés (0 impact backend)
+- Tests `PlatformModuleNavContractTest` + `PageModuleAlignmentTest` mis à jour (allowlists shared tab modules)
+
+**Fichiers créés** :
+- `resources/js/pages/platform/access/[tab].vue` — page maître tabs
+- `resources/js/pages/platform/access/_UsersTab.vue` — onglet Users (preset UserList)
+- `resources/js/pages/platform/access/_RolesTab.vue` — onglet Roles (card grid)
+- `resources/js/pages/platform/access/_PermissionDetail.vue` — viewer permissions
+
+**Fichiers supprimés** :
+- `resources/js/pages/platform/users/index.vue`
+- `resources/js/pages/platform/roles.vue`
+- `resources/js/pages/platform/_PermissionDetail.vue`
+
+**Fichiers modifiés** :
+- `resources/js/pages/platform/users/[id].vue` — navActiveLink + back links
+- `resources/js/plugins/1.router/additional-routes.js` — redirections
+- `app/Modules/Platform/Users/UsersModule.php` — nav item fusionné + routeNames
+- `app/Modules/Platform/Roles/RolesModule.php` — navItems vide + routeNames
+- `resources/js/plugins/i18n/locales/en.json` — clés platformAccess, platformUsers filtres
+- `resources/js/plugins/i18n/locales/fr.json` — idem FR
+- `tests/Feature/PlatformModuleNavContractTest.php` — platform.roles dans sharedPageModules
+- `tests/Feature/PageModuleAlignmentTest.php` — override + sharedTabModules
+
+---
+
+## ADR-381 — Platform Supervision + Access Logs fusion (2026-03-19)
+
+### Contexte
+- Les pages `/platform/companies`, `/platform/company/users` et `/platform/audit` étaient séparées
+- L'utilisateur voulait fusionner Companies + Company Users + Company Logs en une page à onglets "Supervision"
+- Le tab Platform Logs devait rejoindre la page Access Management
+- Le tab Members devait supporter des milliers d'utilisateurs (VDataTableServer + recherche serveur)
+
+### Décisions
+1. **Nouvelle page `platform/supervision/[tab].vue`** avec 3 tabs : Companies, Members, Company Logs
+2. **Tab Platform Logs** ajouté dans `platform/access/[tab].vue` (3ème tab)
+3. **Page `/platform/audit` supprimée** — les 2 tabs redistribués entre access et supervision
+4. **Backend `CompanyUserController`** enrichi avec search + per_page pour scalabilité
+5. **CompaniesModule** : nav item unique "Supervision" → `platform-supervision-tab`
+6. **AuditModule** : navItems vides, routeNames partagés entre access et supervision
+7. **Pattern preset UserList.vue** appliqué : VDataTableServer, "Show X" selector, filter bar, TablePagination, dots menu
+8. Redirections ajoutées pour `/platform/companies`, `/platform/company/users`, `/platform/audit`
+
+### Conséquences
+- 3 pages fusionnées en 2 (supervision + access enrichi)
+- Navigation simplifiée : 1 item "Supervision" remplace "Companies" + "Company Users"
+- "Audit Logs" supprimé de la nav (tabs redistribués)
+- Tab Members prêt pour des milliers d'utilisateurs (pagination serveur + recherche serveur)
+
+### Fichiers
+- `resources/js/pages/platform/supervision/[tab].vue` — page maître supervision
+- `resources/js/pages/platform/supervision/_CompaniesTab.vue` — tab Companies
+- `resources/js/pages/platform/supervision/_MembersTab.vue` — tab Members (VDataTableServer)
+- `resources/js/pages/platform/supervision/_CompanyLogsTab.vue` — tab Company Logs
+- `resources/js/pages/platform/access/_PlatformLogsTab.vue` — tab Platform Logs
+- `resources/js/pages/platform/access/[tab].vue` — ajout 3ème tab logs
+- `app/Modules/Platform/Companies/Http/CompanyUserController.php` — search + per_page
+- `resources/js/modules/platform-admin/users/users.store.js` — fetchCompanyUsers(params)
+- `app/Modules/Platform/Companies/CompaniesModule.php` — nav "Supervision"
+- `app/Modules/Platform/Audit/AuditModule.php` — navItems vides
+- `resources/js/plugins/1.router/additional-routes.js` — 3 redirections ajoutées
+- `resources/js/pages/platform/companies/[id].vue` — navActiveLink + back link supervision
+- `resources/js/pages/platform/index.vue` — dashboard links mis à jour
+- SUPPRIMÉS : `companies/index.vue`, `company/users.vue`, `audit/index.vue`
+- `tests/Unit/NavBuilderTest.php` — key companies → platform-supervision
+- `tests/Feature/PageModuleAlignmentTest.php` — override + sharedTabModules
+- `tests/Feature/PlatformModuleNavContractTest.php` — platform.audit dans sharedPageModules
+
+---
+
+### ADR-382 — Notification bundles commerciaux + permission-aware inbox
+- **Date** : 2026-03-19
+- **Contexte** : La page notifications company affichait 28 toggles techniques individuels (Payment Failed, Invoice Created...) au lieu de bundles commerciaux compréhensibles pour un client SaaS. De plus, les catégories de notification étaient visibles à tous les membres indépendamment de leurs permissions RBAC (un dispatcher sans billing.manage voyait les notifications billing).
+- **Décisions** :
+  1. **Bundles commerciaux** : 1 bundle = 1 catégorie (billing, members, modules, security, support) au lieu de 28 topics individuels. Labels commerciaux via i18n.
+  2. **Agrégation ALL** : Un bundle in_app=true seulement si TOUS les topics de la catégorie ont in_app activé.
+  3. **Security verrouillé** : in_app forcé (locked=true), email toggleable.
+  4. **Mapping catégorie → permission** : `CATEGORY_PERMISSIONS` dans `NotificationTopicRegistry` (billing→billing.manage, members→members.view, modules→modules.manage, security→null, support→support.view).
+  5. **Permission gate au dispatcher** : `NotificationDispatcher::send()` filtre les recipients par permission catégorie avant envoi.
+  6. **Inbox filtré** : Le backend retourne `available_categories` dans la réponse paginée, le frontend n'affiche que les filtres de catégories autorisées.
+  7. **Pas de migration DB** : Réutilisation du stockage per-topic existant, présentation/update en bundles.
+  8. **Platform admin inchangé** : Garde le contrôle granulaire per-topic.
+- **Conséquences** :
+  - UX commerciale (company) : 5 bundles lisibles au lieu de 28 toggles techniques
+  - Sécurité company : un membre sans billing.manage ne voit ni les notifs billing, ni le filtre, ni le bundle de préférences
+  - Sécurité platform : un admin sans view_billing ne voit pas les topics/filtres billing ; cohérence avec le RBAC plateforme
+  - Bundles platform : préférences groupées par catégorie (billing, support, security, system) — même UX que company
+  - Double gate company + platform : NotificationDispatcher filtre en amont + frontend filtre en aval
+  - 45 tests total dans NotificationSystemTest (15 nouveaux ADR-382 + 2 mis à jour)
+- **Fichiers** :
+  - `app/Core/Notifications/NotificationTopicRegistry.php` — CATEGORY_PERMISSIONS, PLATFORM_CATEGORY_PERMISSIONS, LOCKED_CATEGORIES, BUNDLE_META, PLATFORM_BUNDLE_META, categoriesForUser(), platformCategoriesForAdmin()
+  - `app/Core/Notifications/NotificationDispatcher.php` — permission gate company + platform après collection des recipients
+  - `app/Modules/Core/Notifications/Http/NotificationPreferenceController.php` — réécriture complète (index bundles, update bundles)
+  - `app/Modules/Core/Notifications/Http/NotificationController.php` — available_categories dans la réponse
+  - `app/Modules/Platform/Notifications/Http/PlatformNotificationController.php` — available_categories + category filter dans la réponse
+  - `app/Modules/Infrastructure/AdminAuth/Http/PlatformAccountController.php` — réécriture en mode bundles (index + update), permission-filtered, cohérent avec company
+  - `resources/js/core/stores/notification.js` — _availableCategories, format bundles, fetchPreferences/updatePreferences, fix double prefix
+  - `resources/js/pages/company/notifications/index.vue` — catégories dynamiques basées sur store.availableCategories
+  - `resources/js/pages/company/notifications/_NotificationPreferences.vue` — réécriture commerciale VList bundles
+  - `resources/js/pages/platform/account/_AccountNotifications.vue` — réécriture en mode bundles (même UX que company)
+  - `resources/js/plugins/i18n/locales/en.json` — bundle + platformBundle keys EN
+  - `resources/js/plugins/i18n/locales/fr.json` — bundle + platformBundle keys FR
+  - `tests/Feature/NotificationSystemTest.php` — 15 nouveaux tests + 2 mis à jour (45 total)
 
 ---
 

@@ -390,12 +390,12 @@ const estimatedInvoice = computed(() => {
     </VAlert>
 
     <!-- Current Plan + Industry Profile -->
-    <VRow class="mb-6">
+    <VRow class="card-grid card-grid-sm mb-6">
       <VCol
         cols="12"
         md="6"
       >
-        <VCard class="h-100">
+        <VCard>
           <VCardTitle>
             <VIcon
               icon="tabler-credit-card"
@@ -569,7 +569,7 @@ const estimatedInvoice = computed(() => {
         cols="12"
         md="6"
       >
-        <VCard class="h-100">
+        <VCard>
           <VCardTitle>
             <VIcon
               icon="tabler-briefcase"
@@ -646,7 +646,10 @@ const estimatedInvoice = computed(() => {
           type="card"
         />
 
-        <VRow v-else>
+        <VRow
+          v-else
+          class="card-grid card-grid-md"
+        >
           <VCol
             v-for="plan in plans"
             :key="plan.key"

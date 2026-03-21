@@ -84,7 +84,7 @@ const cards = computed(() => [
     value: stats.value.companies,
     icon: 'tabler-building',
     color: 'primary',
-    to: { name: 'platform-companies' },
+    to: { name: 'platform-supervision-tab', params: { tab: 'companies' } },
   },
   {
     title: t('Platform Users'),
@@ -98,7 +98,7 @@ const cards = computed(() => [
     value: stats.value.companyUsers,
     icon: 'tabler-users-group',
     color: 'info',
-    to: { name: 'platform-company-users' },
+    to: { name: 'platform-supervision-tab', params: { tab: 'members' } },
   },
   {
     title: t('Roles'),
@@ -174,7 +174,7 @@ const saveAndResolve = async () => {
       {{ statsError }}
     </VAlert>
 
-    <VRow>
+    <VRow class="card-grid card-grid-xs">
       <VCol
         v-for="card in cards"
         :key="card.title"

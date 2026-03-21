@@ -243,7 +243,7 @@ const refreshLabel = computed(() => {
           </span>
         </VCardTitle>
         <VCardText>
-          <VRow>
+          <VRow class="card-grid card-grid-xs">
             <VCol
               v-for="card in kpiCards"
               :key="card.title"

@@ -33,6 +33,37 @@ class NotificationDispatcher
         }
 
         $recipients = $recipients instanceof Collection ? $recipients : collect($recipients);
+
+        // Permission gate: filter recipients by category permission — ADR-382
+        if ($company && $topic) {
+            // Company scope: filter by company permission
+            $requiredPerm = NotificationTopicRegistry::permissionForCategory($topic->category);
+
+            if ($requiredPerm !== null) {
+                $recipients = $recipients->filter(
+                    fn ($r) => $r->hasCompanyPermission($company, $requiredPerm),
+                );
+
+                if ($recipients->isEmpty()) {
+                    return 0;
+                }
+            }
+        }
+        elseif (! $company && $topic && $recipients->first() instanceof \App\Platform\Models\PlatformUser) {
+            // Platform scope: filter platform admins by platform permission
+            $requiredPerm = NotificationTopicRegistry::PLATFORM_CATEGORY_PERMISSIONS[$topic->category] ?? null;
+
+            if ($requiredPerm !== null) {
+                $recipients = $recipients->filter(
+                    fn ($r) => $r->hasPermission($requiredPerm),
+                );
+
+                if ($recipients->isEmpty()) {
+                    return 0;
+                }
+            }
+        }
+
         $count = 0;
 
         foreach ($recipients as $recipient) {

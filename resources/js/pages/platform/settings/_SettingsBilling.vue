@@ -363,12 +363,12 @@ const resetToDefaults = async () => {
       </VCard>
 
       <!-- ═══ Tax + Addon (6/6) ═══ -->
-      <VRow class="mb-6">
+      <VRow class="card-grid card-grid-sm mb-6">
         <VCol
           cols="12"
           md="6"
         >
-          <VCard class="h-100">
+          <VCard>
             <VCardTitle class="d-flex align-center">
               <VIcon
                 icon="tabler-receipt-tax"
@@ -413,7 +413,7 @@ const resetToDefaults = async () => {
           cols="12"
           md="6"
         >
-          <VCard class="h-100">
+          <VCard>
             <VCardTitle class="d-flex align-center">
               <VIcon
                 icon="tabler-puzzle"
@@ -694,12 +694,12 @@ const resetToDefaults = async () => {
       </VCard>
 
       <!-- ═══ Wallet + Governance (6/6) ═══ -->
-      <VRow class="mb-6">
+      <VRow class="card-grid card-grid-sm mb-6">
         <VCol
           cols="12"
           md="6"
         >
-          <VCard class="h-100">
+          <VCard>
             <VCardTitle class="d-flex align-center">
               <VIcon
                 icon="tabler-wallet"
@@ -747,7 +747,7 @@ const resetToDefaults = async () => {
           cols="12"
           md="6"
         >
-          <VCard class="h-100">
+          <VCard>
             <VCardTitle class="d-flex align-center">
               <VIcon
                 icon="tabler-shield-check"

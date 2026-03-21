@@ -28,7 +28,7 @@ class RoleController
 
         return response()->json([
             'message' => 'Role created.',
-            'role' => $role,
+            'role' => PlatformRoleReadModel::enrich($role),
         ], 201);
     }
 
@@ -45,7 +45,7 @@ class RoleController
 
         return response()->json([
             'message' => 'Role updated.',
-            'role' => $role,
+            'role' => PlatformRoleReadModel::enrich($role),
         ]);
     }
 

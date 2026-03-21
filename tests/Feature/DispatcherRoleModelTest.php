@@ -128,10 +128,10 @@ class DispatcherRoleModelTest extends TestCase
         $this->assertContains('members', $keys, 'Dispatcher should see Members nav item (has members.view).');
     }
 
-    public function test_dispatcher_sees_support_nav_item(): void
+    public function test_dispatcher_does_not_see_support_nav_item(): void
     {
         $keys = $this->extractNavKeys();
-        $this->assertContains('support', $keys, 'Dispatcher should see Support nav item (has support.view).');
+        $this->assertNotContains('support', $keys, 'Support module has no sidebar nav item — access via footer link only.');
     }
 
     public function test_dispatcher_sees_my_deliveries_nav_item(): void

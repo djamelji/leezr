@@ -7,7 +7,7 @@ const isFallbackState = ref(false)
 const interval = ref()
 const showProgress = ref(false)
 
-// Global loading state (API calls via useGlobalLoading / useAsyncState)
+// Global loading state (API calls via useGlobalLoading / useAsyncAction)
 const globalLoading = useGlobalLoading()
 
 // Show the progress bar when either route transition OR global API loading is active

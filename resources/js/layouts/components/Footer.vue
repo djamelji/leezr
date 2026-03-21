@@ -50,9 +50,14 @@ const navigate = link => {
       <a
         v-for="link in footerLinks"
         :key="link.key"
-        class="cursor-pointer"
+        class="d-inline-flex align-center gap-1 cursor-pointer"
         @click="navigate(link)"
       >
+        <VIcon
+          v-if="link.icon"
+          :icon="link.icon"
+          size="18"
+        />
         {{ t(link.label) }}
       </a>
     </span>

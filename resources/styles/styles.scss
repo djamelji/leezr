@@ -1,1 +1,57 @@
-// Write your overrides
+// Card Grid System — Standardized card heights
+// Usage: <VRow class="card-grid card-grid-{size}"> where size = xs | sm | md | lg
+//
+// Sizes:
+//   xs  — 120px min-height (KPI stat cards, small metrics)
+//   sm  — 180px min-height (info cards, role cards, topic cards)
+//   md  — 280px min-height (content cards, plan comparison)
+//   lg  — 400px min-height (rich content, detailed cards)
+//
+// All cards in a .card-grid row get equal height (block-size: 100%).
+// The size class sets a min-height so cards never collapse below threshold.
+
+.card-grid {
+  &.v-row {
+    > .v-col > .v-card,
+    > [class*="v-col-"] > .v-card {
+      block-size: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    // Content area fills remaining space, pushing actions to bottom
+    > .v-col > .v-card > .v-card-text:last-of-type,
+    > [class*="v-col-"] > .v-card > .v-card-text:last-of-type {
+      flex-grow: 1;
+    }
+  }
+
+  // Size tiers — min-height on cards
+  &.card-grid-xs.v-row {
+    > .v-col > .v-card,
+    > [class*="v-col-"] > .v-card {
+      min-block-size: 120px;
+    }
+  }
+
+  &.card-grid-sm.v-row {
+    > .v-col > .v-card,
+    > [class*="v-col-"] > .v-card {
+      min-block-size: 180px;
+    }
+  }
+
+  &.card-grid-md.v-row {
+    > .v-col > .v-card,
+    > [class*="v-col-"] > .v-card {
+      min-block-size: 280px;
+    }
+  }
+
+  &.card-grid-lg.v-row {
+    > .v-col > .v-card,
+    > [class*="v-col-"] > .v-card {
+      min-block-size: 400px;
+    }
+  }
+}

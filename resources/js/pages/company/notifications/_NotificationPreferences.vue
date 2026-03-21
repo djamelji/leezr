@@ -1,52 +1,36 @@
 <script setup>
+/**
+ * Notification Preferences — Commercial bundles (1 per category)
+ * ADR-382: Permission-filtered, commercial labels, locked security
+ */
 import { useNotificationStore } from '@/core/stores/notification'
+import { useAppToast } from '@/composables/useAppToast'
 
 const { t } = useI18n()
 const store = useNotificationStore()
+const { toast } = useAppToast()
 const saving = ref(false)
-const localPrefs = ref([])
+const localBundles = ref([])
 
 onMounted(async () => {
   await store.fetchPreferences()
-  localPrefs.value = store.preferences.map(p => ({
-    ...p,
-    in_app: (p.channels || []).includes('in_app'),
-    email: (p.channels || []).includes('email'),
-  }))
+  localBundles.value = store.preferences.map(b => ({ ...b }))
 })
-
-// Group by category
-const groupedPrefs = computed(() => {
-  const groups = {}
-  for (const p of localPrefs.value) {
-    const cat = p.category || 'system'
-    if (!groups[cat]) groups[cat] = []
-    groups[cat].push(p)
-  }
-
-  return groups
-})
-
-const categoryLabels = {
-  billing: t('notifications.categoryBilling'),
-  members: t('notifications.categoryMembers'),
-  modules: t('notifications.categoryModules'),
-  security: t('notifications.categorySecurity'),
-  system: t('notifications.categorySystem'),
-}
 
 const save = async () => {
   saving.value = true
   try {
-    const prefs = localPrefs.value.map(p => ({
-      topic_key: p.key,
-      channels: [
-        ...(p.in_app ? ['in_app'] : []),
-        ...(p.email ? ['email'] : []),
-      ],
+    const bundles = localBundles.value.map(b => ({
+      category: b.category,
+      in_app: b.locked ? true : b.in_app,
+      email: b.email,
     }))
 
-    await store.updatePreferences(prefs)
+    await store.updatePreferences(bundles)
+    toast(t('common.saved'), 'success')
+  }
+  catch {
+    toast(t('common.operationFailed'), 'error')
   }
   finally {
     saving.value = false
@@ -54,77 +38,110 @@ const save = async () => {
 }
 
 const reset = () => {
-  localPrefs.value = store.preferences.map(p => ({
-    ...p,
-    in_app: (p.channels || []).includes('in_app'),
-    email: (p.channels || []).includes('email'),
-  }))
+  localBundles.value = store.preferences.map(b => ({ ...b }))
 }
 </script>
 
 <template>
   <VCard>
-    <VCardTitle>{{ t('notifications.preferences') }}</VCardTitle>
-    <VCardSubtitle>{{ t('notifications.preferencesDesc') }}</VCardSubtitle>
+    <VCardItem>
+      <template #prepend>
+        <VAvatar
+          color="primary"
+          variant="tonal"
+        >
+          <VIcon icon="tabler-bell-cog" />
+        </VAvatar>
+      </template>
+      <VCardTitle>{{ t('notifications.preferences') }}</VCardTitle>
+      <VCardSubtitle>{{ t('notifications.preferencesDesc') }}</VCardSubtitle>
+    </VCardItem>
 
     <VCardText>
-      <template
-        v-for="(prefs, category) in groupedPrefs"
-        :key="category"
+      <!-- Loading -->
+      <div
+        v-if="!store.preferencesLoaded"
+        class="text-center py-8"
       >
-        <h6 class="text-h6 mb-3 mt-4">
-          {{ categoryLabels[category] || category }}
-        </h6>
+        <VProgressCircular indeterminate />
+      </div>
 
-        <VTable
-          class="text-no-wrap mb-4"
-          density="compact"
+      <!-- Bundle list -->
+      <VList
+        v-else
+        class="card-list"
+      >
+        <VListItem
+          v-for="bundle in localBundles"
+          :key="bundle.category"
+          class="py-4"
         >
-          <thead>
-            <tr>
-              <th style="width: 400px">
-                {{ t('notifications.topic') }}
-              </th>
-              <th class="text-center">
-                In-App
-              </th>
-              <th class="text-center">
-                Email
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="pref in prefs"
-              :key="pref.key"
+          <template #prepend>
+            <VAvatar
+              :color="bundle.color || 'primary'"
+              variant="tonal"
+              rounded
             >
-              <td>
-                <div class="d-flex align-center gap-2">
-                  <VIcon
-                    :icon="pref.icon"
-                    size="18"
-                  />
-                  {{ pref.label }}
-                </div>
-              </td>
-              <td class="text-center">
-                <VCheckbox
-                  v-model="pref.in_app"
+              <VIcon :icon="bundle.icon" />
+            </VAvatar>
+          </template>
+
+          <VListItemTitle class="font-weight-medium">
+            {{ t(`notifications.bundle.${bundle.category}.label`) }}
+          </VListItemTitle>
+          <VListItemSubtitle class="text-wrap">
+            {{ t(`notifications.bundle.${bundle.category}.description`) }}
+          </VListItemSubtitle>
+
+          <template #append>
+            <div class="d-flex align-center gap-4">
+              <!-- In-App switch -->
+              <div
+                class="d-flex flex-column align-center"
+                style="min-inline-size: 60px;"
+              >
+                <span class="text-caption text-disabled mb-1">
+                  {{ t('notifications.channelInApp') }}
+                </span>
+                <VSwitch
+                  v-model="bundle.in_app"
+                  :disabled="bundle.locked"
                   hide-details
                   density="compact"
+                  color="primary"
                 />
-              </td>
-              <td class="text-center">
-                <VCheckbox
-                  v-model="pref.email"
+              </div>
+
+              <!-- Email switch -->
+              <div
+                class="d-flex flex-column align-center"
+                style="min-inline-size: 60px;"
+              >
+                <span class="text-caption text-disabled mb-1">
+                  {{ t('notifications.channelEmail') }}
+                </span>
+                <VSwitch
+                  v-model="bundle.email"
                   hide-details
                   density="compact"
+                  color="primary"
                 />
-              </td>
-            </tr>
-          </tbody>
-        </VTable>
-      </template>
+              </div>
+            </div>
+          </template>
+        </VListItem>
+      </VList>
+
+      <!-- Locked notice -->
+      <VAlert
+        v-if="localBundles.some(b => b.locked)"
+        type="info"
+        variant="tonal"
+        class="mt-4"
+        density="compact"
+      >
+        {{ t('notifications.lockedNotice') }}
+      </VAlert>
     </VCardText>
 
     <VCardActions>

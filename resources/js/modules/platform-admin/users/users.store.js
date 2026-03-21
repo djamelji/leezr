@@ -84,8 +84,8 @@ export const usePlatformUsersStore = defineStore('platformUsers', {
     },
 
     // ─── Company Users (read-only) ──────────────────────
-    async fetchCompanyUsers(page = 1) {
-      const data = await $platformApi('/company-users', { params: { page } })
+    async fetchCompanyUsers(params = {}) {
+      const data = await $platformApi('/company-users', { params })
 
       this._companyUsers = data.data
       this._companyUsersPagination = {

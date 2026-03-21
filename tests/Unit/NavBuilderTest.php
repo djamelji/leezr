@@ -99,8 +99,8 @@ class NavBuilderTest extends TestCase
         // Dashboard has no permission requirement — should be present
         $this->assertContains('dashboard', $allKeys);
 
-        // Companies requires manage_companies — should be present
-        $this->assertContains('companies', $allKeys);
+        // Supervision requires manage_companies — should be present (ADR-381)
+        $this->assertContains('platform-supervision', $allKeys);
 
         // Roles requires manage_roles — should NOT be present
         $this->assertNotContains('roles', $allKeys);

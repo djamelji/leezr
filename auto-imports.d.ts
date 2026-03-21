@@ -11,14 +11,14 @@ declare global {
   const COOKIE_MAX_AGE_1_YEAR: typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']
   const EffectScope: typeof import('vue')['EffectScope']
   const acceptHMRUpdate: typeof import('pinia')['acceptHMRUpdate']
-  const alphaDashValidator: typeof import('./resources/js/@core/utils/validators.js')['alphaDashValidator']
-  const alphaValidator: typeof import('./resources/js/@core/utils/validators.js')['alphaValidator']
+  const alphaDashValidator: typeof import('@core/utils/validators')['alphaDashValidator']
+  const alphaValidator: typeof import('@core/utils/validators')['alphaValidator']
   const applyTheme: typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']
   const applyTypography: typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
-  const avatarText: typeof import('./resources/js/@core/utils/formatters.js')['avatarText']
-  const betweenValidator: typeof import('./resources/js/@core/utils/validators.js')['betweenValidator']
+  const avatarText: typeof import('@core/utils/formatters')['avatarText']
+  const betweenValidator: typeof import('@core/utils/validators')['betweenValidator']
   const checkVersionOnMount: typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']
   const clearVersionState: typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']
   const computed: typeof import('vue')['computed']
@@ -26,7 +26,7 @@ declare global {
   const computedEager: typeof import('@vueuse/core')['computedEager']
   const computedInject: typeof import('@vueuse/core')['computedInject']
   const computedWithControl: typeof import('@vueuse/core')['computedWithControl']
-  const confirmedValidator: typeof import('./resources/js/@core/utils/validators.js')['confirmedValidator']
+  const confirmedValidator: typeof import('@core/utils/validators')['confirmedValidator']
   const controlledComputed: typeof import('@vueuse/core')['controlledComputed']
   const controlledRef: typeof import('@vueuse/core')['controlledRef']
   const createApp: typeof import('vue')['createApp']
@@ -41,7 +41,7 @@ declare global {
   const createSharedComposable: typeof import('@vueuse/core')['createSharedComposable']
   const createTemplatePromise: typeof import('@vueuse/core')['createTemplatePromise']
   const createUnrefFn: typeof import('@vueuse/core')['createUnrefFn']
-  const createUrl: typeof import('./resources/js/@core/composable/createUrl.js')['createUrl']
+  const createUrl: typeof import('@core/composable/createUrl')['createUrl']
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
@@ -51,11 +51,11 @@ declare global {
   const defineStore: typeof import('pinia')['defineStore']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
-  const emailValidator: typeof import('./resources/js/@core/utils/validators.js')['emailValidator']
+  const emailValidator: typeof import('@core/utils/validators')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const formatDate: typeof import('./resources/js/utils/datetime.js')['formatDate']
   const formatDateTime: typeof import('./resources/js/utils/datetime.js')['formatDateTime']
-  const formatDateToMonthShort: typeof import('./resources/js/@core/utils/formatters.js')['formatDateToMonthShort']
+  const formatDateToMonthShort: typeof import('@core/utils/formatters')['formatDateToMonthShort']
   const formatMoney: typeof import('./resources/js/utils/money.js')['formatMoney']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -66,7 +66,7 @@ declare global {
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
-  const integerValidator: typeof import('./resources/js/@core/utils/validators.js')['integerValidator']
+  const integerValidator: typeof import('@core/utils/validators')['integerValidator']
   const invoiceStatusColor: typeof import('./resources/js/utils/billing.js')['invoiceStatusColor']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isEmpty: typeof import('./resources/js/@core/utils/helpers.js')['isEmpty']
@@ -78,8 +78,8 @@ declare global {
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
   const isToday: typeof import('./resources/js/@core/utils/helpers.js')['isToday']
-  const kFormatter: typeof import('./resources/js/@core/utils/formatters.js')['kFormatter']
-  const lengthValidator: typeof import('./resources/js/@core/utils/validators.js')['lengthValidator']
+  const kFormatter: typeof import('@core/utils/formatters')['kFormatter']
+  const lengthValidator: typeof import('@core/utils/validators')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
   const logicNot: typeof import('@vueuse/math')['logicNot']
   const logicOr: typeof import('@vueuse/math')['logicOr']
@@ -112,9 +112,9 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const paginationMeta: typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']
-  const passwordValidator: typeof import('./resources/js/@core/utils/validators.js')['passwordValidator']
+  const passwordValidator: typeof import('@core/utils/validators')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
-  const prefixWithPlus: typeof import('./resources/js/@core/utils/formatters.js')['prefixWithPlus']
+  const prefixWithPlus: typeof import('@core/utils/formatters')['prefixWithPlus']
   const previewTypography: typeof import('./resources/js/composables/useApplyTypography.js')['previewTypography']
   const provide: typeof import('vue')['provide']
   const provideLocal: typeof import('@vueuse/core')['provideLocal']
@@ -132,15 +132,15 @@ declare global {
   const refThrottled: typeof import('@vueuse/core')['refThrottled']
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
   const refreshCsrf: typeof import('./resources/js/utils/csrf.js')['refreshCsrf']
-  const regexValidator: typeof import('./resources/js/@core/utils/validators.js')['regexValidator']
+  const regexValidator: typeof import('@core/utils/validators')['regexValidator']
   const registerPlugins: typeof import('./resources/js/@core/utils/plugins.js')['registerPlugins']
-  const requiredValidator: typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']
+  const requiredValidator: typeof import('@core/utils/validators')['requiredValidator']
   const resetTypography: typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolvePostLoginRedirect: typeof import('./resources/js/utils/safeRedirect.js')['resolvePostLoginRedirect']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
-  const resolveVuetifyTheme: typeof import('./resources/js/@core/utils/vuetify.js')['resolveVuetifyTheme']
+  const resolveVuetifyTheme: typeof import('@core/utils/vuetify')['resolveVuetifyTheme']
   const rgbaToHex: typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']
   const safeRedirect: typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']
   const setActivePinia: typeof import('pinia')['setActivePinia']
@@ -171,8 +171,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
-  const urlValidator: typeof import('./resources/js/@core/utils/validators.js')['urlValidator']
-  const useAbility: typeof import('./resources/js/plugins/casl/composables/useAbility.js')['useAbility']
+  const urlValidator: typeof import('@core/utils/validators')['urlValidator']
   const useAbs: typeof import('@vueuse/math')['useAbs']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useAnalytics: typeof import('./resources/js/composables/useAnalytics.js')['useAnalytics']
@@ -192,8 +191,8 @@ declare global {
   const useArrayReduce: typeof import('@vueuse/core')['useArrayReduce']
   const useArraySome: typeof import('@vueuse/core')['useArraySome']
   const useArrayUnique: typeof import('@vueuse/core')['useArrayUnique']
+  const useAsyncAction: typeof import('./resources/js/composables/useAsyncAction.js')['useAsyncAction']
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
-  const useAsyncState: typeof import('./resources/js/composables/useAsyncState.js')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']
   const useAverage: typeof import('@vueuse/math')['useAverage']
   const useBase64: typeof import('@vueuse/core')['useBase64']
@@ -212,7 +211,7 @@ declare global {
   const useCompanyNav: typeof import('./resources/js/composables/useCompanyNav.js')['useCompanyNav']
   const useConfirm: typeof import('./resources/js/composables/useConfirm.js')['useConfirm']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
-  const useCookie: typeof import('./resources/js/@core/composable/useCookie.js')['useCookie']
+  const useCookie: typeof import('./resources/js/composables/useCookie.js')['useCookie']
   const useCounter: typeof import('@vueuse/core')['useCounter']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVar: typeof import('@vueuse/core')['useCssVar']
@@ -253,7 +252,7 @@ declare global {
   const useFps: typeof import('@vueuse/core')['useFps']
   const useFullscreen: typeof import('@vueuse/core')['useFullscreen']
   const useGamepad: typeof import('@vueuse/core')['useGamepad']
-  const useGenerateImageVariant: typeof import('./resources/js/@core/composable/useGenerateImageVariant.js')['useGenerateImageVariant']
+  const useGenerateImageVariant: typeof import('./resources/js/composables/useGenerateImageVariant.js')['useGenerateImageVariant']
   const useGeolocation: typeof import('@vueuse/core')['useGeolocation']
   const useGlobalLoading: typeof import('./resources/js/composables/useGlobalLoading.js')['useGlobalLoading']
   const useHelpCenter: typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']
@@ -310,14 +309,13 @@ declare global {
   const useProjection: typeof import('@vueuse/math')['useProjection']
   const usePublicAddons: typeof import('./resources/js/composables/usePublicAddons.js')['usePublicAddons']
   const usePublicFields: typeof import('./resources/js/composables/usePublicFields.js')['usePublicFields']
-  const usePublicHelpCenter: typeof import('./resources/js/composables/usePublicHelpCenter.js')['usePublicHelpCenter']
   const usePublicMarkets: typeof import('./resources/js/composables/usePublicMarkets.js')['usePublicMarkets']
   const usePublicPlans: typeof import('./resources/js/composables/usePublicPlans.js')['usePublicPlans']
   const usePublicTheme: typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
-  const useResponsiveLeftSidebar: typeof import('./resources/js/@core/composable/useResponsiveSidebar.js')['useResponsiveLeftSidebar']
+  const useResponsiveLeftSidebar: typeof import('@core/composable/useResponsiveSidebar')['useResponsiveLeftSidebar']
   const useReturnNavigation: typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']
   const useRound: typeof import('@vueuse/math')['useRound']
   const useRoute: typeof import('vue-router/auto')['useRoute']
@@ -331,7 +329,7 @@ declare global {
   const useSessionGovernance: typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']
   const useSessionStorage: typeof import('@vueuse/core')['useSessionStorage']
   const useShare: typeof import('@vueuse/core')['useShare']
-  const useSkins: typeof import('./resources/js/@core/composable/useSkins.js')['useSkins']
+  const useSkins: typeof import('@core/composable/useSkins')['useSkins']
   const useSlots: typeof import('vue')['useSlots']
   const useSorted: typeof import('@vueuse/core')['useSorted']
   const useSpeechRecognition: typeof import('@vueuse/core')['useSpeechRecognition']
@@ -410,14 +408,14 @@ declare module 'vue' {
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
-    readonly alphaDashValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['alphaDashValidator']>
-    readonly alphaValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['alphaValidator']>
+    readonly alphaDashValidator: UnwrapRef<typeof import('@core/utils/validators')['alphaDashValidator']>
+    readonly alphaValidator: UnwrapRef<typeof import('@core/utils/validators')['alphaValidator']>
     readonly applyTheme: UnwrapRef<typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']>
     readonly applyTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
-    readonly avatarText: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['avatarText']>
-    readonly betweenValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['betweenValidator']>
+    readonly avatarText: UnwrapRef<typeof import('@core/utils/formatters')['avatarText']>
+    readonly betweenValidator: UnwrapRef<typeof import('@core/utils/validators')['betweenValidator']>
     readonly checkVersionOnMount: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']>
     readonly clearVersionState: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
@@ -425,7 +423,7 @@ declare module 'vue' {
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
     readonly computedInject: UnwrapRef<typeof import('@vueuse/core')['computedInject']>
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
-    readonly confirmedValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['confirmedValidator']>
+    readonly confirmedValidator: UnwrapRef<typeof import('@core/utils/validators')['confirmedValidator']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -440,7 +438,7 @@ declare module 'vue' {
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
-    readonly createUrl: UnwrapRef<typeof import('./resources/js/@core/composable/createUrl.js')['createUrl']>
+    readonly createUrl: UnwrapRef<typeof import('@core/composable/createUrl')['createUrl']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
@@ -450,35 +448,29 @@ declare module 'vue' {
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
-    readonly emailValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['emailValidator']>
+    readonly emailValidator: UnwrapRef<typeof import('@core/utils/validators')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
-    readonly formatDate: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['formatDate']>
     readonly formatDate: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDate']>
     readonly formatDateTime: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDateTime']>
-    readonly formatDateToMonthShort: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['formatDateToMonthShort']>
+    readonly formatDateToMonthShort: UnwrapRef<typeof import('@core/utils/formatters')['formatDateToMonthShort']>
     readonly formatMoney: UnwrapRef<typeof import('./resources/js/utils/money.js')['formatMoney']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getXsrfToken: UnwrapRef<typeof import('./resources/js/utils/csrf.js')['getXsrfToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
-    readonly hexToRgb: UnwrapRef<typeof import('./resources/js/@core/utils/colorConverter.js')['hexToRgb']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
-    readonly integerValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['integerValidator']>
+    readonly integerValidator: UnwrapRef<typeof import('@core/utils/validators')['integerValidator']>
     readonly invoiceStatusColor: UnwrapRef<typeof import('./resources/js/utils/billing.js')['invoiceStatusColor']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
-    readonly isEmpty: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isEmpty']>
-    readonly isEmptyArray: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isEmptyArray']>
-    readonly isNullOrUndefined: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isNullOrUndefined']>
-    readonly isObject: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isObject']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
-    readonly isToday: UnwrapRef<typeof import('./resources/js/@core/utils/helpers.js')['isToday']>
-    readonly lengthValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['lengthValidator']>
+    readonly kFormatter: UnwrapRef<typeof import('@core/utils/formatters')['kFormatter']>
+    readonly lengthValidator: UnwrapRef<typeof import('@core/utils/validators')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>
     readonly logicOr: UnwrapRef<typeof import('@vueuse/math')['logicOr']>
@@ -511,9 +503,9 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly paginationMeta: UnwrapRef<typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']>
-    readonly passwordValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['passwordValidator']>
+    readonly passwordValidator: UnwrapRef<typeof import('@core/utils/validators')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
-    readonly prefixWithPlus: UnwrapRef<typeof import('./resources/js/@core/utils/formatters.js')['prefixWithPlus']>
+    readonly prefixWithPlus: UnwrapRef<typeof import('@core/utils/formatters')['prefixWithPlus']>
     readonly previewTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['previewTypography']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
@@ -531,16 +523,14 @@ declare module 'vue' {
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly refreshCsrf: UnwrapRef<typeof import('./resources/js/utils/csrf.js')['refreshCsrf']>
-    readonly regexValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['regexValidator']>
-    readonly registerPlugins: UnwrapRef<typeof import('./resources/js/@core/utils/plugins.js')['registerPlugins']>
-    readonly requiredValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['requiredValidator']>
+    readonly regexValidator: UnwrapRef<typeof import('@core/utils/validators')['regexValidator']>
+    readonly requiredValidator: UnwrapRef<typeof import('@core/utils/validators')['requiredValidator']>
     readonly resetTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolvePostLoginRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['resolvePostLoginRedirect']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
-    readonly resolveVuetifyTheme: UnwrapRef<typeof import('./resources/js/@core/utils/vuetify.js')['resolveVuetifyTheme']>
-    readonly rgbaToHex: UnwrapRef<typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']>
+    readonly resolveVuetifyTheme: UnwrapRef<typeof import('@core/utils/vuetify')['resolveVuetifyTheme']>
     readonly safeRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setAppName: UnwrapRef<typeof import('./resources/js/composables/useAppName.js')['setAppName']>
@@ -570,7 +560,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
-    readonly urlValidator: UnwrapRef<typeof import('./resources/js/@core/utils/validators.js')['urlValidator']>
+    readonly urlValidator: UnwrapRef<typeof import('@core/utils/validators')['urlValidator']>
     readonly useAbs: UnwrapRef<typeof import('@vueuse/math')['useAbs']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnalytics: UnwrapRef<typeof import('./resources/js/composables/useAnalytics.js')['useAnalytics']>
@@ -590,8 +580,8 @@ declare module 'vue' {
     readonly useArrayReduce: UnwrapRef<typeof import('@vueuse/core')['useArrayReduce']>
     readonly useArraySome: UnwrapRef<typeof import('@vueuse/core')['useArraySome']>
     readonly useArrayUnique: UnwrapRef<typeof import('@vueuse/core')['useArrayUnique']>
+    readonly useAsyncAction: UnwrapRef<typeof import('./resources/js/composables/useAsyncAction.js')['useAsyncAction']>
     readonly useAsyncQueue: UnwrapRef<typeof import('@vueuse/core')['useAsyncQueue']>
-    readonly useAsyncState: UnwrapRef<typeof import('./resources/js/composables/useAsyncState.js')['useAsyncState']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAverage: UnwrapRef<typeof import('@vueuse/math')['useAverage']>
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
@@ -610,7 +600,7 @@ declare module 'vue' {
     readonly useCompanyNav: UnwrapRef<typeof import('./resources/js/composables/useCompanyNav.js')['useCompanyNav']>
     readonly useConfirm: UnwrapRef<typeof import('./resources/js/composables/useConfirm.js')['useConfirm']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
-    readonly useCookie: UnwrapRef<typeof import('./resources/js/@core/composable/useCookie.js')['useCookie']>
+    readonly useCookie: UnwrapRef<typeof import('./resources/js/composables/useCookie.js')['useCookie']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
@@ -651,7 +641,7 @@ declare module 'vue' {
     readonly useFps: UnwrapRef<typeof import('@vueuse/core')['useFps']>
     readonly useFullscreen: UnwrapRef<typeof import('@vueuse/core')['useFullscreen']>
     readonly useGamepad: UnwrapRef<typeof import('@vueuse/core')['useGamepad']>
-    readonly useGenerateImageVariant: UnwrapRef<typeof import('./resources/js/@core/composable/useGenerateImageVariant.js')['useGenerateImageVariant']>
+    readonly useGenerateImageVariant: UnwrapRef<typeof import('./resources/js/composables/useGenerateImageVariant.js')['useGenerateImageVariant']>
     readonly useGeolocation: UnwrapRef<typeof import('@vueuse/core')['useGeolocation']>
     readonly useGlobalLoading: UnwrapRef<typeof import('./resources/js/composables/useGlobalLoading.js')['useGlobalLoading']>
     readonly useHelpCenter: UnwrapRef<typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']>
@@ -714,7 +704,7 @@ declare module 'vue' {
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
-    readonly useResponsiveLeftSidebar: UnwrapRef<typeof import('./resources/js/@core/composable/useResponsiveSidebar.js')['useResponsiveLeftSidebar']>
+    readonly useResponsiveLeftSidebar: UnwrapRef<typeof import('@core/composable/useResponsiveSidebar')['useResponsiveLeftSidebar']>
     readonly useReturnNavigation: UnwrapRef<typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']>
     readonly useRound: UnwrapRef<typeof import('@vueuse/math')['useRound']>
     readonly useRoute: UnwrapRef<typeof import('vue-router/auto')['useRoute']>
@@ -728,7 +718,7 @@ declare module 'vue' {
     readonly useSessionGovernance: UnwrapRef<typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
-    readonly useSkins: UnwrapRef<typeof import('./resources/js/@core/composable/useSkins.js')['useSkins']>
+    readonly useSkins: UnwrapRef<typeof import('@core/composable/useSkins')['useSkins']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>

@@ -22,6 +22,7 @@ export const useNotificationStore = defineStore('notification', {
     _pagination: null,
     _preferences: [],
     _preferencesLoaded: false,
+    _availableCategories: [],
     _loaded: false,
     _uuids: new Set(), // dedup SSE by event_uuid
     _platformMode: false,
@@ -42,6 +43,7 @@ export const useNotificationStore = defineStore('notification', {
     recentNotifications: state => state._notifications.slice(0, 10),
     preferences: state => state._preferences,
     preferencesLoaded: state => state._preferencesLoaded,
+    availableCategories: state => state._availableCategories,
     pagination: state => state._pagination,
   },
 
@@ -69,6 +71,7 @@ export const useNotificationStore = defineStore('notification', {
         const data = await this._call('/unread-count', opts)
         const prevCount = this._unreadCount
         const newCount = data.unread_count ?? 0
+        const isInitialBoot = !this._loaded
 
         this._unreadCount = newCount
         this._loaded = true
@@ -78,8 +81,9 @@ export const useNotificationStore = defineStore('notification', {
         if (newCount > 0 && this._notifications.length === 0 && !this._loading) {
           await this.fetchRecent()
 
-          // Show toasts for newly arrived unread items (polling detected new notifications)
-          if (newCount > prevCount) {
+          // Only toast on polling-detected increases, NOT on initial boot.
+          // Initial boot just loads silently — toasts are for live events only.
+          if (!isInitialBoot && newCount > prevCount) {
             const newItems = this._notifications
               .filter(n => !n.read_at)
               .slice(0, newCount - prevCount)
@@ -156,6 +160,11 @@ export const useNotificationStore = defineStore('notification', {
 
         // Rebuild uuid set
         this._uuids = new Set(this._notifications.filter(n => n.event_uuid).map(n => n.event_uuid))
+
+        // Capture permission-filtered categories — ADR-382
+        if (data.available_categories) {
+          this._availableCategories = data.available_categories
+        }
       }
       catch (e) {
         console.warn('[notifications] fetchPage failed', e)
@@ -207,9 +216,10 @@ export const useNotificationStore = defineStore('notification', {
 
     async fetchPreferences() {
       try {
-        const data = await $api('/notifications/preferences')
+        const data = await this._call('/preferences')
 
-        this._preferences = data.preferences ?? []
+        this._preferences = data.bundles ?? []
+        this._availableCategories = data.available_categories ?? []
         this._preferencesLoaded = true
       }
       catch (e) {
@@ -217,14 +227,17 @@ export const useNotificationStore = defineStore('notification', {
       }
     },
 
-    async updatePreferences(prefs) {
+    async updatePreferences(bundles) {
       try {
-        await $api('/notifications/preferences', { method: 'PUT', body: { preferences: prefs } })
+        await this._call('/preferences', { method: 'PUT', body: { bundles } })
 
         // Update local state
-        for (const p of prefs) {
-          const existing = this._preferences.find(ep => ep.key === p.topic_key)
-          if (existing) existing.channels = p.channels
+        for (const b of bundles) {
+          const existing = this._preferences.find(p => p.category === b.category)
+          if (existing) {
+            existing.in_app = b.in_app
+            existing.email = b.email
+          }
         }
       }
       catch (e) {
@@ -295,6 +308,7 @@ export const useNotificationStore = defineStore('notification', {
       this._pagination = null
       this._preferences = []
       this._preferencesLoaded = false
+      this._availableCategories = []
       this._loaded = false
       this._uuids = new Set()
       this._toastQueue = []

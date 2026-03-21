@@ -65,10 +65,23 @@ export default defineConfig({
       ],
     }), // Docs: https://github.com/antfu/unplugin-auto-import#unplugin-auto-import
     AutoImport({
-      imports: ['vue', VueRouterAutoImports, '@vueuse/core', '@vueuse/math', 'vue-i18n', 'pinia'],
+      imports: [
+        'vue', VueRouterAutoImports, '@vueuse/core', '@vueuse/math', 'vue-i18n', 'pinia',
+        // @core explicit imports — only non-conflicting exports (avoids duplicated import warnings)
+        {
+          '@core/utils/formatters': ['avatarText', 'kFormatter', 'formatDateToMonthShort', 'prefixWithPlus'],
+          '@core/utils/vuetify': ['resolveVuetifyTheme'],
+          '@core/utils/validators': [
+            'requiredValidator', 'emailValidator', 'passwordValidator', 'confirmedValidator',
+            'betweenValidator', 'integerValidator', 'regexValidator', 'alphaValidator',
+            'urlValidator', 'lengthValidator', 'alphaDashValidator',
+          ],
+          '@core/composable/createUrl': ['createUrl'],
+          '@core/composable/useSkins': ['useSkins'],
+          '@core/composable/useResponsiveSidebar': ['useResponsiveLeftSidebar'],
+        },
+      ],
       dirs: [
-        './resources/js/@core/utils',
-        './resources/js/@core/composable/',
         './resources/js/composables/',
         './resources/js/utils/',
         './resources/js/plugins/*/composables/*',
@@ -76,7 +89,8 @@ export default defineConfig({
       vueTemplate: true,
 
       // ℹ️ Disabled to avoid confusion & accidental usage
-      ignore: ['useCookies', 'useStorage'],
+      // useAsyncState: replaced by useAsyncAction (local), @vueuse/core still exports it
+      ignore: ['useCookies', 'useStorage', 'useAsyncState'],
       eslintrc: {
         enabled: true,
         filepath: './.eslintrc-auto-import.json',

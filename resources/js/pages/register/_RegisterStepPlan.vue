@@ -40,7 +40,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
     </VSwitch>
   </div>
 
-  <VRow>
+  <VRow class="card-grid card-grid-md">
     <VCol
       v-for="plan in plans"
       :key="plan.key"

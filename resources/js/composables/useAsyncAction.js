@@ -2,7 +2,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useGlobalLoading } from '@/composables/useGlobalLoading'
 
 /**
- * useAsyncState — standardized async loading / error / data / retry orchestration.
+ * useAsyncAction — standardized async loading / error / data / retry orchestration.
  *
  * Zero business logic. Works with any async function (useApi, plain fetch, etc.).
  *
@@ -16,7 +16,7 @@ import { useGlobalLoading } from '@/composables/useGlobalLoading'
  *
  * @returns {{ data: Ref, error: Ref, isLoading: Ref, isError: ComputedRef, isEmpty: ComputedRef, execute: Function, retry: Function }}
  */
-export function useAsyncState(asyncFn, options = {}) {
+export function useAsyncAction(asyncFn, options = {}) {
   const {
     immediate = false,
     initialData = null,

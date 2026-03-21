@@ -36,7 +36,7 @@ function allTopics(group) {
         {{ group.title }}
       </h5>
     </div>
-    <VRow>
+    <VRow class="card-grid card-grid-sm">
       <VCol
         v-for="topic in allTopics(group)"
         :key="topic.id"
@@ -104,7 +104,10 @@ function allTopics(group) {
   </div>
 
   <!-- Ungrouped topics -->
-  <VRow v-if="ungroupedTopics.length">
+  <VRow
+    v-if="ungroupedTopics.length"
+    class="card-grid card-grid-sm"
+  >
     <VCol
       v-for="topic in ungroupedTopics"
       :key="topic.id"

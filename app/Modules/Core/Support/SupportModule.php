@@ -17,15 +17,7 @@ class SupportModule implements ModuleDefinition
             surface: 'core',
             sortOrder: 7,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'support',
-                        'title' => 'Support',
-                        'to' => ['name' => 'company-support'],
-                        'icon' => 'tabler-headset',
-                        'permission' => 'support.view',
-                    ],
-                ],
+                navItems: [],
                 routeNames: ['company-support', 'company-support-id'],
                 middlewareKey: 'core.support',
                 footerLinks: [
@@ -33,7 +25,7 @@ class SupportModule implements ModuleDefinition
                         'key' => 'footer-support',
                         'label' => 'footer.support',
                         'to' => ['name' => 'company-support'],
-                        'icon' => 'tabler-headset',
+                        'icon' => 'tabler-message-circle-cog',
                         'permission' => 'support.view',
                         'sortOrder' => 10,
                     ],

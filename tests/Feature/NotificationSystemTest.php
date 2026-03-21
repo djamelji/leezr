@@ -345,32 +345,36 @@ class NotificationSystemTest extends TestCase
     // 4. Company notification preferences API
     // ═══════════════════════════════════════════════════════════
 
-    public function test_company_preferences_index_returns_topics(): void
+    public function test_company_preferences_index_returns_bundles(): void
     {
         $response = $this->actAsOwner()->getJson('/api/notifications/preferences');
 
         $response->assertOk()
-            ->assertJsonStructure(['preferences']);
+            ->assertJsonStructure(['bundles', 'available_categories']);
 
-        // Should contain at least one company-scoped topic
-        $preferences = $response->json('preferences');
-        $this->assertNotEmpty($preferences);
+        // Owner sees all bundles (has all permissions)
+        $bundles = $response->json('bundles');
+        $this->assertNotEmpty($bundles);
 
-        // Each item should have the expected structure
-        $first = $preferences[0];
-        $this->assertArrayHasKey('key', $first);
-        $this->assertArrayHasKey('label', $first);
-        $this->assertArrayHasKey('channels', $first);
-        $this->assertArrayHasKey('default_channels', $first);
+        // Each bundle has the expected structure (ADR-382)
+        $first = $bundles[0];
+        $this->assertArrayHasKey('category', $first);
+        $this->assertArrayHasKey('icon', $first);
+        $this->assertArrayHasKey('color', $first);
+        $this->assertArrayHasKey('in_app', $first);
+        $this->assertArrayHasKey('email', $first);
+        $this->assertArrayHasKey('locked', $first);
+        $this->assertArrayHasKey('topic_count', $first);
     }
 
-    public function test_company_preferences_update(): void
+    public function test_company_preferences_update_bundles(): void
     {
         $response = $this->actAsOwner()->putJson('/api/notifications/preferences', [
-            'preferences' => [
+            'bundles' => [
                 [
-                    'topic_key' => 'billing.payment_received',
-                    'channels' => ['in_app'],
+                    'category' => 'billing',
+                    'in_app' => true,
+                    'email' => false,
                 ],
             ],
         ]);
@@ -378,15 +382,20 @@ class NotificationSystemTest extends TestCase
         $response->assertOk()
             ->assertJson(['message' => 'Preferences updated.']);
 
-        $this->assertDatabaseHas('notification_preferences', [
-            'user_id' => $this->owner->id,
-            'topic_key' => 'billing.payment_received',
-        ]);
+        // All billing topics should have in_app only (email=false)
+        $billingTopics = NotificationTopic::active()
+            ->forScope('company')
+            ->where('category', 'billing')
+            ->pluck('key');
 
-        $pref = NotificationPreference::where('user_id', $this->owner->id)
-            ->where('topic_key', 'billing.payment_received')
-            ->first();
-        $this->assertEquals(['in_app'], $pref->channels);
+        foreach ($billingTopics as $topicKey) {
+            $pref = NotificationPreference::where('user_id', $this->owner->id)
+                ->where('topic_key', $topicKey)
+                ->first();
+            $this->assertNotNull($pref, "Missing preference for {$topicKey}");
+            $this->assertContains('in_app', $pref->channels);
+            $this->assertNotContains('email', $pref->channels);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -575,5 +584,427 @@ class NotificationSystemTest extends TestCase
         $this->assertContains('security.alert', $companyTopics);
         // Platform-only topic should NOT appear
         $this->assertNotContains('platform.new_subscription', $companyTopics);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 10. ADR-382 — Commercial bundles + permission-aware notifications
+    // ═══════════════════════════════════════════════════════════
+
+    public function test_category_permissions_mapping_is_complete(): void
+    {
+        // Every category used in topics should be in CATEGORY_PERMISSIONS
+        $topicCategories = NotificationTopic::active()
+            ->forScope('company')
+            ->distinct()
+            ->pluck('category')
+            ->toArray();
+
+        foreach ($topicCategories as $category) {
+            $this->assertArrayHasKey(
+                $category,
+                NotificationTopicRegistry::CATEGORY_PERMISSIONS,
+                "Category '{$category}' is missing from CATEGORY_PERMISSIONS mapping",
+            );
+        }
+    }
+
+    public function test_preferences_api_returns_bundles_filtered_by_permission(): void
+    {
+        // Create a member with only members.view (no billing.manage)
+        $member = User::factory()->create();
+        $this->company->memberships()->create([
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+
+        // Set up RBAC with a role that only has members.view
+        \App\Company\RBAC\CompanyPermissionCatalog::sync();
+        $role = \App\Company\RBAC\CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'dispatcher',
+            'name' => 'Dispatcher',
+            'is_system' => false,
+            'is_administrative' => false,
+        ]);
+        $membersViewPerm = \App\Company\RBAC\CompanyPermission::where('key', 'members.view')->first();
+        $supportViewPerm = \App\Company\RBAC\CompanyPermission::where('key', 'support.view')->first();
+        $permsToSync = array_filter([$membersViewPerm?->id, $supportViewPerm?->id]);
+        $role->permissions()->sync($permsToSync);
+
+        $membership = $member->memberships()->where('company_id', $this->company->id)->first();
+        $membership->update(['company_role_id' => $role->id]);
+
+        $response = $this->actingAs($member)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->getJson('/api/notifications/preferences');
+
+        $response->assertOk();
+
+        $categories = collect($response->json('bundles'))->pluck('category')->toArray();
+
+        // Should see members and support (has permission) + security (universal)
+        $this->assertContains('security', $categories);
+        $this->assertContains('members', $categories);
+        // Should NOT see billing (no billing.manage) or modules (no modules.manage)
+        $this->assertNotContains('billing', $categories);
+        $this->assertNotContains('modules', $categories);
+    }
+
+    public function test_preferences_api_owner_sees_all_bundles(): void
+    {
+        $response = $this->actAsOwner()->getJson('/api/notifications/preferences');
+
+        $response->assertOk();
+
+        $categories = collect($response->json('bundles'))->pluck('category')->toArray();
+
+        // Owner bypasses permissions — should see all company categories
+        $this->assertContains('billing', $categories);
+        $this->assertContains('members', $categories);
+        $this->assertContains('security', $categories);
+    }
+
+    public function test_preferences_update_applies_to_all_topics_in_category(): void
+    {
+        $this->actAsOwner()->putJson('/api/notifications/preferences', [
+            'bundles' => [
+                ['category' => 'members', 'in_app' => false, 'email' => true],
+            ],
+        ])->assertOk();
+
+        $memberTopics = NotificationTopic::active()
+            ->forScope('company')
+            ->where('category', 'members')
+            ->pluck('key');
+
+        $this->assertGreaterThan(0, $memberTopics->count());
+
+        foreach ($memberTopics as $topicKey) {
+            $pref = NotificationPreference::where('user_id', $this->owner->id)
+                ->where('topic_key', $topicKey)
+                ->first();
+            $this->assertNotNull($pref, "Missing preference for {$topicKey}");
+            $this->assertNotContains('in_app', $pref->channels);
+            $this->assertContains('email', $pref->channels);
+        }
+    }
+
+    public function test_preferences_update_respects_locked_category(): void
+    {
+        // Try to disable in_app for security (locked)
+        $this->actAsOwner()->putJson('/api/notifications/preferences', [
+            'bundles' => [
+                ['category' => 'security', 'in_app' => false, 'email' => false],
+            ],
+        ])->assertOk();
+
+        $securityTopics = NotificationTopic::active()
+            ->forScope('company')
+            ->where('category', 'security')
+            ->pluck('key');
+
+        foreach ($securityTopics as $topicKey) {
+            $pref = NotificationPreference::where('user_id', $this->owner->id)
+                ->where('topic_key', $topicKey)
+                ->first();
+            $this->assertNotNull($pref, "Missing preference for {$topicKey}");
+            // in_app should be forced on despite request saying false
+            $this->assertContains('in_app', $pref->channels);
+        }
+    }
+
+    public function test_preferences_update_skips_unauthorized_categories(): void
+    {
+        // Create a restricted member
+        $member = User::factory()->create();
+        $this->company->memberships()->create([
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+        \App\Company\RBAC\CompanyPermissionCatalog::sync();
+        $role = \App\Company\RBAC\CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'restricted',
+            'name' => 'Restricted',
+            'is_system' => false,
+            'is_administrative' => false,
+        ]);
+        // Only members.view permission
+        $membersViewPerm = \App\Company\RBAC\CompanyPermission::where('key', 'members.view')->first();
+        if ($membersViewPerm) {
+            $role->permissions()->sync([$membersViewPerm->id]);
+        }
+        $membership = $member->memberships()->where('company_id', $this->company->id)->first();
+        $membership->update(['company_role_id' => $role->id]);
+
+        // Try to update billing prefs (unauthorized)
+        $this->actingAs($member)
+            ->withHeaders(['X-Company-Id' => $this->company->id])
+            ->putJson('/api/notifications/preferences', [
+                'bundles' => [
+                    ['category' => 'billing', 'in_app' => false, 'email' => false],
+                ],
+            ])->assertOk(); // Silently skipped, no error
+
+        // No billing preferences should be created
+        $billingTopics = NotificationTopic::active()
+            ->forScope('company')
+            ->where('category', 'billing')
+            ->pluck('key');
+
+        foreach ($billingTopics as $topicKey) {
+            $this->assertDatabaseMissing('notification_preferences', [
+                'user_id' => $member->id,
+                'topic_key' => $topicKey,
+            ]);
+        }
+    }
+
+    public function test_inbox_api_returns_available_categories(): void
+    {
+        $this->createNotificationForUser();
+
+        $response = $this->actAsOwner()->getJson('/api/notifications');
+
+        $response->assertOk()
+            ->assertJsonStructure(['available_categories']);
+
+        $categories = $response->json('available_categories');
+        $this->assertIsArray($categories);
+        // Owner should see all categories
+        $this->assertContains('billing', $categories);
+        $this->assertContains('security', $categories);
+    }
+
+    public function test_dispatcher_filters_recipients_by_permission(): void
+    {
+        // Create a member without billing.manage
+        $member = User::factory()->create();
+        $this->company->memberships()->create([
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+        \App\Company\RBAC\CompanyPermissionCatalog::sync();
+        $role = \App\Company\RBAC\CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'no-billing',
+            'name' => 'No Billing',
+            'is_system' => false,
+            'is_administrative' => false,
+        ]);
+        // No permissions at all
+        $role->permissions()->sync([]);
+        $membership = $member->memberships()->where('company_id', $this->company->id)->first();
+        $membership->update(['company_role_id' => $role->id]);
+
+        $count = NotificationDispatcher::send(
+            'billing.payment_received',
+            [$member],
+            ['amount' => '29.00 EUR'],
+            $this->company,
+        );
+
+        // Member lacks billing.manage → filtered out
+        $this->assertEquals(0, $count);
+        $this->assertDatabaseMissing('notification_events', [
+            'recipient_id' => $member->id,
+            'topic_key' => 'billing.payment_received',
+        ]);
+    }
+
+    public function test_dispatcher_skips_gate_for_universal_categories(): void
+    {
+        // Create a member with NO permissions
+        $member = User::factory()->create();
+        $this->company->memberships()->create([
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+        \App\Company\RBAC\CompanyPermissionCatalog::sync();
+        $role = \App\Company\RBAC\CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'basic',
+            'name' => 'Basic',
+            'is_system' => false,
+            'is_administrative' => false,
+        ]);
+        $role->permissions()->sync([]);
+        $membership = $member->memberships()->where('company_id', $this->company->id)->first();
+        $membership->update(['company_role_id' => $role->id]);
+
+        // Security is universal (null permission) — should reach everyone
+        $count = NotificationDispatcher::send(
+            'security.alert',
+            [$member],
+            ['reason' => 'Suspicious login'],
+            $this->company,
+        );
+
+        $this->assertEquals(1, $count);
+        $this->assertDatabaseHas('notification_events', [
+            'recipient_id' => $member->id,
+            'topic_key' => 'security.alert',
+        ]);
+    }
+
+    public function test_dispatcher_skips_gate_when_no_company(): void
+    {
+        // Without company context, permission gate should be skipped
+        $count = NotificationDispatcher::send(
+            'billing.payment_received',
+            [$this->owner],
+            ['amount' => '29.00 EUR'],
+            null, // no company
+        );
+
+        // Should succeed — no company means no permission check
+        $this->assertEquals(1, $count);
+        $this->assertDatabaseHas('notification_events', [
+            'recipient_id' => $this->owner->id,
+            'topic_key' => 'billing.payment_received',
+        ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 11. ADR-382 — Platform permission-aware notifications
+    // ═══════════════════════════════════════════════════════════
+
+    public function test_platform_category_permissions_mapping_is_complete(): void
+    {
+        $platformCategories = NotificationTopic::active()
+            ->forScope('platform')
+            ->distinct()
+            ->pluck('category')
+            ->toArray();
+
+        foreach ($platformCategories as $category) {
+            $this->assertArrayHasKey(
+                $category,
+                NotificationTopicRegistry::PLATFORM_CATEGORY_PERMISSIONS,
+                "Platform category '{$category}' is missing from PLATFORM_CATEGORY_PERMISSIONS mapping",
+            );
+        }
+    }
+
+    public function test_platform_preferences_filtered_by_permission(): void
+    {
+        // Create a restricted platform admin with only manage_support
+        $restricted = PlatformUser::create([
+            'first_name' => 'Support',
+            'last_name' => 'Only',
+            'email' => 'support-only@test.com',
+            'password' => 'P@ssw0rd!Strong',
+        ]);
+        $role = PlatformRole::create([
+            'key' => 'support_only',
+            'name' => 'Support Only',
+            'is_system' => false,
+        ]);
+        $supportPerm = \App\Platform\Models\PlatformPermission::where('key', 'manage_support')->first();
+        if ($supportPerm) {
+            $role->permissions()->sync([$supportPerm->id]);
+        }
+        $restricted->roles()->attach($role);
+
+        $response = $this->actingAs($restricted, 'platform')
+            ->getJson('/api/platform/me/notification-preferences');
+
+        $response->assertOk()
+            ->assertJson(['mode' => 'bundles'])
+            ->assertJsonStructure(['bundles', 'available_categories']);
+
+        $bundleCategories = collect($response->json('bundles'))->pluck('category')->toArray();
+        $availableCategories = $response->json('available_categories');
+
+        // Should see support (has manage_support) + system (universal)
+        $this->assertContains('support', $availableCategories);
+        $this->assertContains('system', $availableCategories);
+        // Should NOT see billing (no view_billing)
+        $this->assertNotContains('billing', $availableCategories);
+        // Returned bundles should match available categories
+        foreach ($bundleCategories as $cat) {
+            $this->assertContains($cat, $availableCategories);
+        }
+
+        // Verify bundle structure
+        $firstBundle = $response->json('bundles.0');
+        $this->assertArrayHasKey('category', $firstBundle);
+        $this->assertArrayHasKey('icon', $firstBundle);
+        $this->assertArrayHasKey('in_app', $firstBundle);
+        $this->assertArrayHasKey('email', $firstBundle);
+        $this->assertArrayHasKey('locked', $firstBundle);
+        $this->assertArrayHasKey('topic_count', $firstBundle);
+    }
+
+    public function test_platform_super_admin_gets_granular_mode(): void
+    {
+        $response = $this->actAsPlatform()
+            ->getJson('/api/platform/me/notification-preferences');
+
+        $response->assertOk()
+            ->assertJson(['mode' => 'granular'])
+            ->assertJsonStructure(['preferences', 'available_categories']);
+
+        $availableCategories = $response->json('available_categories');
+
+        $this->assertContains('billing', $availableCategories);
+        $this->assertContains('support', $availableCategories);
+        $this->assertContains('system', $availableCategories);
+
+        // Super admin sees per-topic preferences, not bundles
+        $preferences = $response->json('preferences');
+        $this->assertNotEmpty($preferences);
+        $first = $preferences[0];
+        $this->assertArrayHasKey('key', $first);
+        $this->assertArrayHasKey('label', $first);
+        $this->assertArrayHasKey('channels', $first);
+        $this->assertArrayHasKey('category', $first);
+    }
+
+    public function test_platform_inbox_returns_available_categories(): void
+    {
+        $this->createNotificationForAdmin();
+
+        $response = $this->actAsPlatform()
+            ->getJson('/api/platform/me/notifications');
+
+        $response->assertOk()
+            ->assertJsonStructure(['available_categories']);
+
+        $categories = $response->json('available_categories');
+        $this->assertIsArray($categories);
+        $this->assertContains('billing', $categories);
+    }
+
+    public function test_platform_dispatcher_filters_by_platform_permission(): void
+    {
+        // Create a restricted platform admin without view_billing
+        $restricted = PlatformUser::create([
+            'first_name' => 'No',
+            'last_name' => 'Billing',
+            'email' => 'no-billing-admin@test.com',
+            'password' => 'P@ssw0rd!Strong',
+        ]);
+        $role = PlatformRole::create([
+            'key' => 'no_billing_role',
+            'name' => 'No Billing',
+            'is_system' => false,
+        ]);
+        $role->permissions()->sync([]); // no permissions
+        $restricted->roles()->attach($role);
+
+        $count = NotificationDispatcher::send(
+            'platform.new_subscription',
+            [$restricted],
+            ['company' => 'Test'],
+            null,
+        );
+
+        // Restricted admin lacks view_billing → filtered out
+        $this->assertEquals(0, $count);
+        $this->assertDatabaseMissing('notification_events', [
+            'recipient_id' => $restricted->id,
+            'topic_key' => 'platform.new_subscription',
+        ]);
     }
 }

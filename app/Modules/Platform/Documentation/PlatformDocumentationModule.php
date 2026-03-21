@@ -33,7 +33,7 @@ class PlatformDocumentationModule implements ModuleDefinition
                         'key' => 'footer-help-center',
                         'label' => 'footer.helpCenter',
                         'href' => '/help-center',
-                        'icon' => 'tabler-help',
+                        'icon' => 'tabler-lifebuoy',
                         'permission' => '',
                         'sortOrder' => 20,
                     ],

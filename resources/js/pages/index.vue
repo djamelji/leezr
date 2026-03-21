@@ -282,7 +282,10 @@ const reasons = computed(() => [
           </h2>
         </div>
 
-        <VRow justify="center">
+        <VRow
+          justify="center"
+          class="card-grid card-grid-sm"
+        >
           <VCol
             v-for="(reason, i) in reasons"
             :key="i"
@@ -292,7 +295,7 @@ const reasons = computed(() => [
           >
             <VCard
               flat
-              class="pa-6 h-100 text-center"
+              class="pa-6 text-center"
               :style="{ border: '1px solid rgba(var(--v-border-color), var(--v-border-opacity))' }"
             >
               <VIcon

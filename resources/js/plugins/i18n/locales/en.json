@@ -13,6 +13,8 @@
   "Companies": "Companies",
   "Company Users": "Company Users",
   "Platform Users": "Platform Users",
+  "Access Management": "Access Management",
+  "Supervision": "Supervision",
   "Job Domains": "Job Domains",
   "Custom Fields": "Custom Fields",
   "Payments": "Payments",
@@ -34,10 +36,8 @@
     },
     "platform": {
       "dashboard": "Dashboard",
-      "companies": "Companies",
-      "company-users": "Company Users",
-      "platform-users": "Platform Users",
-      "roles": "Roles",
+      "platform-supervision": "Supervision",
+      "platform-access": "Access Management",
       "modules": "Modules",
       "plans": "Plans",
       "fields": "Custom Fields",
@@ -46,7 +46,6 @@
       "international": "International",
       "security": "Security",
       "realtime": "Realtime",
-      "audit": "Audit Logs",
       "payments": "Payments",
       "billing": "Billing",
       "billing-settings": "Billing Settings",
@@ -174,6 +173,7 @@
     "management": "Management",
     "operationFailed": "Operation failed.",
     "invitationPending": "Invitation pending",
+    "show": "Show",
     "export": "Export",
     "import": "Import",
     "all": "All",
@@ -226,7 +226,13 @@
     "myTasks": "My Tasks",
     "tasksPlaceholder": "Your assigned tasks and deliveries will appear here.",
     "currentPlan": "Current Plan:",
-    "upgrade": "Upgrade"
+    "upgrade": "Upgrade",
+    "widgets": {
+      "onboarding": "Initial Setup",
+      "onboardingDesc": "Steps to get your company up and running",
+      "planBadge": "Current Plan",
+      "planBadgeDesc": "Your subscription plan and status"
+    }
   },
   "plans": {
     "title": "Plans",
@@ -1266,6 +1272,8 @@
     "noCompanies": "No companies found.",
     "noSearchResults": "No companies match your search criteria.",
     "searchPlaceholder": "Search by name or slug…",
+    "filterByStatus": "Filter by status",
+    "filterByPlan": "Filter by plan",
     "allStatuses": "All statuses",
     "allPlans": "All plans",
     "suspended": "Suspended",
@@ -1749,7 +1757,15 @@
     "useAccountSettings": "Use your account settings to change your own credentials.",
     "confirmDeleteUser": "Delete platform user \"{name}\"?",
     "failedToDeleteUser": "Failed to delete user.",
-    "allPermissions": "All permissions (structural)"
+    "allPermissions": "All permissions (structural)",
+    "user": "User",
+    "role": "Roles",
+    "searchPlaceholder": "Search users…",
+    "filterByRole": "Filter by role",
+    "filterByStatus": "Filter by status"
+  },
+  "platformAccess": {
+    "title": "Access Management"
   },
   "platformRoles": {
     "title": "Platform Roles",
@@ -1766,7 +1782,21 @@
     "allPermissionsInfo": "All permissions (structural) — cannot be modified.",
     "noRoles": "No roles found.",
     "confirmDeleteRole": "Delete role \"{name}\"?",
-    "failedToDeleteRole": "Failed to delete role."
+    "failedToDeleteRole": "Failed to delete role.",
+    "viewRole": "Role Details",
+    "permissionsCount": "{count} permissions",
+    "noPermissions": "No permissions assigned.",
+    "accessLevel": "Access Level",
+    "totalUsers": "{count} users | {count} user | {count} users",
+    "addRoleDesc": "Add a new role if it doesn't exist.",
+    "accessLevels": {
+      "full_access": "Full Access",
+      "administration": "Administration",
+      "management": "Management",
+      "standard": "Standard",
+      "limited": "Limited",
+      "custom": "Custom"
+    }
   },
   "platformFields": {
     "fieldDefinitions": "Field Definitions",
@@ -2321,7 +2351,10 @@
   "platformCompanyUsers": {
     "title": "Company Users",
     "subtitle": "Read-only supervision of company users across all tenants.",
-    "noUsers": "No company users found."
+    "noUsers": "No company users found.",
+    "user": "User",
+    "companies": "Companies",
+    "searchPlaceholder": "Search members…"
   },
   "platformSettings": {
     "general": {
@@ -3681,6 +3714,20 @@
     "categorySecurity": "Security",
     "categorySupport": "Support",
     "categorySystem": "System",
+    "bundle": {
+      "billing": { "label": "Billing & Payments", "description": "Invoices, payments, subscriptions, and billing alerts" },
+      "members": { "label": "Team", "description": "Invitations, arrivals, departures, and role changes" },
+      "modules": { "label": "Modules", "description": "Module activation and deactivation" },
+      "security": { "label": "Security", "description": "Security alerts and suspicious sign-ins" },
+      "support": { "label": "Support", "description": "Replies and resolutions for your tickets" }
+    },
+    "lockedNotice": "Security in-app notifications cannot be disabled.",
+    "platformBundle": {
+      "billing": { "label": "Billing & Subscriptions", "description": "New subscriptions, plan changes, payment failures, and billing alerts" },
+      "support": { "label": "Support Tickets", "description": "New tickets, assignments, and escalations" },
+      "security": { "label": "Security", "description": "Security alerts and suspicious activity" },
+      "system": { "label": "System", "description": "Company registrations, trial expirations, and system events" }
+    },
     "billing_payment_failed_title": "Payment Failed",
     "billing_payment_failed_body": "A payment attempt for invoice #{invoice_id} has failed.",
     "billing_invoice_created_title": "New Invoice",

@@ -13,6 +13,7 @@ definePage({
     platform: true,
     module: 'platform.users',
     permission: 'manage_platform_users',
+    navActiveLink: 'platform-access-tab',
   },
 })
 
@@ -79,7 +80,7 @@ onMounted(async () => {
   }
   catch {
     toast(t('platformUsers.failedToLoadProfile'), 'error')
-    router.push('/platform/users')
+    router.push('/platform/access/users')
   }
   finally {
     isLoading.value = false
@@ -208,7 +209,7 @@ const handleSetPassword = async () => {
         icon
         variant="text"
         size="small"
-        @click="router.push('/platform/users')"
+        @click="router.push('/platform/access/users')"
       >
         <VIcon icon="tabler-arrow-left" />
       </VBtn>

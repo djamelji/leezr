@@ -68,7 +68,10 @@ const cards = computed(() => {
         type="card"
       />
 
-      <VRow v-else-if="store.metrics">
+      <VRow
+        v-else-if="store.metrics"
+        class="card-grid card-grid-xs"
+      >
         <VCol
           v-for="card in cards"
           :key="card.title"

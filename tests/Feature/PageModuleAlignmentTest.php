@@ -66,7 +66,18 @@ class PageModuleAlignmentTest extends TestCase
         $adminModules = ModuleRegistry::forScope('admin');
         $missing = [];
 
+        // Modules that piggyback on a shared tab page owned by another module — ADR-380
+        $sharedTabModules = [
+            'platform.roles',        // Tab on Access page (owned by platform.users)
+            'platform.translations', // Tab on International page (owned by platform.markets)
+            'platform.audit',        // Tabs on Access + Supervision pages (no own page) — ADR-381
+        ];
+
         foreach ($adminModules as $key => $manifest) {
+            if (in_array($key, $sharedTabModules, true)) {
+                continue;
+            }
+
             foreach ($manifest->capabilities->routeNames as $routeName) {
                 $pagePath = $this->routeNameToPagePath($routeName, 'admin');
 
@@ -174,6 +185,8 @@ class PageModuleAlignmentTest extends TestCase
             'platform' => $base . '/platform/index.vue',
             'platform-international-tab' => $base . '/platform/international/[tab].vue',
             'platform-settings-tab' => $base . '/platform/settings/[tab].vue',
+            'platform-access-tab' => $base . '/platform/access/[tab].vue',
+            'platform-supervision-tab' => $base . '/platform/supervision/[tab].vue',
             'platform-markets-key' => $base . '/platform/markets/[key].vue',
             'platform-modules-key' => $base . '/platform/modules/[key].vue',
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
@@ -181,7 +194,6 @@ class PageModuleAlignmentTest extends TestCase
             'platform-jobdomains-id' => $base . '/platform/jobdomains/[id].vue',
             'platform-documents-id' => $base . '/platform/documents/[id].vue',
             'platform-users-id' => $base . '/platform/users/[id].vue',
-            'platform-company-users' => $base . '/platform/company/users.vue',
             'company-shipments' => $base . '/company/shipments/index.vue',
             'company-shipments-create' => $base . '/company/shipments/create.vue',
             'company-shipments-id' => $base . '/company/shipments/[id].vue',

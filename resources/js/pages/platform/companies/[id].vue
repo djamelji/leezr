@@ -19,6 +19,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.companies',
+    navActiveLink: 'platform-supervision-tab',
     permission: 'manage_companies',
   },
 })
@@ -119,7 +120,7 @@ onMounted(async () => {
   }
   catch {
     toast(t('platformCompanyDetail.failedToLoad'), 'error')
-    router.push({ name: 'platform-companies' })
+    router.push('/platform/supervision/companies')
   }
   finally {
     isLoading.value = false
@@ -437,7 +438,7 @@ const tabs = computed(() => [
         <VBtn
           variant="text"
           size="small"
-          :to="{ name: 'platform-companies' }"
+          to="/platform/supervision/companies"
         >
           <VIcon icon="tabler-arrow-left" class="me-1" />
           {{ t('platformCompanyDetail.backToList') }}
