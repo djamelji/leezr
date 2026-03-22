@@ -2867,7 +2867,7 @@
   },
   "companyDashboard": {
     "title": "Tableau de bord",
-    "widgetsTitle": "Widgets",
+    "widgetsTitle": "Tableau de bord",
     "addWidget": "Ajouter un widget",
     "saveLayout": "Enregistrer la disposition",
     "noWidgets": "Aucun widget configuré.",
@@ -3067,14 +3067,16 @@
   },
   "onboarding": {
     "welcome": "Bienvenue {name} !",
-    "setupPrompt": "Configurez votre espace en 5 minutes",
+    "setupPrompt": "Configurez votre espace en quelques minutes",
     "allDone": "Votre espace est prêt !",
     "gettingStarted": "Pour bien démarrer",
-    "accountCreated": "Créer votre compte",
-    "planSelected": "Choisir un plan",
-    "companyProfile": "Compléter le profil entreprise",
-    "paymentMethod": "Ajouter un moyen de paiement",
-    "inviteMember": "Inviter un collaborateur"
+    "dismiss": "Masquer le guide de démarrage",
+    "steps": {
+      "accountCreated": { "label": "Créer votre compte" },
+      "companyProfile": { "label": "Compléter le profil entreprise" },
+      "paymentMethod": { "label": "Ajouter un moyen de paiement" },
+      "inviteMember": { "label": "Inviter un collaborateur" }
+    }
   },
   "landing": {
     "signIn": "Se connecter",

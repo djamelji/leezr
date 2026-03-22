@@ -2862,7 +2862,7 @@
   },
   "companyDashboard": {
     "title": "Dashboard",
-    "widgetsTitle": "Widgets",
+    "widgetsTitle": "Dashboard",
     "addWidget": "Add Widget",
     "saveLayout": "Save Layout",
     "noWidgets": "No widgets configured yet.",
@@ -3062,14 +3062,16 @@
   },
   "onboarding": {
     "welcome": "Welcome {name}!",
-    "setupPrompt": "Set up your workspace in 5 minutes",
+    "setupPrompt": "Set up your workspace in a few minutes",
     "allDone": "Your workspace is ready!",
     "gettingStarted": "Getting started",
-    "accountCreated": "Create your account",
-    "planSelected": "Choose a plan",
-    "companyProfile": "Complete company profile",
-    "paymentMethod": "Add a payment method",
-    "inviteMember": "Invite a team member"
+    "dismiss": "Hide getting started guide",
+    "steps": {
+      "accountCreated": { "label": "Create your account" },
+      "companyProfile": { "label": "Complete company profile" },
+      "paymentMethod": { "label": "Add a payment method" },
+      "inviteMember": { "label": "Invite a team member" }
+    }
   },
   "landing": {
     "signIn": "Sign In",

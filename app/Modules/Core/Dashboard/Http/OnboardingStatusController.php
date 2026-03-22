@@ -3,50 +3,39 @@
 namespace App\Modules\Core\Dashboard\Http;
 
 use App\Core\Billing\CompanyPaymentProfile;
-use App\Core\Billing\Subscription;
+use App\Core\Fields\FieldDefinition;
+use App\Core\Fields\FieldValue;
 use App\Core\Models\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * ADR-372: Onboarding steps filtered by user permissions.
- * Each step declares its required permission (null = always visible).
- * Owner bypasses (sees all steps). Non-owner sees only steps they can act on.
+ * ADR-383: Onboarding widget — owner-only, dismissible, 4 steps.
+ * Replaces ADR-372 permission-filtered approach with owner-exclusive access.
  */
 class OnboardingStatusController
 {
-    /**
-     * Step definitions with permission requirements.
-     * Permission = null means always visible.
-     */
     private function stepDefinitions(Company $company): array
     {
         return [
             [
                 'key' => 'account_created',
-                'permission' => null,
                 'completed' => true,
             ],
             [
-                'key' => 'plan_selected',
-                'permission' => 'billing.manage',
-                'completed' => Subscription::where('company_id', $company->id)
-                    ->where('is_current', true)
+                'key' => 'company_profile',
+                'completed' => FieldValue::where('model_type', $company->getMorphClass())
+                    ->where('model_id', $company->id)
+                    ->whereHas('definition', fn ($q) => $q->where('scope', FieldDefinition::SCOPE_COMPANY))
+                    ->whereNotNull('value')
                     ->exists(),
             ],
             [
-                'key' => 'company_profile',
-                'permission' => 'settings.manage',
-                'completed' => ! empty($company->address_line1) || ! empty($company->tax_id),
-            ],
-            [
                 'key' => 'payment_method',
-                'permission' => 'billing.manage',
                 'completed' => CompanyPaymentProfile::where('company_id', $company->id)->exists(),
             ],
             [
                 'key' => 'invite_member',
-                'permission' => 'members.invite',
                 'completed' => $company->memberships()->count() > 1,
             ],
         ];
@@ -57,31 +46,43 @@ class OnboardingStatusController
         /** @var Company $company */
         $company = $request->attributes->get('company');
         $user = $request->user();
-        $isOwner = $user->isOwnerOf($company);
 
-        $allSteps = $this->stepDefinitions($company);
+        if (! $user->isOwnerOf($company)) {
+            return response()->json(['message' => 'Owner only.'], 403);
+        }
 
-        // Filter steps by user permissions (owner sees all)
-        $steps = array_values(array_filter($allSteps, function (array $step) use ($company, $user, $isOwner) {
-            if ($isOwner || $step['permission'] === null) {
-                return true;
-            }
+        if ($company->onboarding_dismissed_at !== null) {
+            return response()->json(['dismissed' => true]);
+        }
 
-            return $user->hasCompanyPermission($company, $step['permission']);
-        }));
+        $steps = $this->stepDefinitions($company);
 
-        // Strip permission key from response (frontend doesn't need it)
-        $steps = array_map(fn (array $s) => [
+        $output = array_map(fn (array $s) => [
             'key' => $s['key'],
             'completed' => $s['completed'],
         ], $steps);
 
-        $completedCount = collect($steps)->where('completed', true)->count();
+        $completedCount = collect($output)->where('completed', true)->count();
 
         return response()->json([
-            'steps' => $steps,
+            'steps' => $output,
             'completed_count' => $completedCount,
-            'total_count' => count($steps),
+            'total_count' => count($output),
         ]);
+    }
+
+    public function dismiss(Request $request): JsonResponse
+    {
+        /** @var Company $company */
+        $company = $request->attributes->get('company');
+        $user = $request->user();
+
+        if (! $user->isOwnerOf($company)) {
+            return response()->json(['message' => 'Owner only.'], 403);
+        }
+
+        $company->update(['onboarding_dismissed_at' => now()]);
+
+        return response()->json(['dismissed' => true]);
     }
 }

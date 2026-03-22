@@ -6,8 +6,8 @@ use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 
 /**
- * ADR-372: Pipeline-driven onboarding widget.
- * Visible only to archetypes with settings.manage (management).
+ * ADR-383: Pipeline-driven onboarding widget — owner-only, dismissible.
+ * Backend enforces owner guard (403 for non-owners).
  * Client-resolved — frontend handles display from onboarding API.
  */
 class OnboardingSetupWidget implements WidgetManifest
@@ -29,10 +29,10 @@ class OnboardingSetupWidget implements WidgetManifest
         return [
             'default_w' => 12,
             'default_h' => 2,
-            'min_w' => 6,
+            'min_w' => 12,
             'max_w' => 12,
             'min_h' => 2,
-            'max_h' => 4,
+            'max_h' => 2,
         ];
     }
 

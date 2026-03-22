@@ -13191,4 +13191,31 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-383 — Onboarding widget : owner-only, dismissible, single-card (2026-03-21)
+- **Date** : 2026-03-21
+- **Contexte** : Le widget d'onboarding du dashboard company avait 5 problèmes : (1) étape "Choisir un plan" redondante (plan déjà choisi au registration funnel), (2) visible à tous les membres management au lieu du seul owner, (3) pas de possibilité de masquer/dismiss, (4) affiché en permanence tant que les étapes ne sont pas toutes complétées, (5) VCard imbriquée dans VCard (mauvais pattern UI).
+- **Décisions** :
+  1. **4 étapes** au lieu de 5 : suppression de `plan_selected` (toujours vrai post-registration).
+  2. **Owner-only** : le backend retourne 403 pour tout non-owner, le frontend ne rend le widget que si `auth.isOwner`.
+  3. **Dismiss permanent** : colonne `onboarding_dismissed_at` (nullable timestamp) sur `companies`. Endpoint POST `/api/dashboard/onboarding/dismiss`.
+  4. **Single VCard** : fusion en une seule carte avec VCardItem (titre + close X) + VCardText (progress + checklist).
+  5. **i18n restructuré** : clés `onboarding.steps.*.label` au lieu de clés plates.
+- **Conséquences** :
+  - UX : widget temporaire et léger, l'owner peut le fermer à tout moment
+  - Sécurité : seul l'owner voit et interagit avec l'onboarding
+  - DB : 1 colonne nullable ajoutée à `companies`, pas de données à migrer
+  - 5 tests (owner 4 steps, non-owner 403, dismiss, dismissed flag, non-owner cannot dismiss)
+- **Fichiers** :
+  - `database/migrations/2026_03_21_220200_add_onboarding_dismissed_at_to_companies_table.php` — migration
+  - `app/Core/Models/Company.php` — fillable + casts
+  - `app/Modules/Core/Dashboard/Http/OnboardingStatusController.php` — réécriture complète (owner guard, 4 steps, dismiss)
+  - `app/Modules/Dashboard/Widgets/OnboardingSetupWidget.php` — docblock ADR-383
+  - `routes/company.php` — POST dismiss route
+  - `resources/js/pages/company/dashboard/_OnboardingWidget.vue` — réécriture single-card, 4 steps, dismiss, owner guard
+  - `resources/js/plugins/i18n/locales/en.json` — clés restructurées + dismiss
+  - `resources/js/plugins/i18n/locales/fr.json` — clés restructurées + dismiss
+  - `tests/Feature/OnboardingFilteredTest.php` — 5 tests ADR-383
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

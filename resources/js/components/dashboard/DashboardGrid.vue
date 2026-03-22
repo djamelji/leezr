@@ -208,6 +208,13 @@ function handleResizeDown(tile, event) {
   startResize(tile, event)
 }
 
+function isResizable(tileKey) {
+  const widget = props.catalog.find(w => w.key === tileKey)
+  const l = widget?.layout ?? {}
+
+  return !(l.min_w === l.max_w && l.min_h === l.max_h)
+}
+
 // ── Mouse up → full pipeline (A3) ──
 
 function handleMouseUp() {
@@ -338,9 +345,9 @@ onUnmounted(() => {
           </VCardText>
         </div>
 
-        <!-- Resize handle — visible on card hover only -->
+        <!-- Resize handle — visible on card hover only (hidden for fixed-size widgets) -->
         <div
-          v-if="editable"
+          v-if="editable && isResizable(tile.key)"
           class="dashboard-resize-handle"
           :style="{ cursor: isMobile ? 's-resize' : 'se-resize' }"
           @mousedown.stop.prevent="handleResizeDown(tile, $event)"

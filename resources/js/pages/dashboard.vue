@@ -4,6 +4,7 @@ import { useCompanyDashboardStore } from '@/modules/company/dashboard/dashboard.
 import { useCompanyComplianceStore } from '@/modules/company/dashboard/compliance.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
+import OnboardingWidget from './company/dashboard/_OnboardingWidget.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -85,6 +86,9 @@ const acceptSuggestion = suggestion => {
         </div>
       </template>
     </VAlert>
+
+    <!-- ═══ Onboarding (ADR-383 — outside grid, height adapts to content) ═══ -->
+    <OnboardingWidget />
 
     <!-- ═══ Dashboard Host (ADR-198 — stable grid position) ═══ -->
     <DashboardHostContainer>

@@ -32,12 +32,14 @@ class Company extends Model
         'market_key',
         'jobdomain_key',
         'legal_status_key',
+        'onboarding_dismissed_at',
     ];
 
     protected function casts(): array
     {
         return [
             'financial_freeze' => 'boolean',
+            'onboarding_dismissed_at' => 'datetime',
         ];
     }
 

@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ADR-372: Onboarding steps filtered by permissions.
+ * ADR-383: Onboarding widget — owner-only, dismissible, 4 steps.
  */
 class OnboardingFilteredTest extends TestCase
 {
@@ -44,19 +44,17 @@ class OnboardingFilteredTest extends TestCase
             );
         }
 
-        // Dispatcher: no billing.manage, no settings.manage, has members.invite
         $dispatcherRole = CompanyRole::create([
             'company_id' => $this->company->id,
             'key' => 'dispatcher',
             'name' => 'Dispatcher',
-            'is_administrative' => true, // ADR-373
+            'is_administrative' => true,
         ]);
 
         $dispatcherPerms = CompanyPermission::whereIn('key', [
             'theme.view', 'theme.manage',
             'members.view', 'members.invite',
             'settings.view',
-            'shipments.view', 'shipments.create', 'shipments.manage_status', 'shipments.assign', 'shipments.view_own',
         ])->pluck('id')->toArray();
 
         $dispatcherRole->permissions()->sync($dispatcherPerms);
@@ -73,32 +71,56 @@ class OnboardingFilteredTest extends TestCase
         return $this->actingAs($user)->withHeaders(['X-Company-Id' => $this->company->id]);
     }
 
-    public function test_owner_sees_all_5_onboarding_steps(): void
+    public function test_owner_sees_4_onboarding_steps(): void
     {
         $response = $this->actAs($this->owner)->getJson('/api/dashboard/onboarding');
 
         $response->assertOk();
-        $this->assertCount(5, $response->json('steps'));
-        $this->assertEquals(5, $response->json('total_count'));
+        $this->assertCount(4, $response->json('steps'));
+        $this->assertEquals(4, $response->json('total_count'));
+
+        $keys = collect($response->json('steps'))->pluck('key')->all();
+        $this->assertContains('account_created', $keys);
+        $this->assertContains('company_profile', $keys);
+        $this->assertContains('payment_method', $keys);
+        $this->assertContains('invite_member', $keys);
+        $this->assertNotContains('plan_selected', $keys);
     }
 
-    public function test_dispatcher_sees_only_2_onboarding_steps(): void
+    public function test_non_owner_gets_403(): void
     {
         $response = $this->actAs($this->dispatcher)->getJson('/api/dashboard/onboarding');
 
+        $response->assertForbidden();
+    }
+
+    public function test_dismiss_sets_timestamp(): void
+    {
+        $this->assertNull($this->company->fresh()->onboarding_dismissed_at);
+
+        $response = $this->actAs($this->owner)->postJson('/api/dashboard/onboarding/dismiss');
+
         $response->assertOk();
+        $response->assertJson(['dismissed' => true]);
+        $this->assertNotNull($this->company->fresh()->onboarding_dismissed_at);
+    }
 
-        $stepKeys = collect($response->json('steps'))->pluck('key')->all();
+    public function test_dismissed_returns_dismissed_flag(): void
+    {
+        $this->company->update(['onboarding_dismissed_at' => now()]);
 
-        // Dispatcher has members.invite → sees invite_member + account_created (null perm)
-        $this->assertContains('account_created', $stepKeys);
-        $this->assertContains('invite_member', $stepKeys);
+        $response = $this->actAs($this->owner)->getJson('/api/dashboard/onboarding');
 
-        // Dispatcher does NOT have billing.manage or settings.manage
-        $this->assertNotContains('plan_selected', $stepKeys);
-        $this->assertNotContains('payment_method', $stepKeys);
-        $this->assertNotContains('company_profile', $stepKeys);
+        $response->assertOk();
+        $response->assertJson(['dismissed' => true]);
+        $this->assertArrayNotHasKey('steps', $response->json());
+    }
 
-        $this->assertCount(2, $stepKeys);
+    public function test_non_owner_cannot_dismiss(): void
+    {
+        $response = $this->actAs($this->dispatcher)->postJson('/api/dashboard/onboarding/dismiss');
+
+        $response->assertForbidden();
+        $this->assertNull($this->company->fresh()->onboarding_dismissed_at);
     }
 }

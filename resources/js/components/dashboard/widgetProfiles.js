@@ -40,8 +40,7 @@ const WIDGET_PROFILES = {
   'compliance.roles': 'list',
   'compliance.types': 'list',
 
-  // Company onboarding + plan (ADR-372)
-  'onboarding.setup': 'kpi',
+  // Plan badge (ADR-372). Onboarding is outside grid (ADR-383).
   'billing.plan_badge': 'kpi',
 
   // Operations — shipment KPIs (ADR-374)

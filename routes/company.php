@@ -70,7 +70,8 @@ Route::get('/dashboard/layout', [CompanyDashboardLayoutController::class, 'show'
 Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'update'])
     ->middleware('company.access:manage-structure');
 Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
-Route::get('/dashboard/onboarding', OnboardingStatusController::class);
+Route::get('/dashboard/onboarding', [OnboardingStatusController::class, '__invoke']);
+Route::post('/dashboard/onboarding/dismiss', [OnboardingStatusController::class, 'dismiss']);
 
 // ─── Notification inbox (core — always active) ────────────
 Route::get('/notifications', [NotificationController::class, 'index']);
