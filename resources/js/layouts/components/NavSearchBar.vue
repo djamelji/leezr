@@ -24,7 +24,7 @@ const suggestionGroups = [
       {
         icon: 'tabler-user-shield',
         title: 'Users',
-        url: { name: 'platform-users' },
+        url: { name: 'platform-access-tab', params: { tab: 'users' } },
       },
       {
         icon: 'tabler-building',
@@ -34,7 +34,7 @@ const suggestionGroups = [
       {
         icon: 'tabler-shield-lock',
         title: 'Roles',
-        url: { name: 'platform-roles' },
+        url: { name: 'platform-access-tab', params: { tab: 'roles' } },
       },
     ],
   },
@@ -75,7 +75,7 @@ const noDataSuggestions = [
   {
     title: 'Users',
     icon: 'tabler-user-shield',
-    url: { name: 'platform-users' },
+    url: { name: 'platform-access-tab', params: { tab: 'users' } },
   },
   {
     title: 'Companies',

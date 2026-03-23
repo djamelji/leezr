@@ -91,7 +91,7 @@ const cards = computed(() => [
     value: stats.value.platformUsers,
     icon: 'tabler-user-shield',
     color: 'error',
-    to: { name: 'platform-users' },
+    to: { name: 'platform-access-tab', params: { tab: 'users' } },
   },
   {
     title: t('Company Users'),
@@ -105,7 +105,7 @@ const cards = computed(() => [
     value: stats.value.roles,
     icon: 'tabler-shield-lock',
     color: 'success',
-    to: { name: 'platform-roles' },
+    to: { name: 'platform-access-tab', params: { tab: 'roles' } },
   },
   {
     title: t('Modules'),

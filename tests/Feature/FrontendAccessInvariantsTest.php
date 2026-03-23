@@ -29,11 +29,7 @@ class FrontendAccessInvariantsTest extends TestCase
             'dashboard.vue should not import PlanBadgeWidget statically — use pipeline catalog instead.'
         );
 
-        $this->assertStringNotContainsString(
-            'import OnboardingWidget',
-            $content,
-            'dashboard.vue should not import OnboardingWidget statically — use pipeline catalog instead.'
-        );
+        // OnboardingWidget is intentionally imported statically (ADR-383: rendered outside grid)
     }
 
     /**
