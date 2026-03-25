@@ -290,7 +290,7 @@ const submitRequest = async () => {
     </VCardItem>
 
     <!-- Filters -->
-    <VCardText class="pb-0">
+    <VCardText>
       <VRow>
         <VCol
           cols="12"
@@ -331,14 +331,15 @@ const submitRequest = async () => {
       </VRow>
     </VCardText>
 
-    <VCardText>
-      <VDataTable
-        v-if="store.requests.length > 0"
-        :headers="headers"
-        :items="filteredRequests"
-        :items-per-page="10"
-        :no-data-text="t('companyDocuments.requests.empty')"
-      >
+    <VDivider />
+
+    <VDataTable
+      :headers="headers"
+      :items="filteredRequests"
+      :items-per-page="10"
+      :no-data-text="t('companyDocuments.requests.empty')"
+      class="text-no-wrap"
+    >
         <template #item.user="{ item }">
           <div class="d-flex align-center gap-2 py-2">
             <VAvatar
@@ -447,16 +448,7 @@ const submitRequest = async () => {
             </VBtn>
           </div>
         </template>
-      </VDataTable>
-
-      <VAlert
-        v-else
-        type="info"
-        variant="tonal"
-      >
-        {{ t('companyDocuments.requests.empty') }}
-      </VAlert>
-    </VCardText>
+    </VDataTable>
   </VCard>
 
   <!-- Reject Dialog (S1.2) -->
