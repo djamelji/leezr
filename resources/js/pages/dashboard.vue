@@ -16,7 +16,9 @@ const canEdit = computed(() => auth.isAdministrative)
 onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)
   // Compliance widgets now come from backend catalog (ADR-327)
-  dashboardStore.loadDashboard()
+  dashboardStore.loadDashboard().catch(err => {
+    console.error('[Dashboard] loadDashboard FAILED:', err)
+  })
   complianceStore.fetchCompliance()
 })
 

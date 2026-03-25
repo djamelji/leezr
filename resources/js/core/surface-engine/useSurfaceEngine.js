@@ -60,6 +60,9 @@ export function createSurfaceEngine(config) {
 
       _catalog.value = data.widgets
     }
+    catch (err) {
+      console.error('[SurfaceEngine] fetchCatalog failed:', err?.message || err)
+    }
     finally {
       _catalogLoading.value = false
     }
