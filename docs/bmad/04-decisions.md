@@ -13754,4 +13754,22 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-404 — Injection directe Google Fonts dans HTML `<head>`
+
+- **Date** : 2026-03-25
+- **Contexte** : Sur dev.leezr.com, la police Poppins ne se chargeait pas correctement malgré une configuration identique à la production. Le chargement reposait uniquement sur du JavaScript : 1) early-init Blade (crée un `<link>` avec `id="lzr-typography-google-preload"`), 2) Vue `useApplyTypography()` qui appelle `cleanup()` (supprime les éléments par ID + supprime `--lzr-font-family`) puis re-crée les éléments. Race condition possible : `cleanup()` supprime le `<link>` avant que Google Fonts ait fini de télécharger.
+- **Décision** : Ajouter un `<link rel="stylesheet">` Google Fonts directement dans le `<head>` HTML du Blade template, **sans ID**. Ce lien :
+  - Se charge dès le parsing HTML (avant tout JavaScript)
+  - N'est PAS supprimé par `cleanup()` (qui cible uniquement les éléments avec des IDs spécifiques)
+  - Persiste pendant tout le cycle de vie Vue
+  - Inclut `preconnect` pour optimiser le DNS/TLS
+- **Conséquences** :
+  - La police est disponible dès le premier rendu, même si le JavaScript tarde
+  - Doublon de `<link>` Google Fonts possible (HTML + JS) mais le navigateur déduplique automatiquement les requêtes identiques
+  - Pas d'impact perf (preconnect + display=swap)
+- **Fichiers** :
+  - `resources/views/application.blade.php` — ajout `<link>` Google Fonts + preconnect dans `<head>`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
