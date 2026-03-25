@@ -117,11 +117,9 @@ log "→ [5/9] migrate:fresh --seed (dev mode — no real clients)"
 cd "$RELEASE_DIR"
 $PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
 
-# Staging only: seed demo data (idempotent via updateOrCreate)
-if [ "$BRANCH" = "dev" ]; then
-  log "→ [5.5] Run DevSeeder (staging only)"
-  $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
-fi
+# Demo data on ALL environments (no real clients yet — temporary)
+log "→ [5.5] Run DevSeeder (no real clients yet)"
+$PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
 
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"

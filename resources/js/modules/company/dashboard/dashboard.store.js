@@ -97,7 +97,7 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
       buildSmartDefaultLayout()
 
       const auth = useAuthStore()
-      if (auth.hasPermission('manage-structure')) {
+      if (auth.isAdministrative) {
         await engine.saveLayout()
       }
     }

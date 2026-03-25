@@ -11,7 +11,7 @@ const auth = useAuthStore()
 const dashboardStore = useCompanyDashboardStore()
 const complianceStore = useCompanyComplianceStore()
 
-const canEdit = computed(() => auth.hasPermission('manage-structure'))
+const canEdit = computed(() => auth.isAdministrative)
 
 onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)

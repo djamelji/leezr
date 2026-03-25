@@ -13671,4 +13671,16 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-399 — Fix dashboard grid : accès admin (rôles gestion)
+- **Date** : 2026-03-25
+- **Contexte** : Le dashboard gridable (drag-and-drop, catalogue widgets) n'était accessible qu'au owner. Les admins (manager, dispatcher) voyaient un dashboard statique, bien que le backend les autorise via `manage-structure` (middleware vérifiant `is_administrative`).
+- **Cause** : Le frontend utilisait `auth.hasPermission('manage-structure')` mais cette permission n'est jamais dans la liste `permissions[]` retournée par le backend. Seul `isOwner` court-circuitait dans `hasPermission()`.
+- **Décision** : Remplacer `auth.hasPermission('manage-structure')` par `auth.isAdministrative` (getter existant, vérifie `is_administrative` du companyRole).
+- **Conséquences** : Owner, manager, dispatcher ont le dashboard éditable. Driver reste en lecture seule.
+- **Fichiers** :
+  - `resources/js/pages/dashboard.vue` — canEdit computed
+  - `resources/js/modules/company/dashboard/dashboard.store.js` — auto-save guard
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
