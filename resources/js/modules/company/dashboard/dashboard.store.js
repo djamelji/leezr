@@ -89,6 +89,8 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
       y += dh
     }
 
+    console.warn('[SmartDefault] Built layout:', JSON.stringify(layout.map(t => ({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h }))))
+
     engine._layout.value = layout
     engine._dirty.value = true
   }
@@ -108,9 +110,17 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
 
       const auth = useAuthStore()
       if (auth.isAdministrative) {
-        await engine.saveLayout()
+        try {
+          await engine.saveLayout()
+        }
+        catch {
+          // Save failed (422 validation, network, etc.) — layout stays in memory.
+          // resolveWidgets must still run to populate widget data.
+        }
       }
     }
+
+    console.warn('[Dashboard] Layout before resolve:', JSON.stringify(engine._layout.value.map(t => ({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h }))))
 
     await engine.resolveWidgets()
   }

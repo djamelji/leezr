@@ -247,6 +247,14 @@ onMounted(() => {
   nextTick(() => {
     gridInitialized.value = true
   })
+
+  // Diagnostic — log what the grid renders
+  watch(displayLayout, layout => {
+    if (layout.length) {
+      console.warn('[DashboardGrid] displayLayout:', JSON.stringify(layout.map(t => ({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h }))))
+      console.warn('[DashboardGrid] cols:', cols.value, 'isMobile:', isMobile.value)
+    }
+  }, { immediate: true })
 })
 
 onUnmounted(() => {

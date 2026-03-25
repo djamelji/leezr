@@ -4077,6 +4077,11 @@
     "returnToPlatform": "Retour vers la plateforme",
     "returnToSpace": "Retour vers mon espace"
   },
+  "session": {
+    "expiredTitle": "Session expirée",
+    "expiredMessage": "Votre session a expiré en raison d'une inactivité prolongée. Veuillez vous reconnecter pour continuer.",
+    "reconnect": "Se reconnecter"
+  },
   "footer": {
     "support": "Support",
     "documentation": "Documentation",

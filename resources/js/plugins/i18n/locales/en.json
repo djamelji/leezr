@@ -4072,6 +4072,11 @@
     "returnToPlatform": "Back to platform",
     "returnToSpace": "Back to my space"
   },
+  "session": {
+    "expiredTitle": "Session Expired",
+    "expiredMessage": "Your session has expired due to inactivity. Please log in again to continue.",
+    "reconnect": "Log In Again"
+  },
   "footer": {
     "support": "Support",
     "documentation": "Documentation",
