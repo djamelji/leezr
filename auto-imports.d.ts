@@ -193,6 +193,7 @@ declare global {
   const useArrayUnique: typeof import('@vueuse/core')['useArrayUnique']
   const useAsyncAction: typeof import('./resources/js/composables/useAsyncAction.js')['useAsyncAction']
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
+  const useAsyncState: typeof import('@vueuse/core')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']
   const useAverage: typeof import('@vueuse/math')['useAverage']
   const useBase64: typeof import('@vueuse/core')['useBase64']

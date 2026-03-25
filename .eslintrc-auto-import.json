@@ -397,6 +397,7 @@
     "useSkins": true,
     "avatarText": true,
     "createUrl": true,
-    "resolveVuetifyTheme": true
+    "resolveVuetifyTheme": true,
+    "useAsyncState": true
   }
 }
