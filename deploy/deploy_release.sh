@@ -112,18 +112,14 @@ else
   log "  WARN: .app-meta not found — skipping metadata injection"
 fi
 
-# ─── [5/9] Run migrations ───────────────────────────────────────
-log "→ [5/9] Run migrations"
+# ─── [5/9] Fresh database (no real clients yet) ──────────────────
+log "→ [5/9] migrate:fresh --seed (dev mode — no real clients)"
 cd "$RELEASE_DIR"
-$PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
-
-# ─── [6/9] Run SystemSeeder (idempotent) ────────────────────────
-log "→ [6/9] Run SystemSeeder"
-$PHP_BIN artisan db:seed --class=SystemSeeder --force 2>&1 | tee -a "$LOG_FILE"
+$PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
 
 # Staging only: seed demo data (idempotent via updateOrCreate)
 if [ "$BRANCH" = "dev" ]; then
-  log "→ [6.5] Run DevSeeder (staging only)"
+  log "→ [5.5] Run DevSeeder (staging only)"
   $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
 fi
 
