@@ -13735,4 +13735,23 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-403 — Dashboard grid first-fit placement for all viewports
+
+- **Date** : 2026-03-25
+- **Contexte** : Le layout canonique (12 colonnes) stocké en DB avait parfois toutes les tuiles à `x=0`, empilées verticalement. `computeVisualLayout` retournait le layout tel quel quand `cols >= 12`, rendant les widgets en colonne unique au lieu de les distribuer sur la grille.
+- **Décision** : Supprimer le early-return de `computeVisualLayout` pour desktop. Appliquer l'algorithme first-fit placement sur TOUS les viewports :
+  - **Desktop (12-col)** : first-fit avec dimensions canoniques (w, h) — auto-répare les layouts cassés tout en préservant les layouts corrects
+  - **Tablet (6-col)** : binary snap (inchangé)
+  - **Mobile (forceH)** : interleave charts/KPIs (inchangé)
+- **Conséquences** :
+  - Les layouts avec positions cassées (tout à x=0) sont auto-réparés visuellement
+  - Le layout canonique est corrigé dès la première interaction utilisateur (drag/resize/remove) via `applyPipeline`
+  - Les gaps horizontaux intentionnels ne sont plus possibles (first-fit pack toujours à gauche) — comportement souhaité
+- **Fichiers** :
+  - `resources/js/composables/useDashboardGrid.js` — `computeVisualLayout` : early-return supprimé, path desktop ajouté
+  - `resources/js/components/dashboard/DashboardGrid.vue` — `width: 100%`
+  - `resources/js/components/dashboard/DashboardHostContainer.vue` — `width: 100%`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
