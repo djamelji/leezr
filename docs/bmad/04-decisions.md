@@ -13771,4 +13771,21 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-405 — DocumentsRequests : bouton fantôme + pattern CRUD Vuexy
+
+- **Date** : 2026-03-25
+- **Contexte** : Sur la page `/company/documents/requests`, deux problèmes :
+  1. Le bouton "Demander un document" était invisible fonctionnellement (fantôme) pour les utilisateurs avec `documents.manage` mais sans `roles.view`. `openRequestDialog()` appelait `fetchCompanyRoles({ silent: true })` qui 403 sur `/api/company/roles`. Le flag `_silent403` dans l'intercepteur API supprime le toast mais **ne supprime pas le throw** d'ofetch. L'erreur non catchée empêchait `isRequestDialogVisible = true` d'être atteint.
+  2. Le layout de la page n'utilisait pas le pattern CRUD Vuexy : la table était cachée par `v-if` quand vide (remplacée par un `VAlert` collé aux filtres), et la `VDataTable` était imbriquée dans un `VCardText` au lieu d'être directement dans le `VCard`.
+- **Décision** :
+  - **Store** : `fetchCompanyRoles` et `fetchPermissionCatalog` wrappent l'appel API dans un `try/catch` — quand `silent: true`, l'erreur est avalée silencieusement (le store garde ses valeurs par défaut)
+  - **Component** : `openRequestDialog` utilise `Promise.allSettled()` pour charger rôles et membres en parallèle sans bloquer le dialog sur un échec
+  - **Scope options** : Les radios "Par rôle" et "Par membre" sont conditionnels (`v-if`) à la disponibilité des données
+  - **UI CRUD pattern** : `VDivider` entre filtres et table, `VDataTable` directement dans `VCard` (pas dans `VCardText`), table toujours visible (gère l'état vide via `no-data-text`)
+- **Fichiers** :
+  - `resources/js/modules/company/settings/settings.store.js` — try/catch silent sur fetchCompanyRoles + fetchPermissionCatalog
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — Promise.allSettled, v-if scope radios, pattern CRUD Vuexy
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

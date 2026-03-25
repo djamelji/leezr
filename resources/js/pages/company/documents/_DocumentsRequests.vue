@@ -233,8 +233,12 @@ watch(() => requestForm.value.scope, () => {
 
 const openRequestDialog = async () => {
   requestForm.value = { scope: 'all', company_role_ids: [], user_ids: [], document_type_code: null }
-  if (settingsStore.roles.length === 0) await settingsStore.fetchCompanyRoles({ silent: true })
-  if (membersStore.members.length === 0) await membersStore.fetchMembers()
+
+  await Promise.allSettled([
+    settingsStore.roles.length === 0 ? settingsStore.fetchCompanyRoles({ silent: true }) : Promise.resolve(),
+    membersStore.members.length === 0 ? membersStore.fetchMembers() : Promise.resolve(),
+  ])
+
   isRequestDialogVisible.value = true
 }
 
@@ -530,10 +534,12 @@ const submitRequest = async () => {
                 value="all"
               />
               <VRadio
+                v-if="settingsStore.roles.length > 0"
                 :label="t('companyDocuments.requests.scopeRole')"
                 value="role"
               />
               <VRadio
+                v-if="membersStore.members.length > 0"
                 :label="t('companyDocuments.requests.scopeMember')"
                 value="member"
               />

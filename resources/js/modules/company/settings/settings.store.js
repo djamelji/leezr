@@ -47,16 +47,26 @@ export const useCompanySettingsStore = defineStore('companySettings', {
 
     // ─── Company Roles (CRUD) ──────────────────────────
     async fetchCompanyRoles({ silent = false } = {}) {
-      const data = await $api('/company/roles', { _silent403: silent })
+      try {
+        const data = await $api('/company/roles', { _silent403: silent })
 
-      this._roles = data.roles
+        this._roles = data.roles
+      }
+      catch (e) {
+        if (!silent) throw e
+      }
     },
 
     async fetchPermissionCatalog({ silent = false } = {}) {
-      const data = await $api('/company/permissions', { _silent403: silent })
+      try {
+        const data = await $api('/company/permissions', { _silent403: silent })
 
-      this._permissionCatalog = data.permissions
-      this._permissionModules = data.modules || []
+        this._permissionCatalog = data.permissions
+        this._permissionModules = data.modules || []
+      }
+      catch (e) {
+        if (!silent) throw e
+      }
     },
 
     async createCompanyRole(payload) {
