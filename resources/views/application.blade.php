@@ -17,11 +17,6 @@
   <meta name="robots" content="noindex, nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ ucfirst($appName) }}</title>
-  @if(($typography['active_source'] ?? null) === 'google' && ($typography['active_family_name'] ?? null))
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ urlencode($typography['active_family_name']) }}:wght@{{ implode(';', $typography['google_weights'] ?? [400]) }}&display=swap" />
-  @endif
   <link rel="stylesheet" type="text/css" href="{{ asset('loader.css') }}?v={{ filemtime(public_path('loader.css')) }}" />
   @vite(['resources/js/main.js'])
 </head>
