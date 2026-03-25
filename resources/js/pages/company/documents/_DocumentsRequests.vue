@@ -534,12 +534,10 @@ const submitRequest = async () => {
                 value="all"
               />
               <VRadio
-                v-if="settingsStore.roles.length > 0"
                 :label="t('companyDocuments.requests.scopeRole')"
                 value="role"
               />
               <VRadio
-                v-if="membersStore.members.length > 0"
                 :label="t('companyDocuments.requests.scopeMember')"
                 value="member"
               />
