@@ -13697,4 +13697,42 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-401 — Storage files via PHP route + /media/ prefix
+- **Date** : 2026-03-25
+- **Contexte** : ISPConfig bloque `/storage/` au niveau Apache (directive vhost `SymLinksIfOwnerMatch` + probable `<Directory>` restrictif). Les avatars et fichiers publics retournent 403 sur les deux serveurs.
+- **Décision** :
+  1. Servir les fichiers publics via PHP au lieu de symlinks Apache
+  2. Utiliser le préfixe `/media/` au lieu de `/storage/` (bloqué par ISPConfig)
+  3. `StorageFileController` lit depuis `Storage::disk('public')` (sandboxé)
+  4. `filesystems.php` : URL du disque public = `/media`
+  5. Route `/media/{path}` AVANT le catch-all SPA
+  6. Symlink `public/storage` supprimé du deploy script
+  7. Cache-Control `public, max-age=604800` (7 jours)
+- **Conséquences** : Avatars, polices et tout fichier public fonctionnent sur ISPConfig. Performance légèrement réduite (PHP vs Apache direct) mais le cache navigateur compense. `User::getAvatarAttribute()` utilise `Storage::disk('public')->url()` → génère automatiquement `/media/...`.
+- **Fichiers** :
+  - `app/Modules/Infrastructure/System/Http/StorageFileController.php`
+  - `config/filesystems.php` — public disk url
+  - `routes/web.php` — route /media/{path}
+  - `deploy/deploy_release.sh` — suppression symlink
+  - `public/.htaccess` — nettoyé (plus de rewrite /storage/)
+
+---
+
+### ADR-402 — Dashboard load chain resilience + i18n session
+- **Date** : 2026-03-25
+- **Contexte** : `fetchCatalog()` ne catchait pas les erreurs → crash `Promise.all()` → `resolveWidgets()` jamais appelé → widgets sans données. `saveLayout()` re-throw → même effet. Clés i18n `session.expiredTitle/expiredMessage/reconnect` sous `platformSettings.session` mais le composant utilise `$t('session.expiredTitle')` (premier niveau).
+- **Décision** :
+  1. Ajouter `catch` dans `fetchCatalog()` (comme `fetchLayout()`)
+  2. Wrapper `saveLayout()` dans try/catch dans `loadDashboard()`
+  3. Ajouter `.catch()` dans `dashboard.vue` `onMounted`
+  4. Ajouter clés i18n `session` au premier niveau (fr + en)
+- **Conséquences** : `resolveWidgets()` s'exécute toujours, même si save échoue. Erreurs visibles dans la console. Session expired dialog affiche la traduction correcte.
+- **Fichiers** :
+  - `resources/js/core/surface-engine/useSurfaceEngine.js` — fetchCatalog catch
+  - `resources/js/modules/company/dashboard/dashboard.store.js` — saveLayout try/catch
+  - `resources/js/pages/dashboard.vue` — error handler
+  - `resources/js/plugins/i18n/locales/{fr,en}.json` — session keys
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
