@@ -17,7 +17,9 @@ use App\Core\Modules\CompanyModule;
 use App\Core\Modules\EntitlementResolver;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Modules\PlatformModule;
+use App\Platform\Models\PlatformFontFamily;
 use App\Platform\Models\PlatformRole;
+use App\Platform\Models\PlatformSetting;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -50,6 +52,24 @@ class DevSeeder extends Seeder
         if ($adminRole && !$platformUser->hasRole('admin')) {
             $platformUser->roles()->attach($adminRole->id);
         }
+
+        // ─── Typography — ensure Poppins Google Font (ADR-073) ─────
+        PlatformSetting::instance()->update([
+            'typography' => [
+                'active_source' => 'google',
+                'active_family_id' => null,
+                'google_fonts_enabled' => true,
+                'google_active_family' => 'Poppins',
+                'google_weights' => [100, 200, 300, 400, 500, 600, 700, 800, 900],
+                'headings_family_id' => null,
+                'body_family_id' => null,
+            ],
+        ]);
+
+        PlatformFontFamily::firstOrCreate(
+            ['slug' => 'poppins'],
+            ['name' => 'Poppins', 'source' => 'google', 'is_enabled' => true],
+        );
 
         // ─── Company scope — demo company + users ────────────────
         $owner = User::updateOrCreate(

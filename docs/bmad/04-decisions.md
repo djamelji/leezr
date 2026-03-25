@@ -13754,21 +13754,20 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
-### ADR-404 — Injection directe Google Fonts dans HTML `<head>`
+### ADR-404 — DevSeeder : garantie typographie Poppins (ADR-073 complétion)
 
 - **Date** : 2026-03-25
-- **Contexte** : Sur dev.leezr.com, la police Poppins ne se chargeait pas correctement malgré une configuration identique à la production. Le chargement reposait uniquement sur du JavaScript : 1) early-init Blade (crée un `<link>` avec `id="lzr-typography-google-preload"`), 2) Vue `useApplyTypography()` qui appelle `cleanup()` (supprime les éléments par ID + supprime `--lzr-font-family`) puis re-crée les éléments. Race condition possible : `cleanup()` supprime le `<link>` avant que Google Fonts ait fini de télécharger.
-- **Décision** : Ajouter un `<link rel="stylesheet">` Google Fonts directement dans le `<head>` HTML du Blade template, **sans ID**. Ce lien :
-  - Se charge dès le parsing HTML (avant tout JavaScript)
-  - N'est PAS supprimé par `cleanup()` (qui cible uniquement les éléments avec des IDs spécifiques)
-  - Persiste pendant tout le cycle de vie Vue
-  - Inclut `preconnect` pour optimiser le DNS/TLS
+- **Contexte** : Sur `dev.leezr.com`, la police Poppins n'était pas appliquée après déploiement. Le `PlatformSeeder` (appelé par `SystemSeeder`) crée les `PlatformSetting` avec Poppins mais avec un guard `if (count === 0)`. Le deploy script exécute ensuite `DevSeeder` séparément (`db:seed --class=DevSeeder`). Le `DevSeeder` ne garantissait pas la typographie — si les settings existaient déjà sans typography (anciens deploys), le guard du PlatformSeeder empêchait la mise à jour.
+- **Décision** :
+  - `DevSeeder` : ajout d'un `PlatformSetting::instance()->update()` explicite qui force la typographie Poppins (Google Fonts)
+  - `DevSeeder` : `PlatformFontFamily::firstOrCreate()` pour garantir la famille Poppins
+  - Cohérent avec le pattern existant dans `PlatformSeeder` (mêmes clés, mêmes valeurs)
 - **Conséquences** :
-  - La police est disponible dès le premier rendu, même si le JavaScript tarde
-  - Doublon de `<link>` Google Fonts possible (HTML + JS) mais le navigateur déduplique automatiquement les requêtes identiques
-  - Pas d'impact perf (preconnect + display=swap)
+  - Chaque déploiement staging/dev garantit Poppins active via Google Fonts
+  - Idempotent : `update()` + `firstOrCreate()` sont safe à exécuter N fois
+  - En local, le `DevSeeder` est aussi appelé via `DatabaseSeeder` — double garantie
 - **Fichiers** :
-  - `resources/views/application.blade.php` — ajout `<link>` Google Fonts + preconnect dans `<head>`
+  - `database/seeders/DevSeeder.php` — section typography ajoutée
 
 ---
 
