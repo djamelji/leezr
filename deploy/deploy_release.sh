@@ -128,26 +128,16 @@ $PHP_BIN artisan route:clear  2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan view:clear   2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan optimize     2>&1 | tee -a "$LOG_FILE"
 
-# ─── [7.5] Storage symlink (direct absolute, no chain) ───────────
-log "→ [7.5] Storage symlink (direct)"
-# Skip artisan storage:link — it creates a relative symlink through
-# release/storage (itself a symlink), causing 4-level symlink chains
-# that Apache/ISPConfig may refuse to follow.
-# Instead, point directly at the shared storage with an absolute path.
+# ─── [7.5] Storage — NO symlink (ADR-401) ──────────────────────────
+log "→ [7.5] Storage (PHP route, no symlink)"
+# ISPConfig uses SymLinksIfOwnerMatch which blocks Apache from following
+# the public/storage symlink (403). StorageFileController serves files
+# via PHP instead, bypassing the symlink entirely.
+# We MUST remove any existing symlink so Apache falls through to the
+# .htaccess rewrite → index.php → Laravel → StorageFileController.
 mkdir -p "$SHARED_DIR/storage/app/public"
 rm -f "$RELEASE_DIR/public/storage"
-ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
-log "  public/storage → $SHARED_DIR/storage/app/public"
-
-# Verify symlink resolves correctly
-if RESOLVED=$(readlink -f "$RELEASE_DIR/public/storage" 2>/dev/null); then
-  log "  Resolved: $RESOLVED"
-  if [ ! -d "$RESOLVED" ]; then
-    log "  ⚠ WARNING: symlink target does not exist or is not a directory!"
-  fi
-else
-  log "  ⚠ WARNING: readlink -f failed — check symlink chain"
-fi
+log "  public/storage symlink removed — files served via PHP route"
 
 # ─── [8/9] Health check (BEFORE switch) ─────────────────────────
 log "→ [8/9] Health check"
