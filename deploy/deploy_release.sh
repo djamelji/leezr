@@ -130,9 +130,16 @@ $PHP_BIN artisan route:clear  2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan view:clear   2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan optimize     2>&1 | tee -a "$LOG_FILE"
 
-# ─── [7.5] Storage symlink (public/storage → shared storage) ─────
-log "→ [7.5] Storage symlink"
-$PHP_BIN artisan storage:link --force 2>&1 | tee -a "$LOG_FILE"
+# ─── [7.5] Storage symlink (direct absolute, no chain) ───────────
+log "→ [7.5] Storage symlink (direct)"
+# Skip artisan storage:link — it creates a relative symlink through
+# release/storage (itself a symlink), causing 4-level symlink chains
+# that Apache/ISPConfig may refuse to follow.
+# Instead, point directly at the shared storage with an absolute path.
+mkdir -p "$SHARED_DIR/storage/app/public"
+rm -f "$RELEASE_DIR/public/storage"
+ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
+log "  public/storage → $SHARED_DIR/storage/app/public"
 
 # ─── [8/9] Health check (BEFORE switch) ─────────────────────────
 log "→ [8/9] Health check"
