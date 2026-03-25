@@ -13683,4 +13683,18 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-400 — Fix buildSmartDefaultLayout : validation 422 + exclusion onboarding
+- **Date** : 2026-03-25
+- **Contexte** : `buildSmartDefaultLayout()` codait en dur `h: 4` pour les "charts" (widgets large, w > 6). Or `onboarding.setup` a `max_h: 2` et `billing.plan_badge` a `max_h: 3`. Le `LayoutValidator` backend rejetait le layout entier (422), empêchant la persistance en DB. À chaque visite, le smart default était reconstruit en mémoire mais jamais sauvegardé.
+- **Cause secondaire** : `onboarding.setup` était inclus dans le grid layout alors qu'il est rendu séparément en dehors du grid (ADR-383), et n'a pas de composant dans `widgetComponentMap`.
+- **Décision** :
+  1. Utiliser `w.layout?.default_h` au lieu de valeurs codées en dur pour toutes les catégories (KPIs, lists, banners)
+  2. Exclure `onboarding.setup` du smart default (Set `EXCLUDED_KEYS`)
+  3. Renommer la catégorie "charts" en "banners" (plus précis pour w=12, h=2)
+- **Conséquences** : Le layout passe la validation, se persiste en DB, survit aux rechargements. `billing.plan_badge` s'affiche en `h: 2` (son `default_h`).
+- **Fichiers** :
+  - `resources/js/modules/company/dashboard/dashboard.store.js` — `buildSmartDefaultLayout()`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

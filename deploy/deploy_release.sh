@@ -139,6 +139,16 @@ rm -f "$RELEASE_DIR/public/storage"
 ln -sfn "$SHARED_DIR/storage/app/public" "$RELEASE_DIR/public/storage"
 log "  public/storage → $SHARED_DIR/storage/app/public"
 
+# Verify symlink resolves correctly
+if RESOLVED=$(readlink -f "$RELEASE_DIR/public/storage" 2>/dev/null); then
+  log "  Resolved: $RESOLVED"
+  if [ ! -d "$RESOLVED" ]; then
+    log "  ⚠ WARNING: symlink target does not exist or is not a directory!"
+  fi
+else
+  log "  ⚠ WARNING: readlink -f failed — check symlink chain"
+fi
+
 # ─── [8/9] Health check (BEFORE switch) ─────────────────────────
 log "→ [8/9] Health check"
 $PHP_BIN artisan route:list    > /dev/null
