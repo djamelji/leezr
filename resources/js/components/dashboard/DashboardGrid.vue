@@ -398,6 +398,7 @@ onUnmounted(() => {
   grid-auto-rows: 80px;
   gap: var(--dashboard-gap, 16px);
   min-height: 200px;
+  width: 100%;
   position: relative;
 }
 

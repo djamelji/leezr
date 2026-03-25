@@ -28,6 +28,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
 }
 
 .dashboard-host__toolbar {
@@ -38,5 +39,6 @@
   flex: 1 1 auto;
   min-height: 200px;
   position: relative;
+  width: 100%;
 }
 </style>

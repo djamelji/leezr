@@ -333,10 +333,6 @@ export function useDashboardGrid(gridRef, catalog) {
    * @param {number|null} forceH - if set, override all tile heights (mobile → 2)
    */
   function computeVisualLayout(canonicalLayout, viewCols, forceH = null) {
-    if (viewCols >= CANONICAL_COLS && !forceH) {
-      return canonicalLayout.map(t => ({ ...t }))
-    }
-
     const sorted = [...canonicalLayout].sort((a, b) => a.y - b.y || a.x - b.x)
 
     // Occupancy map: sparse rows × viewCols columns
@@ -416,6 +412,17 @@ export function useDashboardGrid(gridRef, catalog) {
           placeTile(kpis[ki], w, forceH)
           ki++
         }
+      }
+
+      return result
+    }
+
+    // ── Desktop (12-col): first-fit placement preserving canonical widths ──
+    // Auto-repairs layouts with broken positions (e.g. all tiles at x=0)
+    // while preserving correctly positioned layouts.
+    if (viewCols >= CANONICAL_COLS) {
+      for (const tile of sorted) {
+        placeTile(tile, tile.w, tile.h)
       }
 
       return result
