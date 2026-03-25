@@ -35,7 +35,7 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
           />
         </VAvatar>
         <span class="widget-title text-medium-emphasis">
-          {{ t('compliance.overdue') }}
+          {{ t('compliance.expired') }}
         </span>
       </div>
     </div>
@@ -46,17 +46,17 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
         type="text"
       />
       <div
-        v-else-if="!store.queue.length"
+        v-else-if="!store.hasData"
         class="d-flex align-center justify-center h-100 text-disabled"
       >
         {{ t('compliance.noData') }}
       </div>
       <template v-else>
         <div class="widget-kpi font-weight-bold text-error">
-          {{ store.overdueCount }}
+          {{ store.expiredCount }}
         </div>
         <div class="widget-subtext text-medium-emphasis">
-          {{ t('compliance.olderThan48h') }}
+          {{ t('compliance.documentsExpired') }}
         </div>
       </template>
     </div>

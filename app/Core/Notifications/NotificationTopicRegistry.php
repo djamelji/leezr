@@ -22,6 +22,7 @@ class NotificationTopicRegistry
      */
     public const CATEGORY_PERMISSIONS = [
         'billing' => 'billing.manage',
+        'documents' => 'documents.manage',
         'members' => 'members.view',
         'modules' => 'modules.manage',
         'security' => null,
@@ -46,6 +47,7 @@ class NotificationTopicRegistry
     /** Commercial bundle metadata per category (company). */
     public const BUNDLE_META = [
         'billing' => ['icon' => 'tabler-receipt-2', 'color' => 'warning'],
+        'documents' => ['icon' => 'tabler-file-certificate', 'color' => 'info'],
         'members' => ['icon' => 'tabler-users', 'color' => 'info'],
         'modules' => ['icon' => 'tabler-puzzle', 'color' => 'primary'],
         'security' => ['icon' => 'tabler-shield-lock', 'color' => 'error'],
@@ -314,6 +316,69 @@ class NotificationTopicRegistry
                 'default_channels' => ['in_app'],
                 'sort_order' => 16,
                 'description' => 'Notification when a module is deactivated for the company',
+            ],
+
+            // ─── Documents topics (ADR-385) ──────────────────────────
+            'documents.expiring_soon' => [
+                'label' => 'Document Expiring Soon',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-alert',
+                'severity' => 'warning',
+                'default_channels' => ['in_app', 'email'],
+                'sort_order' => 17,
+                'description' => 'Notification when a document is about to expire (within 30 days)',
+            ],
+            'documents.expired' => [
+                'label' => 'Document Expired',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-x',
+                'severity' => 'error',
+                'default_channels' => ['in_app', 'email'],
+                'sort_order' => 18,
+                'description' => 'Notification when a document has expired and needs renewal',
+            ],
+            'documents.submitted' => [
+                'label' => 'Document Submitted',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-upload',
+                'severity' => 'info',
+                'default_channels' => ['in_app'],
+                'sort_order' => 19,
+                'description' => 'Notification when a member submits a document for review',
+            ],
+            'documents.request_new' => [
+                'label' => 'Document Requested',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-plus',
+                'severity' => 'info',
+                'default_channels' => ['in_app'],
+                'sort_order' => 20,
+                'description' => 'Notification when a document is requested from a member',
+            ],
+
+            'documents.reviewed' => [
+                'label' => 'Document Reviewed',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-check',
+                'severity' => 'info',
+                'default_channels' => ['in_app'],
+                'sort_order' => 21,
+                'description' => 'Notification when a submitted document has been approved or rejected',
+            ],
+            'documents.request_cancelled' => [
+                'label' => 'Document Request Cancelled',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-file-x',
+                'severity' => 'warning',
+                'default_channels' => ['in_app'],
+                'sort_order' => 22,
+                'description' => 'Notification when a pending document request is cancelled',
             ],
 
             // ─── Security topics ─────────────────────────────────────

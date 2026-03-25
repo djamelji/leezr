@@ -27,8 +27,6 @@ final class UpdateSystemDocumentTypeData
             'validation_rules.accepted_types.*' => ['string'],
             'validation_rules.applicable_markets' => ['sometimes', 'nullable', 'array'],
             'validation_rules.applicable_markets.*' => ['string'],
-            'validation_rules.required_by_jobdomains' => ['sometimes', 'nullable', 'array'],
-            'validation_rules.required_by_jobdomains.*' => ['string'],
             'validation_rules.required_by_modules' => ['sometimes', 'nullable', 'array'],
             'validation_rules.required_by_modules.*' => ['string'],
             'validation_rules.tags' => ['sometimes', 'nullable', 'array'],

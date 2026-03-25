@@ -17,7 +17,7 @@ onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)
   // Compliance widgets now come from backend catalog (ADR-327)
   dashboardStore.loadDashboard()
-  complianceStore.fetchQueue()
+  complianceStore.fetchCompliance()
 })
 
 // ── Dashboard Engine ──

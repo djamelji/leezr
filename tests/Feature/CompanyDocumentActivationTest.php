@@ -342,7 +342,27 @@ class CompanyDocumentActivationTest extends TestCase
 
     public function test_read_model_preserves_mandatory_documents(): void
     {
-        // insurance_certificate is mandatory for logistique jobdomain
+        // ADR-389: obligation is now via required_override (set by jobdomain preset)
+        // not via catalog-level required_by_jobdomains
+        $insuranceType = DocumentType::where('code', 'insurance_certificate')->first();
+        $idCardType = DocumentType::where('code', 'id_card')->first();
+
+        // Simulate jobdomain preset activation with required_override
+        DocumentTypeActivation::create([
+            'company_id' => $this->company->id,
+            'document_type_id' => $insuranceType->id,
+            'enabled' => true,
+            'required_override' => true,
+            'order' => 0,
+        ]);
+        DocumentTypeActivation::create([
+            'company_id' => $this->company->id,
+            'document_type_id' => $idCardType->id,
+            'enabled' => true,
+            'required_override' => true,
+            'order' => 0,
+        ]);
+
         $response = $this->actAsOwner()->getJson('/api/company/document-activations');
 
         $response->assertOk();
@@ -351,13 +371,12 @@ class CompanyDocumentActivationTest extends TestCase
             ->firstWhere('code', 'insurance_certificate');
 
         $this->assertNotNull($insurance);
-        $this->assertTrue($insurance['mandatory']);
+        $this->assertTrue($insurance['required_override']);
 
-        // id_card is also mandatory for logistique jobdomain (FR)
         $idCard = collect($response->json('company_user_documents'))
             ->firstWhere('code', 'id_card');
 
         $this->assertNotNull($idCard);
-        $this->assertTrue($idCard['mandatory']);
+        $this->assertTrue($idCard['required_override']);
     }
 }

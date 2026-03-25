@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Core\Settings\Http;
+namespace App\Modules\Core\Documents\Http;
 
 use App\Modules\Core\Settings\UseCases\ArchiveCustomDocumentTypeData;
 use App\Modules\Core\Settings\UseCases\ArchiveCustomDocumentTypeUseCase;

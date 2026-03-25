@@ -15,6 +15,10 @@ class NotificationDispatcher
     /**
      * Central dispatch point for all notifications.
      * Creates in-app notifications + publishes SSE events + sends emails.
+     *
+     * @param  string|null  $entityKey  Optional entity key for collaborative resolution (ADR-386).
+     *                                   When set, resolveByEntity() can mark all related notifications
+     *                                   as read when the underlying issue is resolved.
      */
     public static function send(
         string $topicKey,
@@ -22,6 +26,7 @@ class NotificationDispatcher
         array $payload,
         ?Company $company = null,
         ?Notification $mailNotification = null,
+        ?string $entityKey = null,
     ): int {
         // 1. Load topic -> abort if explicitly deactivated
         $topic = NotificationTopic::find($topicKey);
@@ -93,6 +98,7 @@ class NotificationDispatcher
                     'severity' => $rendered['severity'],
                     'link' => $rendered['link'],
                     'data' => $payload,
+                    'entity_key' => $entityKey,
                 ]);
 
                 // Publish SSE envelope for instant delivery
@@ -142,5 +148,22 @@ class NotificationDispatcher
         }
 
         return $count;
+    }
+
+    /**
+     * ADR-386: Resolve all unread notifications linked to a specific entity.
+     *
+     * When a business issue is resolved (e.g. expired document is renewed),
+     * this marks ALL unread notifications with that entity_key as read,
+     * for ALL recipients. This prevents stale alerts from accumulating.
+     *
+     * @param  string  $entityKey  The entity key (e.g. "company_document:5:kbis")
+     * @return int Number of notifications resolved
+     */
+    public static function resolveByEntity(string $entityKey): int
+    {
+        return NotificationEvent::forEntity($entityKey)
+            ->unread()
+            ->update(['read_at' => now()]);
     }
 }

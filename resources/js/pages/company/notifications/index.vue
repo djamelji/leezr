@@ -23,6 +23,7 @@ const severityColors = {
 // ADR-382: categories filtered by user permissions
 const allCategoryDefs = {
   billing: { icon: 'tabler-receipt-2', titleKey: 'notifications.categoryBilling' },
+  documents: { icon: 'tabler-file-certificate', titleKey: 'notifications.categoryDocuments' },
   members: { icon: 'tabler-users', titleKey: 'notifications.categoryMembers' },
   modules: { icon: 'tabler-puzzle', titleKey: 'notifications.categoryModules' },
   security: { icon: 'tabler-shield-lock', titleKey: 'notifications.categorySecurity' },

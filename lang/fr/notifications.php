@@ -65,6 +65,27 @@ return [
         'title' => 'Module désactivé',
         'body' => 'Le module :module_name a été désactivé.',
     ],
+    'documents_expiring_soon' => [
+        'title' => 'Document bientôt expiré',
+        'body' => 'Le document :document_type de :member_name expire le :expires_at.',
+    ],
+    'documents_expired' => [
+        'title' => 'Document expiré',
+        'body' => 'Le document :document_type de :member_name a expiré le :expires_at.',
+    ],
+    'documents_submitted' => [
+        'title' => 'Document soumis',
+        'body' => ':member_name a soumis le document :document_type pour vérification.',
+    ],
+    'documents_request_new' => [
+        'title' => 'Document demandé',
+        'body' => 'Un document :document_type vous a été demandé.',
+    ],
+    'documents_reviewed' => [
+        'title' => 'Document vérifié',
+        'body' => 'Votre document :document_type a été :status.',
+    ],
+
     'security_alert' => [
         'title' => 'Alerte de sécurité',
         'body' => 'Un événement de sécurité a été détecté.',

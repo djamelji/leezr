@@ -14,6 +14,14 @@ const store = useCompanyComplianceStore()
 const density = computed(() => props.viewport?.density || 'L')
 const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
 const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
+
+const rateColor = computed(() => {
+  const rate = store.complianceRate
+  if (rate >= 80) return 'success'
+  if (rate >= 50) return 'warning'
+
+  return 'error'
+})
 </script>
 
 <template>
@@ -24,7 +32,7 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
     <div class="d-flex justify-space-between align-center widget-header">
       <div class="d-flex align-center gap-2 overflow-hidden">
         <VAvatar
-          color="success"
+          :color="rateColor"
           variant="tonal"
           :size="avatarSize"
           rounded
@@ -46,17 +54,20 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
         type="text"
       />
       <div
-        v-else-if="!store.queue.length"
+        v-else-if="!store.hasData"
         class="d-flex align-center justify-center h-100 text-disabled"
       >
         {{ t('compliance.noData') }}
       </div>
       <template v-else>
-        <div class="widget-kpi font-weight-bold text-success">
-          {{ store.compliancePercent }}%
+        <div
+          class="widget-kpi font-weight-bold"
+          :class="`text-${rateColor}`"
+        >
+          {{ store.complianceRate }}%
         </div>
         <div class="widget-subtext text-medium-emphasis">
-          {{ store.submittedCount }} {{ t('compliance.submitted') }} / {{ store.queue.length }} {{ t('compliance.total') }}
+          {{ store.validCount + store.expiringSoonCount }} {{ t('compliance.compliant') }} / {{ store.totalSlots }} {{ t('compliance.total') }}
         </div>
       </template>
     </div>

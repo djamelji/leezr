@@ -39,6 +39,7 @@ class DocumentRequestQueueReadModel
                         'first_name' => $req->user->first_name,
                         'last_name' => $req->user->last_name,
                         'email' => $req->user->email,
+                        'membership_id' => $membership?->id,
                     ] : null,
                     'role' => $membership?->companyRole ? [
                         'id' => $membership->companyRole->id,

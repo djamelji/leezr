@@ -331,8 +331,8 @@ class PlatformJobdomainTest extends TestCase
 
         $presets = $response->json('document_presets');
 
-        // DocumentTypeCatalog has 6 types total
-        $this->assertCount(6, $presets);
+        // ADR-389: DocumentTypeCatalog has 14 types total (6 original + 8 universal)
+        $this->assertCount(14, $presets);
 
         // 5 are in the logistique preset (id_card, driving_license, medical_certificate, kbis, insurance_certificate)
         $inPreset = collect($presets)->where('is_in_preset', true);

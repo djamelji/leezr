@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Core\Members\Http;
+namespace App\Modules\Core\Documents\Http;
 
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
@@ -72,6 +72,7 @@ class MemberDocumentController extends Controller
                 "max:{$maxSize}",
                 'mimes:'.implode(',', $acceptedTypes),
             ],
+            'expires_at' => ['nullable', 'date', 'after:today'],
         ]);
 
         // ADR-169 Phase 4: Storage quota guard
@@ -99,6 +100,7 @@ class MemberDocumentController extends Controller
                 'file_size_bytes' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
                 'uploaded_by' => $request->user()->id,
+                'expires_at' => $request->input('expires_at'),
             ],
         );
 

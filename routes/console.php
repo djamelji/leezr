@@ -41,3 +41,6 @@ Schedule::command('billing:expire-trials')->daily()->withoutOverlapping();
 
 // Scheduled SEPA debits collection — daily at 06:00 (ADR-328 S2)
 Schedule::command('billing:collect-scheduled')->dailyAt('06:00')->withoutOverlapping();
+
+// Document expiration check — daily (ADR-389)
+Schedule::command('documents:check-expiration')->daily()->withoutOverlapping();

@@ -13218,4 +13218,457 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+---
+
+## ADR-384 — Document Lifecycle Service : statut calculé sans mutation (2026-03-23)
+
+- **Date** : 2026-03-23
+- **Contexte** : Les modèles `MemberDocument` et `CompanyDocument` possèdent un champ `expires_at` (nullable timestamp) depuis ADR-169/174, mais cette donnée n'est exploitée nulle part. Aucun calcul de validité, aucune détection d'expiration, aucun `lifecycle_status`. Le `DocumentRequest` gère le workflow de validation (requested → submitted → approved/rejected) — il ne doit PAS porter l'état de vie du document (l'expiration est une préoccupation du document lui-même, pas du workflow).
+- **Décisions** :
+  1. **DocumentLifecycleService** (pur, sans mutation) : service statique dans `Core/Documents/` qui calcule `lifecycle_status` à partir des données d'upload et de `expires_at`. Quatre statuts : `missing` (pas de fichier), `valid` (fichier présent, non expiré), `expiring_soon` (expire dans ≤30 jours), `expired` (date passée).
+  2. **Deux méthodes d'entrée** : `computeStatus(?array $upload)` pour les contextes où l'upload est un tableau (resolver output), `computeFromDate(bool $hasUpload, ?Carbon $expiresAt)` pour les contextes avec modèle Eloquent (CompanyDocumentReadModel).
+  3. **Intégration dans DocumentResolverService** : chaque document de la sortie reçoit `lifecycle_status` calculé automatiquement. Tous les ReadModels en aval (`MemberDocumentWorkflowReadModel`, `SelfDocumentReadModel`) héritent du champ sans modification.
+  4. **Intégration dans CompanyDocumentReadModel** : hydration indépendante via `computeFromDate()` car ce ReadModel fait sa propre jointure CompanyDocument.
+  5. **DocumentRequest.status inchangé** : le workflow de validation reste à 4 statuts (requested/submitted/approved/rejected). L'expiration est un état orthogonal porté par `lifecycle_status`.
+  6. **Seuil configurable** : `DEFAULT_EXPIRING_SOON_DAYS = 30`, passable en paramètre.
+- **Conséquences** :
+  - Le frontend reçoit `lifecycle_status` sur chaque document et peut afficher des badges/alertes
+  - Les futures phases (notifications, compliance dashboard) consomment `lifecycle_status` sans couplage avec le workflow
+  - Séparation claire : `request_status` = workflow humain, `lifecycle_status` = état métier du document
+  - Aucune migration nécessaire — calcul pur à la volée
+- **Fichiers** :
+  - `app/Core/Documents/DocumentLifecycleService.php` — nouveau service pur
+  - `app/Core/Documents/DocumentResolverService.php` — ajout `lifecycle_status` dans la sortie
+  - `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ajout `lifecycle_status` via `computeFromDate()`
+  - `tests/Feature/DocumentLifecycleTest.php` — tests unitaires lifecycle
+
+---
+
+## ADR-385 — Document Notification Topics : catégorie documents (2026-03-23)
+
+- **Date** : 2026-03-23
+- **Contexte** : Le système de notifications (ADR-347→382) couvre billing, members, modules, security et support mais aucun topic lié aux documents. Les alertes d'expiration, les soumissions et les demandes de documents n'ont pas de canal de notification.
+- **Décisions** :
+  1. **Nouvelle catégorie `documents`** dans `CATEGORY_PERMISSIONS` avec permission `settings.manage`. Seuls les utilisateurs ayant cette permission reçoivent les notifications documents.
+  2. **4 topics enregistrés** dans `NotificationTopicRegistry::boot()` :
+     - `documents.expiring_soon` (warning, in_app + email) — document expire dans ≤30 jours
+     - `documents.expired` (error, in_app + email) — document expiré, renouvellement nécessaire
+     - `documents.submitted` (info, in_app) — un membre a soumis un document pour review
+     - `documents.request_new` (info, in_app) — un document a été demandé à un membre
+  3. **Bundle metadata** ajouté dans `BUNDLE_META` : icon `tabler-file-certificate`, color `info`.
+  4. **i18n complet** (FR + EN) : clés `categoryDocuments`, `bundle.documents`, et 8 clés de rendu (`*_title` + `*_body`) pour les 4 topics.
+  5. **Frontend** : catégorie `documents` ajoutée dans `allCategoryDefs` de la page company notifications inbox. Pas de modification platform (scope company uniquement).
+  6. **Pas de dispatch dans cette phase** — les topics sont déclarés et synchronisables, le dispatch sera connecté dans les phases suivantes (job d'expiration, listeners sur upload/request).
+- **Conséquences** :
+  - Les topics apparaissent dans les préférences notification des utilisateurs avec `settings.manage`
+  - Le frontend affiche la catégorie Documents dans le filtre de l'inbox
+  - La catégorie est configurable par l'utilisateur (in_app / email toggle)
+  - Aucun dispatch automatique dans cette phase — les topics sont prêts mais silencieux
+- **Fichiers** :
+  - `app/Core/Notifications/NotificationTopicRegistry.php` — catégorie + 4 topics + bundle meta
+  - `resources/js/plugins/i18n/locales/en.json` — categoryDocuments + bundle + 8 clés rendu
+  - `resources/js/plugins/i18n/locales/fr.json` — idem FR
+  - `resources/js/pages/company/notifications/index.vue` — catégorie dans allCategoryDefs
+
+---
+
+## ADR-386 — Résolution collaborative des notifications par entity_key (2026-03-23)
+
+- **Date** : 2026-03-23
+- **Contexte** : Les notifications d'expiration/renouvellement de documents créent des alertes pour plusieurs destinataires. Quand le problème sous-jacent est résolu (ex : document renouvelé), les notifications restent non-lues et s'accumulent, créant du bruit. Il faut un mécanisme pour marquer automatiquement toutes les notifications liées à une entité comme lues quand le problème est résolu.
+- **Décisions** :
+  1. **Nouvelle colonne `entity_key`** (nullable, indexée) sur `notification_events`. Format libre mais conventionnel : `{entity_type}:{company_id}:{discriminant}` (ex : `company_document:5:kbis`, `member_document:5:42:cni`).
+  2. **Paramètre `?string $entityKey`** ajouté à `NotificationDispatcher::send()`. Stocké dans chaque `NotificationEvent` créé. Facultatif — les notifications sans entité continuent de fonctionner normalement.
+  3. **Méthode `NotificationDispatcher::resolveByEntity(string $entityKey): int`** : marque tous les `NotificationEvent` non-lus ayant cet `entity_key` comme lus (`read_at = now()`). Retourne le nombre de notifications résolues.
+  4. **Scope `forEntity()`** sur `NotificationEvent` pour filtrer par `entity_key`.
+  5. **Usage prévu** : quand un document expiré est renouvelé, appeler `resolveByEntity("company_document:{id}:{type}")` pour nettoyer toutes les alertes d'expiration associées, quel que soit le destinataire.
+- **Conséquences** :
+  - Les notifications liées à un document expiré disparaissent automatiquement de l'inbox de tous les destinataires quand le document est renouvelé
+  - Le pattern est générique et réutilisable pour d'autres domaines (factures impayées, membres inactifs, etc.)
+  - Pas de logique de dispatch dans cette phase — le mécanisme est prêt mais sera connecté dans la phase d'intégration (job d'expiration + listener upload)
+  - L'index sur `entity_key` garantit des performances acceptables même avec un grand volume de notifications
+- **Fichiers** :
+  - `database/migrations/2026_03_23_100001_add_entity_key_to_notification_events.php` — migration colonne + index
+  - `app/Core/Notifications/NotificationEvent.php` — fillable + scopeForEntity
+  - `app/Core/Notifications/NotificationDispatcher.php` — entityKey param + resolveByEntity()
+  - `tests/Feature/NotificationSystemTest.php` — 5 tests (stockage, null, résolution, zero-match, scope)
+
+---
+
+## ADR-387 — Document Compliance Dashboard : ReadModel lifecycle-based + widgets (2026-03-23)
+
+- **Date** : 2026-03-23
+- **Contexte** : Les 5 widgets compliance du dashboard (Rate, Pending, Overdue, Roles, Types) étaient basés sur la queue de demandes de documents (DocumentRequestQueueReadModel — workflow). Ils mesuraient le nombre de demandes soumises vs en attente, pas la conformité réelle des documents. Avec l'introduction de `DocumentLifecycleService` (ADR-384), il est possible de mesurer la vraie conformité : documents valides vs manquants/expirés.
+- **Décisions** :
+  1. **Nouveau `DocumentComplianceReadModel`** : agrège le `lifecycle_status` sur tous les slots requis (membres × types activés + documents company). Budget queries : 5 (types, activations, company_docs, memberships, member_docs). Retourne `summary` (total/valid/missing/expiring_soon/expired/rate), `by_role`, `by_type`.
+  2. **Calcul du taux** : `rate = (valid + expiring_soon) / total × 100`. Un document `expiring_soon` est encore conforme (fichier présent et non expiré), seuls `missing` et `expired` sont non-conformes.
+  3. **Scope required** : seuls les types de documents activés ET requis (mandatory par contexte OU required_override) sont comptabilisés. Les types optionnels ne pénalisent pas la conformité.
+  4. **Nouveau endpoint** : `GET /api/company/documents/compliance` — permission `members.view`. Controller passif `DocumentComplianceController`.
+  5. **Store frontend réécrit** : `compliance.store.js` bascule de `/document-requests/queue` vers `/documents/compliance`. Getters lifecycle-based (validCount, missingCount, expiredCount, expiringSoonCount, complianceRate).
+  6. **5 widgets Vue mis à jour** :
+     - `ComplianceRate` : % conformes (couleur dynamique : success ≥80, warning ≥50, error <50)
+     - `Pending` → `Missing` : documents non déposés (icon `tabler-file-off`)
+     - `Overdue` → `Expired` : documents expirés (icon `tabler-alert-triangle`)
+     - `Roles` : taux + chips expired/missing par rôle (density S = count rôles avec écarts)
+     - `Types` : taux + chips expired/missing par type (density S = count types avec écarts)
+  7. **i18n mis à jour** (FR + EN) : clés renommées de workflow vers lifecycle (submitted→compliant, pending→missing, overdue→expired, etc.).
+- **Conséquences** :
+  - Le dashboard reflète maintenant la conformité réelle des documents (basée sur les fichiers et leur validité), pas le workflow de demande
+  - Les widgets s'activent dès qu'il y a des types de documents requis configurés, même sans aucune demande formelle
+  - Le calcul est idempotent et sans effet de bord (read-only, pas de mutations)
+  - La queue de demandes (`/document-requests/queue`) reste intacte pour d'autres usages
+- **Fichiers** :
+  - `app/Core/Documents/ReadModels/DocumentComplianceReadModel.php` — ReadModel lifecycle-based
+  - `app/Modules/Core/Settings/Http/DocumentComplianceController.php` — endpoint passif
+  - `routes/company.php` — route GET compliance
+  - `resources/js/modules/company/dashboard/compliance.store.js` — store réécrit
+  - `resources/js/views/company-dashboard/_ComplianceRateWidget.vue` — couleur dynamique
+  - `resources/js/views/company-dashboard/_PendingWidget.vue` — missing docs
+  - `resources/js/views/company-dashboard/_OverdueWidget.vue` — expired docs
+  - `resources/js/views/company-dashboard/_RolesWidget.vue` — taux + chips par rôle
+  - `resources/js/views/company-dashboard/_TypesWidget.vue` — taux + chips par type
+  - `resources/js/plugins/i18n/locales/fr.json` — clés compliance FR
+  - `resources/js/plugins/i18n/locales/en.json` — clés compliance EN
+  - `resources/js/pages/dashboard.vue` — fetchCompliance() au lieu de fetchQueue()
+  - `tests/Feature/DocumentComplianceTest.php` — 11 tests (ReadModel + API + permissions)
+
+---
+
+## ADR-388 — UX Documents : lifecycle_status visible + création inline depuis page membre (2026-03-23)
+
+- **Date** : 2026-03-23
+- **Contexte** : Les phases 1-4 ont introduit `DocumentLifecycleService` (ADR-384), les topics notifications (ADR-385), la résolution collaborative (ADR-386) et le compliance dashboard (ADR-387). Mais le `lifecycle_status` n'était pas visible dans les interfaces membre et self-documents. De plus, la création de types de documents personnalisés n'était accessible que depuis Company Profile > Documents, créant un couplage UX fort.
+- **Décisions** :
+  1. **Nouveau composant `DocumentLifecycleChip.vue`** : chip partagé affichant le lifecycle_status (missing/valid/expiring_soon/expired) avec couleurs et icônes cohérentes. Tooltip avec date d'expiration pour `expiring_soon` et `expired`.
+  2. **`MemberDocumentsWorkflowPanel`** enrichi : le lifecycle chip est affiché dans la colonne Status, avant le request_status chip. Les deux dimensions (lifecycle + workflow) sont visibles côte à côte. Flex-wrap pour accommoder les écrans étroits.
+  3. **`AccountSettingsDocuments`** (self-docs) enrichi : même ajout du lifecycle chip dans la vue self-documents.
+  4. **Création inline de types personnalisés depuis la page membre** : bouton « Créer un type personnalisé » dans le header du `MemberDocumentsWorkflowPanel` (emit `createCustomType`). La page `[id].vue` connecte cet emit au `CreateDocumentTypeDrawer` existant. Pas de duplication de code — réutilisation du composant drawer.
+  5. **i18n** : 5 nouvelles clés sous `documents.lifecycle` (missing, valid, expiring_soon, expired, expiresOn) + 1 clé `documents.createCustomFromMember`.
+- **Conséquences** :
+  - L'utilisateur voit immédiatement l'état du document (manquant, valide, expire bientôt, expiré) sur la page membre et la page self-documents
+  - La date d'expiration est accessible via tooltip sans surcharger le tableau
+  - La création de types personnalisés est accessible depuis le contexte membre, réduisant le couplage avec la page Company Profile
+  - Aucune modification backend — toutes les données `lifecycle_status` sont déjà dans les réponses API (ADR-384)
+- **Fichiers** :
+  - `resources/js/views/shared/documents/DocumentLifecycleChip.vue` — nouveau composant
+  - `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — lifecycle chip + bouton create
+  - `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue` — lifecycle chip
+  - `resources/js/pages/company/members/[id].vue` — drawer inline + connect emit
+  - `resources/js/plugins/i18n/locales/fr.json` — 6 clés lifecycle FR
+  - `resources/js/plugins/i18n/locales/en.json` — 6 clés lifecycle EN
+
+---
+
+### ADR-389 — Module `core.documents` : gouvernance totale
+
+- **Date** : 2026-03-23
+- **Contexte** :
+  - Le module Documents était éclaté entre `core.settings` (vault, activation, custom types, compliance) et `core.members` (workflow membre, review, self-upload)
+  - Aucune page centralisée n'existait — les documents étaient cachés dans des tabs de profile/settings/member
+  - Les notifications documents (4 topics déclarés) n'étaient jamais dispatchées
+  - Le couplage `required_by_jobdomains` dans le DocumentTypeCatalog violait la séparation des préoccupations
+- **Décisions** :
+  1. **Module autonome** : Créer `core.documents` (sortOrder 23, surface structure) avec 3 permissions (documents.view, documents.manage, documents.configure) et 2 bundles (documents.access, documents.management)
+  2. **Migration controllers** : 7 controllers déplacés de `Core\Settings\Http` et `Core\Members\Http` vers `Core\Documents\Http`
+  3. **Regroupement routes** : Toutes les routes documents sous `company.access:use-module,core.documents` avec mapping permissions : settings.manage→documents.configure, members.manage→documents.manage, members.view→documents.view
+  4. **Découplage jobdomain** : Suppression de `required_by_jobdomains` du `DocumentTypeCatalog` — l'obligation est désormais exprimée via `required` dans les presets `default_documents` du JobdomainRegistry, transféré en `required_override` sur `DocumentTypeActivation` à l'assignation
+  5. **Enrichissement catalogue** : 8 types universels ajoutés (rib, social_security, residence_permit, diploma, criminal_record, work_contract, company_insurance, company_registration) — total 14 types
+  6. **Notifications** : Dispatch effectif des 5 topics documents (request_new, submitted, reviewed [nouveau], expiring_soon, expired) — commande scheduler `documents:check-expiration` daily
+  7. **CATEGORY_PERMISSIONS** : `documents` mappé de `settings.manage` → `documents.manage`
+  8. **Page centralisée** : `/company/documents/[tab]` avec 5 tabs (overview KPIs, requests queue, compliance, vault, settings) + store dédié `useCompanyDocumentsStore`
+  9. **Retrait du profile** : Tab "documents" supprimé de `/company/profile/[tab]`
+  10. **UX harmonisation** : Drawer ergonomique (hints, descriptions, sections), tooltips activation, vocabulaire obligation simplifié (mandatory réglementaire vs entreprise), DocumentMandatoryChip amélioré
+  11. **Lazy-create** : Le `MemberDocumentWorkflowReadModel` crée maintenant automatiquement des requests pour les documents `required` (mandatory OR required_override), pas seulement les `mandatory`
+- **Conséquences** :
+  - Le module documents est indépendant et déployable séparément
+  - La navigation affiche "Documents" comme item autonome (icon tabler-file-text)
+  - Les rôles jobdomain intègrent automatiquement les bundles documents
+  - Les notifications sont dispatchées à chaque action critique du workflow
+  - Migration backfill pour les companies existantes : `required_override = true` pour les docs présentés comme required dans le preset
+  - Le `PageModuleAlignmentTest` valide l'alignement page/module
+- **Fichiers** :
+  - `app/Modules/Core/Documents/DocumentsModule.php` — manifest
+  - `app/Modules/Core/Documents/Http/` — 7 controllers déplacés
+  - `routes/company.php` — restructuration routes
+  - `app/Core/Documents/DocumentTypeCatalog.php` — suppression required_by_jobdomains, ajout 8 types
+  - `app/Core/Documents/DocumentMandatoryContext.php` — suppression check jobdomain
+  - `app/Core/Jobdomains/JobdomainRegistry.php` — ajout required presets, core.documents module, document bundles
+  - `app/Core/Jobdomains/JobdomainGate.php` — required_override depuis preset
+  - `app/Core/Documents/ReadModels/MemberDocumentWorkflowReadModel.php` — lazy-create required
+  - `app/Core/Notifications/NotificationTopicRegistry.php` — documents.reviewed topic, CATEGORY_PERMISSIONS
+  - `app/Modules/Core/Members/UseCases/RequestDocumentUseCase.php` — dispatch request_new
+  - `app/Modules/Core/Members/UseCases/BatchRequestByRoleUseCase.php` — dispatch request_new batch
+  - `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — dispatch submitted
+  - `app/Modules/Core/Members/UseCases/ReviewMemberDocumentUseCase.php` — dispatch reviewed
+  - `app/Console/Commands/DocumentCheckExpirationCommand.php` — scheduler expiration
+  - `routes/console.php` — schedule daily
+  - `database/migrations/2026_03_23_120001_backfill_document_required_override_from_jobdomain.php`
+  - `resources/js/modules/company/documents/documents.store.js` — store centralisé
+  - `resources/js/pages/company/documents/[tab].vue` — page principale
+  - `resources/js/pages/company/documents/_DocumentsOverview.vue` — KPIs
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — queue
+  - `resources/js/pages/company/documents/_DocumentsCompliance.vue` — conformité
+  - `resources/js/pages/company/documents/_DocumentsVault.vue` — coffre-fort
+  - `resources/js/pages/company/documents/_DocumentsSettings.vue` — configuration
+  - `resources/js/pages/company/profile/[tab].vue` — retrait tab documents
+  - `resources/js/company/views/CreateDocumentTypeDrawer.vue` — UX drawer ergonomique
+  - `resources/js/views/shared/documents/DocumentMandatoryChip.vue` — vocabulaire simplifié
+  - `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue` — tooltips
+  - `lang/fr/notifications.php` — 5 topics documents FR
+  - `lang/en/notifications.php` — 5 topics documents EN
+  - `resources/js/plugins/i18n/locales/fr.json` — clés companyDocuments + UX
+  - `resources/js/plugins/i18n/locales/en.json` — clés companyDocuments + UX
+
+---
+
+### ADR-390 — Rôle owner par défaut dans les presets jobdomain + fix driving_license
+
+- **Date** : 2026-03-24
+- **Contexte** :
+  - Le owner d'une company avait `membership.role = 'owner'` (bypass structurel) mais `company_role_id = NULL`
+  - Le widget conformité affichait "Aucun rôle" pour le owner avec des documents manquants
+  - `driving_license` avait `required_by_modules: ['logistics_fleet']` → obligatoire pour TOUS les membres (dispatchers, managers, owner) alors que seuls les chauffeurs (tag `DRIVING`) en ont besoin
+  - Le module `core.documents` nouvellement créé (ADR-389) n'avait pas de `PlatformModule` record → erreur "Module is not active for this company"
+- **Décisions** :
+  1. **Fix `driving_license`** : retiré `required_by_modules: ['logistics_fleet']` du `DocumentTypeCatalog`. L'obligation est désormais uniquement via `tags: ['driving']` (archétype Conducteur). Migration pour mettre à jour les données existantes.
+  2. **Sync `core.documents`** : exécution de `SystemSeeder` → `ModuleRegistry::sync()` crée le `PlatformModule(key='core.documents', is_enabled_globally=true)`. Le deploy script exécute déjà `SystemSeeder` (étape 6/9).
+  3. **Rôle `owner` dans le preset logistique** : ajouté dans `JobdomainRegistry.default_roles` avec archétype `management` (tag `MANAGEMENT`), `is_administrative: true`, toutes les permissions company-scope (superset du manager : +`audit.viewer`, +`modules.management`, +`documentation.access`), field/doc config adapté.
+  4. **Auto-assignation dans `JobdomainGate::assignToCompany()`** : après la boucle de création des rôles, la membership owner reçoit `company_role_id` pointant vers le `CompanyRole(key='owner')`.
+  5. **Migration backfill** : pour chaque company existante avec un jobdomain, création du rôle owner + sync permissions + assignation à la membership owner.
+  6. **Bypass structurel intact** : `membership.role === 'owner'` → `isOwner() = true` → bypass toutes les vérifications de permissions. Le `company_role_id` est purement additionnel (RBAC visible, field/doc config, compliance widget).
+- **Conséquences** :
+  - Le widget conformité affiche "Propriétaire" au lieu de "Aucun rôle"
+  - Le owner a un profil de champs et de documents role-specific
+  - `driving_license` n'est plus obligatoire pour les non-chauffeurs
+  - Aucun changement de comportement pour le bypass owner — backward compatible
+  - Les tests existants passent sans modification (le setUp crée les memberships manuellement, pas via `JobdomainGate`)
+- **Fichiers** :
+  - `app/Core/Documents/DocumentTypeCatalog.php` — retrait required_by_modules de driving_license
+  - `app/Core/Jobdomains/JobdomainRegistry.php` — ajout rôle owner dans default_roles
+  - `app/Core/Jobdomains/JobdomainGate.php` — auto-assign owner après création rôles
+  - `database/migrations/2026_03_24_105115_remove_required_by_modules_from_driving_license.php`
+  - `database/migrations/2026_03_24_120226_backfill_owner_company_role.php`
+  - `tests/Feature/DocumentRoleVisibilityTest.php` — assertion mise à jour (driving_license hidden)
+
+---
+
+### ADR-391 — Nav coherence: excludePermission pattern + shipments fix + documents hotfix (2026-03-24)
+
+- **Date** : 2026-03-24
+- **Contexte** :
+  - Le nav item "Mes livraisons" était visible pour tous les rôles ayant `shipments.view_own` (dispatcher, owner), alors qu'il ne devrait apparaître dans la nav QUE pour les drivers qui n'ont pas accès à la liste complète. Par ailleurs, le nav item "Documents" crashait avec `Missing required param "tab"` et sa traduction `nav.company.documents` était manquante.
+- **Décisions** :
+  1. **excludePermission pattern** — Nouvelle propriété `excludePermission` sur `NavItem` + filtre step 6 dans `NavBuilder`. Sémantique : masquer l'item si l'utilisateur possède cette permission (bypass inclus).
+  2. **ShipmentsModule** — `my-deliveries` : `excludePermission: 'shipments.view'`. Visible uniquement pour les drivers (ont `view_own` mais PAS `view`).
+  3. **Bouton "Mes livraisons"** — Ajouté sur `/company/shipments` pour dispatcher/owner qui ont `view_own` mais ne voient plus l'item nav.
+  4. **Documents hotfix** — `DocumentsModule` nav item `to` corrigé avec `params: ['tab' => 'overview']`. Clé i18n `nav.company.documents` ajoutée.
+- **Conséquences** :
+  - Driver voit "Mes livraisons" dans la nav, pas "Expéditions"
+  - Dispatcher/owner voient "Expéditions" avec bouton "Mes livraisons" sur la page
+  - Pattern `excludePermission` réutilisable pour d'autres cas similaires
+  - NavBuilder pipeline passe de 10 à 11 steps
+- **Fichiers** :
+  - `app/Core/Navigation/NavItem.php` — propriété `excludePermission`
+  - `app/Core/Navigation/NavBuilder.php` — filtre step 6
+  - `app/Modules/Logistics/Shipments/ShipmentsModule.php` — excludePermission sur my-deliveries
+  - `app/Modules/Core/Documents/DocumentsModule.php` — params tab fix
+  - `resources/js/pages/company/shipments/index.vue` — bouton "Mes livraisons"
+  - `resources/js/plugins/i18n/locales/{fr,en}.json` — clés i18n
+  - `tests/Feature/DispatcherRoleModelTest.php` — assertion inversée
+  - `tests/Unit/NavBuilderTest.php` — 3 tests excludePermission
+
+---
+
+### ADR-392 — Smart document request dialog with 3 scopes (Phase E — ADR-192 completion) (2026-03-24)
+
+- **Date** : 2026-03-24
+- **Contexte** :
+  - Le backend batch document request (ADR-192 Phase C) existait mais l'UI Phase E n'avait jamais été implémentée. Besoin d'un dialog intelligent avec 3 périmètres de demande.
+- **Décisions** :
+  1. **Dialog intelligent multi-select** — VDialog avec VRadioGroup pour le périmètre (tous / par rôle(s) / par membre(s)), selects conditionnels selon le scope, puis type de document.
+  2. **Multi-select** — Rôles et membres sont des champs multi-select avec chips closable (preset Vuexy `DemoSelectChips` + `DemoAutocompleteMultiple`). Permet de sélectionner plusieurs rôles ou plusieurs membres simultanément.
+  3. **Backend étendu** — `POST /company/document-requests/batch` accepte `scope` (`all` | `role` | `member`). `company_role_ids[]` requis si scope=role, `user_ids[]` requis si scope=member. Les champs sont des tableaux d'entiers.
+  4. **BatchRequestByRoleUseCase** — `?array $companyRoleIds` (nullable). Si null (scope=all) → tous les membres. Si tableau → `whereIn('company_role_id', $ids)` pour filtrer par plusieurs rôles.
+  5. **Scope member** — Le controller itère sur `user_ids[]`, délègue chaque demande à `RequestDocumentUseCase`, comptabilise `created`/`skipped`.
+  6. **Permission gate** — Bouton et dialog visibles uniquement avec `documents.manage`.
+  7. **Données** — Rôles via `settingsStore`, membres via `membersStore`, types activés via `documentActivations`. Chargement lazy à l'ouverture du dialog.
+- **Conséquences** :
+  - ADR-192 Phase E complétée
+  - Un seul endpoint unifié pour les 3 scopes de demande
+  - Multi-select natif avec chips — on peut demander un document à 2 rôles ou 3 membres en une seule action
+  - Le dialog conditionne les selects selon le périmètre choisi
+- **Fichiers** :
+  - `app/Modules/Core/Documents/Http/DocumentRequestController.php` — validation scope + routing
+  - `app/Modules/Core/Members/UseCases/BatchRequestByRoleUseCase.php` — rôle nullable
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — dialog intelligent
+  - `resources/js/plugins/i18n/locales/{fr,en}.json` — clés scope + dialog
+  - `tests/Feature/DocumentRequestApiTest.php` — scope ajouté aux appels
+
+### ADR-393 — Documents settings: wire delete + archive custom types (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - La page `/company/documents/settings` affichait des boutons supprimer (🗑) et archiver (📦) pour les types custom, mais les event handlers ne faisaient rien — ils appelaient uniquement `handleRefresh()` sans jamais invoquer le store.
+  - Le backend (`DeleteCustomDocumentTypeUseCase`, `ArchiveCustomDocumentTypeUseCase`) était 100% fonctionnel.
+  - La page alternative `CompanyDocumentsSection.vue` implémentait correctement le pattern avec `useConfirm` + toast.
+- **Décisions** :
+  1. **Wiring complet** — `_DocumentsSettings.vue` appelle désormais `store.deleteCustomDocumentType(code)` et `store.archiveCustomDocumentType(code)` via des handlers dédiés.
+  2. **Confirmation dialog** — Utilisation du composable `useConfirm` avec `ConfirmDialogComponent` (même pattern que `CompanyDocumentsSection.vue`).
+  3. **Delete guard** — Le catalogue (`CompanyDocumentActivationCatalog.vue`) n'affiche le bouton supprimer que si `usage_count === 0` (pas de MemberDocument, CompanyDocument, ni DocumentRequest liés). Sinon, bouton archiver.
+  4. **Archive** — Soft-delete : `archived_at = now()`, `enabled = false` sur toutes les activations. Les données existantes sont conservées.
+- **Conséquences** :
+  - Les types custom sans aucune utilisation sont supprimables
+  - Les types custom utilisés sont archivables (soft-delete)
+  - Les clés i18n existaient déjà (`documents.confirmDelete`, `documents.confirmArchive`, etc.)
+- **Fichiers** :
+  - `resources/js/pages/company/documents/_DocumentsSettings.vue` — handlers delete/archive + ConfirmDialogComponent
+
+### ADR-394 — Delete custom doc types: requests don't block, only uploads do (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - Les `DocumentRequest` (invitations à uploader) bloquaient la suppression des types custom au même titre que les documents uploadés. Résultat : un type custom "test" avec une seule demande en attente ne pouvait pas être supprimé, et l'icône 🗑 n'apparaissait jamais — seule l'archive (📦) s'affichait. Les demandes sont éphémères et n'ont pas la même valeur que les documents réels.
+- **Décisions** :
+  1. **Seuls les uploads bloquent** — `DeleteCustomDocumentTypeUseCase` ne vérifie plus que `MemberDocument` + `CompanyDocument`. Les `DocumentRequest` ne bloquent plus.
+  2. **Cascade-delete des requests** — À la suppression du type, toutes les `DocumentRequest` liées sont supprimées automatiquement (avant les activations et le type).
+  3. **ReadModel aligné** — `CompanyDocumentActivationReadModel.usage_count` ne compte plus les `DocumentRequest`, seulement les documents uploadés (`MemberDocument` + `CompanyDocument`).
+  4. **Archive inchangé** — L'archivage reste pour les types avec de vrais documents uploadés (soft-delete, données conservées).
+- **Conséquences** :
+  - Un type custom sans upload → 🗑 supprimer (même s'il a des demandes en cours)
+  - Un type custom avec uploads → 📦 archiver
+  - La suppression nettoie automatiquement les demandes orphelines
+  - La conformité n'est plus polluée par des types test impossibles à supprimer
+- **Fichiers** :
+  - `app/Modules/Core/Settings/UseCases/DeleteCustomDocumentTypeUseCase.php` — requests non-bloquantes + cascade-delete
+  - `app/Core/Documents/ReadModels/CompanyDocumentActivationReadModel.php` — usage_count sans requests
+
+---
+
+### ADR-395 — Documents V2 Sprint 1: review dialogs, cancel, remind, queue fix (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - L'onglet Demandes ne permettait que d'approuver/rejeter en un clic sans confirmation ni note.
+  - Aucun moyen d'annuler une demande envoyée par erreur.
+  - Aucun moyen de relancer un membre qui n'a pas répondu.
+  - Le `membership_id` manquait du `DocumentRequestQueueReadModel` — le review plantait.
+  - Le store affectait `data` brut au lieu de `data.queue` — la queue s'affichait toujours vide.
+- **Décisions** :
+  1. **S1.1 — Fix membership_id** : Ajout de `membership_id` dans l'objet `user` retourné par `DocumentRequestQueueReadModel`.
+  2. **S1.2 — Review enrichi** : Approbation avec dialog de confirmation (`useConfirm`). Rejet avec dialog dédié (`VDialog`) contenant un `AppTextarea` pour le motif.
+  3. **S1.3 — Annulation** : Nouveau `CancelDocumentRequestUseCase` (guard status=requested → cancelled). Route `PUT /company/document-requests/{id}/cancel`. Notification `documents.request_cancelled`. Action audit `document.request_cancelled`. Bouton 🗑 (secondary) dans la queue.
+  4. **S1.4 — Relance** : Route `PUT /company/document-requests/{id}/remind`. Re-déclenche notification `documents.request_new`, met à jour `requested_at`. Bouton 🔔 (warning) dans la queue.
+  5. **Store fix** : `this._requests = data.queue ?? []` au lieu de `this._requests = data`.
+  6. **Store enrichi** : Actions `cancelRequest(id)` et `remindRequest(id)`.
+- **Conséquences** :
+  - La queue affiche correctement les demandes et offre 4 actions contextuelles
+  - Les admins peuvent approuver avec confirmation, rejeter avec motif, relancer ou annuler
+  - Le statut `cancelled` est supporté dans les chips et dans le backend
+  - Le cycle de vie complet : requested → submitted → approved/rejected, ou requested → cancelled
+- **Fichiers** :
+  - `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — membership_id ajouté
+  - `app/Core/Documents/DocumentRequest.php` — STATUS_CANCELLED
+  - `app/Modules/Core/Members/UseCases/CancelDocumentRequestUseCase.php` — nouveau UseCase
+  - `app/Modules/Core/Documents/Http/DocumentRequestController.php` — cancel() + remind()
+  - `routes/company.php` — 2 nouvelles routes
+  - `app/Core/Audit/AuditAction.php` — DOCUMENT_REQUEST_CANCELLED
+  - `app/Core/Notifications/NotificationTopicRegistry.php` — topic request_cancelled
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — UI enrichie (4 boutons, reject dialog, confirm dialog)
+  - `resources/js/modules/company/documents/documents.store.js` — cancelRequest, remindRequest, fix queue
+  - `resources/js/plugins/i18n/locales/fr.json` — 13 clés ajoutées
+  - `resources/js/plugins/i18n/locales/en.json` — 13 clés ajoutées
+
+---
+
+### ADR-396 — Documents V2 Sprint 2: KPI refonte, activity timeline, enriched queue (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - L'overview documents était basique (4 KPI icônes, VTable pour la conformité par rôle).
+  - Pas de visualisation de la conformité par type de document.
+  - Pas de feed d'activité pour voir les dernières actions.
+  - La queue de demandes n'avait ni recherche, ni filtres, ni pagination.
+- **Décisions** :
+  1. **S2.1 — KPI Overview refonte** : Conformité rate avec `VProgressCircular` dans le KPI. Compliance par rôle en `VList` + `VProgressLinear` (preset CardAdvanceActiveProject). Compliance par type en `VList` + `VProgressCircular` (preset CardAdvanceAssignmentProgress). Layout 2 colonnes (md=6).
+  2. **S2.2 — Activity timeline** : Nouveau `DocumentActivityReadModel` query `CompanyAuditLog` WHERE action LIKE 'document.%'. Route `GET /company/documents/activity`. Composant `_DocumentsActivityTimeline.vue` avec `VTimeline` compact (preset TimelineBasic). Store `_activity` + `fetchActivity()`.
+  3. **S2.3 — Queue enrichie** : VTable remplacée par `VDataTable` avec pagination intégrée (client-side). 3 filtres en en-tête : recherche par nom (AppTextField), filtre statut (AppSelect), filtre type de document (AppSelect). Computed `filteredRequests` applique les filtres.
+- **Conséquences** :
+  - L'overview est visuellement commercial avec des progress bars et cercles
+  - La conformité est lisible en un coup d'oeil par rôle ET par type
+  - Le feed d'activité permet de suivre les actions sans aller dans les logs
+  - La queue est filtrable et paginée
+- **Fichiers** :
+  - `resources/js/pages/company/documents/_DocumentsOverview.vue` — refonte complète (VList, VProgressCircular, VProgressLinear)
+  - `resources/js/pages/company/documents/_DocumentsActivityTimeline.vue` — nouveau composant timeline
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — VDataTable + 3 filtres
+  - `resources/js/pages/company/documents/[tab].vue` — fetchActivity() dans onMounted
+  - `resources/js/modules/company/documents/documents.store.js` — _activity, fetchActivity, cancelRequest, remindRequest
+  - `app/Core/Documents/ReadModels/DocumentActivityReadModel.php` — nouveau ReadModel
+  - `app/Modules/Core/Documents/Http/DocumentComplianceController.php` — activity() méthode
+  - `routes/company.php` — route /company/documents/activity
+  - `resources/js/plugins/i18n/locales/fr.json` — clés activity.*, requests.filter*
+  - `resources/js/plugins/i18n/locales/en.json` — clés activity.*, requests.filter*
+
+---
+
+### ADR-397 — Documents V2 Sprint 3: expires_at, auto-renewal settings, scheduler enrichment (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - Le champ `expires_at` existait dans les modèles MemberDocument/CompanyDocument mais n'était **jamais alimenté** par aucun point d'upload.
+  - Le scheduler `documents:check-expiration` notifiait les expirations mais ne créait pas de nouvelles demandes automatiquement.
+  - Pas de réglage company pour activer/configurer l'automatisation (renouvellement, relances).
+- **Décisions** :
+  1. **S3.1 — expires_at dans les uploads** : Ajout de la validation `'expires_at' => ['nullable', 'date', 'after:today']` dans les 3 controllers d'upload (MemberDocumentController, SelfDocumentController, CompanyDocumentController). Les DTOs `UploadOwnDocumentData` et `UploadCompanyDocumentData` acceptent `?string $expiresAt`. Les 3 `updateOrCreate()` passent `expires_at`.
+  2. **S3.2 — Réglages company** : Nouvelle table `company_document_settings` (company_id unique FK, auto_renew_enabled, renew_days_before, auto_remind_enabled, remind_after_days). Modèle `CompanyDocumentSetting` avec `forCompany()` (firstOrCreate). Controller `DocumentSettingController` (show/update). Routes GET/PUT `/company/document-settings` (documents.configure). UI dans `_DocumentsSettings.vue` : 2 switches + 2 champs numériques + bouton sauvegarder.
+  3. **S3.3 — Scheduler enrichi** : `DocumentCheckExpirationCommand` restructuré en 3 phases :
+     - Phase 1 : Notifications expiring_soon/expired (existait, conservé)
+     - Phase 2 : Auto-renew — crée `DocumentRequest` si company setting activé, pour les docs expirant dans `renew_days_before` jours, sans request pending existante
+     - Phase 3 : Auto-remind — re-notifie les demandes `requested` sans réponse depuis `remind_after_days` jours, remet `requested_at = now()`
+- **Conséquences** :
+  - Le système d'expiration est **fonctionnel end-to-end** dès qu'un upload inclut expires_at
+  - Les companies contrôlent l'automatisation via l'onglet settings
+  - Le scheduler tourne quotidiennement et gère notifications, renouvellements et relances
+- **Fichiers** :
+  - `app/Modules/Core/Documents/Http/MemberDocumentController.php` — expires_at validation + upsert
+  - `app/Modules/Core/Documents/Http/SelfDocumentController.php` — expires_at dans DTO
+  - `app/Modules/Core/Documents/Http/CompanyDocumentController.php` — expires_at dans DTO
+  - `app/Modules/Core/Members/UseCases/UploadOwnDocumentData.php` — ?string $expiresAt
+  - `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — expires_at dans upsert
+  - `app/Core/Documents/UseCases/UploadCompanyDocumentData.php` — ?string $expiresAt
+  - `app/Core/Documents/UseCases/UploadCompanyDocumentUseCase.php` — expires_at dans upsert
+  - `database/migrations/2026_03_25_*_create_company_document_settings_table.php`
+  - `app/Core/Documents/CompanyDocumentSetting.php` — nouveau modèle
+  - `app/Modules/Core/Documents/Http/DocumentSettingController.php` — show/update
+  - `routes/company.php` — 2 routes document-settings
+  - `app/Console/Commands/DocumentCheckExpirationCommand.php` — 3 phases
+  - `resources/js/pages/company/documents/_DocumentsSettings.vue` — section automatisation
+  - `resources/js/modules/company/documents/documents.store.js` — fetchDocSettings, updateDocSettings
+  - `resources/js/plugins/i18n/locales/fr.json` — clés automation.*
+  - `resources/js/plugins/i18n/locales/en.json` — clés automation.*
+
+---
+
+### ADR-398 — Documents V2 Sprint 4: delete company docs, vault UX, audit clean (2026-03-25)
+
+- **Date** : 2026-03-25
+- **Contexte** :
+  - Les documents d'entreprise (vault) ne pouvaient pas être supprimés une fois uploadés.
+  - Le vault n'avait pas de dialog de confirmation pour la suppression.
+  - Sprint de polish final pour la V2 documents.
+- **Décisions** :
+  1. **S4.1 — Suppression document company** : `CompanyDocumentController::destroy()` supprime le fichier physique + le record DB. Route `DELETE /company/documents/{code}` (documents.manage). Bouton 🗑 dans `CompanyDocumentsVault.vue` avec `useConfirm` confirmation dialog.
+  2. **S4.2 — Audit final** : Aucun composant legacy trouvé (CompanyDocumentsSection n'existe pas). Aucun import orphelin. Tous les controllers, routes, stores et composants sont alignés et fonctionnels.
+- **Conséquences** :
+  - Les admins peuvent supprimer les documents d'entreprise avec confirmation
+  - Le module documents V2 est complet et propre
+- **Fichiers** :
+  - `app/Modules/Core/Documents/Http/CompanyDocumentController.php` — destroy()
+  - `routes/company.php` — DELETE /company/documents/{code}
+  - `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — bouton delete + useConfirm
+  - `resources/js/plugins/i18n/locales/fr.json` — confirmDeleteDoc, docDeleted
+  - `resources/js/plugins/i18n/locales/en.json` — confirmDeleteDoc, docDeleted
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -224,7 +224,8 @@ class JobdomainGate
                         ],
                         [
                             'enabled' => true,
-                            'required_override' => false,
+                            // ADR-389: required_override from jobdomain preset
+                            'required_override' => $config['required'] ?? false,
                             'order' => $config['order'] ?? $docType->default_order ?? 0,
                         ],
                     );
@@ -281,6 +282,18 @@ class JobdomainGate
                 if ($roleDocConfig !== null && $role->doc_config === null) {
                     $role->update(['doc_config' => $roleDocConfig]);
                 }
+            }
+
+            // ADR-390: Auto-assign owner membership to the 'owner' CompanyRole
+            $ownerRole = CompanyRole::where('company_id', $company->id)
+                ->where('key', 'owner')
+                ->first();
+
+            if ($ownerRole) {
+                $company->memberships()
+                    ->where('role', 'owner')
+                    ->whereNull('company_role_id')
+                    ->update(['company_role_id' => $ownerRole->id]);
             }
 
             // Clone jobdomain dashboard defaults as company base layout (ADR-149, ADR-327)

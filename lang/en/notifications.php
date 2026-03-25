@@ -65,6 +65,27 @@ return [
         'title' => 'Module Deactivated',
         'body' => 'The module :module_name has been deactivated.',
     ],
+    'documents_expiring_soon' => [
+        'title' => 'Document Expiring Soon',
+        'body' => ':member_name\'s :document_type expires on :expires_at.',
+    ],
+    'documents_expired' => [
+        'title' => 'Document Expired',
+        'body' => ':member_name\'s :document_type expired on :expires_at.',
+    ],
+    'documents_submitted' => [
+        'title' => 'Document Submitted',
+        'body' => ':member_name submitted :document_type for review.',
+    ],
+    'documents_request_new' => [
+        'title' => 'Document Requested',
+        'body' => 'A :document_type document has been requested from you.',
+    ],
+    'documents_reviewed' => [
+        'title' => 'Document Reviewed',
+        'body' => 'Your :document_type has been :status.',
+    ],
+
     'security_alert' => [
         'title' => 'Security Alert',
         'body' => 'A security event has been detected.',

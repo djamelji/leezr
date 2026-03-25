@@ -6,6 +6,7 @@ use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\MemberDocument;
 use App\Core\Models\User;
+use App\Core\Notifications\NotificationDispatcher;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -80,7 +81,21 @@ class ReviewMemberDocumentUseCase
             'reviewed_at' => now(),
         ]);
 
-        // 9. Return result
+        // 9. ADR-389: Notify the member about the review outcome
+        NotificationDispatcher::send(
+            topicKey: 'documents.reviewed',
+            recipients: [$targetUser],
+            payload: [
+                'document_type' => $type->label,
+                'document_code' => $type->code,
+                'status' => $data->status,
+                'review_note' => $data->reviewNote,
+            ],
+            company: $data->company,
+            entityKey: "document_request:{$targetUser->id}:{$type->code}",
+        );
+
+        // 10. Return result
         return new ReviewMemberDocumentResult(
             code: $type->code,
             status: $request->status,

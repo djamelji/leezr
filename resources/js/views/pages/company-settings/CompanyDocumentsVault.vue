@@ -1,6 +1,7 @@
 <script setup>
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
+import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
@@ -20,6 +21,7 @@ const emit = defineEmits(['refresh'])
 
 const { t } = useI18n()
 const { toast } = useAppToast()
+const { confirm, ConfirmDialogComponent } = useConfirm()
 const { formatFileSize } = useDocumentHelpers()
 
 const uploadingCode = ref(null)
@@ -94,6 +96,27 @@ const viewerDownloadUrl = computed(() => {
 const handleViewerDownload = () => {
   if (viewerDocument.value?.upload)
     handleDownload(viewerDocument.value.code, viewerDocument.value.upload.file_name)
+}
+
+const handleDelete = async code => {
+  const ok = await confirm({
+    question: t('documents.confirmDeleteDoc'),
+    confirmTitle: t('common.actionConfirmed'),
+    confirmMsg: t('documents.docDeleted'),
+    cancelTitle: t('common.actionCancelled'),
+    cancelMsg: t('common.operationCancelled'),
+  })
+
+  if (!ok) return
+
+  try {
+    await $api(`/company/documents/${code}`, { method: 'DELETE' })
+    toast(t('documents.docDeleted'), 'success')
+    emit('refresh')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
 }
 </script>
 
@@ -191,11 +214,24 @@ const handleViewerDownload = () => {
             >
               <VIcon icon="tabler-download" />
             </VBtn>
+            <VBtn
+              v-if="doc.upload && canEdit"
+              icon
+              variant="text"
+              size="small"
+              color="error"
+              :title="t('common.delete')"
+              @click="handleDelete(doc.code)"
+            >
+              <VIcon icon="tabler-trash" />
+            </VBtn>
           </div>
         </td>
       </tr>
     </tbody>
   </VTable>
+
+  <ConfirmDialogComponent />
 
   <!-- Document Viewer -->
   <DocumentViewerDialog

@@ -1007,4 +1007,95 @@ class NotificationSystemTest extends TestCase
             'topic_key' => 'platform.new_subscription',
         ]);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // ADR-386: Collaborative resolution via entity_key
+    // ═══════════════════════════════════════════════════════════
+
+    public function test_send_stores_entity_key(): void
+    {
+        $entityKey = 'company_document:1:kbis';
+
+        NotificationDispatcher::send(
+            'billing.payment_received',
+            [$this->owner],
+            ['amount' => '29.00'],
+            $this->company,
+            entityKey: $entityKey,
+        );
+
+        $this->assertDatabaseHas('notification_events', [
+            'recipient_id' => $this->owner->id,
+            'entity_key' => $entityKey,
+        ]);
+    }
+
+    public function test_send_without_entity_key_stores_null(): void
+    {
+        NotificationDispatcher::send(
+            'billing.payment_received',
+            [$this->owner],
+            ['amount' => '29.00'],
+            $this->company,
+        );
+
+        $event = NotificationEvent::where('recipient_id', $this->owner->id)->first();
+        $this->assertNull($event->entity_key);
+    }
+
+    public function test_resolve_by_entity_marks_all_unread_as_read(): void
+    {
+        $entityKey = 'company_document:1:kbis';
+
+        // Create 3 notifications with same entity_key for different recipients
+        $user2 = \App\Core\Models\User::factory()->create();
+        $this->company->memberships()->create(['user_id' => $user2->id, 'role' => 'member']);
+
+        $e1 = $this->createNotificationForUser(['entity_key' => $entityKey]);
+        $e2 = $this->createNotificationForUser([
+            'entity_key' => $entityKey,
+            'recipient_id' => $user2->id,
+        ]);
+        // One already read — should not be affected
+        $e3 = $this->createNotificationForUser([
+            'entity_key' => $entityKey,
+            'read_at' => now()->subHour(),
+        ]);
+        // One with different entity_key — should not be affected
+        $e4 = $this->createNotificationForUser(['entity_key' => 'member_document:1:2:id_card']);
+
+        $resolved = NotificationDispatcher::resolveByEntity($entityKey);
+
+        $this->assertEquals(2, $resolved);
+
+        // e1 and e2 are now read
+        $this->assertNotNull($e1->fresh()->read_at);
+        $this->assertNotNull($e2->fresh()->read_at);
+
+        // e3 was already read — read_at unchanged
+        $this->assertNotNull($e3->fresh()->read_at);
+
+        // e4 has different entity_key — still unread
+        $this->assertNull($e4->fresh()->read_at);
+    }
+
+    public function test_resolve_by_entity_returns_zero_when_no_matches(): void
+    {
+        $resolved = NotificationDispatcher::resolveByEntity('nonexistent:entity:key');
+        $this->assertEquals(0, $resolved);
+    }
+
+    public function test_entity_key_scope_filters_correctly(): void
+    {
+        $entityKey = 'member_document:1:5:driving_license';
+
+        $e1 = $this->createNotificationForUser(['entity_key' => $entityKey]);
+        $e2 = $this->createNotificationForUser(['entity_key' => 'other:key']);
+        $e3 = $this->createNotificationForUser(); // null entity_key
+
+        $results = NotificationEvent::forEntity($entityKey)->get();
+
+        $this->assertCount(1, $results);
+        $this->assertEquals($e1->id, $results->first()->id);
+    }
 }

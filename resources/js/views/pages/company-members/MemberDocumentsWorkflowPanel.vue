@@ -5,6 +5,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
+import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 
@@ -18,6 +19,8 @@ const props = defineProps({
     default: false,
   },
 })
+
+const emit = defineEmits(['createCustomType'])
 
 const { t } = useI18n()
 const { toast } = useAppToast()
@@ -210,32 +213,46 @@ const handleViewerDownload = async () => {
 
 <template>
   <VCard>
-    <!-- ADR-192: Request Document action -->
-    <VCardItem v-if="canEdit && requestableDocTypes.length && !documentsLoading">
+    <!-- ADR-192: Request Document + ADR-388: Create custom type -->
+    <VCardItem v-if="canEdit && !documentsLoading">
       <template #append>
-        <VMenu v-model="requestMenuVisible">
-          <template #activator="{ props: menuProps }">
-            <VBtn
-              v-bind="menuProps"
-              variant="tonal"
-              color="primary"
-              size="small"
-              prepend-icon="tabler-file-plus"
-            >
-              {{ t('documents.requestDocument') }}
-            </VBtn>
-          </template>
-          <VList density="compact">
-            <VListItem
-              v-for="doc in requestableDocTypes"
-              :key="doc.code"
-              :disabled="requestingCode === doc.code"
-              @click="requestDocument(doc.code)"
-            >
-              <VListItemTitle>{{ t(`documents.type.${doc.code}`, doc.label) }}</VListItemTitle>
-            </VListItem>
-          </VList>
-        </VMenu>
+        <div class="d-flex gap-2">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            size="small"
+            prepend-icon="tabler-file-certificate"
+            @click="emit('createCustomType')"
+          >
+            {{ t('documents.createCustomFromMember') }}
+          </VBtn>
+          <VMenu
+            v-if="requestableDocTypes.length"
+            v-model="requestMenuVisible"
+          >
+            <template #activator="{ props: menuProps }">
+              <VBtn
+                v-bind="menuProps"
+                variant="tonal"
+                color="primary"
+                size="small"
+                prepend-icon="tabler-file-plus"
+              >
+                {{ t('documents.requestDocument') }}
+              </VBtn>
+            </template>
+            <VList density="compact">
+              <VListItem
+                v-for="doc in requestableDocTypes"
+                :key="doc.code"
+                :disabled="requestingCode === doc.code"
+                @click="requestDocument(doc.code)"
+              >
+                <VListItemTitle>{{ t(`documents.type.${doc.code}`, doc.label) }}</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
+        </div>
       </template>
     </VCardItem>
 
@@ -291,7 +308,11 @@ const handleViewerDownload = async () => {
               />
             </td>
             <td>
-              <div class="d-flex align-center gap-2">
+              <div class="d-flex align-center gap-2 flex-wrap">
+                <DocumentLifecycleChip
+                  :status="doc.lifecycle_status"
+                  :expires-at="doc.upload?.expires_at"
+                />
                 <DocumentStatusChip :status="doc.request_status" />
                 <VChip
                   v-if="doc.upload"

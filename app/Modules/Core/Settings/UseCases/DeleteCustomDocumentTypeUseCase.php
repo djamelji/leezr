@@ -33,18 +33,19 @@ class DeleteCustomDocumentTypeUseCase
             ]);
         }
 
-        // 4. Check references
+        // 4. Check references — only actual uploads block deletion
         $memberDocCount = MemberDocument::where('document_type_id', $type->id)->count();
         $companyDocCount = CompanyDocument::where('document_type_id', $type->id)->count();
-        $requestCount = DocumentRequest::where('document_type_id', $type->id)->count();
 
-        if ($memberDocCount + $companyDocCount + $requestCount > 0) {
+        if ($memberDocCount + $companyDocCount > 0) {
             throw ValidationException::withMessages([
                 'code' => ['Cannot delete: linked documents exist. Use archive instead.'],
             ]);
         }
 
-        // 5. Delete activation + type
+        // 5. Cascade-delete requests (ephemeral invitations) + activations + type
+        DocumentRequest::where('document_type_id', $type->id)->delete();
+
         DocumentTypeActivation::where('company_id', $data->company->id)
             ->where('document_type_id', $type->id)
             ->delete();

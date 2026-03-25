@@ -8,6 +8,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  admin: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const { t } = useI18n()
@@ -30,7 +34,7 @@ const { t } = useI18n()
           size="12"
           start
         />
-        {{ t('documents.systemMandatory') }}
+        {{ admin ? t('documents.mandatoryRegulatory') : t('documents.mandatory') }}
       </VChip>
     </template>
   </VTooltip>
@@ -40,7 +44,7 @@ const { t } = useI18n()
     variant="tonal"
     color="warning"
   >
-    {{ t('documents.requiredOverride') }}
+    {{ admin ? t('documents.mandatoryCompany') : t('documents.mandatory') }}
   </VChip>
   <VChip
     v-else

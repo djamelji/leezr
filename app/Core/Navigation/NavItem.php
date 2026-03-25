@@ -26,6 +26,7 @@ final class NavItem
         public readonly ?array $plans = null,
         public readonly ?array $tags = null,
         public readonly int $sort = 0,
+        public readonly ?string $excludePermission = null,
     ) {}
 
     public static function fromManifestArray(array $data, int $moduleSortOrder = 0): self
@@ -44,6 +45,7 @@ final class NavItem
             plans: $data['plans'] ?? null,
             tags: $data['tags'] ?? null,
             sort: $data['sort'] ?? $moduleSortOrder,
+            excludePermission: $data['excludePermission'] ?? null,
         );
     }
 

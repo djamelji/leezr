@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Core\Settings\Http;
+namespace App\Modules\Core\Documents\Http;
 
 use App\Core\Documents\ReadModels\CompanyDocumentActivationReadModel;
 use App\Modules\Core\Settings\UseCases\UpsertDocumentActivationData;

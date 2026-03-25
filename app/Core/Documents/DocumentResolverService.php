@@ -6,13 +6,15 @@ use App\Company\RBAC\CompanyRole;
 use App\Core\Models\User;
 
 /**
- * ADR-169 Phase 3 / ADR-174: Resolve document types.
- * Returns document types with their upload status, requirement, and metadata.
+ * ADR-169 Phase 3 / ADR-174 / ADR-384: Resolve document types.
+ * Returns document types with their upload status, requirement, lifecycle, and metadata.
  * Pattern: 3 queries (types → activations → uploads).
  *
  * DETTE-DOC-001 resolved (ADR-174): $scope parameter filters Q1.
  * When scope=company or user=null, Q3 (MemberDocument) is skipped entirely.
  * CompanyDocument hydration is handled by CompanyDocumentReadModel, not here.
+ *
+ * ADR-384: lifecycle_status computed via DocumentLifecycleService (pure, no mutation).
  */
 class DocumentResolverService
 {
@@ -95,6 +97,15 @@ class DocumentResolverService
             $upload = $uploads->get($typeId);
             $rules = $type->validation_rules ?? [];
 
+            $uploadData = $upload ? [
+                'id' => $upload->id,
+                'file_name' => $upload->file_name,
+                'file_size_bytes' => $upload->file_size_bytes,
+                'mime_type' => $upload->mime_type,
+                'expires_at' => $upload->expires_at?->toIso8601String(),
+                'uploaded_at' => $upload->created_at->toIso8601String(),
+            ] : null;
+
             $result[] = [
                 'code' => $type->code,
                 'label' => $type->label,
@@ -104,14 +115,8 @@ class DocumentResolverService
                 'max_file_size_mb' => $rules['max_file_size_mb'] ?? 10,
                 'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
                 'order' => $activation->order,
-                'upload' => $upload ? [
-                    'id' => $upload->id,
-                    'file_name' => $upload->file_name,
-                    'file_size_bytes' => $upload->file_size_bytes,
-                    'mime_type' => $upload->mime_type,
-                    'expires_at' => $upload->expires_at?->toIso8601String(),
-                    'uploaded_at' => $upload->created_at->toIso8601String(),
-                ] : null,
+                'upload' => $uploadData,
+                'lifecycle_status' => DocumentLifecycleService::computeStatus($uploadData),
             ];
         }
 

@@ -179,7 +179,7 @@ class PlatformJobdomainReadModel
         $defaultDocCodes = collect($defaultDocs)->pluck('code')->toArray();
         $presetOrderMap = collect($defaultDocs)->pluck('order', 'code');
 
-        return $dbDocTypes->map(function ($type) use ($defaultDocCodes, $presetOrderMap, $jobdomain) {
+        return $dbDocTypes->map(function ($type) use ($defaultDocCodes, $presetOrderMap, $defaultDocs) {
             $rules = $type->validation_rules ?? [];
 
             return [
@@ -190,7 +190,7 @@ class PlatformJobdomainReadModel
                 'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
                 'applicable_markets' => $rules['applicable_markets'] ?? null,
                 'is_in_preset' => in_array($type->code, $defaultDocCodes),
-                'mandatory_for_jobdomain' => in_array($jobdomain->key, $rules['required_by_jobdomains'] ?? []),
+                'mandatory_for_jobdomain' => in_array($type->code, collect($defaultDocs)->where('required', true)->pluck('code')->toArray()),
                 'required_by_modules' => $rules['required_by_modules'] ?? [],
                 'preset_order' => $presetOrderMap[$type->code] ?? null,
             ];

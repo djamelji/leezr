@@ -7,6 +7,9 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Models\Company;
+use App\Core\Models\User;
+use App\Core\Notifications\NotificationDispatcher;
 
 /**
  * ADR-192: Create a single document request for a member.
@@ -74,6 +77,21 @@ class RequestDocumentUseCase
             (string) $request->id,
             ['metadata' => ['document_type_code' => $documentTypeCode, 'user_id' => $userId]],
         );
+
+        // ADR-389: Notify the target member
+        $recipient = User::find($userId);
+        if ($recipient) {
+            NotificationDispatcher::send(
+                topicKey: 'documents.request_new',
+                recipients: [$recipient],
+                payload: [
+                    'document_type' => $docType->label,
+                    'document_code' => $documentTypeCode,
+                ],
+                company: Company::find($companyId),
+                entityKey: "document_request:{$userId}:{$documentTypeCode}",
+            );
+        }
 
         return $request;
     }

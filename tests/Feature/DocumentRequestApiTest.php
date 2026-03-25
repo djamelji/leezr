@@ -182,7 +182,8 @@ class DocumentRequestApiTest extends TestCase
     {
         $response = $this->actAsOwner()
             ->postJson('/api/company/document-requests/batch', [
-                'company_role_id' => $this->driverRole->id,
+                'scope' => 'role',
+                'company_role_ids' => [$this->driverRole->id],
                 'document_type_code' => 'id_card',
             ]);
 
@@ -209,7 +210,8 @@ class DocumentRequestApiTest extends TestCase
 
         $response = $this->actAsOwner()
             ->postJson('/api/company/document-requests/batch', [
-                'company_role_id' => $this->driverRole->id,
+                'scope' => 'role',
+                'company_role_ids' => [$this->driverRole->id],
                 'document_type_code' => 'id_card',
             ]);
 
@@ -226,7 +228,8 @@ class DocumentRequestApiTest extends TestCase
 
         $this->actAsOwner()
             ->postJson('/api/company/document-requests/batch', [
-                'company_role_id' => $this->driverRole->id,
+                'scope' => 'role',
+                'company_role_ids' => [$this->driverRole->id],
                 'document_type_code' => 'id_card',
             ]);
 
@@ -245,7 +248,8 @@ class DocumentRequestApiTest extends TestCase
 
         $response = $this->actAsOwner()
             ->postJson('/api/company/document-requests/batch', [
-                'company_role_id' => $this->driverRole->id,
+                'scope' => 'role',
+                'company_role_ids' => [$this->driverRole->id],
                 'document_type_code' => 'id_card',
             ]);
 

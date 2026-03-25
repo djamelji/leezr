@@ -211,7 +211,7 @@ class DocumentMandatoryCannotBeHiddenTest extends TestCase
     {
         // medical_certificate: has tags=['driving']
         // but for role 'basic' (no archetype, no required_tags), it is NOT mandatory
-        // (no required_by_jobdomains, no required_by_modules, no tag intersection)
+        // (no required_by_modules, no tag intersection)
         $basicRole = CompanyRole::create([
             'company_id' => $this->company->id,
             'key' => 'basic',

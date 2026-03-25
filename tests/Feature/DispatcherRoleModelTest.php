@@ -134,10 +134,10 @@ class DispatcherRoleModelTest extends TestCase
         $this->assertNotContains('support', $keys, 'Support module has no sidebar nav item — access via footer link only.');
     }
 
-    public function test_dispatcher_sees_my_deliveries_nav_item(): void
+    public function test_dispatcher_does_not_see_my_deliveries_nav_item(): void
     {
         $keys = $this->extractNavKeys();
-        $this->assertContains('my-deliveries', $keys, 'Dispatcher should see My Deliveries nav item (has shipments.view_own, no operationalOnly filter).');
+        $this->assertNotContains('my-deliveries', $keys, 'Dispatcher with shipments.view should NOT see my-deliveries in nav (excludePermission)');
     }
 
     public function test_dispatcher_sees_shipments_nav_item(): void

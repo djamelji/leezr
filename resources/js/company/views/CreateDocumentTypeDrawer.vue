@@ -77,6 +77,15 @@ const handleSubmit = async () => {
     <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
       <VCard flat>
         <VCardText>
+          <VAlert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            {{ t('documents.drawerCreateHint') }}
+          </VAlert>
+
           <VForm @submit.prevent="handleSubmit">
             <VRow>
               <VCol cols="12">
@@ -86,16 +95,22 @@ const handleSubmit = async () => {
                   :placeholder="t('documents.documentLabel')"
                 />
               </VCol>
-              <VCol
-                cols="12"
-                md="6"
-              >
+              <VCol cols="12">
                 <AppSelect
                   v-model="form.scope"
                   :label="t('documents.scope')"
                   :items="scopeOptions"
+                  :hint="form.scope === 'company_user' ? t('documents.scopeHintMember') : t('documents.scopeHintCompany')"
+                  persistent-hint
                 />
               </VCol>
+
+              <VCol cols="12">
+                <h6 class="text-overline text-medium-emphasis mb-2">
+                  {{ t('documents.fileConstraints') }}
+                </h6>
+              </VCol>
+
               <VCol
                 cols="12"
                 md="6"
@@ -106,9 +121,14 @@ const handleSubmit = async () => {
                   type="number"
                   :min="1"
                   :max="50"
+                  :hint="t('documents.maxFileSizeHint')"
+                  persistent-hint
                 />
               </VCol>
-              <VCol cols="12">
+              <VCol
+                cols="12"
+                md="6"
+              >
                 <VSelect
                   v-model="form.accepted_types"
                   :label="t('documents.acceptedTypes')"
@@ -118,6 +138,13 @@ const handleSubmit = async () => {
                   closable-chips
                 />
               </VCol>
+
+              <VCol cols="12">
+                <h6 class="text-overline text-medium-emphasis mb-2">
+                  {{ t('documents.options') }}
+                </h6>
+              </VCol>
+
               <VCol
                 cols="12"
                 md="6"
@@ -127,6 +154,8 @@ const handleSubmit = async () => {
                   :label="t('companySettings.order')"
                   type="number"
                   :min="0"
+                  :hint="t('documents.orderHint')"
+                  persistent-hint
                 />
               </VCol>
               <VCol
@@ -136,6 +165,8 @@ const handleSubmit = async () => {
                 <VCheckbox
                   v-model="form.required"
                   :label="t('companySettings.requiredOverride')"
+                  :hint="t('documents.requiredHint')"
+                  persistent-hint
                 />
               </VCol>
               <VCol cols="12">

@@ -6,6 +6,7 @@ import { useMembersStore } from '@/modules/company/members/members.store'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import MemberProfileForm from '@/company/components/MemberProfileForm.vue'
 import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
+import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
 const { t } = useI18n()
@@ -33,6 +34,9 @@ const resetPasswordLoading = ref(false)
 const isConfirmDialogVisible = ref(false)
 
 const canEdit = computed(() => auth.hasPermission('members.manage'))
+
+// ADR-388: Inline custom document type creation from member page
+const isCreateDocTypeDrawerOpen = ref(false)
 
 const isSelf = computed(() =>
   baseFields.value?.id === auth.user?.id,
@@ -274,11 +278,12 @@ const handleSetPassword = async () => {
           </VCard>
         </VWindowItem>
 
-        <!-- Tab: Documents (ADR-178) -->
+        <!-- Tab: Documents (ADR-178 / ADR-388) -->
         <VWindowItem value="documents">
           <MemberDocumentsWorkflowPanel
             :member-id="route.params.id"
             :can-edit="canEdit"
+            @create-custom-type="isCreateDocTypeDrawerOpen = true"
           />
         </VWindowItem>
 
@@ -378,6 +383,11 @@ const handleSetPassword = async () => {
         </VWindowItem>
       </VWindow>
     </template>
+
+    <!-- ADR-388: Inline custom document type creation -->
+    <CreateDocumentTypeDrawer
+      v-model:is-drawer-open="isCreateDocTypeDrawerOpen"
+    />
 
     <!-- Confirm Dialog for Force Reset -->
     <VDialog

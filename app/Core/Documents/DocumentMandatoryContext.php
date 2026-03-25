@@ -2,7 +2,6 @@
 
 namespace App\Core\Documents;
 
-use App\Core\Models\Company;
 use App\Core\Modules\CompanyModule;
 
 /**
@@ -19,31 +18,26 @@ class DocumentMandatoryContext
             return self::$cache[$companyId];
         }
 
-        $company = Company::find($companyId);
-        $jobdomainKey = $company?->jobdomain_key;
-
         $activeModules = CompanyModule::where('company_id', $companyId)
             ->where('is_enabled_for_company', true)
             ->pluck('module_key')
             ->toArray();
 
         self::$cache[$companyId] = [
-            'jobdomain_key' => $jobdomainKey,
             'active_modules' => $activeModules,
         ];
 
         return self::$cache[$companyId];
     }
 
+    /**
+     * ADR-389: Mandatory is determined by module gating + tag gating only.
+     * Jobdomain coupling removed — obligation is now set via required_override
+     * at jobdomain assignment time (JobdomainGate::assignToCompany).
+     */
     public static function isMandatory(DocumentType $type, array $context, ?array $roleRequiredTags = null): bool
     {
         $rules = $type->validation_rules ?? [];
-
-        // Jobdomain-level mandatory
-        $byJobdomains = $rules['required_by_jobdomains'] ?? [];
-        if (!empty($byJobdomains) && in_array($context['jobdomain_key'], $byJobdomains)) {
-            return true;
-        }
 
         // Module-level mandatory
         $byModules = $rules['required_by_modules'] ?? [];

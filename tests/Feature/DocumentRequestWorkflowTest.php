@@ -80,12 +80,15 @@ class DocumentRequestWorkflowTest extends TestCase
         ]);
 
         // Activate all document types for this company
+        // ADR-389: required_override mirrors jobdomain preset (replaces required_by_jobdomains)
+        $presetRequired = ['id_card', 'kbis', 'insurance_certificate'];
         $docTypes = DocumentType::where('is_system', true)->get();
         foreach ($docTypes as $index => $docType) {
             DocumentTypeActivation::create([
                 'company_id' => $this->company->id,
                 'document_type_id' => $docType->id,
                 'enabled' => true,
+                'required_override' => in_array($docType->code, $presetRequired),
                 'order' => $index * 10,
             ]);
         }
@@ -138,7 +141,7 @@ class DocumentRequestWorkflowTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // 2. Admin index does NOT create request for non-mandatory
+    // 2. Admin index does NOT create request for non-required docs
     // ═══════════════════════════════════════════════════════
 
     public function test_admin_index_does_not_create_request_for_non_mandatory(): void
@@ -150,14 +153,13 @@ class DocumentRequestWorkflowTest extends TestCase
 
         $docs = collect($response->json('documents'));
 
-        // medical_certificate is NOT mandatory for logistique (only tag-based via driving)
-        // But driving_license IS mandatory via module tag — check what's actually mandatory
-        // For non-mandatory docs, request_status should be null (no lazy-create)
+        // ADR-389: required = mandatory (catalog) OR required_override (company preset)
+        // Non-required docs should NOT have lazy-created requests
         foreach ($docs as $doc) {
-            if (! $doc['mandatory']) {
+            if (! $doc['required']) {
                 $this->assertNull(
                     $doc['request_status'],
-                    "Non-mandatory doc {$doc['code']} should NOT have a request created",
+                    "Non-required doc {$doc['code']} should NOT have a request created",
                 );
             }
         }

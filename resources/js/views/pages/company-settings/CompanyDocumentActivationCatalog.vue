@@ -111,13 +111,25 @@ const handleSave = async doc => {
         <tr>
           <th>{{ t('documents.title') }}</th>
           <th style="width: 80px;">
-            {{ t('companySettings.enabled') }}
+            <VTooltip :text="t('documents.tooltipEnabled')">
+              <template #activator="{ props: tp }">
+                <span v-bind="tp">{{ t('companySettings.enabled') }}</span>
+              </template>
+            </VTooltip>
           </th>
           <th style="width: 80px;">
-            {{ t('companySettings.requiredOverride') }}
+            <VTooltip :text="t('documents.tooltipRequired')">
+              <template #activator="{ props: tp }">
+                <span v-bind="tp">{{ t('companySettings.requiredOverride') }}</span>
+              </template>
+            </VTooltip>
           </th>
           <th style="width: 80px;">
-            {{ t('companySettings.order') }}
+            <VTooltip :text="t('documents.tooltipOrder')">
+              <template #activator="{ props: tp }">
+                <span v-bind="tp">{{ t('companySettings.order') }}</span>
+              </template>
+            </VTooltip>
           </th>
           <th style="width: 60px;" />
         </tr>
@@ -158,10 +170,26 @@ const handleSave = async doc => {
             />
           </td>
           <td>
+            <VTooltip
+              v-if="doc.mandatory"
+              :text="t('documents.tooltipMandatory')"
+            >
+              <template #activator="{ props: tp }">
+                <span v-bind="tp">
+                  <VSwitch
+                    v-if="edits[doc.code]"
+                    v-model="edits[doc.code].required_override"
+                    disabled
+                    density="compact"
+                    hide-details
+                  />
+                </span>
+              </template>
+            </VTooltip>
             <VSwitch
-              v-if="edits[doc.code]"
+              v-else-if="edits[doc.code]"
               v-model="edits[doc.code].required_override"
-              :disabled="!canEdit || doc.mandatory"
+              :disabled="!canEdit"
               density="compact"
               hide-details
             />
@@ -296,10 +324,26 @@ const handleSave = async doc => {
             />
           </td>
           <td>
+            <VTooltip
+              v-if="doc.mandatory"
+              :text="t('documents.tooltipMandatory')"
+            >
+              <template #activator="{ props: tp }">
+                <span v-bind="tp">
+                  <VSwitch
+                    v-if="edits[doc.code]"
+                    v-model="edits[doc.code].required_override"
+                    disabled
+                    density="compact"
+                    hide-details
+                  />
+                </span>
+              </template>
+            </VTooltip>
             <VSwitch
-              v-if="edits[doc.code]"
+              v-else-if="edits[doc.code]"
               v-model="edits[doc.code].required_override"
-              :disabled="!canEdit || doc.mandatory"
+              :disabled="!canEdit"
               density="compact"
               hide-details
             />

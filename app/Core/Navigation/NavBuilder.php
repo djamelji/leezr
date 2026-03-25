@@ -18,11 +18,12 @@ use RuntimeException;
  *  3. Filter: item-level plan (company only)
  *  4. Filter: item-level jobdomain (company only)
  *  5. Filter: permissions (backend = source of truth)
- *  6. Filter: surface/roleLevel (company only)
- *  7. Build parent→child tree + cycle detection
- *  8. Group by resolved group key
- *  9. Prune: empty groups + non-clickable parents without children
- * 10. Sort within groups + validate unique keys
+ *  6. Filter: excludePermission (hide if user HAS the permission)
+ *  7. Filter: surface/roleLevel (company only)
+ *  8. Build parent→child tree + cycle detection
+ *  9. Group by resolved group key
+ * 10. Prune: empty groups + non-clickable parents without children
+ * 11. Sort within groups + validate unique keys
  *
  * Returns: [{key, titleKey, items: [{key, title, to, icon, permission, children}]}]
  */
@@ -134,7 +135,24 @@ class NavBuilder
             });
         }
 
-        // 6. Filter: surface/roleLevel (company only)
+        // 6. Filter: excludePermission (hides item if user HAS the specified permission)
+        //    Applies even to bypass users (permissions=null → has all permissions → excluded)
+        $items = array_filter($items, function (NavItem $item) use ($permissions) {
+            if ($item->excludePermission === null) {
+                return true;
+            }
+
+            // Bypass users have all permissions → exclude
+            if ($permissions === null) {
+                return false;
+            }
+
+            $permSet = array_flip($permissions);
+
+            return ! isset($permSet[$item->excludePermission]);
+        });
+
+        // 7. Filter: surface/roleLevel (company only)
         if ($roleLevel !== null) {
             $items = array_filter($items, function (NavItem $item) use ($roleLevel) {
                 // Structure items hidden from operational
@@ -153,10 +171,10 @@ class NavBuilder
 
         $items = array_values($items);
 
-        // 7. Build parent→child tree
+        // 8. Build parent→child tree
         $tree = static::buildTree($items);
 
-        // 8. Group by resolved group key
+        // 9. Group by resolved group key
         $grouped = [];
 
         foreach ($tree as $node) {
@@ -173,10 +191,10 @@ class NavBuilder
             $grouped[$groupKey]['items'][] = $node;
         }
 
-        // 9. Prune: empty groups + non-clickable parents without children
+        // 10. Prune: empty groups + non-clickable parents without children
         $grouped = static::pruneGroups($grouped);
 
-        // 10. Sort within groups + clean output
+        // 11. Sort within groups + clean output
         $result = [];
 
         foreach ($grouped as $group) {

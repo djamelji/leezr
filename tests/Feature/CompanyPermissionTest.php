@@ -571,10 +571,12 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 12 admin permissions (includes core.audit + core.billing + core.modules + core.roles + core.jobdomain + members.sensitive_read)
+        // 14 admin permissions (includes core.audit + core.billing + core.documents + core.modules + core.roles + core.jobdomain + members.sensitive_read)
         $this->assertEquals([
             'audit.view',
             'billing.manage',
+            'documents.configure',
+            'documents.manage',
             'jobdomain.manage',
             'members.credentials',
             'members.manage',
@@ -587,9 +589,10 @@ class CompanyPermissionTest extends TestCase
             'shipments.manage_fields',
         ], $adminPerms);
 
-        // 14 operational permissions (includes core.theme + core.support + core.documentation)
+        // 15 operational permissions (includes core.theme + core.support + core.documents + core.documentation)
         $this->assertEquals([
             'documentation.view',
+            'documents.view',
             'jobdomain.view',
             'members.invite',
             'members.view',

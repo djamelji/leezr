@@ -3,6 +3,7 @@ import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
+import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 
 const props = defineProps({
@@ -126,7 +127,11 @@ const handleViewerDownload = () => {
                   </div>
                 </td>
                 <td>
-                  <div class="d-flex align-center gap-2">
+                  <div class="d-flex align-center gap-2 flex-wrap">
+                    <DocumentLifecycleChip
+                      :status="doc.lifecycle_status"
+                      :expires-at="doc.upload?.expires_at"
+                    />
                     <DocumentStatusChip
                       v-if="doc.request_status"
                       :status="doc.request_status"

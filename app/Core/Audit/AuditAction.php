@@ -80,6 +80,7 @@ final class AuditAction
     // ─── Document requests (ADR-192) ─────────────────
     public const DOCUMENT_REQUESTED = 'document.requested';
     public const DOCUMENT_BATCH_REQUESTED = 'document.batch_requested';
+    public const DOCUMENT_REQUEST_CANCELLED = 'document.request_cancelled';
 
     // ─── Theme ────────────────────────────────────────
     public const THEME_VISIBILITY_UPDATED = 'theme.visibility_updated';

@@ -30,12 +30,12 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
           rounded
         >
           <VIcon
-            icon="tabler-clock"
+            icon="tabler-file-off"
             :size="iconSize"
           />
         </VAvatar>
         <span class="widget-title text-medium-emphasis">
-          {{ t('compliance.pending') }}
+          {{ t('compliance.missing') }}
         </span>
       </div>
     </div>
@@ -46,17 +46,17 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
         type="text"
       />
       <div
-        v-else-if="!store.queue.length"
+        v-else-if="!store.hasData"
         class="d-flex align-center justify-center h-100 text-disabled"
       >
         {{ t('compliance.noData') }}
       </div>
       <template v-else>
         <div class="widget-kpi font-weight-bold text-warning">
-          {{ store.pendingCount }}
+          {{ store.missingCount }}
         </div>
         <div class="widget-subtext text-medium-emphasis">
-          {{ t('compliance.awaitingSubmission') }}
+          {{ t('compliance.documentsNotUploaded') }}
         </div>
       </template>
     </div>

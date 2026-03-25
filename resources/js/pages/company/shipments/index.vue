@@ -15,6 +15,7 @@ const statusFilter = ref('')
 const searchQuery = ref('')
 
 const canManage = computed(() => auth.hasPermission('shipments.create'))
+const canViewOwnDeliveries = computed(() => auth.hasPermission('shipments.view_own') || auth.isOwner)
 
 const headers = computed(() => [
   { title: t('shipments.reference'), key: 'reference' },
@@ -98,13 +99,24 @@ const onPageChange = page => {
           <VIcon icon="tabler-truck" />
           <span>{{ t('shipments.title') }}</span>
         </div>
-        <VBtn
-          v-if="canManage"
-          prepend-icon="tabler-plus"
-          :to="{ name: 'company-shipments-create' }"
-        >
-          {{ t('shipments.newShipment') }}
-        </VBtn>
+        <div class="d-flex gap-2">
+          <VBtn
+            v-if="canViewOwnDeliveries"
+            variant="tonal"
+            color="info"
+            prepend-icon="tabler-truck-delivery"
+            :to="{ name: 'company-my-deliveries' }"
+          >
+            {{ t('shipments.myDeliveries') }}
+          </VBtn>
+          <VBtn
+            v-if="canManage"
+            prepend-icon="tabler-plus"
+            :to="{ name: 'company-shipments-create' }"
+          >
+            {{ t('shipments.newShipment') }}
+          </VBtn>
+        </div>
       </VCardTitle>
 
       <VCardText>

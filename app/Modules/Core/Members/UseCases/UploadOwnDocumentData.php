@@ -16,5 +16,6 @@ final class UploadOwnDocumentData
         public readonly Company $company,
         public readonly string $documentCode,
         public readonly UploadedFile $file,
+        public readonly ?string $expiresAt = null,
     ) {}
 }

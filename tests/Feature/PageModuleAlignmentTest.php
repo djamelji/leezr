@@ -207,6 +207,7 @@ class PageModuleAlignmentTest extends TestCase
             'company-billing-tab' => $base . '/company/billing/[tab].vue',
             'company-roles' => $base . '/company/roles.vue',
             'company-profile-tab' => $base . '/company/profile/[tab].vue',
+            'company-documents-tab' => $base . '/company/documents/[tab].vue',
             'platform-support-id' => $base . '/platform/support/[id].vue',
             'company-support-id' => $base . '/company/support/[id].vue',
             'company-documentation-slug' => $base . '/company/documentation/[slug].vue',

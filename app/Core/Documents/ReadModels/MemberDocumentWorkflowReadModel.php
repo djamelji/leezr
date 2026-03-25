@@ -51,9 +51,9 @@ class MemberDocumentWorkflowReadModel
             $typeId = $type?->id;
             $request = $typeId ? $requests->get($typeId) : null;
 
-            // Lazy-create for mandatory docs without existing request
+            // ADR-389: Lazy-create for required docs (mandatory OR required_override)
             // CONSTRAINT: only for docs already in resolver output (effective surface)
-            if ($doc['mandatory'] && $request === null && $typeId) {
+            if ($doc['required'] && $request === null && $typeId) {
                 $request = DocumentRequest::create([
                     'company_id' => $company->id,
                     'user_id' => $member->id,

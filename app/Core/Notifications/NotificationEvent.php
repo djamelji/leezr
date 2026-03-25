@@ -15,7 +15,7 @@ class NotificationEvent extends Model
     protected $fillable = [
         'event_uuid', 'recipient_type', 'recipient_id', 'company_id', 'topic_key',
         'title', 'body', 'icon', 'severity', 'link', 'data',
-        'delivered_at', 'read_at',
+        'entity_key', 'delivered_at', 'read_at',
     ];
 
     protected function casts(): array
@@ -47,6 +47,11 @@ class NotificationEvent extends Model
     {
         return $query->where('recipient_type', $recipient->getMorphClass())
             ->where('recipient_id', $recipient->id);
+    }
+
+    public function scopeForEntity(Builder $query, string $entityKey): Builder
+    {
+        return $query->where('entity_key', $entityKey);
     }
 
     public function markRead(): void

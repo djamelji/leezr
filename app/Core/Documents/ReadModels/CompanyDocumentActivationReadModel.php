@@ -74,11 +74,10 @@ class CompanyDocumentActivationReadModel
                 'is_system' => $type->is_system,
             ];
 
-            // For custom types, include usage_count so the UI can show delete vs archive
+            // For custom types, include usage_count (actual uploads only — requests are cascade-deleted)
             if (! $type->is_system) {
                 $doc['usage_count'] = MemberDocument::where('document_type_id', $type->id)->count()
-                    + CompanyDocument::where('document_type_id', $type->id)->count()
-                    + DocumentRequest::where('document_type_id', $type->id)->count();
+                    + CompanyDocument::where('document_type_id', $type->id)->count();
             }
 
             if ($type->scope === DocumentType::SCOPE_COMPANY_USER) {

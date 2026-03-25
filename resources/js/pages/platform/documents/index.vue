@@ -115,7 +115,6 @@ const createForm = ref({
     max_file_size_mb: 10,
     accepted_types: ['pdf', 'jpg', 'jpeg', 'png'],
     applicable_markets: [],
-    required_by_jobdomains: [],
     required_by_modules: [],
     tags: [],
   },
@@ -130,7 +129,6 @@ const resetCreateForm = () => {
       max_file_size_mb: 10,
       accepted_types: ['pdf', 'jpg', 'jpeg', 'png'],
       applicable_markets: [],
-      required_by_jobdomains: [],
       required_by_modules: [],
       tags: [],
     },
@@ -154,8 +152,6 @@ const handleCreate = async () => {
     const rules = createForm.value.validation_rules
     if (rules.applicable_markets?.length)
       payload.validation_rules.applicable_markets = rules.applicable_markets
-    if (rules.required_by_jobdomains?.length)
-      payload.validation_rules.required_by_jobdomains = rules.required_by_jobdomains
     if (rules.required_by_modules?.length)
       payload.validation_rules.required_by_modules = rules.required_by_modules
     if (rules.tags?.length)

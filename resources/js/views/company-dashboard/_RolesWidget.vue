@@ -15,11 +15,16 @@ const density = computed(() => props.viewport?.density || 'L')
 const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
 const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
 
-const roleEntries = computed(() => Object.values(store.groupedByRole))
-
-const rolesWithPending = computed(() =>
-  roleEntries.value.filter(g => g.items.some(r => r.status === 'requested')).length,
+const rolesWithIssues = computed(() =>
+  store.byRole.filter(r => r.missing > 0 || r.expired > 0).length,
 )
+
+const rateColor = rate => {
+  if (rate >= 80) return 'success'
+  if (rate >= 50) return 'warning'
+
+  return 'error'
+}
 </script>
 
 <template>
@@ -52,7 +57,7 @@ const rolesWithPending = computed(() =>
         type="text"
       />
       <div
-        v-else-if="!store.queue.length"
+        v-else-if="!store.hasData"
         class="d-flex align-center justify-center h-100 text-disabled"
       >
         {{ t('compliance.noData') }}
@@ -61,10 +66,10 @@ const rolesWithPending = computed(() =>
       <!-- Density S: KPI only -->
       <template v-else-if="density === 'S'">
         <div class="widget-kpi font-weight-bold text-info">
-          {{ rolesWithPending }}
+          {{ rolesWithIssues }}
         </div>
         <div class="widget-subtext text-medium-emphasis">
-          {{ t('compliance.rolesWithPending') }}
+          {{ t('compliance.rolesWithIssues') }}
         </div>
       </template>
 
@@ -72,26 +77,43 @@ const rolesWithPending = computed(() =>
       <template v-else>
         <div class="widget-list">
           <div
-            v-for="group in roleEntries"
-            :key="group.role?.key || '_none'"
+            v-for="role in store.byRole"
+            :key="role.role_key || '_none'"
             class="d-flex align-center justify-space-between py-2"
           >
             <div>
               <span class="font-weight-medium">
-                {{ group.role?.name || t('compliance.noRole') }}
+                {{ role.role_name || t('compliance.noRole') }}
               </span>
               <span class="text-caption text-disabled ms-2">
-                {{ t('compliance.membersConcerned', { count: new Set(group.items.map(r => r.user.id)).size }) }}
+                {{ t('compliance.membersConcerned', { count: role.member_count }) }}
               </span>
             </div>
-            <VChip
-              v-if="group.items.filter(r => r.status === 'requested').length"
-              size="small"
-              color="warning"
-              variant="tonal"
-            >
-              {{ t('compliance.pendingRequests', { count: group.items.filter(r => r.status === 'requested').length }) }}
-            </VChip>
+            <div class="d-flex gap-2 align-center">
+              <VChip
+                v-if="role.expired > 0"
+                size="small"
+                color="error"
+                variant="tonal"
+              >
+                {{ role.expired }} {{ t('compliance.expired') }}
+              </VChip>
+              <VChip
+                v-if="role.missing > 0"
+                size="small"
+                color="warning"
+                variant="tonal"
+              >
+                {{ role.missing }} {{ t('compliance.missing') }}
+              </VChip>
+              <VChip
+                size="small"
+                :color="rateColor(role.rate)"
+                variant="tonal"
+              >
+                {{ role.rate }}%
+              </VChip>
+            </div>
           </div>
         </div>
       </template>

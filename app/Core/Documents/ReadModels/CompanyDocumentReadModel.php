@@ -3,6 +3,7 @@
 namespace App\Core\Documents\ReadModels;
 
 use App\Core\Documents\CompanyDocument;
+use App\Core\Documents\DocumentLifecycleService;
 use App\Core\Documents\DocumentResolverService;
 use App\Core\Documents\DocumentType;
 use App\Core\Models\Company;
@@ -42,7 +43,7 @@ class CompanyDocumentReadModel
             ->get()
             ->keyBy('document_type_id');
 
-        // 3. Enrich each document with upload status
+        // 3. Enrich each document with upload status + lifecycle (ADR-384)
         $documents = array_map(function ($doc) use ($uploads, $typeIds) {
             $typeId = $typeIds->get($doc['code']);
             $upload = $typeId ? $uploads->get($typeId) : null;
@@ -55,6 +56,11 @@ class CompanyDocumentReadModel
                 'uploaded_at' => $upload->created_at->toIso8601String(),
                 'expires_at' => $upload->expires_at?->toIso8601String(),
             ] : null;
+
+            $doc['lifecycle_status'] = DocumentLifecycleService::computeFromDate(
+                $upload !== null,
+                $upload?->expires_at,
+            );
 
             return $doc;
         }, $documents);

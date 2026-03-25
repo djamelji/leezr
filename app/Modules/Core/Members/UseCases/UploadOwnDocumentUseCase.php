@@ -6,6 +6,9 @@ use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\MemberDocument;
+use App\Core\Models\Membership;
+use App\Core\Models\User;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Storage\StorageQuotaService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -113,6 +116,7 @@ class UploadOwnDocumentUseCase
                 'file_size_bytes' => $fileSizeBytes,
                 'mime_type' => $data->file->getMimeType(),
                 'uploaded_by' => $data->user->id,
+                'expires_at' => $data->expiresAt,
             ],
         );
 
@@ -132,6 +136,27 @@ class UploadOwnDocumentUseCase
                 'reviewed_at' => null,
             ],
         );
+
+        // 12. ADR-389: Notify admin users that a document was submitted for review
+        $adminUserIds = Membership::where('company_id', $data->company->id)
+            ->where('is_admin', true)
+            ->where('user_id', '!=', $data->user->id)
+            ->pluck('user_id');
+
+        if ($adminUserIds->isNotEmpty()) {
+            $adminRecipients = User::whereIn('id', $adminUserIds)->get();
+            NotificationDispatcher::send(
+                topicKey: 'documents.submitted',
+                recipients: $adminRecipients,
+                payload: [
+                    'document_type' => $type->label,
+                    'document_code' => $type->code,
+                    'member_name' => $data->user->name,
+                ],
+                company: $data->company,
+                entityKey: "member_document:{$data->user->id}:{$type->code}",
+            );
+        }
 
         return new UploadOwnDocumentResult(
             id: $document->id,

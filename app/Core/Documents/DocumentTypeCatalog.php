@@ -14,13 +14,13 @@ class DocumentTypeCatalog
     public static function all(): array
     {
         return [
+            // ─── Member-scope documents ─────────────────────────
             [
                 'code' => 'id_card',
                 'label' => 'Identity Card',
                 'scope' => DocumentType::SCOPE_COMPANY_USER,
                 'validation_rules' => [
                     'applicable_markets' => ['FR'],
-                    'required_by_jobdomains' => ['logistique'],
                     'max_file_size_mb' => 10,
                     'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
                 ],
@@ -30,7 +30,6 @@ class DocumentTypeCatalog
                 'label' => 'Driving License',
                 'scope' => DocumentType::SCOPE_COMPANY_USER,
                 'validation_rules' => [
-                    'required_by_modules' => ['logistics_fleet'],
                     'tags' => [TagDictionary::DRIVING],
                     'max_file_size_mb' => 10,
                     'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
@@ -47,6 +46,63 @@ class DocumentTypeCatalog
                 ],
             ],
             [
+                'code' => 'rib',
+                'label' => 'RIB / Bank Details',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'max_file_size_mb' => 5,
+                    'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
+                ],
+            ],
+            [
+                'code' => 'social_security',
+                'label' => 'Social Security Card',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'applicable_markets' => ['FR'],
+                    'max_file_size_mb' => 5,
+                    'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
+                ],
+            ],
+            [
+                'code' => 'residence_permit',
+                'label' => 'Residence Permit',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'max_file_size_mb' => 10,
+                    'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
+                ],
+            ],
+            [
+                'code' => 'diploma',
+                'label' => 'Diploma / Certification',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'max_file_size_mb' => 10,
+                    'accepted_types' => ['pdf', 'jpg', 'jpeg', 'png'],
+                ],
+            ],
+            [
+                'code' => 'criminal_record',
+                'label' => 'Criminal Record Extract',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'max_file_size_mb' => 5,
+                    'accepted_types' => ['pdf'],
+                ],
+            ],
+            [
+                'code' => 'work_contract',
+                'label' => 'Employment Contract',
+                'scope' => DocumentType::SCOPE_COMPANY_USER,
+                'validation_rules' => [
+                    'max_file_size_mb' => 10,
+                    'accepted_types' => ['pdf'],
+                ],
+            ],
+
+            // ─── Company-scope documents ────────────────────────
+            [
                 'code' => 'kbis',
                 'label' => 'K-bis Extract',
                 'scope' => DocumentType::SCOPE_COMPANY,
@@ -61,7 +117,6 @@ class DocumentTypeCatalog
                 'label' => 'Insurance Certificate',
                 'scope' => DocumentType::SCOPE_COMPANY,
                 'validation_rules' => [
-                    'required_by_jobdomains' => ['logistique'],
                     'max_file_size_mb' => 10,
                     'accepted_types' => ['pdf'],
                 ],
@@ -73,6 +128,24 @@ class DocumentTypeCatalog
                 'validation_rules' => [
                     'required_by_modules' => ['logistics_fleet'],
                     'applicable_markets' => ['FR'],
+                    'max_file_size_mb' => 10,
+                    'accepted_types' => ['pdf'],
+                ],
+            ],
+            [
+                'code' => 'company_insurance',
+                'label' => 'Professional Liability Insurance',
+                'scope' => DocumentType::SCOPE_COMPANY,
+                'validation_rules' => [
+                    'max_file_size_mb' => 10,
+                    'accepted_types' => ['pdf'],
+                ],
+            ],
+            [
+                'code' => 'company_registration',
+                'label' => 'Company Registration',
+                'scope' => DocumentType::SCOPE_COMPANY,
+                'validation_rules' => [
                     'max_file_size_mb' => 10,
                     'accepted_types' => ['pdf'],
                 ],

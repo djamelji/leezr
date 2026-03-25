@@ -29,7 +29,6 @@ const form = ref({
     max_file_size_mb: 10,
     accepted_types: [],
     applicable_markets: [],
-    required_by_jobdomains: [],
     required_by_modules: [],
     tags: [],
   },
@@ -49,7 +48,6 @@ const fetchDetail = async () => {
         max_file_size_mb: data.document_type.validation_rules?.max_file_size_mb ?? 10,
         accepted_types: data.document_type.validation_rules?.accepted_types ?? [],
         applicable_markets: data.document_type.validation_rules?.applicable_markets ?? [],
-        required_by_jobdomains: data.document_type.validation_rules?.required_by_jobdomains ?? [],
         required_by_modules: data.document_type.validation_rules?.required_by_modules ?? [],
         tags: data.document_type.validation_rules?.tags ?? [],
       },
@@ -83,8 +81,6 @@ const handleSave = async () => {
     const rules = form.value.validation_rules
     if (rules.applicable_markets?.length)
       payload.validation_rules.applicable_markets = rules.applicable_markets
-    if (rules.required_by_jobdomains?.length)
-      payload.validation_rules.required_by_jobdomains = rules.required_by_jobdomains
     if (rules.required_by_modules?.length)
       payload.validation_rules.required_by_modules = rules.required_by_modules
     if (rules.tags?.length)
@@ -289,20 +285,6 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                     <VCombobox
                       v-model="form.validation_rules.applicable_markets"
                       :label="t('platformDocumentTypes.applicableMarkets')"
-                      multiple
-                      chips
-                      closable-chips
-                      density="compact"
-                    />
-                  </VCol>
-
-                  <VCol
-                    cols="12"
-                    md="6"
-                  >
-                    <VCombobox
-                      v-model="form.validation_rules.required_by_jobdomains"
-                      :label="t('platformDocumentTypes.requiredByJobdomains')"
                       multiple
                       chips
                       closable-chips

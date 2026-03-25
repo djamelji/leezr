@@ -7,7 +7,10 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Models\Company;
 use App\Core\Models\Membership;
+use App\Core\Models\User;
+use App\Core\Notifications\NotificationDispatcher;
 
 /**
  * ADR-192: Batch-create document requests for all members of a role.
@@ -24,7 +27,7 @@ class BatchRequestByRoleUseCase
         private readonly AuditLogger $audit,
     ) {}
 
-    public function execute(int $companyId, int $companyRoleId, string $documentTypeCode): array
+    public function execute(int $companyId, ?array $companyRoleIds, string $documentTypeCode): array
     {
         $docType = DocumentType::where('code', $documentTypeCode)
             ->where('scope', DocumentType::SCOPE_COMPANY_USER)
@@ -40,10 +43,14 @@ class BatchRequestByRoleUseCase
             abort(422, 'Document type is not activated for this company.');
         }
 
-        // Get all member user_ids for this role
-        $memberUserIds = Membership::where('company_id', $companyId)
-            ->where('company_role_id', $companyRoleId)
-            ->pluck('user_id');
+        // Get member user_ids — filtered by roles or all members
+        $memberQuery = Membership::where('company_id', $companyId);
+
+        if ($companyRoleIds !== null) {
+            $memberQuery->whereIn('company_role_id', $companyRoleIds);
+        }
+
+        $memberUserIds = $memberQuery->pluck('user_id');
 
         if ($memberUserIds->isEmpty()) {
             return ['created' => 0, 'skipped' => 0];
@@ -88,11 +95,28 @@ class BatchRequestByRoleUseCase
                 null,
                 ['metadata' => [
                     'document_type_code' => $documentTypeCode,
-                    'company_role_id' => $companyRoleId,
+                    'scope' => $companyRoleIds !== null ? 'role' : 'all',
+                    'company_role_ids' => $companyRoleIds,
                     'created_count' => $created,
                     'skipped_count' => count($existingActiveUserIds),
                 ]],
             );
+
+            // ADR-389: Notify each eligible member
+            $company = Company::find($companyId);
+            $recipients = User::whereIn('id', $eligibleUserIds)->get();
+            foreach ($recipients as $recipient) {
+                NotificationDispatcher::send(
+                    topicKey: 'documents.request_new',
+                    recipients: [$recipient],
+                    payload: [
+                        'document_type' => $docType->label,
+                        'document_code' => $documentTypeCode,
+                    ],
+                    company: $company,
+                    entityKey: "document_request:{$recipient->id}:{$documentTypeCode}",
+                );
+            }
         }
 
         return [

@@ -2,79 +2,50 @@ import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 
 /**
- * Compliance store — document request queue for company dashboard widgets.
+ * ADR-387: Compliance store — lifecycle-based document compliance for dashboard widgets.
  *
- * Fetches GET /api/company/document-requests/queue and exposes
+ * Fetches GET /api/company/documents/compliance and exposes
  * computed getters consumed by compliance widgets (self-contained).
+ *
+ * Replaces the old request-queue-based approach with lifecycle_status
+ * aggregation (valid, missing, expiring_soon, expired).
  */
 export const useCompanyComplianceStore = defineStore('companyCompliance', {
   state: () => ({
-    _queue: [],
+    _summary: { total: 0, valid: 0, missing: 0, expiring_soon: 0, expired: 0, rate: 0 },
+    _byRole: [],
+    _byType: [],
     _loading: false,
+    _loaded: false,
   }),
 
   getters: {
-    queue: state => state._queue,
+    summary: state => state._summary,
+    byRole: state => state._byRole,
+    byType: state => state._byType,
     isLoading: state => state._loading,
+    hasData: state => state._loaded && state._summary.total > 0,
 
-    pendingCount: state =>
-      state._queue.filter(r => r.status === 'requested').length,
-
-    submittedCount: state =>
-      state._queue.filter(r => r.status === 'submitted').length,
-
-    overdueCount: state => {
-      const cutoff = Date.now() - 48 * 60 * 60 * 1000
-
-      return state._queue.filter(
-        r => r.status === 'requested' && new Date(r.requested_at).getTime() < cutoff,
-      ).length
-    },
-
-    compliancePercent: state => {
-      if (!state._queue.length) return 0
-      const submitted = state._queue.filter(r => r.status === 'submitted').length
-
-      return Math.round((submitted / state._queue.length) * 100)
-    },
-
-    groupedByRole: state => {
-      const groups = {}
-
-      for (const r of state._queue) {
-        const key = r.role?.key || '_none'
-
-        if (!groups[key])
-          groups[key] = { role: r.role, items: [] }
-        groups[key].items.push(r)
-      }
-
-      return groups
-    },
-
-    groupedByType: state => {
-      const groups = {}
-
-      for (const r of state._queue) {
-        const code = r.document_type.code
-
-        if (!groups[code])
-          groups[code] = { documentType: r.document_type, items: [] }
-        groups[code].items.push(r)
-      }
-
-      return groups
-    },
+    // KPI getters for widgets
+    complianceRate: state => state._summary.rate,
+    totalSlots: state => state._summary.total,
+    validCount: state => state._summary.valid,
+    missingCount: state => state._summary.missing,
+    expiringSoonCount: state => state._summary.expiring_soon,
+    expiredCount: state => state._summary.expired,
   },
 
   actions: {
-    async fetchQueue() {
+    async fetchCompliance() {
       this._loading = true
 
       try {
-        const data = await $api('/company/document-requests/queue')
+        const data = await $api('/company/documents/compliance')
 
-        this._queue = data.queue
+        this._summary = data.summary
+        this._byRole = data.by_role
+        this._byType = data.by_type
+        this._loaded = true
       }
       finally {
         this._loading = false

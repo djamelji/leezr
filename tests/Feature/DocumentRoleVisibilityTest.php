@@ -219,8 +219,8 @@ class DocumentRoleVisibilityTest extends TestCase
         $codes = collect($response->json('documents'))->pluck('code')->toArray();
 
         $this->assertNotContains('medical_certificate', $codes, 'medical_certificate should be hidden');
-        // driving_license has required_by_modules=['logistics_fleet'] → still mandatory (all modules active)
-        // → it should NOT be hidden despite visible=false (mandatory guard)
-        $this->assertContains('driving_license', $codes, 'driving_license (mandatory via modules) should remain visible');
+        // ADR-390: driving_license no longer has required_by_modules — obligation is tag-based only
+        // With no matching tags on this role, driving_license respects doc_config visible=false
+        $this->assertNotContains('driving_license', $codes, 'driving_license should be hidden (no tag match, visible=false)');
     }
 }

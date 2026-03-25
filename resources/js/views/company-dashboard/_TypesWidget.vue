@@ -15,11 +15,16 @@ const density = computed(() => props.viewport?.density || 'L')
 const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
 const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
 
-const typeEntries = computed(() => Object.values(store.groupedByType))
-
-const typesWithPending = computed(() =>
-  typeEntries.value.filter(g => g.items.some(r => r.status === 'requested')).length,
+const typesWithIssues = computed(() =>
+  store.byType.filter(t => t.missing > 0 || t.expired > 0).length,
 )
+
+const rateColor = rate => {
+  if (rate >= 80) return 'success'
+  if (rate >= 50) return 'warning'
+
+  return 'error'
+}
 </script>
 
 <template>
@@ -52,7 +57,7 @@ const typesWithPending = computed(() =>
         type="text"
       />
       <div
-        v-else-if="!store.queue.length"
+        v-else-if="!store.hasData"
         class="d-flex align-center justify-center h-100 text-disabled"
       >
         {{ t('compliance.noData') }}
@@ -61,10 +66,10 @@ const typesWithPending = computed(() =>
       <!-- Density S: KPI only -->
       <template v-else-if="density === 'S'">
         <div class="widget-kpi font-weight-bold text-primary">
-          {{ typesWithPending }}
+          {{ typesWithIssues }}
         </div>
         <div class="widget-subtext text-medium-emphasis">
-          {{ t('compliance.typesWithPending') }}
+          {{ t('compliance.typesWithIssues') }}
         </div>
       </template>
 
@@ -72,38 +77,45 @@ const typesWithPending = computed(() =>
       <template v-else>
         <div class="widget-list">
           <div
-            v-for="group in typeEntries"
-            :key="group.documentType.code"
+            v-for="docType in store.byType"
+            :key="docType.code"
             class="d-flex align-center justify-space-between py-2"
           >
             <div class="d-flex align-center gap-2">
               <span class="font-weight-medium">
-                {{ group.documentType.label }}
+                {{ docType.label }}
               </span>
               <VChip
                 size="x-small"
                 variant="tonal"
                 color="secondary"
               >
-                {{ group.documentType.code }}
+                {{ docType.code }}
               </VChip>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-center">
               <VChip
-                v-if="group.items.filter(r => r.status === 'requested').length"
+                v-if="docType.expired > 0"
+                size="small"
+                color="error"
+                variant="tonal"
+              >
+                {{ docType.expired }} {{ t('compliance.expired') }}
+              </VChip>
+              <VChip
+                v-if="docType.missing > 0"
                 size="small"
                 color="warning"
                 variant="tonal"
               >
-                {{ group.items.filter(r => r.status === 'requested').length }} {{ t('compliance.pending') }}
+                {{ docType.missing }} {{ t('compliance.missing') }}
               </VChip>
               <VChip
-                v-if="group.items.filter(r => r.status === 'submitted').length"
                 size="small"
-                color="success"
+                :color="rateColor(docType.rate)"
                 variant="tonal"
               >
-                {{ group.items.filter(r => r.status === 'submitted').length }} {{ t('compliance.submitted') }}
+                {{ docType.rate }}%
               </VChip>
             </div>
           </div>

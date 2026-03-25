@@ -219,11 +219,10 @@ class NavBuilderTest extends TestCase
     }
 
     /**
-     * ADR-373: my-deliveries no longer has operationalOnly — permission is the generic filter.
-     * Management with bypass (null permissions) sees my-deliveries.
-     * Operational with bypass also sees my-deliveries.
+     * ADR-373 + excludePermission: my-deliveries has excludePermission='shipments.view'.
+     * Bypass users (permissions=null) are treated as having all permissions → excluded.
      */
-    public function test_for_company_my_deliveries_visible_for_both_role_levels(): void
+    public function test_for_company_my_deliveries_hidden_for_bypass_users(): void
     {
         $company = Company::create(['name' => 'OpOnly Co', 'slug' => 'oponly-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
 
@@ -242,17 +241,102 @@ class NavBuilderTest extends TestCase
             }
         }
 
-        // Management with bypass sees my-deliveries (ADR-373: operationalOnly removed)
+        // Management bypass: has all permissions → excludePermission hides my-deliveries
         $mgmtGroups = NavBuilder::forCompany($company, null, 'management');
         $mgmtKeys = $this->extractItemKeys($mgmtGroups);
 
-        $this->assertContains('my-deliveries', $mgmtKeys, 'Management should see my-deliveries (operationalOnly removed, ADR-373)');
+        $this->assertNotContains('my-deliveries', $mgmtKeys, 'Bypass user should NOT see my-deliveries (excludePermission=shipments.view)');
 
-        // Operational with bypass also sees my-deliveries
+        // Operational bypass: same — has all permissions → excluded
         $opGroups = NavBuilder::forCompany($company, null, 'operational');
         $opKeys = $this->extractItemKeys($opGroups);
 
-        $this->assertContains('my-deliveries', $opKeys, 'Operational should see my-deliveries');
+        $this->assertNotContains('my-deliveries', $opKeys, 'Bypass user should NOT see my-deliveries (excludePermission=shipments.view)');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // excludePermission
+    // ═══════════════════════════════════════════════════════
+
+    public function test_exclude_permission_hides_item_when_user_has_permission(): void
+    {
+        $company = Company::create(['name' => 'ExcPerm Co', 'slug' => 'excperm-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
+
+        // Activate logistics_shipments module
+        foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
+            if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+                CompanyModule::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'is_enabled_for_company' => true,
+                ]);
+            }
+        }
+
+        // Dispatcher: has shipments.view → excludePermission should hide my-deliveries
+        $groups = NavBuilder::forCompany($company, ['shipments.view', 'shipments.view_own']);
+        $allKeys = $this->extractItemKeys($groups);
+
+        $this->assertNotContains('my-deliveries', $allKeys, 'User with shipments.view should NOT see my-deliveries (excludePermission)');
+    }
+
+    public function test_exclude_permission_shows_item_when_user_lacks_permission(): void
+    {
+        $company = Company::create(['name' => 'ExcPerm2 Co', 'slug' => 'excperm2-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
+
+        // Activate logistics_shipments module
+        foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
+            if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+                CompanyModule::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'is_enabled_for_company' => true,
+                ]);
+            }
+        }
+
+        // Driver: has shipments.view_own but NOT shipments.view → my-deliveries visible
+        $groups = NavBuilder::forCompany($company, ['shipments.view_own', 'shipments.manage_status']);
+        $allKeys = $this->extractItemKeys($groups);
+
+        $this->assertContains('my-deliveries', $allKeys, 'User without shipments.view should see my-deliveries');
+    }
+
+    public function test_exclude_permission_hides_for_bypass_user(): void
+    {
+        $company = Company::create(['name' => 'ExcPerm3 Co', 'slug' => 'excperm3-co', 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
+
+        // Activate logistics_shipments module
+        foreach (ModuleRegistry::forScope('company') as $key => $manifest) {
+            if ($manifest->type !== 'core') {
+                CompanyModuleActivationReason::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                ]);
+                CompanyModule::create([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'is_enabled_for_company' => true,
+                ]);
+            }
+        }
+
+        // Bypass user (null permissions = owner) → treated as having all permissions → excluded
+        $groups = NavBuilder::forCompany($company, null);
+        $allKeys = $this->extractItemKeys($groups);
+
+        $this->assertNotContains('my-deliveries', $allKeys, 'Bypass user (null permissions) should NOT see my-deliveries (excludePermission)');
     }
 
     // ═══════════════════════════════════════════════════════

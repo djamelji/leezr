@@ -39,7 +39,7 @@ class JobdomainRegistry
                 'description' => 'Transport, fleet management, dispatch',
                 'landing_route' => '/',
                 'nav_profile' => 'logistique',
-                'default_modules' => ['core.theme', 'core.members', 'core.settings', 'logistics_shipments', 'core.documentation'],
+                'default_modules' => ['core.theme', 'core.members', 'core.settings', 'core.documents', 'logistics_shipments', 'core.documentation'],
                 // ADR-169: default_fields only control activation + order.
                 // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
@@ -77,13 +77,14 @@ class JobdomainRegistry
                     ['code' => 'work_schedule', 'order' => 310],
                     ['code' => 'work_mode', 'order' => 320],
                 ],
-                // ADR-169 Phase 3: default document types activated on assignment
+                // ADR-389: default document types activated on assignment
+                // required: true → sets required_override at assignment time
                 'default_documents' => [
-                    ['code' => 'id_card', 'order' => 0],
-                    ['code' => 'driving_license', 'order' => 10],
-                    ['code' => 'medical_certificate', 'order' => 20],
-                    ['code' => 'kbis', 'order' => 30],
-                    ['code' => 'insurance_certificate', 'order' => 40],
+                    ['code' => 'id_card', 'order' => 0, 'required' => true],
+                    ['code' => 'driving_license', 'order' => 10, 'required' => false],
+                    ['code' => 'medical_certificate', 'order' => 20, 'required' => false],
+                    ['code' => 'kbis', 'order' => 30, 'required' => true],
+                    ['code' => 'insurance_certificate', 'order' => 40, 'required' => true],
                 ],
                 // ADR-170 + ADR-357: Semantic archetypes for tag-based mandatory + workspace resolution
                 'archetypes' => [
@@ -92,6 +93,58 @@ class JobdomainRegistry
                     'management' => ['label' => 'Manager / Direction', 'default_tags' => [TagDictionary::MANAGEMENT]],
                 ],
                 'default_roles' => [
+                    'owner' => [
+                        'name' => 'Propriétaire',
+                        'archetype' => 'management',
+                        'is_administrative' => true,
+                        'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active'],
+                        'bundles' => [
+                            'theme.full',
+                            'members.team_access', 'members.team_management', 'members.sensitive_data',
+                            'settings.company_info', 'settings.company_management',
+                            'documents.access', 'documents.management',
+                            'roles.governance',
+                            'jobdomain.info', 'jobdomain.management',
+                            'audit.viewer',
+                            'modules.management',
+                            'documentation.access',
+                            'billing.management',
+                            'support.access',
+                            'shipments.operations', 'shipments.administration',
+                        ],
+                        'fields' => [
+                            // identity
+                            ['code' => 'job_title', 'required' => true, 'visible' => true, 'order' => 0, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'birth_date', 'visible' => true, 'order' => 1, 'group' => 'identity', 'scope' => 'company_user'],
+                            ['code' => 'nationality', 'visible' => true, 'order' => 2, 'group' => 'identity', 'scope' => 'company_user'],
+                            // contact
+                            ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 10, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'address', 'visible' => true, 'order' => 11, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_name', 'visible' => true, 'order' => 12, 'group' => 'contact', 'scope' => 'company_user'],
+                            ['code' => 'emergency_contact_phone', 'visible' => true, 'order' => 13, 'group' => 'contact', 'scope' => 'company_user'],
+                            // hr
+                            ['code' => 'hire_date', 'visible' => true, 'order' => 20, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'contract_type', 'visible' => true, 'order' => 21, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'employee_status', 'visible' => true, 'order' => 22, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'social_security_number', 'visible' => true, 'order' => 23, 'group' => 'hr', 'scope' => 'company_user'],
+                            ['code' => 'iban', 'visible' => true, 'order' => 24, 'group' => 'hr', 'scope' => 'company_user'],
+                            // driving — hidden for owner
+                            ['code' => 'license_number', 'visible' => false, 'order' => 30, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_category', 'visible' => false, 'order' => 31, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'license_expiry', 'visible' => false, 'order' => 32, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'adr_certified', 'visible' => false, 'order' => 33, 'group' => 'driving', 'scope' => 'company_user'],
+                            ['code' => 'vehicle_type', 'visible' => false, 'order' => 34, 'group' => 'driving', 'scope' => 'company_user'],
+                            // dispatch — hidden for owner
+                            ['code' => 'geographic_zone', 'visible' => false, 'order' => 40, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_schedule', 'visible' => false, 'order' => 41, 'group' => 'dispatch', 'scope' => 'company_user'],
+                            ['code' => 'work_mode', 'visible' => false, 'order' => 42, 'group' => 'dispatch', 'scope' => 'company_user'],
+                        ],
+                        'doc_config' => [
+                            ['code' => 'id_card', 'visible' => true, 'order' => 0],
+                            ['code' => 'driving_license', 'visible' => false, 'order' => 10],
+                            ['code' => 'medical_certificate', 'visible' => false, 'order' => 20],
+                        ],
+                    ],
                     'manager' => [
                         'name' => 'Manager',
                         'archetype' => 'management',
@@ -101,6 +154,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
                             'settings.company_info', 'settings.company_management',
+                            'documents.access', 'documents.management',
                             'roles.governance',
                             'jobdomain.info', 'jobdomain.management',
                             'shipments.operations', 'shipments.administration',
@@ -149,6 +203,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access', 'members.team_management',
                             'settings.company_info',
+                            'documents.access', 'documents.management',
                             'shipments.operations',
                             'shipments.delivery',
                             'support.access', // ADR-373: Dispatcher can view/create support tickets
@@ -194,6 +249,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access',
                             'settings.company_info',
+                            'documents.access',
                             'shipments.delivery',
                         ],
                         'fields' => [
@@ -238,6 +294,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
                             'settings.company_info',
+                            'documents.access', 'documents.management',
                             'roles.governance',
                             'jobdomain.info',
                             'shipments.operations',
