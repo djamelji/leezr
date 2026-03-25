@@ -1,19 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\Infrastructure\System\Http;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Serves public storage files via PHP when Apache symlinks are blocked.
+ * Serves public storage files via PHP (ADR-401).
  *
- * ISPConfig uses SymLinksIfOwnerMatch which prevents Apache from following
- * the storage symlink. This controller bypasses that by reading files
- * directly from the public disk.
- *
- * ADR-401: Only serves files from storage/app/public (the public disk).
- * Path traversal is prevented by Storage::disk() sandboxing.
+ * ISPConfig blocks /storage/ at Apache level (vhost config).
+ * Files are served via /media/{path} route instead, reading directly
+ * from the public disk. Path traversal is prevented by Storage::disk() sandboxing.
  */
 class StorageFileController extends Controller
 {

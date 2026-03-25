@@ -80,7 +80,7 @@ const previewPayload = computed(() => {
       font_faces: family?.fonts?.map(f => ({
         weight: f.weight,
         style: f.style,
-        url: `/storage/${f.file_path}`,
+        url: `/media/${f.file_path}`,
         format: f.format || 'woff2',
       })) || [],
     }
