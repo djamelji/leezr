@@ -4,6 +4,7 @@ import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import { useSessionGovernance } from '@/composables/useSessionGovernance'
 import { useSessionExpired } from '@/composables/useSessionExpired'
+import { usePublicTheme } from '@/composables/usePublicTheme'
 import { useAuthStore } from '@/core/stores/auth'
 import { useRuntimeStore, bootMachine } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
@@ -18,6 +19,9 @@ const configStore = useConfigStore()
 
 // Remove below composable usage if you are not using horizontal nav layout in your app
 switchToVerticalNavOnLtOverlayNavBreakpoint()
+
+// Ensure typography (Poppins) is applied on authenticated pages too
+usePublicTheme()
 
 const { layoutAttrs, injectSkinClasses } = useSkins()
 

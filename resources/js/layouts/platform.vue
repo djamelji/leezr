@@ -4,6 +4,7 @@ import { AppContentLayoutNav } from '@layouts/enums'
 import { switchToVerticalNavOnLtOverlayNavBreakpoint } from '@layouts/utils'
 import { useSessionGovernance } from '@/composables/useSessionGovernance'
 import { useSessionExpired } from '@/composables/useSessionExpired'
+import { usePublicTheme } from '@/composables/usePublicTheme'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useRuntimeStore, bootMachine } from '@/core/runtime/runtime'
 import AppShellGate from './components/AppShellGate.vue'
@@ -16,6 +17,9 @@ const PlatformLayoutWithHorizontalNav = defineAsyncComponent(() => import('./com
 const configStore = useConfigStore()
 
 switchToVerticalNavOnLtOverlayNavBreakpoint()
+
+// Ensure typography (Poppins) is applied on authenticated pages too
+usePublicTheme()
 
 const { layoutAttrs, injectSkinClasses } = useSkins()
 

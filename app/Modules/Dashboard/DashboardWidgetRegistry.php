@@ -123,17 +123,13 @@ final class DashboardWidgetRegistry
     /**
      * Filter a saved layout array, keeping only tiles whose widget key
      * exists in the registry AND whose module is currently enabled.
+     * After filtering, compacts the layout (gravity up) to eliminate gaps.
      *
-     * Uses isActiveForScope() which handles both admin-scoped and
-     * company-scoped modules correctly:
-     *   - admin-scoped → isEnabledGlobally()
-     *   - company-scoped → isActive($company, key)
-     *
-     * @return array Filtered layout tiles (re-indexed)
+     * @return array Filtered and compacted layout tiles
      */
     public static function filterLayout(array $tiles, ?Company $company = null): array
     {
-        return array_values(array_filter($tiles, function (array $tile) use ($company) {
+        $filtered = array_values(array_filter($tiles, function (array $tile) use ($company) {
             $widget = static::find($tile['key'] ?? '');
 
             if (!$widget) {
@@ -142,6 +138,40 @@ final class DashboardWidgetRegistry
 
             return ModuleGate::isActiveForScope($widget->module(), $company);
         }));
+
+        return static::compactLayout($filtered);
+    }
+
+    /**
+     * Gravity-up compaction: pull each tile up as far as possible
+     * without overlapping previously placed tiles.
+     */
+    private static function compactLayout(array $tiles): array
+    {
+        if (count($tiles) <= 1) {
+            return $tiles;
+        }
+
+        usort($tiles, fn ($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
+
+        $placed = [];
+
+        foreach ($tiles as &$tile) {
+            $minY = 0;
+
+            foreach ($placed as $p) {
+                $hOverlap = $tile['x'] < $p['x'] + $p['w'] && $tile['x'] + $tile['w'] > $p['x'];
+
+                if ($hOverlap) {
+                    $minY = max($minY, $p['y'] + $p['h']);
+                }
+            }
+
+            $tile['y'] = $minY;
+            $placed[] = $tile;
+        }
+
+        return array_values($tiles);
     }
 
     public static function clearCache(): void
