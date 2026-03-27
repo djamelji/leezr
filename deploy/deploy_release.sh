@@ -226,24 +226,22 @@ log "  Health check passed"
 # ─── [9/9] Atomic symlink switch ────────────────────────────────
 log "→ [9/9] Switch symlinks"
 
+# ISPConfig sets immutable flag (chattr +i) on the web root via cron.
+# Remove it before symlink operations, re-set after.
+sudo chattr -i "$APP_PATH" 2>/dev/null || true
+
 # current → release (atomic via mv -Tf = single rename() syscall)
-# Use sudo — ISPConfig web root is owned by root, deploy user may not have write access
-if ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp" 2>/dev/null; then
-  mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
-else
-  sudo ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp"
-  sudo mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
-fi
+ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp"
+mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
 log "  current → $(basename "$RELEASE_DIR")"
 
 # web → current/public (Apache/Nginx document root)
-if ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp" 2>/dev/null; then
-  mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
-else
-  sudo ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp"
-  sudo mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
-fi
+ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp"
+mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
 log "  web → current/public"
+
+# Re-set immutable flag (ISPConfig cron will do it anyway)
+sudo chattr +i "$APP_PATH" 2>/dev/null || true
 
 # Reload PHP-FPM (clear OPcache + realpath cache)
 # Detect PHP version from the binary used by the app, then reload matching FPM
