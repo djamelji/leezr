@@ -227,15 +227,16 @@ mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
 log "  web → current/public"
 
 # Reload PHP-FPM (clear OPcache + realpath cache)
-# Auto-detect PHP-FPM service name (supports 8.3, 8.4, etc.)
+# Detect PHP version from the binary used by the app, then reload matching FPM
 if command -v systemctl &> /dev/null; then
-  FPM_SERVICE=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oP 'php\d+\.\d+-fpm\.service' | head -1)
-  if [ -n "$FPM_SERVICE" ]; then
-    sudo systemctl reload "$FPM_SERVICE" \
+  APP_PHP_VER=$($PHP_BIN -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null)
+  if [ -n "$APP_PHP_VER" ]; then
+    FPM_SERVICE="php${APP_PHP_VER}-fpm"
+    sudo systemctl reload "$FPM_SERVICE" 2>/dev/null \
       && log "  PHP-FPM reloaded ($FPM_SERVICE)" \
       || log "  WARN: PHP-FPM reload failed for $FPM_SERVICE"
   else
-    log "  WARN: No running PHP-FPM service found"
+    log "  WARN: Could not detect PHP version from $PHP_BIN"
   fi
 fi
 
