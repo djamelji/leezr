@@ -21,18 +21,22 @@ class PlatformSetting extends Model
 
     /**
      * Singleton access — always returns the single row.
-     * Creates it on first call. Fails fast if >1 row detected.
+     * Creates it on first call. Auto-heals if >1 row detected (seeder race).
      */
     public static function instance(): static
     {
-        $count = static::query()->count();
+        $first = static::query()->orderBy('id')->first();
 
-        if ($count > 1) {
-            throw new \RuntimeException(
-                "PlatformSetting singleton violated: {$count} rows found. Expected exactly 1."
-            );
+        if (! $first) {
+            return static::create(['theme' => null]);
         }
 
-        return static::query()->first() ?? static::create(['theme' => null]);
+        // Auto-heal: keep first row, delete duplicates (seeder race condition)
+        $count = static::query()->count();
+        if ($count > 1) {
+            static::query()->where('id', '>', $first->id)->delete();
+        }
+
+        return $first;
     }
 }
