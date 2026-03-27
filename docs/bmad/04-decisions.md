@@ -14165,23 +14165,29 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
-### ADR-414 — Fix ImageMagick v6/v7 compatibilité VPS (2026-03-26)
+### ADR-414 — Fix deploy staging : ImageMagick v6, PHP-FPM reload, Ollama auto-install (2026-03-26)
 
-**Contexte** : Déploiement documents v2 sur staging (Ubuntu VPS). L'erreur `documents.mergeFailed` (422) survient car `ImageProcessor::findMagick()` ne cherche que le binaire `magick` (ImageMagick 7) alors que le VPS a ImageMagick 6 (`convert`). De plus, la policy.xml d'Ubuntu bloque les opérations PDF par défaut.
+**Contexte** : Déploiement documents v2 sur staging (Ubuntu VPS). Trois problèmes identifiés :
+1. `documents.mergeFailed` (422) — `ImageProcessor::findMagick()` ne trouvait que `magick` (v7), pas `convert` (v6)
+2. 403 sur `/api/company/jobdomain` — le deploy script essayait de recharger `php8.4-fpm` alors que le VPS a PHP 8.3 → FPM gardait l'opcache du précédent deploy → modules non découverts
+3. Ollama "down" — Ollama n'était pas installé sur le VPS
 
 **Décisions** :
-1. `findMagick()` cherche d'abord `magick` (v7) puis `convert` (v6) en fallback — les deux sont interchangeables pour les opérations convert
-2. `deploy_release.sh` vérifie `magick` OU `convert` avant d'installer imagemagick
-3. Le deploy corrige automatiquement la policy.xml d'ImageMagick pour autoriser les opérations PDF (nécessaire pour la conversion PDF→images)
+1. `findMagick()` cherche `magick` (v7) puis `convert` (v6) en fallback
+2. Deploy script détecte automatiquement le service PHP-FPM en cours (`php8.3-fpm`, `php8.4-fpm`, etc.)
+3. Deploy script installe Ollama automatiquement + lance le service + pull `moondream` en background
+4. Fix policy.xml ImageMagick pour PDF
+5. Ajout automatique de `AI_DRIVER=ollama` dans `.env` staging si absent
 
 **Conséquences** :
-- Compatible macOS (Homebrew → magick v7) et Ubuntu/Debian (apt → convert v6)
-- Plus besoin d'installer ImageMagick 7 manuellement sur le VPS
-- La conversion PDF→images fonctionne sans restriction de policy
+- Compatible macOS (magick v7) et Ubuntu/Debian (convert v6)
+- PHP-FPM se recharge correctement quelle que soit la version
+- Ollama opérationnel dès le premier deploy (model ready en ~1 min)
 
 **Fichiers** :
 - `app/Core/Documents/ImageProcessor.php` — EDIT (findMagick v6+v7)
-- `deploy/deploy_release.sh` — EDIT (check convert, fix policy.xml)
+- `deploy/deploy_release.sh` — EDIT (PHP-FPM auto-detect, Ollama install, IM policy fix, AI .env)
+- `.env.example` — EDIT (moondream par défaut)
 
 ---
 

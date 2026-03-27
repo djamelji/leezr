@@ -73,6 +73,28 @@ for POLICY_FILE in /etc/ImageMagick-6/policy.xml /etc/ImageMagick-7/policy.xml; 
   fi
 done
 
+# ADR-414: Install Ollama for AI document analysis (if not present)
+if ! command -v ollama &>/dev/null; then
+  log "  Installing Ollama..."
+  curl -fsSL https://ollama.com/install.sh | sh 2>&1 | tee -a "$LOG_FILE" || log "  WARNING: Ollama install failed (non-fatal)"
+fi
+# Ensure Ollama service is running and pull default model
+if command -v ollama &>/dev/null && command -v systemctl &>/dev/null; then
+  if ! systemctl is-active --quiet ollama 2>/dev/null; then
+    sudo systemctl enable ollama 2>/dev/null || true
+    sudo systemctl start ollama 2>/dev/null || true
+    log "  Ollama service started"
+    sleep 3  # wait for service to be ready
+  fi
+  # Pull moondream model in background (small vision model, ~1.7GB)
+  if ! ollama list 2>/dev/null | grep -q "moondream"; then
+    log "  Pulling moondream model (background)..."
+    nohup ollama pull moondream >> "$LOG_FILE" 2>&1 &
+  else
+    log "  Ollama moondream model already present"
+  fi
+fi
+
 # ADR-410: Install Python OpenCV dependencies in venv for document detection
 PYTHON_SCRIPTS="$APP_PATH/current/scripts/python"
 if [ -f "$PYTHON_SCRIPTS/requirements.txt" ]; then
@@ -144,6 +166,20 @@ else
   log "  WARN: .app-meta not found — skipping metadata injection"
 fi
 
+# Ensure AI_DRIVER is set in shared .env (default to ollama if missing)
+if ! grep -q '^AI_DRIVER=' "$SHARED_DIR/.env" 2>/dev/null; then
+  log "  Adding AI_DRIVER=ollama to .env"
+  cat >> "$SHARED_DIR/.env" <<'AIEOF'
+
+# AI — Ollama (ADR-414)
+AI_DRIVER=ollama
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=moondream
+OLLAMA_VISION_MODEL=moondream
+OLLAMA_TIMEOUT=120
+AIEOF
+fi
+
 # ─── [5/9] Fresh database (no real clients yet) ──────────────────
 log "→ [5/9] migrate:fresh --seed (dev mode — no real clients)"
 cd "$RELEASE_DIR"
@@ -191,10 +227,16 @@ mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
 log "  web → current/public"
 
 # Reload PHP-FPM (clear OPcache + realpath cache)
+# Auto-detect PHP-FPM service name (supports 8.3, 8.4, etc.)
 if command -v systemctl &> /dev/null; then
-  sudo systemctl reload php8.4-fpm 2>/dev/null \
-    && log "  PHP-FPM reloaded" \
-    || log "  WARN: PHP-FPM reload skipped (no sudo or php8.4-fpm not found)"
+  FPM_SERVICE=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oP 'php\d+\.\d+-fpm\.service' | head -1)
+  if [ -n "$FPM_SERVICE" ]; then
+    sudo systemctl reload "$FPM_SERVICE" \
+      && log "  PHP-FPM reloaded ($FPM_SERVICE)" \
+      || log "  WARN: PHP-FPM reload failed for $FPM_SERVICE"
+  else
+    log "  WARN: No running PHP-FPM service found"
+  fi
 fi
 
 # ─── Cleanup old releases (keep 5) ──────────────────────────────
