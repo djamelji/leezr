@@ -206,18 +206,10 @@ class ImageProcessor
 
     public function findTesseract(): ?string
     {
-        foreach (['/opt/homebrew/bin/tesseract', '/usr/local/bin/tesseract', '/usr/bin/tesseract'] as $candidate) {
-            if (file_exists($candidate)) {
-                return $candidate;
-            }
-        }
-
+        // Use command -v only — file_exists() fails under open_basedir (ISPConfig)
         $check = Process::run('command -v tesseract');
-        if ($check->successful()) {
-            return trim($check->output());
-        }
 
-        return null;
+        return $check->successful() ? trim($check->output()) : null;
     }
 
     /**
@@ -270,22 +262,8 @@ class ImageProcessor
 
     public function findMagick(): ?string
     {
-        // ImageMagick 7 uses unified "magick" binary, v6 uses "convert"
-        $candidates = [
-            '/opt/homebrew/bin/magick',
-            '/usr/local/bin/magick',
-            '/usr/bin/magick',
-            '/usr/local/bin/convert',
-            '/usr/bin/convert',
-        ];
-
-        foreach ($candidates as $path) {
-            if (file_exists($path)) {
-                return $path;
-            }
-        }
-
-        // Fallback: search PATH for magick (v7) then convert (v6)
+        // Use command -v only — file_exists() fails under open_basedir (ISPConfig)
+        // Try magick (v7 unified binary) first, then convert (v6)
         foreach (['magick', 'convert'] as $bin) {
             $check = Process::run("command -v $bin");
             if ($check->successful()) {
@@ -298,24 +276,16 @@ class ImageProcessor
 
     public function findPython(): ?string
     {
-        // Prefer the project venv (has opencv installed)
+        // Prefer the project venv (has opencv installed) — safe path under open_basedir
         $venvPython = base_path('scripts/python/.venv/bin/python3');
-        if (file_exists($venvPython)) {
+        if (@file_exists($venvPython)) {
             return $venvPython;
         }
 
-        foreach (['/opt/homebrew/bin/python3', '/usr/local/bin/python3', '/usr/bin/python3'] as $candidate) {
-            if (file_exists($candidate)) {
-                return $candidate;
-            }
-        }
-
+        // Use command -v only — file_exists() fails under open_basedir (ISPConfig)
         $check = Process::run('command -v python3');
-        if ($check->successful()) {
-            return trim($check->output());
-        }
 
-        return null;
+        return $check->successful() ? trim($check->output()) : null;
     }
 
     /**

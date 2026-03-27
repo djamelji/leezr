@@ -196,6 +196,15 @@ $PHP_BIN artisan route:clear  2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan view:clear   2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan optimize     2>&1 | tee -a "$LOG_FILE"
 
+# Fix bootstrap/cache permissions — deploy runs as root but PHP-FPM runs as web user
+# ISPConfig convention: web user owns the vhost dir (e.g. web3:client1)
+VHOST_OWNER=$(stat -c '%U:%G' "$APP_PATH" 2>/dev/null || echo "")
+if [ -n "$VHOST_OWNER" ] && [ "$VHOST_OWNER" != "root:root" ]; then
+  chown -R "$VHOST_OWNER" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+  log "  bootstrap/cache ownership → $VHOST_OWNER"
+fi
+chmod -R ug+w "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+
 # ─── [7.5] Storage — NO symlink (ADR-401) ──────────────────────────
 log "→ [7.5] Storage (PHP route, no symlink)"
 # ISPConfig uses SymLinksIfOwnerMatch which blocks Apache from following

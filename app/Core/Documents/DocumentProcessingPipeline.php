@@ -279,12 +279,7 @@ class DocumentProcessingPipeline
             return $path;
         }
 
-        foreach (['/opt/homebrew/bin/tesseract', '/usr/local/bin/tesseract', '/usr/bin/tesseract'] as $candidate) {
-            if (file_exists($candidate)) {
-                return $path = $candidate;
-            }
-        }
-
+        // Use command -v only — file_exists() fails under open_basedir (ISPConfig)
         exec('command -v tesseract 2>/dev/null', $output, $code);
 
         return $path = ($code === 0 ? trim($output[0]) : null);

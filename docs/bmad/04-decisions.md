@@ -14191,4 +14191,27 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-415 — Fix open_basedir + bootstrap/cache permissions (ISPConfig) (2026-03-27)
+
+**Contexte** : Grâce à l'accès SSH direct au VPS staging, deux causes racines identifiées :
+1. `open_basedir restriction` — ISPConfig restreint `file_exists()` aux chemins autorisés. Les fonctions `findMagick()`, `findTesseract()`, `findPython()` testaient des chemins système (`/opt/homebrew/`, `/usr/local/bin/`) avec `file_exists()` → crash immédiat.
+2. `bootstrap/cache` owned by `root:root` — Le deploy script tourne en root, `php artisan optimize` crée les fichiers cache en `root:root`. PHP-FPM (user `web3:client1`) ne peut pas les réécrire.
+
+**Décisions** :
+1. Toutes les fonctions `find*()` utilisent exclusivement `Process::run('command -v ...')` au lieu de `file_exists()` sur des chemins système hors open_basedir
+2. Deploy script : après `optimize`, `chown` les fichiers bootstrap/cache vers le user du vhost ISPConfig
+3. Diagnostic logging conservé pour ModuleGate et EnsureCompanyAccess (debug seulement)
+
+**Conséquences** :
+- Compatible ISPConfig open_basedir (chemins restreints au vhost)
+- bootstrap/cache writable par PHP-FPM après chaque deploy
+- Document upload fonctionne (ImageMagick trouvé via PATH)
+
+**Fichiers** :
+- `app/Core/Documents/ImageProcessor.php` — EDIT (findMagick, findTesseract, findPython → command -v only)
+- `app/Core/Documents/DocumentProcessingPipeline.php` — EDIT (findTesseract → command -v only)
+- `deploy/deploy_release.sh` — EDIT (chown bootstrap/cache après optimize)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
