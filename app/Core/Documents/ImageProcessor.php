@@ -142,66 +142,72 @@ class ImageProcessor
      */
     public function detectOrientation(string $imagePath): int
     {
-        $tesseract = $this->findTesseract();
-        $magick = $this->findMagick();
+        try {
+            $tesseract = $this->findTesseract();
+            $magick = $this->findMagick();
 
-        if (! $tesseract || ! $magick) {
-            return 0;
-        }
+            if (! $tesseract || ! $magick) {
+                return 0;
+            }
 
-        $bestRotation = 0;
-        $bestScore = 0;
+            $bestRotation = 0;
+            $bestScore = 0;
 
-        foreach ([0, 90, 180, 270] as $angle) {
-            $rotatedPath = $imagePath;
+            foreach ([0, 90, 180, 270] as $angle) {
+                $rotatedPath = $imagePath;
 
-            if ($angle > 0) {
-                $rotatedPath = sys_get_temp_dir().'/'.uniqid("orient_{$angle}_").'.jpg';
-                $result = Process::timeout(10)->env($this->shellEnv())->run([
-                    $magick, $imagePath, '-rotate', (string) $angle, $rotatedPath,
+                if ($angle > 0) {
+                    $rotatedPath = sys_get_temp_dir().'/'.uniqid("orient_{$angle}_").'.jpg';
+                    $result = Process::timeout(10)->env($this->shellEnv())->run([
+                        $magick, $imagePath, '-rotate', (string) $angle, $rotatedPath,
+                    ]);
+
+                    if ($result->failed()) {
+                        @unlink($rotatedPath);
+
+                        continue;
+                    }
+                }
+
+                $ocrResult = Process::timeout(15)->env($this->shellEnv())->run([
+                    $tesseract, $rotatedPath, 'stdout', '-l', 'fra+eng',
                 ]);
 
-                if ($result->failed()) {
+                if ($angle > 0) {
                     @unlink($rotatedPath);
+                }
 
+                if ($ocrResult->failed()) {
                     continue;
+                }
+
+                $text = $ocrResult->output();
+                $score = preg_match_all('/[a-zA-Z0-9àâäéèêëîïôùûüçÀÂÄÉÈÊËÎÏÔÙÛÜÇ]/', $text);
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestRotation = $angle;
                 }
             }
 
-            // Quick OCR (timeout 5s) — count alphanumeric chars as score
-            $ocrResult = Process::timeout(8)->env($this->shellEnv())->run([
-                $tesseract, $rotatedPath, 'stdout', '-l', 'fra+eng',
+            $minThreshold = 10;
+            if ($bestScore < $minThreshold) {
+                return 0;
+            }
+
+            Log::info('ImageProcessor: orientation detected', [
+                'rotation' => $bestRotation,
+                'score' => $bestScore,
             ]);
 
-            if ($angle > 0) {
-                @unlink($rotatedPath);
-            }
+            return $bestRotation;
+        } catch (\Throwable $e) {
+            Log::warning('ImageProcessor: orientation detection failed, skipping', [
+                'error' => $e->getMessage(),
+            ]);
 
-            if ($ocrResult->failed()) {
-                continue;
-            }
-
-            $text = $ocrResult->output();
-            $score = preg_match_all('/[a-zA-Z0-9àâäéèêëîïôùûüçÀÂÄÉÈÊËÎÏÔÙÛÜÇ]/', $text);
-
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $bestRotation = $angle;
-            }
-        }
-
-        // Only rotate if we got meaningful text and it's not the original orientation
-        $minThreshold = 10;
-        if ($bestScore < $minThreshold) {
             return 0;
         }
-
-        Log::info('ImageProcessor: orientation detected', [
-            'rotation' => $bestRotation,
-            'score' => $bestScore,
-        ]);
-
-        return $bestRotation;
     }
 
     public function findTesseract(): ?string

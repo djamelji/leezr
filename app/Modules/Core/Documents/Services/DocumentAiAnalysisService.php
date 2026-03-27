@@ -136,21 +136,28 @@ class DocumentAiAnalysisService
     private function buildVisionPrompt(?DocumentType $expectedType): string
     {
         $base = 'Analyze this document image. Return ONLY a valid JSON object (no extra text) with these fields:
-- "document_type": the detected type (e.g. "cni", "passport", "driving_license", "kbis", "rib", "attestation", "invoice", "other")
-- "fields": extracted information: "last_name", "first_name", "birth_date", "document_number", "expiry_date", "issuing_authority", "address" (use null for unreadable fields)
+- "document_type": the detected type. Use EXACTLY one of: "cni" (national ID card), "passport", "driving_license", "residence_permit", "kbis" (company registration), "rib" (bank details), "attestation", "invoice", "payslip", "other"
+- "fields": extracted information: "last_name", "first_name", "birth_date", "document_number", "expiry_date", "issuing_authority", "address" (use null for fields you cannot read clearly)
 - "expiry_date": expiration date in YYYY-MM-DD format if visible, or null
-- "confidence": your confidence from 0.0 to 1.0 — be honest and strict
+- "confidence": your confidence from 0.0 to 1.0
 
-CONFIDENCE RULES:
-- 0.9-1.0: Document clearly matches, all fields legible
-- 0.6-0.8: Document matches but some fields unclear
-- 0.3-0.5: Uncertain, low quality or partial document
-- 0.0-0.2: Wrong document type or unreadable';
+DOCUMENT IDENTIFICATION HINTS (French documents):
+- "cni" (Carte Nationale d\'Identité): says "CARTE NATIONALE D\'IDENTITE" or "REPUBLIQUE FRANCAISE", credit-card size, blue/white/red
+- "driving_license": says "PERMIS DE CONDUIRE", pink/EU format, has vehicle categories (A, B, C, D, E)
+- "passport": booklet format, says "PASSEPORT", has MRZ lines at bottom
+- "residence_permit": says "TITRE DE SEJOUR" or "CARTE DE RESIDENT"
+- A CNI is NOT a driving license. They are different documents even though both have a photo and a name.
+
+CONFIDENCE RULES (be strict):
+- 0.9-1.0: Document type is certain AND all key fields are legible
+- 0.6-0.8: Document type is certain but some fields are unclear or partially visible
+- 0.3-0.5: Document type is uncertain or image quality is poor
+- 0.0-0.2: Wrong document type, unreadable, or clearly not the expected document';
 
         if ($expectedType) {
-            $base .= "\n\nIMPORTANT: This document SHOULD be a \"{$expectedType->label}\" (code: {$expectedType->code}).";
-            $base .= "\nIf this document is clearly NOT a {$expectedType->label} (e.g. it's an invoice, a receipt, or a different document type), set confidence to 0.1 or lower.";
-            $base .= "\nReturn the actual detected document_type regardless of what was expected.";
+            $base .= "\n\nEXPECTED TYPE: \"{$expectedType->label}\" (code: {$expectedType->code}).";
+            $base .= "\nIf this document is NOT a {$expectedType->label}, return the REAL detected type and set confidence below 0.2.";
+            $base .= "\nDo NOT force-match: a CNI is not a driving_license, an invoice is not an ID card.";
         }
 
         return $base;
