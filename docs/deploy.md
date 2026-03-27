@@ -39,6 +39,21 @@ VPS (deploy_release.sh)
 | `dev` | staging | `/var/www/clients/client1/web3` | https://dev.leezr.com |
 | `main` | production | `/var/www/clients/client1/web2` | https://leezr.com |
 
+### Accès SSH (debug / maintenance)
+
+| Env | IP | User | Web user | PHP-FPM |
+|-----|------|------|----------|---------|
+| staging | `213.32.20.37` | `jliouidevleezr` → `web3` | `web3:client1` | `php8.4-fpm` |
+| production | `213.32.20.37` | `prodleezr` → `web2` | `web2:client1` | `php8.4-fpm` |
+
+> **Note** : ces users ISPConfig n'ont PAS sudo. Le deploy GitHub Actions utilise une clé SSH root (secret `VPS_SSH_KEY`).
+
+### ISPConfig — contraintes de sécurité (ADR-415)
+
+- **open_basedir** : PHP ne peut accéder qu'aux chemins du vhost. Ne jamais utiliser `file_exists()` sur `/usr/bin/`, `/opt/homebrew/`, etc. Utiliser `Process::run('command -v ...')`.
+- **immutable flag** : ISPConfig cron met `chattr +i` sur le répertoire web root. Le deploy doit faire `sudo chattr -i` avant le switch symlink.
+- **SymLinksIfOwnerMatch** : Apache ne suit les symlinks que si le owner du lien correspond au owner du fichier. Les fichiers storage sont servis via PHP route (ADR-401).
+
 ---
 
 ## Structure VPS
