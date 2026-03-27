@@ -106,6 +106,7 @@ class DocumentResolverService
                 'uploaded_at' => $upload->created_at->toIso8601String(),
                 'ocr_text' => $upload->ocr_text,
                 'ai_analysis' => $upload->ai_analysis,
+                'ai_insights' => $upload->ai_insights,
             ] : null;
 
             $result[] = [

@@ -13,6 +13,14 @@ class AiGatewayManagerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Clear seeded AI modules so tests start from clean state
+        PlatformAiModule::query()->delete();
+    }
+
     public function test_default_driver_is_null_when_no_config(): void
     {
         $manager = app(AiGatewayManager::class);

@@ -14317,4 +14317,30 @@ Le RBAC backend est complet (NavBuilder 11 steps, middleware `company.access`), 
 
 ---
 
+### ADR-419 — Fix AI pipeline : seed PlatformAiModule + retourner ai_insights (2026-03-27)
+
+**Contexte :**
+L'IA est morte côté company sur staging/prod : aucune analyse, aucun score, aucun rejet de type mismatch. Deux causes racines identifiées.
+
+**Décisions :**
+1. **Seed PlatformAiModule via migration** : La table `platform_ai_modules` était vide sur staging (le `DevSeeder` n'est lancé que manuellement). Sans `PlatformAiModule::active()`, `AiPolicyResolver` retourne `disabled` → `ProcessDocumentAiJob` fait `return` immédiatement. Migration `2026_03_27_100001_seed_platform_ai_modules` crée les records Ollama (actif) + Anthropic (inactif) + routing, seulement si table vide.
+2. **Retourner `ai_insights` dans les ReadModels** : Le champ `ai_insights` est bien stocké en BD par le job AI, mais les 3 ReadModels qui sérialisent les documents ne l'incluaient pas dans la réponse API. Ajouté dans `DocumentResolverService`, `CompanyDocumentReadModel`, `DocumentRequestQueueReadModel`.
+3. **Fix `recent_requests` filtré par période** : `PlatformAiController::usage()` utilisait `AiRequestLog::latest()` au lieu de `(clone $query)->latest()` pour les requêtes récentes → incohérence avec les KPI filtrés.
+4. **Fix tests `AiGatewayManagerTest`** : La migration seed les modules AI, les tests attendaient une table vide → ajout `setUp()` qui nettoie la table.
+
+**Conséquences :**
+- Le deploy lance la migration qui seed les modules AI → `AiPolicyResolver` retourne `enabled` → les jobs AI s'exécutent
+- Les insights (type mismatch, expiry détectée, etc.) sont maintenant visibles côté frontend
+- Le dashboard platform AI affichera les stats dès qu'Ollama traitera des documents
+
+**Fichiers :**
+- `database/migrations/2026_03_27_100001_seed_platform_ai_modules.php` — NOUVEAU
+- `app/Core/Documents/DocumentResolverService.php` — ai_insights ajouté
+- `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ai_insights ajouté
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — ai_insights ajouté
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` — recent_requests filtré
+- `tests/Feature/AiGatewayManagerTest.php` — setUp() nettoie seeded data
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -57,6 +57,7 @@ class CompanyDocumentReadModel
                 'expires_at' => $upload->expires_at?->toIso8601String(),
                 'ocr_text' => $upload->ocr_text,
                 'ai_analysis' => $upload->ai_analysis,
+                'ai_insights' => $upload->ai_insights,
             ] : null;
 
             $doc['lifecycle_status'] = DocumentLifecycleService::computeFromDate(

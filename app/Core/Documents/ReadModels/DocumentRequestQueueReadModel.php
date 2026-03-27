@@ -89,6 +89,7 @@ class DocumentRequestQueueReadModel
                     'expires_at' => $memberDoc->expires_at?->toIso8601String(),
                     'ocr_text' => $memberDoc->ocr_text,
                     'ai_analysis' => $memberDoc->ai_analysis,
+                    'ai_insights' => $memberDoc->ai_insights,
                 ] : null,
                 'requested_at' => $req->requested_at?->toISOString(),
                 'submitted_at' => $req->submitted_at?->toISOString(),

@@ -60,7 +60,7 @@ class PlatformAiController
             ->groupBy('module_key')
             ->pluck('total', 'module_key');
 
-        $recentRequests = AiRequestLog::latest()
+        $recentRequests = (clone $query)->latest()
             ->limit(50)
             ->get()
             ->map(fn (AiRequestLog $log) => [
