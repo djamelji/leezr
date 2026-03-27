@@ -14242,6 +14242,9 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 **Fichiers** :
 - `app/Jobs/Documents/ProcessDocumentAiJob.php` — ImageProcessor au lieu de pdftoppm + safety net + cleanup
 - `deploy/deploy_release.sh` — poppler-utils + systemd queue worker + restart après deploy
+- `app/Core/Ai/Adapters/OllamaAiAdapter.php` — extraire la vraie confidence du modèle (plus hardcodée 0.8)
+- `app/Modules/Core/Documents/Services/DocumentAiAnalysisService.php` — prompt renforcé (pénalise type mismatch)
+- `app/Core/Ai/AiPolicyResolver.php` — `autoRejectTypeMismatch` par défaut `true`
 
 ---
 

@@ -176,10 +176,18 @@ class OllamaAiAdapter implements AiProviderAdapter
                     // Try to extract JSON from response
                     $structuredData = $this->parseJsonFromText($text);
 
+                    // Extract confidence from model's JSON response (ADR-416)
+                    $confidence = 0.5;
+                    if ($structuredData && isset($structuredData['confidence'])) {
+                        $confidence = max(0, min(1, (float) $structuredData['confidence']));
+                    } elseif ($structuredData) {
+                        $confidence = 0.6;
+                    }
+
                     $aiResponse = new AiResponse(
                         text: $text,
                         structuredData: $structuredData,
-                        confidence: $structuredData ? 0.8 : 0.5,
+                        confidence: $confidence,
                         tokensUsed: ($data['prompt_eval_count'] ?? 0) + ($data['eval_count'] ?? 0),
                         latencyMs: $latencyMs,
                         model: $model,

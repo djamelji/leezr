@@ -40,7 +40,7 @@ class AiPolicyResolver
             analysisEnabled: (bool) ($features['ai_analysis_enabled'] ?? true),
             ocrEnabled: (bool) ($features['ocr_enabled'] ?? true),
             autoFillExpiry: (bool) ($features['auto_fill_expiry'] ?? true),
-            autoRejectTypeMismatch: (bool) ($features['auto_reject_type_mismatch'] ?? false),
+            autoRejectTypeMismatch: (bool) ($features['auto_reject_type_mismatch'] ?? true),
             notifyExpiryDetected: (bool) ($features['notify_expiry_detected'] ?? true),
             notifyValidationErrors: (bool) ($features['notify_validation_errors'] ?? true),
             minConfidenceThreshold: ((int) ($features['min_confidence_threshold'] ?? 60)) / 100,

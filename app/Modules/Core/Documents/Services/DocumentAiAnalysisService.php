@@ -135,15 +135,22 @@ class DocumentAiAnalysisService
      */
     private function buildVisionPrompt(?DocumentType $expectedType): string
     {
-        $base = 'Analyze this document image. Return a JSON object with these fields:
-- "document_type": the type of document (e.g. "cni", "passport", "driving_license", "kbis", "rib", "attestation", "other")
-- "fields": an object containing extracted information such as "last_name", "first_name", "birth_date", "document_number", "expiry_date", "issuing_authority", "address"
-- "expiry_date": the expiration date in YYYY-MM-DD format if visible, or null
-- "confidence": your confidence score from 0.0 to 1.0';
+        $base = 'Analyze this document image. Return ONLY a valid JSON object (no extra text) with these fields:
+- "document_type": the detected type (e.g. "cni", "passport", "driving_license", "kbis", "rib", "attestation", "invoice", "other")
+- "fields": extracted information: "last_name", "first_name", "birth_date", "document_number", "expiry_date", "issuing_authority", "address" (use null for unreadable fields)
+- "expiry_date": expiration date in YYYY-MM-DD format if visible, or null
+- "confidence": your confidence from 0.0 to 1.0 — be honest and strict
+
+CONFIDENCE RULES:
+- 0.9-1.0: Document clearly matches, all fields legible
+- 0.6-0.8: Document matches but some fields unclear
+- 0.3-0.5: Uncertain, low quality or partial document
+- 0.0-0.2: Wrong document type or unreadable';
 
         if ($expectedType) {
-            $base .= "\n\nExpected document type: {$expectedType->label} ({$expectedType->code})";
-            $base .= "\nPlease verify if this document matches the expected type.";
+            $base .= "\n\nIMPORTANT: This document SHOULD be a \"{$expectedType->label}\" (code: {$expectedType->code}).";
+            $base .= "\nIf this document is clearly NOT a {$expectedType->label} (e.g. it's an invoice, a receipt, or a different document type), set confidence to 0.1 or lower.";
+            $base .= "\nReturn the actual detected document_type regardless of what was expected.";
         }
 
         return $base;
