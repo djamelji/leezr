@@ -89,8 +89,6 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
       y += dh
     }
 
-    console.warn('[SmartDefault] Built layout:', JSON.stringify(layout.map(t => ({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h }))))
-
     engine._layout.value = layout
     engine._dirty.value = true
   }
@@ -119,8 +117,6 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
         }
       }
     }
-
-    console.warn('[Dashboard] Layout before resolve:', JSON.stringify(engine._layout.value.map(t => ({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h }))))
 
     await engine.resolveWidgets()
   }
