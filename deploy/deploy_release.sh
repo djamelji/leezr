@@ -196,14 +196,15 @@ $PHP_BIN artisan route:clear  2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan view:clear   2>&1 | tee -a "$LOG_FILE"
 $PHP_BIN artisan optimize     2>&1 | tee -a "$LOG_FILE"
 
-# Fix bootstrap/cache permissions — deploy runs as root but PHP-FPM runs as web user
-# ISPConfig convention: web user owns the vhost dir (e.g. web3:client1)
-VHOST_OWNER=$(stat -c '%U:%G' "$APP_PATH" 2>/dev/null || echo "")
+# Fix bootstrap/cache permissions — optimize creates files as deploy user
+# but PHP-FPM runs as ISPConfig web user (e.g. web3:client1)
+# Detect web user from releases/ dir (owned by ISPConfig web user)
+VHOST_OWNER=$(stat -c '%U:%G' "$RELEASES_DIR" 2>/dev/null || echo "")
 if [ -n "$VHOST_OWNER" ] && [ "$VHOST_OWNER" != "root:root" ]; then
-  chown -R "$VHOST_OWNER" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+  sudo chown -R "$VHOST_OWNER" "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
   log "  bootstrap/cache ownership → $VHOST_OWNER"
 fi
-chmod -R ug+w "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
+sudo chmod -R a+rw "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
 
 # ─── [7.5] Storage — NO symlink (ADR-401) ──────────────────────────
 log "→ [7.5] Storage (PHP route, no symlink)"
@@ -226,13 +227,22 @@ log "  Health check passed"
 log "→ [9/9] Switch symlinks"
 
 # current → release (atomic via mv -Tf = single rename() syscall)
-ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp"
-mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
+# Use sudo — ISPConfig web root is owned by root, deploy user may not have write access
+if ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp" 2>/dev/null; then
+  mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
+else
+  sudo ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.tmp"
+  sudo mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
+fi
 log "  current → $(basename "$RELEASE_DIR")"
 
 # web → current/public (Apache/Nginx document root)
-ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp"
-mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
+if ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp" 2>/dev/null; then
+  mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
+else
+  sudo ln -sfn "$CURRENT_LINK/public" "${WEB_LINK}.tmp"
+  sudo mv -Tf "${WEB_LINK}.tmp" "$WEB_LINK"
+fi
 log "  web → current/public"
 
 # Reload PHP-FPM (clear OPcache + realpath cache)
