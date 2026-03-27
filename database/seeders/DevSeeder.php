@@ -114,6 +114,16 @@ class DevSeeder extends Seeder
             ],
         );
 
+        // ─── AI Capability Routing — assign Ollama to all capabilities ──
+        $settings = PlatformSetting::instance();
+        $ai = $settings->ai ?? [];
+        $ai['routing'] = [
+            'vision' => 'ollama',
+            'completion' => 'ollama',
+            'text_extraction' => 'ollama',
+        ];
+        $settings->update(['ai' => $ai]);
+
         // ─── Company scope — demo company + users ────────────────
         $owner = User::updateOrCreate(
             ['email' => 'owner@leezr.test'],

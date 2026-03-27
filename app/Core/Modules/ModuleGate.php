@@ -3,6 +3,7 @@
 namespace App\Core\Modules;
 
 use App\Core\Models\Company;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Central authority for module activation checks.
@@ -57,6 +58,8 @@ class ModuleGate
         $manifest = ModuleRegistry::definitions()[$moduleKey] ?? null;
 
         if (!$manifest) {
+            Log::warning("ModuleGate: manifest NOT FOUND for '{$moduleKey}'. Available: ".implode(', ', array_keys(ModuleRegistry::definitions())));
+
             return false;
         }
 
@@ -64,6 +67,11 @@ class ModuleGate
         $platformModule = PlatformModule::where('key', $moduleKey)->first();
 
         if (!$platformModule || !$platformModule->is_enabled_globally) {
+            Log::warning("ModuleGate: PlatformModule check failed for '{$moduleKey}'", [
+                'exists' => (bool) $platformModule,
+                'is_enabled_globally' => $platformModule?->is_enabled_globally,
+            ]);
+
             return false;
         }
 

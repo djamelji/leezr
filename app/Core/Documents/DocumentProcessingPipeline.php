@@ -114,11 +114,17 @@ class DocumentProcessingPipeline
         } catch (\Throwable $e) {
             Log::error('DocumentProcessingPipeline: processing failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'baseName' => $baseName,
+                'magick' => $this->imageProcessor->findMagick(),
             ]);
 
+            $detail = app()->isLocal() || config('app.debug')
+                ? ' ('.$e->getMessage().')'
+                : '';
+
             throw ValidationException::withMessages([
-                'files' => [__('documents.mergeFailed')],
+                'files' => [__('documents.mergeFailed').$detail],
             ]);
         }
     }

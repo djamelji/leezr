@@ -51,13 +51,21 @@ class EnsureCompanyAccess
         if (!CompanyAccess::can($user, $company, $ability, $context)) {
             $message = match ($ability) {
                 'access-surface' => 'Access restricted to management roles.',
-                'use-module' => 'Module is not active for this company.',
+                'use-module' => "Module '{$key}' is not active for this company.",
                 'use-permission' => "Permission required: {$key}",
                 'manage-structure' => 'Administrative role required.',
                 default => 'Access denied.',
             };
 
-            return response()->json(['message' => $message], 403);
+            return response()->json([
+                'message' => $message,
+                'debug' => config('app.debug') ? [
+                    'ability' => $ability,
+                    'key' => $key,
+                    'company_id' => $company->id,
+                    'user_id' => $user->id,
+                ] : null,
+            ], 403);
         }
 
         return $next($request);
