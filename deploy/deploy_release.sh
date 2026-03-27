@@ -57,6 +57,7 @@ DEPS_NEEDED=""
 { command -v magick &>/dev/null || command -v convert &>/dev/null; } || DEPS_NEEDED="$DEPS_NEEDED imagemagick"
 command -v tesseract &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng"
 command -v gs &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED ghostscript"
+command -v pdftoppm &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED poppler-utils"
 command -v python3 &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED python3 python3-pip"
 if [ -n "$DEPS_NEEDED" ]; then
   log "  Installing: $DEPS_NEEDED"
@@ -189,6 +190,36 @@ $PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
 log "→ [5.5] Run DevSeeder (no real clients yet)"
 $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
 
+# ─── [6/9] Setup AI queue worker (systemd) — ADR-416 ─────────────
+log "→ [6/9] Setup AI queue worker (systemd)"
+QUEUE_SERVICE="leezr-queue-ai"
+VHOST_USER=$(stat -c '%U' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
+VHOST_GROUP=$(stat -c '%G' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
+
+cat > /tmp/${QUEUE_SERVICE}.service <<QEOF
+[Unit]
+Description=Leezr AI Queue Worker ($BRANCH)
+After=network.target
+
+[Service]
+User=$VHOST_USER
+Group=$VHOST_GROUP
+WorkingDirectory=$CURRENT_LINK
+ExecStart=$PHP_BIN $CURRENT_LINK/artisan queue:work --queue=ai --sleep=3 --tries=3 --timeout=120 --max-jobs=100 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=append:$SHARED_DIR/storage/logs/queue-ai.log
+StandardError=append:$SHARED_DIR/storage/logs/queue-ai.log
+
+[Install]
+WantedBy=multi-user.target
+QEOF
+
+sudo cp /tmp/${QUEUE_SERVICE}.service /etc/systemd/system/${QUEUE_SERVICE}.service
+sudo systemctl daemon-reload
+sudo systemctl enable "$QUEUE_SERVICE" 2>/dev/null || true
+log "  Queue worker service configured ($QUEUE_SERVICE)"
+
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"
 $PHP_BIN artisan config:clear 2>&1 | tee -a "$LOG_FILE"
@@ -255,6 +286,13 @@ if command -v systemctl &> /dev/null; then
   else
     log "  WARN: Could not detect PHP version from $PHP_BIN"
   fi
+fi
+
+# Restart AI queue worker to pick up new code (ADR-416)
+if sudo systemctl is-enabled "$QUEUE_SERVICE" &>/dev/null 2>&1; then
+  sudo systemctl restart "$QUEUE_SERVICE" 2>/dev/null \
+    && log "  AI queue worker restarted ($QUEUE_SERVICE)" \
+    || log "  WARN: AI queue worker restart failed"
 fi
 
 # ─── Cleanup old releases (keep 5) ──────────────────────────────

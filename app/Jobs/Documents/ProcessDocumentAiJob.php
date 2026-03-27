@@ -5,7 +5,9 @@ namespace App\Jobs\Documents;
 use App\Core\Ai\AiPolicyResolver;
 use App\Core\Ai\DTOs\AiInsight;
 use App\Core\Documents\CompanyDocument;
+use App\Core\Documents\DocumentAnalysisResult;
 use App\Core\Documents\DocumentType;
+use App\Core\Documents\ImageProcessor;
 use App\Core\Documents\MemberDocument;
 use App\Modules\Core\Documents\Services\DocumentAiAnalysisService;
 use App\Modules\Core\Documents\Services\DocumentAiDecisionService;
@@ -81,21 +83,23 @@ class ProcessDocumentAiJob implements ShouldQueue
         $tempPath = sys_get_temp_dir().'/'.uniqid('ai_doc_').'.'.$ext;
         file_put_contents($tempPath, Storage::get($filePath));
 
-        // Anthropic reads PDF natively. For Ollama, convert PDF to image.
+        // Anthropic reads PDF natively. Local adapters (Ollama, LM Studio) need image conversion.
         $imagePath = $tempPath;
+        $tempImages = [];
         if ($ext === 'pdf') {
             $adapter = \App\Core\Ai\AiGatewayManager::adapterForCapability(
                 \App\Core\Ai\DTOs\AiCapability::Vision
             );
-            if ($adapter->key() === 'ollama') {
-                $pngPrefix = sys_get_temp_dir().'/'.uniqid('ai_img_');
-                $cmd = sprintf('pdftoppm -png -f 1 -l 1 -r 200 %s %s', escapeshellarg($tempPath), escapeshellarg($pngPrefix));
-                exec($cmd, $output, $exitCode);
-                $pngFile = $pngPrefix.'-1.png';
-                if ($exitCode === 0 && file_exists($pngFile)) {
-                    $imagePath = $pngFile;
+            if (in_array($adapter->key(), ['ollama', 'lmstudio'], true)) {
+                $pages = app(ImageProcessor::class)->pdfToImages($tempPath);
+                if (! empty($pages)) {
+                    $imagePath = $pages[0];
+                    $tempImages = $pages;
                 } else {
-                    Log::warning('ProcessDocumentAiJob: PDF to image conversion failed', ['exit' => $exitCode]);
+                    Log::warning('ProcessDocumentAiJob: PDF→image conversion failed, skipping AI vision', [
+                        'path' => $filePath,
+                    ]);
+                    $imagePath = null;
                 }
             }
         }
@@ -104,6 +108,22 @@ class ProcessDocumentAiJob implements ShouldQueue
             $expectedType = $this->documentTypeId
                 ? DocumentType::find($this->documentTypeId)
                 : null;
+
+            // If PDF→image conversion failed, store empty result and bail
+            if ($imagePath === null) {
+                $document->update([
+                    'ai_analysis' => (new DocumentAnalysisResult(
+                        detectedType: null,
+                        fields: [],
+                        expiryDate: null,
+                        confidence: 0,
+                        source: 'none',
+                        validationErrors: ['PDF to image conversion failed — AI vision skipped'],
+                    ))->toArray(),
+                ]);
+
+                return;
+            }
 
             // Step 1: Analysis (existing)
             $result = $service->analyze(
@@ -148,6 +168,9 @@ class ProcessDocumentAiJob implements ShouldQueue
             ]);
         } finally {
             @unlink($tempPath);
+            foreach ($tempImages as $img) {
+                @unlink($img);
+            }
         }
     }
 

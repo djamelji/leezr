@@ -14218,4 +14218,31 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-416 — Fix AI Pipeline Staging : queue worker + PDF→image conversion (2026-03-27)
+
+**Contexte** : L'IA document (ADR-413) déployée sur staging ne produisait aucun résultat. Diagnostic :
+1. Jobs `ProcessDocumentAiJob` dans la queue `ai` → aucun worker pour les traiter
+2. Le job utilisait `pdftoppm` (pas installé) pour convertir PDF→PNG → échec silencieux
+3. En cas d'échec, le PDF brut était envoyé à Ollama comme "image" → crash model runner (`moondream` ne lit pas les PDF)
+4. Résultat : 5 jobs traités, 5 erreurs `"model runner has unexpectedly stopped"`, `ai_analysis.source = "none"` pour tous les documents
+
+**Décisions** :
+1. **Remplacer `pdftoppm` par `ImageProcessor::pdfToImages()`** — réutilise le code existant (ImageMagick 7, déjà installé sur VPS)
+2. **Safety net** : si la conversion PDF→image échoue, **skip l'analyse AI** au lieu d'envoyer le PDF brut (stocke `source: "none"` + `validation_error` explicatif)
+3. **Ajouter `poppler-utils`** aux deps système du deploy (backup pour `pdftoppm`)
+4. **Systemd queue worker** (`leezr-queue-ai.service`) : créé par le deploy script, redémarré après chaque deploy, limité à 100 jobs / 1h pour éviter memory leaks
+5. **Condition élargie** : `['ollama', 'lmstudio']` pour tous les adapters locaux sans support PDF natif
+
+**Conséquences** :
+- L'IA fonctionne end-to-end sur staging (queue worker actif, conversion fiable)
+- Pas de crash Ollama même si la conversion échoue (graceful degradation)
+- Le deploy est homogène dev/staging/prod (le script configure automatiquement le worker)
+- Cleanup des images temporaires dans le `finally` block
+
+**Fichiers** :
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — ImageProcessor au lieu de pdftoppm + safety net + cleanup
+- `deploy/deploy_release.sh` — poppler-utils + systemd queue worker + restart après deploy
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
