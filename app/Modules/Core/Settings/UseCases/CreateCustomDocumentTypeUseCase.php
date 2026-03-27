@@ -37,6 +37,7 @@ class CreateCustomDocumentTypeUseCase
             'label' => $data->label,
             'is_system' => false,
             'default_order' => $data->order,
+            'requires_expiration' => $data->requiresExpiration,
             'validation_rules' => [
                 'max_file_size_mb' => $data->maxFileSizeMb,
                 'accepted_types' => $data->acceptedTypes,

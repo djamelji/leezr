@@ -120,6 +120,37 @@ Règle : **ne jamais lire un fichier entier** sauf réécriture totale.
 
 Justification : un fichier de 400 lignes lu en entier = ~2000 tokens gaspillés. Grep + Read ciblé = ~200 tokens pour le même résultat.
 
+## Dépendances système (ADR-409)
+
+Toute dépendance système (binaire CLI, extension PHP, package OS) doit être :
+1. **Documentée** dans l'ADR qui l'introduit
+2. **Auto-installée** dans le deploy script (`deploy/deploy_release.sh`)
+3. **Auto-installée** dans le CI (`.github/workflows/deploy.yml`)
+4. **Documentée** pour le dev local (Homebrew/apt)
+
+Le deploy script vérifie la présence via `command -v` et installe uniquement si absent (idempotent).
+Ne jamais supposer qu'un package système est déjà installé — toujours vérifier et installer au deploy.
+
+Dépendances actuelles : ImageMagick 7 (`magick`), Tesseract OCR (`tesseract`).
+
+## Règle transverse IA (ADR-413)
+
+Chaque module intégrant l'IA **DOIT** suivre ce pattern :
+
+| Couche | Localisation | Responsabilité |
+|--------|-------------|----------------|
+| Gateway | `app/Core/Ai/` | Infra neutre (adapters, manager) |
+| Policy | `app/Core/Ai/AiPolicyResolver` | Gouvernance settings-driven (platform → module → company) |
+| Analysis | `app/Modules/{Module}/Services/` | Lecture IA → résultat structuré |
+| Decision | `app/Modules/{Module}/Services/` | Policy + résultat → **intentions** (AiDecisionResult). ZERO mutation. |
+| Orchestration | Jobs / UseCases | Exécute les intentions (mutations DB, transitions, notifications) |
+| Insights | `app/Core/Ai/DTOs/AiInsight` | Insights lisibles orientés action stockés avec les données |
+| KPI | `app/Modules/Dashboard/Widgets/` | WidgetManifest + batch ReadModel |
+
+- **DecisionService ne mute JAMAIS** — retourne des intentions, le Job/UseCase orchestre
+- **Gating = settings-driven** — pas de plan gate hardcodé
+- **Core AI = infra neutre** — ZERO logique métier document/fleet/support dans `app/Core/Ai/`
+
 ## Interdictions
 
 - Pas de `any` TypeScript

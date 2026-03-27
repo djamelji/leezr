@@ -15,7 +15,7 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh'])
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { toast } = useAppToast()
 
 const { formatFileSize, fileFormatIcon, fileFormatLabel } = useDocumentHelpers()
@@ -25,14 +25,43 @@ const downloadingCode = ref(null)
 const isViewerOpen = ref(false)
 const viewerDocument = ref(null)
 
-const handleUpload = async (code, file) => {
-  if (!file) return
+// ─── Upload confirmation dialog (ADR-406 S4) ────────────
+const isUploadDialogOpen = ref(false)
+const pendingUploadDoc = ref(null)
+const pendingUploadFiles = ref([])
+const uploadExpiresAt = ref(null)
+
+const openUploadDialog = (doc, files) => {
+  if (!files?.length) return
+  pendingUploadDoc.value = doc
+  pendingUploadFiles.value = [...files]
+  uploadExpiresAt.value = doc.upload?.expires_at ? doc.upload.expires_at.substring(0, 10) : null
+  isUploadDialogOpen.value = true
+}
+
+const cancelUploadDialog = () => {
+  isUploadDialogOpen.value = false
+  pendingUploadDoc.value = null
+  pendingUploadFiles.value = []
+  uploadExpiresAt.value = null
+}
+
+const confirmUpload = () => {
+  if (pendingUploadDoc.value && pendingUploadFiles.value.length) {
+    handleUpload(pendingUploadDoc.value.code, pendingUploadFiles.value, uploadExpiresAt.value)
+  }
+  isUploadDialogOpen.value = false
+}
+
+const handleUpload = async (code, files, expiresAt = null) => {
+  if (!files?.length) return
   uploadingCode.value = code
 
   try {
     const formData = new FormData()
 
-    formData.append('file', file)
+    files.forEach(f => formData.append('files[]', f))
+    if (expiresAt) formData.append('expires_at', expiresAt)
 
     const data = await $api(`/profile/documents/${code}`, {
       method: 'POST',
@@ -51,6 +80,9 @@ const handleUpload = async (code, file) => {
   }
   finally {
     uploadingCode.value = null
+    pendingUploadDoc.value = null
+    pendingUploadFiles.value = []
+    uploadExpiresAt.value = null
   }
 }
 
@@ -121,7 +153,7 @@ const handleViewerDownload = () => {
                 :key="doc.code"
               >
                 <td class="font-weight-medium">
-                  {{ t(`documents.type.${doc.code}`, doc.label) }}
+                  {{ te(`documents.type.${doc.code}`) ? t(`documents.type.${doc.code}`) : doc.label }}
                   <div class="text-body-2 text-disabled">
                     {{ t('documents.maxSize', { size: doc.max_file_size_mb }) }} · {{ t('documents.acceptedTypes', { types: doc.accepted_types.join(', ') }) }}
                   </div>
@@ -195,8 +227,9 @@ const handleViewerDownload = () => {
                       :ref="`fileInput_${doc.code}`"
                       type="file"
                       hidden
+                      multiple
                       :accept="doc.accepted_types.map(t => `.${t}`).join(',')"
-                      @change="handleUpload(doc.code, $event.target.files[0]); $event.target.value = ''"
+                      @change="openUploadDialog(doc, $event.target.files); $event.target.value = ''"
                     >
                     <VBtn
                       v-if="doc.upload"
@@ -218,10 +251,108 @@ const handleViewerDownload = () => {
     </VCol>
   </VRow>
 
+  <!-- Upload confirmation dialog (ADR-406 S4) -->
+  <VDialog
+    v-model="isUploadDialogOpen"
+    max-width="500"
+  >
+    <VCard>
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            color="primary"
+            variant="tonal"
+            rounded
+          >
+            <VIcon icon="tabler-upload" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('documents.confirmUpload') }}</VCardTitle>
+        <VCardSubtitle>{{ te(`documents.type.${pendingUploadDoc?.code}`) ? t(`documents.type.${pendingUploadDoc?.code}`) : pendingUploadDoc?.label }}</VCardSubtitle>
+      </VCardItem>
+      <VCardText>
+        <div
+          v-if="pendingUploadFiles.length"
+          class="mb-4"
+        >
+          <div
+            v-for="(f, idx) in pendingUploadFiles"
+            :key="idx"
+            class="d-flex align-center gap-2 mb-1"
+          >
+            <VIcon
+              icon="tabler-file"
+              size="20"
+            />
+            <span class="text-body-1">{{ f.name }}</span>
+            <span class="text-body-2 text-disabled">{{ formatFileSize(f.size) }}</span>
+            <VBtn
+              icon
+              variant="text"
+              size="x-small"
+              color="error"
+              @click="pendingUploadFiles.splice(idx, 1); if (!pendingUploadFiles.length) cancelUploadDialog()"
+            >
+              <VIcon
+                icon="tabler-x"
+                size="14"
+              />
+            </VBtn>
+          </div>
+          <div class="text-body-2 text-disabled mt-2">
+            {{ t('documents.totalFiles', { count: pendingUploadFiles.length }) }}
+          </div>
+        </div>
+        <VAlert
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('documents.autoMergeHint') }}
+        </VAlert>
+        <template v-if="pendingUploadDoc?.requires_expiration">
+          <AppDateTimePicker
+            v-model="uploadExpiresAt"
+            :label="t('documents.expirationDate')"
+            :hint="t('documents.expirationDateHint')"
+            persistent-hint
+            :rules="[v => !!v || t('documents.expirationDate') + ' ' + t('common.required')]"
+            clearable
+          />
+          <VAlert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            {{ t('documents.requiresExpirationHint') }}
+          </VAlert>
+        </template>
+      </VCardText>
+      <VCardActions class="justify-end">
+        <VBtn
+          variant="tonal"
+          @click="cancelUploadDialog"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          :disabled="!pendingUploadFiles.length || (pendingUploadDoc?.requires_expiration && !uploadExpiresAt)"
+          :loading="uploadingCode === pendingUploadDoc?.code"
+          @click="confirmUpload"
+        >
+          {{ t('documents.upload') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
   <!-- Document Viewer -->
   <DocumentViewerDialog
     v-model:is-dialog-visible="isViewerOpen"
-    :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type } : null"
+    :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type, ocr_text: viewerDocument.upload.ocr_text, ai_analysis: viewerDocument.upload.ai_analysis, ai_insights: viewerDocument.upload.ai_insights } : null"
     :download-url="viewerDownloadUrl"
     :review-status="viewerDocument?.request_status"
     :review-note="viewerDocument?.request_review_note"

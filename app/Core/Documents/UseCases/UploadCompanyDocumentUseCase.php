@@ -6,6 +6,7 @@ use App\Core\Documents\CompanyDocument;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Storage\StorageQuotaService;
+use App\Jobs\Documents\ProcessDocumentAiJob;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -40,6 +41,13 @@ class UploadCompanyDocumentUseCase
             ->where('document_type_id', $type->id)
             ->where('enabled', true)
             ->firstOrFail();
+
+        // 4b. ADR-406: Require expires_at when type demands it
+        if ($type->requires_expiration && empty($data->expiresAt)) {
+            throw ValidationException::withMessages([
+                'expires_at' => ['An expiration date is required for this document type.'],
+            ]);
+        }
 
         // 5. File domain validation (from validation_rules)
         $rules = $type->validation_rules ?? [];
@@ -111,6 +119,9 @@ class UploadCompanyDocumentUseCase
                 'expires_at' => $data->expiresAt,
             ],
         );
+
+        // ADR-411: Dispatch async AI analysis
+        ProcessDocumentAiJob::dispatch(CompanyDocument::class, $document->id, $type->id);
 
         return new UploadCompanyDocumentResult(
             id: $document->id,

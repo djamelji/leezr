@@ -112,6 +112,7 @@ class BatchRequestByRoleUseCase
                     payload: [
                         'document_type' => $docType->label,
                         'document_code' => $documentTypeCode,
+                        'link' => '/account-settings/documents',
                     ],
                     company: $company,
                     entityKey: "document_request:{$recipient->id}:{$documentTypeCode}",

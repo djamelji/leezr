@@ -110,7 +110,7 @@ const emit = defineEmits(['navigate'])
       </VCol>
     </VRow>
 
-    <VRow class="mt-2">
+    <VRow class="card-grid card-grid-lg mt-2">
       <!-- Compliance by Role (VList + VProgressLinear) -->
       <VCol
         cols="12"

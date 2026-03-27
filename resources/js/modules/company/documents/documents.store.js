@@ -174,6 +174,10 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
       return await $api('/company/document-types/custom', { method: 'POST', body: payload })
     },
 
+    async updateCustomDocumentType(code, payload) {
+      return await $api(`/company/document-types/custom/${code}`, { method: 'PUT', body: payload })
+    },
+
     async archiveCustomDocumentType(code) {
       return await $api(`/company/document-types/custom/${code}/archive`, { method: 'PUT' })
     },

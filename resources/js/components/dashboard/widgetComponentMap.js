@@ -48,6 +48,12 @@ const map = {
   DeliveriesMyToday: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesMyTodayWidget.vue')),
   DeliveriesNext: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesNextWidget.vue')),
   DeliveriesCompletedToday: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesCompletedTodayWidget.vue')),
+
+  // AI — platform KPIs (ADR-413)
+  AiDocsAnalyzed: defineAsyncComponent(() => import('@/pages/platform/ai/_AiDocsAnalyzedWidget.vue')),
+  AiDetections: defineAsyncComponent(() => import('@/pages/platform/ai/_AiDetectionsWidget.vue')),
+  AiAutoActions: defineAsyncComponent(() => import('@/pages/platform/ai/_AiAutoActionsWidget.vue')),
+  AiConfidence: defineAsyncComponent(() => import('@/pages/platform/ai/_AiConfidenceWidget.vue')),
 }
 
 export function resolveWidgetComponent(componentKey) {

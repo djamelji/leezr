@@ -16,6 +16,7 @@ use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\EntitlementResolver;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Ai\PlatformAiModule;
 use App\Core\Modules\PlatformModule;
 use App\Platform\Models\PlatformFontFamily;
 use App\Platform\Models\PlatformRole;
@@ -69,6 +70,48 @@ class DevSeeder extends Seeder
         PlatformFontFamily::firstOrCreate(
             ['slug' => 'poppins'],
             ['name' => 'Poppins', 'source' => 'google', 'is_enabled' => true],
+        );
+
+        // ─── AI Providers (ADR-413) ──────────────────────────────
+        // Anthropic Claude — requires API credits
+        PlatformAiModule::updateOrCreate(
+            ['provider_key' => 'anthropic'],
+            [
+                'name' => 'Anthropic',
+                'description' => 'Anthropic API (Claude). Requires API key.',
+                'is_installed' => true,
+                'is_active' => false,
+                'credentials' => [
+                    'api_key' => env('ANTHROPIC_API_KEY', ''),
+                    'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929'),
+                    'timeout' => 60,
+                ],
+                'config' => [],
+                'health_status' => 'unknown',
+                'sort_order' => 10,
+            ],
+        );
+
+        // Ollama — self-hosted (primary for VPS / Linux)
+        PlatformAiModule::updateOrCreate(
+            ['provider_key' => 'ollama'],
+            [
+                'name' => 'Ollama',
+                'description' => 'Self-hosted AI inference via Ollama',
+                'is_installed' => true,
+                'is_active' => true,
+                'credentials' => [
+                    'host' => env('OLLAMA_HOST', 'http://localhost:11434'),
+                    'model' => env('OLLAMA_MODEL', 'moondream'),
+                    'vision_model' => env('OLLAMA_VISION_MODEL', 'moondream'),
+                    'timeout' => 120,
+                ],
+                'config' => [
+                    'host' => env('OLLAMA_HOST', 'http://localhost:11434'),
+                ],
+                'health_status' => 'unknown',
+                'sort_order' => 1,
+            ],
         );
 
         // ─── Company scope — demo company + users ────────────────

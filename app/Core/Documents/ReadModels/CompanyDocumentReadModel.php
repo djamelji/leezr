@@ -55,6 +55,8 @@ class CompanyDocumentReadModel
                 'mime_type' => $upload->mime_type,
                 'uploaded_at' => $upload->created_at->toIso8601String(),
                 'expires_at' => $upload->expires_at?->toIso8601String(),
+                'ocr_text' => $upload->ocr_text,
+                'ai_analysis' => $upload->ai_analysis,
             ] : null;
 
             $doc['lifecycle_status'] = DocumentLifecycleService::computeFromDate(

@@ -2,12 +2,15 @@
 
 namespace App\Modules\Core\Documents\Http;
 
+use App\Core\Documents\DocumentProcessingPipeline;
+use App\Core\Documents\MemberDocument;
 use App\Core\Documents\ReadModels\SelfDocumentReadModel;
 use App\Modules\Core\Members\UseCases\DownloadOwnDocumentUseCase;
 use App\Modules\Core\Members\UseCases\UploadOwnDocumentData;
 use App\Modules\Core\Members\UseCases\UploadOwnDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 
@@ -27,22 +30,45 @@ class SelfDocumentController extends Controller
         );
     }
 
-    public function upload(Request $request, string $code, UploadOwnDocumentUseCase $useCase): JsonResponse
+    public function upload(Request $request, string $code, UploadOwnDocumentUseCase $useCase, DocumentProcessingPipeline $pipeline): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file'],
+            'files' => ['required_without:file', 'array', 'min:1', 'max:10'],
+            'files.*' => ['file'],
+            'file' => ['required_without:files', 'file'],
             'expires_at' => ['nullable', 'date', 'after:today'],
         ]);
 
         $company = $request->attributes->get('company');
 
-        $result = $useCase->execute(new UploadOwnDocumentData(
-            user: $request->user(),
-            company: $company,
-            documentCode: $code,
-            file: $request->file('file'),
-            expiresAt: $request->input('expires_at'),
-        ));
+        // ADR-409: Accept files[] (multi) or file (single, backward compat)
+        $uploadedFiles = $request->hasFile('files')
+            ? $request->file('files')
+            : [$request->file('file')];
+
+        // ADR-409: Pipeline — orient, deskew, trim, merge PDF, OCR
+        $processed = $pipeline->process($uploadedFiles, $code);
+
+        try {
+            // Passthrough = file couldn't be processed (fake in tests, encrypted, etc.)
+            $fileForUseCase = $processed->passthrough
+                ? $uploadedFiles[0]
+                : new UploadedFile($processed->pdfPath, $processed->fileName, $processed->mimeType, null, true);
+
+            $result = $useCase->execute(new UploadOwnDocumentData(
+                user: $request->user(),
+                company: $company,
+                documentCode: $code,
+                file: $fileForUseCase,
+                expiresAt: $request->input('expires_at'),
+            ));
+
+            if ($processed->ocrText) {
+                MemberDocument::where('id', $result->id)->update(['ocr_text' => $processed->ocrText]);
+            }
+        } finally {
+            $pipeline->cleanup();
+        }
 
         return response()->json([
             'message' => $result->replaced ? 'Document replaced.' : 'Document uploaded.',

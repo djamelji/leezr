@@ -266,6 +266,8 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     // Custom document types (ADR-180)
     Route::post('/company/document-types/custom', [CustomDocumentTypeController::class, 'store'])
         ->middleware('company.access:use-permission,documents.configure');
+    Route::put('/company/document-types/custom/{code}', [CustomDocumentTypeController::class, 'update'])
+        ->middleware('company.access:use-permission,documents.configure');
     Route::put('/company/document-types/custom/{code}/archive', [CustomDocumentTypeController::class, 'archive'])
         ->middleware('company.access:use-permission,documents.configure');
     Route::delete('/company/document-types/custom/{code}', [CustomDocumentTypeController::class, 'destroy'])
@@ -291,6 +293,8 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::post('/company/document-requests/batch', [DocumentRequestController::class, 'batchByRole'])
         ->middleware('company.access:use-permission,documents.manage');
     Route::get('/company/document-requests/queue', [DocumentRequestController::class, 'queue'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::get('/company/document-requests/roles', [DocumentRequestController::class, 'batchRoles'])
         ->middleware('company.access:use-permission,documents.manage');
 
     Route::put('/company/document-requests/{id}/cancel', [DocumentRequestController::class, 'cancel'])

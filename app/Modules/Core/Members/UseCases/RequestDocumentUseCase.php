@@ -87,6 +87,7 @@ class RequestDocumentUseCase
                 payload: [
                     'document_type' => $docType->label,
                     'document_code' => $documentTypeCode,
+                    'link' => '/account-settings/documents',
                 ],
                 company: Company::find($companyId),
                 entityKey: "document_request:{$userId}:{$documentTypeCode}",

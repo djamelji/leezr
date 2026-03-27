@@ -46,4 +46,10 @@ return [
     \App\Modules\Dashboard\Widgets\DeliveriesMyTodayWidget::class,
     \App\Modules\Dashboard\Widgets\DeliveriesNextWidget::class,
     \App\Modules\Dashboard\Widgets\DeliveriesCompletedTodayWidget::class,
+
+    // AI — platform KPIs, server-resolved, batch datasetKey (ADR-413)
+    \App\Modules\Dashboard\Widgets\AiDocsAnalyzedWidget::class,
+    \App\Modules\Dashboard\Widgets\AiDetectionsWidget::class,
+    \App\Modules\Dashboard\Widgets\AiAutoActionsWidget::class,
+    \App\Modules\Dashboard\Widgets\AiConfidenceWidget::class,
 ];

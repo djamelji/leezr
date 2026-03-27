@@ -213,6 +213,7 @@ class PageModuleAlignmentTest extends TestCase
             'company-documentation-slug' => $base . '/company/documentation/[slug].vue',
             'company-documentation-article' => null, // article view is inline via _ArticleView.vue sub-component
             'platform-documentation-slug' => $base . '/platform/documentation/[slug].vue',
+            'platform-ai-tab' => $base . '/platform/ai/[tab].vue',
         ];
 
         if (isset($overrides[$routeName])) {

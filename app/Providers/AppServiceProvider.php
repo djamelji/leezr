@@ -6,6 +6,7 @@ use App\Core\Billing\BillingManager;
 use App\Core\Billing\Contracts\BillingProvider;
 use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PaymentRegistry;
+use App\Core\Ai\AiGatewayManager;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Audit\AuditLogger;
@@ -33,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PaymentGatewayManager::class);
+
+        // ADR-411: AI Gateway Manager singleton
+        $this->app->singleton(AiGatewayManager::class);
 
         // ADR-125: Bind realtime publisher (sse or null)
         $this->app->singleton(RealtimePublisher::class, function () {
@@ -69,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
 
         // ADR-124: Boot payment module registry
         PaymentRegistry::boot();
+
+        // ADR-412: Boot AI provider registry
+        \App\Core\Ai\AiProviderRegistry::boot();
 
         // ADR-149: Boot dashboard widget registry (convention-based discovery)
         \App\Modules\Dashboard\DashboardWidgetRegistry::boot();

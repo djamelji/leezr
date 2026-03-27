@@ -1,4 +1,6 @@
 <script setup>
+import { animations } from '@formkit/drag-and-drop'
+import { dragAndDrop } from '@formkit/drag-and-drop/vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
@@ -24,61 +26,185 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh', 'create-custom', 'archive-custom', 'delete-custom'])
+const emit = defineEmits(['refresh', 'create-custom', 'edit-custom', 'archive-custom', 'delete-custom'])
 
 const { t } = useI18n()
 const { toast } = useAppToast()
 
-const savingCode = ref(null)
+// ─── Local reactive copies for drag reordering ──────────────
+const localMemberDocs = ref([])
+const localCompanyDocs = ref([])
 
-// Local editable copies keyed by code
+// ─── Edits state: switches per doc ──────────────
 const edits = ref({})
 
-const initEdits = () => {
+const memberTbodyRef = ref(null)
+const companyTbodyRef = ref(null)
+
+const isSaving = ref(false)
+
+// ─── Snapshot for dirty tracking ──────────────
+const originalSnapshot = ref(null)
+
+const buildSnapshot = () => {
+  const snap = {}
+
+  for (const doc of localMemberDocs.value) {
+    const e = edits.value[doc.code]
+
+    snap[doc.code] = {
+      order: localMemberDocs.value.indexOf(doc),
+      enabled: e?.enabled ?? doc.enabled,
+      required_override: e?.required_override ?? doc.required_override,
+    }
+  }
+  for (const doc of localCompanyDocs.value) {
+    const e = edits.value[doc.code]
+
+    snap[doc.code] = {
+      order: localCompanyDocs.value.indexOf(doc),
+      enabled: e?.enabled ?? doc.enabled,
+      required_override: e?.required_override ?? doc.required_override,
+    }
+  }
+
+  return snap
+}
+
+const isDirty = computed(() => {
+  if (!originalSnapshot.value) return false
+  const current = buildSnapshot()
+  const keys = new Set([...Object.keys(originalSnapshot.value), ...Object.keys(current)])
+
+  for (const k of keys) {
+    const o = originalSnapshot.value[k]
+    const c = current[k]
+
+    if (!o || !c) return true
+    if (o.order !== c.order || o.enabled !== c.enabled || o.required_override !== c.required_override) return true
+  }
+
+  return false
+})
+
+// ─── Init from props ──────────────
+const initFromProps = () => {
+  localMemberDocs.value = [...props.companyUserDocuments]
+  localCompanyDocs.value = [...props.companyDocuments]
+
+  edits.value = {}
   const all = [...props.companyUserDocuments, ...props.companyDocuments]
 
   for (const doc of all) {
-    if (!edits.value[doc.code]) {
-      edits.value[doc.code] = {
-        enabled: doc.enabled,
-        required_override: doc.required_override,
-        order: doc.order,
-      }
+    edits.value[doc.code] = {
+      enabled: doc.enabled,
+      required_override: doc.required_override,
     }
+  }
+
+  nextTick(() => {
+    originalSnapshot.value = buildSnapshot()
+  })
+}
+
+watch(() => [props.companyUserDocuments, props.companyDocuments], initFromProps, { deep: true })
+onMounted(initFromProps)
+
+// ─── Drag-and-drop init ──────────────
+const initDragMember = () => {
+  if (memberTbodyRef.value && localMemberDocs.value.length && props.canEdit) {
+    dragAndDrop({
+      parent: memberTbodyRef,
+      values: localMemberDocs,
+      dragHandle: '.drag-handle',
+      plugins: [animations()],
+    })
   }
 }
 
+const initDragCompany = () => {
+  if (companyTbodyRef.value && localCompanyDocs.value.length && props.canEdit) {
+    dragAndDrop({
+      parent: companyTbodyRef,
+      values: localCompanyDocs,
+      dragHandle: '.drag-handle',
+      plugins: [animations()],
+    })
+  }
+}
+
+onMounted(() => {
+  nextTick(() => {
+    initDragMember()
+    initDragCompany()
+  })
+})
+
 watch(() => [props.companyUserDocuments, props.companyDocuments], () => {
-  // Reset edits when data refreshes
-  edits.value = {}
-  initEdits()
+  nextTick(() => {
+    initDragMember()
+    initDragCompany()
+  })
 }, { deep: true })
 
-onMounted(initEdits)
-
-const handleSave = async doc => {
-  savingCode.value = doc.code
+// ─── Batch save ──────────────
+const handleBatchSave = async () => {
+  isSaving.value = true
 
   try {
-    const edit = edits.value[doc.code]
+    const updates = []
 
-    await $api(`/company/document-activations/${doc.code}`, {
-      method: 'PUT',
-      body: {
-        enabled: edit.enabled,
-        required_override: edit.required_override,
-        order: edit.order,
-      },
+    localMemberDocs.value.forEach((doc, index) => {
+      const e = edits.value[doc.code]
+
+      updates.push({
+        code: doc.code,
+        enabled: e?.enabled ?? doc.enabled,
+        required_override: e?.required_override ?? doc.required_override,
+        order: index,
+      })
     })
 
-    toast(t('companySettings.activationSaved'), 'success')
+    localCompanyDocs.value.forEach((doc, index) => {
+      const e = edits.value[doc.code]
+
+      updates.push({
+        code: doc.code,
+        enabled: e?.enabled ?? doc.enabled,
+        required_override: e?.required_override ?? doc.required_override,
+        order: index,
+      })
+    })
+
+    const results = await Promise.allSettled(
+      updates.map(u =>
+        $api(`/company/document-activations/${u.code}`, {
+          method: 'PUT',
+          body: {
+            enabled: u.enabled,
+            required_override: u.required_override,
+            order: u.order,
+          },
+        }),
+      ),
+    )
+
+    const failures = results.filter(r => r.status === 'rejected')
+
+    if (failures.length === 0) {
+      toast(t('companySettings.activationSaved'), 'success')
+    }
+    else {
+      toast(t('companySettings.activationFailed'), 'error')
+    }
+
     emit('refresh')
   }
   catch (error) {
     toast(error?.data?.message || t('companySettings.activationFailed'), 'error')
   }
   finally {
-    savingCode.value = null
+    isSaving.value = false
   }
 }
 </script>
@@ -99,7 +225,7 @@ const handleSave = async doc => {
   </div>
 
   <!-- Member Documents Section -->
-  <template v-if="props.companyUserDocuments.length">
+  <template v-if="localMemberDocs.length">
     <div class="d-flex align-center gap-2 mb-3">
       <h6 class="text-h6">
         {{ t('companySettings.memberDocuments') }}
@@ -109,6 +235,10 @@ const handleSave = async doc => {
     <VTable class="text-no-wrap mb-6">
       <thead>
         <tr>
+          <th
+            v-if="canEdit"
+            style="width: 40px;"
+          />
           <th>{{ t('documents.title') }}</th>
           <th style="width: 80px;">
             <VTooltip :text="t('documents.tooltipEnabled')">
@@ -124,21 +254,23 @@ const handleSave = async doc => {
               </template>
             </VTooltip>
           </th>
-          <th style="width: 80px;">
-            <VTooltip :text="t('documents.tooltipOrder')">
-              <template #activator="{ props: tp }">
-                <span v-bind="tp">{{ t('companySettings.order') }}</span>
-              </template>
-            </VTooltip>
-          </th>
           <th style="width: 60px;" />
         </tr>
       </thead>
-      <tbody>
+      <tbody ref="memberTbodyRef">
         <tr
-          v-for="doc in props.companyUserDocuments"
+          v-for="doc in localMemberDocs"
           :key="doc.code"
         >
+          <td
+            v-if="canEdit"
+            class="drag-handle"
+          >
+            <VIcon
+              icon="tabler-grip-vertical"
+              size="20"
+            />
+          </td>
           <td class="font-weight-medium">
             {{ t(`documents.type.${doc.code}`, doc.label) }}
             <VChip
@@ -194,29 +326,16 @@ const handleSave = async doc => {
               hide-details
             />
           </td>
-          <td>
-            <AppTextField
-              v-if="edits[doc.code]"
-              v-model.number="edits[doc.code].order"
-              type="number"
-              :min="0"
-              :disabled="!canEdit"
-              density="compact"
-              hide-details
-              style="max-width: 70px;"
-            />
-          </td>
           <td class="d-flex align-center gap-1">
             <VBtn
-              v-if="canEdit"
+              v-if="canEdit && doc.is_system === false"
               icon
               variant="text"
               size="small"
-              color="primary"
-              :loading="savingCode === doc.code"
-              @click="handleSave(doc)"
+              color="info"
+              @click="emit('edit-custom', doc)"
             >
-              <VIcon icon="tabler-device-floppy" />
+              <VIcon icon="tabler-pencil" />
             </VBtn>
             <VBtn
               v-if="canEdit && doc.is_system === false && doc.usage_count === 0"
@@ -245,7 +364,7 @@ const handleSave = async doc => {
   </template>
 
   <!-- Company Documents Section -->
-  <template v-if="props.companyDocuments.length">
+  <template v-if="localCompanyDocs.length">
     <div class="d-flex align-center gap-2 mb-3">
       <h6 class="text-h6">
         {{ t('companySettings.companyDocumentsScope') }}
@@ -275,6 +394,10 @@ const handleSave = async doc => {
     <VTable class="text-no-wrap">
       <thead>
         <tr>
+          <th
+            v-if="canEdit"
+            style="width: 40px;"
+          />
           <th>{{ t('documents.title') }}</th>
           <th style="width: 80px;">
             {{ t('companySettings.enabled') }}
@@ -282,17 +405,23 @@ const handleSave = async doc => {
           <th style="width: 80px;">
             {{ t('companySettings.requiredOverride') }}
           </th>
-          <th style="width: 80px;">
-            {{ t('companySettings.order') }}
-          </th>
           <th style="width: 60px;" />
         </tr>
       </thead>
-      <tbody>
+      <tbody ref="companyTbodyRef">
         <tr
-          v-for="doc in props.companyDocuments"
+          v-for="doc in localCompanyDocs"
           :key="doc.code"
         >
+          <td
+            v-if="canEdit"
+            class="drag-handle"
+          >
+            <VIcon
+              icon="tabler-grip-vertical"
+              size="20"
+            />
+          </td>
           <td class="font-weight-medium">
             {{ t(`documents.type.${doc.code}`, doc.label) }}
             <VChip
@@ -348,29 +477,16 @@ const handleSave = async doc => {
               hide-details
             />
           </td>
-          <td>
-            <AppTextField
-              v-if="edits[doc.code]"
-              v-model.number="edits[doc.code].order"
-              type="number"
-              :min="0"
-              :disabled="!canEdit"
-              density="compact"
-              hide-details
-              style="max-width: 70px;"
-            />
-          </td>
           <td class="d-flex align-center gap-1">
             <VBtn
-              v-if="canEdit"
+              v-if="canEdit && doc.is_system === false"
               icon
               variant="text"
               size="small"
-              color="primary"
-              :loading="savingCode === doc.code"
-              @click="handleSave(doc)"
+              color="info"
+              @click="emit('edit-custom', doc)"
             >
-              <VIcon icon="tabler-device-floppy" />
+              <VIcon icon="tabler-pencil" />
             </VBtn>
             <VBtn
               v-if="canEdit && doc.is_system === false && doc.usage_count === 0"
@@ -397,4 +513,40 @@ const handleSave = async doc => {
       </tbody>
     </VTable>
   </template>
+
+  <!-- Batch save button -->
+  <div
+    v-if="canEdit"
+    class="d-flex justify-end mt-4"
+  >
+    <VBadge
+      :model-value="isDirty"
+      dot
+      color="warning"
+      offset-x="-4"
+      offset-y="-4"
+    >
+      <VBtn
+        color="primary"
+        :loading="isSaving"
+        :disabled="!isDirty"
+        prepend-icon="tabler-device-floppy"
+        @click="handleBatchSave"
+      >
+        {{ t('common.save') }}
+      </VBtn>
+    </VBadge>
+  </div>
 </template>
+
+<style scoped>
+.drag-handle {
+  cursor: grab;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+tr:hover .drag-handle {
+  opacity: 1;
+}
+</style>

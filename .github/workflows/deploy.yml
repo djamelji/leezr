@@ -38,6 +38,16 @@ jobs:
           extensions: mbstring, pdo_mysql, bcmath
           tools: composer:v2
 
+      - name: Install system dependencies (ADR-409, ADR-410)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick ghostscript tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng python3 python3-pip
+
+      - name: Install Python dependencies (ADR-410)
+        run: |
+          python3 -m venv scripts/python/.venv
+          scripts/python/.venv/bin/pip install -q -r scripts/python/requirements.txt
+
       - name: Composer install (production)
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 

@@ -19,11 +19,16 @@ class MemberDocument extends Model
         'mime_type',
         'uploaded_by',
         'expires_at',
+        'ocr_text',
+        'ai_analysis',
+        'ai_insights',
     ];
 
     protected $casts = [
         'file_size_bytes' => 'integer',
         'expires_at' => 'datetime',
+        'ai_analysis' => 'array',
+        'ai_insights' => 'array',
     ];
 
     public function company(): BelongsTo

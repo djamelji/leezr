@@ -51,6 +51,30 @@ log "  Artifact : $ARTIFACT_PATH"
 log "  App path : $APP_PATH"
 log "═══════════════════════════════════════════════════════════"
 
+# ─── [0/9] Ensure system dependencies (ADR-409) ─────────────────
+log "→ [0/9] Ensure system dependencies (ImageMagick, Tesseract, Ghostscript)"
+DEPS_NEEDED=""
+command -v magick  &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED imagemagick"
+command -v tesseract &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng"
+command -v gs &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED ghostscript"
+command -v python3 &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED python3 python3-pip"
+if [ -n "$DEPS_NEEDED" ]; then
+  log "  Installing: $DEPS_NEEDED"
+  sudo apt-get update -qq && sudo apt-get install -y -qq $DEPS_NEEDED 2>&1 | tee -a "$LOG_FILE"
+else
+  log "  All system deps present"
+fi
+
+# ADR-410: Install Python OpenCV dependencies in venv for document detection
+PYTHON_SCRIPTS="$APP_PATH/current/scripts/python"
+if [ -f "$PYTHON_SCRIPTS/requirements.txt" ]; then
+  log "  Setting up Python venv for document detection"
+  python3 -m venv "$PYTHON_SCRIPTS/.venv" 2>&1 | tee -a "$LOG_FILE" || true
+  if [ -f "$PYTHON_SCRIPTS/.venv/bin/pip" ]; then
+    "$PYTHON_SCRIPTS/.venv/bin/pip" install -q -r "$PYTHON_SCRIPTS/requirements.txt" 2>&1 | tee -a "$LOG_FILE" || log "  WARNING: pip install failed (non-fatal)"
+  fi
+fi
+
 # ─── [1/9] Create release directory ──────────────────────────────
 log "→ [1/9] Create release directory"
 mkdir -p "$RELEASE_DIR"

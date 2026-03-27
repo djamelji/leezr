@@ -381,7 +381,8 @@ class DocumentRequestWorkflowTest extends TestCase
             ]);
 
         $response->assertOk();
-        $response->assertJsonPath('review.status', 'rejected');
+        // ADR-410: rejection auto-re-requests → final status is 'requested'
+        $response->assertJsonPath('review.status', 'requested');
         $response->assertJsonPath('review.review_note', 'Document is expired');
     }
 

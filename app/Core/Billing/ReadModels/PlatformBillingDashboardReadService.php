@@ -21,6 +21,7 @@ class PlatformBillingDashboardReadService
         'billing.kpis' => 30,
         'billing.risk' => 30,
         'billing.timeseries' => 60,
+        'ai.document_kpis' => 60,
     ];
 
     /**
@@ -82,6 +83,7 @@ class PlatformBillingDashboardReadService
                 'billing.kpis' => PlatformBillingWidgetsReadService::kpisDataset($scope, $companyId, $from, $to),
                 'billing.risk' => PlatformBillingWidgetsReadService::riskDataset($scope, $companyId),
                 'billing.timeseries' => PlatformBillingWidgetsReadService::timeseriesDataset($scope, $companyId, $from, $to),
+                'ai.document_kpis' => \App\Modules\Core\Documents\ReadModels\DocumentAiKpiReadService::loadDataset(['period' => $period]),
                 default => [],
             };
         });

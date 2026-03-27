@@ -32,6 +32,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.venv
+__pycache__
 .DS_Store
 dist
 dist-ssr

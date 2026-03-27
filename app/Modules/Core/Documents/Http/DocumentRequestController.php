@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Documents\Http;
 
+use App\Company\RBAC\CompanyRole;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\ReadModels\DocumentRequestQueueReadModel;
@@ -127,6 +128,22 @@ class DocumentRequestController
         return response()->json(['message' => 'Document request cancelled.']);
     }
 
+    /**
+     * ADR-406: Lightweight roles listing for batch request dialog.
+     * Protected by documents.manage (not roles.view).
+     */
+    public function batchRoles(Request $request): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        $roles = CompanyRole::where('company_id', $company->id)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['roles' => $roles]);
+    }
+
     public function remind(Request $request, int $requestId): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -150,6 +167,7 @@ class DocumentRequestController
                 payload: [
                     'document_type' => $docType?->label,
                     'document_code' => $docType?->code,
+                    'link' => '/account-settings/documents',
                 ],
                 company: $company,
                 entityKey: "document_request:{$recipient->id}:{$docType?->code}",

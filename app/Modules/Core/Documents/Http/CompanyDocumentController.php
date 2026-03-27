@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Documents\Http;
 
 use App\Core\Documents\CompanyDocument;
+use App\Core\Documents\DocumentProcessingPipeline;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\ReadModels\CompanyDocumentReadModel;
 use App\Core\Documents\UseCases\DownloadCompanyDocumentUseCase;
@@ -10,6 +11,7 @@ use App\Core\Documents\UseCases\UploadCompanyDocumentData;
 use App\Core\Documents\UseCases\UploadCompanyDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 
@@ -29,22 +31,43 @@ class CompanyDocumentController extends Controller
         );
     }
 
-    public function upload(Request $request, string $code, UploadCompanyDocumentUseCase $useCase): JsonResponse
+    public function upload(Request $request, string $code, UploadCompanyDocumentUseCase $useCase, DocumentProcessingPipeline $pipeline): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file'],
+            'files' => ['required_without:file', 'array', 'min:1', 'max:10'],
+            'files.*' => ['file'],
+            'file' => ['required_without:files', 'file'],
             'expires_at' => ['nullable', 'date', 'after:today'],
         ]);
 
         $company = $request->attributes->get('company');
 
-        $result = $useCase->execute(new UploadCompanyDocumentData(
-            actor: $request->user(),
-            company: $company,
-            documentCode: $code,
-            file: $request->file('file'),
-            expiresAt: $request->input('expires_at'),
-        ));
+        // ADR-409: Accept files[] (multi) or file (single, backward compat)
+        $uploadedFiles = $request->hasFile('files')
+            ? $request->file('files')
+            : [$request->file('file')];
+
+        $processed = $pipeline->process($uploadedFiles, $code);
+
+        try {
+            $fileForUseCase = $processed->passthrough
+                ? $uploadedFiles[0]
+                : new UploadedFile($processed->pdfPath, $processed->fileName, $processed->mimeType, null, true);
+
+            $result = $useCase->execute(new UploadCompanyDocumentData(
+                actor: $request->user(),
+                company: $company,
+                documentCode: $code,
+                file: $fileForUseCase,
+                expiresAt: $request->input('expires_at'),
+            ));
+
+            if ($processed->ocrText) {
+                CompanyDocument::where('id', $result->id)->update(['ocr_text' => $processed->ocrText]);
+            }
+        } finally {
+            $pipeline->cleanup();
+        }
 
         return response()->json([
             'message' => $result->replaced ? 'Document replaced.' : 'Document uploaded.',

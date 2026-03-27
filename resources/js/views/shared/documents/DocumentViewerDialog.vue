@@ -37,8 +37,27 @@ const emit = defineEmits([
   'reject',
 ])
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { formatFileSize, viewerKind } = useDocumentHelpers()
+
+// ADR-413: AI analysis helpers
+const aiConfidencePercent = computed(() =>
+  Math.round((props.document?.ai_analysis?.confidence ?? 0) * 100),
+)
+
+const aiConfidenceColor = computed(() => {
+  const c = aiConfidencePercent.value
+  if (c >= 70) return 'success'
+  if (c >= 40) return 'warning'
+
+  return 'error'
+})
+
+const insightAlertType = severity => {
+  const map = { info: 'info', warning: 'warning', error: 'error', success: 'success' }
+
+  return map[severity] || 'info'
+}
 
 const loading = ref(false)
 const previewError = ref(false)
@@ -289,6 +308,125 @@ const handleDownload = () => {
           </VBtn>
         </div>
       </VCardText>
+
+      <!-- OCR extracted text (ADR-409) -->
+      <VExpansionPanels
+        v-if="props.document?.ocr_text"
+        variant="accordion"
+        class="mx-4 mb-2"
+      >
+        <VExpansionPanel>
+          <VExpansionPanelTitle>
+            <VIcon
+              icon="tabler-scan"
+              size="18"
+              class="me-2"
+            />
+            {{ t('documents.ocrExtractedText') }}
+          </VExpansionPanelTitle>
+          <VExpansionPanelText>
+            <pre class="text-body-2" style="white-space: pre-wrap; word-break: break-word; font-family: inherit;">{{ props.document.ocr_text }}</pre>
+          </VExpansionPanelText>
+        </VExpansionPanel>
+      </VExpansionPanels>
+
+      <!-- AI Analysis panel (ADR-413) -->
+      <VExpansionPanels
+        v-if="props.document?.ai_analysis && props.document.ai_analysis.source !== 'none'"
+        variant="accordion"
+        class="mx-4 mb-2"
+      >
+        <VExpansionPanel>
+          <VExpansionPanelTitle>
+            <VIcon
+              icon="tabler-sparkles"
+              size="18"
+              class="me-2"
+            />
+            {{ t('documents.aiAnalysis') }}
+            <VSpacer />
+            <VChip
+              size="x-small"
+              variant="tonal"
+              :color="aiConfidenceColor"
+              class="me-2"
+            >
+              {{ aiConfidencePercent }}%
+            </VChip>
+          </VExpansionPanelTitle>
+          <VExpansionPanelText>
+            <!-- Confidence bar -->
+            <div class="mb-3">
+              <div class="text-caption text-medium-emphasis mb-1">
+                {{ t('documents.aiConfidence') }}
+              </div>
+              <VProgressLinear
+                :model-value="aiConfidencePercent"
+                :color="aiConfidenceColor"
+                height="8"
+                rounded
+              />
+            </div>
+
+            <!-- Source + detected type -->
+            <div class="d-flex gap-2 flex-wrap mb-3">
+              <VChip
+                size="x-small"
+                variant="tonal"
+                color="info"
+              >
+                {{ t(`documents.aiSource.${props.document.ai_analysis.source}`) }}
+              </VChip>
+              <VChip
+                v-if="props.document.ai_analysis.detected_type"
+                size="x-small"
+                variant="tonal"
+              >
+                {{ props.document.ai_analysis.detected_type }}
+              </VChip>
+            </div>
+
+            <!-- Insights (ADR-413) -->
+            <template v-if="props.document.ai_insights?.length">
+              <VAlert
+                v-for="(insight, idx) in props.document.ai_insights"
+                :key="idx"
+                :type="insightAlertType(insight.severity)"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                {{ t(insight.messageKey, insight.messageParams || {}) }}
+              </VAlert>
+            </template>
+
+            <!-- Extracted fields -->
+            <VTable
+              v-if="Object.keys(props.document.ai_analysis.fields || {}).length"
+              density="compact"
+              class="mt-3"
+            >
+              <thead>
+                <tr>
+                  <th>{{ t('documents.aiFieldLabel') }}</th>
+                  <th>{{ t('documents.aiFieldValue') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(value, key) in props.document.ai_analysis.fields"
+                  :key="key"
+                >
+                  <td class="text-medium-emphasis">
+                    {{ te(`documents.aiFieldName.${key}`) ? t(`documents.aiFieldName.${key}`) : key }}
+                  </td>
+                  <td>{{ value }}</td>
+                </tr>
+              </tbody>
+            </VTable>
+          </VExpansionPanelText>
+        </VExpansionPanel>
+      </VExpansionPanels>
 
       <VDivider />
 

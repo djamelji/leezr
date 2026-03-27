@@ -27,7 +27,7 @@ const activeCompanyCount = computed(
   () => companyDocuments.value.filter(d => d.enabled).length,
 )
 
-const emit = defineEmits(['openCreateDrawer'])
+const emit = defineEmits(['openCreateDrawer', 'editCustomType'])
 
 const handleRefresh = async () => {
   await store.fetchDocumentActivations()
@@ -77,12 +77,24 @@ const handleDeleteCustom = async code => {
 
 // ─── Automation settings ─────────────────────────────────
 const autoForm = ref({
-  auto_renew_enabled: false,
+  auto_renew_enabled: true,
   renew_days_before: 30,
-  auto_remind_enabled: false,
+  auto_remind_enabled: true,
   remind_after_days: 7,
 })
 const isAutoSaving = ref(false)
+
+// ─── AI features settings (ADR-413) ────────────────────
+const aiForm = ref({
+  ai_analysis_enabled: true,
+  ocr_enabled: true,
+  auto_fill_expiry: true,
+  notify_expiry_detected: true,
+  notify_validation_errors: true,
+  min_confidence_threshold: 60,
+  auto_reject_type_mismatch: false,
+})
+const isAiSaving = ref(false)
 
 onMounted(async () => {
   await store.fetchDocSettings()
@@ -92,6 +104,9 @@ onMounted(async () => {
       renew_days_before: store.docSettings.renew_days_before,
       auto_remind_enabled: store.docSettings.auto_remind_enabled,
       remind_after_days: store.docSettings.remind_after_days,
+    }
+    if (store.docSettings.ai_features) {
+      aiForm.value = { ...aiForm.value, ...store.docSettings.ai_features }
     }
   }
 })
@@ -107,6 +122,20 @@ const saveAutoSettings = async () => {
   }
   finally {
     isAutoSaving.value = false
+  }
+}
+
+const saveAiSettings = async () => {
+  isAiSaving.value = true
+  try {
+    await store.updateDocSettings({ ai_features: aiForm.value })
+    toast(t('documents.aiSettings.saved'), 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    isAiSaving.value = false
   }
 }
 </script>
@@ -149,6 +178,7 @@ const saveAutoSettings = async () => {
         :can-edit="canConfigure"
         @refresh="handleRefresh"
         @create-custom="emit('openCreateDrawer')"
+        @edit-custom="doc => emit('editCustomType', doc)"
         @archive-custom="handleArchiveCustom"
         @delete-custom="handleDeleteCustom"
       />
@@ -240,6 +270,175 @@ const saveAutoSettings = async () => {
         color="primary"
         :loading="isAutoSaving"
         @click="saveAutoSettings"
+      >
+        {{ t('common.save') }}
+      </VBtn>
+    </VCardActions>
+  </VCard>
+
+  <!-- AI Features Settings Card (ADR-413) -->
+  <VCard class="mt-6">
+    <VCardItem>
+      <template #prepend>
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          rounded
+        >
+          <VIcon icon="tabler-sparkles" />
+        </VAvatar>
+      </template>
+      <VCardTitle>{{ t('documents.aiSettings.title') }}</VCardTitle>
+      <VCardSubtitle>{{ t('documents.aiSettings.hint') }}</VCardSubtitle>
+    </VCardItem>
+    <VCardText>
+      <VRow>
+        <VCol
+          cols="12"
+          md="6"
+        >
+          <!-- AI Analysis toggle -->
+          <div class="d-flex align-center gap-4 mb-4">
+            <VSwitch
+              v-model="aiForm.ai_analysis_enabled"
+              :disabled="!canConfigure"
+            />
+            <div>
+              <div class="text-body-1 font-weight-medium">
+                {{ t('documents.aiSettings.analysisEnabled') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('documents.aiSettings.analysisEnabledHint') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- OCR toggle -->
+          <div class="d-flex align-center gap-4 mb-4">
+            <VSwitch
+              v-model="aiForm.ocr_enabled"
+              :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+            />
+            <div>
+              <div class="text-body-1 font-weight-medium">
+                {{ t('documents.aiSettings.ocrEnabled') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('documents.aiSettings.ocrEnabledHint') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto-fill expiry -->
+          <div class="d-flex align-center gap-4 mb-4">
+            <VSwitch
+              v-model="aiForm.auto_fill_expiry"
+              :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+            />
+            <div>
+              <div class="text-body-1 font-weight-medium">
+                {{ t('documents.aiSettings.autoFillExpiry') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('documents.aiSettings.autoFillExpiryHint') }}
+              </div>
+            </div>
+          </div>
+        </VCol>
+        <VCol
+          cols="12"
+          md="6"
+        >
+          <!-- Notify expiry -->
+          <div class="d-flex align-center gap-4 mb-4">
+            <VSwitch
+              v-model="aiForm.notify_expiry_detected"
+              :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+            />
+            <div>
+              <div class="text-body-1 font-weight-medium">
+                {{ t('documents.aiSettings.notifyExpiry') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('documents.aiSettings.notifyExpiryHint') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Notify validation errors -->
+          <div class="d-flex align-center gap-4 mb-4">
+            <VSwitch
+              v-model="aiForm.notify_validation_errors"
+              :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+            />
+            <div>
+              <div class="text-body-1 font-weight-medium">
+                {{ t('documents.aiSettings.notifyErrors') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('documents.aiSettings.notifyErrorsHint') }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Confidence threshold slider -->
+          <div class="mb-4">
+            <div class="text-body-1 font-weight-medium mb-2">
+              {{ t('documents.aiSettings.confidenceThreshold') }}
+            </div>
+            <VSlider
+              v-model="aiForm.min_confidence_threshold"
+              :min="10"
+              :max="100"
+              :step="5"
+              :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+              thumb-label
+            >
+              <template #thumb-label="{ modelValue }">
+                {{ modelValue }}%
+              </template>
+            </VSlider>
+            <div class="text-caption text-medium-emphasis">
+              {{ t('documents.aiSettings.confidenceThresholdHint') }}
+            </div>
+          </div>
+        </VCol>
+      </VRow>
+
+      <!-- Danger zone: auto-reject -->
+      <VAlert
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+      >
+        {{ t('documents.aiSettings.autoRejectWarning') }}
+      </VAlert>
+      <div class="d-flex align-center gap-4">
+        <VSwitch
+          v-model="aiForm.auto_reject_type_mismatch"
+          color="error"
+          :disabled="!canConfigure || !aiForm.ai_analysis_enabled"
+        />
+        <div>
+          <div class="text-body-1 font-weight-medium">
+            {{ t('documents.aiSettings.autoRejectMismatch') }}
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            {{ t('documents.aiSettings.autoRejectMismatchHint') }}
+          </div>
+        </div>
+      </div>
+    </VCardText>
+    <VCardActions
+      v-if="canConfigure"
+      class="justify-end"
+    >
+      <VBtn
+        color="primary"
+        :loading="isAiSaving"
+        :disabled="!aiForm.ai_analysis_enabled && !isAiSaving"
+        @click="saveAiSettings"
       >
         {{ t('common.save') }}
       </VBtn>

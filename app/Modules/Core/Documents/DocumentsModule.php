@@ -24,21 +24,21 @@ class DocumentsModule implements ModuleDefinition
                 middlewareKey: 'core.documents',
             ),
             permissions: [
-                ['key' => 'documents.view', 'label' => 'View Documents', 'hint' => 'See company and member documents, view compliance status.'],
-                ['key' => 'documents.manage', 'label' => 'Manage Documents', 'is_admin' => true, 'hint' => 'Upload, review, request and delete documents for the company and members.'],
-                ['key' => 'documents.configure', 'label' => 'Configure Documents', 'is_admin' => true, 'hint' => 'Manage document types, activation settings and custom types.'],
+                ['key' => 'documents.view', 'label' => 'View Documents', 'hint' => 'View documents, compliance dashboard, activity timeline, and download files.'],
+                ['key' => 'documents.manage', 'label' => 'Manage Documents', 'is_admin' => true, 'hint' => 'Upload, review, request, delete and upload documents on behalf of members. Preview documents before approval.'],
+                ['key' => 'documents.configure', 'label' => 'Configure Documents', 'is_admin' => true, 'hint' => 'Create, edit and archive document types. Configure activation, ordering, automation settings and expiration rules.'],
             ],
             bundles: [
                 [
                     'key' => 'documents.access',
                     'label' => 'Document Access',
-                    'hint' => 'View company and member documents and compliance status.',
+                    'hint' => 'View documents, compliance dashboard, activity timeline, and download files.',
                     'permissions' => ['documents.view'],
                 ],
                 [
                     'key' => 'documents.management',
                     'label' => 'Document Management',
-                    'hint' => 'Upload, review and manage documents. Configure document types.',
+                    'hint' => 'Upload, review, preview, upload on behalf of members. Create, edit and archive document types. Configure activation, ordering and automation.',
                     'permissions' => ['documents.manage', 'documents.configure'],
                     'is_admin' => true,
                 ],

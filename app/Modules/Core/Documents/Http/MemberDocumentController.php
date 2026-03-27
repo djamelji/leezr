@@ -2,11 +2,13 @@
 
 namespace App\Modules\Core\Documents\Http;
 
+use App\Core\Documents\DocumentProcessingPipeline;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\MemberDocument;
+use App\Jobs\Documents\ProcessDocumentAiJob;
 use App\Core\Documents\ReadModels\MemberDocumentWorkflowReadModel;
 use App\Core\Models\User;
 use App\Core\Storage\StorageQuotaService;
@@ -47,7 +49,7 @@ class MemberDocumentController extends Controller
     /**
      * Upload a document for a member.
      */
-    public function upload(Request $request, int $membershipId, string $documentCode): JsonResponse
+    public function upload(Request $request, int $membershipId, string $documentCode, DocumentProcessingPipeline $pipeline): JsonResponse
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
@@ -56,7 +58,7 @@ class MemberDocumentController extends Controller
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
 
         // Verify activation exists for this company
-        $activation = DocumentTypeActivation::where('company_id', $company->id)
+        DocumentTypeActivation::where('company_id', $company->id)
             ->where('document_type_id', $type->id)
             ->where('enabled', true)
             ->firstOrFail();
@@ -65,14 +67,16 @@ class MemberDocumentController extends Controller
         $maxSize = ($rules['max_file_size_mb'] ?? 10) * 1024; // KB
         $acceptedTypes = $rules['accepted_types'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
 
+        $expiresAtRule = $type->requires_expiration
+            ? ['required', 'date', 'after:today']
+            : ['nullable', 'date', 'after:today'];
+
+        // ADR-409: Accept files[] (multi) or file (single, backward compat)
         $request->validate([
-            'file' => [
-                'required',
-                'file',
-                "max:{$maxSize}",
-                'mimes:'.implode(',', $acceptedTypes),
-            ],
-            'expires_at' => ['nullable', 'date', 'after:today'],
+            'files' => ['required_without:file', 'array', 'min:1', 'max:10'],
+            'files.*' => ['file', "max:{$maxSize}", 'mimes:'.implode(',', $acceptedTypes)],
+            'file' => ['required_without:files', 'file', "max:{$maxSize}", 'mimes:'.implode(',', $acceptedTypes)],
+            'expires_at' => $expiresAtRule,
         ]);
 
         // ADR-169 Phase 4: Storage quota guard
@@ -84,8 +88,34 @@ class MemberDocumentController extends Controller
             ], 422);
         }
 
-        $file = $request->file('file');
-        $path = $file->store("documents/{$company->id}/{$user->id}", 'local');
+        $uploadedFiles = $request->hasFile('files')
+            ? $request->file('files')
+            : [$request->file('file')];
+
+        $processed = $pipeline->process($uploadedFiles, $documentCode);
+
+        try {
+            if ($processed->passthrough) {
+                $file = $uploadedFiles[0];
+                $path = $file->store("documents/{$company->id}/{$user->id}", 'local');
+                $fileName = $file->getClientOriginalName();
+                $fileSize = $file->getSize();
+                $mimeType = $file->getMimeType();
+                $ocrText = null;
+            } else {
+                $path = Storage::disk('local')->putFileAs(
+                    "documents/{$company->id}/{$user->id}",
+                    new \Illuminate\Http\File($processed->pdfPath),
+                    $processed->fileName,
+                );
+                $fileName = $processed->fileName;
+                $fileSize = $processed->fileSize;
+                $mimeType = $processed->mimeType;
+                $ocrText = $processed->ocrText;
+            }
+        } finally {
+            $pipeline->cleanup();
+        }
 
         // Upsert (one document per type per user per company)
         $document = MemberDocument::updateOrCreate(
@@ -96,13 +126,17 @@ class MemberDocumentController extends Controller
             ],
             [
                 'file_path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-                'file_size_bytes' => $file->getSize(),
-                'mime_type' => $file->getMimeType(),
+                'file_name' => $fileName,
+                'file_size_bytes' => $fileSize,
+                'mime_type' => $mimeType,
                 'uploaded_by' => $request->user()->id,
                 'expires_at' => $request->input('expires_at'),
+                'ocr_text' => $ocrText,
             ],
         );
+
+        // ADR-413: Dispatch AI analysis job
+        ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
 
         // ADR-176: Update DocumentRequest workflow
         DocumentRequest::updateOrCreate(

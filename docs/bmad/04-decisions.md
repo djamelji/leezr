@@ -13788,4 +13788,381 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-406 — Évolution module documents V3 (5 sprints)
+
+- **Date** : 2026-03-25
+- **Contexte** : Le module documents V2 (ADR-397) était fonctionnel mais présentait 5 lacunes UX/métier :
+  1. Select rôles vide dans batch request (403 silencieux sur `/company/roles` car `documents.manage` ≠ `roles.view`)
+  2. Pas de preview document avant approbation dans la queue requests
+  3. Pas de flag `requires_expiration` sur les types de documents
+  4. Pas de champ `expires_at` dans les formulaires d'upload (backend l'accepte, frontend ne l'envoie pas)
+  5. Notifications documents non cliquables (champ `link` jamais renseigné dans les payloads)
+- **Décision** :
+  - **S1 — Endpoint dédié batch roles** : `GET /company/document-requests/roles` protégé par `documents.manage`, retourne `{id, name}` léger. Le frontend utilise un `batchRoles` ref local au lieu du store settings
+  - **S2 — Preview avant approbation** : `DocumentViewerDialog` intégré dans `_DocumentsRequests.vue` avec bouton Eye pour status `submitted`. `DocumentRequestQueueReadModel` enrichi avec données upload (`file_name`, `file_size_bytes`, `mime_type`, `expires_at`) via batch load MemberDocument
+  - **S3 — Flag requires_expiration** : Colonne `requires_expiration` (boolean, default false) ajoutée à `document_types`. Propagé dans le modèle, DTO, UseCase, controller, `DocumentResolverService`, et le drawer de création. Validation conditionnelle `expires_at required|date|after:today` dans les 3 use cases d'upload (own, member, company)
+  - **S4 — Champ expires_at dans les uploads** : Dialog de confirmation post-sélection fichier dans les 3 composants d'upload (`AccountSettingsDocuments`, `MemberDocumentsWorkflowPanel`, `CompanyDocumentsVault`). Affiche nom du fichier, taille, date picker `expires_at` (requis si `requires_expiration`, optionnel sinon), bouton Cancel/Upload
+  - **S5 — Notifications cliquables** : Ajout du champ `link` dans les 10 appels `NotificationDispatcher::send()` de 6 fichiers. Liens relatifs frontend : membre → `/account-settings/documents`, admin requests → `/company/documents/requests`, admin compliance → `/company/documents/compliance`. Le frontend gère déjà `router.push(notification.link)`
+- **Conséquences** :
+  - Tous les uploads offrent désormais un champ expiration, crucial pour les documents à durée de vie limitée (permis, carte d'identité, KBIS...)
+  - Les admins peuvent prévisualiser les documents soumis avant de statuer
+  - Les notifications document naviguent directement vers la page pertinente
+  - Migration non-destructive (ajout colonne boolean default false)
+- **Fichiers** :
+  - `app/Modules/Core/Documents/Http/DocumentRequestController.php` — endpoint batchRoles + link remind
+  - `routes/company.php` — route /document-requests/roles
+  - `resources/js/pages/company/documents/_DocumentsRequests.vue` — batchRoles local, viewer preview
+  - `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — enrichissement upload data
+  - `database/migrations/2026_03_25_100001_add_requires_expiration_to_document_types.php` — migration
+  - `app/Core/Documents/DocumentType.php` — fillable + casts requires_expiration
+  - `app/Modules/Core/Settings/UseCases/CreateCustomDocumentTypeData.php` — DTO champ
+  - `app/Modules/Core/Settings/UseCases/CreateCustomDocumentTypeUseCase.php` — create field
+  - `app/Modules/Core/Documents/Http/CustomDocumentTypeController.php` — validation
+  - `app/Core/Documents/DocumentResolverService.php` — retourne requires_expiration
+  - `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — validation 4b + link
+  - `app/Modules/Core/Documents/Http/MemberDocumentController.php` — validation conditionnelle
+  - `app/Core/Documents/UseCases/UploadCompanyDocumentUseCase.php` — validation 4b
+  - `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue` — dialog upload S4
+  - `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — dialog upload S4
+  - `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — dialog upload S4
+  - `app/Console/Commands/DocumentCheckExpirationCommand.php` — link ×4 calls
+  - `app/Modules/Core/Members/UseCases/BatchRequestByRoleUseCase.php` — link
+  - `app/Modules/Core/Members/UseCases/RequestDocumentUseCase.php` — link
+  - `app/Modules/Core/Members/UseCases/ReviewMemberDocumentUseCase.php` — link
+  - `app/Modules/Core/Members/UseCases/CancelDocumentRequestUseCase.php` — link
+  - `resources/js/plugins/i18n/locales/fr.json` — clés i18n S2-S4
+  - `resources/js/plugins/i18n/locales/en.json` — clés i18n S2-S4
+  - `resources/js/company/views/CreateDocumentTypeDrawer.vue` — switch requires_expiration
+
+---
+
+### ADR-407 — CRUD complet types de documents custom (édition)
+
+- **Date** : 2026-03-25
+- **Contexte** : Les types de documents custom ne pouvaient être que créés, archivés ou supprimés. Aucune action d'édition — impossible de modifier le label, la taille max, les types acceptés ou le flag `requires_expiration` après création. Pour un SaaS, c'est un manquement fondamental.
+- **Décision** :
+  - **Backend** : `UpdateCustomDocumentTypeUseCase` + `UpdateCustomDocumentTypeData` DTO. Guards : not system, owned by company. Champs mutables : `label`, `max_file_size_mb`, `accepted_types`, `requires_expiration`. Champs immutables : `code`, `scope` (changement de scope impliquerait migration de données entre tables).
+  - **Controller** : `CustomDocumentTypeController::update()` — PUT `/company/document-types/custom/{code}`, middleware `documents.configure`
+  - **Frontend** : Le drawer `CreateDocumentTypeDrawer` devient dual-mode (create/edit) via prop `editDocument`. En mode edit : scope disabled, order/required masqués (gérés dans le catalog), bouton "Enregistrer" au lieu de "Créer".
+  - **Catalog** : Bouton edit (crayon) sur chaque type custom dans `CompanyDocumentActivationCatalog`, émet `edit-custom` avec l'objet document complet.
+  - **ReadModel** : `CompanyDocumentActivationReadModel` enrichi avec `requires_expiration` pour alimenter le drawer d'édition.
+  - **Wiring** : `_DocumentsSettings` → `[tab].vue` → drawer avec `editDocument` ref.
+- **Conséquences** :
+  - CRUD complet pour les types custom (Create, Read, Update, Archive, Delete)
+  - Pas de risque de perte de données — l'update ne touche ni le code ni le scope
+  - Les documents existants continuent de fonctionner avec les nouvelles règles de validation
+- **Fichiers** :
+  - `app/Modules/Core/Settings/UseCases/UpdateCustomDocumentTypeData.php` (new)
+  - `app/Modules/Core/Settings/UseCases/UpdateCustomDocumentTypeUseCase.php` (new)
+  - `app/Modules/Core/Documents/Http/CustomDocumentTypeController.php` — update()
+  - `routes/company.php` — PUT /document-types/custom/{code}
+  - `app/Core/Documents/ReadModels/CompanyDocumentActivationReadModel.php` — requires_expiration
+  - `resources/js/modules/company/documents/documents.store.js` — updateCustomDocumentType()
+  - `resources/js/company/views/CreateDocumentTypeDrawer.vue` — mode create/edit
+  - `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue` — bouton edit
+  - `resources/js/pages/company/documents/_DocumentsSettings.vue` — emit editCustomType
+  - `resources/js/pages/company/documents/[tab].vue` — wiring editDocument + drawer
+  - `resources/js/plugins/i18n/locales/fr.json` — clés edit
+  - `resources/js/plugins/i18n/locales/en.json` — clés edit
+
+---
+
+### ADR-408 — Module Documents : UX commerciale + complétude (2026-03-23)
+
+**Contexte** : Le module documents (ADR-397→407) était fonctionnel mais trop technique pour un SaaS vendant du confort : champ numérique pour l'ordre, bouton disquette par ligne, automation defaults à false, pas d'upload admin depuis les requêtes, permissions descriptions incomplètes.
+
+**Décisions** :
+
+- **Sprint A** : Automation defaults à `true` — `CompanyDocumentSetting::forCompany()` et front `autoForm` ref initialisés avec `auto_renew_enabled: true` et `auto_remind_enabled: true`. Companies existantes inchangées.
+
+- **Sprint B** : Drag-and-drop + batch save — Remplacement du champ numérique d'ordre et du bouton disquette par ligne par `@formkit/drag-and-drop` (pattern Kanban KanbanBoard.vue). Deux sections (member/company) avec `<tbody ref>` + drag handle (`tabler-grip-vertical`). Dirty tracking via snapshot. Bouton "Enregistrer" unique en bas du catalogue avec `VBadge dot` si dirty. Batch save via `Promise.allSettled()` sur les PUT individuels.
+
+- **Sprint C** : Upload admin depuis la page Requests — Enrichissement `DocumentRequestQueueReadModel` avec `requires_expiration`, `max_file_size_mb`, `accepted_types` dans le champ `document_type`. Dialog upload admin dans `_DocumentsRequests.vue` avec preview fichier, date picker conditionnel, et POST vers `/company/members/{id}/documents/{code}`.
+
+- **Sprint D** : Permissions module mises à jour — Descriptions enrichies dans `DocumentsModule.php` pour refléter toutes les capacités : preview, upload on behalf, drag reorder, edit/archive types, automation settings.
+
+- **Sprint E** : i18n (fr/en) — 5 clés ajoutées : `uploadForMember`, `uploadForMemberSuccess`, `chooseFile`, `noFileSelected`, `expirationRequired`.
+
+**Conséquences** :
+- UX plus commerciale et ergonomique (drag-and-drop, batch save, upload admin)
+- Cohérence entre permissions déclarées et capacités réelles du module
+- Nouvelles companies bénéficient d'automation activée par défaut
+
+**Fichiers** :
+- `app/Core/Documents/CompanyDocumentSetting.php` — defaults true
+- `resources/js/pages/company/documents/_DocumentsSettings.vue` — autoForm defaults true
+- `resources/js/views/pages/company-settings/CompanyDocumentActivationCatalog.vue` — drag-and-drop + batch save
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — enrichi document_type
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — admin upload dialog + bouton
+- `app/Modules/Core/Documents/DocumentsModule.php` — permissions descriptions
+- `resources/js/plugins/i18n/locales/en.json` — clés upload admin
+- `resources/js/plugins/i18n/locales/fr.json` — clés upload admin
+
+---
+
+### ADR-409 — Multi-upload + traitement image intelligent + OCR (2026-03-25)
+
+**Contexte** : Le système n'acceptait qu'1 fichier par type de document. Les utilisateurs devaient manuellement combiner recto/verso en PDF. Les photos smartphone arrivaient de travers, mal cadrées, avec fonds parasites. Besoin d'un pipeline automatisé.
+
+**Décisions** :
+
+- **Pipeline de traitement** : `DocumentProcessingPipeline` orchestre : auto-orient EXIF → deskew (redressement) → trim (crop intelligent) → nettoyage fond → fusion PDF → OCR. `ImageProcessor` utilise ImageMagick CLI via `Process::run()`. Fallback gracieux si binaire absent.
+
+- **Multi-fichier** : Controllers acceptent `files[]` (array, max 10) avec rétrocompatibilité `file` (single). Le pipeline fusionne tout en un PDF unique via FPDF/FPDI. Images auto-fit A4, PDFs importés page par page.
+
+- **OCR** : Tesseract via `thiagoalessio/tesseract_ocr` (fra+eng). Extraction texte sur les images uniquement. Stocké en colonne `ocr_text` (TEXT nullable) sur `member_documents` et `company_documents`. Non-bloquant si Tesseract absent.
+
+- **Frontend** : 4 dialogs d'upload modifiés pour accepter multi-fichier (`multiple` sur input). Liste avec suppression individuelle. Alerte info "auto-merge" remplace l'ancien "multi-file hint".
+
+- **Dépendances système** : ImageMagick 7 (CLI `magick`), Tesseract OCR. Auto-installées via deploy script et CI.
+
+**Conséquences** :
+- Upload multi-fichier transparent pour l'utilisateur (recto/verso, multi-pages)
+- Photos smartphone automatiquement redressées, recadrées et nettoyées
+- Texte OCR exploitable pour recherche future
+- Dépendances système (ImageMagick, Tesseract) requises en production
+
+**Fichiers** :
+- `app/Core/Documents/DocumentProcessingPipeline.php` — pipeline principal (NEW)
+- `app/Core/Documents/ImageProcessor.php` — traitement image ImageMagick (NEW)
+- `app/Core/Documents/ProcessingResult.php` — DTO résultat (NEW)
+- `database/migrations/2026_03_25_*_add_ocr_text_to_documents.php` — migration (NEW)
+- `app/Core/Documents/MemberDocument.php` — +ocr_text fillable
+- `app/Core/Documents/CompanyDocument.php` — +ocr_text fillable
+- `app/Modules/Core/Documents/Http/SelfDocumentController.php` — files[] + pipeline
+- `app/Modules/Core/Documents/Http/CompanyDocumentController.php` — files[] + pipeline
+- `app/Modules/Core/Documents/Http/MemberDocumentController.php` — files[] + pipeline
+- `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue` — multi-file
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — multi-file
+- `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — multi-file
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — multi-file
+- `resources/js/plugins/i18n/locales/fr.json` — clés autoMerge/totalFiles/mergeFailed
+- `resources/js/plugins/i18n/locales/en.json` — clés autoMerge/totalFiles/mergeFailed
+
+---
+
+### ADR-410 — Document v2 : Crop intelligent OpenCV, OCR fix, rejet auto, PDF adaptatif (2026-03-25)
+
+**Contexte** : Le pipeline ADR-409 avait 4 limitations majeures : OCR non fonctionnel (PATH minimal PHP-FPM), pas de crop intelligent (bordures supprimées mais pas de détection de contours), pages PDF forcées en A4 (cartes d'identité perdues au centre), et rejet = action manuelle au lieu d'une re-demande automatique.
+
+**Décisions** :
+
+1. **OCR fix** : `findTesseract()` retourne le chemin absolu (pattern `findMagick`), utilisé via `$ocr->executable()`. Remplace `isTesseractAvailable()`.
+
+2. **Script Python OpenCV** : `scripts/python/document_detector.py` — détection de document par Canny + findContours + approxPolyDP + warp perspective. Fallback = copie originale si pas de quadrilatère trouvé.
+
+3. **Auto-orientation OCR** : `ImageProcessor::detectOrientation()` teste 4 rotations (0/90/180/270), OCR rapide sur chacune, garde celle avec le meilleur score alphanumérique (seuil min 10 caractères).
+
+4. **Pipeline image** : detectAndCrop (Python) → detectOrientation (Tesseract) → ImageMagick (rotate + deskew + quality).
+
+5. **PDF adaptatif** : `addImagePage()` crée des pages aux dimensions de l'image + 5mm marge (au lieu de A4 fixe). Une carte d'identité génère une page carte d'identité.
+
+6. **Rejet auto-re-demande** : `ReviewMemberDocumentUseCase` — après rejet, status → `requested` + notification `documents.request_new` avec motif. Suppression complète du workflow manuel `reRequest` (route, contrôleur, store, bouton, i18n).
+
+7. **Viewer review_note** : passage de la prop `:review-note` au `DocumentViewerDialog` dans `_DocumentsRequests.vue`.
+
+**Conséquences** :
+- Python3 + opencv-python-headless requis en production → ajouté au deploy script et CI
+- Le statut `rejected` n'apparaît plus dans la queue des demandes (transitoire → `requested`)
+- L'utilisateur reçoit 2 notifications lors d'un rejet : reviewed + request_new (avec motif)
+
+**Fichiers** :
+- `app/Core/Documents/DocumentProcessingPipeline.php` — findTesseract(), OCR fix, PDF adaptatif
+- `app/Core/Documents/ImageProcessor.php` — detectAndCrop(), detectOrientation(), findPython(), findTesseract()
+- `scripts/python/document_detector.py` — (NEW) OpenCV document detector
+- `scripts/python/requirements.txt` — (NEW) Python dependencies
+- `app/Modules/Core/Members/UseCases/ReviewMemberDocumentUseCase.php` — rejet auto-re-request
+- `app/Modules/Core/Documents/Http/DocumentRequestController.php` — suppression reRequest()
+- `routes/company.php` — suppression route re-request
+- `resources/js/modules/company/documents/documents.store.js` — suppression reRequest()
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — suppression bouton re-request, ajout review-note prop
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — retrait STATUS_REJECTED du whereIn
+- `resources/js/plugins/i18n/locales/fr.json` — suppression clés reRequest
+- `resources/js/plugins/i18n/locales/en.json` — suppression clés reRequest
+- `deploy/deploy_release.sh` — Python3 + pip install
+- `.github/workflows/deploy.yml` — Python3 + pip install
+
+### ADR-411 — AI Gateway SaaS-grade : Infrastructure + Gouvernance Platform + Intelligence documentaire (2026-03-26)
+
+**Contexte** : ADR-410 a livré un pipeline basique (OpenCV crop, Tesseract OCR, auto-orientation), mais les tests sur documents réels montrent ses limites : OCR Tesseract garbled, orientation souvent incorrecte, aucune extraction structurée. Besoin d'un AI Gateway générique calqué sur le Payment Gateway, avec gouvernance platform complète et intelligence documentaire (MRZ → AI → OCR).
+
+**Décisions** :
+
+1. **AI Gateway pattern** (calque Payment Gateway) : `AiGatewayManager extends Manager`, `AiProviderAdapter` interface avec primitives neutres (`complete`, `vision`, `extractText`), `NullAiAdapter` no-op, `OllamaAiAdapter` HTTP client. Core AI = strictement neutre, zéro logique métier.
+
+2. **DTOs** : `AiCapability` (enum Vision/Completion/TextExtraction), `AiResponse` (text, structuredData, confidence, tokensUsed, latencyMs, model, provider), `AiHealthResult` (status healthy/degraded/down, message, latencyMs).
+
+3. **DB models** : `PlatformAiModule` (calque PlatformPaymentModule — provider_key, credentials encrypted, config, health_status), `AiRequestLog` (logging centralisé — provider, model, capability, tokens, latency, status, company_id, module_key).
+
+4. **Platform AI Module** (manifest `platform.ai`) : navItem brain icon, permissions view_ai/manage_ai, bundles ai.full/ai.readonly. Controllers read-only (providers, usage, routing, config) et mutation (activate/deactivate, updateConfig, updateRouting, healthCheck).
+
+5. **Frontend Platform AI** : page `/platform/ai/[tab]` avec 4 onglets (Providers, Usage, Routing, Settings). Stores Pinia façade pattern (ai.store.js + ai-providers.store.js + ai-usage.store.js). Pattern CRUD list pour providers, KPI cards pour usage, AppSelect pour routing.
+
+6. **MRZ Parser** : `MrzParser` wrapper autour de `rakibdevs/mrz-parser`. Détecte TD1/TD2/TD3 dans texte OCR brut, normalise erreurs OCR (« » → <). `MrzResult` DTO avec mapping clés lib (card_no → documentNumber, etc.).
+
+7. **DocumentAiAnalysisService** : cascade MRZ (100% fiable) → AI Vision (enrichissement) → OCR (fallback). Prompt AI dans le service (pas dans l'adapter). `DocumentAnalysisResult` DTO (detectedType, fields, expiryDate, confidence, source, validationErrors).
+
+8. **Job async** : `ProcessDocumentAiJob` dispatché après upload (member + company). Queue 'ai', tries=3, backoff=[10,30,60], timeout=120s. Safe avec NullAdapter (termine proprement).
+
+9. **ReadModels enrichis** : `ai_analysis` JSON exposé dans DocumentRequestQueueReadModel, CompanyDocumentReadModel, DocumentResolverService.
+
+**Conséquences** :
+- Ollama (self-hosted) seul provider initial — extensible à OpenAI, Claude, etc. via nouveau adapter
+- NullAdapter = défaut sécurisé, aucun coût AI si non configuré
+- Feature gating via EntitlementResolver + ModuleManifest.minPlan (extensible)
+- Platform admin pilote tout : providers, routing capability → provider, monitoring usage
+- Variables env : AI_DRIVER, OLLAMA_HOST, OLLAMA_MODEL, OLLAMA_VISION_MODEL, OLLAMA_TIMEOUT
+
+**Fichiers** :
+- `app/Core/Ai/Contracts/AiProviderAdapter.php` — (NEW) interface
+- `app/Core/Ai/DTOs/AiCapability.php` — (NEW) enum
+- `app/Core/Ai/DTOs/AiResponse.php` — (NEW) response DTO
+- `app/Core/Ai/DTOs/AiHealthResult.php` — (NEW) health DTO
+- `app/Core/Ai/AiGatewayManager.php` — (NEW) Manager
+- `app/Core/Ai/Adapters/NullAiAdapter.php` — (NEW) no-op adapter
+- `app/Core/Ai/Adapters/OllamaAiAdapter.php` — (NEW) Ollama HTTP adapter
+- `app/Core/Ai/PlatformAiModule.php` — (NEW) DB model
+- `app/Core/Ai/AiRequestLog.php` — (NEW) logging model
+- `config/ai.php` — (NEW) config
+- `database/migrations/2026_03_26_100001_create_platform_ai_modules_table.php` — (NEW)
+- `database/migrations/2026_03_26_100002_create_ai_request_logs_table.php` — (NEW)
+- `database/migrations/2026_03_26_100003_add_ai_to_platform_settings.php` — (NEW)
+- `database/migrations/2026_03_26_100004_add_ai_analysis_to_documents.php` — (NEW)
+- `app/Providers/AppServiceProvider.php` — singleton AiGatewayManager
+- `app/Platform/Models/PlatformSetting.php` — ai fillable + cast
+- `app/Modules/Platform/AI/AiModule.php` — (NEW) manifest
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` — (NEW) read controller
+- `app/Modules/Platform/AI/Http/PlatformAiMutationController.php` — (NEW) mutation controller
+- `app/Modules/Platform/AI/Http/Requests/UpdateAiConfigRequest.php` — (NEW)
+- `routes/platform.php` — routes AI
+- `resources/js/pages/platform/ai/[tab].vue` — (NEW) tab page
+- `resources/js/pages/platform/ai/_AiProvidersTab.vue` — (NEW)
+- `resources/js/pages/platform/ai/_AiUsageTab.vue` — (NEW)
+- `resources/js/pages/platform/ai/_AiRoutingTab.vue` — (NEW)
+- `resources/js/pages/platform/ai/_AiSettingsTab.vue` — (NEW)
+- `resources/js/modules/platform-admin/ai/ai.store.js` — (NEW) façade store
+- `resources/js/modules/platform-admin/ai/ai-providers.store.js` — (NEW)
+- `resources/js/modules/platform-admin/ai/ai-usage.store.js` — (NEW)
+- `resources/js/plugins/i18n/locales/fr.json` — i18n platformAi
+- `resources/js/plugins/i18n/locales/en.json` — i18n platformAi
+- `app/Core/Documents/MrzParser.php` — (NEW) MRZ wrapper
+- `app/Core/Documents/MrzResult.php` — (NEW) MRZ DTO
+- `app/Core/Documents/DocumentAnalysisResult.php` — (NEW) analysis DTO
+- `app/Modules/Core/Documents/Services/DocumentAiAnalysisService.php` — (NEW) cascade service
+- `app/Core/Documents/MemberDocument.php` — ai_analysis fillable + cast
+- `app/Core/Documents/CompanyDocument.php` — ai_analysis fillable + cast
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — (NEW) async job
+- `app/Core/Documents/UseCases/UploadCompanyDocumentUseCase.php` — dispatch job
+- `app/Modules/Core/Members/UseCases/UploadOwnDocumentUseCase.php` — dispatch job
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — ai_analysis in response
+- `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ai_analysis in response
+- `app/Core/Documents/DocumentResolverService.php` — ai_analysis in response
+- `composer.json` — rakibdevs/mrz-parser ^1.2
+
+### ADR-412 — AI Gateway Providers Catalog + UI Fixes (2026-03-26)
+
+**Contexte** : ADR-411 a livré l'AI Gateway complet mais les tests UX sur `/platform/ai/` révèlent 4 problèmes : (1) Providers = VDataTable vide sans catalogue d'installation, (2) Usage = VBtnToggle absent des presets Vuexy, (3) Routing = trop minimaliste, (4) Settings = trop spécifique Ollama/OCR.
+
+**Décisions** :
+1. Calquer le pattern Billing complet : `AiProviderRegistry` → `AiProviderManifest` → `PlatformAiGovernanceReadService` → `AiGovernanceCrudService`
+2. Registry boot 4 providers built-in : null, ollama, openai, anthropic (openai/anthropic = catalogue only, pas d'adapter)
+3. Routes passent de `{id}` à `{providerKey}` + ajout `PUT /install`
+4. ReadService masque credentials (même pattern que billing) et enrichit DB avec registry
+5. Frontend providers : VCard par provider (pattern SettingsPayment) au lieu de VDataTable
+6. Drawer configuration dynamique basé sur `credential_fields` du manifest
+7. Usage : `AppSelect` remplace `VBtnToggle` (absent des presets)
+8. Routing : VList card-list avec descriptions par capability
+9. Settings : générique (driver + timeout), pas spécifique Ollama
+10. `UpdateAiConfigRequest` : driver in null,ollama,openai,anthropic + timeout integer 5-300
+
+**Conséquences** :
+- Pattern AI gouvernance aligné 1:1 avec billing
+- OpenAI/Anthropic visibles dans le catalogue mais health check retourne "No adapter available"
+- Les adaptateurs OpenAI/Anthropic seront dans un futur ADR
+
+**Fichiers** :
+- `app/Core/Ai/AiProviderManifest.php` — NEW
+- `app/Core/Ai/AiProviderRegistry.php` — NEW
+- `app/Core/Ai/ReadModels/PlatformAiGovernanceReadService.php` — NEW
+- `app/Modules/Platform/AI/AiGovernanceCrudService.php` — NEW
+- `resources/js/pages/platform/ai/_AiProviderConfigDrawer.vue` — NEW
+- `app/Providers/AppServiceProvider.php` — boot registry
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` — use ReadService
+- `app/Modules/Platform/AI/Http/PlatformAiMutationController.php` — providerKey + CrudService
+- `routes/platform.php` — {id} → {providerKey} + install route
+- `config/ai.php` — defaults génériques
+- `app/Modules/Platform/AI/Http/Requests/UpdateAiConfigRequest.php` — driver + timeout rules
+- `resources/js/modules/platform-admin/ai/ai-providers.store.js` — providerKey actions
+- `resources/js/modules/platform-admin/ai/ai.store.js` — expose new actions
+- `resources/js/pages/platform/ai/_AiProvidersTab.vue` — VCard catalog
+- `resources/js/pages/platform/ai/_AiUsageTab.vue` — AppSelect period
+- `resources/js/pages/platform/ai/_AiRoutingTab.vue` — VList card-list
+- `resources/js/pages/platform/ai/_AiSettingsTab.vue` — generic settings
+- `resources/js/plugins/i18n/locales/fr.json` — i18n keys
+- `resources/js/plugins/i18n/locales/en.json` — i18n keys
+
+### ADR-413 — IA vivante : Policy + Decision + Insights + KPI SaaS (2026-03-26)
+
+**Contexte** : ADR-411/412 ont livré l'AI Gateway infra + catalogue providers. Mais l'IA restait invisible (JSON brut, pas d'insights), passive (analyse sans décision), sans gating (pas de contrôle module/company), non transverse (pas de séparation claire des couches), et sans KPI SaaS visibles.
+
+**Décisions** :
+1. Architecture 7 couches : Gateway (infra) → Policy (gouvernance) → Analysis (lecture) → Decision (intentions) → Orchestration (mutations) → Insights (valeur lisible) → KPI (métriques)
+2. Core AI = infra neutre (`app/Core/Ai/`) : AiPolicy VO, AiPolicyResolver, AiInsight DTO, AiDecisionResult DTO. ZERO logique métier.
+3. Business logic dans modules : `DocumentAiDecisionService` dans `app/Modules/Core/Documents/Services/`. Chaque futur module (fleet, support) aura ses propres services.
+4. **DecisionService = intentions uniquement** — retourne `AiDecisionResult` (booleans + données). NE FAIT aucun write DB, aucune transition workflow, aucune notification. Vérifié par test (0 queries DB).
+5. **Gating = settings-driven** — Cascade : Platform gate (provider actif ?) → Module settings (`CompanyDocumentSetting.ai_features`) → Company overrides. PAS de plan gate hardcodé.
+6. `AiPolicyResolver::forModule($companyId, $moduleKey)` résout la policy. Match par module key, extensible.
+7. Job orchestrateur (`ProcessDocumentAiJob`) consomme les intentions : auto-fill expiry, auto-reject, notifications, stockage insights.
+8. `AiInsight` DTO structuré : type, severity, messageKey (i18n), messageParams, metadata. Stocké en JSON sur documents.
+9. Frontend intelligence visible : panel IA enrichi dans DocumentViewerDialog (confiance, source, insights VAlert, champs extraits), DocumentAiChip partagé dans les 4 tableaux.
+10. AI Settings UI dans `_DocumentsSettings.vue` : 6 toggles + slider confiance + danger zone auto-reject.
+11. Platform governance UI : `_AiProvidersTab.vue` rewrite en `card-grid card-grid-md`, 2/ligne, flat border, états clairs.
+12. 4 KPI widgets WidgetManifest (ADR-156 batch) : docs analysés, détections, auto-actions, confiance. Dataset unique `ai.document_kpis`.
+13. Migration : `ai_features` JSON sur `company_document_settings`, `ai_insights` JSON sur `member_documents` + `company_documents`.
+
+**Conséquences** :
+- Pattern IA transverse réutilisable pour tout module futur (fleet, support, billing)
+- IA visible produit : insights lisibles, chips confiance, settings par company
+- ROI IA mesurable via widgets dashboard platform
+- DecisionService testable unitairement (pure logique, 0 side effects)
+
+**Fichiers** :
+- `app/Core/Ai/AiPolicy.php` — NEW (VO)
+- `app/Core/Ai/AiPolicyResolver.php` — NEW (settings-driven cascade)
+- `app/Core/Ai/DTOs/AiInsight.php` — NEW (DTO)
+- `app/Core/Ai/DTOs/AiDecisionResult.php` — NEW (DTO intentions)
+- `app/Modules/Core/Documents/Services/DocumentAiDecisionService.php` — NEW (pure logic)
+- `app/Modules/Core/Documents/ReadModels/DocumentAiKpiReadService.php` — NEW (batch ReadModel)
+- `app/Modules/Dashboard/Widgets/AiDocsAnalyzedWidget.php` — NEW
+- `app/Modules/Dashboard/Widgets/AiDetectionsWidget.php` — NEW
+- `app/Modules/Dashboard/Widgets/AiAutoActionsWidget.php` — NEW
+- `app/Modules/Dashboard/Widgets/AiConfidenceWidget.php` — NEW
+- `resources/js/views/shared/documents/DocumentAiChip.vue` — NEW
+- `resources/js/pages/platform/ai/_AiDocsAnalyzedWidget.vue` — NEW
+- `resources/js/pages/platform/ai/_AiDetectionsWidget.vue` — NEW
+- `resources/js/pages/platform/ai/_AiAutoActionsWidget.vue` — NEW
+- `resources/js/pages/platform/ai/_AiConfidenceWidget.vue` — NEW
+- `database/migrations/2026_03_26_200001_add_ai_features_and_insights.php` — NEW
+- `tests/Feature/DocumentAiDecisionServiceTest.php` — NEW (8 tests)
+- `app/Core/Documents/CompanyDocumentSetting.php` — EDIT (ai_features fillable/cast)
+- `app/Core/Documents/MemberDocument.php` — EDIT (ai_insights fillable/cast)
+- `app/Core/Documents/CompanyDocument.php` — EDIT (ai_insights fillable/cast)
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — EDIT (policy gate + decision + orchestration)
+- `app/Modules/Core/Documents/Http/DocumentSettingController.php` — EDIT (ai_features validation)
+- `resources/js/pages/platform/ai/_AiProvidersTab.vue` — REWRITE (card-grid-md)
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — EDIT (AI panel)
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — EDIT
+- `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — EDIT
+- `resources/js/views/pages/account-settings/AccountSettingsDocuments.vue` — EDIT
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — EDIT
+- `resources/js/pages/company/documents/_DocumentsSettings.vue` — EDIT (AI settings section)
+- `app/Modules/Dashboard/widgets.php` — EDIT (4 widgets registered)
+- `resources/js/components/dashboard/widgetComponentMap.js` — EDIT (4 async imports)
+- `app/Core/Billing/ReadModels/PlatformBillingDashboardReadService.php` — EDIT (ai.document_kpis case)
+- `resources/js/plugins/i18n/locales/fr.json` — EDIT (i18n keys)
+- `resources/js/plugins/i18n/locales/en.json` — EDIT (i18n keys)
+- `docs/bmad/07-dev-rules.md` — EDIT (règle transverse IA)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

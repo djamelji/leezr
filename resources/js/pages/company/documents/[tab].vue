@@ -48,11 +48,23 @@ const tabs = computed(() => [
   },
 ])
 
-// ─── Create drawer ──────────────────────────────────────
-const isCreateDrawerOpen = ref(false)
+// ─── Create/Edit drawer ─────────────────────────────────
+const isDrawerOpen = ref(false)
+const editDocument = ref(null)
 
-const handleCreated = async () => {
-  isCreateDrawerOpen.value = false
+const openCreateDrawer = () => {
+  editDocument.value = null
+  isDrawerOpen.value = true
+}
+
+const openEditDrawer = doc => {
+  editDocument.value = doc
+  isDrawerOpen.value = true
+}
+
+const handleDrawerDone = async () => {
+  isDrawerOpen.value = false
+  editDocument.value = null
   await store.fetchDocumentActivations()
 }
 
@@ -117,18 +129,23 @@ onMounted(async () => {
       </VWindowItem>
 
       <VWindowItem value="vault">
-        <DocumentsVault @open-create-drawer="isCreateDrawerOpen = true" />
+        <DocumentsVault @open-create-drawer="openCreateDrawer" />
       </VWindowItem>
 
       <VWindowItem value="settings">
-        <DocumentsSettings @open-create-drawer="isCreateDrawerOpen = true" />
+        <DocumentsSettings
+          @open-create-drawer="openCreateDrawer"
+          @edit-custom-type="openEditDrawer"
+        />
       </VWindowItem>
     </VWindow>
 
     <!-- Drawer at page level (outside VWindow) -->
     <CreateDocumentTypeDrawer
-      v-model:is-drawer-open="isCreateDrawerOpen"
-      @created="handleCreated"
+      v-model:is-drawer-open="isDrawerOpen"
+      :edit-document="editDocument"
+      @created="handleDrawerDone"
+      @updated="handleDrawerDone"
     />
   </div>
 </template>

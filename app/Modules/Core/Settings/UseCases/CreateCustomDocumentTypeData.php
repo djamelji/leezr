@@ -19,5 +19,6 @@ final class CreateCustomDocumentTypeData
         public readonly array $acceptedTypes,
         public readonly int $order,
         public readonly bool $required,
+        public readonly bool $requiresExpiration = false,
     ) {}
 }

@@ -90,12 +90,34 @@ class ReviewMemberDocumentUseCase
                 'document_code' => $type->code,
                 'status' => $data->status,
                 'review_note' => $data->reviewNote,
+                'link' => '/account-settings/documents',
             ],
             company: $data->company,
             entityKey: "document_request:{$targetUser->id}:{$type->code}",
         );
 
-        // 10. Return result
+        // 10. ADR-410: Rejection auto-re-requests — reset to requested + notify
+        if ($data->status === DocumentRequest::STATUS_REJECTED) {
+            $request->update([
+                'status' => DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now(),
+            ]);
+
+            NotificationDispatcher::send(
+                topicKey: 'documents.request_new',
+                recipients: [$targetUser],
+                payload: [
+                    'document_type' => $type->label,
+                    'document_code' => $type->code,
+                    'review_note' => $data->reviewNote,
+                    'link' => '/account-settings/documents',
+                ],
+                company: $data->company,
+                entityKey: "document_request:{$targetUser->id}:{$type->code}",
+            );
+        }
+
+        // 11. Return result
         return new ReviewMemberDocumentResult(
             code: $type->code,
             status: $request->status,

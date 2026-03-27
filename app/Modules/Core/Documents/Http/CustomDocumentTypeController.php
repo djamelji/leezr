@@ -8,6 +8,8 @@ use App\Modules\Core\Settings\UseCases\CreateCustomDocumentTypeData;
 use App\Modules\Core\Settings\UseCases\CreateCustomDocumentTypeUseCase;
 use App\Modules\Core\Settings\UseCases\DeleteCustomDocumentTypeData;
 use App\Modules\Core\Settings\UseCases\DeleteCustomDocumentTypeUseCase;
+use App\Modules\Core\Settings\UseCases\UpdateCustomDocumentTypeData;
+use App\Modules\Core\Settings\UseCases\UpdateCustomDocumentTypeUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -29,6 +31,7 @@ class CustomDocumentTypeController extends Controller
             'accepted_types.*' => ['string', 'in:pdf,jpg,jpeg,png,doc,docx'],
             'order' => ['sometimes', 'integer', 'min:0'],
             'required' => ['sometimes', 'boolean'],
+            'requires_expiration' => ['sometimes', 'boolean'],
         ]);
 
         $company = $request->attributes->get('company');
@@ -42,6 +45,7 @@ class CustomDocumentTypeController extends Controller
             acceptedTypes: $request->input('accepted_types'),
             order: (int) $request->input('order', 0),
             required: $request->boolean('required'),
+            requiresExpiration: $request->boolean('requires_expiration'),
         ));
 
         return response()->json([
@@ -53,6 +57,39 @@ class CustomDocumentTypeController extends Controller
                 'scope' => $result->scope,
             ],
         ], 201);
+    }
+
+    public function update(Request $request, string $code, UpdateCustomDocumentTypeUseCase $useCase): JsonResponse
+    {
+        $request->validate([
+            'label' => ['required', 'string', 'max:100'],
+            'max_file_size_mb' => ['required', 'integer', 'min:1', 'max:50'],
+            'accepted_types' => ['required', 'array', 'min:1'],
+            'accepted_types.*' => ['string', 'in:pdf,jpg,jpeg,png,doc,docx'],
+            'requires_expiration' => ['sometimes', 'boolean'],
+        ]);
+
+        $company = $request->attributes->get('company');
+
+        $type = $useCase->execute(new UpdateCustomDocumentTypeData(
+            actor: $request->user(),
+            company: $company,
+            code: $code,
+            label: $request->input('label'),
+            maxFileSizeMb: (int) $request->input('max_file_size_mb'),
+            acceptedTypes: $request->input('accepted_types'),
+            requiresExpiration: $request->boolean('requires_expiration'),
+        ));
+
+        return response()->json([
+            'message' => 'Document type updated.',
+            'document_type' => [
+                'id' => $type->id,
+                'code' => $type->code,
+                'label' => $type->label,
+                'scope' => $type->scope,
+            ],
+        ]);
     }
 
     public function archive(Request $request, string $code, ArchiveCustomDocumentTypeUseCase $useCase): JsonResponse

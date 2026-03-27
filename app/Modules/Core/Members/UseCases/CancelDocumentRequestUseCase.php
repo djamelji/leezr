@@ -56,6 +56,7 @@ class CancelDocumentRequestUseCase
                 recipients: [$recipient],
                 payload: [
                     'document_type_id' => $request->document_type_id,
+                    'link' => '/account-settings/documents',
                 ],
                 company: $company,
                 entityKey: "document_request_cancelled:{$request->id}",

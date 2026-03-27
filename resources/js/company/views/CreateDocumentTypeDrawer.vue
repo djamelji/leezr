@@ -1,5 +1,6 @@
 <script setup>
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
@@ -7,15 +8,23 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  editDocument: {
+    type: Object,
+    default: null,
+  },
 })
 
-const emit = defineEmits(['update:isDrawerOpen', 'created'])
+const emit = defineEmits(['update:isDrawerOpen', 'created', 'updated'])
 
 const { t } = useI18n()
 const settingsStore = useCompanySettingsStore()
+const documentsStore = useCompanyDocumentsStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(false)
+const showAdvanced = ref(false)
+
+const isEditMode = computed(() => !!props.editDocument)
 
 const scopeOptions = [
   { title: t('documents.scopeMember'), value: 'company_user' },
@@ -31,25 +40,59 @@ const defaultForm = () => ({
   accepted_types: ['pdf', 'jpg', 'jpeg', 'png'],
   order: 0,
   required: false,
+  requires_expiration: false,
 })
 
 const form = ref(defaultForm())
+
+// Pre-fill form when editDocument changes
+watch(() => props.editDocument, doc => {
+  if (doc) {
+    form.value = {
+      label: doc.label,
+      scope: doc.scope,
+      max_file_size_mb: doc.max_file_size_mb,
+      accepted_types: [...doc.accepted_types],
+      order: doc.order ?? 0,
+      required: doc.required_override ?? false,
+      requires_expiration: doc.requires_expiration ?? false,
+    }
+    showAdvanced.value = false
+  }
+  else {
+    form.value = defaultForm()
+    showAdvanced.value = false
+  }
+})
 
 const handleClose = () => {
   emit('update:isDrawerOpen', false)
   form.value = defaultForm()
   isLoading.value = false
+  showAdvanced.value = false
 }
 
 const handleSubmit = async () => {
   isLoading.value = true
 
   try {
-    await settingsStore.createCustomDocumentType({ ...form.value })
-    toast(t('documents.customTypeCreated'), 'success')
-    emit('created')
+    if (isEditMode.value) {
+      await documentsStore.updateCustomDocumentType(props.editDocument.code, {
+        label: form.value.label,
+        max_file_size_mb: form.value.max_file_size_mb,
+        accepted_types: form.value.accepted_types,
+        requires_expiration: form.value.requires_expiration,
+      })
+      toast(t('documents.customTypeUpdated'), 'success')
+      emit('updated')
+    }
+    else {
+      await settingsStore.createCustomDocumentType({ ...form.value })
+      toast(t('documents.customTypeCreated'), 'success')
+      emit('created')
+    }
     handleClose()
-    settingsStore.fetchDocumentActivations()
+    documentsStore.fetchDocumentActivations()
   }
   catch (error) {
     toast(error?.data?.message || t('common.error'), 'error')
@@ -68,7 +111,7 @@ const handleSubmit = async () => {
     @update:model-value="handleClose"
   >
     <AppDrawerHeaderSection
-      :title="t('documents.createCustomDocument')"
+      :title="isEditMode ? t('documents.editCustomDocument') : t('documents.createCustomDocument')"
       @cancel="handleClose"
     />
 
@@ -78,104 +121,98 @@ const handleSubmit = async () => {
       <VCard flat>
         <VCardText>
           <VAlert
-            type="info"
+            :type="isEditMode ? 'warning' : 'info'"
             variant="tonal"
             density="compact"
             class="mb-4"
           >
-            {{ t('documents.drawerCreateHint') }}
+            {{ isEditMode ? t('documents.drawerEditHint') : t('documents.drawerCreateHint') }}
           </VAlert>
 
           <VForm @submit.prevent="handleSubmit">
             <VRow>
+              <!-- Document name -->
               <VCol cols="12">
                 <AppTextField
                   v-model="form.label"
                   :label="t('documents.documentLabel')"
-                  :placeholder="t('documents.documentLabel')"
+                  :placeholder="t('documents.documentLabelPlaceholder')"
                 />
               </VCol>
+
+              <!-- Scope -->
               <VCol cols="12">
                 <AppSelect
                   v-model="form.scope"
-                  :label="t('documents.scope')"
+                  :label="t('documents.drawerScopeLabel')"
                   :items="scopeOptions"
                   :hint="form.scope === 'company_user' ? t('documents.scopeHintMember') : t('documents.scopeHintCompany')"
                   persistent-hint
+                  :disabled="isEditMode"
                 />
               </VCol>
 
+              <!-- Requires expiration -->
               <VCol cols="12">
-                <h6 class="text-overline text-medium-emphasis mb-2">
-                  {{ t('documents.fileConstraints') }}
-                </h6>
-              </VCol>
-
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppTextField
-                  v-model.number="form.max_file_size_mb"
-                  :label="t('documents.maxFileSizeMb')"
-                  type="number"
-                  :min="1"
-                  :max="50"
-                  :hint="t('documents.maxFileSizeHint')"
+                <VSwitch
+                  v-model="form.requires_expiration"
+                  :label="t('documents.requiresExpiration')"
+                  :hint="t('documents.requiresExpirationHint')"
                   persistent-hint
                 />
               </VCol>
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <VSelect
-                  v-model="form.accepted_types"
-                  :label="t('documents.acceptedTypes')"
-                  :items="acceptedTypeOptions"
-                  multiple
-                  chips
-                  closable-chips
-                />
-              </VCol>
 
+              <!-- Advanced settings toggle -->
               <VCol cols="12">
-                <h6 class="text-overline text-medium-emphasis mb-2">
-                  {{ t('documents.options') }}
-                </h6>
+                <VBtn
+                  variant="text"
+                  color="secondary"
+                  size="small"
+                  :prepend-icon="showAdvanced ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+                  @click="showAdvanced = !showAdvanced"
+                >
+                  {{ t('documents.advancedSettings') }}
+                </VBtn>
               </VCol>
 
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppTextField
-                  v-model.number="form.order"
-                  :label="t('companySettings.order')"
-                  type="number"
-                  :min="0"
-                  :hint="t('documents.orderHint')"
-                  persistent-hint
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <VCheckbox
-                  v-model="form.required"
-                  :label="t('companySettings.requiredOverride')"
-                  :hint="t('documents.requiredHint')"
-                  persistent-hint
-                />
-              </VCol>
+              <!-- Advanced settings (collapsed by default) -->
+              <template v-if="showAdvanced">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <AppTextField
+                    v-model.number="form.max_file_size_mb"
+                    :label="t('documents.maxFileSizeMb')"
+                    type="number"
+                    :min="1"
+                    :max="50"
+                    suffix="Mo"
+                  />
+                </VCol>
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <VSelect
+                    v-model="form.accepted_types"
+                    :label="t('documents.drawerAcceptedFormats')"
+                    :items="acceptedTypeOptions"
+                    multiple
+                    chips
+                    closable-chips
+                  />
+                </VCol>
+              </template>
+
+              <!-- Actions -->
               <VCol cols="12">
                 <VBtn
                   type="submit"
                   class="me-4"
                   :loading="isLoading"
                 >
-                  {{ t('common.create') }}
+                  {{ isEditMode ? t('common.save') : t('common.create') }}
                 </VBtn>
                 <VBtn
                   variant="tonal"

@@ -10,6 +10,7 @@ use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Storage\StorageQuotaService;
+use App\Jobs\Documents\ProcessDocumentAiJob;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -46,6 +47,13 @@ class UploadOwnDocumentUseCase
             ->where('document_type_id', $type->id)
             ->where('enabled', true)
             ->firstOrFail();
+
+        // 4b. ADR-406: Require expires_at when type demands it
+        if ($type->requires_expiration && empty($data->expiresAt)) {
+            throw ValidationException::withMessages([
+                'expires_at' => ['An expiration date is required for this document type.'],
+            ]);
+        }
 
         // 5. File domain validation (from validation_rules)
         $rules = $type->validation_rules ?? [];
@@ -139,8 +147,11 @@ class UploadOwnDocumentUseCase
 
         // 12. ADR-389: Notify admin users that a document was submitted for review
         $adminUserIds = Membership::where('company_id', $data->company->id)
-            ->where('is_admin', true)
             ->where('user_id', '!=', $data->user->id)
+            ->where(function ($q) {
+                $q->where('role', 'owner')
+                    ->orWhereHas('companyRole', fn ($r) => $r->where('is_administrative', true));
+            })
             ->pluck('user_id');
 
         if ($adminUserIds->isNotEmpty()) {
@@ -152,11 +163,15 @@ class UploadOwnDocumentUseCase
                     'document_type' => $type->label,
                     'document_code' => $type->code,
                     'member_name' => $data->user->name,
+                    'link' => '/company/documents/requests',
                 ],
                 company: $data->company,
                 entityKey: "member_document:{$data->user->id}:{$type->code}",
             );
         }
+
+        // ADR-411: Dispatch async AI analysis
+        ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
 
         return new UploadOwnDocumentResult(
             id: $document->id,

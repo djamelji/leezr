@@ -119,14 +119,18 @@ class DocumentCheckExpirationCommand extends Command
                         'document_code' => $type->code,
                         'expires_at' => $document->expires_at->toDateString(),
                         'member_name' => $user->name,
+                        'link' => '/account-settings/documents',
                     ],
                     company: $company,
                     entityKey: $entityKey,
                 );
 
                 $adminUserIds = Membership::where('company_id', $company->id)
-                    ->where('is_admin', true)
                     ->where('user_id', '!=', $user->id)
+                    ->where(function ($q) {
+                        $q->where('role', 'owner')
+                            ->orWhereHas('companyRole', fn ($r) => $r->where('is_administrative', true));
+                    })
                     ->pluck('user_id');
 
                 if ($adminUserIds->isNotEmpty()) {
@@ -139,6 +143,7 @@ class DocumentCheckExpirationCommand extends Command
                             'document_code' => $type->code,
                             'expires_at' => $document->expires_at->toDateString(),
                             'member_name' => $user->name,
+                            'link' => '/company/documents/compliance',
                         ],
                         company: $company,
                         entityKey: $entityKey,
@@ -219,6 +224,7 @@ class DocumentCheckExpirationCommand extends Command
                         payload: [
                             'document_type' => $document->documentType->label,
                             'document_code' => $document->documentType->code,
+                            'link' => '/account-settings/documents',
                         ],
                         company: Company::find($setting->company_id),
                         entityKey: "document_request:{$document->user_id}:{$document->documentType->code}",
@@ -278,6 +284,7 @@ class DocumentCheckExpirationCommand extends Command
                         payload: [
                             'document_type' => $request->documentType->label,
                             'document_code' => $request->documentType->code,
+                            'link' => '/account-settings/documents',
                         ],
                         company: Company::find($setting->company_id),
                         entityKey: "document_request:{$request->user_id}:{$request->documentType->code}",

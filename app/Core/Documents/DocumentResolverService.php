@@ -104,6 +104,8 @@ class DocumentResolverService
                 'mime_type' => $upload->mime_type,
                 'expires_at' => $upload->expires_at?->toIso8601String(),
                 'uploaded_at' => $upload->created_at->toIso8601String(),
+                'ocr_text' => $upload->ocr_text,
+                'ai_analysis' => $upload->ai_analysis,
             ] : null;
 
             $result[] = [
@@ -112,6 +114,7 @@ class DocumentResolverService
                 'scope' => $type->scope,
                 'required' => $required,
                 'mandatory' => $mandatory,
+                'requires_expiration' => (bool) $type->requires_expiration,
                 'max_file_size_mb' => $rules['max_file_size_mb'] ?? 10,
                 'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
                 'order' => $activation->order,

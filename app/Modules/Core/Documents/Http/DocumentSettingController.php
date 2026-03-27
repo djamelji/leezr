@@ -24,10 +24,19 @@ class DocumentSettingController
         $company = $request->attributes->get('company');
 
         $validated = $request->validate([
-            'auto_renew_enabled' => ['required', 'boolean'],
-            'renew_days_before' => ['required', 'integer', 'min:1', 'max:365'],
-            'auto_remind_enabled' => ['required', 'boolean'],
-            'remind_after_days' => ['required', 'integer', 'min:1', 'max:90'],
+            'auto_renew_enabled' => ['sometimes', 'boolean'],
+            'renew_days_before' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'auto_remind_enabled' => ['sometimes', 'boolean'],
+            'remind_after_days' => ['sometimes', 'integer', 'min:1', 'max:90'],
+            // ADR-413: AI feature settings
+            'ai_features' => ['sometimes', 'array'],
+            'ai_features.ai_analysis_enabled' => ['sometimes', 'boolean'],
+            'ai_features.ocr_enabled' => ['sometimes', 'boolean'],
+            'ai_features.auto_fill_expiry' => ['sometimes', 'boolean'],
+            'ai_features.auto_reject_type_mismatch' => ['sometimes', 'boolean'],
+            'ai_features.notify_expiry_detected' => ['sometimes', 'boolean'],
+            'ai_features.notify_validation_errors' => ['sometimes', 'boolean'],
+            'ai_features.min_confidence_threshold' => ['sometimes', 'integer', 'min:10', 'max:100'],
         ]);
 
         $settings = CompanyDocumentSetting::forCompany($company->id);

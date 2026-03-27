@@ -25,6 +25,8 @@ use App\Modules\Platform\Billing\Http\AuditExportController;
 use App\Modules\Platform\Billing\Http\PlatformRecoveryController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
+use App\Modules\Platform\AI\Http\PlatformAiController;
+use App\Modules\Platform\AI\Http\PlatformAiMutationController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
 use App\Modules\Platform\Fields\Http\FieldActivationController;
 use App\Modules\Platform\Fields\Http\FieldDefinitionController;
@@ -364,6 +366,24 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/billing/replay-dead-letters', [PlatformRecoveryController::class, 'replayAllDeadLetters']);
         Route::post('/billing/replay-dead-letters/{id}', [PlatformRecoveryController::class, 'replayDeadLetter']);
         Route::get('/billing/dead-letters', [PlatformRecoveryController::class, 'listDeadLetters']);
+    });
+
+    // AI Gateway governance (ADR-411)
+    Route::middleware(['module.active:platform.ai', 'platform.permission:view_ai'])->group(function () {
+        Route::get('/ai/providers', [PlatformAiController::class, 'providers']);
+        Route::get('/ai/usage', [PlatformAiController::class, 'usage']);
+        Route::get('/ai/routing', [PlatformAiController::class, 'routing']);
+        Route::get('/ai/config', [PlatformAiController::class, 'config']);
+    });
+
+    Route::middleware(['module.active:platform.ai', 'platform.permission:manage_ai'])->group(function () {
+        Route::put('/ai/config', [PlatformAiMutationController::class, 'updateConfig']);
+        Route::put('/ai/providers/{providerKey}/install', [PlatformAiMutationController::class, 'installProvider']);
+        Route::put('/ai/providers/{providerKey}/activate', [PlatformAiMutationController::class, 'activateProvider']);
+        Route::put('/ai/providers/{providerKey}/deactivate', [PlatformAiMutationController::class, 'deactivateProvider']);
+        Route::put('/ai/providers/{providerKey}/credentials', [PlatformAiMutationController::class, 'updateProviderCredentials']);
+        Route::put('/ai/routing', [PlatformAiMutationController::class, 'updateRouting']);
+        Route::post('/ai/providers/{providerKey}/health-check', [PlatformAiMutationController::class, 'healthCheck']);
     });
 
     // Markets governance (ADR-104)

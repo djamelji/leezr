@@ -72,6 +72,7 @@ class CompanyDocumentActivationReadModel
                 'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
                 'applicable_markets' => $rules['applicable_markets'] ?? null,
                 'is_system' => $type->is_system,
+                'requires_expiration' => (bool) $type->requires_expiration,
             ];
 
             // For custom types, include usage_count (actual uploads only — requests are cascade-deleted)

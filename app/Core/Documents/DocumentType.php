@@ -16,6 +16,7 @@ class DocumentType extends Model
         'scope',
         'label',
         'validation_rules',
+        'requires_expiration',
         'is_system',
         'default_order',
         'archived_at',
@@ -23,6 +24,7 @@ class DocumentType extends Model
 
     protected $casts = [
         'validation_rules' => 'array',
+        'requires_expiration' => 'boolean',
         'is_system' => 'boolean',
         'archived_at' => 'datetime',
     ];

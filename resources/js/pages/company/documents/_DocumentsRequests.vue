@@ -1,19 +1,20 @@
 <script setup>
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
-import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAuthStore } from '@/core/stores/auth'
+import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 
 const { t } = useI18n()
 const store = useCompanyDocumentsStore()
-const settingsStore = useCompanySettingsStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
+const { formatFileSize } = useDocumentHelpers()
 
 const canManage = computed(() => auth.hasPermission('documents.manage'))
 
@@ -189,6 +190,133 @@ const formatDate = dateStr => {
   })
 }
 
+// ─── Document preview (ADR-406 S2) ──────────────────────
+const isViewerOpen = ref(false)
+const viewerRequest = ref(null)
+
+const viewerDocument = computed(() => {
+  const r = viewerRequest.value
+  if (!r?.upload) return null
+
+  return {
+    label: t(`documents.type.${r.document_type?.code}`, r.document_type?.label),
+    file_name: r.upload.file_name,
+    file_size_bytes: r.upload.file_size_bytes,
+    mime_type: r.upload.mime_type,
+    ocr_text: r.upload.ocr_text,
+    ai_analysis: r.upload.ai_analysis,
+    ai_insights: r.upload.ai_insights,
+  }
+})
+
+const viewerDownloadUrl = computed(() => {
+  const r = viewerRequest.value
+  if (!r?.user?.membership_id || !r?.document_type?.code) return ''
+
+  return `/company/members/${r.user.membership_id}/documents/${r.document_type.code}/download`
+})
+
+const openViewer = request => {
+  viewerRequest.value = request
+  isViewerOpen.value = true
+}
+
+const handleViewerApprove = () => {
+  isViewerOpen.value = false
+  if (viewerRequest.value) handleApprove(viewerRequest.value)
+}
+
+const handleViewerReject = () => {
+  isViewerOpen.value = false
+  if (viewerRequest.value) openRejectDialog(viewerRequest.value)
+}
+
+const handleViewerDownload = async () => {
+  const r = viewerRequest.value
+  if (!r?.user?.membership_id || !r?.document_type?.code || !r?.upload) return
+
+  try {
+    const blob = await $api(viewerDownloadUrl.value, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = r.upload.file_name
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  catch {
+    toast(t('common.error'), 'error')
+  }
+}
+
+// ─── Admin upload on behalf of member (ADR-408 C) ───────
+const isAdminUploadOpen = ref(false)
+const adminUploadRequest = ref(null)
+const adminUploadFiles = ref([])
+const adminUploadExpiresAt = ref(null)
+const isAdminUploading = ref(false)
+
+const adminFileInputRef = ref(null)
+
+const openAdminUpload = request => {
+  adminUploadRequest.value = request
+  adminUploadFiles.value = []
+  adminUploadExpiresAt.value = null
+  isAdminUploading.value = false
+  isAdminUploadOpen.value = true
+}
+
+const handleAdminFileSelect = event => {
+  if (!event.target.files?.length) return
+  adminUploadFiles.value = [...event.target.files]
+}
+
+const adminAcceptTypes = computed(() => {
+  const types = adminUploadRequest.value?.document_type?.accepted_types || ['pdf', 'jpg', 'jpeg', 'png']
+
+  return types.map(t => `.${t}`).join(',')
+})
+
+const canSubmitAdminUpload = computed(() => {
+  if (!adminUploadFiles.value.length) return false
+  if (adminUploadRequest.value?.document_type?.requires_expiration && !adminUploadExpiresAt.value) return false
+
+  return true
+})
+
+const confirmAdminUpload = async () => {
+  if (!canSubmitAdminUpload.value) return
+  isAdminUploading.value = true
+
+  try {
+    const formData = new FormData()
+
+    adminUploadFiles.value.forEach(f => formData.append('files[]', f))
+    if (adminUploadExpiresAt.value) {
+      formData.append('expires_at', adminUploadExpiresAt.value)
+    }
+
+    const membershipId = adminUploadRequest.value.user?.membership_id
+    const code = adminUploadRequest.value.document_type?.code
+
+    await $api(`/company/members/${membershipId}/documents/${code}`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    toast(t('documents.uploadForMemberSuccess'), 'success')
+    isAdminUploadOpen.value = false
+    await store.fetchRequests()
+  }
+  catch (error) {
+    toast(error?.data?.message || error.message || t('common.error'), 'error')
+  }
+  finally {
+    isAdminUploading.value = false
+  }
+}
+
 // ─── Batch request dialog ───────────────────────────────
 const isRequestDialogVisible = ref(false)
 const isRequestLoading = ref(false)
@@ -200,8 +328,10 @@ const requestForm = ref({
   document_type_code: null,
 })
 
+const batchRoles = ref([])
+
 const roleItems = computed(() => {
-  return settingsStore.roles.map(r => ({ title: r.name, value: r.id }))
+  return batchRoles.value.map(r => ({ title: r.name, value: r.id }))
 })
 
 const memberItems = computed(() => {
@@ -235,7 +365,7 @@ const openRequestDialog = async () => {
   requestForm.value = { scope: 'all', company_role_ids: [], user_ids: [], document_type_code: null }
 
   await Promise.allSettled([
-    settingsStore.roles.length === 0 ? settingsStore.fetchCompanyRoles({ silent: true }) : Promise.resolve(),
+    $api('/company/document-requests/roles').then(data => { batchRoles.value = data.roles }),
     membersStore.members.length === 0 ? membersStore.fetchMembers() : Promise.resolve(),
   ])
 
@@ -399,6 +529,19 @@ const submitRequest = async () => {
 
         <template #item.actions="{ item }">
           <div class="d-flex gap-1">
+            <!-- Preview (submitted/rejected with upload) -->
+            <VBtn
+              v-if="['submitted', 'rejected'].includes(item.status) && item.upload && canManage"
+              icon
+              variant="text"
+              size="small"
+              color="primary"
+              :title="t('documents.preview')"
+              @click="openViewer(item)"
+            >
+              <VIcon icon="tabler-eye" />
+            </VBtn>
+
             <!-- Approve (submitted only) -->
             <VBtn
               v-if="item.status === 'submitted' && canManage"
@@ -423,6 +566,19 @@ const submitRequest = async () => {
               @click="openRejectDialog(item)"
             >
               <VIcon icon="tabler-x" />
+            </VBtn>
+
+            <!-- Upload on behalf (requested only) -->
+            <VBtn
+              v-if="item.status === 'requested' && canManage"
+              icon
+              variant="text"
+              size="small"
+              color="success"
+              :title="t('documents.uploadForMember')"
+              @click="openAdminUpload(item)"
+            >
+              <VIcon icon="tabler-upload" />
             </VBtn>
 
             <!-- Remind (requested only) -->
@@ -454,6 +610,121 @@ const submitRequest = async () => {
         </template>
     </VDataTable>
   </VCard>
+
+  <!-- Admin Upload Dialog (ADR-408 C) -->
+  <VDialog
+    v-model="isAdminUploadOpen"
+    max-width="500"
+  >
+    <VCard>
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            color="success"
+            variant="tonal"
+            rounded
+          >
+            <VIcon icon="tabler-upload" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('documents.uploadForMember') }}</VCardTitle>
+        <VCardSubtitle>
+          {{ adminUploadRequest?.user?.first_name }} {{ adminUploadRequest?.user?.last_name }}
+          — {{ t(`documents.type.${adminUploadRequest?.document_type?.code}`, adminUploadRequest?.document_type?.label) }}
+        </VCardSubtitle>
+      </VCardItem>
+      <VCardText>
+        <VBtn
+          variant="tonal"
+          color="primary"
+          prepend-icon="tabler-file-upload"
+          block
+          @click="adminFileInputRef?.click()"
+        >
+          {{ t('documents.chooseFile') }}
+        </VBtn>
+        <input
+          ref="adminFileInputRef"
+          type="file"
+          :accept="adminAcceptTypes"
+          hidden
+          multiple
+          @change="handleAdminFileSelect"
+        >
+        <div v-if="adminUploadFiles.length" class="mt-3 mb-4">
+          <div
+            v-for="(f, idx) in adminUploadFiles"
+            :key="idx"
+            class="d-flex align-center gap-2 mb-1"
+          >
+            <VIcon icon="tabler-file" size="20" />
+            <span class="text-body-1">{{ f.name }}</span>
+            <span class="text-body-2 text-disabled">{{ formatFileSize(f.size) }}</span>
+            <VBtn
+              icon
+              variant="text"
+              size="x-small"
+              color="error"
+              @click="adminUploadFiles.splice(idx, 1)"
+            >
+              <VIcon icon="tabler-x" size="14" />
+            </VBtn>
+          </div>
+          <div class="text-body-2 text-disabled mt-2">
+            {{ t('documents.totalFiles', { count: adminUploadFiles.length }) }}
+          </div>
+        </div>
+        <div
+          v-else
+          class="mt-3 text-body-2 text-medium-emphasis"
+        >
+          {{ t('documents.noFileSelected') }}
+        </div>
+
+        <VAlert
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mt-3"
+        >
+          {{ t('documents.autoMergeHint') }}
+        </VAlert>
+
+        <template v-if="adminUploadRequest?.document_type?.requires_expiration">
+          <AppDateTimePicker
+            v-model="adminUploadExpiresAt"
+            :label="t('documents.expiresAt')"
+            class="mt-4"
+          />
+          <VAlert
+            v-if="!adminUploadExpiresAt"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-2"
+          >
+            {{ t('documents.expirationRequired') }}
+          </VAlert>
+        </template>
+      </VCardText>
+      <VCardActions class="justify-end">
+        <VBtn
+          variant="tonal"
+          @click="isAdminUploadOpen = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="success"
+          :loading="isAdminUploading"
+          :disabled="!canSubmitAdminUpload"
+          @click="confirmAdminUpload"
+        >
+          {{ t('documents.upload') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 
   <!-- Reject Dialog (S1.2) -->
   <VDialog
@@ -596,6 +867,19 @@ const submitRequest = async () => {
       </VCardActions>
     </VCard>
   </VDialog>
+
+  <!-- Document preview (ADR-406 S2) -->
+  <DocumentViewerDialog
+    v-model:is-dialog-visible="isViewerOpen"
+    :document="viewerDocument"
+    :download-url="viewerDownloadUrl"
+    :can-review="canManage && viewerRequest?.status === 'submitted'"
+    :review-status="viewerRequest?.status"
+    :review-note="viewerRequest?.review_note"
+    @approve="handleViewerApprove"
+    @reject="handleViewerReject"
+    @download="handleViewerDownload"
+  />
 
   <!-- Confirm dialog -->
   <ConfirmDialogComponent />
