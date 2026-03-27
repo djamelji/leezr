@@ -8,6 +8,7 @@ const store = useCompanyDocumentsStore()
 const auth = useAuthStore()
 
 const canEdit = computed(() => auth.hasPermission('documents.manage'))
+const canConfigure = computed(() => auth.hasPermission('documents.configure'))
 
 const companyDocuments = computed(() => store.companyDocuments)
 const hasDocuments = computed(() => companyDocuments.value.length > 0)
@@ -35,7 +36,7 @@ const emit = defineEmits(['openCreateDrawer'])
       <VCardSubtitle>{{ t('companyDocuments.vault.hint') }}</VCardSubtitle>
       <template #append>
         <VBtn
-          v-if="canEdit"
+          v-if="canConfigure"
           variant="tonal"
           color="success"
           size="small"

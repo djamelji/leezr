@@ -4,6 +4,7 @@ definePage({
     surface: 'structure',
     module: 'core.billing',
     navActiveLink: 'company-billing-tab',
+    permission: 'billing.manage',
   },
 })
 

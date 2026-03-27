@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { $guardedApi } from '@/utils/guardedApi'
 
 /**
  * ADR-389: Centralized documents store for the company documents module.
@@ -133,12 +134,14 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
     },
 
     // ─── Requests Queue ────────────────────────────────
+    // ADR-418: $guardedApi — cross-permission defense (documents.manage vs page-level documents.view)
     async fetchRequests() {
       this._loading.requests = true
 
       try {
-        const data = await $api('/company/document-requests/queue')
+        const data = await $guardedApi('documents.manage', '/company/document-requests/queue')
 
+        if (!data) return
         this._requests = data.queue ?? []
       }
       catch {
@@ -150,10 +153,12 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
     },
 
     // ─── Document Settings ──────────────────────────────
+    // ADR-418: $guardedApi — cross-permission defense (documents.configure vs page-level documents.view)
     async fetchDocSettings() {
       try {
-        const data = await $api('/company/document-settings')
+        const data = await $guardedApi('documents.configure', '/company/document-settings')
 
+        if (!data) return
         this._docSettings = data.settings
       }
       catch {

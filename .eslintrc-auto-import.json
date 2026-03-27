@@ -397,6 +397,9 @@
     "useSkins": true,
     "avatarText": true,
     "createUrl": true,
-    "resolveVuetifyTheme": true
+    "resolveVuetifyTheme": true,
+    "$guardedApi": true,
+    "useCompanyPermissionContext": true,
+    "usePlatformPermissionContext": true
   }
 }

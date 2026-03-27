@@ -4,7 +4,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
-definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
+definePage({ meta: { module: 'logistics_shipments', surface: 'operations', permission: 'shipments.view' } })
 
 const { t } = useI18n()
 const auth = useAuthStore()

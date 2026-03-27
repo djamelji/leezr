@@ -135,6 +135,11 @@ export const setupGuards = router => {
         return '/dashboard'
       }
     }
+
+    // Permission guard — ADR-418: router = autorité centrale RBAC
+    if (to.meta.permission && !auth.hasPermission(to.meta.permission)) {
+      return { name: 'company403' }
+    }
   })
 
   // ─── Overlay cleanup (ADR-075) ─────────────────────────

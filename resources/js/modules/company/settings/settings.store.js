@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { $guardedApi } from '@/utils/guardedApi'
 import { cacheRemove } from '@/core/runtime/cache'
 import { useAuthStore } from '@/core/stores/auth'
 import { useNavStore } from '@/core/stores/nav'
@@ -46,10 +47,12 @@ export const useCompanySettingsStore = defineStore('companySettings', {
     },
 
     // ─── Company Roles (CRUD) ──────────────────────────
+    // ADR-418: $guardedApi — cross-permission defense (called from members page with members.view)
     async fetchCompanyRoles({ silent = false } = {}) {
       try {
-        const data = await $api('/company/roles', { _silent403: silent })
+        const data = await $guardedApi('roles.view', '/company/roles', { _silent403: silent })
 
+        if (!data) return
         this._roles = data.roles
       }
       catch (e) {
@@ -59,8 +62,9 @@ export const useCompanySettingsStore = defineStore('companySettings', {
 
     async fetchPermissionCatalog({ silent = false } = {}) {
       try {
-        const data = await $api('/company/permissions', { _silent403: silent })
+        const data = await $guardedApi('roles.view', '/company/permissions', { _silent403: silent })
 
+        if (!data) return
         this._permissionCatalog = data.permissions
         this._permissionModules = data.modules || []
       }

@@ -48,6 +48,7 @@ export const companyResources = [
     ttl: 10 * 60 * 1000, // 10 minutes
     dependsOn: ['auth:me'],
     critical: false, // Non-blocking — app works with default jobdomain
+    permission: 'jobdomain.view', // ADR-418: scheduler skips if user lacks permission
   },
   {
     key: 'features:modules',

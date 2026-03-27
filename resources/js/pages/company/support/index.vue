@@ -5,6 +5,7 @@ definePage({
   meta: {
     navActiveKey: 'company-support',
     module: 'core.support',
+    permission: 'support.view',
   },
 })
 

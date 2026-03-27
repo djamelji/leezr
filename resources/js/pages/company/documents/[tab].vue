@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { module: 'core.documents', surface: 'structure' } })
+definePage({ meta: { module: 'core.documents', surface: 'structure', permission: 'documents.view' } })
 
 import DocumentsOverview from './_DocumentsOverview.vue'
 import DocumentsRequests from './_DocumentsRequests.vue'
@@ -8,18 +8,29 @@ import DocumentsVault from './_DocumentsVault.vue'
 import DocumentsSettings from './_DocumentsSettings.vue'
 import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
+import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 
 const { t } = useI18n()
 const route = useRoute('company-documents-tab')
 const router = useRouter()
 const store = useCompanyDocumentsStore()
+const { can } = useCompanyPermissionContext()
 
 const activeTab = computed({
   get: () => route.params.tab,
   set: () => route.params.tab,
 })
 
-const tabs = computed(() => [
+// ADR-418: Tab-level permission gating
+const tabPermissions = {
+  overview: null,
+  requests: 'documents.manage',
+  compliance: null,
+  vault: null,
+  settings: 'documents.configure',
+}
+
+const allTabs = computed(() => [
   {
     title: t('companyDocuments.tabs.overview'),
     icon: 'tabler-layout-dashboard',
@@ -48,6 +59,24 @@ const tabs = computed(() => [
   },
 ])
 
+// Only show tabs user has permission for
+const tabs = computed(() =>
+  allTabs.value.filter(t => {
+    const perm = tabPermissions[t.tab]
+
+    return !perm || can(perm)
+  }),
+)
+
+// ADR-418: Redirect if URL points to a restricted tab
+watch(() => route.params.tab, tab => {
+  const perm = tabPermissions[tab]
+
+  if (perm && !can(perm)) {
+    router.replace({ params: { tab: tabs.value[0]?.tab || 'overview' } })
+  }
+}, { immediate: true })
+
 // ─── Create/Edit drawer ─────────────────────────────────
 const isDrawerOpen = ref(false)
 const editDocument = ref(null)
@@ -73,13 +102,17 @@ const navigateToTab = tab => {
 }
 
 onMounted(async () => {
+  // Page-level data (documents.view — guaranteed by router guard)
   await Promise.all([
     store.fetchCompanyDocuments(),
     store.fetchDocumentActivations(),
     store.fetchCompliance(),
-    store.fetchRequests(),
     store.fetchActivity(),
   ])
+
+  // ADR-418: Tab-specific data — only fetch if user has permission
+  if (can('documents.manage')) store.fetchRequests()
+  if (can('documents.configure')) store.fetchDocSettings()
 })
 </script>
 

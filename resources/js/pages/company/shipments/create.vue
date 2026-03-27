@@ -1,7 +1,7 @@
 <script setup>
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
-definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
+definePage({ meta: { module: 'logistics_shipments', surface: 'operations', permission: 'shipments.create' } })
 
 const { t } = useI18n()
 const shipmentStore = useShipmentStore()

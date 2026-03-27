@@ -14248,4 +14248,73 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-417 — Fix 403 jobdomain runtime : permission gate + null guard (2026-03-27)
+
+**Contexte :**
+Le runtime SPA fetch `/company/jobdomain` au boot de TOUTE page company (resource `tenant:jobdomain`, phase tenant).
+L'utilisateur `admin@leezr.test` a le rôle Dispatcher qui n'inclut PAS `jobdomain.view`.
+Résultat : 403 HTTP + crash JS (`data.assigned` sur `undefined`) visible sur la page Documents et toutes les pages company.
+
+**Décisions :**
+1. **Permission gate dans le store** : vérifier `auth.hasPermission('jobdomain.view')` AVANT l'appel API → aucun 403 émis
+2. **Null guard** : si `$api()` retourne `undefined` (403 silencé ou autre erreur), retourner `null` sans crasher
+3. La resource `tenant:jobdomain` était déjà `critical: false` → pas d'impact sur le boot
+
+**Conséquences :**
+- Zéro erreur console (ni réseau ni JS) pour les utilisateurs sans `jobdomain.view`
+- Le store conserve ses valeurs par défaut (assigned=false, jobdomain=null)
+- L'app fonctionne normalement sans données jobdomain (navigation, landing route → fallback defaults)
+
+**Fichiers :**
+- `resources/js/modules/company/jobdomain/jobdomain.store.js` — permission gate + null guard
+
+---
+
+### ADR-418 — Architecture RBAC Frontend : 5 couches d'alignement systémique (2026-03-27)
+
+**Contexte :**
+Le RBAC backend est complet (NavBuilder 11 steps, middleware `company.access`), mais le frontend n'est pas aligné : 21 pages company, 0 avec `meta.permission`, stores appellent des APIs protégées sans vérifier la permission → 403 en console. Tab gating dispersé et non systémique.
+
+**Décisions :**
+1. **5 principes directeurs** : Source unique (`useCompanyPermissionContext`), Router = autorité centrale, matrice exhaustive module→permission→route→UI, stores safe par design (`$guardedApi`), zéro 403 frontend
+2. **Couche 1 — Composables explicites** : `useCompanyPermissionContext()` + `usePlatformPermissionContext()` — wrappent `auth.hasPermission()` + `moduleStore.isActive()` en un seul `checkAccess(meta)` déterministe
+3. **Couche 2 — Router = autorité RBAC** : Permission guard company dans `guards.js` (après module guard) → redirect `company403` si `meta.permission` échoue. LA protection primaire.
+4. **Couche 3 — 19 pages avec `meta.permission`** : Chaque page company non-exemptée déclare `permission` dans `definePage()`. 5 pages exemptées documentées (dashboard, home, 403, notifications, account-settings).
+5. **Couche 4 — `$guardedApi` (défense en profondeur)** : Utility `$guardedApi(permission, url, options)` pour les 4 appels cross-permission : `fetchCompanyRoles` (roles.view depuis members), `fetchPermissionCatalog`, `fetchRequests` (documents.manage depuis documents.view), `fetchDocSettings` (documents.configure)
+6. **Couche 5 — Tab gating documents** : `tabPermissions` map + computed `tabs` filtré + watch redirect sur URL directe + `onMounted` conditionnel (requests si `documents.manage`, docSettings si `documents.configure`)
+7. **Couche 5b — Boot resource permission** : Champ `permission` sur ResourceDef + gate dans `Job.run()` (skip silencieux). Retire le guard ad hoc ADR-417 de `jobdomain.store.js`.
+8. **Drawer guard** : `_DocumentsVault.vue` — séparation `canEdit` (documents.manage) / `canConfigure` (documents.configure) sur le bouton CreateDocumentType
+9. **5 tests CI invariants** dans `PageLayoutMetaTest` : permission requise sur pages avec module, boot resources déclaratifs, permission gate dans job.js, router guards company, tab gating documents
+
+**Hiérarchie de protection (du plus important au moins) :**
+1. Router guard (bloque la page) — PRIMAIRE
+2. Tab gating (masque tabs + skip fetch) — SECONDAIRE
+3. Bouton v-if (masque actions mutations) — TERTIAIRE
+4. `$guardedApi` (filet pour appels cross-permission) — DERNIER RECOURS
+
+**Conséquences :**
+- 19/19 pages company protégées alignées avec le backend NavBuilder
+- Zéro 403 côté frontend (Dispatcher ne peut plus naviguer vers des pages interdites)
+- Owner bypass intact (hasPermission retourne true pour isOwner)
+- Tests CI empêchent la régression : toute nouvelle page avec module sans permission → fail
+- Stores restent "dumb I/O" — aucune logique RBAC métier dedans
+- Pattern extensible : `$guardedApi` et `permission` sur ResourceDef pour futurs ajouts
+
+**Fichiers :**
+- `resources/js/composables/useCompanyPermissionContext.js` — NOUVEAU
+- `resources/js/composables/usePlatformPermissionContext.js` — NOUVEAU
+- `resources/js/utils/guardedApi.js` — NOUVEAU
+- `resources/js/plugins/1.router/guards.js` — permission guard company
+- `resources/js/core/runtime/resources.js` — permission field sur tenant:jobdomain
+- `resources/js/core/runtime/job.js` — permission gate avant run
+- `resources/js/modules/company/jobdomain/jobdomain.store.js` — retrait guard ad hoc ADR-417
+- `resources/js/modules/company/settings/settings.store.js` — $guardedApi sur fetchCompanyRoles + fetchPermissionCatalog
+- `resources/js/modules/company/documents/documents.store.js` — $guardedApi sur fetchRequests + fetchDocSettings
+- `resources/js/pages/company/documents/[tab].vue` — tab gating déclaratif
+- `resources/js/pages/company/documents/_DocumentsVault.vue` — canConfigure guard sur CreateDocumentType
+- 19 pages `definePage()` avec `permission:` ajouté (members, roles, documents, billing, audit, modules, shipments, deliveries, profile, support)
+- `tests/Feature/PageLayoutMetaTest.php` — 5 nouveaux tests CI (8 total)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -2,7 +2,7 @@
 import { formatDate } from '@/utils/datetime'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
-definePage({ meta: { module: 'logistics_shipments', surface: 'operations' } })
+definePage({ meta: { module: 'logistics_shipments', surface: 'operations', permission: 'shipments.view_own' } })
 
 const { t } = useI18n()
 const deliveryStore = useDeliveryStore()

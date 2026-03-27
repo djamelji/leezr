@@ -43,6 +43,18 @@ export class Job {
   async run(deps) {
     if (this.status === 'cancelled') return
 
+    // ADR-418: Permission gate — skip resource if user lacks permission
+    if (this.resource.permission) {
+      const auth = deps.resolveStore('auth')
+
+      if (!auth.hasPermission(this.resource.permission)) {
+        this.status = 'done'
+        deps.journal.log('job:skip-permission', { key: this.key, permission: this.resource.permission })
+
+        return
+      }
+    }
+
     this.status = 'running'
     this.error = null
     const start = Date.now()

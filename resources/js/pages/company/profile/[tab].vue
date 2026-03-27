@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { module: 'core.settings', surface: 'structure' } })
+definePage({ meta: { module: 'core.settings', surface: 'structure', permission: 'settings.view' } })
 
 import CompanyProfileOverview from './_CompanyProfileOverview.vue'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'

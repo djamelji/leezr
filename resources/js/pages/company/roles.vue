@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { surface: 'structure', module: 'core.roles' } })
+definePage({ meta: { surface: 'structure', module: 'core.roles', permission: 'roles.view' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'

@@ -7,6 +7,7 @@
 export {}
 declare global {
   const $api: typeof import('./resources/js/utils/api.js')['$api']
+  const $guardedApi: typeof import('./resources/js/utils/guardedApi.js')['$guardedApi']
   const $platformApi: typeof import('./resources/js/utils/platformApi.js')['$platformApi']
   const COOKIE_MAX_AGE_1_YEAR: typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']
   const EffectScope: typeof import('vue')['EffectScope']
@@ -209,6 +210,7 @@ declare global {
   const useCloned: typeof import('@vueuse/core')['useCloned']
   const useColorMode: typeof import('@vueuse/core')['useColorMode']
   const useCompanyNav: typeof import('./resources/js/composables/useCompanyNav.js')['useCompanyNav']
+  const useCompanyPermissionContext: typeof import('./resources/js/composables/useCompanyPermissionContext.js')['useCompanyPermissionContext']
   const useConfirm: typeof import('./resources/js/composables/useConfirm.js')['useConfirm']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
   const useCookie: typeof import('./resources/js/composables/useCookie.js')['useCookie']
@@ -296,6 +298,7 @@ declare global {
   const usePerformanceObserver: typeof import('@vueuse/core')['usePerformanceObserver']
   const usePermission: typeof import('@vueuse/core')['usePermission']
   const usePlatformNav: typeof import('./resources/js/composables/usePlatformNav.js')['usePlatformNav']
+  const usePlatformPermissionContext: typeof import('./resources/js/composables/usePlatformPermissionContext.js')['usePlatformPermissionContext']
   const usePointer: typeof import('@vueuse/core')['usePointer']
   const usePointerLock: typeof import('@vueuse/core')['usePointerLock']
   const usePointerSwipe: typeof import('@vueuse/core')['usePointerSwipe']
@@ -404,6 +407,7 @@ declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
     readonly $api: UnwrapRef<typeof import('./resources/js/utils/api.js')['$api']>
+    readonly $guardedApi: UnwrapRef<typeof import('./resources/js/utils/guardedApi.js')['$guardedApi']>
     readonly $platformApi: UnwrapRef<typeof import('./resources/js/utils/platformApi.js')['$platformApi']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
@@ -598,6 +602,7 @@ declare module 'vue' {
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
     readonly useCompanyNav: UnwrapRef<typeof import('./resources/js/composables/useCompanyNav.js')['useCompanyNav']>
+    readonly useCompanyPermissionContext: UnwrapRef<typeof import('./resources/js/composables/useCompanyPermissionContext.js')['useCompanyPermissionContext']>
     readonly useConfirm: UnwrapRef<typeof import('./resources/js/composables/useConfirm.js')['useConfirm']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
     readonly useCookie: UnwrapRef<typeof import('./resources/js/composables/useCookie.js')['useCookie']>
@@ -685,6 +690,7 @@ declare module 'vue' {
     readonly usePerformanceObserver: UnwrapRef<typeof import('@vueuse/core')['usePerformanceObserver']>
     readonly usePermission: UnwrapRef<typeof import('@vueuse/core')['usePermission']>
     readonly usePlatformNav: UnwrapRef<typeof import('./resources/js/composables/usePlatformNav.js')['usePlatformNav']>
+    readonly usePlatformPermissionContext: UnwrapRef<typeof import('./resources/js/composables/usePlatformPermissionContext.js')['usePlatformPermissionContext']>
     readonly usePointer: UnwrapRef<typeof import('@vueuse/core')['usePointer']>
     readonly usePointerLock: UnwrapRef<typeof import('@vueuse/core')['usePointerLock']>
     readonly usePointerSwipe: UnwrapRef<typeof import('@vueuse/core')['usePointerSwipe']>

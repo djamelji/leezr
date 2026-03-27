@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { module: 'core.members', surface: 'structure' } })
+definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'

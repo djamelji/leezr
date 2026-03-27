@@ -4,7 +4,7 @@ import { formatDateTime } from '@/utils/datetime'
 
 const { t } = useI18n()
 
-definePage({ meta: { module: 'core.audit', surface: 'structure' } })
+definePage({ meta: { module: 'core.audit', surface: 'structure', permission: 'audit.view' } })
 
 const auditStore = useCompanyAuditStore()
 const isLoading = ref(true)

@@ -44,7 +44,11 @@ export const useJobdomainStore = defineStore('jobdomain', {
         return data
       }
 
+      // ADR-418: Permission gate moved to ResourceDef (resources.js) — store is dumb I/O
       const data = await $api('/company/jobdomain', { signal: options.signal, _silent403: true })
+
+      // Permission denied (403) or unavailable — keep defaults, don't crash
+      if (!data) return null
 
       this._assigned = data.assigned
       this._jobdomain = data.jobdomain
