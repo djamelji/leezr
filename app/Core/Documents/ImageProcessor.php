@@ -270,14 +270,26 @@ class ImageProcessor
 
     public function findMagick(): ?string
     {
-        foreach (['/opt/homebrew/bin/magick', '/usr/local/bin/magick', '/usr/bin/magick', 'magick'] as $path) {
-            if ($path === 'magick') {
-                $check = Process::run('command -v magick');
-                if ($check->successful()) {
-                    return trim($check->output());
-                }
-            } elseif (file_exists($path)) {
+        // ImageMagick 7 uses unified "magick" binary, v6 uses "convert"
+        $candidates = [
+            '/opt/homebrew/bin/magick',
+            '/usr/local/bin/magick',
+            '/usr/bin/magick',
+            '/usr/local/bin/convert',
+            '/usr/bin/convert',
+        ];
+
+        foreach ($candidates as $path) {
+            if (file_exists($path)) {
                 return $path;
+            }
+        }
+
+        // Fallback: search PATH for magick (v7) then convert (v6)
+        foreach (['magick', 'convert'] as $bin) {
+            $check = Process::run("command -v $bin");
+            if ($check->successful()) {
+                return trim($check->output());
             }
         }
 

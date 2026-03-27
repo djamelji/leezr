@@ -14165,4 +14165,24 @@ Les routes billing étaient protégées uniquement par `use-module:core.billing`
 
 ---
 
+### ADR-414 — Fix ImageMagick v6/v7 compatibilité VPS (2026-03-26)
+
+**Contexte** : Déploiement documents v2 sur staging (Ubuntu VPS). L'erreur `documents.mergeFailed` (422) survient car `ImageProcessor::findMagick()` ne cherche que le binaire `magick` (ImageMagick 7) alors que le VPS a ImageMagick 6 (`convert`). De plus, la policy.xml d'Ubuntu bloque les opérations PDF par défaut.
+
+**Décisions** :
+1. `findMagick()` cherche d'abord `magick` (v7) puis `convert` (v6) en fallback — les deux sont interchangeables pour les opérations convert
+2. `deploy_release.sh` vérifie `magick` OU `convert` avant d'installer imagemagick
+3. Le deploy corrige automatiquement la policy.xml d'ImageMagick pour autoriser les opérations PDF (nécessaire pour la conversion PDF→images)
+
+**Conséquences** :
+- Compatible macOS (Homebrew → magick v7) et Ubuntu/Debian (apt → convert v6)
+- Plus besoin d'installer ImageMagick 7 manuellement sur le VPS
+- La conversion PDF→images fonctionne sans restriction de policy
+
+**Fichiers** :
+- `app/Core/Documents/ImageProcessor.php` — EDIT (findMagick v6+v7)
+- `deploy/deploy_release.sh` — EDIT (check convert, fix policy.xml)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

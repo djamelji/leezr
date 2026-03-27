@@ -54,7 +54,7 @@ log "═════════════════════════
 # ─── [0/9] Ensure system dependencies (ADR-409) ─────────────────
 log "→ [0/9] Ensure system dependencies (ImageMagick, Tesseract, Ghostscript)"
 DEPS_NEEDED=""
-command -v magick  &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED imagemagick"
+{ command -v magick &>/dev/null || command -v convert &>/dev/null; } || DEPS_NEEDED="$DEPS_NEEDED imagemagick"
 command -v tesseract &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng"
 command -v gs &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED ghostscript"
 command -v python3 &>/dev/null || DEPS_NEEDED="$DEPS_NEEDED python3 python3-pip"
@@ -64,6 +64,14 @@ if [ -n "$DEPS_NEEDED" ]; then
 else
   log "  All system deps present"
 fi
+
+# ImageMagick 6 on Ubuntu blocks PDF operations by default — allow them for document processing
+for POLICY_FILE in /etc/ImageMagick-6/policy.xml /etc/ImageMagick-7/policy.xml; do
+  if [ -f "$POLICY_FILE" ] && grep -q 'rights="none".*pattern="PDF"' "$POLICY_FILE"; then
+    log "  Fixing ImageMagick policy for PDF support in $POLICY_FILE"
+    sudo sed -i 's/<policy domain="coder" rights="none" pattern="PDF"/<policy domain="coder" rights="read|write" pattern="PDF"/' "$POLICY_FILE"
+  fi
+done
 
 # ADR-410: Install Python OpenCV dependencies in venv for document detection
 PYTHON_SCRIPTS="$APP_PATH/current/scripts/python"
