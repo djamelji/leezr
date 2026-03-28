@@ -58,6 +58,7 @@ class CompanyDocumentReadModel
                 'ocr_text' => $upload->ocr_text,
                 'ai_analysis' => $upload->ai_analysis,
                 'ai_insights' => $upload->ai_insights,
+                'ai_status' => $upload->ai_status,
             ] : null;
 
             $doc['lifecycle_status'] = DocumentLifecycleService::computeFromDate(

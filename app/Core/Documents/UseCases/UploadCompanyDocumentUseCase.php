@@ -117,6 +117,7 @@ class UploadCompanyDocumentUseCase
                 'mime_type' => $data->file->getMimeType(),
                 'uploaded_by' => $data->actor->id,
                 'expires_at' => $data->expiresAt,
+                'ai_status' => 'pending',
             ],
         );
 

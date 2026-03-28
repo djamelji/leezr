@@ -287,6 +287,10 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::put('/company/members/{id}/documents/{code}/review', [MemberDocumentController::class, 'review'])
         ->middleware('company.access:use-permission,documents.manage');
 
+    // ADR-422: Retry AI analysis for failed documents
+    Route::post('/company/members/{id}/documents/{code}/retry-ai', [MemberDocumentController::class, 'retryAi'])
+        ->middleware('company.access:use-permission,documents.manage');
+
     // Document requests (ADR-192)
     Route::post('/company/document-requests', [DocumentRequestController::class, 'store'])
         ->middleware('company.access:use-permission,documents.manage');

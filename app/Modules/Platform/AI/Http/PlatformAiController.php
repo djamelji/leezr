@@ -4,6 +4,7 @@ namespace App\Modules\Platform\AI\Http;
 
 use App\Core\Ai\AiGatewayManager;
 use App\Core\Ai\AiRequestLog;
+use App\Core\Ai\ReadModels\AiHealthReadService;
 use App\Core\Ai\ReadModels\PlatformAiGovernanceReadService;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
@@ -112,5 +113,13 @@ class PlatformAiController
                 'timeout' => config('ai.ollama.timeout', 60),
             ],
         ]);
+    }
+
+    /**
+     * ADR-422: AI health check — queue, provider, pending jobs.
+     */
+    public function health(): JsonResponse
+    {
+        return response()->json(AiHealthReadService::check());
     }
 }

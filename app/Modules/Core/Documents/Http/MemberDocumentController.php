@@ -8,6 +8,7 @@ use App\Core\Documents\DocumentResolverService;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\MemberDocument;
+use App\Core\Documents\RetryDocumentAiService;
 use App\Jobs\Documents\ProcessDocumentAiJob;
 use App\Core\Documents\ReadModels\MemberDocumentWorkflowReadModel;
 use App\Core\Models\User;
@@ -21,16 +22,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 
-/**
- * ADR-169 Phase 3: Member document CRUD.
- * Routes scoped to company context via middleware.
- */
 class MemberDocumentController extends Controller
 {
-    /**
-     * List all document types (with upload + workflow status) for a member.
-     * ADR-176: Uses MemberDocumentWorkflowReadModel for enriched workflow data.
-     */
     public function index(Request $request, int $membershipId): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -132,6 +125,7 @@ class MemberDocumentController extends Controller
                 'uploaded_by' => $request->user()->id,
                 'expires_at' => $request->input('expires_at'),
                 'ocr_text' => $ocrText,
+                'ai_status' => 'pending',
             ],
         );
 
@@ -234,5 +228,19 @@ class MemberDocumentController extends Controller
         return response()->json([
             'message' => 'Document deleted.',
         ]);
+    }
+
+    public function retryAi(Request $request, int $membershipId, string $documentCode): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $document = MemberDocument::where('company_id', $company->id)
+            ->where('user_id', User::findOrFail($membershipId)->id)
+            ->where('document_type_id', DocumentType::where('code', $documentCode)->firstOrFail()->id)
+            ->whereNotNull('file_path')
+            ->firstOrFail();
+
+        RetryDocumentAiService::retry($document);
+
+        return response()->json(['message' => __('documents.retryAiSuccess'), 'ai_status' => 'pending']);
     }
 }

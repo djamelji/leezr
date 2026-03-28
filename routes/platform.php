@@ -374,6 +374,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/ai/usage', [PlatformAiController::class, 'usage']);
         Route::get('/ai/routing', [PlatformAiController::class, 'routing']);
         Route::get('/ai/config', [PlatformAiController::class, 'config']);
+        Route::get('/ai/health', [PlatformAiController::class, 'health']);
     });
 
     Route::middleware(['module.active:platform.ai', 'platform.permission:manage_ai'])->group(function () {

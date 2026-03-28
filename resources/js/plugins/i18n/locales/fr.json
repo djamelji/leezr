@@ -3920,7 +3920,16 @@
       "autoRejectMismatch": "Auto-rejeter si type incohérent",
       "autoRejectMismatchHint": "Rejette automatiquement un document si le type détecté ne correspond pas au type attendu",
       "autoRejectWarning": "Attention : l'auto-rejet peut rejeter des documents légitimes si l'IA se trompe. Utilisez avec un seuil de confiance élevé."
-    }
+    },
+    "aiStatus": {
+      "pending": "Analyse en attente",
+      "processing": "Analyse en cours...",
+      "completed": "Analyse terminée",
+      "failed": "Échec de l'analyse"
+    },
+    "retryAi": "Relancer l'analyse",
+    "retryAiSuccess": "Analyse relancée avec succès",
+    "retryAiOnlyFailed": "Seuls les documents en échec peuvent être relancés"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",

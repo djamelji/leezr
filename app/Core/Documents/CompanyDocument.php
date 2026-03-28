@@ -21,6 +21,7 @@ class CompanyDocument extends Model
         'ocr_text',
         'ai_analysis',
         'ai_insights',
+        'ai_status',
     ];
 
     protected $casts = [
@@ -29,6 +30,14 @@ class CompanyDocument extends Model
         'ai_analysis' => 'array',
         'ai_insights' => 'array',
     ];
+
+    public const AI_STATUS_PENDING = 'pending';
+
+    public const AI_STATUS_PROCESSING = 'processing';
+
+    public const AI_STATUS_COMPLETED = 'completed';
+
+    public const AI_STATUS_FAILED = 'failed';
 
     public function company(): BelongsTo
     {

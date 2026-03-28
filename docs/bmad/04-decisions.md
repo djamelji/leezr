@@ -14397,4 +14397,46 @@ Deux problèmes identifiés sur staging par diagnostic strict (DB → API → UI
 
 ---
 
+## ADR-422 : AI Lifecycle + Health Check + Retry (Phase 0 Documents) (2026-03-28)
+
+**Contexte :**
+Le module Documents a un pipeline AI complet (analyse, décision, insights) mais :
+1. Aucun `ai_status` lifecycle → impossible de distinguer "pas encore analysé" de "échoué"
+2. Le queue worker staging pointait vers le mauvais path VPS → zéro job AI exécuté
+3. Aucun health check applicatif → régressions silencieuses pendant des jours
+4. Pas de retry possible depuis l'UI en cas d'échec
+
+**Décisions :**
+1. **AI Status Lifecycle** : Ajout colonne `ai_status` (pending/processing/completed/failed) sur `member_documents` et `company_documents`. Le job ProcessDocumentAiJob gère les transitions. Migration avec backfill intelligent (documents existants avec ai_analysis → completed, avec fichier mais sans analyse → pending).
+2. **Retry AI** : Endpoint `POST /company/members/{id}/documents/{code}/retry-ai` + bouton "Relancer l'analyse" dans DocumentViewerDialog (visible si ai_status=failed). Service `RetryDocumentAiService` extrait pour respecter le max 250 lignes controller.
+3. **Health Check AI** : Commande `php artisan ai:health` + endpoint `GET /platform/ai/health`. Vérifie : provider health, module actif, queue pending/failed, stats documents par ai_status. ReadService `AiHealthReadService` pour la logique.
+4. **Deploy fix** : Script deploy corrige les permissions des fichiers seedés (chown/chmod après DevSeeder).
+5. **Reanalyze enrichi** : `documents:reanalyze` cible aussi les documents `ai_status=failed`, reset ai_status/analysis/insights avant redispatch.
+
+**Conséquences :**
+- Le polling frontend peut s'appuyer sur `ai_status` (fiable, pas de guess sur null)
+- Les admins peuvent relancer l'analyse AI sans CLI
+- Le health check détecte les workers cassés, providers down, jobs bloqués
+- L'UX affiche des chips de status (pending=warning, processing=info spinner, failed=error + bouton retry)
+
+**Fichiers :**
+- `database/migrations/2026_03_28_022924_add_ai_status_to_documents.php` — NOUVEAU
+- `app/Core/Documents/MemberDocument.php` — ai_status fillable + constantes
+- `app/Core/Documents/CompanyDocument.php` — ai_status fillable + constantes
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — transitions processing/completed/failed
+- `app/Modules/Core/Documents/Http/MemberDocumentController.php` — retryAi endpoint
+- `app/Core/Documents/RetryDocumentAiService.php` — NOUVEAU (logique retry)
+- `app/Core/Ai/ReadModels/AiHealthReadService.php` — NOUVEAU (agrégation health)
+- `app/Console/Commands/AiHealthCommand.php` — NOUVEAU (ai:health)
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` — health endpoint
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — ai_status exposé
+- `app/Core/Documents/DocumentResolverService.php` — ai_status exposé
+- `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ai_status exposé
+- `app/Console/Commands/DocumentReanalyzeCommand.php` — cible aussi failed
+- `deploy/deploy_release.sh` — fix permissions fichiers seedés
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — chips status + bouton retry
+- 4 pages company : ai_status propagé dans viewerDocument
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -35,6 +35,7 @@ const emit = defineEmits([
   'download',
   'approve',
   'reject',
+  'retry-ai',
 ])
 
 const { t, te } = useI18n()
@@ -308,6 +309,49 @@ const handleDownload = () => {
           </VBtn>
         </div>
       </VCardText>
+
+      <!-- ADR-422: AI Status indicator -->
+      <div v-if="props.document?.ai_status" class="mx-4 mb-2">
+        <VChip
+          v-if="props.document.ai_status === 'processing'"
+          color="info"
+          variant="tonal"
+          size="small"
+          prepend-icon="tabler-loader-2"
+          class="animate-spin-slow"
+        >
+          {{ t('documents.aiStatus.processing') }}
+        </VChip>
+        <VChip
+          v-else-if="props.document.ai_status === 'failed'"
+          color="error"
+          variant="tonal"
+          size="small"
+          prepend-icon="tabler-alert-triangle"
+        >
+          {{ t('documents.aiStatus.failed') }}
+        </VChip>
+        <VBtn
+          v-if="props.document.ai_status === 'failed'"
+          size="small"
+          variant="tonal"
+          color="primary"
+          class="ms-2"
+          prepend-icon="tabler-refresh"
+          @click="emit('retry-ai')"
+        >
+          {{ t('documents.retryAi') }}
+        </VBtn>
+        <VChip
+          v-else-if="props.document.ai_status === 'pending'"
+          color="warning"
+          variant="tonal"
+          size="small"
+          prepend-icon="tabler-clock"
+        >
+          {{ t('documents.aiStatus.pending') }}
+        </VChip>
+      </div>
 
       <!-- OCR extracted text (ADR-409) -->
       <VExpansionPanels

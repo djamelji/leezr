@@ -61,12 +61,16 @@ class ProcessDocumentAiJob implements ShouldQueue
 
         $companyId = $document->company_id ?? null;
 
+        // ADR-422: Set ai_status = processing at start
+        $document->update(['ai_status' => 'processing']);
+
         // ADR-413: Resolve AI policy — gate before any analysis
         $policy = AiPolicyResolver::forModule($companyId ?? 0, 'documents');
         if (! $policy->analysisEnabled) {
             Log::info('ProcessDocumentAiJob: AI disabled for company, skipping', [
                 'company_id' => $companyId,
             ]);
+            $document->update(['ai_status' => 'completed']); // No-op but not failed
 
             return;
         }
@@ -75,6 +79,7 @@ class ProcessDocumentAiJob implements ShouldQueue
         $filePath = $document->file_path;
         if (! Storage::exists($filePath)) {
             Log::warning('ProcessDocumentAiJob: file not found in storage', ['path' => $filePath]);
+            $document->update(['ai_status' => 'failed']);
 
             return;
         }
@@ -112,6 +117,7 @@ class ProcessDocumentAiJob implements ShouldQueue
             // If PDF→image conversion failed, store empty result and bail
             if ($imagePath === null) {
                 $document->update([
+                    'ai_status' => 'completed',
                     'ai_analysis' => (new DocumentAnalysisResult(
                         detectedType: null,
                         fields: [],
@@ -157,6 +163,9 @@ class ProcessDocumentAiJob implements ShouldQueue
                 ]);
             }
 
+            // ADR-422: Mark completed
+            $document->update(['ai_status' => 'completed']);
+
             Log::info('ProcessDocumentAiJob: analysis + decision complete', [
                 'class' => $this->documentClass,
                 'id' => $this->documentId,
@@ -166,6 +175,10 @@ class ProcessDocumentAiJob implements ShouldQueue
                 'has_action' => $decision->hasAnyAction(),
                 'insights_count' => count($decision->insights),
             ]);
+        } catch (\Throwable $e) {
+            $document->update(['ai_status' => 'failed']);
+
+            throw $e;
         } finally {
             @unlink($tempPath);
             foreach ($tempImages as $img) {
@@ -176,6 +189,10 @@ class ProcessDocumentAiJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
+        // ADR-422: Mark failed on permanent failure
+        $document = ($this->documentClass)::find($this->documentId);
+        $document?->update(['ai_status' => 'failed']);
+
         Log::error('ProcessDocumentAiJob: failed permanently', [
             'class' => $this->documentClass,
             'id' => $this->documentId,

@@ -125,6 +125,7 @@ class UploadOwnDocumentUseCase
                 'mime_type' => $data->file->getMimeType(),
                 'uploaded_by' => $data->user->id,
                 'expires_at' => $data->expiresAt,
+                'ai_status' => 'pending',
             ],
         );
 

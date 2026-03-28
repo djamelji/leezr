@@ -23,14 +23,13 @@ class DocumentReanalyzeCommand extends Command
     {
         $dryRun = $this->option('dry-run');
 
-        // Member documents without AI analysis
+        // ADR-422: Target docs without analysis OR with failed status
         $memberDocs = MemberDocument::whereNotNull('file_path')
-            ->whereNull('ai_analysis')
+            ->where(fn ($q) => $q->whereNull('ai_analysis')->orWhere('ai_status', 'failed'))
             ->get();
 
-        // Company documents without AI analysis
         $companyDocs = CompanyDocument::whereNotNull('file_path')
-            ->whereNull('ai_analysis')
+            ->where(fn ($q) => $q->whereNull('ai_analysis')->orWhere('ai_status', 'failed'))
             ->get();
 
         $total = $memberDocs->count() + $companyDocs->count();
@@ -50,10 +49,12 @@ class DocumentReanalyzeCommand extends Command
         }
 
         foreach ($memberDocs as $doc) {
+            $doc->update(['ai_status' => 'pending', 'ai_analysis' => null, 'ai_insights' => null]);
             ProcessDocumentAiJob::dispatch(MemberDocument::class, $doc->id, $doc->document_type_id);
         }
 
         foreach ($companyDocs as $doc) {
+            $doc->update(['ai_status' => 'pending', 'ai_analysis' => null, 'ai_insights' => null]);
             ProcessDocumentAiJob::dispatch(CompanyDocument::class, $doc->id, $doc->document_type_id);
         }
 

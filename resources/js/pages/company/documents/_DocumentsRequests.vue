@@ -206,6 +206,7 @@ const viewerDocument = computed(() => {
     ocr_text: r.upload.ocr_text,
     ai_analysis: r.upload.ai_analysis,
     ai_insights: r.upload.ai_insights,
+    ai_status: r.upload.ai_status,
   }
 })
 
@@ -244,6 +245,24 @@ const handleViewerDownload = async () => {
     a.download = r.upload.file_name
     a.click()
     URL.revokeObjectURL(url)
+  }
+  catch {
+    toast(t('common.error'), 'error')
+  }
+}
+
+// ─── ADR-422: Retry AI analysis ───────
+const handleRetryAi = async () => {
+  const r = viewerRequest.value
+  if (!r?.user?.membership_id || !r?.document_type?.code) return
+
+  try {
+    await $api(`/company/members/${r.user.membership_id}/documents/${r.document_type.code}/retry-ai`, {
+      method: 'POST',
+    })
+    toast(t('documents.retryAiSuccess'), 'success')
+    isViewerOpen.value = false
+    await store.fetchRequests()
   }
   catch {
     toast(t('common.error'), 'error')
@@ -879,6 +898,7 @@ const submitRequest = async () => {
     @approve="handleViewerApprove"
     @reject="handleViewerReject"
     @download="handleViewerDownload"
+    @retry-ai="handleRetryAi"
   />
 
   <!-- Confirm dialog -->
