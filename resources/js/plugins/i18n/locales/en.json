@@ -2514,7 +2514,7 @@
       "settings": "Settings"
     },
     "provider": "Provider",
-    "status": "Status",
+    "statusLabel": "Status",
     "capabilities": "Capabilities",
     "health": "Health",
     "latency": "Latency",
@@ -2530,6 +2530,7 @@
     "avgLatency": "Avg Latency",
     "errorRate": "Errors",
     "recentRequests": "Recent Requests",
+    "totalTokens": "Tokens",
     "noRequests": "No AI requests logged",
     "capability": {
       "vision": "Vision",

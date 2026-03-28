@@ -20,7 +20,7 @@ const recentHeaders = computed(() => [
   { title: t('platformAi.model'), key: 'model', width: 140 },
   { title: 'Capability', key: 'capability', width: 130 },
   { title: t('platformAi.latency'), key: 'latency_ms', width: 100 },
-  { title: t('platformAi.status'), key: 'status', width: 100 },
+  { title: t('platformAi.statusLabel'), key: 'status', width: 100 },
   { title: 'Module', key: 'module_key', width: 120 },
   { title: 'Date', key: 'created_at', width: 160 },
 ])
@@ -114,7 +114,7 @@ onMounted(() => load())
               {{ (store.usageStats?.total_input_tokens ?? 0) + (store.usageStats?.total_output_tokens ?? 0) }}
             </div>
             <div class="text-caption text-medium-emphasis">
-              Tokens
+              {{ t('platformAi.totalTokens') }}
             </div>
           </VCardText>
         </VCard>
