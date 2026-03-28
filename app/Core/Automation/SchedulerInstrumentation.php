@@ -126,7 +126,7 @@ class SchedulerInstrumentation
             return null;
         }
 
-        return (int) round((microtime(true) - $run->started_at->getPreciseTimestamp(3)) * 1000);
+        return (int) round(now()->diffInMilliseconds($run->started_at));
     }
 
     /**
