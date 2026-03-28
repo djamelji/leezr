@@ -577,7 +577,7 @@ class DevSeeder extends Seeder
                     'mime_type' => 'image/png',
                     'uploaded_by' => $user->id,
                     'expires_at' => now()->addYears(2),
-                    'ai_status' => 'pending',
+                    'ai_status' => 'completed',
                 ],
             );
         }
@@ -621,7 +621,7 @@ class DevSeeder extends Seeder
                     'mime_type' => 'image/png',
                     'uploaded_by' => $admin->id,
                     'expires_at' => now()->addYears(5),
-                    'ai_status' => 'pending',
+                    'ai_status' => 'completed',
                 ],
             );
         }
@@ -647,7 +647,7 @@ class DevSeeder extends Seeder
                     'mime_type' => 'image/png',
                     'uploaded_by' => $owner->id,
                     'expires_at' => now()->addMonths(3),
-                    'ai_status' => 'pending',
+                    'ai_status' => 'completed',
                 ],
             );
         }
