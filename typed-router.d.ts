@@ -99,6 +99,7 @@ declare module 'vue-router/auto-routes' {
     'platform-ai-ai-settings-tab': RouteRecordInfo<'platform-ai-ai-settings-tab', '/platform/ai/_AiSettingsTab', Record<never, never>, Record<never, never>>,
     'platform-ai-ai-usage-tab': RouteRecordInfo<'platform-ai-ai-usage-tab', '/platform/ai/_AiUsageTab', Record<never, never>, Record<never, never>>,
     'platform-ai-tab': RouteRecordInfo<'platform-ai-tab', '/platform/ai/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
+    'platform-automations': RouteRecordInfo<'platform-automations', '/platform/automations', Record<never, never>, Record<never, never>>,
     'platform-billing': RouteRecordInfo<'platform-billing', '/platform/billing', Record<never, never>, Record<never, never>>,
     'platform-billing-ar-outstanding-widget': RouteRecordInfo<'platform-billing-ar-outstanding-widget', '/platform/billing/_ArOutstandingWidget', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-coupons-tab': RouteRecordInfo<'platform-billing-billing-coupons-tab', '/platform/billing/_BillingCouponsTab', Record<never, never>, Record<never, never>>,

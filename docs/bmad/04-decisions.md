@@ -14691,4 +14691,106 @@ Le module Documents nécessitait trois améliorations UX majeures :
 
 ---
 
+### ADR-425 — Automation Center : centre de contrôle des tâches planifiées (2026-03-28)
+
+**Contexte :**
+Le projet dispose de 14+ tâches planifiées (billing, documents, FX) définies dans `routes/console.php`. Aucune visibilité platform, pas de toggle on/off, pas de logs centralisés, pas d'exécution manuelle possible. Les administrateurs doivent accéder au serveur pour diagnostiquer un cron en erreur.
+
+**Décisions :**
+1. **Tables `automation_rules` + `automation_run_logs`** — stocke chaque règle d'automatisation avec son cron schedule, statut, dernière/prochaine exécution, et un journal de runs avec durée/erreurs/métadonnées.
+2. **AutomationRule / AutomationRunLog models** — dans `app/Core/Automation/`. Scopes `active()` et `byCategory()`. Casts JSON config, boolean enabled, datetime timestamps.
+3. **AutomationRunner service** — mappe chaque `rule.key` vers une commande artisan existante. `runAll()` exécute toutes les règles dues, `runSingle()` une seule. Capture la durée, le nombre d'actions (parsé depuis l'output), les erreurs. Calcule `next_run_at` via `CronExpression`.
+4. **Commande `automation:run`** — point d'entrée CLI. Options `--rule=key` et `--dry-run`. Affiche un résumé tabulaire.
+5. **AutomationRuleSeeder** — seed idempotent (updateOrCreate) des 14 règles avec labels, descriptions, catégories, cron expressions correspondant à `routes/console.php`.
+6. **AutomationController** — CRUD platform (index avec 5 derniers logs, update enabled/schedule/config, run manuel, logs paginés).
+7. **AutomationsModule** — module platform `platform.automations`, navItem avec icon `tabler-robot`, permission `manage_automations`, sortOrder 97, group governance.
+8. **Vue page + Pinia store** — VDataTable avec toggle switch, bouton run, dialog logs. Store utilise `$platformApi`.
+9. **Le cron dans `routes/console.php` reste inchangé** — les deux systèmes coexistent. Le centre d'automatisation offre la visibilité et le contrôle manuel, le schedule Laravel reste le fallback fiable.
+
+**Conséquences :**
+- Les administrateurs platform peuvent voir l'état de chaque automatisation, les activer/désactiver, les exécuter manuellement, consulter les logs d'exécution.
+- La migration du schedule vers le runner centralisé peut se faire progressivement.
+- Aucune modification des commandes artisan existantes.
+
+**Fichiers :**
+- `database/migrations/2026_03_28_100001_create_automation_rules_table.php` — migration
+- `app/Core/Automation/AutomationRule.php` — modèle
+- `app/Core/Automation/AutomationRunLog.php` — modèle
+- `app/Core/Automation/AutomationRunner.php` — service
+- `app/Console/Commands/AutomationRunCommand.php` — commande artisan
+- `database/seeders/AutomationRuleSeeder.php` — seeder
+- `app/Modules/Platform/Automations/AutomationsModule.php` — module definition
+- `app/Modules/Platform/Automations/Http/AutomationController.php` — controller
+- `routes/platform.php` — routes ajoutées
+- `resources/js/pages/platform/automations/index.vue` — page Vue
+- `resources/js/modules/platform-admin/automations/automations.store.js` — Pinia store
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n fr
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n en
+
+---
+
+### ADR-428 — Phase A+B : IA Vivante + Refactor UX Documents (2026-03-28)
+
+**Contexte :**
+Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'UX ne met pas en valeur l'IA : les résultats sont cachés dans des panels repliables, le viewer est un dialog modal étroit, aucun feedback immédiat après upload, et la liste mélange demandes en attente et soumissions à traiter.
+
+**Décisions :**
+
+**Phase A — IA Vivante :**
+1. **Toast post-upload** — après upload admin, un toast info "Analyse IA en cours sur votre document..." donne un feedback immédiat (clé `documents.aiProcessingToast`).
+2. **DocumentViewerDialog → VNavigationDrawer** — le viewer passe de VDialog à un drawer latéral droit (temporary, width 560) pour plus d'espace et une UX fluide.
+3. **AI Summary Banner always visible** — quand `ai_status = completed`, un bandeau coloré affiche : confidence %, type détecté, nombre de champs extraits, nombre d'anomalies. Plus besoin de cliquer.
+4. **AI Status Banners** — processing (VProgressLinear animé), pending (info), failed (error + bouton retry). Visibles sans clic.
+5. **AI Extracted Fields always visible** — les champs extraits s'affichent dans un VTable compact, pas dans un VExpansionPanel. Pas de clic nécessaire.
+6. **AI Suggestions always visible** — les suggestions AI s'affichent dans une VList avec bouton "Appliquer tout" proéminent (variant elevated). Chaque suggestion a son bouton "Appliquer".
+7. **OCR dans expansion panel** — seul le texte OCR brut reste dans un panel repliable (données techniques).
+
+**Phase B — Refactor UX :**
+8. **Inbox split** — `_DocumentsRequests.vue` sépare les demandes en 2 sections : "À traiter" (status=submitted) et "En attente" (status=requested), chacune avec son propre VDataTable.
+9. **Unified lifecycle mapping** — fonction frontend `unifiedStatus()` qui fusionne `request.status` + `upload.ai_status` : submitted+processing→processing, approved→validated, etc.
+10. **DocumentAiChip enrichi** — le chip supporte maintenant le prop `aiStatus` pour afficher : spinner (processing/pending), badge erreur (failed), ou chip confiance coloré (completed).
+11. **Clés i18n ajoutées** — `sectionToReview`, `sectionPending`, `status_processing`, `status_validated`, `aiProcessingToast`, `aiAnalyzedBanner`, `aiFieldsExtracted`, `aiAnomalies`, `aiExtractedFields` dans fr.json et en.json.
+
+**Conséquences :**
+- L'IA est visible immédiatement sans interaction — effet "wow" pour les utilisateurs.
+- Le drawer offre plus d'espace que le dialog modal pour afficher AI + preview.
+- L'inbox split guide l'admin : d'abord traiter les soumissions, puis voir les demandes en attente.
+- Le lifecycle unifié simplifie la compréhension du statut pour l'utilisateur.
+- Les 4 consommateurs du viewer (DocumentsRequests, MemberDocumentsWorkflowPanel, CompanyDocumentsVault, AccountSettingsDocuments) passent déjà `ai_status` dans le prop `document`.
+
+**Fichiers :**
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — réécriture complète (dialog → drawer + AI visible)
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — inbox split + toast + lifecycle
+- `resources/js/views/shared/documents/DocumentAiChip.vue` — enrichi avec aiStatus prop
+- `resources/js/plugins/i18n/locales/fr.json` — clés Phase A+B
+- `resources/js/plugins/i18n/locales/en.json` — clés Phase A+B
+
+---
+
+### ADR-429 — Fix Scheduler + Queue Worker VPS : cron ISPConfig (2026-03-28)
+
+**Contexte :** Les 14 tâches planifiées Laravel (billing:expire-trials, billing:renew, billing:retry-dunning, billing:recover-checkouts, documents:check-expiring, documents:auto-remind, documents:auto-renew, fx:update, automation:run, etc.) ne s'exécutaient **jamais** — ni sur staging ni sur prod. Aucun crontab n'existait pour `php artisan schedule:run`. De plus, le queue worker `--queue=default` (billing, notifications) n'existait pas non plus (seul `leezr-queue-ai.service` pour la queue AI).
+
+**Impact :** Trials jamais expirés, subscriptions jamais renouvelées, dunning jamais relancé, webhooks jamais récupérés, documents jamais auto-remind/auto-renew, FX rates jamais mis à jour.
+
+**Décisions :**
+1. Installation crontab user-level (web3/web2) + persistance via ISPConfig panel
+2. Scheduler : `* * * * * /usr/bin/php8.4 /var/www/clients/client1/{webN}/current/artisan schedule:run >> storage/logs/scheduler.log 2>&1`
+3. Queue default : pattern self-healing via pgrep — `pgrep -f "queue:work --queue=default" > /dev/null || nohup php8.4 artisan queue:work --queue=default --sleep=3 --tries=3 --timeout=60 --max-time=3600 >> storage/logs/queue-default.log 2>&1 &`
+4. 4 cron jobs créés dans ISPConfig (staging scheduler, staging queue, prod scheduler, prod queue)
+5. PHP 8.4 sur VPS (pas 8.3)
+
+**Conséquences :**
+- Toutes les 14 tâches planifiées s'exécutent désormais aux horaires prévus
+- Queue default opérationnelle (billing webhooks, notifications)
+- `billing:recover-checkouts` a exécuté avec succès pour la première fois sur prod
+- Logs disponibles : `storage/logs/scheduler.log`, `storage/logs/queue-default.log`
+
+**Fichiers / Config :**
+- ISPConfig cron jobs (IDs 1-4) via panel.novamoov.com
+- Crontab web3 (staging) : 2 entrées (scheduler + queue-default)
+- Crontab web2 (prod) : 2 entrées (scheduler + queue-default)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

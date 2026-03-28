@@ -62,6 +62,7 @@ use App\Modules\Infrastructure\AdminAuth\Http\PlatformPasswordResetController;
 use App\Modules\Infrastructure\AdminAuth\Http\PlatformTwoFactorController;
 use App\Modules\Platform\Support\Http\PlatformSupportTicketController;
 use App\Modules\Platform\Support\Http\PlatformSupportMessageController;
+use App\Modules\Platform\Automations\Http\AutomationController;
 use Illuminate\Support\Facades\Route;
 
 // Metrics export — bearer token auth, no session guard (ADR-311)
@@ -539,6 +540,14 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'show']);
         Route::put('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'update']);
         Route::delete('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'destroy']);
+    });
+
+    // ── Automations (ADR-425) ─────────────────────────────────
+    Route::middleware(['module.active:platform.automations', 'platform.permission:manage_automations'])->group(function () {
+        Route::get('/automations', [AutomationController::class, 'index']);
+        Route::put('/automations/{id}', [AutomationController::class, 'update']);
+        Route::post('/automations/{id}/run', [AutomationController::class, 'run']);
+        Route::get('/automations/{id}/logs', [AutomationController::class, 'logs']);
     });
 
     }); // end platform.2fa

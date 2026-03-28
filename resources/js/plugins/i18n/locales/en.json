@@ -53,7 +53,8 @@
       "notifications": "Notifications",
       "support": "Support",
       "documentation": "Documentation",
-      "ai": "AI"
+      "ai": "AI",
+      "automations": "Automations"
     },
     "company": {
       "dashboard": "Dashboard",
@@ -1609,7 +1610,11 @@
       "bulkApproveSuccess": "{count} document(s) approved.",
       "bulkRejectSuccess": "{count} document(s) rejected.",
       "bulkRejectTitle": "Reject selected documents",
-      "bulkRejectConfirm": "Reject"
+      "bulkRejectConfirm": "Reject",
+      "status_processing": "Processing",
+      "status_validated": "Validated",
+      "sectionToReview": "To review",
+      "sectionPending": "Awaiting submission"
     },
     "compliance": {
       "title": "Document Compliance",
@@ -3961,7 +3966,12 @@
     "suggestionApplied": "Suggestion applied",
     "suggestionsApplied": "Suggestions applied",
     "aiAnalysisComplete": "AI analysis complete — {confidence}% confidence",
-    "aiAnalysisFailed": "AI analysis failed — you can retry"
+    "aiAnalysisFailed": "AI analysis failed — you can retry",
+    "aiProcessingToast": "AI is analyzing your document...",
+    "aiAnalyzedBanner": "AI analyzed this document",
+    "aiFieldsExtracted": "{count} field extracted | {count} fields extracted",
+    "aiAnomalies": "{count} anomaly detected | {count} anomalies detected",
+    "aiExtractedFields": "Extracted fields"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "EU Intra-Community Reverse Charge",
   "billing.tax_exemption.export_extra_eu": "VAT Exempt — Export outside EU",
@@ -4295,5 +4305,35 @@
     "support": "Support",
     "documentation": "Documentation",
     "helpCenter": "Help Center"
+  },
+  "automations": {
+    "title": "Automation Center",
+    "subtitle": "Manage and monitor all automated tasks",
+    "rule": "Rule",
+    "category": "Category",
+    "status": "Status",
+    "schedule": "Schedule",
+    "lastRun": "Last run",
+    "nextRun": "Next run",
+    "actions": "Actions",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "runNow": "Run now",
+    "viewLogs": "View logs",
+    "runSuccess": "Automation executed successfully",
+    "runFailed": "Execution failed",
+    "updated": "Automation updated",
+    "statusOk": "OK",
+    "statusError": "Error",
+    "statusSkipped": "Skipped",
+    "neverRun": "Never executed",
+    "actionsCount": "{count} action(s)",
+    "duration": "{ms} ms",
+    "noLogs": "No logs available",
+    "categories": {
+      "documents": "Documents",
+      "billing": "Billing",
+      "system": "System"
+    }
   }
 }

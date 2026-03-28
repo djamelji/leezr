@@ -53,7 +53,8 @@
       "notifications": "Notifications",
       "support": "Support",
       "documentation": "Documentation",
-      "ai": "IA"
+      "ai": "IA",
+      "automations": "Automatisations"
     },
     "company": {
       "dashboard": "Tableau de bord",
@@ -1575,6 +1576,10 @@
       "status_submitted": "Soumis",
       "status_approved": "Approuvé",
       "status_rejected": "Rejeté",
+      "status_processing": "Analyse en cours",
+      "status_validated": "Validé",
+      "sectionToReview": "À traiter",
+      "sectionPending": "En attente de soumission",
       "approvedSuccess": "Document approuvé",
       "rejectedSuccess": "Document rejeté",
       "reviewFailed": "Échec de la vérification",
@@ -3966,7 +3971,12 @@
     "suggestionApplied": "Suggestion appliquée",
     "suggestionsApplied": "Suggestions appliquées",
     "aiAnalysisComplete": "Analyse IA terminée — confiance {confidence}%",
-    "aiAnalysisFailed": "Analyse IA échouée — vous pouvez la relancer"
+    "aiAnalysisFailed": "Analyse IA échouée — vous pouvez la relancer",
+    "aiProcessingToast": "Analyse IA en cours sur votre document...",
+    "aiAnalyzedBanner": "IA a analysé ce document",
+    "aiFieldsExtracted": "{count} champ extrait | {count} champs extraits",
+    "aiAnomalies": "{count} anomalie détectée | {count} anomalies détectées",
+    "aiExtractedFields": "Champs extraits"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",
@@ -4300,5 +4310,35 @@
     "support": "Support",
     "documentation": "Documentation",
     "helpCenter": "Centre d'aide"
+  },
+  "automations": {
+    "title": "Centre d'automatisation",
+    "subtitle": "Gérez et supervisez toutes les tâches automatisées",
+    "rule": "Règle",
+    "category": "Catégorie",
+    "status": "Statut",
+    "schedule": "Planification",
+    "lastRun": "Dernière exécution",
+    "nextRun": "Prochaine exécution",
+    "actions": "Actions",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "runNow": "Exécuter maintenant",
+    "viewLogs": "Voir les logs",
+    "runSuccess": "Automatisation exécutée avec succès",
+    "runFailed": "Échec de l'exécution",
+    "updated": "Automatisation mise à jour",
+    "statusOk": "OK",
+    "statusError": "Erreur",
+    "statusSkipped": "Ignoré",
+    "neverRun": "Jamais exécuté",
+    "actionsCount": "{count} action(s)",
+    "duration": "{ms} ms",
+    "noLogs": "Aucun log disponible",
+    "categories": {
+      "documents": "Documents",
+      "billing": "Facturation",
+      "system": "Système"
+    }
   }
 }

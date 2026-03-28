@@ -70,6 +70,34 @@ const filteredRequests = computed(() => {
   return items
 })
 
+// B1: Split into inbox sections
+const submittedRequests = computed(() => filteredRequests.value.filter(r => r.status === 'submitted'))
+const pendingRequests = computed(() => filteredRequests.value.filter(r => r.status === 'requested'))
+
+// B4: Unified lifecycle mapping (frontend only — backend untouched)
+const unifiedStatus = item => {
+  if (item.status === 'submitted' && item.upload?.ai_status === 'processing') return 'processing'
+  if (item.status === 'submitted' && item.upload?.ai_status === 'pending') return 'processing'
+  if (item.status === 'approved') return 'validated'
+  return item.status
+}
+
+const unifiedStatusColor = status => {
+  switch (status) {
+    case 'requested': return 'info'
+    case 'submitted': return 'warning'
+    case 'processing': return 'secondary'
+    case 'validated': return 'success'
+    case 'rejected': return 'error'
+    case 'cancelled': return 'secondary'
+    default: return 'secondary'
+  }
+}
+
+const unifiedStatusLabel = status => {
+  return t(`companyDocuments.requests.status_${status}`, status)
+}
+
 // ─── Request queue table ────────────────────────────────
 const headers = computed(() => [
   { title: t('companyDocuments.requests.member'), key: 'user', sortable: false },
@@ -436,6 +464,7 @@ const confirmAdminUpload = async () => {
     })
 
     toast(t('documents.uploadForMemberSuccess'), 'success')
+    toast(t('documents.aiProcessingToast'), 'info')
     isAdminUploadOpen.value = false
     await store.fetchRequests()
   }
@@ -633,206 +662,147 @@ const submitRequest = async () => {
 
     <VDivider />
 
-    <VDataTable
-      v-model="selectedItems"
-      :headers="headers"
-      :items="filteredRequests"
-      :items-per-page="10"
-      class="text-no-wrap"
-      show-select
-      return-object
-      item-value="id"
-      :item-selectable="selectableItemFilter"
-    >
-        <template #no-data>
-          <div class="text-center pa-8">
-            <VIcon
-              icon="tabler-file-text"
-              :size="64"
-              color="disabled"
-              class="mb-4"
-            />
-            <h6 class="text-h6 mb-1">
-              {{ t('companyDocuments.emptyState.requestsTitle') }}
-            </h6>
-            <p class="text-body-2 text-medium-emphasis">
-              {{ t('companyDocuments.emptyState.requestsSubtitle') }}
-            </p>
-          </div>
-        </template>
+    <!-- B1: Section "À traiter" (submitted documents) -->
+    <template v-if="submittedRequests.length">
+      <div class="d-flex align-center gap-2 px-4 pt-4 pb-2">
+        <VIcon icon="tabler-urgent" size="20" color="warning" />
+        <span class="text-body-1 font-weight-medium">{{ t('companyDocuments.requests.sectionToReview') }}</span>
+        <VChip size="x-small" variant="tonal" color="warning">{{ submittedRequests.length }}</VChip>
+      </div>
+      <VDataTable
+        v-model="selectedItems"
+        :headers="headers"
+        :items="submittedRequests"
+        :items-per-page="10"
+        class="text-no-wrap"
+        show-select
+        return-object
+        item-value="id"
+        :item-selectable="selectableItemFilter"
+      >
         <template #item.user="{ item }">
           <div class="d-flex align-center gap-2 py-2">
-            <VAvatar
-              size="32"
-              color="primary"
-              variant="tonal"
-            >
-              <span class="text-body-2">
-                {{ item.user?.first_name?.[0] }}{{ item.user?.last_name?.[0] }}
-              </span>
+            <VAvatar size="32" color="primary" variant="tonal">
+              <span class="text-body-2">{{ item.user?.first_name?.[0] }}{{ item.user?.last_name?.[0] }}</span>
             </VAvatar>
             <div>
-              <div class="text-body-1">
-                {{ item.user?.first_name }} {{ item.user?.last_name }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ item.user?.email }}
-              </div>
+              <div class="text-body-1">{{ item.user?.first_name }} {{ item.user?.last_name }}</div>
+              <div class="text-body-2 text-medium-emphasis">{{ item.user?.email }}</div>
             </div>
           </div>
         </template>
-
         <template #item.role="{ item }">
-          <VChip
-            v-if="item.role"
-            size="small"
-            variant="tonal"
-          >
-            {{ item.role.name }}
-          </VChip>
-          <span
-            v-else
-            class="text-disabled"
-          >—</span>
+          <VChip v-if="item.role" size="small" variant="tonal">{{ item.role.name }}</VChip>
+          <span v-else class="text-disabled">—</span>
         </template>
-
         <template #item.document_type="{ item }">
           {{ t(`documents.type.${item.document_type?.code}`, item.document_type?.label) }}
         </template>
-
         <template #item.status="{ item }">
           <div class="d-flex align-center gap-2">
-            <VChip
-              size="small"
-              :color="statusColor(item.status)"
-            >
-              {{ statusLabel(item.status) }}
+            <VChip size="small" :color="unifiedStatusColor(unifiedStatus(item))">
+              {{ unifiedStatusLabel(unifiedStatus(item)) }}
             </VChip>
-            <DocumentAiChip
-              v-if="item.upload"
-              :analysis="item.upload.ai_analysis"
-            />
+            <DocumentAiChip v-if="item.upload" :analysis="item.upload.ai_analysis" :ai-status="item.upload.ai_status" />
           </div>
         </template>
-
         <template #item.requested_at="{ item }">
           {{ formatDate(item.requested_at) }}
         </template>
-
         <template #item.actions="{ item }">
           <div class="d-flex gap-1">
-            <!-- Preview (submitted/rejected with upload) -->
-            <VBtn
-              v-if="['submitted', 'rejected'].includes(item.status) && item.upload && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="primary"
-              :title="t('documents.preview')"
-              @click="openViewer(item)"
-            >
+            <VBtn v-if="item.upload && canManage" icon variant="text" size="small" color="primary" :title="t('documents.preview')" @click="openViewer(item)">
               <VIcon icon="tabler-eye" />
             </VBtn>
-
-            <!-- Approve (submitted only) -->
-            <VBtn
-              v-if="item.status === 'submitted' && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="success"
-              :title="t('documents.approve')"
-              @click="handleApprove(item)"
-            >
+            <VBtn v-if="canManage" icon variant="text" size="small" color="success" :title="t('documents.approve')" @click="handleApprove(item)">
               <VIcon icon="tabler-check" />
             </VBtn>
-
-            <!-- Reject (submitted only) -->
-            <VBtn
-              v-if="item.status === 'submitted' && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="error"
-              :title="t('documents.reject')"
-              @click="openRejectDialog(item)"
-            >
+            <VBtn v-if="canManage" icon variant="text" size="small" color="error" :title="t('documents.reject')" @click="openRejectDialog(item)">
               <VIcon icon="tabler-x" />
             </VBtn>
+          </div>
+        </template>
+      </VDataTable>
 
-            <!-- Upload on behalf (requested only) -->
-            <VBtn
-              v-if="item.status === 'requested' && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="success"
-              :title="t('documents.uploadForMember')"
-              @click="openAdminUpload(item)"
-            >
+      <!-- Bulk action floating bar (ADR-423) -->
+      <VExpandTransition>
+        <div v-if="selectedSubmittedCount > 0 && canManage" class="d-flex align-center justify-space-between pa-4 bg-surface border-t">
+          <span class="text-body-1 font-weight-medium">{{ t('companyDocuments.requests.bulkSelected', { count: selectedSubmittedCount }) }}</span>
+          <div class="d-flex gap-2">
+            <VBtn color="success" variant="tonal" prepend-icon="tabler-checks" :loading="isBulkLoading" @click="handleBulkApprove">
+              {{ t('companyDocuments.requests.bulkApprove') }}
+            </VBtn>
+            <VBtn color="error" variant="tonal" prepend-icon="tabler-x" :loading="isBulkLoading" @click="openBulkRejectDialog">
+              {{ t('companyDocuments.requests.bulkReject') }}
+            </VBtn>
+          </div>
+        </div>
+      </VExpandTransition>
+    </template>
+
+    <VDivider v-if="submittedRequests.length && pendingRequests.length" />
+
+    <!-- B1: Section "En attente" (requested — waiting for member upload) -->
+    <template v-if="pendingRequests.length">
+      <div class="d-flex align-center gap-2 px-4 pt-4 pb-2">
+        <VIcon icon="tabler-hourglass" size="20" color="info" />
+        <span class="text-body-1 font-weight-medium">{{ t('companyDocuments.requests.sectionPending') }}</span>
+        <VChip size="x-small" variant="tonal" color="info">{{ pendingRequests.length }}</VChip>
+      </div>
+      <VDataTable
+        :headers="headers"
+        :items="pendingRequests"
+        :items-per-page="10"
+        class="text-no-wrap"
+      >
+        <template #item.user="{ item }">
+          <div class="d-flex align-center gap-2 py-2">
+            <VAvatar size="32" color="primary" variant="tonal">
+              <span class="text-body-2">{{ item.user?.first_name?.[0] }}{{ item.user?.last_name?.[0] }}</span>
+            </VAvatar>
+            <div>
+              <div class="text-body-1">{{ item.user?.first_name }} {{ item.user?.last_name }}</div>
+              <div class="text-body-2 text-medium-emphasis">{{ item.user?.email }}</div>
+            </div>
+          </div>
+        </template>
+        <template #item.role="{ item }">
+          <VChip v-if="item.role" size="small" variant="tonal">{{ item.role.name }}</VChip>
+          <span v-else class="text-disabled">—</span>
+        </template>
+        <template #item.document_type="{ item }">
+          {{ t(`documents.type.${item.document_type?.code}`, item.document_type?.label) }}
+        </template>
+        <template #item.status="{ item }">
+          <VChip size="small" :color="unifiedStatusColor(unifiedStatus(item))">
+            {{ unifiedStatusLabel(unifiedStatus(item)) }}
+          </VChip>
+        </template>
+        <template #item.requested_at="{ item }">
+          {{ formatDate(item.requested_at) }}
+        </template>
+        <template #item.actions="{ item }">
+          <div class="d-flex gap-1">
+            <VBtn v-if="canManage" icon variant="text" size="small" color="success" :title="t('documents.uploadForMember')" @click="openAdminUpload(item)">
               <VIcon icon="tabler-upload" />
             </VBtn>
-
-            <!-- Remind (requested only) -->
-            <VBtn
-              v-if="item.status === 'requested' && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="warning"
-              :title="t('companyDocuments.requests.remind')"
-              @click="handleRemind(item)"
-            >
+            <VBtn v-if="canManage" icon variant="text" size="small" color="warning" :title="t('companyDocuments.requests.remind')" @click="handleRemind(item)">
               <VIcon icon="tabler-bell-ringing" />
             </VBtn>
-
-            <!-- Cancel (requested only) -->
-            <VBtn
-              v-if="item.status === 'requested' && canManage"
-              icon
-              variant="text"
-              size="small"
-              color="secondary"
-              :title="t('companyDocuments.requests.cancelRequest')"
-              @click="handleCancel(item)"
-            >
+            <VBtn v-if="canManage" icon variant="text" size="small" color="secondary" :title="t('companyDocuments.requests.cancelRequest')" @click="handleCancel(item)">
               <VIcon icon="tabler-trash" />
             </VBtn>
           </div>
         </template>
-    </VDataTable>
+      </VDataTable>
+    </template>
 
-    <!-- Bulk action floating bar (ADR-423) -->
-    <VExpandTransition>
-      <div
-        v-if="selectedSubmittedCount > 0 && canManage"
-        class="d-flex align-center justify-space-between pa-4 bg-surface border-t"
-      >
-        <span class="text-body-1 font-weight-medium">
-          {{ t('companyDocuments.requests.bulkSelected', { count: selectedSubmittedCount }) }}
-        </span>
-        <div class="d-flex gap-2">
-          <VBtn
-            color="success"
-            variant="tonal"
-            prepend-icon="tabler-checks"
-            :loading="isBulkLoading"
-            @click="handleBulkApprove"
-          >
-            {{ t('companyDocuments.requests.bulkApprove') }}
-          </VBtn>
-          <VBtn
-            color="error"
-            variant="tonal"
-            prepend-icon="tabler-x"
-            :loading="isBulkLoading"
-            @click="openBulkRejectDialog"
-          >
-            {{ t('companyDocuments.requests.bulkReject') }}
-          </VBtn>
-        </div>
-      </div>
-    </VExpandTransition>
+    <!-- Empty state when both sections empty -->
+    <div v-if="!submittedRequests.length && !pendingRequests.length && !store.loading.requests" class="text-center pa-8">
+      <VIcon icon="tabler-file-text" :size="64" color="disabled" class="mb-4" />
+      <h6 class="text-h6 mb-1">{{ t('companyDocuments.emptyState.requestsTitle') }}</h6>
+      <p class="text-body-2 text-medium-emphasis">{{ t('companyDocuments.emptyState.requestsSubtitle') }}</p>
+    </div>
   </VCard>
 
   <!-- Admin Upload Dialog (ADR-408 C) -->
