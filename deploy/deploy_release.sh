@@ -191,11 +191,13 @@ log "→ [5.5] Run DevSeeder (no real clients yet)"
 $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
 
 # ADR-422: Fix permissions on seeded document files (created as root, needs to be readable by web user)
-if [ -d "$SHARED_DIR/storage/app/documents/seed" ]; then
-  chmod -R 755 "$SHARED_DIR/storage/app/documents/seed" 2>/dev/null || true
+# Laravel 12 local disk = storage/app/private/ (not storage/app/)
+SEED_DIR="$SHARED_DIR/storage/app/private/documents/seed"
+if [ -d "$SEED_DIR" ]; then
+  chmod -R 755 "$SEED_DIR" 2>/dev/null || true
   VHOST_SEED_OWNER=$(stat -c '%U:%G' "$RELEASES_DIR" 2>/dev/null || echo "")
   if [ -n "$VHOST_SEED_OWNER" ] && [ "$VHOST_SEED_OWNER" != "root:root" ]; then
-    chown -R "$VHOST_SEED_OWNER" "$SHARED_DIR/storage/app/documents/seed" 2>/dev/null || true
+    chown -R "$VHOST_SEED_OWNER" "$SEED_DIR" 2>/dev/null || true
   fi
   log "  Fixed seed document permissions"
 fi
