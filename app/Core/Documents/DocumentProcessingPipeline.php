@@ -6,7 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use setasign\Fpdi\Fpdi;
-use thiagoalessio\TesseractOCR\TesseractOCR;
+use Illuminate\Support\Facades\Process;
 
 class DocumentProcessingPipeline
 {
@@ -250,19 +250,22 @@ class DocumentProcessingPipeline
         $texts = [];
         foreach ($imagePaths as $path) {
             try {
-                $ocr = new TesseractOCR($path);
-                $ocr->lang('fra', 'eng');
+                // ADR-421: Call Tesseract directly via Process::run() instead of
+                // TesseractOCR library — the library's FriendlyErrors::checkTesseractPresence()
+                // uses file_exists() which is blocked by ISPConfig open_basedir.
+                $result = Process::timeout(15)->run([
+                    $tesseractBin, $path, 'stdout', '-l', 'fra+eng',
+                ]);
 
-                if ($tesseractBin) {
-                    $ocr->executable($tesseractBin);
-                }
-
-                $text = $ocr->run();
-                if (! empty(trim($text))) {
-                    $texts[] = trim($text);
+                if ($result->successful()) {
+                    $text = trim($result->output());
+                    if (! empty($text)) {
+                        $texts[] = $text;
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('DocumentProcessingPipeline: OCR failed for image', [
+                    'correlation_id' => $this->correlationId,
                     'path' => $path,
                     'error' => $e->getMessage(),
                 ]);
@@ -279,9 +282,9 @@ class DocumentProcessingPipeline
             return $path;
         }
 
-        // Use command -v only — file_exists() fails under open_basedir (ISPConfig)
-        exec('command -v tesseract 2>/dev/null', $output, $code);
+        // Use Process::run() — file_exists() and exec() both fail under open_basedir (ISPConfig)
+        $check = Process::run('command -v tesseract');
 
-        return $path = ($code === 0 ? trim($output[0]) : null);
+        return $path = ($check->successful() ? trim($check->output()) : null);
     }
 }

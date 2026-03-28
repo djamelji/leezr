@@ -14370,4 +14370,31 @@ Le deploy staging lance `migrate:fresh --seed` à chaque push sur `dev`. Le DevS
 
 ---
 
+### ADR-421 — Fix OCR open_basedir + PHP upload limits VPS (2026-03-28)
+
+**Contexte :**
+Deux problèmes identifiés sur staging par diagnostic strict (DB → API → UI) :
+1. `ocr_text` = NULL pour **tous** les documents — malgré Tesseract installé sur le VPS
+2. Upload 422 `The files.0 failed to upload` sur des fichiers > 2 Mo (passeport, scan haute qualité)
+
+**Diagnostic :**
+1. **OCR** : La librairie PHP `thiagoalessio/tesseract_ocr` appelle `file_exists('/usr/bin/tesseract')` dans `FriendlyErrors::checkTesseractPresence()` — bloqué par `open_basedir` ISPConfig. Erreur catchée silencieusement → `ocrChars: 0` dans les logs.
+2. **Upload** : `upload_max_filesize = 2M` dans la config PHP du VPS (défaut ISPConfig). Laravel valide `max:10240` (10 Mo) mais PHP rejette le fichier **avant** que Laravel ne le voie.
+
+**Décisions :**
+1. **Remplacer la librairie TesseractOCR** par un appel `Process::run()` direct dans `DocumentProcessingPipeline::extractOcrText()`. Même pattern que `ImageProcessor::detectOrientation()` (ADR-415). Aucun `file_exists()` dans la chaîne OCR.
+2. **Créer `public/.user.ini`** avec `upload_max_filesize = 20M`, `post_max_size = 25M`, `max_file_uploads = 20`. PHP-FPM lit ce fichier automatiquement (délai `user_ini.cache_ttl`, défaut 300s).
+3. **Uniformiser `findTesseract()`** dans DocumentProcessingPipeline : remplacer `exec()` par `Process::run()` (cohérence avec ImageProcessor).
+
+**Conséquences :**
+- L'OCR fonctionne sur le VPS sans contourner `open_basedir`
+- Les uploads de fichiers jusqu'à 20 Mo sont acceptés par PHP
+- La librairie `thiagoalessio/tesseract_ocr` peut être retirée de composer.json à terme (plus utilisée)
+
+**Fichiers :**
+- `app/Core/Documents/DocumentProcessingPipeline.php` — Process::run() au lieu de TesseractOCR
+- `public/.user.ini` — NOUVEAU (upload limits PHP)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
