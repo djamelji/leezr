@@ -4,6 +4,11 @@ namespace Database\Seeders;
 
 use App\Company\RBAC\CompanyPermissionCatalog;
 use App\Company\RBAC\CompanyRole;
+use App\Core\Documents\CompanyDocument;
+use App\Core\Documents\DocumentRequest;
+use App\Core\Documents\DocumentType;
+use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Documents\MemberDocument;
 use App\Core\Fields\FieldActivation;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValue;
@@ -24,6 +29,7 @@ use App\Platform\Models\PlatformSetting;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Dev seeder — demo data for local development only.
@@ -337,6 +343,9 @@ class DevSeeder extends Seeder
             );
         }
 
+        // ─── Document type activations for demo company (ADR-419) ──
+        $this->seedDocumentData($company, $owner, $admin, $user);
+
         // ─── Pending approval company — ADR-289 ──────────────────
         // ADR-301: admin_approval is for upgrades only, not registration
         // The pending company's subscription is seeded directly with status='pending'
@@ -498,5 +507,146 @@ class DevSeeder extends Seeder
         //     'icon_type' => 'image',
         //     'icon_name' => '/images/modules/stripe.svg',
         // ]);
+    }
+
+    /**
+     * ADR-419: Seed document type activations, document requests, and uploaded
+     * documents so the AI pipeline has material to process after migrate:fresh.
+     */
+    private function seedDocumentData(Company $company, User $owner, User $admin, User $user): void
+    {
+        // ─── 1. Activate document types for the company ─────────────
+        $memberDocCodes = ['id_card', 'driving_license', 'medical_certificate', 'rib', 'work_contract'];
+        $companyDocCodes = ['kbis', 'insurance_certificate', 'transport_license'];
+
+        foreach (array_merge($memberDocCodes, $companyDocCodes) as $index => $code) {
+            $docType = DocumentType::where('code', $code)->first();
+            if ($docType) {
+                DocumentTypeActivation::updateOrCreate(
+                    ['company_id' => $company->id, 'document_type_id' => $docType->id],
+                    ['enabled' => true, 'required_override' => in_array($code, ['id_card', 'driving_license', 'kbis']), 'order' => $index * 10],
+                );
+            }
+        }
+
+        // ─── 2. Copy fixture files to storage ───────────────────────
+        $fixturesPath = database_path('seeders/fixtures');
+
+        $storedFiles = [];
+        $fixtures = [
+            'dummy_driving_license.png' => 'documents/seed/dummy_driving_license.png',
+            'dummy_id_card.png' => 'documents/seed/dummy_id_card.png',
+            'dummy_kbis.png' => 'documents/seed/dummy_kbis.png',
+        ];
+
+        foreach ($fixtures as $source => $dest) {
+            $sourcePath = $fixturesPath.'/'.$source;
+            if (file_exists($sourcePath)) {
+                Storage::put($dest, file_get_contents($sourcePath));
+                $storedFiles[$source] = $dest;
+            }
+        }
+
+        // ─── 3. Member document requests for Bob (driver) ───────────
+        $drivingLicense = DocumentType::where('code', 'driving_license')->first();
+        $idCard = DocumentType::where('code', 'id_card')->first();
+        $medicalCert = DocumentType::where('code', 'medical_certificate')->first();
+
+        if (! $drivingLicense || ! $idCard || ! $medicalCert) {
+            return; // DocumentTypeCatalog hasn't been synced yet
+        }
+
+        // Request 1: driving_license — SUBMITTED (Bob uploaded a file)
+        $dlRequest = DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $drivingLicense->id],
+            [
+                'status' => DocumentRequest::STATUS_SUBMITTED,
+                'requested_at' => now()->subDays(5),
+                'submitted_at' => now()->subDays(2),
+            ],
+        );
+
+        // The actual uploaded document for the submitted request
+        if (isset($storedFiles['dummy_driving_license.png'])) {
+            MemberDocument::updateOrCreate(
+                ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $drivingLicense->id],
+                [
+                    'file_path' => $storedFiles['dummy_driving_license.png'],
+                    'file_name' => 'permis_bob_dupont.png',
+                    'file_size_bytes' => Storage::size($storedFiles['dummy_driving_license.png']),
+                    'mime_type' => 'image/png',
+                    'uploaded_by' => $user->id,
+                    'expires_at' => now()->addYears(2),
+                ],
+            );
+        }
+
+        // Request 2: id_card — REQUESTED (pending upload from Bob)
+        DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $idCard->id],
+            [
+                'status' => DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now()->subDays(3),
+            ],
+        );
+
+        // Request 3: medical_certificate — REQUESTED (pending from Bob)
+        DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $medicalCert->id],
+            [
+                'status' => DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now()->subDay(),
+            ],
+        );
+
+        // ─── 4. Member document requests for Alice (dispatcher) ─────
+        // Alice: id_card SUBMITTED (with file)
+        DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $idCard->id],
+            [
+                'status' => DocumentRequest::STATUS_SUBMITTED,
+                'requested_at' => now()->subDays(7),
+                'submitted_at' => now()->subDays(4),
+            ],
+        );
+
+        if (isset($storedFiles['dummy_id_card.png'])) {
+            MemberDocument::updateOrCreate(
+                ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $idCard->id],
+                [
+                    'file_path' => $storedFiles['dummy_id_card.png'],
+                    'file_name' => 'ci_alice_martin.png',
+                    'file_size_bytes' => Storage::size($storedFiles['dummy_id_card.png']),
+                    'mime_type' => 'image/png',
+                    'uploaded_by' => $admin->id,
+                    'expires_at' => now()->addYears(5),
+                ],
+            );
+        }
+
+        // Alice: driving_license REQUESTED
+        DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $drivingLicense->id],
+            [
+                'status' => DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now()->subDays(2),
+            ],
+        );
+
+        // ─── 5. Company documents (company-scope) ───────────────────
+        $kbis = DocumentType::where('code', 'kbis')->first();
+        if ($kbis && isset($storedFiles['dummy_kbis.png'])) {
+            CompanyDocument::updateOrCreate(
+                ['company_id' => $company->id, 'document_type_id' => $kbis->id],
+                [
+                    'file_path' => $storedFiles['dummy_kbis.png'],
+                    'file_name' => 'kbis_leezr_logistics.png',
+                    'file_size_bytes' => Storage::size($storedFiles['dummy_kbis.png']),
+                    'mime_type' => 'image/png',
+                    'uploaded_by' => $owner->id,
+                    'expires_at' => now()->addMonths(3),
+                ],
+            );
+        }
     }
 }

@@ -14343,4 +14343,31 @@ L'IA est morte côté company sur staging/prod : aucune analyse, aucun score, au
 
 ---
 
+### ADR-420 — DevSeeder : données documents pour tests AI pipeline (2026-03-27)
+
+**Contexte :**
+Le deploy staging lance `migrate:fresh --seed` à chaque push sur `dev`. Le DevSeeder ne seedait aucune donnée document (0 activations, 0 requests, 0 MemberDocuments, 0 CompanyDocuments). Résultat : après chaque deploy, aucun document à tester — l'AI pipeline n'a rien à traiter, la commande `documents:reanalyze` retourne 0 résultats, et la queue document-requests est vide.
+
+**Décisions :**
+1. **Fixtures images** : 3 images PNG dummy (permis, CI, K-bis) dans `database/seeders/fixtures/`, copiées dans `storage/app/documents/seed/` par le seeder.
+2. **Document type activations** : 8 types activés pour la company demo (5 member-scope : id_card, driving_license, medical_certificate, rib, work_contract + 3 company-scope : kbis, insurance_certificate, transport_license).
+3. **Document requests** : 5 requests réparties sur Bob (driver) et Alice (dispatcher) — 2 `submitted` (avec MemberDocument associé + fichier), 3 `requested` (en attente d'upload). Cela alimente la queue visible sur `/company/documents/requests`.
+4. **MemberDocuments** : 2 documents avec fichiers réels en storage (permis Bob, CI Alice) — l'AI pipeline peut les traiter si le queue worker tourne.
+5. **CompanyDocument** : 1 K-bis company-scope avec fichier.
+6. **Méthode privée `seedDocumentData()`** isolée pour lisibilité, pattern cohérent avec `seedModuleConfigs()`.
+
+**Conséquences :**
+- Après chaque `migrate:fresh --seed`, la queue des requests contient 5 entrées avec 2 fichiers uploadés
+- L'AI pipeline (Ollama) peut analyser les 2 submitted documents si le worker queue `ai` tourne
+- Le tab "Requests" de la page documents affiche immédiatement les données après deploy
+- Les fixtures PNG sont commit dans le repo (< 5 Ko total)
+
+**Fichiers :**
+- `database/seeders/DevSeeder.php` — méthode `seedDocumentData()` ajoutée
+- `database/seeders/fixtures/dummy_driving_license.png` — NOUVEAU
+- `database/seeders/fixtures/dummy_id_card.png` — NOUVEAU
+- `database/seeders/fixtures/dummy_kbis.png` — NOUVEAU
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
