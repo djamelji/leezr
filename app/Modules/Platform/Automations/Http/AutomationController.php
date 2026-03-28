@@ -2,88 +2,149 @@
 
 namespace App\Modules\Platform\Automations\Http;
 
-use App\Core\Automation\AutomationRule;
-use App\Core\Automation\AutomationRunLog;
-use App\Core\Automation\AutomationRunner;
+use App\Core\Automation\Jobs\RunScheduledTaskJob;
+use App\Core\Automation\ScheduledTaskRegistry;
+use App\Core\Automation\ScheduledTaskRun;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-
 class AutomationController extends Controller
 {
-    public function __construct(
-        private readonly AutomationRunner $runner,
-    ) {}
-
     /**
-     * List all automation rules with their latest 5 run logs.
+     * GET /platform/automations
+     *
+     * Returns summary KPIs, queue stats, global health,
+     * and per-task details with health badges.
      */
     public function index(): JsonResponse
     {
-        $rules = AutomationRule::with(['runLogs' => function ($q) {
-            $q->latest('created_at')->limit(5);
-        }])
-            ->orderBy('category')
-            ->orderBy('key')
-            ->get();
+        // ── 24h aggregate stats per task ─────────────────
+        $since = now()->subDay();
 
-        return response()->json(['data' => $rules]);
-    }
+        $taskStats = ScheduledTaskRun::query()
+            ->where('created_at', '>=', $since)
+            ->selectRaw('task')
+            ->selectRaw("SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count")
+            ->selectRaw("SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count")
+            ->selectRaw('COUNT(*) as total_count')
+            ->selectRaw('AVG(duration_ms) as avg_duration_ms')
+            ->groupBy('task')
+            ->get()
+            ->keyBy('task');
 
-    /**
-     * Update rule (enabled, schedule, config).
-     */
-    public function update(Request $request, int $id): JsonResponse
-    {
-        $rule = AutomationRule::findOrFail($id);
+        // ── Latest run per task ──────────────────────────
+        $latestRunIds = ScheduledTaskRun::query()
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('task')
+            ->pluck('id');
 
-        $validated = $request->validate([
-            'enabled' => 'sometimes|boolean',
-            'schedule' => 'sometimes|string|max:100',
-            'config' => 'sometimes|nullable|array',
-        ]);
+        $latestRuns = ScheduledTaskRun::whereIn('id', $latestRunIds)
+            ->get()
+            ->keyBy('task');
 
-        $rule->update($validated);
+        // ── Queue stats (via Registry — no DB:: in controllers) ──
+        $queueStats = ScheduledTaskRegistry::queueStats();
 
-        // Recalculate next_run_at if schedule changed
-        if (isset($validated['schedule'])) {
-            $rule->update([
-                'next_run_at' => $this->runner->calculateNextRun($validated['schedule']),
-            ]);
+        // ── Summary KPIs ─────────────────────────────────
+        $totalSuccess = $taskStats->sum('success_count');
+        $totalFailed = $taskStats->sum('failed_count');
+        $avgDuration = $taskStats->avg('avg_duration_ms');
+
+        // ── Build per-task response ──────────────────────
+        $tasks = [];
+        foreach (ScheduledTaskRegistry::all() as $name => $meta) {
+            $stats = $taskStats->get($name);
+            $lastRun = $latestRuns->get($name);
+
+            $tasks[] = [
+                'name' => $name,
+                'description' => $meta['description'],
+                'category' => $meta['category'],
+                'frequency' => $meta['frequency'],
+                'cron' => $meta['cron'],
+                'health' => ScheduledTaskRegistry::computeHealth($name, $lastRun),
+                'next_run_at' => ScheduledTaskRegistry::nextRunAt($name)?->toIso8601String(),
+                'last_run_at' => $lastRun?->started_at?->toIso8601String(),
+                'last_status' => $lastRun?->status,
+                'last_duration_ms' => $lastRun?->duration_ms,
+                'last_output' => $lastRun?->output,
+                'last_error' => $lastRun?->error,
+                'runs_count_24h' => (int) ($stats?->total_count ?? 0),
+                'success_count_24h' => (int) ($stats?->success_count ?? 0),
+                'failed_count_24h' => (int) ($stats?->failed_count ?? 0),
+                'avg_duration_24h' => $stats ? (int) round($stats->avg_duration_ms) : null,
+            ];
         }
 
         return response()->json([
-            'data' => $rule->fresh()->load(['runLogs' => fn ($q) => $q->latest('created_at')->limit(5)]),
-            'message' => 'Automation updated.',
+            'summary' => array_merge([
+                'success_24h' => $totalSuccess,
+                'failed_24h' => $totalFailed,
+                'avg_duration_ms' => $avgDuration ? (int) round($avgDuration) : 0,
+            ], $queueStats),
+            'scheduler_health' => ScheduledTaskRegistry::globalHealth(),
+            'tasks' => $tasks,
         ]);
     }
 
     /**
-     * Manually trigger a single rule.
+     * GET /platform/automations/runs?task=...&page=1
+     *
+     * Paginated run history for a specific task.
      */
-    public function run(Request $request, int $id): JsonResponse
+    public function runs(Request $request): JsonResponse
     {
-        $rule = AutomationRule::findOrFail($id);
+        $request->validate([
+            'task' => 'required|string|max:100',
+        ]);
 
-        $result = $this->runner->runSingle($rule);
+        $task = $request->input('task');
 
-        return response()->json([
-            'data' => $rule->fresh()->load(['runLogs' => fn ($q) => $q->latest('created_at')->limit(5)]),
-            'result' => $result,
-        ], $result['status'] === 'error' ? 422 : 200);
+        if (! ScheduledTaskRegistry::exists($task)) {
+            return response()->json(['message' => 'Unknown task.'], 404);
+        }
+
+        $runs = ScheduledTaskRun::query()
+            ->task($task)
+            ->latest('id')
+            ->paginate(20);
+
+        return response()->json($runs);
     }
 
     /**
-     * Paginated run logs for a specific rule.
+     * POST /platform/automations/run
+     *
+     * Dispatch a task for immediate async execution.
+     * Returns immediately with run_id — cockpit gets update via realtime.
      */
-    public function logs(int $id): JsonResponse
+    public function run(Request $request): JsonResponse
     {
-        $rule = AutomationRule::findOrFail($id);
+        $request->validate([
+            'task' => 'required|string|max:100',
+        ]);
 
-        $logs = AutomationRunLog::where('automation_rule_id', $rule->id)
-            ->latest('created_at')
-            ->paginate(20);
+        $task = $request->input('task');
 
-        return response()->json($logs);
+        if (! ScheduledTaskRegistry::exists($task)) {
+            return response()->json(['message' => 'Unknown task.'], 404);
+        }
+
+        // Create the run record
+        $run = ScheduledTaskRun::create([
+            'task' => $task,
+            'status' => 'running',
+            'started_at' => now(),
+            'environment' => app()->environment(),
+        ]);
+
+        // Dispatch async job
+        RunScheduledTaskJob::dispatch($task, $run->id);
+
+        return response()->json([
+            'run_id' => $run->id,
+            'status' => 'dispatched',
+            'message' => "Task {$task} dispatched for execution.",
+        ]);
     }
 }

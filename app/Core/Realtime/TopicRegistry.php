@@ -126,6 +126,13 @@ final class TopicRegistry
             'targeting' => 'company',
             'version' => 2,
         ],
+        'automation.run.completed' => [
+            'description' => 'Scheduled task run completed (success or failure)',
+            'invalidates' => [],
+            'categories' => ['domain'],
+            'targeting' => 'platform',
+            'version' => 2,
+        ],
 
         // ─── Audit + Security topics ─────────────────────────
         'security.alert' => [

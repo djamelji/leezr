@@ -475,6 +475,19 @@ class NotificationTopicRegistry
                 'description' => 'Notification when a company account is suspended',
             ],
 
+            // ─── Scheduler topics ──────────────────────────────────────
+            'platform.scheduler_task_failed' => [
+                'label' => 'Scheduler Task Failed',
+                'description' => 'A scheduled automation task has failed',
+                'category' => 'system',
+                'icon' => 'tabler-alert-triangle',
+                'severity' => 'critical',
+                'default_channels' => ['in_app'],
+                'scope' => 'platform',
+                'is_active' => true,
+                'sort_order' => 900,
+            ],
+
             // ─── Support topics ─────────────────────────────────────
             'support.ticket_created' => [
                 'label' => 'New Support Ticket',

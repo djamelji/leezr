@@ -542,12 +542,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::delete('/documentation/groups/{id}', [\App\Modules\Platform\Documentation\Http\PlatformDocGroupController::class, 'destroy']);
     });
 
-    // ── Automations (ADR-425) ─────────────────────────────────
+    // ── Automations cockpit (ADR-430) ───────────────────────────
     Route::middleware(['module.active:platform.automations', 'platform.permission:manage_automations'])->group(function () {
         Route::get('/automations', [AutomationController::class, 'index']);
-        Route::put('/automations/{id}', [AutomationController::class, 'update']);
-        Route::post('/automations/{id}/run', [AutomationController::class, 'run']);
-        Route::get('/automations/{id}/logs', [AutomationController::class, 'logs']);
+        Route::get('/automations/runs', [AutomationController::class, 'runs']);
+        Route::post('/automations/run', [AutomationController::class, 'run']);
     });
 
     }); // end platform.2fa

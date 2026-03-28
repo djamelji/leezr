@@ -3,78 +3,76 @@ import { $platformApi } from '@/utils/platformApi'
 
 export const usePlatformAutomationsStore = defineStore('platformAutomations', {
   state: () => ({
-    _rules: [],
-    _logs: [],
+    _summary: null,
+    _schedulerHealth: null,
+    _tasks: [],
+    _runs: [],
+    _runsPagination: { current_page: 1, last_page: 1, total: 0 },
     _loading: false,
-    _runningRuleId: null,
-    _logsPagination: { current_page: 1, last_page: 1, total: 0 },
+    _runsLoading: false,
+    _runningTask: null,
   }),
 
   getters: {
-    rules: s => s._rules,
-    logs: s => s._logs,
+    summary: s => s._summary,
+    schedulerHealth: s => s._schedulerHealth,
+    tasks: s => s._tasks,
+    runs: s => s._runs,
+    runsPagination: s => s._runsPagination,
     loading: s => s._loading,
-    runningRuleId: s => s._runningRuleId,
-    logsPagination: s => s._logsPagination,
+    runsLoading: s => s._runsLoading,
+    runningTask: s => s._runningTask,
   },
 
   actions: {
-    async fetchRules() {
+    async fetchTasks() {
       this._loading = true
       try {
         const data = await $platformApi('/automations')
 
-        this._rules = data.data
+        this._summary = data.summary
+        this._schedulerHealth = data.scheduler_health
+        this._tasks = data.tasks
       }
       finally {
         this._loading = false
       }
     },
 
-    async updateRule(id, payload) {
-      const data = await $platformApi(`/automations/${id}`, {
-        method: 'PUT',
-        body: payload,
-      })
+    async fetchRuns(task, page = 1) {
+      this._runsLoading = true
+      try {
+        const data = await $platformApi(`/automations/runs?task=${encodeURIComponent(task)}&page=${page}`)
 
-      // Replace updated rule in the list
-      const idx = this._rules.findIndex(r => r.id === id)
-      if (idx !== -1) {
-        this._rules[idx] = data.data
+        this._runs = data.data
+        this._runsPagination = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          total: data.total,
+        }
       }
-
-      return data
+      finally {
+        this._runsLoading = false
+      }
     },
 
-    async runRule(id) {
-      this._runningRuleId = id
+    async runTask(task) {
+      this._runningTask = task
       try {
-        const data = await $platformApi(`/automations/${id}/run`, {
+        const data = await $platformApi('/automations/run', {
           method: 'POST',
+          body: { task },
         })
-
-        // Replace updated rule in the list
-        const idx = this._rules.findIndex(r => r.id === id)
-        if (idx !== -1) {
-          this._rules[idx] = data.data
-        }
 
         return data
       }
       finally {
-        this._runningRuleId = null
+        // Don't clear runningTask here — let realtime event clear it
       }
     },
 
-    async fetchLogs(id, page = 1) {
-      const data = await $platformApi(`/automations/${id}/logs?page=${page}`)
-
-      this._logs = data.data
-      this._logsPagination = {
-        current_page: data.current_page,
-        last_page: data.last_page,
-        total: data.total,
-      }
+    clearRunningTask() {
+      this._runningTask = null
     },
   },
 })

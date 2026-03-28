@@ -14793,4 +14793,45 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 ---
 
+## ADR-430 : Automation Center SaaS — Cockpit Scheduler Temps Réel (2026-03-28)
+
+**Contexte :** Le scheduler Laravel exécute 14 tâches planifiées (billing, documents, FX) via ISPConfig cron (ADR-429), mais aucune exécution n'était tracée en base. La page Automations existante reposait sur `automation_rules` / `automation_run_logs` — un système "fantôme" déconnecté du vrai scheduler. Résultat : zéro observabilité sur la santé des tâches critiques.
+
+**Décisions :**
+1. **Table `scheduled_task_runs`** — traçabilité complète de chaque exécution (task, status, duration_ms, output, error, environment)
+2. **`ScheduledTaskRegistry`** — registre statique des 14 tâches avec metadata (cron, fréquence, intervalle attendu), calcul de health (ok/delayed/broken), `nextRunAt()` via cron-expression, `globalHealth()` détection silence scheduler, `parseOutput()` pour futures métriques JSON
+3. **`SchedulerInstrumentation`** — hooks `before()/onSuccess()/onFailure()` chaînés sur chaque Schedule::command dans `routes/console.php`, output capturé via `appendOutputTo()`, realtime publish + alerting notification sur failure
+4. **`RunScheduledTaskJob`** — job async pour "Run now" (timeout 5min, tries 1), dispatch immédiat, status update + realtime
+5. **Topic `automation.run.completed`** dans TopicRegistry (targeting=platform) + topic `platform.scheduler_task_failed` dans NotificationTopicRegistry (severity=critical)
+6. **API refaite** — `GET /automations` (summary KPIs + queue stats + scheduler health + 14 tasks avec health), `GET /automations/runs?task=` (historique paginé), `POST /automations/run` (dispatch async)
+7. **Frontend cockpit** — KPI cards (success/failed/duration/queue), queue monitor (4 cards), VDataTable 14 rows avec health badges, drawer détail (stats 24h + output + historique paginé), realtime subscription auto-refresh
+8. **UPGRADE** : `next_run_at` calculé depuis cron, global scheduler health (silence > 2 min = dead), structure parseOutput pour futures métriques JSON
+
+**Conséquences :**
+- Observabilité complète du scheduler sans modifier la logique métier des commandes
+- Health monitoring proactif (broken = last failed ou silence)
+- Tables `automation_rules` / `automation_run_logs` conservées dormantes (pas supprimées)
+- Notifications platform admins sur chaque échec de tâche
+- Realtime updates via SSE (ADR-427) — pas de polling
+
+**Fichiers créés :**
+- `database/migrations/2026_03_28_200001_create_scheduled_task_runs_table.php`
+- `app/Core/Automation/ScheduledTaskRun.php`
+- `app/Core/Automation/ScheduledTaskRegistry.php`
+- `app/Core/Automation/SchedulerInstrumentation.php`
+- `app/Core/Automation/Jobs/RunScheduledTaskJob.php`
+
+**Fichiers modifiés :**
+- `routes/console.php` — 14 tâches instrumentées avec SI hooks + appendOutputTo
+- `app/Core/Realtime/TopicRegistry.php` — topic `automation.run.completed`
+- `app/Core/Notifications/NotificationTopicRegistry.php` — topic `platform.scheduler_task_failed`
+- `app/Modules/Platform/Automations/Http/AutomationController.php` — réécriture complète
+- `routes/platform.php` — 3 routes remplacent les 4 anciennes
+- `resources/js/modules/platform-admin/automations/automations.store.js` — réécriture
+- `resources/js/pages/platform/automations/index.vue` — refonte cockpit
+- `resources/js/plugins/i18n/locales/fr.json` — bloc automations étendu
+- `resources/js/plugins/i18n/locales/en.json` — bloc automations étendu
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
