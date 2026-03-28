@@ -90,7 +90,6 @@ const loadRunsPage = page => {
 // ── Realtime ──────────────────────────────────────────
 useRealtimeSubscription('automation.run.completed', () => {
   store.fetchTasks()
-  store.clearRunningTask()
 
   // Refresh runs if drawer is open
   if (drawerVisible.value && selectedTask.value) {

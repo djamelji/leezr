@@ -64,15 +64,14 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
           body: { task },
         })
 
+        // Refresh after short delay to let job start processing
+        setTimeout(() => this.fetchTasks(), 2000)
+
         return data
       }
       finally {
-        // Don't clear runningTask here — let realtime event clear it
+        this._runningTask = null
       }
-    },
-
-    clearRunningTask() {
-      this._runningTask = null
     },
   },
 })
