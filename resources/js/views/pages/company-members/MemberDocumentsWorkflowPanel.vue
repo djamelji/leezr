@@ -6,6 +6,7 @@ import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
 import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
+import DocumentAiChip from '@/views/shared/documents/DocumentAiChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 
@@ -218,6 +219,33 @@ const handleViewerReject = () => {
   openRejectDialog(viewerDocument.value.code)
 }
 
+// ADR-426: Apply AI suggestions
+const memberViewerRef = ref(null)
+
+const handleApplySuggestions = async fields => {
+  const doc = viewerDocument.value
+  if (!doc?.code) return
+
+  try {
+    await $api(`/company/members/${props.memberId}/documents/${doc.code}/apply-suggestions`, {
+      method: 'POST',
+      body: { fields },
+    })
+
+    memberViewerRef.value?.markApplied(fields)
+
+    if (fields.length === 1) {
+      toast(t('documents.suggestionApplied'), 'success')
+    }
+    else {
+      toast(t('documents.suggestionsApplied'), 'success')
+    }
+  }
+  catch {
+    toast(t('common.error'), 'error')
+  }
+}
+
 const handleViewerDownload = async () => {
   if (!viewerDocument.value?.upload)
     return
@@ -297,16 +325,24 @@ const handleViewerDownload = async () => {
         <VProgressCircular indeterminate />
       </div>
 
-      <!-- ADR-178: Actionable empty state -->
-      <VAlert
+      <!-- ADR-178/423: Actionable empty state -->
+      <div
         v-else-if="memberDocuments.length === 0"
-        type="info"
-        variant="tonal"
-        class="ma-2"
+        class="text-center pa-8"
       >
-        <VAlertTitle>{{ t('documents.noDocumentsActivated') }}</VAlertTitle>
-        {{ t('documents.noDocumentsActivatedHint') }}
-      </VAlert>
+        <VIcon
+          icon="tabler-file-certificate"
+          :size="64"
+          color="disabled"
+          class="mb-4"
+        />
+        <h6 class="text-h6 mb-2">
+          {{ t('companyDocuments.emptyState.memberDocsTitle') }}
+        </h6>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ t('companyDocuments.emptyState.memberDocsSubtitle') }}
+        </p>
+      </div>
 
       <VTable
         v-else
@@ -347,6 +383,10 @@ const handleViewerDownload = async () => {
                   :expires-at="doc.upload?.expires_at"
                 />
                 <DocumentStatusChip :status="doc.request_status" />
+                <DocumentAiChip
+                  v-if="doc.upload"
+                  :analysis="doc.upload.ai_analysis"
+                />
                 <VChip
                   v-if="doc.upload"
                   size="small"
@@ -596,8 +636,9 @@ const handleViewerDownload = async () => {
 
   <!-- Document Viewer -->
   <DocumentViewerDialog
+    ref="memberViewerRef"
     v-model:is-dialog-visible="isViewerOpen"
-    :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type, ocr_text: viewerDocument.upload.ocr_text, ai_analysis: viewerDocument.upload.ai_analysis, ai_insights: viewerDocument.upload.ai_insights, ai_status: viewerDocument.upload.ai_status } : null"
+    :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type, ocr_text: viewerDocument.upload.ocr_text, ai_analysis: viewerDocument.upload.ai_analysis, ai_insights: viewerDocument.upload.ai_insights, ai_suggestions: viewerDocument.upload.ai_suggestions, ai_status: viewerDocument.upload.ai_status } : null"
     :download-url="viewerDownloadUrl"
     :can-review="!!(viewerDocument?.can_review && canEdit)"
     :review-status="viewerDocument?.request_status"
@@ -605,6 +646,7 @@ const handleViewerDownload = async () => {
     @approve="handleViewerApprove"
     @reject="handleViewerReject"
     @download="handleViewerDownload"
+    @apply-suggestions="handleApplySuggestions"
   />
 
   <ConfirmDialogComponent />

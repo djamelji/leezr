@@ -15,6 +15,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['refresh'])
@@ -153,6 +157,30 @@ const handleDelete = async code => {
 </script>
 
 <template>
+  <VSkeletonLoader
+    v-if="props.loading"
+    type="table"
+  />
+  <!-- Empty state (ADR-423) -->
+  <div
+    v-else-if="props.documents.length === 0"
+    class="text-center pa-8"
+  >
+    <VIcon
+      icon="tabler-building-bank"
+      :size="64"
+      color="disabled"
+      class="mb-4"
+    />
+    <h5 class="text-h5 mb-2">
+      {{ t('companyDocuments.emptyState.vaultTitle') }}
+    </h5>
+    <p class="text-body-1 text-medium-emphasis">
+      {{ t('companyDocuments.emptyState.vaultSubtitle') }}
+    </p>
+  </div>
+
+  <template v-else>
   <h6 class="text-h6 mb-3">
     {{ t('documents.vault') }}
   </h6>
@@ -371,4 +399,5 @@ const handleDelete = async code => {
     :download-url="viewerDownloadUrl"
     @download="handleViewerDownload"
   />
+  </template>
 </template>

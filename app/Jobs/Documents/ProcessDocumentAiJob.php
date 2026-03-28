@@ -6,9 +6,13 @@ use App\Core\Ai\AiPolicyResolver;
 use App\Core\Ai\DTOs\AiInsight;
 use App\Core\Documents\CompanyDocument;
 use App\Core\Documents\DocumentAnalysisResult;
+use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\ImageProcessor;
 use App\Core\Documents\MemberDocument;
+use App\Core\Models\Company;
+use App\Core\Models\User;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Modules\Core\Documents\Services\DocumentAiAnalysisService;
 use App\Modules\Core\Documents\Services\DocumentAiDecisionService;
 use Illuminate\Bus\Queueable;
@@ -163,6 +167,120 @@ class ProcessDocumentAiJob implements ShouldQueue
                 ]);
             }
 
+            // Step 5: Auto-reject execution (MemberDocument only, ADR-416)
+            $autoRejected = false;
+            if ($decision->shouldAutoReject && $this->documentClass === MemberDocument::class) {
+                $request = DocumentRequest::where('company_id', $document->company_id)
+                    ->where('user_id', $document->user_id)
+                    ->where('document_type_id', $document->document_type_id)
+                    ->where('status', DocumentRequest::STATUS_SUBMITTED)
+                    ->first();
+
+                if ($request) {
+                    $request->update([
+                        'status' => DocumentRequest::STATUS_REJECTED,
+                        'reviewer_id' => null, // AI auto-reject
+                        'review_note' => 'Auto-rejected by AI: '.$decision->autoRejectReason,
+                        'reviewed_at' => now(),
+                    ]);
+                    $autoRejected = true;
+
+                    Log::info('ProcessDocumentAiJob: auto-rejected document request', [
+                        'document_id' => $this->documentId,
+                        'request_id' => $request->id,
+                        'reason' => $decision->autoRejectReason,
+                    ]);
+
+                    // ADR-410 pattern: auto-re-request after rejection
+                    $request->update([
+                        'status' => DocumentRequest::STATUS_REQUESTED,
+                        'requested_at' => now(),
+                    ]);
+                }
+            }
+
+            // Step 6: Post-AI notifications (MemberDocument only, ADR-416)
+            if ($this->documentClass === MemberDocument::class) {
+                try {
+                    $company = Company::find($document->company_id);
+                    $targetUser = User::find($document->user_id);
+                    $docType = $expectedType ?? DocumentType::find($document->document_type_id);
+
+                    if ($company && $targetUser && $docType) {
+                        if ($autoRejected) {
+                            // Notify the member: their document was auto-rejected
+                            NotificationDispatcher::send(
+                                topicKey: 'documents.reviewed',
+                                recipients: [$targetUser],
+                                payload: [
+                                    'document_type' => $docType->label,
+                                    'document_code' => $docType->code,
+                                    'status' => DocumentRequest::STATUS_REJECTED,
+                                    'review_note' => 'Auto-rejected by AI: '.$decision->autoRejectReason,
+                                    'link' => '/account-settings/documents',
+                                ],
+                                company: $company,
+                                entityKey: "document_request:{$targetUser->id}:{$docType->code}",
+                            );
+
+                            // Notify the member: a new request has been created (re-request)
+                            NotificationDispatcher::send(
+                                topicKey: 'documents.request_new',
+                                recipients: [$targetUser],
+                                payload: [
+                                    'document_type' => $docType->label,
+                                    'document_code' => $docType->code,
+                                    'review_note' => 'Auto-rejected by AI: '.$decision->autoRejectReason,
+                                    'link' => '/account-settings/documents',
+                                ],
+                                company: $company,
+                                entityKey: "document_request:{$targetUser->id}:{$docType->code}",
+                            );
+                        } else {
+                            // AI analysis complete (no auto-reject) — notify admins/managers
+                            $adminUserIds = $company->memberships()
+                                ->where(function ($q) {
+                                    $q->where('role', 'owner')
+                                        ->orWhereHas('companyRole', fn ($r) => $r->where('is_administrative', true));
+                                })
+                                ->pluck('user_id');
+
+                            if ($adminUserIds->isNotEmpty()) {
+                                $adminRecipients = User::whereIn('id', $adminUserIds)->get();
+                                NotificationDispatcher::send(
+                                    topicKey: 'documents.ai_analyzed',
+                                    recipients: $adminRecipients,
+                                    payload: [
+                                        'document_type' => $docType->label,
+                                        'document_code' => $docType->code,
+                                        'member_name' => $targetUser->name,
+                                        'confidence' => $result->confidence,
+                                        'detected_type' => $result->detectedType,
+                                        'link' => '/company/documents/requests',
+                                    ],
+                                    company: $company,
+                                    entityKey: "member_document:{$document->id}",
+                                );
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Notification failure must NOT fail the job
+                    Log::warning('ProcessDocumentAiJob: notification dispatch failed', [
+                        'document_id' => $this->documentId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Step 7: Build AI suggestions for member profile auto-fill (ADR-426)
+            if ($this->documentClass === MemberDocument::class && ! empty($result->fields)) {
+                $suggestions = $this->buildSuggestions($result);
+                if (! empty($suggestions)) {
+                    $document->update(['ai_suggestions' => $suggestions]);
+                }
+            }
+
             // ADR-422: Mark completed
             $document->update(['ai_status' => 'completed']);
 
@@ -173,6 +291,7 @@ class ProcessDocumentAiJob implements ShouldQueue
                 'confidence' => $result->confidence,
                 'detected_type' => $result->detectedType,
                 'has_action' => $decision->hasAnyAction(),
+                'auto_rejected' => $autoRejected,
                 'insights_count' => count($decision->insights),
             ]);
         } catch (\Throwable $e) {
@@ -185,6 +304,47 @@ class ProcessDocumentAiJob implements ShouldQueue
                 @unlink($img);
             }
         }
+    }
+
+    /**
+     * ADR-426: Build profile auto-fill suggestions from AI-extracted fields.
+     *
+     * Maps document fields (last_name, first_name, birth_date, etc.)
+     * to member profile field codes. Only includes fields with non-null values.
+     *
+     * @return array<int, array{field: string, value: string, confidence: float}>
+     */
+    private function buildSuggestions(DocumentAnalysisResult $result): array
+    {
+        // Map of AI field keys → profile field codes
+        // Only include fields that map to actual FieldDefinition codes
+        $mappableFields = [
+            'last_name' => 'last_name',
+            'first_name' => 'first_name',
+            'birth_date' => 'birth_date',
+            'place_of_birth' => 'place_of_birth',
+            'nationality' => 'nationality',
+            'address' => 'address',
+            'gender' => 'gender',
+            'document_number' => 'document_number',
+        ];
+
+        $suggestions = [];
+        $confidence = $result->confidence;
+
+        foreach ($result->fields as $key => $value) {
+            if ($value === null || $value === '' || ! isset($mappableFields[$key])) {
+                continue;
+            }
+
+            $suggestions[] = [
+                'field' => $mappableFields[$key],
+                'value' => (string) $value,
+                'confidence' => round($confidence, 2),
+            ];
+        }
+
+        return $suggestions;
     }
 
     public function failed(\Throwable $exception): void

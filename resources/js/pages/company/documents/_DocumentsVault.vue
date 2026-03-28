@@ -21,7 +21,11 @@ const emit = defineEmits(['openCreateDrawer'])
 </script>
 
 <template>
-  <VCard>
+  <VSkeletonLoader
+    v-if="store.loading.vault"
+    type="table"
+  />
+  <VCard v-else>
     <VCardItem>
       <template #prepend>
         <VAvatar

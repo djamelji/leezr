@@ -107,6 +107,7 @@ class DocumentResolverService
                 'ocr_text' => $upload->ocr_text,
                 'ai_analysis' => $upload->ai_analysis,
                 'ai_insights' => $upload->ai_insights,
+                'ai_suggestions' => $upload->ai_suggestions,
                 'ai_status' => $upload->ai_status,
             ] : null;
 

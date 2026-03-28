@@ -44,3 +44,9 @@ Schedule::command('billing:collect-scheduled')->dailyAt('06:00')->withoutOverlap
 
 // Document expiration check — daily (ADR-389)
 Schedule::command('documents:check-expiration')->daily()->withoutOverlapping();
+
+// Document auto-renew — daily at 08:00 (ADR-397)
+Schedule::command('documents:auto-renew')->dailyAt('08:00')->withoutOverlapping();
+
+// Document auto-remind — daily at 09:00 (ADR-397)
+Schedule::command('documents:auto-remind')->dailyAt('09:00')->withoutOverlapping();

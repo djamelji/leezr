@@ -22,6 +22,7 @@ class MemberDocument extends Model
         'ocr_text',
         'ai_analysis',
         'ai_insights',
+        'ai_suggestions',
         'ai_status',
     ];
 
@@ -30,6 +31,7 @@ class MemberDocument extends Model
         'expires_at' => 'datetime',
         'ai_analysis' => 'array',
         'ai_insights' => 'array',
+        'ai_suggestions' => 'array',
     ];
 
     public const AI_STATUS_PENDING = 'pending';

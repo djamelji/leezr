@@ -3,6 +3,7 @@ import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAuthStore } from '@/core/stores/auth'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
+import DocumentAiChip from '@/views/shared/documents/DocumentAiChip.vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
@@ -77,6 +78,62 @@ const headers = computed(() => [
   { title: t('companyDocuments.requests.requestedAt'), key: 'requested_at', sortable: false },
   { title: t('companyDocuments.requests.actions'), key: 'actions', sortable: false },
 ])
+
+// ─── Bulk selection (ADR-423) ───────────────────────────
+const selectedItems = ref([])
+const isBulkLoading = ref(false)
+
+// Only submitted items can be bulk-actioned
+const selectableItemFilter = item => item.status === 'submitted'
+
+const selectedSubmittedCount = computed(() => selectedItems.value.length)
+
+const handleBulkApprove = async () => {
+  if (!selectedItems.value.length) return
+  const ids = selectedItems.value.map(item => item.id)
+
+  isBulkLoading.value = true
+  try {
+    const result = await store.bulkAction(ids, 'approved')
+
+    toast(t('companyDocuments.requests.bulkApproveSuccess', { count: result.processed }), 'success')
+    selectedItems.value = []
+  }
+  catch (error) {
+    toast(error.message || t('common.error'), 'error')
+  }
+  finally {
+    isBulkLoading.value = false
+  }
+}
+
+const isBulkRejectDialogVisible = ref(false)
+const bulkRejectNote = ref('')
+
+const openBulkRejectDialog = () => {
+  bulkRejectNote.value = ''
+  isBulkRejectDialogVisible.value = true
+}
+
+const handleBulkReject = async () => {
+  if (!selectedItems.value.length) return
+  const ids = selectedItems.value.map(item => item.id)
+
+  isBulkLoading.value = true
+  try {
+    const result = await store.bulkAction(ids, 'rejected', bulkRejectNote.value || null)
+
+    toast(t('companyDocuments.requests.bulkRejectSuccess', { count: result.processed }), 'success')
+    selectedItems.value = []
+    isBulkRejectDialogVisible.value = false
+  }
+  catch (error) {
+    toast(error.message || t('common.error'), 'error')
+  }
+  finally {
+    isBulkLoading.value = false
+  }
+}
 
 const statusColor = status => {
   switch (status) {
@@ -206,6 +263,7 @@ const viewerDocument = computed(() => {
     ocr_text: r.upload.ocr_text,
     ai_analysis: r.upload.ai_analysis,
     ai_insights: r.upload.ai_insights,
+    ai_suggestions: r.upload.ai_suggestions,
     ai_status: r.upload.ai_status,
   }
 })
@@ -251,6 +309,33 @@ const handleViewerDownload = async () => {
   }
 }
 
+// ─── ADR-426: Apply AI suggestions ───────
+const viewerRef = ref(null)
+
+const handleApplySuggestions = async fields => {
+  const r = viewerRequest.value
+  if (!r?.user?.membership_id || !r?.document_type?.code) return
+
+  try {
+    await $api(`/company/members/${r.user.membership_id}/documents/${r.document_type.code}/apply-suggestions`, {
+      method: 'POST',
+      body: { fields },
+    })
+
+    viewerRef.value?.markApplied(fields)
+
+    if (fields.length === 1) {
+      toast(t('documents.suggestionApplied'), 'success')
+    }
+    else {
+      toast(t('documents.suggestionsApplied'), 'success')
+    }
+  }
+  catch {
+    toast(t('common.error'), 'error')
+  }
+}
+
 // ─── ADR-422: Retry AI analysis ───────
 const handleRetryAi = async () => {
   const r = viewerRequest.value
@@ -277,18 +362,43 @@ const adminUploadExpiresAt = ref(null)
 const isAdminUploading = ref(false)
 
 const adminFileInputRef = ref(null)
+const isDragOver = ref(false)
 
 const openAdminUpload = request => {
   adminUploadRequest.value = request
   adminUploadFiles.value = []
   adminUploadExpiresAt.value = null
   isAdminUploading.value = false
+  isDragOver.value = false
   isAdminUploadOpen.value = true
 }
 
 const handleAdminFileSelect = event => {
   if (!event.target.files?.length) return
   adminUploadFiles.value = [...event.target.files]
+}
+
+const handleDrop = event => {
+  isDragOver.value = false
+
+  const files = [...(event.dataTransfer?.files || [])]
+  if (!files.length) return
+
+  // Filter by accepted types
+  const accept = adminAcceptTypes.value
+  if (accept) {
+    const extensions = accept.split(',').map(e => e.trim().toLowerCase())
+    const filtered = files.filter(f => {
+      const ext = `.${f.name.split('.').pop().toLowerCase()}`
+
+      return extensions.includes(ext)
+    })
+
+    adminUploadFiles.value = filtered
+  }
+  else {
+    adminUploadFiles.value = files
+  }
 }
 
 const adminAcceptTypes = computed(() => {
@@ -327,6 +437,7 @@ const confirmAdminUpload = async () => {
     toast(t('documents.uploadForMemberSuccess'), 'success')
     isAdminUploadOpen.value = false
     await store.fetchRequests()
+    startAiPolling()
   }
   catch (error) {
     toast(error?.data?.message || error.message || t('common.error'), 'error')
@@ -335,6 +446,54 @@ const confirmAdminUpload = async () => {
     isAdminUploading.value = false
   }
 }
+
+// ─── AI status polling after upload (ADR-Phase2) ─────────
+let aiPollInterval = null
+const AI_POLL_INTERVAL_MS = 3000
+const AI_POLL_MAX_MS = 30000
+
+const startAiPolling = () => {
+  stopAiPolling()
+
+  let elapsed = 0
+  const pendingIds = new Set(
+    store.requests
+      .filter(r => r.upload && ['pending', 'processing'].includes(r.upload.ai_status))
+      .map(r => r.id),
+  )
+
+  if (pendingIds.size === 0) return
+
+  aiPollInterval = setInterval(async () => {
+    elapsed += AI_POLL_INTERVAL_MS
+
+    if (elapsed >= AI_POLL_MAX_MS) {
+      stopAiPolling()
+
+      return
+    }
+
+    await store.fetchRequests()
+
+    // Check if any tracked requests have completed AI analysis
+    const allDone = [...pendingIds].every(id => {
+      const req = store.requests.find(r => r.id === id)
+
+      return !req || !req.upload || ['completed', 'failed', 'skipped'].includes(req.upload.ai_status)
+    })
+
+    if (allDone) stopAiPolling()
+  }, AI_POLL_INTERVAL_MS)
+}
+
+const stopAiPolling = () => {
+  if (aiPollInterval) {
+    clearInterval(aiPollInterval)
+    aiPollInterval = null
+  }
+}
+
+onUnmounted(() => stopAiPolling())
 
 // ─── Batch request dialog ───────────────────────────────
 const isRequestDialogVisible = ref(false)
@@ -413,7 +572,11 @@ const submitRequest = async () => {
 </script>
 
 <template>
-  <VCard>
+  <VSkeletonLoader
+    v-if="store.loading.requests"
+    type="table"
+  />
+  <VCard v-else>
     <VCardItem>
       <template #prepend>
         <VAvatar
@@ -487,12 +650,32 @@ const submitRequest = async () => {
     <VDivider />
 
     <VDataTable
+      v-model="selectedItems"
       :headers="headers"
       :items="filteredRequests"
       :items-per-page="10"
-      :no-data-text="t('companyDocuments.requests.empty')"
       class="text-no-wrap"
+      show-select
+      return-object
+      item-value="id"
+      :item-selectable="selectableItemFilter"
     >
+        <template #no-data>
+          <div class="text-center pa-8">
+            <VIcon
+              icon="tabler-file-text"
+              :size="64"
+              color="disabled"
+              class="mb-4"
+            />
+            <h6 class="text-h6 mb-1">
+              {{ t('companyDocuments.emptyState.requestsTitle') }}
+            </h6>
+            <p class="text-body-2 text-medium-emphasis">
+              {{ t('companyDocuments.emptyState.requestsSubtitle') }}
+            </p>
+          </div>
+        </template>
         <template #item.user="{ item }">
           <div class="d-flex align-center gap-2 py-2">
             <VAvatar
@@ -534,12 +717,18 @@ const submitRequest = async () => {
         </template>
 
         <template #item.status="{ item }">
-          <VChip
-            size="small"
-            :color="statusColor(item.status)"
-          >
-            {{ statusLabel(item.status) }}
-          </VChip>
+          <div class="d-flex align-center gap-2">
+            <VChip
+              size="small"
+              :color="statusColor(item.status)"
+            >
+              {{ statusLabel(item.status) }}
+            </VChip>
+            <DocumentAiChip
+              v-if="item.upload"
+              :analysis="item.upload.ai_analysis"
+            />
+          </div>
         </template>
 
         <template #item.requested_at="{ item }">
@@ -628,6 +817,38 @@ const submitRequest = async () => {
           </div>
         </template>
     </VDataTable>
+
+    <!-- Bulk action floating bar (ADR-423) -->
+    <VExpandTransition>
+      <div
+        v-if="selectedSubmittedCount > 0 && canManage"
+        class="d-flex align-center justify-space-between pa-4 bg-surface border-t"
+      >
+        <span class="text-body-1 font-weight-medium">
+          {{ t('companyDocuments.requests.bulkSelected', { count: selectedSubmittedCount }) }}
+        </span>
+        <div class="d-flex gap-2">
+          <VBtn
+            color="success"
+            variant="tonal"
+            prepend-icon="tabler-checks"
+            :loading="isBulkLoading"
+            @click="handleBulkApprove"
+          >
+            {{ t('companyDocuments.requests.bulkApprove') }}
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="tonal"
+            prepend-icon="tabler-x"
+            :loading="isBulkLoading"
+            @click="openBulkRejectDialog"
+          >
+            {{ t('companyDocuments.requests.bulkReject') }}
+          </VBtn>
+        </div>
+      </div>
+    </VExpandTransition>
   </VCard>
 
   <!-- Admin Upload Dialog (ADR-408 C) -->
@@ -653,15 +874,31 @@ const submitRequest = async () => {
         </VCardSubtitle>
       </VCardItem>
       <VCardText>
-        <VBtn
-          variant="tonal"
-          color="primary"
-          prepend-icon="tabler-file-upload"
-          block
+        <!-- Drag & Drop Zone -->
+        <div
+          class="border-dashed rounded-lg pa-8 text-center cursor-pointer transition-swing"
+          :class="[
+            isDragOver ? 'border-primary border-opacity-100 bg-primary-lighten-5' : 'border-opacity-100',
+          ]"
+          @dragover.prevent="isDragOver = true"
+          @dragenter.prevent="isDragOver = true"
+          @dragleave.prevent="isDragOver = false"
+          @drop.prevent="handleDrop"
           @click="adminFileInputRef?.click()"
         >
-          {{ t('documents.chooseFile') }}
-        </VBtn>
+          <VIcon
+            icon="tabler-cloud-upload"
+            :size="48"
+            :color="isDragOver ? 'primary' : 'secondary'"
+            class="mb-2"
+          />
+          <div class="text-body-1 font-weight-medium">
+            {{ t('documents.dropzoneText') }}
+          </div>
+          <div class="text-body-2 text-medium-emphasis mt-1">
+            {{ t('documents.dropzoneHint') }}
+          </div>
+        </div>
         <input
           ref="adminFileInputRef"
           type="file"
@@ -670,6 +907,8 @@ const submitRequest = async () => {
           multiple
           @change="handleAdminFileSelect"
         >
+
+        <!-- Selected files list -->
         <div v-if="adminUploadFiles.length" class="mt-3 mb-4">
           <div
             v-for="(f, idx) in adminUploadFiles"
@@ -692,12 +931,6 @@ const submitRequest = async () => {
           <div class="text-body-2 text-disabled mt-2">
             {{ t('documents.totalFiles', { count: adminUploadFiles.length }) }}
           </div>
-        </div>
-        <div
-          v-else
-          class="mt-3 text-body-2 text-medium-emphasis"
-        >
-          {{ t('documents.noFileSelected') }}
         </div>
 
         <VAlert
@@ -889,6 +1122,7 @@ const submitRequest = async () => {
 
   <!-- Document preview (ADR-406 S2) -->
   <DocumentViewerDialog
+    ref="viewerRef"
     v-model:is-dialog-visible="isViewerOpen"
     :document="viewerDocument"
     :download-url="viewerDownloadUrl"
@@ -899,7 +1133,55 @@ const submitRequest = async () => {
     @reject="handleViewerReject"
     @download="handleViewerDownload"
     @retry-ai="handleRetryAi"
+    @apply-suggestions="handleApplySuggestions"
   />
+
+  <!-- Bulk Reject Dialog (ADR-423) -->
+  <VDialog
+    v-model="isBulkRejectDialogVisible"
+    max-width="500"
+  >
+    <VCard>
+      <VCardItem>
+        <template #prepend>
+          <VAvatar
+            color="error"
+            variant="tonal"
+            rounded
+          >
+            <VIcon icon="tabler-x" />
+          </VAvatar>
+        </template>
+        <VCardTitle>{{ t('companyDocuments.requests.bulkRejectTitle') }}</VCardTitle>
+        <VCardSubtitle>
+          {{ t('companyDocuments.requests.bulkSelected', { count: selectedSubmittedCount }) }}
+        </VCardSubtitle>
+      </VCardItem>
+      <VCardText>
+        <AppTextarea
+          v-model="bulkRejectNote"
+          :label="t('companyDocuments.requests.rejectNoteLabel')"
+          :placeholder="t('companyDocuments.requests.rejectNotePlaceholder')"
+          rows="3"
+        />
+      </VCardText>
+      <VCardActions class="justify-end">
+        <VBtn
+          variant="tonal"
+          @click="isBulkRejectDialogVisible = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="error"
+          :loading="isBulkLoading"
+          @click="handleBulkReject"
+        >
+          {{ t('companyDocuments.requests.bulkRejectConfirm') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 
   <!-- Confirm dialog -->
   <ConfirmDialogComponent />

@@ -14439,4 +14439,209 @@ Le module Documents a un pipeline AI complet (analyse, décision, insights) mais
 
 ---
 
+### ADR-423 — Enhanced AI Vision Prompt : OCR cross-ref, corrected_text, summary, is_expired (2026-03-28)
+
+**Contexte :**
+Le prompt AI vision dans `DocumentAiAnalysisService::buildVisionPrompt()` ne bénéficiait pas du texte OCR pré-extrait par Tesseract. Le modèle analysait l'image sans contexte textuel, ce qui causait :
+1. Des erreurs de lecture sur les champs partiellement visibles (noms avec accents, numéros de document)
+2. Aucune correction OCR -- le texte Tesseract brut (souvent garbled) était stocké tel quel
+3. Aucun résumé du document pour l'UX
+4. Pas de détection d'expiration côté AI (seulement en post-traitement)
+5. Confidence gonflée — le modèle retournait 0.95+ même sur des images médiocres
+
+**Décisions :**
+1. **Propager `$ocrText` à `tryAiVision()` → `buildVisionPrompt()`** : le texte OCR est injecté dans le prompt comme référence, tronqué à 2000 chars pour ne pas dépasser les limites de tokens.
+2. **3 nouveaux champs demandés au modèle** : `corrected_text` (texte nettoyé du document), `summary` (1-2 phrases FR), `is_expired` (boolean basé sur la date du jour).
+3. **Enrichissement document types FR** : ajout kbis, rib, attestation, payslip, invoice avec descriptions détaillées. Section "CRITICAL DISAMBIGUATION" explicite.
+4. **Confidence rules renforcées** : 6 paliers au lieu de 4, interdiction explicite de 0.95+ sauf perfection totale. Instruction "round DOWN when in doubt".
+5. **Backward compatibility** : les 3 nouveaux champs sont nullable dans `DocumentAnalysisResult`. Le `toArray()` les inclut systématiquement (null si absents). Les anciens résultats sans ces champs continuent de fonctionner.
+6. **`corrected_text` stocké en double** : dans `fields['corrected_text']` ET dans `DocumentAnalysisResult::correctedText` (propriété dédiée) pour accès pratique.
+7. **3 champs identity supplémentaires** demandés : `nationality`, `place_of_birth`, `gender`.
+
+**Conséquences :**
+- L'AI bénéficie du contexte OCR pour vérifier/corriger les champs extraits visuellement
+- Le texte corrigé est disponible pour la recherche et l'indexation
+- Le résumé FR améliore l'UX dans les dialogues de visualisation
+- L'expiration est détectée par l'AI en plus du post-traitement (double vérification)
+- Le scoring de confiance est plus réaliste et discriminant
+
+**Fichiers :**
+- `app/Modules/Core/Documents/Services/DocumentAiAnalysisService.php` — prompt enrichi, propagation OCR, extraction champs
+- `app/Core/Documents/DocumentAnalysisResult.php` — 3 propriétés nullable : correctedText, summary, isExpired
+
+---
+
+### ADR-424 — Scheduler commands : documents auto-remind & auto-renew (2026-03-28)
+
+**Contexte :**
+La commande monolithique `documents:check-expiration` (ADR-389) contenait 3 phases en une seule commande : expiration notifications, auto-renew, auto-remind. Pour la séparation des responsabilités, la testabilité indépendante, et la planification flexible (horaires différents), deux commandes dédiées sont extraites.
+
+**Décisions :**
+1. **`documents:auto-remind`** — commande autonome (daily at 09:00). Charge les `CompanyDocumentSetting` avec `auto_remind_enabled = true`. Pour chaque company, trouve les `DocumentRequest` en status `requested` dont `requested_at` dépasse `remind_after_days`. Re-notifie le membre via `NotificationDispatcher::send()` topic `documents.request_new`. Bumpe `requested_at` à `now()` pour espacer les rappels d'un cycle complet.
+2. **`documents:auto-renew`** — commande autonome (daily at 08:00). Charge les `CompanyDocumentSetting` avec `auto_renew_enabled = true`. Trouve les `MemberDocument` expirant dans les `renew_days_before` jours (mais pas encore expirés) sans `DocumentRequest` pending. Crée une nouvelle request et notifie le membre.
+3. **`Isolatable` interface** sur les deux commandes pour éviter les exécutions concurrentes.
+4. **`chunkById(100)`** pour traiter les grands volumes sans surcharger la mémoire.
+5. **`--dry-run` option** sur les deux commandes pour simuler sans agir.
+6. **`withoutOverlapping()`** dans le schedule pour double sécurité.
+
+**Conséquences :**
+- Les phases 2 et 3 de `documents:check-expiration` restent en place comme fallback — les nouvelles commandes les remplacent progressivement.
+- Les horaires sont décalés : auto-renew à 08h (créer les requests), auto-remind à 09h (rappeler les requests existantes). L'expiration check tourne à minuit (daily default).
+- Chaque commande peut être testée, monitorée et désactivée indépendamment.
+
+**Fichiers :**
+- `app/Console/Commands/DocumentAutoRemindCommand.php` — nouvelle commande
+- `app/Console/Commands/DocumentAutoRenewCommand.php` — nouvelle commande
+- `routes/console.php` — schedule entries ajoutées
+
+---
+
+## ADR-423 : Intelligence AI — Confidence réelle, auto-reject, prompt enrichi, notifications (2026-03-28)
+
+**Contexte** : La Phase 1 du plan Documents+AI vise à rendre l'analyse AI commercialement utile. Les problèmes identifiés : confidence hardcodée (0.9), pas de rejet auto type mismatch, pas de notifications post-analyse, prompt OCR basique.
+
+**Décisions** :
+1. **Confidence réelle** — `AnthropicAiAdapter::extractConfidence()` : parse `structuredData['confidence']` (clamped 0-1), fallback 0.6 si JSON sans champ, 0.5 si pas de JSON. Aligné avec OllamaAiAdapter (déjà implémenté).
+2. **Auto-reject type mismatch** — `ProcessDocumentAiJob` Step 5 : si `$decision->shouldAutoReject`, update `DocumentRequest` → status `rejected` (reviewer_id=null, note="Auto-rejected by AI"), puis re-request automatique (ADR-410 pattern). MemberDocument uniquement.
+3. **Notifications post-AI** — Step 6 du Job : si auto-reject → topic `documents.reviewed` + `documents.request_new` au membre. Sinon → topic `documents.ai_analyzed` aux admins. Nouveau topic `documents.ai_analyzed` dans NotificationTopicRegistry (category: documents, icon: tabler-robot).
+4. **Prompt enrichi** — `DocumentAiAnalysisService::buildVisionPrompt()` : OCR cross-reference, 3 nouveaux champs (corrected_text, summary, is_expired), types FR enrichis avec descriptions détaillées, section disambiguation, 6 paliers confidence, instruction "round DOWN when in doubt".
+5. **DocumentAnalysisResult** — 3 nouvelles propriétés nullable : correctedText, summary, isExpired. Backward-compatible via named args + defaults.
+
+**Conséquences** :
+- La confidence reflète la réalité du modèle AI, pas un score fixe
+- Un passeport uploadé comme "permis" sera rejeté automatiquement si le setting est activé
+- Les admins reçoivent des notifications in-app après chaque analyse AI
+- Le prompt est plus strict, évite les confusions entre types de documents FR
+
+**Fichiers** :
+- `app/Core/Ai/Adapters/AnthropicAiAdapter.php` — extractConfidence()
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — Step 5+6 (auto-reject + notifications)
+- `app/Core/Notifications/NotificationTopicRegistry.php` — topic documents.ai_analyzed
+- `app/Modules/Core/Documents/Services/DocumentAiAnalysisService.php` — prompt enrichi
+- `app/Core/Documents/DocumentAnalysisResult.php` — correctedText, summary, isExpired
+- `resources/js/plugins/i18n/locales/fr.json` — clés notifications
+- `resources/js/plugins/i18n/locales/en.json` — clés notifications
+
+---
+
+## ADR-424 : UX Documents — Skeleton, polling, drag-drop, error handling, schedulers (2026-03-28)
+
+**Contexte** : Phase 2 (UX+Fiabilité) et Phase 3 partielle (automation). L'UX documents manquait de feedback visuel (loading, erreurs, empty states), de polling AI, et les schedulers automation n'existaient pas.
+
+**Décisions** :
+1. **Error handling store** — Toutes les actions `documents.store.js` wrappées try/catch avec `useAppToast()`. Loading flags pour chaque section.
+2. **Skeleton loaders** — `VSkeletonLoader` sur les 5 onglets documents + CompanyDocumentsVault pendant le chargement.
+3. **Polling AI status** — Après upload admin dans `_DocumentsRequests.vue` : poll toutes les 3s pendant 30s max. Stop dès que ai_status ≠ pending/processing.
+4. **DocumentAiChip** — Intégré dans `_DocumentsRequests.vue` (colonne status) et `MemberDocumentsWorkflowPanel.vue`.
+5. **Drag & drop upload** — Zone dropzone dans le dialog upload admin : dragover/drop natifs HTML5, highlight au survol, filtrage par extensions acceptées.
+6. **Auto-remind scheduler** — `documents:auto-remind` daily 09:00 : rappels pour requests non répondues après X jours. Chunking + Isolatable.
+7. **Auto-renew scheduler** — `documents:auto-renew` daily 08:00 : re-request pour documents expirant dans X jours. Chunking + Isolatable.
+
+**Conséquences** :
+- Loading states systématiques → pas de flash de contenu vide
+- Polling évite le refresh manuel après upload
+- Drag & drop améliore l'UX admin upload
+- Schedulers consomment les settings CompanyDocumentSetting (auto_remind_enabled, auto_renew_enabled)
+
+**Fichiers** :
+- `resources/js/modules/company/documents/documents.store.js` — error handling + loading
+- `resources/js/pages/company/documents/_Documents*.vue` — 5 tabs (skeleton + empty states)
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — polling + drag-drop + bulk + chip
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — chip + empty state
+- `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — skeleton + empty state
+- `app/Console/Commands/DocumentAutoRemindCommand.php` — nouveau
+- `app/Console/Commands/DocumentAutoRenewCommand.php` — nouveau
+- `routes/console.php` — schedule
+
+---
+
+## ADR-425 : CSV Export, Bulk Actions, Empty States — Documents UX Phase 3 (2026-03-28)
+
+**Date :** 2026-03-28
+**Statut :** Accepté
+
+**Contexte :**
+Le module Documents nécessitait trois améliorations UX majeures :
+1. Export CSV des données de conformité pour reporting externe
+2. Actions en masse (approuver/rejeter) sur les demandes soumises pour gagner du temps
+3. États vides informatifs sur les 5 onglets pour guider les utilisateurs
+
+**Décisions :**
+
+### 3.4 — Export CSV Conformité
+- Nouvel endpoint `GET /company/documents/compliance/export` sur `DocumentComplianceController`
+- Permission `documents.manage` (pas juste `view` car données sensibles)
+- `StreamedResponse` avec UTF-8 BOM (compatibilité Excel)
+- Colonnes : type_code, type_label, scope, total, valid, missing, expiring, expired, compliance_rate
+- Séparateur `;` pour compatibilité Excel FR
+- Bouton d'export ajouté dans `_DocumentsCompliance.vue`
+
+### 3.5 — Bulk Approve/Reject
+- Nouvel endpoint `POST /company/document-requests/bulk-action` sur `DocumentRequestController`
+- Body : `{ ids, action, review_note }` — réutilise `ReviewMemberDocumentUseCase` existant (pas de duplication)
+- Checkboxes sur le VDataTable (seulement items `submitted` sélectionnables via `item-selectable`)
+- Floating action bar avec compteur et boutons approve/reject
+- Dialog de rejet en masse avec note optionnelle
+- Méthode `bulkAction()` ajoutée au store Pinia
+
+### 3.6 — Empty States
+- Pattern uniforme : icône 64px disabled + titre h5/h6 + sous-titre + CTA optionnel
+- 5 composants améliorés : `_DocumentsOverview`, `_DocumentsRequests`, `_DocumentsCompliance`, `CompanyDocumentsVault`, `MemberDocumentsWorkflowPanel`
+- Clés i18n sous `companyDocuments.emptyState.*` (fr + en)
+
+**Conséquences :**
+- L'export CSV consomme le même ReadModel que le dashboard (pas de requête supplémentaire)
+- Le bulk action est protégé par les mêmes guards que le review individuel (validation par UseCase)
+- Les états vides guident vers l'action appropriée (ex: bouton vers settings depuis overview)
+
+**Fichiers :**
+- `app/Modules/Core/Documents/Http/DocumentComplianceController.php` — méthode exportCsv
+- `app/Modules/Core/Documents/Http/DocumentRequestController.php` — méthode bulkAction
+- `routes/company.php` — 2 nouvelles routes
+- `resources/js/modules/company/documents/documents.store.js` — action bulkAction
+- `resources/js/pages/company/documents/_DocumentsCompliance.vue` — bouton export + empty state
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — bulk selection + floating bar + empty state
+- `resources/js/pages/company/documents/_DocumentsOverview.vue` — empty state
+- `resources/js/views/pages/company-settings/CompanyDocumentsVault.vue` — empty state
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — empty state
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n ajoutées
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n ajoutées
+
+---
+
+## ADR-426 : AI Suggestions — Auto-fill profil membre depuis analyse document (2026-03-28)
+
+**Contexte** : L'analyse IA des documents (CNI, passeport, permis) extrait des champs comme nom, prénom, date de naissance, adresse. Ces données pouvaient enrichir automatiquement le profil du membre, mais il n'existait aucun mécanisme pour proposer ou appliquer ces suggestions.
+
+**Décisions** :
+1. Nouvelle colonne `ai_suggestions` (JSON nullable) sur `member_documents` — stocke un tableau de suggestions `[{field, value, confidence}]`
+2. `ProcessDocumentAiJob` — Step 7 : après l'analyse AI, `buildSuggestions()` transforme les champs extraits en suggestions mappées aux codes FieldDefinition (last_name, first_name, birth_date, place_of_birth, nationality, address, gender, document_number)
+3. Nouveau contrôleur `MemberDocumentAiSuggestionController` (séparé du principal pour respecter la limite 250 lignes) — POST `/company/members/{id}/documents/{code}/apply-suggestions` avec body `{fields: ['first_name', ...]}` — utilise `FieldWriteService::upsert()` avec scope `company_user`
+4. ReadModels enrichis : `DocumentRequestQueueReadModel`, `DocumentResolverService`, `CompanyDocumentReadModel` exposent `ai_suggestions` dans les données upload
+5. Frontend : nouveau panneau d'expansion "Suggestions IA" dans `DocumentViewerDialog` — liste chaque suggestion avec label, valeur, badge confiance, bouton "Appliquer" individuel et "Tout appliquer" — état appliqué (grisé + chip "Suggestion appliquée") géré via `defineExpose({ markApplied })`
+6. Parents `_DocumentsRequests.vue` et `MemberDocumentsWorkflowPanel.vue` gèrent l'événement `@apply-suggestions` → appel API → `markApplied()` sur le viewer
+
+**Conséquences** :
+- Les suggestions sont non-intrusives (panneau replié par défaut, application manuelle)
+- La confiance est affichée pour chaque champ, permettant au gestionnaire de juger
+- FieldWriteService garantit que seuls les champs avec activation active sont écrits
+- Pas d'auto-application : toujours un humain dans la boucle
+
+**Fichiers** :
+- `database/migrations/2026_03_28_125314_add_ai_suggestions_to_documents.php`
+- `app/Core/Documents/MemberDocument.php` — fillable + cast
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — Step 7 + buildSuggestions()
+- `app/Modules/Core/Documents/Http/MemberDocumentAiSuggestionController.php` — nouveau
+- `routes/company.php` — route apply-suggestions
+- `app/Core/Documents/ReadModels/DocumentRequestQueueReadModel.php` — ai_suggestions
+- `app/Core/Documents/DocumentResolverService.php` — ai_suggestions
+- `app/Core/Documents/ReadModels/CompanyDocumentReadModel.php` — ai_suggestions
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — panneau suggestions
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — handler
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — handler
+- `resources/js/plugins/i18n/locales/fr.json` — clés i18n
+- `resources/js/plugins/i18n/locales/en.json` — clés i18n
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

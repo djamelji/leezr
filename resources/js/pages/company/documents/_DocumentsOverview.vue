@@ -56,11 +56,45 @@ const typeColor = (rate, index) => {
   return 'error'
 }
 
+const isLoading = computed(() => store.loading.compliance || store.loading.activity)
+
 const emit = defineEmits(['navigate'])
 </script>
 
 <template>
   <div>
+    <VSkeletonLoader
+      v-if="isLoading"
+      type="card, card"
+    />
+    <!-- Empty state (ADR-423) -->
+    <VCard
+      v-else-if="store.compliance.summary.total === 0"
+      class="text-center pa-8"
+    >
+      <VIcon
+        icon="tabler-file-off"
+        :size="64"
+        color="disabled"
+        class="mb-4"
+      />
+      <h5 class="text-h5 mb-2">
+        {{ t('companyDocuments.emptyState.overviewTitle') }}
+      </h5>
+      <p class="text-body-1 text-medium-emphasis mb-4">
+        {{ t('companyDocuments.emptyState.overviewSubtitle') }}
+      </p>
+      <VBtn
+        color="primary"
+        variant="tonal"
+        prepend-icon="tabler-file-settings"
+        @click="emit('navigate', 'settings')"
+      >
+        {{ t('companyDocuments.emptyState.overviewCta') }}
+      </VBtn>
+    </VCard>
+
+    <template v-else>
     <!-- KPI Cards -->
     <VRow class="card-grid card-grid-xs">
       <VCol
@@ -310,6 +344,7 @@ const emit = defineEmits(['navigate'])
         </div>
       </VCardText>
     </VCard>
+    </template>
   </div>
 </template>
 

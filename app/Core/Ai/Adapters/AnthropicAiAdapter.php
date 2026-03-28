@@ -197,7 +197,7 @@ class AnthropicAiAdapter implements AiProviderAdapter
                     $aiResponse = new AiResponse(
                         text: $text,
                         structuredData: $structuredData,
-                        confidence: $structuredData ? 0.9 : 0.7,
+                        confidence: $this->extractConfidence($structuredData),
                         tokensUsed: $inputTokens + $outputTokens,
                         latencyMs: $latencyMs,
                         model: $data['model'] ?? $model,
@@ -292,6 +292,24 @@ class AnthropicAiAdapter implements AiProviderAdapter
         }
 
         return null;
+    }
+
+    /**
+     * Extract confidence from structured AI response.
+     *
+     * Priority: real confidence from AI → fallback for missing field → low fallback for no JSON.
+     */
+    private function extractConfidence(?array $structuredData): float
+    {
+        if ($structuredData === null) {
+            return 0.5;
+        }
+
+        if (isset($structuredData['confidence']) && is_numeric($structuredData['confidence'])) {
+            return (float) min(1.0, max(0.0, $structuredData['confidence']));
+        }
+
+        return 0.6;
     }
 
     private function detectMediaType(string $path): string

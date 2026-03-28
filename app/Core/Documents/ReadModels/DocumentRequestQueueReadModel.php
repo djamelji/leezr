@@ -90,6 +90,7 @@ class DocumentRequestQueueReadModel
                     'ocr_text' => $memberDoc->ocr_text,
                     'ai_analysis' => $memberDoc->ai_analysis,
                     'ai_insights' => $memberDoc->ai_insights,
+                    'ai_suggestions' => $memberDoc->ai_suggestions,
                     'ai_status' => $memberDoc->ai_status,
                 ] : null,
                 'requested_at' => $req->requested_at?->toISOString(),

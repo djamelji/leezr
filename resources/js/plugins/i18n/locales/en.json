@@ -1602,7 +1602,14 @@
       "remindSuccess": "Reminder sent.",
       "searchPlaceholder": "Search for a member...",
       "filterStatus": "Filter by status",
-      "filterDocType": "Filter by type"
+      "filterDocType": "Filter by type",
+      "bulkSelected": "{count} document(s) selected",
+      "bulkApprove": "Approve selected",
+      "bulkReject": "Reject selected",
+      "bulkApproveSuccess": "{count} document(s) approved.",
+      "bulkRejectSuccess": "{count} document(s) rejected.",
+      "bulkRejectTitle": "Reject selected documents",
+      "bulkRejectConfirm": "Reject"
     },
     "compliance": {
       "title": "Document Compliance",
@@ -1617,7 +1624,8 @@
       "expired": "Expired",
       "rate": "Rate",
       "byType": "Detail by Document Type",
-      "noData": "No compliance data."
+      "noData": "No compliance data.",
+      "exportCsv": "Export CSV"
     },
     "vault": {
       "title": "Company Vault",
@@ -1637,6 +1645,19 @@
       "autoRemindHint": "Remind members who haven't responded to a request",
       "remindDays": "Days after request",
       "saved": "Automation settings saved."
+    },
+    "emptyState": {
+      "overviewTitle": "No documents configured",
+      "overviewSubtitle": "Configure your document types and activate them to start compliance tracking.",
+      "overviewCta": "Configure documents",
+      "requestsTitle": "No pending requests",
+      "requestsSubtitle": "Document requests sent to your members will appear here.",
+      "complianceTitle": "No compliance data",
+      "complianceSubtitle": "Activate document types to see compliance statistics.",
+      "vaultTitle": "No company documents",
+      "vaultSubtitle": "Company documents (certificates, insurance, etc.) will appear here once activated.",
+      "memberDocsTitle": "No documents required",
+      "memberDocsSubtitle": "No document types are activated for this member."
     }
   },
   "fieldGroups": {
@@ -3862,6 +3883,8 @@
     "uploadForMemberSuccess": "Document uploaded on behalf of member.",
     "chooseFile": "Choose a file",
     "noFileSelected": "No file selected",
+    "dropzoneText": "Drag your files here or click to select",
+    "dropzoneHint": "Accepted formats: PDF, JPG, PNG",
     "expirationRequired": "An expiration date is required for this document type.",
     "aiAnalysis": "AI Analysis",
     "aiConfidence": "Confidence",
@@ -3885,7 +3908,14 @@
       "nationality": "Nationality",
       "gender": "Gender",
       "issuingCountry": "Issuing country",
-      "raw_text": "Raw text"
+      "raw_text": "Raw text",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "birth_date": "Date of birth",
+      "document_number": "Document number",
+      "expiry_date": "Expiry date",
+      "place_of_birth": "Place of birth",
+      "address": "Address"
     },
     "aiInsight": {
       "analysisComplete": "Analysis complete (source: {source})",
@@ -3924,7 +3954,12 @@
     },
     "retryAi": "Retry analysis",
     "retryAiSuccess": "Analysis retry dispatched",
-    "retryAiOnlyFailed": "Only failed documents can be retried"
+    "retryAiOnlyFailed": "Only failed documents can be retried",
+    "aiSuggestions": "AI Suggestions",
+    "applySuggestion": "Apply",
+    "applyAllSuggestions": "Apply all",
+    "suggestionApplied": "Suggestion applied",
+    "suggestionsApplied": "Suggestions applied"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "EU Intra-Community Reverse Charge",
   "billing.tax_exemption.export_extra_eu": "VAT Exempt — Export outside EU",
@@ -4099,6 +4134,12 @@
     "documents_submitted_body": "{member_name} has submitted the document {document_label}.",
     "documents_request_new_title": "Document Requested",
     "documents_request_new_body": "The document {document_label} has been requested from {member_name}.",
+    "documents_reviewed_title": "Document Reviewed",
+    "documents_reviewed_body": "The document {document_type} has been {status}.",
+    "documents_request_cancelled_title": "Document Request Cancelled",
+    "documents_request_cancelled_body": "The request for document {document_type} has been cancelled.",
+    "documents_ai_analyzed_title": "AI Analysis Complete",
+    "documents_ai_analyzed_body": "AI analysis of {member_name}'s {document_type} document is complete (confidence: {confidence}%).",
     "security_alert_title": "Security Alert",
     "security_alert_body": "A security event has been detected.",
     "platform_new_subscription_title": "New Subscription",

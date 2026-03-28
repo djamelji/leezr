@@ -36,6 +36,7 @@ const emit = defineEmits([
   'approve',
   'reject',
   'retry-ai',
+  'apply-suggestions',
 ])
 
 const { t, te } = useI18n()
@@ -123,6 +124,48 @@ const onClose = () => {
 const handleDownload = () => {
   emit('download')
 }
+
+// ADR-426: AI suggestions for member profile auto-fill
+const aiSuggestions = computed(() => props.document?.ai_suggestions || [])
+const appliedFields = ref(new Set())
+const applyingFields = ref(new Set())
+
+// Reset applied state when dialog or document changes
+watch([() => props.isDialogVisible, () => props.document], () => {
+  appliedFields.value = new Set()
+  applyingFields.value = new Set()
+})
+
+const confidenceColor = confidence => {
+  const pct = Math.round(confidence * 100)
+  if (pct >= 70) return 'success'
+  if (pct >= 40) return 'warning'
+
+  return 'error'
+}
+
+const handleApplySuggestion = field => {
+  applyingFields.value.add(field)
+  emit('apply-suggestions', [field])
+}
+
+const handleApplyAll = () => {
+  const fields = aiSuggestions.value
+    .filter(s => !appliedFields.value.has(s.field))
+    .map(s => s.field)
+
+  fields.forEach(f => applyingFields.value.add(f))
+  emit('apply-suggestions', fields)
+}
+
+const markApplied = fields => {
+  fields.forEach(f => {
+    appliedFields.value.add(f)
+    applyingFields.value.delete(f)
+  })
+}
+
+defineExpose({ markApplied })
 </script>
 
 <template>
@@ -465,6 +508,103 @@ const handleDownload = () => {
                     {{ te(`documents.aiFieldName.${key}`) ? t(`documents.aiFieldName.${key}`) : key }}
                   </td>
                   <td>{{ value }}</td>
+                </tr>
+              </tbody>
+            </VTable>
+          </VExpansionPanelText>
+        </VExpansionPanel>
+      </VExpansionPanels>
+
+      <!-- ADR-426: AI Suggestions panel -->
+      <VExpansionPanels
+        v-if="aiSuggestions.length"
+        variant="accordion"
+        class="mx-4 mb-2"
+      >
+        <VExpansionPanel>
+          <VExpansionPanelTitle>
+            <VIcon
+              icon="tabler-bulb"
+              size="18"
+              class="me-2"
+            />
+            {{ t('documents.aiSuggestions') }}
+            <VSpacer />
+            <VChip
+              size="x-small"
+              variant="tonal"
+              color="primary"
+              class="me-2"
+            >
+              {{ aiSuggestions.length }}
+            </VChip>
+          </VExpansionPanelTitle>
+          <VExpansionPanelText>
+            <div class="d-flex justify-end mb-3">
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="tabler-checks"
+                :disabled="aiSuggestions.every(s => appliedFields.has(s.field))"
+                @click="handleApplyAll"
+              >
+                {{ t('documents.applyAllSuggestions') }}
+              </VBtn>
+            </div>
+            <VTable
+              density="compact"
+            >
+              <thead>
+                <tr>
+                  <th>{{ t('documents.aiFieldLabel') }}</th>
+                  <th>{{ t('documents.aiFieldValue') }}</th>
+                  <th class="text-center">
+                    {{ t('documents.aiConfidence') }}
+                  </th>
+                  <th style="width: 120px;" />
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="suggestion in aiSuggestions"
+                  :key="suggestion.field"
+                  :class="{ 'text-disabled': appliedFields.has(suggestion.field) }"
+                >
+                  <td class="text-medium-emphasis">
+                    {{ te(`documents.aiFieldName.${suggestion.field}`) ? t(`documents.aiFieldName.${suggestion.field}`) : suggestion.field }}
+                  </td>
+                  <td>{{ suggestion.value }}</td>
+                  <td class="text-center">
+                    <VChip
+                      size="x-small"
+                      variant="tonal"
+                      :color="confidenceColor(suggestion.confidence)"
+                    >
+                      {{ Math.round(suggestion.confidence * 100) }}%
+                    </VChip>
+                  </td>
+                  <td>
+                    <VBtn
+                      v-if="!appliedFields.has(suggestion.field)"
+                      size="x-small"
+                      variant="tonal"
+                      color="success"
+                      :loading="applyingFields.has(suggestion.field)"
+                      @click="handleApplySuggestion(suggestion.field)"
+                    >
+                      {{ t('documents.applySuggestion') }}
+                    </VBtn>
+                    <VChip
+                      v-else
+                      size="x-small"
+                      variant="tonal"
+                      color="success"
+                      prepend-icon="tabler-check"
+                    >
+                      {{ t('documents.suggestionApplied') }}
+                    </VChip>
+                  </td>
                 </tr>
               </tbody>
             </VTable>

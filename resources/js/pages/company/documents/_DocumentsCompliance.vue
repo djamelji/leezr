@@ -51,10 +51,38 @@ const filteredTypes = computed(() => {
 
   return types
 })
+
+// ─── CSV Export (ADR-423) ───────────────────────────────
+const exportCsv = () => {
+  window.open('/api/company/documents/compliance/export', '_blank')
+}
 </script>
 
 <template>
-  <div>
+  <VSkeletonLoader
+    v-if="store.loading.compliance"
+    type="card, table"
+  />
+  <!-- Empty state (ADR-423) -->
+  <VCard
+    v-else-if="store.compliance.summary.total === 0"
+    class="text-center pa-8"
+  >
+    <VIcon
+      icon="tabler-shield-check"
+      :size="64"
+      color="disabled"
+      class="mb-4"
+    />
+    <h5 class="text-h5 mb-2">
+      {{ t('companyDocuments.emptyState.complianceTitle') }}
+    </h5>
+    <p class="text-body-1 text-medium-emphasis">
+      {{ t('companyDocuments.emptyState.complianceSubtitle') }}
+    </p>
+  </VCard>
+
+  <div v-else>
     <!-- Summary -->
     <VCard>
       <VCardItem>
@@ -70,13 +98,24 @@ const filteredTypes = computed(() => {
         <VCardTitle>{{ t('companyDocuments.compliance.title') }}</VCardTitle>
         <VCardSubtitle>{{ t('companyDocuments.compliance.hint') }}</VCardSubtitle>
         <template #append>
-          <VChip
-            size="large"
-            :color="rateColor(store.complianceRate)"
-            class="font-weight-bold"
-          >
-            {{ store.complianceRate }}%
-          </VChip>
+          <div class="d-flex align-center gap-2">
+            <VBtn
+              variant="tonal"
+              color="secondary"
+              size="small"
+              prepend-icon="tabler-download"
+              @click="exportCsv"
+            >
+              {{ t('companyDocuments.compliance.exportCsv') }}
+            </VBtn>
+            <VChip
+              size="large"
+              :color="rateColor(store.complianceRate)"
+              class="font-weight-bold"
+            >
+              {{ store.complianceRate }}%
+            </VChip>
+          </div>
         </template>
       </VCardItem>
       <VCardText>

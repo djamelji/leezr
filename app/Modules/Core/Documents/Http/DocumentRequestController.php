@@ -12,6 +12,8 @@ use App\Core\Notifications\NotificationDispatcher;
 use App\Modules\Core\Members\UseCases\BatchRequestByRoleUseCase;
 use App\Modules\Core\Members\UseCases\CancelDocumentRequestUseCase;
 use App\Modules\Core\Members\UseCases\RequestDocumentUseCase;
+use App\Modules\Core\Members\UseCases\ReviewMemberDocumentData;
+use App\Modules\Core\Members\UseCases\ReviewMemberDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -175,5 +177,63 @@ class DocumentRequestController
         }
 
         return response()->json(['message' => 'Reminder sent.']);
+    }
+
+    /**
+     * ADR-423: Bulk approve/reject submitted document requests.
+     * Loops through IDs and delegates to ReviewMemberDocumentUseCase.
+     */
+    public function bulkAction(Request $request, ReviewMemberDocumentUseCase $useCase): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+            'action' => ['required', 'in:approved,rejected'],
+            'review_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $company = $request->attributes->get('company');
+        $actor = $request->user();
+
+        $docRequests = DocumentRequest::where('company_id', $company->id)
+            ->whereIn('id', $validated['ids'])
+            ->where('status', DocumentRequest::STATUS_SUBMITTED)
+            ->with(['user', 'documentType'])
+            ->get();
+
+        $processed = 0;
+        $skipped = 0;
+
+        foreach ($docRequests as $docRequest) {
+            $membership = Membership::where('company_id', $company->id)
+                ->where('user_id', $docRequest->user_id)
+                ->first();
+
+            if (! $membership) {
+                $skipped++;
+
+                continue;
+            }
+
+            try {
+                $useCase->execute(new ReviewMemberDocumentData(
+                    actor: $actor,
+                    company: $company,
+                    membershipId: $membership->id,
+                    documentCode: $docRequest->documentType->code,
+                    status: $validated['action'],
+                    reviewNote: $validated['review_note'] ?? null,
+                ));
+                $processed++;
+            } catch (\Throwable) {
+                $skipped++;
+            }
+        }
+
+        return response()->json([
+            'message' => "Bulk action complete: {$processed} processed, {$skipped} skipped.",
+            'processed' => $processed,
+            'skipped' => $skipped,
+        ]);
     }
 }

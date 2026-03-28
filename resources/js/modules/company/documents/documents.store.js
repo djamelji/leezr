@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 import { $guardedApi } from '@/utils/guardedApi'
+import { useAppToast } from '@/composables/useAppToast'
 
 /**
  * ADR-389: Centralized documents store for the company documents module.
@@ -39,6 +40,7 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
       compliance: false,
       requests: false,
       activity: false,
+      settings: false,
     },
   }),
 
@@ -111,6 +113,9 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
           by_type: data.by_type,
         }
       }
+      catch {
+        // Keep existing compliance data on error
+      }
       finally {
         this._loading.compliance = false
       }
@@ -155,6 +160,8 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
     // ─── Document Settings ──────────────────────────────
     // ADR-418: $guardedApi — cross-permission defense (documents.configure vs page-level documents.view)
     async fetchDocSettings() {
+      this._loading.settings = true
+
       try {
         const data = await $guardedApi('documents.configure', '/company/document-settings')
 
@@ -164,42 +171,113 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
       catch {
         this._docSettings = null
       }
+      finally {
+        this._loading.settings = false
+      }
     },
 
     async updateDocSettings(payload) {
-      const data = await $api('/company/document-settings', { method: 'PUT', body: payload })
+      const { toast } = useAppToast()
 
-      this._docSettings = data.settings
+      try {
+        const data = await $api('/company/document-settings', { method: 'PUT', body: payload })
 
-      return data
+        this._docSettings = data.settings
+
+        return data
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     // ─── Custom Document Types ─────────────────────────
     async createCustomDocumentType(payload) {
-      return await $api('/company/document-types/custom', { method: 'POST', body: payload })
+      const { toast } = useAppToast()
+
+      try {
+        return await $api('/company/document-types/custom', { method: 'POST', body: payload })
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     async updateCustomDocumentType(code, payload) {
-      return await $api(`/company/document-types/custom/${code}`, { method: 'PUT', body: payload })
+      const { toast } = useAppToast()
+
+      try {
+        return await $api(`/company/document-types/custom/${code}`, { method: 'PUT', body: payload })
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     async archiveCustomDocumentType(code) {
-      return await $api(`/company/document-types/custom/${code}/archive`, { method: 'PUT' })
+      const { toast } = useAppToast()
+
+      try {
+        return await $api(`/company/document-types/custom/${code}/archive`, { method: 'PUT' })
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     async deleteCustomDocumentType(code) {
-      return await $api(`/company/document-types/custom/${code}`, { method: 'DELETE' })
+      const { toast } = useAppToast()
+
+      try {
+        return await $api(`/company/document-types/custom/${code}`, { method: 'DELETE' })
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     // ─── Request Actions ──────────────────────────────────
     async cancelRequest(requestId) {
-      await $api(`/company/document-requests/${requestId}/cancel`, { method: 'PUT' })
-      await this.fetchRequests()
+      const { toast } = useAppToast()
+
+      try {
+        await $api(`/company/document-requests/${requestId}/cancel`, { method: 'PUT' })
+        await this.fetchRequests()
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
     },
 
     async remindRequest(requestId) {
-      await $api(`/company/document-requests/${requestId}/remind`, { method: 'PUT' })
+      const { toast } = useAppToast()
+
+      try {
+        await $api(`/company/document-requests/${requestId}/remind`, { method: 'PUT' })
+        await this.fetchRequests()
+      }
+      catch (error) {
+        toast(error?.data?.message || error.message || 'Error', 'error')
+        throw error
+      }
+    },
+
+    // ADR-423: Bulk approve/reject
+    async bulkAction(ids, action, reviewNote = null) {
+      const data = await $api('/company/document-requests/bulk-action', {
+        method: 'POST',
+        body: { ids, action, review_note: reviewNote },
+      })
+
       await this.fetchRequests()
+
+      return data
     },
   },
 })

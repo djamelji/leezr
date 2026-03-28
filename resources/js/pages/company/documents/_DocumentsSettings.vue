@@ -138,10 +138,16 @@ const saveAiSettings = async () => {
     isAiSaving.value = false
   }
 }
+
+const isLoading = computed(() => store.loading.activations || store.loading.settings)
 </script>
 
 <template>
-  <VCard>
+  <VSkeletonLoader
+    v-if="isLoading"
+    type="card, card, card"
+  />
+  <VCard v-else>
     <VCardItem>
       <template #prepend>
         <VAvatar

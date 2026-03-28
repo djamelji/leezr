@@ -15,6 +15,9 @@ final class DocumentAnalysisResult
         public readonly float $confidence,
         public readonly string $source,            // 'mrz', 'ai', 'ocr'
         public readonly array $validationErrors = [],
+        public readonly ?string $correctedText = null,  // AI-corrected text from document
+        public readonly ?string $summary = null,        // 1-2 sentence document description
+        public readonly ?bool $isExpired = null,        // AI-determined expiry status
     ) {}
 
     public function toArray(): array
@@ -26,6 +29,9 @@ final class DocumentAnalysisResult
             'confidence' => $this->confidence,
             'source' => $this->source,
             'validation_errors' => $this->validationErrors,
+            'corrected_text' => $this->correctedText,
+            'summary' => $this->summary,
+            'is_expired' => $this->isExpired,
         ];
     }
 

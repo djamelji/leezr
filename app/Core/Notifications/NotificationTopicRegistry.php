@@ -380,6 +380,16 @@ class NotificationTopicRegistry
                 'sort_order' => 22,
                 'description' => 'Notification when a pending document request is cancelled',
             ],
+            'documents.ai_analyzed' => [
+                'label' => 'Document AI Analysis Complete',
+                'category' => 'documents',
+                'scope' => 'company',
+                'icon' => 'tabler-robot',
+                'severity' => 'info',
+                'default_channels' => ['in_app'],
+                'sort_order' => 23,
+                'description' => 'Notification when AI analysis of a member document is complete (no auto-reject)',
+            ],
 
             // ─── Security topics ─────────────────────────────────────
             'security.alert' => [

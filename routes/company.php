@@ -33,6 +33,7 @@ use App\Modules\Core\Documents\Http\CustomDocumentTypeController;
 use App\Modules\Core\Documents\Http\DocumentComplianceController;
 use App\Modules\Core\Documents\Http\DocumentSettingController;
 use App\Modules\Core\Documents\Http\DocumentRequestController;
+use App\Modules\Core\Documents\Http\MemberDocumentAiSuggestionController;
 use App\Modules\Core\Documents\Http\MemberDocumentController;
 use App\Modules\Core\Documents\Http\SelfDocumentController;
 use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
@@ -246,6 +247,8 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     // Document compliance dashboard (ADR-387)
     Route::get('/company/documents/compliance', [DocumentComplianceController::class, 'index'])
         ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/documents/compliance/export', [DocumentComplianceController::class, 'exportCsv'])
+        ->middleware('company.access:use-permission,documents.manage');
 
     // Document activity feed (ADR-396)
     Route::get('/company/documents/activity', [DocumentComplianceController::class, 'activity'])
@@ -291,6 +294,10 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::post('/company/members/{id}/documents/{code}/retry-ai', [MemberDocumentController::class, 'retryAi'])
         ->middleware('company.access:use-permission,documents.manage');
 
+    // ADR-426: Apply AI suggestions to member profile
+    Route::post('/company/members/{id}/documents/{code}/apply-suggestions', [MemberDocumentAiSuggestionController::class, 'apply'])
+        ->middleware('company.access:use-permission,documents.manage');
+
     // Document requests (ADR-192)
     Route::post('/company/document-requests', [DocumentRequestController::class, 'store'])
         ->middleware('company.access:use-permission,documents.manage');
@@ -305,6 +312,8 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.manage');
 
     Route::put('/company/document-requests/{id}/remind', [DocumentRequestController::class, 'remind'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::post('/company/document-requests/bulk-action', [DocumentRequestController::class, 'bulkAction'])
         ->middleware('company.access:use-permission,documents.manage');
 
     // Self-document upload (ADR-173, no additional permission — self scope)
