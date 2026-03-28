@@ -3959,7 +3959,9 @@
     "applySuggestion": "Apply",
     "applyAllSuggestions": "Apply all",
     "suggestionApplied": "Suggestion applied",
-    "suggestionsApplied": "Suggestions applied"
+    "suggestionsApplied": "Suggestions applied",
+    "aiAnalysisComplete": "AI analysis complete — {confidence}% confidence",
+    "aiAnalysisFailed": "AI analysis failed — you can retry"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "EU Intra-Community Reverse Charge",
   "billing.tax_exemption.export_extra_eu": "VAT Exempt — Export outside EU",

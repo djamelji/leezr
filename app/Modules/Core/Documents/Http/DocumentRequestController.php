@@ -9,6 +9,7 @@ use App\Core\Documents\ReadModels\DocumentRequestQueueReadModel;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Modules\Core\Members\UseCases\BatchRequestByRoleUseCase;
 use App\Modules\Core\Members\UseCases\CancelDocumentRequestUseCase;
 use App\Modules\Core\Members\UseCases\RequestDocumentUseCase;
@@ -24,6 +25,7 @@ use Illuminate\Http\Request;
  */
 class DocumentRequestController
 {
+    use PublishesRealtimeEvents;
     public function store(Request $request, RequestDocumentUseCase $useCase): JsonResponse
     {
         $validated = $request->validate([
@@ -38,6 +40,8 @@ class DocumentRequestController
             $validated['user_id'],
             $validated['document_type_code'],
         );
+
+        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'requested', 'entity' => 'DocumentRequest', 'document_type' => $validated['document_type_code'], 'user_id' => $validated['user_id']]);
 
         return response()->json([
             'message' => 'Document requested.',
@@ -126,6 +130,8 @@ class DocumentRequestController
     {
         $company = $request->attributes->get('company');
         $useCase->execute($company, $requestId, $request->user());
+
+        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'cancelled', 'entity' => 'DocumentRequest']);
 
         return response()->json(['message' => 'Document request cancelled.']);
     }
@@ -228,6 +234,10 @@ class DocumentRequestController
             } catch (\Throwable) {
                 $skipped++;
             }
+        }
+
+        if ($processed > 0) {
+            $this->publishDomainEvent('document.updated', $company->id, ['type' => 'bulk_reviewed', 'entity' => 'DocumentRequest', 'action' => $validated['action'], 'count' => $processed]);
         }
 
         return response()->json([

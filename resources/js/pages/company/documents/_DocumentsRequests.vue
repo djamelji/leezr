@@ -2,6 +2,7 @@
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAuthStore } from '@/core/stores/auth'
+import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 import DocumentAiChip from '@/views/shared/documents/DocumentAiChip.vue'
 import { $api } from '@/utils/api'
@@ -437,7 +438,6 @@ const confirmAdminUpload = async () => {
     toast(t('documents.uploadForMemberSuccess'), 'success')
     isAdminUploadOpen.value = false
     await store.fetchRequests()
-    startAiPolling()
   }
   catch (error) {
     toast(error?.data?.message || error.message || t('common.error'), 'error')
@@ -447,53 +447,37 @@ const confirmAdminUpload = async () => {
   }
 }
 
-// ─── AI status polling after upload (ADR-Phase2) ─────────
-let aiPollInterval = null
-const AI_POLL_INTERVAL_MS = 3000
-const AI_POLL_MAX_MS = 30000
+// ─── ADR-427: Realtime SSE listener for document events ─────────
+// Replaces destructive polling (setInterval + full fetchRequests every 3s)
+// with targeted per-row updates via SSE domain events.
+useRealtimeSubscription('document.updated', envelope => {
+  const payload = envelope?.payload
+  if (!payload) return
 
-const startAiPolling = () => {
-  stopAiPolling()
+  const type = payload.type
 
-  let elapsed = 0
-  const pendingIds = new Set(
-    store.requests
-      .filter(r => r.upload && ['pending', 'processing'].includes(r.upload.ai_status))
-      .map(r => r.id),
-  )
+  if (type === 'ai.completed' || type === 'ai.failed') {
+    // Targeted: patch only the affected row's AI data
+    store.handleRealtimeEvent(payload)
 
-  if (pendingIds.size === 0) return
-
-  aiPollInterval = setInterval(async () => {
-    elapsed += AI_POLL_INTERVAL_MS
-
-    if (elapsed >= AI_POLL_MAX_MS) {
-      stopAiPolling()
-
-      return
+    // Toast notification for completed AI analysis
+    if (type === 'ai.completed' && payload.confidence != null) {
+      const pct = Math.round((payload.confidence ?? 0) * 100)
+      toast(t('documents.aiAnalysisComplete', { confidence: pct }), 'success')
     }
-
-    await store.fetchRequests()
-
-    // Check if any tracked requests have completed AI analysis
-    const allDone = [...pendingIds].every(id => {
-      const req = store.requests.find(r => r.id === id)
-
-      return !req || !req.upload || ['completed', 'failed', 'skipped'].includes(req.upload.ai_status)
-    })
-
-    if (allDone) stopAiPolling()
-  }, AI_POLL_INTERVAL_MS)
-}
-
-const stopAiPolling = () => {
-  if (aiPollInterval) {
-    clearInterval(aiPollInterval)
-    aiPollInterval = null
+    else if (type === 'ai.failed') {
+      toast(t('documents.aiAnalysisFailed'), 'warning')
+    }
   }
-}
-
-onUnmounted(() => stopAiPolling())
+  else if (type === 'ai.retried') {
+    // Patch row to show processing state
+    store.handleRealtimeEvent({ ...payload, type: 'ai.completed', ai_status: 'pending' })
+  }
+  else {
+    // uploaded, reviewed, deleted, etc. → soft refresh
+    store.handleRealtimeEvent(payload)
+  }
+})
 
 // ─── Batch request dialog ───────────────────────────────
 const isRequestDialogVisible = ref(false)

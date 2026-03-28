@@ -13,6 +13,8 @@ use App\Core\Documents\MemberDocument;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
 use App\Modules\Core\Documents\Services\DocumentAiAnalysisService;
 use App\Modules\Core\Documents\Services\DocumentAiDecisionService;
 use Illuminate\Bus\Queueable;
@@ -294,8 +296,42 @@ class ProcessDocumentAiJob implements ShouldQueue
                 'auto_rejected' => $autoRejected,
                 'insights_count' => count($decision->insights),
             ]);
+
+            // ADR-427: Publish SSE event for realtime UI update
+            try {
+                app(RealtimePublisher::class)->publish(
+                    EventEnvelope::domain('document.updated', $companyId, [
+                        'id' => $this->documentId,
+                        'type' => 'ai.completed',
+                        'entity' => class_basename($this->documentClass),
+                        'ai_status' => 'completed',
+                        'member_id' => $document->user_id ?? $document->uploaded_by ?? null,
+                        'document_type' => $expectedType?->code ?? null,
+                        'confidence' => $result->confidence ?? null,
+                        'summary' => $result->summary ?? null,
+                    ])
+                );
+            } catch (\Throwable) {
+                // SSE is non-critical
+            }
         } catch (\Throwable $e) {
             $document->update(['ai_status' => 'failed']);
+
+            // ADR-427: Publish SSE event for failed analysis
+            try {
+                app(RealtimePublisher::class)->publish(
+                    EventEnvelope::domain('document.updated', $companyId, [
+                        'id' => $this->documentId,
+                        'type' => 'ai.failed',
+                        'entity' => class_basename($this->documentClass),
+                        'ai_status' => 'failed',
+                        'member_id' => $document->user_id ?? $document->uploaded_by ?? null,
+                        'document_type' => $expectedType?->code ?? null,
+                    ])
+                );
+            } catch (\Throwable) {
+                // SSE is non-critical
+            }
 
             throw $e;
         } finally {

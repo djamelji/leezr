@@ -3964,7 +3964,9 @@
     "applySuggestion": "Appliquer",
     "applyAllSuggestions": "Tout appliquer",
     "suggestionApplied": "Suggestion appliquée",
-    "suggestionsApplied": "Suggestions appliquées"
+    "suggestionsApplied": "Suggestions appliquées",
+    "aiAnalysisComplete": "Analyse IA terminée — confiance {confidence}%",
+    "aiAnalysisFailed": "Analyse IA échouée — vous pouvez la relancer"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",

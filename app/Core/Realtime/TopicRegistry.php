@@ -98,6 +98,35 @@ final class TopicRegistry
             'version' => 2,
         ],
 
+        // ─── ADR-427: Global domain topics ─────────────────────
+
+        // Documents
+        'document.updated' => [
+            'description' => 'Document uploaded, reviewed, deleted, or status changed',
+            'invalidates' => [],
+            'categories' => ['domain', 'notification'],
+            'targeting' => 'company',
+            'version' => 2,
+        ],
+
+        // Billing
+        'billing.updated' => [
+            'description' => 'Subscription, invoice, or payment status changed',
+            'invalidates' => [],
+            'categories' => ['domain', 'notification'],
+            'targeting' => 'company',
+            'version' => 2,
+        ],
+
+        // Automation
+        'automation.updated' => [
+            'description' => 'Automation rule executed, enabled, or disabled',
+            'invalidates' => [],
+            'categories' => ['domain'],
+            'targeting' => 'company',
+            'version' => 2,
+        ],
+
         // ─── Audit + Security topics ─────────────────────────
         'security.alert' => [
             'description' => 'A security alert was raised',

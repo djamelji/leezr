@@ -3,6 +3,7 @@ import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
+import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
 import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
@@ -83,6 +84,20 @@ const fetchDocuments = async () => {
 
 // Refetch when memberId changes (navigation between members)
 watch(() => props.memberId, fetchDocuments, { immediate: true })
+
+// ADR-427: Realtime SSE — targeted AI status update per document row
+useRealtimeSubscription('document.updated', envelope => {
+  const payload = envelope?.payload
+  if (!payload) return
+
+  if (payload.type === 'ai.completed' || payload.type === 'ai.failed') {
+    const doc = memberDocuments.value.find(d => d.upload?.id === payload.id)
+    if (doc?.upload) {
+      doc.upload.ai_status = payload.ai_status
+      if (payload.confidence != null) doc.upload.ai_analysis = { ...(doc.upload.ai_analysis || {}), confidence: payload.confidence }
+    }
+  }
+})
 
 // ─── Upload confirmation dialog (ADR-406 S4) ────────────
 const isUploadDialogOpen = ref(false)

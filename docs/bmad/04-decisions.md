@@ -14644,4 +14644,51 @@ Le module Documents nécessitait trois améliorations UX majeures :
 
 ---
 
+## ADR-427 : Global Realtime Backbone — SSE domain events + targeted updates (2026-03-28)
+
+**Contexte :** Le module Documents utilisait un `setInterval(3000)` + `fetchRequests()` pendant l'analyse IA, causant des reloads destructifs de la table (perte scroll, sélection, état drawers). L'architecture SSE (ADR-125 à 131) existait côté backend mais n'était pas consommée côté frontend pour les événements domaine. Chaque module risquait de réinventer son propre mécanisme realtime.
+
+**Décisions :**
+
+1. **Topics globaux** — `TopicRegistry` enrichi avec 3 topics domaine : `document.updated` (v2, remplace `document.ai_completed`), `billing.updated`, `automation.updated`. Chaque topic catégorisé `domain` + `notification`, ciblé `company`.
+
+2. **Trait `PublishesRealtimeEvents`** — Nouveau trait PHP (`app/Core/Realtime/`) offrant `publishDomainEvent()` et `publishNotificationEvent()`. Non-bloquant (try/catch + Log::warning). Utilisé par `MemberDocumentController`, `DocumentRequestController`, `CompanyPaymentMethodController`, `ProcessDocumentAiJob`.
+
+3. **Backend emission systématique** — Chaque mutation importante émet un événement SSE avec payload structuré : `{type, entity, id?, document_type?, status?, ...}`. Types : `uploaded`, `reviewed`, `deleted`, `cancelled`, `requested`, `bulk_reviewed`, `ai.completed`, `ai.failed`, `ai.retried`, `payment_method.deleted`, `payment_method.default_changed`.
+
+4. **DomainEventBus singleton** — `resources/js/core/realtime/DomainEventBus.js` : bus global wrappant `DomainHandler`, importable par tout store/composable. `runtime.js` modifié pour utiliser ce singleton au lieu d'un handler local.
+
+5. **Composable `useRealtimeSubscription`** — Auto-subscribe à un ou plusieurs topics avec cleanup `onUnmounted()`. Pattern : `useRealtimeSubscription('document.updated', handler)`.
+
+6. **Store documents realtime** — 3 nouvelles actions : `updateRequestById(id, patch)` (patch ciblé par row), `mergeRequestAiData(id, aiData)` (patch upload sub-object), `handleRealtimeEvent(payload)` (routage par type : ai.completed/failed → patch ciblé, autres → soft refresh).
+
+7. **Suppression polling destructif** — `_DocumentsRequests.vue` : supprimé `startAiPolling`/`stopAiPolling` (setInterval 3s + fetchRequests). Remplacé par `useRealtimeSubscription('document.updated', handler)` avec toast i18n ciblé. `MemberDocumentsWorkflowPanel.vue` : ajouté listener realtime pour AI status.
+
+8. **Interdictions** — Pas de reload page, pas de reload table, pas de polling agressif. Uniquement des patches ciblés par row ou des soft-refresh après mutations non-AI.
+
+**Conséquences :**
+- Le SaaS devient réactif en temps réel sans refresh destructif
+- Le backbone est générique : tout nouveau module peut souscrire via `useRealtimeSubscription`
+- Les topics sont extensibles (ajout dans `TopicRegistry` suffit)
+- Le trait `PublishesRealtimeEvents` rend l'émission triviale (1 ligne par controller)
+- Pattern reproductible : Topic → Backend emit → SSE → DomainEventBus → Store handler → UI patch
+
+**Fichiers :**
+- `app/Core/Realtime/TopicRegistry.php` — 3 topics globaux ajoutés
+- `app/Core/Realtime/PublishesRealtimeEvents.php` — nouveau trait
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` — SSE emit ai.completed/ai.failed
+- `app/Modules/Core/Documents/Http/MemberDocumentController.php` — SSE emit 4 types
+- `app/Modules/Core/Documents/Http/DocumentRequestController.php` — SSE emit 3 types
+- `app/Modules/Core/Billing/Http/CompanyPaymentMethodController.php` — SSE emit 2 types
+- `resources/js/core/realtime/DomainEventBus.js` — nouveau singleton
+- `resources/js/core/realtime/useRealtimeSubscription.js` — nouveau composable
+- `resources/js/core/runtime/runtime.js` — utilise DomainEventBus singleton
+- `resources/js/modules/company/documents/documents.store.js` — 3 actions realtime
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — polling → SSE
+- `resources/js/views/pages/company-members/MemberDocumentsWorkflowPanel.vue` — SSE listener
+- `resources/js/plugins/i18n/locales/fr.json` — clés aiAnalysisComplete/Failed
+- `resources/js/plugins/i18n/locales/en.json` — clés aiAnalysisComplete/Failed
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

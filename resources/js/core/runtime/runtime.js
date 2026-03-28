@@ -19,7 +19,7 @@ import { buildSnapshot } from './invariants'
 import { bootMachine } from './bootMachine'
 import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
 import { createChannelRouter } from '@/core/realtime/ChannelRouter'
-import { createDomainHandler } from '@/core/realtime/handlers/DomainHandler'
+import { domainEventBus } from '@/core/realtime/DomainEventBus'
 import { createNotificationHandler } from '@/core/realtime/handlers/NotificationHandler'
 import { createAuditHandler } from '@/core/realtime/handlers/AuditHandler'
 import { createSecurityHandler } from '@/core/realtime/handlers/SecurityHandler'
@@ -47,9 +47,8 @@ const NAV_POLL_MS = 30_000 // 30 seconds
 let _realtimeClient = null
 let _realtimeActive = false
 
-// ADR-126: Channel router + domain event bus
+// ADR-126: Channel router (domain events route through DomainEventBus singleton)
 let _channelRouter = null
-let _domainHandler = null
 
 // Store factory map — keyed by store id from resource declarations
 const storeFactories = {
@@ -567,9 +566,7 @@ export const useRuntimeStore = defineStore('runtime', {
 
       if (!companyId) return
 
-      // ADR-126: Initialize channel router with category handlers
-      _domainHandler = createDomainHandler()
-
+      // ADR-126 + ADR-427: Channel router — domain events go through global DomainEventBus
       const notificationHandler = createNotificationHandler(() => {
         try { return storeFactories.notification?.() ?? null } catch { return null }
       })
@@ -582,7 +579,7 @@ export const useRuntimeStore = defineStore('runtime', {
 
       _channelRouter = createChannelRouter({
         invalidation: data => this._handleRealtimeInvalidation(data.invalidates || []),
-        domain: data => _domainHandler.dispatch(data),
+        domain: data => domainEventBus.dispatch(data),
         notification: data => notificationHandler.dispatch(data),
         audit: data => auditHandler.dispatch(data),
         security: data => securityHandler.dispatch(data),
@@ -619,10 +616,7 @@ export const useRuntimeStore = defineStore('runtime', {
       }
       _realtimeActive = false
       _channelRouter = null
-      if (_domainHandler) {
-        _domainHandler.clear()
-        _domainHandler = null
-      }
+      domainEventBus.clear()
     },
 
     /**

@@ -10,6 +10,7 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoicePayNowService;
 use App\Core\Billing\ScheduledDebit;
 use App\Core\Billing\ScheduledDebitService;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Modules\Core\Billing\UseCases\DeletePaymentMethodUseCase;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 
 class CompanyPaymentMethodController
 {
+    use PublishesRealtimeEvents;
     public function savedCards(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -42,6 +44,14 @@ class CompanyPaymentMethodController
     {
         $company = $request->attributes->get('company');
         $result = DeletePaymentMethodUseCase::execute($company, $id);
+
+        // ADR-427: SSE realtime event
+        if ($result['code'] === 200) {
+            $this->publishDomainEvent('billing.updated', $company->id, [
+                'type' => 'payment_method.deleted',
+                'entity' => 'CompanyPaymentProfile',
+            ]);
+        }
 
         return response()->json(
             ['message' => $result['message']],
@@ -87,6 +97,12 @@ class CompanyPaymentMethodController
                 'error' => $e->getMessage(),
             ]);
         }
+
+        // ADR-427: SSE realtime event
+        $this->publishDomainEvent('billing.updated', $company->id, [
+            'type' => 'payment_method.default_changed',
+            'entity' => 'CompanyPaymentProfile',
+        ]);
 
         return response()->json(['message' => 'Default card updated.']);
     }

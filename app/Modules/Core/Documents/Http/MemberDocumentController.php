@@ -9,6 +9,7 @@ use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\MemberDocument;
 use App\Core\Documents\RetryDocumentAiService;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Jobs\Documents\ProcessDocumentAiJob;
 use App\Core\Documents\ReadModels\MemberDocumentWorkflowReadModel;
 use App\Core\Models\User;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
 
 class MemberDocumentController extends Controller
 {
+    use PublishesRealtimeEvents;
     public function index(Request $request, int $membershipId): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -39,9 +41,6 @@ class MemberDocumentController extends Controller
         );
     }
 
-    /**
-     * Upload a document for a member.
-     */
     public function upload(Request $request, int $membershipId, string $documentCode, DocumentProcessingPipeline $pipeline): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -149,6 +148,8 @@ class MemberDocumentController extends Controller
             ],
         );
 
+        $this->publishDomainEvent('document.updated', $company->id, ['id' => $document->id, 'type' => 'uploaded', 'entity' => 'MemberDocument', 'member_id' => $user->id, 'document_type' => $type->code, 'ai_status' => 'pending']);
+
         return response()->json([
             'message' => 'Document uploaded.',
             'document' => [
@@ -161,9 +162,6 @@ class MemberDocumentController extends Controller
         ]);
     }
 
-    /**
-     * Download a document.
-     */
     public function download(Request $request, int $membershipId, string $documentCode)
     {
         $company = $request->attributes->get('company');
@@ -200,6 +198,8 @@ class MemberDocumentController extends Controller
             reviewNote: $request->input('review_note'),
         ));
 
+        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'reviewed', 'entity' => 'MemberDocument', 'document_type' => $code, 'status' => $result->status]);
+
         return response()->json([
             'message' => 'Document review saved.',
             'review' => [
@@ -225,6 +225,8 @@ class MemberDocumentController extends Controller
             documentCode: $documentCode,
         ));
 
+        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'deleted', 'entity' => 'MemberDocument', 'document_type' => $documentCode]);
+
         return response()->json([
             'message' => 'Document deleted.',
         ]);
@@ -240,6 +242,8 @@ class MemberDocumentController extends Controller
             ->firstOrFail();
 
         RetryDocumentAiService::retry($document);
+
+        $this->publishDomainEvent('document.updated', $company->id, ['id' => $document->id, 'type' => 'ai.retried', 'entity' => 'MemberDocument', 'document_type' => $documentCode, 'ai_status' => 'pending']);
 
         return response()->json(['message' => __('documents.retryAiSuccess'), 'ai_status' => 'pending']);
     }

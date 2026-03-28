@@ -279,5 +279,61 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
 
       return data
     },
+
+    // ─── ADR-427: Realtime targeted updates ─────────────
+
+    /**
+     * Update a single request in the queue by matching criteria.
+     * Used by SSE events to patch specific rows without full refetch.
+     */
+    updateRequestById(documentId, patch) {
+      const idx = this._requests.findIndex(
+        r => r.upload?.id === documentId || r.document_id === documentId,
+      )
+      if (idx !== -1) {
+        this._requests[idx] = { ...this._requests[idx], ...patch }
+      }
+    },
+
+    /**
+     * Merge partial AI data into a request's upload object.
+     * Used when ai_status changes from processing → completed.
+     */
+    mergeRequestAiData(documentId, aiData) {
+      const req = this._requests.find(
+        r => r.upload?.id === documentId || r.document_id === documentId,
+      )
+      if (req?.upload) {
+        Object.assign(req.upload, aiData)
+      }
+    },
+
+    /**
+     * Handle a realtime domain event for documents.
+     * Called by useRealtimeSubscription('document.updated', ...) in the page component.
+     *
+     * Strategy:
+     * - ai.completed/ai.failed → patch the specific row's ai_status
+     * - uploaded/reviewed/deleted/bulk_reviewed → soft refresh requests list
+     * - Other → ignore (forward-compatible)
+     */
+    handleRealtimeEvent(payload) {
+      const type = payload?.type
+
+      if (type === 'ai.completed' || type === 'ai.failed') {
+        // Targeted patch: only update the affected row
+        const docId = payload.id
+        if (docId) {
+          this.mergeRequestAiData(docId, {
+            ai_status: payload.ai_status,
+            confidence: payload.confidence ?? null,
+          })
+        }
+      }
+      else if (['uploaded', 'reviewed', 'deleted', 'cancelled', 'requested', 'bulk_reviewed'].includes(type)) {
+        // Soft refresh: debounced refetch of the affected lists
+        this.fetchRequests()
+      }
+    },
   },
 })
