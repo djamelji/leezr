@@ -7,58 +7,55 @@ use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
 use App\Platform\Models\PlatformUser;
 use Closure;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class SchedulerInstrumentation
 {
-    /** @var array<string, int> Track current run IDs by task name */
-    private static array $currentRuns = [];
-
     /**
      * Hook: called BEFORE the scheduled command runs.
      * Creates a ScheduledTaskRun record with status=running.
+     * Also ensures the scheduler log directory exists.
      */
     public static function before(string $task): Closure
     {
         return function () use ($task) {
             try {
-                $run = ScheduledTaskRun::create([
+                // Ensure log directory exists for appendOutputTo
+                $logDir = storage_path('logs/scheduler');
+                if (! File::isDirectory($logDir)) {
+                    File::makeDirectory($logDir, 0755, true);
+                }
+
+                ScheduledTaskRun::create([
                     'task' => $task,
                     'status' => 'running',
                     'started_at' => now(),
                     'environment' => app()->environment(),
                 ]);
-
-                static::$currentRuns[$task] = $run->id;
             } catch (\Throwable $e) {
-                Log::warning("[Scheduler] Failed to instrument before() for {$task}: {$e->getMessage()}");
+                Log::warning("[Scheduler] before({$task}): {$e->getMessage()}");
             }
         };
     }
 
     /**
      * Hook: called when the scheduled command succeeds.
-     * Updates the run record with status=success, captures output, publishes realtime.
+     * Finds the latest "running" record for this task and updates it.
+     * No static state dependency — DB lookup is the source of truth.
      */
     public static function onSuccess(string $task): Closure
     {
         return function () use ($task) {
             try {
-                $runId = static::$currentRuns[$task] ?? null;
-                if (! $runId) {
-                    return;
-                }
-
-                $run = ScheduledTaskRun::find($runId);
+                $run = static::findRunningRecord($task);
                 if (! $run) {
                     return;
                 }
 
                 $output = static::captureOutput($task);
-                $durationMs = $run->started_at
-                    ? (int) round($run->started_at->diffInMilliseconds(now()))
-                    : null;
+                $durationMs = static::computeDuration($run);
 
                 $run->update([
                     'status' => 'success',
@@ -68,36 +65,27 @@ class SchedulerInstrumentation
                 ]);
 
                 static::publishRealtimeEvent($task, 'success', $durationMs);
-
-                unset(static::$currentRuns[$task]);
             } catch (\Throwable $e) {
-                Log::warning("[Scheduler] Failed to instrument onSuccess() for {$task}: {$e->getMessage()}");
+                Log::warning("[Scheduler] onSuccess({$task}): {$e->getMessage()}");
             }
         };
     }
 
     /**
      * Hook: called when the scheduled command fails.
-     * Updates the run record with status=failed, publishes realtime, dispatches alert.
+     * Finds the latest "running" record for this task and updates it.
      */
     public static function onFailure(string $task): Closure
     {
         return function () use ($task) {
             try {
-                $runId = static::$currentRuns[$task] ?? null;
-                if (! $runId) {
-                    return;
-                }
-
-                $run = ScheduledTaskRun::find($runId);
+                $run = static::findRunningRecord($task);
                 if (! $run) {
                     return;
                 }
 
                 $output = static::captureOutput($task);
-                $durationMs = $run->started_at
-                    ? (int) round($run->started_at->diffInMilliseconds(now()))
-                    : null;
+                $durationMs = static::computeDuration($run);
 
                 $run->update([
                     'status' => 'failed',
@@ -109,15 +97,37 @@ class SchedulerInstrumentation
 
                 static::publishRealtimeEvent($task, 'failed', $durationMs);
                 static::dispatchFailureAlert($task, $run);
-
-                unset(static::$currentRuns[$task]);
             } catch (\Throwable $e) {
-                Log::warning("[Scheduler] Failed to instrument onFailure() for {$task}: {$e->getMessage()}");
+                Log::warning("[Scheduler] onFailure({$task}): {$e->getMessage()}");
             }
         };
     }
 
     // ── Private helpers ───────────────────────────────────
+
+    /**
+     * Find the latest "running" record for a task.
+     * This is the source of truth — no static state needed.
+     */
+    private static function findRunningRecord(string $task): ?ScheduledTaskRun
+    {
+        return ScheduledTaskRun::where('task', $task)
+            ->where('status', 'running')
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Compute duration in ms from started_at to now.
+     */
+    private static function computeDuration(ScheduledTaskRun $run): ?int
+    {
+        if (! $run->started_at) {
+            return null;
+        }
+
+        return (int) round((microtime(true) - $run->started_at->getPreciseTimestamp(3)) * 1000);
+    }
 
     /**
      * Read captured output from the scheduler log file.

@@ -18,6 +18,15 @@ class AutomationController extends Controller
      */
     public function index(): JsonResponse
     {
+        // ── Auto-fix stale "running" records (> 10 min) ──
+        ScheduledTaskRun::where('status', 'running')
+            ->where('started_at', '<', now()->subMinutes(10))
+            ->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'error' => 'Marked as failed: running for more than 10 minutes (stale)',
+            ]);
+
         // ── 24h aggregate stats per task ─────────────────
         $since = now()->subDay();
 
