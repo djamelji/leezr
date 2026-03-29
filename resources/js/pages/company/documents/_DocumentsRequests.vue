@@ -508,8 +508,8 @@ useRealtimeSubscription('document.updated', envelope => {
   }
 })
 
-// ─── ADR-430: Polling fallback for AI status ────────────
-// If SSE is unavailable, poll every 15s while any document has pending/processing AI
+// ─── ADR-431: Polling fallback for AI status ────────────
+// Poll every 5s while any document has pending/processing AI (SSE double-safety)
 let aiPollTimer = null
 const hasProcessingAi = computed(() =>
   store.requests.some(r => r.upload && ['pending', 'processing'].includes(r.upload.ai_status)),
@@ -517,7 +517,7 @@ const hasProcessingAi = computed(() =>
 
 watch(hasProcessingAi, active => {
   if (active && !aiPollTimer) {
-    aiPollTimer = setInterval(() => store.fetchRequests(), 15000)
+    aiPollTimer = setInterval(() => store.fetchRequests(), 5000)
   }
   else if (!active && aiPollTimer) {
     clearInterval(aiPollTimer)

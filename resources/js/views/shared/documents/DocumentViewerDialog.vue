@@ -164,6 +164,7 @@ defineExpose({ markApplied })
     :width="$vuetify.display.smAndDown ? '100%' : 560"
     data-allow-mismatch
     class="scrollable-content"
+    border="none"
     @update:model-value="onClose"
   >
     <div class="d-flex flex-column h-100">
