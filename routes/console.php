@@ -1,7 +1,6 @@
 <?php
 
 use App\Core\Automation\SchedulerInstrumentation as SI;
-use App\Core\Markets\Jobs\FxRateFetchJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -12,7 +11,7 @@ Artisan::command('inspire', function () {
 
 // ── FX ───────────────────────────────────────────────────
 // FX rate refresh every 6 hours (ADR-104)
-Schedule::job(new FxRateFetchJob)->cron('0 */6 * * *')->withoutOverlapping()
+Schedule::command('fx:rates-sync')->cron('0 */6 * * *')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/fx-rates-sync.log'))
     ->before(SI::before('fx:rates-sync'))
     ->onSuccess(SI::onSuccess('fx:rates-sync'))
