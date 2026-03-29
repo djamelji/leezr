@@ -1,6 +1,7 @@
 <script setup>
 import { $api } from '@/utils/api'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
+import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
   isDialogVisible: {
@@ -169,7 +170,7 @@ defineExpose({ markApplied })
   >
     <div class="d-flex flex-column h-100">
       <!-- Header -->
-      <div class="d-flex align-center pa-4 border-b">
+      <div class="d-flex align-center pa-4">
         <VAvatar color="primary" variant="tonal" rounded class="me-3">
           <VIcon icon="tabler-file-text" />
         </VAvatar>
@@ -187,8 +188,10 @@ defineExpose({ markApplied })
         </VBtn>
       </div>
 
+      <VDivider />
+
       <!-- Scrollable content -->
-      <div class="flex-grow-1 overflow-y-auto">
+      <PerfectScrollbar :options="{ wheelPropagation: false }" class="flex-grow-1">
         <!-- Rejection note -->
         <VAlert
           v-if="reviewStatus === 'rejected' && reviewNote"
@@ -445,7 +448,7 @@ defineExpose({ markApplied })
             </VExpansionPanelText>
           </VExpansionPanel>
         </VExpansionPanels>
-      </div>
+      </PerfectScrollbar>
 
       <!-- Sticky actions footer -->
       <div class="border-t pa-3 d-flex align-center gap-2">
@@ -465,6 +468,14 @@ defineExpose({ markApplied })
     </div>
   </VNavigationDrawer>
 </template>
+
+<style lang="scss">
+.scrollable-content {
+  .v-navigation-drawer__content {
+    overflow: hidden !important;
+  }
+}
+</style>
 
 <style scoped>
 .document-wrapper {

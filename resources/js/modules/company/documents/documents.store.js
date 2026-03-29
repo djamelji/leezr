@@ -147,7 +147,33 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
         const data = await $guardedApi('documents.manage', '/company/document-requests/queue')
 
         if (!data) return
-        this._requests = data.queue ?? []
+        const incoming = data.queue ?? []
+
+        // ADR-431: Smart merge — preserve object references to avoid full table re-render
+        if (this._requests.length === 0) {
+          this._requests = incoming
+        }
+        else {
+          const existingById = new Map(this._requests.map(r => [r.id, r]))
+
+          // Update existing + collect new
+          const merged = incoming.map(item => {
+            const existing = existingById.get(item.id)
+            if (existing) {
+              // Patch in-place: preserve Vue reactive reference
+              Object.assign(existing, item)
+
+              return existing
+            }
+
+            return item
+          })
+
+          // Only reassign if length/order changed (add/remove)
+          if (merged.length !== this._requests.length || merged.some((r, i) => r.id !== this._requests[i]?.id)) {
+            this._requests = merged
+          }
+        }
       }
       catch {
         this._requests = []

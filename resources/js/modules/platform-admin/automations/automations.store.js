@@ -34,7 +34,29 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
 
         this._summary = data.summary
         this._schedulerHealth = data.scheduler_health
-        this._tasks = data.tasks
+
+        // ADR-431: Smart merge — preserve object references to avoid table blink
+        const incoming = data.tasks ?? []
+        if (this._tasks.length === 0) {
+          this._tasks = incoming
+        }
+        else {
+          const existingByName = new Map(this._tasks.map(t => [t.name, t]))
+          const merged = incoming.map(item => {
+            const existing = existingByName.get(item.name)
+            if (existing) {
+              Object.assign(existing, item)
+
+              return existing
+            }
+
+            return item
+          })
+
+          if (merged.length !== this._tasks.length || merged.some((t, i) => t.name !== this._tasks[i]?.name)) {
+            this._tasks = merged
+          }
+        }
 
         // ADR-431: Auto-stop polling when no tasks are running
         const hasRunning = this._tasks.some(t => t.last_run?.status === 'running')
