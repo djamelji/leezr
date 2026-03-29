@@ -4370,7 +4370,8 @@
     "health": {
       "ok": "Healthy",
       "delayed": "Delayed",
-      "broken": "Broken"
+      "broken": "Broken",
+      "unknown": "Unknown"
     },
     "tasks": {
       "expireTrials": "Auto-expire free trial subscriptions",

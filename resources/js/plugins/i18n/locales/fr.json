@@ -4375,7 +4375,8 @@
     "health": {
       "ok": "Sain",
       "delayed": "Retardé",
-      "broken": "Cassé"
+      "broken": "Cassé",
+      "unknown": "Inconnu"
     },
     "tasks": {
       "expireTrials": "Expiration automatique des essais gratuits",

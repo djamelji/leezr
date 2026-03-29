@@ -33,7 +33,7 @@ const headers = computed(() => [
 ])
 
 // ── Helpers ───────────────────────────────────────────
-const healthColor = h => ({ ok: 'success', delayed: 'warning', broken: 'error' })[h] || 'secondary'
+const healthColor = h => ({ ok: 'success', delayed: 'warning', broken: 'error', unknown: 'secondary' })[h] || 'secondary'
 const healthLabel = h => t(`automations.health.${h}`) || h
 const statusColor = s => ({ success: 'success', failed: 'error', running: 'info' })[s] || 'secondary'
 const statusLabel = s => t(`automations.status${s?.charAt(0).toUpperCase()}${s?.slice(1)}`) || '—'
@@ -87,14 +87,20 @@ const loadRunsPage = page => {
   }
 }
 
-// ── Realtime ──────────────────────────────────────────
-useRealtimeSubscription('automation.run.completed', () => {
-  store.fetchTasks()
+// ── Realtime (smooth update — no blink) ──────────────
+const isRealtimeUpdating = ref(false)
+
+useRealtimeSubscription('automation.run.completed', async () => {
+  isRealtimeUpdating.value = true
+  await store.fetchTasks()
 
   // Refresh runs if drawer is open
   if (drawerVisible.value && selectedTask.value) {
-    store.fetchRuns(selectedTask.value.name)
+    await store.fetchRuns(selectedTask.value.name)
   }
+
+  // Brief highlight then fade
+  setTimeout(() => { isRealtimeUpdating.value = false }, 800)
 })
 
 // ── Init ──────────────────────────────────────────────
@@ -613,3 +619,18 @@ onMounted(() => {
     </VNavigationDrawer>
   </div>
 </template>
+
+<style scoped>
+/* Smooth realtime transitions — prevent blink on data updates */
+:deep(.v-data-table__tr) {
+  transition: background-color 0.6s ease;
+}
+
+:deep(.v-chip) {
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+:deep(.v-card-text) {
+  transition: opacity 0.3s ease;
+}
+</style>

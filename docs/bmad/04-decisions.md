@@ -14850,17 +14850,30 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 5. **Worker AI staging absent** — `leezr-queue-ai.service` pointe web2 (prod) uniquement. `queue-ai.log` owned par root → cron AI staging échoue silencieusement. Fix : cron self-healing AI ajouté avec output `/dev/null`.
 
+6. **Health `unknown` pour tâches jamais exécutées** — `computeHealth()` retournait `broken` quand aucun run n'existait, affichant "Cassé" pour des tâches légitimes (fx:rates-sync every6h). Fix : nouveau status `unknown` distinct de `broken`, affiché comme chip "Inconnu" gris.
+
+7. **Animations smooth realtime** — Les mises à jour SSE causaient un "blinking" visuel du tableau et des chips. Fix : transitions CSS sur `v-data-table__tr`, `v-chip`, `v-card-text` + `<Transition>` Vue sur `DocumentAiChip` pour animer les changements d'état AI (pending→processing→completed).
+
+8. **Overlay DocumentViewer z-index** — Le drawer du viewer de documents ne couvrait pas toute la page. Fix : z-index 2100 sur le drawer + z-index 2099 sur le scrim via CSS global.
+
 **Conséquences** :
 - Tous les scheduler runs tracés correctement (status + duration_ms positif)
 - Workers queue auto-réparables sur staging ET production
 - Documents seedés n'affichent plus de spinner IA
 - "Run now" fonctionne pour toutes les tâches y compris fx:rates-sync
+- Tâches jamais exécutées affichent "Inconnu" au lieu de "Cassé"
+- Mises à jour realtime fluides sans blinking
+- Overlay du viewer couvre tout le viewport
 
 **Fichiers** :
 - `app/Core/Automation/SchedulerInstrumentation.php` — fix computeDuration
+- `app/Core/Automation/ScheduledTaskRegistry.php` — health `unknown`
 - `app/Console/Commands/FxRatesSyncCommand.php` — nouveau wrapper
 - `routes/console.php` — Schedule::command au lieu de Schedule::job
 - `database/seeders/DevSeeder.php` — ai_status=completed
+- `resources/js/pages/platform/automations/index.vue` — CSS transitions, unknown health
+- `resources/js/views/shared/documents/DocumentAiChip.vue` — Transition animation
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — z-index overlay
 
 ---
 

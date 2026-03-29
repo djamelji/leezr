@@ -163,13 +163,17 @@ class ScheduledTaskRegistry
     /**
      * Compute health status for a task based on its last run.
      *
-     * @return 'ok'|'delayed'|'broken'
+     * @return 'ok'|'delayed'|'broken'|'unknown'
      */
     public static function computeHealth(string $task, ?ScheduledTaskRun $lastRun): string
     {
         $meta = self::get($task);
-        if (! $meta || ! $lastRun) {
+        if (! $meta) {
             return 'broken';
+        }
+
+        if (! $lastRun) {
+            return 'unknown';
         }
 
         $expectedMinutes = $meta['expected_interval_minutes'];

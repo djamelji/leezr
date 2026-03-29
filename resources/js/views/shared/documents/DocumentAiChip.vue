@@ -33,36 +33,58 @@ const chipColor = computed(() => {
 </script>
 
 <template>
-  <!-- Processing: animated spinner -->
-  <VChip
-    v-if="aiStatus === 'processing' || aiStatus === 'pending'"
-    size="x-small"
-    variant="tonal"
-    color="info"
-  >
-    <VProgressCircular indeterminate size="12" width="2" color="info" class="me-1" />
-    {{ t('documents.aiStatus.processing') }}
-  </VChip>
+  <Transition name="ai-chip" mode="out-in">
+    <!-- Processing: animated spinner -->
+    <VChip
+      v-if="aiStatus === 'processing' || aiStatus === 'pending'"
+      key="processing"
+      size="x-small"
+      variant="tonal"
+      color="info"
+    >
+      <VProgressCircular indeterminate size="12" width="2" color="info" class="me-1" />
+      {{ t('documents.aiStatus.processing') }}
+    </VChip>
 
-  <!-- Failed -->
-  <VChip
-    v-else-if="aiStatus === 'failed'"
-    size="x-small"
-    variant="tonal"
-    color="error"
-    prepend-icon="tabler-alert-triangle"
-  >
-    {{ t('documents.aiStatus.failed') }}
-  </VChip>
+    <!-- Failed -->
+    <VChip
+      v-else-if="aiStatus === 'failed'"
+      key="failed"
+      size="x-small"
+      variant="tonal"
+      color="error"
+      prepend-icon="tabler-alert-triangle"
+    >
+      {{ t('documents.aiStatus.failed') }}
+    </VChip>
 
-  <!-- Completed with analysis -->
-  <VChip
-    v-else-if="hasAnalysis"
-    size="x-small"
-    variant="tonal"
-    :color="chipColor"
-  >
-    <VIcon start size="14" icon="tabler-sparkles" />
-    {{ t('documents.aiChipLabel', { confidence }) }}
-  </VChip>
+    <!-- Completed with analysis -->
+    <VChip
+      v-else-if="hasAnalysis"
+      key="completed"
+      size="x-small"
+      variant="tonal"
+      :color="chipColor"
+    >
+      <VIcon start size="14" icon="tabler-sparkles" />
+      {{ t('documents.aiChipLabel', { confidence }) }}
+    </VChip>
+  </Transition>
 </template>
+
+<style scoped>
+.ai-chip-enter-active,
+.ai-chip-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.ai-chip-enter-from {
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+.ai-chip-leave-to {
+  opacity: 0;
+  transform: scale(0.85);
+}
+</style>

@@ -162,6 +162,7 @@ defineExpose({ markApplied })
     temporary
     location="end"
     :width="$vuetify.display.smAndDown ? '100%' : 560"
+    class="document-viewer-drawer"
     @update:model-value="onClose"
   >
     <div class="d-flex flex-column h-100">
@@ -485,5 +486,17 @@ defineExpose({ markApplied })
   transform: rotate(-12deg);
   z-index: 2;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+/* Ensure drawer + scrim cover entire viewport above sidebar */
+:global(.document-viewer-drawer) {
+  z-index: 2100 !important;
+}
+
+:global(.document-viewer-drawer + .v-overlay__scrim),
+:global(.v-overlay:has(.document-viewer-drawer) .v-overlay__scrim) {
+  z-index: 2099 !important;
+  position: fixed !important;
+  inset: 0 !important;
 }
 </style>
