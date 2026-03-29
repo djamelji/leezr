@@ -87,7 +87,10 @@ export function createRealtimeClient(options) {
     if (_destroyed || _eventSource) return
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-    const url = `${baseUrl}/realtime/stream?company_id=${options.companyId}`
+    // ADR-431: Platform scope uses /platform prefix, company scope uses company_id param
+    const url = options.companyId
+      ? `${baseUrl}/realtime/stream?company_id=${options.companyId}`
+      : `${baseUrl}/platform/realtime/stream`
 
     try {
       _eventSource = new EventSource(url, { withCredentials: true })

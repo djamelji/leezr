@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { $platformApi } from '@/utils/platformApi'
 
+let _pollTimer = null
+
 export const usePlatformAutomationsStore = defineStore('platformAutomations', {
   state: () => ({
     _summary: null,
@@ -33,6 +35,12 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
         this._summary = data.summary
         this._schedulerHealth = data.scheduler_health
         this._tasks = data.tasks
+
+        // ADR-431: Auto-stop polling when no tasks are running
+        const hasRunning = this._tasks.some(t => t.last_run?.status === 'running')
+        if (!hasRunning) {
+          this._stopRunningPoll()
+        }
       }
       finally {
         this._loading = false
@@ -64,13 +72,30 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
           body: { task },
         })
 
-        // Refresh after short delay to let job start processing
-        setTimeout(() => this.fetchTasks(), 2000)
+        // ADR-431: Start polling every 5s until no tasks are running
+        this._startRunningPoll()
 
         return data
       }
       finally {
         this._runningTask = null
+      }
+    },
+
+    /**
+     * ADR-431: Poll every 5s while tasks are running.
+     * Stops automatically when no task has status "running".
+     * Double safety with SSE domain events.
+     */
+    _startRunningPoll() {
+      if (_pollTimer) return
+      _pollTimer = setInterval(() => this.fetchTasks(), 5000)
+    },
+
+    _stopRunningPoll() {
+      if (_pollTimer) {
+        clearInterval(_pollTimer)
+        _pollTimer = null
       }
     },
   },

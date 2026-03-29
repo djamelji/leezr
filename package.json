@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "vite",
+    "dev:all": "concurrently -k --names vite,queue-ai -c cyan,blue \"vite\" \"php artisan queue:work --queue=ai --sleep=3 --tries=3 --timeout=120\"",
     "dev:leezr": "node scripts/dev-leezr.js",
     "build": "vite build",
     "mailpit": "open http://localhost:8025",

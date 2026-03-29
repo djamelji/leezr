@@ -63,6 +63,7 @@ use App\Modules\Infrastructure\AdminAuth\Http\PlatformTwoFactorController;
 use App\Modules\Platform\Support\Http\PlatformSupportTicketController;
 use App\Modules\Platform\Support\Http\PlatformSupportMessageController;
 use App\Modules\Platform\Automations\Http\AutomationController;
+use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
 use Illuminate\Support\Facades\Route;
 
 // Metrics export — bearer token auth, no session guard (ADR-311)
@@ -98,6 +99,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::post('/me/notifications/{id}/read', [PlatformNotificationController::class, 'markRead']);
     Route::post('/me/notifications/read-all', [PlatformNotificationController::class, 'markAllRead']);
     Route::delete('/me/notifications/{id}', [PlatformNotificationController::class, 'destroy']);
+
+    // ADR-431: SSE realtime stream for platform scope (exempt from 2FA — long-lived connection)
+    Route::get('/realtime/stream', RealtimeStreamController::class);
 
     // 2FA management (ADR-351) — exempt from 2FA (needed to enable it)
     Route::post('/2fa/enable', [PlatformTwoFactorController::class, 'enable']);

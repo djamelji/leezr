@@ -31,7 +31,7 @@ class RealtimeStreamController
     public function __invoke(Request $request, StreamTransport $transport): StreamedResponse
     {
         $company = $request->attributes->get('company');
-        $companyId = $company->id;
+        $companyId = $company?->id;
         $userId = $request->user()->id;
 
         $heartbeatInterval = config('realtime.heartbeat_interval', 30);
@@ -43,7 +43,8 @@ class RealtimeStreamController
         $topicFilter = $this->parseFilter($request->query('topics'));
 
         // ADR-127: Connection governance — reject if limits exceeded
-        if (!ConnectionTracker::connect($userId, $companyId, $request->ip())) {
+        // ADR-431: Skip ConnectionTracker for platform scope (companyId is null)
+        if ($companyId !== null && !ConnectionTracker::connect($userId, $companyId, $request->ip())) {
             Log::warning('[realtime] connection rejected — limit exceeded', [
                 'user_id' => $userId,
                 'company_id' => $companyId,
@@ -143,8 +144,10 @@ class RealtimeStreamController
                 $transport->sleep();
             }
 
-            // ADR-127: Unregister connection
-            ConnectionTracker::disconnect($userId, $companyId);
+            // ADR-127: Unregister connection (ADR-431: skip for platform scope)
+            if ($companyId !== null) {
+                ConnectionTracker::disconnect($userId, $companyId);
+            }
 
             Log::debug('[realtime] disconnect', [
                 'user_id' => $userId,

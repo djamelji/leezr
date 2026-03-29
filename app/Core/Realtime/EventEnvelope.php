@@ -38,17 +38,17 @@ class EventEnvelope
 
     // ─── Static factories ────────────────────────────────────
 
-    public static function invalidation(string $topic, int $companyId, array $payload = []): self
+    public static function invalidation(string $topic, ?int $companyId, array $payload = []): self
     {
         return new self($topic, EventCategory::Invalidation, $companyId, $payload);
     }
 
-    public static function domain(string $topic, int $companyId, array $payload = [], ?int $userId = null): self
+    public static function domain(string $topic, ?int $companyId, array $payload = [], ?int $userId = null): self
     {
         return new self($topic, EventCategory::Domain, $companyId, $payload, $userId);
     }
 
-    public static function notification(string $topic, int $companyId, array $payload = [], ?int $userId = null): self
+    public static function notification(string $topic, ?int $companyId, array $payload = [], ?int $userId = null): self
     {
         return new self($topic, EventCategory::Notification, $companyId, $payload, $userId);
     }

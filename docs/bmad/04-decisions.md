@@ -14877,4 +14877,39 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 ---
 
+### ADR-431 — Correction 3 bugs critiques : SSE Platform, Documents AI, DocumentViewer (2026-03-29)
+
+**Contexte** : Après ADR-430, 3 problèmes structurels persistent :
+1. "Run now" reste "en cours" indéfiniment — les events SSE platform ne sont jamais reçus
+2. Documents "Analyse en cours" en local — le worker AI n'est pas lancé par `dev:all`
+3. Overlay DocumentViewer ne suit pas le thème — hacks CSS invalides
+
+**Décisions** :
+- `EventEnvelope` : 3 factories statiques (`invalidation`, `domain`, `notification`) acceptent `?int $companyId` (le constructeur l'acceptait déjà)
+- `RealtimeStreamController` : `$companyId` nullable via `$company?->id`, `ConnectionTracker` skip si `null`
+- Route SSE platform : `GET /api/platform/realtime/stream` dans `routes/platform.php`
+- Frontend `RealtimeClient.js` : URL conditionnelle company vs platform
+- Frontend `runtime.js` : nouvelle méthode `_initPlatformRealtime()` appelée en scope platform
+- Automations store : polling intelligent toutes les 5s au lieu de `setTimeout(2s)` unique — s'arrête quand plus aucune tâche running
+- `package.json` : `dev:all` lance Vite + worker AI via concurrently
+- `DocumentViewerDialog.vue` : `data-allow-mismatch` + `scrollable-content` remplacent la classe custom, hacks CSS `:global()` supprimés
+
+**Conséquences** :
+- Le cockpit automation reçoit les events SSE en temps réel (fin d'exécution visible immédiatement)
+- Le polling 5s assure la résilience même si SSE échoue
+- L'analyse AI des documents fonctionne en local avec `pnpm dev:all`
+- Le viewer de documents respecte le thème Vuetify nativement
+
+**Fichiers modifiés** :
+- `app/Core/Realtime/EventEnvelope.php` — 3 signatures `?int $companyId`
+- `app/Modules/Infrastructure/Realtime/Http/RealtimeStreamController.php` — companyId nullable + ConnectionTracker conditionnel
+- `routes/platform.php` — route GET `/realtime/stream` + import controller
+- `resources/js/core/realtime/RealtimeClient.js` — URL platform SSE
+- `resources/js/core/runtime/runtime.js` — `_initPlatformRealtime()`
+- `resources/js/modules/platform-admin/automations/automations.store.js` — polling fallback
+- `resources/js/views/shared/documents/DocumentViewerDialog.vue` — data-allow-mismatch, scrollable-content, suppression hacks CSS
+- `package.json` — dev:all avec worker AI
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

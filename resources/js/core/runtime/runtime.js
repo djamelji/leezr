@@ -193,12 +193,15 @@ export const useRuntimeStore = defineStore('runtime', {
       }
 
       if (bootMachine.isReady.value && scope === 'platform') {
+        // ADR-431: Start SSE for platform realtime events
+        this._initPlatformRealtime()
+
         const notifStore = resolveStore('notification')
 
         notifStore.setPlatformMode(true)
         notifStore.fetchUnreadCount().catch(() => {})
 
-        // Platform has no SSE stream — poll every 15s for notifications
+        // Keep polling as fallback — SSE onConnected will stop it
         this._startPlatformNotifPoll()
       }
     },
@@ -600,6 +603,40 @@ export const useRuntimeStore = defineStore('runtime', {
           _journal.log('realtime:fallback', { reason: 'SSE failed — activating polling' })
           this._journalVersion++
           this._startNavPoll()
+        },
+      })
+
+      _realtimeClient.connect()
+    },
+
+    /**
+     * ADR-431: Connect SSE for platform scope (companyId = null).
+     * Only dispatches domain events — no invalidation or notification routing.
+     */
+    _initPlatformRealtime() {
+      if (_realtimeClient || typeof EventSource === 'undefined') return
+
+      _channelRouter = createChannelRouter({
+        invalidation: () => {},
+        domain: data => domainEventBus.dispatch(data),
+        notification: () => {},
+        audit: () => {},
+        security: () => {},
+      })
+
+      _realtimeClient = createRealtimeClient({
+        companyId: null,
+        onEvent: (sseEventType, data) => _channelRouter.dispatch(sseEventType, data),
+        onInvalidate: () => {},
+        onConnected: () => {
+          _realtimeActive = true
+          _journal.log('realtime:connected', { scope: 'platform' })
+          this._journalVersion++
+        },
+        onFallback: () => {
+          _realtimeActive = false
+          _journal.log('realtime:fallback', { reason: 'Platform SSE failed' })
+          this._journalVersion++
         },
       })
 
