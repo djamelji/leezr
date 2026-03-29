@@ -126,7 +126,7 @@ class SchedulerInstrumentation
             return null;
         }
 
-        return (int) round(now()->diffInMilliseconds($run->started_at));
+        return (int) abs($run->started_at->diffInMilliseconds(now()));
     }
 
     /**
