@@ -14834,4 +14834,34 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 ---
 
+### ADR-430 — Automation Center : correctifs post-déploiement (2026-03-29)
+
+**Contexte** : Le cockpit Automation Center (ADR-425) présentait 5 bugs critiques post-déploiement empêchant son bon fonctionnement sur staging et production.
+
+**Décisions & Correctifs** :
+
+1. **`computeDuration()` overflow** — `getPreciseTimestamp(3)` retourne des millisecondes, `microtime(true)` des secondes → nombre négatif géant → MySQL INT UNSIGNED overflow. Puis `diffInMilliseconds()` Carbon 3 retourne signé. Fix : `abs($run->started_at->diffInMilliseconds(now()))`.
+
+2. **`pgrep` self-match cron** — `pgrep -f "queue:work --queue=default"` matchait sa propre commande cron. Fix : bracket trick `[w]eb3/current/artisan queue:work --queue=default` + chemin complet pour distinguer staging (web3) de production (web2) sur le même serveur.
+
+3. **`fx:rates-sync` command not found** — Schedulé comme `Schedule::job()` mais `RunScheduledTaskJob` fait `Artisan::call()`. Fix : créer `FxRatesSyncCommand` wrapper + changer en `Schedule::command('fx:rates-sync')`.
+
+4. **Seeder `ai_status=pending`** — Documents fictifs sans fichier réel → IA jamais appelée → spinner permanent "Analyse en cours". Fix : seeder met `ai_status=completed`.
+
+5. **Worker AI staging absent** — `leezr-queue-ai.service` pointe web2 (prod) uniquement. `queue-ai.log` owned par root → cron AI staging échoue silencieusement. Fix : cron self-healing AI ajouté avec output `/dev/null`.
+
+**Conséquences** :
+- Tous les scheduler runs tracés correctement (status + duration_ms positif)
+- Workers queue auto-réparables sur staging ET production
+- Documents seedés n'affichent plus de spinner IA
+- "Run now" fonctionne pour toutes les tâches y compris fx:rates-sync
+
+**Fichiers** :
+- `app/Core/Automation/SchedulerInstrumentation.php` — fix computeDuration
+- `app/Console/Commands/FxRatesSyncCommand.php` — nouveau wrapper
+- `routes/console.php` — Schedule::command au lieu de Schedule::job
+- `database/seeders/DevSeeder.php` — ai_status=completed
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
