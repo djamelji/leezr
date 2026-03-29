@@ -140,46 +140,52 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
 
     // ─── Requests Queue ────────────────────────────────
     // ADR-418: $guardedApi — cross-permission defense (documents.manage vs page-level documents.view)
-    async fetchRequests() {
-      this._loading.requests = true
+    // ADR-431b: silent mode — skeleton only on first load, polling passes { silent: true }
+    async fetchRequests({ silent = false } = {}) {
+      if (!silent) this._loading.requests = true
 
       try {
         const data = await $guardedApi('documents.manage', '/company/document-requests/queue')
 
         if (!data) return
-        const incoming = data.queue ?? []
-
-        // ADR-431: Smart merge — preserve object references to avoid full table re-render
-        if (this._requests.length === 0) {
-          this._requests = incoming
-        }
-        else {
-          const existingById = new Map(this._requests.map(r => [r.id, r]))
-
-          // Update existing + collect new
-          const merged = incoming.map(item => {
-            const existing = existingById.get(item.id)
-            if (existing) {
-              // Patch in-place: preserve Vue reactive reference
-              Object.assign(existing, item)
-
-              return existing
-            }
-
-            return item
-          })
-
-          // Only reassign if length/order changed (add/remove)
-          if (merged.length !== this._requests.length || merged.some((r, i) => r.id !== this._requests[i]?.id)) {
-            this._requests = merged
-          }
-        }
+        this._mergeRequests(data.queue ?? [])
       }
       catch {
         this._requests = []
       }
       finally {
-        this._loading.requests = false
+        if (!silent) this._loading.requests = false
+      }
+    },
+
+    /**
+     * ADR-431b: Smart merge — only trigger reactivity when data actually changed.
+     * Compares via JSON.stringify before Object.assign to avoid unnecessary re-renders.
+     */
+    _mergeRequests(incoming) {
+      if (this._requests.length === 0) {
+        this._requests = incoming
+
+        return
+      }
+
+      const existingById = new Map(this._requests.map(r => [r.id, r]))
+
+      const merged = incoming.map(item => {
+        const existing = existingById.get(item.id)
+        if (existing) {
+          if (JSON.stringify(existing) !== JSON.stringify(item)) {
+            Object.assign(existing, item)
+          }
+
+          return existing
+        }
+
+        return item
+      })
+
+      if (merged.length !== this._requests.length || merged.some((r, i) => r.id !== this._requests[i]?.id)) {
+        this._requests = merged
       }
     },
 

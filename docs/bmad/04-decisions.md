@@ -14918,4 +14918,33 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 ---
 
+### ADR-431b — Fix structurel UX/realtime : anti-freeze, queue:default, AI UX résiliente (2026-03-29)
+
+**Contexte** : L'UX realtime n'est pas commercialisable. 4 corrections structurelles : le polling déclenche un skeleton/blink à chaque cycle, le DocumentAiChip ne donne aucun feedback si l'AI est lente, les automations souffrent du même blink, et le worker queue:default n'a pas de service systemd en production.
+
+**Décisions** :
+- **Documents store** : `fetchRequests({ silent = false })` — skeleton uniquement au premier chargement. `_mergeRequests()` compare via `JSON.stringify` AVANT `Object.assign` — ne déclenche la réactivité que si données réellement différentes
+- **DocumentAiChip** : nouveau prop `uploadedAt` + timer interne — après 30s en pending/processing, affiche "Analyse plus longue que prévu..." (warning, pas erreur). La mise à jour est par ligne grâce au smart merge
+- **Automations store** : même pattern `fetchTasks({ silent })` + `_mergeTasks()` conditionnel. Polling 5s passe `{ silent: true }`
+- **Deploy script** : section [6.5/9] service systemd `leezr-queue-default` (--queue=default --timeout=60), restart après switch symlink
+- **DocumentViewer audit** : aucun fix nécessaire — VNavigationDrawer temporary est correctement téléporté dans VApp, variables CSS scrim héritées du thème, overrides SCSS en place
+
+**Conséquences** :
+- Zéro skeleton/blink pendant le polling — seul le premier chargement montre le skeleton
+- Le smart merge JSON.stringify évite toute réactivité Vue inutile → table stable
+- Les utilisateurs voient un feedback clair quand l'IA est lente (pas d'inquiétude, pas d'erreur)
+- Le worker queue:default est géré par systemd en prod (restart automatique, logs centralisés)
+- Le DocumentViewer fonctionne correctement sans modification
+
+**Fichiers modifiés** :
+- `resources/js/modules/company/documents/documents.store.js` — `fetchRequests({ silent })` + `_mergeRequests()` conditionnel
+- `resources/js/pages/company/documents/_DocumentsRequests.vue` — polling silent + tracking uploadedAt
+- `resources/js/views/shared/documents/DocumentAiChip.vue` — timeout UX 30s message + prop uploadedAt
+- `resources/js/modules/platform-admin/automations/automations.store.js` — `fetchTasks({ silent })` + `_mergeTasks()` conditionnel
+- `deploy/deploy_release.sh` — service systemd `leezr-queue-default` + restart
+- `resources/js/plugins/i18n/locales/fr.json` — clé `documents.aiStatus.slow`
+- `resources/js/plugins/i18n/locales/en.json` — clé `documents.aiStatus.slow`
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -3956,7 +3956,8 @@
       "pending": "Analysis pending",
       "processing": "Analyzing...",
       "completed": "Analysis complete",
-      "failed": "Analysis failed"
+      "failed": "Analysis failed",
+      "slow": "Taking longer than expected..."
     },
     "retryAi": "Retry analysis",
     "retryAiSuccess": "Analysis retry dispatched",

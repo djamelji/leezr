@@ -27,36 +27,15 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
   },
 
   actions: {
-    async fetchTasks() {
-      this._loading = true
+    // ADR-431b: silent mode — skeleton only on first load, polling passes { silent: true }
+    async fetchTasks({ silent = false } = {}) {
+      if (!silent) this._loading = true
       try {
         const data = await $platformApi('/automations')
 
         this._summary = data.summary
         this._schedulerHealth = data.scheduler_health
-
-        // ADR-431: Smart merge — preserve object references to avoid table blink
-        const incoming = data.tasks ?? []
-        if (this._tasks.length === 0) {
-          this._tasks = incoming
-        }
-        else {
-          const existingByName = new Map(this._tasks.map(t => [t.name, t]))
-          const merged = incoming.map(item => {
-            const existing = existingByName.get(item.name)
-            if (existing) {
-              Object.assign(existing, item)
-
-              return existing
-            }
-
-            return item
-          })
-
-          if (merged.length !== this._tasks.length || merged.some((t, i) => t.name !== this._tasks[i]?.name)) {
-            this._tasks = merged
-          }
-        }
+        this._mergeTasks(data.tasks ?? [])
 
         // ADR-431: Auto-stop polling when no tasks are running
         const hasRunning = this._tasks.some(t => t.last_run?.status === 'running')
@@ -65,7 +44,38 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
         }
       }
       finally {
-        this._loading = false
+        if (!silent) this._loading = false
+      }
+    },
+
+    /**
+     * ADR-431b: Smart merge — only trigger reactivity when data actually changed.
+     * Compares via JSON.stringify before Object.assign to avoid unnecessary re-renders.
+     */
+    _mergeTasks(incoming) {
+      if (this._tasks.length === 0) {
+        this._tasks = incoming
+
+        return
+      }
+
+      const existingByName = new Map(this._tasks.map(t => [t.name, t]))
+
+      const merged = incoming.map(item => {
+        const existing = existingByName.get(item.name)
+        if (existing) {
+          if (JSON.stringify(existing) !== JSON.stringify(item)) {
+            Object.assign(existing, item)
+          }
+
+          return existing
+        }
+
+        return item
+      })
+
+      if (merged.length !== this._tasks.length || merged.some((t, i) => t.name !== this._tasks[i]?.name)) {
+        this._tasks = merged
       }
     },
 
@@ -111,7 +121,7 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
      */
     _startRunningPoll() {
       if (_pollTimer) return
-      _pollTimer = setInterval(() => this.fetchTasks(), 5000)
+      _pollTimer = setInterval(() => this.fetchTasks({ silent: true }), 5000)
     },
 
     _stopRunningPoll() {

@@ -1,7 +1,7 @@
 <script setup>
 /**
  * ADR-428: Enhanced AI chip with ai_status lifecycle support.
- * Shows processing spinner, failed badge, or confidence chip.
+ * ADR-431b: Timeout UX — shows "taking longer than expected" after 30s.
  */
 const props = defineProps({
   analysis: {
@@ -10,6 +10,10 @@ const props = defineProps({
   },
   aiStatus: {
     type: String,
+    default: null,
+  },
+  uploadedAt: {
+    type: Number,
     default: null,
   },
 })
@@ -30,13 +34,50 @@ const chipColor = computed(() => {
   if (c >= 40) return 'warning'
   return 'error'
 })
+
+// ADR-431b: Timeout UX — detect if AI is taking >30s
+const isProcessing = computed(() => props.aiStatus === 'processing' || props.aiStatus === 'pending')
+const elapsed = ref(0)
+let tickTimer = null
+
+watch(isProcessing, active => {
+  if (active && props.uploadedAt) {
+    elapsed.value = Date.now() - props.uploadedAt
+    tickTimer = setInterval(() => {
+      elapsed.value = Date.now() - props.uploadedAt
+    }, 1000)
+  }
+  else {
+    if (tickTimer) clearInterval(tickTimer)
+    tickTimer = null
+    elapsed.value = 0
+  }
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (tickTimer) clearInterval(tickTimer)
+})
+
+const isSlowProcessing = computed(() => isProcessing.value && elapsed.value > 30000)
 </script>
 
 <template>
   <Transition name="ai-chip" mode="out-in">
+    <!-- Processing slow: >30s timeout message -->
+    <VChip
+      v-if="isSlowProcessing"
+      key="slow"
+      size="x-small"
+      variant="tonal"
+      color="warning"
+    >
+      <VProgressCircular indeterminate size="12" width="2" color="warning" class="me-1" />
+      {{ t('documents.aiStatus.slow') }}
+    </VChip>
+
     <!-- Processing: animated spinner -->
     <VChip
-      v-if="aiStatus === 'processing' || aiStatus === 'pending'"
+      v-else-if="isProcessing"
       key="processing"
       size="x-small"
       variant="tonal"

@@ -232,6 +232,34 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$QUEUE_SERVICE" 2>/dev/null || true
 log "  Queue worker service configured ($QUEUE_SERVICE)"
 
+# ─── [6.5/9] Setup default queue worker (systemd) — ADR-431b ────
+log "→ [6.5/9] Setup default queue worker (systemd)"
+QUEUE_DEFAULT_SERVICE="leezr-queue-default"
+
+cat > /tmp/${QUEUE_DEFAULT_SERVICE}.service <<QDEOF
+[Unit]
+Description=Leezr Default Queue Worker
+After=network.target
+
+[Service]
+User=$VHOST_USER
+Group=$VHOST_GROUP
+WorkingDirectory=$CURRENT_LINK
+ExecStart=$PHP_BIN $CURRENT_LINK/artisan queue:work --queue=default --sleep=3 --tries=3 --timeout=60 --max-jobs=100 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=append:$SHARED_DIR/storage/logs/queue-default.log
+StandardError=append:$SHARED_DIR/storage/logs/queue-default.log
+
+[Install]
+WantedBy=multi-user.target
+QDEOF
+
+sudo cp /tmp/${QUEUE_DEFAULT_SERVICE}.service /etc/systemd/system/${QUEUE_DEFAULT_SERVICE}.service
+sudo systemctl daemon-reload
+sudo systemctl enable "$QUEUE_DEFAULT_SERVICE" 2>/dev/null || true
+log "  Default queue worker service configured ($QUEUE_DEFAULT_SERVICE)"
+
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"
 $PHP_BIN artisan config:clear 2>&1 | tee -a "$LOG_FILE"
@@ -300,11 +328,16 @@ if command -v systemctl &> /dev/null; then
   fi
 fi
 
-# Restart AI queue worker to pick up new code (ADR-416)
+# Restart queue workers to pick up new code (ADR-416, ADR-431b)
 if sudo systemctl is-enabled "$QUEUE_SERVICE" &>/dev/null 2>&1; then
   sudo systemctl restart "$QUEUE_SERVICE" 2>/dev/null \
     && log "  AI queue worker restarted ($QUEUE_SERVICE)" \
     || log "  WARN: AI queue worker restart failed"
+fi
+if sudo systemctl is-enabled "$QUEUE_DEFAULT_SERVICE" &>/dev/null 2>&1; then
+  sudo systemctl restart "$QUEUE_DEFAULT_SERVICE" 2>/dev/null \
+    && log "  Default queue worker restarted ($QUEUE_DEFAULT_SERVICE)" \
+    || log "  WARN: Default queue worker restart failed"
 fi
 
 # ─── Cleanup old releases (keep 5) ──────────────────────────────

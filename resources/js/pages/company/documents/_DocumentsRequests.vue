@@ -465,6 +465,7 @@ const confirmAdminUpload = async () => {
 
     toast(t('documents.uploadForMemberSuccess'), 'success')
     toast(t('documents.aiProcessingToast'), 'info')
+    trackUploadTimestamp(adminUploadRequest.value.id)
     isAdminUploadOpen.value = false
     await store.fetchRequests()
   }
@@ -508,8 +509,9 @@ useRealtimeSubscription('document.updated', envelope => {
   }
 })
 
-// ─── ADR-431: Polling fallback for AI status ────────────
+// ─── ADR-431b: Polling fallback for AI status ────────────
 // Poll every 5s while any document has pending/processing AI (SSE double-safety)
+// Uses silent mode → no skeleton, no blink
 let aiPollTimer = null
 const hasProcessingAi = computed(() =>
   store.requests.some(r => r.upload && ['pending', 'processing'].includes(r.upload.ai_status)),
@@ -517,7 +519,7 @@ const hasProcessingAi = computed(() =>
 
 watch(hasProcessingAi, active => {
   if (active && !aiPollTimer) {
-    aiPollTimer = setInterval(() => store.fetchRequests(), 5000)
+    aiPollTimer = setInterval(() => store.fetchRequests({ silent: true }), 5000)
   }
   else if (!active && aiPollTimer) {
     clearInterval(aiPollTimer)
@@ -528,6 +530,18 @@ watch(hasProcessingAi, active => {
 onBeforeUnmount(() => {
   if (aiPollTimer) clearInterval(aiPollTimer)
 })
+
+// ─── ADR-431b: Track upload timestamps for AI timeout UX ─────
+// Stores local timestamp when admin uploads a document (for timeout message in DocumentAiChip)
+const uploadTimestamps = ref({})
+
+const trackUploadTimestamp = requestId => {
+  uploadTimestamps.value[requestId] = Date.now()
+}
+
+const getUploadedAt = request => {
+  return uploadTimestamps.value[request.id] || null
+}
 
 // ─── Batch request dialog ───────────────────────────────
 const isRequestDialogVisible = ref(false)
@@ -724,7 +738,7 @@ const submitRequest = async () => {
             <VChip size="small" :color="unifiedStatusColor(unifiedStatus(item))">
               {{ unifiedStatusLabel(unifiedStatus(item)) }}
             </VChip>
-            <DocumentAiChip v-if="item.upload" :analysis="item.upload.ai_analysis" :ai-status="item.upload.ai_status" />
+            <DocumentAiChip v-if="item.upload" :analysis="item.upload.ai_analysis" :ai-status="item.upload.ai_status" :uploaded-at="getUploadedAt(item)" />
           </div>
         </template>
         <template #item.requested_at="{ item }">

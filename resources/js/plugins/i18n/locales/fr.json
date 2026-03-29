@@ -3961,7 +3961,8 @@
       "pending": "Analyse en attente",
       "processing": "Analyse en cours...",
       "completed": "Analyse terminée",
-      "failed": "Échec de l'analyse"
+      "failed": "Échec de l'analyse",
+      "slow": "Analyse plus longue que prévu..."
     },
     "retryAi": "Relancer l'analyse",
     "retryAiSuccess": "Analyse relancée avec succès",
