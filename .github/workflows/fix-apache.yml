@@ -1,0 +1,79 @@
+# ──────────────────────────────────────────────────────────────────
+# TEMPORARY — Fix Apache crash (ISPConfig SSL cert missing)
+# Trigger: manual dispatch only. DELETE after use.
+# ──────────────────────────────────────────────────────────────────
+name: Fix Apache SSL
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    name: Regenerate ISPConfig SSL + restart Apache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Fix ISPConfig SSL cert + restart Apache
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p ${{ secrets.VPS_PORT || 22 }} \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            'bash -s' <<'REMOTE_SCRIPT'
+          set -e
+
+          echo "=== Diagnostic ==="
+          echo "Apache status: $(systemctl is-active apache2 2>/dev/null || echo 'unknown')"
+          ls -la /usr/local/ispconfig/interface/ssl/ 2>/dev/null || echo "SSL dir not found"
+
+          echo ""
+          echo "=== Fix: regenerate ISPConfig self-signed SSL cert ==="
+          mkdir -p /usr/local/ispconfig/interface/ssl
+
+          # Backup existing files if any
+          for f in ispserver.crt ispserver.key; do
+            if [ -f "/usr/local/ispconfig/interface/ssl/$f" ]; then
+              cp "/usr/local/ispconfig/interface/ssl/$f" "/usr/local/ispconfig/interface/ssl/$f.bak.$(date +%s)"
+            fi
+          done
+
+          # Generate new self-signed cert (10 years)
+          openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout /usr/local/ispconfig/interface/ssl/ispserver.key \
+            -out /usr/local/ispconfig/interface/ssl/ispserver.crt \
+            -subj "/CN=panel.novamoov.com" 2>&1
+
+          chmod 600 /usr/local/ispconfig/interface/ssl/ispserver.key
+          chmod 644 /usr/local/ispconfig/interface/ssl/ispserver.crt
+
+          echo "SSL cert generated:"
+          openssl x509 -noout -subject -dates -in /usr/local/ispconfig/interface/ssl/ispserver.crt
+
+          echo ""
+          echo "=== Apache config test ==="
+          /usr/sbin/apache2ctl configtest 2>&1
+
+          echo ""
+          echo "=== Restart Apache ==="
+          systemctl restart apache2
+          systemctl status apache2 --no-pager -l
+
+          echo ""
+          echo "=== Verify sites ==="
+          sleep 2
+          curl -sk -o /dev/null -w "dev.leezr.com  → HTTP %{http_code}\n" https://dev.leezr.com/ || echo "dev.leezr.com FAILED"
+          curl -sk -o /dev/null -w "leezr.com      → HTTP %{http_code}\n" https://leezr.com/ || echo "leezr.com FAILED"
+          curl -sk -o /dev/null -w "panel          → HTTP %{http_code}\n" https://panel.novamoov.com:8081/ || echo "panel FAILED"
+
+          echo ""
+          echo "=== DONE ==="
+          REMOTE_SCRIPT
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
