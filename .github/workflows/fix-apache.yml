@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────────
-# TEMPORARY — Fix Apache crash (ISPConfig SSL cert missing)
+# TEMPORARY — Disable Nginx (conflicts with Apache) + ensure Apache
 # Trigger: manual dispatch only. DELETE after use.
 # ──────────────────────────────────────────────────────────────────
 name: Fix Apache SSL
@@ -9,7 +9,7 @@ on:
 
 jobs:
   fix:
-    name: Regenerate ISPConfig SSL + restart Apache
+    name: Disable Nginx + ensure Apache
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
@@ -19,90 +19,41 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Fix ISPConfig SSL cert + restart Apache
+      - name: Disable Nginx permanently + restart Apache
         run: |
           ssh -i ~/.ssh/deploy_key \
             -p ${{ secrets.VPS_PORT || 22 }} \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             'bash -s' <<'REMOTE_SCRIPT'
 
-          echo "=== Diagnostic ==="
-          echo "Apache status: $(systemctl is-active apache2 2>/dev/null || echo 'unknown')"
-          ls -la /usr/local/ispconfig/interface/ssl/ 2>/dev/null || echo "SSL dir not found"
-
-          echo ""
-          echo "=== Check what is using port 80/443 ==="
+          echo "=== Before ==="
+          echo "Nginx: $(systemctl is-active nginx 2>/dev/null) / enabled: $(systemctl is-enabled nginx 2>/dev/null)"
+          echo "Apache: $(systemctl is-active apache2 2>/dev/null) / enabled: $(systemctl is-enabled apache2 2>/dev/null)"
           ss -tlnp | grep -E ':80 |:443 ' || echo "Nothing on 80/443"
 
           echo ""
-          echo "=== Check nginx ==="
-          systemctl is-active nginx 2>/dev/null && echo "Nginx is ACTIVE" || echo "Nginx is not active"
-          nginx -t 2>&1 || true
-
-          echo ""
-          echo "=== Fix: regenerate ISPConfig self-signed SSL cert ==="
-          mkdir -p /usr/local/ispconfig/interface/ssl
-
-          for f in ispserver.crt ispserver.key; do
-            if [ -f "/usr/local/ispconfig/interface/ssl/$f" ]; then
-              cp "/usr/local/ispconfig/interface/ssl/$f" "/usr/local/ispconfig/interface/ssl/$f.bak.$(date +%s)" 2>/dev/null || true
-            fi
-          done
-
-          openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-            -keyout /usr/local/ispconfig/interface/ssl/ispserver.key \
-            -out /usr/local/ispconfig/interface/ssl/ispserver.crt \
-            -subj "/CN=panel.novamoov.com" 2>&1
-
-          chmod 600 /usr/local/ispconfig/interface/ssl/ispserver.key
-          chmod 644 /usr/local/ispconfig/interface/ssl/ispserver.crt
-
-          echo "SSL cert generated:"
-          openssl x509 -noout -subject -dates -in /usr/local/ispconfig/interface/ssl/ispserver.crt
-
-          echo ""
-          echo "=== Apache config test ==="
-          /usr/sbin/apache2ctl configtest 2>&1 || true
-
-          echo ""
-          echo "=== Stop nginx if it blocks port 80/443 ==="
-          if systemctl is-active nginx &>/dev/null; then
-            echo "Stopping nginx to free ports..."
-            systemctl stop nginx 2>&1 || true
-            sleep 1
-          fi
+          echo "=== Disable Nginx permanently ==="
+          systemctl stop nginx 2>&1 || true
+          systemctl disable nginx 2>&1 || true
+          systemctl mask nginx 2>&1 || true
+          echo "Nginx stopped, disabled, and masked"
 
           echo ""
           echo "=== Restart Apache ==="
           systemctl restart apache2 2>&1 || true
           sleep 2
-          systemctl status apache2 --no-pager -l 2>&1 || true
 
           echo ""
-          echo "=== Apache error log (last 30 lines) ==="
-          tail -30 /var/log/apache2/error.log 2>/dev/null || echo "Cannot read error.log"
-
-          echo ""
-          echo "=== journalctl apache2 (last 30 lines) ==="
-          journalctl -u apache2 --no-pager -n 30 2>&1 || true
-
-          echo ""
-          echo "=== Check ports after restart ==="
-          ss -tlnp | grep -E ':80 |:443 ' || echo "Nothing on 80/443"
+          echo "=== After ==="
+          echo "Nginx: $(systemctl is-active nginx 2>/dev/null) / enabled: $(systemctl is-enabled nginx 2>/dev/null)"
+          echo "Apache: $(systemctl is-active apache2 2>/dev/null) / enabled: $(systemctl is-enabled apache2 2>/dev/null)"
+          ss -tlnp | grep -E ':80 |:443 '
 
           echo ""
           echo "=== Verify sites ==="
-          sleep 2
-          curl -sk -o /dev/null -w "dev.leezr.com  -> HTTP %{http_code}\n" https://dev.leezr.com/ || echo "dev.leezr.com FAILED"
-          curl -sk -o /dev/null -w "leezr.com      -> HTTP %{http_code}\n" https://leezr.com/ || echo "leezr.com FAILED"
-          curl -sk -o /dev/null -w "panel          -> HTTP %{http_code}\n" https://panel.novamoov.com:8081/ || echo "panel FAILED"
-
-          echo ""
-          echo "=== Start nginx back (reverse proxy) if needed ==="
-          if ! ss -tlnp | grep -q ':80 '; then
-            echo "Port 80 free, starting nginx..."
-            systemctl start nginx 2>&1 || true
-          fi
+          curl -sk -o /dev/null -w "dev.leezr.com  -> HTTP %{http_code}\n" https://dev.leezr.com/ || echo "FAILED"
+          curl -sk -o /dev/null -w "leezr.com      -> HTTP %{http_code}\n" https://leezr.com/ || echo "FAILED"
+          curl -sk -o /dev/null -w "panel:8081     -> HTTP %{http_code}\n" https://panel.novamoov.com:8081/ || echo "FAILED"
 
           echo ""
           echo "=== DONE ==="
