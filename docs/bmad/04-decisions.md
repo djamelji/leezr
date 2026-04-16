@@ -15920,6 +15920,40 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
   - `routes/platform.php` (2 routes POST ajoutées)
   - `fr.json`, `en.json` (19 clés ajoutées chacun)
 
+### ADR-452 — IMAP Inbox Fetching + Compose Fix + APP_NAME Fix (2026-04-16)
+
+**Contexte** :
+- POST `/api/platform/email/inbox/compose` retournait 500 : `Undefined array key "company_id"` car champ nullable non dans `$validated`
+- L'inbox n'affichait aucun email car pas de client IMAP — seul le webhook inbound existait
+- Le logo email affichait "laravel" car `APP_NAME=Laravel` dans `.env` de prod et `PlatformSetting.general` était null
+- Templates et règles d'orchestration absents en prod (seeders pas exécutés)
+
+**Décisions** :
+1. Fix compose : `$validated['company_id'] ?? null` au lieu de `$validated['company_id']`
+2. Créer `ImapFetcher` service : connexion IMAP, récupération emails, création threads/logs, déduplication par message_id
+3. Créer commande `email:fetch-inbox` scheduled toutes les 5 minutes
+4. Ajouter section IMAP dans les paramètres email (host, port, encryption, username, password, folder)
+5. Ajouter endpoints `test-imap` et `fetch-inbox` pour test connexion et sync manuelle
+6. Fixer `APP_NAME=Leezr` directement dans `.env` prod + `config:cache`
+7. Exécuter seeders `EmailTemplateSeeder` et `EmailOrchestrationRuleSeeder` sur prod et staging
+
+**Conséquences** :
+- L'inbox affichera les vrais emails du serveur ISPConfig une fois IMAP configuré dans Paramètres → Email → IMAP
+- La sync automatique tourne toutes les 5 minutes via le scheduler
+- Le bouton "Synchroniser maintenant" permet un fetch immédiat
+- php-imap extension déjà disponible sur le VPS (vérifié)
+
+**Fichiers** :
+- `app/Core/Email/ImapFetcher.php` (nouveau — 342 lignes)
+- `app/Console/Commands/EmailFetchInboxCommand.php` (nouveau)
+- `app/Modules/Platform/Email/Http/EmailInboxController.php` (fix compose)
+- `app/Modules/Platform/Email/Http/EmailSettingsController.php` (IMAP fields + endpoints)
+- `resources/js/pages/platform/email/_EmailSettingsTab.vue` (section IMAP UI)
+- `routes/platform.php` (2 routes IMAP)
+- `routes/console.php` (scheduled task)
+- `app/Core/Automation/ScheduledTaskRegistry.php` (task entry)
+- `fr.json`, `en.json` (15 clés IMAP)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
