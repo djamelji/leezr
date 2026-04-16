@@ -116,8 +116,9 @@ class EmailInboxController
             'company_id' => 'nullable|exists:companies,id',
         ]);
 
-        $company = $validated['company_id']
-            ? \App\Core\Models\Company::find($validated['company_id'])
+        $companyId = $validated['company_id'] ?? null;
+        $company = $companyId
+            ? \App\Core\Models\Company::find($companyId)
             : null;
 
         // Create thread
