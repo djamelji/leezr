@@ -149,6 +149,16 @@ class ScheduledTaskRegistry
             'cron' => '*/5 * * * *',
             'expected_interval_minutes' => 5,
         ],
+
+        // ── Email ────────────────────────────────────────────
+        'email:fetch-inbox' => [
+            'command' => 'email:fetch-inbox',
+            'description' => 'automations.tasks.emailFetchInbox',
+            'category' => 'system',
+            'frequency' => 'every5min',
+            'cron' => '*/5 * * * *',
+            'expected_interval_minutes' => 5,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

@@ -17,6 +17,19 @@ const smtpForm = ref({
 const originalSmtp = ref({})
 const smtpFormRef = ref()
 
+// ── IMAP (platform-wide) ──
+const imapForm = ref({
+  imap_host: '',
+  imap_port: 993,
+  imap_encryption: 'ssl',
+  imap_username: '',
+  imap_password: '',
+  imap_folder: 'INBOX',
+})
+
+const originalImap = ref({})
+const imapFormRef = ref()
+
 // ── Identity (per-admin) ──
 const identityForm = ref({
   from_name: '',
@@ -33,10 +46,15 @@ const branding = ref({ app_name: 'Leezr', primary_color: '#7367F0' })
 // ── Loading states ──
 const isLoading = ref(true)
 const isSavingSmtp = ref(false)
+const isSavingImap = ref(false)
 const isSavingIdentity = ref(false)
 const isTesting = ref(false)
+const isTestingImap = ref(false)
+const isFetchingInbox = ref(false)
 const testResult = ref(null)
+const imapTestResult = ref(null)
 const passwordSet = ref(false)
+const imapPasswordSet = ref(false)
 
 const encryptionOptions = [
   { title: 'TLS (587)', value: 'tls' },
@@ -44,7 +62,14 @@ const encryptionOptions = [
   { title: 'None', value: 'none' },
 ]
 
+const imapEncryptionOptions = [
+  { title: 'SSL (993)', value: 'ssl' },
+  { title: 'TLS (143)', value: 'tls' },
+  { title: 'None', value: 'none' },
+]
+
 const { isDirty: isSmtpDirty } = useUnsavedChanges(smtpForm, originalSmtp)
+const { isDirty: isImapDirty } = useUnsavedChanges(imapForm, originalImap)
 const { isDirty: isIdentityDirty } = useUnsavedChanges(identityForm, originalIdentity)
 
 const fetchAll = async () => {
@@ -66,6 +91,20 @@ const fetchAll = async () => {
     }
     passwordSet.value = s.smtp_password_set || false
     originalSmtp.value = { ...smtpForm.value }
+
+    // IMAP
+    const im = settingsData.imap || {}
+
+    imapForm.value = {
+      imap_host: im.imap_host || '',
+      imap_port: im.imap_port || 993,
+      imap_encryption: im.imap_encryption || 'ssl',
+      imap_username: im.imap_username || '',
+      imap_password: '',
+      imap_folder: im.imap_folder || 'INBOX',
+    }
+    imapPasswordSet.value = im.imap_password_set || false
+    originalImap.value = { ...imapForm.value }
 
     branding.value = settingsData.branding || { app_name: 'Leezr', primary_color: '#7367F0' }
 
@@ -115,6 +154,34 @@ const saveSmtp = async () => {
   }
 }
 
+const saveImap = async () => {
+  const { valid } = await imapFormRef.value.validate()
+  if (!valid) return
+
+  isSavingImap.value = true
+  try {
+    const payload = { ...imapForm.value }
+
+    if (!payload.imap_password && imapPasswordSet.value) {
+      payload.imap_password = '********'
+    }
+
+    await $platformApi('/email/settings', { method: 'PUT', body: payload })
+    toast(t('email.settingsSaved'), 'success')
+    originalImap.value = { ...imapForm.value }
+
+    if (payload.imap_password && payload.imap_password !== '********') {
+      imapPasswordSet.value = true
+    }
+  }
+  catch (e) {
+    toast(e.message || t('email.saveError'), 'error')
+  }
+  finally {
+    isSavingImap.value = false
+  }
+}
+
 const saveIdentity = async () => {
   const { valid } = await identityFormRef.value.validate()
   if (!valid) return
@@ -156,6 +223,44 @@ const testConnection = async () => {
   }
 }
 
+const testImapConnection = async () => {
+  isTestingImap.value = true
+  imapTestResult.value = null
+  try {
+    const data = await $platformApi('/email/settings/test-imap', { method: 'POST' })
+
+    imapTestResult.value = data
+    if (data.success) {
+      toast(t('email.imapTestSuccess'), 'success')
+    }
+    else {
+      toast(t('email.imapTestFailed', { error: data.message }), 'error')
+    }
+  }
+  catch (e) {
+    imapTestResult.value = { success: false, message: e.message }
+    toast(t('email.imapTestFailed', { error: e.message }), 'error')
+  }
+  finally {
+    isTestingImap.value = false
+  }
+}
+
+const fetchInbox = async () => {
+  isFetchingInbox.value = true
+  try {
+    const data = await $platformApi('/email/settings/fetch-inbox', { method: 'POST' })
+
+    toast(t('email.fetchSuccess', { count: data.count }), 'success')
+  }
+  catch (e) {
+    toast(e.message || t('email.fetchFailed'), 'error')
+  }
+  finally {
+    isFetchingInbox.value = false
+  }
+}
+
 onMounted(fetchAll)
 </script>
 
@@ -167,22 +272,32 @@ onMounted(fetchAll)
 
   <template v-else>
     <VRow>
-      <!-- SMTP Configuration (platform-wide) -->
+      <!-- Left column: SMTP + IMAP -->
       <VCol
         cols="12"
         md="6"
       >
+        <!-- SMTP Configuration -->
         <VForm
           ref="smtpFormRef"
           @submit.prevent="saveSmtp"
         >
-          <VCard>
+          <VCard class="mb-6">
             <VCardTitle class="d-flex align-center gap-2 pa-5">
               <VIcon
                 icon="tabler-server"
                 size="22"
               />
               {{ t('email.smtpConfig') }}
+              <VChip
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                label
+                class="ms-2"
+              >
+                {{ t('email.outgoing') }}
+              </VChip>
             </VCardTitle>
             <VCardText>
               <VRow>
@@ -199,8 +314,6 @@ onMounted(fetchAll)
                   <AppTextField
                     v-model.number="smtpForm.smtp_port"
                     :label="t('email.smtpPort')"
-                    :hint="t('email.smtpPortHelp')"
-                    persistent-hint
                     type="number"
                     :rules="[v => !v || (v >= 1 && v <= 65535) || 'Port 1-65535']"
                   />
@@ -267,6 +380,142 @@ onMounted(fetchAll)
                     class="mt-3"
                   >
                     {{ testResult.message }}
+                  </VAlert>
+                </VCol>
+              </VRow>
+            </VCardText>
+          </VCard>
+        </VForm>
+
+        <!-- IMAP Configuration -->
+        <VForm
+          ref="imapFormRef"
+          @submit.prevent="saveImap"
+        >
+          <VCard>
+            <VCardTitle class="d-flex align-center gap-2 pa-5">
+              <VIcon
+                icon="tabler-mail-down"
+                size="22"
+              />
+              {{ t('email.imapConfig') }}
+              <VChip
+                size="x-small"
+                color="info"
+                variant="tonal"
+                label
+                class="ms-2"
+              >
+                {{ t('email.incoming') }}
+              </VChip>
+            </VCardTitle>
+            <VCardText>
+              <VAlert
+                variant="tonal"
+                type="info"
+                density="compact"
+                class="mb-4"
+              >
+                {{ t('email.imapHelp') }}
+              </VAlert>
+              <VRow>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="imapForm.imap_host"
+                    :label="t('email.imapHost')"
+                    placeholder="mail.leezr.com"
+                  />
+                </VCol>
+                <VCol cols="6">
+                  <AppTextField
+                    v-model.number="imapForm.imap_port"
+                    :label="t('email.imapPort')"
+                    type="number"
+                    :rules="[v => !v || (v >= 1 && v <= 65535) || 'Port 1-65535']"
+                  />
+                </VCol>
+                <VCol cols="6">
+                  <AppSelect
+                    v-model="imapForm.imap_encryption"
+                    :label="t('email.imapEncryption')"
+                    :items="imapEncryptionOptions"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="imapForm.imap_username"
+                    :label="t('email.imapUsername')"
+                    placeholder="admin@leezr.com"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="imapForm.imap_password"
+                    :label="t('email.imapPassword')"
+                    type="password"
+                    :placeholder="imapPasswordSet ? '••••••••' : ''"
+                    :hint="imapPasswordSet ? t('email.passwordAlreadySet') : ''"
+                    persistent-hint
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <AppTextField
+                    v-model="imapForm.imap_folder"
+                    :label="t('email.imapFolder')"
+                    placeholder="INBOX"
+                  />
+                </VCol>
+                <VCol cols="12">
+                  <div class="d-flex gap-3">
+                    <VBtn
+                      variant="outlined"
+                      color="secondary"
+                      :loading="isTestingImap"
+                      :disabled="!imapForm.imap_host"
+                      @click="testImapConnection"
+                    >
+                      <VIcon
+                        icon="tabler-plug-connected"
+                        class="me-2"
+                      />
+                      {{ t('email.testConnection') }}
+                    </VBtn>
+                    <VBtn
+                      variant="outlined"
+                      color="info"
+                      :loading="isFetchingInbox"
+                      :disabled="!imapForm.imap_host"
+                      @click="fetchInbox"
+                    >
+                      <VIcon
+                        icon="tabler-refresh"
+                        class="me-2"
+                      />
+                      {{ t('email.fetchNow') }}
+                    </VBtn>
+                    <VSpacer />
+                    <VBtn
+                      type="submit"
+                      color="primary"
+                      :loading="isSavingImap"
+                      :disabled="isSavingImap"
+                    >
+                      <VIcon
+                        icon="tabler-device-floppy"
+                        class="me-2"
+                      />
+                      {{ t('common.save') }}
+                    </VBtn>
+                  </div>
+
+                  <VAlert
+                    v-if="imapTestResult"
+                    :type="imapTestResult.success ? 'success' : 'error'"
+                    variant="tonal"
+                    density="compact"
+                    class="mt-3"
+                  >
+                    {{ imapTestResult.message }}
                   </VAlert>
                 </VCol>
               </VRow>

@@ -589,6 +589,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::get('/email/settings', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'show']);
             Route::put('/email/settings', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'update']);
             Route::post('/email/settings/test', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'test']);
+            Route::post('/email/settings/test-imap', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'testImap']);
+            Route::post('/email/settings/fetch-inbox', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'fetchInbox']);
 
             // Per-admin email identity (ADR-450)
             Route::get('/email/identity', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'showIdentity']);

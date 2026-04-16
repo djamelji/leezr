@@ -36,8 +36,19 @@ class EmailSettingsController
             $primaryColor = '#7367F0';
         }
 
+        // IMAP settings for inbox fetching
+        $imap = [
+            'imap_host' => $settings['imap_host'] ?? '',
+            'imap_port' => $settings['imap_port'] ?? 993,
+            'imap_encryption' => $settings['imap_encryption'] ?? 'ssl',
+            'imap_username' => $settings['imap_username'] ?? '',
+            'imap_password_set' => ! empty($settings['imap_password']),
+            'imap_folder' => $settings['imap_folder'] ?? 'INBOX',
+        ];
+
         return response()->json([
             'settings' => $smtp,
+            'imap' => $imap,
             'branding' => [
                 'app_name' => $general['app_name'] ?? config('app.name', 'Leezr'),
                 'primary_color' => $primaryColor,
@@ -57,6 +68,12 @@ class EmailSettingsController
             'smtp_encryption' => 'nullable|in:tls,ssl,none',
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string|max:255',
+            'imap_host' => 'nullable|string|max:255',
+            'imap_port' => 'nullable|integer|min:1|max:65535',
+            'imap_encryption' => 'nullable|in:ssl,tls,none',
+            'imap_username' => 'nullable|string|max:255',
+            'imap_password' => 'nullable|string|max:255',
+            'imap_folder' => 'nullable|string|max:100',
         ]);
 
         $instance = PlatformSetting::instance();
@@ -66,8 +83,11 @@ class EmailSettingsController
         if (($validated['smtp_password'] ?? '') === '********') {
             $validated['smtp_password'] = $current['smtp_password'] ?? null;
         }
+        if (($validated['imap_password'] ?? '') === '********') {
+            $validated['imap_password'] = $current['imap_password'] ?? null;
+        }
 
-        // Preserve identity fields that might exist from old config
+        // Preserve existing fields
         $merged = array_merge($current, $validated);
 
         $instance->update(['email' => $merged]);
@@ -80,6 +100,45 @@ class EmailSettingsController
         $result = app(EmailService::class)->testConnection();
 
         return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function testImap(): JsonResponse
+    {
+        $fetcher = new \App\Core\Email\ImapFetcher;
+
+        if (! $fetcher->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'IMAP not configured.'], 422);
+        }
+
+        $success = $fetcher->connect();
+        $fetcher->disconnect();
+
+        return response()->json([
+            'success' => $success,
+            'message' => $success ? 'IMAP connection successful.' : 'IMAP connection failed: '.imap_last_error(),
+        ], $success ? 200 : 422);
+    }
+
+    public function fetchInbox(): JsonResponse
+    {
+        $fetcher = new \App\Core\Email\ImapFetcher;
+
+        if (! $fetcher->isConfigured()) {
+            return response()->json(['success' => false, 'message' => 'IMAP not configured.'], 422);
+        }
+
+        if (! $fetcher->connect()) {
+            return response()->json(['success' => false, 'message' => 'IMAP connection failed.'], 422);
+        }
+
+        $count = $fetcher->fetch(50);
+        $fetcher->disconnect();
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$count} email(s) fetched.",
+            'count' => $count,
+        ]);
     }
 
     /**

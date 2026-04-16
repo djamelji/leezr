@@ -125,3 +125,10 @@ Schedule::command('alerts:evaluate')->everyFiveMinutes()->withoutOverlapping()
     ->before(SI::before('alerts:evaluate'))
     ->onSuccess(SI::onSuccess('alerts:evaluate'))
     ->onFailure(SI::onFailure('alerts:evaluate'));
+
+// ── Email IMAP fetch ───────────────────────────────────
+Schedule::command('email:fetch-inbox')->everyFiveMinutes()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/email-fetch.log'))
+    ->before(SI::before('email:fetch-inbox'))
+    ->onSuccess(SI::onSuccess('email:fetch-inbox'))
+    ->onFailure(SI::onFailure('email:fetch-inbox'));
