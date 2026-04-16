@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BillingCheckoutSession extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'subscription_id', 'provider_key',
         'provider_session_id', 'status', 'completed_at',
@@ -26,11 +29,6 @@ class BillingCheckoutSession extends Model
             'last_checked_at' => 'datetime',
             'metadata' => 'array',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function subscription(): BelongsTo

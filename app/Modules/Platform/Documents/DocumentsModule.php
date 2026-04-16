@@ -24,6 +24,8 @@ class DocumentsModule implements ModuleDefinition
                         'to' => ['name' => 'platform-documents'],
                         'icon' => 'tabler-file-text',
                         'permission' => 'manage_document_catalog',
+                        'group' => 'product',
+                        'sort' => 33,
                     ],
                 ],
                 routeNames: ['platform-documents', 'platform-documents-id'],

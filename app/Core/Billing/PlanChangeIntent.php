@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PlanChangeIntent extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'from_plan_key', 'to_plan_key',
         'interval_from', 'interval_to',
@@ -31,13 +34,6 @@ class PlanChangeIntent extends Model
             'executed_at' => 'datetime',
             'proration_snapshot' => 'array',
         ];
-    }
-
-    // ─── Relations ──────────────────────────────────────────
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     // ─── Scopes ─────────────────────────────────────────────

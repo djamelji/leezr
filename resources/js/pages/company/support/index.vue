@@ -1,5 +1,6 @@
 <script setup>
 import { useSupportStore } from '@/modules/company/support/support.store'
+import { formatDate } from '@/utils/datetime'
 
 definePage({
   meta: {
@@ -95,7 +96,6 @@ const openTicket = row => {
   router.push({ name: 'company-support-id', params: { id: row.id } })
 }
 
-const formatDate = d => d ? new Date(d).toLocaleDateString() : '—'
 
 watch([statusFilter], () => {
   page.value = 1
@@ -111,6 +111,7 @@ onMounted(loadTickets)
       <VCardTitle class="d-flex align-center justify-space-between">
         <span>{{ t('support.myTickets') }}</span>
         <VBtn
+          v-can="'support.create'"
           color="primary"
           prepend-icon="tabler-plus"
           @click="isCreateDialogOpen = true"
@@ -176,6 +177,7 @@ onMounted(loadTickets)
                 {{ t('support.noTicketsYet') }}
               </p>
               <VBtn
+                v-can="'support.create'"
                 color="primary"
                 prepend-icon="tabler-plus"
                 @click="isCreateDialogOpen = true"
@@ -229,6 +231,7 @@ onMounted(loadTickets)
             {{ t('common.cancel') }}
           </VBtn>
           <VBtn
+            v-can="'support.create'"
             color="primary"
             :disabled="!newTicket.subject || !newTicket.body"
             @click="createTicket"

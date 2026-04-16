@@ -14947,4 +14947,979 @@ Le module Documents fonctionne techniquement (OCR, AI analysis, viewer) mais l'U
 
 ---
 
+## ADR-432 : Global Scopes + Trait BelongsToCompany — Isolation Multi-Tenant Automatique (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-TENANCY révèle que les 40+ modèles Eloquent avec `company_id` sont scopés manuellement via `->where('company_id', $company->id)` dans chaque query. Aucun global scope, aucun trait centralisé. L'isolation est correcte (0 fuite détectée) mais fragile face à la croissance de l'équipe — un oubli de `where` dans un nouveau controller = fuite cross-tenant.
+
+**Décision** :
+1. Créer un trait `BelongsToCompany` qui boot un `CompanyScope` global scope automatiquement
+2. Le trait ajoute `addGlobalScope('company', new CompanyScope)` au boot du modèle
+3. Le trait auto-set `company_id` sur `creating` si `app('company.context')` est bound
+4. Le middleware `SetCompanyContext` bind `app()->instance('company.context', $company)` après validation
+5. Les 40+ modèles tenant-scoped adoptent le trait
+6. Les ReadModels suppriment les `where('company_id', ...)` devenus redondants
+7. Les platform controllers utilisent `withoutGlobalScope('company')` explicitement
+
+**Alternatives rejetées** :
+- **Statu quo (scoping manuel)** — Fonctionnel mais non scalable. Risque de sécurité croissant avec la taille de l'équipe
+- **Package multi-tenant (stancl/tenancy)** — Overkill pour un shared database. Ajoute de la complexité sans bénéfice
+- **Row-level security PostgreSQL** — Non applicable (MySQL). Et ne résout pas le besoin applicatif
+
+**Conséquences** :
+- Toute query sur un modèle avec `BelongsToCompany` est automatiquement scopée — impossible d'oublier
+- Les tests cross-tenant peuvent vérifier l'invariant : tout modèle avec migration `company_id` DOIT avoir le trait
+- AiRequestLog (company_id nullable) nécessite un scope conditionnel dans le trait
+- Les webhooks Stripe doivent opérer hors scope (platform context)
+
+**Règles imposées** :
+- Tout modèle avec `company_id` DOIT utiliser `BelongsToCompany` — aucune exception
+- `withoutGlobalScope('company')` interdit dans les controllers company — uniquement dans platform admin et jobs
+- Tests cross-tenant obligatoires pour chaque nouvel endpoint company-scoped
+
+**Implémentation (2026-04-11) — TERMINÉE** :
+
+Fichiers créés :
+- `app/Core/Scopes/CompanyScope.php` — Global scope, no-op quand pas de contexte
+- `app/Core/Traits/BelongsToCompany.php` — Boot scope + auto-fill company_id + company() + withoutCompanyScope()
+- `tests/Feature/CompanyScopeTest.php` — 11 tests : scope filtering, cross-tenant isolation, auto-fill, context switch, middleware binding
+
+Fichiers modifiés — 28 modèles avec trait BelongsToCompany :
+- Core RBAC : Membership, CompanyRole, CompanyModule, CompanyModuleActivationReason, CompanyPresetSnapshot, CompanyAuditLog
+- Billing : Subscription, Invoice, Payment, CompanyPaymentProfile, CompanyWallet, CompanyPaymentCustomer, CompanyAddonSubscription, ScheduledDebit, BillingCheckoutSession, BillingCouponUsage, PlanChangeIntent, CreditNote, LedgerEntry, FinancialSnapshot, BillingExpectedConfirmation
+- Documents : CompanyDocument, MemberDocument, DocumentRequest, DocumentTypeActivation, CompanyDocumentSetting
+- Logistics : Shipment
+- Support : SupportTicket
+
+Fichiers modifiés — Middleware :
+- `app/Company/Http/Middleware/SetCompanyContext.php` — `app()->instance('company.context', $company)` + `terminate()` pour clear le contexte
+
+Modèles EXCLUS (company_id nullable) : NotificationEvent, FieldActivation, FieldDefinition, DocumentType, AiRequestLog, SecurityAlert
+
+Tests ajustés (CompanyScope rend les records étrangers invisibles → 422/404 au lieu de 403) :
+- `tests/Feature/BillingP0SecurityTest.php` — assertContains [403, 422]
+- `tests/Feature/BillingAdr229Test.php` — assertContains [403, 404]
+- `tests/Feature/InvoiceBatchPayTest.php` — assertContains [403, 422]
+
+Résultat : 2257 tests passed, 0 failed, 12 skipped.
+
+---
+
+## ADR-433 : Contrat Permissions Frontend — Directive v-can, Composable useCan, Route Guards Complets (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-RBAC révèle que le RBAC backend est complet (50+ permissions, 4 abilities, middleware stack solide) mais le frontend n'applique aucun gating sur les actions UI. Les boutons CRUD sont visibles pour tous, le composable `useCompanyPermissionContext` existe mais n'est utilisé nulle part, et l'endpoint `/me` company ne retourne pas les permissions directement.
+
+**Décision** :
+1. Enrichir l'endpoint company `/me` pour retourner `permissions[]` (array de clés) directement
+2. Créer une directive Vue globale `v-can="'permission.key'"` qui masque l'élément si permission absente
+3. Créer un composable `useCan()` : `{ can, canAll, canAny, canModule, isOwner, isAdmin }`
+4. Gater toutes les actions CRUD dans les pages company avec `v-can` ou `useCan()`
+5. Compléter les `meta.permission` sur toutes les routes company
+6. Brancher le topic SSE `rbac.changed` pour rafraîchir les permissions via un appel `/me`
+7. Créer une page 403 contextuelle indiquant la permission manquante
+
+**Alternatives rejetées** :
+- **CASL (frontend RBAC library)** — Retiré en ADR-087. Trop complexe pour les besoins actuels
+- **v-if partout** — Verbeux, non centralisé, facile à oublier
+- **Backend-only gating** — Les actions restent visibles, l'UX est confuse (bouton cliquable → erreur 403)
+
+**Conséquences** :
+- Toute action visible est autorisée — pas de "bouton fantôme" qui échoue au clic
+- Le backend reste l'autorité — le frontend masque, le backend rejette (double validation)
+- Le topic SSE `rbac.changed` est consommé → les permissions sont live
+- L'owner bypass est reflété côté frontend (`isOwner` = all permissions)
+
+**Règles imposées** :
+- Toute action CRUD visible DOIT être gatée par `v-can` ou `useCan()` — sans exception
+- Route `meta.permission` OBLIGATOIRE sur toute route company avec données protégées
+- Le backend reste l'autorité finale — jamais de "frontend-only" gating
+
+**Implémentation (2026-04-11) — TERMINÉE** :
+
+Fichiers créés :
+- `resources/js/composables/useCan.js` — composable `{ can, canAll, canAny, canModule, isOwner, isAdmin }`
+- `resources/js/plugins/3.directives.js` — directive `v-can` globale (string ou array, OR logic)
+
+Pages modifiées avec v-can (~57 boutons d'action gated) :
+- Members : index.vue (invite, edit, delete), [id].vue (reset password, set password)
+- Roles : roles.vue (add, edit, clone, delete)
+- Documents : _DocumentsOverview.vue (configure, view requests), _DocumentsVault.vue (create type), _DocumentsRequests.vue (8 actions), _DocumentsCompliance.vue (export), _DocumentsSettings.vue (save)
+- Shipments : index.vue (create), [id].vue (status transitions, assign)
+- Billing : _BillingCards.vue, _BillingAlerts.vue, _BillingPaymentMethods.vue, _BillingPlan.vue, _BillingCancelDialog.vue, _BillingEmpty.vue, _BillingInvoices.vue, invoices/[id].vue, pay.vue
+- Support : index.vue (create ticket), [id].vue (send message)
+- Modules : index.vue (activate/deactivate), [key].vue (save), _ThemeRoleVisibility.vue (toggle)
+- Company Profile : _CompanyProfileOverview.vue (save), _CompanyProfileDocuments.vue (create/manage types)
+
+Audit meta.permission : 19/19 pages company ont les permissions correctes. Aucun gap.
+
+Note : l'endpoint `/me` n'a pas été enrichi car les permissions transitent déjà via `/my-companies` → auth store → `hasPermission()`. Le composable `useCan()` et la directive `v-can` consomment ce flux existant.
+
+Résultat : 2257 tests passed, 0 failed. Build propre.
+
+---
+
+## ADR-434 : Contrat SSE Global — Topic → Store → UX Behavior Matrix (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-REALTIME révèle que sur 22 topics SSE définis dans le TopicRegistry, seuls 3 sont consommés par le frontend (document.updated, automation.run.completed). Les 19 autres émettent des événements que personne n'écoute — changements RBAC, plan, modules, billing, notifications ne sont pas reflétés en temps réel.
+
+**Décision** :
+1. Définir une matrice topic → store → UX comportement pour les 22 topics
+2. Chaque store SSE-aware DOIT exposer `handleRealtimeEvent(envelope)` et `handleInvalidation()`
+3. Centraliser les topic handlers dans `core/realtime/topicHandlers.js`
+4. Brancher les 5 topics critiques en priorité : `rbac.changed`, `modules.changed`, `plan.changed`, `billing.updated`, `notification.created`
+5. Implémenter le fallback polling pour les stores critiques (auth, billing, members)
+6. Créer un notification badge temps réel alimenté par le topic `notification.created`
+7. Ajouter un connection status indicator dans la navbar
+
+**Alternatives rejetées** :
+- **WebSocket (Socket.io)** — Overkill, ajouterait une dépendance serveur. SSE + Redis suffisent
+- **Polling uniquement** — Charge serveur plus élevée, latence plus grande, pas de temps réel
+- **GraphQL subscriptions** — Nécessiterait une refonte complète de l'API
+
+**Conséquences** :
+- Toute modification backend est reflétée dans le frontend en temps réel (< 2s latence)
+- Le fallback polling garantit la cohérence même si le SSE est déconnecté
+- Le documents store reste le modèle de référence pour le smart merge
+- Le notification badge fonctionne en temps réel (plus de polling ou reload)
+
+**Règles imposées** :
+- Chaque topic DOIT avoir un handler frontend — aucun événement émis sans consommateur
+- Le feedback UX est défini par la matrice — pas de toast/badge ad hoc
+- Le fallback polling est OBLIGATOIRE pour les stores critiques (auth, billing, members)
+- La reconnection SSE est transparente pour l'utilisateur
+
+**Implémentation (2026-04-11) — TERMINÉE** :
+
+Fichiers créés :
+- `resources/js/core/realtime/topicHandlers.js` — matrice topic → invalidates + ux pour les 17 topics company/domain
+
+Fichiers modifiés — Frontend :
+- `resources/js/core/runtime/runtime.js` — domain handler enrichi : auto-invalidation via `getTopicHandler(data.topic)` avant dispatch sur DomainEventBus
+
+Fichiers modifiés — Backend emitters (6 fichiers) :
+- `app/Modules/Core/Roles/Http/CompanyRoleController.php` — émet `rbac.changed` sur store/update/destroy
+- `app/Modules/Core/Modules/Http/CompanyModuleController.php` — émet `modules.changed` sur enable/disable/updateSettings
+- `app/Modules/Core/Members/Http/MembershipController.php` — émet `members.changed` sur store/update/destroy
+- `app/Modules/Core/Billing/Http/CompanyPlanController.php` — émet `plan.changed` sur changePlan
+- `app/Core/Billing/PlanChangeExecutor.php` — émet `plan.changed` après exécution réussie
+- `app/Modules/Platform/Billing/UseCases/ApproveSubscriptionUseCase.php` — émet `plan.changed` après approval
+
+Flux complet : Backend mutation → `publishDomainEvent()` → Redis SSE → ChannelRouter → topicHandlers invalidation → store refetch automatique
+
+Résultat : 2257 tests passed, 0 failed. Build propre.
+
+---
+
+## ADR-435 : Système Market-Aware Frontend + Formatting Rules (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-MULTI-MARKET révèle un bug critique : `worldStore.applyMarket(market)` existe mais n'est jamais appelé. Lors du switch de company FR→GB, les montants restent formatés en EUR, les dates en timezone Paris, le dial_code en +33. L'API `/my-companies` ne retourne pas le `market_key`. Le backend multi-market est complet (Market model, TaxContextResolver, TranslationRepository), mais le frontend ne le consomme pas correctement.
+
+**Décision** :
+1. Enrichir `/api/my-companies` pour retourner `market_key` et `market: { currency, locale, timezone, dial_code }` pour chaque company
+2. Appeler `worldStore.applyMarket(company.market)` dans le flow de boot ET de company switch
+3. Créer un composable `useMarketFormatting()` avec `formatAmount(cents, currency?)` et `formatDate(iso)`
+4. Créer un composant `<MoneyDisplay :amount="cents" :currency="currency" />` qui force le passage de currency
+5. Auditer toutes les pages billing pour forcer `currency` explicite (pas de fallback worldStore)
+6. Remplacer les FX rates stubs par une vraie API (ECB ou fixer.io)
+
+**Alternatives rejetées** :
+- **Currency hardcodé EUR** — Bloque l'expansion multi-market
+- **Currency depuis le plan** — Le plan n'a pas de currency, c'est le market qui la définit
+- **Formatage côté backend** — Ajouterait de la latence et compliquerait les réponses API
+
+**Conséquences** :
+- Un utilisateur multi-company voit les montants dans la bonne devise après switch
+- Les dates sont dans le bon timezone
+- Le dial_code est correct pour le market de la company
+- Les FX rates sont réels (plus de stubs)
+
+**Règles imposées** :
+- Le worldStore DOIT être mis à jour à chaque switch de company
+- `formatMoney()` ne doit JAMAIS être appelé sans `currency` explicite dans les contextes billing
+- Le backend est la source de vérité pour le market — le frontend ne résout jamais le market
+- Tests multi-market FR→GB OBLIGATOIRES
+
+**Implémentation (2026-04-11) — TERMINÉE** :
+
+Fichiers modifiés — Backend :
+- `app/Core/Auth/ReadModels/UserCompaniesReadModel.php` — eager-load `company.market`, retourne `market_key` + `market: {key, currency, locale, timezone, dial_code}` par company
+
+Fichiers modifiés — Frontend :
+- `resources/js/core/stores/auth.js` — import `useWorldStore`, ajout `_syncMarket()` appelé après `fetchMyCompanies()` et `switchCompany()`
+
+Fichiers créés :
+- `resources/js/composables/useMarketFormatting.js` — composable `{ formatAmount, formatDate, formatDateTime, currency, locale, timezone }`
+
+Flux corrigé : `/my-companies` → auth store hydraté → `_syncMarket()` → `worldStore.applyMarket(company.market)` → `formatMoney()` utilise le bon currency/locale
+
+Note : `formatMoney()` dans `utils/money.js` fonctionne désormais correctement car worldStore est synchronisé avec le market de la company active. Le composable `useMarketFormatting()` offre une API enrichie pour les composants.
+
+Résultat : 2257 tests passed, 0 failed. Build propre.
+
+---
+
+## ADR-436 : AI Transverse Multi-Module — Extension Pattern via AiModuleContract (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-AI-ENGINE révèle que le moteur AI (AiGatewayManager, 3 adapters, AiPolicyResolver, pipeline async) est production-grade mais verrouillé sur le module Documents. Le `match($moduleKey)` dans AiPolicyResolver a un `default => disabled`. L'architecture supporte l'extension mais aucun contrat formel n'existe pour brancher un nouveau module.
+
+**Décision** :
+1. Créer une interface `AiModuleContract` : `moduleKey()`, `policyFields()`, `resolvePolicy(companyId)`, `dispatchAnalysis(entity)`
+2. Créer un `AiModuleContractRegistry` qui agrège les implémentations
+3. Refactorer `AiPolicyResolver` pour utiliser le registry au lieu du `match` hardcodé
+4. Ajouter un `AiQuotaManager` : quota par company, par module, par période (mois)
+5. Ajouter un `AiCostCalculator` : coût par provider/model/tokens → suivi budgétaire
+6. Créer des composants frontend réutilisables : `AiStatusChip`, `AiInsightPanel`
+7. Support comme premier module étendu (auto-triage des tickets)
+
+**Alternatives rejetées** :
+- **Match case par module** — Fonctionnel pour 2-3 modules, non scalable au-delà
+- **AI-as-a-Service externe** — Perte de contrôle, latence, coût, dépendance
+- **Prompt marketplace** — Prématuré. Le contrat d'interface est suffisant pour V2
+
+**Conséquences** :
+- Brancher un nouveau module sur l'AI = implémenter AiModuleContract + créer un job
+- Le quota empêche une company de monopoliser les ressources AI
+- Le cost tracking permet la facturation de l'AI comme feature premium
+- Documents reste le modèle de référence
+
+**Règles imposées** :
+- L'AI est un service optionnel — tout module DOIT fonctionner sans AI
+- Les décisions AI sont des intentions — JAMAIS des mutations directes
+- Le PolicyResolver est le gate unique — aucun bypass
+- Les quotas sont par company + par module
+- Le provider est abstrait — le code métier ne sait pas quel provider est utilisé
+
+**Scope impacté** :
+- `app/Core/Ai/Contracts/AiModuleContract.php` — nouvelle interface
+- `app/Core/Ai/AiModuleContractRegistry.php` — registre
+- `app/Core/Ai/AiPolicyResolver.php` — refactoring match → registry
+- `app/Core/Ai/AiQuotaManager.php` — nouveau
+- `app/Core/Documents/DocumentAiModule.php` — implémentation Documents
+- `app/Providers/AppServiceProvider.php` — registration boot
+- Docs : `docs/V2-AUDIT-AI-ENGINE.md`
+
+**Implémentation** (2026-04-11) :
+- `AiModuleContract` interface créée : `moduleKey()`, `policyFields()`, `resolvePolicy()`, `dispatchAnalysis()`
+- `AiModuleContractRegistry` créé : registre statique (register, get, has, keys, all, clear)
+- `AiQuotaManager` créé : quota par company/module/mois (canProcess, usageThisMonth, remaining)
+- `DocumentAiModule` créé : migration du `resolveDocuments()` + `platformDefaults()` depuis AiPolicyResolver
+- `AiPolicyResolver` refactoré : `match($moduleKey)` → `AiModuleContractRegistry::get($moduleKey)->resolvePolicy()`
+- Enregistrement dans `AppServiceProvider::boot()` : `AiModuleContractRegistry::register(new DocumentAiModule())`
+- 2257 tests pass, build clean
+
+---
+
+## ADR-437 : Workflow Engine User-Defined — Architecture Cible Automations Company (2026-04-11)
+
+**Contexte** :
+L'audit V2-AUDIT-AUTOMATION révèle que l'Automation Center est un cockpit de monitoring pour les 14 tâches scheduler platform. Les companies ne peuvent pas créer de workflows custom. C'est un gap produit majeur — les concurrents SaaS offrent des "workflows" configurables (trigger → condition → action). Le modèle AutomationRule n'a pas de `company_id`.
+
+**Décision** :
+1. Créer un modèle `WorkflowRule` company-scoped (avec `BelongsToCompany`) : `name`, `trigger_type`, `trigger_config` (JSON), `conditions` (JSON), `actions` (JSON), `enabled`, `max_executions_per_day`, `cooldown_minutes`
+2. Créer un `TriggerRegistry` déclaratif : chaque module déclare ses triggers dans son manifest
+3. Créer un `ConditionEvaluator` : évalue des conditions JSON (field = value, field > value, field in [values])
+4. Créer un `ActionExecutor` : exécute des actions (send_notification, send_email, update_field, webhook)
+5. Hook dans `EventEnvelope::publish()` pour évaluer les triggers après chaque domain event
+6. Quota par plan : Free=0, Starter=3, Pro=10, Enterprise=illimité
+7. Le scheduler existant (14 tâches) est INCHANGÉ — le workflow engine est un ajout
+
+**Alternatives rejetées** :
+- **n8n / Zapier intégration** — Dépendance externe, perte de contrôle, coût par exécution
+- **Remplacer le scheduler** — Le scheduler fonctionne parfaitement. Le workflow engine est complémentaire
+- **Low-code engine complet** — Overengineering. Un trigger → condition → action linéaire suffit pour V2
+
+**Conséquences** :
+- Les companies peuvent créer des automations sans coder (drag-and-drop)
+- Le scheduler platform coexiste avec les workflows company
+- Les workflows sont un levier de monétisation (quota par plan)
+- Les triggers s'appuient sur les EventEnvelope existants — pas de nouveau système d'événements
+
+**Règles imposées** :
+- Le scheduler existant NE CHANGE PAS
+- Les workflows company sont ISOLÉS (BelongsToCompany obligatoire)
+- Les actions sont ASYNCHRONES (jobs queue, jamais dans le request lifecycle)
+- Les triggers sont DÉCLARATIFS (module manifest, pas de "magic")
+- Le quota est PAR PLAN — pas de bypass
+- L'exécution est LOGGÉE — trace complète pour debug et audit
+
+**Scope impacté** :
+- `app/Core/Automation/WorkflowRule.php` — nouveau modèle (BelongsToCompany)
+- `app/Core/Automation/WorkflowExecutionLog.php` — audit trail
+- `app/Core/Automation/WorkflowTriggerRegistry.php` — registre déclaratif
+- `app/Core/Automation/ConditionEvaluator.php` — évaluateur conditions JSON
+- `app/Core/Automation/ActionExecutor.php` — exécuteur actions
+- `app/Core/Automation/WorkflowDispatcher.php` — pont SSE → workflow
+- `app/Core/Automation/Jobs/ProcessWorkflowJob.php` — exécution async
+- `app/Core/Realtime/Adapters/SseRealtimePublisher.php` — hook trigger
+- `app/Modules/Core/Automations/Http/WorkflowRuleController.php` — CRUD API
+- `routes/company.php` — routes /workflows/*
+- `database/migrations/2026_04_11_100001_create_workflow_rules_table.php`
+- Docs : `docs/V2-AUDIT-AUTOMATION.md`
+
+**Implémentation** (2026-04-11) :
+- `WorkflowRule` modèle company-scoped (BelongsToCompany) : name, trigger_topic, conditions JSON, actions JSON, quota (max_executions_per_day, cooldown_minutes, executions_today)
+- `WorkflowExecutionLog` : audit trail (trigger_payload, conditions_met, actions_executed, status, duration_ms)
+- `WorkflowTriggerRegistry` : registre statique (register, get, has, all, topics, clear) — 5 triggers enregistrés (document.updated, members.changed, plan.changed, modules.changed, rbac.changed)
+- `ConditionEvaluator` : évalue conditions JSON (10 opérateurs : =, !=, >, <, >=, <=, in, not_in, contains, starts_with) — AND logic
+- `ActionExecutor` : exécute actions (send_notification via SSE domain event, webhook HTTP POST, log)
+- `WorkflowDispatcher` : pont entre SseRealtimePublisher et workflow engine — filtre par topic + company, dispatch ProcessWorkflowJob
+- `ProcessWorkflowJob` : évalue conditions, exécute actions, log résultat — async sur queue default
+- Hook dans `SseRealtimePublisher::publish()` → `WorkflowDispatcher::dispatch()` après chaque événement
+- `WorkflowRuleController` : CRUD complet (index, store, show, update, destroy, logs, triggers)
+- Routes company : GET/POST/PUT/DELETE /workflows, GET /workflows/triggers, GET /workflows/{id}/logs
+- `workflow:reset-daily-counters` : commande scheduler daily (reset executions_today)
+- `ScheduledTaskRegistry` : +1 tâche (15 total)
+- Migration : workflow_rules + workflow_execution_logs avec index composites
+- 2257 tests pass, build clean
+
+---
+
+### ADR-438 — Frontend Activation : 5 ADR backend rendus visibles UI (2026-04-11)
+
+**Contexte** : 6 ADR (432-437) implémentés côté backend n'avaient aucun impact UI visible. Règle : "Une feature n'existe que si elle est visible dans l'UI." Sprint d'activation frontend avec 5 priorités (P1-P5).
+
+**Décisions** :
+
+**P1 — Workflow UI (ADR-437)** :
+- Créé `WorkflowsModule.php` (ModuleDefinition company, permissions automations.view/manage)
+- Créé `workflows.store.js` (Pinia : fetchRules, createRule, updateRule, deleteRule, toggleEnabled, fetchLogs)
+- Créé `pages/company/workflows/index.vue` (VDataTableServer + empty state + delete dialog)
+- Créé `_WorkflowCreateDrawer.vue` (AppStepper 3 étapes : trigger → conditions → actions)
+- Créé `workflows/[id].vue` (détail rule + VTimeline logs + edit/delete)
+- Routes wrappées avec `company.access:use-module,core.workflows`
+
+**P2 — Multi-Market Formatting (ADR-435)** :
+- 25+ pages migrées de `const formatDate = ...` inline vers `import { formatDate/formatDateTime } from '@/utils/datetime'`
+- Company : billing (7 fichiers), documents, support, workflows
+- Platform : billing (11 fichiers), support, automations
+- Supprimé tous les `toLocaleDateString('fr-FR')` et `toLocaleString()` hardcodés
+
+**P3 — RBAC Guards (ADR-433)** :
+- Fix boucle infinie redirect : `403.vue` avait `meta: { surface: 'structure' }` → déclenche surface guard → redirige vers 403 → boucle
+- Corrigé en `definePage({})` — page 403 affiche maintenant message + countdown + boutons retour
+- Messages i18n améliorés (générique "permissions nécessaires" vs "rôles de gestion")
+
+**P4 — Realtime (ADR-434)** :
+- Consolidé `topicHandlers.js` : supprimé 5 sous-topics orphelins (member.joined/removed, role.assigned, module.activated/deactivated)
+- Topics parents passés de `ux: 'silent'` à `ux: 'toast'` avec `toastKey`
+- `runtime.js` : ajouté toast feedback via `useAppToast` + `getI18n().global.t()`
+- Clés i18n : `realtime.rbacChanged`, `realtime.modulesChanged`, etc.
+
+**P5 — AI UI (ADR-436)** :
+- Gate quota dans `ProcessDocumentAiJob` via `AiQuotaManager::canProcess()`
+- Nouveau statut `ai_status = 'quota_exceeded'`
+- Créé `AiQuotaController.php` (GET /company/ai-quota/{moduleKey})
+- `DocumentAiChip.vue` : chip orange `quota_exceeded`
+- `_DocumentsSettings.vue` : carte quota AI (VProgressLinear + alerts warning/error)
+
+**Conséquences** :
+- 5 features backend désormais visibles et utilisables dans l'UI
+- Formatage date/montant centralisé (market-aware) sur toute l'app
+- Feedback realtime perceptible (toast notifications)
+- Page 403 fonctionnelle (plus de boucle infinie)
+- Pipeline AI complet backend → API → UI
+
+**Fichiers créés** :
+- `app/Modules/Core/Automations/WorkflowsModule.php`
+- `app/Modules/Core/Documents/Http/AiQuotaController.php`
+- `resources/js/modules/company/workflows/workflows.store.js`
+- `resources/js/pages/company/workflows/index.vue`
+- `resources/js/pages/company/workflows/_WorkflowCreateDrawer.vue`
+- `resources/js/pages/company/workflows/[id].vue`
+
+**Fichiers modifiés** (sélection) :
+- `routes/company.php` (middleware module workflows + route AI quota)
+- `resources/js/core/realtime/topicHandlers.js` (consolidation topics)
+- `resources/js/core/runtime/runtime.js` (toast feedback)
+- `resources/js/pages/company/403.vue` (fix redirect loop)
+- `resources/js/views/shared/documents/DocumentAiChip.vue` (quota_exceeded)
+- `resources/js/pages/company/documents/_DocumentsSettings.vue` (quota UI)
+- `app/Jobs/Documents/ProcessDocumentAiJob.php` (quota gate)
+- `tests/Feature/CompanyPermissionTest.php` (automations permissions)
+- `tests/Feature/PageModuleAlignmentTest.php` (workflows route overrides)
+- 25+ pages company/platform (migration formatDate centralisé)
+- `fr.json`, `en.json` (workflows.*, realtime.*, aiQuota.* keys)
+- 2257 tests pass, build clean
+
+---
+
+### ADR-439 — UX Framework V2 : Patterns globaux + Migration 5 pages critiques (2026-04-12)
+
+**Contexte** : L'audit produit V2 (score 73/100) a identifié 7 problèmes systémiques affectant toutes les pages : empty states absents, loading sans skeleton, erreurs silencieuses, validation inconsistante, pas de warn-before-leave, pas de breadcrumbs, pas de tooltips d'aide.
+
+**Décisions** :
+- Créer `useUnsavedChanges` composable (deepEqual récursif, onBeforeRouteLeave, beforeunload) pour protéger les formulaires
+- Créer `PageBreadcrumbs` wrapper sur VBreadcrumbs natif — uniquement sur pages détail ([id].vue) et navigation profonde (create.vue), jamais sur index/tabs
+- Créer `AppTooltipHelp` (VIcon + VTooltip activator=parent) pour tooltips contextuels sur champs
+- Promouvoir `useAsyncAction` comme pattern unique pour tout fetch async (page load) ET submit de formulaire — remplace les isLoading/error manuels
+- Pattern triptyque obligatoire : `VSkeletonLoader v-if=isLoading` → `ErrorState v-else-if=isError @retry` → contenu
+- Promouvoir `ErrorState` (existant, 0 usages avant) comme standard erreur — remplace VAlert type=error
+- Promouvoir `EmptyState` sur les pages manquantes (members, support messages)
+- Supprimer les `successMessage`/`errorMessage` refs + VAlerts au profit de `useAppToast` systématique
+- Validation Vuetify native : `ref="formRef"` + `:rules=[requiredValidator]` + `formRef.validate()` avant submit
+
+**Conséquences** :
+- 5 pages critiques migrées vers les patterns standardisés
+- Retry garanti sur toute erreur de chargement (ErrorState @retry → useAsyncAction.retry)
+- Les formulaires avec `useUnsavedChanges` protègent contre la perte de données
+- Les breadcrumbs remplacent les boutons retour sur les pages de détail
+- Aucun changement backend
+
+**Fichiers créés** :
+- `resources/js/composables/useUnsavedChanges.js`
+- `resources/js/core/components/PageBreadcrumbs.vue`
+- `resources/js/core/components/AppTooltipHelp.vue`
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/billing/invoices/[id].vue` (useAsyncAction, ErrorState, PageBreadcrumbs)
+- `resources/js/pages/company/support/[id].vue` (useAsyncAction, skeleton, ErrorState, EmptyState messages, PageBreadcrumbs)
+- `resources/js/pages/company/members/index.vue` (useAsyncAction, skeleton, ErrorState, EmptyState, toast au lieu de VAlerts)
+- `resources/js/pages/company/documents/[tab].vue` (useAsyncAction, skeleton, ErrorState)
+- `resources/js/pages/company/shipments/create.vue` (useAsyncAction submit, validation, useUnsavedChanges, PageBreadcrumbs, AppTooltipHelp, toast)
+- `resources/js/plugins/i18n/locales/fr.json` (common.unsavedChanges, common.noMessages, members.noMembers/noMembersDescription, shipments.scheduledDateHelp/created)
+- `resources/js/plugins/i18n/locales/en.json` (mêmes clés en anglais)
+
+---
+
+## ADR-438 : Platform Alert Center — Alertes Centralisées Cross-Système (2026-04-14)
+
+**Contexte** :
+La plateforme n'a AUCUN système d'alertes centralisé. Les problèmes (billing failures, AI down, tickets non traités) sont découverts par hasard. Le SecurityAlert existant (ADR-129) couvre uniquement la sécurité. Il manque un agrégateur transverse qui remonte les alertes de TOUS les systèmes (billing, support, infra, AI, business) dans un tableau de bord unifié.
+
+**Décision** :
+1. Créer une table `platform_alerts` avec fingerprint unique (SHA256 de source+type+target) pour la déduplication
+2. Créer un modèle `PlatformAlert` dans `app/Core/Alerts/` — platform-scoped (pas BelongsToCompany), company_id nullable
+3. Créer une commande `alerts:evaluate` exécutée toutes les 5 minutes par le scheduler
+4. La commande évalue 5 règles hardcodées : invoice_overdue_7d, invoice_overdue_30d, payment_failed_3x, ticket_unassigned_24h, subscription_pending
+5. Auto-resolve : si la condition n'est plus vraie (facture payée, ticket assigné), l'alerte est automatiquement résolue
+6. API REST dans `PlatformAlertController` : index (paginé + KPIs), count (badge nav), acknowledge, resolve, dismiss
+7. Severities : critical, warning, info — tri par sévérité puis date
+8. Statuses : active, acknowledged, resolved, dismissed
+
+**Alternatives rejetées** :
+- **Étendre SecurityAlert** — scope trop limité (sécurité only), schéma différent, pas de dedup par fingerprint
+- **Event-driven alerts** — complexité prématurée. Les règles hardcodées couvrent 80% des besoins. Extensible plus tard
+- **Redis-based counters** — phpredis non disponible sur le VPS (ADR-429), predis trop lent pour du temps réel. DB suffisante pour 5min polling
+
+**Conséquences** :
+- Les admins platform voient TOUTES les alertes en un seul endroit
+- Le badge nav `/alerts/count` permet un monitoring passif sans ouvrir la page
+- Les alertes sont auto-résolues — pas de bruit résiduel
+- Le fingerprint empêche les doublons même en cas de re-exécution fréquente
+- Extensible : ajouter une règle = ajouter une méthode `evaluateXxx()` dans la commande
+
+**Scope impacté** :
+- `database/migrations/2026_04_14_100001_create_platform_alerts_table.php`
+- `app/Core/Alerts/PlatformAlert.php` — modèle
+- `app/Console/Commands/AlertEvaluatorCommand.php` — évaluateur (5 règles)
+- `app/Modules/Platform/Alerts/Http/PlatformAlertController.php` — API REST
+- `routes/platform.php` — routes /alerts/*
+- `routes/console.php` — scheduled task every 5 minutes
+- `app/Core/Automation/ScheduledTaskRegistry.php` — entrée alerts:evaluate
+
+---
+
+### ADR-440 — Company Intelligence : Health Score + MRR + Segments (2026-04-14)
+
+**Contexte** : La supervision `/platform/supervision` est une table CRUD plate sans intelligence. L'admin ne peut pas identifier rapidement les companies à risque (factures impayées, inactivité) ou à forte valeur (MRR élevé). Directive produit : "chaque écran doit aider à décider et agir."
+
+**Décisions** :
+1. Créer `CompanyHealthScoreCalculator` dans `app/Core/Companies/` — score 0-100 composite :
+   - Payment health (30%) : factures overdue → 0-100
+   - Activity (25%) : dernier audit log → 0-100
+   - Profile completeness (15%) : nombre de membres → 0-100
+   - Module usage (15%) : ratio modules activés → 0-100
+   - Support (15%) : tickets ouverts → 0-100
+   - Labels : healthy (80+/success), attention (60-79/warning), at-risk (<60/error)
+2. Enrichir `CompanyController::index()` avec subqueries SQL (pas N+1) :
+   - `mrr_cents` via Plan join, `last_activity_at` via MAX(CompanyAuditLog), `open_tickets_count` via COUNT(SupportTicket)
+   - Health score calculé per-company après fetch (pas cachable en SQL)
+3. Ajouter filtres serveur : `health` (at-risk/attention/healthy), `segment` (at_risk, high_value, trial_ending)
+4. Stats enrichies : `total_mrr`, `at_risk_count`
+5. Frontend : segment quick-filters (VChip toggleable), health dropdown, colonnes MRR/Health/LastActivity/OpenTickets
+6. MRR = prix mensuel du plan actif (price_monthly de la table plans). Pas de colonne price dans subscriptions.
+7. Relative time via `Intl.RelativeTimeFormat` natif (pas de dépendance dayjs)
+
+**Alternatives rejetées** :
+- **Health score en colonne DB + cron** : over-engineering pour le volume actuel. Calculé on-the-fly.
+- **MRR depuis subscription** : pas de colonne prix dans subscriptions — le prix est dans Plan.
+- **dayjs pour relative time** : Intl.RelativeTimeFormat natif suffit, zéro dépendance.
+
+**Conséquences** :
+- L'admin voit en un coup d'oeil les companies à risque, haute valeur, et trials expirants
+- Les KPI cards affichent MRR total et count at-risk
+- Performance : subqueries SQL inlinées, health calculé en PHP sur les 20 items paginés
+- Aucune migration nécessaire (toutes les tables existent déjà)
+
+**Fichiers créés** :
+- `app/Core/Companies/CompanyHealthScoreCalculator.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Platform/Companies/Http/CompanyController.php` (index enrichi)
+- `resources/js/pages/platform/supervision/_CompaniesTab.vue` (colonnes, segments, health)
+- `resources/js/modules/platform-admin/companies/companies.store.js` (stats enrichies)
+- `resources/js/plugins/i18n/locales/fr.json` (clés companies.health/mrr/segments/stats)
+- `resources/js/plugins/i18n/locales/en.json` (mêmes clés en anglais)
+
+---
+
+### ADR-441 — Alert Center Frontend : Page Platform /alerts (2026-04-14)
+
+**Contexte** : Le backend Alert Center (ADR-438) expose une API de gestion des alertes plateforme (billing, support, AI, infra, security, business). Il manquait la page frontend pour que les opérateurs puissent consulter, trier et agir sur ces alertes.
+
+**Décisions** :
+1. Création d'un Pinia store `platformAlerts` utilisant `$platformApi` (ofetch) — cohérent avec tous les stores platform-admin
+2. Page `/platform/alerts/index.vue` avec layout platform, KPI cards (card-grid-xs), filtres (source, severity, status), VDataTable paginé
+3. Actions inline par alerte : Acknowledge, Resolve, Dismiss — avec toast feedback
+4. Navigation vers la cible (Invoice, SupportTicket, Subscription, Payment) via routage target_type/target_id
+5. i18n complet (fr + en) avec clé nav `platform-alerts`
+
+**Conséquences** :
+- Les opérateurs peuvent voir et agir sur toutes les alertes depuis un écran unique
+- Le nav item `platform-alerts` sera visible dès que le backend l'ajoutera au manifest
+- Pattern réutilisable pour tout futur centre de monitoring
+
+**Fichiers créés** :
+- `resources/js/modules/platform-admin/alerts/alerts.store.js`
+- `resources/js/pages/platform/alerts/index.vue`
+
+**Fichiers modifiés** :
+- `resources/js/plugins/i18n/locales/fr.json` (nav.platform.platform-alerts + section alerts)
+- `resources/js/plugins/i18n/locales/en.json` (mêmes clés en anglais)
+
+---
+
+### ADR-443 — Activity Feed : journal d'événements platform-wide (2026-04-14)
+
+**Contexte** : Le backend d'audit existe (PlatformAuditLog + CompanyAuditLog, 60+ types d'actions, DiffEngine, correlation_id) mais il n'y a aucune vue centralisée "qu'est-ce qui s'est passé ?". Les administrateurs doivent pouvoir scanner rapidement l'activité de la plateforme.
+
+**Décisions** :
+1. **Nouveau module `platform.activity`** — sortOrder 98, scope admin, group governance, requires platform.audit
+2. **ActivityFeedQuery** — UNION ALL des deux tables audit avec SELECT shape identique, filtres (type, severity, actor, dates)
+3. **ActivityDescriber** — descriptions humaines contextuelles pour chaque type d'action (30+ patterns spécifiques)
+4. **ActivityAggregator** — agrégation des événements consécutifs du même type dans la même minute ("12x Invoice marked paid")
+5. **ActivityCategoryMap** — mapping action_prefix → catégorie (auth, billing, admin, company, support, module, document)
+6. **Résolution d'acteurs** — lookup N+0 (batch PlatformUser + User par IDs, Company par IDs)
+7. **Frontend VTimeline** — composant Vuetify natif avec density=compact, icônes par catégorie, chips cliquables (actor, company), timestamps relatifs (Intl.RelativeTimeFormat)
+8. **Pinia store** — `usePlatformActivityStore` avec filters réactifs
+9. **Permission réutilisée** — `view_audit_logs` (pas de nouvelle permission, Activity est une vue sur les mêmes données)
+10. **Controller < 250 lignes** — logique déléguée à 3 classes dédiées (Query, Describer, Aggregator) pour respecter ControllerSizeInvariantTest
+
+**Conséquences** :
+- Les admins disposent d'une timeline chronologique scannable en 5 secondes
+- Chaque mention de company est cliquable → navigation vers la fiche company
+- L'agrégation évite la noyade quand 50 invoices sont générées en même temps
+- Le module est indépendant mais s'appuie sur l'infrastructure audit existante
+
+**Fichiers créés** :
+- `app/Modules/Platform/Activity/ActivityModule.php` (module manifest)
+- `app/Modules/Platform/Activity/Http/PlatformActivityController.php` (controller)
+- `app/Modules/Platform/Activity/ActivityFeedQuery.php` (query builder UNION)
+- `app/Modules/Platform/Activity/ActivityDescriber.php` (descriptions humaines)
+- `app/Modules/Platform/Activity/ActivityAggregator.php` (agrégation même-minute)
+- `app/Modules/Platform/Activity/ActivityCategoryMap.php` (catégorisation des actions)
+- `resources/js/modules/platform-admin/activity/activity.store.js` (Pinia store)
+- `resources/js/pages/platform/activity/index.vue` (page frontend VTimeline)
+
+**Fichiers modifiés** :
+- `routes/platform.php` (ajout routes /activity, /activity/types)
+- `resources/js/plugins/i18n/locales/fr.json` (nav.platform.activity + section activity)
+- `resources/js/plugins/i18n/locales/en.json` (mêmes clés en anglais)
+
+---
+
+### ADR-444 — Platform Dashboard Cockpit : Landing page decisionnelle (2026-04-14)
+
+**Contexte** :
+Le dashboard plateforme n'affichait que 5 KPI compteurs statiques (Companies, Platform Users, etc.) + le widget engine configurable. Ce n'etait pas un outil de decision — il ne repondait pas a la question "Que dois-je faire MAINTENANT ?".
+
+**Decisions** :
+1. Deux nouveaux endpoints cockpit :
+   - `GET /dashboard/attention` — items requierant une action immediate (factures en retard >7j, tickets non assignes >24h, abonnements en attente, paiements echoues, alertes critiques)
+   - `GET /dashboard/health` — 4 badges sante systeme (Scheduler, Queue, AI, Alerts)
+2. Le dashboard est reorganise en 4 sections verticales :
+   - **Attention Required** (hero) — cards cliquables par severite (critical/warning), masque si vide
+   - **System Health** — 4 VChip badges avec tooltip detail
+   - **KPI Cards** — 5 cartes compteurs existantes (inchangees)
+   - **Widget Engine** — DashboardGrid configurable (inchange)
+3. Queue health utilise `ScheduledTaskRegistry::queueStats()` pour eviter le facade `DB::` dans le controller (invariant teste)
+4. Titre du dashboard change de "Tableau de bord plateforme" a "Cockpit"
+
+**Consequences** :
+- L'admin voit en 5 secondes ce qui requiert son attention
+- Les sections attention + health se chargent en parallele des stats et du widget engine
+- VSkeletonLoader pendant le chargement cockpit
+- Si aucun item d'attention : alerte success compacte "Tout est sous controle"
+
+**Fichiers crees** :
+- `app/Modules/Platform/Dashboard/Http/DashboardCockpitController.php` (2 actions : attention, health)
+
+**Fichiers modifies** :
+- `routes/platform.php` (ajout routes /dashboard/attention, /dashboard/health + import)
+- `resources/js/pages/platform/index.vue` (refonte complete : cockpit 4 sections)
+- `resources/js/modules/platform-admin/dashboard/dashboard.store.js` (ajout attentionItems, healthBadges, loadCockpit)
+- `resources/js/plugins/i18n/locales/fr.json` (section platformDashboard : 13 nouvelles cles)
+- `resources/js/plugins/i18n/locales/en.json` (memes cles en anglais)
+
+---
+
+### ADR-445 — Platform Navigation : Restructuration en 8 groupes (2026-04-14)
+
+**Contexte** :
+La navigation platform etait une liste plate de 15+ items sans hierarchie. Les groupes existants (root, management, governance) ne reflétaient pas la logique produit. Le Lot 1 V2 a cree 2 nouvelles pages (Activity Feed, Alert Center) et fusionne billing. La navigation devait etre restructuree en groupes logiques pour passer de "pages administrees" a "un produit".
+
+**Decisions** :
+1. **9 groupes explicites** dans la sidebar platform, ordonnes via `ADMIN_GROUP_ORDER` dans NavBuilder :
+   - **Cockpit** (Dashboard, Activite, Alertes) — monitoring immediat
+   - **Clients** (Entreprises, Support) — gestion client
+   - **Finance** (Facturation, Plans, Coupons) — economie
+   - **Produit** (Modules, Metiers, Champs, Documents, Documentation) — catalogue produit
+   - **Intelligence artificielle** (Fournisseurs, Usage) — split AI en 2 nav items
+   - **International** (Marches, Langues, Traductions, Taux de change) — split en 4 nav items
+   - **Operations** (Automations, Temps reel, Securite) — infra technique
+   - **Administration** (Acces, Parametres, Notifications, Mon compte) — gouvernance interne
+
+2. **Ordonnancement explicite des groupes** : ajout de `NavBuilder::ADMIN_GROUP_ORDER` + `sortGroupsByOrder()` pour garantir l'ordre d'affichage independamment de l'ordre de decouverte des modules.
+
+3. **Nouveaux nav items** :
+   - `platform-alerts` (AlertsModule cree) — cockpit, sort 3
+   - `platform-coupons` — raccourci vers billing tab coupons, sort 22
+   - `platform-ai-providers` + `platform-ai-usage` — remplacent l'ancien `ai` unique
+   - `platform-markets` / `platform-languages` / `platform-translations` / `platform-fx-rates` — remplacent `international`
+   - `platform-account` — raccourci "Mon compte" dans administration
+   - `support` — ajoute en sidebar (etait footer-only)
+
+4. **Nav item renomme** : `platform-supervision` → `platform-companies` (label "Entreprises", route inchangee).
+
+5. **AlertsModule cree** (`app/Modules/Platform/Alerts/AlertsModule.php`) pour posseder la route `platform-alerts` et satisfaire le contrat module-nav.
+
+6. **Routes alerts** : wrappees avec `module.active:platform.alerts` pour satisfaire `GlobalModuleRouteCoverageTest`.
+
+**Consequences** :
+- La sidebar est organisee par domaine metier, pas par ordre de creation
+- Les tabs AI et International sont visibles directement sans clic supplementaire
+- Support passe du footer a la sidebar (visibilite amelioree)
+- Tous les tests nav passent (NavBuilderTest, PlatformModuleNavContractTest, PageModuleAlignmentTest, GlobalModuleRouteCoverageTest)
+- Les anciens groupes (root, management, governance) ne sont plus utilises en admin
+
+**Fichiers crees** :
+- `app/Modules/Platform/Alerts/AlertsModule.php`
+
+**Fichiers modifies** :
+- `app/Core/Navigation/NavBuilder.php` (ADMIN_GROUP_ORDER, sortGroupsByOrder)
+- `app/Modules/Platform/Dashboard/DashboardModule.php` (group cockpit)
+- `app/Modules/Platform/Activity/ActivityModule.php` (group cockpit)
+- `app/Modules/Platform/Companies/CompaniesModule.php` (group clients, key renomme)
+- `app/Modules/Platform/Support/PlatformSupportModule.php` (ajout navItem, group clients)
+- `app/Modules/Platform/Billing/BillingModule.php` (group finance, ajout coupons)
+- `app/Modules/Platform/Plans/PlansModule.php` (group finance)
+- `app/Modules/Platform/Modules/ModulesModule.php` (group product)
+- `app/Modules/Platform/Jobdomains/JobdomainsModule.php` (group product)
+- `app/Modules/Platform/Fields/FieldsModule.php` (group product)
+- `app/Modules/Platform/Documents/DocumentsModule.php` (group product)
+- `app/Modules/Platform/Documentation/PlatformDocumentationModule.php` (group product)
+- `app/Modules/Platform/AI/AiModule.php` (group ai, split en 2 items)
+- `app/Modules/Platform/Markets/MarketsModule.php` (group international, split en 4 items)
+- `app/Modules/Platform/Automations/AutomationsModule.php` (group operations)
+- `app/Modules/Platform/Realtime/RealtimeModule.php` (group operations)
+- `app/Modules/Platform/Security/SecurityModule.php` (group operations)
+- `app/Modules/Platform/Users/UsersModule.php` (group administration)
+- `app/Modules/Platform/Settings/PlatformSettingsModule.php` (group administration, ajout Mon compte)
+- `app/Modules/Platform/Notifications/NotificationsModule.php` (group administration)
+- `resources/js/plugins/i18n/locales/fr.json` (groupes + 10 nouvelles cles nav)
+- `resources/js/plugins/i18n/locales/en.json` (memes cles)
+- `resources/js/pages/platform/account/[tab].vue` (ajout module meta)
+- `resources/js/pages/platform/support/index.vue` (navActiveKey → navActiveLink)
+- `resources/js/pages/platform/support/[id].vue` (navActiveKey → navActiveLink)
+- `routes/platform.php` (alerts routes wrappees module.active)
+- `tests/Unit/NavBuilderTest.php` (adapte aux nouveaux groupes)
+- `tests/Feature/PlatformModuleNavContractTest.php` (support retire des exemptions)
+- `tests/Feature/PageModuleAlignmentTest.php` (ajout override platform-account-tab)
+
+---
+
+### ADR-446 — P0 Produit : Email Platform + Billing Safety + Navigation Cleanup (2026-04-15)
+
+**Contexte** : L'audit produit V2 (score 56% alignement) a identifié 3 chantiers P0 non-négociables pour un SaaS production-ready : emails non observables, actions billing sans confirmation, navigation incohérente.
+
+**Décisions** :
+
+#### P0-A : Email Platform System
+- Nouveau modèle `EmailLog` avec architecture future Email Hub : `message_id` (UUID@domain RFC 2822), `external_id`, `headers` (JSON), `from_email`, `reply_to`, `direction` (outbound)
+- `EmailService` central : SMTP dynamique depuis `PlatformSetting.email` (compatible ISPConfig), `testConnection()`, `retry()`, `generateMessageId()`
+- `EmailEventSubscriber` : écoute `MessageSent`/`MessageSending` pour tracking status
+- 11 notifications billing converties en `ShouldQueue` + templates Blade `resources/views/emails/billing/`
+- Layout email responsive avec branding configurable (logo, couleur)
+- Module `platform.email` avec 3 onglets : Logs (KPI + table), Templates (catalogue), Settings (SMTP + identité + branding)
+- Routes platform : `/email/logs`, `/email/logs/{id}/retry`, `/email/templates`, `/email/settings`, `/email/settings/test`
+
+#### P0-B : Billing Safety
+- Dunning retry : dialog de confirmation avec montant, devise, nombre de tentatives précédentes
+- Dunning escalate : dialog avec 2 alertes (montant perdu + suspension possible)
+- Admin cancel subscription : preview endpoint avec timing, addons actifs, solde wallet + dialog
+- Admin undo cancel : dialog de confirmation avec plan actuel
+- Clé d'idempotence sur toutes les actions critiques
+
+#### P0-C : Navigation Cleanup
+- `supervision/[tab].vue` → `companies/index.vue` (tabs non-paramétriques)
+- 3 sous-composants migrés : `_CompaniesTab`, `_MembersTab`, `_CompanyLogsTab`
+- SecurityModule : navItems vidés (sécurité absorbée par alertes)
+- CompaniesModule navItem → route `platform-companies` (plus de `platform-supervision-tab`)
+- Redirects `/platform/supervision/*` → `/platform/companies`
+- Toutes références `platform-supervision` mises à jour (AuditModule, dashboard, tests)
+
+**Conséquences** :
+- Chaque email envoyé est loggé, observable, ré-essayable
+- SMTP configurable par admin non-technique sans toucher au code
+- Aucune action billing destructrice sans confirmation + preview
+- Navigation cohérente : supervision → companies (single entry point)
+- Score alignement V2 : 56% → ~72% (email + safety + nav)
+
+**Fichiers créés** :
+- `database/migrations/2026_04_15_100001_create_email_logs_table.php`
+- `database/migrations/2026_04_15_100002_add_email_to_platform_settings.php`
+- `app/Core/Email/EmailLog.php`, `EmailService.php`, `EmailEventSubscriber.php`
+- `app/Modules/Platform/Email/EmailModule.php`
+- `app/Modules/Platform/Email/Http/EmailLogController.php`, `EmailSettingsController.php`
+- `resources/views/emails/layout.blade.php` + 11 templates billing
+- `resources/js/pages/platform/email/[tab].vue` + 3 sous-composants
+- `resources/js/pages/platform/companies/index.vue` + 3 sous-composants (migrés)
+
+**Fichiers modifiés** :
+- `app/Notifications/Billing/*.php` (11 fichiers — ShouldQueue + Blade)
+- `app/Notifications/BillingCriticalAlert.php`
+- `app/Core/Notifications/NotificationDispatcher.php` (EmailService central)
+- `app/Providers/AppServiceProvider.php` (EventSubscriber)
+- `routes/platform.php` (email routes + cancel-preview)
+- `app/Modules/Platform/Companies/CompaniesModule.php` (route target)
+- `app/Modules/Platform/Security/SecurityModule.php` (navItems vidés)
+- `app/Modules/Platform/Audit/AuditModule.php` (routeNames)
+- `resources/js/pages/platform/billing/_BillingDunningTab.vue` (safety dialogs)
+- `resources/js/pages/platform/companies/_CompanyBillingTab.vue` (cancel preview)
+- `resources/js/pages/platform/companies/[id].vue` (refs supervision)
+- `resources/js/pages/platform/index.vue` (dashboard links)
+- `resources/js/plugins/1.router/additional-routes.js` (redirects)
+- `resources/js/plugins/i18n/locales/fr.json`, `en.json` (email + billingActions)
+- Tests : `BillingLotCTest`, `PageModuleAlignmentTest`, `PlatformSecurityModuleToggleTest`
+
+---
+
+### ADR-447 — Email SaaS Complet + Billing Safety (2026-04-16)
+
+**Contexte** : Le système email P0-A livrait un driver SMTP amélioré (delivery + logs) mais pas un système email SaaS. Il manquait : templates configurables, orchestration des envois, activation ON/OFF par template, preview/test, et stats enrichies. Côté billing, le plan change admin n'avait pas de warning downgrade explicite ni de highlight wallet.
+
+**Décisions** :
+
+1. **EmailTemplate model** : Table `email_templates` avec subject/body FR+EN, variables JSON, is_active, is_system, preview_data. 11 templates billing seedés. L'admin peut modifier sujets et contenus, activer/désactiver chaque template.
+
+2. **EmailOrchestrationRule model** : Table `email_orchestration_rules` avec trigger_event, timing (immediate/delayed), delay, conditions JSON, max_sends. 11 règles billing seedées. L'admin configure quand et comment chaque email est envoyé.
+
+3. **EmailOrchestrator service** : Point d'entrée central (`shouldSend`, `isTemplateActive`, `renderTemplate`). Vérifie règles + conditions + template actif avant envoi.
+
+4. **TemplateRenderer** : Rendu `{{ variable }}` par str_replace (pas d'eval, pas de Blade compilation). Safe et prédictible.
+
+5. **EmailStatsService** : Stats agrégées (sent/failed 24h, success rate, volume par template 7j, sparkline daily).
+
+6. **Frontend email 4 tabs** :
+   - Logs : enrichi avec filtres catégorie + template
+   - Templates : CRUD complet avec drawer edit, preview dialog HTML, test send
+   - Orchestration : liste des règles, toggle ON/OFF, dialog edit timing/delay
+   - Settings : inchangé (SMTP + Identity + Branding)
+
+7. **EmailTemplateController** : index, show, update, preview (rendu HTML), sendTest (envoi test à l'admin connecté).
+
+8. **TestEmailNotification** : Notification Blade pour les tests de rendu.
+
+9. **Billing Safety** :
+   - Admin `[id].vue` : VAlert downgrade warning + VAlert wallet deduction highlight + bouton confirm coloré warning
+   - Company `_BillingPlan.vue` : mêmes VAlert warnings + bouton confirm différencié upgrade/downgrade
+
+**Conséquences** :
+- L'admin peut désactiver un email sans toucher au code
+- L'admin peut modifier sujet et contenu email en FR+EN
+- L'admin peut tester un template avant activation
+- Les downgrades plan ont un warning visuel explicite (admin + company)
+- Les déductions wallet sont mises en avant dans les previews
+
+**Fichiers créés** :
+- `app/Core/Email/EmailTemplate.php`
+- `app/Core/Email/EmailOrchestrationRule.php`
+- `app/Core/Email/EmailOrchestrator.php`
+- `app/Core/Email/TemplateRenderer.php`
+- `app/Core/Email/EmailStatsService.php`
+- `app/Modules/Platform/Email/Http/EmailTemplateController.php`
+- `app/Modules/Platform/Email/Http/EmailOrchestrationController.php`
+- `app/Notifications/Email/TestEmailNotification.php`
+- `database/migrations/2026_04_16_100001_create_email_templates_table.php`
+- `database/migrations/2026_04_16_100002_create_email_orchestration_rules_table.php`
+- `database/seeders/EmailTemplateSeeder.php`
+- `database/seeders/EmailOrchestrationRuleSeeder.php`
+- `resources/js/pages/platform/email/_EmailOrchestrationTab.vue`
+
+**Fichiers modifiés** :
+- `resources/js/pages/platform/email/[tab].vue` (4ème tab)
+- `resources/js/pages/platform/email/_EmailTemplatesTab.vue` (réécriture CRUD)
+- `resources/js/pages/platform/email/_EmailLogsTab.vue` (filtres catégorie/template)
+- `resources/js/pages/platform/companies/[id].vue` (downgrade warning + wallet alert)
+- `resources/js/pages/company/billing/_BillingPlan.vue` (downgrade warning + wallet alert)
+- `routes/platform.php` (7 nouvelles routes email)
+- `resources/js/plugins/i18n/locales/fr.json`, `en.json` (clés email + billing safety)
+
+---
+
+### ADR-448 — Email Hub : Inbox, Threading, Compose, Reply, Inbound Webhook (2026-04-16)
+
+**Contexte** : Le système email existant (ADR-447) était un backoffice technique — logs, templates, orchestration, SMTP. Aucune capacité d'envoi manuel, de threading, de réception ou de conversation. Produit incomplet pour un admin SaaS.
+
+**Décisions** :
+1. **EmailThread** model — conversations threadées avec subject, participant, company, status (open/closed/archived), compteurs (unread_count, message_count)
+2. **EmailLog étendu** — ajout de `direction` (sent/received), `thread_id` (FK), `is_read`, `body_html`, `body_text`, `in_reply_to` pour transformer les logs en base de messagerie
+3. **EmailInboxController** — 6 actions : index (threads paginés + stats), show (messages + markAllRead), compose (envoi manuel), reply (In-Reply-To + threading), markRead, updateStatus
+4. **EmailInboundController** — webhook POST sans auth pour réception emails (Mailgun/Postmark/SES compatible). Matching thread via In-Reply-To/References headers
+5. **EmailRecipient** — classe Notifiable simple pour envoi à des adresses arbitraires (pas de User requis)
+6. **ManualEmailNotification** — notification ShouldQueue pour compose/reply
+7. **Navigation restructurée** — Email Hub avec 4 nav items : Inbox (principal), Templates, Orchestration, Settings. Surface `governance`, groupe `operations`
+8. **Frontend** — 3 pages : inbox/index.vue (liste threads + compose drawer), inbox/[id].vue (conversation + reply), _ComposeDialog.vue
+
+**Conséquences** :
+- Admin peut envoyer, recevoir, répondre, threader des emails depuis la platform
+- Endpoint inbound prêt pour configuration webhook Mailgun/Postmark/SES
+- Tous les emails (automatiques + manuels) sont dans EmailLog avec direction + thread
+- Navigation email = point d'entrée opérationnel, pas technique
+
+**Fichiers créés** :
+- `database/migrations/2026_04_16_100003_create_email_threads_table.php`
+- `database/migrations/2026_04_16_100004_add_thread_columns_to_email_logs.php`
+- `app/Core/Email/EmailThread.php`
+- `app/Core/Email/EmailRecipient.php`
+- `app/Modules/Platform/Email/Http/EmailInboxController.php`
+- `app/Modules/Platform/Email/Http/EmailInboundController.php`
+- `app/Notifications/Email/ManualEmailNotification.php`
+- `resources/js/pages/platform/email/inbox/index.vue`
+- `resources/js/pages/platform/email/inbox/[id].vue`
+- `resources/js/pages/platform/email/inbox/_ComposeDialog.vue`
+
+**Fichiers modifiés** :
+- `app/Core/Email/EmailLog.php` (+6 fillable, +thread relation, +4 scopes)
+- `app/Modules/Platform/Email/EmailModule.php` (4 nav items, routeNames)
+- `routes/platform.php` (+7 inbox routes + 1 inbound webhook)
+- `tests/Feature/PageModuleAlignmentTest.php` (+2 route overrides)
+- `resources/js/plugins/i18n/locales/fr.json`, `en.json` (~35 clés emailInbox)
+- `docs/bmad/04-decisions.md` (ADR-448)
+
+---
+
+### ADR-449 — Platform Navigation Simplification + Email Hub Tabs (2026-04-16)
+
+**Contexte** : La navigation platform avait 28 items sidebar répartis sur 8 groupes.
+Plusieurs modules injectaient N items pour N onglets internes d'une même page : Email (4 items),
+AI (2 items), International (4 items), Billing (2 items). Violation du principe "1 domaine = 1 item sidebar max".
+Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.vue`) au lieu d'un onglet.
+
+**Décisions** :
+
+1. **Règle UX : 1 domaine = 1 nav item** — les sous-surfaces (onglets, sous-pages) vivent dans les tabs
+   internes de la page cible, jamais en items sidebar distincts.
+
+2. **Email Hub** : 4 items → 1 item "Messaging" pointant vers `/platform/email/inbox`.
+   5 onglets internes : Inbox (default), Templates, Automations, Settings, Logs.
+   L'inbox est devenu un tab sub-component (`_EmailInboxTab.vue`), l'ancienne page
+   `inbox/index.vue` a été supprimée.
+
+3. **AI** : 2 items (Providers, Usage) → 1 item "AI" pointant vers `/platform/ai/providers`.
+
+4. **International** : 4 items (Markets, Languages, Translations, FX Rates) → 1 item "International"
+   pointant vers `/platform/international/markets`.
+
+5. **Billing** : 2 items (Billing, Coupons) → 1 item "Billing" pointant vers `/platform/billing/overview`.
+
+6. **ComposeDialog** : ajout VForm + validation Vuetify native + toast error/success.
+
+7. **Thread Detail** : ajout breadcrumbs vers tab inbox, toast sur reply/status/error.
+
+8. **Tab "orchestration" renommé "automations"** — cohérence avec le label admin.
+
+**Navigation avant/après** :
+- Avant : 28 items (Email×4, AI×2, International×4, Billing×2, +16 autres)
+- Après : 21 items (Email×1, AI×1, International×1, Billing×1, +17 autres)
+- Réduction nette : -7 items sidebar
+
+**Conséquences** :
+- Nav items clés changent : `billing` → `platform-billing`, `platform-ai-providers/usage` → `platform-ai`,
+  `platform-markets/languages/translations/fx-rates` → `platform-international`,
+  `platform-email-inbox/templates/orchestration/settings` → `platform-messaging`
+- Les anciens nav keys i18n supprimés, remplacés par les nouveaux
+- Route `platform-email-inbox` supprimée (page supprimée), `platform-email-tab` reste avec tab=inbox
+
+**Fichiers** :
+- `app/Modules/Platform/Email/EmailModule.php` (4 items → 1)
+- `app/Modules/Platform/AI/AiModule.php` (2 items → 1)
+- `app/Modules/Platform/Markets/MarketsModule.php` (4 items → 1)
+- `app/Modules/Platform/Billing/BillingModule.php` (2 items → 1)
+- `resources/js/pages/platform/email/[tab].vue` (5 onglets, inbox default)
+- `resources/js/pages/platform/email/_EmailInboxTab.vue` (nouveau sub-component)
+- `resources/js/pages/platform/email/inbox/_ComposeDialog.vue` (VForm + toast)
+- `resources/js/pages/platform/email/inbox/[id].vue` (breadcrumbs + toast)
+- `resources/js/pages/platform/email/inbox/index.vue` (SUPPRIMÉ)
+- `resources/js/plugins/i18n/locales/fr.json`, `en.json` (nav keys + email keys)
+- `tests/Feature/PageModuleAlignmentTest.php` (remove inbox route override)
+- `tests/Feature/PlatformBillingModuleToggleTest.php` (billing → platform-billing)
+
+---
+
+## ADR-450 : Email Settings — SMTP Pre-fill, Per-Admin Identity, Theme Branding (2026-04-16)
+- **Date** : 2026-04-16
+- **Contexte** : L'onglet Paramètres Email avait 3 problèmes : SMTP vide alors que Laravel a la config dans .env, identité email (from_name, from_email, reply_to) globale au lieu d'être par admin, branding (logo + couleur) dupliqué au lieu de réutiliser les paramètres généraux et le thème.
+- **Décisions** :
+  1. **SMTP pré-rempli** : `EmailSettingsController::show()` retourne la config Laravel mail (`config('mail.mailers.smtp.host')`, etc.) comme valeurs par défaut quand PlatformSetting.email est vide
+  2. **Identité par admin** : Colonne `email_identity` (JSON nullable) sur `users` table. Chaque admin a son propre `from_name`, `from_email`, `reply_to`. Endpoints dédiés `GET/PUT /email/identity`
+  3. **Logo = BrandLogo texte** : Suppression de `branding_logo_url`. Le template email Blade affiche `appName.` en texte stylisé (identique à `BrandLogo.vue`). L'app_name vient de `PlatformSetting.general.app_name`
+  4. **Couleur = thème** : Suppression de `branding_color`. `EmailService::branding()` lit `UIResolverService::forPlatform()->primaryColor` (même source que l'UI Vuetify)
+  5. **Frontend** : SMTP et identité séparés en 2 formulaires distincts. Branding affiché en lecture seule avec liens vers les paramètres source
+- **Conséquences** :
+  - Plus de duplication branding — une seule source de vérité (thème + général)
+  - Chaque admin peut personnaliser son identité d'envoi
+  - SMTP fonctionne immédiatement en dev (Mailpit) sans configuration manuelle
+- **Fichiers** :
+  - `database/migrations/2026_04_16_100005_add_email_identity_to_users.php` (migration)
+  - `app/Core/Models/User.php` (email_identity fillable + cast)
+  - `app/Modules/Platform/Email/Http/EmailSettingsController.php` (refonte: show, update, showIdentity, updateIdentity)
+  - `app/Core/Email/EmailService.php` (branding() refactored)
+  - `resources/views/emails/layout.blade.php` (logo texte, plus d'img)
+  - `resources/js/pages/platform/email/_EmailSettingsTab.vue` (refonte UI)
+  - `routes/platform.php` (2 routes identity)
+  - `fr.json`, `en.json` (12 clés ajoutées)
+
+---
+
+## ADR-451 : Email Hub — Templates CRUD, Orchestration Récurrence, Catégories Complètes (2026-04-16)
+- **Date** : 2026-04-16
+- **Contexte** : Le système email n'avait que des templates billing (11), pas de création de template custom, pas de sélecteur de template dans l'orchestration, pas de planification récurrente, et le preview n'utilisait pas le BrandLogo.
+- **Décisions** :
+  1. **Templates CRUD** : Endpoint `POST /email/templates/configurable` pour créer des templates custom (`is_system=false`). UI avec drawer de création (key, catégorie, nom, sujets bilingues, corps bilingues, variables éditables)
+  2. **Orchestration enrichie** : Sélecteur de template dropdown dans l'édition de règle. Création de nouvelles règles via `POST /email/orchestration`. Timing `recurring` ajouté avec fréquences : daily, every_2_days, every_3_days, weekly, bi_weekly, monthly
+  3. **Preview BrandLogo** : Le preview email affiche `appname` en noir (#333) + `.` en couleur primaire (identique à `BrandLogo.vue` et `layout.blade.php`)
+  4. **26 templates, 7 catégories** : billing (11), onboarding (2), support (3), documents (3), maintenance (3), members (2), security (2). Seeder `updateOrCreate` idempotent
+  5. **Migration** : Colonne `frequency` (nullable string) sur `email_orchestration_rules`
+- **Conséquences** :
+  - Système email complet : toutes les catégories SaaS couvertes
+  - Admins peuvent créer des templates custom et des règles d'orchestration
+  - Planification récurrente pour newsletters, rappels maintenance, etc.
+- **Fichiers** :
+  - `database/migrations/2026_04_16_100006_add_frequency_to_email_orchestration_rules.php`
+  - `database/seeders/EmailTemplateSeeder.php` (15 templates ajoutés)
+  - `app/Core/Email/EmailOrchestrationRule.php` (frequency fillable)
+  - `app/Modules/Platform/Email/Http/EmailTemplateController.php` (store + preview fix)
+  - `app/Modules/Platform/Email/Http/EmailOrchestrationController.php` (store + template_key + frequency)
+  - `resources/js/pages/platform/email/_EmailTemplatesTab.vue` (refonte : CRUD + catégories colorées)
+  - `resources/js/pages/platform/email/_EmailOrchestrationTab.vue` (refonte : create + template selector + recurring)
+  - `routes/platform.php` (2 routes POST ajoutées)
+  - `fr.json`, `en.json` (19 clés ajoutées chacun)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -30,6 +30,22 @@ use RuntimeException;
 class NavBuilder
 {
     /**
+     * Explicit group ordering for admin scope.
+     * Groups are sorted by their position in this array.
+     * Groups not listed here appear at the end.
+     */
+    private const ADMIN_GROUP_ORDER = [
+        'cockpit',
+        'clients',
+        'finance',
+        'product',
+        'ai',
+        'international',
+        'operations',
+        'administration',
+    ];
+
+    /**
      * Build grouped navigation for admin (platform) scope.
      *
      * @param  array|null  $permissions  Permission keys. null = bypass (super_admin).
@@ -194,6 +210,11 @@ class NavBuilder
         // 10. Prune: empty groups + non-clickable parents without children
         $grouped = static::pruneGroups($grouped);
 
+        // 10b. Sort groups by explicit order (admin scope has ADMIN_GROUP_ORDER)
+        if ($scope === 'admin') {
+            $grouped = static::sortGroupsByOrder($grouped, self::ADMIN_GROUP_ORDER);
+        }
+
         // 11. Sort within groups + clean output
         $result = [];
 
@@ -321,6 +342,25 @@ class NavBuilder
         }
 
         return "nav.groups.{$groupKey}";
+    }
+
+    /**
+     * Sort groups by explicit order array. Groups not in the order array
+     * are appended at the end in their original order.
+     */
+    private static function sortGroupsByOrder(array $groups, array $order): array
+    {
+        $orderMap = array_flip($order);
+        $max = count($order);
+
+        uksort($groups, function (string $a, string $b) use ($orderMap, $max) {
+            $posA = $orderMap[$a] ?? ($max + 1);
+            $posB = $orderMap[$b] ?? ($max + 1);
+
+            return $posA <=> $posB;
+        });
+
+        return $groups;
     }
 
     // ─── Pruning ──────────────────────────────────────────────

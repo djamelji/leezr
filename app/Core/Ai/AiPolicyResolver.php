@@ -2,18 +2,16 @@
 
 namespace App\Core\Ai;
 
-use App\Core\Documents\CompanyDocumentSetting;
-use App\Platform\Models\PlatformSetting;
-
 /**
- * ADR-413: Resolves AI policy for a given module + company.
+ * ADR-413 + ADR-436: Resolves AI policy for a given module + company.
  *
  * Cascade (settings-driven, NOT plan-driven):
  *   1. Platform gate: no active provider → disabled
- *   2. Module settings (CompanyDocumentSetting.ai_features for documents)
- *   3. Fallback to platform defaults (PlatformSetting.ai.document_defaults)
+ *   2. Registry lookup: AiModuleContractRegistry → module.resolvePolicy()
+ *   3. Unknown module → disabled
  *
- * Each module resolves its own settings. Core AI stays neutral.
+ * ADR-436: Delegates to AiModuleContractRegistry instead of hardcoded match.
+ * Each module implements AiModuleContract and registers itself at boot.
  */
 class AiPolicyResolver
 {
@@ -24,31 +22,12 @@ class AiPolicyResolver
             return AiPolicy::disabled();
         }
 
-        // Gate 2: Module-specific resolution
-        return match ($moduleKey) {
-            'documents' => self::resolveDocuments($companyId),
-            default => AiPolicy::disabled(),
-        };
-    }
+        // Gate 2: Registry-based module resolution (ADR-436)
+        $module = AiModuleContractRegistry::get($moduleKey);
+        if (! $module) {
+            return AiPolicy::disabled();
+        }
 
-    private static function resolveDocuments(int $companyId): AiPolicy
-    {
-        $settings = CompanyDocumentSetting::forCompany($companyId);
-        $features = $settings->ai_features ?? self::platformDefaults();
-
-        return new AiPolicy(
-            analysisEnabled: (bool) ($features['ai_analysis_enabled'] ?? true),
-            ocrEnabled: (bool) ($features['ocr_enabled'] ?? true),
-            autoFillExpiry: (bool) ($features['auto_fill_expiry'] ?? true),
-            autoRejectTypeMismatch: (bool) ($features['auto_reject_type_mismatch'] ?? true),
-            notifyExpiryDetected: (bool) ($features['notify_expiry_detected'] ?? true),
-            notifyValidationErrors: (bool) ($features['notify_validation_errors'] ?? true),
-            minConfidenceThreshold: ((int) ($features['min_confidence_threshold'] ?? 60)) / 100,
-        );
-    }
-
-    private static function platformDefaults(): array
-    {
-        return PlatformSetting::instance()->ai['document_defaults'] ?? [];
+        return $module->resolvePolicy($companyId);
     }
 }

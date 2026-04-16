@@ -13,8 +13,7 @@ use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
-use App\Core\Realtime\Contracts\RealtimePublisher;
-use App\Core\Realtime\EventEnvelope;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Core\Security\SecurityDetector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 
 class CompanyModuleController
 {
+    use PublishesRealtimeEvents;
     /**
      * List all modules with activation status and capabilities for the current company.
      */
@@ -72,9 +72,7 @@ class CompanyModuleController
             ]);
 
             // ADR-125: publish after mutation
-            app(RealtimePublisher::class)->publish(
-                EventEnvelope::invalidation('modules.changed', $company->id, ['action' => 'enabled', 'module_key' => $key])
-            );
+            $this->publishDomainEvent('modules.changed', $company->id, ['action' => 'module_enabled', 'module_key' => $key]);
 
             // ADR-130: audit log
             app(AuditLogger::class)->logCompany($company->id, AuditAction::MODULE_ENABLED, 'module', $key);
@@ -103,9 +101,7 @@ class CompanyModuleController
             ]);
 
             // ADR-125: publish after mutation
-            app(RealtimePublisher::class)->publish(
-                EventEnvelope::invalidation('modules.changed', $company->id, ['action' => 'disabled', 'module_key' => $key])
-            );
+            $this->publishDomainEvent('modules.changed', $company->id, ['action' => 'module_disabled', 'module_key' => $key]);
 
             // ADR-130: audit log
             app(AuditLogger::class)->logCompany($company->id, AuditAction::MODULE_DISABLED, 'module', $key);
@@ -198,9 +194,7 @@ class CompanyModuleController
         ]);
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('modules.changed', $company->id, ['action' => 'settings_updated', 'module_key' => $key])
-        );
+        $this->publishDomainEvent('modules.changed', $company->id, ['action' => 'module_settings_updated', 'module_key' => $key]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::MODULE_SETTINGS_UPDATED, 'module', $key);

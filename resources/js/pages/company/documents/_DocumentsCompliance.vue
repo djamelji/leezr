@@ -100,6 +100,7 @@ const exportCsv = () => {
         <template #append>
           <div class="d-flex align-center gap-2">
             <VBtn
+              v-can="'documents.manage'"
               variant="tonal"
               color="secondary"
               size="small"

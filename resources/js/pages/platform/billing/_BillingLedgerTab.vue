@@ -1,5 +1,6 @@
 <script setup>
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
+import { formatDate } from '@/utils/datetime'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -105,17 +106,6 @@ watch(companyId, val => {
 })
 
 // ── Helpers ────────────────────────────────────────────
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 const formatAmount = (amount, currency) => {
   if (amount == null) return '—'

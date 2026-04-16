@@ -18,7 +18,7 @@ class MarketsModule implements ModuleDefinition
             sortOrder: 12,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'international', 'title' => 'International', 'to' => ['name' => 'platform-international-tab', 'params' => ['tab' => 'markets']], 'icon' => 'tabler-world', 'permission' => 'manage_markets'],
+                    ['key' => 'platform-international', 'title' => 'International', 'to' => ['name' => 'platform-international-tab', 'params' => ['tab' => 'markets']], 'icon' => 'tabler-world', 'permission' => 'manage_markets', 'group' => 'international', 'sort' => 50],
                 ],
                 routeNames: ['platform-international-tab', 'platform-markets-key'],
             ),

@@ -80,6 +80,7 @@ const toggleVisibility = async (role, newValue) => {
 
       <template #item.visible="{ item }">
         <VSwitch
+          v-can="'modules.manage'"
           :model-value="item.visible"
           :loading="togglingId === item.id"
           :disabled="togglingId !== null"

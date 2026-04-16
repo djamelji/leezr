@@ -2,6 +2,7 @@
 import { usePlatformAutomationsStore } from '@/modules/platform-admin/automations/automations.store'
 import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 import { useAppToast } from '@/composables/useAppToast'
+import { formatDateTime } from '@/utils/datetime'
 
 definePage({
   meta: {
@@ -39,11 +40,6 @@ const statusColor = s => ({ success: 'success', failed: 'error', running: 'info'
 const statusLabel = s => t(`automations.status${s?.charAt(0).toUpperCase()}${s?.slice(1)}`) || '—'
 const freqLabel = f => t(`automations.freq.${f}`) || f
 
-const formatDate = d => {
-  if (!d) return t('automations.neverRun')
-
-  return new Date(d).toLocaleString()
-}
 
 const truncate = (str, len = 50) => {
   if (!str) return '—'
@@ -326,7 +322,7 @@ onMounted(() => {
 
         <!-- Last run -->
         <template #item.last_run_at="{ item }">
-          {{ formatDate(item.last_run_at) }}
+          {{ formatDateTime(item.last_run_at) }}
         </template>
 
         <!-- Status -->
@@ -460,7 +456,7 @@ onMounted(() => {
             v-if="selectedTask.next_run_at"
             class="text-body-2 text-medium-emphasis mb-4"
           >
-            {{ t('automations.nextRun') }}: {{ formatDate(selectedTask.next_run_at) }}
+            {{ t('automations.nextRun') }}: {{ formatDateTime(selectedTask.next_run_at) }}
           </div>
 
           <!-- 24h stats -->

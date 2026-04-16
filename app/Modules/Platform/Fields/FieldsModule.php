@@ -18,7 +18,7 @@ class FieldsModule implements ModuleDefinition
             sortOrder: 60,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'fields', 'title' => 'Custom Fields', 'to' => ['name' => 'platform-fields'], 'icon' => 'tabler-forms', 'permission' => 'manage_field_definitions'],
+                    ['key' => 'fields', 'title' => 'Custom Fields', 'to' => ['name' => 'platform-fields'], 'icon' => 'tabler-forms', 'permission' => 'manage_field_definitions', 'group' => 'product', 'sort' => 32],
                 ],
                 routeNames: ['platform-fields'],
             ),

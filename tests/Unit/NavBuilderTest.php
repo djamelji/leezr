@@ -78,10 +78,10 @@ class NavBuilderTest extends TestCase
 
         // Dashboard (sortOrder 1) should come before other items
         if (in_array('dashboard', $allKeys) && count($allKeys) > 1) {
-            // Dashboard is in root group, verify it exists
-            $rootGroup = collect($groups)->firstWhere('key', 'root');
-            if ($rootGroup) {
-                $this->assertSame('dashboard', $rootGroup['items'][0]['key']);
+            // Dashboard is in cockpit group, verify it exists
+            $cockpitGroup = collect($groups)->firstWhere('key', 'cockpit');
+            if ($cockpitGroup) {
+                $this->assertSame('dashboard', $cockpitGroup['items'][0]['key']);
             }
         }
     }
@@ -99,8 +99,8 @@ class NavBuilderTest extends TestCase
         // Dashboard has no permission requirement — should be present
         $this->assertContains('dashboard', $allKeys);
 
-        // Supervision requires manage_companies — should be present (ADR-381)
-        $this->assertContains('platform-supervision', $allKeys);
+        // Companies requires manage_companies — should be present (ADR-381)
+        $this->assertContains('platform-companies', $allKeys);
 
         // Roles requires manage_roles — should NOT be present
         $this->assertNotContains('roles', $allKeys);
@@ -596,20 +596,21 @@ class NavBuilderTest extends TestCase
         $groups = NavBuilder::forAdmin();
         $groupKeys = collect($groups)->pluck('key')->all();
 
-        // Admin scope default group is 'management'
-        $this->assertContains('management', $groupKeys, 'Admin items should be in management group by default');
+        // Admin scope: all items now have explicit groups (cockpit, clients, finance, etc.)
+        // Cockpit group should always exist (Dashboard has no permission requirement)
+        $this->assertContains('cockpit', $groupKeys, 'Admin nav should contain the cockpit group');
     }
 
     public function test_explicit_group_overrides_derived(): void
     {
         $groups = NavBuilder::forAdmin();
 
-        // Dashboard has explicit group: 'root'
-        $rootGroup = collect($groups)->firstWhere('key', 'root');
-        $this->assertNotNull($rootGroup, 'Root group should exist for dashboard');
+        // Dashboard has explicit group: 'cockpit'
+        $cockpitGroup = collect($groups)->firstWhere('key', 'cockpit');
+        $this->assertNotNull($cockpitGroup, 'Cockpit group should exist for dashboard');
 
-        $rootKeys = collect($rootGroup['items'])->pluck('key')->all();
-        $this->assertContains('dashboard', $rootKeys, 'Dashboard should be in root group (explicit override)');
+        $cockpitKeys = collect($cockpitGroup['items'])->pluck('key')->all();
+        $this->assertContains('dashboard', $cockpitKeys, 'Dashboard should be in cockpit group (explicit override)');
     }
 
     public function test_group_title_key_is_i18n_key(): void
@@ -617,22 +618,18 @@ class NavBuilderTest extends TestCase
         $groups = NavBuilder::forAdmin();
 
         foreach ($groups as $group) {
-            if ($group['key'] === 'root') {
-                $this->assertSame('', $group['titleKey'], 'Root group should have empty titleKey');
-            } else {
-                $this->assertStringStartsWith('nav.groups.', $group['titleKey'],
-                    "Group '{$group['key']}' titleKey should be an i18n key");
-            }
+            $this->assertStringStartsWith('nav.groups.', $group['titleKey'],
+                "Group '{$group['key']}' titleKey should be an i18n key");
         }
     }
 
-    public function test_root_group_has_empty_title_key(): void
+    public function test_cockpit_group_has_correct_title_key(): void
     {
         $groups = NavBuilder::forAdmin();
-        $rootGroup = collect($groups)->firstWhere('key', 'root');
+        $cockpitGroup = collect($groups)->firstWhere('key', 'cockpit');
 
-        $this->assertNotNull($rootGroup);
-        $this->assertSame('', $rootGroup['titleKey']);
+        $this->assertNotNull($cockpitGroup);
+        $this->assertSame('nav.groups.cockpit', $cockpitGroup['titleKey']);
     }
 
     // ═══════════════════════════════════════════════════════

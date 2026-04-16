@@ -4,6 +4,7 @@ import { applyTheme } from '@/composables/useApplyTheme'
 import { useThemeStore } from '@/modules/core/theme/theme.store'
 import { refreshCsrf } from '@/utils/csrf'
 import { postBroadcast } from '@/core/runtime/broadcast'
+import { useWorldStore } from '@/core/stores/world'
 import { cacheClear } from '@/core/runtime/cache'
 
 export const useAuthStore = defineStore('auth', {
@@ -195,12 +196,28 @@ export const useAuthStore = defineStore('auth', {
         this._persistCompanyId(data.companies[0].id)
       }
 
+      // ADR-435: Sync worldStore with current company's market
+      this._syncMarket()
+
       return data.companies
     },
 
     switchCompany(companyId) {
       this._persistCompanyId(companyId)
+      // ADR-435: Apply market before reload/broadcast
+      this._syncMarket()
       postBroadcast('company-switch', { companyId })
+    },
+
+    /**
+     * ADR-435: Sync worldStore with the current company's market data.
+     * Called after fetchMyCompanies and on company switch.
+     */
+    _syncMarket() {
+      const company = this.currentCompany
+      if (company?.market) {
+        useWorldStore().applyMarket(company.market)
+      }
     },
   },
 })

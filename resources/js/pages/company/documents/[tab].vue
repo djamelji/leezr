@@ -101,7 +101,7 @@ const navigateToTab = tab => {
   router.push({ name: 'company-documents-tab', params: { tab } })
 }
 
-onMounted(async () => {
+const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: pageRetry } = useAsyncAction(async () => {
   // Page-level data (documents.view — guaranteed by router guard)
   await Promise.all([
     store.fetchCompanyDocuments(),
@@ -110,14 +110,29 @@ onMounted(async () => {
     store.fetchActivity(),
   ])
 
-  // ADR-418: Tab-specific data — only fetch if user has permission
-  if (can('documents.manage')) store.fetchRequests()
-  if (can('documents.configure')) store.fetchDocSettings()
-})
+  // ADR-418: Tab-specific data — only fetch if user has permission (non-blocking)
+  if (can('documents.manage')) store.fetchRequests().catch(() => {})
+  if (can('documents.configure')) store.fetchDocSettings().catch(() => {})
+}, { immediate: true })
 </script>
 
 <template>
   <div>
+    <!-- Loading -->
+    <VSkeletonLoader
+      v-if="pageLoading"
+      type="tabs, card, card"
+    />
+
+    <!-- Error -->
+    <ErrorState
+      v-else-if="pageError"
+      :message="pageErrorMsg"
+      @retry="pageRetry"
+    />
+
+    <!-- Content -->
+    <template v-else>
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill"
@@ -180,5 +195,6 @@ onMounted(async () => {
       @created="handleDrawerDone"
       @updated="handleDrawerDone"
     />
+    </template>
   </div>
 </template>

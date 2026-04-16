@@ -1,11 +1,12 @@
 <script setup>
 import { usePlatformSupportStore } from '@/modules/platform-admin/support/support.store'
+import { formatDate } from '@/utils/datetime'
 
 definePage({
   meta: {
     layout: 'platform',
     platform: true,
-    navActiveKey: 'platform-support',
+    navActiveLink: 'platform-support',
     module: 'platform.support',
   },
 })
@@ -74,7 +75,6 @@ const openTicket = row => {
   router.push({ name: 'platform-support-id', params: { id: row.id } })
 }
 
-const formatDate = d => d ? new Date(d).toLocaleDateString() : '—'
 
 watch([statusFilter, priorityFilter, search], () => {
   page.value = 1

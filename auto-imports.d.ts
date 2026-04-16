@@ -203,6 +203,7 @@ declare global {
   const useBroadcastChannel: typeof import('@vueuse/core')['useBroadcastChannel']
   const useBrowserLocation: typeof import('@vueuse/core')['useBrowserLocation']
   const useCached: typeof import('@vueuse/core')['useCached']
+  const useCan: typeof import('./resources/js/composables/useCan.js')['useCan']
   const useCeil: typeof import('@vueuse/math')['useCeil']
   const useClamp: typeof import('@vueuse/math')['useClamp']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
@@ -272,6 +273,7 @@ declare global {
   const useMagicKeys: typeof import('@vueuse/core')['useMagicKeys']
   const useMaintenanceTheme: typeof import('./resources/js/composables/useMaintenanceTheme.js')['useMaintenanceTheme']
   const useManualRefHistory: typeof import('@vueuse/core')['useManualRefHistory']
+  const useMarketFormatting: typeof import('./resources/js/composables/useMarketFormatting.js')['useMarketFormatting']
   const useMath: typeof import('@vueuse/math')['useMath']
   const useMax: typeof import('@vueuse/math')['useMax']
   const useMediaControls: typeof import('@vueuse/core')['useMediaControls']
@@ -363,6 +365,7 @@ declare global {
   const useTransition: typeof import('@vueuse/core')['useTransition']
   const useTrunc: typeof import('@vueuse/math')['useTrunc']
   const useTunnelPersistence: typeof import('./resources/js/composables/useTunnelPersistence.js')['useTunnelPersistence']
+  const useUnsavedChanges: typeof import('./resources/js/composables/useUnsavedChanges.js')['useUnsavedChanges']
   const useUrlSearchParams: typeof import('@vueuse/core')['useUrlSearchParams']
   const useUserMedia: typeof import('@vueuse/core')['useUserMedia']
   const useVModel: typeof import('@vueuse/core')['useVModel']
@@ -595,6 +598,7 @@ declare module 'vue' {
     readonly useBroadcastChannel: UnwrapRef<typeof import('@vueuse/core')['useBroadcastChannel']>
     readonly useBrowserLocation: UnwrapRef<typeof import('@vueuse/core')['useBrowserLocation']>
     readonly useCached: UnwrapRef<typeof import('@vueuse/core')['useCached']>
+    readonly useCan: UnwrapRef<typeof import('./resources/js/composables/useCan.js')['useCan']>
     readonly useCeil: UnwrapRef<typeof import('@vueuse/math')['useCeil']>
     readonly useClamp: UnwrapRef<typeof import('@vueuse/math')['useClamp']>
     readonly useClipboard: UnwrapRef<typeof import('@vueuse/core')['useClipboard']>
@@ -664,6 +668,7 @@ declare module 'vue' {
     readonly useMagicKeys: UnwrapRef<typeof import('@vueuse/core')['useMagicKeys']>
     readonly useMaintenanceTheme: UnwrapRef<typeof import('./resources/js/composables/useMaintenanceTheme.js')['useMaintenanceTheme']>
     readonly useManualRefHistory: UnwrapRef<typeof import('@vueuse/core')['useManualRefHistory']>
+    readonly useMarketFormatting: UnwrapRef<typeof import('./resources/js/composables/useMarketFormatting.js')['useMarketFormatting']>
     readonly useMath: UnwrapRef<typeof import('@vueuse/math')['useMath']>
     readonly useMax: UnwrapRef<typeof import('@vueuse/math')['useMax']>
     readonly useMediaControls: UnwrapRef<typeof import('@vueuse/core')['useMediaControls']>
@@ -755,6 +760,7 @@ declare module 'vue' {
     readonly useTransition: UnwrapRef<typeof import('@vueuse/core')['useTransition']>
     readonly useTrunc: UnwrapRef<typeof import('@vueuse/math')['useTrunc']>
     readonly useTunnelPersistence: UnwrapRef<typeof import('./resources/js/composables/useTunnelPersistence.js')['useTunnelPersistence']>
+    readonly useUnsavedChanges: UnwrapRef<typeof import('./resources/js/composables/useUnsavedChanges.js')['useUnsavedChanges']>
     readonly useUrlSearchParams: UnwrapRef<typeof import('@vueuse/core')['useUrlSearchParams']>
     readonly useUserMedia: UnwrapRef<typeof import('@vueuse/core')['useUserMedia']>
     readonly useVModel: UnwrapRef<typeof import('@vueuse/core')['useVModel']>

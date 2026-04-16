@@ -129,6 +129,26 @@ class ScheduledTaskRegistry
             'cron' => '0 */6 * * *',
             'expected_interval_minutes' => 360,
         ],
+
+        // ── Workflow Engine (ADR-437) ───────────────────────────
+        'workflow:reset-daily-counters' => [
+            'command' => 'workflow:reset-daily-counters',
+            'description' => 'automations.tasks.workflowResetCounters',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '0 0 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
+
+        // ── Alert Center (ADR-438) ──────────────────────────────
+        'alerts:evaluate' => [
+            'command' => 'alerts:evaluate',
+            'description' => 'automations.tasks.alertsEvaluate',
+            'category' => 'system',
+            'frequency' => 'every5min',
+            'cron' => '*/5 * * * *',
+            'expected_interval_minutes' => 5,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

@@ -4,6 +4,7 @@ namespace App\Core\Billing;
 
 use App\Core\Billing\Exceptions\InvalidSubscriptionTransition;
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class Subscription extends Model
 {
+    use BelongsToCompany;
+
     // ── States ────────────────────────────────────────────
     const STATES = [
         'pending_payment', 'pending', 'trialing', 'active',
@@ -178,11 +181,6 @@ class Subscription extends Model
     }
 
     // ── Relations ────────────────────────────────────────
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     // ── Scopes ───────────────────────────────────────────
 

@@ -11,8 +11,7 @@ use App\Core\Models\User;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\CompanyEntitlements;
-use App\Core\Realtime\Contracts\RealtimePublisher;
-use App\Core\Realtime\EventEnvelope;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Core\Security\SecurityDetector;
 use App\Modules\Core\Members\Http\Requests\StoreMemberRequest;
 use App\Modules\Core\Members\Http\Requests\UpdateMemberRequest;
@@ -23,6 +22,7 @@ use Illuminate\Support\Facades\Password;
 
 class MembershipController extends Controller
 {
+    use PublishesRealtimeEvents;
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -141,9 +141,7 @@ class MembershipController extends Controller
         }
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.added', 'user_id' => $user->id])
-        );
+        $this->publishDomainEvent('members.changed', $company->id, ['action' => 'member_added', 'user_id' => $user->id]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ADDED, 'user', (string) $user->id);
@@ -206,9 +204,7 @@ class MembershipController extends Controller
 
         // ADR-125: publish after mutation (only on role reassignment)
         if ($roleChanged) {
-            app(RealtimePublisher::class)->publish(
-                EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.role_changed', 'user_id' => $membership->user_id])
-            );
+            $this->publishDomainEvent('members.changed', $company->id, ['action' => 'member_role_changed', 'user_id' => $membership->user_id]);
 
             // ADR-130: audit log
             app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ROLE_CHANGED, 'membership', (string) $membership->id);
@@ -247,9 +243,7 @@ class MembershipController extends Controller
         $membership->delete();
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('members.changed', $company->id, ['action' => 'member.removed'])
-        );
+        $this->publishDomainEvent('members.changed', $company->id, ['action' => 'member_removed', 'user_id' => $userId]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_REMOVED, 'user', (string) $userId);

@@ -3,11 +3,14 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'subscription_id', 'invoice_id', 'company_id', 'amount', 'currency',
         'status', 'provider', 'provider_payment_id', 'metadata',
@@ -29,10 +32,5 @@ class Payment extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 }

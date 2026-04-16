@@ -2,6 +2,7 @@
 import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import { formatMoney } from '@/utils/money'
+import { formatDate } from '@/utils/datetime'
 import { $api } from '@/utils/api'
 
 const { t } = useI18n()
@@ -32,15 +33,6 @@ const statusOptions = computed(() => [
   { title: t('platformBilling.scheduledDebits.statusCancelled'), value: 'cancelled' },
 ])
 
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
 
 const daysUntil = debitDate => {
   if (!debitDate) return null

@@ -4,6 +4,7 @@ namespace App\Core\Documents;
 
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class DocumentRequest extends Model
 {
+    use BelongsToCompany;
     public const STATUS_REQUESTED = 'requested';
     public const STATUS_SUBMITTED = 'submitted';
     public const STATUS_APPROVED = 'approved';
@@ -40,11 +42,6 @@ class DocumentRequest extends Model
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     public function user(): BelongsTo
     {

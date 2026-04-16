@@ -309,6 +309,7 @@ const displayStateChip = computed(() => {
 
               <div class="d-flex gap-2 mt-4">
                 <VBtn
+                  v-can="'modules.manage'"
                   type="submit"
                   :loading="isSaving"
                 >

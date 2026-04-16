@@ -12,6 +12,7 @@ import BrandLogo from '@/components/BrandLogo.vue'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
 import { invoiceStatusColor } from '@/utils/billing'
+import { formatDate, formatDateTime } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 
 const { t } = useI18n()
@@ -19,33 +20,16 @@ const route = useRoute()
 const router = useRouter()
 const store = useCompanyBillingStore()
 
-const isLoading = ref(true)
-const error = ref(false)
-
 const invoice = computed(() => store.invoiceDetail)
 const snap = computed(() => invoice.value?.billing_snapshot || {})
 
 // Market locale for date formatting (e.g. "fr-FR")
 const marketLocale = computed(() => snap.value?.market_locale || 'fr-FR')
 
-const load = async () => {
-  isLoading.value = true
-  error.value = false
-  try {
-    await store.fetchInvoiceDetail(route.params.id)
-    if (!store.invoiceDetail) {
-      error.value = true
-    }
-  }
-  catch {
-    error.value = true
-  }
-  finally {
-    isLoading.value = false
-  }
-}
-
-onMounted(load)
+const { isLoading, isError, error, retry } = useAsyncAction(async () => {
+  await store.fetchInvoiceDetail(route.params.id)
+  if (!store.invoiceDetail) throw new Error(t('companyBilling.invoiceDetail.notFound'))
+}, { immediate: true })
 
 // ── Helpers ──
 const isPastDue = computed(() => {
@@ -90,28 +74,6 @@ const paymentStatusLabel = status => {
   const key = map[status]
 
   return key ? t(`companyBilling.invoiceDetail.${key}`) : status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-const formatDateTime = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 const taxPercent = computed(() => {
@@ -168,27 +130,29 @@ const payInvoice = () => {
     />
 
     <!-- Error -->
-    <VAlert
-      v-else-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-4"
+    <ErrorState
+      v-else-if="isError"
+      :message="error"
+      @retry="retry"
     >
-      <VAlertTitle>{{ t('companyBilling.invoiceDetail.notFound') }}</VAlertTitle>
-      <p class="mb-4">
-        {{ t('companyBilling.invoiceDetail.notFoundDesc') }}
-      </p>
       <VBtn
         variant="tonal"
         color="primary"
+        class="mt-2"
         @click="router.push('/company/billing/invoices')"
       >
         {{ t('companyBilling.invoiceDetail.backToBilling') }}
       </VBtn>
-    </VAlert>
+    </ErrorState>
 
     <!-- Content -->
     <template v-else-if="invoice">
+      <PageBreadcrumbs
+        :items="[
+          { title: t('companyBilling.title'), to: { name: 'company-billing-tab', params: { tab: 'invoices' } } },
+          { title: invoice.display_number || invoice.number },
+        ]"
+      />
       <VRow>
         <!-- Main Content (9 cols) -->
         <VCol
@@ -657,6 +621,7 @@ const payInvoice = () => {
               <!-- Pay button — open or overdue with amount_due > 0 -->
               <VBtn
                 v-if="canPay"
+                v-can="'billing.manage'"
                 block
                 color="primary"
                 prepend-icon="tabler-credit-card"

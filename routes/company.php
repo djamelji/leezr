@@ -33,6 +33,7 @@ use App\Modules\Core\Documents\Http\CustomDocumentTypeController;
 use App\Modules\Core\Documents\Http\DocumentComplianceController;
 use App\Modules\Core\Documents\Http\DocumentSettingController;
 use App\Modules\Core\Documents\Http\DocumentRequestController;
+use App\Modules\Core\Documents\Http\AiQuotaController;
 use App\Modules\Core\Documents\Http\MemberDocumentAiSuggestionController;
 use App\Modules\Core\Documents\Http\MemberDocumentController;
 use App\Modules\Core\Documents\Http\SelfDocumentController;
@@ -266,6 +267,10 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::put('/company/document-settings', [DocumentSettingController::class, 'update'])
         ->middleware('company.access:use-permission,documents.configure');
 
+    // AI quota (ADR-436)
+    Route::get('/company/ai-quota/{moduleKey}', [AiQuotaController::class, 'show'])
+        ->middleware('company.access:use-permission,documents.view');
+
     // Custom document types (ADR-180)
     Route::post('/company/document-types/custom', [CustomDocumentTypeController::class, 'store'])
         ->middleware('company.access:use-permission,documents.configure');
@@ -377,6 +382,21 @@ Route::middleware('company.access:use-module,core.support')->group(function () {
         ->middleware('company.access:use-permission,support.view');
     Route::post('/support/tickets/{id}/messages', [SupportMessageController::class, 'store'])
         ->middleware('company.access:use-permission,support.create');
+});
+
+// ── Workflow Rules (ADR-437) ─────────────────────────────────
+Route::middleware('company.access:use-module,core.workflows')->group(function () {
+    Route::middleware('company.access:use-permission,automations.view')->group(function () {
+        Route::get('/workflows', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'index']);
+        Route::get('/workflows/triggers', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'triggers']);
+        Route::get('/workflows/{workflowRule}', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'show']);
+        Route::get('/workflows/{workflowRule}/logs', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'logs']);
+    });
+    Route::middleware('company.access:use-permission,automations.manage')->group(function () {
+        Route::post('/workflows', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'store']);
+        Route::put('/workflows/{workflowRule}', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'update']);
+        Route::delete('/workflows/{workflowRule}', [\App\Modules\Core\Automations\Http\WorkflowRuleController::class, 'destroy']);
+    });
 });
 
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

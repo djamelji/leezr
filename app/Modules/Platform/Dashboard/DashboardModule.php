@@ -18,7 +18,7 @@ class DashboardModule implements ModuleDefinition
             sortOrder: 1,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'dashboard', 'title' => 'Dashboard', 'to' => ['name' => 'platform'], 'icon' => 'tabler-dashboard', 'group' => 'root'],
+                    ['key' => 'dashboard', 'title' => 'Dashboard', 'to' => ['name' => 'platform'], 'icon' => 'tabler-dashboard', 'group' => 'cockpit', 'sort' => 1],
                 ],
                 routeNames: ['platform'],
             ),

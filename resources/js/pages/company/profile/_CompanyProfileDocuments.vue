@@ -96,6 +96,7 @@ const emit = defineEmits(['openTypesDrawer', 'openCreateDrawer'])
           <div class="d-flex align-center gap-2">
             <VBtn
               v-if="canEdit"
+              v-can="'settings.manage'"
               variant="tonal"
               color="success"
               size="small"
@@ -109,6 +110,7 @@ const emit = defineEmits(['openTypesDrawer', 'openCreateDrawer'])
               {{ t('companyProfile.createType') }}
             </VBtn>
             <VBtn
+              v-can="'settings.manage'"
               variant="tonal"
               color="info"
               size="small"

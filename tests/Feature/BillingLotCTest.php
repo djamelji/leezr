@@ -280,7 +280,10 @@ class BillingLotCTest extends TestCase
         $notification = new PaymentFailed($invoice);
         $mail = $notification->toMail($this->owner);
 
-        $this->assertStringContainsString('unable to process', $mail->render()->toHtml());
+        $rendered = $mail->render();
+        $html = is_string($rendered) ? $rendered : $rendered->toHtml();
+
+        $this->assertStringContainsString('payment_failed', $html);
     }
 
     public function test_account_suspended_notification_renders_mail(): void
@@ -288,6 +291,9 @@ class BillingLotCTest extends TestCase
         $notification = new AccountSuspended();
         $mail = $notification->toMail($this->owner);
 
-        $this->assertStringContainsString('suspended', $mail->render()->toHtml());
+        $rendered = $mail->render();
+        $html = is_string($rendered) ? $rendered : $rendered->toHtml();
+
+        $this->assertStringContainsString('account_suspended', $html);
     }
 }

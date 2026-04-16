@@ -20,6 +20,7 @@ import { bootMachine } from './bootMachine'
 import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
 import { createChannelRouter } from '@/core/realtime/ChannelRouter'
 import { domainEventBus } from '@/core/realtime/DomainEventBus'
+import { getTopicHandler } from '@/core/realtime/topicHandlers'
 import { createNotificationHandler } from '@/core/realtime/handlers/NotificationHandler'
 import { createAuditHandler } from '@/core/realtime/handlers/AuditHandler'
 import { createSecurityHandler } from '@/core/realtime/handlers/SecurityHandler'
@@ -29,6 +30,8 @@ import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { useModuleStore } from '@/core/stores/module'
 import { useNavStore } from '@/core/stores/nav'
 import { useNotificationStore } from '@/core/stores/notification'
+import { useAppToast } from '@/composables/useAppToast'
+import { getI18n } from '@/plugins/i18n'
 
 // Module-level journal (non-reactive — accessed via getter + version counter)
 const _journal = createJournal(200)
@@ -582,7 +585,25 @@ export const useRuntimeStore = defineStore('runtime', {
 
       _channelRouter = createChannelRouter({
         invalidation: data => this._handleRealtimeInvalidation(data.invalidates || []),
-        domain: data => domainEventBus.dispatch(data),
+        domain: data => {
+          // ADR-434: Auto-invalidate stores based on topic handler config
+          const handler = getTopicHandler(data.topic)
+
+          if (handler?.invalidates?.length) {
+            this._handleRealtimeInvalidation(handler.invalidates)
+          }
+
+          // ADR-434b: Toast feedback for perceptible realtime events
+          if (handler?.ux === 'toast' && handler.toastKey) {
+            const { toast } = useAppToast()
+            const i18n = getI18n()
+            const msg = i18n.global.t(handler.toastKey)
+
+            toast(msg, 'info')
+          }
+
+          domainEventBus.dispatch(data)
+        },
         notification: data => notificationHandler.dispatch(data),
         audit: data => auditHandler.dispatch(data),
         security: data => securityHandler.dispatch(data),

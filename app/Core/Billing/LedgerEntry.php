@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use RuntimeException;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 class LedgerEntry extends Model
 {
+    use BelongsToCompany;
+
     protected $table = 'financial_ledger_entries';
 
     protected $guarded = [];
@@ -40,10 +43,5 @@ class LedgerEntry extends Model
         static::deleting(function () {
             throw new RuntimeException('Ledger entries are immutable — deletes are forbidden.');
         });
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 }

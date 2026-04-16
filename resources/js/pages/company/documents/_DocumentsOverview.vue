@@ -85,6 +85,7 @@ const emit = defineEmits(['navigate'])
         {{ t('companyDocuments.emptyState.overviewSubtitle') }}
       </p>
       <VBtn
+        v-can="'documents.configure'"
         color="primary"
         variant="tonal"
         prepend-icon="tabler-file-settings"
@@ -320,6 +321,7 @@ const emit = defineEmits(['navigate'])
           </VBtn>
           <VBtn
             v-if="store.submittedRequestsCount > 0"
+            v-can="'documents.manage'"
             variant="tonal"
             color="warning"
             @click="emit('navigate', 'requests')"
@@ -331,6 +333,7 @@ const emit = defineEmits(['navigate'])
             {{ t('companyDocuments.overview.viewPending', { count: store.submittedRequestsCount }) }}
           </VBtn>
           <VBtn
+            v-can="'documents.configure'"
             variant="tonal"
             color="info"
             @click="emit('navigate', 'settings')"

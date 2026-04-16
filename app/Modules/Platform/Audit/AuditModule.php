@@ -18,7 +18,7 @@ class AuditModule implements ModuleDefinition
             sortOrder: 93,
             capabilities: new Capabilities(
                 navItems: [],
-                routeNames: ['platform-access-tab', 'platform-supervision-tab'],
+                routeNames: ['platform-access-tab', 'platform-companies'],
             ),
             permissions: [
                 ['key' => 'view_audit_logs', 'label' => 'View Audit Logs'],

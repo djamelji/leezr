@@ -77,6 +77,36 @@ class AppServiceProvider extends ServiceProvider
         // ADR-412: Boot AI provider registry
         \App\Core\Ai\AiProviderRegistry::boot();
 
+        // ADR-436: Register AI module contracts
+        \App\Core\Ai\AiModuleContractRegistry::register(new \App\Core\Documents\DocumentAiModule());
+
+        // ADR-437: Register workflow triggers (topics that can trigger company workflows)
+        \App\Core\Automation\WorkflowTriggerRegistry::register('document.updated', 'Document mis à jour', [
+            ['field' => 'ai_status', 'type' => 'string', 'label' => 'Statut AI'],
+            ['field' => 'status', 'type' => 'string', 'label' => 'Statut document'],
+        ], [
+            ['type' => 'send_notification', 'label' => 'Envoyer notification'],
+            ['type' => 'webhook', 'label' => 'Appeler webhook'],
+        ]);
+        \App\Core\Automation\WorkflowTriggerRegistry::register('members.changed', 'Membre modifié', [
+            ['field' => 'action', 'type' => 'string', 'label' => 'Action'],
+        ], [
+            ['type' => 'send_notification', 'label' => 'Envoyer notification'],
+            ['type' => 'webhook', 'label' => 'Appeler webhook'],
+        ]);
+        \App\Core\Automation\WorkflowTriggerRegistry::register('plan.changed', 'Plan modifié', [], [
+            ['type' => 'send_notification', 'label' => 'Envoyer notification'],
+            ['type' => 'log', 'label' => 'Écrire dans le log'],
+        ]);
+        \App\Core\Automation\WorkflowTriggerRegistry::register('modules.changed', 'Module activé/désactivé', [
+            ['field' => 'action', 'type' => 'string', 'label' => 'Action'],
+        ], [
+            ['type' => 'send_notification', 'label' => 'Envoyer notification'],
+        ]);
+        \App\Core\Automation\WorkflowTriggerRegistry::register('rbac.changed', 'Rôle ou permission modifié', [], [
+            ['type' => 'send_notification', 'label' => 'Envoyer notification'],
+        ]);
+
         // ADR-149: Boot dashboard widget registry (convention-based discovery)
         \App\Modules\Dashboard\DashboardWidgetRegistry::boot();
 
@@ -94,6 +124,11 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Event::listen(
             \App\Core\Events\ModuleDisabled::class,
             \App\Core\Billing\Listeners\AddonCreditListener::class,
+        );
+
+        // ADR-446: Email event subscriber for delivery tracking
+        \Illuminate\Support\Facades\Event::subscribe(
+            \App\Core\Email\EmailEventSubscriber::class,
         );
 
         // ADR-318: Rate limiter for async reconciliation jobs

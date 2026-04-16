@@ -5,7 +5,7 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
   state: () => ({
     _companies: [],
     _companiesPagination: { current_page: 1, last_page: 1, total: 0 },
-    _stats: { total_active: 0, total_suspended: 0, total: 0 },
+    _stats: { total_active: 0, total_suspended: 0, total: 0, total_mrr: 0, at_risk_count: 0 },
     _plans: [],
   }),
 

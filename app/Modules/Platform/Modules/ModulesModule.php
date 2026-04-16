@@ -18,7 +18,7 @@ class ModulesModule implements ModuleDefinition
             sortOrder: 40,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'modules', 'title' => 'Modules', 'to' => ['name' => 'platform-modules'], 'icon' => 'tabler-puzzle', 'permission' => 'manage_modules'],
+                    ['key' => 'modules', 'title' => 'Modules', 'to' => ['name' => 'platform-modules'], 'icon' => 'tabler-puzzle', 'permission' => 'manage_modules', 'group' => 'product', 'sort' => 30],
                 ],
                 routeNames: ['platform-modules', 'platform-modules-key'],
             ),

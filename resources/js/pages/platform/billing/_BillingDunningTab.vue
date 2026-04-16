@@ -3,6 +3,7 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
+import { formatDate, formatDateTime } from '@/utils/datetime'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -72,24 +73,20 @@ const filteredInvoices = computed(() => {
   return items
 })
 
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
+// Retry confirmation dialog
+const retryTarget = ref(null)
+const isRetryDialogOpen = ref(false)
 
-  return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+const confirmRetry = item => {
+  retryTarget.value = item
+  isRetryDialogOpen.value = true
 }
 
-const formatDateTime = dateStr => {
-  if (!dateStr) return '—'
+const handleRetry = async () => {
+  const item = retryTarget.value
+  if (!item) return
 
-  return new Date(dateStr).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const handleRetry = async item => {
+  isRetryDialogOpen.value = false
   actionLoading.value = { ...actionLoading.value, [item.id]: 'retry' }
   try {
     await store.retryInvoicePayment(item.id, {
@@ -106,7 +103,20 @@ const handleRetry = async item => {
   }
 }
 
-const handleEscalate = async item => {
+// Escalate confirmation dialog
+const escalateTarget = ref(null)
+const isEscalateDialogOpen = ref(false)
+
+const confirmEscalate = item => {
+  escalateTarget.value = item
+  isEscalateDialogOpen.value = true
+}
+
+const handleEscalate = async () => {
+  const item = escalateTarget.value
+  if (!item) return
+
+  isEscalateDialogOpen.value = false
   actionLoading.value = { ...actionLoading.value, [item.id]: 'escalate' }
   try {
     await store.forceDunningTransition(item.id, {
@@ -339,7 +349,7 @@ onMounted(() => load())
               icon="tabler-refresh"
               :loading="actionLoading[item.id] === 'retry'"
               :disabled="!!actionLoading[item.id]"
-              @click="handleRetry(item)"
+              @click="confirmRetry(item)"
             />
             <VBtn
               v-if="item.status === 'overdue'"
@@ -349,7 +359,7 @@ onMounted(() => load())
               icon="tabler-arrow-up"
               :loading="actionLoading[item.id] === 'escalate'"
               :disabled="!!actionLoading[item.id]"
-              @click="handleEscalate(item)"
+              @click="confirmEscalate(item)"
             />
             <VBtn
               v-if="item.status === 'overdue'"
@@ -415,6 +425,96 @@ onMounted(() => load())
           @click="handleWriteOff"
         >
           {{ t('platformBilling.dunning.writeOff') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Retry Confirm Dialog (ADR-446: Billing Safety) -->
+  <VDialog
+    v-model="isRetryDialogOpen"
+    max-width="460"
+  >
+    <VCard>
+      <VCardTitle class="text-h5 pa-5">
+        {{ t('billingActions.retryConfirmTitle') }}
+      </VCardTitle>
+      <VCardText>
+        <p class="mb-3">
+          {{ t('billingActions.retryConfirmMessage', { amount: retryTarget ? formatMoney(retryTarget.total_amount, retryTarget.currency) : '', currency: retryTarget?.currency, number: retryTarget?.number }) }}
+        </p>
+        <div
+          v-if="retryTarget"
+          class="pa-3 rounded"
+          style="background: rgb(var(--v-theme-surface))"
+        >
+          <div class="text-body-2 text-medium-emphasis">
+            {{ t('billingActions.retryConfirmInfo', { count: retryTarget.retry_count || 0 }) }}
+          </div>
+        </div>
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="text"
+          @click="isRetryDialogOpen = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          variant="elevated"
+          @click="handleRetry"
+        >
+          {{ t('billingActions.retryConfirmButton') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Escalate Confirm Dialog (ADR-446: Billing Safety) -->
+  <VDialog
+    v-model="isEscalateDialogOpen"
+    max-width="500"
+  >
+    <VCard>
+      <VCardTitle class="text-h5 pa-5">
+        {{ t('billingActions.escalateConfirmTitle') }}
+      </VCardTitle>
+      <VCardText>
+        <p class="mb-3">
+          {{ t('billingActions.escalateConfirmMessage', { number: escalateTarget?.number }) }}
+        </p>
+        <VAlert
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-2"
+        >
+          {{ t('billingActions.escalateImpact1', { amount: escalateTarget ? formatMoney(escalateTarget.total_amount, escalateTarget.currency) : '', currency: escalateTarget?.currency }) }}
+        </VAlert>
+        <VAlert
+          type="error"
+          variant="tonal"
+          density="compact"
+        >
+          {{ t('billingActions.escalateImpact2') }}
+        </VAlert>
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="text"
+          @click="isEscalateDialogOpen = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="warning"
+          variant="elevated"
+          @click="handleEscalate"
+        >
+          {{ t('billingActions.escalateConfirmButton') }}
         </VBtn>
       </VCardActions>
     </VCard>

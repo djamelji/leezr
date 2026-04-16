@@ -133,10 +133,16 @@ class NotificationDispatcher
                 $count++;
             }
 
-            // 4. Email channel: use existing Laravel notification
+            // 4. Email channel: route through EmailService for logging + dynamic SMTP
             if (in_array('email', $channels) && $mailNotification) {
                 try {
-                    $recipient->notify($mailNotification);
+                    app(\App\Core\Email\EmailService::class)->send(
+                        notification: $mailNotification,
+                        recipient: $recipient,
+                        templateKey: $topicKey,
+                        company: $company,
+                        metadata: $payload,
+                    );
                 } catch (\Throwable $e) {
                     Log::warning('[notifications] Email send failed', [
                         'topic' => $topicKey,

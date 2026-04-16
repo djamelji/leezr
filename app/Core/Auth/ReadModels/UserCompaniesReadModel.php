@@ -15,11 +15,14 @@ class UserCompaniesReadModel
     public static function forUser(User $user): array
     {
         $memberships = $user->memberships()
-            ->with('companyRole.permissions', 'company')
+            ->with('companyRole.permissions', 'company.market')
             ->get();
 
         return $memberships->map(function ($membership) {
             $isAdministrative = $membership->isAdmin();
+
+            // ADR-435: Include market data for frontend market-aware formatting
+            $market = $membership->company->market;
 
             $data = [
                 'id' => $membership->company->id,
@@ -28,6 +31,14 @@ class UserCompaniesReadModel
                 'role' => $membership->role,
                 'is_administrative' => $isAdministrative,
                 'plan_key' => CompanyEntitlements::planKey($membership->company),
+                'market_key' => $membership->company->market_key,
+                'market' => $market ? [
+                    'key' => $market->key,
+                    'currency' => $market->currency,
+                    'locale' => $market->locale,
+                    'timezone' => $market->timezone,
+                    'dial_code' => $market->dial_code,
+                ] : null,
             ];
 
             if ($membership->companyRole) {

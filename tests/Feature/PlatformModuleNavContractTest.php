@@ -35,7 +35,6 @@ class PlatformModuleNavContractTest extends TestCase
         // These modules have routeNames but no navItem — they piggyback on another module's nav entry
         $sharedPageModules = [
             'platform.translations', // Tab on International page (owned by platform.markets)
-            'platform.support',      // No sidebar nav — access via footer link only
             'platform.roles',        // Tab on Access page (owned by platform.users) — ADR-380
             'platform.audit',        // Tabs on Access + Supervision pages (no own page) — ADR-381
         ];

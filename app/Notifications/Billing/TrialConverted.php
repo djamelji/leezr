@@ -3,14 +3,26 @@
 namespace App\Notifications\Billing;
 
 use App\Core\Billing\Subscription;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * ADR-286: Sent when a trial subscription converts to active (first billing).
  */
-class TrialConverted extends Notification
+class TrialConverted extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public ?int $emailLogId = null;
+
+    public ?string $emailMessageId = null;
+
     public function __construct(
         private readonly Subscription $subscription,
     ) {}
@@ -23,12 +35,13 @@ class TrialConverted extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your trial has ended — subscription is now active')
-            ->greeting("Hello {$notifiable->first_name},")
-            ->line('Your free trial has ended and your subscription is now **active**.')
-            ->line('Your first invoice has been generated and billing will continue according to your plan.')
-            ->action('View Billing', url('/company/billing'))
-            ->line('Have questions? Contact our support team.');
+            ->subject(__('email.billing.trial_converted.subject'))
+            ->view('emails.billing.trial-converted', [
+                'user' => $notifiable,
+                'subscription' => $this->subscription,
+                'emailLogId' => $this->emailLogId,
+                'emailMessageId' => $this->emailMessageId,
+            ]);
     }
 
     public function getSubscription(): Subscription

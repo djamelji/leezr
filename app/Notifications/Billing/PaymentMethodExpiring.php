@@ -3,14 +3,26 @@
 namespace App\Notifications\Billing;
 
 use App\Core\Billing\CompanyPaymentProfile;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * ADR-272: Sent when a payment method (card) is expiring within 30 days.
  */
-class PaymentMethodExpiring extends Notification
+class PaymentMethodExpiring extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public ?int $emailLogId = null;
+
+    public ?string $emailMessageId = null;
+
     public function __construct(
         private readonly CompanyPaymentProfile $profile,
     ) {}
@@ -22,19 +34,14 @@ class PaymentMethodExpiring extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $meta = $this->profile->metadata ?? [];
-        $brand = ucfirst($meta['brand'] ?? 'card');
-        $last4 = $meta['last4'] ?? '****';
-        $expMonth = str_pad($meta['exp_month'] ?? '??', 2, '0', STR_PAD_LEFT);
-        $expYear = $meta['exp_year'] ?? '????';
-
         return (new MailMessage)
-            ->subject("Your {$brand} ending in {$last4} is expiring soon")
-            ->greeting("Hello {$notifiable->first_name},")
-            ->line("Your payment method **{$brand} ending in {$last4}** expires on **{$expMonth}/{$expYear}**.")
-            ->line('Please update your payment method to avoid service interruption.')
-            ->action('Update Payment Method', url('/company/billing'))
-            ->line('Thank you for keeping your account up to date.');
+            ->subject(__('email.billing.payment_method_expiring.subject', ['brand' => $this->profile->brand, 'last4' => $this->profile->last4]))
+            ->view('emails.billing.payment-method-expiring', [
+                'user' => $notifiable,
+                'profile' => $this->profile,
+                'emailLogId' => $this->emailLogId,
+                'emailMessageId' => $this->emailMessageId,
+            ]);
     }
 
     public function getProfile(): CompanyPaymentProfile

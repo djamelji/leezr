@@ -4,6 +4,7 @@ namespace App\Core\Support;
 
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Traits\BelongsToCompany;
 use App\Platform\Models\PlatformUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 
 class SupportTicket extends Model
 {
+    use BelongsToCompany;
     protected $fillable = [
         'uuid',
         'company_id',
@@ -40,11 +42,6 @@ class SupportTicket extends Model
             $ticket->status ??= 'open';
             $ticket->priority ??= 'normal';
         });
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function creator(): BelongsTo

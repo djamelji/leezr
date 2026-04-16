@@ -3,14 +3,26 @@
 namespace App\Notifications\Billing;
 
 use App\Core\Billing\Invoice;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * ADR-272: Sent when a paid addon module is activated and invoiced.
  */
-class AddonActivated extends Notification
+class AddonActivated extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public ?int $emailLogId = null;
+
+    public ?string $emailMessageId = null;
+
     public function __construct(
         private readonly string $moduleName,
         private readonly Invoice $invoice,
@@ -23,16 +35,15 @@ class AddonActivated extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $amount = number_format($this->invoice->amount_due / 100, 2);
-        $currency = strtoupper($this->invoice->currency ?? 'EUR');
-
         return (new MailMessage)
-            ->subject("Module \"{$this->moduleName}\" activated")
-            ->greeting("Hello {$notifiable->first_name},")
-            ->line("The module **{$this->moduleName}** has been activated on your account.")
-            ->line("An invoice of **{$amount} {$currency}** has been created.")
-            ->action('View Billing', url('/company/billing'))
-            ->line('Thank you for your purchase.');
+            ->subject(__('email.billing.addon_activated.subject', ['module' => $this->moduleName]))
+            ->view('emails.billing.addon-activated', [
+                'user' => $notifiable,
+                'moduleName' => $this->moduleName,
+                'invoice' => $this->invoice,
+                'emailLogId' => $this->emailLogId,
+                'emailMessageId' => $this->emailMessageId,
+            ]);
     }
 
     public function getInvoice(): Invoice

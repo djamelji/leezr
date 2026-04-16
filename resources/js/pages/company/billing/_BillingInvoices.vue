@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
 import { invoiceStatusColor } from '@/utils/billing'
@@ -44,22 +45,10 @@ const statusLabel = status => {
   return labels[status] || status
 }
 
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
 const formatPeriod = item => {
   if (!item.period_start || !item.period_end) return '—'
 
-  const opts = { month: 'short', day: 'numeric' }
-
-  return `${new Date(item.period_start).toLocaleDateString(undefined, opts)} – ${new Date(item.period_end).toLocaleDateString(undefined, opts)}`
+  return `${formatDate(item.period_start)} – ${formatDate(item.period_end)}`
 }
 
 const loadInvoices = async (page = 1) => {
@@ -196,6 +185,7 @@ watch(statusFilter, () => loadInvoices(1))
             </IconBtn>
             <VBtn
               v-if="['open', 'overdue'].includes(item.status) && item.amount_due > 0"
+              v-can="'billing.manage'"
               size="small"
               variant="tonal"
               color="warning"

@@ -66,6 +66,7 @@ const { t } = useI18n()
 
           <div class="d-flex gap-2">
             <VBtn
+              v-can="'billing.manage'"
               variant="tonal"
               color="primary"
               size="small"
@@ -75,6 +76,7 @@ const { t } = useI18n()
             </VBtn>
             <VBtn
               v-if="canCancel"
+              v-can="'billing.manage'"
               variant="outlined"
               color="error"
               size="small"

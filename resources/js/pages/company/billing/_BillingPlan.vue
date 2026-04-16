@@ -6,6 +6,7 @@ import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
 import { usePublicPlans } from '@/composables/usePublicPlans'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
+import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { cacheRemove } from '@/core/runtime/cache'
@@ -95,16 +96,6 @@ const dismissRejected = async () => {
   finally {
     dismissingRejected.value = false
   }
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return null
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
 }
 
 const planColor = key => {
@@ -339,6 +330,7 @@ const estimatedInvoice = computed(() => {
       </span>
       <template #append>
         <VBtn
+          v-can="'billing.manage'"
           variant="outlined"
           color="error"
           size="small"
@@ -378,6 +370,7 @@ const estimatedInvoice = computed(() => {
       <span>{{ t('companyPlan.rejectedMessage', { plan: pendingSub.plan_key }) }}</span>
       <template #append>
         <VBtn
+          v-can="'billing.manage'"
           variant="outlined"
           color="error"
           size="small"
@@ -778,6 +771,7 @@ const estimatedInvoice = computed(() => {
                 </VBtn>
                 <VBtn
                   v-else
+                  v-can="'billing.manage'"
                   block
                   :color="plan.key === currentPlanKey
                     ? 'info'
@@ -989,6 +983,32 @@ const estimatedInvoice = computed(() => {
               <p class="text-caption mt-1">{{ formatMoney(changePreview.to_plan.price, { currency: changePreview.currency }) }}/{{ changePreview.to_plan.interval === 'yearly' ? t('common.annually').toLowerCase() : t('common.monthly').toLowerCase() }}</p>
             </div>
           </div>
+
+          <!-- Downgrade warning -->
+          <VAlert
+            v-if="!changePreview.is_upgrade"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <template #title>
+              {{ t('companyPlan.planChangePreview.downgradeWarningTitle') }}
+            </template>
+            {{ t('companyPlan.planChangePreview.downgradeWarningText') }}
+          </VAlert>
+
+          <!-- Wallet deduction highlight -->
+          <VAlert
+            v-if="changePreview.immediate?.wallet_deduction > 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            icon="tabler-wallet"
+            class="mb-4"
+          >
+            {{ t('companyPlan.planChangePreview.walletDeductionAlert', { amount: formatMoney(changePreview.immediate.wallet_deduction, { currency: changePreview.currency }), balance: formatMoney(changePreview.wallet_balance, { currency: changePreview.currency }) }) }}
+          </VAlert>
 
           <!-- Timing + Fiscal context -->
           <div class="d-flex flex-column gap-2 mb-4">
@@ -1218,12 +1238,14 @@ const estimatedInvoice = computed(() => {
             {{ t('companyPlan.planChangePreview.cancel') }}
           </VBtn>
           <VBtn
+            v-can="'billing.manage'"
             :color="changePreview?.is_upgrade ? 'success' : 'warning'"
             :loading="changingPlan"
             :disabled="previewLoading || previewError"
             @click="confirmPlanChange"
           >
-            {{ t('companyPlan.planChangePreview.confirm') }}
+            <VIcon icon="tabler-check" class="me-1" />
+            {{ changePreview?.is_upgrade ? t('companyPlan.planChangePreview.confirm') : t('companyPlan.planChangePreview.confirmDowngrade') }}
           </VBtn>
         </VCardActions>
       </VCard>

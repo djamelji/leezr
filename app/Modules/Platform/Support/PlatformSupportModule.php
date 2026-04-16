@@ -17,7 +17,9 @@ class PlatformSupportModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 92,
             capabilities: new Capabilities(
-                navItems: [],
+                navItems: [
+                    ['key' => 'support', 'title' => 'Support', 'to' => ['name' => 'platform-support'], 'icon' => 'tabler-message-circle-cog', 'permission' => 'manage_support', 'group' => 'clients', 'sort' => 11],
+                ],
                 routeNames: ['platform-support', 'platform-support-id'],
                 footerLinks: [
                     [

@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ScheduledDebit extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'invoice_id', 'company_id', 'payment_profile_id',
         'amount', 'currency', 'debit_date', 'status',
@@ -33,11 +36,6 @@ class ScheduledDebit extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function paymentProfile(): BelongsTo

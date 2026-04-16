@@ -87,6 +87,18 @@ const isSlowProcessing = computed(() => isProcessing.value && elapsed.value > 30
       {{ t('documents.aiStatus.processing') }}
     </VChip>
 
+    <!-- Quota exceeded (ADR-436) -->
+    <VChip
+      v-else-if="aiStatus === 'quota_exceeded'"
+      key="quota"
+      size="x-small"
+      variant="tonal"
+      color="warning"
+      prepend-icon="tabler-alert-circle"
+    >
+      {{ t('documents.aiStatus.quotaExceeded') }}
+    </VChip>
+
     <!-- Failed -->
     <VChip
       v-else-if="aiStatus === 'failed'"

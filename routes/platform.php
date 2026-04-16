@@ -25,6 +25,7 @@ use App\Modules\Platform\Billing\Http\AuditExportController;
 use App\Modules\Platform\Billing\Http\PlatformRecoveryController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
+use App\Modules\Platform\Dashboard\Http\DashboardCockpitController;
 use App\Modules\Platform\AI\Http\PlatformAiController;
 use App\Modules\Platform\AI\Http\PlatformAiMutationController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
@@ -63,6 +64,7 @@ use App\Modules\Infrastructure\AdminAuth\Http\PlatformTwoFactorController;
 use App\Modules\Platform\Support\Http\PlatformSupportTicketController;
 use App\Modules\Platform\Support\Http\PlatformSupportMessageController;
 use App\Modules\Platform\Automations\Http\AutomationController;
+use App\Modules\Platform\Alerts\Http\PlatformAlertController;
 use App\Modules\Infrastructure\Realtime\Http\RealtimeStreamController;
 use Illuminate\Support\Facades\Route;
 
@@ -133,6 +135,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
         Route::put('/companies/{id}/payment-methods/{pmId}/default', [CompanySubscriptionAdminController::class, 'setDefaultPaymentMethod']);
         Route::delete('/companies/{id}/payment-methods/{pmId}', [CompanySubscriptionAdminController::class, 'deletePaymentMethod']);
+        Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
         Route::put('/companies/{id}/subscription/cancel', [CompanySubscriptionAdminController::class, 'cancelSubscription']);
         Route::put('/companies/{id}/subscription/undo-cancel', [CompanySubscriptionAdminController::class, 'undoCancelSubscription']);
         Route::put('/companies/{id}/subscription/extend-trial', [CompanySubscriptionAdminController::class, 'extendTrial']);
@@ -302,6 +305,10 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/dashboard/layout', [DashboardLayoutController::class, 'show']);
         Route::put('/dashboard/layout', [DashboardLayoutController::class, 'update']);
         Route::get('/dashboard/layout/presets', [DashboardLayoutController::class, 'presets']);
+
+        // Cockpit — decision-oriented landing (ADR-441)
+        Route::get('/dashboard/attention', [DashboardCockpitController::class, 'attention']);
+        Route::get('/dashboard/health', [DashboardCockpitController::class, 'health']);
     });
 
     // Billing / Payments governance (ADR-101, ADR-102)
@@ -456,6 +463,12 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/audit/actions', [PlatformAuditLogController::class, 'actions']);
     });
 
+    // Activity Feed (ADR-440)
+    Route::middleware(['module.active:platform.activity', 'platform.permission:view_audit_logs'])->group(function () {
+        Route::get('/activity', [\App\Modules\Platform\Activity\Http\PlatformActivityController::class, 'index']);
+        Route::get('/activity/types', [\App\Modules\Platform\Activity\Http\PlatformActivityController::class, 'types']);
+    });
+
     // Security Alerts (ADR-129, ADR-157)
     Route::middleware(['module.active:platform.security'])->group(function () {
         Route::middleware(['platform.permission:security.alerts.view'])->group(function () {
@@ -551,6 +564,61 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/automations', [AutomationController::class, 'index']);
         Route::get('/automations/runs', [AutomationController::class, 'runs']);
         Route::post('/automations/run', [AutomationController::class, 'run']);
+    });
+
+    // ── Alert Center (ADR-438) ──────────────────────────────────
+    Route::middleware(['module.active:platform.alerts'])->group(function () {
+        Route::middleware(['platform.permission:view_alerts'])->group(function () {
+            Route::get('/alerts', [PlatformAlertController::class, 'index']);
+            Route::get('/alerts/count', [PlatformAlertController::class, 'count']);
+        });
+
+        Route::middleware(['platform.permission:manage_alerts'])->group(function () {
+            Route::put('/alerts/{alert}/acknowledge', [PlatformAlertController::class, 'acknowledge']);
+            Route::put('/alerts/{alert}/resolve', [PlatformAlertController::class, 'resolve']);
+            Route::put('/alerts/{alert}/dismiss', [PlatformAlertController::class, 'dismiss']);
+        });
+    });
+
+    // ── Email Platform (ADR-446) ──────────────────────────────────
+    Route::middleware(['module.active:platform.email'])->group(function () {
+        Route::middleware(['platform.permission:manage_email'])->group(function () {
+            Route::get('/email/logs', [\App\Modules\Platform\Email\Http\EmailLogController::class, 'index']);
+            Route::post('/email/logs/{id}/retry', [\App\Modules\Platform\Email\Http\EmailLogController::class, 'retry']);
+            Route::get('/email/templates', [\App\Modules\Platform\Email\Http\EmailLogController::class, 'templates']);
+            Route::get('/email/settings', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'show']);
+            Route::put('/email/settings', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'update']);
+            Route::post('/email/settings/test', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'test']);
+
+            // Per-admin email identity (ADR-450)
+            Route::get('/email/identity', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'showIdentity']);
+            Route::put('/email/identity', [\App\Modules\Platform\Email\Http\EmailSettingsController::class, 'updateIdentity']);
+
+            // Templates CRUD (ADR-446)
+            Route::post('/email/templates/configurable', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'store']);
+            Route::get('/email/templates/configurable', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'index']);
+            Route::get('/email/templates/configurable/{key}', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'show']);
+            Route::put('/email/templates/configurable/{key}', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'update']);
+            Route::post('/email/templates/configurable/{key}/preview', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'preview']);
+            Route::post('/email/templates/configurable/{key}/test', [\App\Modules\Platform\Email\Http\EmailTemplateController::class, 'sendTest']);
+
+            // Orchestration (ADR-446)
+            Route::get('/email/orchestration', [\App\Modules\Platform\Email\Http\EmailOrchestrationController::class, 'index']);
+            Route::post('/email/orchestration', [\App\Modules\Platform\Email\Http\EmailOrchestrationController::class, 'store']);
+            Route::put('/email/orchestration/{id}', [\App\Modules\Platform\Email\Http\EmailOrchestrationController::class, 'update']);
+
+            // Inbox (ADR-447)
+            Route::get('/email/inbox', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'index']);
+            Route::get('/email/inbox/{id}', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'show']);
+            Route::post('/email/inbox/compose', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'compose']);
+            Route::post('/email/inbox/{id}/reply', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'reply']);
+            Route::post('/email/inbox/{id}/read', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'markRead']);
+            Route::put('/email/inbox/{id}/status', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'updateStatus']);
+        });
+
+        // Inbound webhook (no auth — secured by webhook secret)
+        Route::post('/email/inbound', [\App\Modules\Platform\Email\Http\EmailInboundController::class, 'store'])
+            ->withoutMiddleware(['auth:platform', 'platform.permission:manage_email']);
     });
 
     }); // end platform.2fa

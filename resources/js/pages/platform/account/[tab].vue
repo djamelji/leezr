@@ -3,7 +3,7 @@ import AccountGeneral from './_AccountGeneral.vue'
 import AccountSecurity from './_AccountSecurity.vue'
 import AccountNotifications from './_AccountNotifications.vue'
 
-definePage({ meta: { layout: 'platform', platform: true } })
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.settings' } })
 
 const { t } = useI18n()
 const route = useRoute('platform-account-tab')

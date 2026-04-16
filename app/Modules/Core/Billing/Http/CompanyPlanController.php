@@ -6,8 +6,7 @@ use App\Core\Billing\Contracts\BillingProvider;
 use App\Core\Plans\PlanRegistry;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
-use App\Core\Realtime\Contracts\RealtimePublisher;
-use App\Core\Realtime\EventEnvelope;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,6 +17,7 @@ use Illuminate\Validation\Rule;
  */
 class CompanyPlanController extends Controller
 {
+    use PublishesRealtimeEvents;
     public function update(Request $request, BillingProvider $billing): JsonResponse
     {
         $validated = $request->validate([
@@ -29,9 +29,7 @@ class CompanyPlanController extends Controller
         $billing->changePlan($company, $validated['plan_key']);
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('plan.changed', $company->id, ['plan_key' => $validated['plan_key']])
-        );
+        $this->publishDomainEvent('plan.changed', $company->id, ['action' => 'plan_changed', 'plan_key' => $validated['plan_key']]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::PLAN_CHANGED, 'company', (string) $company->id);

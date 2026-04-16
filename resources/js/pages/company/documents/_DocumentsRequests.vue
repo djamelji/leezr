@@ -9,6 +9,7 @@ import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
+import { formatDate } from '@/utils/datetime'
 
 const { t } = useI18n()
 const store = useCompanyDocumentsStore()
@@ -266,15 +267,6 @@ const handleRemind = async request => {
   }
 }
 
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 
 // ─── Document preview (ADR-406 S2) ──────────────────────
 const isViewerOpen = ref(false)
@@ -643,6 +635,7 @@ const submitRequest = async () => {
         #append
       >
         <VBtn
+          v-can="'documents.manage'"
           variant="tonal"
           color="primary"
           prepend-icon="tabler-send"
@@ -749,10 +742,10 @@ const submitRequest = async () => {
             <VBtn v-if="item.upload && canManage" icon variant="text" size="small" color="primary" :title="t('documents.preview')" @click="openViewer(item)">
               <VIcon icon="tabler-eye" />
             </VBtn>
-            <VBtn v-if="canManage" icon variant="text" size="small" color="success" :title="t('documents.approve')" @click="handleApprove(item)">
+            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="success" :title="t('documents.approve')" @click="handleApprove(item)">
               <VIcon icon="tabler-check" />
             </VBtn>
-            <VBtn v-if="canManage" icon variant="text" size="small" color="error" :title="t('documents.reject')" @click="openRejectDialog(item)">
+            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="error" :title="t('documents.reject')" @click="openRejectDialog(item)">
               <VIcon icon="tabler-x" />
             </VBtn>
           </div>
@@ -764,10 +757,10 @@ const submitRequest = async () => {
         <div v-if="selectedSubmittedCount > 0 && canManage" class="d-flex align-center justify-space-between pa-4 bg-surface border-t">
           <span class="text-body-1 font-weight-medium">{{ t('companyDocuments.requests.bulkSelected', { count: selectedSubmittedCount }) }}</span>
           <div class="d-flex gap-2">
-            <VBtn color="success" variant="tonal" prepend-icon="tabler-checks" :loading="isBulkLoading" @click="handleBulkApprove">
+            <VBtn v-can="'documents.manage'" color="success" variant="tonal" prepend-icon="tabler-checks" :loading="isBulkLoading" @click="handleBulkApprove">
               {{ t('companyDocuments.requests.bulkApprove') }}
             </VBtn>
-            <VBtn color="error" variant="tonal" prepend-icon="tabler-x" :loading="isBulkLoading" @click="openBulkRejectDialog">
+            <VBtn v-can="'documents.manage'" color="error" variant="tonal" prepend-icon="tabler-x" :loading="isBulkLoading" @click="openBulkRejectDialog">
               {{ t('companyDocuments.requests.bulkReject') }}
             </VBtn>
           </div>
@@ -818,13 +811,13 @@ const submitRequest = async () => {
         </template>
         <template #item.actions="{ item }">
           <div class="d-flex gap-1">
-            <VBtn v-if="canManage" icon variant="text" size="small" color="success" :title="t('documents.uploadForMember')" @click="openAdminUpload(item)">
+            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="success" :title="t('documents.uploadForMember')" @click="openAdminUpload(item)">
               <VIcon icon="tabler-upload" />
             </VBtn>
-            <VBtn v-if="canManage" icon variant="text" size="small" color="warning" :title="t('companyDocuments.requests.remind')" @click="handleRemind(item)">
+            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="warning" :title="t('companyDocuments.requests.remind')" @click="handleRemind(item)">
               <VIcon icon="tabler-bell-ringing" />
             </VBtn>
-            <VBtn v-if="canManage" icon variant="text" size="small" color="secondary" :title="t('companyDocuments.requests.cancelRequest')" @click="handleCancel(item)">
+            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="secondary" :title="t('companyDocuments.requests.cancelRequest')" @click="handleCancel(item)">
               <VIcon icon="tabler-trash" />
             </VBtn>
           </div>

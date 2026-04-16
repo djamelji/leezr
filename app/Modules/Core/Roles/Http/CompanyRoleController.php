@@ -7,8 +7,7 @@ use App\Company\RBAC\CompanyRole;
 use App\Core\RBAC\PermissionCatalogBuilder;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
-use App\Core\Realtime\Contracts\RealtimePublisher;
-use App\Core\Realtime\EventEnvelope;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Core\Security\SecurityDetector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +17,7 @@ use Illuminate\Validation\Rule;
 
 class CompanyRoleController extends Controller
 {
+    use PublishesRealtimeEvents;
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
@@ -77,9 +77,7 @@ class CompanyRoleController extends Controller
         }
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.created', 'role_id' => $role->id])
-        );
+        $this->publishDomainEvent('rbac.changed', $company->id, ['action' => 'role_created', 'role_id' => $role->id]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_CREATED, 'role', (string) $role->id, [
@@ -136,9 +134,7 @@ class CompanyRoleController extends Controller
         }
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.updated', 'role_id' => $role->id])
-        );
+        $this->publishDomainEvent('rbac.changed', $company->id, ['action' => 'role_updated', 'role_id' => $role->id]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_UPDATED, 'role', (string) $role->id);
@@ -174,9 +170,7 @@ class CompanyRoleController extends Controller
         $role->delete();
 
         // ADR-125: publish after mutation
-        app(RealtimePublisher::class)->publish(
-            EventEnvelope::invalidation('rbac.changed', $company->id, ['action' => 'role.deleted', 'role_id' => $id])
-        );
+        $this->publishDomainEvent('rbac.changed', $company->id, ['action' => 'role_deleted', 'role_id' => $id]);
 
         // ADR-130: audit log
         app(AuditLogger::class)->logCompany($company->id, AuditAction::ROLE_DELETED, 'role', (string) $id);

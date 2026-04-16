@@ -3,14 +3,26 @@
 namespace App\Notifications\Billing;
 
 use App\Core\Billing\Subscription;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
  * ADR-286: Sent when a company starts a trial subscription.
  */
-class TrialStarted extends Notification
+class TrialStarted extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    public int $tries = 3;
+
+    public array $backoff = [60, 300, 900];
+
+    public ?int $emailLogId = null;
+
+    public ?string $emailMessageId = null;
+
     public function __construct(
         private readonly Subscription $subscription,
     ) {}
@@ -22,16 +34,14 @@ class TrialStarted extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $endsAt = $this->subscription->trial_ends_at->format('M j, Y');
-        $days = $this->subscription->trial_ends_at->diffInDays(now());
-
         return (new MailMessage)
-            ->subject('Your free trial has started!')
-            ->greeting("Hello {$notifiable->first_name},")
-            ->line("Welcome! Your **{$days}-day free trial** has started.")
-            ->line("Your trial will end on **{$endsAt}**. You have full access to all features during this period.")
-            ->action('Go to Billing', url('/company/billing'))
-            ->line('Have questions? Contact our support team.');
+            ->subject(__('email.billing.trial_started.subject'))
+            ->view('emails.billing.trial-started', [
+                'user' => $notifiable,
+                'subscription' => $this->subscription,
+                'emailLogId' => $this->emailLogId,
+                'emailMessageId' => $this->emailMessageId,
+            ]);
     }
 
     public function getSubscription(): Subscription

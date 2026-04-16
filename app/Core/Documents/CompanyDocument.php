@@ -4,11 +4,13 @@ namespace App\Core\Documents;
 
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyDocument extends Model
 {
+    use BelongsToCompany;
     protected $fillable = [
         'company_id',
         'document_type_id',
@@ -38,11 +40,6 @@ class CompanyDocument extends Model
     public const AI_STATUS_COMPLETED = 'completed';
 
     public const AI_STATUS_FAILED = 'failed';
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     public function documentType(): BelongsTo
     {

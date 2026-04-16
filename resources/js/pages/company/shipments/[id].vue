@@ -317,6 +317,7 @@ onMounted(async () => {
                   <VBtn
                     v-for="transition in availableTransitions"
                     :key="transition.status"
+                    v-can="'shipments.manage_status'"
                     :color="transition.color"
                     :prepend-icon="transition.icon"
                     :loading="isChangingStatus"
@@ -338,6 +339,7 @@ onMounted(async () => {
           <!-- Assignment card -->
           <VCard
             v-if="canAssign"
+            v-can="'shipments.assign'"
             class="mt-4"
           >
             <VCardTitle>{{ t('shipments.assignment') }}</VCardTitle>
@@ -350,6 +352,7 @@ onMounted(async () => {
                 class="mb-3"
               />
               <VBtn
+                v-can="'shipments.assign'"
                 color="primary"
                 prepend-icon="tabler-user-check"
                 :loading="isAssigning"

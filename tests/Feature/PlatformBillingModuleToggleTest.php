@@ -61,7 +61,7 @@ class PlatformBillingModuleToggleTest extends TestCase
 
         $allKeys = collect($groups)->pluck('items')->flatten(1)->pluck('key')->toArray();
 
-        $this->assertNotContains('billing', $allKeys);
+        $this->assertNotContains('platform-billing', $allKeys);
         $this->assertNotContains('payments', $allKeys);
         $this->assertNotContains('billing-settings', $allKeys);
     }
@@ -99,7 +99,7 @@ class PlatformBillingModuleToggleTest extends TestCase
         $groups = NavBuilder::forAdmin(null);
         $allKeys = collect($groups)->pluck('items')->flatten(1)->pluck('key')->toArray();
 
-        $this->assertContains('billing', $allKeys);
+        $this->assertContains('platform-billing', $allKeys);
 
         // Widgets present
         DashboardWidgetRegistry::clearCache();

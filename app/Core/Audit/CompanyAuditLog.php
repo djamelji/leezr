@@ -3,6 +3,7 @@
 namespace App\Core\Audit;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CompanyAuditLog extends Model
 {
     use HasUlids;
+    use BelongsToCompany;
 
     public $timestamps = false;
 
@@ -41,9 +43,4 @@ class CompanyAuditLog extends Model
         'metadata' => 'array',
         'created_at' => 'datetime',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 }

@@ -111,6 +111,7 @@ const onPageChange = page => {
           </VBtn>
           <VBtn
             v-if="canManage"
+            v-can="'shipments.create'"
             prepend-icon="tabler-plus"
             :to="{ name: 'company-shipments-create' }"
           >

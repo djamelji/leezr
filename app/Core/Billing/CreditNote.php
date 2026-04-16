@@ -3,11 +3,14 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CreditNote extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'number', 'company_id', 'invoice_id',
         'amount', 'currency', 'reason', 'status',
@@ -25,11 +28,6 @@ class CreditNote extends Model
             'billing_snapshot' => 'array',
             'metadata' => 'array',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function invoice(): BelongsTo

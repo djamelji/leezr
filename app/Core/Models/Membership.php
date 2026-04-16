@@ -3,11 +3,14 @@
 namespace App\Core\Models;
 
 use App\Company\RBAC\CompanyRole;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Membership extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'user_id',
         'company_id',
@@ -18,11 +21,6 @@ class Membership extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function companyRole(): BelongsTo

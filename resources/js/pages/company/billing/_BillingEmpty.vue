@@ -23,6 +23,7 @@ const { t } = useI18n()
         {{ t('companyBilling.overview.choosePlan') }}
       </p>
       <VBtn
+        v-can="'billing.manage'"
         color="primary"
         :to="{ name: 'company-plan' }"
       >

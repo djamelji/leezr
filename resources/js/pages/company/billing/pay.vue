@@ -10,6 +10,7 @@ definePage({
 
 import { loadStripe } from '@stripe/stripe-js'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
+import { formatDate } from '@/utils/datetime'
 import { invoiceStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
 import { useAnalytics } from '@/composables/useAnalytics'
@@ -157,16 +158,6 @@ const statusLabel = status => {
   const key = `companyBilling.pay.status${status?.charAt(0).toUpperCase()}${status?.slice(1)}`
 
   return t(key, status)
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 const brandIcon = brand => {
@@ -855,6 +846,7 @@ const goToBilling = () => {
 
               <!-- Pay button -->
               <VBtn
+                v-can="'billing.manage'"
                 block
                 color="primary"
                 size="large"
@@ -918,6 +910,7 @@ const goToBilling = () => {
               <!-- Pay button (step=select) -->
               <VBtn
                 v-if="step === 'select'"
+                v-can="'billing.manage'"
                 block
                 color="primary"
                 size="large"

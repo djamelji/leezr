@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 
 defineProps({
@@ -11,13 +12,6 @@ const emit = defineEmits(['update:isVisible', 'confirm'])
 
 const { t } = useI18n()
 
-const formatDate = dateStr => {
-  if (!dateStr) return ''
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'long', day: 'numeric',
-  })
-}
 </script>
 
 <template>
@@ -84,6 +78,7 @@ const formatDate = dateStr => {
           {{ t('common.cancel') }}
         </VBtn>
         <VBtn
+          v-can="'billing.manage'"
           color="error"
           :loading="isCancelling"
           @click="emit('confirm')"

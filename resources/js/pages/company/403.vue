@@ -1,5 +1,5 @@
 <script setup>
-definePage({ meta: { surface: 'structure' } })
+definePage({})
 
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyNav } from '@/composables/useCompanyNav'

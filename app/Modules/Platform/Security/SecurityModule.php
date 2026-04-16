@@ -17,10 +17,8 @@ class SecurityModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 94,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'security', 'title' => 'Security', 'to' => ['name' => 'platform-security'], 'icon' => 'tabler-shield-lock', 'permission' => 'security.view'],
-                ],
-                routeNames: ['platform-security'],
+                navItems: [],
+                routeNames: [],
             ),
             permissions: [
                 ['key' => 'security.view', 'label' => 'View Security Dashboard'],

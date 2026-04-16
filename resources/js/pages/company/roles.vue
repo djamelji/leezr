@@ -218,6 +218,7 @@ const deleteRole = async role => {
         {{ t('roles.title') }}
         <VSpacer />
         <VBtn
+          v-can="'roles.manage'"
           size="small"
           prepend-icon="tabler-plus"
           @click="openCreateDrawer"
@@ -285,6 +286,7 @@ const deleteRole = async role => {
         <template #item.actions="{ item }">
           <div class="d-flex gap-1 justify-center">
             <VBtn
+              v-can="'roles.manage'"
               icon
               variant="text"
               size="small"
@@ -300,6 +302,7 @@ const deleteRole = async role => {
               </VTooltip>
             </VBtn>
             <VBtn
+              v-can="'roles.manage'"
               icon
               variant="text"
               size="small"
@@ -316,6 +319,7 @@ const deleteRole = async role => {
             </VBtn>
             <VBtn
               v-if="!item.is_system"
+              v-can="'roles.manage'"
               icon
               variant="text"
               size="small"

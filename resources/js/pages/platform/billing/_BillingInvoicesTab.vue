@@ -4,6 +4,7 @@ import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billi
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatMoney } from '@/utils/money'
+import { formatDate } from '@/utils/datetime'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -93,11 +94,7 @@ const statusLabel = status => {
   return t(`platformBilling.${map[status] || 'statusDraft'}`)
 }
 
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
 
-  return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
 
 // ── Data loading ───────────────────────────────────────
 const load = async (page = 1) => {

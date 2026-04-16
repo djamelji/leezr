@@ -301,6 +301,7 @@ const handleSetPassword = async () => {
                     {{ t('credentials.forceResetDescription') }}
                   </p>
                   <VBtn
+                    v-can="'members.credentials'"
                     prepend-icon="tabler-mail-forward"
                     variant="outlined"
                     color="warning"
@@ -324,6 +325,7 @@ const handleSetPassword = async () => {
 
                   <VBtn
                     v-if="!showSetPasswordFields"
+                    v-can="'members.credentials'"
                     prepend-icon="tabler-key"
                     variant="outlined"
                     color="info"

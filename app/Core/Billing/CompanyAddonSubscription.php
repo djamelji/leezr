@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CompanyAddonSubscription extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'module_key',
@@ -32,11 +35,6 @@ class CompanyAddonSubscription extends Model
             'activated_at' => 'datetime',
             'deactivated_at' => 'datetime',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function scopeActive(Builder $query): Builder

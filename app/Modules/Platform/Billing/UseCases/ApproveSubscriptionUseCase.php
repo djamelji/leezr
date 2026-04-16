@@ -4,11 +4,14 @@ namespace App\Modules\Platform\Billing\UseCases;
 
 use App\Core\Billing\Contracts\BillingProvider;
 use App\Core\Billing\Subscription;
+use App\Core\Realtime\PublishesRealtimeEvents;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ApproveSubscriptionUseCase
 {
+    use PublishesRealtimeEvents;
+
     public function __construct(
         private readonly BillingProvider $billing,
     ) {}
@@ -53,6 +56,9 @@ class ApproveSubscriptionUseCase
                 'current_period_start' => now(),
                 'current_period_end' => $periodEnd,
             ]);
+
+            // ADR-125: publish after mutation
+            $this->publishDomainEvent('plan.changed', $company->id, ['action' => 'subscription_approved', 'plan_key' => $subscription->plan_key]);
 
             return $subscription->fresh()->load('company:id,name,slug');
         });

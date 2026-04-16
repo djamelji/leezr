@@ -577,6 +577,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Available → Activate -->
                       <VBtn
                         v-if="mod.display_state === 'available' && canManage"
+                        v-can="'modules.manage'"
                         color="primary"
                         variant="tonal"
                         class="flex-grow-1"
@@ -592,6 +593,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Locked plan → Upgrade CTA -->
                       <VBtn
                         v-else-if="mod.display_state === 'locked_plan'"
+                        v-can="'modules.manage'"
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
@@ -606,6 +608,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Locked addon → Purchase -->
                       <VBtn
                         v-else-if="mod.display_state === 'locked_addon'"
+                        v-can="'modules.manage'"
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
@@ -854,6 +857,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
                       <VBtn
                         v-if="canManage && mod.type !== 'core'"
+                        v-can="'modules.manage'"
                         variant="text"
                         color="secondary"
                         size="small"
@@ -1033,6 +1037,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Available → Activate -->
                       <VBtn
                         v-else-if="mod.display_state === 'available' && canManage"
+                        v-can="'modules.manage'"
                         color="primary"
                         variant="tonal"
                         class="flex-grow-1"
@@ -1048,6 +1053,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Locked plan -->
                       <VBtn
                         v-else-if="mod.display_state === 'locked_plan'"
+                        v-can="'modules.manage'"
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
@@ -1062,6 +1068,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Locked addon -->
                       <VBtn
                         v-else-if="mod.display_state === 'locked_addon'"
+                        v-can="'modules.manage'"
                         color="warning"
                         variant="tonal"
                         class="flex-grow-1"
@@ -1091,6 +1098,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <!-- Active → Deactivate (secondary) -->
                       <VBtn
                         v-if="mod.display_state === 'active' && canManage && mod.type !== 'core'"
+                        v-can="'modules.manage'"
                         variant="text"
                         color="secondary"
                         size="small"
@@ -1309,6 +1317,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             {{ t('common.cancel') }}
           </VBtn>
           <VBtn
+            v-can="'modules.manage'"
             color="error"
             variant="elevated"
             :loading="togglingKey === deactivateTarget?.key"
@@ -1345,6 +1354,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             {{ t('common.cancel') }}
           </VBtn>
           <VBtn
+            v-can="'modules.manage'"
             color="primary"
             @click="confirmReactivation"
           >
@@ -1464,6 +1474,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             {{ t('common.cancel') }}
           </VBtn>
           <VBtn
+            v-can="'modules.manage'"
             color="primary"
             variant="elevated"
             :disabled="quoteLoading || !quoteData"

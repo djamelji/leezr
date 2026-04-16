@@ -62,6 +62,9 @@ class SetCompanyContext
         $request->merge(['company' => $company]);
         $request->attributes->set('company', $company);
 
+        // ADR-432: Bind company to container for CompanyScope global scope
+        app()->instance('company.context', $company);
+
         return $next($request);
     }
 
@@ -69,6 +72,15 @@ class SetCompanyContext
      * ADR-257: Billing payment routes must remain accessible for suspended
      * companies — that's how they pay outstanding invoices to reactivate.
      */
+    /**
+     * ADR-432: Clear company context after request to prevent bleed
+     * between requests (important for tests and queue workers).
+     */
+    public function terminate(Request $request, Response $response): void
+    {
+        app()->forgetInstance('company.context');
+    }
+
     private static function isSuspendedBypass(Request $request): bool
     {
         $path = $request->path();

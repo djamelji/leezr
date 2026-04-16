@@ -19,8 +19,6 @@ use Illuminate\Support\Facades\Log;
  */
 class CompanySubscriptionAdminController
 {
-    // ─── Payment Methods ──────────────────────────────
-
     public function paymentMethods(int $id): JsonResponse
     {
         $company = Company::findOrFail($id);
@@ -65,12 +63,8 @@ class CompanySubscriptionAdminController
                 );
             }
         } catch (\Throwable $e) {
-            Log::warning('[billing:admin] Stripe set default PM failed', [
-                'profile_id' => $profile->id,
-                'error' => $e->getMessage(),
-            ]);
+            Log::warning('[billing:admin] Stripe set default PM failed', ['profile_id' => $profile->id, 'error' => $e->getMessage()]);
         }
-
         return response()->json(['message' => 'Default payment method updated.']);
     }
 
@@ -91,10 +85,7 @@ class CompanySubscriptionAdminController
                 $adapter = app(StripePaymentAdapter::class);
                 $adapter->detachPaymentMethod($profile->provider_payment_method_id);
             } catch (\Throwable $e) {
-                Log::warning('[billing:admin] Stripe detach failed', [
-                    'profile_id' => $profile->id,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('[billing:admin] Stripe detach failed', ['profile_id' => $profile->id, 'error' => $e->getMessage()]);
             }
         }
 
@@ -111,7 +102,39 @@ class CompanySubscriptionAdminController
         return response()->json(['message' => 'Payment method removed.']);
     }
 
-    // ─── Subscription Lifecycle ───────────────────────
+    public function cancelPreview(int $id): JsonResponse
+    {
+        $company = Company::findOrFail($id);
+
+        $subscription = Subscription::where('company_id', $company->id)
+            ->whereIn('status', ['active', 'trialing'])
+            ->latest()
+            ->first();
+
+        if (! $subscription) {
+            return response()->json(['message' => 'No active subscription.'], 422);
+        }
+
+        $activeAddons = \App\Core\Billing\CompanyAddonSubscription::where('company_id', $company->id)
+            ->active()
+            ->get()
+            ->map(fn ($a) => $a->module_key)
+            ->toArray();
+
+        $walletBalance = \App\Core\Billing\WalletLedger::balance($company);
+
+        $timing = \App\Core\Billing\BillingPolicy::get('downgrade_timing', $company->market_key) === 'immediate'
+            ? 'immediate'
+            : 'end_of_period';
+
+        return response()->json([
+            'timing' => $timing,
+            'period_end' => $subscription->current_period_end?->format('d/m/Y'),
+            'plan_key' => $subscription->plan_key,
+            'active_addons' => $activeAddons,
+            'wallet_balance' => $walletBalance,
+        ]);
+    }
 
     public function cancelSubscription(int $id): JsonResponse
     {
@@ -128,20 +151,11 @@ class CompanySubscriptionAdminController
 
         $subscription->update(['cancel_at_period_end' => true]);
 
-        app(AuditLogger::class)->logPlatform(
-            AuditAction::CANCEL_REQUESTED,
-            'company',
-            (string) $company->id,
-            [
-                'diffBefore' => ['cancel_at_period_end' => false],
-                'diffAfter' => ['cancel_at_period_end' => true],
-            ],
-        );
-
-        return response()->json([
-            'message' => 'Cancellation scheduled at end of period.',
-            'subscription' => $subscription->fresh(),
+        app(AuditLogger::class)->logPlatform(AuditAction::CANCEL_REQUESTED, 'company', (string) $company->id, [
+            'diffBefore' => ['cancel_at_period_end' => false], 'diffAfter' => ['cancel_at_period_end' => true],
         ]);
+
+        return response()->json(['message' => 'Cancellation scheduled at end of period.', 'subscription' => $subscription->fresh()]);
     }
 
     public function undoCancelSubscription(int $id): JsonResponse
@@ -159,21 +173,11 @@ class CompanySubscriptionAdminController
 
         $subscription->update(['cancel_at_period_end' => false]);
 
-        app(AuditLogger::class)->logPlatform(
-            AuditAction::CANCEL_REQUESTED,
-            'company',
-            (string) $company->id,
-            [
-                'diffBefore' => ['cancel_at_period_end' => true],
-                'diffAfter' => ['cancel_at_period_end' => false],
-                'metadata' => ['action' => 'undo_cancel'],
-            ],
-        );
-
-        return response()->json([
-            'message' => 'Cancellation undone.',
-            'subscription' => $subscription->fresh(),
+        app(AuditLogger::class)->logPlatform(AuditAction::CANCEL_REQUESTED, 'company', (string) $company->id, [
+            'diffBefore' => ['cancel_at_period_end' => true], 'diffAfter' => ['cancel_at_period_end' => false], 'metadata' => ['action' => 'undo_cancel'],
         ]);
+
+        return response()->json(['message' => 'Cancellation undone.', 'subscription' => $subscription->fresh()]);
     }
 
     public function extendTrial(Request $request, int $id): JsonResponse
@@ -213,8 +217,6 @@ class CompanySubscriptionAdminController
             'subscription' => $subscription->fresh(),
         ]);
     }
-
-    // ─── Payment Method Setup (Stripe) ───────────────
 
     public function createSetupIntent(int $id): JsonResponse
     {

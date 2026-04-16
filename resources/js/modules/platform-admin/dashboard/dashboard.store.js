@@ -9,6 +9,34 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     scopeStrategy: 'explicit',
   })
 
+  // ── Cockpit (ADR-441) ─────────────────────────────────────────────
+
+  const attentionItems = ref([])
+  const healthBadges = ref({})
+  const cockpitLoading = ref(false)
+
+  async function fetchAttention() {
+    const data = await $platformApi('/dashboard/attention')
+
+    attentionItems.value = data.items
+  }
+
+  async function fetchHealth() {
+    const data = await $platformApi('/dashboard/health')
+
+    healthBadges.value = data.badges
+  }
+
+  async function loadCockpit() {
+    cockpitLoading.value = true
+    try {
+      await Promise.all([fetchAttention(), fetchHealth()])
+    }
+    finally {
+      cockpitLoading.value = false
+    }
+  }
+
   // ── Platform-only extensions ───────────────────────────────────────
 
   const _presets = ref([])
@@ -91,5 +119,10 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     updateTile,
     updateWidgetScope,
     loadDashboard,
+    // Cockpit (ADR-441)
+    attentionItems,
+    healthBadges,
+    cockpitLoading,
+    loadCockpit,
   }
 })

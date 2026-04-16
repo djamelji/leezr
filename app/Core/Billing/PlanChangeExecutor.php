@@ -9,6 +9,8 @@ use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Plans\Plan;
 use App\Core\Plans\PlanRegistry;
 use App\Core\Billing\InvoiceLineDescriptor;
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
 use App\Notifications\Billing\PlanChanged;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -160,7 +162,7 @@ class PlanChangeExecutor
             throw new RuntimeException("Cannot execute intent #{$intent->id}: status is {$intent->status}.");
         }
 
-        return DB::transaction(function () use ($intent) {
+        $executedIntent = DB::transaction(function () use ($intent) {
             // Re-fetch with lock
             $intent = PlanChangeIntent::where('id', $intent->id)->lockForUpdate()->first();
 
@@ -362,6 +364,25 @@ class PlanChangeExecutor
 
             return $intent->fresh();
         });
+
+        // ADR-125: publish after successful transaction (non-blocking)
+        try {
+            app(RealtimePublisher::class)->publish(
+                EventEnvelope::domain('plan.changed', $executedIntent->company_id, [
+                    'action' => 'plan_changed',
+                    'from_plan' => $executedIntent->from_plan_key,
+                    'to_plan' => $executedIntent->to_plan_key,
+                    'intent_id' => $executedIntent->id,
+                ])
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[realtime] plan.changed publish failed (non-blocking)', [
+                'intent_id' => $executedIntent->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $executedIntent;
     }
 
     /**

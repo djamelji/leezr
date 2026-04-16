@@ -2,6 +2,7 @@
 import BrandLogo from '@/components/BrandLogo.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
+import { formatDate, formatDateTime } from '@/utils/datetime'
 
 definePage({ meta: { layout: 'platform', platform: true, module: 'platform.billing', permission: 'view_billing' } })
 
@@ -81,28 +82,6 @@ const paymentStatusLabel = status => {
   const key = map[status]
 
   return key ? t(`platformBilling.invoiceDetail.${key}`) : status
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-const formatDateTime = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(marketLocale.value, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 const taxPercent = computed(() => {

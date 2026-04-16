@@ -363,6 +363,7 @@ const resetForm = () => initForm()
       class="d-flex flex-wrap gap-4 mt-6"
     >
       <VBtn
+        v-can="'settings.manage'"
         type="submit"
         :loading="isLoading"
       >

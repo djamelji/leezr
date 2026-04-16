@@ -186,7 +186,8 @@ class PageModuleAlignmentTest extends TestCase
             'platform-international-tab' => $base . '/platform/international/[tab].vue',
             'platform-settings-tab' => $base . '/platform/settings/[tab].vue',
             'platform-access-tab' => $base . '/platform/access/[tab].vue',
-            'platform-supervision-tab' => $base . '/platform/supervision/[tab].vue',
+            'platform-companies' => $base . '/platform/companies/index.vue',
+            'platform-email-tab' => $base . '/platform/email/[tab].vue',
             'platform-markets-key' => $base . '/platform/markets/[key].vue',
             'platform-modules-key' => $base . '/platform/modules/[key].vue',
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
@@ -202,18 +203,22 @@ class PageModuleAlignmentTest extends TestCase
             'company-members' => $base . '/company/members/index.vue',
             'company-members-id' => $base . '/company/members/[id].vue',
             'company-modules' => $base . '/company/modules/index.vue',
+            'platform-billing-tab' => $base . '/platform/billing/[tab].vue',
             'platform-billing-invoices-id' => $base . '/platform/billing/invoices/[id].vue',
-            'platform-billing-advanced-tab' => $base . '/platform/billing/advanced/[tab].vue',
             'company-billing-tab' => $base . '/company/billing/[tab].vue',
             'company-roles' => $base . '/company/roles.vue',
             'company-profile-tab' => $base . '/company/profile/[tab].vue',
             'company-documents-tab' => $base . '/company/documents/[tab].vue',
             'platform-support-id' => $base . '/platform/support/[id].vue',
             'company-support-id' => $base . '/company/support/[id].vue',
+            'company-workflows' => $base . '/company/workflows/index.vue',
+            'company-workflows-id' => $base . '/company/workflows/[id].vue',
             'company-documentation-slug' => $base . '/company/documentation/[slug].vue',
             'company-documentation-article' => null, // article view is inline via _ArticleView.vue sub-component
             'platform-documentation-slug' => $base . '/platform/documentation/[slug].vue',
             'platform-ai-tab' => $base . '/platform/ai/[tab].vue',
+            'platform-account-tab' => $base . '/platform/account/[tab].vue',
+            'platform-email-inbox-id' => $base . '/platform/email/inbox/[id].vue',
         ];
 
         if (isset($overrides[$routeName])) {

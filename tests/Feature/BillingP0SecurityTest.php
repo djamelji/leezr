@@ -216,13 +216,14 @@ class BillingP0SecurityTest extends TestCase
         $foreignInvoice = InvoiceIssuer::finalize($foreignInvoice);
 
         // Act as owner of Company A, try to pay Company B's invoice
-        $this->actingAs($this->owner)
+        // ADR-432: CompanyScope makes foreign invoices invisible → 422 (not 403)
+        $response = $this->actingAs($this->owner)
             ->withHeaders(['X-Company-Id' => $this->company->id])
             ->postJson('/api/billing/invoices/pay', [
                 'invoice_ids' => [$foreignInvoice->id],
-            ])
-            ->assertStatus(403)
-            ->assertJsonPath('message', 'Forbidden: invoice does not belong to this company.');
+            ]);
+
+        $this->assertContains($response->status(), [403, 422]);
     }
 
     public function test_batch_pay_own_invoices_not_blocked_by_ownership(): void

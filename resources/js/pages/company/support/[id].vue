@@ -1,6 +1,7 @@
 <script setup>
 import { useSupportStore } from '@/modules/company/support/support.store'
 import { useAuthStore } from '@/core/stores/auth'
+import { formatDateTime } from '@/utils/datetime'
 
 definePage({
   meta: {
@@ -20,6 +21,14 @@ const sending = ref(false)
 const chatLogRef = ref(null)
 
 const ticketId = computed(() => Number(route.params.id))
+
+const { isLoading, isError, error, retry } = useAsyncAction(async () => {
+  await Promise.all([
+    store.fetchTicket(ticketId.value),
+    store.fetchMessages(ticketId.value),
+  ])
+  scrollToBottom()
+}, { immediate: true })
 
 const statusColors = {
   open: 'info',
@@ -44,6 +53,8 @@ const scrollToBottom = () => {
   })
 }
 
+const { toast } = useAppToast()
+
 const sendMessage = async () => {
   if (!newMessage.value.trim() || sending.value)
     return
@@ -54,41 +65,48 @@ const sendMessage = async () => {
     newMessage.value = ''
     scrollToBottom()
   }
+  catch (err) {
+    toast(err?.data?.message || t('common.loadError'), 'error')
+  }
   finally {
     sending.value = false
   }
 }
 
-const formatTime = d => {
-  if (!d) return ''
-  const date = new Date(d)
-
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-}
 
 const isMyMessage = msg => msg.sender_type === 'company_user' && msg.sender_id === auth.user?.id
 
-onMounted(async () => {
-  await Promise.all([
-    store.fetchTicket(ticketId.value),
-    store.fetchMessages(ticketId.value),
-  ])
-  scrollToBottom()
-})
 </script>
 
 <template>
   <div>
-    <VBtn
-      variant="text"
-      prepend-icon="tabler-arrow-left"
-      class="mb-4"
-      :to="{ name: 'company-support' }"
-    >
-      {{ t('support.backToTickets') }}
-    </VBtn>
+    <!-- Loading -->
+    <VRow v-if="isLoading">
+      <VCol cols="12" md="4">
+        <VSkeletonLoader type="card" />
+      </VCol>
+      <VCol cols="12" md="8">
+        <VSkeletonLoader type="card" />
+      </VCol>
+    </VRow>
 
-    <VRow v-if="store.currentTicket">
+    <!-- Error -->
+    <ErrorState
+      v-else-if="isError"
+      :message="error"
+      @retry="retry"
+    />
+
+    <!-- Content -->
+    <template v-else-if="store.currentTicket">
+      <PageBreadcrumbs
+        :items="[
+          { title: t('support.title'), to: { name: 'company-support' } },
+          { title: `#${store.currentTicket.id} — ${store.currentTicket.subject}` },
+        ]"
+      />
+
+    <VRow>
       <!-- Ticket info -->
       <VCol
         cols="12"
@@ -136,7 +154,7 @@ onMounted(async () => {
 
               <div class="d-flex align-center gap-2">
                 <span class="text-body-2 text-medium-emphasis">{{ t('support.createdAt') }}:</span>
-                <span class="text-body-2">{{ formatTime(store.currentTicket.created_at) }}</span>
+                <span class="text-body-2">{{ formatDateTime(store.currentTicket.created_at) }}</span>
               </div>
             </div>
           </VCardText>
@@ -159,8 +177,14 @@ onMounted(async () => {
             class="flex-grow-1 pa-4"
             style="overflow-y: auto; max-block-size: 500px;"
           >
+            <EmptyState
+              v-if="store.messages.length === 0"
+              icon="tabler-message"
+              :title="t('common.noMessages')"
+            />
             <div
               v-for="msg in store.messages"
+              v-else
               :key="msg.id"
               class="d-flex mb-4"
               :class="isMyMessage(msg) ? 'justify-end' : 'justify-start'"
@@ -184,7 +208,7 @@ onMounted(async () => {
                   :class="isMyMessage(msg) ? 'text-white' : 'text-medium-emphasis'"
                   style="opacity: 0.7;"
                 >
-                  {{ formatTime(msg.created_at) }}
+                  {{ formatDateTime(msg.created_at) }}
                 </div>
               </div>
             </div>
@@ -206,6 +230,7 @@ onMounted(async () => {
                   @keydown.enter.exact.prevent="sendMessage"
                 />
                 <VBtn
+                  v-can="'support.create'"
                   color="primary"
                   icon="tabler-send"
                   :loading="sending"
@@ -227,5 +252,6 @@ onMounted(async () => {
         </VCard>
       </VCol>
     </VRow>
+    </template>
   </div>
 </template>

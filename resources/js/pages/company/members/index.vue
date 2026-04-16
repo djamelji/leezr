@@ -1,7 +1,6 @@
 <script setup>
 definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })
 
-import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useJobdomainStore } from '@/modules/company/jobdomain/jobdomain.store'
@@ -11,7 +10,6 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
 
 const { t } = useI18n()
-const auth = useAuthStore()
 const membersStore = useMembersStore()
 const settingsStore = useCompanySettingsStore()
 const jobdomainStore = useJobdomainStore()
@@ -20,8 +18,6 @@ const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
 
 const isDrawerOpen = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const showIncompleteOnly = ref(false)
 
 // ADR-168b: incomplete profiles
@@ -92,21 +88,18 @@ const isSelectValid = computed(() => {
   return cleaned.length > 0 && cleaned.length === unique.size
 })
 
-const canInvite = computed(() => auth.hasPermission('members.invite'))
-const canManage = computed(() => auth.hasPermission('members.manage'))
-
 const allowCustomFields = computed(() => jobdomainStore.allowCustomFields)
 
-onMounted(async () => {
+const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: pageRetry } = useAsyncAction(async () => {
   await Promise.all([
     membersStore.fetchMembers(),
     settingsStore.fetchCompanyRoles({ silent: true }).catch(() => {}),
   ])
-})
+}, { immediate: true })
 
 const handleMemberAdded = () => {
   isDrawerOpen.value = false
-  successMessage.value = t('members.memberAdded')
+  toast(t('members.memberAdded'), 'success')
 }
 
 const removeMember = async member => {
@@ -122,10 +115,10 @@ const removeMember = async member => {
 
   try {
     await membersStore.removeMember(member.id)
-    successMessage.value = t('members.memberRemoved')
+    toast(t('members.memberRemoved'), 'success')
   }
-  catch (error) {
-    errorMessage.value = error?.data?.message || t('members.failedToRemove')
+  catch (err) {
+    toast(err?.data?.message || t('members.failedToRemove'), 'error')
   }
 }
 
@@ -410,7 +403,21 @@ const typeOptions = computed(() => [
 
 <template>
   <div>
-    <VCard>
+    <!-- Loading -->
+    <VSkeletonLoader
+      v-if="pageLoading"
+      type="table-heading, table-tbody"
+    />
+
+    <!-- Error -->
+    <ErrorState
+      v-else-if="pageError"
+      :message="pageErrorMsg"
+      @retry="pageRetry"
+    />
+
+    <!-- Content -->
+    <VCard v-else>
       <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
         <div class="d-flex align-center gap-2">
           <span>{{ t('members.title') }}</span>
@@ -429,12 +436,9 @@ const typeOptions = computed(() => [
             {{ t('members.unlimitedMembers') }}
           </VChip>
         </div>
-        <div
-          v-if="canInvite || canManage"
-          class="d-flex gap-2"
-        >
+        <div class="d-flex gap-2">
           <VBtn
-            v-if="canManage"
+            v-can="'members.manage'"
             variant="tonal"
             prepend-icon="tabler-forms"
             @click="openFieldsDrawer"
@@ -442,7 +446,7 @@ const typeOptions = computed(() => [
             {{ t('members.memberFields') }}
           </VBtn>
           <VBtn
-            v-if="canInvite"
+            v-can="'members.invite'"
             prepend-icon="tabler-plus"
             :disabled="membersStore.memberLimit !== null && membersStore.memberCount >= membersStore.memberLimit"
             @click="isDrawerOpen = true"
@@ -453,26 +457,6 @@ const typeOptions = computed(() => [
       </VCardTitle>
 
       <VCardText>
-        <VAlert
-          v-if="successMessage"
-          type="success"
-          class="mb-4"
-          closable
-          @click:close="successMessage = ''"
-        >
-          {{ successMessage }}
-        </VAlert>
-
-        <VAlert
-          v-if="errorMessage"
-          type="error"
-          class="mb-4"
-          closable
-          @click:close="errorMessage = ''"
-        >
-          {{ errorMessage }}
-        </VAlert>
-
         <!-- ADR-172: member limit reached -->
         <VAlert
           v-if="membersStore.memberLimit !== null && membersStore.memberCount >= membersStore.memberLimit"
@@ -506,16 +490,24 @@ const typeOptions = computed(() => [
           />
         </div>
 
-        <VTable class="text-no-wrap">
+        <EmptyState
+          v-if="filteredMembers.length === 0"
+          icon="tabler-users"
+          :title="showIncompleteOnly ? t('members.noIncompleteProfiles') : t('members.noMembers')"
+          :description="t('members.noMembersDescription')"
+        />
+
+        <VTable
+          v-else
+          class="text-no-wrap"
+        >
           <thead>
             <tr>
               <th>{{ t('members.user') }}</th>
               <th>{{ t('members.email') }}</th>
               <th>{{ t('members.status') }}</th>
               <th>{{ t('members.role') }}</th>
-              <th v-if="canInvite || canManage">
-                {{ t('common.actions') }}
-              </th>
+              <th>{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -571,7 +563,7 @@ const typeOptions = computed(() => [
                   {{ member.company_role?.name || member.role }}
                 </VChip>
               </td>
-              <td v-if="canInvite || canManage">
+              <td>
                 <VBtn
                   icon
                   size="small"
@@ -581,8 +573,9 @@ const typeOptions = computed(() => [
                 >
                   <VIcon icon="tabler-eye" />
                 </VBtn>
-                <template v-if="canManage && !member._isProtected">
+                <template v-if="!member._isProtected">
                   <VBtn
+                    v-can="'members.manage'"
                     icon
                     size="small"
                     variant="text"
@@ -592,6 +585,7 @@ const typeOptions = computed(() => [
                     <VIcon icon="tabler-edit" />
                   </VBtn>
                   <VBtn
+                    v-can="'members.manage'"
                     icon
                     size="small"
                     variant="text"

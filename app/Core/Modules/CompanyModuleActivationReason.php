@@ -3,11 +3,14 @@
 namespace App\Core\Modules;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyModuleActivationReason extends Model
 {
+    use BelongsToCompany;
+
     public const REASON_DIRECT = 'direct';
     public const REASON_PLAN = 'plan';
     public const REASON_BUNDLE = 'bundle';
@@ -26,9 +29,4 @@ class CompanyModuleActivationReason extends Model
         'reason',
         'source_module_key',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 }

@@ -400,6 +400,9 @@
     "resolveVuetifyTheme": true,
     "$guardedApi": true,
     "useCompanyPermissionContext": true,
-    "usePlatformPermissionContext": true
+    "usePlatformPermissionContext": true,
+    "useCan": true,
+    "useMarketFormatting": true,
+    "useUnsavedChanges": true
   }
 }

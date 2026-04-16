@@ -234,7 +234,29 @@ const subActionLoading = ref(false)
 const extendTrialDialog = ref(false)
 const extendTrialDays = ref(7)
 
+// Cancel confirmation dialog (ADR-446: Billing Safety)
+const isCancelDialogOpen = ref(false)
+const cancelPreview = ref(null)
+const cancelPreviewLoading = ref(false)
+
+const openCancelDialog = async () => {
+  isCancelDialogOpen.value = true
+  cancelPreviewLoading.value = true
+  try {
+    const { data } = await useApi(`/platform/api/companies/${props.companyId}/subscription/cancel-preview`)
+
+    cancelPreview.value = data.value
+  }
+  catch {
+    cancelPreview.value = null
+  }
+  finally {
+    cancelPreviewLoading.value = false
+  }
+}
+
 const cancelSubscription = async () => {
+  isCancelDialogOpen.value = false
   subActionLoading.value = true
   try {
     const data = await companiesStore.cancelSubscription(props.companyId)
@@ -250,7 +272,11 @@ const cancelSubscription = async () => {
   }
 }
 
+// Undo cancel confirmation dialog (ADR-446: Billing Safety)
+const isUndoCancelDialogOpen = ref(false)
+
 const undoCancelSubscription = async () => {
+  isUndoCancelDialogOpen.value = false
   subActionLoading.value = true
   try {
     const data = await companiesStore.undoCancelSubscription(props.companyId)
@@ -566,7 +592,7 @@ watch(() => props.billing, val => {
                 variant="text"
                 color="warning"
                 :loading="subActionLoading"
-                @click="undoCancelSubscription"
+                @click="isUndoCancelDialogOpen = true"
               >
                 {{ t('platformCompanyDetail.billing.undoCancel') }}
               </VBtn>
@@ -603,7 +629,7 @@ watch(() => props.billing, val => {
               variant="outlined"
               color="warning"
               :loading="subActionLoading"
-              @click="cancelSubscription"
+              @click="openCancelDialog"
             >
               <VIcon icon="tabler-calendar-off" class="me-1" />
               {{ t('platformCompanyDetail.billing.scheduleCancellation') }}
@@ -1014,6 +1040,98 @@ watch(() => props.billing, val => {
             @click="submitExtendTrial"
           >
             {{ t('platformCompanyDetail.billing.extendTrialConfirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- Cancel Subscription Confirm Dialog (ADR-446: Billing Safety) -->
+    <VDialog
+      v-model="isCancelDialogOpen"
+      max-width="500"
+      persistent
+    >
+      <VCard>
+        <VCardTitle class="text-h5 pa-5 d-flex align-center gap-2">
+          <VIcon icon="tabler-calendar-off" color="warning" />
+          {{ t('billingActions.adminCancelTitle') }}
+        </VCardTitle>
+        <VCardText>
+          <VSkeletonLoader v-if="cancelPreviewLoading" type="text, text, text" />
+          <template v-else-if="cancelPreview">
+            <div class="mb-3">
+              <span class="text-body-2 font-weight-medium">{{ t('billingActions.adminCancelTiming') }}</span>
+              <VChip
+                size="small"
+                variant="tonal"
+                :color="cancelPreview.timing === 'immediate' ? 'error' : 'warning'"
+                class="ms-2"
+              >
+                {{ cancelPreview.timing === 'immediate' ? t('billingActions.adminCancelImmediate') : t('billingActions.adminCancelEndPeriod', { date: cancelPreview.period_end }) }}
+              </VChip>
+            </div>
+            <VAlert
+              v-if="cancelPreview.active_addons?.length"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              <strong>{{ t('billingActions.adminCancelAddons') }}</strong>
+              <ul class="mt-1">
+                <li v-for="addon in cancelPreview.active_addons" :key="addon">{{ addon }}</li>
+              </ul>
+            </VAlert>
+            <div v-if="cancelPreview.wallet_balance" class="text-body-2 text-medium-emphasis">
+              {{ t('billingActions.adminCancelWallet') }} {{ formatMoney(cancelPreview.wallet_balance) }}
+            </div>
+          </template>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="isCancelDialogOpen = false">
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="warning"
+            variant="elevated"
+            :loading="subActionLoading"
+            @click="cancelSubscription"
+          >
+            {{ t('billingActions.adminCancelButton') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- Undo Cancel Confirm Dialog (ADR-446: Billing Safety) -->
+    <VDialog
+      v-model="isUndoCancelDialogOpen"
+      max-width="420"
+    >
+      <VCard>
+        <VCardTitle class="text-h5 pa-5 d-flex align-center gap-2">
+          <VIcon icon="tabler-refresh" color="success" />
+          {{ t('billingActions.adminUndoCancelTitle') }}
+        </VCardTitle>
+        <VCardText>
+          <p class="mb-2">{{ t('billingActions.adminUndoCancelMessage') }}</p>
+          <div v-if="billing?.subscription?.plan_key" class="text-body-2 text-medium-emphasis">
+            {{ t('billingActions.adminUndoCancelPlan', { plan: billing.subscription.plan_key }) }}
+          </div>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="isUndoCancelDialogOpen = false">
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="success"
+            variant="elevated"
+            :loading="subActionLoading"
+            @click="undoCancelSubscription"
+          >
+            {{ t('billingActions.adminUndoCancelButton') }}
           </VBtn>
         </VCardActions>
       </VCard>

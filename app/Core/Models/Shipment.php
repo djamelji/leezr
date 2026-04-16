@@ -2,11 +2,14 @@
 
 namespace App\Core\Models;
 
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Shipment extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'created_by_user_id',
@@ -59,11 +62,6 @@ class Shipment extends Model
     ];
 
     // --- Relationships ---
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     public function createdBy(): BelongsTo
     {

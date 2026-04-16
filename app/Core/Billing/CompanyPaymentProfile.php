@@ -3,12 +3,15 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyPaymentProfile extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'provider_key', 'method_key',
         'provider_payment_method_id', 'label',
@@ -22,11 +25,6 @@ class CompanyPaymentProfile extends Model
             'preferred_debit_day' => 'integer',
             'metadata' => 'array',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function scopeDefault(Builder $query): Builder

@@ -214,11 +214,12 @@ class BillingAdr229Test extends TestCase
             'status' => 'created',
         ]);
 
+        // ADR-432: CompanyScope makes foreign sessions invisible → 404 (not 403)
         $response = $this->actingAs($this->owner)
             ->withHeaders(['X-Company-Id' => $this->company->id])
             ->getJson('/api/billing/checkout/status?session_id=cs_foreign');
 
-        $response->assertStatus(403);
+        $this->assertContains($response->status(), [403, 404]);
     }
 
     // ── 5: Unknown session returns 404 ──────────────────

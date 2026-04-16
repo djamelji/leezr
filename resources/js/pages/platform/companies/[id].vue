@@ -19,7 +19,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.companies',
-    navActiveLink: 'platform-supervision-tab',
+    navActiveKey: 'platform-companies',
     permission: 'manage_companies',
   },
 })
@@ -120,7 +120,7 @@ onMounted(async () => {
   }
   catch {
     toast(t('platformCompanyDetail.failedToLoad'), 'error')
-    router.push('/platform/supervision/companies')
+    router.push('/platform/companies')
   }
   finally {
     isLoading.value = false
@@ -438,7 +438,7 @@ const tabs = computed(() => [
         <VBtn
           variant="text"
           size="small"
-          to="/platform/supervision/companies"
+          to="/platform/companies"
         >
           <VIcon icon="tabler-arrow-left" class="me-1" />
           {{ t('platformCompanyDetail.backToList') }}
@@ -945,6 +945,32 @@ const tabs = computed(() => [
             </VChip>
           </div>
 
+          <!-- Downgrade warning -->
+          <VAlert
+            v-if="!planPreview.is_upgrade"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <template #title>
+              {{ t('platformCompanyDetail.planPreview.downgradeWarningTitle') }}
+            </template>
+            {{ t('platformCompanyDetail.planPreview.downgradeWarningText') }}
+          </VAlert>
+
+          <!-- Wallet deduction highlight -->
+          <VAlert
+            v-if="planPreview.immediate?.wallet_deduction > 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            icon="tabler-wallet"
+            class="mb-4"
+          >
+            {{ t('platformCompanyDetail.planPreview.walletDeductionAlert', { amount: formatMoney(planPreview.immediate.wallet_deduction, { currency: planPreview.currency }), balance: formatMoney(planPreview.wallet_balance, { currency: planPreview.currency }) }) }}
+          </VAlert>
+
           <!-- Immediate billing details -->
           <template v-if="planPreview.immediate && planPreview.timing === 'immediate'">
             <h6 class="text-h6 mb-2">
@@ -1119,11 +1145,12 @@ const tabs = computed(() => [
             {{ t('common.cancel') }}
           </VBtn>
           <VBtn
-            color="primary"
+            :color="planPreview?.is_upgrade ? 'primary' : 'warning'"
             :loading="actionLoading"
             @click="confirmPlanChange"
           >
-            {{ t('platformCompanyDetail.planPreview.confirm') }}
+            <VIcon icon="tabler-check" class="me-1" />
+            {{ planPreview?.is_upgrade ? t('platformCompanyDetail.planPreview.confirm') : t('platformCompanyDetail.planPreview.confirmDowngrade') }}
           </VBtn>
         </VCardActions>
       </VCard>

@@ -1,4 +1,6 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
+
 const props = defineProps({
   overview: { type: Object, default: null },
   hasPaymentIssue: { type: Boolean, default: false },
@@ -17,15 +19,6 @@ const emit = defineEmits(['cancel-scheduled-change', 'dismiss-rejected'])
 
 const { t } = useI18n()
 
-const formatDate = dateStr => {
-  if (!dateStr) return ''
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
 </script>
 
 <template>
@@ -47,6 +40,7 @@ const formatDate = dateStr => {
     <template #append>
       <div class="d-flex gap-2">
         <VBtn
+          v-can="'billing.manage'"
           variant="tonal"
           color="error"
           size="small"
@@ -55,6 +49,7 @@ const formatDate = dateStr => {
           {{ t('companyBilling.overview.retryPayment') }}
         </VBtn>
         <VBtn
+          v-can="'billing.manage'"
           variant="outlined"
           color="error"
           size="small"
@@ -88,6 +83,7 @@ const formatDate = dateStr => {
     <template #append>
       <VBtn
         v-if="!paymentMethod"
+        v-can="'billing.manage'"
         variant="tonal"
         color="info"
         size="small"
@@ -135,6 +131,7 @@ const formatDate = dateStr => {
 
     <template #append>
       <VBtn
+        v-can="'billing.manage'"
         variant="outlined"
         color="error"
         size="small"
@@ -178,6 +175,7 @@ const formatDate = dateStr => {
     </span>
     <template #append>
       <VBtn
+        v-can="'billing.manage'"
         variant="outlined"
         color="error"
         size="small"

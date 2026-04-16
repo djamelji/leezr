@@ -420,6 +420,7 @@ const executeDelete = async () => {
           :description="t('companyBilling.paymentSecurityNotice')"
         >
           <VBtn
+            v-can="'billing.manage'"
             variant="tonal"
             color="primary"
             prepend-icon="tabler-plus"
@@ -475,6 +476,7 @@ const executeDelete = async () => {
                   </VChip>
                   <IconBtn
                     v-if="!pm.is_default"
+                    v-can="'billing.manage'"
                     size="small"
                     :title="t('companyBilling.setAsDefault')"
                     :loading="actionLoading === `default-${pm.id}`"
@@ -508,6 +510,7 @@ const executeDelete = async () => {
                   </VTooltip>
                   <IconBtn
                     v-else
+                    v-can="'billing.manage'"
                     size="small"
                     color="error"
                     :title="t('common.delete')"
@@ -701,6 +704,7 @@ const executeDelete = async () => {
 
               <div class="d-flex gap-2 mt-3">
                 <VBtn
+                  v-can="'billing.manage'"
                   color="primary"
                   size="small"
                   :loading="isSaving"
@@ -813,6 +817,7 @@ const executeDelete = async () => {
                     {{ t('common.previous') }}
                   </VBtn>
                   <VBtn
+                    v-can="'billing.manage'"
                     color="primary"
                     size="small"
                     :loading="isSaving"

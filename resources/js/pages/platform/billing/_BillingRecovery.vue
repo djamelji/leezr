@@ -1,6 +1,7 @@
 <script setup>
 import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
+import { formatDate } from '@/utils/datetime'
 
 const emit = defineEmits(['switchTab'])
 
@@ -33,18 +34,6 @@ const recovery = computed(() => store.recoveryStatus)
 
 const statusIcon = status => {
   return status === 'ok' ? 'tabler-circle-check' : 'tabler-alert-triangle'
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 // ── Recovery actions ──

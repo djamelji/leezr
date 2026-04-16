@@ -3,6 +3,7 @@
 namespace App\Core\Jobdomains;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CompanyPresetSnapshot extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = ['company_id', 'jobdomain_key', 'trigger', 'roles_snapshot'];
 
     protected function casts(): array
@@ -19,11 +22,6 @@ class CompanyPresetSnapshot extends Model
         return [
             'roles_snapshot' => 'array',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     /**

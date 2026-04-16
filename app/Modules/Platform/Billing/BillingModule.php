@@ -18,9 +18,9 @@ class BillingModule implements ModuleDefinition
             sortOrder: 65,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing'], 'icon' => 'tabler-file-invoice', 'permission' => 'view_billing', 'group' => 'governance'],
+                    ['key' => 'platform-billing', 'title' => 'Billing', 'to' => ['name' => 'platform-billing-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-file-invoice', 'permission' => 'view_billing', 'group' => 'finance', 'sort' => 20],
                 ],
-                routeNames: ['platform-billing', 'platform-billing-invoices-id', 'platform-billing-advanced-tab'],
+                routeNames: ['platform-billing-tab', 'platform-billing-invoices-id'],
             ),
             permissions: [
                 ['key' => 'view_billing', 'label' => 'View Billing'],

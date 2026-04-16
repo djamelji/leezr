@@ -109,3 +109,19 @@ Schedule::command('documents:auto-remind')->dailyAt('09:00')->withoutOverlapping
     ->before(SI::before('documents:auto-remind'))
     ->onSuccess(SI::onSuccess('documents:auto-remind'))
     ->onFailure(SI::onFailure('documents:auto-remind'));
+
+// ── Workflow Engine (ADR-437) ────────────────────────────
+// Reset daily execution counters at midnight
+Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/workflow-reset-daily-counters.log'))
+    ->before(SI::before('workflow:reset-daily-counters'))
+    ->onSuccess(SI::onSuccess('workflow:reset-daily-counters'))
+    ->onFailure(SI::onFailure('workflow:reset-daily-counters'));
+
+// ── Alert Center (ADR-438) ──────────────────────────────
+// Evaluate alert rules every 5 minutes
+Schedule::command('alerts:evaluate')->everyFiveMinutes()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/alerts-evaluate.log'))
+    ->before(SI::before('alerts:evaluate'))
+    ->onSuccess(SI::onSuccess('alerts:evaluate'))
+    ->onFailure(SI::onFailure('alerts:evaluate'));

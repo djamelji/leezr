@@ -62,6 +62,7 @@ class PlatformSecurityModuleToggleTest extends TestCase
         $groups = NavBuilder::forAdmin(null);
         $allKeys = collect($groups)->pluck('items')->flatten(1)->pluck('key')->toArray();
 
+        // ADR-446: Security navItem removed — security accessible via alerts module
         $this->assertNotContains('security', $allKeys);
     }
 
@@ -78,11 +79,9 @@ class PlatformSecurityModuleToggleTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Nav items present
-        $groups = NavBuilder::forAdmin(null);
-        $allKeys = collect($groups)->pluck('items')->flatten(1)->pluck('key')->toArray();
-
-        $this->assertContains('security', $allKeys);
+        // ADR-446: Security navItem removed — module still active but no separate nav entry
+        $manifest = ModuleRegistry::definitions()['platform.security'] ?? null;
+        $this->assertNotNull($manifest);
     }
 
     // ── T4: Module manifest declares type platform ───────────

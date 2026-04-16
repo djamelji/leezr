@@ -41,6 +41,7 @@ const emit = defineEmits(['openCreateDrawer'])
       <template #append>
         <VBtn
           v-if="canConfigure"
+          v-can="'documents.configure'"
           variant="tonal"
           color="success"
           size="small"

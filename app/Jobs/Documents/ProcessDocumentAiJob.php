@@ -3,6 +3,7 @@
 namespace App\Jobs\Documents;
 
 use App\Core\Ai\AiPolicyResolver;
+use App\Core\Ai\AiQuotaManager;
 use App\Core\Ai\DTOs\AiInsight;
 use App\Core\Documents\CompanyDocument;
 use App\Core\Documents\DocumentAnalysisResult;
@@ -79,6 +80,20 @@ class ProcessDocumentAiJob implements ShouldQueue
             $document->update(['ai_status' => 'completed']); // No-op but not failed
 
             return;
+        }
+
+        // ADR-436: Quota gate — reject if monthly quota exceeded
+        if ($companyId) {
+            $company = Company::find($companyId);
+            if ($company && ! AiQuotaManager::canProcess($company, 'documents')) {
+                Log::info('ProcessDocumentAiJob: quota exceeded, skipping', [
+                    'company_id' => $companyId,
+                    'remaining' => AiQuotaManager::remaining($companyId, 'documents'),
+                ]);
+                $document->update(['ai_status' => 'quota_exceeded']);
+
+                return;
+            }
         }
 
         // Download file to temp

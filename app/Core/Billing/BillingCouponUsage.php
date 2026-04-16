@@ -3,11 +3,14 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BillingCouponUsage extends Model
 {
+    use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,11 +29,6 @@ class BillingCouponUsage extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(BillingCoupon::class, 'coupon_id');
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function invoice(): BelongsTo

@@ -3,12 +3,15 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'subscription_id', 'parent_invoice_id', 'company_id', 'number', 'annexe_suffix',
         'amount', 'subtotal', 'tax_amount', 'tax_rate_bps', 'tax_exemption_reason',
@@ -56,11 +59,6 @@ class Invoice extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class);
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function lines(): HasMany

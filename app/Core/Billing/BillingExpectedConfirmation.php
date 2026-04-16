@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BillingExpectedConfirmation extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'provider_key', 'expected_event_type',
         'provider_reference', 'status', 'expected_by', 'confirmed_at',
@@ -26,11 +29,6 @@ class BillingExpectedConfirmation extends Model
             'expected_by' => 'datetime',
             'confirmed_at' => 'datetime',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function isPending(): bool

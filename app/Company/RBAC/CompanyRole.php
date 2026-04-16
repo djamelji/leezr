@@ -4,6 +4,7 @@ namespace App\Company\RBAC;
 
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class CompanyRole extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = ['company_id', 'key', 'name', 'is_system', 'is_administrative', 'archetype', 'required_tags', 'field_config', 'doc_config'];
 
     protected function casts(): array
@@ -23,11 +26,6 @@ class CompanyRole extends Model
             'required_tags' => 'array',
             'doc_config' => 'array',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function memberships(): HasMany

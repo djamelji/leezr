@@ -18,7 +18,7 @@ class UsersModule implements ModuleDefinition
             sortOrder: 20,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'platform-access', 'title' => 'Access Management', 'to' => ['name' => 'platform-access-tab', 'params' => ['tab' => 'users']], 'icon' => 'tabler-user-shield', 'permission' => 'manage_platform_users'],
+                    ['key' => 'platform-access', 'title' => 'Access Management', 'to' => ['name' => 'platform-access-tab', 'params' => ['tab' => 'users']], 'icon' => 'tabler-user-shield', 'permission' => 'manage_platform_users', 'group' => 'administration', 'sort' => 70],
                 ],
                 routeNames: ['platform-access-tab', 'platform-users-id'],
             ),

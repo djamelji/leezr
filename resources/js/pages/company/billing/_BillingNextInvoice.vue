@@ -1,4 +1,5 @@
 <script setup>
+import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 
 defineProps({
@@ -8,15 +9,6 @@ defineProps({
 
 const { t } = useI18n()
 
-const formatDate = dateStr => {
-  if (!dateStr) return ''
-
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
 </script>
 
 <template>

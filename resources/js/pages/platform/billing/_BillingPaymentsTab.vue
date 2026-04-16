@@ -3,6 +3,7 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
+import { formatDate } from '@/utils/datetime'
 
 const { t } = useI18n()
 const store = usePlatformPaymentsStore()
@@ -33,12 +34,6 @@ const statusLabel = status => {
   const map = { succeeded: 'statusSucceeded', pending: 'statusPending', failed: 'statusFailed', refunded: 'statusRefunded' }
 
   return t(`platformBilling.${map[status] || status}`)
-}
-
-const formatDate = dateStr => {
-  if (!dateStr) return '—'
-
-  return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 const filteredPayments = computed(() => {

@@ -69,12 +69,54 @@ async function loadStats() {
   }
 }
 
-// ── Mount: two independent flows ──
+// ── Cockpit: attention + health (ADR-441) ──
+const hasCritical = computed(() =>
+  dashboardStore.attentionItems.some(i => i.severity === 'critical'),
+)
+
+const criticalCount = computed(() =>
+  dashboardStore.attentionItems.filter(i => i.severity === 'critical').reduce((sum, i) => sum + i.count, 0),
+)
+
+const severityColor = severity => {
+  const map = { critical: 'error', warning: 'warning', info: 'info' }
+
+  return map[severity] || 'secondary'
+}
+
+const healthStatusColor = status => {
+  const map = { ok: 'success', warning: 'warning', critical: 'error', unknown: 'secondary' }
+
+  return map[status] || 'secondary'
+}
+
+const healthStatusIcon = status => {
+  const map = {
+    ok: 'tabler-check',
+    warning: 'tabler-alert-circle',
+    critical: 'tabler-alert-triangle',
+    unknown: 'tabler-help',
+  }
+
+  return map[status] || 'tabler-help'
+}
+
+const healthBadgesList = computed(() => {
+  const badges = dashboardStore.healthBadges
+  if (!badges || !Object.keys(badges).length) return []
+
+  return Object.values(badges)
+})
+
+// ── Mount: three independent flows ──
 onMounted(() => {
-  // ① Stats — optional, non-blocking
+  // 1. Cockpit (attention + health) — hero
+  dashboardStore.loadCockpit()
+
+  // 2. Stats — optional, non-blocking
   loadStats()
 
-  // ② Dashboard engine — critical, independent
+  // 3. Dashboard engine — critical, independent
   dashboardStore.loadDashboard()
 })
 
@@ -84,7 +126,7 @@ const cards = computed(() => [
     value: stats.value.companies,
     icon: 'tabler-building',
     color: 'primary',
-    to: { name: 'platform-supervision-tab', params: { tab: 'companies' } },
+    to: { name: 'platform-companies' },
   },
   {
     title: t('Platform Users'),
@@ -98,7 +140,7 @@ const cards = computed(() => [
     value: stats.value.companyUsers,
     icon: 'tabler-users-group',
     color: 'info',
-    to: { name: 'platform-supervision-tab', params: { tab: 'members' } },
+    to: { name: 'platform-companies' },
   },
   {
     title: t('Roles'),
@@ -163,6 +205,138 @@ const saveAndResolve = async () => {
       {{ t('platformDashboard.title') }}
     </h4>
 
+    <!-- ═══ ATTENTION REQUIRED (ADR-441) ═══ -->
+    <template v-if="dashboardStore.cockpitLoading">
+      <VCard
+        flat
+        class="mb-6"
+      >
+        <VCardText>
+          <VSkeletonLoader
+            type="heading"
+            class="mb-3"
+          />
+          <VRow>
+            <VCol
+              v-for="n in 3"
+              :key="n"
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <VSkeletonLoader type="card" />
+            </VCol>
+          </VRow>
+        </VCardText>
+      </VCard>
+    </template>
+
+    <template v-else>
+      <!-- Attention items exist -->
+      <template v-if="dashboardStore.attentionItems.length > 0">
+        <!-- Critical banner -->
+        <VAlert
+          v-if="hasCritical"
+          type="error"
+          variant="tonal"
+          icon="tabler-alert-triangle"
+          class="mb-4"
+        >
+          {{ t('platformDashboard.attentionBanner', { count: criticalCount }) }}
+        </VAlert>
+
+        <h5 class="text-h5 mb-4">
+          {{ t('platformDashboard.attentionTitle') }}
+        </h5>
+
+        <VRow class="card-grid card-grid-xs mb-6">
+          <VCol
+            v-for="item in dashboardStore.attentionItems"
+            :key="item.type"
+            cols="12"
+            sm="6"
+            md="4"
+            lg="3"
+          >
+            <VCard>
+              <VCardText class="d-flex align-center gap-x-4">
+                <VAvatar
+                  :color="severityColor(item.severity)"
+                  variant="tonal"
+                  size="44"
+                  rounded
+                >
+                  <VIcon
+                    :icon="item.icon"
+                    size="28"
+                  />
+                </VAvatar>
+                <div class="flex-grow-1">
+                  <h4 class="text-h4">
+                    {{ item.count }}
+                  </h4>
+                  <p class="text-body-2 mb-0 text-medium-emphasis">
+                    {{ t(`platformDashboard.${item.type}`) }}
+                  </p>
+                </div>
+                <VBtn
+                  :to="item.route"
+                  variant="tonal"
+                  :color="severityColor(item.severity)"
+                  size="small"
+                >
+                  {{ t('platformDashboard.viewAction') }}
+                </VBtn>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
+      </template>
+
+      <!-- No attention items — all clear -->
+      <VAlert
+        v-else
+        type="success"
+        variant="tonal"
+        icon="tabler-circle-check"
+        density="compact"
+        class="mb-6"
+      >
+        {{ t('platformDashboard.noAttention') }}
+      </VAlert>
+
+      <!-- ═══ SYSTEM HEALTH (ADR-441) ═══ -->
+      <VCard
+        flat
+        class="mb-6"
+      >
+        <VCardText class="d-flex align-center flex-wrap gap-3">
+          <span class="text-body-1 font-weight-medium text-high-emphasis me-2">
+            {{ t('platformDashboard.healthTitle') }}
+          </span>
+          <VTooltip
+            v-for="badge in healthBadgesList"
+            :key="badge.label"
+            :text="badge.detail"
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <VChip
+                v-bind="tooltipProps"
+                :color="healthStatusColor(badge.status)"
+                :prepend-icon="healthStatusIcon(badge.status)"
+                variant="tonal"
+                size="default"
+                label
+              >
+                {{ badge.label }}
+              </VChip>
+            </template>
+          </VTooltip>
+        </VCardText>
+      </VCard>
+    </template>
+
     <!-- ═══ Stats Error ═══ -->
     <VAlert
       v-if="statsError"
@@ -174,6 +348,7 @@ const saveAndResolve = async () => {
       {{ statsError }}
     </VAlert>
 
+    <!-- ═══ KPI STAT CARDS ═══ -->
     <VRow class="card-grid card-grid-xs">
       <VCol
         v-for="card in cards"

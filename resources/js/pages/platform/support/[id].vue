@@ -1,12 +1,13 @@
 <script setup>
 import { usePlatformSupportStore } from '@/modules/platform-admin/support/support.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import { formatDateTime } from '@/utils/datetime'
 
 definePage({
   meta: {
     layout: 'platform',
     platform: true,
-    navActiveKey: 'platform-support',
+    navActiveLink: 'platform-support',
     module: 'platform.support',
   },
 })
@@ -92,12 +93,6 @@ const assignToMe = () => store.assignTicket(ticketId.value)
 const resolve = () => store.resolveTicket(ticketId.value)
 const close = () => store.closeTicket(ticketId.value)
 
-const formatTime = d => {
-  if (!d) return ''
-  const date = new Date(d)
-
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-}
 
 const isMyMessage = msg => msg.sender_type === 'platform_admin' && msg.sender_id === auth.user?.id
 
@@ -183,7 +178,7 @@ onMounted(async () => {
 
               <div class="d-flex align-center gap-2">
                 <span class="text-body-2 text-medium-emphasis">{{ t('support.createdAt') }}:</span>
-                <span class="text-body-2">{{ formatTime(store.currentTicket.created_at) }}</span>
+                <span class="text-body-2">{{ formatDateTime(store.currentTicket.created_at) }}</span>
               </div>
 
               <div
@@ -191,7 +186,7 @@ onMounted(async () => {
                 class="d-flex align-center gap-2"
               >
                 <span class="text-body-2 text-medium-emphasis">{{ t('support.firstResponse') }}:</span>
-                <span class="text-body-2">{{ formatTime(store.currentTicket.first_response_at) }}</span>
+                <span class="text-body-2">{{ formatDateTime(store.currentTicket.first_response_at) }}</span>
               </div>
             </div>
           </VCardText>
@@ -294,7 +289,7 @@ onMounted(async () => {
                   :class="msg.sender_type === 'platform_admin' && !msg.is_internal ? 'text-white' : 'text-medium-emphasis'"
                   style="opacity: 0.7;"
                 >
-                  {{ formatTime(msg.created_at) }}
+                  {{ formatDateTime(msg.created_at) }}
                 </div>
               </div>
             </div>

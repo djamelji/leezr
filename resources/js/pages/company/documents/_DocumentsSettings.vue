@@ -4,12 +4,38 @@ import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.
 import { useAuthStore } from '@/core/stores/auth'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { $api } from '@/utils/api'
 
 const { t } = useI18n()
 const store = useCompanyDocumentsStore()
 const auth = useAuthStore()
 const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
+
+// ─── AI Quota (ADR-436) ────────────────────────────────
+const aiQuota = ref(null)
+const quotaLoading = ref(false)
+
+const fetchAiQuota = async () => {
+  quotaLoading.value = true
+  try {
+    aiQuota.value = await $api('/company/ai-quota/documents')
+  }
+  catch {
+    aiQuota.value = null
+  }
+  finally {
+    quotaLoading.value = false
+  }
+}
+
+const quotaColor = computed(() => {
+  if (!aiQuota.value) return 'primary'
+  const pct = aiQuota.value.percentage
+  if (pct >= 90) return 'error'
+  if (pct >= 70) return 'warning'
+  return 'primary'
+})
 
 const canConfigure = computed(() => auth.hasPermission('documents.configure'))
 
@@ -97,7 +123,10 @@ const aiForm = ref({
 const isAiSaving = ref(false)
 
 onMounted(async () => {
-  await store.fetchDocSettings()
+  await Promise.all([
+    store.fetchDocSettings(),
+    fetchAiQuota(),
+  ])
   if (store.docSettings) {
     autoForm.value = {
       auto_renew_enabled: store.docSettings.auto_renew_enabled,
@@ -273,6 +302,7 @@ const isLoading = computed(() => store.loading.activations || store.loading.sett
       class="justify-end"
     >
       <VBtn
+        v-can="'documents.configure'"
         color="primary"
         :loading="isAutoSaving"
         @click="saveAutoSettings"
@@ -441,6 +471,7 @@ const isLoading = computed(() => store.loading.activations || store.loading.sett
       class="justify-end"
     >
       <VBtn
+        v-can="'documents.configure'"
         color="primary"
         :loading="isAiSaving"
         :disabled="!aiForm.ai_analysis_enabled && !isAiSaving"
@@ -449,6 +480,91 @@ const isLoading = computed(() => store.loading.activations || store.loading.sett
         {{ t('common.save') }}
       </VBtn>
     </VCardActions>
+  </VCard>
+
+  <!-- AI Quota Card (ADR-436) -->
+  <VCard class="mt-6">
+    <VCardItem>
+      <template #prepend>
+        <VAvatar
+          color="info"
+          variant="tonal"
+          rounded
+        >
+          <VIcon icon="tabler-chart-bar" />
+        </VAvatar>
+      </template>
+      <VCardTitle>{{ t('documents.aiQuota.title') }}</VCardTitle>
+      <VCardSubtitle>{{ t('documents.aiQuota.subtitle') }}</VCardSubtitle>
+    </VCardItem>
+
+    <VCardText>
+      <!-- Loading -->
+      <div
+        v-if="quotaLoading"
+        class="text-center pa-4"
+      >
+        <VProgressCircular
+          indeterminate
+          size="24"
+        />
+      </div>
+
+      <!-- Quota display -->
+      <template v-else-if="aiQuota">
+        <div class="d-flex align-center justify-space-between mb-2">
+          <span class="text-body-2">
+            {{ t('documents.aiQuota.usage', { used: aiQuota.used, limit: aiQuota.limit }) }}
+          </span>
+          <span class="text-body-2 font-weight-medium">
+            {{ aiQuota.percentage }}%
+          </span>
+        </div>
+
+        <VProgressLinear
+          :model-value="aiQuota.percentage"
+          :color="quotaColor"
+          height="8"
+          rounded
+          class="mb-4"
+        />
+
+        <VAlert
+          v-if="aiQuota.percentage >= 90"
+          type="warning"
+          variant="tonal"
+          density="compact"
+        >
+          {{ t('documents.aiQuota.almostExhausted') }}
+        </VAlert>
+
+        <VAlert
+          v-if="aiQuota.remaining === 0"
+          type="error"
+          variant="tonal"
+          density="compact"
+        >
+          {{ t('documents.aiQuota.exhausted') }}
+        </VAlert>
+
+        <p
+          v-if="aiQuota.remaining > 0 && aiQuota.percentage < 90"
+          class="text-body-2 text-medium-emphasis"
+        >
+          {{ t('documents.aiQuota.remaining', { count: aiQuota.remaining }) }}
+        </p>
+      </template>
+
+      <!-- Error state -->
+      <VAlert
+        v-else
+        type="info"
+        variant="tonal"
+        density="compact"
+      >
+        {{ t('documents.aiQuota.unavailable') }}
+      </VAlert>
+    </VCardText>
   </VCard>
 
   <ConfirmDialogComponent />

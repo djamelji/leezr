@@ -3,6 +3,7 @@
 namespace App\Core\Documents;
 
 use App\Core\Models\Company;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CompanyDocumentSetting extends Model
 {
+    use BelongsToCompany;
     protected $fillable = [
         'company_id',
         'auto_renew_enabled',
@@ -30,11 +32,6 @@ class CompanyDocumentSetting extends Model
         'remind_after_days' => 'integer',
         'ai_features' => 'array',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     /**
      * Get or create default settings for a company.

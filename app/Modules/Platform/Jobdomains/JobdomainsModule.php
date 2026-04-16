@@ -18,7 +18,7 @@ class JobdomainsModule implements ModuleDefinition
             sortOrder: 50,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'jobdomains', 'title' => 'Job Domains', 'to' => ['name' => 'platform-jobdomains'], 'icon' => 'tabler-briefcase', 'permission' => 'manage_jobdomains'],
+                    ['key' => 'jobdomains', 'title' => 'Job Domains', 'to' => ['name' => 'platform-jobdomains'], 'icon' => 'tabler-briefcase', 'permission' => 'manage_jobdomains', 'group' => 'product', 'sort' => 31],
                 ],
                 routeNames: ['platform-jobdomains', 'platform-jobdomains-id'],
             ),

@@ -29,6 +29,7 @@ class User extends Authenticatable
         'password_set_at',
         'avatar',
         'theme_preference',
+        'email_identity',
     ];
 
     protected $guarded = ['name'];
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'password_set_at' => 'datetime',
+            'email_identity' => 'array',
         ];
     }
 

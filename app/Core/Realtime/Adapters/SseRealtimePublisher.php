@@ -65,6 +65,9 @@ class SseRealtimePublisher implements RealtimePublisher
             // ADR-131: Check for event flood → auto kill switch
             EventFloodDetector::check();
 
+            // ADR-437: Evaluate workflow triggers (async — dispatches queue jobs)
+            \App\Core\Automation\WorkflowDispatcher::dispatch($envelope);
+
             Log::debug('[realtime] publish', [
                 'id' => $envelope->id,
                 'topic' => $envelope->topic,

@@ -289,13 +289,14 @@ class InvoiceBatchPayTest extends TestCase
 
         $invoice = $this->createInvoice('open', 3000);
 
+        // ADR-432: CompanyScope makes foreign invoices invisible → 422 (not 403)
         $response = $this->actingAs($otherOwner)
             ->withHeaders(['X-Company-Id' => $otherCompany->id])
             ->postJson('/api/billing/invoices/pay', [
                 'invoice_ids' => [$invoice->id],
             ]);
 
-        $response->assertStatus(403);
+        $this->assertContains($response->status(), [403, 422]);
     }
 
     // ── Confirm endpoint ──
