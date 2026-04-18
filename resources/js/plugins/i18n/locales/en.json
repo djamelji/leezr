@@ -4826,6 +4826,7 @@
     "messages": "messages",
     "yesterday": "Yesterday",
     "empty": "No conversations",
+    "emptyDescription": "Your inbox is empty.",
     "sent": "Sent",
     "received": "Received",
     "failed": "Failed",
@@ -4864,7 +4865,78 @@
       "subject": "Subject",
       "body": "Message",
       "send": "Send",
-      "error": "Unable to send the message."
+      "cc": "Cc",
+      "bcc": "Bcc",
+      "error": "Unable to send the message.",
+      "invalidEmail": "Invalid email address",
+      "attachments": "Attachments",
+      "addAttachment": "Add attachment",
+      "maxFileSize": "Max size: {size} MB",
+      "maxFiles": "Max {count} files",
+      "discardDraft": "Discard draft",
+      "moreOptions": "More options"
+    },
+    "folders": {
+      "inbox": "Inbox",
+      "sent": "Sent",
+      "draft": "Drafts",
+      "starred": "Starred",
+      "spam": "Spam",
+      "trash": "Trash"
+    },
+    "labels": {
+      "title": "Labels",
+      "personal": "Personal",
+      "company": "Company",
+      "important": "Important",
+      "private": "Private"
+    },
+    "composeBtn": "Compose",
+    "reply": "Reply",
+    "forward": "Forward",
+    "moveTo": "Move to",
+    "addLabel": "Add label",
+    "removeLabel": "Remove label",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "star": "Add to starred",
+    "unstar": "Remove from starred",
+    "moveToInbox": "Move to inbox",
+    "moveToSpam": "Mark as spam",
+    "moveToTrash": "Delete",
+    "deleteForever": "Delete permanently",
+    "refresh": "Refresh",
+    "syncing": "Syncing...",
+    "syncSuccess": "{count} email(s) synced",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "bulkSuccess": "Action applied to {count} conversation(s)",
+    "from": "From",
+    "date": "Date",
+    "attachments": "Attachments",
+    "quote": "On {date}, {from} wrote:",
+    "replyOrForwardPrefix": "Click here to ",
+    "replyOrForwardOr": " or ",
+    "draft": {
+      "saved": "Draft saved",
+      "saving": "Saving...",
+      "deleted": "Draft deleted",
+      "edit": "Edit draft",
+      "autoSaved": "Auto-saved at {time}"
+    },
+    "contacts": {
+      "title": "Contacts",
+      "none": "No contacts found",
+      "recent": "Recent contacts"
+    },
+    "trash": {
+      "autoDelete": "Auto-delete in {days} days",
+      "emptyTrash": "Empty trash",
+      "emptyTrashConfirm": "Permanently delete all emails in the trash?"
+    },
+    "signature": {
+      "title": "Signature",
+      "placeholder": "Configure your email signature in settings"
     }
   },
   "billingActions": {

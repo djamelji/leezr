@@ -15956,4 +15956,130 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-453 — Refonte Inbox Email — Full Vuexy Email App (2026-04-17)
+
+**Contexte** :
+- L'onglet Inbox était une liste simple avec page de détail séparée (`inbox/[id].vue`)
+- Pas de dossiers (spam, trash, starred), pas de bulk actions, pas de labels
+- L'UX ne correspondait pas au preset Vuexy Email App (3 panneaux : sidebar + liste + drawer détail)
+
+**Décisions** :
+1. Migration : ajouter `folder` (varchar, default 'inbox'), `is_starred` (bool), `labels` (json) à `email_threads`
+2. Backend : enrichir `EmailInboxController` avec filtrage par dossier, `bulkAction()` (read/unread/star/trash/spam/inbox/delete/label), `fetchNow()` (sync IMAP manuelle)
+3. Frontend : layout 3-panneaux INSIDE le tab content (pas full-page) — sidebar dossiers + labels (gauche), thread list (centre), drawer détail (droite)
+4. Composable `useEmailInbox.js` : state management centralisé, polling 30s + SSE `email.updated`
+5. ComposeDialog Vuexy-style : card bottom-right flottant avec To/Cc/Bcc/Subject/Body
+6. SSE : topic `email.updated` (platform scope) émis par `ImapFetcher`, `EmailInboxController::bulkAction`, `fetchNow`, `compose`, `reply`
+7. Supprimer `inbox/[id].vue` et `inbox/_ComposeDialog.vue` — détail = drawer inline, compose = dialog flottant
+8. i18n : ~40 clés ajoutées (folders, labels, bulk actions, compose fields)
+
+**Conséquences** :
+- Navigation par dossiers : inbox, sent, starred, spam, trash
+- Sélection multiple + actions bulk (trash, star, read, move, label)
+- Détail thread s'ouvre dans un drawer à droite sans changer de page
+- Reply inline dans le drawer
+- Compose dans un dialog flottant bottom-right
+- SSE + polling assurent la mise à jour temps réel
+- PIÈGE route : suppression `inbox/` directory élimine la route `platform-email-inbox-id`
+
+**Fichiers** :
+- `database/migrations/xxxx_add_folder_starred_labels_to_email_threads.php` (nouveau)
+- `app/Core/Email/EmailThread.php` (folder, is_starred, labels + scopes)
+- `app/Core/Email/ImapFetcher.php` (SSE emit après processMessage)
+- `app/Core/Realtime/TopicRegistry.php` (email.updated topic)
+- `app/Modules/Platform/Email/Http/EmailInboxController.php` (folder filter, bulkAction, fetchNow)
+- `routes/platform.php` (2 routes : bulk, fetch-now)
+- `resources/js/composables/useEmailInbox.js` (nouveau)
+- `resources/js/pages/platform/email/_EmailLeftSidebar.vue` (nouveau)
+- `resources/js/pages/platform/email/_EmailView.vue` (nouveau)
+- `resources/js/pages/platform/email/_EmailCompose.vue` (nouveau)
+- `resources/js/pages/platform/email/_EmailInboxTab.vue` (rewrite complet)
+- `resources/js/plugins/i18n/locales/fr.json` (~40 clés)
+- `resources/js/plugins/i18n/locales/en.json` (~40 clés)
+- `resources/js/pages/platform/email/inbox/[id].vue` (supprimé)
+- `resources/js/pages/platform/email/inbox/_ComposeDialog.vue` (supprimé)
+
+---
+
+### ADR-454 — Email Hub 100/100 — Messagerie SaaS Production-Grade (2026-04-17)
+
+**Contexte** : L'inbox (ADR-453) était un MVP fonctionnel mais incomplet : VTextarea au lieu de TiptapEditor, CC/BCC jamais envoyés, pas de pièces jointes, pas de brouillons, pas de forward, pas de carnet de contacts, pas de recherche full-text body, dates hardcodées 'fr-FR'.
+
+**Décisions** :
+
+1. **TiptapEditor partout** — Compose dialog et reply box utilisent le `TiptapEditor` global (`@core/components/TiptapEditor.vue`), le body est envoyé en HTML, le backend stocke `body_html`
+2. **CC/BCC fonctionnels** — Migration `cc`/`bcc` sur `email_logs`, `ManualEmailNotification` supporte `->cc()`/`->bcc()`, `HtmlString` pour le body HTML
+3. **Pièces jointes** — Table `email_attachments`, `EmailAttachmentService` (upload, download, IMAP extraction), stockage `storage/app/private/email-attachments/`, max 10MB, 5 fichiers
+4. **Brouillons** — Colonne `is_draft` sur `email_logs`, `EmailDraftService` (save, update, send, delete), dossier `draft` dans le folder system, routes CRUD
+5. **Forward** — `_EmailView` émet `@forward` → `_EmailInboxTab` ouvre le compose pré-rempli avec `Fwd: {subject}` + quote
+6. **Reply avec quote** — Au clic Reply, pré-remplissage du TiptapEditor avec `<blockquote>` contenant le message original
+7. **Carnet de contacts** — Table `email_contacts`, auto-extraction à chaque envoi (`EmailContact::recordUsage()`), endpoint `GET /email/contacts?q=`
+8. **Recherche full-text** — Index `FULLTEXT` sur `email_logs(body_text, subject)` et `email_threads(subject, participant_email, participant_name)`, `MATCH AGAINST` en mode BOOLEAN
+9. **Corbeille 30j** — Colonne `trashed_at` sur `email_threads`, set lors du move to trash, reset lors du move to inbox
+10. **i18n dynamique** — `formatTime()` utilise `locale.value` au lieu de `'fr-FR'` hardcodé, `t('emailInbox.yesterday')` au lieu de `'Hier'`
+11. **Minimize compose** — État `isMinimized` avec `VExpandTransition`, header toujours visible
+12. **Validation email** — Pattern regex sur To, CC, BCC avec messages d'erreur i18n
+13. **Style Vuexy** — Boutons paperclip + dots-vertical + trash, prepend labels, outline hidden
+14. **Prefill compose** — Prop `prefill` pour forward et édition de brouillon
+
+**Conséquences** :
+- 6 nouvelles migrations (cc/bcc, attachments, drafts, contacts, fulltext, trashed_at)
+- 4 nouveaux modèles/services (EmailAttachment, EmailAttachmentService, EmailDraftService, EmailContact)
+- 11 nouvelles routes (attachments upload/download, drafts CRUD, contacts search)
+- ~30 nouvelles clés i18n (fr + en)
+- Reply et compose envoient maintenant du HTML (pas du plain text)
+
+**Fichiers** :
+- `database/migrations/2026_04_17_100001_add_cc_bcc_to_email_logs.php`
+- `database/migrations/2026_04_17_100002_create_email_attachments_table.php`
+- `database/migrations/2026_04_17_100003_add_draft_support_to_emails.php`
+- `database/migrations/2026_04_17_100004_create_email_contacts_table.php`
+- `database/migrations/2026_04_17_100005_add_fulltext_indexes_to_emails.php`
+- `database/migrations/2026_04_17_100006_add_trashed_at_to_email_threads.php`
+- `app/Core/Email/EmailAttachment.php`
+- `app/Core/Email/EmailAttachmentService.php`
+- `app/Core/Email/EmailContact.php`
+- `app/Core/Email/EmailDraftService.php`
+- `app/Core/Email/EmailLog.php` (cc, bcc, is_draft, attachments relation)
+- `app/Core/Email/EmailThread.php` (trashed_at)
+- `app/Core/Email/EmailComposeService.php` (cc/bcc, contacts auto-extract)
+- `app/Core/Email/EmailBulkActionService.php` (trashed_at)
+- `app/Core/Email/ImapFetcher.php` (attachments extraction)
+- `app/Notifications/Email/ManualEmailNotification.php` (cc/bcc, HtmlString)
+- `app/Modules/Platform/Email/Http/EmailInboxController.php` (attachments, drafts, contacts, fulltext search)
+- `routes/platform.php` (11 new routes)
+- `resources/js/pages/platform/email/_EmailCompose.vue` (rewrite: TiptapEditor, attachments, validation, minimize, prefill)
+- `resources/js/pages/platform/email/_EmailView.vue` (TiptapEditor reply, quote, forward, attachments display)
+- `resources/js/pages/platform/email/_EmailInboxTab.vue` (forward handler, compose prefill)
+- `resources/js/composables/useEmailInbox.js` (drafts, contacts, i18n formatTime, draft folder)
+- `resources/js/plugins/i18n/locales/fr.json` (~30 clés)
+- `resources/js/plugins/i18n/locales/en.json` (~30 clés)
+
+## ADR-455 : Email Hub — Corrections UX P0 + Reply Attachments (2026-04-18)
+
+**Contexte** : L'implémentation ADR-452/453/454 a livré le backend email complet et 90% du frontend. L'audit UX révèle 4 problèmes P0 : sidebar non cliquable, checkbox mal placée, reply sans attachments, search non debounced.
+
+**Décisions** :
+1. **Sidebar double-emit bug (CAUSE RACINE)** — Les click handlers de `_EmailLeftSidebar.vue` émettaient DEUX events : `update:currentFolder` ET `update:currentLabel`. Le parent appelait `changeFolder()` et `changeLabel()` en séquence, et chacun reset la valeur de l'autre (`changeFolder` met label=null, `changeLabel` met folder='inbox'). Résultat : clic sur "Envoyés" → folder='sent' puis immédiatement folder='inbox'. **Fix** : chaque clic n'émet qu'UN seul event, le handler correspondant gère la coordination interne
+2. **Sidebar layout flexbox** — remplacement du `position: absolute` + `z-index` par un layout flexbox (`display: flex` sur `.email-app-layout`), plus robuste que le positionnement manuel
+3. **Sidebar CSS** — ajout `list-style: none; padding: 0; margin: 0` sur `.email-filters` / `.email-labels`
+3. **Séparation search / action bar** — checkbox déplacée de la barre search vers la barre d'actions bulk (pattern Vuexy Email)
+4. **Debounce search** — watcher `searchQuery` séparé avec debounce 400ms. Folder/label restent immédiats
+5. **Reply attachments** — `reply()` accepte `attachmentIds`, `uploadAttachment()` ajouté au composable, bouton paperclip connecté dans `_EmailView.vue`
+
+**Conséquences** :
+- Sidebar email définitivement cliquable (plus de z-index wars avec le platform layout)
+- Layout plus robuste et maintenable (flexbox au lieu de positionnement absolu)
+- EmailView (`position: absolute; z-index: 10`) reste fonctionnel car `.email-app-layout` a `position: relative`
+- Reply supporte les pièces jointes (upload via API + envoi avec `attachment_ids`)
+- Search ne surcharge plus l'API (debounce 400ms)
+
+**Fichiers** :
+- `resources/js/pages/platform/email/_EmailLeftSidebar.vue` (CSS ul reset)
+- `resources/js/pages/platform/email/_EmailInboxTab.vue` (search/action bar séparées, z-index, handleReplySent, handleUploadAttachment)
+- `resources/js/pages/platform/email/_EmailView.vue` (reply attachments handler, file input, display chips)
+- `resources/js/composables/useEmailInbox.js` (reply attachmentIds, uploadAttachment, debounce search)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

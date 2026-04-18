@@ -4831,6 +4831,7 @@
     "messages": "messages",
     "yesterday": "Hier",
     "empty": "Aucune conversation",
+    "emptyDescription": "Votre boîte est vide.",
     "sent": "Envoyé",
     "received": "Reçu",
     "failed": "Échoué",
@@ -4869,7 +4870,78 @@
       "subject": "Sujet",
       "body": "Message",
       "send": "Envoyer",
-      "error": "Impossible d'envoyer le message."
+      "cc": "Cc",
+      "bcc": "Cci",
+      "error": "Impossible d'envoyer le message.",
+      "invalidEmail": "Adresse email invalide",
+      "attachments": "Pièces jointes",
+      "addAttachment": "Ajouter une pièce jointe",
+      "maxFileSize": "Taille max : {size} Mo",
+      "maxFiles": "Max {count} fichiers",
+      "discardDraft": "Supprimer le brouillon",
+      "moreOptions": "Plus d'options"
+    },
+    "folders": {
+      "inbox": "Boîte de réception",
+      "sent": "Envoyés",
+      "draft": "Brouillons",
+      "starred": "Favoris",
+      "spam": "Spam",
+      "trash": "Corbeille"
+    },
+    "labels": {
+      "title": "Labels",
+      "personal": "Personnel",
+      "company": "Entreprise",
+      "important": "Important",
+      "private": "Privé"
+    },
+    "composeBtn": "Rédiger",
+    "reply": "Répondre",
+    "forward": "Transmettre",
+    "moveTo": "Déplacer vers",
+    "addLabel": "Ajouter un label",
+    "removeLabel": "Retirer le label",
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
+    "star": "Ajouter aux favoris",
+    "unstar": "Retirer des favoris",
+    "moveToInbox": "Déplacer vers la boîte de réception",
+    "moveToSpam": "Marquer comme spam",
+    "moveToTrash": "Supprimer",
+    "deleteForever": "Supprimer définitivement",
+    "refresh": "Actualiser",
+    "syncing": "Synchronisation...",
+    "syncSuccess": "{count} email(s) synchronisé(s)",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner",
+    "bulkSuccess": "Action appliquée à {count} conversation(s)",
+    "from": "De",
+    "date": "Date",
+    "attachments": "Pièces jointes",
+    "quote": "Le {date}, {from} a écrit :",
+    "replyOrForwardPrefix": "Cliquez ici pour ",
+    "replyOrForwardOr": " ou ",
+    "draft": {
+      "saved": "Brouillon sauvegardé",
+      "saving": "Sauvegarde...",
+      "deleted": "Brouillon supprimé",
+      "edit": "Modifier le brouillon",
+      "autoSaved": "Sauvegardé automatiquement à {time}"
+    },
+    "contacts": {
+      "title": "Contacts",
+      "none": "Aucun contact trouvé",
+      "recent": "Contacts récents"
+    },
+    "trash": {
+      "autoDelete": "Suppression automatique dans {days} jours",
+      "emptyTrash": "Vider la corbeille",
+      "emptyTrashConfirm": "Supprimer définitivement tous les emails de la corbeille ?"
+    },
+    "signature": {
+      "title": "Signature",
+      "placeholder": "Configurer votre signature email dans les paramètres"
     }
   },
   "billingActions": {

@@ -2,6 +2,8 @@
 
 namespace App\Core\Email;
 
+use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Realtime\EventEnvelope;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -144,7 +146,7 @@ class ImapFetcher
             ? $headerObj->references
             : null;
 
-        // Get body
+        // Get body and attachments
         $body = $this->getBody($uid);
 
         // Find or create thread
@@ -176,12 +178,27 @@ class ImapFetcher
             'sent_at' => $date,
         ]);
 
+        // Extract attachments
+        $this->extractAttachments($uid, $log);
+
         // Update thread counters
         $thread->refreshCounts();
 
         // Reopen thread if closed
         if ($thread->status === 'closed') {
             $thread->update(['status' => 'open']);
+        }
+
+        // Emit SSE event for real-time inbox updates (ADR-453)
+        try {
+            app(RealtimePublisher::class)->publish(
+                EventEnvelope::domain('email.updated', null, [
+                    'action' => 'new_message',
+                    'thread_id' => $thread->id,
+                ])
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[imap] SSE publish failed (non-blocking)', ['error' => $e->getMessage()]);
         }
 
         return true;
@@ -242,6 +259,62 @@ class ImapFetcher
         }
 
         return ['html' => $html, 'text' => $text];
+    }
+
+    private function extractAttachments(int $uid, EmailLog $log): void
+    {
+        $structure = imap_fetchstructure($this->connection, $uid, FT_UID);
+        if (empty($structure->parts)) {
+            return;
+        }
+
+        $attachmentService = app(EmailAttachmentService::class);
+
+        foreach ($structure->parts as $partIndex => $part) {
+            $disposition = strtoupper($part->disposition ?? '');
+            if ($disposition !== 'ATTACHMENT' && $disposition !== 'INLINE') {
+                continue;
+            }
+
+            // Get filename
+            $filename = 'attachment';
+            if (! empty($part->dparameters)) {
+                foreach ($part->dparameters as $param) {
+                    if (strtoupper($param->attribute) === 'FILENAME') {
+                        $filename = imap_utf8($param->value);
+                        break;
+                    }
+                }
+            }
+            if ($filename === 'attachment' && ! empty($part->parameters)) {
+                foreach ($part->parameters as $param) {
+                    if (strtoupper($param->attribute) === 'NAME') {
+                        $filename = imap_utf8($param->value);
+                        break;
+                    }
+                }
+            }
+
+            $content = imap_fetchbody($this->connection, $uid, (string) ($partIndex + 1), FT_UID);
+            $content = $this->decodeBody($content, $part->encoding ?? 0);
+
+            $mimeType = strtolower(($part->subtype ?? 'OCTET-STREAM'));
+            $primaryType = match ($part->type ?? 0) {
+                0 => 'text', 1 => 'multipart', 2 => 'message', 3 => 'application',
+                4 => 'audio', 5 => 'image', 6 => 'video',
+                default => 'application',
+            };
+            $fullMime = "{$primaryType}/{$mimeType}";
+
+            try {
+                $attachmentService->storeFromImap($log, $filename, $content, $fullMime);
+            } catch (\Throwable $e) {
+                Log::warning('[imap] Failed to store attachment', [
+                    'filename' => $filename,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function decodeBody(string $body, int $encoding): string

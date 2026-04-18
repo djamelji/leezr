@@ -33,7 +33,7 @@ class EmailModule implements ModuleDefinition
                         'sort' => 60,
                     ],
                 ],
-                routeNames: ['platform-email-inbox-id', 'platform-email-tab'],
+                routeNames: ['platform-email-tab'],
             ),
             permissions: [
                 ['key' => 'manage_email', 'label' => 'Manage Emails'],

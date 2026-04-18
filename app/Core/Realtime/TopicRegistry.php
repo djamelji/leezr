@@ -150,6 +150,15 @@ final class TopicRegistry
             'version' => 2,
         ],
 
+        // ─── Email topics (ADR-453) ─────────────────────────────
+        'email.updated' => [
+            'description' => 'Email inbox change (new message, folder move, read status)',
+            'invalidates' => ['email-threads'],
+            'categories' => ['domain'],
+            'targeting' => 'platform',
+            'version' => 2,
+        ],
+
         // ─── Notification topics ───────────────────────────────
         'notification.created' => [
             'description' => 'A new in-app notification was created for a user',

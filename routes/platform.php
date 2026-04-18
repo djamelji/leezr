@@ -609,13 +609,28 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::post('/email/orchestration', [\App\Modules\Platform\Email\Http\EmailOrchestrationController::class, 'store']);
             Route::put('/email/orchestration/{id}', [\App\Modules\Platform\Email\Http\EmailOrchestrationController::class, 'update']);
 
-            // Inbox (ADR-447)
+            // Inbox (ADR-447, ADR-453)
             Route::get('/email/inbox', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'index']);
             Route::get('/email/inbox/{id}', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'show']);
             Route::post('/email/inbox/compose', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'compose']);
+            Route::post('/email/inbox/bulk', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'bulkAction']);
+            Route::post('/email/inbox/fetch-now', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'fetchNow']);
             Route::post('/email/inbox/{id}/reply', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'reply']);
             Route::post('/email/inbox/{id}/read', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'markRead']);
             Route::put('/email/inbox/{id}/status', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'updateStatus']);
+
+            // Attachments (ADR-454)
+            Route::post('/email/inbox/attachments', [\App\Modules\Platform\Email\Http\EmailAttachmentController::class, 'store']);
+            Route::get('/email/inbox/attachments/{id}/download', [\App\Modules\Platform\Email\Http\EmailAttachmentController::class, 'download']);
+
+            // Drafts (ADR-454)
+            Route::post('/email/inbox/draft', [\App\Modules\Platform\Email\Http\EmailDraftController::class, 'store']);
+            Route::put('/email/inbox/draft/{id}', [\App\Modules\Platform\Email\Http\EmailDraftController::class, 'update']);
+            Route::post('/email/inbox/draft/{id}/send', [\App\Modules\Platform\Email\Http\EmailDraftController::class, 'send']);
+            Route::delete('/email/inbox/draft/{id}', [\App\Modules\Platform\Email\Http\EmailDraftController::class, 'destroy']);
+
+            // Contacts (ADR-454)
+            Route::get('/email/contacts', [\App\Modules\Platform\Email\Http\EmailContactController::class, 'index']);
         });
 
         // Inbound webhook (no auth — secured by webhook secret)

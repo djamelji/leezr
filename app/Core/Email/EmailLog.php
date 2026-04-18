@@ -4,6 +4,7 @@ namespace App\Core\Email;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EmailLog extends Model
 {
@@ -16,6 +17,8 @@ class EmailLog extends Model
         'company_id',
         'recipient_email',
         'recipient_name',
+        'cc',
+        'bcc',
         'from_email',
         'reply_to',
         'subject',
@@ -27,6 +30,7 @@ class EmailLog extends Model
         'direction',
         'thread_id',
         'is_read',
+        'is_draft',
         'error_message',
         'headers',
         'metadata',
@@ -39,6 +43,7 @@ class EmailLog extends Model
         'sent_at' => 'datetime',
         'created_at' => 'datetime',
         'is_read' => 'boolean',
+        'is_draft' => 'boolean',
     ];
 
     public function company(): BelongsTo
@@ -49,6 +54,11 @@ class EmailLog extends Model
     public function thread(): BelongsTo
     {
         return $this->belongsTo(EmailThread::class, 'thread_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(EmailAttachment::class);
     }
 
     public function scopeFailed($query)

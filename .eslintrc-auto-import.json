@@ -403,6 +403,7 @@
     "usePlatformPermissionContext": true,
     "useCan": true,
     "useMarketFormatting": true,
-    "useUnsavedChanges": true
+    "useUnsavedChanges": true,
+    "useEmailInbox": true
   }
 }

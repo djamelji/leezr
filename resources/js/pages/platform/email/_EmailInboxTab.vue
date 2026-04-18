@@ -1,248 +1,641 @@
 <script setup>
-import ComposeDialog from './inbox/_ComposeDialog.vue'
-import { $platformApi } from '@/utils/platformApi'
+import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import { useEmailInbox } from '@/composables/useEmailInbox'
+import EmailLeftSidebar from './_EmailLeftSidebar.vue'
+import EmailView from './_EmailView.vue'
+import EmailCompose from './_EmailCompose.vue'
 
 const { t } = useI18n()
-const router = useRouter()
 const { toast } = useAppToast()
 
-// State
-const threads = ref([])
-const stats = ref({ total_unread: 0, open: 0, closed: 0 })
-const currentPage = ref(1)
-const lastPage = ref(1)
-const total = ref(0)
-const isLoading = ref(true)
-const search = ref('')
-const statusFilter = ref('')
-const showUnreadOnly = ref(false)
-const isComposeOpen = ref(false)
+const {
+  // Constants
+  LABELS,
+  FOLDERS,
 
-// Fetch threads
-const fetchThreads = async () => {
-  isLoading.value = true
-  try {
-    const params = new URLSearchParams()
-    params.set('page', currentPage.value)
-    if (search.value) params.set('search', search.value)
-    if (statusFilter.value) params.set('status', statusFilter.value)
-    if (showUnreadOnly.value) params.set('unread', '1')
+  // State
+  threads,
+  selectedThread,
+  selectedThreadMessages,
+  selectedIds,
+  currentFolder,
+  currentLabel,
+  searchQuery,
+  folderCounts,
+  isLoading,
+  isSyncing,
+  pagination,
 
-    const data = await $platformApi(`/email/inbox?${params}`)
-    threads.value = data.data
-    stats.value = data.stats
-    currentPage.value = data.current_page
-    lastPage.value = data.last_page
-    total.value = data.total
-  } catch (e) {
-    toast(t('emailInbox.fetchError'), 'error')
-  } finally {
-    isLoading.value = false
+  // Computed
+  isAllSelected,
+  isIndeterminate,
+  hasSelection,
+  threadMeta,
+
+  // API
+  fetchThreads,
+  bulkAction,
+  compose,
+  reply,
+  uploadAttachment,
+  fetchNow,
+  saveDraft,
+  updateDraft,
+  sendDraft,
+  deleteDraft,
+  searchContacts,
+
+  // Selection
+  toggleSelect,
+  toggleSelectAll,
+  deselectAll,
+
+  // Navigation
+  openThread,
+  closeThread,
+  navigateThread,
+  toggleStar,
+  changeFolder,
+  changeLabel,
+
+  // Helpers
+  resolveLabelColor,
+  formatTime,
+} = useEmailInbox()
+
+const showCompose = ref(false)
+const composePrefill = ref(null)
+const isLeftSidebarOpen = ref(true)
+
+// Event handlers
+const handleBulkAction = async action => {
+  const count = selectedIds.value.size
+  await bulkAction(action)
+  toast(t('emailInbox.bulkSuccess', { count }), 'success')
+}
+
+const handleBulkLabel = async label => {
+  const count = selectedIds.value.size
+  await bulkAction('label', label)
+  toast(t('emailInbox.bulkSuccess', { count }), 'success')
+}
+
+const handleRefresh = async () => {
+  const data = await fetchNow()
+  if (data?.count > 0) {
+    toast(t('emailInbox.syncSuccess', { count: data.count }), 'success')
   }
 }
 
-// Watchers
-watch([search, statusFilter, showUnreadOnly], () => {
-  currentPage.value = 1
-  fetchThreads()
+const handleComposeSent = async data => {
+  try {
+    await compose(data)
+    toast(t('emailInbox.composeSent'), 'success')
+    composePrefill.value = null
+    await fetchThreads(pagination.value.page)
+  } catch {
+    toast(t('emailInbox.compose.error'), 'error')
+  }
+}
+
+const handleForward = data => {
+  composePrefill.value = data
+  showCompose.value = true
+}
+
+const handleReplySent = async payload => {
+  if (!selectedThread.value) return
+
+  // Support both string (backward compat) and object { body, attachment_ids }
+  const body = typeof payload === 'string' ? payload : payload.body
+  const attachmentIds = typeof payload === 'string' ? [] : (payload.attachment_ids || [])
+
+  try {
+    await reply(selectedThread.value.id, body, attachmentIds)
+    toast(t('emailInbox.replySent'), 'success')
+    const { $platformApi } = await import('@/utils/platformApi')
+    const data = await $platformApi(`/email/inbox/${selectedThread.value.id}`)
+    selectedThread.value = data.thread
+    selectedThreadMessages.value = data.messages
+  } catch {
+    toast(t('emailInbox.replyError'), 'error')
+  }
+}
+
+const handleUploadAttachment = async (file, callback) => {
+  try {
+    const result = await uploadAttachment(file)
+
+    callback({
+      id: result.id,
+      name: result.original_filename,
+      size: result.human_size,
+    })
+  } catch {
+    toast(t('emailInbox.compose.error'), 'error')
+  }
+}
+
+const handleThreadTrash = async () => {
+  if (!selectedThread.value) return
+  selectedIds.value = new Set([selectedThread.value.id])
+  await bulkAction('trash')
+  closeThread()
+}
+
+const handleThreadStar = () => {
+  if (selectedThread.value) toggleStar(selectedThread.value.id)
+}
+
+const handleThreadUnstar = () => {
+  if (selectedThread.value) toggleStar(selectedThread.value.id)
+}
+
+const handleThreadUnread = async () => {
+  if (!selectedThread.value) return
+  selectedIds.value = new Set([selectedThread.value.id])
+  await bulkAction('unread')
+  closeThread()
+}
+
+const handleThreadMoveTo = async folder => {
+  if (!selectedThread.value) return
+  selectedIds.value = new Set([selectedThread.value.id])
+  await bulkAction(folder)
+  closeThread()
+}
+
+const handleThreadLabel = async label => {
+  if (!selectedThread.value) return
+  selectedIds.value = new Set([selectedThread.value.id])
+  await bulkAction('label', label)
+}
+
+const selectAllModel = computed({
+  get: () => isAllSelected.value,
+  set: () => toggleSelectAll(),
 })
-
-const openThread = thread => {
-  router.push({ name: 'platform-email-inbox-id', params: { id: thread.id } })
-}
-
-const formatTime = dateStr => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now - date
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffDays === 0) return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  if (diffDays === 1) return t('emailInbox.yesterday')
-  if (diffDays < 7) return date.toLocaleDateString('fr-FR', { weekday: 'short' })
-  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-}
-
-const statusColor = status => {
-  if (status === 'open') return 'success'
-  if (status === 'closed') return 'default'
-  return 'warning'
-}
-
-const onComposeSent = () => {
-  toast(t('emailInbox.composeSent'), 'success')
-  fetchThreads()
-}
-
-onMounted(fetchThreads)
 </script>
 
 <template>
-  <div>
-    <!-- Header -->
-    <div class="d-flex align-center flex-wrap gap-4 mb-6">
-      <div>
-        <p class="text-body-1 mb-0">
-          {{ t('emailInbox.subtitle') }}
-        </p>
-      </div>
-      <VSpacer />
-      <VBtn
-        color="primary"
-        prepend-icon="tabler-pencil"
-        @click="isComposeOpen = true"
-      >
-        {{ t('emailInbox.newEmail') }}
-      </VBtn>
+  <div
+    class="email-app-layout"
+    :style="{ height: $vuetify.display.mdAndUp ? 'calc(100vh - 200px)' : 'calc(100vh - 220px)', minHeight: '500px' }"
+  >
+    <!-- Left sidebar -->
+    <div
+      class="email-left-sidebar h-100"
+      :class="$vuetify.display.mdAndUp ? 'd-block' : 'd-none'"
+    >
+      <EmailLeftSidebar
+        :folder-counts="folderCounts"
+        :current-folder="currentFolder"
+        :current-label="currentLabel"
+        :folders="FOLDERS"
+        :labels="LABELS"
+        @update:current-folder="changeFolder"
+        @update:current-label="changeLabel"
+        @compose="showCompose = true"
+      />
     </div>
 
-    <!-- Stats cards -->
-    <VRow class="card-grid card-grid-xs mb-6">
-      <VCol cols="12" sm="4">
-        <VCard>
-          <VCardText class="d-flex align-center gap-4">
-            <VAvatar color="primary" variant="tonal" rounded>
-              <VIcon icon="tabler-inbox" />
-            </VAvatar>
-            <div>
-              <div class="text-h5">{{ stats.open }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ t('emailInbox.stats.open') }}</div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol cols="12" sm="4">
-        <VCard>
-          <VCardText class="d-flex align-center gap-4">
-            <VAvatar color="error" variant="tonal" rounded>
-              <VIcon icon="tabler-mail" />
-            </VAvatar>
-            <div>
-              <div class="text-h5">{{ stats.total_unread }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ t('emailInbox.stats.unread') }}</div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol cols="12" sm="4">
-        <VCard>
-          <VCardText class="d-flex align-center gap-4">
-            <VAvatar color="secondary" variant="tonal" rounded>
-              <VIcon icon="tabler-check" />
-            </VAvatar>
-            <div>
-              <div class="text-h5">{{ stats.closed }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ t('emailInbox.stats.closed') }}</div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
-
-    <!-- Filters + Thread list -->
-    <VCard>
-      <VCardText class="d-flex align-center flex-wrap gap-4">
-        <AppTextField
-          v-model="search"
-          :placeholder="t('emailInbox.searchPlaceholder')"
-          prepend-inner-icon="tabler-search"
-          density="compact"
-          style="max-inline-size: 300px;"
-          clearable
-        />
-        <AppSelect
-          v-model="statusFilter"
-          :items="[
-            { title: t('emailInbox.filters.all'), value: '' },
-            { title: t('emailInbox.filters.open'), value: 'open' },
-            { title: t('emailInbox.filters.closed'), value: 'closed' },
-            { title: t('emailInbox.filters.archived'), value: 'archived' },
-          ]"
-          density="compact"
-          style="max-inline-size: 160px;"
-        />
-        <VCheckbox
-          v-model="showUnreadOnly"
-          :label="t('emailInbox.filters.unreadOnly')"
-          density="compact"
-        />
-        <VSpacer />
-        <IconBtn @click="fetchThreads">
-          <VIcon icon="tabler-refresh" />
+    <!-- Center: thread list -->
+    <div class="email-content-area h-100 d-flex flex-column">
+      <!-- Top action bar -->
+      <div class="d-flex align-center gap-2 px-4 py-2" style="min-height: 56px;">
+        <!-- Mobile: hamburger -->
+        <IconBtn
+          v-if="$vuetify.display.smAndDown"
+          @click="isLeftSidebarOpen = !isLeftSidebarOpen"
+        >
+          <VIcon icon="tabler-menu-2" />
         </IconBtn>
-      </VCardText>
+
+        <VTextField
+          v-model="searchQuery"
+          density="default"
+          :placeholder="t('emailInbox.searchPlaceholder')"
+          class="email-search flex-grow-1"
+        >
+          <template #prepend-inner>
+            <VIcon
+              icon="tabler-search"
+              size="24"
+              class="me-1 text-medium-emphasis"
+            />
+          </template>
+        </VTextField>
+
+        <IconBtn
+          :loading="isSyncing"
+          @click="handleRefresh"
+        >
+          <VIcon
+            icon="tabler-refresh"
+            size="22"
+          />
+          <VTooltip
+            activator="parent"
+            location="top"
+          >
+            {{ t('emailInbox.refresh') }}
+          </VTooltip>
+        </IconBtn>
+
+        <IconBtn>
+          <VIcon
+            icon="tabler-dots-vertical"
+            size="22"
+          />
+        </IconBtn>
+      </div>
 
       <VDivider />
 
-      <VSkeletonLoader
-        v-if="isLoading"
-        type="list-item-three-line, list-item-three-line, list-item-three-line"
-      />
+      <!-- Action bar: select all + bulk actions -->
+      <div class="py-2 px-4 d-flex align-center gap-x-1">
+        <VCheckbox
+          :model-value="selectAllModel"
+          :indeterminate="isIndeterminate"
+          density="compact"
+          hide-details
+          class="flex-shrink-0"
+          @update:model-value="toggleSelectAll"
+        />
 
-      <VList v-else-if="threads.length" class="py-0">
-        <template v-for="(thread, i) in threads" :key="thread.id">
-          <VListItem
-            class="cursor-pointer"
-            :class="{ 'bg-light-primary': thread.unread_count > 0 }"
-            @click="openThread(thread)"
-          >
-            <template #prepend>
-              <VAvatar
-                :color="thread.unread_count > 0 ? 'primary' : 'secondary'"
-                variant="tonal"
-                size="40"
-              >
-                <VIcon :icon="thread.unread_count > 0 ? 'tabler-mail' : 'tabler-mail-opened'" />
-              </VAvatar>
-            </template>
+        <div
+          class="w-100 d-flex align-center action-bar-actions gap-x-1"
+          :style="{ visibility: hasSelection ? undefined : 'hidden' }"
+        >
+          <span class="text-body-2 text-disabled me-2">
+            {{ selectedIds.size }}
+          </span>
 
-            <VListItemTitle class="d-flex align-center gap-2">
-              <span class="text-truncate" :class="{ 'font-weight-bold': thread.unread_count > 0 }">
-                {{ thread.subject }}
-              </span>
-              <VChip :color="statusColor(thread.status)" size="x-small" label>
-                {{ thread.status }}
-              </VChip>
-              <VBadge v-if="thread.unread_count > 0" :content="thread.unread_count" color="error" inline />
-            </VListItemTitle>
+          <IconBtn @click="handleBulkAction('trash')">
+            <VIcon
+              icon="tabler-trash"
+              size="22"
+            />
+            <VTooltip
+              activator="parent"
+              location="top"
+            >
+              {{ t('emailInbox.moveToTrash') }}
+            </VTooltip>
+          </IconBtn>
 
-            <VListItemSubtitle class="d-flex align-center gap-2 mt-1">
-              <span class="text-body-2">{{ thread.participant_name || thread.participant_email }}</span>
-              <template v-if="thread.company">
-                <VIcon icon="tabler-building" size="14" />
-                <span class="text-body-2">{{ thread.company.name }}</span>
-              </template>
-              <span v-if="thread.last_message" class="text-body-2 text-truncate text-medium-emphasis">
-                — {{ thread.last_message.body_text }}
-              </span>
-            </VListItemSubtitle>
+          <IconBtn @click="handleBulkAction('read')">
+            <VIcon
+              icon="tabler-mail-opened"
+              size="22"
+            />
+            <VTooltip
+              activator="parent"
+              location="top"
+            >
+              {{ t('emailInbox.markRead') }}
+            </VTooltip>
+          </IconBtn>
 
-            <template #append>
-              <div class="d-flex flex-column align-end gap-1">
-                <span class="text-caption text-disabled">{{ formatTime(thread.last_message_at) }}</span>
-                <span class="text-caption text-disabled">{{ thread.message_count }} {{ t('emailInbox.messages') }}</span>
-              </div>
-            </template>
-          </VListItem>
-          <VDivider v-if="i < threads.length - 1" />
-        </template>
-      </VList>
+          <IconBtn @click="handleBulkAction('star')">
+            <VIcon
+              icon="tabler-star"
+              size="22"
+            />
+            <VTooltip
+              activator="parent"
+              location="top"
+            >
+              {{ t('emailInbox.star') }}
+            </VTooltip>
+          </IconBtn>
 
-      <div v-else class="pa-12 text-center">
-        <VIcon icon="tabler-inbox-off" size="64" class="text-disabled mb-4" />
-        <p class="text-h6 text-disabled">{{ t('emailInbox.empty') }}</p>
-        <VBtn variant="tonal" prepend-icon="tabler-pencil" @click="isComposeOpen = true">
-          {{ t('emailInbox.newEmail') }}
-        </VBtn>
+          <!-- Move to menu -->
+          <IconBtn>
+            <VIcon
+              icon="tabler-folder"
+              size="22"
+            />
+            <VMenu activator="parent">
+              <VList density="compact">
+                <VListItem @click="handleBulkAction('inbox')">
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-mail"
+                      class="me-2"
+                      size="20"
+                    />
+                  </template>
+                  <VListItemTitle>{{ t('emailInbox.folders.inbox') }}</VListItemTitle>
+                </VListItem>
+                <VListItem @click="handleBulkAction('spam')">
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-alert-octagon"
+                      class="me-2"
+                      size="20"
+                    />
+                  </template>
+                  <VListItemTitle>{{ t('emailInbox.folders.spam') }}</VListItemTitle>
+                </VListItem>
+                <VListItem @click="handleBulkAction('trash')">
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-trash"
+                      class="me-2"
+                      size="20"
+                    />
+                  </template>
+                  <VListItemTitle>{{ t('emailInbox.folders.trash') }}</VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
+          </IconBtn>
+
+          <!-- Label menu -->
+          <IconBtn>
+            <VIcon
+              icon="tabler-tag"
+              size="22"
+            />
+            <VMenu activator="parent">
+              <VList density="compact">
+                <VListItem
+                  v-for="label in LABELS"
+                  :key="label.title"
+                  @click.stop="handleBulkLabel(label.title)"
+                >
+                  <template #prepend>
+                    <VBadge
+                      inline
+                      :color="label.color"
+                      dot
+                    />
+                  </template>
+                  <VListItemTitle class="ms-2 text-capitalize">
+                    {{ label.title }}
+                  </VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
+          </IconBtn>
+        </div>
       </div>
 
-      <VDivider v-if="lastPage > 1" />
-      <VCardText v-if="lastPage > 1" class="d-flex justify-center">
-        <VPagination v-model="currentPage" :length="lastPage" :total-visible="5" @update:model-value="fetchThreads" />
-      </VCardText>
-    </VCard>
+      <VDivider />
 
-    <ComposeDialog :is-visible="isComposeOpen" @close="isComposeOpen = false" @sent="onComposeSent" />
+      <!-- Thread list -->
+      <PerfectScrollbar
+        tag="ul"
+        :options="{ wheelPropagation: false }"
+        class="email-list flex-grow-1"
+      >
+        <!-- Loading -->
+        <li
+          v-if="isLoading && threads.length === 0"
+          class="d-flex justify-center align-center pa-8"
+        >
+          <VProgressCircular indeterminate />
+        </li>
+
+        <!-- Empty state -->
+        <li
+          v-else-if="!isLoading && threads.length === 0"
+          class="py-4 px-5 text-center"
+        >
+          <VIcon
+            icon="tabler-mail-off"
+            size="48"
+            class="text-disabled mb-2"
+          />
+          <div class="text-h6 text-disabled">
+            {{ t('emailInbox.empty') }}
+          </div>
+          <div class="text-body-2 text-disabled mt-1">
+            {{ t('emailInbox.emptyDescription') }}
+          </div>
+        </li>
+
+        <!-- Threads -->
+        <template v-else>
+          <li
+            v-for="thread in threads"
+            :key="thread.id"
+            class="email-item d-flex align-center pa-4 gap-2 cursor-pointer"
+            :class="[{ 'email-read': thread.unread_count === 0 }]"
+            @click="openThread(thread)"
+          >
+            <VCheckbox
+              :model-value="selectedIds.has(thread.id)"
+              class="flex-shrink-0"
+              @click.stop
+              @update:model-value="toggleSelect(thread.id)"
+            />
+
+            <IconBtn
+              :color="thread.is_starred ? 'warning' : 'default'"
+              @click.stop="toggleStar(thread.id)"
+            >
+              <VIcon
+                :icon="thread.is_starred ? 'tabler-star-filled' : 'tabler-star'"
+                size="22"
+              />
+            </IconBtn>
+
+            <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+              <h6
+                class="text-h6 text-truncate"
+                :class="{ 'font-weight-regular': thread.unread_count === 0 }"
+              >
+                {{ thread.participant_name || thread.participant_email }}
+              </h6>
+              <span class="text-body-2 text-truncate">{{ thread.subject }}</span>
+            </div>
+
+            <VSpacer />
+
+            <div class="email-meta d-flex align-center gap-2">
+              <VIcon
+                v-for="label in (thread.labels || [])"
+                :key="label"
+                icon="tabler-circle-filled"
+                size="10"
+                :color="resolveLabelColor(label)"
+              />
+
+              <VChip
+                v-if="thread.unread_count > 0"
+                color="primary"
+                size="x-small"
+                label
+              >
+                {{ thread.unread_count }}
+              </VChip>
+
+              <span class="text-sm text-disabled">
+                {{ formatTime(thread.last_message_at) }}
+              </span>
+            </div>
+
+            <div class="email-actions d-none">
+              <IconBtn @click.stop="toggleStar(thread.id)">
+                <VIcon
+                  :icon="thread.is_starred ? 'tabler-star-filled' : 'tabler-star'"
+                  size="22"
+                />
+              </IconBtn>
+              <IconBtn @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('trash')">
+                <VIcon
+                  icon="tabler-trash"
+                  size="22"
+                />
+              </IconBtn>
+              <IconBtn @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('read')">
+                <VIcon
+                  icon="tabler-mail-opened"
+                  size="22"
+                />
+              </IconBtn>
+            </div>
+          </li>
+        </template>
+      </PerfectScrollbar>
+
+      <!-- Pagination -->
+      <div
+        v-if="pagination.lastPage > 1"
+        class="d-flex justify-center pa-4"
+      >
+        <VPagination
+          :model-value="pagination.page"
+          :length="pagination.lastPage"
+          :total-visible="5"
+          density="compact"
+          @update:model-value="fetchThreads"
+        />
+      </div>
+    </div>
+
+    <!-- Right drawer: thread detail (only in DOM when needed) -->
+    <EmailView
+      v-if="selectedThread"
+      :thread="selectedThread"
+      :messages="selectedThreadMessages"
+      :thread-meta="threadMeta"
+      :labels="LABELS"
+      @close="closeThread"
+      @refresh="fetchThreads(pagination.page)"
+      @navigated="navigateThread"
+      @trash="handleThreadTrash"
+      @star="handleThreadStar"
+      @unstar="handleThreadUnstar"
+      @unread="handleThreadUnread"
+      @move-to="handleThreadMoveTo"
+      @label="handleThreadLabel"
+      @reply-sent="handleReplySent"
+      @upload-attachment="handleUploadAttachment"
+      @forward="handleForward"
+    />
+
+    <!-- Compose dialog -->
+    <EmailCompose
+      v-model="showCompose"
+      :prefill="composePrefill"
+      @sent="handleComposeSent"
+    />
   </div>
 </template>
+
+<style lang="scss">
+@use "@styles/variables/vuetify";
+@use "@core-scss/base/mixins";
+
+.email-app-layout {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  border-radius: vuetify.$card-border-radius;
+
+  @include mixins.elevation(vuetify.$card-elevation);
+
+  $sel-email-app-layout: &;
+
+  @at-root {
+    .skin--bordered {
+      @include mixins.bordered-skin($sel-email-app-layout);
+    }
+  }
+}
+
+.email-left-sidebar {
+  flex-shrink: 0;
+  inline-size: 260px;
+  border-inline-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgb(var(--v-theme-surface));
+}
+
+.email-content-area {
+  position: relative;
+  flex-grow: 1;
+  min-inline-size: 0;
+}
+
+// Remove border from search field (Vuexy pattern)
+.email-search {
+  .v-field__outline {
+    display: none;
+  }
+
+  .v-field__field {
+    .v-field__input {
+      font-size: 0.9375rem !important;
+      line-height: 1.375rem !important;
+    }
+  }
+}
+
+.email-list {
+  white-space: nowrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  .email-item {
+    block-size: 4.375rem;
+    transition: all 0.2s ease-in-out;
+    will-change: transform, box-shadow;
+
+    &.email-read {
+      background-color: rgba(var(--v-theme-on-surface), var(--v-hover-opacity));
+    }
+
+    & + .email-item {
+      border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    }
+  }
+
+  .email-item .email-meta {
+    display: flex;
+  }
+
+  .email-item:hover {
+    transform: translateY(-2px);
+
+    @include mixins.elevation(4);
+
+    @media screen and (min-width: 1280px) {
+      .email-actions {
+        display: block !important;
+      }
+
+      .email-meta {
+        display: none;
+      }
+    }
+
+    + .email-item {
+      border-color: transparent;
+    }
+  }
+}
+</style>
