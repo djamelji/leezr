@@ -2,17 +2,12 @@
 
 namespace App\Notifications\Email;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
 
-class ManualEmailNotification extends Notification implements ShouldQueue
+class ManualEmailNotification extends Notification
 {
-    use Queueable;
-
-    public int $tries = 1;
     public ?int $emailLogId = null;
     public ?string $emailMessageId = null;
     public ?string $cc = null;

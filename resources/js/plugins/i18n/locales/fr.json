@@ -4834,6 +4834,7 @@
     "emptyDescription": "Votre boîte est vide.",
     "sent": "Envoyé",
     "received": "Reçu",
+    "toPrefix": "À : ",
     "failed": "Échoué",
     "noContent": "Aucun contenu",
     "clickToReply": "Cliquer ici pour répondre",

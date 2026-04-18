@@ -438,20 +438,33 @@ watch(() => props.thread, () => {
         <VCard v-show="showReplyCard">
           <VCardText class="font-weight-medium text-high-emphasis">
             <div class="text-base">
-              {{ t('emailInbox.replyOrForwardPrefix') }}
-              <span
-                class="text-primary cursor-pointer"
-                @click="handleClickReply"
-              >
-                {{ t('emailInbox.reply') }}
-              </span>
-              {{ t('emailInbox.replyOrForwardOr') }}
-              <span
-                class="text-primary cursor-pointer"
-                @click="handleClickForward"
-              >
-                {{ t('emailInbox.forward') }}
-              </span>
+              <!-- Sent-only threads: forward only (no reply to yourself) -->
+              <template v-if="props.thread.folder === 'sent'">
+                {{ t('emailInbox.replyOrForwardPrefix') }}
+                <span
+                  class="text-primary cursor-pointer"
+                  @click="handleClickForward"
+                >
+                  {{ t('emailInbox.forward') }}
+                </span>
+              </template>
+              <!-- Received threads: reply + forward -->
+              <template v-else>
+                {{ t('emailInbox.replyOrForwardPrefix') }}
+                <span
+                  class="text-primary cursor-pointer"
+                  @click="handleClickReply"
+                >
+                  {{ t('emailInbox.reply') }}
+                </span>
+                {{ t('emailInbox.replyOrForwardOr') }}
+                <span
+                  class="text-primary cursor-pointer"
+                  @click="handleClickForward"
+                >
+                  {{ t('emailInbox.forward') }}
+                </span>
+              </template>
             </div>
           </VCardText>
         </VCard>

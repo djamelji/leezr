@@ -22,7 +22,7 @@ class EmailComposeService
             'participant_email' => $data['to'],
             'participant_name' => $data['to_name'] ?? null,
             'status' => 'open',
-            'folder' => 'inbox',
+            'folder' => 'sent',
             'last_message_at' => now(),
             'message_count' => 1,
             'unread_count' => 0,

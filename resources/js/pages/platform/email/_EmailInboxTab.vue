@@ -443,12 +443,25 @@ const selectAllModel = computed({
             </IconBtn>
 
             <div class="d-flex flex-column flex-grow-1 overflow-hidden">
-              <h6
-                class="text-h6 text-truncate"
-                :class="{ 'font-weight-regular': thread.unread_count === 0 }"
-              >
-                {{ thread.participant_name || thread.participant_email }}
-              </h6>
+              <div class="d-flex align-center gap-1">
+                <h6
+                  class="text-h6 text-truncate"
+                  :class="{ 'font-weight-regular': thread.unread_count === 0 }"
+                >
+                  {{ thread.folder === 'sent' ? t('emailInbox.toPrefix') : '' }}{{ thread.participant_name || thread.participant_email }}
+                </h6>
+                <VChip
+                  v-if="thread.last_message?.direction === 'sent'"
+                  size="x-small"
+                  color="info"
+                  variant="tonal"
+                  label
+                  class="flex-shrink-0"
+                >
+                  <VIcon icon="tabler-send" size="10" class="me-1" />
+                  {{ t('emailInbox.sent') }}
+                </VChip>
+              </div>
               <span class="text-body-2 text-truncate">{{ thread.subject }}</span>
             </div>
 

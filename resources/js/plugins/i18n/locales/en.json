@@ -4829,6 +4829,7 @@
     "emptyDescription": "Your inbox is empty.",
     "sent": "Sent",
     "received": "Received",
+    "toPrefix": "To: ",
     "failed": "Failed",
     "noContent": "No content",
     "clickToReply": "Click here to reply",

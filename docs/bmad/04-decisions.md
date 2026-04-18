@@ -16080,6 +16080,30 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 - `resources/js/pages/platform/email/_EmailView.vue` (reply attachments handler, file input, display chips)
 - `resources/js/composables/useEmailInbox.js` (reply attachmentIds, uploadAttachment, debounce search)
 
+## ADR-456 : Email Hub — Fix envoi réel + séparation inbox/sent + SMTP/IMAP config (2026-04-18)
+
+**Contexte** : Investigation SSH révèle 4 problèmes bloquants : (1) emails marqués "envoyés" mais jamais reçus, (2) emails envoyés et reçus mélangés dans inbox et sent, (3) IMAP ne télécharge pas les mails, (4) actions identiques pour sent/received.
+
+**Décisions** :
+1. **ManualEmailNotification : suppression ShouldQueue** — La notification utilisait `ShouldQueue`, mais `configureSmtp()` configure le transport SMTP dans le process HTTP via `Config::set()`. Quand le queue worker désérialisait le job, cette config runtime était perdue → le worker utilisait `MAIL_MAILER=log` → emails écrits dans laravel.log au lieu d'être envoyés. Fix : envoi synchrone (compose/reply sont interactifs, le user attend la réponse)
+2. **EmailComposeService::compose() : folder='sent'** — Les threads créés par compose avaient `folder='inbox'`, causant leur apparition dans inbox ET sent (via `email_logs.direction`). Fix : `folder='sent'` pour les nouveaux threads composés
+3. **SMTP/IMAP configurés en base (prod + staging)** — `PlatformSetting.email` était null. Configuré via tinker : `imap_host=213.32.20.37:993/SSL`, `smtp_host=213.32.20.37:587/TLS`, credentials `admin@leezr.com`. IMAP fetch testé manuellement : 1 email récupéré avec succès
+4. **UI : différenciation sent vs received** — Thread list affiche chip "Envoyé" + préfixe "À :" pour les threads sortants. Thread view : seul Forward est proposé pour les threads `folder=sent` (pas Reply à soi-même)
+
+**Conséquences** :
+- Les emails composés sont réellement envoyés via SMTP (plus de `log` driver)
+- Inbox ne contient que les threads reçus, Sent contient les threads envoyés
+- IMAP fetch fonctionne toutes les 5 min (scheduler) + bouton refresh manuel
+- L'UI distingue visuellement envoyé vs reçu
+
+**Fichiers** :
+- `app/Notifications/Email/ManualEmailNotification.php` (suppression ShouldQueue)
+- `app/Core/Email/EmailComposeService.php` (folder='sent')
+- `resources/js/pages/platform/email/_EmailInboxTab.vue` (chip direction, prefix "À :")
+- `resources/js/pages/platform/email/_EmailView.vue` (forward-only pour sent threads)
+- `resources/js/plugins/i18n/locales/fr.json` (clé toPrefix)
+- `resources/js/plugins/i18n/locales/en.json` (clé toPrefix)
+
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
