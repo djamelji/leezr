@@ -108,6 +108,30 @@ class PlatformSeeder extends Seeder
             ]);
         }
 
+        // Seed email SMTP + IMAP credentials (idempotent — always update to latest)
+        $instance = PlatformSetting::instance();
+        $currentEmail = $instance->email ?? [];
+
+        if (empty($currentEmail['smtp_host'])) {
+            $instance->update([
+                'email' => array_merge($currentEmail, [
+                    'smtp_host' => '213.32.20.37',
+                    'smtp_port' => 587,
+                    'smtp_encryption' => 'tls',
+                    'smtp_username' => 'admin@leezr.com',
+                    'smtp_password' => '@Crinshow31',
+                    'imap_host' => '213.32.20.37',
+                    'imap_port' => 993,
+                    'imap_encryption' => 'ssl',
+                    'imap_username' => 'admin@leezr.com',
+                    'imap_password' => '@Crinshow31',
+                    'imap_folder' => 'INBOX',
+                    'from_email' => 'admin@leezr.com',
+                    'from_name' => 'Leezr',
+                ]),
+            ]);
+        }
+
         // Seed default font families (idempotent)
         PlatformFontFamily::firstOrCreate(
             ['slug' => 'public-sans'],
