@@ -16106,4 +16106,25 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-457 — Email Credentials Seeder + IMAP/SMTP Config Persistence (2026-04-19)
+
+**Contexte** : Après chaque déploiement, la config SMTP/IMAP dans `PlatformSetting.email` était perdue car non seedée. Résultat : inbox vide (IMAP "not configured"), 422 sur test SMTP, emails non envoyés.
+
+**Décisions** :
+1. **Seeder email dans PlatformSeeder** — credentials `admin@leezr.com` / `@Crinshow31` seedés de façon idempotente (seulement si `smtp_host` est vide)
+2. **Config manuelle appliquée** — prod et staging seedés via tinker immédiatement
+3. **IMAP fetch vérifié** — 1 email récupéré sur chaque serveur après config
+
+**Cause racine du 422** : `testConnection()` → `configureSmtp()` → `PlatformSetting.email` vide → fallback sur mailer `log` → transport `log` n'a pas de `start()` → la connexion "réussit" mais aucun SMTP réel. Avec les credentials seedés, le test utilise le vrai transport SMTP.
+
+**Conséquences** :
+- Les déploiements futurs préservent la config email automatiquement
+- IMAP fetch toutes les 5 min (scheduler) fonctionne dès le premier deploy
+- La page settings affiche les credentials (password masqué) et le test SMTP/IMAP retourne 200
+
+**Fichiers** :
+- `database/seeders/PlatformSeeder.php` (ajout seeder email idempotent)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
