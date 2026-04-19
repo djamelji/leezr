@@ -107,12 +107,17 @@ class EmailService
     {
         $this->configureSmtp();
         $settings = $this->getSettings();
-        $fromEmail = $settings['from_email'] ?? config('mail.from.address');
-        $fromName = $settings['from_name'] ?? config('mail.from.name');
+
+        if (empty($settings['smtp_host'])) {
+            return ['success' => false, 'message' => 'SMTP host not configured'];
+        }
 
         try {
-            $transport = app('mailer')->getSymfonyTransport();
-            // Force reconnect to test credentials
+            // Use the freshly-purged dynamic mailer explicitly
+            $mailer = app('mail.manager')->mailer('dynamic');
+            $transport = $mailer->getSymfonyTransport();
+
+            // Force SMTP handshake to validate credentials
             if (method_exists($transport, 'start')) {
                 $transport->start();
             }
@@ -140,12 +145,17 @@ class EmailService
             return; // Fall back to default Laravel config (dev/testing)
         }
 
+        // Laravel 12 / Symfony Mailer uses 'scheme' not 'encryption':
+        // 'smtps' = implicit TLS (port 465), 'smtp' = STARTTLS (port 587)
+        $encryption = $settings['smtp_encryption'] ?? 'tls';
+        $scheme = $encryption === 'ssl' ? 'smtps' : 'smtp';
+
         Config::set('mail.default', 'dynamic');
         Config::set('mail.mailers.dynamic', [
             'transport' => 'smtp',
+            'scheme' => $scheme,
             'host' => $settings['smtp_host'],
             'port' => (int) ($settings['smtp_port'] ?? 587),
-            'encryption' => $settings['smtp_encryption'] ?? 'tls',
             'username' => $settings['smtp_username'] ?? null,
             'password' => $settings['smtp_password'] ?? null,
             'timeout' => 30,
