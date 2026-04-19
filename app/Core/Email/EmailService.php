@@ -105,12 +105,13 @@ class EmailService
      */
     public function testConnection(): array
     {
-        $this->configureSmtp();
         $settings = $this->getSettings();
 
         if (empty($settings['smtp_host'])) {
             return ['success' => false, 'message' => 'SMTP host not configured'];
         }
+
+        $this->configureSmtp();
 
         try {
             // Use the freshly-purged dynamic mailer explicitly
@@ -159,14 +160,8 @@ class EmailService
             'username' => $settings['smtp_username'] ?? null,
             'password' => $settings['smtp_password'] ?? null,
             'timeout' => 30,
-            // ISPConfig uses self-signed certs — skip verification
-            'stream' => [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true,
-                ],
-            ],
+            // ISPConfig self-signed cert: passed as DSN option to Symfony Mailer
+            'verify_peer' => 0,
         ]);
 
         Config::set('mail.from.address', $settings['from_email'] ?? config('mail.from.address'));
