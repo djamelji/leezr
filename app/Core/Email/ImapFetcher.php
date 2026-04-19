@@ -71,44 +71,70 @@ class ImapFetcher
             return 0;
         }
 
+        $host = $this->settings['imap_host'];
+        $port = (int) ($this->settings['imap_port'] ?? 993);
+        $encryption = $this->settings['imap_encryption'] ?? 'ssl';
+        $flags = $encryption === 'ssl' ? '/imap/ssl' : '/imap';
+        $flags .= '/novalidate-cert';
+        $mailboxBase = "{{$host}:{$port}{$flags}}";
+
+        // Fetch from INBOX + Junk (external mails often land in Junk)
+        $folders = ['INBOX', 'Junk'];
+
         // Find the last fetched email's date to only get newer ones
         $lastFetched = EmailLog::where('direction', 'received')
             ->whereNotNull('sent_at')
             ->orderByDesc('sent_at')
             ->first();
 
-        // Search for emails since last fetch (or last 7 days if first run)
         $since = $lastFetched
             ? $lastFetched->sent_at->subHour()->format('d-M-Y')
-            : now()->subDays(7)->format('d-M-Y');
-
-        $messageNums = imap_search($this->connection, "SINCE \"{$since}\"", SE_UID);
-
-        if (! $messageNums) {
-            return 0;
-        }
-
-        // Take latest N messages
-        $messageNums = array_slice(array_reverse($messageNums), 0, $limit);
+            : now()->subDays(30)->format('d-M-Y');
 
         $fetched = 0;
-        foreach ($messageNums as $uid) {
-            try {
-                if ($this->processMessage($uid)) {
-                    $fetched++;
+
+        foreach ($folders as $folder) {
+            // Reopen connection for each folder
+            if ($folder !== 'INBOX') {
+                $reopened = @imap_reopen($this->connection, $mailboxBase.$folder);
+                if (! $reopened) {
+                    Log::info("[imap] Folder {$folder} not available, skipping");
+
+                    continue;
                 }
-            } catch (\Throwable $e) {
-                Log::warning('[imap] Failed to process message', [
-                    'uid' => $uid,
-                    'error' => $e->getMessage(),
-                ]);
+            }
+
+            $messageNums = @imap_search($this->connection, "SINCE \"{$since}\"", SE_UID);
+
+            if (! $messageNums) {
+                continue;
+            }
+
+            // Take latest N messages per folder
+            $messageNums = array_slice(array_reverse($messageNums), 0, $limit);
+
+            foreach ($messageNums as $uid) {
+                try {
+                    if ($this->processMessage($uid, $folder)) {
+                        $fetched++;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('[imap] Failed to process message', [
+                        'uid' => $uid,
+                        'folder' => $folder,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
+
+        // Switch back to INBOX
+        @imap_reopen($this->connection, $mailboxBase.'INBOX');
 
         return $fetched;
     }
 
-    private function processMessage(int $uid): bool
+    private function processMessage(int $uid, string $imapFolder = 'INBOX'): bool
     {
         $headers = imap_fetchheader($this->connection, $uid, FT_UID);
         $headerObj = imap_rfc822_parse_headers($headers);
@@ -150,7 +176,14 @@ class ImapFetcher
         $body = $this->getBody($uid);
 
         // Find or create thread
-        $thread = $this->findOrCreateThread($fromEmail, $fromName, $subject, $inReplyTo, $references);
+        // Map IMAP folder to app folder: Junk → spam, default → inbox
+        $appFolder = match ($imapFolder) {
+            'Junk' => 'spam',
+            'Trash' => 'trash',
+            default => 'inbox',
+        };
+
+        $thread = $this->findOrCreateThread($fromEmail, $fromName, $subject, $inReplyTo, $references, $appFolder);
 
         // Create EmailLog
         $log = EmailLog::create([
@@ -174,7 +207,7 @@ class ImapFetcher
                 'In-Reply-To' => $inReplyTo ? "<{$inReplyTo}>" : null,
                 'References' => $references,
             ],
-            'metadata' => ['source' => 'imap'],
+            'metadata' => ['source' => 'imap', 'imap_folder' => $imapFolder],
             'sent_at' => $date,
         ]);
 
@@ -350,7 +383,7 @@ class ImapFetcher
         return $converted !== false ? $converted : $body;
     }
 
-    private function findOrCreateThread(string $fromEmail, ?string $fromName, string $subject, ?string $inReplyTo, ?string $references): EmailThread
+    private function findOrCreateThread(string $fromEmail, ?string $fromName, string $subject, ?string $inReplyTo, ?string $references, string $folder = 'inbox'): EmailThread
     {
         // 1. Try to match by In-Reply-To → find existing log → get thread
         if ($inReplyTo) {
@@ -393,6 +426,7 @@ class ImapFetcher
             'subject' => $normalizedSubject,
             'participant_email' => $fromEmail,
             'participant_name' => $fromName,
+            'folder' => $folder,
             'status' => 'open',
             'last_message_at' => now(),
             'message_count' => 0,

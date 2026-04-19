@@ -159,6 +159,14 @@ class EmailService
             'username' => $settings['smtp_username'] ?? null,
             'password' => $settings['smtp_password'] ?? null,
             'timeout' => 30,
+            // ISPConfig uses self-signed certs — skip verification
+            'stream' => [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                ],
+            ],
         ]);
 
         Config::set('mail.from.address', $settings['from_email'] ?? config('mail.from.address'));
