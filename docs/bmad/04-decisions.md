@@ -16127,4 +16127,21 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-458 — SMTP Self-Signed Cert + IMAP Multi-Folder + Laravel 12 Scheme (2026-04-19)
+
+**Contexte** : Le test SMTP retournait 422 (`certificate verify failed`) car ISPConfig utilise un certificat auto-signé. Les mails externes atterrissent dans le dossier Junk IMAP, non scanné par le fetcher.
+
+**Décisions** :
+1. **SMTP `verify_peer=0`** — passé comme option DSN à Symfony EsmtpTransportFactory. Laravel passe le config array comme options DSN → `$dsn->getOption('verify_peer')` désactive la vérification SSL
+2. **SMTP `scheme` au lieu de `encryption`** — Laravel 12 / Symfony Mailer utilise `scheme: 'smtp'` (STARTTLS port 587) ou `scheme: 'smtps'` (TLS implicite port 465), pas `encryption: 'tls'`
+3. **IMAP multi-dossiers** — le fetcher scanne maintenant INBOX + Junk. Les mails du dossier Junk créent des threads avec `folder='spam'`
+4. **First-run lookback** — étendu de 7 à 30 jours pour rattraper les mails plus anciens
+5. **testConnection()** — utilise `app('mail.manager')->mailer('dynamic')` explicitement au lieu de `app('mailer')` qui pouvait résoudre un transport caché
+
+**Fichiers** :
+- `app/Core/Email/EmailService.php` (verify_peer DSN, scheme, testConnection)
+- `app/Core/Email/ImapFetcher.php` (multi-folder, folder mapping, 30j lookback)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
