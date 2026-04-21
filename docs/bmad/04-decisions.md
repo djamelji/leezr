@@ -16144,4 +16144,20 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-459 — Fix "impossible d'envoyer" : EmailContact DB::raw + casting crash (2026-04-21)
+
+**Contexte** : L'envoi d'email affichait "impossible d'envoyer le message" alors que le destinataire recevait bien le mail. Le log Laravel montrait : `Object of class Illuminate\Database\Query\Expression could not be converted to int`.
+
+**Cause racine** : `EmailContact::recordUsage()` utilisait `DB::raw('frequency + 1')` dans `updateOrCreate()`. Eloquent essayait de caster l'Expression en int (car `'frequency' => 'integer'` dans `$casts`) lors du `isDirty()` check → crash. L'email était envoyé AVANT le contact tracking, donc le 500 post-envoi faisait croire au frontend que l'envoi avait échoué.
+
+**Décisions** :
+1. **Fix `recordUsage()`** — remplacé `updateOrCreate + DB::raw` par `firstOrCreate + increment()` : compatible Eloquent casting
+2. **Safety net compose/reply** — `EmailContact::recordUsage()` wrappé en try/catch dans `EmailComposeService` — le contact tracking ne doit jamais bloquer l'envoi
+
+**Fichiers** :
+- `app/Core/Email/EmailContact.php` (fix DB::raw → firstOrCreate + increment)
+- `app/Core/Email/EmailComposeService.php` (try/catch contact tracking)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -3,7 +3,6 @@
 namespace App\Core\Email;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class EmailContact extends Model
 {
@@ -21,6 +20,7 @@ class EmailContact extends Model
 
     /**
      * Record a contact usage (auto-extract on send).
+     * Uses firstOrCreate + increment to avoid DB::raw() casting issues with Eloquent.
      */
     public static function recordUsage(string $email, ?string $name = null): void
     {
@@ -29,13 +29,17 @@ class EmailContact extends Model
             return;
         }
 
-        static::updateOrCreate(
+        $contact = static::firstOrCreate(
             ['email' => $email],
-            [
-                'name' => $name ?: DB::raw('name'),
-                'frequency' => DB::raw('frequency + 1'),
-                'last_used_at' => now(),
-            ],
+            ['name' => $name, 'frequency' => 1, 'last_used_at' => now()]
         );
+
+        if (! $contact->wasRecentlyCreated) {
+            $contact->increment('frequency');
+            $contact->update(array_filter([
+                'name' => $name ?: $contact->name,
+                'last_used_at' => now(),
+            ]));
+        }
     }
 }

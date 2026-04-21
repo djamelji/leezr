@@ -48,9 +48,15 @@ class EmailComposeService
             'bcc' => $data['bcc'] ?? null,
         ]);
 
-        // Auto-extract contacts
-        EmailContact::recordUsage($data['to'], $data['to_name'] ?? null);
-        $this->recordCcBccContacts($data['cc'] ?? null, $data['bcc'] ?? null);
+        // Auto-extract contacts (non-blocking — must never break email sending)
+        try {
+            EmailContact::recordUsage($data['to'], $data['to_name'] ?? null);
+            $this->recordCcBccContacts($data['cc'] ?? null, $data['bcc'] ?? null);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[email] Contact extraction failed (non-blocking)', [
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return [$thread->fresh(), $log];
     }
@@ -91,8 +97,14 @@ class EmailComposeService
             'message_count' => $thread->messages()->count(),
         ]);
 
-        // Auto-extract contact from reply
-        EmailContact::recordUsage($thread->participant_email, $thread->participant_name);
+        // Auto-extract contact from reply (non-blocking)
+        try {
+            EmailContact::recordUsage($thread->participant_email, $thread->participant_name);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[email] Contact extraction failed (non-blocking)', [
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $log;
     }
