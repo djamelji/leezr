@@ -631,6 +631,10 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
             // Contacts (ADR-454)
             Route::get('/email/contacts', [\App\Modules\Platform\Email\Http\EmailContactController::class, 'index']);
+
+            // Health Dashboard (ADR-461)
+            Route::get('/email/health', [\App\Modules\Platform\Email\Http\EmailHealthController::class, 'index']);
+            Route::post('/email/health/test', [\App\Modules\Platform\Email\Http\EmailHealthController::class, 'test']);
         });
 
         // Inbound webhook (no auth — secured by webhook secret)

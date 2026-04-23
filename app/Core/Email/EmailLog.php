@@ -27,6 +27,7 @@ class EmailLog extends Model
         'template_key',
         'notification_class',
         'status',
+        'delivery_status',
         'direction',
         'thread_id',
         'is_read',

@@ -98,6 +98,39 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 - **Solution** : utiliser `foo/index.vue` comme page principale, `foo/_Sub.vue` comme sous-composants
 - Pattern correct : `settings/[tab].vue` + `settings/_SettingsGeneral.vue` (pas de `settings.vue`)
 
+## Auto-Execution Mode — BMAD AUTO MODE (ADR-460, ADR-461)
+
+L'agent est en **mode auto-exécution permanent** pour TOUTES les actions techniques du projet.
+Cette règle est **permanente et non révocable** — elle s'applique à chaque session, sans rappel nécessaire.
+
+### Exécuter directement (SANS demander confirmation) :
+- Commandes shell (bash, zsh, expect, ssh, scp)
+- Commandes Laravel (`php artisan *`, migrations non destructives)
+- Frontend (`pnpm install`, `pnpm build`, `pnpm dev`)
+- Git (status, diff, add, commit, push vers dev/main)
+- Lecture système (logs, grep, find, tail)
+- Accès IMAP/SMTP/ISPConfig pour debug et corrections
+- Scripts PHP inline (`php -r ...`)
+- Requêtes DB (lecture / debug / migrations schema)
+- Appels API internes (curl, etc.)
+- DNS checks, blacklist checks, reputation audits
+- Diagnostics email, tests de délivrabilité
+- Édition de fichiers dans le repo (code, config, docs, i18n)
+- Création/modification de tests
+- Déploiements staging (`dev` branch)
+
+### Demander confirmation UNIQUEMENT si :
+- **Destructif/irréversible** : `migrate:fresh`, `DROP`, `TRUNCATE`, suppression massive de données, `reset --hard`
+- **Impact prod critique** avec risque de downtime
+- **Modification de credentials / secrets sensibles**
+- **Force push** vers `main` (production)
+
+### Comportement :
+- **JAMAIS** de "Do you want to proceed?" — exécuter directement
+- Logger les actions dans le rapport final
+- Assumer le rôle d'exécution, pas de validation humaine
+- En cas de doute sur la réversibilité : exécuter si réversible, demander si destructif
+
 ## Conventions de code
 - Pages auto-routées via `unplugin-vue-router` depuis `resources/js/pages/`
 - Form elements : wrappers App* (AppTextField, AppSelect, etc.)

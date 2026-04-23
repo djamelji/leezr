@@ -16160,4 +16160,68 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-461 — Email Deliverability Overhaul + Email Health Dashboard (2026-04-22)
+
+**Contexte** : Les emails envoyés depuis Leezr arrivaient en spam Gmail. Causes identifiées : SPF dupliqué (2 TXT records → RFC 7208 PermError), DMARC à `p=none` (aucune protection), Return-Path non aligné avec le domaine SPF, ManualEmailNotification synchrone bloquant les requêtes HTTP.
+
+**Diagnostic factuel** :
+- SPF : 2 records TXT coexistaient (`~all` + `-all`) → PermError RFC 7208
+- DKIM : Clé DNS + rspamd signing configurés, mais jamais prouvé par test
+- DMARC : `p=none` = Gmail ignore complètement
+- PTR : `server1.novamoov.com` (shared hosting, match myhostname Postfix)
+- IP 213.32.20.37 : Propre sur 6 DNSBL (Spamhaus, Barracuda, SpamCop, SORBS, UCEPROTECT, Mailspike)
+
+**Décisions** :
+
+1. **DNS SPF unique** — Supprimé l'ancien SPF (`~all`, ISPConfig ID=54). SPF final : `v=spf1 mx a ip4:213.32.20.37 ip6:2001:41d0:305:2100::fb1f -all` (hard fail)
+
+2. **DMARC renforcé** — Modifié `_dmarc.leezr.com` de `p=none` à `p=quarantine`. Supprimé doublon DMARC inactif (ID=59). Objectif final : `p=reject` après 1 semaine de validation
+
+3. **Return-Path + headers deliverability** — `EmailEventSubscriber::handleMessageSending()` injecte désormais :
+   - `Return-Path` aligné SPF (noreply@{domaine})
+   - `X-Mailer: Leezr/1.0`
+   - Message-ID (existait déjà)
+
+4. **ManualEmailNotification → ShouldQueue** — Réactivé `implements ShouldQueue` (retiré dans ADR-456). Fix : `handleMessageSending()` auto-configure SMTP depuis PlatformSetting quand le mailer n'est pas `dynamic` (cas queue worker). Le SMTP runtime config est restauré automatiquement
+
+5. **configureSmtp() → public** — Rendu public pour permettre l'auto-configuration dans le subscriber
+
+6. **delivery_status** — Nouveau champ `delivery_status` (nullable, varchar 20) sur `email_logs` : sent/delivered/bounced/failed/complained
+
+7. **Email Health Dashboard** — Nouvel onglet "Santé Email" dans la plateforme :
+   - `EmailHealthController` : DNS checks (SPF/DKIM/DMARC/PTR), DNSBL reputation, stats, SMTP status
+   - Score global (0-100%) basé sur tous les checks
+   - Bouton "Test Deliverability" envoyant un email test
+   - 4 cards DNS + 4 cards réputation + stats envoi + test
+
+8. **Template custom anti-spam** — `ManualEmailNotification` utilise désormais `emails.manual` (template Leezr brandé) au lieu du template Laravel par défaut qui ajoutait "Hello!" + "Regards" (spam trigger). Multipart HTML+text/plain via `['emails.manual', 'emails.manual-text']`
+
+9. **List-Unsubscribe header** — `EmailEventSubscriber` injecte `List-Unsubscribe: <mailto:unsubscribe@{domain}>` + `List-Unsubscribe-Post` sur chaque email. Requis par Gmail depuis Feb 2024
+
+10. **BMAD AUTO MODE permanent** — Règle ajoutée dans `CLAUDE.md` : l'agent exécute directement toutes les actions techniques sans demander confirmation. Seules les actions destructives/irréversibles en prod nécessitent un accord
+
+**Preuves factuelles (2026-04-23)** :
+- Port25 Authentication Report : `SPF=pass`, `DKIM=pass` (d=leezr.com, s=default), `iprev=pass`
+- Google DMARC Aggregate Report (ID=5551938733052287675) : `disposition=none`, `dkim=pass`, `spf=pass`
+- IP 213.32.20.37 propre sur 6 DNSBL
+
+**Fichiers** :
+- Zone DNS `leezr.com` via ISPConfig (suppression SPF dupliqué, DMARC quarantine)
+- `app/Core/Email/EmailEventSubscriber.php` (Return-Path, X-Mailer, List-Unsubscribe, auto-SMTP queue)
+- `app/Core/Email/EmailService.php` (configureSmtp public)
+- `app/Notifications/Email/ManualEmailNotification.php` (ShouldQueue, template custom, multipart)
+- `app/Core/Email/EmailLog.php` (delivery_status fillable)
+- `database/migrations/2026_04_22_005850_add_delivery_status_to_email_logs.php`
+- `app/Modules/Platform/Email/Http/EmailHealthController.php` (nouveau)
+- `routes/platform.php` (GET /email/health, POST /email/health/test)
+- `resources/js/pages/platform/email/[tab].vue` (tab health)
+- `resources/js/pages/platform/email/_EmailHealthTab.vue` (nouveau)
+- `resources/views/emails/manual.blade.php` (nouveau — template brandé)
+- `resources/views/emails/manual-text.blade.php` (nouveau — text/plain)
+- `resources/js/plugins/i18n/locales/fr.json` (emailHealth.*)
+- `resources/js/plugins/i18n/locales/en.json` (emailHealth.*)
+- `CLAUDE.md` (BMAD AUTO MODE permanent)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -148,6 +148,7 @@ declare module 'vue-router/auto-routes' {
     'platform-documents': RouteRecordInfo<'platform-documents', '/platform/documents', Record<never, never>, Record<never, never>>,
     'platform-documents-id': RouteRecordInfo<'platform-documents-id', '/platform/documents/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'platform-email-email-compose': RouteRecordInfo<'platform-email-email-compose', '/platform/email/_EmailCompose', Record<never, never>, Record<never, never>>,
+    'platform-email-email-health-tab': RouteRecordInfo<'platform-email-email-health-tab', '/platform/email/_EmailHealthTab', Record<never, never>, Record<never, never>>,
     'platform-email-email-inbox-tab': RouteRecordInfo<'platform-email-email-inbox-tab', '/platform/email/_EmailInboxTab', Record<never, never>, Record<never, never>>,
     'platform-email-email-left-sidebar': RouteRecordInfo<'platform-email-email-left-sidebar', '/platform/email/_EmailLeftSidebar', Record<never, never>, Record<never, never>>,
     'platform-email-email-logs-tab': RouteRecordInfo<'platform-email-email-logs-tab', '/platform/email/_EmailLogsTab', Record<never, never>, Record<never, never>>,

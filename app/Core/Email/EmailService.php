@@ -138,7 +138,7 @@ class EmailService
      * - No dependency on .env MAIL_* in production
      * - Domain changes = UI settings change only
      */
-    private function configureSmtp(): void
+    public function configureSmtp(): void
     {
         $settings = $this->getSettings();
 

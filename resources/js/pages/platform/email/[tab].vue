@@ -6,6 +6,7 @@ import EmailLogsTab from './_EmailLogsTab.vue'
 import EmailTemplatesTab from './_EmailTemplatesTab.vue'
 import EmailOrchestrationTab from './_EmailOrchestrationTab.vue'
 import EmailSettingsTab from './_EmailSettingsTab.vue'
+import EmailHealthTab from './_EmailHealthTab.vue'
 
 definePage({
   meta: {
@@ -26,6 +27,7 @@ const tabs = [
   { value: 'automations', title: t('email.automations'), icon: 'tabler-robot' },
   { value: 'settings', title: t('email.settings'), icon: 'tabler-settings' },
   { value: 'logs', title: t('email.logs'), icon: 'tabler-list' },
+  { value: 'health', title: t('email.health'), icon: 'tabler-heartbeat' },
 ]
 </script>
 
@@ -51,5 +53,6 @@ const tabs = [
     <EmailOrchestrationTab v-else-if="currentTab === 'automations'" />
     <EmailSettingsTab v-else-if="currentTab === 'settings'" />
     <EmailLogsTab v-else-if="currentTab === 'logs'" />
+    <EmailHealthTab v-else-if="currentTab === 'health'" />
   </div>
 </template>
