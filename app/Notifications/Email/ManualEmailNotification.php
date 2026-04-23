@@ -2,10 +2,12 @@
 
 namespace App\Notifications\Email;
 
+use App\Core\Email\EmailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Config;
 
 class ManualEmailNotification extends Notification implements ShouldQueue
 {
@@ -30,9 +32,13 @@ class ManualEmailNotification extends Notification implements ShouldQueue
 
     public function toMail(mixed $notifiable): MailMessage
     {
-        // Use custom branded template instead of default Laravel notification
-        // (default adds "Hello!" + "Regards" which triggers spam filters)
-        // HTML + text/plain multipart (Gmail penalizes HTML-only)
+        // Configure SMTP BEFORE MailChannel selects the transport.
+        // handleMessageSending() event is too late — mailer is already resolved.
+        if (Config::get('mail.default') !== 'dynamic') {
+            app(EmailService::class)->configureSmtp();
+        }
+
+        // Custom branded template + multipart HTML/text (no "Hello!/Regards" spam trigger)
         $data = ['body' => $this->emailBody, 'subject' => $this->emailSubject];
         $mail = (new MailMessage)
             ->subject($this->emailSubject)
