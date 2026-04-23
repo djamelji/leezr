@@ -16200,10 +16200,17 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 10. **BMAD AUTO MODE permanent** — Règle ajoutée dans `CLAUDE.md` : l'agent exécute directement toutes les actions techniques sans demander confirmation. Seules les actions destructives/irréversibles en prod nécessitent un accord
 
+11. **EmailLog status tracking fix** — Le status restait "queued" après envoi SMTP réussi. Cause : Laravel `MailChannel` ne passe PAS l'objet notification dans `$event->data['__notification']` (toujours null). Fix : inclure `emailLogId` et `emailMessageId` dans les données de vue du MailMessage, qui sont passées dans `$event->data` aux events `MessageSending`/`MessageSent`
+
+12. **DMARC complet style novamoov** — Mis à jour `_dmarc.leezr.com` pour inclure tous les champs : `v=DMARC1; p=quarantine; rua=mailto:admin@leezr.com; ruf=mailto:admin@leezr.com; sp=quarantine; adkim=r; aspf=r`
+
+13. **configureSmtp() dans toMail()** — Déplacé l'auto-configuration SMTP de `handleMessageSending()` (trop tard, transport déjà sélectionné) vers `ManualEmailNotification::toMail()` qui s'exécute AVANT que MailChannel ne sélectionne le transport
+
 **Preuves factuelles (2026-04-23)** :
 - Port25 Authentication Report : `SPF=pass`, `DKIM=pass` (d=leezr.com, s=default), `iprev=pass`
 - Google DMARC Aggregate Report (ID=5551938733052287675) : `disposition=none`, `dkim=pass`, `spf=pass`
 - IP 213.32.20.37 propre sur 6 DNSBL
+- EmailLog status tracking : `status=sent, sent_at=2026-04-23 02:18:55` (confirmé sur prod après fix)
 
 **Fichiers** :
 - Zone DNS `leezr.com` via ISPConfig (suppression SPF dupliqué, DMARC quarantine)
