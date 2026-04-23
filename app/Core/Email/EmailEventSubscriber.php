@@ -6,7 +6,6 @@ use Illuminate\Events\Dispatcher;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
 
 class EmailEventSubscriber
 {
@@ -45,8 +44,7 @@ class EmailEventSubscriber
         }
 
         $headers = $event->message->getHeaders();
-        $notification = $event->data['__notification'] ?? null;
-        $messageId = $event->data['emailMessageId'] ?? $notification?->emailMessageId ?? null;
+        $messageId = $event->data['emailMessageId'] ?? null;
 
         if ($messageId) {
             $headers->addIdHeader('Message-ID', $messageId);
@@ -72,18 +70,11 @@ class EmailEventSubscriber
     }
 
     /**
-     * Extract emailLogId from event data — supports both direct key
-     * and queued notification property (__notification->emailLogId).
+     * Extract emailLogId from event data (passed via MailMessage view data).
      */
     private function extractLogId(array $data): ?int
     {
-        if (! empty($data['emailLogId'])) {
-            return (int) $data['emailLogId'];
-        }
-
-        $notification = $data['__notification'] ?? null;
-
-        return $notification?->emailLogId ?? null;
+        return ! empty($data['emailLogId']) ? (int) $data['emailLogId'] : null;
     }
 
     public function subscribe(Dispatcher $events): array

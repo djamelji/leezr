@@ -39,7 +39,13 @@ class ManualEmailNotification extends Notification implements ShouldQueue
         }
 
         // Custom branded template + multipart HTML/text (no "Hello!/Regards" spam trigger)
-        $data = ['body' => $this->emailBody, 'subject' => $this->emailSubject];
+        // emailLogId/emailMessageId in view data so MessageSent event can update EmailLog status
+        $data = [
+            'body' => $this->emailBody,
+            'subject' => $this->emailSubject,
+            'emailLogId' => $this->emailLogId,
+            'emailMessageId' => $this->emailMessageId,
+        ];
         $mail = (new MailMessage)
             ->subject($this->emailSubject)
             ->view(['emails.manual', 'emails.manual-text'], $data);
