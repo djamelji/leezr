@@ -34,7 +34,10 @@ class EmailEventSubscriber
      * Handle message sending event — inject custom headers for deliverability.
      *
      * - Auto-configures SMTP for queue workers (ADR-461)
-     * - Headers: Message-ID, Return-Path (SPF alignment), List-Unsubscribe, X-Mailer
+     * - Sets Message-ID for tracking
+     * - NO Return-Path override (let Postfix use From address — like Roundcube)
+     * - NO List-Unsubscribe (non-existing mailbox is worse than no header)
+     * - NO X-Mailer (non-standard header can trigger spam filters)
      */
     public function handleMessageSending(MessageSending $event): void
     {
@@ -48,24 +51,6 @@ class EmailEventSubscriber
 
         if ($messageId) {
             $headers->addIdHeader('Message-ID', $messageId);
-        }
-
-        // Return-Path aligned with SPF domain for DMARC alignment
-        $fromEmail = $event->message->getFrom()[0]?->getAddress() ?? null;
-        if ($fromEmail) {
-            $domain = substr($fromEmail, strpos($fromEmail, '@') + 1) ?: 'leezr.com';
-            $event->message->returnPath("noreply@{$domain}");
-
-            // List-Unsubscribe — improves Gmail/Outlook reputation scoring
-            if (! $headers->has('List-Unsubscribe')) {
-                $headers->addTextHeader('List-Unsubscribe', "<mailto:unsubscribe@{$domain}>");
-                $headers->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
-            }
-        }
-
-        // X-Mailer identification
-        if (! $headers->has('X-Mailer')) {
-            $headers->addTextHeader('X-Mailer', 'Leezr/1.0');
         }
     }
 
