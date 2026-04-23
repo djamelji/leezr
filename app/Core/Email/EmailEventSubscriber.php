@@ -15,7 +15,7 @@ class EmailEventSubscriber
      */
     public function handleMessageSent(MessageSent $event): void
     {
-        $logId = $event->data['emailLogId'] ?? null;
+        $logId = $this->extractLogId($event->data);
         if (! $logId) {
             return;
         }
@@ -34,21 +34,19 @@ class EmailEventSubscriber
     /**
      * Handle message sending event — inject custom headers for deliverability.
      *
-     * - Auto-configures SMTP for queue workers (ADR-461 fix for ShouldQueue)
-     * - Headers: Message-ID, Return-Path (SPF alignment), X-Mailer
+     * - Auto-configures SMTP for queue workers (ADR-461)
+     * - Headers: Message-ID, Return-Path (SPF alignment), List-Unsubscribe, X-Mailer
      */
     public function handleMessageSending(MessageSending $event): void
     {
-        // Auto-configure SMTP when running in queue worker context (ADR-461)
-        // EmailService::send() sets config in sync context, but queued notifications
-        // lose runtime config. Re-apply from PlatformSetting when we detect a Leezr email.
-        $emailLogId = $event->data['emailLogId'] ?? null;
-        if ($emailLogId && Config::get('mail.default') !== 'dynamic') {
+        // Auto-configure SMTP for queue workers and any non-dynamic mailer context.
+        if (Config::get('mail.default') !== 'dynamic') {
             app(EmailService::class)->configureSmtp();
         }
 
         $headers = $event->message->getHeaders();
-        $messageId = $event->data['emailMessageId'] ?? null;
+        $notification = $event->data['__notification'] ?? null;
+        $messageId = $event->data['emailMessageId'] ?? $notification?->emailMessageId ?? null;
 
         if ($messageId) {
             $headers->addIdHeader('Message-ID', $messageId);
@@ -71,6 +69,21 @@ class EmailEventSubscriber
         if (! $headers->has('X-Mailer')) {
             $headers->addTextHeader('X-Mailer', 'Leezr/1.0');
         }
+    }
+
+    /**
+     * Extract emailLogId from event data — supports both direct key
+     * and queued notification property (__notification->emailLogId).
+     */
+    private function extractLogId(array $data): ?int
+    {
+        if (! empty($data['emailLogId'])) {
+            return (int) $data['emailLogId'];
+        }
+
+        $notification = $data['__notification'] ?? null;
+
+        return $notification?->emailLogId ?? null;
     }
 
     public function subscribe(Dispatcher $events): array
