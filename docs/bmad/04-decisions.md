@@ -16206,11 +16206,34 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 13. **configureSmtp() dans toMail()** — Déplacé l'auto-configuration SMTP de `handleMessageSending()` (trop tard, transport déjà sélectionné) vers `ManualEmailNotification::toMail()` qui s'exécute AVANT que MailChannel ne sélectionne le transport
 
-**Preuves factuelles (2026-04-23)** :
+14. **ROOT CAUSE IDENTIFIÉ : IPv6 PTR mismatch (2026-04-24)** — Les emails arrivaient **intermittement** en spam Gmail. Investigation a révélé que Postfix (`inet_protocols = all`) choisit aléatoirement IPv4 ou IPv6 pour les connexions sortantes :
+    - IPv4 `213.32.20.37` → PTR `server1.novamoov.com` ✅ → iprev=pass → inbox
+    - IPv6 `2001:41d0:305:2100::fb1f` → PTR `vps-2b018f32.vps.ovh.net` ❌ → iprev=fail → SPAM
+    - Gmail bounce 550-5.7.26 : `DKIM = did not pass`, `SPF [server1.novamoov.com] with ip: [2001:41d0:305:2100::fb1f] = did not pass`
+    - **Fix requis** : `postconf -e inet_protocols=ipv4 && postfix reload` (ISPConfig admin panel > System > Server Config, ou accès root SSH)
+    - Note : pas d'accès root via SSH/ISPConfig pour appliquer automatiquement. ISPConfig REST API `server_config_set` a stocké la valeur mais le template Postfix ne l'utilise pas
+
+15. **Headers toxiques supprimés** — Les headers ajoutés en item 3 et 9 causaient du spam car les mailboxes associées N'EXISTENT PAS :
+    - `Return-Path: noreply@leezr.com` — mailbox inexistante, SPF aligned mais bounces non traitables
+    - `List-Unsubscribe: <mailto:unsubscribe@leezr.com>` — mailbox inexistante, considéré comme frauduleux par Gmail
+    - `X-Mailer: Leezr/1.0` — header non-standard, signal spam
+    - **Fix** : Tous ces headers supprimés de `EmailEventSubscriber::handleMessageSending()`. Le serveur gère Return-Path naturellement, et List-Unsubscribe sera ajouté quand une vraie mailbox de désinscription existera
+    - Preuve : après suppression, Gmail accepte avec `250 OK` sans rate limiting (avant : `421-4.7.28 unusual rate of unsolicited mail`)
+
+16. **Email Health Dashboard : PTR IPv6** — Ajout de la vérification PTR IPv6 dans `EmailHealthController::checkIpv6Ptr()`. Le dashboard détecte maintenant 3 états :
+    - `configured` : PTR IPv6 = PTR IPv4 (aligné)
+    - `mismatch` : PTR IPv6 ≠ PTR IPv4 (cause intermittente de spam)
+    - `missing` : Pas de PTR IPv6 (fail assuré en IPv6)
+    - Score global ajusté : IPv6 mismatch = 0 points (max 10), IPv6 absent sans AAAA = 10 points (pas un problème)
+
+**Preuves factuelles (2026-04-23 + 2026-04-24)** :
 - Port25 Authentication Report : `SPF=pass`, `DKIM=pass` (d=leezr.com, s=default), `iprev=pass`
 - Google DMARC Aggregate Report (ID=5551938733052287675) : `disposition=none`, `dkim=pass`, `spf=pass`
 - IP 213.32.20.37 propre sur 6 DNSBL
 - EmailLog status tracking : `status=sent, sent_at=2026-04-23 02:18:55` (confirmé sur prod après fix)
+- Gmail bounce IPv6 (13:37 UTC) : `550-5.7.26 SPF [server1.novamoov.com] with ip: [2001:41d0:305:2100::fb1f] = did not pass`
+- Gmail accept IPv4 (01:16 UTC, 04/24) : `relay=gmail-smtp-in.l.google.com[142.250.102.26]:25, status=sent (250 2.0.0 OK)`
+- Post header-cleanup : emails acceptés sans rate limiting
 
 **Fichiers** :
 - Zone DNS `leezr.com` via ISPConfig (suppression SPF dupliqué, DMARC quarantine)

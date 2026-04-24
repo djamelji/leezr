@@ -4841,6 +4841,7 @@
     "configured": "Configured",
     "clean": "Clean",
     "listed": "Listed",
+    "mismatch": "Mismatch",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "excellent": "Excellent",

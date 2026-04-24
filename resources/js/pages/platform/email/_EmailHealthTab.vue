@@ -74,13 +74,21 @@ const dnsCards = computed(() => {
       detail: dns.dmarc.record,
     },
     {
-      title: 'PTR',
+      title: 'PTR (IPv4)',
       status: dns.ptr.status,
       statusColor: dns.ptr.status === 'configured' ? 'success' : 'error',
       statusLabel: dns.ptr.status === 'configured' ? dns.ptr.ptr_name : t('emailHealth.missing'),
       icon: 'tabler-arrows-exchange',
       detail: dns.ptr.detail,
     },
+    ...(dns.ptr_ipv6 && dns.ptr_ipv6.status !== 'none' ? [{
+      title: 'PTR (IPv6)',
+      status: dns.ptr_ipv6.status,
+      statusColor: dns.ptr_ipv6.status === 'configured' ? 'success' : dns.ptr_ipv6.status === 'mismatch' ? 'warning' : 'error',
+      statusLabel: dns.ptr_ipv6.status === 'configured' ? dns.ptr_ipv6.ptr_name : dns.ptr_ipv6.status === 'mismatch' ? t('emailHealth.mismatch') : t('emailHealth.missing'),
+      icon: 'tabler-arrows-exchange-2',
+      detail: dns.ptr_ipv6.detail,
+    }] : []),
   ]
 })
 
@@ -106,13 +114,16 @@ const overallScore = computed(() => {
   const dns = healthData.value.dns
   const rep = healthData.value.reputation
 
-  if (dns.spf.status === 'valid') score += 25
+  if (dns.spf.status === 'valid') score += 20
   else if (dns.spf.status === 'weak') score += 10
-  if (dns.dkim.record_exists) score += 25
+  if (dns.dkim.record_exists) score += 20
   if (dns.dmarc.policy === 'reject') score += 20
   else if (dns.dmarc.policy === 'quarantine') score += 15
   else if (dns.dmarc.policy === 'none') score += 5
   if (dns.ptr.status === 'configured') score += 10
+  // IPv6 PTR — mismatch is a critical spam factor
+  if (dns.ptr_ipv6?.status === 'configured') score += 10
+  else if (dns.ptr_ipv6?.status === 'none') score += 10 // no IPv6 = not a problem
 
   const cleanCount = Object.values(rep).filter(v => v === 'clean').length
   score += Math.round((cleanCount / Math.max(Object.keys(rep).length, 1)) * 20)

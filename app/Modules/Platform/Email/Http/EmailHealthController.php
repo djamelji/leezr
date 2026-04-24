@@ -31,6 +31,7 @@ class EmailHealthController extends Controller
                 'dkim' => $this->checkDkim($domain),
                 'dmarc' => $this->checkDmarc($domain),
                 'ptr' => $this->checkPtr($serverIp),
+                'ptr_ipv6' => $this->checkIpv6Ptr($domain, $serverIp),
             ],
             'reputation' => $this->checkReputation($serverIp),
             'stats' => $this->getStats(),
@@ -126,11 +127,50 @@ class EmailHealthController extends Controller
     {
         $ptrName = gethostbyaddr($ip);
         $ok = $ptrName && $ptrName !== $ip;
+        $hostname = gethostname() ?: 'unknown';
 
         return [
             'status' => $ok ? 'configured' : 'missing',
             'ptr_name' => $ok ? $ptrName : null, 'ip' => $ip,
             'detail' => $ok ? "PTR resolves to {$ptrName}" : 'No PTR record for server IP',
+        ];
+    }
+
+    private function checkIpv6Ptr(string $domain, string $ipv4): array
+    {
+        $aaaaRecords = dns_get_record($domain, DNS_AAAA) ?: [];
+        if (empty($aaaaRecords)) {
+            return ['status' => 'none', 'detail' => 'No AAAA record — IPv6 not configured'];
+        }
+
+        $ipv6 = $aaaaRecords[0]['ipv6'] ?? null;
+        if (! $ipv6) {
+            return ['status' => 'none', 'detail' => 'No IPv6 address found'];
+        }
+
+        $ipv6Ptr = @gethostbyaddr($ipv6);
+        $ipv4Ptr = @gethostbyaddr($ipv4);
+        $hasPtr = $ipv6Ptr && $ipv6Ptr !== $ipv6;
+        $match = $hasPtr && $ipv4Ptr && $ipv6Ptr === $ipv4Ptr;
+
+        if (! $hasPtr) {
+            return [
+                'status' => 'missing', 'ip' => $ipv6, 'ptr_name' => null,
+                'detail' => "IPv6 {$ipv6} has no PTR record — emails via IPv6 will fail SPF/iprev",
+            ];
+        }
+
+        if (! $match) {
+            return [
+                'status' => 'mismatch', 'ip' => $ipv6,
+                'ptr_name' => $ipv6Ptr, 'ipv4_ptr' => $ipv4Ptr,
+                'detail' => "IPv6 PTR ({$ipv6Ptr}) differs from IPv4 PTR ({$ipv4Ptr}) — causes intermittent spam. Fix: set inet_protocols=ipv4 in Postfix or align IPv6 PTR.",
+            ];
+        }
+
+        return [
+            'status' => 'configured', 'ip' => $ipv6, 'ptr_name' => $ipv6Ptr,
+            'detail' => "IPv6 PTR matches IPv4 PTR ({$ipv6Ptr})",
         ];
     }
 
