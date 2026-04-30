@@ -69,7 +69,14 @@
       "platform-ai": "AI",
       "platform-international": "International",
       "platform-billing": "Billing",
-      "platform-account": "My Account"
+      "platform-account": "My Account",
+      "system-health": "System Health",
+      "onboarding-funnel": "Onboarding Funnel",
+      "feature-flags": "Feature Flags",
+      "usage-monitoring": "Usage Monitoring",
+      "catalog": "Catalog",
+      "operations": "Operations",
+      "communications": "Communications"
     },
     "company": {
       "dashboard": "Dashboard",
@@ -124,7 +131,9 @@
     "group": "Group",
     "noFieldConfig": "No field configuration",
     "sensitiveData": "Sensitive Data Access",
-    "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)"
+    "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)",
+    "empty": "No custom roles",
+    "emptyDesc": "Custom roles let you fine-tune access control for your team members."
   },
   "common": {
     "save": "Save",
@@ -219,7 +228,8 @@
     "createSuccess": "Created successfully.",
     "updateSuccess": "Updated successfully.",
     "deleteSuccess": "Deleted successfully.",
-    "operationCancelled": "Operation cancelled."
+    "operationCancelled": "Operation cancelled.",
+    "helpCenter": "Help center"
   },
   "platformAccount": {
     "myAccount": "My Account",
@@ -239,6 +249,7 @@
   },
   "dashboard": {
     "welcome": "Welcome, {name}",
+    "welcomeSubtitle": "Your centralized management space",
     "viewingCompany": "You are viewing {name}.",
     "workingIn": "You are working in {name}.",
     "loadingCompany": "Loading your company...",
@@ -251,6 +262,24 @@
       "onboardingDesc": "Steps to get your company up and running",
       "planBadge": "Current Plan",
       "planBadgeDesc": "Your subscription plan and status"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "profile": "Company profile",
+      "members": "Invite a member",
+      "documents": "Documents",
+      "billing": "Billing"
+    },
+    "firstVisit": {
+      "profile": "Complete your profile",
+      "profileDesc": "Add your company information to personalize your workspace.",
+      "profileCta": "Complete profile",
+      "documents": "Manage documents",
+      "documentsDesc": "Configure required document types and upload your first files.",
+      "documentsCta": "Go to documents",
+      "members": "Invite your team",
+      "membersDesc": "Add team members and assign appropriate roles.",
+      "membersCta": "Invite a member"
     }
   },
   "plans": {
@@ -397,6 +426,51 @@
     "noPreviewResults": "No methods matched this context.",
     "specificity": "Specificity",
     "supportedMethods": "Supported Methods"
+  },
+  "platformOperations": {
+    "title": "Operations",
+    "subtitle": "Monitoring, alerts, security, AI, usage and automations.",
+    "tabs": {
+      "health": "System Health",
+      "alerts": "Alerts",
+      "security": "Security",
+      "ai": "AI",
+      "usage": "Usage",
+      "automations": "Automations",
+      "realtime": "Realtime"
+    }
+  },
+  "platformCatalog": {
+    "title": "Product Catalog",
+    "subtitle": "Modules, job domains, fields and document types.",
+    "tabs": {
+      "modules": "Modules",
+      "jobdomains": "Job Domains",
+      "fields": "Fields",
+      "documents": "Documents",
+      "plans": "Plans"
+    }
+  },
+  "platformCommunications": {
+    "title": "Communications",
+    "subtitle": "Customer support and documentation.",
+    "tabs": {
+      "support": "Support",
+      "documentation": "Documentation"
+    }
+  },
+  "platformMessaging": {
+    "title": "Messaging",
+    "subtitle": "Emails, templates, orchestration and logs.",
+    "tabs": {
+      "inbox": "Inbox",
+      "templates": "Templates",
+      "orchestration": "Orchestration",
+      "logs": "Logs",
+      "health": "Health",
+      "settings": "Settings",
+      "notifications": "Notifications"
+    }
   },
   "platformBilling": {
     "title": "Billing Overview",
@@ -978,6 +1052,9 @@
       "summaryMonths": "for {n} months"
     },
     "unsavedChanges": "You have unsaved changes. Do you want to leave?",
+    "confirmReset": "Reset changes?",
+    "confirmResetDesc": "All your unsaved changes will be lost.",
+    "confirmResetBtn": "Reset",
     "noMessages": "No messages yet"
   },
   "companyBilling": {
@@ -1357,9 +1434,17 @@
       "immediate": "Immediate",
       "endOfPeriod": "At end of current period",
       "proration": "Proration",
-      "creditOldPlan": "Credit for unused {name}",
-      "chargeNewPlan": "Charge for remaining {name}",
+      "prorationTitle": "Calculation breakdown",
+      "currentPlanAt": "Your current plan: {name} at {price}/mo",
+      "newPlanAt": "New plan: {name} at {price}/mo",
+      "daysDetail": "{remaining} days remaining out of {total}",
+      "creditOldPlan": "Current plan credit ({name})",
+      "creditFormula": "({price} \u00d7 {remaining}/{total} days)",
+      "chargeNewPlan": "New plan charge ({name})",
+      "chargeFormula": "({price} \u00d7 {remaining}/{total} days)",
       "prorationNet": "Proration adjustment",
+      "netToPay": "Amount to pay",
+      "netCredit": "Credit to your wallet",
       "daysRemaining": "{days} days remaining in period",
       "addonsImpact": "Addon changes",
       "addonCurrent": "Current",
@@ -1583,7 +1668,13 @@
       "viewPending": "View {count} pending",
       "manageTypes": "Manage Types",
       "byType": "Compliance by Type",
-      "byTypeHint": "Document compliance breakdown by document type"
+      "byTypeHint": "Document compliance breakdown by document type",
+      "uploadTitle": "Upload a Document",
+      "uploadDesc": "Upload a document for your company or a team member.",
+      "uploadCta": "Go to Vault",
+      "configTitle": "Configure Document Types",
+      "configDesc": "Define which documents are required, enable AI and automatic reminders.",
+      "configCta": "Document Settings"
     },
     "activity": {
       "title": "Recent Activity",
@@ -2553,8 +2644,29 @@
     "tabs": {
       "providers": "Providers",
       "usage": "Usage",
+      "operations": "Operations",
       "routing": "Routing",
       "settings": "Settings"
+    },
+    "operations": {
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "overallStatus": "Overall Status",
+      "pendingJobs": "Pending Jobs",
+      "failedJobs24h": "Failed (24h)",
+      "errorRatePercent": "Error Rate",
+      "providerHealth": "Provider Health",
+      "documentProcessing": "Document Processing",
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "topConsumers": "Top Consumers (by company)",
+      "company": "Company",
+      "requests": "Requests",
+      "tokens": "Tokens",
+      "errors": "Errors",
+      "noCompanyData": "No company consumption data"
     },
     "provider": "Provider",
     "statusLabel": "Status",
@@ -2660,7 +2772,9 @@
       "sessions": "Sessions",
       "maintenance": "Maintenance",
       "billing": "Billing",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "international": "International",
+      "featureFlags": "Feature Flags"
     },
     "session": {
       "title": "Session Governance",
@@ -2987,6 +3101,151 @@
     "reactivateNoCharge": "This addon is still active until {date}. Reactivating at no additional cost.",
     "reactivateConfirm": "Reactivate"
   },
+  "contactSales": {
+    "title": "Premium module",
+    "description": "This module requires a custom offer.",
+    "moduleName": "Module",
+    "emailLabel": "Your email",
+    "messageLabel": "Your message (optional)",
+    "messagePlaceholder": "Describe your needs...",
+    "submit": "Get in touch",
+    "viewPlans": "View plans",
+    "sent": "Request sent! We'll get back to you shortly.",
+    "cancel": "Cancel"
+  },
+  "modulePreview": {
+    "drawerTitle": "Module Details",
+    "benefits": "Benefits",
+    "usageExample": "Usage Example",
+    "roi": "Value Proposition",
+    "activate": "Activate this module",
+    "alreadyActive": "Module active",
+    "upgradeRequired": "Upgrade required",
+    "contactSales": "Contact sales",
+    "included": "Included in your plan",
+    "addon": "Add-on module",
+    "viewDetails": "View details",
+    "core.members": {
+      "tagline": "Centralize your team management",
+      "benefits": [
+        "Invite team members in a single click",
+        "Assign tailored roles and permissions",
+        "Track activity and compliance for every member"
+      ],
+      "example": "An HR manager invites 10 employees, assigns the 'Driver' role and monitors their mandatory documents in real time.",
+      "valueProposition": "Save 2 hours/week on access management and compliance"
+    },
+    "core.roles": {
+      "tagline": "Fine-tune access control for every team member",
+      "benefits": [
+        "Create custom business roles (driver, admin, accountant...)",
+        "Restrict access to sensitive data by department",
+        "Audit who has access to what at a glance"
+      ],
+      "example": "The director creates a 'Branch Manager' role that can see local shipments but not global financials.",
+      "valueProposition": "Reduce unauthorized access risks by 90%"
+    },
+    "core.documents": {
+      "tagline": "Centralize and secure all your regulatory documents",
+      "benefits": [
+        "Store permits, licenses and certifications in one place",
+        "Receive automatic alerts before expiration",
+        "Generate audit-ready compliance folders"
+      ],
+      "example": "The fleet manager gets an alert 30 days before a driver's HGV license expires and triggers the renewal process.",
+      "valueProposition": "Zero forgotten expired documents — guaranteed compliance"
+    },
+    "core.billing": {
+      "tagline": "Manage your subscription and costs with full transparency",
+      "benefits": [
+        "View your plan, add-ons and consumption at a glance",
+        "Upgrade plans or add modules self-service",
+        "Access your complete invoice history"
+      ],
+      "example": "The CFO compares available plans, upgrades to Business and enables the Analytics add-on — all without calling support.",
+      "valueProposition": "Full control over 100% of your SaaS costs"
+    },
+    "core.modules": {
+      "tagline": "Build your custom business toolset",
+      "benefits": [
+        "Activate only the modules you actually need",
+        "Discover new features as your business grows",
+        "Control your budget by paying only for what you use"
+      ],
+      "example": "A 15-person company enables shipment tracking, then adds analytics 3 months later when volume increases.",
+      "valueProposition": "A tool that scales with you — no unnecessary costs"
+    },
+    "core.workflows": {
+      "tagline": "Automate your recurring business processes",
+      "benefits": [
+        "Create workflows without coding (drag & drop)",
+        "Trigger automatic actions on events (new member, expired document...)",
+        "Reduce human error on repetitive tasks"
+      ],
+      "example": "When a driver is added, a workflow automatically sends the welcome kit, requests documents and notifies the manager.",
+      "valueProposition": "Cut time spent on manual processes by 3x"
+    },
+    "core.settings": {
+      "tagline": "Configure your company workspace to fit your needs",
+      "benefits": [
+        "Customize your workspace name, logo and colors",
+        "Manage notification and language preferences",
+        "Control security and authentication settings"
+      ],
+      "example": "The admin sets the timezone, enables Slack notifications and applies the company branding — all in one place.",
+      "valueProposition": "A workspace tailored to your brand in under 5 minutes"
+    },
+    "core.audit": {
+      "tagline": "Keep a complete trail of every action in your company",
+      "benefits": [
+        "View the full history of user actions",
+        "Identify who changed what and when",
+        "Export logs for compliance audits"
+      ],
+      "example": "During an ISO audit, the quality manager exports the last 6 months of change logs in a single click.",
+      "valueProposition": "Total compliance and traceability — audit stress-free"
+    },
+    "logistics_shipments": {
+      "tagline": "Manage all your shipments from start to finish",
+      "benefits": [
+        "Create and track shipments from a unified dashboard",
+        "Automatically assign drivers and vehicles",
+        "Generate delivery notes and electronic proof of delivery (ePOD)"
+      ],
+      "example": "The dispatcher creates 20 shipments, assigns available drivers and tracks deliveries live on the map.",
+      "valueProposition": "Handle 2x more shipments with the same team"
+    },
+    "logistics_tracking": {
+      "tagline": "Track your deliveries and vehicles in real time",
+      "benefits": [
+        "View every vehicle's position on the map",
+        "Get automatic alerts when delays occur",
+        "Share a tracking link with your customers"
+      ],
+      "example": "A customer receives an SMS with a tracking link and watches their package go from 'In Transit' to 'Delivered' in real time.",
+      "valueProposition": "Reduce 'Where is my package?' calls by 60%"
+    },
+    "logistics_fleet": {
+      "tagline": "Optimize fleet management and maintenance",
+      "benefits": [
+        "Centralize vehicle information (MOT, insurance, mileage)",
+        "Schedule preventive maintenance automatically",
+        "Analyze costs per vehicle and optimize your fleet"
+      ],
+      "example": "The fleet manager receives an alert that vehicle #12 is reaching 100,000 km and automatically schedules the service.",
+      "valueProposition": "Reduce maintenance costs by 25%"
+    },
+    "logistics_analytics": {
+      "tagline": "Make data-driven decisions with confidence",
+      "benefits": [
+        "Track logistics KPIs (on-time rate, cost/km, fill rate)",
+        "Identify improvement areas with visual reports",
+        "Export data for board meetings"
+      ],
+      "example": "The logistics director spots a 5% drop in on-time delivery rate and identifies the responsible hub in 2 clicks.",
+      "valueProposition": "Improve your service rate by 15% within 3 months"
+    }
+  },
   "themeSettings": {
     "title": "Theme Toggle Visibility",
     "subtitle": "Choose which roles can see the Light / Dark mode toggle in the header.",
@@ -3101,6 +3360,11 @@
   },
   "platformDashboard": {
     "title": "Cockpit",
+    "tabs": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "funnel": "Registration Funnel"
+    },
     "statsError": "Some statistics could not be loaded.",
     "statsPartialError": "{count} stat(s) could not be loaded.",
     "attentionTitle": "Attention Required",
@@ -3348,7 +3612,14 @@
     "couponError_coupon_already_used": "This promo code has already been used.",
     "loadError": "Unable to load registration data. Please refresh the page.",
     "registrationSuccess": "Your account has been created successfully! Welcome.",
-    "pleaseCorrectErrors": "Please correct the errors below to continue."
+    "pleaseCorrectErrors": "Please correct the errors below to continue.",
+    "hero": {
+      "title": "Manage your business in one place",
+      "subtitle": "Documents, teams, compliance and billing — all centralized",
+      "benefit1": "Save time on daily operations",
+      "benefit2": "Centralize your business data",
+      "benefit3": "Automate your management"
+    }
   },
   "onboarding": {
     "welcome": "Welcome {name}!",
@@ -3356,11 +3627,16 @@
     "allDone": "Your workspace is ready!",
     "gettingStarted": "Getting started",
     "dismiss": "Hide getting started guide",
+    "resumeSetup": "Resume setup",
+    "resumeHint": "You haven't finished setting up your company.",
+    "reopening": "Reopening...",
     "steps": {
       "accountCreated": { "label": "Create your account" },
       "companyProfile": { "label": "Complete company profile" },
       "paymentMethod": { "label": "Add a payment method" },
-      "inviteMember": { "label": "Invite a team member" }
+      "inviteMember": { "label": "Invite a team member" },
+      "activateModule": { "label": "Activate a business module" },
+      "firstDocument": { "label": "Upload a first document" }
     }
   },
   "landing": {
@@ -3412,6 +3688,18 @@
     "pageNotFound": "Page Not Found",
     "description": "We couldn't find the page you are looking for.",
     "backToHome": "Back to Home"
+  },
+  "featureFlags": {
+    "title": "Feature Flags",
+    "subtitle": "Manage feature toggles per company",
+    "create": "New Flag",
+    "createTitle": "Create Feature Flag",
+    "key": "Key",
+    "description": "Description",
+    "global": "Global",
+    "overrides": "Overrides",
+    "enabledGlobally": "Enabled Globally",
+    "empty": "No feature flags configured"
   },
   "maintenancePage": {
     "enterYourEmail": "Enter your email",
@@ -4297,7 +4585,23 @@
     "categoryGeneral": "General",
     "categoryTechnical": "Technical",
     "categoryBilling": "Billing",
-    "noTicketsYet": "No tickets yet"
+    "noTicketsYet": "No tickets yet",
+    "sla": "SLA",
+    "slaOnTrack": "On Track",
+    "slaWarning": "Warning",
+    "slaBreached": "Breached",
+    "slaResponseTime": "Response Time",
+    "slaResolutionTime": "Resolution Time",
+    "slaCompliance": "SLA Compliance",
+    "slaOpenTickets": "Open Tickets",
+    "slaBreachedTickets": "Breached Tickets",
+    "slaAvgResponseTime": "Avg Response Time",
+    "slaResponseIn": "Response in {time}",
+    "slaResolutionIn": "Resolution in {time}",
+    "slaResponded": "Responded",
+    "slaResolved": "Resolved",
+    "slaHours": "{n}h",
+    "slaDeadlinePassed": "Deadline passed"
   },
   "documentation": {
     "title": "Help Center",
@@ -4463,7 +4767,11 @@
       "checkExpiration": "Document expiration check",
       "autoRenew": "Auto-renew documents",
       "autoRemind": "Auto-remind documents",
-      "fxRatesSync": "FX rates synchronization"
+      "fxRatesSync": "FX rates synchronization",
+      "alertsEvaluate": "Evaluate platform alerts",
+      "emailFetchInbox": "Fetch incoming emails",
+      "usageCollectSnapshots": "Collect usage snapshots",
+      "workflowResetCounters": "Reset workflow daily counters"
     },
     "categories": {
       "documents": "Documents",
@@ -4526,7 +4834,9 @@
     "status_success": "Success",
     "status_partial": "Partial",
     "status_skipped": "Skipped",
-    "status_failed": "Failed"
+    "status_failed": "Failed",
+    "empty": "No automation rules",
+    "emptyDesc": "Create rules to automate recurring tasks in your company."
   },
   "activity": {
     "title": "Activity",
@@ -4593,6 +4903,18 @@
     "infra": "Infrastructure",
     "security": "Security",
     "business": "Business"
+  },
+  "incidents": {
+    "event": {
+      "created": "Alert Created",
+      "acknowledged": "Acknowledged",
+      "escalated": "Escalated",
+      "resolved": "Resolved"
+    },
+    "escalationCount": "Escalation #{count}",
+    "timeline": "Incident Timeline",
+    "escalation": "Auto-escalation",
+    "noTimeline": "No timeline available"
   },
   "email": {
     "billing": {
@@ -4995,5 +5317,97 @@
     "adminUndoCancelMessage": "Reactivate the cancelled subscription?",
     "adminUndoCancelPlan": "Current plan: {plan}",
     "adminUndoCancelButton": "Reactivate"
+  },
+  "breadcrumbs": {
+    "dashboard": "Dashboard",
+    "billing": "Billing",
+    "profile": "Company Profile"
+  },
+  "globalSearch": {
+    "placeholder": "Search...",
+    "management": "Management",
+    "configuration": "Configuration",
+    "dashboard": "Dashboard",
+    "companies": "Companies",
+    "users": "Users",
+    "roles": "Roles",
+    "jobDomains": "Job Domains",
+    "customFields": "Custom Fields",
+    "modules": "Modules",
+    "settings": "Settings",
+    "invoices": "Invoices",
+    "tickets": "Support Tickets",
+    "noResults": "No results",
+    "trySuggestions": "Try searching for"
+  },
+  "onboardingFunnel": {
+    "title": "Registration Funnel",
+    "subtitle": "Track conversion rates and abandonment in the registration flow",
+    "stepStarted": "Started",
+    "stepCompanyInfo": "Company Info",
+    "stepAdminUser": "Admin User",
+    "stepPlanSelected": "Plan Selected",
+    "stepPaymentInfo": "Payment Info",
+    "stepCompleted": "Completed",
+    "started": "Started",
+    "completed": "Completed",
+    "conversionRate": "Conversion Rate",
+    "abandoned": "Abandoned",
+    "funnelTitle": "Conversion Funnel",
+    "abandonmentTitle": "Abandonment Analysis by Step",
+    "dailyTrend": "Daily Trend (Last 7 Days)"
+  },
+  "usageMonitoring": {
+    "title": "Usage Monitoring",
+    "subtitle": "Track per-company usage: AI, emails, storage, members",
+    "aiRequests": "AI Requests",
+    "aiTokens": "AI Tokens",
+    "emailsSent": "Emails Sent",
+    "totalMembers": "Active Members",
+    "storage": "Storage",
+    "topAiConsumers": "Top AI Consumers",
+    "dailyTrend": "Daily Trend",
+    "noData": "No data for this period"
+  },
+  "systemHealth": {
+    "title": "System Health",
+    "subtitle": "Aggregated infrastructure health monitoring",
+    "refresh": "Refresh",
+    "lastCheck": "Last check",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "critical": "Critical",
+    "overallHealthy": "All systems operational",
+    "overallWarning": "Some systems need attention",
+    "overallCritical": "Critical issues detected",
+    "email": "Email",
+    "emailSent": "Sent (24h)",
+    "emailFailed": "Failed (24h)",
+    "emailFailRate": "Fail rate",
+    "ai": "AI",
+    "aiProvider": "Provider",
+    "aiProviderStatus": "Provider status",
+    "aiQueuePending": "Queue pending",
+    "aiQueueFailed": "Queue failed (24h)",
+    "queues": "Queues",
+    "queueDefaultPending": "Default pending",
+    "queueAiPending": "AI pending",
+    "queueDefaultFailed": "Default failed (24h)",
+    "queueAiFailed": "AI failed (24h)",
+    "scheduler": "Scheduler",
+    "schedulerRuns": "Runs (2h)",
+    "schedulerFailed": "Failed (2h)",
+    "schedulerLastRun": "Last run",
+    "database": "Database",
+    "dbLatency": "Latency",
+    "dbConnection": "Connection",
+    "disk": "Disk",
+    "diskUsed": "Used",
+    "diskFree": "Free",
+    "alerts": "Alerts",
+    "alertsCritical": "Active critical",
+    "alertsTotal": "Active total",
+    "error": "Error",
+    "never": "Never"
   }
 }

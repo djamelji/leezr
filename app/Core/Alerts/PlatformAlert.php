@@ -29,6 +29,8 @@ class PlatformAlert extends Model
         'resolved_at' => 'datetime',
     ];
 
+    protected $appends = ['incident_timeline'];
+
     // ── Relations ────────────────────────────────────────
 
     public function company(): BelongsTo
@@ -93,5 +95,40 @@ class PlatformAlert extends Model
         $this->update([
             'status' => 'dismissed',
         ]);
+    }
+
+    // ── Incident Timeline (ADR-469) ────────────────────
+
+    /**
+     * Build a chronological incident timeline from model timestamps
+     * and escalation metadata.
+     */
+    public function getIncidentTimelineAttribute(): array
+    {
+        $timeline = [];
+
+        $timeline[] = ['event' => 'created', 'at' => $this->created_at?->toIso8601String()];
+
+        // Escalation events from metadata
+        $meta = $this->metadata ?? [];
+        if (isset($meta['last_escalated_at'])) {
+            $timeline[] = [
+                'event' => 'escalated',
+                'at' => $meta['last_escalated_at'],
+                'count' => $meta['escalation_count'] ?? 1,
+            ];
+        }
+
+        if ($this->acknowledged_at) {
+            $timeline[] = ['event' => 'acknowledged', 'at' => $this->acknowledged_at->toIso8601String()];
+        }
+
+        if ($this->resolved_at) {
+            $timeline[] = ['event' => 'resolved', 'at' => $this->resolved_at->toIso8601String()];
+        }
+
+        usort($timeline, fn ($a, $b) => strcmp($a['at'] ?? '', $b['at'] ?? ''));
+
+        return $timeline;
     }
 }

@@ -17,18 +17,8 @@ class NotificationsModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 91,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'notifications',
-                        'title' => 'Notifications',
-                        'to' => ['name' => 'platform-notifications'],
-                        'icon' => 'tabler-bell-cog',
-                        'permission' => 'manage_notifications',
-                        'group' => 'administration',
-                        'sort' => 72,
-                    ],
-                ],
-                routeNames: ['platform-notifications'],
+                navItems: [],
+                routeNames: ['platform-notifications', 'platform-messaging-tab'],
             ),
             permissions: [
                 ['key' => 'manage_notifications', 'label' => 'Manage Notification Topics'],

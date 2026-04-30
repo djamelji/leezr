@@ -126,9 +126,32 @@ Schedule::command('alerts:evaluate')->everyFiveMinutes()->withoutOverlapping()
     ->onSuccess(SI::onSuccess('alerts:evaluate'))
     ->onFailure(SI::onFailure('alerts:evaluate'));
 
+// Escalate unacknowledged critical alerts every 15 minutes (ADR-469)
+Schedule::command('alerts:escalate')->everyFifteenMinutes()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/alerts-escalate.log'))
+    ->before(SI::before('alerts:escalate'))
+    ->onSuccess(SI::onSuccess('alerts:escalate'))
+    ->onFailure(SI::onFailure('alerts:escalate'));
+
+// ── Usage Monitoring (P3-4) ────────────────────────────
+// Collect daily usage snapshots at 23:55
+Schedule::command('usage:collect-snapshots')->dailyAt('23:55')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/usage-collect-snapshots.log'))
+    ->before(SI::before('usage:collect-snapshots'))
+    ->onSuccess(SI::onSuccess('usage:collect-snapshots'))
+    ->onFailure(SI::onFailure('usage:collect-snapshots'));
+
 // ── Email IMAP fetch ───────────────────────────────────
 Schedule::command('email:fetch-inbox')->everyFiveMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/email-fetch.log'))
     ->before(SI::before('email:fetch-inbox'))
     ->onSuccess(SI::onSuccess('email:fetch-inbox'))
     ->onFailure(SI::onFailure('email:fetch-inbox'));
+
+// ── Registration funnel (P3-1) ────────────────────────
+// Detect abandoned registrations — daily at 08:00
+Schedule::command('registration:detect-abandoned')->dailyAt('08:00')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/registration-detect-abandoned.log'))
+    ->before(SI::before('registration:detect-abandoned'))
+    ->onSuccess(SI::onSuccess('registration:detect-abandoned'))
+    ->onFailure(SI::onFailure('registration:detect-abandoned'));

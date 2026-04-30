@@ -17,10 +17,8 @@ class PlansModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 15,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'plans', 'title' => 'Plans', 'to' => ['name' => 'platform-plans'], 'icon' => 'tabler-chart-bar', 'permission' => 'manage_plans', 'group' => 'finance', 'sort' => 21],
-                ],
-                routeNames: ['platform-plans', 'platform-plans-key'],
+                navItems: [],
+                routeNames: ['platform-plans', 'platform-plans-key', 'platform-catalog-tab'],
             ),
             permissions: [
                 ['key' => 'manage_plans', 'label' => 'Manage Plans'],

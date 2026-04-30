@@ -71,19 +71,21 @@ class OnboardingFilteredTest extends TestCase
         return $this->actingAs($user)->withHeaders(['X-Company-Id' => $this->company->id]);
     }
 
-    public function test_owner_sees_4_onboarding_steps(): void
+    public function test_owner_sees_6_onboarding_steps(): void
     {
         $response = $this->actAs($this->owner)->getJson('/api/dashboard/onboarding');
 
         $response->assertOk();
-        $this->assertCount(4, $response->json('steps'));
-        $this->assertEquals(4, $response->json('total_count'));
+        $this->assertCount(6, $response->json('steps'));
+        $this->assertEquals(6, $response->json('total_count'));
 
         $keys = collect($response->json('steps'))->pluck('key')->all();
         $this->assertContains('account_created', $keys);
         $this->assertContains('company_profile', $keys);
         $this->assertContains('payment_method', $keys);
         $this->assertContains('invite_member', $keys);
+        $this->assertContains('activate_module', $keys);
+        $this->assertContains('first_document', $keys);
         $this->assertNotContains('plan_selected', $keys);
     }
 
@@ -105,7 +107,7 @@ class OnboardingFilteredTest extends TestCase
         $this->assertNotNull($this->company->fresh()->onboarding_dismissed_at);
     }
 
-    public function test_dismissed_returns_dismissed_flag(): void
+    public function test_dismissed_returns_dismissed_flag_with_steps(): void
     {
         $this->company->update(['onboarding_dismissed_at' => now()]);
 
@@ -113,7 +115,10 @@ class OnboardingFilteredTest extends TestCase
 
         $response->assertOk();
         $response->assertJson(['dismissed' => true]);
-        $this->assertArrayNotHasKey('steps', $response->json());
+        // Dismissed response now includes steps so frontend can determine if reopen is possible
+        $this->assertArrayHasKey('steps', $response->json());
+        $this->assertArrayHasKey('completed_count', $response->json());
+        $this->assertArrayHasKey('total_count', $response->json());
     }
 
     public function test_non_owner_cannot_dismiss(): void
@@ -122,5 +127,29 @@ class OnboardingFilteredTest extends TestCase
 
         $response->assertForbidden();
         $this->assertNull($this->company->fresh()->onboarding_dismissed_at);
+    }
+
+    public function test_reopen_clears_dismissed_timestamp(): void
+    {
+        $this->company->update(['onboarding_dismissed_at' => now()]);
+        $this->assertNotNull($this->company->fresh()->onboarding_dismissed_at);
+
+        $response = $this->actAs($this->owner)->postJson('/api/dashboard/onboarding/reopen');
+
+        $response->assertOk();
+        $this->assertNull($this->company->fresh()->onboarding_dismissed_at);
+        $this->assertArrayHasKey('steps', $response->json());
+        $this->assertCount(6, $response->json('steps'));
+        $this->assertArrayNotHasKey('dismissed', $response->json());
+    }
+
+    public function test_non_owner_cannot_reopen(): void
+    {
+        $this->company->update(['onboarding_dismissed_at' => now()]);
+
+        $response = $this->actAs($this->dispatcher)->postJson('/api/dashboard/onboarding/reopen');
+
+        $response->assertForbidden();
+        $this->assertNotNull($this->company->fresh()->onboarding_dismissed_at);
     }
 }

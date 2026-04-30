@@ -1,4 +1,5 @@
 <script setup>
+import EmptyState from '@/core/components/EmptyState.vue'
 import { useWorkflowsStore } from '@/modules/company/workflows/workflows.store'
 import { formatDateTime } from '@/utils/datetime'
 
@@ -154,27 +155,22 @@ onMounted(() => {
 
           <!-- Empty state -->
           <template #no-data>
-            <div class="text-center pa-8">
-              <VIcon
-                icon="tabler-automation"
-                size="48"
-                class="mb-4 text-medium-emphasis"
-              />
-              <p class="text-h6 mb-2">
-                {{ t('workflows.emptyTitle') }}
-              </p>
-              <p class="text-body-2 text-medium-emphasis mb-4">
-                {{ t('workflows.emptySubtitle') }}
-              </p>
+            <EmptyState
+              v-if="!store.loading.rules"
+              icon="tabler-robot-off"
+              :title="t('workflows.empty')"
+              :description="t('workflows.emptyDesc')"
+            >
               <VBtn
                 v-can="'automations.manage'"
                 color="primary"
                 prepend-icon="tabler-plus"
+                class="mt-4"
                 @click="isDrawerOpen = true"
               >
                 {{ t('workflows.create') }}
               </VBtn>
-            </div>
+            </EmptyState>
           </template>
         </VDataTable>
       </VCardText>

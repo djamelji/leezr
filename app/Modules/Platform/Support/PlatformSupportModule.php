@@ -18,14 +18,21 @@ class PlatformSupportModule implements ModuleDefinition
             sortOrder: 92,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'support', 'title' => 'Support', 'to' => ['name' => 'platform-support'], 'icon' => 'tabler-message-circle-cog', 'permission' => 'manage_support', 'group' => 'clients', 'sort' => 11],
+                    [
+                        'key' => 'communications',
+                        'title' => 'Communications',
+                        'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']],
+                        'icon' => 'tabler-message-circle-cog',
+                        'group' => 'clients',
+                        'sort' => 40,
+                    ],
                 ],
-                routeNames: ['platform-support', 'platform-support-id'],
+                routeNames: ['platform-support', 'platform-support-id', 'platform-communications-tab'],
                 footerLinks: [
                     [
                         'key' => 'footer-support',
                         'label' => 'footer.support',
-                        'to' => ['name' => 'platform-support'],
+                        'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']],
                         'icon' => 'tabler-message-circle-cog',
                         'permission' => 'manage_support',
                         'sortOrder' => 10,

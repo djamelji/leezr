@@ -598,13 +598,47 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
     >
       <div class="position-relative bg-background w-100 me-0">
         <div
-          class="d-flex align-center justify-center w-100 h-100"
-          style="padding-inline: 50px;"
+          class="d-flex flex-column align-center justify-center w-100 h-100"
+          style="padding-inline: 40px;"
         >
+          <!-- Hero value proposition -->
+          <div class="register-hero text-center mb-6" style="max-inline-size: 360px;">
+            <h4 class="text-h4 font-weight-bold mb-2">
+              {{ t('register.hero.title') }}
+            </h4>
+            <p class="text-body-1 text-medium-emphasis mb-4">
+              {{ t('register.hero.subtitle') }}
+            </p>
+
+            <VList
+              class="register-hero-list"
+              bg-color="transparent"
+              density="compact"
+            >
+              <VListItem
+                v-for="i in 3"
+                :key="i"
+                class="px-0"
+              >
+                <template #prepend>
+                  <VIcon
+                    icon="tabler-check"
+                    color="success"
+                    size="20"
+                    class="me-2"
+                  />
+                </template>
+                <VListItemTitle class="text-body-1">
+                  {{ t(`register.hero.benefit${i}`) }}
+                </VListItemTitle>
+              </VListItem>
+            </VList>
+          </div>
+
           <VImg
-            max-width="400"
+            max-width="320"
             :src="imageVariant"
-            class="auth-illustration mt-16 mb-2"
+            class="auth-illustration mb-2"
           />
         </div>
 
@@ -812,6 +846,22 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
 
 .card-list {
   --v-card-list-gap: 0.5rem;
+}
+
+.register-hero-list {
+  .v-list-item {
+    min-block-size: 32px !important;
+  }
+
+  .v-list-item__prepend {
+    .v-icon {
+      margin-inline-end: 8px;
+    }
+  }
+
+  .v-list-item-title {
+    text-align: start;
+  }
 }
 
 .stripe-card-element {

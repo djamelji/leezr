@@ -56,6 +56,9 @@ use Illuminate\Support\Facades\Route;
 // ─── Navigation (infrastructure-level, no module gate) ────
 Route::get('/nav', [NavController::class, 'company']);
 
+// ─── Feature Flags (resolved for current company, no module gate) ──
+Route::get('/feature-flags', \App\Modules\Core\FeatureFlag\Http\CompanyFeatureFlagController::class);
+
 // ─── Theme preference (ADR-159, module-gated) ───────────
 Route::middleware(['company.access:use-module,core.theme', 'company.access:use-permission,theme.manage'])->group(function () {
     Route::put('/theme-preference', [ThemePreferenceController::class, 'update']);
@@ -80,6 +83,7 @@ Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'updat
 Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
 Route::get('/dashboard/onboarding', [OnboardingStatusController::class, '__invoke']);
 Route::post('/dashboard/onboarding/dismiss', [OnboardingStatusController::class, 'dismiss']);
+Route::post('/dashboard/onboarding/reopen', [OnboardingStatusController::class, 'reopen']);
 
 // ─── Notification inbox (core — always active) ────────────
 Route::get('/notifications', [NotificationController::class, 'index']);

@@ -17,10 +17,8 @@ class RealtimeModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 95,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'realtime', 'title' => 'Realtime', 'to' => ['name' => 'platform-realtime'], 'icon' => 'tabler-broadcast', 'permission' => 'realtime.view', 'group' => 'operations', 'sort' => 61],
-                ],
-                routeNames: ['platform-realtime'],
+                navItems: [],
+                routeNames: ['platform-realtime', 'platform-operations-tab'],
             ),
             permissions: [
                 ['key' => 'realtime.view', 'label' => 'View Realtime Dashboard'],

@@ -22,5 +22,6 @@ export const usePlatformAiStore = defineStore('platformAi', () => {
     // Usage sub-store
     ...storeToRefs(usageStore),
     fetchUsage: usageStore.fetchUsage,
+    fetchHealth: usageStore.fetchHealth,
   }
 })

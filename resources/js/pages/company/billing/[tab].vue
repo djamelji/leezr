@@ -30,10 +30,24 @@ const tabs = computed(() => [
   { title: t('companyBilling.tabs.paymentMethods'), icon: 'tabler-credit-card-pay', tab: 'payment-methods' },
   { title: t('companyBilling.tabs.activity'), icon: 'tabler-history', tab: 'activity' },
 ])
+
+const currentTabTitle = computed(() => {
+  const current = tabs.value.find(tab => tab.tab === activeTab.value)
+
+  return current?.title ?? ''
+})
 </script>
 
 <template>
   <div>
+    <PageBreadcrumbs
+      :items="[
+        { title: t('breadcrumbs.dashboard'), to: { name: 'dashboard' } },
+        { title: t('breadcrumbs.billing'), to: { name: 'company-billing-tab', params: { tab: 'overview' } } },
+        { title: currentTabTitle },
+      ]"
+    />
+
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill"

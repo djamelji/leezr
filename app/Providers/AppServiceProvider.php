@@ -13,6 +13,8 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Realtime\Adapters\NullRealtimePublisher;
 use App\Core\Realtime\Adapters\SseRealtimePublisher;
 use App\Core\Realtime\Contracts\RealtimePublisher;
+use App\Core\Alerts\Observers\PlatformAlertObserver;
+use App\Core\Alerts\PlatformAlert;
 use App\Core\Realtime\Contracts\StreamTransport;
 use App\Core\Realtime\Transports\PollingTransport;
 use App\Core\Realtime\Transports\PubSubTransport;
@@ -70,6 +72,9 @@ class AppServiceProvider extends ServiceProvider
             'company' => Company::class,
             'platform_user' => PlatformUser::class,
         ]);
+
+        // ADR-469: Observe platform alerts for critical notification + escalation
+        PlatformAlert::observe(PlatformAlertObserver::class);
 
         // ADR-124: Boot payment module registry
         PaymentRegistry::boot();

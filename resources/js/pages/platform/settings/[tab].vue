@@ -5,6 +5,8 @@ import SettingsMaintenance from './_SettingsMaintenance.vue'
 import SettingsNotifications from './_SettingsNotifications.vue'
 import SettingsSession from './_SettingsSession.vue'
 import SettingsTheme from './_SettingsTheme.vue'
+import SettingsInternational from './_SettingsInternational.vue'
+import SettingsFeatureFlags from './_SettingsFeatureFlags.vue'
 
 definePage({
   meta: {
@@ -30,6 +32,8 @@ const tabs = computed(() => [
   { title: t('platformSettings.tabs.maintenance'), icon: 'tabler-barrier-block', tab: 'maintenance' },
   { title: t('platformSettings.tabs.billing'), icon: 'tabler-receipt-2', tab: 'billing' },
   { title: t('platformSettings.tabs.notifications'), icon: 'tabler-bell-cog', tab: 'notifications' },
+  { title: t('platformSettings.tabs.international'), icon: 'tabler-world', tab: 'international' },
+  { title: t('platformSettings.tabs.featureFlags'), icon: 'tabler-flag', tab: 'feature-flags' },
 ])
 </script>
 
@@ -81,6 +85,14 @@ const tabs = computed(() => [
 
       <VWindowItem value="notifications">
         <SettingsNotifications />
+      </VWindowItem>
+
+      <VWindowItem value="international">
+        <SettingsInternational />
+      </VWindowItem>
+
+      <VWindowItem value="feature-flags">
+        <SettingsFeatureFlags />
       </VWindowItem>
     </VWindow>
   </div>

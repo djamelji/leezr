@@ -112,11 +112,10 @@ class PlatformRealtimeModuleToggleTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Nav items present
-        $groups = NavBuilder::forAdmin(null);
-        $allKeys = collect($groups)->pluck('items')->flatten(1)->pluck('key')->toArray();
-
-        $this->assertContains('realtime', $allKeys);
+        // Module is enabled (navItem absorbed into Operations hub — ADR-462)
+        $manifest = \App\Core\Modules\ModuleRegistry::forScope('admin')['platform.realtime'] ?? null;
+        $this->assertNotNull($manifest);
+        $this->assertContains('platform-operations-tab', $manifest->capabilities->routeNames);
     }
 
     // ── T5: Module manifest declares type platform ───────────

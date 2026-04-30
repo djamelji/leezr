@@ -8,6 +8,7 @@ definePage({
     platform: true,
     module: 'platform.modules',
     permission: 'manage_modules',
+    navActiveLink: 'platform-catalog-tab',
   },
 })
 
@@ -362,7 +363,7 @@ const loadModuleProfile = async key => {
   }
   catch {
     toast(t('platformModules.moduleNotFound'), 'error')
-    router.push({ name: 'platform-modules' })
+    router.push({ name: 'platform-catalog-tab', params: { tab: 'modules' } })
   }
   finally {
     isLoading.value = false
@@ -570,7 +571,7 @@ const planLabel = planKey => {
             icon
             variant="text"
             size="small"
-            :to="{ name: 'platform-modules' }"
+            :to="{ name: 'platform-catalog-tab', params: { tab: 'modules' } }"
           >
             <VIcon icon="tabler-arrow-left" />
           </VBtn>

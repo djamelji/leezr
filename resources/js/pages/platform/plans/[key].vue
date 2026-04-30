@@ -9,6 +9,7 @@ definePage({
     platform: true,
     module: 'platform.plans',
     permission: 'manage_plans',
+    navActiveLink: 'platform-catalog-tab',
   },
 })
 
@@ -51,7 +52,7 @@ onMounted(async () => {
   }
   catch {
     toast(t('plans.planNotFound'), 'error')
-    router.push({ name: 'platform-plans' })
+    router.push({ name: 'platform-catalog-tab', params: { tab: 'plans' } })
   }
   finally {
     isLoading.value = false
@@ -229,7 +230,7 @@ const fmtDate = dateStr => {
         icon
         variant="text"
         size="small"
-        @click="router.push({ name: 'platform-plans' })"
+        @click="router.push({ name: 'platform-catalog-tab', params: { tab: 'plans' } })"
       >
         <VIcon icon="tabler-arrow-left" />
       </VBtn>

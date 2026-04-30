@@ -145,6 +145,7 @@ const tabs = computed(() => [
       <VWindowItem value="recovery">
         <BillingRecovery @switch-tab="tab => router.replace({ name: 'platform-billing-tab', params: { tab } })" />
       </VWindowItem>
+
     </VWindow>
   </div>
 </template>

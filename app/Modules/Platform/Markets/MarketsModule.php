@@ -17,10 +17,8 @@ class MarketsModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 12,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'platform-international', 'title' => 'International', 'to' => ['name' => 'platform-international-tab', 'params' => ['tab' => 'markets']], 'icon' => 'tabler-world', 'permission' => 'manage_markets', 'group' => 'international', 'sort' => 50],
-                ],
-                routeNames: ['platform-international-tab', 'platform-markets-key'],
+                navItems: [],
+                routeNames: ['platform-international-tab', 'platform-markets-key', 'platform-settings-tab'],
             ),
             permissions: [
                 ['key' => 'manage_markets', 'label' => 'Manage markets, languages, legal statuses & FX rates'],

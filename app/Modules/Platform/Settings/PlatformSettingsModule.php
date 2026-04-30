@@ -27,16 +27,8 @@ class PlatformSettingsModule implements ModuleDefinition
                         'group' => 'administration',
                         'sort' => 71,
                     ],
-                    [
-                        'key' => 'platform-account',
-                        'title' => 'My Account',
-                        'to' => ['name' => 'platform-account-tab', 'params' => ['tab' => 'account']],
-                        'icon' => 'tabler-user-cog',
-                        'group' => 'administration',
-                        'sort' => 73,
-                    ],
                 ],
-                routeNames: ['platform-settings-tab', 'platform-account-tab'],
+                routeNames: ['platform-settings-tab', 'platform-feature-flags', 'platform-account-tab'],
             ),
             permissions: [
                 ['key' => 'manage_theme_settings', 'label' => 'Manage Theme Settings'],

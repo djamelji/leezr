@@ -17,18 +17,8 @@ class PlatformDocumentationModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 96,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'documentation',
-                        'title' => 'Documentation',
-                        'to' => ['name' => 'platform-documentation'],
-                        'icon' => 'tabler-book',
-                        'permission' => 'manage_documentation',
-                        'group' => 'product',
-                        'sort' => 34,
-                    ],
-                ],
-                routeNames: ['platform-documentation', 'platform-documentation-slug'],
+                navItems: [],
+                routeNames: ['platform-documentation', 'platform-documentation-slug', 'platform-communications-tab'],
                 footerLinks: [
                     [
                         'key' => 'footer-help-center',

@@ -5,6 +5,7 @@ namespace App\Modules\Infrastructure\Auth\UseCases;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\BillingCoupon;
+use App\Core\Registration\RegistrationFunnelEvent;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\PaymentGatewayManager;
@@ -270,6 +271,17 @@ class RegisterCompanyUseCase
                     }
                 }
             }
+        }
+
+        // Track funnel completion (P3-1: Onboarding Funnel)
+        try {
+            RegistrationFunnelEvent::create([
+                'session_id' => session()->getId(),
+                'company_id' => $result->company->id,
+                'step' => 'completed',
+            ]);
+        } catch (\Throwable) {
+            // Non-critical — never block registration
         }
 
         // Audit outside transaction — non-critical side-effect

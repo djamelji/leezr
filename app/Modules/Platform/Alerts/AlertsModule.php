@@ -25,19 +25,26 @@ class AlertsModule implements ModuleDefinition
             sortOrder: 3,
             capabilities: new Capabilities(
                 navItems: [
-                    [
-                        'key' => 'platform-alerts',
-                        'title' => 'Alerts',
-                        'to' => ['name' => 'platform-alerts'],
-                        'icon' => 'tabler-bell-ringing',
-                        'group' => 'cockpit',
-                        'sort' => 3,
-                    ],
+                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'group' => 'operations', 'sort' => 60],
                 ],
-                routeNames: ['platform-alerts'],
+                routeNames: ['platform-alerts', 'platform-operations-tab'],
             ),
-            permissions: [],
-            bundles: [],
+            permissions: [
+                ['key' => 'view_alerts', 'label' => 'View Alerts'],
+                ['key' => 'manage_alerts', 'label' => 'Manage Alerts'],
+            ],
+            bundles: [
+                [
+                    'key' => 'alerts.readonly',
+                    'label' => 'Alerts Read-Only',
+                    'permissions' => ['view_alerts'],
+                ],
+                [
+                    'key' => 'alerts.full',
+                    'label' => 'Full Alert Management',
+                    'permissions' => ['view_alerts', 'manage_alerts'],
+                ],
+            ],
             scope: 'admin',
             type: 'platform',
         );

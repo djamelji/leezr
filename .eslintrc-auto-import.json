@@ -404,6 +404,7 @@
     "useCan": true,
     "useMarketFormatting": true,
     "useUnsavedChanges": true,
-    "useEmailInbox": true
+    "useEmailInbox": true,
+    "useFeatureFlag": true
   }
 }

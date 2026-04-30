@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public (no auth) — rate limited
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/register/funnel-track', \App\Modules\Infrastructure\Auth\Http\FunnelTrackController::class)->middleware('throttle:30,1');
 Route::post('/register/confirm-payment', \App\Modules\Infrastructure\Auth\Http\ConfirmRegistrationPaymentController::class)
     ->middleware(['auth:sanctum', 'throttle:10,1']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15,1');

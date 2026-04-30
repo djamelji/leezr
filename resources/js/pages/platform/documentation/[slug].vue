@@ -9,6 +9,7 @@ definePage({
     platform: true,
     module: 'platform.documentation',
     permission: 'manage_documentation',
+    navActiveLink: 'platform-communications-tab',
   },
 })
 
@@ -150,7 +151,7 @@ const deleteArticle = async article => {
 }
 
 const goBack = () => {
-  router.push({ name: 'platform-documentation' })
+  router.push({ name: 'platform-communications-tab', params: { tab: 'documentation' } })
 }
 </script>
 

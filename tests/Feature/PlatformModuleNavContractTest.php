@@ -33,10 +33,25 @@ class PlatformModuleNavContractTest extends TestCase
     {
         // Modules that explicitly share another module's page (tab pattern)
         // These modules have routeNames but no navItem — they piggyback on another module's nav entry
+        // ADR-462: Nav refactoring 25→8 hubs — many modules are now absorbed into hub tabs
         $sharedPageModules = [
             'platform.translations', // Tab on International page (owned by platform.markets)
             'platform.roles',        // Tab on Access page (owned by platform.users) — ADR-380
             'platform.audit',        // Tabs on Access + Supervision pages (no own page) — ADR-381
+            'platform.ai',           // Absorbed into Operations hub
+            'platform.jobdomains',   // Absorbed into Catalog hub
+            'platform.fields',       // Absorbed into Catalog hub
+            'platform.automations',  // Absorbed into Operations hub
+            'platform.documents',    // Absorbed into Catalog hub
+            'platform.notifications',// Absorbed into Messaging hub
+            'platform.documentation',// Absorbed into Messaging hub
+            'platform.realtime',     // Absorbed into Operations hub
+            // platform.alerts owns the Operations hub navItem
+            'platform.security',     // Absorbed into Operations hub
+            'platform.activity',     // Absorbed into Dashboard hub
+            'platform.markets',      // Absorbed into Settings hub
+            // platform.support owns the Communications hub navItem
+            'platform.plans',        // Absorbed into Billing hub
         ];
 
         $missing = [];

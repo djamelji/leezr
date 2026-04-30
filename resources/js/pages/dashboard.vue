@@ -5,6 +5,13 @@ import { useCompanyComplianceStore } from '@/modules/company/dashboard/complianc
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
 import OnboardingWidget from './company/dashboard/_OnboardingWidget.vue'
+import QuickActionsBar from './company/dashboard/_QuickActionsBar.vue'
+
+definePage({
+  meta: {
+    module: 'core.dashboard',
+  },
+})
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -12,6 +19,8 @@ const dashboardStore = useCompanyDashboardStore()
 const complianceStore = useCompanyComplianceStore()
 
 const canEdit = computed(() => auth.isAdministrative)
+const companyName = computed(() => auth.currentCompany?.name || '')
+const userName = computed(() => auth.user?.first_name || auth.user?.display_name || '')
 
 onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)
@@ -62,6 +71,19 @@ const acceptSuggestion = suggestion => {
 
 <template>
   <div>
+    <!-- ═══ Welcome Header ═══ -->
+    <div class="mb-6">
+      <h4 class="text-h4">
+        {{ t('dashboard.welcome', { name: userName }) }}
+      </h4>
+      <p class="text-body-1 text-medium-emphasis mb-0">
+        {{ t('dashboard.welcomeSubtitle') }}
+        <span v-if="companyName">
+          — <span class="font-weight-medium text-high-emphasis">{{ companyName }}</span>
+        </span>
+      </p>
+    </div>
+
     <!-- ═══ Suggestions Banner ═══ -->
     <VAlert
       v-if="pendingSuggestions.length"
@@ -91,6 +113,118 @@ const acceptSuggestion = suggestion => {
 
     <!-- ═══ Onboarding (ADR-383 — outside grid, height adapts to content) ═══ -->
     <OnboardingWidget />
+
+    <!-- ═══ Quick Actions (P0-1 — contextual guidance) ═══ -->
+    <QuickActionsBar />
+
+    <!-- ═══ First Visit Cards (shown until user adds widgets) ═══ -->
+    <VRow
+      v-if="!hasDashboardWidgets && !dashboardStore.isLoading"
+      class="mb-6"
+    >
+      <VCol
+        cols="12"
+        md="4"
+      >
+        <VCard>
+          <VCardText class="text-center pa-6">
+            <VAvatar
+              color="primary"
+              variant="tonal"
+              size="56"
+              class="mb-3"
+            >
+              <VIcon
+                icon="tabler-user-check"
+                size="28"
+              />
+            </VAvatar>
+            <h6 class="text-h6 mb-1">
+              {{ t('dashboard.firstVisit.profile') }}
+            </h6>
+            <p class="text-body-2 text-disabled mb-3">
+              {{ t('dashboard.firstVisit.profileDesc') }}
+            </p>
+            <VBtn
+              variant="tonal"
+              color="primary"
+              size="small"
+              to="/company/profile/overview"
+            >
+              {{ t('dashboard.firstVisit.profileCta') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </VCol>
+      <VCol
+        cols="12"
+        md="4"
+      >
+        <VCard>
+          <VCardText class="text-center pa-6">
+            <VAvatar
+              color="success"
+              variant="tonal"
+              size="56"
+              class="mb-3"
+            >
+              <VIcon
+                icon="tabler-file-check"
+                size="28"
+              />
+            </VAvatar>
+            <h6 class="text-h6 mb-1">
+              {{ t('dashboard.firstVisit.documents') }}
+            </h6>
+            <p class="text-body-2 text-disabled mb-3">
+              {{ t('dashboard.firstVisit.documentsDesc') }}
+            </p>
+            <VBtn
+              variant="tonal"
+              color="success"
+              size="small"
+              :to="{ name: 'company-documents-tab', params: { tab: 'overview' } }"
+            >
+              {{ t('dashboard.firstVisit.documentsCta') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </VCol>
+      <VCol
+        cols="12"
+        md="4"
+      >
+        <VCard>
+          <VCardText class="text-center pa-6">
+            <VAvatar
+              color="info"
+              variant="tonal"
+              size="56"
+              class="mb-3"
+            >
+              <VIcon
+                icon="tabler-users"
+                size="28"
+              />
+            </VAvatar>
+            <h6 class="text-h6 mb-1">
+              {{ t('dashboard.firstVisit.members') }}
+            </h6>
+            <p class="text-body-2 text-disabled mb-3">
+              {{ t('dashboard.firstVisit.membersDesc') }}
+            </p>
+            <VBtn
+              variant="tonal"
+              color="info"
+              size="small"
+              to="/company/members"
+            >
+              {{ t('dashboard.firstVisit.membersCta') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </VCol>
+    </VRow>
 
     <!-- ═══ Dashboard Host (ADR-198 — stable grid position) ═══ -->
     <DashboardHostContainer>

@@ -67,10 +67,25 @@ class PageModuleAlignmentTest extends TestCase
         $missing = [];
 
         // Modules that piggyback on a shared tab page owned by another module — ADR-380
+        // ADR-462: Nav refactoring 25→8 hubs — absorbed modules share hub routes
         $sharedTabModules = [
             'platform.roles',        // Tab on Access page (owned by platform.users)
             'platform.translations', // Tab on International page (owned by platform.markets)
             'platform.audit',        // Tabs on Access + Supervision pages (no own page) — ADR-381
+            'platform.ai',           // Absorbed into Operations hub
+            'platform.jobdomains',   // Absorbed into Catalog hub
+            'platform.fields',       // Absorbed into Catalog hub
+            'platform.automations',  // Absorbed into Operations hub
+            'platform.documents',    // Absorbed into Catalog hub
+            'platform.notifications',// Absorbed into Messaging hub
+            'platform.documentation',// Absorbed into Communications hub
+            'platform.realtime',     // Absorbed into Operations hub
+            // platform.alerts is the owner of the Operations hub navItem
+            'platform.security',     // Absorbed into Operations hub
+            'platform.activity',     // Absorbed into Dashboard hub
+            'platform.markets',      // Absorbed into Settings hub
+            // platform.support owns the Communications hub navItem
+            'platform.plans',        // Absorbed into Catalog hub
         ];
 
         foreach ($adminModules as $key => $manifest) {
@@ -156,6 +171,11 @@ class PageModuleAlignmentTest extends TestCase
                     continue;
                 }
 
+                // Route absorbed into a hub tab — no standalone page needed (ADR-462)
+                if ($pagePath === '__absorbed__') {
+                    continue;
+                }
+
                 if (!file_exists($pagePath)) {
                     $orphanRoutes[] = "{$key}: routeName '{$routeName}' → expected page at {$pagePath} but file not found";
                 }
@@ -183,11 +203,9 @@ class PageModuleAlignmentTest extends TestCase
         // Map of known route name → file path overrides (non-standard naming)
         $overrides = [
             'platform' => $base . '/platform/index.vue',
-            'platform-international-tab' => $base . '/platform/international/[tab].vue',
             'platform-settings-tab' => $base . '/platform/settings/[tab].vue',
             'platform-access-tab' => $base . '/platform/access/[tab].vue',
             'platform-companies' => $base . '/platform/companies/index.vue',
-            'platform-email-tab' => $base . '/platform/email/[tab].vue',
             'platform-markets-key' => $base . '/platform/markets/[key].vue',
             'platform-modules-key' => $base . '/platform/modules/[key].vue',
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
@@ -216,12 +234,38 @@ class PageModuleAlignmentTest extends TestCase
             'company-documentation-slug' => $base . '/company/documentation/[slug].vue',
             'company-documentation-article' => null, // article view is inline via _ArticleView.vue sub-component
             'platform-documentation-slug' => $base . '/platform/documentation/[slug].vue',
-            'platform-ai-tab' => $base . '/platform/ai/[tab].vue',
             'platform-account-tab' => $base . '/platform/account/[tab].vue',
             'platform-email-inbox-id' => $base . '/platform/email/inbox/[id].vue',
+            // Hub routes (ADR-462: nav refactoring 25→8)
+            'platform-dashboard-tab' => $base . '/platform/dashboard/[tab].vue',
+            'platform-operations-tab' => $base . '/platform/operations/[tab].vue',
+            'platform-catalog-tab' => $base . '/platform/catalog/[tab].vue',
+            'platform-messaging-tab' => $base . '/platform/messaging/[tab].vue',
+            'platform-communications-tab' => $base . '/platform/communications/[tab].vue',
+            // Old standalone routes absorbed into hubs — pages deleted, served by hub tabs (ADR-462)
+            'platform-system-health' => '__absorbed__',
+            'platform-onboarding-funnel' => '__absorbed__',
+            'platform-usage-monitoring' => '__absorbed__',
+            'platform-feature-flags' => '__absorbed__',
+            'platform-ai-tab' => '__absorbed__',
+            'platform-international-tab' => '__absorbed__',
+            'platform-email-tab' => '__absorbed__',
+            'platform-support' => '__absorbed__',
+            'platform-automations' => '__absorbed__',
+            'platform-notifications' => '__absorbed__',
+            'platform-modules' => '__absorbed__',
+            'platform-jobdomains' => '__absorbed__',
+            'platform-fields' => '__absorbed__',
+            'platform-documents' => '__absorbed__',
+            'platform-alerts' => '__absorbed__',
+            'platform-realtime' => '__absorbed__',
+            'platform-activity' => '__absorbed__',
+            'platform-documentation' => '__absorbed__',
+            'platform-security' => '__absorbed__',
+            'platform-plans' => '__absorbed__',
         ];
 
-        if (isset($overrides[$routeName])) {
+        if (array_key_exists($routeName, $overrides)) {
             return $overrides[$routeName];
         }
 

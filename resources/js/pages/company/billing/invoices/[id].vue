@@ -139,7 +139,7 @@ const payInvoice = () => {
         variant="tonal"
         color="primary"
         class="mt-2"
-        @click="router.push('/company/billing/invoices')"
+        @click="router.push({ name: 'company-billing-tab', params: { tab: 'invoices' } })"
       >
         {{ t('companyBilling.invoiceDetail.backToBilling') }}
       </VBtn>
@@ -637,7 +637,7 @@ const payInvoice = () => {
                 color="secondary"
                 prepend-icon="tabler-arrow-left"
                 class="mb-4"
-                @click="router.push('/company/billing/invoices')"
+                @click="router.push({ name: 'company-billing-tab', params: { tab: 'invoices' } })"
               >
                 {{ t('companyBilling.invoiceDetail.backToBilling') }}
               </VBtn>

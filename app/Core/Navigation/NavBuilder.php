@@ -39,8 +39,6 @@ class NavBuilder
         'clients',
         'finance',
         'product',
-        'ai',
-        'international',
         'operations',
         'administration',
     ];

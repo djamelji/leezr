@@ -159,6 +159,16 @@ class ScheduledTaskRegistry
             'cron' => '*/5 * * * *',
             'expected_interval_minutes' => 5,
         ],
+
+        // ── Usage Monitoring (P3-4) ─────────────────────────────
+        'usage:collect-snapshots' => [
+            'command' => 'usage:collect-snapshots',
+            'description' => 'automations.tasks.usageCollectSnapshots',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '55 23 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

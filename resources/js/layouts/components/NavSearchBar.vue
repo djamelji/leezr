@@ -1,104 +1,129 @@
 <script setup>
 import Shepherd from 'shepherd.js'
-import { withQuery } from 'ufo'
 import { useConfigStore } from '@core/stores/config'
+import { $platformApi } from '@/utils/platformApi'
 
 defineOptions({
   inheritAttrs: false,
 })
 
+const { t } = useI18n()
 const configStore = useConfigStore()
 const isAppSearchBarVisible = ref(false)
 const isLoading = ref(false)
 
 // 👉 Default suggestions — real platform routes
-const suggestionGroups = [
+const suggestionGroups = computed(() => [
   {
-    title: 'Management',
+    title: t('globalSearch.management'),
     content: [
       {
         icon: 'tabler-dashboard',
-        title: 'Dashboard',
+        title: t('globalSearch.dashboard'),
         url: { name: 'platform' },
       },
       {
         icon: 'tabler-user-shield',
-        title: 'Users',
+        title: t('globalSearch.users'),
         url: { name: 'platform-access-tab', params: { tab: 'users' } },
       },
       {
         icon: 'tabler-building',
-        title: 'Companies',
+        title: t('globalSearch.companies'),
         url: { name: 'platform-companies' },
       },
       {
         icon: 'tabler-shield-lock',
-        title: 'Roles',
+        title: t('globalSearch.roles'),
         url: { name: 'platform-access-tab', params: { tab: 'roles' } },
       },
     ],
   },
   {
-    title: 'Configuration',
+    title: t('globalSearch.configuration'),
     content: [
       {
         icon: 'tabler-briefcase',
-        title: 'Job Domains',
+        title: t('globalSearch.jobDomains'),
         url: { name: 'platform-jobdomains' },
       },
       {
         icon: 'tabler-forms',
-        title: 'Custom Fields',
+        title: t('globalSearch.customFields'),
         url: { name: 'platform-fields' },
       },
       {
         icon: 'tabler-puzzle',
-        title: 'Modules',
+        title: t('globalSearch.modules'),
         url: { name: 'platform-modules' },
       },
       {
         icon: 'tabler-settings',
-        title: 'Settings',
+        title: t('globalSearch.settings'),
         url: { name: 'platform-settings-tab', params: { tab: 'general' } },
       },
     ],
   },
-]
+])
 
 // 👉 No Data suggestion
-const noDataSuggestions = [
+const noDataSuggestions = computed(() => [
   {
-    title: 'Dashboard',
+    title: t('globalSearch.dashboard'),
     icon: 'tabler-dashboard',
     url: { name: 'platform' },
   },
   {
-    title: 'Users',
+    title: t('globalSearch.users'),
     icon: 'tabler-user-shield',
     url: { name: 'platform-access-tab', params: { tab: 'users' } },
   },
   {
-    title: 'Companies',
+    title: t('globalSearch.companies'),
     icon: 'tabler-building',
     url: { name: 'platform-companies' },
   },
-]
+])
+
+// i18n mapping for backend group titles
+const groupTitleMap = {
+  Companies: 'globalSearch.companies',
+  Users: 'globalSearch.users',
+  Invoices: 'globalSearch.invoices',
+  'Support Tickets': 'globalSearch.tickets',
+}
+
+const translateGroupTitle = title => {
+  const key = groupTitleMap[title]
+
+  return key ? t(key) : title
+}
 
 const searchQuery = ref('')
 const router = useRouter()
 const searchResult = ref([])
 
 const fetchResults = async () => {
+  const q = searchQuery.value?.trim()
+  if (!q || q.length < 2) {
+    searchResult.value = []
+
+    return
+  }
+
   isLoading.value = true
 
-  const { data } = await useApi(withQuery('/app-bar/search', { q: searchQuery.value }))
+  try {
+    const data = await $platformApi('/search', { query: { q } })
 
-  searchResult.value = data.value
-
-  // ℹ️ simulate loading: we have used setTimeout for better user experience your can remove it
-  setTimeout(() => {
+    searchResult.value = data ?? []
+  }
+  catch {
+    searchResult.value = []
+  }
+  finally {
     isLoading.value = false
-  }, 500)
+  }
 }
 
 watch(searchQuery, fetchResults)
@@ -134,7 +159,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
       class="d-none d-md-flex align-center text-disabled ms-2"
       @click="Shepherd.activeTour?.cancel()"
     >
-      <span class="me-2">Search</span>
+      <span class="me-2">{{ t('globalSearch.placeholder') }}</span>
       <span class="meta-key">&#8984;K</span>
     </span>
   </div>
@@ -187,7 +212,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
     <!-- no data suggestion -->
     <template #noDataSuggestion>
       <div class="mt-9">
-        <span class="d-flex justify-center text-disabled mb-2">Try searching for</span>
+        <span class="d-flex justify-center text-disabled mb-2">{{ t('globalSearch.trySuggestions') }}</span>
         <h6
           v-for="suggestion in noDataSuggestions"
           :key="suggestion.title"
@@ -207,7 +232,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
     <!-- search result -->
     <template #searchResult="{ item }">
       <VListSubheader class="text-disabled custom-letter-spacing font-weight-regular ps-4">
-        {{ item.title }}
+        {{ translateGroupTitle(item.title) }}
       </VListSubheader>
       <VListItem
         v-for="list in item.children"

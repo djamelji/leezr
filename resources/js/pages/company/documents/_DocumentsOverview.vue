@@ -145,6 +145,85 @@ const emit = defineEmits(['navigate'])
       </VCol>
     </VRow>
 
+    <!-- Action Separation: Upload vs Configure (ADR-461) -->
+    <VRow class="mt-4">
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <VCard
+          color="primary"
+          variant="tonal"
+        >
+          <VCardText class="d-flex flex-column align-center text-center pa-6">
+            <VAvatar
+              color="primary"
+              variant="tonal"
+              size="56"
+              class="mb-4"
+            >
+              <VIcon
+                icon="tabler-file-upload"
+                size="28"
+              />
+            </VAvatar>
+            <h6 class="text-h6 mb-2">
+              {{ t('companyDocuments.overview.uploadTitle') }}
+            </h6>
+            <p class="text-body-2 text-medium-emphasis mb-4">
+              {{ t('companyDocuments.overview.uploadDesc') }}
+            </p>
+            <VBtn
+              color="primary"
+              variant="elevated"
+              prepend-icon="tabler-folder"
+              @click="emit('navigate', 'vault')"
+            >
+              {{ t('companyDocuments.overview.uploadCta') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </VCol>
+      <VCol
+        v-can="'documents.configure'"
+        cols="12"
+        md="6"
+      >
+        <VCard
+          color="warning"
+          variant="tonal"
+        >
+          <VCardText class="d-flex flex-column align-center text-center pa-6">
+            <VAvatar
+              color="warning"
+              variant="tonal"
+              size="56"
+              class="mb-4"
+            >
+              <VIcon
+                icon="tabler-settings"
+                size="28"
+              />
+            </VAvatar>
+            <h6 class="text-h6 mb-2">
+              {{ t('companyDocuments.overview.configTitle') }}
+            </h6>
+            <p class="text-body-2 text-medium-emphasis mb-4">
+              {{ t('companyDocuments.overview.configDesc') }}
+            </p>
+            <VBtn
+              color="warning"
+              variant="elevated"
+              prepend-icon="tabler-settings"
+              @click="emit('navigate', 'settings')"
+            >
+              {{ t('companyDocuments.overview.configCta') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </VCol>
+    </VRow>
+
     <VRow class="card-grid card-grid-lg mt-2">
       <!-- Compliance by Role (VList + VProgressLinear) -->
       <VCol

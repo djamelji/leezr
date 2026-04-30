@@ -17,18 +17,8 @@ class AutomationsModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 97,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'automations',
-                        'title' => 'Automations',
-                        'to' => ['name' => 'platform-automations'],
-                        'icon' => 'tabler-robot',
-                        'permission' => 'manage_automations',
-                        'group' => 'operations',
-                        'sort' => 60,
-                    ],
-                ],
-                routeNames: ['platform-automations'],
+                navItems: [],
+                routeNames: ['platform-automations', 'platform-operations-tab'],
             ),
             permissions: [
                 ['key' => 'manage_automations', 'label' => 'Manage Automations'],

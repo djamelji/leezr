@@ -69,5 +69,11 @@ export const usePlatformAlertStore = defineStore('platformAlerts', {
       await $platformApi(`/alerts/${id}/dismiss`, { method: 'PUT' })
       await this.fetchAlerts(this._lastParams)
     },
+
+    async fetchAlertDetail(id) {
+      const data = await $platformApi(`/alerts/${id}`)
+
+      return data.alert
+    },
   },
 })

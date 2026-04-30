@@ -6,6 +6,7 @@ use App\Core\Ai\AiGatewayManager;
 use App\Core\Ai\AiRequestLog;
 use App\Core\Ai\ReadModels\AiHealthReadService;
 use App\Core\Ai\ReadModels\PlatformAiGovernanceReadService;
+use App\Core\Models\Company;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,10 +77,31 @@ class PlatformAiController
                 'created_at' => $log->created_at->toIso8601String(),
             ]);
 
+        // Top consumers by company (ADR-462)
+        $byCompany = (clone $query)
+            ->whereNotNull('company_id')
+            ->selectRaw('company_id, count(*) as total_requests, sum(input_tokens + output_tokens) as total_tokens, sum(case when status = \'error\' then 1 else 0 end) as errors')
+            ->groupBy('company_id')
+            ->orderByDesc('total_requests')
+            ->limit(10)
+            ->get()
+            ->map(function ($row) {
+                $company = Company::find($row->company_id);
+
+                return [
+                    'company_id' => $row->company_id,
+                    'company_name' => $company?->name ?? "Company #{$row->company_id}",
+                    'total_requests' => (int) $row->total_requests,
+                    'total_tokens' => (int) $row->total_tokens,
+                    'errors' => (int) $row->errors,
+                ];
+            });
+
         return response()->json([
             'stats' => $stats,
             'by_provider' => $byProvider,
             'by_module' => $byModule,
+            'by_company' => $byCompany,
             'recent_requests' => $recentRequests,
             'period' => $period,
         ]);

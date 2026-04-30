@@ -3,7 +3,7 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import { formatMoney } from '@/utils/money'
 import { formatDate } from '@/utils/datetime'
-import { $api } from '@/utils/api'
+import { $platformApi } from '@/utils/platformApi'
 
 const { t } = useI18n()
 const { toast } = useAppToast()
@@ -59,7 +59,7 @@ const load = async (page = 1) => {
     if (statusFilter.value)
       params.append('status', statusFilter.value)
 
-    const data = await $api(`/platform/billing/scheduled-debits?${params}`)
+    const data = await $platformApi(`/billing/scheduled-debits?${params}`)
 
     items.value = data.data
     pagination.value = {

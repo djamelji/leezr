@@ -69,7 +69,14 @@
       "platform-ai": "IA",
       "platform-international": "International",
       "platform-billing": "Facturation",
-      "platform-account": "Mon compte"
+      "platform-account": "Mon compte",
+      "system-health": "Santé système",
+      "onboarding-funnel": "Funnel inscription",
+      "feature-flags": "Feature Flags",
+      "usage-monitoring": "Monitoring utilisation",
+      "catalog": "Catalogue",
+      "operations": "Opérations",
+      "communications": "Communications"
     },
     "company": {
       "dashboard": "Tableau de bord",
@@ -124,7 +131,9 @@
     "group": "Groupe",
     "noFieldConfig": "Aucune configuration de champs",
     "sensitiveData": "Accès aux données sensibles",
-    "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)"
+    "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)",
+    "empty": "Aucun rôle personnalisé",
+    "emptyDesc": "Les rôles personnalisés permettent de contrôler finement les accès de vos membres."
   },
   "common": {
     "save": "Enregistrer",
@@ -219,7 +228,8 @@
     "createSuccess": "Créé avec succès.",
     "updateSuccess": "Mis à jour avec succès.",
     "deleteSuccess": "Supprimé avec succès.",
-    "operationCancelled": "Opération annulée."
+    "operationCancelled": "Opération annulée.",
+    "helpCenter": "Centre d'aide"
   },
   "platformAccount": {
     "myAccount": "Mon compte",
@@ -239,6 +249,7 @@
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",
+    "welcomeSubtitle": "Votre espace de gestion centralisé",
     "viewingCompany": "Vous consultez {name}.",
     "workingIn": "Vous travaillez dans {name}.",
     "loadingCompany": "Chargement de votre entreprise...",
@@ -251,6 +262,24 @@
       "onboardingDesc": "Étapes de mise en route de votre entreprise",
       "planBadge": "Abonnement actuel",
       "planBadgeDesc": "Votre abonnement et son statut"
+    },
+    "quickActions": {
+      "title": "Actions rapides",
+      "profile": "Profil entreprise",
+      "members": "Inviter un membre",
+      "documents": "Documents",
+      "billing": "Facturation"
+    },
+    "firstVisit": {
+      "profile": "Complétez votre profil",
+      "profileDesc": "Ajoutez les informations de votre entreprise pour personnaliser votre espace.",
+      "profileCta": "Compléter le profil",
+      "documents": "Gérez vos documents",
+      "documentsDesc": "Configurez les types de documents requis et téléversez vos premiers fichiers.",
+      "documentsCta": "Accéder aux documents",
+      "members": "Invitez votre équipe",
+      "membersDesc": "Ajoutez vos collaborateurs et attribuez-leur des rôles adaptés.",
+      "membersCta": "Inviter un membre"
     }
   },
   "plans": {
@@ -397,6 +426,51 @@
     "noPreviewResults": "Aucune méthode ne correspond à ce contexte.",
     "specificity": "Spécificité",
     "supportedMethods": "Méthodes supportées"
+  },
+  "platformOperations": {
+    "title": "Opérations",
+    "subtitle": "Supervision, alertes, sécurité, IA, usage et automatisations.",
+    "tabs": {
+      "health": "Santé système",
+      "alerts": "Alertes",
+      "security": "Sécurité",
+      "ai": "IA",
+      "usage": "Utilisation",
+      "automations": "Automatisations",
+      "realtime": "Temps réel"
+    }
+  },
+  "platformCatalog": {
+    "title": "Catalogue produit",
+    "subtitle": "Modules, domaines d'activité, champs et types de documents.",
+    "tabs": {
+      "modules": "Modules",
+      "jobdomains": "Domaines d'activité",
+      "fields": "Champs",
+      "documents": "Documents",
+      "plans": "Plans"
+    }
+  },
+  "platformCommunications": {
+    "title": "Communications",
+    "subtitle": "Support client et documentation.",
+    "tabs": {
+      "support": "Support",
+      "documentation": "Documentation"
+    }
+  },
+  "platformMessaging": {
+    "title": "Messagerie",
+    "subtitle": "Emails, templates, orchestration et logs.",
+    "tabs": {
+      "inbox": "Boîte de réception",
+      "templates": "Templates",
+      "orchestration": "Orchestration",
+      "logs": "Logs",
+      "health": "Santé",
+      "settings": "Paramètres",
+      "notifications": "Notifications"
+    }
   },
   "platformBilling": {
     "title": "Aperçu facturation",
@@ -978,6 +1052,9 @@
       "summaryMonths": "pendant {n} mois"
     },
     "unsavedChanges": "Vous avez des modifications non enregistrées. Voulez-vous quitter ?",
+    "confirmReset": "Réinitialiser les modifications ?",
+    "confirmResetDesc": "Toutes vos modifications non sauvegardées seront perdues.",
+    "confirmResetBtn": "Réinitialiser",
     "noMessages": "Aucun message pour le moment"
   },
   "companyBilling": {
@@ -1373,9 +1450,17 @@
       "immediate": "Immédiat",
       "endOfPeriod": "À la fin de la période en cours",
       "proration": "Prorata",
-      "creditOldPlan": "Crédit pour {name} non utilisé",
-      "chargeNewPlan": "Facturation du reste pour {name}",
+      "prorationTitle": "Détail du calcul",
+      "currentPlanAt": "Votre plan actuel : {name} à {price}/mois",
+      "newPlanAt": "Nouveau plan : {name} à {price}/mois",
+      "daysDetail": "{remaining} jours restants sur {total}",
+      "creditOldPlan": "Crédit plan actuel ({name})",
+      "creditFormula": "({price} \u00d7 {remaining}/{total} jours)",
+      "chargeNewPlan": "Coût nouveau plan ({name})",
+      "chargeFormula": "({price} \u00d7 {remaining}/{total} jours)",
       "prorationNet": "Ajustement au prorata",
+      "netToPay": "Montant à payer",
+      "netCredit": "Crédit sur votre portefeuille",
       "daysRemaining": "{days} jours restants dans la période",
       "addonsImpact": "Impact sur les addons",
       "addonCurrent": "Actuel",
@@ -1588,7 +1673,13 @@
       "viewPending": "Voir {count} soumis",
       "manageTypes": "Gérer les types",
       "byType": "Conformité par type",
-      "byTypeHint": "Détail de la conformité documentaire par type de document"
+      "byTypeHint": "Détail de la conformité documentaire par type de document",
+      "uploadTitle": "Ajouter un document",
+      "uploadDesc": "Téléversez un document pour votre entreprise ou un membre de votre équipe.",
+      "uploadCta": "Accéder au coffre-fort",
+      "configTitle": "Configurer les types de documents",
+      "configDesc": "Définissez quels documents sont requis, activez l'IA et les rappels automatiques.",
+      "configCta": "Paramètres documents"
     },
     "activity": {
       "title": "Activité récente",
@@ -2558,8 +2649,29 @@
     "tabs": {
       "providers": "Providers",
       "usage": "Utilisation",
+      "operations": "Opérations",
       "routing": "Routing",
       "settings": "Paramètres"
+    },
+    "operations": {
+      "healthy": "Opérationnel",
+      "degraded": "Dégradé",
+      "overallStatus": "État global",
+      "pendingJobs": "Jobs en attente",
+      "failedJobs24h": "Échecs (24h)",
+      "errorRatePercent": "Taux d'erreur",
+      "providerHealth": "Santé du provider",
+      "documentProcessing": "Traitement documents",
+      "pending": "En attente",
+      "processing": "En cours",
+      "completed": "Terminés",
+      "failed": "Échoués",
+      "topConsumers": "Top consommateurs (par entreprise)",
+      "company": "Entreprise",
+      "requests": "Requêtes",
+      "tokens": "Tokens",
+      "errors": "Erreurs",
+      "noCompanyData": "Aucune donnée de consommation par entreprise"
     },
     "provider": "Provider",
     "statusLabel": "Statut",
@@ -2665,7 +2777,9 @@
       "sessions": "Sessions",
       "maintenance": "Maintenance",
       "billing": "Facturation",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "international": "International",
+      "featureFlags": "Feature Flags"
     },
     "session": {
       "title": "Gouvernance des sessions",
@@ -2992,6 +3106,151 @@
     "reactivateNoCharge": "Cet addon est encore actif jusqu'au {date}. Réactivation sans frais supplémentaires.",
     "reactivateConfirm": "Réactiver"
   },
+  "contactSales": {
+    "title": "Module premium",
+    "description": "Ce module nécessite une offre personnalisée.",
+    "moduleName": "Module concerné",
+    "emailLabel": "Votre email",
+    "messageLabel": "Votre message (optionnel)",
+    "messagePlaceholder": "Décrivez votre besoin...",
+    "submit": "Être contacté",
+    "viewPlans": "Voir les plans",
+    "sent": "Demande envoyée ! Nous vous recontacterons rapidement.",
+    "cancel": "Annuler"
+  },
+  "modulePreview": {
+    "drawerTitle": "Détails du module",
+    "benefits": "Bénéfices",
+    "usageExample": "Exemple d'utilisation",
+    "roi": "Valeur ajoutée",
+    "activate": "Activer ce module",
+    "alreadyActive": "Module actif",
+    "upgradeRequired": "Upgrade requis",
+    "contactSales": "Contacter le commercial",
+    "included": "Inclus dans votre plan",
+    "addon": "Module complémentaire",
+    "viewDetails": "Voir les détails",
+    "core.members": {
+      "tagline": "Centralisez la gestion de vos équipes",
+      "benefits": [
+        "Invitez vos collaborateurs en 1 clic",
+        "Attribuez des rôles et permissions adaptés",
+        "Suivez l'activité et la conformité de chaque membre"
+      ],
+      "example": "Un responsable RH invite 10 salariés, leur attribue le rôle 'Chauffeur' et suit leurs documents obligatoires en temps réel.",
+      "valueProposition": "Gagnez 2h/semaine sur la gestion des accès et la conformité"
+    },
+    "core.roles": {
+      "tagline": "Contrôlez finement les accès de chaque collaborateur",
+      "benefits": [
+        "Créez des rôles métier sur mesure (chauffeur, administrateur, comptable…)",
+        "Limitez l'accès aux données sensibles par service",
+        "Auditez qui a accès à quoi en un coup d'œil"
+      ],
+      "example": "Le directeur crée un rôle 'Chef d'agence' qui voit les expéditions de son site mais pas les finances globales.",
+      "valueProposition": "Réduisez les risques d'accès non autorisés de 90%"
+    },
+    "core.documents": {
+      "tagline": "Centralisez et sécurisez tous vos documents réglementaires",
+      "benefits": [
+        "Stockez permis, licences et certifications au même endroit",
+        "Recevez des alertes automatiques avant expiration",
+        "Générez un dossier de conformité prêt pour l'audit"
+      ],
+      "example": "Le gestionnaire de flotte reçoit une alerte 30 jours avant l'expiration du permis PL d'un chauffeur et lance le renouvellement.",
+      "valueProposition": "Zéro document expiré oublié — conformité garantie"
+    },
+    "core.billing": {
+      "tagline": "Pilotez votre abonnement et vos coûts en toute transparence",
+      "benefits": [
+        "Visualisez votre plan, vos extensions et votre consommation",
+        "Changez de plan ou ajoutez des modules en libre-service",
+        "Consultez l'historique complet de vos factures"
+      ],
+      "example": "Le DAF compare les plans disponibles, passe au plan Business et active l'extension Analytics — le tout sans appeler le support.",
+      "valueProposition": "Maîtrisez 100% de vos coûts SaaS en autonomie"
+    },
+    "core.modules": {
+      "tagline": "Composez votre outil métier à la carte",
+      "benefits": [
+        "Activez uniquement les modules dont vous avez besoin",
+        "Découvrez de nouvelles fonctionnalités au fil de votre croissance",
+        "Maîtrisez votre budget en ne payant que l'utile"
+      ],
+      "example": "Une PME de 15 personnes active le suivi des expéditions, puis ajoute l'analytique 3 mois plus tard quand le volume augmente.",
+      "valueProposition": "Un outil qui grandit avec vous — sans surcoût inutile"
+    },
+    "core.workflows": {
+      "tagline": "Automatisez vos processus métier récurrents",
+      "benefits": [
+        "Créez des workflows sans coder (drag & drop)",
+        "Déclenchez des actions automatiques sur événement (nouveau membre, document expiré…)",
+        "Réduisez les erreurs humaines sur les tâches répétitives"
+      ],
+      "example": "Quand un chauffeur est ajouté, un workflow envoie automatiquement le kit d'accueil, demande ses documents et notifie son responsable.",
+      "valueProposition": "Divisez par 3 le temps passé sur les processus manuels"
+    },
+    "core.settings": {
+      "tagline": "Configurez votre espace entreprise selon vos besoins",
+      "benefits": [
+        "Personnalisez le nom, le logo et les couleurs de votre espace",
+        "Gérez les préférences de notification et de langue",
+        "Contrôlez les paramètres de sécurité et d'authentification"
+      ],
+      "example": "L'administrateur configure le fuseau horaire, active les notifications Slack et applique la charte graphique de l'entreprise.",
+      "valueProposition": "Un espace de travail à votre image en moins de 5 minutes"
+    },
+    "core.audit": {
+      "tagline": "Gardez une trace de chaque action dans votre entreprise",
+      "benefits": [
+        "Consultez l'historique complet des actions utilisateurs",
+        "Identifiez qui a modifié quoi et quand",
+        "Exportez les logs pour vos audits de conformité"
+      ],
+      "example": "Lors d'un audit ISO, le responsable qualité exporte le journal des modifications des 6 derniers mois en un clic.",
+      "valueProposition": "Conformité et traçabilité totale — auditez sans stress"
+    },
+    "logistics_shipments": {
+      "tagline": "Gérez toutes vos expéditions de A à Z",
+      "benefits": [
+        "Créez et suivez vos expéditions depuis un tableau de bord unifié",
+        "Assignez automatiquement les chauffeurs et véhicules",
+        "Générez les bons de livraison et preuves de livraison (ePOD)"
+      ],
+      "example": "Le dispatcher crée 20 expéditions, les assigne aux chauffeurs disponibles et suit les livraisons en direct sur la carte.",
+      "valueProposition": "Traitez 2x plus d'expéditions avec le même effectif"
+    },
+    "logistics_tracking": {
+      "tagline": "Suivez vos livraisons et véhicules en temps réel",
+      "benefits": [
+        "Visualisez la position de chaque véhicule sur la carte",
+        "Recevez des alertes automatiques en cas de retard",
+        "Partagez un lien de suivi avec vos clients"
+      ],
+      "example": "Un client reçoit un SMS avec un lien de suivi et voit son colis passer de 'En transit' à 'Livré' en temps réel.",
+      "valueProposition": "Réduisez de 60% les appels clients 'Où est mon colis ?'"
+    },
+    "logistics_fleet": {
+      "tagline": "Optimisez la gestion et l'entretien de votre flotte",
+      "benefits": [
+        "Centralisez les informations de chaque véhicule (CT, assurance, kilométrage)",
+        "Planifiez les maintenances préventives automatiquement",
+        "Analysez les coûts par véhicule et optimisez votre parc"
+      ],
+      "example": "Le gestionnaire de flotte reçoit une alerte que le véhicule #12 atteint 100 000 km et programme automatiquement la révision.",
+      "valueProposition": "Réduisez vos coûts de maintenance de 25%"
+    },
+    "logistics_analytics": {
+      "tagline": "Prenez des décisions éclairées grâce aux données",
+      "benefits": [
+        "Suivez vos KPIs logistiques (ponctualité, coût/km, taux de remplissage)",
+        "Identifiez les axes d'amélioration avec des rapports visuels",
+        "Exportez vos données pour vos comités de direction"
+      ],
+      "example": "Le directeur logistique constate que le taux de livraison à l'heure a chuté de 5% et identifie le hub responsable en 2 clics.",
+      "valueProposition": "Améliorez votre taux de service de 15% en 3 mois"
+    }
+  },
   "themeSettings": {
     "title": "Visibilité du sélecteur de thème",
     "subtitle": "Choisissez quels rôles peuvent voir le sélecteur Clair / Sombre dans l'en-tête.",
@@ -3106,6 +3365,11 @@
   },
   "platformDashboard": {
     "title": "Cockpit",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "activity": "Activité",
+      "funnel": "Funnel inscription"
+    },
     "statsError": "Certaines statistiques n'ont pas pu être chargées.",
     "statsPartialError": "{count} statistique(s) non chargée(s).",
     "attentionTitle": "Attention requise",
@@ -3353,7 +3617,14 @@
     "couponError_coupon_already_used": "Ce code promo a déjà été utilisé.",
     "loadError": "Impossible de charger les données d'inscription. Veuillez rafraîchir la page.",
     "registrationSuccess": "Votre compte a été créé avec succès ! Bienvenue.",
-    "pleaseCorrectErrors": "Veuillez corriger les erreurs ci-dessous pour continuer."
+    "pleaseCorrectErrors": "Veuillez corriger les erreurs ci-dessous pour continuer.",
+    "hero": {
+      "title": "Gérez votre entreprise en un seul endroit",
+      "subtitle": "Documents, équipes, conformité et facturation centralisés",
+      "benefit1": "Gagnez du temps sur vos opérations",
+      "benefit2": "Centralisez vos données",
+      "benefit3": "Automatisez votre gestion"
+    }
   },
   "onboarding": {
     "welcome": "Bienvenue {name} !",
@@ -3361,11 +3632,16 @@
     "allDone": "Votre espace est prêt !",
     "gettingStarted": "Pour bien démarrer",
     "dismiss": "Masquer le guide de démarrage",
+    "resumeSetup": "Reprendre la configuration",
+    "resumeHint": "Vous n'avez pas terminé la mise en route de votre entreprise.",
+    "reopening": "Réouverture...",
     "steps": {
       "accountCreated": { "label": "Créer votre compte" },
       "companyProfile": { "label": "Compléter le profil entreprise" },
       "paymentMethod": { "label": "Ajouter un moyen de paiement" },
-      "inviteMember": { "label": "Inviter un collaborateur" }
+      "inviteMember": { "label": "Inviter un collaborateur" },
+      "activateModule": { "label": "Activer un module métier" },
+      "firstDocument": { "label": "Déposer un premier document" }
     }
   },
   "landing": {
@@ -3417,6 +3693,18 @@
     "pageNotFound": "Page introuvable",
     "description": "Nous n'avons pas pu trouver la page que vous recherchez.",
     "backToHome": "Retour à l'accueil"
+  },
+  "featureFlags": {
+    "title": "Feature Flags",
+    "subtitle": "Gestion des fonctionnalités activables par entreprise",
+    "create": "Nouveau flag",
+    "createTitle": "Créer un feature flag",
+    "key": "Clé",
+    "description": "Description",
+    "global": "Global",
+    "overrides": "Exceptions",
+    "enabledGlobally": "Activé globalement",
+    "empty": "Aucun feature flag configuré"
   },
   "maintenancePage": {
     "enterYourEmail": "Saisissez votre adresse e-mail",
@@ -4302,7 +4590,23 @@
     "categoryGeneral": "Général",
     "categoryTechnical": "Technique",
     "categoryBilling": "Facturation",
-    "noTicketsYet": "Aucun ticket pour le moment"
+    "noTicketsYet": "Aucun ticket pour le moment",
+    "sla": "SLA",
+    "slaOnTrack": "Dans les temps",
+    "slaWarning": "Attention",
+    "slaBreached": "Dépassé",
+    "slaResponseTime": "Temps de réponse",
+    "slaResolutionTime": "Temps de résolution",
+    "slaCompliance": "Conformité SLA",
+    "slaOpenTickets": "Tickets ouverts",
+    "slaBreachedTickets": "Tickets en dépassement",
+    "slaAvgResponseTime": "Temps moyen de réponse",
+    "slaResponseIn": "Réponse dans {time}",
+    "slaResolutionIn": "Résolution dans {time}",
+    "slaResponded": "Répondu",
+    "slaResolved": "Résolu",
+    "slaHours": "{n}h",
+    "slaDeadlinePassed": "Délai dépassé"
   },
   "documentation": {
     "title": "Centre d'aide",
@@ -4468,7 +4772,11 @@
       "checkExpiration": "Vérification d'expiration des documents",
       "autoRenew": "Renouvellement automatique des documents",
       "autoRemind": "Rappels automatiques des documents",
-      "fxRatesSync": "Synchronisation des taux de change"
+      "fxRatesSync": "Synchronisation des taux de change",
+      "alertsEvaluate": "Évaluer les alertes plateforme",
+      "emailFetchInbox": "Récupérer les emails entrants",
+      "usageCollectSnapshots": "Collecter les snapshots d'utilisation",
+      "workflowResetCounters": "Réinitialiser les compteurs quotidiens"
     },
     "categories": {
       "documents": "Documents",
@@ -4531,7 +4839,9 @@
     "status_success": "Succès",
     "status_partial": "Partiel",
     "status_skipped": "Ignoré",
-    "status_failed": "Échoué"
+    "status_failed": "Échoué",
+    "empty": "Aucune règle d'automatisation",
+    "emptyDesc": "Créez des règles pour automatiser les tâches récurrentes de votre entreprise."
   },
   "activity": {
     "title": "Activit\u00e9",
@@ -4598,6 +4908,18 @@
     "infra": "Infrastructure",
     "security": "S\u00e9curit\u00e9",
     "business": "Business"
+  },
+  "incidents": {
+    "event": {
+      "created": "Alerte cr\u00e9\u00e9e",
+      "acknowledged": "Acquitt\u00e9e",
+      "escalated": "Escalad\u00e9e",
+      "resolved": "R\u00e9solue"
+    },
+    "escalationCount": "Escalade #{count}",
+    "timeline": "Chronologie de l'incident",
+    "escalation": "Escalade automatique",
+    "noTimeline": "Pas d'historique disponible"
   },
   "email": {
     "billing": {
@@ -5000,5 +5322,97 @@
     "adminUndoCancelMessage": "Réactiver l'abonnement annulé ?",
     "adminUndoCancelPlan": "Plan actuel : {plan}",
     "adminUndoCancelButton": "Réactiver"
+  },
+  "breadcrumbs": {
+    "dashboard": "Tableau de bord",
+    "billing": "Facturation",
+    "profile": "Profil entreprise"
+  },
+  "globalSearch": {
+    "placeholder": "Rechercher...",
+    "management": "Gestion",
+    "configuration": "Configuration",
+    "dashboard": "Tableau de bord",
+    "companies": "Entreprises",
+    "users": "Utilisateurs",
+    "roles": "Rôles",
+    "jobDomains": "Domaines métier",
+    "customFields": "Champs personnalisés",
+    "modules": "Modules",
+    "settings": "Paramètres",
+    "invoices": "Factures",
+    "tickets": "Tickets support",
+    "noResults": "Aucun résultat",
+    "trySuggestions": "Essayez de rechercher"
+  },
+  "systemHealth": {
+    "title": "Santé du système",
+    "subtitle": "Vue consolidée de l'état de santé de l'infrastructure.",
+    "refresh": "Rafraîchir",
+    "lastCheck": "Dernière vérification",
+    "healthy": "OK",
+    "warning": "Attention",
+    "critical": "Critique",
+    "overallHealthy": "Tous les systèmes sont opérationnels.",
+    "overallWarning": "Certains systèmes nécessitent une attention.",
+    "overallCritical": "Des problèmes critiques ont été détectés.",
+    "email": "Email",
+    "emailSent": "Envoyés (24h)",
+    "emailFailed": "Échoués (24h)",
+    "emailFailRate": "Taux d'échec",
+    "ai": "Intelligence artificielle",
+    "aiProvider": "Fournisseur",
+    "aiProviderStatus": "Statut fournisseur",
+    "aiQueuePending": "En attente",
+    "aiQueueFailed": "Échoués (24h)",
+    "queues": "Files d'attente",
+    "queueDefaultPending": "Default en attente",
+    "queueAiPending": "AI en attente",
+    "queueDefaultFailed": "Default échoués (24h)",
+    "queueAiFailed": "AI échoués (24h)",
+    "scheduler": "Planificateur",
+    "schedulerRuns": "Exécutions (2h)",
+    "schedulerFailed": "Échoués (2h)",
+    "schedulerLastRun": "Dernière exécution",
+    "database": "Base de données",
+    "dbLatency": "Latence",
+    "dbConnection": "Connexion",
+    "disk": "Stockage",
+    "diskUsed": "Utilisé",
+    "diskFree": "Espace libre",
+    "alerts": "Alertes",
+    "alertsCritical": "Critiques actives",
+    "alertsTotal": "Total actives",
+    "error": "Erreur",
+    "never": "Jamais"
+  },
+  "onboardingFunnel": {
+    "title": "Funnel d'inscription",
+    "subtitle": "Suivi des conversions et abandons du parcours d'inscription",
+    "stepStarted": "Démarré",
+    "stepCompanyInfo": "Info entreprise",
+    "stepAdminUser": "Utilisateur admin",
+    "stepPlanSelected": "Plan sélectionné",
+    "stepPaymentInfo": "Info paiement",
+    "stepCompleted": "Complété",
+    "started": "Démarrés",
+    "completed": "Complétés",
+    "conversionRate": "Taux de conversion",
+    "abandoned": "Abandonnés",
+    "funnelTitle": "Entonnoir de conversion",
+    "abandonmentTitle": "Analyse des abandons par étape",
+    "dailyTrend": "Tendance quotidienne (7 derniers jours)"
+  },
+  "usageMonitoring": {
+    "title": "Monitoring d'utilisation",
+    "subtitle": "Suivi de l'utilisation par entreprise : IA, emails, stockage, membres",
+    "aiRequests": "Requêtes IA",
+    "aiTokens": "Tokens IA",
+    "emailsSent": "Emails envoyés",
+    "totalMembers": "Membres actifs",
+    "storage": "Stockage",
+    "topAiConsumers": "Top consommateurs IA",
+    "dailyTrend": "Tendance quotidienne",
+    "noData": "Pas de données pour cette période"
   }
 }

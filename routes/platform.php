@@ -26,6 +26,10 @@ use App\Modules\Platform\Billing\Http\PlatformRecoveryController;
 use App\Modules\Platform\Dashboard\Http\DashboardWidgetController;
 use App\Modules\Platform\Dashboard\Http\DashboardLayoutController;
 use App\Modules\Platform\Dashboard\Http\DashboardCockpitController;
+use App\Modules\Platform\Dashboard\Http\OnboardingFunnelController;
+use App\Modules\Platform\Dashboard\Http\PlatformSearchController;
+use App\Modules\Platform\Dashboard\Http\SystemHealthController;
+use App\Modules\Platform\Dashboard\Http\UsageMonitoringController;
 use App\Modules\Platform\AI\Http\PlatformAiController;
 use App\Modules\Platform\AI\Http\PlatformAiMutationController;
 use App\Modules\Platform\Plans\Http\PlanCrudController;
@@ -35,6 +39,7 @@ use App\Modules\Platform\Jobdomains\Http\JobdomainController;
 use App\Modules\Platform\Jobdomains\Http\JobdomainOverlayController;
 use App\Modules\Platform\Modules\Http\ModuleController;
 use App\Modules\Platform\Maintenance\Http\MaintenanceSettingsController;
+use App\Modules\Platform\Settings\Http\FeatureFlagController;
 use App\Modules\Platform\Settings\Http\GeneralSettingsController;
 use App\Modules\Platform\Settings\Http\SessionSettingsController;
 use App\Modules\Platform\Settings\Http\TypographyController;
@@ -252,6 +257,18 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/maintenance/my-ip', [MaintenanceSettingsController::class, 'myIp']);
     });
 
+    // Feature Flags (ADR-469)
+    Route::middleware(['module.active:platform.settings', 'platform.permission:manage_theme_settings'])->group(function () {
+        Route::prefix('feature-flags')->group(function () {
+            Route::get('/', [FeatureFlagController::class, 'index']);
+            Route::post('/', [FeatureFlagController::class, 'store']);
+            Route::put('/{key}', [FeatureFlagController::class, 'update']);
+            Route::delete('/{key}', [FeatureFlagController::class, 'destroy']);
+            Route::post('/{key}/toggle', [FeatureFlagController::class, 'toggle']);
+            Route::post('/{key}/company-override', [FeatureFlagController::class, 'companyOverride']);
+        });
+    });
+
     // Document Type Catalog (ADR-182 → platform.documents module)
     Route::middleware(['module.active:platform.documents', 'platform.permission:manage_document_catalog'])->group(function () {
         Route::get('/documents', [DocumentTypeCatalogController::class, 'index']);
@@ -309,6 +326,19 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         // Cockpit — decision-oriented landing (ADR-441)
         Route::get('/dashboard/attention', [DashboardCockpitController::class, 'attention']);
         Route::get('/dashboard/health', [DashboardCockpitController::class, 'health']);
+
+        // System health aggregated view
+        Route::get('/system/health', [SystemHealthController::class, 'index']);
+
+        // Global search (ADR-468)
+        Route::get('/search', PlatformSearchController::class);
+
+        // Onboarding funnel analytics (P3-1)
+        Route::get('/onboarding/funnel', OnboardingFunnelController::class);
+
+        // Usage monitoring (P3-4)
+        Route::get('/usage/overview', [UsageMonitoringController::class, 'overview']);
+        Route::get('/usage/company/{companyId}', [UsageMonitoringController::class, 'company']);
     });
 
     // Billing / Payments governance (ADR-101, ADR-102)
@@ -571,6 +601,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::middleware(['platform.permission:view_alerts'])->group(function () {
             Route::get('/alerts', [PlatformAlertController::class, 'index']);
             Route::get('/alerts/count', [PlatformAlertController::class, 'count']);
+            Route::get('/alerts/{alert}', [PlatformAlertController::class, 'show']);
         });
 
         Route::middleware(['platform.permission:manage_alerts'])->group(function () {

@@ -161,8 +161,8 @@ class NavEndpointTest extends TestCase
         // Dashboard (no permission) — should be visible
         $this->assertContains('dashboard', $allKeys);
 
-        // Modules (manage_modules) — should be visible
-        $this->assertContains('modules', $allKeys);
+        // Catalog (manage_modules) — should be visible
+        $this->assertContains('catalog', $allKeys);
 
         // Companies (manage_companies) — should NOT be visible
         $this->assertNotContains('companies', $allKeys);

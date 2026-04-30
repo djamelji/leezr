@@ -4,6 +4,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useWorldStore } from '@/core/stores/world'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -11,10 +12,13 @@ const world = useWorldStore()
 const settingsStore = useCompanySettingsStore()
 const { toast } = useAppToast()
 
+const formRef = ref()
+const isFormValid = ref(false)
 const form = ref({ name: '' })
 const dynamicForm = ref({})
 const isLoading = ref(false)
 const billingIsSameAsCompany = ref(false)
+const isResetDialogVisible = ref(false)
 
 const canEdit = computed(() => auth.hasPermission('settings.manage'))
 
@@ -71,6 +75,16 @@ watch(billingIsSameAsCompany, val => {
     copyCompanyToBilling()
 })
 
+// ─── Unsaved changes tracking ────────────────────────
+const formSnapshot = computed(() => ({
+  name: form.value.name,
+  dynamic: { ...dynamicForm.value },
+}))
+
+const originalSnapshot = ref({ name: '', dynamic: {} })
+
+const { isDirty, markClean } = useUnsavedChanges(formSnapshot, originalSnapshot)
+
 // ─── Form init / save ───────────────────────────────
 const initForm = () => {
   const data = settingsStore.company
@@ -84,11 +98,17 @@ const initForm = () => {
   dynamicForm.value = df
 
   billingIsSameAsCompany.value = false
+
+  // Sync original snapshot so isDirty resets to false
+  nextTick(() => markClean())
 }
 
 watch(() => settingsStore.company, () => initForm(), { immediate: true })
 
 const handleSave = async () => {
+  const { valid } = await formRef.value.validate()
+  if (!valid) return
+
   isLoading.value = true
 
   try {
@@ -101,6 +121,7 @@ const handleSave = async () => {
     await settingsStore.updateCompany(payload)
     await auth.fetchMyCompanies()
 
+    markClean()
     toast(t('companySettings.settingsUpdated'), 'success')
   }
   catch (error) {
@@ -111,12 +132,28 @@ const handleSave = async () => {
   }
 }
 
-const resetForm = () => initForm()
+const resetForm = () => {
+  if (isDirty.value) {
+    isResetDialogVisible.value = true
+
+    return
+  }
+  initForm()
+}
+
+const confirmReset = () => {
+  isResetDialogVisible.value = false
+  initForm()
+}
 
 </script>
 
 <template>
-  <VForm @submit.prevent="handleSave">
+  <VForm
+    ref="formRef"
+    v-model="isFormValid"
+    @submit.prevent="handleSave"
+  >
     <!-- ─── General Info ────────────────────────────── -->
     <VCard>
       <VCardText>
@@ -132,6 +169,7 @@ const resetForm = () => initForm()
               v-model="form.name"
               :label="t('companySettings.companyName')"
               :placeholder="t('companySettings.companyNamePlaceholder')"
+              :rules="[requiredValidator]"
               :disabled="!canEdit"
             />
           </VCol>
@@ -323,6 +361,7 @@ const resetForm = () => initForm()
               v-model="dynamicForm.billing_email"
               :label="fieldLabel('billing_email')"
               :placeholder="t('companySettings.placeholder.email')"
+              :rules="[emailValidator]"
               :disabled="!canEdit"
             />
           </VCol>
@@ -366,6 +405,7 @@ const resetForm = () => initForm()
         v-can="'settings.manage'"
         type="submit"
         :loading="isLoading"
+        :disabled="!isFormValid"
       >
         {{ t('companySettings.saveChanges') }}
       </VBtn>
@@ -425,4 +465,29 @@ const resetForm = () => initForm()
     </VCardText>
   </VCard>
 
+  <!-- ─── Reset Confirmation Dialog ──────────────── -->
+  <VDialog
+    v-model="isResetDialogVisible"
+    max-width="400"
+  >
+    <VCard>
+      <VCardTitle>{{ t('common.confirmReset') }}</VCardTitle>
+      <VCardText>{{ t('common.confirmResetDesc') }}</VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="tonal"
+          @click="isResetDialogVisible = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="error"
+          @click="confirmReset"
+        >
+          {{ t('common.confirmResetBtn') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 </template>

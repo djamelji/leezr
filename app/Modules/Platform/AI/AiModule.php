@@ -17,10 +17,8 @@ class AiModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 63,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'platform-ai', 'title' => 'AI', 'to' => ['name' => 'platform-ai-tab', 'params' => ['tab' => 'providers']], 'icon' => 'tabler-brain', 'permission' => 'view_ai', 'group' => 'ai', 'sort' => 40],
-                ],
-                routeNames: ['platform-ai-tab'],
+                navItems: [],
+                routeNames: ['platform-ai-tab', 'platform-operations-tab'],
             ),
             permissions: [
                 ['key' => 'view_ai', 'label' => 'View AI'],

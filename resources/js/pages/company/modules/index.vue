@@ -46,6 +46,67 @@ const reactivateDeactivateDate = ref(null)
 
 const canManage = computed(() => auth.roleLevel === 'management')
 
+// --- Contact sales dialog state ---
+const showContactDialog = ref(false)
+const contactModule = ref(null)
+const contactForm = reactive({ email: '', message: '' })
+const contactSending = ref(false)
+const contactSent = ref(false)
+
+const openContactDialog = mod => {
+  contactModule.value = mod
+  contactForm.email = auth.user?.email || ''
+  contactForm.message = ''
+  contactSent.value = false
+  showContactDialog.value = true
+}
+
+const submitContact = () => {
+  contactSending.value = true
+  const subject = encodeURIComponent(`Demande module: ${contactModule.value?.name}`)
+  const body = encodeURIComponent(`Email: ${contactForm.email}\n\nModule: ${contactModule.value?.name}\n\nMessage: ${contactForm.message}`)
+  window.open(`mailto:contact@leezr.com?subject=${subject}&body=${body}`)
+  contactSent.value = true
+  contactSending.value = false
+}
+
+// --- Preview drawer state ---
+const selectedModule = ref(null)
+const showPreviewDrawer = ref(false)
+
+const openPreviewDrawer = mod => {
+  selectedModule.value = mod
+  showPreviewDrawer.value = true
+}
+
+const previewContent = computed(() => {
+  if (!selectedModule.value) return null
+  const key = selectedModule.value.key
+
+  return {
+    tagline: t(`modulePreview.${key}.tagline`),
+    benefits: [
+      t(`modulePreview.${key}.benefits[0]`),
+      t(`modulePreview.${key}.benefits[1]`),
+      t(`modulePreview.${key}.benefits[2]`),
+    ],
+    example: t(`modulePreview.${key}.example`),
+    valueProposition: t(`modulePreview.${key}.valueProposition`),
+  }
+})
+
+const previewStatusChip = computed(() => {
+  if (!selectedModule.value) return null
+  const state = selectedModule.value.display_state
+  if (state === 'included') return { text: t('modulePreview.included'), color: 'primary', icon: 'tabler-check' }
+  if (state === 'active') return { text: t('modulePreview.alreadyActive'), color: 'success', icon: 'tabler-check' }
+  if (['locked_plan', 'locked_addon'].includes(state)) return { text: t('modulePreview.upgradeRequired'), color: 'warning', icon: 'tabler-lock' }
+  if (state === 'contact_sales') return { text: t('modulePreview.contactSales'), color: 'secondary', icon: 'tabler-mail' }
+  if (selectedModule.value.pricing_mode === 'addon') return { text: t('modulePreview.addon'), color: 'info', icon: 'tabler-puzzle' }
+
+  return { text: t('companyModules.stateAvailable'), color: 'info', icon: 'tabler-circle-check' }
+})
+
 onMounted(async () => {
   try {
     await moduleStore.fetchModules()
@@ -627,12 +688,21 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="secondary"
                         variant="tonal"
                         class="flex-grow-1"
-                        disabled
+                        @click="openContactDialog(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-mail" />
                         </template>
                         {{ t('companyModules.contactSales') }}
+                      </VBtn>
+
+                      <VBtn
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        @click="openPreviewDrawer(mod)"
+                      >
+                        {{ t('modulePreview.viewDetails') }}
                       </VBtn>
                     </VCardActions>
                   </VCard>
@@ -743,6 +813,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           <VIcon icon="tabler-settings" />
                         </template>
                         {{ t('companyModules.configure') }}
+                      </VBtn>
+
+                      <VBtn
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        @click="openPreviewDrawer(mod)"
+                      >
+                        {{ t('modulePreview.viewDetails') }}
                       </VBtn>
                     </VCardActions>
                   </VCard>
@@ -865,6 +944,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         @click="requestDeactivation(mod)"
                       >
                         {{ t('companyModules.deactivate') }}
+                      </VBtn>
+
+                      <VBtn
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        @click="openPreviewDrawer(mod)"
+                      >
+                        {{ t('modulePreview.viewDetails') }}
                       </VBtn>
                     </VCardActions>
                   </VCard>
@@ -1087,7 +1175,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="secondary"
                         variant="tonal"
                         class="flex-grow-1"
-                        disabled
+                        @click="openContactDialog(mod)"
                       >
                         <template #prepend>
                           <VIcon icon="tabler-mail" />
@@ -1106,6 +1194,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         @click="requestDeactivation(mod)"
                       >
                         {{ t('companyModules.deactivate') }}
+                      </VBtn>
+
+                      <VBtn
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        @click="openPreviewDrawer(mod)"
+                      >
+                        {{ t('modulePreview.viewDetails') }}
                       </VBtn>
                     </VCardActions>
                   </VCard>
@@ -1380,12 +1477,10 @@ const doToggle = async (key, isCurrentlyEnabled) => {
         </VCardTitle>
 
         <VCardText class="px-6">
-          <div
+          <VSkeletonLoader
             v-if="quoteLoading"
-            class="text-center py-4"
-          >
-            <VProgressCircular indeterminate />
-          </div>
+            type="paragraph"
+          />
 
           <template v-else-if="quoteData">
             <!-- ADR-340: Line items HT -->
@@ -1481,6 +1576,324 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             @click="confirmQuoteEnable"
           >
             {{ t('companyModules.quoteConfirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- Module preview drawer -->
+    <VNavigationDrawer
+      v-model="showPreviewDrawer"
+      temporary
+      location="end"
+      width="420"
+    >
+      <template v-if="selectedModule">
+        <!-- Header -->
+        <div class="pa-6 pb-4">
+          <div class="d-flex align-center gap-3 mb-4">
+            <VAvatar
+              size="48"
+              :color="selectedModule.type === 'core' ? 'primary' : 'info'"
+              variant="tonal"
+            >
+              <VIcon
+                :icon="selectedModule.icon_name || 'tabler-puzzle'"
+                size="24"
+              />
+            </VAvatar>
+            <div class="flex-grow-1">
+              <h5 class="text-h5">
+                {{ selectedModule.name }}
+              </h5>
+              <p
+                v-if="previewContent"
+                class="text-body-2 text-medium-emphasis mb-0"
+              >
+                {{ previewContent.tagline }}
+              </p>
+            </div>
+            <VBtn
+              icon
+              variant="text"
+              size="small"
+              @click="showPreviewDrawer = false"
+            >
+              <VIcon icon="tabler-x" />
+            </VBtn>
+          </div>
+
+          <!-- Status chip -->
+          <VChip
+            v-if="previewStatusChip"
+            :color="previewStatusChip.color"
+            variant="tonal"
+            size="small"
+          >
+            <template #prepend>
+              <VIcon
+                :icon="previewStatusChip.icon"
+                size="16"
+              />
+            </template>
+            {{ previewStatusChip.text }}
+          </VChip>
+        </div>
+
+        <VDivider />
+
+        <!-- Benefits -->
+        <div
+          v-if="previewContent"
+          class="pa-6 pb-2"
+        >
+          <h6 class="text-h6 mb-3">
+            {{ t('modulePreview.benefits') }}
+          </h6>
+          <VList density="compact">
+            <VListItem
+              v-for="(benefit, idx) in previewContent.benefits"
+              :key="idx"
+              class="px-0"
+            >
+              <template #prepend>
+                <VIcon
+                  icon="tabler-circle-check-filled"
+                  color="success"
+                  size="20"
+                  class="me-2"
+                />
+              </template>
+              <VListItemTitle class="text-body-2 text-wrap">
+                {{ benefit }}
+              </VListItemTitle>
+            </VListItem>
+          </VList>
+        </div>
+
+        <!-- Usage example -->
+        <div
+          v-if="previewContent"
+          class="px-6 pb-4"
+        >
+          <h6 class="text-h6 mb-3">
+            {{ t('modulePreview.usageExample') }}
+          </h6>
+          <VCard
+            color="primary"
+            variant="tonal"
+          >
+            <VCardText class="text-body-2">
+              <VIcon
+                icon="tabler-bulb"
+                size="18"
+                class="me-1"
+              />
+              {{ previewContent.example }}
+            </VCardText>
+          </VCard>
+        </div>
+
+        <!-- Value proposition (ROI) -->
+        <div
+          v-if="previewContent"
+          class="px-6 pb-4"
+        >
+          <h6 class="text-h6 mb-3">
+            {{ t('modulePreview.roi') }}
+          </h6>
+          <VAlert
+            type="success"
+            variant="tonal"
+            density="comfortable"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-trending-up" />
+            </template>
+            <span class="text-body-1 font-weight-medium">
+              {{ previewContent.valueProposition }}
+            </span>
+          </VAlert>
+        </div>
+
+        <VSpacer />
+
+        <!-- CTA -->
+        <div class="pa-6 pt-2">
+          <!-- Already active -->
+          <VBtn
+            v-if="['included', 'active'].includes(selectedModule.display_state)"
+            color="success"
+            variant="tonal"
+            block
+            disabled
+          >
+            <template #prepend>
+              <VIcon icon="tabler-check" />
+            </template>
+            {{ t('modulePreview.alreadyActive') }}
+          </VBtn>
+
+          <!-- Available → Activate -->
+          <VBtn
+            v-else-if="selectedModule.display_state === 'available' && canManage"
+            color="primary"
+            variant="elevated"
+            block
+            :loading="togglingKey === selectedModule.key"
+            @click="showPreviewDrawer = false; activateModule(selectedModule)"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-power" />
+            </template>
+            {{ t('modulePreview.activate') }}
+          </VBtn>
+
+          <!-- Locked plan → Upgrade -->
+          <VBtn
+            v-else-if="selectedModule.display_state === 'locked_plan'"
+            color="warning"
+            variant="elevated"
+            block
+            @click="showPreviewDrawer = false; navigateToPlanUpgrade(selectedModule)"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-lock" />
+            </template>
+            {{ t('modulePreview.upgradeRequired') }}
+          </VBtn>
+
+          <!-- Locked addon → Purchase -->
+          <VBtn
+            v-else-if="selectedModule.display_state === 'locked_addon'"
+            color="warning"
+            variant="elevated"
+            block
+            :loading="togglingKey === selectedModule.key"
+            @click="showPreviewDrawer = false; activateModule(selectedModule)"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-shopping-cart" />
+            </template>
+            {{ t('modulePreview.activate') }}
+          </VBtn>
+
+          <!-- Contact sales -->
+          <VBtn
+            v-else-if="selectedModule.display_state === 'contact_sales'"
+            color="secondary"
+            variant="elevated"
+            block
+            @click="showPreviewDrawer = false; openContactDialog(selectedModule)"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-mail" />
+            </template>
+            {{ t('modulePreview.contactSales') }}
+          </VBtn>
+        </div>
+      </template>
+    </VNavigationDrawer>
+
+    <!-- Contact sales dialog -->
+    <VDialog
+      v-model="showContactDialog"
+      max-width="500"
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center pt-5 px-6">
+          <VIcon
+            icon="tabler-lock"
+            color="secondary"
+            class="me-2"
+          />
+          {{ t('contactSales.title') }}
+        </VCardTitle>
+
+        <VCardText class="px-6">
+          <p class="text-body-1 mb-4">
+            {{ t('contactSales.description') }}
+          </p>
+
+          <div
+            v-if="contactModule"
+            class="d-flex align-center gap-2 mb-4"
+          >
+            <span class="text-body-2 text-medium-emphasis">{{ t('contactSales.moduleName') }} :</span>
+            <VChip
+              size="small"
+              variant="tonal"
+              color="info"
+            >
+              <template #prepend>
+                <VIcon
+                  :icon="contactModule.icon_name || 'tabler-puzzle'"
+                  size="16"
+                />
+              </template>
+              {{ contactModule.name }}
+            </VChip>
+          </div>
+
+          <VAlert
+            v-if="contactSent"
+            type="success"
+            variant="tonal"
+            class="mb-4"
+          >
+            {{ t('contactSales.sent') }}
+          </VAlert>
+
+          <template v-if="!contactSent">
+            <AppTextField
+              v-model="contactForm.email"
+              :label="t('contactSales.emailLabel')"
+              type="email"
+              class="mb-4"
+            />
+
+            <VTextarea
+              v-model="contactForm.message"
+              :label="t('contactSales.messageLabel')"
+              :placeholder="t('contactSales.messagePlaceholder')"
+              rows="3"
+              auto-grow
+            />
+          </template>
+        </VCardText>
+
+        <VCardActions class="px-6 pb-5">
+          <VSpacer />
+          <VBtn
+            color="secondary"
+            variant="tonal"
+            @click="showContactDialog = false"
+          >
+            {{ contactSent ? t('common.close') : t('contactSales.cancel') }}
+          </VBtn>
+          <VBtn
+            v-if="!contactSent"
+            color="info"
+            variant="tonal"
+            @click="router.push({ name: 'company-plan' }); showContactDialog = false"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-credit-card" />
+            </template>
+            {{ t('contactSales.viewPlans') }}
+          </VBtn>
+          <VBtn
+            v-if="!contactSent"
+            color="primary"
+            variant="elevated"
+            :loading="contactSending"
+            :disabled="!contactForm.email"
+            @click="submitContact"
+          >
+            <template #prepend>
+              <VIcon icon="tabler-send" />
+            </template>
+            {{ t('contactSales.submit') }}
           </VBtn>
         </VCardActions>
       </VCard>

@@ -1,6 +1,7 @@
 <script setup>
 definePage({ meta: { surface: 'structure', module: 'core.roles', permission: 'roles.view' } })
 
+import EmptyState from '@/core/components/EmptyState.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useMembersStore } from '@/modules/company/members/members.store'
@@ -334,9 +335,12 @@ const deleteRole = async role => {
 
         <!-- Empty state -->
         <template #no-data>
-          <div class="text-center pa-4 text-disabled">
-            {{ t('roles.noRoles') }}
-          </div>
+          <EmptyState
+            v-if="!isLoading"
+            icon="tabler-shield-off"
+            :title="t('roles.empty')"
+            :description="t('roles.emptyDesc')"
+          />
         </template>
       </VDataTable>
     </VCard>
@@ -354,6 +358,11 @@ const deleteRole = async role => {
       />
 
       <VDivider />
+
+      <VProgressLinear
+        v-if="drawerLoading"
+        indeterminate
+      />
 
       <div style="block-size: calc(100vh - 56px); overflow-y: auto;">
         <VCardText>

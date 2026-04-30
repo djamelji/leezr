@@ -88,7 +88,7 @@ class FooterLinkCapabilityTest extends TestCase
         $this->assertSame('footer-support', $link['key']);
         $this->assertSame('footer.support', $link['label']);
         $this->assertSame('manage_support', $link['permission']);
-        $this->assertSame(['name' => 'platform-support'], $link['to']);
+        $this->assertSame(['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']], $link['to']);
     }
 
     // ═══════════════════════════════════════════════════════

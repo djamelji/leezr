@@ -21,6 +21,12 @@ const tabs = computed(() => [
   },
 ])
 
+const currentTabTitle = computed(() => {
+  const current = tabs.value.find(tab => tab.tab === activeTab.value)
+
+  return current?.title ?? ''
+})
+
 onMounted(async () => {
   await Promise.all([
     settingsStore.fetchCompany(),
@@ -31,6 +37,14 @@ onMounted(async () => {
 
 <template>
   <div>
+    <PageBreadcrumbs
+      :items="[
+        { title: t('breadcrumbs.dashboard'), to: { name: 'dashboard' } },
+        { title: t('breadcrumbs.profile'), to: { name: 'company-profile-tab', params: { tab: 'overview' } } },
+        { title: currentTabTitle },
+      ]"
+    />
+
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill"

@@ -27,13 +27,13 @@ class EmailModule implements ModuleDefinition
                     [
                         'key' => 'platform-messaging',
                         'title' => 'Messaging',
-                        'to' => ['name' => 'platform-email-tab', 'params' => ['tab' => 'inbox']],
+                        'to' => ['name' => 'platform-messaging-tab', 'params' => ['tab' => 'inbox']],
                         'icon' => 'tabler-mail',
-                        'group' => 'operations',
-                        'sort' => 60,
+                        'group' => 'cockpit',
+                        'sort' => 5,
                     ],
                 ],
-                routeNames: ['platform-email-tab'],
+                routeNames: ['platform-email-tab', 'platform-messaging-tab'],
             ),
             permissions: [
                 ['key' => 'manage_email', 'label' => 'Manage Emails'],

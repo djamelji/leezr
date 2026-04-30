@@ -7,7 +7,7 @@ definePage({
   meta: {
     layout: 'platform',
     platform: true,
-    navActiveLink: 'platform-support',
+    navActiveLink: 'platform-communications-tab',
     module: 'platform.support',
   },
 })
@@ -93,6 +93,35 @@ const assignToMe = () => store.assignTicket(ticketId.value)
 const resolve = () => store.resolveTicket(ticketId.value)
 const close = () => store.closeTicket(ticketId.value)
 
+const slaColors = {
+  on_track: 'success',
+  warning: 'warning',
+  breached: 'error',
+}
+
+const slaLabels = {
+  on_track: () => t('support.slaOnTrack'),
+  warning: () => t('support.slaWarning'),
+  breached: () => t('support.slaBreached'),
+}
+
+const formatHours = hours => {
+  if (hours === null || hours === undefined) return '-'
+  if (hours < 1) return `${Math.round(hours * 60)}min`
+
+  return t('support.slaHours', { n: hours })
+}
+
+const getOverallSla = ticket => {
+  const sla = ticket?.sla_status
+  if (!sla) return 'on_track'
+  const statuses = [sla.response?.status, sla.resolution?.status]
+  if (statuses.includes('breached')) return 'breached'
+  if (statuses.includes('warning')) return 'warning'
+
+  return 'on_track'
+}
+
 
 const isMyMessage = msg => msg.sender_type === 'platform_admin' && msg.sender_id === auth.user?.id
 
@@ -123,8 +152,16 @@ onMounted(async () => {
         md="4"
       >
         <VCard class="mb-4">
-          <VCardTitle class="text-body-1 font-weight-bold">
-            #{{ store.currentTicket.id }} — {{ store.currentTicket.subject }}
+          <VCardTitle class="d-flex align-center gap-2 text-body-1 font-weight-bold">
+            <span>#{{ store.currentTicket.id }} — {{ store.currentTicket.subject }}</span>
+            <VSpacer />
+            <VChip
+              :color="slaColors[getOverallSla(store.currentTicket)]"
+              size="small"
+              variant="tonal"
+            >
+              {{ slaLabels[getOverallSla(store.currentTicket)]() }}
+            </VChip>
           </VCardTitle>
           <VCardText>
             <div class="d-flex flex-column gap-3">
@@ -187,6 +224,74 @@ onMounted(async () => {
               >
                 <span class="text-body-2 text-medium-emphasis">{{ t('support.firstResponse') }}:</span>
                 <span class="text-body-2">{{ formatDateTime(store.currentTicket.first_response_at) }}</span>
+              </div>
+
+              <!-- SLA Timers -->
+              <VDivider v-if="store.currentTicket.sla_status" />
+
+              <div
+                v-if="store.currentTicket.sla_status"
+                class="d-flex flex-column gap-2"
+              >
+                <div class="text-body-2 font-weight-bold">
+                  {{ t('support.sla') }}
+                </div>
+
+                <!-- Response SLA -->
+                <div class="d-flex align-center justify-space-between">
+                  <span class="text-body-2 text-medium-emphasis">{{ t('support.slaResponseTime') }}:</span>
+                  <span v-if="store.currentTicket.sla_status.response.completed">
+                    <VChip
+                      :color="slaColors[store.currentTicket.sla_status.response.status]"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      {{ t('support.slaResponded') }} — {{ formatHours(store.currentTicket.sla_status.response.elapsed_hours) }}
+                    </VChip>
+                  </span>
+                  <span v-else>
+                    <VChip
+                      :color="slaColors[store.currentTicket.sla_status.response.status]"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      <template v-if="store.currentTicket.sla_status.response.remaining_hours > 0">
+                        {{ t('support.slaResponseIn', { time: formatHours(store.currentTicket.sla_status.response.remaining_hours) }) }}
+                      </template>
+                      <template v-else>
+                        {{ t('support.slaDeadlinePassed') }}
+                      </template>
+                    </VChip>
+                  </span>
+                </div>
+
+                <!-- Resolution SLA -->
+                <div class="d-flex align-center justify-space-between">
+                  <span class="text-body-2 text-medium-emphasis">{{ t('support.slaResolutionTime') }}:</span>
+                  <span v-if="store.currentTicket.sla_status.resolution.completed">
+                    <VChip
+                      :color="slaColors[store.currentTicket.sla_status.resolution.status]"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      {{ t('support.slaResolved') }} — {{ formatHours(store.currentTicket.sla_status.resolution.elapsed_hours) }}
+                    </VChip>
+                  </span>
+                  <span v-else>
+                    <VChip
+                      :color="slaColors[store.currentTicket.sla_status.resolution.status]"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      <template v-if="store.currentTicket.sla_status.resolution.remaining_hours > 0">
+                        {{ t('support.slaResolutionIn', { time: formatHours(store.currentTicket.sla_status.resolution.remaining_hours) }) }}
+                      </template>
+                      <template v-else>
+                        {{ t('support.slaDeadlinePassed') }}
+                      </template>
+                    </VChip>
+                  </span>
+                </div>
               </div>
             </div>
           </VCardText>

@@ -17,18 +17,8 @@ class DocumentsModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 62,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'document-types',
-                        'title' => 'Document Types',
-                        'to' => ['name' => 'platform-documents'],
-                        'icon' => 'tabler-file-text',
-                        'permission' => 'manage_document_catalog',
-                        'group' => 'product',
-                        'sort' => 33,
-                    ],
-                ],
-                routeNames: ['platform-documents', 'platform-documents-id'],
+                navItems: [],
+                routeNames: ['platform-documents', 'platform-documents-id', 'platform-catalog-tab'],
             ),
             permissions: [
                 ['key' => 'manage_document_catalog', 'label' => 'Manage Document Type Catalog'],

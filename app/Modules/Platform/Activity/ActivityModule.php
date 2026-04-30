@@ -23,18 +23,8 @@ class ActivityModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 98,
             capabilities: new Capabilities(
-                navItems: [
-                    [
-                        'key' => 'activity',
-                        'title' => 'Activity',
-                        'to' => ['name' => 'platform-activity'],
-                        'icon' => 'tabler-activity',
-                        'permission' => 'view_audit_logs',
-                        'group' => 'cockpit',
-                        'sort' => 2,
-                    ],
-                ],
-                routeNames: ['platform-activity'],
+                navItems: [],
+                routeNames: ['platform-activity', 'platform-dashboard-tab'],
             ),
             permissions: [],
             bundles: [],

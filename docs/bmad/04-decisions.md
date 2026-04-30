@@ -16254,4 +16254,511 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-462 — Dashboard Quick Actions Bar (P0-1) (2026-04-28)
+
+**Contexte** : Après l'onboarding, le dashboard manquait de guidance contextuelle. Les utilisateurs ne savaient pas quelles actions entreprendre ensuite (compléter le profil, inviter des membres, configurer la facturation).
+
+**Décisions** :
+
+1. **QuickActionsBar sub-component** — Nouveau composant `_QuickActionsBar.vue` affiché sous l'OnboardingWidget. Barre horizontale avec 4 boutons d'action rapide : Profil entreprise, Inviter un membre, Documents, Facturation
+
+2. **Filtrage par rôle** — Le bouton Facturation n'est visible que pour les utilisateurs administratifs (`auth.isAdministrative`). Les autres actions sont visibles par tous
+
+3. **Placement** — Inséré entre l'OnboardingWidget et le DashboardHostContainer dans `dashboard.vue`. Toujours visible, indépendant de l'état d'onboarding
+
+4. **Routes avec params tab** — Les liens Documents et Facturation utilisent les named routes avec params tab (`company-documentation-tab`, `company-billing-tab`) conformément à ADR-391
+
+**Fichiers** :
+- `resources/js/pages/company/dashboard/_QuickActionsBar.vue` (nouveau)
+- `resources/js/pages/dashboard.vue` (import + template)
+- `resources/js/plugins/i18n/locales/fr.json` (dashboard.quickActions.*)
+- `resources/js/plugins/i18n/locales/en.json` (dashboard.quickActions.*)
+
+---
+
+### ADR-463 — Encrypt SMTP/IMAP Credentials in PlatformSetting (P0-4) (2026-04-28)
+
+**Contexte** : Les mots de passe SMTP/IMAP sont stockés en clair dans la colonne JSON `email` de `platform_settings`. Cela constitue un risque de sécurité : toute lecture de la base expose directement les credentials.
+
+**Décisions** :
+1. Utiliser `Crypt::encryptString()` / `Crypt::decryptString()` (AES-256-CBC via APP_KEY) pour chiffrer uniquement `smtp_password` et `imap_password` dans le JSON `email`.
+2. Implémenter via accessor/mutator custom sur PlatformSetting (`getEmailAttribute` / `setEmailAttribute`) plutôt que le cast `encrypted:array` (qui chiffrerait toute la colonne, y compris les champs non sensibles).
+3. Retirer `'email' => 'array'` des `$casts` car le mutator gère manuellement `json_encode`/`json_decode` — le cast et le mutator sont incompatibles.
+4. Migration data pour chiffrer les mots de passe existants en base.
+5. `DecryptException` catch dans l'accessor pour les données pré-migration encore en clair — transition transparente.
+6. Helper `isEncrypted()` dans le mutator pour éviter le double-chiffrement (idempotence).
+
+**Conséquences** :
+- Les consumers (`EmailService`, `ImapFetcher`, etc.) n'ont aucun changement : ils lisent `$settings['smtp_password']` qui est auto-déchiffré par l'accessor.
+- La migration `down()` ne peut pas inverser le chiffrement (perte de données) — re-seeding nécessaire.
+- Toute rotation de `APP_KEY` nécessitera une re-encryption des credentials email.
+
+**Fichiers** :
+- `app/Platform/Models/PlatformSetting.php` (accessor/mutator + suppression cast email)
+- `database/migrations/2026_04_28_100000_encrypt_email_credentials_in_platform_settings.php` (nouveau)
+
+---
+
+### ADR-464 — Onboarding Widget: 2 New Steps — Module Activation & First Document (P0-2) (2026-04-28)
+
+**Contexte** : Le widget d'onboarding (ADR-383) ne comporte que 4 étapes. Il manque des actions business clés pour guider l'owner : activer un module métier et déposer un premier document.
+
+**Décisions** :
+1. Ajouter 2 nouvelles étapes à la fin de la séquence d'onboarding : `activate_module` et `first_document`.
+2. `activate_module` vérifie l'existence d'un `CompanyModule` avec `is_enabled_for_company = true` pour la company.
+3. `first_document` vérifie l'existence d'un `CompanyDocument` OU d'un `MemberDocument` associé à la company (couvre les deux types de documents).
+4. Les liens frontend pointent respectivement vers `/company/modules` et la route `company-documents-tab` (tab overview).
+5. Le fallback `totalCount` du widget frontend passe de 4 à 6.
+
+**Conséquences** :
+- L'API `/dashboard/onboarding` retourne désormais 6 steps au lieu de 4.
+- Le test `OnboardingFilteredTest` mis à jour pour valider les 6 steps.
+- 2257 tests passent, build clean.
+
+**Fichiers** :
+- `app/Modules/Core/Dashboard/Http/OnboardingStatusController.php` (2 steps ajoutés + imports)
+- `resources/js/pages/company/dashboard/_OnboardingWidget.vue` (stepMeta + totalCount fallback)
+- `resources/js/plugins/i18n/locales/fr.json` (labels FR)
+- `resources/js/plugins/i18n/locales/en.json` (labels EN)
+- `tests/Feature/OnboardingFilteredTest.php` (assertion 4→6 steps)
+
+---
+
+### ADR-465 — NavBar Support Icon + Help Center Link (P0-3) (2026-04-28)
+
+**Contexte** : L'utilisateur n'a aucun accès rapide au support ou au help center depuis la barre de navigation. L'audit produit identifie ce manque comme un irritant UX critique (P0 "Base saine").
+
+**Décisions** :
+1. Créer un composant `NavBarSupport.vue` dans `resources/js/layouts/components/` — icône `tabler-help-circle` avec tooltip.
+2. L'icône redirige vers `/help-center` via `router.push()` (navigation interne, pas un lien externe).
+3. Intégrer le composant dans `NavbarGlobalWidgets.vue`, positionné entre les raccourcis et les notifications.
+4. Utiliser `IconBtn` (composant Vuexy existant) pour la cohérence visuelle avec les autres icônes de la navbar.
+
+**Conséquences** :
+- Le help center est accessible en 1 clic depuis n'importe quelle page company.
+- La route `/help-center` doit exister (page déjà présente dans le projet).
+- Aucun impact sur les pages platform (navbar séparée).
+
+**Fichiers** :
+- `resources/js/layouts/components/NavBarSupport.vue` (nouveau)
+- `resources/js/layouts/components/NavbarGlobalWidgets.vue` (ajout import + template)
+- `resources/js/plugins/i18n/locales/fr.json` (clé `common.helpCenter`)
+- `resources/js/plugins/i18n/locales/en.json` (clé `common.helpCenter`)
+
+---
+
+### ADR-466 — Sprint P1 "Fluidité Company" — UX Polish (2026-04-28)
+
+**Contexte** : L'audit produit (score 75/100) identifie des irritants UX sur les pages company : empty states manquants, formulaires sans validation, navigation sans breadcrumbs, absence de protection des modifications non sauvegardées.
+
+**Décisions** :
+
+1. **Empty states cohérents** (P1-1) : Remplacer les états vides artisanaux par le composant `EmptyState` standard sur `roles.vue` et `workflows/index.vue`. Ajouter `VSkeletonLoader` dans le quote dialog de `modules/index.vue`. Ajouter `VProgressLinear` dans le drawer roles pendant le chargement.
+
+2. **Validation formulaire profil** (P1-2) : Ajouter `requiredValidator` sur le champ company name et `emailValidator` sur billing_email dans `_CompanyProfileOverview.vue`. Désactiver le bouton submit si formulaire invalide.
+
+3. **Navigation contextuelle** (P1-3) : Ajouter `PageBreadcrumbs` sur `billing/[tab].vue` et `profile/[tab].vue` (Dashboard > Section > Tab). Corriger le back button de `billing/invoices/[id].vue` pour utiliser la route nommée avec params (ADR-391).
+
+4. **Feedback visuel actions** (P1-4) : Déjà implémenté — toasts success/error et `:loading` présents sur tous les boutons d'action (modules toggle, roles drawer save, support send).
+
+5. **Protection unsaved changes** (P1-5) : Intégrer le composable `useUnsavedChanges` dans `_CompanyProfileOverview.vue` — dirty state detection, confirmation dialog avant reset, `onBeforeRouteLeave` guard, `beforeunload` guard navigateur.
+
+**Conséquences** :
+- UX plus fluide et cohérente sur toutes les pages company.
+- L'utilisateur ne perd plus ses modifications par accident.
+- La navigation est contextualisée (breadcrumbs) sur les sections à onglets.
+- Les validators frontend bloquent les soumissions invalides côté client.
+
+**Fichiers** :
+- `resources/js/pages/company/roles.vue` (EmptyState + drawer VProgressLinear)
+- `resources/js/pages/company/workflows/index.vue` (EmptyState)
+- `resources/js/pages/company/modules/index.vue` (VSkeletonLoader quote dialog)
+- `resources/js/pages/company/profile/_CompanyProfileOverview.vue` (validation + unsaved changes)
+- `resources/js/pages/company/billing/[tab].vue` (PageBreadcrumbs)
+- `resources/js/pages/company/billing/invoices/[id].vue` (fix back button route nommée)
+- `resources/js/pages/company/profile/[tab].vue` (PageBreadcrumbs)
+- `resources/js/plugins/i18n/locales/fr.json` (clés roles, workflows, breadcrumbs, confirmReset)
+- `resources/js/plugins/i18n/locales/en.json` (idem EN)
+
+---
+
+### ADR-467 — AI Operations Tab (P2-2) — Live Queue, Top Consumers, Error Rate (2026-04-28)
+
+**Contexte** : L'audit P2-2 demande un tab "Operations" dans la section Platform AI pour surveiller en temps réel la santé du système AI, le statut des queues, le taux d'erreur, et identifier les companies les plus consommatrices. Les tabs existants (Providers, Usage, Routing, Settings) couvrent la configuration et les stats brutes mais manquent d'une vue opérationnelle consolidée.
+
+**Décisions** :
+
+1. **Tab Operations** : Ajout d'un 5e onglet "Operations" entre Usage et Routing dans `[tab].vue`. Ce tab agrège les données de deux endpoints existants (`/ai/health` et `/ai/usage`) pour fournir une vue opérationnelle sans créer de nouvel endpoint.
+
+2. **Top consumers by company** : Enrichissement de l'endpoint `GET /ai/usage` avec un champ `by_company` — top 10 companies classées par nombre de requêtes, avec total tokens et erreurs. Le champ `company_id` existe déjà dans `AiRequestLog`.
+
+3. **Store enrichi** : Ajout de `fetchHealth()` et `byCompany` au store usage/ai, exposés via le store composite `usePlatformAiStore`.
+
+4. **Contenu du tab** : 4 KPI cards (Overall Health, Pending Jobs, Failed Jobs 24h, Error Rate %), 2 cartes detail (Provider Health, Document Processing status), 1 table top consumers (VDataTable).
+
+5. **i18n** : Nouvelles clés `platformAi.operations.*` dans fr.json et en.json.
+
+**Conséquences** :
+- Vue opérationnelle complète pour l'admin platform — monitoring queue AI, santé provider, taux d'erreur, top consumers.
+- Aucun nouvel endpoint API — réutilisation de `/ai/health` et enrichissement de `/ai/usage`.
+- Le tab Usage conserve sa fonction (stats globales, requêtes récentes), Operations ajoute la dimension monitoring/health.
+
+**Fichiers** :
+- `resources/js/pages/platform/ai/[tab].vue` (ajout tab operations)
+- `resources/js/pages/platform/ai/_AiOperationsTab.vue` (nouveau composant)
+- `resources/js/modules/platform-admin/ai/ai-usage.store.js` (fetchHealth, byCompany)
+- `resources/js/modules/platform-admin/ai/ai.store.js` (expose fetchHealth)
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` (by_company dans usage)
+- `resources/js/plugins/i18n/locales/fr.json` (clés platformAi.operations)
+- `resources/js/plugins/i18n/locales/en.json` (clés platformAi.operations)
+
+---
+
+### ADR-468 — Sprint P2 "Amélioration Forte Valeur" — Platform Admin (2026-04-28)
+
+**Contexte** : L'audit produit identifie des manques opérationnels sur la plateforme admin : pas de vue santé système agrégée, pas de suivi SLA support, pas de recherche globale multi-table.
+
+**Décisions** :
+
+1. **System Health Page** (P2-1) : Créer un endpoint `GET /platform/system/health` via `SystemHealthController` qui agrège 7 sections (Email, AI, Queues, Scheduler, Database, Disk, Alerts). Chaque section retourne `status: healthy|warning|critical` avec détails. Page Vue `system-health.vue` avec cards colorées et bouton rafraîchir. Navigation ajoutée dans DashboardModule (group: operations).
+
+2. **AI Operations Tab** (P2-2) : Nouveau tab "Operations" dans la section AI platform avec KPI (queue pending, failed 24h, error rate), provider health cards, document processing stats, et table top 10 consumers par company. Backend enrichi avec `by_company` dans l'endpoint usage. Store `ai-usage.store.js` étendu avec `fetchHealth()`. (ADR-467)
+
+3. **Billing Navigation** (P2-3) : Déjà complet — 13 tabs billing platform en place, structure unifiée `billing/[tab].vue`. Aucune modification nécessaire.
+
+4. **Support SLA Tracking** (P2-4) : Accessor `sla_status` sur `SupportTicket` avec seuils par priorité (urgent: 2h/8h, high: 4h/24h, normal: 8h/48h, low: 24h/72h). Status: on_track/warning/breached calculé par rapport au temps écoulé. Frontend enrichi : 4 KPI cards (tickets ouverts, temps moyen réponse, conformité SLA, tickets en breach) + colonne SLA dans le tableau + chips colorés + timers SLA sur la page détail.
+
+5. **Global Search** (P2-5) : Endpoint `GET /platform/search?q=xxx` via `PlatformSearchController` — recherche multi-table (Companies, Users, Invoices, Support Tickets) avec limit 5 par catégorie. Format compatible avec NavSearchBar existant. Minimum 2 caractères.
+
+**Conséquences** :
+- L'admin platform a une visibilité complète sur la santé de l'infrastructure.
+- Le suivi SLA permet d'identifier les tickets en dépassement avant breach.
+- La recherche globale trouve n'importe quelle entité en 2 secondes.
+- Navigation platform enrichie (group: operations).
+
+**Fichiers** :
+- `app/Modules/Platform/Dashboard/Http/SystemHealthController.php` (nouveau)
+- `app/Modules/Platform/Dashboard/Http/PlatformSearchController.php` (nouveau)
+- `app/Modules/Platform/Dashboard/DashboardModule.php` (nav item + routeName)
+- `resources/js/pages/platform/system-health.vue` (nouveau)
+- `resources/js/pages/platform/ai/_AiOperationsTab.vue` (nouveau)
+- `resources/js/pages/platform/ai/[tab].vue` (ajout tab)
+- `resources/js/pages/platform/support/index.vue` (KPI cards + SLA column)
+- `resources/js/pages/platform/support/[id].vue` (SLA timers)
+- `app/Core/Support/SupportTicket.php` (accessor sla_status)
+- `app/Modules/Platform/AI/Http/PlatformAiController.php` (by_company)
+- `routes/platform.php` (2 nouvelles routes)
+- `resources/js/plugins/i18n/locales/fr.json` (systemHealth, platformSupport.sla, platformAi.operations)
+- `resources/js/plugins/i18n/locales/en.json` (idem EN)
+
+### ADR-469 — P3-2 Incident Center: Admin Notifications + Escalation (2026-04-29)
+
+**Contexte** : Les alertes critiques de la plateforme (ADR-438) n'avaient pas de mécanisme de notification email ni d'escalade automatique. Un admin devait consulter manuellement le tableau de bord pour découvrir les alertes critiques. Pas de chronologie d'incident non plus.
+
+**Décisions** :
+
+1. **Critical Alert Email Notification** : Observer `PlatformAlertObserver` sur `PlatformAlert::created` qui envoie `CriticalAlertNotification` (mail queued) à tous les `PlatformUser` ayant le rôle `super_admin` quand une alerte `severity=critical` est créée.
+
+2. **Escalation automatique** : Commande `alerts:escalate` planifiée toutes les 15 minutes. Cherche les alertes critiques actives non acquittées depuis > 30 minutes. Incrémente `metadata.escalation_count`, stocke `metadata.last_escalated_at`, re-notifie les admins. Cap à 3 escalations par alerte.
+
+3. **Incident Timeline** : Accessor `incident_timeline` ajouté à `PlatformAlert` (dans `$appends`). Construit une chronologie ordonnée : created -> escalated -> acknowledged -> resolved. Exposé automatiquement dans toutes les réponses API.
+
+4. **API show endpoint** : `GET /platform/api/alerts/{alert}` ajouté avec relations `company` et `acknowledgedByUser` eager-loaded.
+
+5. **Frontend timeline dialog** : Bouton timeline dans le tableau des alertes, ouvre un `VDialog` avec `_AlertTimeline.vue` qui affiche une `VTimeline` Vuetify avec les événements colorés et horodatés.
+
+**Conséquences** :
+- Les admins reçoivent un email immédiat pour chaque alerte critique.
+- Les alertes non acquittées sont escaladées automatiquement (rappel toutes les 15 min, max 3 fois).
+- La chronologie permet de tracer le cycle de vie complet d'un incident.
+- Le scheduler a maintenant 16 tâches planifiées (ajout `alerts:escalate`).
+
+**Fichiers** :
+- `app/Core/Alerts/Notifications/CriticalAlertNotification.php` (nouveau)
+- `app/Core/Alerts/Observers/PlatformAlertObserver.php` (nouveau)
+- `app/Console/Commands/EscalateAlertsCommand.php` (nouveau)
+- `app/Core/Alerts/PlatformAlert.php` (accessor incident_timeline + $appends)
+- `app/Modules/Platform/Alerts/Http/PlatformAlertController.php` (méthode show)
+- `app/Providers/AppServiceProvider.php` (observer registration)
+- `routes/platform.php` (route show)
+- `routes/console.php` (schedule alerts:escalate)
+- `resources/js/pages/platform/alerts/_AlertTimeline.vue` (nouveau)
+- `resources/js/pages/platform/alerts/index.vue` (dialog timeline)
+- `resources/js/modules/platform-admin/alerts/alerts.store.js` (fetchAlertDetail)
+- `resources/js/plugins/i18n/locales/fr.json` (clés incidents.*)
+- `resources/js/plugins/i18n/locales/en.json` (clés incidents.*)
+
+---
+
+### ADR-470 — P3-3 Feature Flags: Lightweight Custom System (2026-04-29)
+
+**Contexte** : Le projet a besoin d'un système de feature flags pour activer/désactiver des fonctionnalités par entreprise. Laravel Pennant est surdimensionné pour ce cas d'usage. Un système custom léger avec table DB, cache, et UI admin est suffisant.
+
+**Décisions** :
+
+1. **Table `feature_flags`** : Colonnes `key` (unique, 100 chars), `description`, `enabled_globally` (boolean), `company_overrides` (JSON map `{company_id: bool}`). Migration standard.
+
+2. **Model `FeatureFlag`** avec méthode statique `isEnabled(key, companyId)` : vérifie d'abord l'override company, puis le flag global. Cache 5 minutes par clé, invalidé automatiquement via `booted()` events (saved/deleted).
+
+3. **Service `FeatureFlagService`** : CRUD complet, toggle global, set/remove company override, résolution pour une company (tous les flags avec leur état résolu).
+
+4. **Platform admin controller** sous `App\Modules\Platform\Settings\Http\FeatureFlagController` : 6 endpoints (list, store, update, destroy, toggle, company-override). Protégé par `module.active:platform.settings` + `platform.permission:manage_theme_settings`.
+
+5. **Company-scoped endpoint** : `GET /api/feature-flags` via `CompanyFeatureFlagController` (invokable). Retourne un map `{key: bool}` résolu pour la company authentifiée. Pas de module gate (infrastructure-level).
+
+6. **Frontend composable `useFeatureFlag()`** : Singleton réactif, auto-fetch au premier usage, expose `isEnabled(key)` et `flags` (readonly). State partagé entre composants.
+
+7. **Page admin `platform/feature-flags.vue`** : Table des flags avec switch toggle, compteur overrides, dialog création, suppression. Module `platform.settings`.
+
+8. **Nav item** ajouté dans `PlatformSettingsModule` (sort: 72, entre Settings et My Account).
+
+**Conséquences** :
+- Système de feature flags opérationnel sans dépendance externe.
+- Cache 5 min par clé, invalidation automatique.
+- Les company overrides permettent un rollout progressif.
+- Le composable frontend est prêt pour consommation dans n'importe quelle page company.
+
+**Fichiers** :
+- `database/migrations/2026_04_29_015636_create_feature_flags_table.php` (nouveau)
+- `app/Core/FeatureFlag/FeatureFlag.php` (nouveau — model)
+- `app/Core/FeatureFlag/FeatureFlagService.php` (nouveau — service)
+- `app/Modules/Platform/Settings/Http/FeatureFlagController.php` (nouveau — platform admin)
+- `app/Modules/Core/FeatureFlag/Http/CompanyFeatureFlagController.php` (nouveau — company endpoint)
+- `routes/platform.php` (6 routes feature-flags)
+- `routes/company.php` (1 route feature-flags)
+- `app/Modules/Platform/Settings/PlatformSettingsModule.php` (nav item + routeName)
+- `resources/js/pages/platform/feature-flags.vue` (nouveau — admin page)
+- `resources/js/composables/useFeatureFlag.js` (nouveau — company composable)
+- `tests/Feature/PageModuleAlignmentTest.php` (route override)
+- `resources/js/plugins/i18n/locales/fr.json` (clés featureFlags.*, nav.platform.feature-flags)
+- `resources/js/plugins/i18n/locales/en.json` (idem EN)
+
+---
+
+### ADR-471 — P3-4 Usage Monitoring: Daily Snapshots + Platform Analytics (2026-04-29)
+
+**Contexte** : Le platform admin a besoin de visibilité sur l'utilisation par entreprise : requêtes IA, tokens consommés, emails envoyés, membres actifs, stockage. Pas de métriques temps réel pour l'instant — un snapshot quotidien suffit.
+
+**Décisions** :
+
+1. **Table `usage_snapshots`** : Colonnes `company_id`, `date` (unique par company), `api_requests`, `ai_requests`, `ai_tokens`, `emails_sent`, `active_members`, `storage_bytes`. Snapshot quotidien par entreprise.
+
+2. **Commande `usage:collect-snapshots`** : Collecte quotidienne à 23h55 via scheduler. Agrège les données depuis `ai_request_logs` (input_tokens + output_tokens), `email_logs` (status=sent), `memberships` (count), `company_documents` + `member_documents` (file_size_bytes). UpdateOrCreate pour idempotence.
+
+3. **Service `UsageAnalyticsService`** : Deux méthodes — `platformOverview(days)` pour vue globale (totaux, top 10 consommateurs IA, tendance quotidienne) et `companyDetail(companyId, days)` pour vue par entreprise. Filtrable sur 7/30/90 jours.
+
+4. **Controller `UsageMonitoringController`** : Deux endpoints dans le groupe `platform.dashboard` — `/usage/overview` et `/usage/company/{companyId}`. Max 90 jours.
+
+5. **Page Vue `platform/usage-monitoring.vue`** : 5 KPI cards (card-grid-xs), table des top consommateurs IA, table de tendance quotidienne. Sélecteur de période 7/30/90 jours.
+
+6. **Nav item** dans DashboardModule : `usage-monitoring` (sort 64, groupe operations, icône tabler-chart-bar).
+
+**Conséquences** :
+- Les données ne sont disponibles qu'à partir du premier snapshot (pas de backfill)
+- `api_requests` reste à 0 en attendant un middleware de comptage futur
+- Le champ `storage_bytes` agrège company_documents + member_documents
+
+**Fichiers** :
+- `database/migrations/2026_04_29_200001_create_usage_snapshots_table.php` (nouveau)
+- `app/Core/Usage/UsageSnapshot.php` (nouveau — model)
+- `app/Core/Usage/UsageAnalyticsService.php` (nouveau — service)
+- `app/Console/Commands/CollectUsageSnapshotsCommand.php` (nouveau — commande)
+- `app/Modules/Platform/Dashboard/Http/UsageMonitoringController.php` (nouveau — controller)
+- `routes/platform.php` (2 routes usage)
+- `routes/console.php` (schedule usage:collect-snapshots)
+- `app/Modules/Platform/Dashboard/DashboardModule.php` (nav item + routeName)
+- `app/Core/Automation/ScheduledTaskRegistry.php` (enregistrement task)
+- `resources/js/pages/platform/usage-monitoring.vue` (nouveau — page admin)
+- `tests/Feature/PageModuleAlignmentTest.php` (route override)
+- `resources/js/plugins/i18n/locales/fr.json` (clés usageMonitoring.*, nav.platform.usage-monitoring)
+- `resources/js/plugins/i18n/locales/en.json` (idem EN)
+
+---
+
+### ADR-472 — Sprint P3 "Différenciation" — Consolidation (2026-04-29)
+
+**Contexte** : Sprint P3 de la roadmap V2 Platform — 4 fonctionnalités de différenciation pour rendre la plateforme pilotable et progressive.
+
+**Décisions** :
+
+1. **P3-1 — Onboarding Funnel** (ADR manquant, consolidé ici) :
+   - Table `registration_funnel_events` pour tracker chaque étape du wizard d'inscription
+   - `FunnelTrackController` (POST public, throttle 30/min) pour tracking côté frontend
+   - `OnboardingFunnelService` pour analytics : conversion rates, abandons par étape, tendance 7j
+   - `DetectAbandonedRegistrationsCommand` (daily 08:00) avec alertes PlatformAlert si >5 abandons
+   - Page `platform/onboarding-funnel.vue` : 4 KPIs, entonnoir visuel, analyse abandons, trend
+   - Intégration dans `RegisterCompanyUseCase` pour tracker step=completed
+
+2. **P3-2 — Incident Center** (ADR-469) : Notifications email + escalade automatique + timeline
+
+3. **P3-3 — Feature Flags** (ADR-470) : Système léger custom (pas Pennant), toggles globaux + overrides par company, cache 5min, composable frontend
+
+4. **P3-4 — Usage Monitoring** (ADR-471) : Snapshots quotidiens, analytics IA/emails/storage/membres, page dashboard
+
+5. **Fix post-agents** : `FunnelTrackController` déplacé de `App\Core\Registration\Http` vers `App\Modules\Infrastructure\Auth\Http` pour conformité `NoOrphanRouteTest`
+
+**Conséquences** :
+- 4 nouvelles pages platform : onboarding-funnel, alerts (enrichie), feature-flags, usage-monitoring
+- 3 nouvelles commandes planifiées : `registration:detect-abandoned`, `alerts:escalate`, `usage:collect-snapshots`
+- Composable `useFeatureFlag.js` disponible pour gating frontend
+- 2257 tests verts, build clean
+
+**Fichiers** : Voir ADR-469, ADR-470, ADR-471 pour le détail par fonctionnalité.
+
+---
+
+### ADR-473 — Proration Human-Readable Breakdown in Plan Change Preview (2026-04-29)
+
+**Contexte** : La dialog de preview de changement de plan affichait les montants de prorata (crédit ancien plan, charge nouveau plan, net) sans aucune explication du calcul. Les utilisateurs ne comprenaient pas d'où venaient les montants facturés.
+
+**Décisions** :
+1. Remplacer la section proration opaque par un détail de calcul transparent dans une VCard outlined
+2. Afficher le plan actuel et le nouveau plan avec leur prix mensuel
+3. Montrer les jours restants / jours totaux avec une barre de progression (VProgressLinear) et un pourcentage (VChip)
+4. Pour chaque ligne (crédit et charge), afficher la formule en sous-titre : `(prix × jours_restants/jours_totaux)`
+5. Le montant net utilise un label contextuel : "Montant à payer" (upgrade) ou "Crédit sur votre portefeuille" (downgrade)
+6. Le net est affiché dans un VChip coloré (warning pour charge, success pour crédit)
+7. 7 nouvelles clés i18n ajoutées dans fr.json et en.json (section `planChangePreview`)
+
+**Conséquences** :
+- L'utilisateur voit exactement comment son montant est calculé
+- Aucune modification backend — seul l'affichage frontend change
+- Les clés i18n existantes (`creditOldPlan`, `chargeNewPlan`) sont mises à jour pour un libellé plus clair
+- Build clean, 2256 tests verts
+
+**Fichiers** :
+- `resources/js/pages/company/billing/_BillingPlan.vue` (section proration lignes ~1063-1170)
+- `resources/js/plugins/i18n/locales/fr.json` (section `planChangePreview`)
+- `resources/js/plugins/i18n/locales/en.json` (section `planChangePreview`)
+
+---
+
+### ADR-474 — Onboarding Recoverable: Reopen After Dismiss (2026-04-29)
+
+**Contexte** : L'onboarding widget (ADR-383) ne pouvait pas etre recupere apres dismiss. L'owner qui cliquait "X" perdait definitivement son guide de mise en route, ce qui est un business blocker.
+
+**Decisions** :
+1. **Backend** : Le endpoint GET `/dashboard/onboarding` retourne desormais les steps meme quand dismissed (`dismissed: true` + `steps` + `completed_count` + `total_count`), afin que le frontend puisse determiner si un reopen est pertinent.
+2. **Backend** : Nouveau endpoint POST `/dashboard/onboarding/reopen` — owner-only, remet `onboarding_dismissed_at` a null et retourne les steps frais.
+3. **Frontend** : Quand dismissed mais pas toutes les etapes completees, un VAlert tonal "info" s'affiche avec un bouton "Reprendre la configuration" qui appelle reopen.
+4. **Frontend** : Quand toutes les etapes sont completees, rien ne s'affiche (meme si dismissed).
+5. **Tests** : Test existant mis a jour (dismissed retourne maintenant les steps) + 2 nouveaux tests (reopen clears timestamp, non-owner cannot reopen).
+
+**Consequences** :
+- L'owner peut toujours recuperer son guide de mise en route apres l'avoir masque
+- Le banner de reopen est discret (VAlert compact) et ne perturbe pas le dashboard
+- La securite owner-only est preservee sur le reopen
+
+**Fichiers** :
+- `app/Modules/Core/Dashboard/Http/OnboardingStatusController.php` (methode `reopen` + dismissed response enrichie)
+- `routes/company.php` (route `POST /dashboard/onboarding/reopen`)
+- `resources/js/pages/company/dashboard/_OnboardingWidget.vue` (banner reopen + logique `showReopenBanner`)
+- `resources/js/plugins/i18n/locales/fr.json` (cles `onboarding.resumeSetup`, `resumeHint`, `reopening`)
+- `resources/js/plugins/i18n/locales/en.json` (cles `onboarding.resumeSetup`, `resumeHint`, `reopening`)
+- `tests/Feature/OnboardingFilteredTest.php` (test mis a jour + 2 nouveaux tests)
+
+---
+
+## ADR-462 : Registration Hero — Value Proposition dans le panneau gauche (2026-04-29)
+
+**Contexte** : La page d'inscription affiche un wizard qui commence par "Quel est votre secteur d'activite ?" sans expliquer ce qu'est Leezr. Les utilisateurs arrivent sans comprendre la proposition de valeur.
+
+**Decisions** :
+- Ajouter un bloc "hero" dans le panneau gauche (illustration) de la page d'inscription
+- Titre, sous-titre et 3 bullets de benefices metier, affiches au-dessus de l'illustration existante
+- Utiliser VList + VListItem + VIcon (tabler-check, couleur success) pour les bullets
+- Contenu i18n bilingue (fr/en) sous la cle `register.hero.*`
+- L'illustration est conservee en dessous du hero, avec une taille reduite (320px au lieu de 400px) pour laisser de la place
+- Aucune modification de `@core/` ou `@layouts/` — tout est dans la page register
+
+**Consequences** :
+- Les visiteurs voient immediatement la proposition de valeur de Leezr avant d'interagir avec le wizard
+- Le panneau gauche passe d'un simple decoratif a un element de conversion
+- Visible uniquement sur desktop (md+) comme l'illustration originale
+- Build clean, tests passes, aucune regression
+
+**Fichiers** :
+- `resources/js/pages/register/index.vue` (hero dans le panneau gauche + styles)
+- `resources/js/plugins/i18n/locales/fr.json` (cles `register.hero.*`)
+- `resources/js/plugins/i18n/locales/en.json` (cles `register.hero.*`)
+
+---
+
+### ADR-475 — Navigation Platform Refactoring: 25 items → 8 hubs (2026-04-30)
+
+**Contexte** : La sidebar platform avait explosé à 25+ items au fil des sprints P0-P3, rendant la navigation confuse et non scalable. Il fallait regrouper toutes les pages en hubs thématiques.
+
+**Décisions** :
+1. **8 hubs sidebar** : Dashboard (3 tabs), Companies (+support), Billing (+plans), Catalog (4 tabs: modules, jobdomains, fields, documents), Messaging (8 tabs: email inbox/templates/orchestration/settings/logs/health + documentation + notifications), Operations (7 tabs: health, alerts, security, AI, usage, automations, realtime), Access, Settings (+international, +feature-flags)
+2. **Pattern URL-driven** : Chaque hub utilise `[tab].vue` avec `computed({ get: route.params.tab, set: router.replace })` et VTabs/VWindow
+3. **Sub-tabs locaux** : AI (dans Operations) et International (dans Settings) gardent des onglets locaux via `ref()` car ils avaient eux-mêmes des sous-onglets URL
+4. **Module manifests** : Les modules absorbés ont vidé leurs `navItems[]` mais gardé leurs `routeNames` (+ ajouté la route hub). Le module propriétaire du hub porte le navItem
+5. **Pages détail préservées** : `modules/[key].vue`, `plans/[key].vue`, `companies/[id].vue`, `support/[id].vue`, `documentation/[slug].vue` restent des pages séparées avec `navActiveLink` pointant vers le hub parent
+6. **ADMIN_GROUP_ORDER** réduit de 8 à 6 groupes (retiré `ai` et `international`)
+7. **12 anciennes pages routées supprimées** (les `_*.vue` sous-composants restent car importés par les hubs)
+
+**Mapping ancien → nouveau** :
+- system-health, alerts, security, ai, usage-monitoring, automations, realtime → Operations hub
+- modules, jobdomains, fields, documents → Catalog hub
+- email, documentation, notifications → Messaging hub
+- activity, onboarding-funnel → Dashboard hub
+- international, feature-flags → Settings hub
+- support → Companies hub
+- plans → Billing hub
+
+**Conséquences** :
+- Sidebar réduite de 25 à 8 items — navigation claire et scalable
+- Aucune fonctionnalité perdue — tout est accessible via les onglets de hub
+- Tests adaptés : `PageModuleAlignmentTest`, `PlatformModuleNavContractTest`, `PlatformRealtimeModuleToggleTest`, `NavEndpointTest` mis à jour
+- AlertsModule porte le navItem Operations (pas DashboardModule) pour satisfaire le contrat navItem↔routeNames
+- 2259 tests pass, build clean
+
+**Fichiers** :
+- `resources/js/pages/platform/operations/[tab].vue` + 8 `_*.vue` — **CRÉÉ**
+- `resources/js/pages/platform/catalog/[tab].vue` + `_CatalogFields.vue` — **CRÉÉ**
+- `resources/js/pages/platform/dashboard/[tab].vue` + 3 `_*.vue` — **CRÉÉ**
+- `resources/js/pages/platform/messaging/[tab].vue` + 2 `_*.vue` — **CRÉÉ**
+- `resources/js/pages/platform/settings/[tab].vue` — ajouté 2 onglets (international, feature-flags)
+- `resources/js/pages/platform/settings/_SettingsInternational.vue`, `_SettingsFeatureFlags.vue` — **CRÉÉ**
+- `resources/js/pages/platform/companies/index.vue` — ajouté onglet support
+- `resources/js/pages/platform/companies/_CompaniesSupport.vue` — **CRÉÉ**
+- `resources/js/pages/platform/billing/[tab].vue` — ajouté onglet plans
+- `resources/js/pages/platform/billing/_BillingPlans.vue` — **DÉPLACÉ**
+- 15+ `*Module.php` manifests — navItems vidés ou mis à jour
+- `app/Core/Navigation/NavBuilder.php` — ADMIN_GROUP_ORDER réduit
+- `tests/Feature/PageModuleAlignmentTest.php`, `PlatformModuleNavContractTest.php`, etc. — adaptés
+- `resources/js/plugins/i18n/locales/fr.json` et `en.json` — clés hubs ajoutées
+- 12 anciennes pages routées supprimées
+
+---
+
+### ADR-476 — Hub Structural Adjustments: Plans→Catalog, Communications hub, Nav groups (2026-04-30)
+
+**Contexte** : Après la refonte 25→8 hubs (ADR-475), le feedback utilisateur a révélé 4 ajustements structurels nécessaires pour une meilleure cohérence métier.
+
+**Décisions** :
+1. **Plans tab** déplacé de Billing → Catalog (les plans sont un produit catalogue, pas une opération financière)
+2. **Catalog** nav group changé de `product` → `clients` (même groupe que Entreprises)
+3. **Messaging** nav group changé de `operations` → `cockpit` (même groupe que Tableau de bord)
+4. **Nouveau hub Communications** créé avec 2 onglets : Support (retiré de Companies) + Documentation (retiré de Messaging)
+5. `PlatformSupportModule` est le owner du hub Communications (navItem `communications` → `platform-communications-tab`)
+
+**Conséquences** :
+- Sidebar finale 8 items : Tableau de bord, Messagerie | Entreprises, Catalogue, Communications | Facturation | Opérations | Accès, Paramètres
+- `_BillingPlans.vue` → `_CatalogPlans.vue`, `_CompaniesSupport.vue` → `_CommunicationsSupport.vue`, `_MessagingDocumentation.vue` → `_CommunicationsDocumentation.vue`
+- Tests `FooterLinkCapabilityTest`, `PageModuleAlignmentTest`, `PlatformModuleNavContractTest` mis à jour
+
+**Fichiers** :
+- `resources/js/pages/platform/communications/[tab].vue` — CRÉÉ (hub 2 onglets)
+- `resources/js/pages/platform/catalog/_CatalogPlans.vue` — déplacé depuis billing
+- `resources/js/pages/platform/communications/_CommunicationsSupport.vue` — déplacé depuis companies
+- `resources/js/pages/platform/communications/_CommunicationsDocumentation.vue` — déplacé depuis messaging
+- `app/Modules/Platform/Support/PlatformSupportModule.php` — navItem communications
+- `app/Modules/Platform/Plans/PlansModule.php` — routeNames → catalog
+- `app/Modules/Platform/Modules/ModulesModule.php` — group → clients
+- `app/Modules/Platform/Email/EmailModule.php` — group → cockpit
+- `tests/Feature/FooterLinkCapabilityTest.php` — footer link → communications hub
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -143,12 +143,40 @@ class PlatformSupportTicketController
             ->whereNotIn('status', ['closed', 'resolved'])
             ->count();
 
+        // SLA metrics — computed on active (non-closed) tickets
+        $activeTickets = SupportTicket::whereNotIn('status', ['closed'])->get();
+
+        $totalBreached = 0;
+        $totalActive = $activeTickets->count();
+
+        foreach ($activeTickets as $ticket) {
+            $sla = $ticket->sla_status;
+            if ($sla['response']['status'] === 'breached' || $sla['resolution']['status'] === 'breached') {
+                $totalBreached++;
+            }
+        }
+
+        // Average first-response time (hours) — only tickets that have been responded to
+        $respondedTickets = SupportTicket::whereNotNull('first_response_at')->get();
+        $avgResponseTime = $respondedTickets->count() > 0
+            ? round($respondedTickets->avg(fn ($t) => abs($t->created_at->diffInMinutes($t->first_response_at)) / 60), 1)
+            : 0;
+
+        // SLA compliance = % of active tickets NOT breached
+        $slaCompliancePercent = $totalActive > 0
+            ? round((($totalActive - $totalBreached) / $totalActive) * 100, 1)
+            : 100;
+
         return response()->json([
             'open' => $open,
             'in_progress' => $inProgress,
             'waiting_customer' => $waitingCustomer,
             'resolved' => $resolved,
             'unassigned' => $unassigned,
+            'total_open' => $open + $inProgress + $waitingCustomer,
+            'total_breached' => $totalBreached,
+            'avg_response_time' => $avgResponseTime,
+            'sla_compliance_percent' => $slaCompliancePercent,
         ]);
     }
 }

@@ -1063,41 +1063,110 @@ const estimatedInvoice = computed(() => {
           <!-- Proration breakdown (immediate only) -->
           <template v-if="changePreview.timing === 'immediate' && changePreview.proration">
             <VDivider class="mb-3" />
-            <p class="text-subtitle-2 font-weight-medium mb-2">{{ t('companyPlan.planChangePreview.proration') }}</p>
-            <p class="text-caption text-disabled mb-2">{{ t('companyPlan.planChangePreview.daysRemaining', { days: changePreview.proration.days_remaining }) }}</p>
 
-            <VList density="compact" class="pa-0">
-              <VListItem v-if="changePreview.proration.credit_old_plan > 0">
-                <VListItemTitle class="text-body-2 text-success">
-                  {{ t('companyPlan.planChangePreview.creditOldPlan', { name: changePreview.from_plan.name }) }}
-                </VListItemTitle>
-                <template #append>
-                  <span class="text-body-2 text-success">-{{ formatMoney(changePreview.proration.credit_old_plan, { currency: changePreview.currency }) }}</span>
-                </template>
-              </VListItem>
+            <VCard
+              variant="outlined"
+              class="mb-3"
+            >
+              <VCardText class="pa-4">
+                <!-- Title -->
+                <div class="d-flex align-center gap-2 mb-3">
+                  <VIcon
+                    icon="tabler-calculator"
+                    size="20"
+                    color="primary"
+                  />
+                  <span class="text-subtitle-1 font-weight-medium">{{ t('companyPlan.planChangePreview.prorationTitle') }}</span>
+                </div>
 
-              <VListItem v-if="changePreview.proration.charge_new_plan > 0">
-                <VListItemTitle class="text-body-2">
-                  {{ t('companyPlan.planChangePreview.chargeNewPlan', { name: changePreview.to_plan.name }) }}
-                </VListItemTitle>
-                <template #append>
-                  <span class="text-body-2">+{{ formatMoney(changePreview.proration.charge_new_plan, { currency: changePreview.currency }) }}</span>
-                </template>
-              </VListItem>
+                <!-- Plan info -->
+                <div class="text-body-2 mb-1">
+                  {{ t('companyPlan.planChangePreview.currentPlanAt', { name: changePreview.from_plan.name, price: formatMoney(changePreview.from_plan.price_monthly * 100, { currency: changePreview.currency }) }) }}
+                </div>
+                <div class="text-body-2 mb-3">
+                  {{ t('companyPlan.planChangePreview.newPlanAt', { name: changePreview.to_plan.name, price: formatMoney(changePreview.to_plan.price_monthly * 100, { currency: changePreview.currency }) }) }}
+                </div>
 
-              <VDivider />
+                <!-- Days remaining with progress -->
+                <div class="mb-1">
+                  <div class="d-flex align-center justify-space-between mb-1">
+                    <span class="text-body-2 text-medium-emphasis">
+                      {{ t('companyPlan.planChangePreview.daysDetail', { remaining: changePreview.proration.days_remaining, total: changePreview.proration.total_days }) }}
+                    </span>
+                    <VChip
+                      size="x-small"
+                      color="info"
+                      variant="tonal"
+                    >
+                      {{ Math.round(changePreview.proration.days_remaining / changePreview.proration.total_days * 100) }}%
+                    </VChip>
+                  </div>
+                  <VProgressLinear
+                    :model-value="changePreview.proration.days_remaining / changePreview.proration.total_days * 100"
+                    color="info"
+                    rounded
+                    height="6"
+                  />
+                </div>
 
-              <VListItem>
-                <VListItemTitle class="font-weight-medium">
-                  {{ t('companyPlan.planChangePreview.prorationNet') }}
-                </VListItemTitle>
-                <template #append>
-                  <span class="font-weight-medium" :class="changePreview.proration.net > 0 ? '' : 'text-success'">
-                    {{ changePreview.proration.net > 0 ? '+' : '' }}{{ formatMoney(changePreview.proration.net, { currency: changePreview.currency }) }}
-                  </span>
-                </template>
-              </VListItem>
-            </VList>
+                <VDivider class="my-3" />
+
+                <!-- Calculation breakdown -->
+                <VList
+                  density="compact"
+                  class="pa-0"
+                >
+                  <!-- Credit old plan -->
+                  <VListItem v-if="changePreview.proration.credit_old_plan > 0">
+                    <VListItemTitle class="text-body-2 text-success">
+                      {{ t('companyPlan.planChangePreview.creditOldPlan', { name: changePreview.from_plan.name }) }}
+                    </VListItemTitle>
+                    <VListItemSubtitle class="text-caption text-disabled">
+                      {{ t('companyPlan.planChangePreview.creditFormula', { price: formatMoney(changePreview.from_plan.price_monthly * 100, { currency: changePreview.currency }), remaining: changePreview.proration.days_remaining, total: changePreview.proration.total_days }) }}
+                    </VListItemSubtitle>
+                    <template #append>
+                      <span class="text-body-2 font-weight-medium text-success">
+                        -{{ formatMoney(changePreview.proration.credit_old_plan, { currency: changePreview.currency }) }}
+                      </span>
+                    </template>
+                  </VListItem>
+
+                  <!-- Charge new plan -->
+                  <VListItem v-if="changePreview.proration.charge_new_plan > 0">
+                    <VListItemTitle class="text-body-2">
+                      {{ t('companyPlan.planChangePreview.chargeNewPlan', { name: changePreview.to_plan.name }) }}
+                    </VListItemTitle>
+                    <VListItemSubtitle class="text-caption text-disabled">
+                      {{ t('companyPlan.planChangePreview.chargeFormula', { price: formatMoney(changePreview.to_plan.price_monthly * 100, { currency: changePreview.currency }), remaining: changePreview.proration.days_remaining, total: changePreview.proration.total_days }) }}
+                    </VListItemSubtitle>
+                    <template #append>
+                      <span class="text-body-2 font-weight-medium">
+                        +{{ formatMoney(changePreview.proration.charge_new_plan, { currency: changePreview.currency }) }}
+                      </span>
+                    </template>
+                  </VListItem>
+
+                  <VDivider class="my-1" />
+
+                  <!-- Net total -->
+                  <VListItem>
+                    <VListItemTitle class="text-subtitle-2 font-weight-bold">
+                      {{ changePreview.proration.net > 0 ? t('companyPlan.planChangePreview.netToPay') : t('companyPlan.planChangePreview.netCredit') }}
+                    </VListItemTitle>
+                    <template #append>
+                      <VChip
+                        :color="changePreview.proration.net > 0 ? 'warning' : 'success'"
+                        variant="tonal"
+                        size="small"
+                        class="font-weight-bold"
+                      >
+                        {{ changePreview.proration.net > 0 ? '+' : '' }}{{ formatMoney(changePreview.proration.net, { currency: changePreview.currency }) }}
+                      </VChip>
+                    </template>
+                  </VListItem>
+                </VList>
+              </VCardText>
+            </VCard>
           </template>
 
           <!-- Addon impact -->

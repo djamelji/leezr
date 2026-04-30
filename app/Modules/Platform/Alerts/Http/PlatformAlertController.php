@@ -54,6 +54,17 @@ class PlatformAlertController
     }
 
     /**
+     * GET /platform/api/alerts/{alert}
+     * Single alert detail with incident timeline (ADR-469).
+     */
+    public function show(PlatformAlert $alert): JsonResponse
+    {
+        $alert->load('company:id,name', 'acknowledgedByUser:id,first_name,last_name');
+
+        return response()->json(['alert' => $alert]);
+    }
+
+    /**
      * PUT /platform/api/alerts/{alert}/acknowledge
      */
     public function acknowledge(PlatformAlert $alert, Request $request): JsonResponse
