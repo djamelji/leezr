@@ -3,6 +3,7 @@ import { useHelpCenter } from '@/composables/useHelpCenter'
 import HelpCenterFooter from './_HelpCenterFooter.vue'
 import HelpCenterHeader from './_HelpCenterHeader.vue'
 import HelpCenterKnowledgeBase from './_HelpCenterKnowledgeBase.vue'
+import HelpCenterQuickActions from './_HelpCenterQuickActions.vue'
 import HelpCenterSearchResults from './_HelpCenterSearchResults.vue'
 
 definePage({
@@ -75,6 +76,16 @@ onMounted(fetchLanding)
         </div>
       </div>
 
+      <!-- Quick Actions — "Que voulez-vous faire ?" -->
+      <div class="help-center-section-compact">
+        <VContainer>
+          <HelpCenterQuickActions
+            :groups="data.groups"
+            :ungrouped-topics="data.ungrouped_topics"
+          />
+        </VContainer>
+      </div>
+
       <!-- Knowledge Base -->
       <div class="help-center-section">
         <VContainer>
@@ -117,6 +128,10 @@ onMounted(fetchLanding)
     padding-block: 5.25rem;
   }
 
+  .help-center-section-compact {
+    padding-block: 3rem 1rem;
+  }
+
   .search-results-overlay {
     position: absolute;
     z-index: 10;
@@ -141,6 +156,10 @@ onMounted(fetchLanding)
 
     .help-center-section {
       padding-block: 3.5rem;
+    }
+
+    .help-center-section-compact {
+      padding-block: 2rem 0.5rem;
     }
   }
 }

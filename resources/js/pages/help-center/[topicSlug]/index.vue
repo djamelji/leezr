@@ -18,6 +18,13 @@ onMounted(() => fetchTopic(route.params.topicSlug))
 watch(() => route.params.topicSlug, slug => {
   if (slug) fetchTopic(slug)
 })
+
+function articleRoute(article) {
+  return {
+    name: 'help-center-topicSlug-articleSlug',
+    params: { topicSlug: route.params.topicSlug, articleSlug: article.slug },
+  }
+}
 </script>
 
 <template>
@@ -37,7 +44,7 @@ watch(() => route.params.topicSlug, slug => {
           ]"
         />
 
-        <div class="d-flex align-center gap-x-4 mb-6">
+        <div class="d-flex align-center gap-x-4 mb-2">
           <VAvatar
             rounded
             color="primary"
@@ -62,37 +69,52 @@ watch(() => route.params.topicSlug, slug => {
           </div>
         </div>
 
-        <VList class="card-list">
-          <VListItem
+        <!-- Article count -->
+        <p class="text-caption text-medium-emphasis mb-4">
+          {{ topic.articles?.length || 0 }} {{ $t('documentation.articles') }}
+        </p>
+
+        <!-- Article cards — actionable format -->
+        <VRow
+          v-if="topic.articles?.length"
+          class="card-grid card-grid-xs"
+        >
+          <VCol
             v-for="article in topic.articles"
             :key="article.id"
-            :to="{
-              name: 'help-center-topicSlug-articleSlug',
-              params: { topicSlug: route.params.topicSlug, articleSlug: article.slug },
-            }"
-            class="text-high-emphasis"
+            cols="12"
+            sm="6"
           >
-            <VListItemTitle class="text-body-1 font-weight-medium">
-              {{ article.title }}
-            </VListItemTitle>
-            <VListItemSubtitle
-              v-if="article.excerpt"
-              class="text-body-2"
+            <VCard
+              :to="articleRoute(article)"
+              hover
+              class="article-card"
             >
-              {{ article.excerpt }}
-            </VListItemSubtitle>
-            <template #append>
-              <VIcon
-                icon="tabler-chevron-right"
-                class="flip-in-rtl"
-                size="20"
-              />
-            </template>
-          </VListItem>
-        </VList>
+              <VCardText class="d-flex align-start gap-3">
+                <VIcon
+                  icon="tabler-file-text"
+                  size="20"
+                  color="primary"
+                  class="mt-1 flex-shrink-0"
+                />
+                <div>
+                  <p class="text-body-1 font-weight-medium text-high-emphasis mb-1">
+                    {{ article.title }}
+                  </p>
+                  <p
+                    v-if="article.excerpt"
+                    class="text-body-2 text-medium-emphasis mb-0 article-excerpt"
+                  >
+                    {{ article.excerpt }}
+                  </p>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
 
         <div
-          v-if="!topic.articles?.length"
+          v-else
           class="text-center py-10"
         >
           <VIcon
@@ -127,8 +149,19 @@ watch(() => route.params.topicSlug, slug => {
   margin-block: 6rem 3rem;
 }
 
-.card-list {
-  --v-card-list-gap: 0.5rem;
+.article-card {
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: rgba(var(--v-theme-primary), 0.3);
+  }
+}
+
+.article-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
 

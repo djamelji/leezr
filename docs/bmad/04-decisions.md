@@ -16792,4 +16792,36 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-478 — Help Center UX Refonte : système d'aide opérationnel (2026-05-01)
+
+**Contexte** : Le Help Center avait 90 articles seedés (ADR-477) mais l'UX était un catalogue passif — topics sans actions directes, articles avec structure documentation classique, aucune entrée par problème, pas de navigation guidée. Résultat : les utilisateurs ne trouvaient pas les réponses.
+
+**Décisions** :
+1. **Backend** : `HelpCenterController::index()` enrichi — retourne les 5 premiers articles par topic (`top_articles`) en plus du count, permettant des liens directs depuis la landing page
+2. **Landing page** : ajout section "Que voulez-vous faire ?" (`_HelpCenterQuickActions.vue`) — 8 actions directes extraites des topics, liens vers articles spécifiques
+3. **Topic cards** : chaque card affiche les 3-5 articles en liens cliquables directs au lieu d'un simple "Voir tous les articles"
+4. **Page article** : ajout table des matières auto-générée (h2 headings), navigation prev/next entre articles, CTA d'escalade "Pas résolu ? → Ouvrir un ticket"
+5. **Page topic** : articles présentés en cards 2 colonnes avec excerpt, format actionnable
+6. **Réécriture contenu** : 90 articles transformés du format "Contexte/Étapes/Exemple/Erreurs/Résultat" vers "Situation/Étapes (max 5)/Résultat/Problèmes fréquents". Chaque article commence par "Dans ce guide, vous allez..." — 200-300 mots max (vs 400-500 avant)
+7. **i18n** : 4 nouvelles clés (quickActionsTitle, tableOfContents, notResolved, notResolvedHint) en FR+EN
+
+**Conséquences** :
+- Help Center = système de résolution, pas documentation passive
+- 2 clics max pour trouver une réponse (landing → article)
+- Escalade support intégrée dans chaque article
+- Navigation guidée prev/next dans chaque topic
+- Contenu 40% plus court, 100% orienté action
+
+**Fichiers** :
+- `app/Modules/Infrastructure/Public/Http/HelpCenterController.php` — top_articles dans index()
+- `resources/js/pages/help-center/index.vue` — section quick actions
+- `resources/js/pages/help-center/_HelpCenterQuickActions.vue` — NOUVEAU
+- `resources/js/pages/help-center/_HelpCenterKnowledgeBase.vue` — articles directs par topic
+- `resources/js/pages/help-center/[topicSlug]/index.vue` — cards articles
+- `resources/js/pages/help-center/[topicSlug]/[articleSlug].vue` — TOC, prev/next, CTA escalade
+- `database/seeders/data/help-center-*.php` — 90 articles réécrits format actionnable
+- `resources/js/plugins/i18n/locales/{fr,en}.json` — 4 clés
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

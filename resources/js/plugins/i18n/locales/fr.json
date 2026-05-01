@@ -4680,7 +4680,11 @@
     "lastSearched": "Dernière recherche",
     "confirmDeleteGroup": "Supprimer le groupe « {title} » ?",
     "returnToPlatform": "Retour vers la plateforme",
-    "returnToSpace": "Retour vers mon espace"
+    "returnToSpace": "Retour vers mon espace",
+    "quickActionsTitle": "Que voulez-vous faire ?",
+    "tableOfContents": "Dans cet article",
+    "notResolved": "Pas résolu ?",
+    "notResolvedHint": "Ouvrez un ticket et notre équipe vous répondra rapidement."
   },
   "session": {
     "expiredTitle": "Session expirée",

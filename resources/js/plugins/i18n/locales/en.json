@@ -4675,7 +4675,11 @@
     "lastSearched": "Last searched",
     "confirmDeleteGroup": "Delete group \"{title}\"?",
     "returnToPlatform": "Back to platform",
-    "returnToSpace": "Back to my space"
+    "returnToSpace": "Back to my space",
+    "quickActionsTitle": "What do you want to do?",
+    "tableOfContents": "In this article",
+    "notResolved": "Not resolved?",
+    "notResolvedHint": "Open a ticket and our team will respond quickly."
   },
   "session": {
     "expiredTitle": "Session Expired",

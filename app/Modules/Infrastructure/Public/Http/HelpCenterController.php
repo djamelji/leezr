@@ -38,10 +38,24 @@ class HelpCenterController
                     ->withCount(['publishedArticles as articles_count' => function ($q2) use ($audience) {
                         $q2->forAudience($audience);
                     }])
+                    ->with(['publishedArticles' => function ($q2) use ($audience) {
+                        $q2->forAudience($audience)
+                            ->orderBy('sort_order')
+                            ->limit(5)
+                            ->select(['id', 'topic_id', 'title', 'slug']);
+                    }])
                     ->select(['id', 'uuid', 'title', 'slug', 'description', 'icon', 'group_id']);
             }])
             ->orderBy('sort_order')
             ->get(['id', 'uuid', 'title', 'slug', 'icon']);
+
+        // Rename relation for frontend: published_articles → top_articles
+        $groups->each(function ($group) {
+            $group->publishedTopics->each(function ($topic) {
+                $topic->setAttribute('top_articles', $topic->publishedArticles->take(5)->values());
+                $topic->unsetRelation('publishedArticles');
+            });
+        });
 
         $ungroupedTopics = DocumentationTopic::query()
             ->published()
@@ -50,8 +64,19 @@ class HelpCenterController
             ->withCount(['publishedArticles as articles_count' => function ($q) use ($audience) {
                 $q->forAudience($audience);
             }])
+            ->with(['publishedArticles' => function ($q) use ($audience) {
+                $q->forAudience($audience)
+                    ->orderBy('sort_order')
+                    ->limit(5)
+                    ->select(['id', 'topic_id', 'title', 'slug']);
+            }])
             ->orderBy('sort_order')
             ->get(['id', 'uuid', 'title', 'slug', 'description', 'icon']);
+
+        $ungroupedTopics->each(function ($topic) {
+            $topic->setAttribute('top_articles', $topic->publishedArticles->take(5)->values());
+            $topic->unsetRelation('publishedArticles');
+        });
 
         return response()->json([
             'groups' => $groups,

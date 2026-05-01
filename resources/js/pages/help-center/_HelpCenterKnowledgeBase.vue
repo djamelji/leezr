@@ -8,8 +8,16 @@ function topicRoute(topic) {
   return { name: 'help-center-topicSlug', params: { topicSlug: topic.slug } }
 }
 
+function articleRoute(topic, article) {
+  return { name: 'help-center-topicSlug-articleSlug', params: { topicSlug: topic.slug, articleSlug: article.slug } }
+}
+
 function allTopics(group) {
   return group.published_topics || group.topics || []
+}
+
+function topArticles(topic) {
+  return topic.top_articles || []
 }
 </script>
 
@@ -44,57 +52,85 @@ function allTopics(group) {
         sm="6"
         lg="4"
       >
-        <VCard :title="topic.title">
-          <template #prepend>
-            <VAvatar
-              rounded
-              color="primary"
-              variant="tonal"
-              size="32"
-              class="me-1"
+        <VCard>
+          <VCardItem>
+            <template #prepend>
+              <VAvatar
+                rounded
+                color="primary"
+                variant="tonal"
+                size="32"
+                class="me-1"
+              >
+                <VIcon
+                  :icon="topic.icon || 'tabler-book'"
+                  size="20"
+                />
+              </VAvatar>
+            </template>
+            <VCardTitle>{{ topic.title }}</VCardTitle>
+            <template #append>
+              <VChip
+                v-if="topic.articles_count !== undefined"
+                size="small"
+                color="primary"
+                variant="tonal"
+              >
+                {{ topic.articles_count }}
+              </VChip>
+            </template>
+          </VCardItem>
+          <VCardText class="pt-0">
+            <!-- Direct article links — actionable -->
+            <VList
+              v-if="topArticles(topic).length"
+              density="compact"
+              class="pa-0 topic-article-list"
             >
-              <VIcon
-                :icon="topic.icon || 'tabler-book'"
-                size="20"
-              />
-            </VAvatar>
-          </template>
-          <template #append>
-            <VChip
-              v-if="topic.articles_count !== undefined"
-              size="small"
-              color="primary"
-              variant="tonal"
-            >
-              {{ topic.articles_count }}
-            </VChip>
-          </template>
-          <VCardText v-if="topic.description">
-            <p class="text-body-2 text-medium-emphasis mb-3">
-              {{ topic.description }}
-            </p>
+              <VListItem
+                v-for="article in topArticles(topic)"
+                :key="article.id"
+                :to="articleRoute(topic, article)"
+                class="px-0 text-high-emphasis"
+                density="compact"
+              >
+                <template #prepend>
+                  <VIcon
+                    icon="tabler-arrow-right"
+                    size="14"
+                    color="primary"
+                    class="me-2"
+                  />
+                </template>
+                <VListItemTitle class="text-body-2">
+                  {{ article.title }}
+                </VListItemTitle>
+              </VListItem>
+            </VList>
+
+            <!-- See all link -->
             <RouterLink
+              v-if="topic.articles_count > topArticles(topic).length"
               :to="topicRoute(topic)"
-              class="text-base d-flex align-center font-weight-medium d-inline-block"
+              class="text-caption d-flex align-center font-weight-medium text-primary mt-2"
             >
-              <span class="d-inline-block">{{ $t('documentation.seeAllArticles') }}</span>
+              {{ $t('documentation.seeAllArticles') }} ({{ topic.articles_count }})
               <VIcon
-                icon="tabler-arrow-right"
-                size="18"
-                class="ms-3 flip-in-rtl"
+                icon="tabler-chevron-right"
+                size="14"
+                class="ms-1 flip-in-rtl"
               />
             </RouterLink>
-          </VCardText>
-          <VCardText v-else>
             <RouterLink
+              v-else-if="!topArticles(topic).length"
               :to="topicRoute(topic)"
-              class="text-base d-flex align-center font-weight-medium d-inline-block"
+              class="text-body-2 d-flex align-center font-weight-medium"
             >
-              <span class="d-inline-block">{{ $t('documentation.seeAllArticles') }}</span>
+              {{ $t('documentation.seeAllArticles') }}
               <VIcon
                 icon="tabler-arrow-right"
                 size="18"
-                class="ms-3 flip-in-rtl"
+                class="ms-2 flip-in-rtl"
               />
             </RouterLink>
           </VCardText>
@@ -115,57 +151,71 @@ function allTopics(group) {
       sm="6"
       lg="4"
     >
-      <VCard :title="topic.title">
-        <template #prepend>
-          <VAvatar
-            rounded
-            color="primary"
-            variant="tonal"
-            size="32"
-            class="me-1"
+      <VCard>
+        <VCardItem>
+          <template #prepend>
+            <VAvatar
+              rounded
+              color="primary"
+              variant="tonal"
+              size="32"
+              class="me-1"
+            >
+              <VIcon
+                :icon="topic.icon || 'tabler-book'"
+                size="20"
+              />
+            </VAvatar>
+          </template>
+          <VCardTitle>{{ topic.title }}</VCardTitle>
+          <template #append>
+            <VChip
+              v-if="topic.articles_count !== undefined"
+              size="small"
+              color="primary"
+              variant="tonal"
+            >
+              {{ topic.articles_count }}
+            </VChip>
+          </template>
+        </VCardItem>
+        <VCardText class="pt-0">
+          <VList
+            v-if="topArticles(topic).length"
+            density="compact"
+            class="pa-0 topic-article-list"
           >
-            <VIcon
-              :icon="topic.icon || 'tabler-book'"
-              size="20"
-            />
-          </VAvatar>
-        </template>
-        <template #append>
-          <VChip
-            v-if="topic.articles_count !== undefined"
-            size="small"
-            color="primary"
-            variant="tonal"
-          >
-            {{ topic.articles_count }}
-          </VChip>
-        </template>
-        <VCardText v-if="topic.description">
-          <p class="text-body-2 text-medium-emphasis mb-3">
-            {{ topic.description }}
-          </p>
+            <VListItem
+              v-for="article in topArticles(topic)"
+              :key="article.id"
+              :to="articleRoute(topic, article)"
+              class="px-0 text-high-emphasis"
+              density="compact"
+            >
+              <template #prepend>
+                <VIcon
+                  icon="tabler-arrow-right"
+                  size="14"
+                  color="primary"
+                  class="me-2"
+                />
+              </template>
+              <VListItemTitle class="text-body-2">
+                {{ article.title }}
+              </VListItemTitle>
+            </VListItem>
+          </VList>
+
           <RouterLink
+            v-if="topic.articles_count > topArticles(topic).length"
             :to="topicRoute(topic)"
-            class="text-base d-flex align-center font-weight-medium d-inline-block"
+            class="text-caption d-flex align-center font-weight-medium text-primary mt-2"
           >
-            <span class="d-inline-block">{{ $t('documentation.seeAllArticles') }}</span>
+            {{ $t('documentation.seeAllArticles') }} ({{ topic.articles_count }})
             <VIcon
-              icon="tabler-arrow-right"
-              size="18"
-              class="ms-3 flip-in-rtl"
-            />
-          </RouterLink>
-        </VCardText>
-        <VCardText v-else>
-          <RouterLink
-            :to="topicRoute(topic)"
-            class="text-base d-flex align-center font-weight-medium d-inline-block"
-          >
-            <span class="d-inline-block">{{ $t('documentation.seeAllArticles') }}</span>
-            <VIcon
-              icon="tabler-arrow-right"
-              size="18"
-              class="ms-3 flip-in-rtl"
+              icon="tabler-chevron-right"
+              size="14"
+              class="ms-1 flip-in-rtl"
             />
           </RouterLink>
         </VCardText>
@@ -173,3 +223,11 @@ function allTopics(group) {
     </VCol>
   </VRow>
 </template>
+
+<style lang="scss" scoped>
+.topic-article-list {
+  :deep(.v-list-item) {
+    min-block-size: 28px !important;
+  }
+}
+</style>
