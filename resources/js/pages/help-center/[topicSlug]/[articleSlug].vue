@@ -95,7 +95,7 @@ const nextArticle = computed(() => {
 
 function siblingRoute(sibling) {
   return {
-    name: 'help-center-topicSlug-articleSlug',
+    name: 'help-center-topic-slug-article-slug',
     params: { topicSlug: route.params.topicSlug, articleSlug: sibling.slug },
   }
 }
@@ -155,7 +155,7 @@ onMounted(() => {
               class="px-0 pb-2 pt-0 help-center-breadcrumbs"
               :items="[
                 { title: $t('documentation.publicTitle'), to: { name: 'help-center' }, class: 'text-primary' },
-                { title: article.topic?.title, to: { name: 'help-center-topicSlug', params: { topicSlug: route.params.topicSlug } }, class: 'text-primary' },
+                { title: article.topic?.title, to: { name: 'help-center-topic-slug', params: { topicSlug: route.params.topicSlug } }, class: 'text-primary' },
                 { title: article.article?.title },
               ]"
             />

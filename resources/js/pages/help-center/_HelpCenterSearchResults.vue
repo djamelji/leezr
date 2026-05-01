@@ -13,7 +13,7 @@ const { isAuthenticated } = useReturnNavigation()
 
 function articleRoute(article) {
   return {
-    name: 'help-center-topicSlug-articleSlug',
+    name: 'help-center-topic-slug-article-slug',
     params: { topicSlug: article.topic?.slug, articleSlug: article.slug },
   }
 }

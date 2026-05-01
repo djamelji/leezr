@@ -21,7 +21,7 @@ watch(() => route.params.topicSlug, slug => {
 
 function articleRoute(article) {
   return {
-    name: 'help-center-topicSlug-articleSlug',
+    name: 'help-center-topic-slug-article-slug',
     params: { topicSlug: route.params.topicSlug, articleSlug: article.slug },
   }
 }

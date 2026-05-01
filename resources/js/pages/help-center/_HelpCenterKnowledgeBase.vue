@@ -9,12 +9,12 @@ defineProps({
 })
 
 function topicRoute(topic) {
-  return { name: 'help-center-topicSlug', params: { topicSlug: topic.slug } }
+  return { name: 'help-center-topic-slug', params: { topicSlug: topic.slug } }
 }
 
 function articleRoute(topic, article) {
   return {
-    name: 'help-center-topicSlug-articleSlug',
+    name: 'help-center-topic-slug-article-slug',
     params: { topicSlug: topic.slug, articleSlug: article.slug },
   }
 }
