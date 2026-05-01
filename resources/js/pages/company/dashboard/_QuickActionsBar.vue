@@ -24,7 +24,7 @@ const actions = computed(() => {
       key: 'documents',
       icon: 'tabler-file-check',
       label: t('dashboard.quickActions.documents'),
-      to: { name: 'company-documentation-tab', params: { tab: 'overview' } },
+      to: { name: 'company-documents-tab', params: { tab: 'overview' } },
       color: 'success',
     },
     {

@@ -111,8 +111,8 @@ const statusColors = {
 const targetRoutes = {
   Invoice: id => ({ name: 'platform-billing-invoices-id', params: { id } }),
   SupportTicket: id => ({ name: 'platform-support-id', params: { id } }),
-  Subscription: () => ({ name: 'platform-billing', query: { tab: 'subscriptions' } }),
-  Payment: () => ({ name: 'platform-billing', query: { tab: 'payments' } }),
+  Subscription: () => ({ name: 'platform-billing-tab', params: { tab: 'subscriptions' } }),
+  Payment: () => ({ name: 'platform-billing-tab', params: { tab: 'payments' } }),
 }
 
 const navigateToTarget = alert => {

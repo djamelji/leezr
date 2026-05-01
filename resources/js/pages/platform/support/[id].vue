@@ -140,7 +140,7 @@ onMounted(async () => {
       variant="text"
       prepend-icon="tabler-arrow-left"
       class="mb-4"
-      :to="{ name: 'platform-support' }"
+      :to="{ name: 'platform-communications-tab', params: { tab: 'support' } }"
     >
       {{ t('support.backToTickets') }}
     </VBtn>

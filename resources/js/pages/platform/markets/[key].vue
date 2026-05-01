@@ -7,7 +7,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.markets',
-    navActiveLink: 'platform-international-tab',
+    navActiveLink: 'platform-settings-tab',
   },
 })
 
@@ -75,7 +75,7 @@ const loadMarket = async () => {
   }
   catch {
     toast(t('common.error'), 'error')
-    router.push({ name: 'platform-international-tab', params: { tab: 'markets' } })
+    router.push({ name: 'platform-settings-tab', params: { tab: 'international' } })
   }
   finally {
     isLoading.value = false
@@ -229,7 +229,7 @@ const legalHeaders = [
         icon="tabler-arrow-left"
         variant="text"
         class="me-2"
-        @click="router.push({ name: 'platform-international-tab', params: { tab: 'markets' } })"
+        @click="router.push({ name: 'platform-settings-tab', params: { tab: 'international' } })"
       />
       <div v-if="!isLoading">
         <h4 class="text-h4">

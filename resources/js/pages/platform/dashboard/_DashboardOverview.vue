@@ -148,7 +148,7 @@ const cards = computed(() => [
     value: stats.value.modules,
     icon: 'tabler-puzzle',
     color: 'warning',
-    to: { name: 'platform-modules' },
+    to: { name: 'platform-catalog-tab', params: { tab: 'modules' } },
   },
 ])
 
