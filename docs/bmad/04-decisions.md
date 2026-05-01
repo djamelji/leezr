@@ -16761,4 +16761,35 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-477 — Help Center Content Seeding: 90 articles pour 3 audiences (2026-04-30)
+
+**Contexte** : Le système Help Center (5 tables, modèles, contrôleurs, routes, pages Vue, 927 lignes de tests) est entièrement construit mais les tables sont vides. Aucun seeder n'existait — le Help Center affiche des pages vides pour tous les utilisateurs.
+
+**Décisions** :
+1. Création d'un `HelpCenterSeeder` idempotent (skip si contenu existe) appelé dans `DatabaseSeeder`
+2. Contenu structuré en 3 fichiers PHP dans `database/seeders/data/` — un par audience
+3. **Public** (25 articles, 5 topics) : contenu orienté conversion — présentation, fonctionnalités, tarification, sécurité, FAQ
+4. **Company** (35 articles, 7 topics) : guide utilisateur — démarrage, gestion, membres, documents, modules, facturation, support
+5. **Platform** (30 articles, 6 topics) : guide admin — gestion clients, facturation, catalogue, opérations, support SLA, configuration
+6. Chaque article suit le format structuré : Contexte, Étapes, Exemple concret, Erreurs fréquentes, Résultat attendu
+7. Contenu spécifique à Leezr (pas générique) — références aux vrais modules, plans, fonctionnalités
+8. Company content split en 2 fichiers (part1: topics 1-4, part2: topics 5-7) fusionnés par `help-center-company.php`
+
+**Conséquences** :
+- 3 groups, 18 topics, 90 articles disponibles dès le premier `php artisan db:seed`
+- Help Center fonctionnel pour les 3 audiences sans intervention manuelle
+- Contenu éditable par l'admin via l'interface platform existante
+- `HelpCenterSeeder` dans `DatabaseSeeder` après `PaymentModuleSeeder` — exécuté en staging et prod
+
+**Fichiers** :
+- `database/seeders/HelpCenterSeeder.php` — seeder principal
+- `database/seeders/DatabaseSeeder.php` — ajout de HelpCenterSeeder
+- `database/seeders/data/help-center-public.php` — 25 articles public/conversion
+- `database/seeders/data/help-center-company.php` — merge des 2 parts (35 articles)
+- `database/seeders/data/help-center-company-part1.php` — topics 1-4 (20 articles)
+- `database/seeders/data/help-center-company-part2.php` — topics 5-7 (15 articles)
+- `database/seeders/data/help-center-platform.php` — 30 articles admin/platform
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

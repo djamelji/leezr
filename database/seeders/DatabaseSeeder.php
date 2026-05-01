@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         // System data — always (idempotent, safe for all environments)
         $this->call(SystemSeeder::class);
         $this->call(PaymentModuleSeeder::class);
+        $this->call(HelpCenterSeeder::class);
 
         // Demo data — local only (never in staging/production)
         if (app()->environment('local')) {
