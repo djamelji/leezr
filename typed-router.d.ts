@@ -77,6 +77,7 @@ declare module 'vue-router/auto-routes' {
     'help-center-help-center-footer': RouteRecordInfo<'help-center-help-center-footer', '/help-center/_HelpCenterFooter', Record<never, never>, Record<never, never>>,
     'help-center-help-center-header': RouteRecordInfo<'help-center-help-center-header', '/help-center/_HelpCenterHeader', Record<never, never>, Record<never, never>>,
     'help-center-help-center-knowledge-base': RouteRecordInfo<'help-center-help-center-knowledge-base', '/help-center/_HelpCenterKnowledgeBase', Record<never, never>, Record<never, never>>,
+    'help-center-help-center-quick-actions': RouteRecordInfo<'help-center-help-center-quick-actions', '/help-center/_HelpCenterQuickActions', Record<never, never>, Record<never, never>>,
     'help-center-help-center-search-results': RouteRecordInfo<'help-center-help-center-search-results', '/help-center/_HelpCenterSearchResults', Record<never, never>, Record<never, never>>,
     'help-center-topic-slug': RouteRecordInfo<'help-center-topic-slug', '/help-center/:topicSlug', { topicSlug: ParamValue<true> }, { topicSlug: ParamValue<false> }>,
     'help-center-topic-slug-article-slug': RouteRecordInfo<'help-center-topic-slug-article-slug', '/help-center/:topicSlug/:articleSlug', { topicSlug: ParamValue<true>, articleSlug: ParamValue<true> }, { topicSlug: ParamValue<false>, articleSlug: ParamValue<false> }>,
