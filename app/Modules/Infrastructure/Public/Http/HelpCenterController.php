@@ -35,13 +35,9 @@ class HelpCenterController
             ->with(['publishedTopics' => function ($q) use ($audience) {
                 $q->forAudience($audience)
                     ->orderBy('sort_order')
-                    ->withCount(['publishedArticles as articles_count' => function ($q2) use ($audience) {
-                        $q2->forAudience($audience);
-                    }])
                     ->with(['publishedArticles' => function ($q2) use ($audience) {
                         $q2->forAudience($audience)
                             ->orderBy('sort_order')
-                            ->limit(5)
                             ->select(['id', 'topic_id', 'title', 'slug']);
                     }])
                     ->select(['id', 'uuid', 'title', 'slug', 'description', 'icon', 'group_id']);
@@ -49,10 +45,12 @@ class HelpCenterController
             ->orderBy('sort_order')
             ->get(['id', 'uuid', 'title', 'slug', 'icon']);
 
-        // Rename relation for frontend: published_articles → top_articles
+        // Transform: set articles_count + top_articles from loaded relation
         $groups->each(function ($group) {
             $group->publishedTopics->each(function ($topic) {
-                $topic->setAttribute('top_articles', $topic->publishedArticles->take(5)->values());
+                $all = $topic->publishedArticles;
+                $topic->setAttribute('articles_count', $all->count());
+                $topic->setAttribute('top_articles', $all->take(5)->values());
                 $topic->unsetRelation('publishedArticles');
             });
         });
@@ -61,20 +59,18 @@ class HelpCenterController
             ->published()
             ->forAudience($audience)
             ->whereNull('group_id')
-            ->withCount(['publishedArticles as articles_count' => function ($q) use ($audience) {
-                $q->forAudience($audience);
-            }])
             ->with(['publishedArticles' => function ($q) use ($audience) {
                 $q->forAudience($audience)
                     ->orderBy('sort_order')
-                    ->limit(5)
                     ->select(['id', 'topic_id', 'title', 'slug']);
             }])
             ->orderBy('sort_order')
             ->get(['id', 'uuid', 'title', 'slug', 'description', 'icon']);
 
         $ungroupedTopics->each(function ($topic) {
-            $topic->setAttribute('top_articles', $topic->publishedArticles->take(5)->values());
+            $all = $topic->publishedArticles;
+            $topic->setAttribute('articles_count', $all->count());
+            $topic->setAttribute('top_articles', $all->take(5)->values());
             $topic->unsetRelation('publishedArticles');
         });
 
