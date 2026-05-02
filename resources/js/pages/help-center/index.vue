@@ -62,6 +62,32 @@ const quickActions = computed(() => {
   ]
 })
 
+// ── Common Problems by audience ──
+const commonProblems = computed(() => {
+  const audience = data.value?.audience
+  if (audience === 'platform') {
+    return [
+      { icon: 'tabler-credit-card-off', label: t('helpCenter.problems.paymentFailed'), topicSlug: 'facturation-revenus', articleSlug: 'traiter-paiements-prelevements' },
+      { icon: 'tabler-file-alert', label: t('helpCenter.problems.wrongInvoice'), topicSlug: 'facturation-revenus', articleSlug: 'emettre-avoir-appliquer-coupon' },
+      { icon: 'tabler-user-off', label: t('helpCenter.problems.clientBlocked'), topicSlug: 'gestion-clients', articleSlug: 'cycle-vie-client' },
+      { icon: 'tabler-urgent', label: t('helpCenter.problems.criticalAlert'), topicSlug: 'operations-monitoring', articleSlug: 'centre-alertes' },
+      { icon: 'tabler-mail-off', label: t('helpCenter.problems.emailNotDelivered'), topicSlug: 'configuration-plateforme', articleSlug: 'configuration-email' },
+    ]
+  }
+  if (audience === 'company') {
+    return [
+      { icon: 'tabler-lock-access', label: t('helpCenter.problems.cantLogin'), topicSlug: 'demarrage', articleSlug: 'premiers-pas-apres-inscription' },
+      { icon: 'tabler-file-question', label: t('helpCenter.problems.dontUnderstandInvoice'), topicSlug: 'facturation', articleSlug: 'comprendre-votre-facture' },
+      { icon: 'tabler-file-off', label: t('helpCenter.problems.documentWontSend'), topicSlug: 'documents', articleSlug: 'telecharger-gerer-document' },
+      { icon: 'tabler-mail-off', label: t('helpCenter.problems.memberNoInvite'), topicSlug: 'membres', articleSlug: 'inviter-nouveau-membre' },
+      { icon: 'tabler-puzzle-off', label: t('helpCenter.problems.moduleNotWorking'), topicSlug: 'modules', articleSlug: 'activer-un-module' },
+    ]
+  }
+
+  // public — no problems section
+  return []
+})
+
 function actionRoute(action) {
   return {
     name: 'help-center-topic-slug-article-slug',
@@ -105,6 +131,7 @@ onMounted(fetchLanding)
               :results="searchResults"
               :query="searchQuery"
               :has-support-module="hasSupportModule"
+              :common-problems="commonProblems"
               @select="showResults = false"
             />
           </VContainer>
@@ -144,6 +171,63 @@ onMounted(fetchLanding)
                 <div class="text-body-1 font-weight-medium">
                   {{ action.label }}
                 </div>
+              </VCard>
+            </VCol>
+          </VRow>
+        </VContainer>
+      </div>
+
+      <!-- Common Problems -->
+      <div
+        v-if="commonProblems.length"
+        class="help-center-section problems-section"
+      >
+        <VContainer>
+          <div class="d-flex align-center justify-center gap-x-2 mb-6">
+            <VIcon
+              icon="tabler-alert-triangle"
+              color="warning"
+              size="28"
+            />
+            <h5 class="text-h5">
+              {{ $t('helpCenter.commonProblems') }}
+            </h5>
+          </div>
+          <VRow class="justify-center">
+            <VCol
+              v-for="problem in commonProblems"
+              :key="problem.articleSlug"
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <VCard
+                :to="actionRoute(problem)"
+                class="problem-card"
+                flat
+                border
+              >
+                <VCardText class="d-flex align-center gap-x-3 pa-3">
+                  <VAvatar
+                    color="warning"
+                    variant="tonal"
+                    size="36"
+                  >
+                    <VIcon
+                      :icon="problem.icon"
+                      size="20"
+                    />
+                  </VAvatar>
+                  <span class="text-body-1 font-weight-medium">
+                    {{ problem.label }}
+                  </span>
+                  <VSpacer />
+                  <VIcon
+                    icon="tabler-chevron-right"
+                    size="18"
+                    color="warning"
+                  />
+                </VCardText>
               </VCard>
             </VCol>
           </VRow>
@@ -205,6 +289,21 @@ onMounted(fetchLanding)
     &:hover {
       border-color: rgba(var(--v-theme-primary), 0.5) !important;
       transform: translateY(-2px);
+    }
+  }
+
+  .problems-section {
+    background: rgba(var(--v-theme-warning), 0.04);
+  }
+
+  .problem-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-color: rgba(var(--v-theme-warning), 0.3) !important;
+
+    &:hover {
+      border-color: rgba(var(--v-theme-warning), 0.7) !important;
+      background: rgba(var(--v-theme-warning), 0.06);
     }
   }
 }

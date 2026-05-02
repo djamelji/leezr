@@ -4698,6 +4698,19 @@
       "isItForMe": "Is it for me?",
       "howItWorks": "How it works",
       "freeTrial": "Try for free"
+    },
+    "commonProblems": "Common problems",
+    "problems": {
+      "paymentFailed": "Payment failed",
+      "wrongInvoice": "Incorrect invoice",
+      "clientBlocked": "Client blocked",
+      "criticalAlert": "Critical alert",
+      "emailNotDelivered": "Email not delivered",
+      "cantLogin": "I can't log in",
+      "dontUnderstandInvoice": "I don't understand my invoice",
+      "documentWontSend": "My document won't send",
+      "memberNoInvite": "A member didn't receive the invitation",
+      "moduleNotWorking": "A module isn't working"
     }
   },
   "session": {

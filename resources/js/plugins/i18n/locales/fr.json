@@ -4703,6 +4703,19 @@
       "isItForMe": "Est-ce pour moi ?",
       "howItWorks": "Comment ça marche",
       "freeTrial": "Essayer gratuitement"
+    },
+    "commonProblems": "Problèmes fréquents",
+    "problems": {
+      "paymentFailed": "Paiement échoué",
+      "wrongInvoice": "Facture incorrecte",
+      "clientBlocked": "Client bloqué",
+      "criticalAlert": "Alerte critique",
+      "emailNotDelivered": "Email non délivré",
+      "cantLogin": "Je ne peux pas me connecter",
+      "dontUnderstandInvoice": "Je ne comprends pas ma facture",
+      "documentWontSend": "Mon document ne s'envoie pas",
+      "memberNoInvite": "Un membre ne reçoit pas d'invitation",
+      "moduleNotWorking": "Un module ne fonctionne pas"
     }
   },
   "session": {
