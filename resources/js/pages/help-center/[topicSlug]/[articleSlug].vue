@@ -13,6 +13,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const route = useRoute()
 const { article, loading, fetchArticle, submitFeedback } = useHelpCenter()
 const { isAuthenticated } = useReturnNavigation()
@@ -57,27 +58,7 @@ const tableOfContents = computed(() => {
   return toc
 })
 
-// Prev/Next navigation
-const prevArticle = computed(() => {
-  const siblings = article.value?.siblings || []
-  const current = article.value?.article
-  if (!current || !siblings.length) return null
-
-  // Find current position in full topic list (siblings + self)
-  const all = [...siblings]
-  const selfIndex = all.findIndex(s => s.slug > current.slug) // sorted by sort_order
-
-  // Just return last sibling before current based on ordering
-  for (let i = siblings.length - 1; i >= 0; i--) {
-    if (siblings[i].sort_order !== undefined && current.sort_order !== undefined) {
-      if (siblings[i].sort_order < current.sort_order) return siblings[i]
-    }
-  }
-
-  // Fallback: use array order
-  return null
-})
-
+// Next action = next sibling
 const nextArticle = computed(() => {
   const siblings = article.value?.siblings || []
   const current = article.value?.article
@@ -89,8 +70,14 @@ const nextArticle = computed(() => {
     }
   }
 
-  // Fallback: first sibling
   return siblings[0] || null
+})
+
+// Related articles = other siblings (max 3)
+const relatedArticles = computed(() => {
+  const siblings = article.value?.siblings || []
+
+  return siblings.slice(0, 3)
 })
 
 function siblingRoute(sibling) {
@@ -174,32 +161,68 @@ onMounted(() => {
               v-html="sanitizedContent"
             />
 
-            <!-- Prev / Next Navigation -->
-            <VDivider class="mb-4" />
-            <div class="d-flex justify-space-between align-center mb-6">
-              <VBtn
-                v-if="prevArticle"
-                variant="text"
-                :to="siblingRoute(prevArticle)"
+            <!-- Next Action -->
+            <VCard
+              v-if="nextArticle"
+              flat
+              border
+              class="mb-4"
+            >
+              <VCardText class="d-flex align-center justify-space-between flex-wrap gap-3">
+                <div>
+                  <p class="text-overline text-primary mb-1">
+                    {{ t('helpCenter.nextAction') }}
+                  </p>
+                  <p class="text-body-1 font-weight-medium mb-0">
+                    {{ nextArticle.title }}
+                  </p>
+                </div>
+                <VBtn
+                  color="primary"
+                  variant="tonal"
+                  :to="siblingRoute(nextArticle)"
+                >
+                  {{ t('helpCenter.goToAction') }}
+                  <VIcon
+                    icon="tabler-arrow-right"
+                    class="ms-2"
+                  />
+                </VBtn>
+              </VCardText>
+            </VCard>
+
+            <!-- Related Articles -->
+            <div
+              v-if="relatedArticles.length"
+              class="mb-6"
+            >
+              <h6 class="text-h6 mb-3">
+                {{ t('helpCenter.relatedArticles') }}
+              </h6>
+              <VList
+                density="compact"
+                class="pa-0 related-list"
               >
-                <VIcon
-                  icon="tabler-arrow-left"
-                  class="me-2"
-                />
-                {{ prevArticle.title }}
-              </VBtn>
-              <div v-else />
-              <VBtn
-                v-if="nextArticle"
-                variant="text"
-                :to="siblingRoute(nextArticle)"
-              >
-                {{ nextArticle.title }}
-                <VIcon
-                  icon="tabler-arrow-right"
-                  class="ms-2"
-                />
-              </VBtn>
+                <VListItem
+                  v-for="rel in relatedArticles"
+                  :key="rel.id"
+                  :to="siblingRoute(rel)"
+                  density="compact"
+                  class="px-2"
+                >
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-arrow-right"
+                      size="16"
+                      color="primary"
+                      class="me-2"
+                    />
+                  </template>
+                  <VListItemTitle class="text-body-2">
+                    {{ rel.title }}
+                  </VListItemTitle>
+                </VListItem>
+              </VList>
             </div>
 
             <!-- Feedback widget -->
@@ -335,6 +358,17 @@ onMounted(() => {
 .toc-list {
   :deep(.v-list-item) {
     min-block-size: 30px !important;
+  }
+}
+
+.related-list {
+  :deep(.v-list-item) {
+    min-block-size: 32px !important;
+    border-radius: 6px;
+
+    &:hover {
+      background: rgba(var(--v-theme-primary), 0.08);
+    }
   }
 }
 

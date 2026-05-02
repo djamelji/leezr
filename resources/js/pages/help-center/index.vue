@@ -12,6 +12,7 @@ definePage({
   },
 })
 
+const { t } = useI18n()
 const { data, searchResults, hasSupportModule, loading, fetchLanding, search } = useHelpCenter()
 const searchQuery = ref('')
 const showResults = ref(false)
@@ -31,6 +32,41 @@ function onSearch(val) {
     await search(val)
     showResults.value = true
   }, 300)
+}
+
+// ── Quick Actions by audience ──
+const quickActions = computed(() => {
+  const audience = data.value?.audience
+  if (audience === 'platform') {
+    return [
+      { icon: 'tabler-file-invoice', label: t('helpCenter.actions.fixInvoice'), topicSlug: 'facturation-revenus', articleSlug: 'emettre-avoir-appliquer-coupon', color: 'error' },
+      { icon: 'tabler-building', label: t('helpCenter.actions.manageClient'), topicSlug: 'gestion-clients', articleSlug: 'consulter-detail-entreprise', color: 'primary' },
+      { icon: 'tabler-alert-triangle', label: t('helpCenter.actions.resolveAlert'), topicSlug: 'operations-monitoring', articleSlug: 'centre-alertes', color: 'warning' },
+      { icon: 'tabler-puzzle', label: t('helpCenter.actions.activateModule'), topicSlug: 'modules-catalogue', articleSlug: 'gerer-modules-entreprise', color: 'success' },
+    ]
+  }
+  if (audience === 'company') {
+    return [
+      { icon: 'tabler-user-plus', label: t('helpCenter.actions.addMember'), topicSlug: 'membres', articleSlug: 'inviter-nouveau-membre', color: 'primary' },
+      { icon: 'tabler-file-upload', label: t('helpCenter.actions.sendDocument'), topicSlug: 'documents', articleSlug: 'telecharger-gerer-document', color: 'success' },
+      { icon: 'tabler-receipt', label: t('helpCenter.actions.understandInvoice'), topicSlug: 'facturation', articleSlug: 'comprendre-votre-facture', color: 'info' },
+      { icon: 'tabler-puzzle', label: t('helpCenter.actions.activateModule'), topicSlug: 'modules', articleSlug: 'activer-un-module', color: 'warning' },
+    ]
+  }
+  // public
+  return [
+    { icon: 'tabler-rocket', label: t('helpCenter.actions.discoverLeezr'), topicSlug: 'presentation', articleSlug: 'quest-ce-que-leezr', color: 'primary' },
+    { icon: 'tabler-target', label: t('helpCenter.actions.isItForMe'), topicSlug: 'presentation', articleSlug: 'a-qui-sadresse-leezr', color: 'info' },
+    { icon: 'tabler-layout-dashboard', label: t('helpCenter.actions.howItWorks'), topicSlug: 'presentation', articleSlug: 'comment-fonctionne-la-plateforme', color: 'success' },
+    { icon: 'tabler-gift', label: t('helpCenter.actions.freeTrial'), topicSlug: 'tarification', articleSlug: 'la-periode-dessai-gratuite', color: 'warning' },
+  ]
+})
+
+function actionRoute(action) {
+  return {
+    name: 'help-center-topic-slug-article-slug',
+    params: { topicSlug: action.topicSlug, articleSlug: action.articleSlug },
+  }
 }
 
 onMounted(fetchLanding)
@@ -73,6 +109,45 @@ onMounted(fetchLanding)
             />
           </VContainer>
         </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="help-center-section bg-surface">
+        <VContainer>
+          <h5 class="text-h5 text-center mb-6">
+            {{ $t('helpCenter.whatDoYouWant') }}
+          </h5>
+          <VRow class="justify-center">
+            <VCol
+              v-for="action in quickActions"
+              :key="action.articleSlug"
+              cols="6"
+              sm="3"
+            >
+              <VCard
+                :to="actionRoute(action)"
+                class="text-center pa-4 h-100 quick-action-card"
+                flat
+                border
+              >
+                <VAvatar
+                  :color="action.color"
+                  variant="tonal"
+                  size="48"
+                  class="mb-3"
+                >
+                  <VIcon
+                    :icon="action.icon"
+                    size="24"
+                  />
+                </VAvatar>
+                <div class="text-body-1 font-weight-medium">
+                  {{ action.label }}
+                </div>
+              </VCard>
+            </VCol>
+          </VRow>
+        </VContainer>
       </div>
 
       <!-- Knowledge Base -->
@@ -121,6 +196,16 @@ onMounted(fetchLanding)
     position: absolute;
     z-index: 10;
     inline-size: 100%;
+  }
+
+  .quick-action-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: rgba(var(--v-theme-primary), 0.5) !important;
+      transform: translateY(-2px);
+    }
   }
 }
 

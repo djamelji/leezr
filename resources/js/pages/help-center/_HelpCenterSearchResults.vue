@@ -54,11 +54,22 @@ function supportRoute() {
           <VListItemTitle class="text-body-1 font-weight-medium">
             {{ article.title }}
           </VListItemTitle>
-          <VListItemSubtitle
-            v-if="article.excerpt"
-            class="text-body-2"
-          >
-            {{ article.excerpt }}
+          <VListItemSubtitle class="d-flex align-center gap-x-2 mt-1">
+            <VChip
+              v-if="article.topic?.title"
+              size="x-small"
+              color="primary"
+              variant="tonal"
+              label
+            >
+              {{ article.topic.title }}
+            </VChip>
+            <span
+              v-if="article.excerpt"
+              class="text-body-2 text-truncate"
+            >
+              {{ article.excerpt }}
+            </span>
           </VListItemSubtitle>
           <template #append>
             <VIcon

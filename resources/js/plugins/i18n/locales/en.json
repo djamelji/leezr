@@ -4681,6 +4681,25 @@
     "notResolved": "Not resolved?",
     "notResolvedHint": "Open a ticket and our team will respond quickly."
   },
+  "helpCenter": {
+    "whatDoYouWant": "What do you want to do?",
+    "nextAction": "Next action",
+    "goToAction": "Follow this guide",
+    "relatedArticles": "Related articles",
+    "actions": {
+      "fixInvoice": "Fix an invoice",
+      "manageClient": "Manage a client",
+      "resolveAlert": "Resolve an alert",
+      "activateModule": "Activate a module",
+      "addMember": "Add a member",
+      "sendDocument": "Send a document",
+      "understandInvoice": "Understand my invoice",
+      "discoverLeezr": "Discover Leezr",
+      "isItForMe": "Is it for me?",
+      "howItWorks": "How it works",
+      "freeTrial": "Try for free"
+    }
+  },
   "session": {
     "expiredTitle": "Session Expired",
     "expiredMessage": "Your session has expired due to inactivity. Please log in again to continue.",

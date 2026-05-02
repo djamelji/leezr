@@ -4686,6 +4686,25 @@
     "notResolved": "Pas résolu ?",
     "notResolvedHint": "Ouvrez un ticket et notre équipe vous répondra rapidement."
   },
+  "helpCenter": {
+    "whatDoYouWant": "Que voulez-vous faire ?",
+    "nextAction": "Action suivante",
+    "goToAction": "Suivre ce guide",
+    "relatedArticles": "Articles liés",
+    "actions": {
+      "fixInvoice": "Corriger une facture",
+      "manageClient": "Gérer un client",
+      "resolveAlert": "Résoudre une alerte",
+      "activateModule": "Activer un module",
+      "addMember": "Ajouter un membre",
+      "sendDocument": "Envoyer un document",
+      "understandInvoice": "Comprendre ma facture",
+      "discoverLeezr": "Découvrir Leezr",
+      "isItForMe": "Est-ce pour moi ?",
+      "howItWorks": "Comment ça marche",
+      "freeTrial": "Essayer gratuitement"
+    }
+  },
   "session": {
     "expiredTitle": "Session expirée",
     "expiredMessage": "Votre session a expiré en raison d'une inactivité prolongée. Veuillez vous reconnecter pour continuer.",
