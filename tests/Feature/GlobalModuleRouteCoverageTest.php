@@ -84,11 +84,13 @@ class GlobalModuleRouteCoverageTest extends TestCase
             $controllerFile = (new ReflectionClass($className))->getFileName();
             $matchedInfo = null;
 
-            foreach ($modulePathToInfo as $modulePath => $info) {
-                if (str_starts_with($controllerFile, $modulePath)) {
-                    $matchedInfo = $info;
+            // Find the most specific (longest) matching module path
+            $bestMatchLen = 0;
 
-                    break;
+            foreach ($modulePathToInfo as $modulePath => $info) {
+                if (str_starts_with($controllerFile, $modulePath) && strlen($modulePath) > $bestMatchLen) {
+                    $matchedInfo = $info;
+                    $bestMatchLen = strlen($modulePath);
                 }
             }
 

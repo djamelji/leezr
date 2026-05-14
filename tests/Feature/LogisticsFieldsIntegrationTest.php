@@ -72,7 +72,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
         $cuFields = collect(FieldDefinitionCatalog::all())
             ->where('scope', FieldDefinition::SCOPE_COMPANY_USER);
 
-        $this->assertCount(20, $cuFields, 'Catalog must contain exactly 20 company_user fields (canon FR logistique)');
+        $this->assertCount(28, $cuFields, 'Catalog must contain exactly 28 company_user fields (canon FR logistique + DSN identity)');
     }
 
     public function test_catalog_fields_synced_to_database(): void

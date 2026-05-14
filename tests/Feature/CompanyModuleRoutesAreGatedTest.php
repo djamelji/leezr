@@ -71,11 +71,13 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
             $controllerFile = (new ReflectionClass($className))->getFileName();
             $matchedKey = null;
 
-            foreach ($modulePathToKey as $modulePath => $key) {
-                if (str_starts_with($controllerFile, $modulePath)) {
-                    $matchedKey = $key;
+            // Find the most specific (longest) matching module path
+            $bestMatchLen = 0;
 
-                    break;
+            foreach ($modulePathToKey as $modulePath => $key) {
+                if (str_starts_with($controllerFile, $modulePath) && strlen($modulePath) > $bestMatchLen) {
+                    $matchedKey = $key;
+                    $bestMatchLen = strlen($modulePath);
                 }
             }
 

@@ -571,7 +571,7 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 14 admin permissions (includes core.audit + core.billing + core.documents + core.modules + core.roles + core.jobdomain + members.sensitive_read)
+        // 33 admin permissions (includes core + shipments + workforce + workforce_documents)
         $this->assertEquals([
             'audit.view',
             'billing.manage',
@@ -587,9 +587,28 @@ class CompanyPermissionTest extends TestCase
             'settings.manage',
             'shipments.delete',
             'shipments.manage_fields',
+            'workforce.admin',
+            'workforce.compensation_manage',
+            'workforce.compensation_read',
+            'workforce.contracts',
+            'workforce.leave_adjust',
+            'workforce.leave_approve',
+            'workforce.leave_manage',
+            'workforce.leave_view_all',
+            'workforce.payroll_export',
+            'workforce.payroll_prepare',
+            'workforce.payroll_validate',
+            'workforce.planning_manage',
+            'workforce.planning_publish',
+            'workforce.sensitive_read',
+            'workforce.time_approve',
+            'workforce.timesheet_approve',
+            'workforce_documents.generate',
+            'workforce_documents.manage_templates',
+            'workforce_documents.sign',
         ], $adminPerms);
 
-        // 17 operational permissions (includes core.theme + core.support + core.documents + core.documentation + core.workflows)
+        // 25 operational permissions (includes core + shipments + workforce + workforce_documents)
         $this->assertEquals([
             'automations.manage',
             'automations.view',
@@ -608,6 +627,14 @@ class CompanyPermissionTest extends TestCase
             'support.view',
             'theme.manage',
             'theme.view',
+            'workforce.leave_request',
+            'workforce.manage',
+            'workforce.planning_view',
+            'workforce.time_manage',
+            'workforce.timesheet_submit',
+            'workforce.timesheet_view',
+            'workforce.view',
+            'workforce_documents.view',
         ], $opPerms);
     }
 

@@ -82,7 +82,7 @@ class ActorProfileFieldResolutionTest extends TestCase
         $codes = array_column($fields, 'code');
         $this->assertContains('phone', $codes);
         $this->assertContains('job_title', $codes);
-        $this->assertCount(20, $fields);
+        $this->assertCount(28, $fields);
     }
 
     public function test_resolve_with_role_key_and_null_field_config_returns_all_fields(): void
@@ -115,7 +115,7 @@ class ActorProfileFieldResolutionTest extends TestCase
             'nonexistent_role',
         );
 
-        $this->assertCount(20, $fields);
+        $this->assertCount(28, $fields);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -144,7 +144,7 @@ class ActorProfileFieldResolutionTest extends TestCase
         $codes = array_column($fields, 'code');
         $this->assertContains('phone', $codes);
         $this->assertContains('job_title', $codes, 'Unlisted field must remain visible');
-        $this->assertCount(20, $fields);
+        $this->assertCount(28, $fields);
     }
 
     public function test_resolve_respects_visible_false(): void
@@ -169,7 +169,7 @@ class ActorProfileFieldResolutionTest extends TestCase
         $codes = array_column($fields, 'code');
         $this->assertContains('phone', $codes);
         $this->assertNotContains('job_title', $codes, 'visible=false must hide the field');
-        $this->assertCount(19, $fields);
+        $this->assertCount(27, $fields);
     }
 
     // ═══════════════════════════════════════════════════════
