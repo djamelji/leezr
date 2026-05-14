@@ -26,6 +26,58 @@
   "Fleet": "Flotte",
   "Shortcut": "Raccourci",
   "Appointments": "Rendez-vous",
+  "Work Locations": "Lieux de travail",
+  "Schedule Templates": "Modèles d'horaires",
+  "Shifts": "Créneaux",
+  "Create Shift": "Créer un créneau",
+  "Publish Shifts": "Publier les créneaux",
+  "Cancel Shift": "Annuler le créneau",
+  "Draft": "Brouillon",
+  "Published": "Publié",
+  "Completed": "Terminé",
+  "Cancelled": "Annulé",
+  "Planned vs Actual": "Prévu vs Réel",
+  "Missing Actual": "Réel manquant",
+  "Bulk Create": "Création en masse",
+  "Night Shift": "Créneau de nuit",
+  "Location Type": "Type de lieu",
+  "Internal": "Interne",
+  "Client Site": "Site client",
+  "Remote": "À distance",
+  "Mobile": "Mobile",
+  "Template": "Modèle",
+  "Break Duration": "Durée de pause",
+  "Shift Details": "Détails du créneau",
+  "Timesheet": "Feuille de temps",
+  "Timesheets": "Feuilles de temps",
+  "Timesheet Period": "Période de feuille de temps",
+  "Generate Timesheet": "Générer la feuille de temps",
+  "Submit Timesheet": "Soumettre la feuille de temps",
+  "Approve Timesheet": "Approuver la feuille de temps",
+  "Reject Timesheet": "Rejeter la feuille de temps",
+  "Lock Timesheet": "Verrouiller la feuille de temps",
+  "Reopen Timesheet": "Rouvrir la feuille de temps",
+  "Submitted": "Soumis",
+  "Approved": "Approuvé",
+  "Rejected": "Rejeté",
+  "Locked": "Verrouillé",
+  "Anomalies": "Anomalies",
+  "Missing Clock Out": "Pointage de sortie manquant",
+  "Missing Time Entry": "Pointage manquant",
+  "Overtime Daily": "Heures supplémentaires journalières",
+  "Overtime Weekly": "Heures supplémentaires hebdomadaires",
+  "Insufficient Break": "Pause insuffisante",
+  "Unplanned Work": "Travail non planifié",
+  "Leave Conflict": "Conflit de congé",
+  "Late Arrival": "Retard à l'arrivée",
+  "Early Departure": "Départ anticipé",
+  "Worked Minutes": "Minutes travaillées",
+  "Break Minutes": "Minutes de pause",
+  "Planned Minutes": "Minutes planifiées",
+  "Approval Note": "Note d'approbation",
+  "Rejection Reason": "Motif de rejet",
+  "Period Start": "Début de période",
+  "Period End": "Fin de période",
   "nav": {
     "groups": {
       "management": "Gestion",
@@ -94,7 +146,13 @@
       "support": "Support",
       "documentation": "Centre d'aide",
       "documents": "Documents",
-      "workflows": "Workflows"
+      "workflows": "Workflows",
+      "workforce-employees": "Employés",
+      "workforce-time": "Pointage",
+      "workforce-leave": "Congés",
+      "workforce-planning": "Planning",
+      "workforce-payroll": "Paie",
+      "workforce-documents": "Documents RH"
     }
   },
   "roles": {
@@ -5450,5 +5508,777 @@
     "topAiConsumers": "Top consommateurs IA",
     "dailyTrend": "Tendance quotidienne",
     "noData": "Pas de données pour cette période"
+  },
+  "payroll": {
+    "title": "Préparation de paie",
+    "subtitle": "Préparez, validez et exportez les données de paie",
+    "createRun": "Créer une période de paie",
+    "periodStart": "Début de période",
+    "periodEnd": "Fin de période",
+    "status": "Statut",
+    "statusDraft": "Brouillon",
+    "statusComputed": "Calculé",
+    "statusValidated": "Validé",
+    "statusExported": "Exporté",
+    "compute": "Calculer la paie",
+    "recompute": "Recalculer",
+    "validate": "Valider la paie",
+    "export": "Exporter",
+    "delete": "Supprimer",
+    "employeeCount": "Nombre d'employés",
+    "totalGross": "Total brut estimé",
+    "totalWorked": "Total heures travaillées",
+    "totalOvertime": "Total heures supplémentaires",
+    "totalLeave": "Total jours de congé",
+    "grossBasis": "Base brute estimée",
+    "grossBasisNote": "Estimation de préparation, pas le brut officiel",
+    "baseSalary": "Salaire de base",
+    "overtimePay": "Heures supplémentaires",
+    "unpaidLeaveDeduction": "Déduction congés non payés",
+    "paidLeave": "Congés payés",
+    "unpaidLeave": "Congés non payés",
+    "breakdown": "Décomposition",
+    "formulaVersion": "Version de la formule",
+    "compensationSnapshot": "Données de rémunération",
+    "timesheetSnapshot": "Données de feuille de temps",
+    "anomalies": "Anomalies",
+    "anomalyMissingTimesheet": "Feuille de temps manquante",
+    "anomalyMissingCompensation": "Plan de rémunération manquant",
+    "anomalyTimesheetErrors": "Feuille de temps avec erreurs",
+    "anomalyZeroWorked": "Aucune heure travaillée",
+    "anomalyCompensationGap": "Changement de rémunération en cours de période",
+    "validationNote": "Note de validation",
+    "validationNoteRequired": "Une note est requise en présence d'anomalies critiques",
+    "exportFormat": "Format d'export",
+    "noRuns": "Aucune période de paie",
+    "noLines": "Aucune ligne de paie",
+    "confirmDelete": "Supprimer cette période de paie ?",
+    "payFrequency": "Fréquence de paie",
+    "payFrequencyMixed": "Mixte",
+    "payFrequencyMonthly": "Mensuel",
+    "payFrequencyBiweekly": "Bimensuel",
+    "payFrequencyWeekly": "Hebdomadaire",
+    "created": "Cycle de paie créé",
+    "deleted": "Cycle de paie supprimé",
+    "computed": "Lignes de paie calculées",
+    "calculationsComputed": "Calculs brut-net effectués",
+    "validated": "Cycle de paie validé",
+    "exported": "Cycle de paie exporté",
+    "recomputed": "Lignes de paie recalculées"
+  },
+  "workforceDocuments": {
+    "title": "Documents RH",
+    "subtitle": "Générez et gérez les documents RH depuis des modèles",
+    "templates": "Modèles de documents",
+    "generated": "Documents générés",
+    "createTemplate": "Créer un modèle",
+    "editTemplate": "Modifier le modèle",
+    "templateName": "Nom du modèle",
+    "templateCode": "Code du modèle",
+    "subjectType": "Type de sujet",
+    "subjectEmployee": "Employé",
+    "subjectContract": "Contrat",
+    "subjectLeaveRequest": "Demande de congé",
+    "subjectPayrollRun": "Cycle de paie",
+    "subjectPayrollLine": "Ligne de paie",
+    "bodyHtml": "Contenu HTML",
+    "headerHtml": "En-tête",
+    "footerHtml": "Pied de page",
+    "variables": "Variables disponibles",
+    "variableKey": "Clé",
+    "variableType": "Type",
+    "variableLabel": "Libellé",
+    "version": "Version",
+    "versionHistory": "Historique des versions",
+    "generate": "Générer le document",
+    "bulkGenerate": "Génération en lot",
+    "bulkLimit": "Maximum 100 documents par lot",
+    "download": "Télécharger",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer ce document généré ?",
+    "generatedAt": "Généré le",
+    "generatedBy": "Généré par",
+    "templateVersion": "Version du modèle",
+    "snapshot": "Données capturées",
+    "signature": "Signature",
+    "signatureNone": "Non signé",
+    "signaturePending": "En attente de signature",
+    "signatureSigned": "Signé",
+    "signatureDeclined": "Refusé",
+    "signedAt": "Signé le",
+    "noTemplates": "Aucun modèle de document",
+    "noDocuments": "Aucun document généré",
+    "platformTemplate": "Modèle plateforme",
+    "companyOverride": "Modèle personnalisé",
+    "preview": "Aperçu",
+    "formulaVersion": "Version de la formule",
+    "subtitleFull": "Bulletins de paie, contrats, et documents générés",
+    "generateDocument": "Générer un document",
+    "stats": {
+      "totalDocuments": "Total documents",
+      "payslipDrafts": "Brouillons bulletins",
+      "officialPayslips": "Bulletins officiels"
+    },
+    "filters": {
+      "subjectType": "Type de sujet",
+      "signatureStatus": "Statut signature",
+      "templateCode": "Code du modèle"
+    },
+    "columns": {
+      "templateCode": "Modèle",
+      "subject": "Sujet",
+      "signatureStatus": "Signature",
+      "generatedAt": "Généré le",
+      "generatedBy": "Généré par",
+      "actions": "Actions"
+    },
+    "subjects": {
+      "payrollLine": "Bulletin",
+      "employee": "Employé",
+      "contract": "Contrat",
+      "leaveRequest": "Congé",
+      "payrollRun": "Cycle de paie"
+    },
+    "signatureStatuses": {
+      "none": "Non signé",
+      "pending": "En attente",
+      "signed": "Signé",
+      "declined": "Refusé"
+    },
+    "emptyState": {
+      "title": "Aucun document généré",
+      "description": "Commencez par générer un document depuis un modèle."
+    },
+    "drawer": {
+      "title": "Générer un document"
+    },
+    "fields": {
+      "templateCode": "Code du modèle",
+      "subjectType": "Type de sujet",
+      "subjectId": "Identifiant du sujet",
+      "forceVault": "Forcer le coffre-fort"
+    },
+    "payslipActions": {
+      "generateDrafts": "Générer bulletins brouillon",
+      "generateDraftsDesc": "Génère les bulletins de paie en brouillon pour un cycle donné.",
+      "generateOfficial": "Générer bulletins officiels",
+      "generateOfficialDesc": "Génère les bulletins officiels signés. Action irréversible.",
+      "payrollRunId": "ID du cycle de paie"
+    },
+    "confirm": {
+      "officialTitle": "Générer les bulletins officiels ?",
+      "officialText": "Cette action est irréversible. Les bulletins officiels seront générés et signés pour tous les employés du cycle sélectionné."
+    },
+    "success": {
+      "generated": "Document généré avec succès",
+      "draftsGenerated": "Brouillons générés avec succès",
+      "officialGenerated": "Bulletins officiels générés avec succès"
+    }
+  },
+  "payslipDraft": {
+    "title": "Fiche de paie — BROUILLON",
+    "disclaimer": "Document non officiel, à titre indicatif uniquement. Ne constitue pas une fiche de paie au sens du Code du travail.",
+    "watermark": "BROUILLON",
+    "generatedOn": "Généré le {date}",
+    "period": "Période du {start} au {end}",
+    "employeeSection": "Salarié",
+    "earnings": "Rémunération brute",
+    "baseSalary": "Salaire de base",
+    "grossBasis": "Base brute (base + heures sup. − absences)",
+    "taxableBenefits": "Avantages imposables",
+    "grossTotal": "Total brut",
+    "contributions": "Cotisations",
+    "contributionBase": "Base",
+    "employeeRate": "Taux sal.",
+    "employeePart": "Part sal.",
+    "employerRate": "Taux pat.",
+    "employerPart": "Part pat.",
+    "totalContributions": "Total cotisations",
+    "tax": "Prélèvement à la source",
+    "taxableIncome": "Revenu imposable",
+    "taxRate": "Taux PAS",
+    "incomeTax": "Impôt sur le revenu (PAS)",
+    "netBeforeTax": "Net avant impôt",
+    "netPayable": "NET À PAYER",
+    "employerCost": "Coût employeur total",
+    "plafondSS": "Plafond SS mensuel",
+    "ruleVersion": "Version règles",
+    "generateDrafts": "Générer les brouillons",
+    "generatingDrafts": "Génération des brouillons en cours...",
+    "draftsGenerated": "{count} brouillon(s) généré(s)",
+    "noDraftsYet": "Aucun brouillon généré pour ce cycle",
+    "downloadPdf": "Télécharger le PDF"
+  },
+  "workforce": {
+    "hub": {
+      "title": "Ressources Humaines",
+      "subtitle": "Gérez vos employés, leur temps de travail, leurs congés et la paie",
+      "modulesTitle": "Modules RH",
+      "actionsTitle": "Actions rapides",
+      "gettingStarted": {
+        "title": "Commencez par ajouter vos employés",
+        "description": "Créez votre premier employé pour débloquer toutes les fonctionnalités RH : contrats, pointage, congés, paie et DSN.",
+        "action": "Ajouter un employé"
+      }
+    },
+    "modules": {
+      "employees": {
+        "title": "Employés",
+        "description": "Gestion des employés, contrats et rémunérations"
+      },
+      "time": {
+        "title": "Pointage",
+        "description": "Suivi du temps de travail, pauses et feuilles de temps"
+      },
+      "planning": {
+        "title": "Planning",
+        "description": "Planification des postes, modèles et lieux de travail"
+      },
+      "leave": {
+        "title": "Congés",
+        "description": "Demandes de congés, soldes et approbations"
+      },
+      "payroll": {
+        "title": "Paie",
+        "description": "Cycles de paie, calculs brut-net et exports"
+      },
+      "documents": {
+        "title": "Documents RH",
+        "description": "Génération de documents depuis des modèles"
+      }
+    },
+    "actions": {
+      "addEmployee": {
+        "title": "Ajouter un employé",
+        "description": "Créer une nouvelle fiche employé",
+        "action": "Ajouter"
+      },
+      "createPayroll": {
+        "title": "Lancer un cycle de paie",
+        "description": "Créer un nouveau cycle de paie mensuel",
+        "action": "Créer"
+      },
+      "viewTimesheets": {
+        "title": "Consulter les feuilles de temps",
+        "description": "Voir les feuilles de temps en attente de validation",
+        "action": "Consulter"
+      }
+    },
+    "emptyStates": {
+      "time": {
+        "title": "Aucun pointage enregistré",
+        "description": "Les pointages apparaîtront ici dès que vos employés commenceront à pointer."
+      },
+      "planning": {
+        "title": "Aucun planning créé",
+        "description": "Créez des modèles de planning et planifiez les postes de vos employés."
+      },
+      "leave": {
+        "title": "Aucune demande de congé",
+        "description": "Les demandes de congés de vos employés apparaîtront ici."
+      },
+      "payroll": {
+        "title": "Aucun cycle de paie",
+        "description": "Créez votre premier cycle de paie pour calculer les bulletins de salaire."
+      },
+      "documents": {
+        "title": "Aucun document généré",
+        "description": "Générez des documents RH depuis des modèles pour vos employés."
+      }
+    },
+    "comingSoon": "Bientôt",
+    "statuses": {
+      "employee": {
+        "active": "Actif",
+        "inactive": "Inactif",
+        "on_leave": "En congé",
+        "suspended": "Suspendu",
+        "terminated": "Sorti"
+      },
+      "contract": {
+        "draft": "Brouillon",
+        "active": "Actif",
+        "suspended": "Suspendu",
+        "terminated": "Résilié"
+      },
+      "leave": {
+        "draft": "Brouillon",
+        "pending": "En attente",
+        "approved": "Approuvé",
+        "consumed": "Consommé",
+        "rejected": "Refusé",
+        "cancelled": "Annulé"
+      },
+      "shift": {
+        "draft": "Brouillon",
+        "published": "Publié",
+        "completed": "Terminé",
+        "cancelled": "Annulé"
+      },
+      "timeEntry": {
+        "idle": "Inactif",
+        "working": "En activité",
+        "on_break": "En pause",
+        "completed": "Terminé"
+      },
+      "timesheet": {
+        "draft": "Brouillon",
+        "submitted": "Soumis",
+        "approved": "Approuvé",
+        "rejected": "Refusé",
+        "locked": "Verrouillé"
+      },
+      "payrollRun": {
+        "draft": "Brouillon",
+        "computed": "Calculé",
+        "validated": "Validé",
+        "exported": "Exporté"
+      },
+      "dsn": {
+        "draft": "Brouillon",
+        "validated": "Validé",
+        "exported": "Exporté",
+        "submitted": "Transmis",
+        "accepted": "Accepté",
+        "rejected": "Rejeté"
+      }
+    }
+  },
+  "workforceDashboard": {
+    "title": "Tableau de bord RH",
+    "subtitle": "Vue d'ensemble de vos ressources humaines, indicateurs clés et actions à traiter",
+    "refresh": "Actualiser",
+    "loadError": "Erreur lors du chargement du tableau de bord",
+    "pendingActionsTitle": "Actions en attente :",
+    "kpi": {
+      "activeEmployees": "Employés actifs",
+      "totalEmployees": "sur le total",
+      "activeContracts": "Contrats actifs",
+      "timesheetCompletion": "Complétion pointage",
+      "pendingActions": "Actions en attente"
+    },
+    "pending": {
+      "leaves": "congés à valider",
+      "payrolls": "paies en brouillon",
+      "dsn": "DSN à traiter"
+    },
+    "stats": {
+      "active": "actifs",
+      "total": "total",
+      "timesheets": "feuilles",
+      "completion": "complétion",
+      "pending": "en attente",
+      "approved": "approuvés",
+      "draft": "brouillon",
+      "validated": "validés"
+    }
+  },
+  "employees": {
+    "title": "Employés",
+    "subtitle": "Gérez vos employés, leurs contrats et rémunérations",
+    "addEmployee": "Ajouter un employé",
+    "created": "Employé créé avec succès",
+    "updated": "Employé mis à jour",
+    "loadError": "Erreur lors du chargement de l'employé",
+    "searchPlaceholder": "Rechercher un employé…",
+    "filterStatus": "Filtrer par statut",
+    "noContract": "Aucun contrat",
+    "backToList": "Retour à la liste",
+    "columns": {
+      "name": "Nom",
+      "email": "Email",
+      "employeeNumber": "Matricule",
+      "status": "Statut",
+      "contract": "Contrat",
+      "hireDate": "Date d'embauche"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email",
+      "phone": "Téléphone",
+      "employeeNumber": "Matricule",
+      "hireDate": "Date d'embauche",
+      "terminationDate": "Date de sortie"
+    },
+    "tabs": {
+      "profile": "Profil",
+      "contract": "Contrat",
+      "variables": "Variables",
+      "documents": "Documents",
+      "activity": "Activité"
+    },
+    "profile": {
+      "title": "Informations personnelles",
+      "personalInfo": "Informations personnelles",
+      "employmentInfo": "Informations d'emploi"
+    },
+    "contract": {
+      "title": "Contrats",
+      "addContract": "Ajouter un contrat",
+      "currentContract": "Contrat en cours",
+      "type": "Type de contrat",
+      "workModel": "Modèle de travail",
+      "week": "sem.",
+      "startDate": "Date de début",
+      "compensation": "Rémunération",
+      "baseSalary": "Salaire de base",
+      "probationEnd": "Fin de période d'essai",
+      "noCurrentContract": "Aucun contrat actif. Créez un contrat pour cet employé.",
+      "history": "Historique des contrats",
+      "weeklyHours": "Heures hebdomadaires",
+      "conventionCollective": "Convention collective"
+    },
+    "contractTypes": {
+      "cdi": "CDI",
+      "cdd": "CDD",
+      "stage": "Stage",
+      "alternance": "Alternance",
+      "freelance": "Freelance"
+    },
+    "workModels": {
+      "horaire": "Horaire",
+      "forfait_jours": "Forfait jours",
+      "forfait_heures": "Forfait heures"
+    },
+    "payFrequency": {
+      "monthly": "mois",
+      "biweekly": "quinzaine",
+      "weekly": "semaine"
+    },
+    "emptyState": {
+      "title": "Aucun employé enregistré",
+      "description": "Commencez par ajouter votre premier employé pour gérer les contrats, le pointage et la paie.",
+      "action": "Ajouter un employé"
+    },
+    "variables": {
+      "title": "Variables de paie",
+      "emptyDescription": "Les variables de paie personnalisées pour cet employé seront configurées ici."
+    },
+    "documents": {
+      "title": "Documents employé",
+      "emptyDescription": "Les documents liés à cet employé (contrat, attestations, etc.) apparaîtront ici."
+    },
+    "activity": {
+      "title": "Journal d'activité",
+      "emptyDescription": "L'historique des modifications et événements pour cet employé sera affiché ici."
+    }
+  },
+  "payroll": {
+    "title": "Paie",
+    "subtitle": "Préparez, calculez et exportez la paie de vos employés",
+    "createRun": "Créer un bulletin de paie",
+    "backToList": "Retour à la liste",
+    "employees": "employés",
+    "columns": {
+      "period": "Période",
+      "status": "Statut",
+      "employees": "Employés",
+      "grossTotal": "Brut total",
+      "anomalies": "Anomalies",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "draft": "Brouillon",
+      "computed": "Calculé",
+      "validated": "Validé",
+      "exported": "Exporté"
+    },
+    "stats": {
+      "totalRuns": "Total runs",
+      "draft": "Brouillons",
+      "computed": "Calculés",
+      "validated": "Validés"
+    },
+    "filters": {
+      "periodStart": "Début de période",
+      "periodEnd": "Fin de période",
+      "status": "Statut"
+    },
+    "fields": {
+      "periodStart": "Début de période",
+      "periodEnd": "Fin de période"
+    },
+    "emptyState": {
+      "title": "Aucun bulletin de paie",
+      "description": "Créez votre premier bulletin de paie pour commencer."
+    },
+    "actions": {
+      "compute": "Calculer",
+      "computeCalculations": "Calculer brut→net",
+      "validate": "Valider",
+      "export": "Exporter",
+      "recompute": "Recalculer",
+      "delete": "Supprimer",
+      "view": "Voir le détail"
+    },
+    "workflow": {
+      "draft": "Brouillon",
+      "computed": "Calculé",
+      "validated": "Validé",
+      "exported": "Exporté"
+    },
+    "totals": {
+      "gross": "Brut total",
+      "netPayable": "Net à payer",
+      "employerCost": "Coût employeur",
+      "anomalies": "Anomalies"
+    },
+    "anomalies": {
+      "title": "Anomalies détectées",
+      "types": {
+        "missing_timesheet": "Feuille de temps manquante",
+        "missing_compensation": "Rémunération manquante",
+        "timesheet_has_errors": "Feuille de temps avec erreurs",
+        "zero_worked_minutes": "Aucune heure travaillée",
+        "compensation_gap": "Écart de rémunération"
+      }
+    },
+    "lines": {
+      "title": "Lignes de paie par employé",
+      "employee": "Employé",
+      "worked": "Travaillé",
+      "overtime": "Heures sup.",
+      "grossBasis": "Brut base",
+      "netPayable": "Net à payer",
+      "employerCost": "Coût employeur",
+      "anomalies": "Anomalies"
+    },
+    "dialogs": {
+      "cancel": "Annuler",
+      "validate": {
+        "title": "Valider le bulletin de paie",
+        "message": "Êtes-vous sûr de vouloir valider ce bulletin de paie ? Cette action est irréversible.",
+        "noteLabel": "Note de validation (optionnel)",
+        "notePlaceholder": "Ajouter une note justificative..."
+      },
+      "delete": {
+        "title": "Supprimer le brouillon",
+        "message": "Êtes-vous sûr de vouloir supprimer ce brouillon de bulletin de paie ? Cette action est irréversible."
+      }
+    },
+    "confirm": {
+      "deleteTitle": "Supprimer le brouillon",
+      "deleteText": "Êtes-vous sûr de vouloir supprimer ce brouillon ? Cette action est irréversible."
+    }
+  },
+  "timesheets": {
+    "generateTimesheet": "Générer une feuille de temps",
+    "generate": "Générer",
+    "backToList": "Retour à la liste",
+    "columns": {
+      "employee": "Employé",
+      "period": "Période",
+      "status": "Statut",
+      "worked": "Heures travaillées",
+      "overtime": "Heures sup.",
+      "anomalies": "Anomalies"
+    },
+    "stats": {
+      "totalPeriods": "Total périodes",
+      "pending": "En attente",
+      "approved": "Approuvées",
+      "completionRate": "Taux de complétion"
+    },
+    "filters": {
+      "periodStart": "Début de période",
+      "periodEnd": "Fin de période",
+      "status": "Statut"
+    },
+    "fields": {
+      "employee": "Employé",
+      "periodStart": "Début de période",
+      "periodEnd": "Fin de période"
+    },
+    "emptyState": {
+      "title": "Aucune feuille de temps",
+      "description": "Générez des feuilles de temps pour commencer le suivi des heures."
+    },
+    "grid": {
+      "title": "Grille journalière",
+      "date": "Date",
+      "day": "Jour",
+      "worked": "Travaillé",
+      "break": "Pause",
+      "overtime": "Heures sup.",
+      "leave": "Congé",
+      "anomalies": "Anomalies"
+    },
+    "summary": {
+      "worked": "Travaillé",
+      "overtime": "Heures sup.",
+      "anomalies": "anomalies"
+    },
+    "actions": {
+      "submit": "Soumettre",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "lock": "Verrouiller",
+      "reopen": "Rouvrir"
+    },
+    "anomalies": {
+      "title": "Anomalies détectées",
+      "types": {
+        "missing_entry": "Entrée manquante",
+        "overtime_exceeded": "Heures sup. dépassées",
+        "break_missing": "Pause manquante",
+        "inconsistent_hours": "Heures incohérentes"
+      }
+    },
+    "dialogs": {
+      "approve": {
+        "title": "Approuver la feuille de temps",
+        "message": "Êtes-vous sûr de vouloir approuver cette feuille de temps ?",
+        "noteLabel": "Note (optionnel)",
+        "notePlaceholder": "Ajouter une note..."
+      },
+      "reject": {
+        "title": "Rejeter la feuille de temps",
+        "message": "Veuillez indiquer le motif du rejet.",
+        "reasonLabel": "Motif du rejet",
+        "reasonPlaceholder": "Indiquer le motif..."
+      }
+    },
+    "generated": "Feuille de temps générée",
+    "submitted": "Feuille de temps soumise",
+    "approved": "Feuille de temps approuvée",
+    "rejected": "Feuille de temps rejetée",
+    "locked": "Feuille de temps verrouillée",
+    "reopened": "Feuille de temps réouverte"
+  },
+  "leaves": {
+    "title": "Congés",
+    "subtitle": "Gérez les demandes de congés de vos employés",
+    "newRequest": "Nouvelle demande",
+    "searchPlaceholder": "Rechercher un employé\u2026",
+    "filterStatus": "Filtrer par statut",
+    "stats": {
+      "pending": "En attente",
+      "approved": "Approuvées",
+      "rejected": "Refusées"
+    },
+    "columns": {
+      "employee": "Employé",
+      "type": "Type",
+      "dates": "Dates",
+      "duration": "Durée",
+      "status": "Statut"
+    },
+    "fields": {
+      "employee": "Employé",
+      "leaveType": "Type de congé",
+      "dateFrom": "Date de début",
+      "dateTo": "Date de fin",
+      "duration": "Durée (centièmes de jour)",
+      "durationHint": "Ex : 100 = 1 jour, 50 = 0,5 jour",
+      "reason": "Motif"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "cancel": "Annuler"
+    },
+    "confirm": {
+      "approveTitle": "Approuver la demande",
+      "approveText": "Voulez-vous approuver cette demande de congé de {name} ?",
+      "rejectTitle": "Refuser la demande",
+      "rejectText": "Voulez-vous refuser cette demande de congé de {name} ?",
+      "cancelTitle": "Annuler la demande",
+      "cancelText": "Voulez-vous annuler cette demande de congé ?"
+    },
+    "created": "Demande de congé créée",
+    "approved": "Congé approuvé",
+    "rejected": "Congé refusé",
+    "cancelled": "Congé annulé"
+  },
+  "dsn": {
+    "title": "DSN - Declarations Sociales",
+    "subtitle": "Gestion des declarations sociales nominatives",
+    "exportDsn": "Exporter DSN",
+    "backToList": "Retour a la liste",
+    "statuses": {
+      "draft": "Brouillon",
+      "validated": "Valide",
+      "exported": "Exporte",
+      "submitted": "Transmis",
+      "accepted": "Accepte",
+      "rejected": "Rejete"
+    },
+    "stats": {
+      "total": "Total declarations",
+      "submitted": "Transmises",
+      "accepted": "Acceptees",
+      "rejected": "Rejetees"
+    },
+    "columns": {
+      "periodMonth": "Periode",
+      "status": "Statut",
+      "gatewayStatus": "Statut passerelle",
+      "payloadHash": "Hash",
+      "submittedAt": "Transmis le",
+      "actions": "Actions"
+    },
+    "filters": {
+      "periodMonth": "Periode (AAAA-MM)",
+      "status": "Filtrer par statut"
+    },
+    "fields": {
+      "payrollRunId": "ID du run de paie",
+      "payrollRunIdPlaceholder": "Saisissez l'ID du run de paie"
+    },
+    "actions": {
+      "view": "Voir le detail",
+      "submit": "Transmettre",
+      "poll": "Interroger le statut"
+    },
+    "emptyState": {
+      "title": "Aucune declaration DSN",
+      "description": "Exportez une declaration DSN depuis un run de paie pour commencer."
+    },
+    "workflow": {
+      "draft": "Brouillon",
+      "validated": "Valide",
+      "exported": "Exporte",
+      "submitted": "Transmis",
+      "accepted": "Accepte",
+      "rejected": "Rejete"
+    },
+    "detail": {
+      "periodLabel": "Periode",
+      "payloadHash": "Hash :",
+      "workflow": "Workflow",
+      "generatedBy": "Genere par",
+      "exportedBy": "Exporte par",
+      "submittedBy": "Transmis par",
+      "validationErrors": "Erreurs de validation",
+      "validationErrorsDescription": "{count} erreur(s) de validation detectee(s)",
+      "gatewayTracking": "Suivi passerelle",
+      "gatewayDriver": "Driver",
+      "gatewayEnvironment": "Environnement",
+      "gatewayStatusLabel": "Statut passerelle",
+      "attemptCount": "Tentatives",
+      "errorCode": "Code erreur",
+      "lastPolledAt": "Derniere interrogation",
+      "nextPollAt": "Prochaine interrogation",
+      "technicalReceipt": "Accuse technique",
+      "businessReport": "Bilan metier",
+      "auditHistory": "Historique"
+    },
+    "poll": {
+      "statusChanged": "Le statut a ete mis a jour",
+      "noChange": "Aucun changement de statut"
+    },
+    "audit": {
+      "created": "Declaration creee",
+      "validated": "Declaration validee",
+      "exported": "Declaration exportee",
+      "submitted": "Declaration transmise",
+      "polled": "Statut interroge",
+      "accepted": "Declaration acceptee",
+      "rejected": "Declaration rejetee"
+    },
+    "exported": "Déclaration DSN exportée",
+    "submitted": "Déclaration DSN soumise",
+    "polled": "Statut DSN actualisé"
   }
 }

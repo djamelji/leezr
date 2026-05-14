@@ -26,6 +26,58 @@
   "Fleet": "Fleet",
   "Shortcut": "Shortcut",
   "Appointments": "Appointments",
+  "Work Locations": "Work Locations",
+  "Schedule Templates": "Schedule Templates",
+  "Shifts": "Shifts",
+  "Create Shift": "Create Shift",
+  "Publish Shifts": "Publish Shifts",
+  "Cancel Shift": "Cancel Shift",
+  "Draft": "Draft",
+  "Published": "Published",
+  "Completed": "Completed",
+  "Cancelled": "Cancelled",
+  "Planned vs Actual": "Planned vs Actual",
+  "Missing Actual": "Missing Actual",
+  "Bulk Create": "Bulk Create",
+  "Night Shift": "Night Shift",
+  "Location Type": "Location Type",
+  "Internal": "Internal",
+  "Client Site": "Client Site",
+  "Remote": "Remote",
+  "Mobile": "Mobile",
+  "Template": "Template",
+  "Break Duration": "Break Duration",
+  "Shift Details": "Shift Details",
+  "Timesheet": "Timesheet",
+  "Timesheets": "Timesheets",
+  "Timesheet Period": "Timesheet Period",
+  "Generate Timesheet": "Generate Timesheet",
+  "Submit Timesheet": "Submit Timesheet",
+  "Approve Timesheet": "Approve Timesheet",
+  "Reject Timesheet": "Reject Timesheet",
+  "Lock Timesheet": "Lock Timesheet",
+  "Reopen Timesheet": "Reopen Timesheet",
+  "Submitted": "Submitted",
+  "Approved": "Approved",
+  "Rejected": "Rejected",
+  "Locked": "Locked",
+  "Anomalies": "Anomalies",
+  "Missing Clock Out": "Missing Clock Out",
+  "Missing Time Entry": "Missing Time Entry",
+  "Overtime Daily": "Daily Overtime",
+  "Overtime Weekly": "Weekly Overtime",
+  "Insufficient Break": "Insufficient Break",
+  "Unplanned Work": "Unplanned Work",
+  "Leave Conflict": "Leave Conflict",
+  "Late Arrival": "Late Arrival",
+  "Early Departure": "Early Departure",
+  "Worked Minutes": "Worked Minutes",
+  "Break Minutes": "Break Minutes",
+  "Planned Minutes": "Planned Minutes",
+  "Approval Note": "Approval Note",
+  "Rejection Reason": "Rejection Reason",
+  "Period Start": "Period Start",
+  "Period End": "Period End",
   "nav": {
     "groups": {
       "management": "Management",
@@ -94,7 +146,13 @@
       "support": "Support",
       "documentation": "Help Center",
       "documents": "Documents",
-      "workflows": "Workflows"
+      "workflows": "Workflows",
+      "workforce-employees": "Employees",
+      "workforce-time": "Time Tracking",
+      "workforce-leave": "Leave",
+      "workforce-planning": "Planning",
+      "workforce-payroll": "Payroll",
+      "workforce-documents": "HR Documents"
     }
   },
   "roles": {
@@ -5445,5 +5503,777 @@
     "alertsTotal": "Active total",
     "error": "Error",
     "never": "Never"
+  },
+  "payroll": {
+    "title": "Payroll Preparation",
+    "subtitle": "Prepare, validate and export payroll data",
+    "createRun": "Create payroll period",
+    "periodStart": "Period start",
+    "periodEnd": "Period end",
+    "status": "Status",
+    "statusDraft": "Draft",
+    "statusComputed": "Computed",
+    "statusValidated": "Validated",
+    "statusExported": "Exported",
+    "compute": "Compute payroll",
+    "recompute": "Recompute",
+    "validate": "Validate payroll",
+    "export": "Export",
+    "delete": "Delete",
+    "employeeCount": "Employee count",
+    "totalGross": "Total estimated gross",
+    "totalWorked": "Total worked hours",
+    "totalOvertime": "Total overtime hours",
+    "totalLeave": "Total leave days",
+    "grossBasis": "Estimated gross basis",
+    "grossBasisNote": "Preparation estimate, not official gross salary",
+    "baseSalary": "Base salary",
+    "overtimePay": "Overtime pay",
+    "unpaidLeaveDeduction": "Unpaid leave deduction",
+    "paidLeave": "Paid leave",
+    "unpaidLeave": "Unpaid leave",
+    "breakdown": "Breakdown",
+    "formulaVersion": "Formula version",
+    "compensationSnapshot": "Compensation data",
+    "timesheetSnapshot": "Timesheet data",
+    "anomalies": "Anomalies",
+    "anomalyMissingTimesheet": "Missing timesheet",
+    "anomalyMissingCompensation": "Missing compensation plan",
+    "anomalyTimesheetErrors": "Timesheet with errors",
+    "anomalyZeroWorked": "Zero worked hours",
+    "anomalyCompensationGap": "Compensation change during period",
+    "validationNote": "Validation note",
+    "validationNoteRequired": "A note is required when error-level anomalies exist",
+    "exportFormat": "Export format",
+    "noRuns": "No payroll periods",
+    "noLines": "No payroll lines",
+    "confirmDelete": "Delete this payroll period?",
+    "payFrequency": "Pay frequency",
+    "payFrequencyMixed": "Mixed",
+    "payFrequencyMonthly": "Monthly",
+    "payFrequencyBiweekly": "Biweekly",
+    "payFrequencyWeekly": "Weekly",
+    "created": "Payroll run created",
+    "deleted": "Payroll run deleted",
+    "computed": "Payroll lines computed",
+    "calculationsComputed": "Gross-to-net calculations completed",
+    "validated": "Payroll run validated",
+    "exported": "Payroll run exported",
+    "recomputed": "Payroll lines recomputed"
+  },
+  "workforceDocuments": {
+    "title": "HR Documents",
+    "subtitle": "Generate and manage HR documents from templates",
+    "templates": "Document templates",
+    "generated": "Generated documents",
+    "createTemplate": "Create template",
+    "editTemplate": "Edit template",
+    "templateName": "Template name",
+    "templateCode": "Template code",
+    "subjectType": "Subject type",
+    "subjectEmployee": "Employee",
+    "subjectContract": "Contract",
+    "subjectLeaveRequest": "Leave request",
+    "subjectPayrollRun": "Payroll run",
+    "subjectPayrollLine": "Payroll line",
+    "bodyHtml": "HTML content",
+    "headerHtml": "Header",
+    "footerHtml": "Footer",
+    "variables": "Available variables",
+    "variableKey": "Key",
+    "variableType": "Type",
+    "variableLabel": "Label",
+    "version": "Version",
+    "versionHistory": "Version history",
+    "generate": "Generate document",
+    "bulkGenerate": "Bulk generate",
+    "bulkLimit": "Maximum 100 documents per batch",
+    "download": "Download",
+    "delete": "Delete",
+    "confirmDelete": "Delete this generated document?",
+    "generatedAt": "Generated on",
+    "generatedBy": "Generated by",
+    "templateVersion": "Template version",
+    "snapshot": "Captured data",
+    "signature": "Signature",
+    "signatureNone": "Not signed",
+    "signaturePending": "Pending signature",
+    "signatureSigned": "Signed",
+    "signatureDeclined": "Declined",
+    "signedAt": "Signed on",
+    "noTemplates": "No document templates",
+    "noDocuments": "No generated documents",
+    "platformTemplate": "Platform template",
+    "companyOverride": "Custom template",
+    "preview": "Preview",
+    "formulaVersion": "Formula version",
+    "subtitleFull": "Payslips, contracts, and generated documents",
+    "generateDocument": "Generate document",
+    "stats": {
+      "totalDocuments": "Total documents",
+      "payslipDrafts": "Payslip drafts",
+      "officialPayslips": "Official payslips"
+    },
+    "filters": {
+      "subjectType": "Subject type",
+      "signatureStatus": "Signature status",
+      "templateCode": "Template code"
+    },
+    "columns": {
+      "templateCode": "Template",
+      "subject": "Subject",
+      "signatureStatus": "Signature",
+      "generatedAt": "Generated on",
+      "generatedBy": "Generated by",
+      "actions": "Actions"
+    },
+    "subjects": {
+      "payrollLine": "Payslip",
+      "employee": "Employee",
+      "contract": "Contract",
+      "leaveRequest": "Leave",
+      "payrollRun": "Payroll run"
+    },
+    "signatureStatuses": {
+      "none": "Not signed",
+      "pending": "Pending",
+      "signed": "Signed",
+      "declined": "Declined"
+    },
+    "emptyState": {
+      "title": "No generated documents",
+      "description": "Start by generating a document from a template."
+    },
+    "drawer": {
+      "title": "Generate a document"
+    },
+    "fields": {
+      "templateCode": "Template code",
+      "subjectType": "Subject type",
+      "subjectId": "Subject ID",
+      "forceVault": "Force vault"
+    },
+    "payslipActions": {
+      "generateDrafts": "Generate draft payslips",
+      "generateDraftsDesc": "Generate draft payslips for a given payroll run.",
+      "generateOfficial": "Generate official payslips",
+      "generateOfficialDesc": "Generate signed official payslips. This action is irreversible.",
+      "payrollRunId": "Payroll run ID"
+    },
+    "confirm": {
+      "officialTitle": "Generate official payslips?",
+      "officialText": "This action is irreversible. Official payslips will be generated and signed for all employees in the selected payroll run."
+    },
+    "success": {
+      "generated": "Document generated successfully",
+      "draftsGenerated": "Drafts generated successfully",
+      "officialGenerated": "Official payslips generated successfully"
+    }
+  },
+  "payslipDraft": {
+    "title": "Payslip — DRAFT",
+    "disclaimer": "Unofficial document, for indicative purposes only. Does not constitute an official payslip under applicable labor law.",
+    "watermark": "DRAFT",
+    "generatedOn": "Generated on {date}",
+    "period": "Period from {start} to {end}",
+    "employeeSection": "Employee",
+    "earnings": "Gross earnings",
+    "baseSalary": "Base salary",
+    "grossBasis": "Gross basis (base + overtime − absences)",
+    "taxableBenefits": "Taxable benefits",
+    "grossTotal": "Gross total",
+    "contributions": "Contributions",
+    "contributionBase": "Base",
+    "employeeRate": "Empl. rate",
+    "employeePart": "Empl. part",
+    "employerRate": "Comp. rate",
+    "employerPart": "Comp. part",
+    "totalContributions": "Total contributions",
+    "tax": "Withholding tax",
+    "taxableIncome": "Taxable income",
+    "taxRate": "Tax rate",
+    "incomeTax": "Income tax (PAS)",
+    "netBeforeTax": "Net before tax",
+    "netPayable": "NET PAYABLE",
+    "employerCost": "Total employer cost",
+    "plafondSS": "Monthly SS ceiling",
+    "ruleVersion": "Rule version",
+    "generateDrafts": "Generate drafts",
+    "generatingDrafts": "Generating drafts...",
+    "draftsGenerated": "{count} draft(s) generated",
+    "noDraftsYet": "No drafts generated for this cycle yet",
+    "downloadPdf": "Download PDF"
+  },
+  "workforce": {
+    "hub": {
+      "title": "Human Resources",
+      "subtitle": "Manage your employees, time tracking, leave, and payroll",
+      "modulesTitle": "HR Modules",
+      "actionsTitle": "Quick Actions",
+      "gettingStarted": {
+        "title": "Start by adding your employees",
+        "description": "Create your first employee to unlock all HR features: contracts, time tracking, leave, payroll, and DSN.",
+        "action": "Add an employee"
+      }
+    },
+    "modules": {
+      "employees": {
+        "title": "Employees",
+        "description": "Employee management, contracts, and compensation"
+      },
+      "time": {
+        "title": "Time Tracking",
+        "description": "Work time tracking, breaks, and timesheets"
+      },
+      "planning": {
+        "title": "Planning",
+        "description": "Shift planning, templates, and work locations"
+      },
+      "leave": {
+        "title": "Leave",
+        "description": "Leave requests, balances, and approvals"
+      },
+      "payroll": {
+        "title": "Payroll",
+        "description": "Payroll runs, gross-to-net calculations, and exports"
+      },
+      "documents": {
+        "title": "HR Documents",
+        "description": "Generate documents from templates"
+      }
+    },
+    "actions": {
+      "addEmployee": {
+        "title": "Add an employee",
+        "description": "Create a new employee record",
+        "action": "Add"
+      },
+      "createPayroll": {
+        "title": "Start a payroll run",
+        "description": "Create a new monthly payroll cycle",
+        "action": "Create"
+      },
+      "viewTimesheets": {
+        "title": "Review timesheets",
+        "description": "View timesheets pending validation",
+        "action": "Review"
+      }
+    },
+    "emptyStates": {
+      "time": {
+        "title": "No time entries yet",
+        "description": "Time entries will appear here once your employees start clocking in."
+      },
+      "planning": {
+        "title": "No planning created",
+        "description": "Create schedule templates and plan your employees' shifts."
+      },
+      "leave": {
+        "title": "No leave requests",
+        "description": "Your employees' leave requests will appear here."
+      },
+      "payroll": {
+        "title": "No payroll runs",
+        "description": "Create your first payroll run to calculate pay slips."
+      },
+      "documents": {
+        "title": "No documents generated",
+        "description": "Generate HR documents from templates for your employees."
+      }
+    },
+    "comingSoon": "Coming soon",
+    "statuses": {
+      "employee": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "on_leave": "On Leave",
+        "suspended": "Suspended",
+        "terminated": "Terminated"
+      },
+      "contract": {
+        "draft": "Draft",
+        "active": "Active",
+        "suspended": "Suspended",
+        "terminated": "Terminated"
+      },
+      "leave": {
+        "draft": "Draft",
+        "pending": "Pending",
+        "approved": "Approved",
+        "consumed": "Consumed",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      },
+      "shift": {
+        "draft": "Draft",
+        "published": "Published",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "timeEntry": {
+        "idle": "Idle",
+        "working": "Working",
+        "on_break": "On Break",
+        "completed": "Completed"
+      },
+      "timesheet": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "locked": "Locked"
+      },
+      "payrollRun": {
+        "draft": "Draft",
+        "computed": "Computed",
+        "validated": "Validated",
+        "exported": "Exported"
+      },
+      "dsn": {
+        "draft": "Draft",
+        "validated": "Validated",
+        "exported": "Exported",
+        "submitted": "Submitted",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      }
+    }
+  },
+  "workforceDashboard": {
+    "title": "HR Dashboard",
+    "subtitle": "Overview of your workforce, key indicators and pending actions",
+    "refresh": "Refresh",
+    "loadError": "Error loading dashboard",
+    "pendingActionsTitle": "Pending actions:",
+    "kpi": {
+      "activeEmployees": "Active Employees",
+      "totalEmployees": "of total",
+      "activeContracts": "Active Contracts",
+      "timesheetCompletion": "Timesheet Completion",
+      "pendingActions": "Pending Actions"
+    },
+    "pending": {
+      "leaves": "leaves to approve",
+      "payrolls": "draft payrolls",
+      "dsn": "DSN to process"
+    },
+    "stats": {
+      "active": "active",
+      "total": "total",
+      "timesheets": "sheets",
+      "completion": "completion",
+      "pending": "pending",
+      "approved": "approved",
+      "draft": "draft",
+      "validated": "validated"
+    }
+  },
+  "employees": {
+    "title": "Employees",
+    "subtitle": "Manage your employees, contracts and compensation",
+    "addEmployee": "Add Employee",
+    "created": "Employee created successfully",
+    "updated": "Employee updated",
+    "loadError": "Error loading employee",
+    "searchPlaceholder": "Search employees…",
+    "filterStatus": "Filter by status",
+    "noContract": "No contract",
+    "backToList": "Back to list",
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "employeeNumber": "Employee #",
+      "status": "Status",
+      "contract": "Contract",
+      "hireDate": "Hire Date"
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "employeeNumber": "Employee Number",
+      "hireDate": "Hire Date",
+      "terminationDate": "Termination Date"
+    },
+    "tabs": {
+      "profile": "Profile",
+      "contract": "Contract",
+      "variables": "Variables",
+      "documents": "Documents",
+      "activity": "Activity"
+    },
+    "profile": {
+      "title": "Personal Information",
+      "personalInfo": "Personal Information",
+      "employmentInfo": "Employment Information"
+    },
+    "contract": {
+      "title": "Contracts",
+      "addContract": "Add Contract",
+      "currentContract": "Current Contract",
+      "type": "Contract Type",
+      "workModel": "Work Model",
+      "week": "wk",
+      "startDate": "Start Date",
+      "compensation": "Compensation",
+      "baseSalary": "Base Salary",
+      "probationEnd": "Probation End",
+      "noCurrentContract": "No active contract. Create a contract for this employee.",
+      "history": "Contract History",
+      "weeklyHours": "Weekly Hours",
+      "conventionCollective": "Collective Agreement"
+    },
+    "contractTypes": {
+      "cdi": "Permanent (CDI)",
+      "cdd": "Fixed-term (CDD)",
+      "stage": "Internship",
+      "alternance": "Apprenticeship",
+      "freelance": "Freelance"
+    },
+    "workModels": {
+      "horaire": "Hourly",
+      "forfait_jours": "Lump-sum days",
+      "forfait_heures": "Lump-sum hours"
+    },
+    "payFrequency": {
+      "monthly": "month",
+      "biweekly": "biweekly",
+      "weekly": "week"
+    },
+    "emptyState": {
+      "title": "No employees yet",
+      "description": "Start by adding your first employee to manage contracts, time tracking and payroll.",
+      "action": "Add Employee"
+    },
+    "variables": {
+      "title": "Payroll Variables",
+      "emptyDescription": "Custom payroll variables for this employee will be configured here."
+    },
+    "documents": {
+      "title": "Employee Documents",
+      "emptyDescription": "Documents related to this employee (contract, certificates, etc.) will appear here."
+    },
+    "activity": {
+      "title": "Activity Log",
+      "emptyDescription": "History of changes and events for this employee will be displayed here."
+    }
+  },
+  "payroll": {
+    "title": "Payroll",
+    "subtitle": "Prepare, calculate and export your employees' payroll",
+    "createRun": "Create Payroll Run",
+    "backToList": "Back to list",
+    "employees": "employees",
+    "columns": {
+      "period": "Period",
+      "status": "Status",
+      "employees": "Employees",
+      "grossTotal": "Gross Total",
+      "anomalies": "Anomalies",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "computed": "Computed",
+      "validated": "Validated",
+      "exported": "Exported"
+    },
+    "stats": {
+      "totalRuns": "Total Runs",
+      "draft": "Drafts",
+      "computed": "Computed",
+      "validated": "Validated"
+    },
+    "filters": {
+      "periodStart": "Period Start",
+      "periodEnd": "Period End",
+      "status": "Status"
+    },
+    "fields": {
+      "periodStart": "Period Start",
+      "periodEnd": "Period End"
+    },
+    "emptyState": {
+      "title": "No Payroll Runs",
+      "description": "Create your first payroll run to get started."
+    },
+    "actions": {
+      "compute": "Compute",
+      "computeCalculations": "Compute gross→net",
+      "validate": "Validate",
+      "export": "Export",
+      "recompute": "Recompute",
+      "delete": "Delete",
+      "view": "View details"
+    },
+    "workflow": {
+      "draft": "Draft",
+      "computed": "Computed",
+      "validated": "Validated",
+      "exported": "Exported"
+    },
+    "totals": {
+      "gross": "Gross Total",
+      "netPayable": "Net Payable",
+      "employerCost": "Employer Cost",
+      "anomalies": "Anomalies"
+    },
+    "anomalies": {
+      "title": "Detected Anomalies",
+      "types": {
+        "missing_timesheet": "Missing timesheet",
+        "missing_compensation": "Missing compensation",
+        "timesheet_has_errors": "Timesheet has errors",
+        "zero_worked_minutes": "Zero worked hours",
+        "compensation_gap": "Compensation gap"
+      }
+    },
+    "lines": {
+      "title": "Payroll Lines by Employee",
+      "employee": "Employee",
+      "worked": "Worked",
+      "overtime": "Overtime",
+      "grossBasis": "Gross Basis",
+      "netPayable": "Net Payable",
+      "employerCost": "Employer Cost",
+      "anomalies": "Anomalies"
+    },
+    "dialogs": {
+      "cancel": "Cancel",
+      "validate": {
+        "title": "Validate Payroll Run",
+        "message": "Are you sure you want to validate this payroll run? This action is irreversible.",
+        "noteLabel": "Validation note (optional)",
+        "notePlaceholder": "Add a justification note..."
+      },
+      "delete": {
+        "title": "Delete Draft",
+        "message": "Are you sure you want to delete this payroll draft? This action is irreversible."
+      }
+    },
+    "confirm": {
+      "deleteTitle": "Delete Draft",
+      "deleteText": "Are you sure you want to delete this draft? This action is irreversible."
+    }
+  },
+  "timesheets": {
+    "generateTimesheet": "Generate Timesheet",
+    "generate": "Generate",
+    "backToList": "Back to list",
+    "columns": {
+      "employee": "Employee",
+      "period": "Period",
+      "status": "Status",
+      "worked": "Worked Hours",
+      "overtime": "Overtime",
+      "anomalies": "Anomalies"
+    },
+    "stats": {
+      "totalPeriods": "Total Periods",
+      "pending": "Pending",
+      "approved": "Approved",
+      "completionRate": "Completion Rate"
+    },
+    "filters": {
+      "periodStart": "Period Start",
+      "periodEnd": "Period End",
+      "status": "Status"
+    },
+    "fields": {
+      "employee": "Employee",
+      "periodStart": "Period Start",
+      "periodEnd": "Period End"
+    },
+    "emptyState": {
+      "title": "No Timesheets",
+      "description": "Generate timesheets to start tracking hours."
+    },
+    "grid": {
+      "title": "Daily Grid",
+      "date": "Date",
+      "day": "Day",
+      "worked": "Worked",
+      "break": "Break",
+      "overtime": "Overtime",
+      "leave": "Leave",
+      "anomalies": "Anomalies"
+    },
+    "summary": {
+      "worked": "Worked",
+      "overtime": "Overtime",
+      "anomalies": "anomalies"
+    },
+    "actions": {
+      "submit": "Submit",
+      "approve": "Approve",
+      "reject": "Reject",
+      "lock": "Lock",
+      "reopen": "Reopen"
+    },
+    "anomalies": {
+      "title": "Detected Anomalies",
+      "types": {
+        "missing_entry": "Missing entry",
+        "overtime_exceeded": "Overtime exceeded",
+        "break_missing": "Missing break",
+        "inconsistent_hours": "Inconsistent hours"
+      }
+    },
+    "dialogs": {
+      "approve": {
+        "title": "Approve Timesheet",
+        "message": "Are you sure you want to approve this timesheet?",
+        "noteLabel": "Note (optional)",
+        "notePlaceholder": "Add a note..."
+      },
+      "reject": {
+        "title": "Reject Timesheet",
+        "message": "Please provide a reason for rejection.",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Enter reason..."
+      }
+    },
+    "generated": "Timesheet generated",
+    "submitted": "Timesheet submitted",
+    "approved": "Timesheet approved",
+    "rejected": "Timesheet rejected",
+    "locked": "Timesheet locked",
+    "reopened": "Timesheet reopened"
+  },
+  "leaves": {
+    "title": "Leave",
+    "subtitle": "Manage your employees' leave requests",
+    "newRequest": "New Request",
+    "searchPlaceholder": "Search employee\u2026",
+    "filterStatus": "Filter by status",
+    "stats": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "columns": {
+      "employee": "Employee",
+      "type": "Type",
+      "dates": "Dates",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "fields": {
+      "employee": "Employee",
+      "leaveType": "Leave Type",
+      "dateFrom": "Start Date",
+      "dateTo": "End Date",
+      "duration": "Duration (hundredths of day)",
+      "durationHint": "E.g. 100 = 1 day, 50 = 0.5 day",
+      "reason": "Reason"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel"
+    },
+    "confirm": {
+      "approveTitle": "Approve Request",
+      "approveText": "Do you want to approve this leave request from {name}?",
+      "rejectTitle": "Reject Request",
+      "rejectText": "Do you want to reject this leave request from {name}?",
+      "cancelTitle": "Cancel Request",
+      "cancelText": "Do you want to cancel this leave request?"
+    },
+    "created": "Leave request created",
+    "approved": "Leave approved",
+    "rejected": "Leave rejected",
+    "cancelled": "Leave cancelled"
+  },
+  "dsn": {
+    "title": "DSN - Social Declarations",
+    "subtitle": "Manage nominative social declarations",
+    "exportDsn": "Export DSN",
+    "backToList": "Back to list",
+    "statuses": {
+      "draft": "Draft",
+      "validated": "Validated",
+      "exported": "Exported",
+      "submitted": "Submitted",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "stats": {
+      "total": "Total declarations",
+      "submitted": "Submitted",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "columns": {
+      "periodMonth": "Period",
+      "status": "Status",
+      "gatewayStatus": "Gateway Status",
+      "payloadHash": "Hash",
+      "submittedAt": "Submitted at",
+      "actions": "Actions"
+    },
+    "filters": {
+      "periodMonth": "Period (YYYY-MM)",
+      "status": "Filter by status"
+    },
+    "fields": {
+      "payrollRunId": "Payroll Run ID",
+      "payrollRunIdPlaceholder": "Enter the payroll run ID"
+    },
+    "actions": {
+      "view": "View details",
+      "submit": "Submit",
+      "poll": "Poll status"
+    },
+    "emptyState": {
+      "title": "No DSN declarations",
+      "description": "Export a DSN declaration from a payroll run to get started."
+    },
+    "workflow": {
+      "draft": "Draft",
+      "validated": "Validated",
+      "exported": "Exported",
+      "submitted": "Submitted",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "detail": {
+      "periodLabel": "Period",
+      "payloadHash": "Hash:",
+      "workflow": "Workflow",
+      "generatedBy": "Generated by",
+      "exportedBy": "Exported by",
+      "submittedBy": "Submitted by",
+      "validationErrors": "Validation Errors",
+      "validationErrorsDescription": "{count} validation error(s) detected",
+      "gatewayTracking": "Gateway Tracking",
+      "gatewayDriver": "Driver",
+      "gatewayEnvironment": "Environment",
+      "gatewayStatusLabel": "Gateway Status",
+      "attemptCount": "Attempts",
+      "errorCode": "Error code",
+      "lastPolledAt": "Last polled at",
+      "nextPollAt": "Next poll at",
+      "technicalReceipt": "Technical receipt",
+      "businessReport": "Business report",
+      "auditHistory": "History"
+    },
+    "poll": {
+      "statusChanged": "Status has been updated",
+      "noChange": "No status change"
+    },
+    "audit": {
+      "created": "Declaration created",
+      "validated": "Declaration validated",
+      "exported": "Declaration exported",
+      "submitted": "Declaration submitted",
+      "polled": "Status polled",
+      "accepted": "Declaration accepted",
+      "rejected": "Declaration rejected"
+    },
+    "exported": "DSN declaration exported",
+    "submitted": "DSN declaration submitted",
+    "polled": "DSN status updated"
   }
 }
