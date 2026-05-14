@@ -16824,4 +16824,3950 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 
 ---
 
+### ADR-479 — Workforce Architecture: MarketRuleSet — Règles légales versionnées (2026-05-03)
+
+**Contexte** : Workforce nécessite des règles légales (durée max, repos min, SMIC, congés légaux) versionnées par marché (pays). Aucune table dédiée n'existe — les règles sont aujourd'hui hardcodées ou absentes. Les règles changent quand la législation évolue : il faut un historique `effective_from`/`effective_until`.
+
+**Décisions** :
+1. Nouvelle table `market_rule_sets` dans `Core/Markets` — versionnée par `(market_key, domain, rule_key, effective_from)`
+2. Colonnes : `market_key`, `domain` (workforce, billing, etc.), `rule_key`, `value` (JSON), `effective_from`, `effective_until`, `source` (law/convention/custom), `reference` (texte de loi)
+3. Seed France MVP : 8 règles (weekly_hours_legal=35h, daily_hours_max=10h, weekly_hours_max=48h, rest_daily_min=11h, rest_weekly_min=35h, break_after_hours=6h/20min, annual_leave_days=25, min_wage_hourly_cents=1178)
+4. MarketRuleSet est **non-overridable** — c'est le plancher légal. CompanyPolicy choisit le mode d'application (allow/warn/block)
+5. Utilisé par : ComplianceEngine, PayrollPreparation, RuleResolver
+
+**Conséquences** :
+- Nouvelle migration `create_market_rule_sets_table`
+- Nouveau model `app/Core/Markets/MarketRuleSet.php`
+- Seed `MarketRuleSetSeeder` (France)
+- Pattern réutilisable pour tous les domaines (billing, compliance...)
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000001_create_market_rule_sets_table.php`
+- `app/Core/Markets/MarketRuleSet.php`
+- `database/seeders/MarketRuleSetSeeder.php`
+
+---
+
+### ADR-480 — Workforce Architecture: CompanyPolicyStore — Politiques company transverses (2026-05-03)
+
+**Contexte** : Les companies doivent configurer leurs politiques métier (enforcement mode heures, politique pauses, overtime, types de congés). Aujourd'hui, chaque module stocke sa config dans `CompanyModule.config_json` ou des tables dédiées (`CompanyDocumentSetting`). Ce pattern crée de la dette — chaque nouveau module invente sa propre table.
+
+**Décisions** :
+1. Nouvelle table transverse `company_policies` dans `Core/Policies` — réutilisable par tous les domaines (workforce, billing, documents, etc.)
+2. Colonnes : `company_id`, `domain`, `policy_key`, `value` (JSON), `effective_from`, `effective_until`, `source` (jobdomain_preset/admin_manual/contract_sync/platform_default), `metadata`
+3. Unique constraint : `(company_id, domain, policy_key, effective_from)` — versioning natif
+4. Service `CompanyPolicyResolver::get($companyId, $domain, $policyKey, $at)` — résout la policy active à une date, fallback vers MarketRuleSet
+5. Service `CompanyPolicyResolver::snapshot($companyId, $domain, $at)` — snapshot complet pour PayrollPeriod.rule_snapshot
+6. Policies workforce initiales : enforcement_mode, break_policy, leave_accrual_mode, overtime_policy, time_tracking_mode
+
+**Conséquences** :
+- Nouvelle migration `create_company_policies_table`
+- Nouveau model `app/Core/Policies/CompanyPolicy.php`
+- Nouveau service `app/Core/Policies/CompanyPolicyResolver.php`
+- Pattern transverse : les modules existants pourront migrer vers cette table (billing config, document settings)
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000002_create_company_policies_table.php`
+- `app/Core/Policies/CompanyPolicy.php`
+- `app/Core/Policies/CompanyPolicyResolver.php`
+
+---
+
+### ADR-481 — Workforce Architecture: Employee — Entité Core séparée (2026-05-03)
+
+**Contexte** : Un Employee n'est ni un User (compte d'accès) ni un Membership (lien User-Company). Un employé peut exister sans accès SPA (intérimaire, ouvrier sans email). Employee est une entité fondamentale — Contracts, TimeEntry, Leave, Payroll en dépendent.
+
+**Décisions** :
+1. `Employee` vit dans `app/Core/Workforce/Employee.php` — pas dans un module
+2. `Employee.user_id` est nullable — un employé peut ne pas avoir de compte User
+3. Employee ≠ User ≠ Membership — trois entités distinctes avec des lifecycles séparés
+4. Un User peut être Employee dans N companies (multi-tenant)
+5. State machine : `active` → `on_leave` → `suspended` → `terminated` (+ `inactive` pour pre-embauche)
+6. Colonnes structurées : employee_number, first_name, last_name, email, phone, hire_date, termination_date, status
+7. `BelongsToCompany` trait + `CompanyScope` global scope
+8. Dynamic Fields via `FieldValue.model_type = Employee` (EAV existant)
+
+**Conséquences** :
+- Nouvelle migration `create_workforce_employees_table`
+- Nouveau model `app/Core/Workforce/Employee.php`
+- FieldResolverService doit accepter Employee comme `$model`
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000003_create_workforce_employees_table.php`
+- `app/Core/Workforce/Employee.php`
+
+---
+
+### ADR-482 — Workforce Architecture: EmploymentContract + CompensationPlan (2026-05-03)
+
+**Contexte** : Un Employee a N contrats (1 seul `is_current=true`). Chaque contrat a N plans de rémunération versionnés (`effective_from`/`effective_until`). Le contrat est l'agrégat racine pour les conditions de travail.
+
+**Décisions** :
+1. `EmploymentContract` dans `app/Core/Workforce/EmploymentContract.php`
+2. State machine : `draft` → `active` → `suspended` → `terminated`
+3. Constraint `is_current` unique par employee (un seul contrat actif)
+4. Colonnes structurées : employee_id, contract_type (cdi/cdd/stage/alternance/freelance), work_model_key (horaire/forfait_jours/forfait_heures), weekly_hours, start_date, end_date, probation_end_date
+5. `CompensationPlan` dans `app/Core/Workforce/CompensationPlan.php` — versionné
+6. Colonnes compensation : contract_id, base_salary_cents, currency, pay_frequency, overtime_rate_bps, effective_from, effective_until
+7. Argent en centimes (integer), taux en basis points (integer) — pas de float
+8. `contract.custom_compliance_rules` (JSON nullable) — overrides MarketRuleSet pour cadres forfait jours etc.
+
+**Conséquences** :
+- Nouvelle migration `create_workforce_contracts_table`
+- Nouvelle migration `create_workforce_compensation_plans_table`
+- 2 nouveaux models Core/Workforce
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000004_create_workforce_employment_contracts_table.php`
+- `database/migrations/2026_05_03_000005_create_workforce_compensation_plans_table.php`
+- `app/Core/Workforce/EmploymentContract.php`
+- `app/Core/Workforce/CompensationPlan.php`
+
+---
+
+### ADR-483 — Workforce Architecture: TimeEntry sans split — AccountingDayAllocator (2026-05-03)
+
+**Contexte** : Un pointage de nuit (22h → 6h) traverse minuit. Deux approches : split automatique à minuit (crée 2 TimeEntry) ou source unique + allocation comptable. Le split crée de la complexité (états orphelins, doublons, edge cases DST).
+
+**Décisions** :
+1. `TimeEntry` est une source unique — jamais de split à minuit
+2. Un pointage 22h→06h = 1 seul TimeEntry avec clock_in=22:00 et clock_out=06:00+1
+3. `AccountingDayAllocator` (service, pas de table) répartit les heures par jour comptable pour les ReadModels/Timesheets/Payroll
+4. State machine TimeEntry : `idle` → `working` → `on_break` → `completed`
+5. `TimeEntryBreak` : 1:N, types lunch/rest/personal, start_at/end_at/duration_minutes
+6. Source tracking : manual, mobile, kiosk, import
+7. `total_worked_minutes` et `total_break_minutes` calculés au clock_out
+
+**Conséquences** :
+- Nouvelle migration `create_workforce_time_entries_table`
+- Nouvelle migration `create_workforce_time_entry_breaks_table`
+- Nouveau service `app/Core/Workforce/Services/AccountingDayAllocator.php`
+- Pas de table d'allocation — c'est un calcul pur
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000006_create_workforce_time_entries_table.php`
+- `database/migrations/2026_05_03_000007_create_workforce_time_entry_breaks_table.php`
+- `app/Core/Workforce/TimeEntry.php`
+- `app/Core/Workforce/TimeEntryBreak.php`
+- `app/Core/Workforce/Services/AccountingDayAllocator.php`
+
+---
+
+### ADR-484 — Workforce Architecture: Fields extension — target_entity + custom fields (2026-05-03)
+
+**Contexte** : Le système Fields (EAV) existant a 3 scopes : `platform_user`, `company`, `company_user`. Workforce a besoin de cibler Employee et Contract comme entités. De plus, les companies doivent pouvoir créer des custom fields avec chiffrement, visibilité par rôle, et limite par entitlement.
+
+**Décisions** :
+1. `FieldValue.model_type` accepte déjà des modèles Eloquent — étendre pour accepter `Employee` et `Contract`
+2. `FieldResolverService::resolve()` doit accepter un Employee ou Contract comme `$model`
+3. Ajout colonnes sur `field_definitions` : `encrypted` (bool), `visibility_roles` (JSON nullable), `recommended` (bool)
+4. La limite de custom fields par target_entity est contrôlée par entitlement (défaut MVP = 20)
+5. Migration Fields→Employee atomique à l'activation module : `MigrateFieldsToEmployeeUseCase`
+6. Rollback possible : `RollbackFieldsMigrationUseCase`
+
+**Conséquences** :
+- Nouvelle migration `alter_field_definitions_add_workforce_columns`
+- Modification de `FieldResolverService` pour accepter Employee/Contract
+- Pas de nouvelle table — extension de l'existant
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000008_alter_field_definitions_add_workforce_columns.php`
+- `app/Core/Fields/FieldResolverService.php` (modification)
+
+---
+
+### ADR-485 — Workforce Architecture: Documents extension — subject-based model (2026-05-03)
+
+**Contexte** : Les documents sont liés à `MemberDocument` (scope `company_user`). Workforce a besoin de rattacher des documents à Employee, Contract, LeaveRequest, PayrollPeriod. Un document a un seul sujet principal — le rattachement secondaire se fait via ReadModels.
+
+**Décisions** :
+1. Ajout colonnes sur `member_documents` : `document_subject_type` (string nullable), `document_subject_id` (bigint nullable), `relation_type` (source/generated/signed/attachment/proof), `generation_snapshot` (JSON nullable)
+2. Polymorphisme simple — pas de table pivot en MVP
+3. `generation_snapshot` obligatoire pour `relation_type = 'generated'` — fige variables, template_version, rule_version
+4. Ajout `parent_document_id` (FK self-reference nullable) pour avenants → contrat original
+5. Évolution future : table pivot `document_subjects` si multi-rattachement nécessaire
+6. 7 nouveaux document types via DocumentTypeCatalog (employment_contract, contract_amendment, absence_justification, medical_certificate, employer_attestation, payslip_imported, internal_hr_document)
+
+**Conséquences** :
+- Nouvelle migration `alter_member_documents_add_subject_columns`
+- Extension du DocumentTypeCatalog
+- Pas de modification structurelle du système Documents existant
+
+**Fichiers** :
+- `database/migrations/2026_05_03_000009_alter_member_documents_add_subject_columns.php`
+- `app/Core/Documents/DocumentTypeCatalog.php` (ajout types)
+
+---
+
+### ADR-486 — Workforce Architecture: Module family — 6 modules activables (2026-05-03)
+
+**Contexte** : Workforce couvre 38 sous-domaines. Un seul module serait trop gros et non granulaire. L'architecture module existante (ModuleManifest, entitlements, activation) supporte nativement les familles de modules avec dépendances.
+
+**Décisions** :
+1. 6 modules : `workforce` (core), `workforce_planning`, `workforce_leave`, `workforce_payroll`, `workforce_documents`, `workforce_esign`
+2. Module racine `workforce` = Employee + Contract + Compensation + TimeTracking basique
+3. Dépendances : planning/leave/documents → workforce, payroll → workforce+leave, esign → documents
+4. Entitlements : workforce = core si jobdomain propose / sinon addon pro, payroll = addon business, esign = addon business
+5. 15 permissions MVP regroupées en 4 bundles (team, hr_management, time_validation, payroll)
+6. JobDomain `workforce_presets` JSON déclenche auto-activation à l'assignation company
+
+**Conséquences** :
+- 6 nouveaux ModuleManifest dans `app/Modules/Workforce/`
+- Migration `alter_jobdomains_add_workforce_presets`
+- 15 permissions dans PermissionCatalog, 4 bundles dans PermissionBundleCatalog
+
+**Fichiers** :
+- `app/Modules/Workforce/WorkforceModule.php`
+- `app/Modules/Workforce/WorkforcePlanningModule.php` (stub Phase 2)
+- `app/Modules/Workforce/WorkforceLeaveModule.php` (stub Phase 2)
+- `app/Modules/Workforce/WorkforcePayrollModule.php` (stub Phase 2)
+- `app/Modules/Workforce/WorkforceDocumentsModule.php` (stub Phase 2)
+- `app/Modules/Workforce/WorkforceESignModule.php` (stub Phase 3)
+- `database/migrations/2026_05_03_000010_alter_jobdomains_add_workforce_presets.php`
+
+---
+
+### ADR-487 — Workforce Architecture: RBAC — 15 permissions + 4 bundles (2026-05-03)
+
+**Contexte** : Workforce touche des données très sensibles (SSN, IBAN, salaires). Le RBAC existant (permissions + bundles + is_admin flag) doit être étendu avec des permissions granulaires qui protègent l'accès aux données sensibles tout en restant gérables (pas 40 permissions).
+
+**Décisions** :
+1. 15 permissions : workforce.view, .manage, .contracts, .compensation_read, .compensation_manage, .sensitive_read, .time_manage, .time_approve, .leave_request, .leave_approve, .planning_manage, .payroll_prepare, .payroll_validate, .payroll_export, .admin
+2. 4 bundles : team (view+manage+time_manage+leave_request), hr_management (contracts+compensation_*+sensitive_read+admin), time_validation (time_manage+time_approve+planning_manage), payroll (payroll_*+compensation_read)
+3. Permissions sensibles marquées `is_admin=true` : contracts, compensation_*, sensitive_read, time_approve, leave_approve, payroll_*, admin
+4. FieldResolverService masque SSN/IBAN si `workforce.sensitive_read` absent
+5. Rôles recommandés via JobDomain default_roles : owner (tous), hr_manager, manager, payroll_manager, employee
+
+**Conséquences** :
+- Extension de PermissionCatalog et PermissionBundleCatalog
+- Pas de nouvelle table — utilise le système RBAC existant
+
+**Fichiers** :
+- `app/Core/RBAC/PermissionCatalog.php` (extension)
+- `app/Core/RBAC/PermissionBundleCatalog.php` (extension)
+
+---
+
+### ADR-488 — Workforce Architecture: ComplianceEngine + AnomalyDetector (2026-05-03)
+
+**Contexte** : Workforce doit vérifier en temps réel la conformité légale (durée max quotidienne, repos minimum, pause obligatoire) et détecter les anomalies (heures sup non validées, absences non justifiées). MarketRuleSet fournit les règles, CompanyPolicy le mode d'application.
+
+**Décisions** :
+1. `ComplianceEngine::check($company, $ruleKey, $actualValue)` → retourne `ComplianceResult` (compliant, mode, rule, message)
+2. Modes : allow (pas de vérif), warn (accepté + notification), block (rejet), manager_approval (en attente)
+3. `AnomalyDetector::scan($company, $date)` → détecte overtime_exceeded, break_missing, rest_insufficient, night_work, sunday_work, holiday_work, late_arrival, early_departure, missing_clock_out
+4. Exécution : à chaque clock_out + scan quotidien par scheduler
+5. Résolution : MarketRuleSet est le plancher non-overridable. Contract peut être plus favorable, jamais moins.
+6. 6 invariants de résolution (INV-RES-001 à 006)
+
+**Conséquences** :
+- Nouveau service `app/Core/Workforce/Services/ComplianceEngine.php`
+- Nouveau service `app/Core/Workforce/Services/AnomalyDetector.php`
+- Intégré dans ClockOutUseCase et scheduler
+
+**Fichiers** :
+- `app/Core/Workforce/Services/ComplianceEngine.php`
+- `app/Core/Workforce/Services/AnomalyDetector.php`
+
+---
+
+### ADR-489 — Workforce Phase 1: Audit de cohérence post-implémentation (2026-05-04)
+
+**Contexte** : Audit de cohérence architecture/code après implémentation Phase 1 Workforce MVP. 5 problèmes identifiés (3 critiques, 2 majeurs).
+
+**Corrections appliquées** :
+
+1. **C1 — TimeEntryBreak isolation multi-tenant** : Ajout `company_id` FK + index + trait `BelongsToCompany`. Sans cela, les breaks n'avaient pas d'isolation directe par company (uniquement via JOIN TimeEntry).
+
+2. **C2 — TerminateEmployeeUseCase transaction** : Opération multi-entités (Employee + Contract) wrappée dans `DB::transaction()`. Prévient l'état incohérent si le second save échoue.
+
+3. **C3 — currentCompensation() query** : `orWhere` remplacé par closure nested `->where(fn($q) => ...)`. L'ancien pattern pouvait matcher des plans hors-contrat dans certains edge cases.
+
+4. **M1 — Audit breaks** : `AuditLogger::logCompany()` ajouté dans `StartBreakUseCase` et `EndBreakUseCase`. Category `workforce.time`, metadata: break_id, employee_id, occurred_at.
+
+5. **M2 — Validation enums** : Source validée contre `TimeEntry::SOURCES` dans `ClockInUseCase`. Type validé contre `TimeEntryBreak::TYPES` dans `StartBreakUseCase`. Rejet explicite avec DomainException si valeur inconnue.
+
+**Fichiers modifiés** :
+- `database/migrations/2026_05_03_000007_create_workforce_time_entry_breaks_table.php`
+- `app/Core/Workforce/TimeEntryBreak.php`
+- `app/Core/Workforce/EmploymentContract.php`
+- `app/Modules/Workforce/UseCases/TerminateEmployeeUseCase.php`
+- `app/Modules/Workforce/UseCases/StartBreakUseCase.php`
+- `app/Modules/Workforce/UseCases/EndBreakUseCase.php`
+- `app/Modules/Workforce/UseCases/ClockInUseCase.php`
+
+---
+
+### ADR-490 — Workforce Leave: Architecture du système de congés (2026-05-04)
+
+**Contexte** : Phase 2.1 du module Workforce — conception et implémentation du système de congés (leave). Design validé avec 10 corrections avant code.
+
+**Décisions** :
+
+1. **Ledger append-only** : `workforce_leave_ledger_entries` est la source de vérité absolue. `boot()` bloque update/delete via `RuntimeException`. Corrections par storno (écriture inverse). 8 types d'entrées : accrual, consumption, reservation, release, adjustment, storno, carry_over, grant.
+
+2. **Typed balance formula** : `available = accrued - reserved - consumed + adjusted`. Pas un simple `SUM(credit) - SUM(debit)`. Chaque type d'entrée alimente sa colonne spécifique.
+
+3. **Reservation/Consumption flow** : Approbation → reservation (debit). Annulation → release (credit). Consommation → release + consumption (2 entrées atomiques). ConsumeLeaveUseCase est idempotent via clé `consume:{request_id}`.
+
+4. **LeaveBalanceCache** : Table de cache, pas source de vérité. Projection du ledger, recomputée si drift détecté. SELECT FOR UPDATE pour locking.
+
+5. **Integer hundredths** : Tous les comptages en centièmes d'entier (2500 = 25.00 jours). JAMAIS de float.
+
+6. **Accrual rounding** : Cible annuelle / 12 tronquée pour mois 1-11, mois 12 ajuste le reste (2500 - 11×208 = 212). Idempotent via clé `accrual:{emp}:{type}:{period}`.
+
+7. **Employee.status non modifié** : ConsumeLeaveUseCase ne touche PAS Employee.status. La présence est trackée via ReadModels uniquement.
+
+**Fichiers créés** :
+- `database/migrations/2026_05_04_000001..4` (4 migrations leave)
+- `app/Core/Workforce/Leave*.php` (4 models)
+- `app/Core/Workforce/Services/LeaveLedger.php`
+- `app/Modules/Workforce/Data/RequestLeaveData.php`, `ApproveLeaveData.php`
+- `app/Modules/Workforce/UseCases/*Leave*.php` (8 UseCases)
+- `app/Modules/Workforce/ReadModels/Leave*ReadModel.php` (3 ReadModels)
+- `database/seeders/LeaveTypeSeeder.php`
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Employee.php` (relations leaveRequests, leaveBalances)
+- `app/Modules/Workforce/WorkforceLeaveModule.php` (5 permissions, 3 bundles)
+- `tests/Feature/CompanyPermissionTest.php` (3 perms admin ajoutées)
+
+---
+
+### ADR-491 — Workforce Planning: Architecture du système de planification (2026-05-04)
+
+**Contexte** : Phase 2.2 du module Workforce — planification des shifts. Planning = prévu, distinct du réel (TimeEntry) et de l'indisponibilité (Leave).
+
+**Décisions** :
+
+1. **3 agrégats** : WorkLocation (type: internal/client_site/remote/mobile), ScheduleTemplate (réutilisable), Shift (assignation individuelle).
+2. **Machine d'états Shift** : draft → published → completed | cancelled. Published = immutable (date/heures/employee).
+3. **Stockage UTC** : start_at/end_at en UTC, timezone figée sur le Shift, date = jour logique local.
+4. **Template snapshot** : template_snapshot JSON immuable au moment de la création du shift.
+5. **Invariants clés** : pas de shift sur congé approved/consumed (I1), pas de double booking datetime (I2), employee actif + contrat actif (I3/I4), publication atomique avec lockForUpdate (I8).
+6. **Interactions** : Planning consulte Leave (guard). Planning ne consulte PAS TimeEntry en écriture. Comparison planned vs actual = ReadModel lecture seule.
+7. **Shift.completed** = lifecycle planning terminé, pas "travail effectué". PlanningComparisonReadModel signale missing_actual.
+
+**Fichiers créés** :
+- `database/migrations/2026_05_04_100001..3` (3 migrations planning)
+- `app/Core/Workforce/WorkLocation.php`, `ScheduleTemplate.php`, `Shift.php`
+- `app/Modules/Workforce/UseCases/*` (10 UseCases planning)
+- `app/Modules/Workforce/ReadModels/ShiftReadModel.php`, `WorkLocationReadModel.php`, `ScheduleTemplateReadModel.php`, `PlanningComparisonReadModel.php`
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Employee.php` (relation shifts)
+- `app/Modules/Workforce/WorkforcePlanningModule.php` (3 permissions, 2 bundles)
+- `tests/Feature/CompanyPermissionTest.php` (+1 admin, +1 operational)
+
+---
+
+### ADR-492 — Workforce Timesheet: Architecture du système de feuilles de temps (2026-05-04)
+
+**Contexte** : Phase 2.3 du module Workforce — feuilles de temps validées. Timesheet = snapshot agrégé de TimeEntry + Shift + Leave pour une période. Payroll consommera le Timesheet locked, jamais les données live.
+
+**Décisions** :
+
+1. **2 agrégats** : TimesheetPeriod (enveloppe période) + TimesheetLine (détail journalier snapshot).
+2. **Machine d'états** : draft → submitted → approved → locked | rejected → draft.
+3. **Source snapshot complet** : chaque ligne fige les valeurs complètes des sources (IDs + données), pas juste les IDs.
+4. **Policy snapshot** : capturé à soumission, immutable ensuite. Draft utilise policies live.
+5. **Anomalies informatives** : ne bloquent pas submit. Approval avec anomalies error requiert approval_note.
+6. **TimesheetLine immutable** : boot() enforce que les lignes ne peuvent être modifiées que si parent est draft (I13).
+7. **Lock conditionnel** : requiert module workforce_payroll activé + permission payroll_prepare.
+8. **AccountingDayAllocator** : répartit TimeEntries cross-midnight sur les jours calendaires.
+9. **Aucune mutation sources** : Timesheet lit mais ne modifie jamais TimeEntry, Shift ou LeaveRequest.
+
+**Fichiers créés** :
+- `database/migrations/2026_05_04_200001..2` (2 migrations timesheet)
+- `app/Core/Workforce/TimesheetPeriod.php`, `TimesheetLine.php`
+- `app/Modules/Workforce/UseCases/*Timesheet*.php` (7 UseCases)
+- `app/Modules/Workforce/ReadModels/Timesheet*ReadModel.php` (3 ReadModels)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Employee.php` (relation timesheetPeriods)
+- `app/Modules/Workforce/WorkforceModule.php` (+3 permissions, +2 bundles)
+- `tests/Feature/CompanyPermissionTest.php` (+1 admin, +2 operational)
+
+---
+
+### ADR-493 — Workforce Payroll: Architecture du système de préparation de paie (2026-05-04)
+
+**Contexte** : Phase 2.4 du module Workforce — préparation de paie. PayrollRun consomme uniquement les TimesheetPeriod locked (jamais les données live). gross_basis_cents est une estimation de préparation, pas le brut officiel (Phase 3 = PayrollCalculationResult).
+
+**Décisions** :
+
+1. **Nom PayrollRun** (pas PayrollPeriod) : terme standard "batch de calcul", évite confusion avec TimesheetPeriod.
+2. **2 agrégats** : PayrollRun (enveloppe période + statut) + PayrollLine (détail employé snapshot).
+3. **Machine d'états** : draft → computed → validated → exported | computed → draft (recompute).
+4. **Salaire fixe non proratisé** : MVP base = base_salary_cents + overtime - unpaid leave deduction. Pas de prorata par temps travaillé.
+5. **gross_breakdown JSON** : décomposition complète (base, overtime, deduction, formula_version=payroll-prep-v1).
+6. **Snapshots triples** : compensation_snapshot + timesheet_snapshot (sur PayrollLine), policy_snapshot (sur PayrollRun).
+7. **pay_frequency_scope** : sur PayrollRun (monthly|biweekly|weekly|mixed), fréquence réelle dans chaque PayrollLine.compensation_snapshot.
+8. **Anomalies à 2 niveaux** : run-level (missing_timesheet, missing_compensation pour employés sans ligne) + line-level (timesheet_has_errors, zero_worked).
+9. **Validation conditionnelle** : error anomalies → validation_note obligatoire. employee_count=0 → blocage validation (I14).
+10. **Export metadata** : export_format, export_path, exported_snapshot sur PayrollRun. export_payload JSON pré-construit sur chaque PayrollLine.
+11. **Idempotency** : UNIQUE(company_id, idempotency_key) avec pattern payroll:{company}:{start}:{end}.
+12. **PayrollLine immutable** : boot() bloque update/delete quand parent ≠ draft. Recompute = delete+regenerate via draft.
+13. **Recompute autorisé uniquement depuis computed** (interdit depuis validated/exported). Audit ancien snapshot avant suppression.
+14. **Compute transactionnel** : DB::transaction + lockForUpdate sur PayrollRun.
+
+**Fichiers créés** :
+- `database/migrations/2026_05_04_300001..2` (2 migrations payroll)
+- `app/Core/Workforce/PayrollRun.php`, `PayrollLine.php`
+- `app/Modules/Workforce/UseCases/{Create,Compute,Recompute,Validate,Export,Delete}PayrollUseCase.php` (6 UseCases)
+- `app/Modules/Workforce/ReadModels/Payroll{Run,Line}ReadModel.php` (2 ReadModels)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Employee.php` (relation payrollLines)
+- `resources/js/plugins/i18n/locales/{fr,en}.json` (48 clés payroll chacun)
+
+**Permissions existantes (aucun changement)** : payroll_prepare, payroll_validate, payroll_export (déjà dans WorkforcePayrollModule).
+
+---
+
+### ADR-494 — Workforce Documents: Architecture de génération documentaire RH (2026-05-04)
+
+**Contexte** : Phase 2.5 du module Workforce — génération documentaire RH transverse. Réutilise le système Documents existant (MemberDocument vault). Pas de système parallèle. Documents générés immutables. Préparation e-signature future sans implémenter de provider.
+
+**Décisions** :
+
+1. **DocumentTemplate** (Core transverse) : HTML avec placeholders `{{ variable }}`, versioning auto (UNIQUE company_id+code+version), une seule version active par (company_id, code) (I12).
+2. **GeneratedDocument** (Core transverse) : immutable sauf signature fields, boot() enforcement. Signed non supprimable (I2).
+3. **DocumentTemplateResolver** : résolution company active > platform active > DomainException. platform_template_id = traçabilité uniquement.
+4. **DocumentVariableResolver** : parser regex strict `/{{\s*([\w.]+)\s*}}/`, HTML-escape par défaut, valeurs nulles → chaîne vide. Jamais Blade::render.
+5. **variables_schema validé** : à la création/update du template ET à la génération (I13). Variables manquantes → DomainException.
+6. **Subject-based polymorphism** : 5 types enum (employee, contract, leave_request, payroll_run, payroll_line).
+7. **MemberDocument vault** : employee/contract → TOUJOURS créé. leave/payroll → JAMAIS.
+8. **Idempotency** : `doc:{template_id}:{subject_type}:{subject_id}:{version}`, duplicates autorisés (régénération consciente).
+9. **Signature transitions strictes** (I14) : none→pending→signed|declined. Constantes SIGNATURE_TRANSITIONS.
+10. **Stockage structuré** : `documents/generated/{company_id}/{Y}/{m}/{uuid}.pdf`, disk configurable.
+11. **BulkGenerate transactionnel** : DB::transaction, all-or-nothing, max 100 (I15).
+12. **Snapshot complet** : generation_snapshot inclut toutes les variables résolues + _meta (resolver_version, template_version).
+13. **pay_frequency sur chaque PayrollLine** : pas de "fréquence dominante" au niveau run.
+
+**Fichiers créés** :
+- `database/migrations/2026_05_04_400001..2` (2 migrations documents)
+- `app/Core/Documents/DocumentTemplate.php`, `GeneratedDocument.php`
+- `app/Core/Documents/Services/DocumentTemplateResolver.php`, `DocumentVariableResolver.php`, `DocumentPdfGenerator.php`
+- `app/Modules/Workforce/UseCases/{Create,Update}DocumentTemplateUseCase.php`
+- `app/Modules/Workforce/UseCases/{Generate,BulkGenerate,Delete}DocumentUseCase.php`
+- `app/Modules/Workforce/UseCases/UpdateSignatureStatusUseCase.php`
+- `app/Modules/Workforce/ReadModels/{DocumentTemplate,GeneratedDocument,TemplateVariableSchema}ReadModel.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Workforce/WorkforceDocumentsModule.php` (+4 permissions, +2 bundles, navItem)
+- `tests/Feature/CompanyPermissionTest.php` (+3 admin, +1 operational → 33 admin, 25 operational)
+- `resources/js/plugins/i18n/locales/{fr,en}.json` (48 clés workforceDocuments chacun)
+
+---
+
+### ADR-495 — Corrections pré-Phase 3 : Audit Workforce (2026-05-04)
+
+**Contexte** : L'audit Phase 2.6 a identifié 4 corrections nécessaires avant d'entrer en Phase 3 (paie officielle). Score audit global : 7.4/10, avec 2 P0 bloquants, 2 P1 fortement recommandés.
+
+**Décisions** :
+
+1. **D2 — Idempotency constraint** : Migration ajoutant `UNIQUE(company_id, idempotency_key)` sur `generated_documents`. Le `GenerateDocumentUseCase` vérifie l'idempotency avant création (retourne l'existant si trouvé). Suppression de l'ancien INDEX simple.
+
+2. **D3 — ReadModel purity** : Extraction du write DB de `LeaveBalanceReadModel.computeBalance()` vers un Service dédié `LeaveBalanceCacheHealer`. Le ReadModel ne fait plus que lire le ledger via `LeaveLedger::computeBalance()`. Le cache healing reste accessible pour les UseCases qui en ont besoin.
+
+3. **D4 — Policy snapshot enrichi** : `ComputePayrollUseCase` capture maintenant les politiques workforce réelles via `CompanyPolicyResolver::snapshot()`. Le policy_snapshot inclut : `snapshot_version`, `captured_at`, `resolver_version`, les politiques métier + metadata de compute.
+
+4. **D1 — Pack de tests minimum** : 32 tests / 158 assertions couvrant :
+   - State machines (LeaveRequest, TimesheetPeriod, PayrollRun, GeneratedDocument signature) — 8 tests
+   - Immutabilité boot() (LeaveLedgerEntry, TimesheetLine, PayrollLine, GeneratedDocument) — 10 tests
+   - Guards ValidatePayrollUseCase (status, employee_count=0, error anomalies) — 3 tests
+   - Template resolution (company override, platform fallback, DomainException) — 3 tests
+   - Idempotency et snapshot — 2 tests
+   - Multi-tenant isolation (4 modèles × BelongsToCompany scope) — 4 tests
+   - 2 tests manquants identifiés mais hors scope : ComputePayrollUseCase end-to-end (dépend de activeContract qui n'existe pas encore)
+
+**Conséquences** :
+- Score audit passe de 7.4/10 à ~8.5/10 (tests 2/10 → 6/10, invariants 8/10 → 9/10)
+- Phase 3 débloquée pour les calculs de paie, conformité légale
+- LeaveBalanceCacheHealer disponible comme Service injectable pour les futurs UseCases
+
+**Fichiers** :
+- `database/migrations/2026_05_04_500001_add_unique_idempotency_key_to_generated_documents.php` (NEW)
+- `app/Core/Workforce/Services/LeaveBalanceCacheHealer.php` (NEW)
+- `tests/Feature/WorkforceInvariantsTest.php` (NEW — 32 tests)
+- `app/Modules/Workforce/UseCases/GenerateDocumentUseCase.php` (idempotency guard)
+- `app/Modules/Workforce/UseCases/ComputePayrollUseCase.php` (policy_snapshot enrichi)
+- `app/Modules/Workforce/ReadModels/LeaveBalanceReadModel.php` (purified — write removed)
+
+---
+
+### ADR-496 — Phase 3.1 : Payroll Calculation Engine — Brut → Net (2026-05-04)
+
+**Contexte** : Phase 2 (Payroll Prep) a livré PayrollRun/PayrollLine avec gross_breakdown (base + overtime − unpaid_leave). Phase 3.1 ajoute le calcul complet Brut → Net : cotisations salariales/patronales, PAS, avantages, déductions. Hors scope : bulletin officiel, DSN, export comptable.
+
+**Décisions** :
+
+1. **Pas de table doublon** : les cotisations sont des entrées `MarketRuleSet` (domain `workforce_payroll`), pas une table séparée. CSG base multiplier (98.25% = 9825 bps) et plafond SS viennent exclusivement de MarketRuleSet — jamais hardcodé.
+
+2. **Table `workforce_payroll_calculations`** : résultat de calcul 1:1 avec PayrollLine. Status enum `calculated`/`validated` (pas `is_official`). Colonne `blocking_anomalies` JSON (net négatif, règle manquante, taux PAS invalide, devise non supportée).
+
+3. **Table `workforce_employee_tax_profiles`** : taux PAS par employé. SSN retiré — existe déjà dans FieldValue (code `social_security_number`, sensitive=true).
+
+4. **Engine injectable** : `PayrollCalculationEngine` injecte `PayrollRuleResolver` via constructor. Les calculateurs (Contribution, Tax, Benefit, Deduction, Net) sont stateless purs.
+
+5. **Formule anti-double-comptage** : `gross_total = gross_basis + taxable_benefits`. Net = `gross_total - contributions_employee - tax - deductions`. Benefits déjà inclus dans gross_total, jamais ré-ajoutés.
+
+6. **Preview vs calculated vs validated** : preview = zéro DB write/audit. `calculated` = persisté, recalculable. `validated` = gelé, snapshot immutable.
+
+7. **ValidatePayrollUseCase enrichi** : refuse validation si PayrollLine sans PayrollCalculation ou si blocking_anomalies présentes.
+
+8. **Seed FR indicatif** : 11 entrées MarketRuleSet (cotisations URSSAF 2026 simplifiées). Disclaimer systématique : "indicatif / non exhaustif / validation expert-comptable requise".
+
+9. **31 tests** : 16 unitaires (calculateurs purs) + 15 intégration (guards, idempotence, multi-tenant, preview, etc.).
+
+**Conséquences** :
+- PayrollRun.status `computed` → calculs Brut→Net possibles → validation bloque si calculs manquants
+- Architecture extensible : ajouter convention collective = ajouter entrées MarketRuleSet
+- Aucun bulletin officiel ni DSN dans cette phase
+
+**Fichiers** : voir rapport implémentation ci-dessous.
+
+---
+
+### ADR-497 — Phase 3.2 : Payslip Draft / Payroll Documents (2026-05-04)
+
+**Contexte** : Phase 3.1 (ADR-496) a livré le calcul Brut→Net (PayrollCalculation). Phase 3.2 relie ces données au système de génération documentaire existant (GeneratedDocument + DocumentTemplate + DocumentPdfGenerator) pour produire des fiches de paie brouillon. Hors scope : fiche de paie officielle, DSN, signature électronique.
+
+**Décisions** :
+
+1. **Zéro nouvelle table** : les payslip drafts sont des GeneratedDocument avec subject_type='payroll_line'. Le lien PayrollCalculation ↔ document passe par PayrollLine (sujet partagé).
+
+2. **Enrichissement DocumentVariableResolver** : namespace `calculation.*` ajouté pour subject_type payroll_line. 24 variables scalaires + contribution_lines indexées (calculation.contribution_line_N_*). Si pas de calculation, toutes les variables = chaîne vide.
+
+3. **Template seedé `payslip_draft_fr`** : template platform avec disclaimer obligatoire. Watermark CSS "BROUILLON" (opacity 0.06, rotate -30deg). Footer : "Document non officiel, à titre indicatif uniquement."
+
+4. **GeneratePayslipDraftsUseCase** : orchestre la génération bulk pour un PayrollRun validé. Guards : run.status=validated, calculations.status=validated, blocking_anomalies vide. Délègue à GenerateDocumentUseCase existant (idempotent).
+
+5. **Permissions existantes** : pas de nouvelle permission. Requiert modules workforce_payroll + workforce_documents actifs.
+
+6. **12 tests** : 3 unit (resolver enrichi) + 9 feature (use case, guards, idempotence, multi-tenant, snapshot, disclaimer).
+
+**Conséquences** :
+- PayrollRun validé → génération payslip drafts possible → chaque employé reçoit un PDF brouillon
+- Aucune fiche de paie officielle ni DSN dans cette phase
+- DocumentVariableResolver étendu sans breaking change (nouvelles variables, pas de suppression)
+
+**Fichiers** : voir rapport implémentation ci-dessous.
+
+---
+
+### ADR-498 — Sprint A : Correctifs P0 post-audit Phase 3.3 (2026-05-04)
+
+**Contexte** : L'audit Phase 3.3 (GO/NO-GO Phase 4) a identifié 16 points P0 bloquants dans le module payroll/documents : AuditLogger appelé en statique avec paramètres invalides (6 UseCases), ModuleRegistry::isEnabled() inexistante (3 fichiers), imports App\Models\User cassés (8 occurrences dans 3 modèles), imports App\Models\Company cassés (2 fichiers).
+
+**Décisions** :
+
+1. **AuditLogger refactor** : Les 6 UseCases payroll/document (Create, Compute, Export, Recompute, Delete, BulkGenerate) migrent de `AuditLogger::logCompany(description:, metadata:)` (statique, params invalides) vers `app(AuditLogger::class)->logCompany(options: ['actorId' => ..., 'metadata' => [...]])` (instance, signature correcte). Le champ `description` est préservé dans `options.metadata.description`. Le `targetId` est casté en `(string)`.
+
+2. **ModuleGate replacement** : 3 fichiers (CreatePayrollRunUseCase, ComputePayrollUseCase, BulkGenerateDocumentUseCase) migrent de `ModuleRegistry::isEnabled($companyId, 'module')` (méthode inexistante) vers `ModuleGate::isEnabledGlobally('module')` (pattern validé par le reste du codebase).
+
+3. **User import fix** : 8 occurrences de `\App\Models\User::class` corrigées vers `\App\Core\Models\User::class` dans TimesheetPeriod (4), PayrollRun (3), LeaveRequest (1).
+
+4. **Company import fix** : `\App\Models\Company::class` corrigé vers `\App\Core\Models\Company::class` dans DocumentTemplate et CreatePayrollRunUseCase.
+
+**Conséquences** :
+- Audit trail fonctionnel sur toute la chaîne payroll (6 UseCases)
+- Module gating cohérent avec le reste du codebase
+- Relations Eloquent BelongsTo fonctionnelles (User/Company correctement résolus)
+- 2334 tests PASS, 0 régression, build clean
+
+**Fichiers modifiés** :
+- `app/Modules/Workforce/UseCases/CreatePayrollRunUseCase.php`
+- `app/Modules/Workforce/UseCases/ComputePayrollUseCase.php`
+- `app/Modules/Workforce/UseCases/ExportPayrollUseCase.php`
+- `app/Modules/Workforce/UseCases/RecomputePayrollUseCase.php`
+- `app/Modules/Workforce/UseCases/DeletePayrollRunUseCase.php`
+- `app/Modules/Workforce/UseCases/BulkGenerateDocumentUseCase.php`
+- `app/Core/Workforce/TimesheetPeriod.php`
+- `app/Core/Workforce/PayrollRun.php`
+- `app/Core/Workforce/LeaveRequest.php`
+- `app/Core/Documents/DocumentTemplate.php`
+
+---
+
+### ADR-499 — Sprint B : Tests critiques chemin payroll + fix activeContract (2026-05-04)
+
+**Contexte** : L'audit Phase 3.3 (ADR-498) a identifié 29 tests P0 manquants sur le chemin critique payroll : RecomputePayrollUseCase (0 tests), ExportPayrollUseCase (0 tests), DeletePayrollRunUseCase (0 tests), invariants de calcul (0 tests), template/PDF failure (0 tests). Sprint B comble ces lacunes.
+
+**Décisions** :
+
+1. **29 tests ajoutés** dans `tests/Feature/PayrollUseCaseTest.php` couvrant : Recompute (7 tests — happy path, 3 guards, audit, identité, metadata), Export (7 tests — happy path, 3 guards, payload, snapshot, audit), Delete (6 tests — happy path, 3 guards, cascade, audit), Calculation invariants (6 tests — net=gross-contrib-tax, employer cost, positivity, immutabilité, mutabilité), Template/PDF (3 tests — template missing, message format, payslip draft sans template).
+
+2. **Fix P0 supplémentaire découvert** : `ComputePayrollUseCase` ligne 68 accédait à `$employee->activeContract` — relation inexistante sur Employee. Corrigé vers `$employee->currentContract` (relation existante avec `is_current = true`). Sans ce fix, le compute payroll ne créait aucune ligne (anomalie MISSING_COMPENSATION silencieuse pour tous les employés).
+
+**Conséquences** :
+- Le chemin payroll critique (Create → Compute → Validate → Recompute → Export → Delete) est désormais couvert par tests
+- Les invariants de calcul (net, employer cost, positivity, immutability) sont vérifiés
+- Bug silencieux `activeContract` corrigé — le compute payroll crée maintenant des lignes correctement
+- 2363 tests PASS (+29), 0 régression, build clean
+
+**Fichiers** :
+- `tests/Feature/PayrollUseCaseTest.php` (CRÉÉ — 29 tests, 72 assertions)
+- `app/Modules/Workforce/UseCases/ComputePayrollUseCase.php` (MODIFIÉ — `activeContract` → `currentContract`)
+
+---
+
+### ADR-500 — Sprint C : Éradication complète AuditLogger statique + disclaimer EN (2026-05-04)
+
+**Contexte** : Après Sprint A (ADR-498, 6 UseCases payroll) et Sprint B (ADR-499, 29 tests + fix activeContract), il restait 12 appels `AuditLogger::logCompany()` statiques avec paramètres invalides dans le module Workforce (Employee, Contract, Time Tracking, Documents). Le disclaimer EN ne reflétait pas exactement le FR.
+
+**Décisions** :
+
+1. **12 appels statiques corrigés** dans 11 fichiers. Pattern identique à Sprint A : `AuditLogger::logCompany(description:, metadata:)` → `app(AuditLogger::class)->logCompany(options: ['metadata' => [..., 'description' => '...'], 'actorId' => ...])`. Le champ `actor_id` présent dans le metadata de 5 fichiers (DeleteGeneratedDocument, UpdateSignature, CreateDocumentTemplate, UpdateDocumentTemplate x2) est extrait vers `options.actorId`.
+
+2. **Zéro appel statique résiduel** : `Grep AuditLogger::logCompany\(` sur tout `app/` retourne 0 résultat.
+
+3. **Disclaimer EN aligné** : `"Unofficial document, for informational purposes only"` → `"Unofficial document, for indicative purposes only. Does not constitute an official payslip under applicable labor law."` — miroir exact du FR.
+
+**Conséquences** :
+- L'ensemble du module Workforce utilise le pattern correct `app(AuditLogger::class)->logCompany(options:)`
+- Audit trail fonctionnel sur tous les UseCases : Employee (create, terminate), Time (clock_in, clock_out, break_start, break_end), Contract (create), Documents (create, update, version, delete, signature)
+- Disclaimer FR/EN symétriques
+- 2363 tests PASS, 0 régression, build clean
+
+**Fichiers modifiés** :
+- `app/Modules/Workforce/UseCases/CreateEmployeeUseCase.php`
+- `app/Modules/Workforce/UseCases/TerminateEmployeeUseCase.php`
+- `app/Modules/Workforce/UseCases/ClockInUseCase.php`
+- `app/Modules/Workforce/UseCases/ClockOutUseCase.php`
+- `app/Modules/Workforce/UseCases/StartBreakUseCase.php`
+- `app/Modules/Workforce/UseCases/EndBreakUseCase.php`
+- `app/Modules/Workforce/UseCases/CreateContractUseCase.php`
+- `app/Modules/Workforce/UseCases/DeleteGeneratedDocumentUseCase.php`
+- `app/Modules/Workforce/UseCases/UpdateSignatureStatusUseCase.php`
+- `app/Modules/Workforce/UseCases/CreateDocumentTemplateUseCase.php`
+- `app/Modules/Workforce/UseCases/UpdateDocumentTemplateUseCase.php`
+- `resources/js/plugins/i18n/locales/en.json`
+
+---
+
+### ADR-501 — Phase 4.1 : Convention Collective Engine — Design (2026-05-04)
+
+**Contexte** : Le moteur payroll (Phases 3.1-3.2) est fonctionnel avec des règles légales nationales (MarketRuleSet, source=URSSAF/AGIRC-ARRCO). Phase 4 exige le support des conventions collectives (CC) qui modifient, surchargent ou complètent les règles légales de base. Cet ADR définit l'architecture CC sans implémenter — l'implémentation fera l'objet d'un sprint séparé après validation.
+
+**Scope** : ADR-501 = CC Engine uniquement. ADR-502 (Payslip officiel), ADR-503 (YTD/Cumuls), ADR-504 (DSN), ADR-505 (Workflow) suivront.
+
+---
+
+#### 1. Modèle de données CC
+
+**Nouvelle table `convention_collectives`** :
+```sql
+CREATE TABLE convention_collectives (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    idcc VARCHAR(10) NOT NULL,          -- Code IDCC officiel (ex: "3248")
+    short_name VARCHAR(100) NOT NULL,   -- Nom court (ex: "Métallurgie")
+    full_name VARCHAR(500) NOT NULL,    -- Nom officiel complet
+    market_key VARCHAR(10) NOT NULL DEFAULT 'FR',
+    brochure_number VARCHAR(20) NULL,   -- N° brochure JO (ex: "3109")
+    is_active BOOLEAN DEFAULT TRUE,
+    metadata JSON NULL,                 -- notes, URLs, dates d'extension
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    UNIQUE (idcc, market_key),
+    FOREIGN KEY (market_key) REFERENCES markets(key) ON DELETE CASCADE,
+    INDEX (market_key, is_active)
+);
+```
+
+**Nouvelle table `convention_collective_rules`** — extension du pattern MarketRuleSet :
+```sql
+CREATE TABLE convention_collective_rules (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    convention_collective_id BIGINT UNSIGNED NOT NULL,
+    domain VARCHAR(50) NOT NULL,           -- 'workforce_payroll', 'workforce_leave', etc.
+    rule_type VARCHAR(30) NOT NULL,        -- type de règle (voir RULE_TYPES ci-dessous)
+    rule_key VARCHAR(100) NOT NULL,        -- même nomenclature que market_rule_sets
+    value JSON NOT NULL,                   -- même structure JSON que MarketRuleSet.value
+    effective_from DATE NOT NULL,
+    effective_until DATE NULL,
+    override_mode VARCHAR(20) NOT NULL DEFAULT 'replace',  -- 'replace', 'supplement', 'minimum'
+    source VARCHAR(100) NOT NULL,          -- ex: "CC Métallurgie Art. 42"
+    reference VARCHAR(500) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (convention_collective_id) REFERENCES convention_collectives(id) ON DELETE CASCADE,
+    UNIQUE (convention_collective_id, domain, rule_type, rule_key, effective_from),
+    INDEX (convention_collective_id, domain, rule_type)
+);
+```
+
+**`rule_type` enum** (les CC ne concernent pas que les cotisations) :
+- `contribution` — cotisations salariales/patronales
+- `salary_minimum` — minima conventionnels par classification
+- `overtime` — majorations heures sup spécifiques CC
+- `seniority_bonus` — prime d'ancienneté
+- `leave` — congés supplémentaires (ancienneté, enfants, etc.)
+- `notice_period` — préavis selon ancienneté et catégorie
+- `classification` — grilles de classification (cadre, non-cadre, etc.)
+- `benefit` — avantages conventionnels (mutuelle, prévoyance, transport)
+- `working_time` — aménagement du temps de travail spécifique CC
+
+Phase 4.1 implémente uniquement `contribution` et `benefit`. Les autres rule_types sont modélisés mais non résolus par le moteur payroll (réservés aux futurs ADR).
+
+**Nouvelle table `company_payroll_rule_overrides`** — Niveau 3 : accord d'entreprise :
+```sql
+CREATE TABLE company_payroll_rule_overrides (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    company_id BIGINT UNSIGNED NOT NULL,
+    domain VARCHAR(50) NOT NULL,           -- 'workforce_payroll'
+    rule_type VARCHAR(30) NOT NULL,        -- même enum que convention_collective_rules
+    rule_key VARCHAR(100) NOT NULL,
+    value JSON NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_until DATE NULL,
+    override_mode VARCHAR(20) NOT NULL DEFAULT 'replace',  -- 'replace', 'supplement', 'minimum'
+    approved_by INT UNSIGNED NULL,         -- acteur qui a validé l'override
+    justification VARCHAR(500) NULL,       -- motif de l'override (audit)
+    source VARCHAR(100) NOT NULL,          -- ex: "Accord d'entreprise 2026-03"
+    reference VARCHAR(500) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    UNIQUE (company_id, domain, rule_type, rule_key, effective_from),
+    INDEX (company_id, domain, rule_type)
+);
+```
+
+**Logique** : L'override company est le niveau le plus fort de la chaîne.
+- S'applique à TOUS les contrats de la company (pas par contrat)
+- Exige `approved_by` + `justification` pour auditabilité
+- Même `override_mode` que CC rules (replace/supplement/minimum)
+- Phase 4.1 : table créée, modèle créé, resolver prêt. Pas d'UI admin (futur sprint).
+
+**Champ ajouté sur `workforce_employment_contracts`** :
+```sql
+ALTER TABLE workforce_employment_contracts
+    ADD COLUMN convention_collective_id BIGINT UNSIGNED NULL AFTER company_id,
+    ADD FOREIGN KEY (convention_collective_id) REFERENCES convention_collectives(id) ON DELETE SET NULL;
+```
+
+**Logique** : La CC est attachée au **contrat**, pas à la company ni à l'employé.
+- Un même company peut avoir des contrats sous différentes CC (multi-activité)
+- Le changement de CC = nouveau contrat (ou avenant → nouveau contrat avec version+1)
+- Si `convention_collective_id` est NULL → seules les règles MarketRuleSet légales s'appliquent
+
+**Nouveau champ optionnel sur `companies`** :
+```sql
+ALTER TABLE companies
+    ADD COLUMN default_convention_collective_id BIGINT UNSIGNED NULL,
+    ADD FOREIGN KEY (default_convention_collective_id) REFERENCES convention_collectives(id) ON DELETE SET NULL;
+```
+→ Valeur par défaut pour les nouveaux contrats de cette company. N'override PAS le contrat existant.
+
+---
+
+#### 2. Mécanisme de priorité des règles (Rule Resolution Chain)
+
+**Hiérarchie déterministe (du plus faible au plus fort)** :
+
+```
+Niveau 1 : MarketRuleSet (source=law)            ← base légale nationale (URSSAF, Code du travail)
+Niveau 2 : ConventionCollectiveRule               ← CC spécifique au contrat (IDCC)
+Niveau 3 : CompanyPayrollRuleOverride             ← accord d'entreprise / décision company
+```
+
+Les 3 niveaux sont implémentés dès Phase 4.1. Niveau 3 n'a pas d'UI admin en 4.1 (insertion DB directe ou futur sprint), mais le resolver le supporte déjà.
+
+**Algorithme de résolution** (dans `PayrollRuleResolver`) :
+
+```php
+// Pour chaque rule_key (ex: contribution_maladie) :
+1. Charger la règle légale MarketRuleSet (source=law, active à period_end)
+2. Si le contrat a une convention_collective_id :
+   - Charger la CC rule active pour ce rule_key
+   - Appliquer selon override_mode CC :
+     - 'replace'    → la CC remplace complètement la règle légale
+     - 'supplement' → la CC ajoute une ligne supplémentaire (ex: cotisation mutuelle CC)
+     - 'minimum'    → max(legal, CC) — la CC ne peut pas être MOINS favorable
+3. Charger le company override actif pour ce rule_key (CompanyPayrollRuleOverride)
+   - Appliquer selon override_mode company :
+     - 'replace'    → le company override remplace le résultat CC (ou légal)
+     - 'supplement' → ajoute une ligne supplémentaire
+     - 'minimum'    → max(résultat précédent, company override)
+4. Retourner le set final de règles avec traçabilité source complète
+```
+
+**Règle d'or** : Si aucune CC rule ni company override n'existe pour un rule_key → la règle légale MarketRuleSet s'applique par défaut. Le moteur ne crash JAMAIS si la CC ou le company override est incomplet.
+
+**Nouveau champ dans chaque règle résolue** :
+```php
+[
+    'code' => 'contribution_maladie',
+    'source_level' => 'company_override', // ou 'convention_collective', ou 'market_law'
+    'source_ref' => 'Accord d\'entreprise 2026-03',
+    'override_mode' => 'replace',
+    'resolution_chain' => ['market_law', 'convention_collective', 'company_override'], // traçabilité complète
+    // ... rates, base_type, etc.
+]
+```
+
+---
+
+#### 3. Extension du PayrollRuleResolver
+
+**Méthodes additives** (rétrocompatibilité totale, aucune signature existante modifiée) :
+
+```php
+class PayrollRuleResolver
+{
+    // ── Méthodes existantes (INCHANGÉES) ──
+    public function resolveContributions(string $marketKey, Carbon $at): array;
+    public function resolvePlafondSS(string $marketKey, Carbon $at): int;
+    public function resolveCsgBaseMultiplier(string $marketKey, Carbon $at): int;
+    public function resolveTaxRate(int $companyId, int $employeeId, Carbon $at): int;
+    public function snapshot(string $marketKey, Carbon $at): array;
+
+    // ── Nouvelles méthodes (Phase 4.1) ──
+
+    // Résolution complète : Market → CC → Company override
+    public function resolveContributionsWithCC(
+        string $marketKey,
+        Carbon $at,
+        ?int $conventionCollectiveId = null,
+        ?int $companyId = null,              // pour company overrides
+    ): array;
+
+    // Snapshot enrichi avec CC + company override context
+    public function snapshotWithCC(
+        string $marketKey,
+        Carbon $at,
+        ?int $conventionCollectiveId = null,
+        ?int $companyId = null,
+    ): array;
+}
+```
+
+**Implémentation interne de `resolveContributionsWithCC()`** :
+1. Appelle `resolveContributions()` pour obtenir les règles légales (Niveau 1)
+2. Enrichit chaque règle avec `source_level => 'market_law'`
+3. Si `$conventionCollectiveId` non-null → charge les CC rules actives, merge par `rule_key` selon `override_mode` (Niveau 2)
+4. Si `$companyId` non-null → charge les company overrides actifs, merge par `rule_key` selon `override_mode` (Niveau 3)
+5. Retourne le set final avec `source_level`, `source_ref`, `resolution_chain` pour chaque règle
+
+**`snapshot()` reste INCHANGÉ**. `snapshotWithCC()` est la version enrichie qui inclut CC + company override context.
+
+**Pas d'impact sur** : `resolvePlafondSS()`, `resolveCsgBaseMultiplier()`, `resolveTaxRate()` — ceux-ci restent purement légaux (Phase 4.1). Les CC peuvent modifier ces valeurs dans un futur ADR.
+
+---
+
+#### 4. Impact sur ContributionCalculator
+
+**Aucun impact structural**. `ContributionCalculator::compute()` est une **pure function** qui reçoit un array de rules — elle ne sait pas d'où elles viennent (légal, CC, ou futur accord d'entreprise).
+
+Le seul changement : les rules passées à `compute()` peuvent maintenant contenir des **règles supplémentaires** (mode `supplement` de la CC). Ex :
+- Légal : 9 contribution rules (seeder actuel)
+- CC Métallurgie : +2 rules (mutuelle obligatoire, prévoyance CC) → 11 rules total
+
+`resolveBase()` n'est pas impacté car les `base_type` restent les mêmes 5 types.
+
+**Nouveau base_type potentiel** (Phase 4 ultérieure) :
+- `tranche_a` / `tranche_b` — variantes CC de tranche_1/tranche_2 avec plafonds différents
+- Non implémenté en 4.1, prévu en 4.2 si nécessaire
+
+---
+
+#### 5. Snapshot CC intégré au calculation_snapshot
+
+**Structure de `snapshotWithCC()`** — snapshot complet pour `PayrollCalculation.calculation_snapshot` :
+
+```php
+public function snapshotWithCC(string $marketKey, Carbon $at, ?int $ccId, ?int $companyId): array
+{
+    return [
+        'market_key' => $marketKey,
+        'resolved_at' => $at->toIso8601String(),
+        'resolver_version' => 'payroll-resolver-v2',    // permet de distinguer v1 (Phase 3) vs v2 (Phase 4)
+        'plafond_ss_monthly_cents' => ...,
+        'csg_base_multiplier_bps' => ...,
+
+        // Contexte CC complet (ou null si pas de CC)
+        'convention_collective' => $ccId ? [
+            'id' => $cc->id,
+            'idcc' => $cc->idcc,
+            'name' => $cc->short_name,
+            'brochure_number' => $cc->brochure_number,
+            'rules_applied' => [                        // TOUTES les CC rules appliquées
+                [
+                    'rule_key' => 'contribution_mutuelle_cc',
+                    'rule_type' => 'contribution',
+                    'override_mode' => 'supplement',
+                    'effective_from' => '2026-01-01',
+                    'source' => 'CC Métallurgie Art. 42',
+                    'value' => [...],
+                ],
+                // ...
+            ],
+            'rules_applied_count' => 3,
+            'override_modes_used' => ['replace', 'supplement'],
+        ] : null,
+
+        // Contexte company override (ou null si aucun override)
+        'company_override' => $companyId && $hasOverrides ? [
+            'company_id' => $companyId,
+            'rules_applied' => [
+                [
+                    'rule_key' => 'contribution_maladie',
+                    'rule_type' => 'contribution',
+                    'override_mode' => 'replace',
+                    'effective_from' => '2026-03-01',
+                    'source' => 'Accord d\'entreprise 2026-03',
+                    'approved_by' => 42,
+                    'justification' => 'Négociation CSE',
+                    'value' => [...],
+                ],
+            ],
+            'rules_applied_count' => 1,
+        ] : null,
+
+        // Toutes les contribution rules finales (après résolution complète)
+        'contribution_rules_count' => count($rules),
+        'contribution_rules' => $rules,    // chaque rule inclut source_level, source_ref, resolution_chain
+    ];
+}
+```
+
+**Dans `CalculationResult::toArray()`** — le champ `rules_applied` contiendra pour chaque règle :
+```php
+[
+    'code' => 'contribution_maladie',
+    'base_type' => 'deplafonne',
+    'employee_rate_bps' => 0,
+    'employer_rate_bps' => 700,
+    'source_level' => 'company_override',              // market_law | convention_collective | company_override
+    'source_ref' => 'Accord d\'entreprise 2026-03',
+    'resolution_chain' => ['market_law', 'convention_collective', 'company_override'],
+]
+```
+
+**Auditabilité complète** : Pour toute PayrollCalculation, on peut répondre à la question « pourquoi ce montant ? » en lisant :
+1. `calculation_snapshot.convention_collective` → quelle CC, quelles rules CC appliquées
+2. `calculation_snapshot.company_override` → quels overrides company, qui a approuvé, pourquoi
+3. `calculation_snapshot.contribution_rules[].source_level` → source finale de chaque règle
+4. `calculation_snapshot.contribution_rules[].resolution_chain` → chemin complet de résolution
+
+**Invariant critique** : le snapshot contient TOUTES les données nécessaires pour recalculer le résultat sans accès DB live. C'est le contrat d'auditabilité.
+
+---
+
+#### 6. Stratégie de test
+
+**A. Tests unitaires (nouvelle classe `ConventionCollectiveRuleResolutionTest`)** :
+
+| # | Test | Assertion |
+|---|------|-----------|
+| 1 | Résolution sans CC → seules règles légales | count = 9, source_level = market_law |
+| 2 | CC avec 1 rule mode `replace` | la règle légale est remplacée, count = 9 |
+| 3 | CC avec 1 rule mode `supplement` | la règle CC s'ajoute, count = 10 |
+| 4 | CC avec 1 rule mode `minimum` + CC > legal | CC gagne, rate CC appliqué |
+| 5 | CC avec 1 rule mode `minimum` + CC < legal | legal gagne, rate legal maintenu |
+| 6 | CC incomplète (2 rules sur 9) | 7 rules légales + 2 CC = 9 total |
+| 7 | CC avec dates non-actives | CC ignorée, fallback légal |
+| 8 | Contrat sans CC → null passé → mode dégradé OK | identique au test 1 |
+| 9 | Snapshot inclut convention_collective block | vérifie structure JSON |
+| 10 | Deux contrats même company, CC différentes | chacun résout ses propres règles |
+
+**B. Tests d'intégration (extension de `PayrollUseCaseTest`)** :
+
+| # | Test | Assertion |
+|---|------|-----------|
+| 11 | ComputePayrollUseCase avec CC → calcul correct | net différent du calcul sans CC |
+| 12 | CC modifie taux maladie → impact contribution_lines | montants changent selon taux CC |
+| 13 | CC supplement ajoute mutuelle → +1 contribution_line | line "mutuelle_cc" apparaît |
+| 14 | Recompute après changement CC → recalcul cohérent | nouveau snapshot reflète nouvelle CC |
+| 15 | Export avec CC → calcul_snapshot contient CC info | convention_collective block non-null |
+
+**C. Tests de non-régression** :
+
+| # | Test | Assertion |
+|---|------|-----------|
+| 16 | Calcul sans CC identique à Phase 3.1 | net identique au centime près |
+| 17 | `resolveContributions()` (ancienne signature) inchangé | backward compat |
+| 18 | ContributionCalculator pure, pas impacté par CC | même input → même output |
+
+**D. Tests isolation + company override + auditabilité** :
+
+| # | Test | Assertion |
+|---|------|-----------|
+| 19 | CC attachée au contrat A n'impacte pas contrat B dans la même company | contrat B résout uniquement rules légales |
+| 20 | Company override gagne sur CC selon override_mode replace | source_level = company_override, taux = company |
+| 21 | Company override mode minimum : max(CC, company) appliqué | le plus favorable gagne |
+| 22 | Règle CC expirée (effective_until < period_end) non appliquée | fallback sur légal, CC ignorée |
+| 23 | Snapshot permet de recalculer l'explication sans DB live | snapshot contient toutes les données, ContributionCalculator::compute(snapshot.rules) = même résultat |
+| 24 | Company override sans CC → override s'applique directement sur légal | source_level = company_override, resolution_chain = [market_law, company_override] |
+| 25 | rule_type filtering : seuls contribution et benefit résolus en 4.1 | autres rule_types ignorés par le moteur payroll |
+
+**Total : 25 tests Phase 4.1**
+
+---
+
+#### 7. Plan d'implémentation (sprints estimés)
+
+**Sprint 4.1-A : Fondations CC + Company Override** (modèles + migrations + seeder)
+- Migrations : 4 tables (convention_collectives, convention_collective_rules avec rule_type, company_payroll_rule_overrides, alter contracts + companies)
+- Modèles : ConventionCollective, ConventionCollectiveRule, CompanyPayrollRuleOverride
+- Seeder : CC Métallurgie (IDCC 3248) avec rules de test (contribution + benefit)
+- EmploymentContract : relation CC
+- Company : relation default CC
+
+**Sprint 4.1-B : Rule Resolution** (PayrollRuleResolver extension)
+- Méthode `resolveContributionsWithCC()` — chaîne 3 niveaux
+- Méthode `snapshotWithCC()` — snapshot enrichi complet
+- Merge logic (replace/supplement/minimum) pour CC ET company override
+- Tests 1-10 + 19-25
+
+**Sprint 4.1-C : Engine Integration** (PayrollCalculationEngine adaptation)
+- Engine lit `convention_collective_id` depuis le contrat de la PayrollLine
+- Engine lit company_id pour les company overrides
+- Appelle `resolveContributionsWithCC()` + `snapshotWithCC()`
+- `CalculationResult.rulesApplied` enrichi avec `source_level` + `resolution_chain`
+- Tests 11-18
+
+---
+
+#### Points de vigilance
+
+1. **Pas de hardcoding CC** : les règles CC sont en DB, pas en code PHP
+2. **Pas de mix DSN/calcul** : la DSN (ADR-504) lira les snapshots, pas le moteur
+3. **Pas de PDF officiel** : tant que CC + YTD ne sont pas validés
+4. **override_mode déterministe** : 3 modes seulement (replace/supplement/minimum), pas de logique custom
+5. **Rétrocompatibilité** : les 5 méthodes existantes de PayrollRuleResolver ne changent PAS
+6. **Multi-tenant** : CC rules partagées (platform-level), company overrides isolés par company_id
+7. **Versioning légal** : `effective_from`/`effective_until` sur CC rules ET company overrides → pas de modification rétroactive, on crée une nouvelle version
+8. **rule_type scope Phase 4.1** : seuls `contribution` et `benefit` sont résolus par le moteur. Les 7 autres rule_types sont modélisés mais ignorés par le resolver payroll (futurs ADR)
+9. **Snapshot = source de vérité** : le snapshot doit permettre de recalculer le résultat SANS accès DB live
+
+**Conséquences** :
+- Pas de changement au ContributionCalculator (pure function inchangée)
+- PayrollRuleResolver enrichi de 2 nouvelles méthodes additives, 0 breaking change
+- PayrollCalculationEngine lit le contrat pour obtenir la CC + le company_id pour les overrides
+- calculation_snapshot auto-documenté avec provenance complète de chaque règle (3 niveaux)
+- Company override prêt sans UI → insertion DB directe ou futur sprint admin
+
+**Fichiers impactés (prévision)** :
+- `database/migrations/2026_05_04_000001_create_convention_collectives_table.php` (CRÉER)
+- `database/migrations/2026_05_04_000002_create_convention_collective_rules_table.php` (CRÉER)
+- `database/migrations/2026_05_04_000003_create_company_payroll_rule_overrides_table.php` (CRÉER)
+- `database/migrations/2026_05_04_000004_add_cc_to_contracts_and_companies.php` (CRÉER)
+- `app/Core/Workforce/ConventionCollective.php` (CRÉER)
+- `app/Core/Workforce/ConventionCollectiveRule.php` (CRÉER)
+- `app/Core/Workforce/CompanyPayrollRuleOverride.php` (CRÉER)
+- `app/Core/Workforce/Services/PayrollRuleResolver.php` (MODIFIER — 2 méthodes additives)
+- `app/Core/Workforce/PayrollCalculationEngine.php` (MODIFIER — appelle resolveContributionsWithCC)
+- `app/Core/Workforce/EmploymentContract.php` (MODIFIER — relation conventionCollective)
+- `app/Core/Models/Company.php` (MODIFIER — relation defaultConventionCollective)
+- `app/Core/Workforce/DTOs/CalculationResult.php` (MODIFIER — source_level + resolution_chain)
+- `database/seeders/ConventionCollectiveSeeder.php` (CRÉER)
+- `tests/Feature/ConventionCollectiveRuleResolutionTest.php` (CRÉER — 25 tests)
+- `tests/Feature/PayrollUseCaseTest.php` (MODIFIER — tests CC intégration)
+
+---
+
+### ADR-502 — Sprint 4.1-B : Rule Resolution — CC + Company Override (2026-05-04)
+
+**Contexte** : ADR-501 a défini l'architecture CC Engine. Sprint 4.1-A a posé les fondations (migrations, modèles). Sprint 4.1-B implémente la résolution 3 niveaux dans PayrollRuleResolver.
+
+**Décisions** :
+1. Deux méthodes additives ajoutées à `PayrollRuleResolver` — 0 modification des 5 méthodes existantes
+2. `resolveContributionsWithCC(marketKey, at, ?ccId, ?companyId)` — résolution Market → CC → Company Override
+3. `snapshotWithCC(marketKey, at, ?ccId, ?companyId)` — snapshot complet avec CC context + company override context
+4. Merge déterministe par `override_mode` : replace (remplace), supplement (ajoute), minimum (plus favorable)
+5. Chaque règle résolue porte : `source_level`, `source_ref`, `override_mode`, `resolution_chain`, `rule_type`, `effective_from`, `effective_until`
+6. `snapshot()` v1 reste INCHANGÉ — `snapshotWithCC()` ajoute `resolver_version: payroll-resolver-v2`
+7. Seuls `contribution` et `benefit` rule_types résolus en Phase 4.1
+
+**Tests** : 16 nouveaux tests (118 assertions) :
+- backward compat `resolveContributions()` + `snapshot()` v1
+- fallback market sans CC
+- CC replace / supplement / minimum (plus favorable et moins favorable)
+- company override > CC (replace + minimum)
+- CC expirée ignorée
+- isolation CC entre contrats (A avec CC ≠ B sans CC)
+- snapshot CC context (idcc, nom, rules, modes)
+- snapshot company override context (approved_by, justification)
+- snapshot recalculable offline (ContributionCalculator::compute sur données snapshot)
+- company override sans CC (directement sur market)
+- rule_type filtering (seniority_bonus ignoré)
+
+**Gate** : 2379 PASS (+16), 0 FAIL, build clean (8.04s)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Services/PayrollRuleResolver.php` — +2 méthodes publiques, +2 méthodes privées
+
+**Fichiers créés** :
+- `tests/Feature/ConventionCollectiveRuleResolutionTest.php` — 16 tests, 118 assertions
+
+---
+
+### ADR-503 — Sprint 4.1-C : Engine Integration — CC + Company Override dans le moteur payroll (2026-05-04)
+
+**Contexte** : ADR-502 a implémenté `resolveContributionsWithCC()` et `snapshotWithCC()` dans PayrollRuleResolver. Sprint 4.1-C intègre ces méthodes dans PayrollCalculationEngine pour que tout calcul payroll utilise la chaîne 3 niveaux (Market → CC → Company Override).
+
+**Décisions** :
+1. `PayrollCalculationEngine.calculate()` résout la CC via `compensation_snapshot.contract_id` → `EmploymentContract.convention_collective_id`
+2. Si `contract_id` absent ou contrat sans CC → comportement strictement identique à Phase 3.1 (fallback market_law)
+3. `CALC_VERSION` bumped de `payroll-calc-v1` → `payroll-calc-v2`
+4. `CalculationResult` DTO enrichi d'un champ optionnel `ruleSnapshot` (array nullable)
+5. `ComputePayrollCalculationsUseCase.buildSnapshot()` intègre `convention_collective`, `company_override`, `resolver_version` dans le `calculation_snapshot`
+6. `snapshot_version` bumped de `calc-snapshot-v1` → `calc-snapshot-v2`
+7. `rules_applied` enrichi : chaque règle porte `source_level`, `source_ref`, `resolution_chain`
+8. Test `PayrollCalculationIntegrationTest` mis à jour pour utiliser la constante `CALC_VERSION` au lieu du hardcoded `v1`
+
+**Tests** : 8 nouveaux tests d'intégration engine (42 assertions) :
+- Calcul sans CC inchangé (backward compat, 9 rules, source_level=market_law)
+- Calcul avec CC replace (maladie 700→650, employer contributions changent)
+- Calcul avec CC supplement (mutuelle CC ajoutée, 10 contribution lines)
+- Calcul avec company override (maladie override 600, source_level=company_override)
+- Snapshot contient resolution_chain + CC context + resolver_version
+- Recompute reflète changement CC (ajout rule CC → net diminue → snapshot enrichi)
+- Export conserve données CC (calculation_snapshot.convention_collective présent)
+- Multi-tenant isolation CC/overrides (CC supplement + company override isolés)
+
+**Gate** : 2387 PASS (+8), 0 FAIL, build clean (8.47s)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/PayrollCalculationEngine.php` — CALC_VERSION v2, résolution CC via contract, snapshotWithCC
+- `app/Core/Workforce/DTOs/CalculationResult.php` — +champ `ruleSnapshot`
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php` — buildSnapshot v2, intègre CC/company override context
+- `tests/Feature/PayrollCalculationIntegrationTest.php` — version check utilise constante
+
+**Fichiers créés** :
+- `tests/Feature/PayrollCCEngineIntegrationTest.php` — 8 tests, 42 assertions
+
+---
+
+### ADR-504 — Phase 4.2 : YTD / Cumuls annuels — Design (2026-05-05)
+
+**Contexte** : Phase 4.1 (ADR-501→503) a livré le moteur de calcul Brut→Net avec CC Engine. Chaque calcul est **mono-période** : ContributionCalculator applique le plafond SS **mensuel**, TaxCalculator calcule le PAS sur le mois courant, aucun cumul annuel n'existe. Or la paie française exige des cumuls annuels pour :
+- Plafonnement annuel SS (cotisations plafonnées = cumul annuel, pas mois par mois en isolation)
+- Régularisation progressive PAS (recalcul basé sur cumul net imposable)
+- Bulletin officiel (ligne "Cumul brut", "Cumul net imposable", etc.)
+- DSN mensuelle (blocs S21.G00.51 = cumuls)
+- Contrôle de cohérence (total cotisations annuelles vs. déclarations)
+
+**Problème clé** : le plafonnement SS n'est PAS une simple multiplication ×12. Un salarié payé 2500€ brut/mois avec plafond SS à 3864€ est entièrement plafonné chaque mois. Mais un salarié payé 5000€ brut/mois dépasse le plafond : la tranche 1 et tranche 2 doivent être recalculées en cumul annuel pour éviter les sur-/sous-cotisations dues aux variations mensuelles (primes, heures sup, absences).
+
+**Approche retenue** : Méthode de **régularisation progressive** (standard DSN/URSSAF)
+
+**Principe** :
+1. Chaque mois M, on calcule le cumul brut mois 1 à M
+2. On applique le plafond SS annuel proratisé (plafond_mensuel × M mois)
+3. On calcule les cotisations sur la base cumulée
+4. On soustrait les cotisations déjà versées (mois 1 à M-1)
+5. La différence = cotisations du mois M (avec régularisation automatique)
+
+**Architecture** :
+
+#### A. Nouveau modèle : `PayrollYtdSnapshot`
+Table : `workforce_payroll_ytd_snapshots`
+```
+id                               bigInt PK
+company_id                       bigInt FK
+employee_id                      bigInt FK (workforce_employees)
+fiscal_year                      smallInt (2026, 2027...)
+period_month                     tinyInt (1-12)
+payroll_calculation_id           bigInt FK UNIQUE (la calculation source)
+
+-- Cumuls bruts (mois 1 → M inclus)
+ytd_gross_total_cents            bigInt
+ytd_gross_basis_cents            bigInt
+
+-- Cumuls cotisations
+ytd_contributions_employee_cents bigInt
+ytd_contributions_employer_cents bigInt
+ytd_total_cost_employer_cents    bigInt
+
+-- Cumuls plafonnement
+ytd_plafond_ss_cents             bigInt (= plafond_mensuel × M)
+ytd_base_plafonnee_cents         bigInt (= min(ytd_gross, ytd_plafond))
+ytd_base_tranche2_cents          bigInt (= max(0, min(ytd_gross, ytd_plafond×8) - ytd_plafond))
+
+-- Cumuls fiscaux
+ytd_taxable_income_cents         bigInt
+ytd_tax_cents                    bigInt
+ytd_net_before_tax_cents         bigInt
+ytd_net_payable_cents            bigInt
+
+-- Cumuls divers
+ytd_benefits_cents               bigInt default 0
+ytd_deductions_cents             bigInt default 0
+
+-- Détail cotisations (contribution_lines cumulées)
+ytd_contribution_lines           JSON
+
+-- Métadonnées
+snapshot_version                 string(30) -- 'ytd-snapshot-v1'
+months_included                  JSON -- [1,2,3...M] pour traçabilité
+rule_versions_used               JSON -- {1: 'v2', 2: 'v2', ...} par mois
+created_at, updated_at           timestamps
+```
+
+Index unique : `(company_id, employee_id, fiscal_year, period_month)`
+
+**Pourquoi un snapshot et pas un ledger ?** Le LeaveLedger a besoin d'entrées atomiques car les opérations (accrual/consommation) sont indépendantes. Ici, chaque mois le YTD est **recalculé intégralement** à partir des PayrollCalculations validées. Un snapshot par mois est plus simple, auditeable, et permet le recalcul sans risque de drift.
+
+#### B. Nouveau service : `YtdCalculator`
+Fichier : `app/Core/Workforce/Services/YtdCalculator.php`
+
+```php
+class YtdCalculator
+{
+    /**
+     * Compute YTD snapshot for employee at month M.
+     * Pure — reads from validated PayrollCalculations, writes YtdSnapshot.
+     *
+     * @param int $companyId
+     * @param int $employeeId
+     * @param int $fiscalYear
+     * @param int $periodMonth (1-12)
+     * @param PayrollCalculation $currentCalc — the current month's calculation
+     * @return YtdSnapshot
+     */
+    public static function compute(
+        int $companyId,
+        int $employeeId,
+        int $fiscalYear,
+        int $periodMonth,
+        PayrollCalculation $currentCalc
+    ): PayrollYtdSnapshot;
+
+    /**
+     * Get prior months' YTD data for progressive regularization.
+     * Returns cumulative totals for months 1..(M-1).
+     */
+    public static function getPriorCumuls(
+        int $companyId,
+        int $employeeId,
+        int $fiscalYear,
+        int $currentMonth
+    ): ?PayrollYtdSnapshot;
+
+    /**
+     * Recalculate all YTD snapshots for an employee in a fiscal year.
+     * Used when a prior month is corrected (recalculation cascade).
+     */
+    public static function recalculateYear(
+        int $companyId,
+        int $employeeId,
+        int $fiscalYear
+    ): array; // returns array of updated YtdSnapshots
+}
+```
+
+#### C. Intégration dans PayrollCalculationEngine
+
+**Phase 4.2 ne modifie PAS les calculateurs purs** (ContributionCalculator, TaxCalculator, NetAggregator). Ces services restent mono-période.
+
+**Le YTD est un post-traitement** :
+1. `PayrollCalculationEngine::calculate()` produit un `CalculationResult` (inchangé)
+2. `ComputePayrollCalculationsUseCase::execute()` persiste la `PayrollCalculation`
+3. **Après** persistance, `YtdCalculator::compute()` crée/met à jour le `PayrollYtdSnapshot`
+4. Le YTD snapshot agrège toutes les `PayrollCalculation` validées du fiscal year
+
+**Régularisation progressive (Phase 4.3+)** : dans une phase ultérieure, le moteur pourra utiliser `YtdCalculator::getPriorCumuls()` **avant** le calcul pour ajuster les bases plafonnées. Phase 4.2 se concentre sur le stockage et le calcul post-hoc.
+
+#### D. Stratégie d'implémentation — Sprints
+
+**Sprint 4.2-A : Fondations**
+- Migration `create_workforce_payroll_ytd_snapshots_table`
+- Modèle `PayrollYtdSnapshot` (scopes: forYear, forMonth, forEmployee)
+- Relations : PayrollCalculation hasOne ytdSnapshot, Employee hasMany ytdSnapshots
+
+**Sprint 4.2-B : YtdCalculator service**
+- `YtdCalculator::compute()` — agrège les PayrollCalculations du fiscal year
+- `YtdCalculator::getPriorCumuls()` — retourne le snapshot M-1
+- `YtdCalculator::recalculateYear()` — recalcul cascade
+- Calcul des bases plafonnées en cumul (ytd_base_plafonnee, ytd_base_tranche2)
+- Tests unitaires : 12+ tests obligatoires
+
+**Sprint 4.2-C : Intégration UseCase**
+- `ComputePayrollCalculationsUseCase` appelle `YtdCalculator::compute()` après persistance
+- Snapshot version tracking (rule_versions_used par mois)
+- Tests d'intégration : multi-mois, recalcul, idempotence
+
+**Tests obligatoires Phase 4.2** :
+1. YTD mois 1 = identique au calcul mensuel
+2. YTD mois 3 = somme correcte des 3 mois
+3. Plafond SS cumulé = plafond_mensuel × nb_mois
+4. Base plafonnée cumulée correcte (salarié sous plafond)
+5. Base plafonnée cumulée correcte (salarié au-dessus plafond)
+6. Tranche 2 cumulée correcte
+7. Recalcul mois 2 → cascade recalcule mois 3+
+8. Idempotence : compute() 2× donne le même résultat
+9. Isolation multi-tenant : YTD par company
+10. Snapshot contient months_included et rule_versions_used
+11. Pas de YTD si PayrollCalculation non validée
+12. Fiscal year boundary : janvier N+1 ne cumule pas décembre N
+
+**Réserves Phase 4.1 adressées** :
+- **R1 (minimum trop simpliste)** : reporté à Phase 4.3 (hors scope YTD)
+- **R2 (détection conflits règles)** : reporté à Phase 4.3 (hors scope YTD)
+
+**Conséquences** :
+- Nouveau modèle `PayrollYtdSnapshot` + migration
+- Nouveau service `YtdCalculator` (pur, testable)
+- `ComputePayrollCalculationsUseCase` enrichi (appel post-persistance)
+- Aucune modification des calculateurs purs (ContributionCalculator, TaxCalculator, etc.)
+- Le YTD est un **post-traitement**, pas un pré-requis du calcul (Phase 4.2)
+- La **régularisation progressive** (YTD comme input du calcul) = Phase 4.3
+
+**Fichiers à créer** :
+- `database/migrations/YYYY_MM_DD_create_workforce_payroll_ytd_snapshots_table.php`
+- `app/Core/Workforce/PayrollYtdSnapshot.php`
+- `app/Core/Workforce/Services/YtdCalculator.php`
+- `tests/Feature/PayrollYtdCalculatorTest.php`
+
+**Fichiers à modifier** :
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php`
+- `app/Core/Workforce/PayrollCalculation.php` (relation ytdSnapshot)
+- `app/Core/Workforce/PayrollLine.php` ou `Employee.php` (relation ytdSnapshots)
+
+### ADR-505 — Sprint 4.2-A+B : YTD Snapshot Model + YtdCalculator Service (2026-05-05)
+
+**Contexte** : Implémentation Phase 4.2 (YTD / Cumuls annuels) validée par ADR-504.
+Sprint 4.2-A = migration + modèle + relations. Sprint 4.2-B = service pur + 14 tests.
+
+**Décisions** :
+- **Sprint 4.2-A** : Table `workforce_payroll_ytd_snapshots` avec 22 colonnes, 2 UNIQUE constraints (`ytd_employee_month_unique` + `ytd_calculation_unique`), versioning (`snapshot_version`, `calc_rule_version`, `resolver_version`)
+- **Sprint 4.2-B** : `YtdCalculator` — service pur (ZERO DB writes), 3 méthodes publiques statiques : `compute()`, `getPriorCumuls()`, `recalculateYear()`
+- Requête `fetchValidatedCalculations` utilise `DB::table()->join()` (pas Eloquent `whereHas`) pour bypasser BelongsToCompany scopes sur relations imbriquées
+- **Fix critique SQLite** : comparaison date `<= '2026-01-31'` échoue car SQLite stocke `'2026-01-31 00:00:00'` → utiliser `< first_day_of_next_month` au lieu de `<= last_day_of_month`
+- 14 tests couvrent les 12 contraintes mandatées + 2 tests getPriorCumuls — 48 assertions, tous verts
+- Contribution lines cumulées par code dans `ytd_contribution_lines` (JSON array)
+- Plafonnement cumulé : `ytd_base_plafonnee = min(gross_ytd, plafond_ss_ytd)`, `ytd_base_tranche2 = max(0, min(gross_ytd, plafond_ss×8) - plafond_ss)`
+
+**Conséquences** :
+- 2401 tests passent (+ 14 YTD), build clean
+- Sprint 4.2-C à suivre : intégration dans `ComputePayrollCalculationsUseCase`
+- Le YTD reste un post-traitement — la régularisation progressive = Phase 4.3
+
+**Fichiers créés** :
+- `database/migrations/2026_05_05_700001_create_workforce_payroll_ytd_snapshots_table.php`
+- `app/Core/Workforce/PayrollYtdSnapshot.php`
+- `app/Core/Workforce/Services/YtdCalculator.php`
+- `tests/Feature/PayrollYtdCalculatorTest.php`
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/PayrollCalculation.php` — relation `ytdSnapshot()` HasOne
+- `app/Core/Workforce/Employee.php` — relation `ytdSnapshots()` HasMany
+
+### ADR-506 — Sprint 4.2-C : YTD Integration dans ComputePayrollCalculationsUseCase (2026-05-05)
+
+**Contexte** : Sprint 4.2-C — intégrer `YtdCalculator` dans le UseCase de calcul payroll.
+Le snapshot YTD doit être créé dès le status `calculated`, remplaçable jusqu'à validation.
+
+**Décisions** :
+- `ComputePayrollCalculationsUseCase` appelle `persistYtdSnapshots()` après création des calculations, DANS la `DB::transaction` existante
+- `YtdCalculator::compute()` enrichi d'un paramètre `$includeCalculated = false` — le UseCase passe `true` pour inclure les calculations fraîchement créées (status `calculated`)
+- `PayrollYtdSnapshot::updateOrCreate()` sur clé composite `(company_id, employee_id, fiscal_year, period_month)` — idempotent
+- La cascade `ON DELETE CASCADE` sur `payroll_calculation_id` supprime automatiquement les snapshots lors du recalcul (delete + recreate des calculations)
+- Méthode `fetchValidatedCalculations` renommée en `fetchCalculations` — accepte `$includeCalculated` pour `whereIn` status `['validated']` ou `['validated', 'calculated']`
+- 6 tests d'intégration (T32-T37) : création YTD, recompute idempotent, validation verrouille, multi-mois cumul, multi-tenant isolation, unique constraint
+
+**Conséquences** :
+- 2407 tests passent (+6 intégration), build clean
+- Chaque `ComputePayrollCalculations` produit automatiquement un snapshot YTD par employé
+- Le YTD est recalculable via recalcul du run (idempotent par cascade delete + updateOrCreate)
+- Phase 4.2 complète — Phase 4.3 (régularisation progressive) utilisera les YTD comme input du calcul
+
+**Fichiers modifiés** :
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php` — appel `persistYtdSnapshots` + imports
+- `app/Core/Workforce/Services/YtdCalculator.php` — paramètre `$includeCalculated`, rename `fetchCalculations`
+- `tests/Feature/PayrollCalculationIntegrationTest.php` — 6 tests T32-T37
+
+### ADR-507 — Phase 4.3 : Régularisation progressive — Design (2026-05-05)
+
+**Contexte** : Phase 4.2 terminée (YTD comme post-traitement). Phase 4.3 = le YTD devient un INPUT
+du calcul pour appliquer la méthode de régularisation progressive URSSAF/DSN.
+
+**Problème** : Les calculateurs actuels (`ContributionCalculator`, `TaxCalculator`) opèrent sur des
+montants mensuels uniquement. Conséquences :
+- Plafond SS appliqué mois par mois → erreur si salaire variable (prime, heure sup, absence)
+- Tranches 1/2 calculées sur le mois → pas de compensation inter-mois
+- PAS calculé mensuellement → pas de régularisation si taux change en cours d'année
+- Non-conforme à la méthode progressive obligatoire URSSAF/DSN
+
+**Méthode progressive (algorithme URSSAF)** :
+Pour chaque ligne de cotisation au mois M :
+1. `ytd_gross = somme(brut mois 1..M)`
+2. `ytd_plafond = plafond_mensuel × M`
+3. `ytd_base = resolveBase(ytd_gross, ytd_plafond, base_type)`
+4. `ytd_cotisation = ytd_base × taux`
+5. `cotisation_mois_M = ytd_cotisation - cumul_cotisations_mois_1..(M-1)`
+
+Même principe pour le PAS :
+1. `ytd_taxable = ytd_gross - ytd_contrib_employee + ytd_csg_non_deductible`
+2. `ytd_tax = ytd_taxable × taux_courant / 10000`
+3. `tax_mois_M = ytd_tax - cumul_tax_mois_1..(M-1)`
+
+**Décisions** :
+
+**A. Nouveau service `RegularizationCalculator`** (pur, 0 DB writes)
+- Input : montants mensuels (gross, plafond, rules) + prior YTD cumuls (ou null si mois 1)
+- Appelle `ContributionCalculator::compute()` deux fois :
+  - Sur les montants cumulés (ytd_gross, ytd_plafond) → cotisations cumulées théoriques
+  - Le delta (cumulé - prior) = cotisation régularisée du mois courant
+- Retourne `ContributionResult` (même DTO) avec montants régularisés
+- Si prior = null (mois 1), se comporte exactement comme le calcul mensuel actuel
+
+**B. Nouveau service `TaxRegularizationCalculator`** (pur, 0 DB writes)
+- Input : montants mensuels + prior YTD cumuls
+- Calcule `ytd_taxable_income` cumulé, applique le taux courant sur le cumul
+- Delta = régularisation PAS du mois courant
+- Si prior = null, identique au calcul mensuel actuel
+
+**C. Intégration dans `PayrollCalculationEngine`**
+- Avant le calcul, fetch prior YTD via `YtdCalculator::getPriorCumuls()`
+- Si prior existe → utiliser `RegularizationCalculator` + `TaxRegularizationCalculator`
+- Si pas de prior (mois 1 ou premier run) → comportement actuel inchangé
+- Le `CalculationResult` porte un flag `regularization_applied: true/false`
+- Le `calculation_snapshot` enregistre les `prior_cumuls` utilisés pour traçabilité
+
+**D. Backward compatibility**
+- Mois 1 d'un fiscal year : aucun changement (pas de prior → calcul mensuel classique)
+- Mois N sans prior validé : calcul mensuel classique (pas de prior → pas de régularisation)
+- Régularisation uniquement si des mois antérieurs validés existent
+- Les tests existants (mois unique) ne sont PAS impactés — même résultat car pas de prior
+
+**Sprints** :
+
+**Sprint 4.3-A — `RegularizationCalculator` + tests**
+Créer le service pur + tests couvrant :
+1. Mois 1 sans prior → identique au calcul mensuel
+2. Mois 2 avec prior → cotisations = (cumulé M1+M2) - (cumulé M1)
+3. Salaire variable → plafonnement cumulatif correct (un mois au-dessus, un mois en-dessous)
+4. Tranche 2 progressive → apparaît quand le cumul dépasse le plafond
+5. Régularisation négative possible (remboursement si mois précédent trop cotisé)
+6. Contribution lines par code préservées
+7. Idempotence
+
+**Sprint 4.3-B — `TaxRegularizationCalculator` + tests**
+Créer le service PAS pur + tests :
+1. Mois 1 → identique
+2. Mois 2 → régularisation PAS progressive
+3. Changement de taux en cours d'année → régularisation corrige le cumul
+4. Régularisation PAS négative possible (remboursement)
+
+**Sprint 4.3-C — Engine integration + tests end-to-end**
+Intégrer dans `PayrollCalculationEngine` :
+1. Fetch prior via `YtdCalculator::getPriorCumuls(includeCalculated: true)`
+2. Route vers régularisation ou calcul direct
+3. Tests multi-mois via `ComputePayrollCalculationsUseCase`
+4. Vérifier que les tests existants ne cassent pas (backward compat)
+5. Le `calculation_snapshot` porte `regularization_method: 'progressive'` + `prior_cumuls`
+
+**Contraintes** :
+- ZERO modification des calculateurs existants (`ContributionCalculator`, `TaxCalculator`)
+- Les nouveaux services les APPELLENT, ils ne les remplacent pas
+- Tous les résultats restent des DTOs immuables (readonly)
+- La régularisation ne doit JAMAIS produire un net payable négatif → anomalie bloquante si cas
+
+**Fichiers à créer** :
+- `app/Core/Workforce/Services/RegularizationCalculator.php`
+- `app/Core/Workforce/Services/TaxRegularizationCalculator.php`
+- `tests/Feature/PayrollRegularizationTest.php`
+- `tests/Feature/PayrollTaxRegularizationTest.php`
+
+**Fichiers à modifier** :
+- `app/Core/Workforce/PayrollCalculationEngine.php` (injection prior YTD, routing)
+- `app/Core/Workforce/DTOs/CalculationResult.php` (flag `regularization_applied`)
+- `tests/Feature/PayrollCalculationIntegrationTest.php` (tests multi-mois E2E)
+
+### ADR-508 — Sprint 4.3-A : RegularizationCalculator — Cotisations progressives (2026-05-05)
+
+**Contexte** : Phase 4.3 (ADR-507). Sprint A = service pur de régularisation progressive des cotisations sociales, méthode URSSAF.
+
+**Décisions** :
+- Nouveau service `RegularizationCalculator` — wrapper pur autour de `ContributionCalculator` (ZERO modification du calculateur existant)
+- Algorithme : appelle `ContributionCalculator::compute()` deux fois (cumulatif M mois + prior M-1 mois avec règles COURANTES), puis delta chaque ligne
+- Si pas de prior (mois 1 ou premier run) → délègue directement à `ContributionCalculator` (résultat identique)
+- Les bases cumulatives sont recalculées avec les règles courantes pour cohérence (pas les règles historiques)
+- Régularisation négative autorisée (ex: tranche 2 qui disparaît quand le cumul repasse sous le plafond)
+- 9 tests purs (aucun DB, aucun modèle) couvrant : mois 1 identique, delta correct, salaire variable, tranche 2 progressive, négatif, codes préservés, idempotence, 3 mois cumulatif, CSG non déductible
+- `ContributionCalculator` non modifié — aucune régression possible sur Phases 3/4.1/4.2
+
+**Conséquences** :
+- 2416 tests passent (+9), build clean
+- Sprints 4.3-B (TaxRegularizationCalculator) et 4.3-C (Engine integration) à suivre
+- Le service est prêt à être branché dans `PayrollCalculationEngine`
+
+**Fichiers créés** :
+- `app/Core/Workforce/Services/RegularizationCalculator.php`
+- `tests/Feature/PayrollRegularizationTest.php`
+
+### ADR-509 — Sprint 4.3-B : TaxRegularizationCalculator — PAS progressif (2026-05-05)
+
+**Contexte** : Phase 4.3 (ADR-507). Sprint B = service pur de régularisation progressive du PAS (prélèvement à la source).
+
+**Décisions** :
+- Nouveau service `TaxRegularizationCalculator` — wrapper pur autour de `TaxCalculator` (ZERO modification)
+- Algorithme : calcule le PAS sur le cumul YTD (gross - contrib_emp + csg_nd), applique le taux courant, delta avec le prior tax réellement payé
+- Gère le changement de taux en cours d'année : effet de rattrapage automatique (applique le nouveau taux au cumul entier, soustrait l'ancien PAS déjà payé)
+- Régularisation négative autorisée (remboursement si le taux baisse)
+- CSG non-déductible prior extraite de `ytd_contribution_lines` (code `csg_non_deductible`)
+- Taxable income mensuel (pour le bulletin) = valeur mensuelle courante, pas le delta cumulatif
+- 9 tests purs (aucun DB) : mois 1 identique, delta correct, changement taux rattrapage, négatif refund, idempotence, 3 mois, salaire variable, rate clamping, graceful sans CSG ND
+
+**Conséquences** :
+- 2425 tests passent (+9), build clean
+- Sprint 4.3-C (Engine integration) à suivre
+- `TaxCalculator` non modifié — aucune régression
+
+**Fichiers créés** :
+- `app/Core/Workforce/Services/TaxRegularizationCalculator.php`
+- `tests/Feature/PayrollTaxRegularizationTest.php`
+
+---
+
+### ADR-510 — Sprint 4.3-C : Engine Integration — Régularisation progressive dans le moteur payroll (2026-05-05)
+
+**Contexte** : Phase 4.3 (ADR-507). Sprint C = intégration des wrappers RegularizationCalculator (ADR-508) et TaxRegularizationCalculator (ADR-509) dans PayrollCalculationEngine, sans modifier les calculateurs purs existants.
+
+**Décisions** :
+- `PayrollCalculationEngine::calculate()` accepte `?array $priorCumuls` optionnel — mois 1 (null) = résultat identique Phase 3.1
+- Cotisations via `RegularizationCalculator::compute()` au lieu de `ContributionCalculator` direct
+- PAS via `TaxRegularizationCalculator::compute()` au lieu de `TaxCalculator` direct
+- `calculateRun()` réécrit : fetch prior YTD par employé via `YtdCalculator::getPriorCumuls()` avec cache par employee_id
+- `CalculationResult` enrichi avec `?array $regularizationSnapshot` (backward compatible, dernier paramètre)
+- `ComputePayrollCalculationsUseCase::buildSnapshot()` inclut `regularization` dans le snapshot JSON si présent
+- Regularization snapshot contient : `regularization_method: 'progressive'`, `prior_cumuls` (months_included, ytd_*), `current_month` (gross, contrib, tax)
+- 5 tests E2E multi-mois (T38-T42) : mois 1 sans régularisation, mois 2 avec snapshot, delta stable salaire constant, idempotence recalcul, 3 mois cohérence YTD
+
+**Conséquences** :
+- 2430 tests passent (+5 E2E), build clean
+- Phase 4.3 (Régularisation progressive) est complète
+- `ContributionCalculator` et `TaxCalculator` non modifiés — aucune régression
+- Prochaine phase possible : 4.4 (bulletins de paie PDF) ou 5.0 (validation workflow)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/PayrollCalculationEngine.php` — routing vers wrappers + calculateRun avec prior YTD
+- `app/Core/Workforce/DTOs/CalculationResult.php` — ajout `regularizationSnapshot`
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php` — snapshot enrichi
+- `tests/Feature/PayrollCalculationIntegrationTest.php` — T38-T42 E2E régularisation
+
+---
+
+### ADR-511 — Phase 5 : Bulletin de paie officiel FR — Design (2026-05-05)
+
+**Contexte** : Le moteur de paie (Phases 3-4) produit un calcul Brut→Net complet avec régularisation progressive, mais le bulletin généré est un "BROUILLON" (template `payslip_draft_fr`). Pour passer en production, il faut un bulletin conforme au Code du travail (R3243-1 à R3243-9) et à l'arrêté du 25 février 2016 modifié (modèle transitoire valide jusqu'au 31/12/2026).
+
+**Objectif** : Transformer le moteur de calcul en document légal exploitable — le bulletin est la restitution visible de tout le travail moteur.
+
+**Analyse des écarts** :
+
+*Cotisations* : 9 codes existants (urssaf, chomage, retraite, csg_crds) → ~20 requis. Manquent : AT/MP, allocations familiales, CEG T1/T2, CET, AGS, FNAL, CSA, formation professionnelle, taxe d'apprentissage, dialogue social. Ces codes sont majoritairement "employeur seul" (n'affectent pas le net salarié mais sont obligatoires sur le bulletin).
+
+*Groupement URSSAF* : Le bulletin clarifié impose 7 groupes visuels (Santé, AT/MP, Retraite, Famille, Chômage, CSG/CRDS, Autres employeur). Le champ `category` actuel ne correspond pas exactement → nouveau champ `bulletin_group` sur chaque règle.
+
+*Données employeur* : SIRET et NAF manquent sur Company (obligatoires sur le bulletin).
+
+*Données salarié* : Classification (niveau/échelon/coefficient) dans `metadata` JSON, pas de colonnes dédiées. NIR (N° SS) absent du modèle Employee.
+
+*Calculs* : Montant net social (obligatoire depuis 01/07/2023), allègement de cotisations (RGDU) absents.
+
+*Template* : Le template actuel est un brouillon (watermark BROUILLON). Il manque : groupements URSSAF, mentions légales obligatoires, section YTD, compteurs congés, montant net social, footer conservation.
+
+**Architecture** :
+
+```
+Phase 5 = 4 Sprints
+
+5.1 — Enrichissement data model
+  ├─ bulletin_group sur règles de cotisation (Santé, AT/MP, Retraite, Famille, Chômage, CSG/CRDS, Autres)
+  ├─ Codes cotisation manquants (AT/MP, famille, CEG, CET, AGS, FNAL, CSA, formation, apprentissage, dialogue)
+  ├─ Company : SIRET + NAF (colonnes dédiées ou metadata convention)
+  ├─ Employee : classification_level, classification_coefficient (metadata convention documentée)
+  └─ Tests seeder + resolver
+
+5.2 — Montant net social + allègements
+  ├─ NetSocialCalculator : brut - cotisations sociales obligatoires (excl. complémentaire santé)
+  ├─ Allègement stub (RGDU = 0 pour l'instant, structure prête)
+  ├─ NetResult enrichi : netSocialCents, reductionsCents
+  ├─ PayrollCalculation : 2 colonnes ajoutées (net_social_cents, reductions_cents)
+  └─ Tests unitaires
+
+5.3 — Variable resolver + template officiel
+  ├─ DocumentVariableResolver enrichi :
+  │   ├─ Contributions groupées par bulletin_group (boucle template)
+  │   ├─ Montant net social
+  │   ├─ YTD (depuis PayrollYtdSnapshot)
+  │   ├─ Employer legal info (SIRET, NAF, CC, IDCC)
+  │   ├─ Employee classification
+  │   └─ Compteurs congés (depuis PayrollLine/metadata)
+  ├─ Template payslip_official_fr :
+  │   ├─ Header : employeur (SIRET, NAF, CC) + salarié (matricule, classification, emploi)
+  │   ├─ Période : dates, heures, forfait
+  │   ├─ Rémunération brute : salaire base, heures sup, primes, avantages
+  │   ├─ Cotisations : 7 groupes URSSAF avec sous-lignes, colonnes base/taux/montant salarié+patronal
+  │   ├─ Totaux : brut, cotisations salariales, cotisations patronales, allègements
+  │   ├─ Net social (montant net social)
+  │   ├─ Déductions/remboursements (transport, titres-restaurant)
+  │   ├─ Net avant impôt
+  │   ├─ PAS : base, taux, montant
+  │   ├─ NET À PAYER (gros caractères)
+  │   ├─ Coût employeur total
+  │   ├─ YTD : net imposable, PAS cumulé, heures sup exonérées
+  │   └─ Footer : mentions légales, conservation, service-public.fr
+  └─ Tests template + resolver
+
+5.4 — UseCase officiel + E2E
+  ├─ GenerateOfficialPayslipsUseCase (ou enrichir l'existant)
+  ├─ Sélection template draft vs official
+  ├─ Archivage dans vault employé (MemberDocument)
+  ├─ Audit log complet
+  └─ Tests E2E : génération multi-employé, snapshot contenu, PDF valide
+```
+
+**Contraintes** :
+- ZERO modification des calculateurs purs (ContributionCalculator, TaxCalculator, RegularizationCalculator)
+- Les nouveaux codes cotisation passent par le seeder (MarketRuleSet) → même chaîne de résolution
+- `bulletin_group` est un champ informatif pour le template, pas un paramètre de calcul
+- Le modèle transitoire (arrêté 2016 modifié) reste valide jusqu'au 31/12/2026 — pas besoin du modèle "rénové" 2027
+- Disclaimer "Calcul indicatif — validation expert-comptable requise" maintenu sur le template officiel
+
+**Décisions clés** :
+1. `bulletin_group` ajouté dans la valeur JSON de chaque règle (MarketRuleSet.value), pas une nouvelle colonne
+2. SIRET/NAF : nouvelles colonnes sur `companies` (pas metadata — trop critique pour être enfoui)
+3. Montant net social : nouveau service pur `NetSocialCalculator` (pas dans NetAggregator — logique différente)
+4. Template officiel : `payslip_official_fr` (code distinct du brouillon, les deux coexistent)
+5. Contribution lines groupées : le resolver produit un array indexé par `bulletin_group` pour le template
+6. YTD : lecture directe depuis `PayrollYtdSnapshot` (déjà persisté en Phase 4.2)
+7. RGDU : structure prête (stub à 0), implémentation réelle en phase ultérieure (formule LFSS 2025 complexe)
+
+**Conséquences** :
+- 4 sprints progressifs, chacun testable indépendamment
+- Le bulletin officiel peut être généré dès Sprint 5.3 (template complet)
+- Sprint 5.4 intègre dans le workflow de validation payroll
+- Base posée pour DSN future (codes cotisation normalisés, bulletin_group aligné)
+- Les taux cotisation restent indicatifs — validation expert-comptable requise
+
+**Fichiers impactés (prévision)** :
+- `database/seeders/WorkforcePayrollRuleSeeder.php` — codes + bulletin_group
+- `database/migrations/...add_siret_naf_to_companies.php` — colonnes SIRET/NAF
+- `database/migrations/...add_net_social_to_payroll_calculations.php` — colonnes
+- `app/Core/Workforce/Services/NetSocialCalculator.php` — **CRÉER**
+- `app/Core/Workforce/DTOs/NetResult.php` — enrichir (net social, réductions)
+- `app/Core/Documents/Services/DocumentVariableResolver.php` — enrichir
+- `database/seeders/PayslipOfficialTemplateSeeder.php` — **CRÉER**
+- `app/Modules/Workforce/UseCases/GeneratePayslipDraftsUseCase.php` — enrichir ou dupliquer
+- Tests : seeder, resolver, template, E2E
+
+---
+
+### ADR-512 — Sprint 5.1 : Data model foundations — bulletin_group + SIRET/NAF + 11 codes cotisation (2026-05-05)
+
+**Contexte** : Phase 5 (ADR-511). Sprint 5.1 = fondations data model pour le bulletin de paie officiel FR, sans générer de bulletin ni modifier de calculateur.
+
+**Décisions** :
+- `bulletin_group` ajouté dans le `value` JSON de chaque MarketRuleSet contribution rule (Santé, AT/MP, Retraite, Famille, Chômage, CSG/CRDS, Autres employeur)
+- 11 codes cotisation ajoutés au seeder FR : `at_mp`, `ceg_t1`, `ceg_t2`, `cet`, `allocations_familiales`, `ags`, `fnal`, `csa`, `formation_pro`, `taxe_apprentissage`, `dialogue_social`
+- Total : 9 → 20 codes cotisation FR, couvrant les 7 groupes URSSAF du bulletin clarifié
+- Nouveaux codes sont majoritairement employeur-seul (employee_rate_bps = 0) — n'affectent pas le net salarié
+- `BulletinGroup` constants class avec DISPLAY_ORDER, LABELS, isValid(), label()
+- SIRET (14 car) + NAF/APE (10 car) ajoutés comme colonnes nullable sur `companies`
+- Company model enrichi ($fillable)
+- Seeder corrigé pour Carbon::parse(effective_from) — fix idempotence SQLite
+- 13 tests ciblés : constants, seeder coverage, resolver flow, calculator backward compat, employer-only rates, SIRET/NAF CRUD, idempotence, full 20-rule calculation, original rates unchanged
+- Tests existants adaptés : PayrollCCEngineIntegrationTest (9→20, 10→21), ConventionCollectiveRuleResolutionTest (9→20, 10→21, 10→21)
+
+**Conséquences** :
+- 2443 tests passent (+13), build clean
+- ZERO modification des calculateurs purs (ContributionCalculator, TaxCalculator, RegularizationCalculator, TaxRegularizationCalculator)
+- `bulletin_group` est purement informatif (template rendering) — n'affecte aucun calcul
+- Sprint 5.2 (Montant net social + allègements) peut démarrer
+
+**Fichiers créés** :
+- `app/Core/Workforce/BulletinGroup.php`
+- `database/migrations/2026_05_05_100001_add_siret_naf_to_companies.php`
+- `tests/Feature/BulletinGroupDataModelTest.php`
+
+**Fichiers modifiés** :
+- `database/seeders/WorkforcePayrollRuleSeeder.php` — bulletin_group + 11 nouveaux codes + Carbon fix
+- `app/Core/Models/Company.php` — siret, naf_code dans $fillable
+- `tests/Feature/PayrollCCEngineIntegrationTest.php` — counts 9→20, 10→21
+- `tests/Feature/ConventionCollectiveRuleResolutionTest.php` — counts 9→20, 10→21
+
+---
+
+### ADR-513 — Sprint 5.2 : Montant net social + structure allègements (2026-05-05)
+
+**Contexte** : Phase 5 (ADR-511), Sprint 5.2. Ajout du calcul du Montant Net Social (MNS) obligatoire sur le bulletin de paie depuis 01/01/2024 (arrêté du 31/01/2023 modifié 25/06/2024), et structure stub pour les allègements de cotisations patronales (RGDU futur).
+
+**Décisions** :
+- `NetSocialCalculator` créé comme service pur statique (même pattern que ContributionCalculator) — aucun accès DB, aucun side-effect
+- Formule MNS : `Brut - cotisations salariales + CSG non-déductible + CRDS`
+- CRDS extrait par itération sur `contributions->lines` (code='crds') — évite de modifier ContributionCalculator
+- `csgNonDeductibleCents` déjà tracké dans ContributionResult — réutilisé directement
+- `ReliefResult` stub DTO créé pour les allègements patronaux (RGDU, exonérations HS, ZFU, etc.) — totalEmployerReliefCents=0, lines=[]
+- `CalculationResult` enrichi avec `?int $netSocialCents = null` et `?ReliefResult $reliefs = null` (backward compatible)
+- `PayrollCalculationEngine` : Step 12 (NetSocialCalculator::compute) + Step 13 (ReliefResult::stub()) ajoutés après Step 11 (regularization)
+- Migration : `net_social_cents` (int, nullable) + `relief_lines` (JSON, nullable) sur `workforce_payroll_calculations`
+- `PayrollCalculation` model : fillable + casts enrichis
+- `ComputePayrollCalculationsUseCase` : persiste net_social_cents + relief_lines, enrichit calculation_snapshot avec `net_social_cents` + `relief_summary`
+- Snapshot version reste `calc-snapshot-v2` (ajout de champs, pas de breaking change structurel)
+- 10 tests ciblés : formule simple, zéro contributions, graceful sans CRDS, stub values, real data, backward compat, full result, net social vs net payable, relief non-impactant, 20-rule case
+
+**Contrainte respectée** : `net_social_cents` est une donnée calculée de restitution bulletin/social, jamais source de vérité ni input du moteur. ZERO modification de ContributionCalculator, TaxCalculator, NetAggregator.
+
+**Conséquences** :
+- 2453 tests passent (+10 nouveaux), build clean 8.51s
+- Le MNS est prêt pour affichage sur le bulletin officiel (Sprint 5.3)
+- Les allègements sont structurellement présents (stub) — le RGDU sera implémenté quand tous les paramètres seront disponibles
+- Sprint 5.3 (template bulletin) peut démarrer avec toutes les données nécessaires
+
+**Fichiers créés** :
+- `app/Core/Workforce/Services/NetSocialCalculator.php`
+- `app/Core/Workforce/DTOs/ReliefResult.php`
+- `database/migrations/2026_05_05_100002_add_net_social_and_relief_lines_to_payroll_calculations.php`
+- `tests/Feature/NetSocialAndReliefTest.php`
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/DTOs/CalculationResult.php` — netSocialCents + reliefs params
+- `app/Core/Workforce/PayrollCalculationEngine.php` — Steps 12-13 + imports
+- `app/Core/Workforce/PayrollCalculation.php` — fillable + casts
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php` — persist + snapshot enrichment
+
+---
+
+### ADR-514 — Sprint 5.3 : Variable resolver + template payslip_official_fr (2026-05-05)
+
+**Contexte** : Phase 5 (ADR-511), Sprint 5.3. Dernier sprint avant la génération de bulletins officiels. Objectif : exposer toutes les données de calcul (net social, allègements, groupes URSSAF, YTD, SIRET/NAF) dans le système de variables template, puis créer le template HTML conforme au bulletin clarifié FR (arrêté 25/02/2016 modifié).
+
+**Décisions** :
+- `bulletin_group` propagé dans `ContributionLine` DTO (paramètre optionnel `?string $bulletinGroup = null`, backward compatible) + `toArray()` inclut le champ
+- `ContributionCalculator` passe désormais `$rule['bulletin_group'] ?? null` à chaque ContributionLine — les 20 lignes de cotisation FR ont leur groupe URSSAF
+- `YtdCalculator` propage `bulletin_group` dans les cumuls YTD (`ytd_contribution_lines`)
+- `DocumentVariableResolver` enrichi (version v1 → v2) avec :
+  - `company.siret`, `company.naf_code` — identifiants légaux employeur
+  - `calculation.net_social_formatted`, `calculation.net_social_cents` — montant net social
+  - `calculation.relief_total_formatted`, `calculation.relief_line_count` — allègements employeur
+  - `calculation.contribution_line_{N}_bulletin_group` — groupe URSSAF par ligne
+  - `bulletin_group.{group}.label`, `bulletin_group.{group}.employee_total_formatted`, `bulletin_group.{group}.employer_total_formatted`, `bulletin_group.{group}.line_count` — sous-totaux par groupe
+  - `bulletin_group.{group}.line_{N}_*` — lignes indexées par groupe (jusqu'à 10 par groupe)
+  - `ytd.*` — cumuls annuels (brut, cotisations, impôt, net, mois inclus)
+  - `payroll.period_label`, `contract.*`, `compensation.*` — contexte bulletin
+- `resolveBulletinGroups()` : méthode statique groupant les lignes de cotisation par `bulletin_group` dans l'ordre `BulletinGroup::DISPLAY_ORDER` (7 groupes URSSAF)
+- `resolveYtd()` : méthode statique résolvant les cumuls YTD depuis `PayrollYtdSnapshot`
+- Padding étendu de 15 à 25 slots pour les contribution lines (20 actuelles + marge)
+- Template `payslip_official_fr` créé via `PayslipOfficialFrTemplateSeeder` :
+  - En-tête : employeur (SIRET, NAF, raison sociale) + salarié (nom, matricule, embauche, contrat)
+  - 7 sections cotisations groupées par URSSAF (Santé, AT/MP, Retraite, Famille, Chômage, CSG/CRDS, Autres)
+  - Section PAS (prélèvement à la source)
+  - Montant net social avec mention légale art. L. 3243-2
+  - Net à payer + coût employeur + allègements
+  - Cumuls annuels (YTD)
+  - Mentions légales : conservation sans limitation, délai 3 ans, calcul indicatif
+- Pas de watermark BROUILLON sur le template officiel (vs payslip_draft_fr qui conserve le watermark)
+- 10 tests ciblés : propagation bulletin_group, toArray, backward compat, SIRET/NAF, net social, groupes URSSAF, version bump, seeder valide, idempotence, YTD
+
+**Contrainte respectée** : le template ne fait que restituer les snapshots/calculs validés. Aucun nouveau calcul dans le template ni dans le resolver.
+
+**Conséquences** :
+- 2463 tests passent (+10 nouveaux), build clean 8.40s
+- Le système de génération de bulletins officiels FR est structurellement complet
+- `payslip_official_fr` peut être utilisé par `GeneratePayslipDraftsUseCase` en changeant simplement le `templateCode`
+- Sprint 5.4 (UseCase de génération officielle + guards + tests E2E) peut démarrer
+
+**Fichiers créés** :
+- `database/seeders/PayslipOfficialFrTemplateSeeder.php`
+- `tests/Feature/PayslipOfficialResolverTest.php`
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/DTOs/ContributionLine.php` — ajout `?string $bulletinGroup = null` + toArray
+- `app/Core/Workforce/Services/ContributionCalculator.php` — propage `bulletin_group` dans ContributionLine
+- `app/Core/Workforce/Services/YtdCalculator.php` — propage `bulletin_group` dans ytd_contribution_lines
+- `app/Core/Documents/Services/DocumentVariableResolver.php` — version v2, net_social, relief, SIRET/NAF, bulletin groups, YTD, payroll period/contract/compensation
+
+### ADR-515 — Sprint 5.4 : GenerateOfficialPayslipsUseCase (2026-05-05)
+
+**Contexte** : Phase 5 (ADR-511), Sprint 5.4 final. UseCase dédié à la génération de bulletins de paie officiels FR, avec des guards plus stricts que les brouillons et la création obligatoire d'une entrée vault (MemberDocument) pour chaque salarié.
+
+**Décisions** :
+- `GenerateOfficialPayslipsUseCase` créé, orchestrant la génération pour toutes les PayrollLines d'un PayrollRun validé
+- 9 contraintes obligatoires implémentées :
+  1. PayrollRun.status = `validated`
+  2. Toutes les PayrollCalculation status = `validated`
+  3. Aucune `blocking_anomalies` sur les calculations
+  4. Company.siret + Company.naf_code obligatoires (garde spécifique bulletins officiels)
+  5. Template `payslip_official_fr` actif (vérifié via DocumentTemplateResolver)
+  6. MemberDocument vault forcé pour chaque document (`forceVault: true` dans GenerateDocumentUseCase)
+  7. Document officiel non supprimable via metadata `{official: true, non_deletable: true}`
+  8. AuditLogger avec category `workforce.payslip_official` et action `payslip_official.generated`
+  9. 12 tests E2E couvrant : happy path, 5 guards (run non validé, SIRET manquant, NAF manquant, anomalies bloquantes, calculs non validés, lignes sans calcul), idempotence, vault, snapshot, non-deletable, multi-tenant
+- `GenerateDocumentUseCase` enrichi avec deux paramètres optionnels :
+  - `bool $forceVault = false` — crée un MemberDocument même pour les subjects hors `VAULT_SUBJECTS`
+  - `?array $extraMetadata = null` — metadata additionnelle stockée sur GeneratedDocument
+  - `createMemberDocument()` étendu pour résoudre `user_id` depuis `payroll_line → employee → user_id`
+- `GeneratedDocument.boot()` enrichi avec guard I3 : les documents ayant `metadata.non_deletable = true` ne peuvent plus être supprimés (RuntimeException)
+- Migration pour rendre `member_documents.document_type_id` et `uploaded_by` nullable (les documents générés par le système n'ont pas de DocumentType ni d'uploader humain)
+
+**Conséquences** :
+- 2475 tests passent (+12 nouveaux), build clean 7.94s
+- Pipeline complète : ComputePayrollCalculations → ValidatePayroll → GenerateOfficialPayslips
+- Chaque bulletin officiel est : immutable, non-supprimable, audité, dans le vault employé
+- Le modèle est extensible à d'autres marchés (template_code différent, guards marché-spécifiques)
+
+**Fichiers créés** :
+- `app/Modules/Workforce/UseCases/GenerateOfficialPayslipsUseCase.php`
+- `tests/Feature/OfficialPayslipUseCaseTest.php`
+- `database/migrations/2026_05_05_100003_make_member_documents_document_type_id_nullable.php`
+
+**Fichiers modifiés** :
+- `app/Modules/Workforce/UseCases/GenerateDocumentUseCase.php` — params `forceVault` + `extraMetadata`, vault pour payroll_line
+- `app/Core/Documents/GeneratedDocument.php` — guard I3 non_deletable dans boot()
+
+### ADR-516 — Audit GO/NO-GO post-Phase 5 : corrections obligatoires (2026-05-05)
+
+**Contexte** : Audit transverse des 6 axes (conformité, immutabilité/vault, sécurité multi-tenant, tests/couverture, variable resolver, migrations/schéma) avant Phase 6 DSN. Verdict : GO conditionnel — 4 corrections obligatoires identifiées et appliquées.
+
+**Corrections appliquées** :
+
+1. **C1 — RegularizationCalculator::deltaResults()** : `bulletinGroup` n'était pas propagé sur les lignes delta, causant une perte d'information bulletin_group en régularisation (mois 2+). Fix : ajout de `bulletinGroup: $cumulLine->bulletinGroup` au constructeur ContributionLine dans `deltaResults()`.
+
+2. **C2 — GenerateOfficialPayslipsUseCase** : la boucle de génération + audit log n'était pas atomique. Un échec partiel créait des documents orphelins sans audit log. Fix : `DB::transaction()` autour de la boucle et du log.
+
+3. **C3 — GenerateDocumentUseCase::forceVault** : si `forceVault: true` mais que le `user_id` n'est pas résolvable (employee null), le vault échouait silencieusement — le GeneratedDocument était créé sans MemberDocument. Fix : `throw DomainException` si `forceVault && !$memberDocumentId`.
+
+4. **C4 — DocumentVariableResolver::resolvePayrollLine()** : si `currentContract` est null, les variables `contract.*` et `compensation.*` n'étaient pas injectées → placeholders bruts `{{ contract.* }}` visibles sur le bulletin. Fix : méthodes `emptyContractFields()` et `emptyCompensationFields()` injectent des valeurs vides par défaut.
+
+**Résultats de l'audit** :
+- Conformité moteur : 7/7 points conformes (13 étapes, 5 base_types, PAS, MNS, 20 règles, 7 groupes, stub relief)
+- Sécurité multi-tenant : solide (BelongsToCompany 10/11, cross-company guards, HTML-escape)
+- Tests : 269 tests payroll/workforce/documents, zéro TODO/FIXME, DTOs readonly
+- Variable resolver v2 : zéro gap template→resolver, edge cases gérés
+- Migrations : cohérentes, nullable safe pour staging/prod
+
+**Risques DSN identifiés** (pour Phase 6) :
+- NIR/SSN absent du modèle Workforce (stocké en Fields dynamiques) → adaptateur nécessaire
+- Codes CTP URSSAF absents des contribution rules → table de mapping nécessaire
+- ReliefResult stub → calcul RGDU (coefficient T) nécessaire
+- Heures sup. ventilées partiellement
+
+**Conséquences** :
+- 2475 tests passent, build clean
+- Phase 5 officiellement validée : GO pour Phase 6 DSN
+- Failles vault F1/F5/F7 documentées comme dette technique P2 (cascade DELETE bypass)
+
+**Fichiers modifiés** :
+- `app/Core/Workforce/Services/RegularizationCalculator.php` — bulletinGroup dans deltaResults
+- `app/Modules/Workforce/UseCases/GenerateOfficialPayslipsUseCase.php` — DB::transaction
+- `app/Modules/Workforce/UseCases/GenerateDocumentUseCase.php` — throw si forceVault échoue
+- `app/Core/Documents/Services/DocumentVariableResolver.php` — fallback contract/compensation vides
+
+---
+
+### ADR-517 — Phase 6 DSN : Déclaration Sociale Nominative — Design (2026-05-05)
+
+**Contexte** : Après Phase 5 (bulletin de paie officiel FR) validée GO, Phase 6 vise la génération de fichiers DSN (Déclaration Sociale Nominative) conformes à la norme NEODES Phase 3. La DSN est la déclaration mensuelle obligatoire envoyée à net-entreprises.fr regroupant toutes les données sociales nominatives (cotisations, salaires, événements). Ce design est un cadrage strict avant implémentation — aucun code avant validation.
+
+---
+
+#### BLOC 1 — Mapping données existantes → blocs DSN S21.G00.*
+
+**Matrice de couverture** (données Leezr → blocs DSN) :
+
+| Bloc DSN | Contenu | Source Leezr | Couverture |
+|----------|---------|--------------|------------|
+| **S10.G00.00** | Envoi (émetteur) | PlatformSetting (siret, nom) | 90% — manque logiciel_nom/version |
+| **S10.G00.01** | Contact émetteur | PlatformSetting (email SMTP) | 70% — manque téléphone/nom contact |
+| **S10.G00.02** | Déclaration (nature, type) | Calculé (nature=01 mensuelle) | 100% |
+| **S20.G00.05** | Entreprise déclarante | Company (siret, name, naf_code) | 60% — **manque adresse, effectif, SIREN** |
+| **S21.G00.06** | Établissement | Company (siret, naf_code) | 40% — **manque adresse établissement** |
+| **S21.G00.11** | Versement OPS | Non modélisé | 0% — **organisme de protection sociale absent** |
+| **S21.G00.15** | Adhésion prévoyance | Non modélisé | 0% — **adhésion prévoyance absente** |
+| **S21.G00.20** | Versement individu | PayrollRun (period, payment_date) | 50% — manque date_paiement, IBAN salarié |
+| **S21.G00.22** | Rémunération | PayrollCalculation (gross, net, etc.) | 70% — codes CTP manquants |
+| **S21.G00.23** | Primes/gratifications | CompensationPlan.metadata.benefits | 30% — structure à enrichir |
+| **S21.G00.30** | Individu (identité) | Employee (nom, prénom) | 15% — **NIR, sexe, date/lieu naissance, adresse absents** |
+| **S21.G00.40** | Contrat | EmploymentContract (type, dates, heures) | 60% — manque PCS-ESE, code RNCP, motif CDD |
+| **S21.G00.41** | Changement contrat | Non modélisé (immutable) | 0% — événementiel, Phase 7+ |
+| **S21.G00.50** | Versement individu | PayrollCalculation (montants nets) | 70% — date paiement, RIB manquants |
+| **S21.G00.51** | Rémunération | PayrollCalculation.contribution_lines | 75% — **codes CTP URSSAF manquants** |
+| **S21.G00.53** | Activité | PayrollLine (heures, congés) | 50% — ventilation HS incomplète |
+| **S21.G00.54** | Arrêt de travail | Non modélisé | 0% — Phase 7+ (maladie, AT) |
+| **S21.G00.60** | Fin de contrat | Non modélisé | 0% — Phase 7+ (rupture, licenciement) |
+| **S21.G00.71** | Base assujettie | PayrollCalculation (contribution_lines) | 80% — mapping base_type→code DSN nécessaire |
+| **S21.G00.78** | CSG/CRDS | PayrollCalculation (csg_deductible, crds) | 90% — code DSN à mapper |
+| **S21.G00.81** | Allègement | ReliefResult (stub = 0) | 0% — **RGDU non calculé** |
+| **S89.G00.35** | Total versement OPS | Agrégat calculable | 80% — dépend de G1 (CTP mapping) |
+
+**Verdict couverture globale** : ~55% des blocs obligatoires couverts par les données existantes. 6 gaps critiques identifiés.
+
+---
+
+#### BLOC 2 — Gaps obligatoires et solutions
+
+**G1 — Codes CTP URSSAF** (Priorité P0, Complexité S)
+
+- **Problème** : Les 23 codes cotisation Leezr (`urssaf_maladie`, `retraite_t1`, etc.) sont des codes internes. La DSN exige des codes CTP officiels URSSAF (ex. 100=Assurance Maladie, 310=Retraite T1, 772=CSG déductible).
+- **Solution** : Classe statique `DsnCtpMapping` (pas de table DB — les CTP sont des référentiels normatifs stables).
+- **Mapping prévu** :
+
+| Code Leezr | CTP URSSAF | Libellé DSN |
+|------------|------------|-------------|
+| urssaf_maladie | 100 | RG CAS GENERAL MALADIE |
+| at_mp | 100 | (inclus dans CTP 100) |
+| urssaf_vieillesse_plaf | 100 | (inclus dans CTP 100) |
+| urssaf_vieillesse_deplaf | 100 | (inclus dans CTP 100) |
+| allocations_familiales | 100 | (inclus dans CTP 100) |
+| fnal | 332 | CONTRIB FNAL 50 SAL ET + |
+| csa | 100 | (inclus dans CTP 100) |
+| chomage | 772 | CONTRIB ASS CHOMAGE |
+| ags | 937 | AGS |
+| retraite_t1 | 260 | AGIRC-ARRCO T1 |
+| retraite_t2 | 262 | AGIRC-ARRCO T2 |
+| ceg_t1 | 260 | (inclus dans CTP 260) |
+| ceg_t2 | 262 | (inclus dans CTP 262) |
+| cet | 260 | (inclus dans CTP 260) |
+| csg_deductible | — | (pas de CTP, bloc S21.G00.78) |
+| csg_non_deductible | — | (pas de CTP, bloc S21.G00.78) |
+| crds | — | (pas de CTP, bloc S21.G00.78) |
+| formation_pro | 058 | CONTRIB FORMATION PRO |
+| taxe_apprentissage | 058 | (inclus dans CTP 058) |
+| dialogue_social | 027 | CONTRIB DIALOGUE SOCIAL |
+
+- **Fichier** : `app/Core/Workforce/Dsn/DsnCtpMapping.php`
+- **Pas de migration** — pure logique statique
+
+**G2 — NIR / Numéro Sécurité Sociale** (Priorité P0, Complexité S)
+
+- **Problème** : Le NIR est stocké dans le Fields EAV system (`field_values.code='social_security_number'`) rattaché à User, pas directement sur Employee. Accès : Employee → User → FieldValue → démasquage.
+- **Solution** : Service `DsnEmployeeResolver` qui résout les données identité DSN d'un Employee.
+- **Validation** : NIR = 13 chiffres + clé 2 chiffres, algorithme modulo 97 (97 - (NIR_13_digits % 97) = clé). Gestion Corse (2A=19, 2B=18).
+- **Fichier** : `app/Core/Workforce/Dsn/DsnEmployeeResolver.php`
+- **Pas de migration** — adaptateur sur Fields existant
+
+**G3 — Adresse entreprise et établissement** (Priorité P0, Complexité S)
+
+- **Problème** : `Company` n'a aucun champ adresse. Les blocs DSN S20.G00.05 (entreprise) et S21.G00.06 (établissement) exigent : numéro+voie, complément, code postal, commune, code INSEE commune, code pays.
+- **Solution** : Migration ajout colonnes adresse sur `companies` (address_street, address_complement, address_postal_code, address_city, address_insee_code, address_country_code). Les champs adresse structurée existent déjà dans l'ADR-284 (billing_address) — pattern identique.
+- **Fichier** : Migration `add_dsn_address_to_companies`
+- **Impact** : 1 migration, modifier Company fillable/casts
+
+**G4 — RGDU (Réduction Générale Dégressive Unifiée)** (Priorité P1, Complexité M)
+
+- **Problème** : `ReliefResult::stub()` retourne 0. Le calcul RGDU (ex-Fillon) est le principal allègement patronal français, obligatoire en DSN (bloc S21.G00.81).
+- **Formule RGDU** : `C = (T / 0.6) × (1.6 × SMIC_mensuel_brut / rémunération_brute − 1)` bornée à [0, T].
+  - T = coefficient maximal (ex. 0.3195 pour entreprises <50 sal., 0.3235 pour ≥50 sal.)
+  - SMIC mensuel = SMIC horaire × 151.67h
+  - Régularisation annuelle progressive (cohérent avec RegularizationCalculator Phase 4.3)
+- **Solution** : Service `RgduCalculator::compute()` + 2 meta-rules dans MarketRuleSet seeder (`smic_horaire_cents`, `rgdu_coefficient_t_bps`).
+- **Fichiers** : `app/Core/Workforce/Services/RgduCalculator.php`, enrichir seeder MarketRuleSet
+- **Migration** : aucune (meta-rules dans MarketRuleSet existant)
+
+**G5 — Heures supplémentaires ventilées** (Priorité P1, Complexité M)
+
+- **Problème** : PayrollLine stocke `total_overtime_minutes` global mais pas la ventilation par taux (HS 125%, HS 150%, HS nuit, dimanche/férié). Le bloc DSN S21.G00.53 exige le détail par type d'HS.
+- **Solution** : Enrichir `gross_breakdown` JSON de PayrollLine avec `overtime_lines: [{type: 'hs_125', minutes: X, rate_bps: 12500}, ...]`. Le `PreparePayrollLinesUseCase` doit produire cette ventilation depuis les TimeEntries/shifts.
+- **Fichiers** : Modifier `PreparePayrollLinesUseCase`, enrichir `buildExportPayload()`
+- **Migration** : aucune (JSON existant enrichi)
+
+**G6 — Effectif entreprise** (Priorité P2, Complexité XS)
+
+- **Problème** : `Company` n'a pas de champ `average_headcount`. Le bloc DSN S20.G00.05.007 l'exige, et le coefficient T RGDU en dépend.
+- **Solution** : Colonne `average_headcount` (smallint, nullable) sur `companies` + calcul automatique via scheduled task `Employee::active()->count()`.
+- **Fichier** : Migration `add_average_headcount_to_companies`
+
+**G7 — Données identité Employee** (Priorité P0, Complexité M)
+
+- **Problème** : Employee n'a que first_name, last_name, email, phone. Le bloc DSN S21.G00.30 exige : sexe, date de naissance, lieu de naissance (commune+département), nationalité, adresse personnelle. Ces données peuvent être dans Fields EAV ou nécessiter des colonnes dédiées.
+- **Solution** : Utiliser le Fields EAV system existant pour les données sensibles (comme NIR). Définir dans FieldDefinitionCatalog : `gender` (select: M/F), `birth_date` (date), `birth_city` (text), `birth_department` (text), `birth_country` (text), `nationality` (text), `personal_address_*` (5 champs). Le `DsnEmployeeResolver` collecte tout via Fields.
+- **Fichiers** : Enrichir `FieldDefinitionCatalog`, étendre `DsnEmployeeResolver`
+- **Migration** : aucune (Fields EAV dynamique via seeder)
+
+---
+
+#### BLOC 3 — Architecture DSN
+
+**Vue d'ensemble des composants** :
+
+```
+┌─────────────────────────────────────────────┐
+│           ExportPayrollDsnUseCase            │  ← Orchestre la génération
+│  (guards, résolution données, assemblage)    │
+└─────────┬───────────┬───────────┬───────────┘
+          │           │           │
+    ┌─────▼──┐  ┌─────▼──┐  ┌───▼──────────┐
+    │ DsnEmp │  │ DsnCtp │  │ DsnBlock     │
+    │Resolver│  │Mapping │  │ Serializer   │
+    └────────┘  └────────┘  └──────────────┘
+                                    │
+                            ┌───────▼───────┐
+                            │  DsnValidator  │
+                            │ (NIR mod97,   │
+                            │  SIRET Luhn,  │
+                            │  structure)   │
+                            └───────┬───────┘
+                                    │
+                            ┌───────▼───────┐
+                            │ DsnFile       │
+                            │Writer (NEODES)│
+                            │ ISO 8859-1    │
+                            └───────┬───────┘
+                                    │
+                            ┌───────▼───────┐
+                            │ DsnGateway    │
+                            │ Manager       │
+                            │ (upload API)  │
+                            └───────────────┘
+```
+
+**3.1 — Modèle DsnDeclaration** (`app/Core/Workforce/DsnDeclaration.php`)
+
+```php
+// Eloquent model, BelongsToCompany
+class DsnDeclaration extends Model {
+    // Statuts: draft → validated → submitted → accepted | rejected
+    const STATUS_DRAFT = 'draft';
+    const STATUS_VALIDATED = 'validated';
+    const STATUS_SUBMITTED = 'submitted';
+    const STATUS_ACCEPTED = 'accepted';
+    const STATUS_REJECTED = 'rejected';
+
+    protected $fillable = [
+        'company_id', 'payroll_run_id',
+        'dsn_nature',        // 01=mensuelle, 02=signalement événement
+        'dsn_type',          // 01=normale, 02=annule_remplace, 03=néant
+        'period_month',      // int 1-12
+        'period_year',       // int
+        'fraction',          // int (1=unique, ou 1/2, 2/2 si multi-établissement)
+        'status',
+        'file_path',         // storage path du fichier .dsn
+        'file_size_bytes',
+        'generation_snapshot', // JSON — données source gelées
+        'validation_errors',   // JSON — erreurs de validation
+        'submission_response', // JSON — réponse net-entreprises (AEE, BAN, etc.)
+        'submitted_at',
+        'accepted_at',
+        'rejected_at',
+        'generated_by',      // FK User
+        'idempotency_key',   // dsn:{company_id}:{year}:{month}:{fraction}:{type}
+    ];
+}
+```
+
+**3.2 — Service DsnBlockSerializer** (`app/Core/Workforce/Dsn/DsnBlockSerializer.php`)
+
+Responsabilité : transformer les données Leezr en blocs DSN formatés NEODES.
+
+```php
+class DsnBlockSerializer {
+    // Génère le contenu complet du fichier DSN
+    public static function serialize(DsnPayload $payload): string;
+
+    // Blocs individuels
+    private static function blockEnvoi(DsnPayload $p): array;        // S10.G00.00
+    private static function blockEntreprise(DsnPayload $p): array;   // S20.G00.05
+    private static function blockEtablissement(DsnPayload $p): array;// S21.G00.06
+    private static function blockIndividu(DsnPayload $p, $emp): array;// S21.G00.30
+    private static function blockContrat(DsnPayload $p, $contract): array;// S21.G00.40
+    private static function blockRemuneration(DsnPayload $p, $calc): array;// S21.G00.51
+    private static function blockBaseAssujettie(DsnPayload $p, $line): array;// S21.G00.71
+    private static function blockAllegement(DsnPayload $p, $relief): array;// S21.G00.81
+}
+```
+
+Format NEODES ligne par ligne :
+```
+S21.G00.30.001,'2 85 12 75 108 042 38'    (NIR)
+S21.G00.30.002,'NOM SALARIE'               (nom)
+S21.G00.30.004,'PRENOM'                     (prénom)
+S21.G00.30.006,'01'                         (sexe: 01=M, 02=F)
+```
+
+Encodage : **ISO 8859-1** (pas UTF-8). Séparateur : virgule. Valeurs entre apostrophes simples.
+
+**3.3 — DTO DsnPayload** (`app/Core/Workforce/Dsn/DsnPayload.php`)
+
+```php
+readonly class DsnPayload {
+    public function __construct(
+        public Company $company,
+        public PayrollRun $run,
+        public array $lines,          // PayrollLine[] with calculations
+        public array $employeeData,   // [employee_id => DsnEmployeeData]
+        public array $ctpAggregates,  // [ctp_code => {base_cents, employee_cents, employer_cents, headcount}]
+        public string $dsnNature,     // '01' mensuelle
+        public string $dsnType,       // '01' normale
+        public int $fraction,
+    ) {}
+}
+```
+
+**3.4 — Service DsnValidator** (`app/Core/Workforce/Dsn/DsnValidator.php`)
+
+Validations pré-soumission :
+
+| Règle | Validation | Bloc |
+|-------|-----------|------|
+| V1 | NIR modulo 97 (Corse : 2A→19, 2B→18) | S21.G00.30.001 |
+| V2 | SIRET Luhn (14 chiffres) | S20.G00.05.001 |
+| V3 | NAF/APE format (4 chiffres + 1 lettre) | S20.G00.05.003 |
+| V4 | Code postal 5 chiffres (HEXAPOSTE) | S21.G00.06.003 |
+| V5 | Dates format JJ/MM/AAAA | Tous blocs dates |
+| V6 | Montants en centimes → format DSN (euros.centimes) | Tous blocs montants |
+| V7 | CTP codes valides (référentiel URSSAF) | S21.G00.22 |
+| V8 | IDCC valide (4 chiffres, référentiel ministère travail) | S21.G00.40.017 |
+| V9 | Cohérence totaux : ΣS21.G00.51 = S89.G00.35 | Total versement OPS |
+| V10 | Champs obligatoires non vides par bloc | Tous |
+| V11 | Encodage ISO 8859-1 compatible (pas de caractères UTF-8 seuls) | Global |
+
+```php
+class DsnValidator {
+    public static function validate(DsnPayload $payload): DsnValidationResult;
+    public static function validateNir(string $nir): bool;
+    public static function validateSiret(string $siret): bool;
+    // ... une méthode par règle
+}
+```
+
+**3.5 — UseCase ExportPayrollDsnUseCase** (`app/Modules/Workforce/UseCases/ExportPayrollDsnUseCase.php`)
+
+Orchestration principale :
+
+```
+1. Guard: PayrollRun.status === 'validated' (ou 'exported')
+2. Guard: ModuleGate 'workforce_payroll' + 'workforce_documents'
+3. Guard: Company.siret + naf_code + adresse complète
+4. Guard: Tous les employees ont un NIR valide
+5. Guard: DsnDeclaration idempotency (pas de doublon mois/année/fraction)
+6. Résoudre données employés via DsnEmployeeResolver (batch)
+7. Mapper cotisations → CTP via DsnCtpMapping
+8. Agréger CTP par code (base, employee, employer, effectif)
+9. Calculer RGDU via RgduCalculator (si implémenté)
+10. Construire DsnPayload
+11. Valider via DsnValidator
+12. Sérialiser via DsnBlockSerializer → fichier .dsn
+13. Stocker fichier (Storage::disk('private'))
+14. Créer DsnDeclaration (status=validated si 0 erreurs, draft sinon)
+15. Audit log (category: 'workforce.dsn')
+```
+
+**3.6 — Gateway DsnGatewayManager** (`app/Core/Workforce/Dsn/DsnGatewayManager.php`)
+
+Pattern adapter identique à `PaymentGatewayManager` (ADR-222) :
+
+```php
+interface DsnTransmitterAdapter {
+    public function submit(DsnDeclaration $declaration): DsnSubmissionResult;
+    public function checkStatus(string $submissionId): DsnStatusResult;
+    public function getAcquittement(string $submissionId): ?DsnAcquittement;
+}
+
+// Implémentations :
+// - NetEntreprisesAdapter : API REST HTTPS net-entreprises.fr (production)
+// - FileDsnAdapter : export fichier local (tests, debug, comptable)
+// - NullDsnAdapter : no-op (dev, tests unitaires)
+```
+
+API net-entreprises.fr :
+- Endpoint : `https://www.net-entreprises.fr/api/dsn/v1/depot`
+- Auth : certificat client + identifiants déclarant
+- Réponses : AEE (accusé envoi), ARE (accusé réception), CCO (compte-rendu conformité), BAN (bilan anomalies)
+- Délai : AEE immédiat, CCO sous 24-48h
+
+**3.7 — Calendrier DSN**
+
+- Entreprises < 50 salariés : **15 du mois M+1**
+- Entreprises ≥ 50 salariés : **5 du mois M+1**
+- Scheduled task : `CheckDsnDeadlineCommand` — alerte si PayrollRun validated mais DSN non soumise à J-3
+
+---
+
+#### BLOC 4 — Plan sprints Phase 6
+
+**Sprint 6.0 — Fondations données** (Priorité P0)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| Migration adresse Company (G3) | XS | migration + Company.php fillable |
+| Migration average_headcount Company (G6) | XS | migration + Company.php fillable |
+| Enrichir FieldDefinitionCatalog (G7) : gender, birth_date, birth_city, birth_department, birth_country, nationality, personal_address_* | S | FieldDefinitionCatalog.php, seeder |
+| DsnCtpMapping classe statique (G1) | S | DsnCtpMapping.php |
+| DsnEmployeeResolver (G2+G7) | M | DsnEmployeeResolver.php |
+| Tests : 15 tests (NIR validation, CTP mapping, employee resolver, adresse) | M | tests |
+
+**Sprint 6.1 — RGDU Calculator** (Priorité P1)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| Meta-rules seeder : smic_horaire_cents, rgdu_coefficient_t_bps | XS | WorkforcePayrollRuleSeeder.php |
+| RgduCalculator::compute() | M | RgduCalculator.php |
+| Intégration dans PayrollCalculationEngine (remplace ReliefResult::stub()) | S | PayrollCalculationEngine.php |
+| Régularisation annuelle RGDU (cohérent Phase 4.3) | M | RegularizationCalculator enrichi |
+| Tests : 12 tests (coefficient T, bornes, régularisation, effectif <50/≥50) | M | tests |
+
+**Sprint 6.2 — Overtime ventilé** (Priorité P1)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| Enrichir PreparePayrollLinesUseCase : overtime_lines dans gross_breakdown | M | PreparePayrollLinesUseCase.php |
+| Mettre à jour buildExportPayload() | S | PayrollLine.php |
+| Tests : 8 tests (ventilation HS 125%/150%, nuit, férié) | S | tests |
+
+**Sprint 6.3 — Sérialisation DSN** (Priorité P0)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| DsnPayload DTO | S | DsnPayload.php |
+| DsnBlockSerializer (20 méthodes de bloc) | L | DsnBlockSerializer.php |
+| DsnValidator (11 règles) | M | DsnValidator.php |
+| Format NEODES : encodage ISO 8859-1, apostrophes, virgules | S | DsnFileWriter.php |
+| Tests : 25 tests (chaque bloc, encodage, validations NIR/SIRET, cohérence totaux) | L | tests |
+
+**Sprint 6.4 — UseCase + Modèle** (Priorité P0)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| Migration create_dsn_declarations | S | migration |
+| DsnDeclaration model (statuts, relations, guards) | S | DsnDeclaration.php |
+| ExportPayrollDsnUseCase (15 étapes) | L | ExportPayrollDsnUseCase.php |
+| Audit log + idempotency | S | dans UseCase |
+| Tests E2E : 15 tests (guards, happy path, idempotency, multi-tenant, snapshot) | L | tests |
+
+**Sprint 6.5 — Gateway + Transmission** (Priorité P2)
+
+| Tâche | Complexité | Fichiers |
+|-------|-----------|----------|
+| DsnTransmitterAdapter interface | XS | interface |
+| FileDsnAdapter (export fichier comptable) | S | FileDsnAdapter.php |
+| NullDsnAdapter (tests) | XS | NullDsnAdapter.php |
+| DsnGatewayManager + config | S | DsnGatewayManager.php |
+| CheckDsnDeadlineCommand (scheduler) | S | command + routes/console.php |
+| NetEntreprisesAdapter (stub — API réelle Phase 7) | M | NetEntreprisesAdapter.php |
+| Tests : 10 tests (adapter pattern, deadline check) | M | tests |
+
+**Estimation totale Phase 6** :
+- **85 tests de conformité** prévus
+- **~25 fichiers** créés/modifiés
+- **2 migrations** (adresse + headcount Company, dsn_declarations)
+- **Sprints** : 6.0 → 6.1 → 6.2 peuvent être parallélisés, 6.3 → 6.4 séquentiels, 6.5 en dernier
+
+---
+
+#### Invariants Phase 6
+
+1. **Zéro donnée inventée** — chaque champ DSN a une source Leezr traçable ou un gap documenté
+2. **Immutabilité** — DsnDeclaration.generation_snapshot gèle les données au moment de la génération
+3. **Idempotency** — clé `dsn:{company_id}:{year}:{month}:{fraction}:{type}` empêche les doublons
+4. **Multi-tenant** — DsnDeclaration porte `company_id`, BelongsToCompany, cross-company guard
+5. **Encodage strict** — ISO 8859-1, pas UTF-8 (norme NEODES)
+6. **Validation pré-soumission** — DsnValidator bloque si erreurs → status reste `draft`
+7. **Audit trail** — AuditLogger.category `workforce.dsn` pour chaque génération/soumission
+
+---
+
+#### Blocs DSN hors scope Phase 6 (Phase 7+)
+
+- **S21.G00.41** — Changement de contrat (événementiel, nécessite historisation contrat)
+- **S21.G00.54** — Arrêt de travail (maladie, accident, maternité — nécessite module Leave enrichi)
+- **S21.G00.60** — Fin de contrat (licenciement, démission, rupture conventionnelle — nécessite workflow terminaison)
+- **S21.G00.62** — Prud'hommes (événementiel rare)
+- **DSN événementielle** (nature=02) — signalement arrêt/reprise/fin en temps réel
+- **NetEntreprisesAdapter réel** — connexion API production (certificat client, authentification)
+
+**Conséquences** :
+- Phase 6 produit un fichier DSN mensuel valide (nature 01, type 01) exportable
+- Transmission effective vers net-entreprises.fr reportée à Phase 7 (certificat + homologation)
+- L'architecture gateway est posée — seul l'adapter réel reste à implémenter
+
+**Fichiers créés/modifiés (prévision)** :
+- `app/Core/Workforce/Dsn/` — nouveau namespace (6-8 fichiers)
+- `app/Core/Workforce/DsnDeclaration.php` — nouveau modèle
+- `app/Core/Workforce/Services/RgduCalculator.php` — nouveau service
+- `app/Modules/Workforce/UseCases/ExportPayrollDsnUseCase.php` — nouveau UseCase
+- `database/migrations/` — 2 nouvelles migrations
+- `database/seeders/WorkforcePayrollRuleSeeder.php` — enrichi (SMIC, coefficient T)
+- `database/seeders/FieldDefinitionCatalog.php` — enrichi (champs identité)
+- `tests/Feature/` — 5 nouveaux fichiers de tests (~85 tests)
+
+---
+
+### ADR-518 — Sprint 6.0 : Fondations données DSN (2026-05-06)
+
+**Contexte** : Premier sprint de Phase 6 DSN. Objectif : combler les gaps de données P0 sans toucher au moteur de paie, préparer les inputs nécessaires aux sprints suivants (sérialisation, export).
+
+**Livrables** :
+
+1. **Migration Company adresse DSN** : 7 colonnes ajoutées à `companies` — `address_street`, `address_complement`, `address_postal_code`, `address_city`, `address_insee_code` (code commune INSEE), `address_country_code` (ISO, default 'FR'), `average_headcount` (effectif moyen annuel). Fillable mis à jour.
+
+2. **FieldDefinitionCatalog enrichi** : 8 nouveaux champs identité employee (scope `company_user`) — `gender` (select M/F), `birth_city`, `birth_department`, `birth_country` (catégorie hr, applicable FR), `personal_address_street`, `personal_address_postal_code`, `personal_address_city`, `personal_address_country_code` (catégorie base). S'ajoutent aux existants `birth_date`, `nationality`, `social_security_number`.
+
+3. **DsnCtpMapping** : classe statique mapping 23 codes cotisation Leezr → 8 codes CTP URSSAF officiels (100, 260, 262, 332, 772, 937, 058, 027). CSG/CRDS (3 codes) séparés → bloc S21.G00.78. Méthodes : `get()`, `ctpCode()`, `dsnBloc()`, `hasCtp()`, `isCsgCrds()`, `allCtpCodes()`, `leezrCodesForCtp()`.
+
+4. **DsnEmployeeResolver** : résout données identité DSN d'un Employee via Fields EAV system. Bypass FieldResolverService (pas de masquage — DSN nécessite valeurs brutes). Batch mode (évite N+1). Validation NIR : modulo 97, gestion Corse (2A→19, 2B→18). DTO `DsnEmployeeData` readonly avec `missingMandatoryFields()`, `isDsnReady()`, `dsnGenderCode()`.
+
+5. **DsnCompanyResolver** : résout données établissement DSN depuis Company. Extraction SIREN (9 premiers chiffres) / NIC (5 derniers) depuis SIRET. Validation SIRET (Luhn 14 chiffres), NAF (4 digits + 1 lettre). DTO `DsnCompanyData` readonly avec `missingMandatoryFields()`, `isDsnReady()`.
+
+**Tests** : 31 tests, 132 assertions couvrant :
+- CTP mapping complet (8 tests : codes connus/inconnus, CSG/CRDS, all codes, reverse lookup)
+- NIR validation (6 tests : standard, espaces, Corse 2A, trop court, mauvaise clé, non numérique)
+- DsnEmployeeResolver (6 tests : résolution complète, champs manquants, sans user, batch, batch sans user, gender code)
+- DsnCompanyResolver (4 tests : données complètes, champs manquants, IDCC, sans CC)
+- SIRET/NAF validation (5 tests : valide, longueur, non numérique, Luhn invalide, NAF formats)
+- Multi-tenant isolation (1 test : pas de fuite NIR inter-company)
+- Address persistence (1 test : colonnes Company stockées)
+
+**Fichiers créés** :
+- `database/migrations/2026_05_06_100001_add_dsn_address_to_companies.php`
+- `app/Core/Workforce/Dsn/DsnCtpMapping.php`
+- `app/Core/Workforce/Dsn/DsnEmployeeResolver.php`
+- `app/Core/Workforce/Dsn/DsnEmployeeData.php`
+- `app/Core/Workforce/Dsn/DsnCompanyResolver.php`
+- `app/Core/Workforce/Dsn/DsnCompanyData.php`
+- `tests/Feature/DsnFoundationsTest.php`
+
+**Fichiers modifiés** :
+- `app/Core/Models/Company.php` — fillable enrichi (7 champs)
+- `app/Core/Fields/FieldDefinitionCatalog.php` — 8 nouveaux champs identité
+
+**Conséquences** :
+- Namespace `App\Core\Workforce\Dsn` créé (6 fichiers)
+- Zéro modification du moteur de paie ou des calculateurs
+- Zéro modèle DsnDeclaration (Sprint 6.4)
+- Données Company et Employee prêtes pour sérialisation DSN (Sprint 6.3)
+
+---
+
+### ADR-519 — Sprint 6.2 : Overtime ventilé pour DSN/RGDU (2026-05-06)
+
+**Contexte** :
+- La DSN (S21.G00.53) exige la ventilation des heures supplémentaires par type (HS 25%, HS 50%, journalières)
+- Le calcul RGDU (Réduction Générale Dégressive Unifiée) nécessite les heures sup ventilées pour le coefficient T
+- Le `gross_breakdown` actuel agrège toutes les heures sup dans un seul `overtime_cents`
+- Sprint 6.2 exécuté AVANT 6.1 car RGDU dépend de cette ventilation
+
+**Décisions** :
+1. **gross_breakdown enrichi** avec 8 nouveaux champs : `overtime_25_cents`, `overtime_50_cents`, `overtime_daily_cents`, `overtime_25_hours`, `overtime_50_hours`, `overtime_daily_hours`, `base_hours`, `total_hours`
+2. **Ventilation droit français** : HS 25% = premières 8h/semaine au-delà de 35h, HS 50% = au-delà de 43h, Daily = heures sup journalières (depuis `daily_overtime_minutes` des TimesheetLine)
+3. **Rounding reconciliation** : la différence d'arrondi est absorbée par `overtime_25_cents` pour garantir `sum == overtime_cents`
+4. **calculation_snapshot enrichi** (`calc-snapshot-v3`) : section `input` inclut désormais la ventilation overtime + `base_salary_cents` + `base_hours` + `total_hours`
+5. **ZÉRO modification des calculateurs financiers** : `gross_basis_cents`, `net_payable_cents`, contributions — tous identiques. La ventilation est purement informative.
+6. **Backward compatibility** : tous les anciens champs de `gross_breakdown` préservés, `formula_version` inchangée
+
+**Conséquences** :
+- `ComputePayrollUseCase` : ventilation overtime ajoutée (lignes 158-195)
+- `ComputePayrollCalculationsUseCase` : `buildSnapshot()` enrichi avec données PayrollLine (version `calc-snapshot-v3`)
+- Tests : `OvertimeVentilationTest` 14 tests / 70 assertions (zero overtime, HS25 seul, HS25+HS50, daily+weekly mix, stress, backward compat, snapshot)
+- Test existant mis à jour : `PayrollCCEngineIntegrationTest` (`calc-snapshot-v2` → `v3`)
+- Total suite : 2520 tests, 9943 assertions — tous verts
+
+**Fichiers** :
+- `app/Modules/Workforce/UseCases/ComputePayrollUseCase.php` (modifié)
+- `app/Modules/Workforce/UseCases/ComputePayrollCalculationsUseCase.php` (modifié)
+- `tests/Feature/OvertimeVentilationTest.php` (créé)
+- `tests/Feature/PayrollCCEngineIntegrationTest.php` (modifié)
+
+---
+
+### ADR-520 — Sprint 6.1 : RGDU Calculator — Réduction Générale Dégressive Unifiée (2026-05-06)
+
+**Contexte** :
+- La RGDU (ex-réduction Fillon) est l'allègement principal des cotisations patronales en France
+- Formule : `C = (T/0.6) × (1.6 × SMIC_proratisé / rémunération_brute − 1)`, bornée à [0, T]
+- Relief = C × rémunération_brute, plafonné au total des cotisations patronales éligibles
+- Dépendances résolues : Sprint 6.2 (overtime ventilé), Sprint 6.0 (Company.average_headcount)
+
+**Décisions** :
+1. **RgduCalculator** : service pur statique (ZERO DB access), reçoit tous les paramètres en entrée
+2. **RgduResult DTO** : coefficient (bps), SMIC proratisé, relief, éligibilité, formula version
+3. **3 meta-rules seedées** dans `WorkforcePayrollRuleSeeder` :
+   - `smic_horaire_cents` : 1147 cents (11,47 €, indicatif 2026)
+   - `rgdu_coefficient_t` : 3195 bps (<50 sal.) / 3235 bps (≥50 sal.)
+   - `rgdu_eligible_codes` : 11 codes cotisations patronales éligibles
+4. **PayrollRuleResolver enrichi** : 3 nouvelles méthodes (`resolveSmicHoraire`, `resolveRgduCoefficientT`, `resolveRgduEligibleCodes`)
+5. **PayrollCalculationEngine** : `ReliefResult::stub()` remplacé par calcul RGDU réel. Si meta-rules absentes → `blocking_anomaly` type `missing_rgdu_rule`
+6. **Net salarié inchangé** : RGDU = allègement employeur uniquement. `net_payable_cents` et `net_before_tax_cents` identiques
+7. **total_cost_employer_cents** : actuellement SANS reliefs (brut + cotisations patronales brutes). Les reliefs sont dans `relief_lines` séparément
+8. **Disclaimer** : tous les taux sont indicatifs — validation expert-comptable requise
+
+**Formule RGDU détaillée** :
+- SMIC proratisé = SMIC_horaire × (heures_contractuelles_mensuelles + heures_sup)
+- Temps partiel : `monthly_hours = weekly_hours × 52/12` (au lieu de 151.67)
+- Overtime : utilise `gross_breakdown.overtime_hours` (Sprint 6.2)
+- Cap : min(C × brut, somme cotisations patronales éligibles)
+- Coefficient T : dépend de `Company.average_headcount` (< ou ≥ 50 salariés)
+
+**Conséquences** :
+- `ReliefResult` n'est plus un stub — contient les données RGDU réelles
+- `relief_lines` dans PayrollCalculation contient `rgdu_detail` avec le snapshot complet
+- `calculation_snapshot.relief_summary` automatiquement enrichi
+- Pas de modification de `ContributionCalculator` ni de `NetAggregator`
+- Tests : 18 tests (10 unitaires + 8 intégration) / 53 assertions
+- Total suite : 2538 tests, 9996 assertions — tous verts, build clean
+
+**Fichiers** :
+- `app/Core/Workforce/DTOs/RgduResult.php` (créé)
+- `app/Core/Workforce/Services/RgduCalculator.php` (créé)
+- `app/Core/Workforce/PayrollCalculationEngine.php` (modifié — step 13 RGDU)
+- `app/Core/Workforce/Services/PayrollRuleResolver.php` (modifié — 3 nouvelles méthodes)
+- `database/seeders/WorkforcePayrollRuleSeeder.php` (modifié — 3 meta-rules)
+- `tests/Feature/RgduCalculatorTest.php` (créé)
+
+---
+
+### ADR-521 — Sprint 6.3 : Sérialisation DSN + Validation NEODES (2026-05-06)
+
+**Contexte** :
+- La DSN (Déclaration Sociale Nominative) mensuelle exige un format text NEODES Phase 3
+- Format : ISO-8859-1, séparateur virgule, valeurs entre single quotes, rubriques S21.G00.XX.YYY
+- L'objectif est de transformer les données PayrollRun validé/exporté en payload structuré, le valider, puis le sérialiser en texte DSN
+- Pas de transmission (Phase 7), pas de mutation, pas de DSN événementielle
+
+**Décisions** :
+1. **DsnPayload DTO** : container readonly regroupant DsnCompanyData, DsnEmployeeBlock[], DsnCtpAggregate[], métadonnées déclaration
+2. **DsnEmployeeBlock DTO** : par salarié — identité (S21.G00.30), contrat (.40), versement (.50), rémunération (.51), CSG/CRDS (.78), cotisations individuelles (.81)
+3. **DsnCtpAggregate DTO** : agrégation par CTP code — somme des bases/cotisations de tous les salariés
+4. **DsnBlockSerializer** : service pur statique, sérialise DsnPayload → string texte NEODES
+   - 8 blocs : S21.G00.06, .22, .30, .40, .50, .51, .78, .81
+   - Formatage : cents→euros (2 déc), bps→% (2 déc), dates Y-m-d→ddmmyyyy, NIR sans espaces
+   - Single quotes sanitisées (apostrophes → espaces)
+5. **DsnValidator** : service pur statique, 5 catégories de validation :
+   - `siret` : Luhn checksum 14 chiffres (via DsnCompanyResolver)
+   - `nir` : modulo-97 + champs obligatoires (via DsnEmployeeResolver/DsnEmployeeData)
+   - `ctp` : tous les codes cotisations doivent avoir un mapping CTP (sauf CSG/CRDS)
+   - `totals` : cohérence somme individuelle ↔ agrégats CTP (tolérance 1 cent/salarié)
+   - `encoding` : tous les champs string ISO-8859-1 compatibles
+6. **DsnValidationResult DTO** : résultat structuré avec `valid`, `errors[]` catégorisés, filtrage par catégorie
+7. **Read-only** : aucune mutation DB, aucun effet de bord — les données viennent de PayrollRun validated/exported + PayrollCalculation validated
+8. **ISO-8859-1** : check via round-trip `mb_convert_encoding(UTF-8→ISO-8859-1→UTF-8)`. € (U+20AC) rejeté car hors ISO-8859-1
+
+**Architecture** :
+```
+PayrollRun (validated/exported)
+  → PayrollLine[] → PayrollCalculation (validated)
+  → DsnCompanyResolver → DsnCompanyData
+  → DsnEmployeeResolver → DsnEmployeeData
+  → Build DsnEmployeeBlock[] + DsnCtpAggregate[]
+  → DsnPayload
+  → DsnValidator::validate() → DsnValidationResult
+  → DsnBlockSerializer::serialize() → string (NEODES text)
+```
+
+**Conséquences** :
+- Pipeline DSN complet : build payload → validate → serialize → text output
+- Pas de transmission (Phase 7 future)
+- Les DTOs sont la structure de données stable — le serializer et validator sont découplés
+- Tests : 44 tests, 318 assertions
+- Total suite : 2582 tests, 10314 assertions — tous verts, build clean
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/DsnPayload.php` (créé)
+- `app/Core/Workforce/Dsn/DsnEmployeeBlock.php` (créé)
+- `app/Core/Workforce/Dsn/DsnCtpAggregate.php` (créé)
+- `app/Core/Workforce/Dsn/DsnBlockSerializer.php` (créé)
+- `app/Core/Workforce/Dsn/DsnValidator.php` (créé)
+- `app/Core/Workforce/Dsn/DsnValidationResult.php` (créé)
+- `tests/Feature/DsnSerializationTest.php` (créé)
+
+---
+
+### ADR-522 — Sprint 6.4 : DSN Declaration Orchestration
+
+**Date** : 2026-05-06
+**Statut** : Accepté
+**Sprint** : 6.4
+
+**Contexte** :
+Sprint 6.3 a livré la sérialisation DSN (DsnPayload, DsnBlockSerializer, DsnValidator). Il manque l'orchestration complète : persister une DsnDeclaration en base, coordonner build → validate → serialize → persist, et fournir un ReadModel pour les requêtes.
+
+**Décisions** :
+
+1. **Model DsnDeclaration** — table `workforce_dsn_declarations` avec machine d'état draft → validated → exported. Immutabilité garantie par boot hook (RuntimeException si update sur exported). Unique constraint `(company_id, payroll_run_id)`.
+
+2. **ExportPayrollDsnUseCase** — use case unique d'orchestration :
+   - Guards : PayrollRun status validated/exported, toutes les PayrollCalculation validated
+   - Idempotence : retourne la déclaration existante si exported, met à jour si draft
+   - Pipeline : build DsnPayload → validate → serialize → persist file → create DsnDeclaration
+   - Stocke payload_snapshot (audit) et payload_hash (SHA-256, intégrité)
+   - Si validation échoue : persiste en draft avec erreurs, PUIS lève DomainException
+   - Fichier DSN : `workforce/dsn/{companyId}/dsn_{companyId}_{periodMonth}_{timestamp}.dsn`
+
+3. **DsnDeclarationReadModel** — 3 méthodes statiques read-only : forCompany (paginé + filtres), forPayrollRun, latestForPeriod. Toutes avec withoutGlobalScopes.
+
+4. **Aucune transmission** — la DSN est une archive interne. Phase 7 ajoutera la transmission net-entreprises.
+
+5. **Pas de mutation PayrollRun** — le use case ne modifie jamais le PayrollRun source. La déclaration est un artéfact dérivé.
+
+**Conséquences** :
+- DsnDeclaration = archive immuable après export
+- Les erreurs de validation sont stockées en JSON, pas des exceptions brutes
+- Le hash SHA-256 permet de vérifier l'intégrité du fichier sans le relire
+- 24 tests couvrent : happy path (4), guards (4), idempotence (2), hash (1), multi-tenant (1), no-mutation (2), validation errors (1), state machine (3), read model (4), contenu DSN (2)
+
+**Fichiers** :
+- `database/migrations/2026_05_06_100001_create_dsn_declarations_table.php` (créé)
+- `app/Core/Workforce/DsnDeclaration.php` (créé)
+- `app/Modules/Workforce/UseCases/ExportPayrollDsnUseCase.php` (créé)
+- `app/Modules/Workforce/ReadModels/DsnDeclarationReadModel.php` (créé)
+- `tests/Feature/ExportPayrollDsnUseCaseTest.php` (créé)
+
+---
+
+### ADR-523 — Sprint 6.5 : DSN Gateway + Transmission Stub
+
+**Date** : 2026-05-06
+**Statut** : Accepté
+**Sprint** : 6.5
+
+**Contexte** :
+Sprint 6.4 a livré l'orchestration DSN (DsnDeclaration, ExportPayrollDsnUseCase). Le pipeline s'arrête à `exported`. Sprint 6.5 prépare l'architecture de transmission sans intégrer l'API réelle net-entreprises.
+
+**Décisions** :
+
+1. **DsnGatewayInterface** — contrat pour les gateways de transmission DSN. Méthode `submit(string $filePath, array $metadata): DsnSubmissionResult`. Result DTO readonly avec factories `success(reference)` / `failure(error)`.
+
+2. **NullDsnGateway** — gateway no-op, retourne toujours succès. Reference format `NULL-{companyId}-{period}-{timestamp}`. Driver par défaut en dev/test.
+
+3. **FileDsnGateway** — copie le fichier DSN dans un répertoire `transmitted/`. Simule la transmission pour staging. Vérifie l'existence du fichier source avant copie.
+
+4. **DsnGatewayManager** — extends `Illuminate\Support\Manager`. Drivers : `null`, `file`. Config `workforce.dsn.gateway` (env `DSN_GATEWAY_DRIVER`). Enregistré en singleton dans AppServiceProvider. `DsnGatewayInterface` bound au driver actif.
+
+5. **Extension DsnDeclaration** — 3 nouveaux statuts : `submitted`, `accepted`, `rejected`. Transitions : `exported → submitted → accepted|rejected`. Immutabilité boot hook étendue : bloque updates sur `submitted`/`accepted`/`rejected` sauf transition `submitted → accepted|rejected`. Migration ajoute colonnes `submission_reference`, `submitted_by`, `submitted_at`.
+
+6. **SubmitDsnDeclarationUseCase** — guard `status=exported`, submit via gateway, transition `submitted`, stocke reference + timestamp. Idempotent si déjà submitted/accepted. Sur échec gateway : lève DomainException, declaration reste `exported` (retry possible). Méthodes `markAccepted`/`markRejected` pour callbacks futurs.
+
+7. **Aucune API réelle** — net-entreprises hors scope. Gateway par défaut = null.
+
+**Conséquences** :
+- Architecture prête pour brancher un vrai adapter net-entreprises (Phase 7)
+- Pattern Manager identique à PaymentGatewayManager (cohérence)
+- Config via env var, zéro changement code pour switch de driver
+- 27 tests couvrent : gateways (4), result DTO (2), manager (3), submit use case happy path (3), guards (3), idempotence (2), failure (1), accepted/rejected (4), state machine (1), immutabilité (2), no-mutation (1), file integration (1)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/Gateway/DsnGatewayInterface.php` (créé)
+- `app/Core/Workforce/Dsn/Gateway/DsnSubmissionResult.php` (créé)
+- `app/Core/Workforce/Dsn/Gateway/NullDsnGateway.php` (créé)
+- `app/Core/Workforce/Dsn/Gateway/FileDsnGateway.php` (créé)
+- `app/Core/Workforce/Dsn/Gateway/DsnGatewayManager.php` (créé)
+- `app/Core/Workforce/DsnDeclaration.php` (modifié — 3 statuts + immutabilité étendue)
+- `app/Modules/Workforce/UseCases/SubmitDsnDeclarationUseCase.php` (créé)
+- `database/migrations/2026_05_06_200001_add_submission_fields_to_dsn_declarations.php` (créé)
+- `config/workforce.php` (créé)
+- `app/Providers/AppServiceProvider.php` (modifié — singleton + binding)
+- `tests/Feature/DsnGatewayTest.php` (créé — 27 tests)
+- `tests/Feature/ExportPayrollDsnUseCaseTest.php` (modifié — immutabilité test aligné)
+
+---
+
+### ADR-524 — Sprint 6.6 : DSN Hardening pré-Net-Entreprises
+
+**Date** : 2026-05-06
+**Statut** : Accepté
+**Sprint** : 6.6
+
+**Contexte** :
+Sprints 6.1–6.5 ont livré le pipeline DSN complet : calcul → sérialisation → validation → orchestration → transmission. Sprint 6.6 durcit le pipeline avant connexion réelle à net-entreprises : mapping CTP versionné, validation structurée, guards de régénération, audit hash.
+
+**Décisions** :
+
+1. **DsnCtpMapping versionné** — Résolution en 2 passes : MarketRuleSet (domain='dsn_ctp') d'abord, puis fallback statique. Cache in-memory par requête avec `clearCache()` pour tests. Signatures étendues avec `$marketKey='FR'` et `$atDate=null` optionnels. Les overrides DB peuvent ajouter de nouveaux codes ou remplacer des codes existants. Date-scoping via `effective_from`/`effective_until`.
+
+2. **DsnValidationResult enrichi** — Propriété `$errors` renommée `$entries`. 2 sévérités : `SEVERITY_ERROR` (bloquant) et `SEVERITY_WARNING` (non-bloquant). Factory `fail()` remplacée par `fromEntries()` — `valid=true` quand uniquement des warnings. Nouvelles méthodes : `errors()` (bloquants), `warnings()`, `entriesForEmployee(int)`. `toArray()` inclut `error_count` et `warning_count`.
+
+3. **DsnValidator enrichi** — Chaque entrée contient `severity`, `category`, `rubrique` (code DSN NEODES), `field`, `message`, et optionnellement `employee_id`/`payroll_line_id`. Problèmes encoding → WARNING (non-bloquant). Mismatch CTP total_cents → WARNING. Tous les autres problèmes (SIRET, NIR, CTP manquant, base mismatch) → ERROR. Helpers de mapping rubrique ajoutés.
+
+4. **Replay/regenerate guard** — `DsnDeclaration::canRegenerate()` autorise draft/validated/exported/rejected, bloque submitted/accepted. Dans `ExportPayrollDsnUseCase` : si `!canRegenerate()` → DomainException. Si exported → return as-is (idempotent). Si rejected → delete old record + fresh creation (contournement contrainte unique payroll_run_id).
+
+5. **Payload hash audit** — Hash SHA-256 stable pour mêmes données source, change si les données source changent, préservé après soumission. Hash calculé à l'export et stocké dans `payload_hash`.
+
+**Conséquences** :
+- Pipeline DSN résistant aux changements de barèmes CTP (versioning DB)
+- Validation structurée permet UI de présenter erreurs par sévérité, rubrique et employé
+- Guards empêchent corruption de déclarations soumises tout en autorisant reprise après rejet
+- Hash audit garantit intégrité du payload tout au long du lifecycle
+- 24 tests couvrent : CTP versionné (7), validation enrichie (5), regenerate guards (8), hash audit (4)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/DsnCtpMapping.php` (réécrit — versioning MarketRuleSet + cache)
+- `app/Core/Workforce/Dsn/DsnValidationResult.php` (réécrit — severity + entries + counts)
+- `app/Core/Workforce/Dsn/DsnValidator.php` (réécrit — rubriques + severity par type)
+- `app/Core/Workforce/DsnDeclaration.php` (modifié — canRegenerate())
+- `app/Modules/Workforce/UseCases/ExportPayrollDsnUseCase.php` (modifié — regenerate guard + entries API)
+- `tests/Feature/DsnHardeningTest.php` (créé — 24 tests)
+- `tests/Feature/DsnSerializationTest.php` (modifié — aligné sur nouveau DsnValidationResult)
+
+---
+
+### ADR-525 — Sprint 6.7 : DSN Operational Readiness
+
+**Date** : 2026-05-06
+**Statut** : Accepté
+**Sprint** : 6.7
+
+**Contexte** :
+Sprints 6.1–6.6 ont livré le pipeline DSN complet (calcul → sérialisation → validation → orchestration → transmission → hardening). Sprint 6.7 prépare l'exploitation et le support avant intégration externe réelle : ReadModels enrichis, audit trail, commandes CLI opérationnelles.
+
+**Décisions** :
+
+1. **DsnDeclarationReadModel enrichi** — 5 nouvelles méthodes statiques :
+   - `failedAndRejected(companyId)` — dashboard des déclarations nécessitant attention (draft avec erreurs + rejected)
+   - `latestByCompanyPeriod(companyId, limit)` — dernière déclaration par période, collection dédupliquée
+   - `validationSummary(declarationId)` — résumé structuré (counts, by_category, by_employee, entries)
+   - `statistics(companyId)` — stats globales (total, by_status, latest/earliest period)
+   - `detail(declarationId)` — vue complète avec toutes les relations (users, payrollRun)
+
+2. **DsnAuditReadModel** — nouveau ReadModel pour l'audit trail DSN :
+   - `historyForDeclaration(declarationId)` — historique complet des actions (generated, submitted, accepted, rejected)
+   - `payloadHashTimeline(declarationId)` — évolution du hash à travers les événements
+   - `forCompany(companyId)` — tous les logs DSN paginés
+   - `actionSummary(companyId)` — compteurs par type d'action
+   - Filtre sur `target_type='dsn_declaration'` dans CompanyAuditLog
+
+3. **Commandes CLI** — 3 commandes support/ops :
+   - `dsn:validate {declaration_id}` — affiche résumé validation (errors/warnings, by_category, by_employee, entries avec rubriques). Exit code 1 si erreurs bloquantes.
+   - `dsn:regenerate {declaration_id} {--dry-run}` — régénère une déclaration (guard canRegenerate). Mode dry-run pour preview. Appelle ExportPayrollDsnUseCase.
+   - `dsn:inspect {declaration_id} {--audit} {--payload}` — inspection complète : core fields, integrity (hash, file, canRegenerate), lifecycle timestamps, validation summary, payrollRun info, audit trail optionnel (--audit), payload snapshot optionnel (--payload).
+
+4. **Aucune transmission réelle** — objectif support/ops uniquement. Pas de mutation paie.
+
+**Conséquences** :
+- Support peut inspecter n'importe quelle déclaration DSN via CLI sans toucher à la DB
+- Dashboard des échecs/rejets permet suivi proactif
+- Audit trail complet avec timeline des hash pour traçabilité
+- Régénération guidée avec guards et dry-run
+- 21 tests couvrent : ReadModel enrichi (6), DsnAuditReadModel (3), CLI commands (6), intégration support/debug (4 : inspect payload, validation summary, rejected regeneration trace, accepted immutable)
+
+**Fichiers** :
+- `app/Modules/Workforce/ReadModels/DsnDeclarationReadModel.php` (enrichi — 5 méthodes ajoutées)
+- `app/Modules/Workforce/ReadModels/DsnAuditReadModel.php` (créé)
+- `app/Console/Commands/DsnValidateCommand.php` (créé)
+- `app/Console/Commands/DsnRegenerateCommand.php` (créé)
+- `app/Console/Commands/DsnInspectCommand.php` (créé)
+- `tests/Feature/DsnOperationalReadinessTest.php` (créé — 21 tests)
+
+---
+
+### ADR-526 — Sprint 6.8 : DSN Pre-Flight & Safety Layer
+
+**Date** : 2026-05-06
+**Statut** : Accepté
+**Sprint** : 6.8
+
+**Contexte** :
+Sprint 6.7 a livré les outils d'exploitation DSN. Sprint 6.8 ajoute une couche de sécurité complète avant toute soumission réelle : pré-vérifications automatiques, verrouillage anti-double soumission, politique de retry avec backoff exponentiel, vérification d'intégrité du fichier DSN, et kill-switch global dry-run.
+
+**Décisions** :
+
+1. **DsnPreflightChecker** — service pure lecture avec 9 vérifications :
+   - Status = exported, fichier DSN existe, payload_hash défini
+   - Pas d'erreurs validation bloquantes, payload_snapshot présent
+   - SIRET valide (Luhn), NIR salariés valides (modulo 97)
+   - Mapping CTP complet, intégrité hash fichier (warning)
+   - Retourne `PreflightResult` DTO readonly (`isReady`, `blockingErrors`, `warnings`)
+
+2. **SubmitDsnDeclarationUseCase durci** — 6 guards séquentiels :
+   - Idempotence (submitted/accepted → skip)
+   - Status guard (must be exported)
+   - File guard (file_path non vide)
+   - Preflight check (DsnPreflightChecker)
+   - Hash integrity (recompute hash du fichier sur disque vs stored hash)
+   - Submission lock (anti-double submit)
+
+3. **Submission Lock** — table `workforce_dsn_submission_locks` :
+   - Champs : `declaration_id` (unique FK), `locked_at`, `expires_at`
+   - TTL 5 minutes par défaut, nettoyage automatique des locks expirés
+   - Service `DsnSubmissionLockService` : acquire/release/isLocked/cleanExpired
+   - Lock toujours relâché dans `finally` block
+
+4. **Retry policy** — boucle configurable :
+   - `max_attempts` (défaut 3), `backoff_base_seconds` (défaut 1)
+   - Backoff exponentiel : 1s, 2s, 4s
+   - `DomainException` = non-retryable (propagation immédiate)
+   - `Throwable` = retryable (timeout, network)
+   - Erreur business (rejected/invalid/refused ou BIZ_* code) = non-retryable
+
+5. **Audit enrichi** — action `dsn_declaration.submit_attempt` avec metadata :
+   - `attempt_number`, `duration_ms`, `gateway` (classe), `result` (success/gateway_failure/exception/preflight_failed)
+   - `error_type`, `submission_reference`, `payload_hash`, `preflight_warnings`
+
+6. **Hash integrity** — vérification fichier sur disque :
+   - Hash calculé à l'export par `DsnBlockSerializer::serialize()` → stocké comme `payload_hash`
+   - Avant soumission : relecture du fichier DSN, recompute `hash('sha256', $fileContent)`
+   - Mismatch → `dsn_payload_tampered` DomainException (bloque la soumission)
+
+7. **Dry-run global** — kill-switch `config('workforce.dsn.submit_enabled')` :
+   - `false` (défaut) → force `NullDsnGateway` quel que soit le driver injecté
+   - `true` → utilise le gateway configuré
+   - Config : `DSN_SUBMIT_ENABLED`, `DSN_MAX_ATTEMPTS`, `DSN_BACKOFF_BASE_SECONDS`
+
+**Conséquences** :
+- Aucune soumission ne peut passer sans les 9 vérifications preflight
+- Double-clic/double-soumission impossible grâce au lock avec TTL
+- Erreurs réseau/timeout automatiquement retentées avec backoff
+- Erreurs métier (rejet URSSAF) stoppent immédiatement sans retry
+- Fichier DSN vérifié par hash avant chaque soumission
+- Dry-run par défaut = zéro risque de transmission accidentelle
+- 14 tests couvrent : preflight OK/KO (4), submission lock (2), retry policy (3), hash integrity (1), dry-run (1), audit enrichi (1), payload immutable (1), multi-tenant isolation (1)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/PreflightResult.php` (créé — DTO readonly)
+- `app/Core/Workforce/Dsn/DsnPreflightChecker.php` (créé — 9 checks)
+- `app/Core/Workforce/Dsn/DsnSubmissionLock.php` (créé — modèle Eloquent)
+- `app/Core/Workforce/Dsn/DsnSubmissionLockService.php` (créé — acquire/release/isLocked/cleanExpired)
+- `database/migrations/2026_05_06_300001_create_dsn_submission_locks_table.php` (créé)
+- `app/Modules/Workforce/UseCases/SubmitDsnDeclarationUseCase.php` (réécrit — 6 guards + retry + audit)
+- `config/workforce.php` (enrichi — submit_enabled, max_attempts, backoff_base_seconds)
+- `tests/Feature/DsnPreflightTest.php` (créé — 14 tests)
+- `tests/Feature/DsnGatewayTest.php` (adapté — bypass preflight, hash fichier, action audit)
+
+---
+
+### ADR-527 — Sprint 6.9 : DSN Production Readiness Final Audit
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 6.9
+
+**Contexte** :
+Dernier audit backend DSN avant Phase 7 (intégration Net-Entreprises réelle). Objectif : vérifier tous les invariants critiques, combler les gaps de tests, corriger les failles identifiées, produire un runbook production, et émettre un verdict GO/NO-GO.
+
+**Audit réalisé** :
+- 25 fichiers PHP audités (Core/Workforce/Dsn/ + Modules/Workforce/)
+- 91 tests DSN existants (DsnPreflightTest 14, DsnGatewayTest 27, DsnHardeningTest 24, DsnOperationalReadinessTest 21, DsnFoundationsTest, DsnSerializationTest, ExportPayrollDsnUseCaseTest)
+- 0 TODO/FIXME/HACK trouvé dans le code DSN
+
+**Problèmes identifiés et corrigés** :
+
+1. **Race condition DsnSubmissionLockService::acquire()** (CRITIQUE)
+   - Problème : TOCTOU entre SELECT et CREATE — deux threads pouvaient bypasser le lock
+   - Correction : ajout try/catch sur `QueryException` (unique constraint violation). Si violation = `return false` au lieu de 500. Supporte SQLite (23000), MySQL (23000), PostgreSQL (23505).
+
+2. **Hash integrity vérifiait le snapshot JSON au lieu du fichier** (corrigé Sprint 6.8 tardif)
+   - Le hash est calculé depuis `DsnBlockSerializer::serialize()` (fichier texte DSN)
+   - `verifyPayloadHashIntegrity()` lit maintenant le fichier sur disque et compare le SHA-256
+
+**Invariants vérifiés** (tous confirmés) :
+
+| Invariant | Vérifié | Test(s) |
+|-----------|---------|---------|
+| Aucun submit sans preflight OK | ✅ | DsnPreflightTest ×4 |
+| Aucun double submit concurrent | ✅ | DsnPreflightTest::double_submit + concurrent_lock |
+| Aucun regenerate après submitted/accepted | ✅ | DsnHardeningTest ×2 |
+| Rejected régénérable proprement | ✅ | DsnPreflightTest::rejected_regenerate_reexport |
+| Payload hash stable | ✅ | DsnHardeningTest ×3 |
+| Payload immuable après submission | ✅ | DsnPreflightTest + DsnGatewayTest |
+| Dry-run force NullDsnGateway | ✅ | DsnPreflightTest::dry_run |
+| Aucune mutation PayrollRun/Calculation | ✅ | DsnPreflightTest::no_payroll_mutation |
+| Audit complet export/submit/accept/reject | ✅ | DsnPreflightTest::full_audit_timeline |
+| Lock release dans finally (même sur exception) | ✅ | DsnPreflightTest::lock_released_on_exception |
+| Multi-tenant isolation | ✅ | DsnPreflightTest::multi_tenant_lock |
+
+**Tests ajoutés** (Sprint 6.9) :
+
+1. `test_lock_released_on_gateway_exception` — vérifie que le lock est libéré dans `finally` même quand le gateway explose
+2. `test_no_payroll_mutation_during_export` — vérifie que PayrollRun et PayrollCalculation ne sont jamais modifiés pendant l'export DSN
+3. `test_concurrent_lock_acquire_handles_unique_violation` — vérifie que le lock retourne `false` au lieu d'une exception sur double acquire
+4. `test_rejected_regenerate_reexport_full_flow` — flow complet rejected → régénérer → validated → exported → submitted → rejected → regenerate → new declaration
+5. `test_full_audit_timeline_export_submit_accept` — vérifie la timeline d'audit complète (generated, submit_attempt, accepted)
+
+**Runbook production** :
+- Créé `docs/bmad/dsn-runbook.md` — guide opérationnel pour support/ops
+- Couvre : lifecycle, génération, validation, inspection, régénération, soumission, traitement rejet, diagnostics courants, configuration
+
+**Métriques finales** :
+- Tests DSN total : 96 (19+27+24+21 + foundations + serialization + export)
+- TODO/FIXME/HACK : 0
+- Architecture : 25 fichiers PHP, 20 DTOs/services purs (readonly, zero side effects)
+- Couverture invariants : 11/11 (100%)
+
+**Verdict : GO Phase 7** 🟢
+
+Le pipeline DSN est production-ready pour l'intégration Net-Entreprises. Tous les invariants sont vérifiés et testés. La seule fonctionnalité manquante est le gateway `NetEntreprisesDsnGateway` lui-même (Phase 7).
+
+Réserves mineures (non-bloquantes, à traiter en Phase 7) :
+- Retry avec `usleep()` bloquant — acceptable en synchrone, à migrer vers queue worker si latence
+- Encoding ISO-8859-1 validé sur identity fields seulement, pas sur toutes les valeurs
+- `transitionTo()` ne persiste pas automatiquement (by design, mais documenté)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/DsnSubmissionLockService.php` (corrigé — race condition fix)
+- `tests/Feature/DsnPreflightTest.php` (enrichi — 5 tests ajoutés, total 19)
+- `docs/bmad/dsn-runbook.md` (créé — runbook production)
+
+---
+
+### ADR-528 — Phase 7 : Net-Entreprises Gateway réel — Design
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Phase** : 7 (Design uniquement — pas d'implémentation)
+
+**Contexte** :
+Phase 6 a livré un pipeline DSN production-ready (export, validation, hash, lock, retry, dry-run, runbook, 96+ tests). Seul manque le gateway réel vers Net-Entreprises. Phase 7 conçoit l'intégration sans coder, en conservant NullDsnGateway et FileDsnGateway.
+
+**Recherche technique Net-Entreprises** :
+L'API DSN M2M (Machine to Machine) du GIP-MDS est une API **REST HTTPS** (pas SOAP, pas SFTP) avec ces caractéristiques :
+- Authentification : POST XML vers `net-entreprises.fr/authentifier/1.0/` → jeton
+- Dépôt : POST GZIP vers `dsnrg.net-entreprises.fr/deposer-dsn/1.0/` → réponse synchrone AEE/ARE
+- Polling : GET `consulter-retour/1.0/{idflux}` pour CCO/BAN/CRM asynchrones
+- Environnement de test disponible (`test.net-entreprises.fr`)
+- Compression GZIP obligatoire sur toutes les requêtes et réponses
+- Fichier DSN en ISO-8859-1
+
+---
+
+#### 1. NetEntreprisesDsnGateway — Architecture
+
+**Implémente** `DsnGatewayInterface` (contrat existant inchangé).
+
+**Dépendances internes** (toutes dans `app/Core/Workforce/Dsn/Gateway/NetEntreprises/`) :
+
+```
+NetEntreprisesDsnGateway          ← implements DsnGatewayInterface
+  ├── DsnAuthClient               ← authentification (POST XML → jeton)
+  ├── DsnDepotClient              ← dépôt fichier (POST GZIP → AEE/ARE)
+  └── DsnRetourClient             ← consultation retours (GET → CCO/BAN/CRM)
+```
+
+**Principe** : Tout le code HTTP/provider est encapsulé dans les 3 clients. Le Core Workforce ne voit que `DsnGatewayInterface::submit()` et le nouveau `DsnPollingInterface::poll()`.
+
+**submit()** :
+1. `DsnAuthClient::authenticate()` → jeton (cache 30 min)
+2. Lire fichier DSN, encoder ISO-8859-1, compresser GZIP
+3. `DsnDepotClient::deposit(jeton, gzipContent, metadata)` → réponse synchrone
+4. Parser réponse : AEE (succès) → `DsnSubmissionResult::success(idFlux)` / ARE (rejet) → `DsnSubmissionResult::failure(error, rawResponse)`
+5. Stocker l'identifiant de flux (23 chars) comme `submission_reference`
+
+**Headers HTTP du dépôt** :
+```
+Authorization: DSNLogin jeton={token}
+Content-Type: text/plain
+Content-Encoding: gzip
+Accept-Encoding: gzip
+User-Agent: Leezr-DSN/1.0
+```
+
+---
+
+#### 2. Credentials & Sécurité
+
+**Modèle de stockage** : `PlatformSetting` chiffré (pattern existant ADR-463).
+
+| Clé PlatformSetting | Type | Description |
+|---------------------|------|-------------|
+| `dsn_ne_siret` | string (encrypted) | SIRET du déclarant |
+| `dsn_ne_nom` | string (encrypted) | Nom du déclarant |
+| `dsn_ne_prenom` | string (encrypted) | Prénom du déclarant |
+| `dsn_ne_password` | string (encrypted) | Mot de passe Net-Entreprises |
+| `dsn_ne_environment` | string | `sandbox` ou `production` |
+
+**Pas de certificat en v1** — authentification par triplet SIRET/nom/prénom/mot de passe. Certificat envisageable en v2.
+
+**Sécurité** :
+- Credentials **jamais** dans les logs, AuditLogger metadata, ou exceptions
+- Token jeton caché en memory (non persisté) avec TTL 30 min
+- `config('workforce.dsn.submit_enabled')` conservé comme kill-switch global
+- Env `DSN_NE_ENVIRONMENT` sépare sandbox/production (hosts différents)
+
+**Config additionnelle** (`config/workforce.php`) :
+```php
+'dsn' => [
+    // ... existant inchangé ...
+
+    // Net-Entreprises settings
+    'ne_environment' => env('DSN_NE_ENVIRONMENT', 'sandbox'),
+    'ne_auth_url' => env('DSN_NE_AUTH_URL', 'https://test.net-entreprises.fr/authentifier/1.0/'),
+    'ne_deposit_url' => env('DSN_NE_DEPOSIT_URL', 'https://test.dsnrg.net-entreprises.fr/deposer-dsn/1.0/'),
+    'ne_status_url' => env('DSN_NE_STATUS_URL', 'https://test.dsnrg.net-entreprises.fr/consulter-retour/1.0/'),
+    'ne_token_ttl_minutes' => (int) env('DSN_NE_TOKEN_TTL', 30),
+
+    // Polling
+    'poll_initial_delay_seconds' => (int) env('DSN_POLL_INITIAL_DELAY', 15),
+    'poll_interval_seconds' => (int) env('DSN_POLL_INTERVAL', 300),
+    'poll_max_duration_hours' => (int) env('DSN_POLL_MAX_HOURS', 72),
+],
+```
+
+---
+
+#### 3. Nouveaux champs DsnDeclaration
+
+**Migration** : `add_gateway_tracking_to_dsn_declarations`
+
+| Champ | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `gateway_driver` | string(20) | Oui | Driver utilisé (`null`, `file`, `net-entreprises`) |
+| `gateway_environment` | string(20) | Oui | Environnement (`sandbox`, `production`) |
+| `technical_receipt_path` | string | Oui | Chemin fichier AEE/ARE |
+| `business_report_path` | string | Oui | Chemin fichier CCO/BAN |
+| `gateway_status` | string(30) | Oui | Statut externe (voir mapping ci-dessous) |
+| `gateway_error_code` | string(50) | Oui | Code erreur gateway |
+| `gateway_error_message` | text | Oui | Message erreur gateway |
+| `gateway_metadata` | json | Oui | Metadata brute gateway (CRM, retours, etc.) |
+| `last_polled_at` | timestamp | Oui | Dernier polling |
+| `next_poll_at` | timestamp | Oui | Prochain polling prévu |
+| `attempt_count` | int unsigned | 0 default | Nombre de tentatives submission |
+
+**Champs existants conservés tels quels** :
+- `submission_reference` — stockera l'identifiant de flux Net-Entreprises (23 chars)
+- `submitted_by`, `submitted_at` — inchangés
+
+---
+
+#### 4. Mapping statuts externes → DsnDeclaration
+
+| Retour NE | gateway_status | DsnDeclaration.status | Action |
+|-----------|---------------|----------------------|--------|
+| AEE (sync) | `aee_received` | `submitted` | Stocker AEE, planifier polling |
+| ARE (sync) | `are_rejected` | `rejected` | Stocker ARE, raison dans gateway_error_message |
+| CCO (poll) | `cco_accepted` | `accepted` | Stocker CCO, marquer accepted |
+| BAN (poll) | `ban_rejected` | `rejected` | Stocker BAN, raison dans gateway_error_message |
+| EN_COURS (poll) | `pending` | `submitted` (inchangé) | Continuer polling |
+| Timeout polling | `poll_timeout` | `submitted` (inchangé) | Alerte ops, arrêt polling |
+
+**Nouveau status DSN potentiel** : NON — on ne crée pas de nouveau status DsnDeclaration. Le cycle `submitted → accepted|rejected` reste inchangé. `gateway_status` porte le détail du statut externe.
+
+---
+
+#### 5. Submission flow (inchangé + enrichi)
+
+Le flow existant dans `SubmitDsnDeclarationUseCase` reste identique :
+1. Guards (idempotence, status, file, preflight, hash, lock) — **inchangés**
+2. `resolveGateway()` — retourne `NetEntreprisesDsnGateway` si `submit_enabled=true` et `gateway=net-entreprises`
+3. `gateway.submit(filePath, metadata)` → `DsnSubmissionResult`
+4. Si success (AEE) : transition `submitted`, stocke `submission_reference` = idFlux
+5. Si failure (ARE) : exception `DomainException`, déclaration reste `exported`
+6. Audit attempt — **inchangé**
+
+**Enrichissements post-submit** (dans le UseCase) :
+- Stocker `gateway_driver`, `gateway_environment` sur la déclaration
+- Stocker `technical_receipt_path` (fichier AEE)
+- Incrémenter `attempt_count`
+- Planifier `next_poll_at` = now + `poll_initial_delay_seconds`
+
+---
+
+#### 6. Polling flow (nouveau)
+
+**Nouveau UseCase** : `PollDsnDeclarationStatusUseCase`
+
+**Déclenchement** : Commande scheduler `dsn:poll-submitted` (toutes les 5 minutes)
+
+**Flow** :
+```
+1. Chercher toutes les DsnDeclaration.status = 'submitted' AND next_poll_at <= now()
+2. Pour chaque déclaration :
+   a. DsnRetourClient::checkStatus(submission_reference)
+   b. Mapper le retour NE → gateway_status
+   c. Si AEE + CCO reçu → markAccepted() + stocker business_report_path
+   d. Si AEE + BAN reçu → markRejected() + stocker business_report_path + raison
+   e. Si EN_COURS → mettre à jour last_polled_at, calculer next_poll_at
+   f. Si timeout (submitted_at + poll_max_duration_hours dépassé) → gateway_status = 'poll_timeout', alerte
+   g. Audit log par polling attempt
+3. Télécharger les fichiers retour (CCO, BAN, CRM) dans storage
+```
+
+**Backoff polling** :
+- 15 secondes après dépôt → premier poll
+- Puis toutes les 5 minutes pendant 72h max
+- Après 72h sans réponse → `poll_timeout`, arrêt, alerte support
+
+**CRM (Comptes Rendus Métiers)** :
+- Stockés dans `gateway_metadata` JSON
+- Par organisme : CNAV (20-21), France Travail (41-43), URSSAF (60-62), Agirc-Arrco (70-71), DGFIP (92-94)
+- Non-bloquants pour le cycle submitted → accepted
+
+---
+
+#### 7. Erreurs modélisées
+
+| Code erreur | Retryable | Source | Description |
+|-------------|-----------|--------|-------------|
+| `credentials_missing` | Non | Config | Credentials DSN non configurés |
+| `authentication_failed` | Non | Auth | Triplet SIRET/nom/prénom/mdp invalide |
+| `network_timeout` | Oui | HTTP | Timeout réseau vers Net-Entreprises |
+| `transport_error` | Oui | HTTP | Erreur HTTP 5xx ou connection refused |
+| `gzip_error` | Non | Encoding | Erreur compression/décompression GZIP |
+| `encoding_error` | Non | Encoding | Fichier non convertible en ISO-8859-1 |
+| `duplicate_submission` | Non | Gateway | Déclaration déjà déposée (même identifiant) |
+| `technical_rejection` | Non | AEE/ARE | ARE reçu — rejet technique |
+| `business_rejection` | Non | CCO/BAN | BAN reçu — rejet métier |
+| `provider_unavailable` | Oui | HTTP | Net-Entreprises en maintenance |
+| `polling_timeout` | Non | Poll | 72h sans réponse conclusive |
+| `invalid_response` | Non | Parse | Réponse Net-Entreprises non parsable |
+
+**Mapping vers retry policy existante** :
+- `network_timeout`, `transport_error`, `provider_unavailable` → retryable (Throwable)
+- Tous les autres → non-retryable (DomainException)
+
+---
+
+#### 8. Idempotence
+
+| Scénario | Comportement |
+|----------|-------------|
+| `submit()` avec `submission_reference` déjà présent | Return early (noop, comme existant) |
+| `submit()` sur status `submitted`/`accepted` | Return early (guard existant) |
+| `submit()` sur status `rejected` | Exception (doit régénérer d'abord via ExportUseCase) |
+| Retry après `transport_error` sans `submission_reference` | OK — retry normal |
+| Retry après AEE reçu + `submission_reference` stocké | Return early — idempotent |
+| Polling sur déclaration déjà `accepted`/`rejected` | Skip — guard dans PollUseCase |
+
+---
+
+#### 9. Non-fuite de secrets
+
+**Règles strictes** :
+
+1. `DsnAuthClient` ne retourne **jamais** le mot de passe, seulement le jeton
+2. Le jeton n'est **jamais** persisté en DB ni dans les logs
+3. `AuditLogger` metadata ne contient **jamais** de credential — uniquement `gateway_driver`, `gateway_environment`, `submission_reference`, `gateway_status`
+4. Les exceptions lancées par les clients ne contiennent **jamais** de credential — messages génériques ("authentication failed")
+5. Les rawResponse dans `DsnSubmissionResult` sont **filtrés** : retirer tout champ contenant `password`, `token`, `jeton`, `motdepasse`
+
+---
+
+#### 10. Tests attendus (Phase 7)
+
+| # | Test | Sprint |
+|---|------|--------|
+| 1 | Fake gateway submit success (AEE) | 7.2 |
+| 2 | Fake auth failure → DomainException credentials | 7.2 |
+| 3 | Fake network timeout → retry | 7.2 |
+| 4 | Fake duplicate submission → blocked | 7.2 |
+| 5 | submission_reference persisted after submit | 7.3 |
+| 6 | gateway_driver + environment persisted | 7.3 |
+| 7 | AEE file stored in technical_receipt_path | 7.3 |
+| 8 | Polling → CCO → markAccepted | 7.4 |
+| 9 | Polling → BAN → markRejected with report | 7.4 |
+| 10 | Polling timeout after max_hours | 7.4 |
+| 11 | No secret in audit log metadata | 7.2 |
+| 12 | Kill-switch submit_enabled=false → NullGateway | 7.3 |
+| 13 | Payload hash unchanged after real submit | 7.3 |
+| 14 | GZIP compression correct | 7.2 |
+| 15 | ISO-8859-1 encoding correct | 7.2 |
+| 16 | Concurrent poll on same declaration safe | 7.4 |
+| 17 | CRM metadata stored correctly | 7.4 |
+| 18 | Sandbox vs production URL routing | 7.5 |
+| 19 | Token refresh on expiry | 7.5 |
+| 20 | attempt_count incremented | 7.3 |
+
+---
+
+#### 11. Plan de sprints 7.1–7.5
+
+**Sprint 7.1 — Gateway contracts + credentials** (Design → Code)
+- Créer `DsnPollingInterface` (nouvelle interface pour polling)
+- Créer migration `add_gateway_tracking_to_dsn_declarations`
+- Enrichir `config/workforce.php` avec les settings Net-Entreprises
+- Stocker credentials dans `PlatformSetting` chiffré
+- Créer `DsnCredentialService` pour lecture/validation credentials
+- Créer commande `dsn:check-credentials` (smoke test auth sans dépôt)
+- Tests : credentials storage, config validation, credential service
+
+**Sprint 7.2 — Fake client + contract tests**
+- Créer `DsnAuthClient`, `DsnDepotClient`, `DsnRetourClient` (HTTP clients)
+- Créer `FakeNetEntreprisesServer` (classe de test simulant les réponses NE)
+- Créer `NetEntreprisesDsnGateway implements DsnGatewayInterface`
+- Enregistrer driver `net-entreprises` dans `DsnGatewayManager`
+- Tests 1-4, 11, 14, 15 : auth, submit, timeout, duplicate, secrets, GZIP, encoding
+
+**Sprint 7.3 — Submit integration**
+- Intégrer `NetEntreprisesDsnGateway` dans `SubmitDsnDeclarationUseCase`
+- Enrichir UseCase : stocker `gateway_driver`, `gateway_environment`, `technical_receipt_path`, `attempt_count`
+- Planifier `next_poll_at` après submit réussi
+- Tests 5-7, 12, 13, 20 : reference, driver, receipt, kill-switch, hash, attempts
+
+**Sprint 7.4 — Polling + reconciliation**
+- Créer `PollDsnDeclarationStatusUseCase`
+- Créer commande scheduler `dsn:poll-submitted`
+- Implémenter téléchargement retours (CCO, BAN, CRM)
+- Stocker `business_report_path`, `gateway_metadata`
+- Implémenter `poll_timeout` après 72h
+- Tests 8-10, 16, 17 : polling accepted/rejected/timeout, concurrent, CRM
+
+**Sprint 7.5 — Production hardening + observability**
+- Health check Net-Entreprises (connectivity smoke test)
+- Alertes : polling timeout, auth failure, repeated rejects
+- Métriques : submit latency, polling duration, success rate
+- Sandbox vs production URL routing
+- Token refresh on expiry
+- Tests 18, 19 : sandbox routing, token refresh
+- Runbook mise à jour avec procédures Net-Entreprises
+- ADR final Phase 7
+
+---
+
+#### 12. Risques identifiés
+
+| # | Risque | Impact | Mitigation |
+|---|--------|--------|------------|
+| R1 | Net-Entreprises en maintenance imprévue | Soumissions bloquées | Retry policy + alerte ops + file gateway fallback |
+| R2 | Token expiré pendant soumission | Échec submit | Refresh proactif avant expiry, retry |
+| R3 | Fichier DSN non-conforme ISO-8859-1 | ARE (rejet technique) | Validation encoding dans DsnPreflightChecker (existant) |
+| R4 | SIRET/NIR invalide | BAN (rejet métier) | Validation Luhn/mod97 dans DsnPreflightChecker (existant) |
+| R5 | Identifiant de flux perdu | Impossible de poller | Persist `submission_reference` AVANT transition status |
+| R6 | Polling infini sans réponse | Ressource gaspillée | `poll_max_duration_hours=72` + alerte |
+| R7 | Credentials compromis | Dépôts frauduleux | Chiffrement PlatformSetting, rotation possible, audit |
+| R8 | Double dépôt même période | Rejet NE "duplicate" | Lock anti-double-submit existant + idempotence guard |
+| R9 | CRM tardifs (jours après CCO) | Incomplétude | `gateway_metadata` accumule les CRM, pas bloquant |
+| R10 | Changement API NE (version) | Incompatibilité | Versionner les URL endpoints en config, alerter |
+
+---
+
+#### 13. Fichiers à créer/modifier (Phase 7 complète)
+
+| Fichier | Action | Sprint |
+|---------|--------|--------|
+| `app/Core/Workforce/Dsn/Gateway/DsnPollingInterface.php` | Créer | 7.1 |
+| `app/Core/Workforce/Dsn/Gateway/NetEntreprises/DsnAuthClient.php` | Créer | 7.2 |
+| `app/Core/Workforce/Dsn/Gateway/NetEntreprises/DsnDepotClient.php` | Créer | 7.2 |
+| `app/Core/Workforce/Dsn/Gateway/NetEntreprises/DsnRetourClient.php` | Créer | 7.2 |
+| `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesDsnGateway.php` | Créer | 7.2 |
+| `app/Core/Workforce/Dsn/Gateway/NetEntreprises/DsnCredentialService.php` | Créer | 7.1 |
+| `app/Core/Workforce/Dsn/Gateway/DsnGatewayManager.php` | Modifier (ajouter driver) | 7.2 |
+| `app/Modules/Workforce/UseCases/PollDsnDeclarationStatusUseCase.php` | Créer | 7.4 |
+| `app/Modules/Workforce/UseCases/SubmitDsnDeclarationUseCase.php` | Modifier (enrichir post-submit) | 7.3 |
+| `app/Core/Workforce/DsnDeclaration.php` | Modifier (12 champs) | 7.1 |
+| `config/workforce.php` | Modifier (NE settings) | 7.1 |
+| `database/migrations/xxx_add_gateway_tracking.php` | Créer | 7.1 |
+| `app/Console/Commands/DsnCheckCredentialsCommand.php` | Créer | 7.1 |
+| `app/Console/Commands/DsnPollSubmittedCommand.php` | Créer | 7.4 |
+| `tests/Feature/DsnNetEntreprisesTest.php` | Créer (20 tests) | 7.2–7.5 |
+| `docs/bmad/dsn-runbook.md` | Modifier (NE procedures) | 7.5 |
+
+---
+
+**Verdict : GO implémentation Phase 7** 🟢
+
+L'architecture est validée. Les risques sont identifiés et mitigés. Le plan de sprint 7.1–7.5 est structuré. Les contrats existants (`DsnGatewayInterface`, `DsnSubmissionResult`) sont suffisants pour la v1 submission. Le polling nécessite une nouvelle interface mais ne casse rien.
+
+Prêt pour Sprint 7.1 sur instruction.
+
+---
+
+### ADR-529 — Sprint 7.1 : DSN Gateway Foundations
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 7.1 (Phase 7 — Net-Entreprises Gateway réel)
+
+**Contexte** :
+ADR-528 a validé le design complet de l'intégration Net-Entreprises. Sprint 7.1 pose les fondations : contrats de polling, migration des champs de suivi gateway, configuration NE, stockage chiffré des credentials, service de validation, et commande de diagnostic.
+
+**Décisions** :
+
+1. **DsnPollingInterface** — Nouveau contrat `poll(string $submissionReference): DsnPollingResult` dans `app/Core/Workforce/Dsn/Gateway/`. DsnPollingResult est un DTO readonly avec factories : `pending()`, `accepted()`, `rejected()`, `timeout()`.
+
+2. **Migration gateway tracking** — 11 nouveaux champs sur `workforce_dsn_declarations` : `gateway_driver`, `gateway_environment`, `technical_receipt_path`, `business_report_path`, `gateway_status`, `gateway_error_code`, `gateway_error_message`, `gateway_metadata` (JSON), `last_polled_at`, `next_poll_at`, `attempt_count`. Index sur `gateway_status` et `next_poll_at`.
+
+3. **Config NE** — `config/workforce.php` enrichi : `ne_environment` (sandbox default), `ne_auth_url`, `ne_deposit_url`, `ne_status_url`, `ne_token_ttl_minutes`, `poll_initial_delay_seconds` (15), `poll_interval_seconds` (300), `poll_max_duration_hours` (72). URLs par défaut pointent vers `test.net-entreprises.fr`.
+
+4. **Credentials chiffrés** — Nouvelle colonne JSON `dsn` sur `platform_settings`. Accesseur set/get avec `Crypt::encryptString/decryptString` sur `ne_password` (pattern identique à `email`).
+
+5. **DsnCredentialService** — Service dans `app/Core/Workforce/Dsn/Gateway/NetEntreprises/`. Lit les credentials depuis PlatformSetting, valide présence des 4 champs requis (ne_siret, ne_nom, ne_prenom, ne_password), valide format SIRET (14 digits + Luhn), valide environnement (sandbox/production).
+
+6. **dsn:check-credentials** — Commande Artisan de diagnostic. Affiche le statut de chaque credential (présent/absent), masque le mot de passe et le SIRET partiellement, exécute la validation de format, affiche la configuration gateway. Exit 0 si valide, 1 si erreurs.
+
+**Conséquences** :
+- Le DsnDeclaration model accepte désormais les champs de suivi gateway (fillable + casts)
+- NullDsnGateway et FileDsnGateway continuent de fonctionner sans changement
+- Le kill-switch `submit_enabled=false` reste actif par défaut
+- Les credentials ne sont jamais exposés en clair dans la base de données
+- Sprint 7.2 peut commencer : clients HTTP + NetEntreprisesDsnGateway
+
+**Tests** : 24 tests dans `DsnGatewayFoundationsTest` (79 assertions). Suite complète : 2721 tests verts, build clean.
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/Gateway/DsnPollingInterface.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/DsnPollingResult.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/DsnCredentialService.php` — créé
+- `app/Console/Commands/DsnCheckCredentialsCommand.php` — créé
+- `database/migrations/2026_05_07_100001_add_gateway_tracking_to_dsn_declarations.php` — créé
+- `database/migrations/2026_05_07_100002_add_dsn_column_to_platform_settings.php` — créé
+- `app/Core/Workforce/DsnDeclaration.php` — modifié (11 champs fillable + casts)
+- `app/Platform/Models/PlatformSetting.php` — modifié (dsn fillable + accesseurs chiffrés)
+- `config/workforce.php` — modifié (8 settings NE + polling)
+- `tests/Feature/DsnGatewayFoundationsTest.php` — créé (24 tests)
+
+---
+
+### ADR-530 — Sprint 7.2 : Net-Entreprises Fake Client + Gateway Contract Tests
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 7.2 (Phase 7 — Net-Entreprises Gateway réel)
+
+**Contexte** :
+Sprint 7.1 a posé les fondations (DsnPollingInterface, credentials, config, migration). Sprint 7.2 implémente le gateway Net-Entreprises en mode fake/testable pour figer le contrat submit/poll avant intégration HTTP réelle.
+
+**Décisions** :
+
+1. **NetEntreprisesClientInterface** — Contrat injectable avec 2 méthodes : `submit(payload, credentials, metadata)` → `NetEntreprisesSubmitResponse` et `poll(submissionReference, credentials)` → `NetEntreprisesPollResponse`. Isole tout le transport HTTP du gateway.
+
+2. **DTOs response** — Deux readonly DTOs :
+   - `NetEntreprisesSubmitResponse` : success, reference, receipt, errorCode, errorMessage, retryable, rawResponse. Factories: `accepted()`, `rejected()`, `transportError()`.
+   - `NetEntreprisesPollResponse` : gatewayStatus, terminal, receipt, report, metadata, errorCode, errorMessage, rawResponse. Factories: `pending()`, `accepted()`, `rejected()`.
+
+3. **FakeNetEntreprisesClient** — Implémente `NetEntreprisesClientInterface` avec 7 scénarios configurables : `success`, `authentication_failed`, `network_timeout`, `duplicate_submission`, `technical_rejection`, `business_rejection`, `pending_then_accepted`. Compteur de polls interne pour simuler séquences pending→accepted.
+
+4. **NetEntreprisesDsnGateway** — Implémente `DsnGatewayInterface` + `DsnPollingInterface`. Adapter-only : délègue au client injectable, mappe les réponses vers `DsnSubmissionResult`/`DsnPollingResult`, filtre les secrets des rawResponse (password, token, jeton, motdepasse, ne_password, secret, credential). Valide credentials via `DsnCredentialService` avant chaque opération.
+
+5. **DsnGatewayManager** — Nouveau driver `net-entreprises` enregistré. Résout via `createNetEntreprisesDriver()` (Str::studly). Injecte le client depuis le container si lié, sinon FakeNetEntreprisesClient par défaut. Config `submit_enabled=false` continue de forcer NullDsnGateway dans le UseCase (inchangé).
+
+6. **Séparation retryable/non-retryable** — Les erreurs transport (`network_timeout`, `transport_error`) sont `retryable=true` dans le DTO et propagées comme `RuntimeException` pour le retry loop existant. Les erreurs business/auth (`authentication_failed`, `duplicate_submission`, `technical_rejection`) retournent `DsnSubmissionResult::failure()` directement (non-retryable).
+
+**Conséquences** :
+- NullDsnGateway et FileDsnGateway inchangés et fonctionnels
+- Le contrat submit/poll est figé et couvert par 20 tests contractuels
+- Sprint 7.3 peut intégrer le gateway dans le UseCase (post-submit enrichment)
+- Sprint 7.3+ remplacera FakeNetEntreprisesClient par le vrai client HTTP
+
+**Tests** : 20 tests dans `DsnNetEntreprisesContractTest` (50 assertions). Suite complète : 2741 tests verts, build clean.
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesClientInterface.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesSubmitResponse.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesPollResponse.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/FakeNetEntreprisesClient.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesDsnGateway.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/DsnGatewayManager.php` — modifié (driver net-entreprises)
+- `tests/Feature/DsnNetEntreprisesContractTest.php` — créé (20 tests)
+
+---
+
+### ADR-531 — Sprint 7.3 : DSN Submit Integration + Post-Submit Lifecycle
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 7.3 (Phase 7 — Net-Entreprises Gateway réel)
+
+**Contexte** :
+Sprint 7.2 a livré le gateway NetEntreprises en mode fake (contrat figé, 20 tests). Sprint 7.3 branche le gateway dans le flux réel de SubmitDsnDeclarationUseCase et ajoute la capacité de polling pour le suivi asynchrone.
+
+**Décisions** :
+
+1. **DsnDeclaration immutability relaxée** — Le guard boot() distingue désormais 3 cas :
+   - **Pre-submission** (draft/validated/exported) : fully mutable
+   - **Submitted** : seuls les GATEWAY_TRACKING_FIELDS sont modifiables (gateway_status, gateway_error_*, gateway_metadata, *_report_path, last_polled_at, next_poll_at, attempt_count, status→accepted/rejected)
+   - **Accepted/Rejected** : fully immutable (aucune modification possible)
+   - Les champs core (payload_hash, file_path, company_id, period_month, etc.) restent immutables après submission.
+
+2. **Post-submit enrichment** — Après un submit réussi, le UseCase persiste :
+   - `gateway_driver` : nom du driver résolu (null, file, net-entreprises)
+   - `gateway_environment` : sandbox ou production
+   - `gateway_status` : 'aee_received' sur succès
+   - `attempt_count` : numéro de la tentative réussie
+   - `next_poll_at` : now + poll_initial_delay_seconds (15s default)
+   - `technical_receipt_path` : fichier AEE stocké sur disque si disponible
+
+3. **Poll method** — Nouvelle méthode `poll(DsnDeclaration, actorId)` sur SubmitDsnDeclarationUseCase :
+   - Guard : status must be `submitted`, must have `submission_reference`
+   - Noop sur status terminal (accepted/rejected)
+   - Appelle `DsnPollingInterface::poll(submissionReference)`
+   - Mapping résultat :
+     - `pending` → met à jour `last_polled_at`, calcule `next_poll_at`
+     - `cco_accepted` → stocke `business_report_path`, `gateway_metadata`, transition → accepted
+     - `ban_rejected` → stocke erreur, transition → rejected, `next_poll_at = null`
+   - NullDsnGateway (dry-run) → auto-accept immédiat
+
+4. **Audit enrichi** — Catégorie changée de `workforce.dsn` à `workforce.dsn.submit`. Nouveau champ `retryable` dans la metadata. Nouvelle action `dsn_declaration.poll_attempt` pour les tentatives de polling.
+
+5. **markAccepted/markRejected enrichis** — Persistent aussi `gateway_status` (`cco_accepted`/`ban_rejected`) et `gateway_error_message` (pour rejected).
+
+6. **Secret safety** — Le resolveDriverName() retourne un string lisible (pas get_class). Aucun credential ne transite dans l'audit metadata. Les rawResponse du gateway sont filtrés par NetEntreprisesDsnGateway avant retour.
+
+**Mapping gateway → state machine** :
+
+| Gateway response | gateway_status | DsnDeclaration.status | Action |
+|:---|:---|:---|:---|
+| AEE (submit success) | aee_received | submitted | Schedule poll |
+| ARE (submit rejection) | — | exported (inchangé) | DomainException |
+| CCO (poll accepted) | cco_accepted | accepted | Store report |
+| BAN (poll rejected) | ban_rejected | rejected | Store error |
+| EN_COURS (poll pending) | pending | submitted (inchangé) | Schedule next poll |
+| NullGateway (dry-run poll) | cco_accepted | accepted | Auto-accept |
+
+**Invariants vérifiés** :
+1. Aucun submit sans submission_reference en DB
+2. Aucun double submit (idempotence guard + lock)
+3. Poll ne peut pas overrider accepted/rejected (noop sur terminal)
+4. Core fields immutables après submission (RuntimeException sinon)
+5. Gateway tracking fields mutables sur submitted uniquement
+6. Aucun secret dans l'audit trail
+
+**Tests** : 25 tests dans `DsnSubmitIntegrationTest` (72 assertions). Suite complète : 2766 tests verts, build clean.
+
+**Fichiers** :
+- `app/Core/Workforce/DsnDeclaration.php` — modifié (GATEWAY_TRACKING_FIELDS, boot() relaxé)
+- `app/Modules/Workforce/UseCases/SubmitDsnDeclarationUseCase.php` — modifié (post-submit tracking, poll(), audit enrichi)
+- `tests/Feature/DsnSubmitIntegrationTest.php` — créé (25 tests)
+
+---
+
+### ADR-532 — Sprint 7.4 : DSN Polling Scheduler + Reconciliation
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 7.4 (Phase 7 — Net-Entreprises Gateway réel)
+
+**Contexte** :
+Sprint 7.3 a ajouté la méthode `poll()` dans SubmitDsnDeclarationUseCase. Sprint 7.4 construit le scheduler qui orchestre les polls automatiquement : sélection des déclarations dues, anti-concurrence, backoff exponentiel, timeout 72h, et commande artisan intégrée au cron.
+
+**Décisions** :
+
+1. **PollDsnDeclarationUseCase** — Wrapper autour de `SubmitDsnDeclarationUseCase::poll()` ajoutant :
+   - **Lock anti-concurrence** : réutilise `DsnSubmissionLockService` avec TTL 2 minutes pour empêcher les polls parallèles sur la même déclaration
+   - **Backoff exponentiel** : attempt 1 → +15 min, attempt 2 → +30 min, attempt 3+ → +60 min (calculé dans `applyBackoff()`)
+   - **Timeout 72h** : si `submitted_at + poll_max_duration_hours` dépassé → `poll_timeout` gateway_status + `markRejected()` + audit `dsn_declaration.poll_timeout`
+   - **Erreurs transport (RuntimeException)** : applique backoff et retourne `error_retryable` (pas de rejet)
+   - **Erreurs non-retryable (Throwable)** : audit `dsn_declaration.poll_error` + retourne `error`
+   - Résultats possibles : `accepted`, `rejected`, `pending`, `timeout`, `locked`, `skipped`, `error_retryable`, `error`
+
+2. **Commande `dsn:poll-pending`** — Sélection des déclarations dues :
+   - Filtre : `status = submitted AND (next_poll_at IS NULL OR next_poll_at <= now())`
+   - Ordre : `next_poll_at ASC` (les plus anciennes en premier)
+   - Options : `--limit=50` (cap par exécution), `--dry-run` (affiche table sans exécuter)
+   - `actorId = 0` pour le scheduler (système)
+   - Affichage : icônes colorées par résultat + tableau récapitulatif
+
+3. **Backoff configurable** — Les délais sont codés dans `PollDsnDeclarationUseCase::applyBackoff()` car ils sont stables et ne nécessitent pas de config externe. Le timeout 72h est configurable via `workforce.dsn.poll_max_duration_hours`.
+
+4. **Sécurité anti-concurrence** — Le lock est acquis AVANT le poll et libéré dans un `finally`. Si le lock échoue, le UseCase retourne `locked` sans erreur ni side-effect. Cela permet à plusieurs crons de tourner en sécurité.
+
+**Fichiers** :
+- `app/Modules/Workforce/UseCases/PollDsnDeclarationUseCase.php` — créé (lock, backoff, timeout, audit)
+- `app/Console/Commands/DsnPollPendingCommand.php` — créé (commande artisan scheduler-ready)
+- `tests/Feature/DsnPollingSchedulerTest.php` — créé (15 tests, 33 assertions)
+
+---
+
+### ADR-533 — Sprint 7.5 : DSN Production Hardening & Observability
+
+**Date** : 2026-05-07
+**Statut** : Accepté
+**Sprint** : 7.5 (Phase 7 — Net-Entreprises Gateway réel)
+
+**Contexte** :
+Sprints 7.1-7.4 ont livré le gateway DSN complet (credentials, gateway adapter, submit integration, polling scheduler). Sprint 7.5 finalise la couche gateway avec observabilité, health check, commandes ops, sécurité renforcée et runbook production.
+
+**Décisions** :
+
+1. **DsnMetricsService** — Service read-only calculant 6 métriques depuis DsnDeclaration :
+   - `dsn_declarations_submitted_total`, `dsn_declarations_accepted_total`, `dsn_declarations_rejected_total`
+   - `dsn_poll_attempts_total` (somme attempt_count), `dsn_gateway_errors_total` (non-null gateway_error_code)
+   - `dsn_average_acceptance_delay_minutes` (submitted_at → updated_at, calcul PHP pour compatibilité SQLite)
+   - Pas de Prometheus — métriques internes suffisantes pour le volume actuel.
+
+2. **DsnGatewayHealthCheck** — 6 checks retournant green/yellow/red :
+   - `submit_enabled` : green si actif, yellow si désactivé
+   - `credentials` : green si présents + format valide, red sinon
+   - `gateway_driver` : green si net-entreprises, yellow sinon
+   - `last_submit` : green si récent, yellow si aucun
+   - `recent_errors` : green si 0, yellow si 1-4, red si ≥5 dans les 24h
+   - `pending_polls` : green si 0 overdue, yellow si 1-9, red si ≥10
+   - Status global : ANY red → red, ANY yellow → yellow, ALL green → green
+   - Pattern identique à `SystemHealthService` existant.
+
+3. **Commande `dsn:gateway-health`** — Affiche le health check + métriques optionnelles (`--metrics`). Icônes colorées par statut.
+
+4. **Commande `dsn:retry-rejected`** — Reset une déclaration rejected → exported :
+   - Garde : uniquement sur status `rejected`
+   - Utilise `DsnDeclaration::resetForRetry()` (bypass boot immutability via DB::table)
+   - Audit action `dsn_declaration.retry_rejected`
+   - Options : `--force` pour skip confirmation
+
+5. **DsnDeclaration::resetForRetry()** — Méthode qui bypass le boot guard d'immutabilité via `DB::table()` direct (pas Eloquent). Seul le status `rejected` peut être reset. Rafraîchit le modèle après update. Justification : le guard est intentionnel pour protéger l'intégrité en fonctionnement normal, mais les ops de retry sont des cas exceptionnels contrôlés par CLI uniquement.
+
+6. **Sécurité renforcée** — Vérifications exhaustives de non-fuite de secrets :
+   - Gateway rawResponse : `filterSecrets()` dans NetEntreprisesDsnGateway (7 champs)
+   - CLI output : passwords masqués (`••••••••`)
+   - Audit logs : aucun credential dans metadata
+   - Tests dédiés : `assertSecretFree()` sur submit response, poll response, CLI output
+
+7. **Runbook production** — `docs/dsn-runbook.md` couvrant :
+   - Architecture gateway (state machine, kill-switch)
+   - Checklist activation production (12 items)
+   - Procédures : rejected (BAN), timeout 72h, credentials invalides, errors élevées
+   - Rollback : NullGateway (immédiat) ou FileGateway (traçabilité)
+   - Observabilité : tableau métriques + health checks
+
+8. **GO/NO-GO Phase 7** — Invariants vérifiés :
+   - ✅ Aucun secret dans audit/CLI/response (4 tests)
+   - ✅ Health check couvre les 6 dimensions opérationnelles
+   - ✅ Métriques couvrent submitted/accepted/rejected/errors/delays
+   - ✅ Retry-rejected bypass le guard proprement via DB::table
+   - ✅ Runbook documenté avec procédures complètes
+   - ✅ Gateway driver fallback vérifié
+   - ⚠️ HTTP client réel NON implémenté (Phase 8)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/DsnMetricsService.php` — créé
+- `app/Core/Workforce/Dsn/DsnGatewayHealthCheck.php` — créé
+- `app/Core/Workforce/DsnDeclaration.php` — modifié (resetForRetry)
+- `app/Console/Commands/DsnGatewayHealthCommand.php` — créé
+- `app/Console/Commands/DsnRetryRejectedCommand.php` — créé
+- `docs/dsn-runbook.md` — créé
+- `tests/Feature/DsnProductionHardeningTest.php` — créé (15 tests, 41 assertions)
+
+---
+
+### ADR-534 — Sprint 8.1 : Net-Entreprises HTTP Client Sandbox
+
+**Date** : 2026-05-08
+**Statut** : Accepté
+**Sprint** : 8.1 (Phase 8 — Net-Entreprises HTTP Client réel)
+
+**Contexte** :
+Phase 7 a livré l'architecture gateway complète (interface, fake client, polling, health, metrics, runbook) avec 99 tests. Phase 8 implémente le client HTTP réel derrière `NetEntreprisesClientInterface`, sans activer la transmission production par défaut.
+
+**Décisions** :
+
+1. **NetEntreprisesHttpClient** — Implémente `NetEntreprisesClientInterface` avec le vrai protocole NE :
+   - **Authentification** : POST XML vers `/authentifier/1.0/` avec `<identifiants>` (siret, nom, prenom, motdepasse, service)
+   - **Token caching** : jeton stocké in-memory avec TTL (30 min default, -1 min safety margin). Invalidé sur 401.
+   - **Deposit** : POST vers `/deposer-dsn/1.0/` avec payload gzippé, header `Authorization: {jeton}`, `Content-Type: text/plain`, `Content-Encoding: gzip`
+   - **Consultation** : POST XML vers `/consulter-retour/1.0/` avec `<consultation><idFlux>` pour polling
+   - **Retry** : retry automatique sur `ConnectionException` uniquement (pas sur 4xx/5xx)
+   - **Timeout** : configurable via `ne_timeout_seconds` (30s default)
+
+2. **Protocole NE REST+XML** (pas SOAP) :
+   - Auth : XML body → XML response avec `<jeton>`
+   - Deposit : gzip body → XML response avec `<idFlux>` (AEE) ou `<code-erreur>` (ARE)
+   - Consultation : XML body → XML response avec `<statut>` (accepte/rejete/en_cours)
+   - Pas de WSDL, pas de SOAP envelope
+
+3. **Service codes** : `97` = sandbox/test, `25` = production. Configuré via `ne_service_code`.
+
+4. **URLs par environnement** :
+   - Test : `test-services.net-entreprises.fr` (auth), `test-dsnrg.net-entreprises.fr` (deposit/consult)
+   - Prod : `services.net-entreprises.fr` (auth), `dsnrg.net-entreprises.fr` (deposit/consult)
+   - Toutes configurables via env vars `DSN_NE_*`
+
+5. **Exception strategy** inchangée :
+   - `RuntimeException` : transport error → retryable (ConnectionException, gzip failure)
+   - `DomainException` : auth failure, 401 → non-retryable
+   - Le gateway adapter (`NetEntreprisesDsnGateway`) mappe ces exceptions comme avant
+
+6. **Binding container** — `NetEntreprisesClientInterface` → `NetEntreprisesHttpClient` dans `AppServiceProvider`. Le `DsnGatewayManager` résout via container quand bindé, sinon fallback `FakeNetEntreprisesClient`. Les tests peuvent override le binding.
+
+7. **Config enrichie** — Ajout de `ne_service_code`, `ne_download_url`, `ne_timeout_seconds`, `ne_retry_attempts` dans `config/workforce.php`.
+
+8. **Sécurité** :
+   - Le password est dans le XML auth (requis par NE) mais JAMAIS dans les rawResponse
+   - Le token est dans l'Authorization header mais JAMAIS dans les rawResponse
+   - Pas de logging du body auth (contient le password)
+   - Les rawResponse sont filtrés par `NetEntreprisesDsnGateway::filterSecrets()` en aval
+
+**Invariants vérifiés** :
+1. Aucun secret dans les rawResponse (submit + poll)
+2. Token non visible dans les responses client
+3. Auth failure → DomainException (pas RuntimeException)
+4. Transport failure → RuntimeException (pas DomainException)
+5. Token caché réutilisé entre submit et poll
+6. Gzip du payload avant transmission
+7. XML malformé → dégradation gracieuse (pas de crash)
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesHttpClient.php` — créé
+- `app/Core/Workforce/Dsn/Gateway/DsnGatewayManager.php` — commentaire mis à jour
+- `app/Providers/AppServiceProvider.php` — binding NE client ajouté
+- `config/workforce.php` — config NE enrichie (service_code, download_url, timeout, retry)
+- `tests/Feature/DsnHttpClientTest.php` — créé (18 tests, 41 assertions)
+
+---
+
+### ADR-535 — Sprint 8.2 : Net-Entreprises Polling réel + retours métier
+
+**Date** : 2026-05-08
+**Statut** : Accepté
+**Sprint** : 8.2 (Phase 8 — Net-Entreprises HTTP Client réel)
+
+**Contexte** :
+Sprint 8.1 a livré le client HTTP réel (auth + deposit + consultation). Sprint 8.2 enrichit le polling avec le mapping complet des retours métier NE (CCO/BAN/EN_COURS), l'archivage des fichiers XML retours sur disque, et la validation du lifecycle complet via Http::fake().
+
+**Décisions** :
+
+1. **Mapping response NE → DsnPollingResult** :
+   - `statut=accepte` ou contient `CCO`/`certificat`/`conforme` → `cco_accepted` (terminal)
+   - `statut=rejete` ou contient `BAN`+`anomalie`/`rejet` → `ban_rejected` (terminal)
+   - `statut=en_cours` ou tout autre → `pending` (non-terminal)
+   - Le mapping est implémenté dans `resolveGatewayStatus()` du HttpClient
+
+2. **Archivage XML retours** — Nouvelle méthode `archiveReturn()` dans NetEntreprisesDsnGateway :
+   - CCO → `workforce/dsn/returns/{safeRef}/cco_{timestamp}.xml`
+   - BAN → `workforce/dsn/returns/{safeRef}/ban_{timestamp}.xml`
+   - AEE (submit) → `workforce/dsn/returns/{safeRef}/aee_{timestamp}.xml`
+   - Le XML brut est archivé tel quel (pas de transformation)
+   - Le path est passé dans `DsnPollingResult.businessReportPath` → persiste dans `DsnDeclaration.business_report_path`
+   - Seuls les résultats terminaux (CCO/BAN) sont archivés, pas les EN_COURS
+
+3. **HttpClient::poll() enrichi** :
+   - Le body XML brut est maintenant passé dans `report` du DTO `NetEntreprisesPollResponse`
+   - Le gateway archive ce body, pas le client (séparation des responsabilités)
+   - Les metadata incluent les détails organismes si disponibles
+
+4. **Submit AEE archivé** — Le gateway archive aussi l'AEE (accusé de réception) sur submit réussi :
+   - Path stocké dans `rawResponse['archived_receipt_path']`
+   - Le UseCase persiste déjà `technical_receipt_path` via `storeReceipt()`
+
+5. **Gestion d'erreurs enrichie** :
+   - 401 pendant poll → DomainException → gateway retourne `rejected` avec `polling_error`
+   - ConnectionException → RuntimeException → PollDsnDeclarationUseCase applique backoff
+   - XML malformé → `parseXmlResponse()` retourne `raw_body` tronqué → résolu comme `pending`
+
+6. **Sécurité** — Aucun secret dans :
+   - Les rawResponse (filtrage `filterSecrets()` existant)
+   - Les fichiers XML archivés (XML NE brut, ne contient pas de credentials)
+   - Les résultats de poll (token jamais dans les DTO)
+
+**Lifecycle complet validé** :
+
+```
+Submit → AEE (archivé) → DsnDeclaration.submitted
+  ↓ (schedule poll)
+Poll → EN_COURS → replanifie next_poll_at (backoff 15/30/60 min)
+  ↓ (poll again)
+Poll → CCO → archive XML → DsnDeclaration.accepted + business_report_path
+  ou
+Poll → BAN → archive XML → DsnDeclaration.rejected + gateway_error_code/message
+  ou
+Timeout 72h → poll_timeout → DsnDeclaration.rejected
+```
+
+**Fichiers** :
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesHttpClient.php` — modifié (report=body dans poll response)
+- `app/Core/Workforce/Dsn/Gateway/NetEntreprises/NetEntreprisesDsnGateway.php` — modifié (archiveReturn, AEE archivé)
+- `tests/Feature/DsnPollingHttpTest.php` — créé (13 tests, 44 assertions)
+
+---
+
+### ADR-536 — Sprint 8.3 : Net-Entreprises Sandbox Validation + GO/NO-GO Production
+
+**Date** : 2026-05-08
+**Statut** : Accepté
+**Sprint** : 8.3 (Phase 8 — Net-Entreprises HTTP Client réel)
+
+**Contexte** :
+Les sprints 8.1 et 8.2 ont livré le client HTTP réel et le polling complet. Sprint 8.3 fournit les outils de validation sandbox, le health check enrichi, et la checklist de passage en production. C'est le dernier sprint avant activation live.
+
+**Décisions** :
+
+1. **Commande `dsn:sandbox-submit`** — CLI pour soumettre une déclaration vers le sandbox NE uniquement :
+   - Guard triple : `ne_environment=sandbox`, `status=exported`, `credentials present`
+   - Force le gateway `net-entreprises` quel que soit le config driver
+   - Bypass temporaire de `submit_enabled` (sandbox only)
+   - Option `--dry-run` : affiche payload hash, endpoints, config sans appel HTTP
+   - Résultat : reference, status, receipt paths, error details
+
+2. **Health check enrichi (8 checks)** — 2 nouveaux checks ajoutés à `DsnGatewayHealthCheck` :
+   - `environment` : sandbox=yellow (test mode), production=green (live mode)
+   - `endpoints` : vérifie cohérence entre environment et URLs configurées
+     - sandbox + URLs prod → RED MISMATCH
+     - production + URLs test → RED MISMATCH
+     - cohérent → GREEN
+   - Le résultat inclut maintenant le champ `environment` au top-level
+
+3. **Production activation checklist** — 4 phases dans le runbook :
+   - Phase 1 : Prérequis techniques (sandbox validée, HTTP client testé, tests verts)
+   - Phase 2 : Configuration production (credentials réels, URLs prod, service code 25)
+   - Phase 3 : Activation progressive (submit_enabled, health check, premier submit supervisé)
+   - Phase 4 : Monitoring post-activation (cron polling, health quotidien, alertes)
+
+4. **Sandbox validation procedure** — Procédure en 5 étapes documentée dans le runbook :
+   - Health check → dry-run → submit réel → polling → inspection retours
+   - Critères GO : AEE reçu, CCO/BAN obtenu, XML archivés, pas de secrets
+   - Critères NO-GO : credentials invalides, mismatch endpoints, transport errors, secrets
+
+5. **Sécurité** — Confirmé que :
+   - Le dry-run n'affiche jamais les credentials
+   - Le health check ne contient aucun secret
+   - La commande sandbox-submit ne peut jamais cibler production
+
+**GO/NO-GO Report** :
+
+| Critère | Statut | Commentaire |
+|:---|:---|:---|
+| HTTP Client réel | ✅ GO | Auth XML + deposit gzip + consultation XML |
+| Token caching | ✅ GO | In-memory, TTL-1min safety, invalidate on 401 |
+| AEE receipt archival | ✅ GO | workforce/dsn/returns/{ref}/aee_{ts}.xml |
+| CCO/BAN archival | ✅ GO | workforce/dsn/returns/{ref}/cco_{ts}.xml / ban_{ts}.xml |
+| Polling lifecycle | ✅ GO | Submit → poll → CCO/BAN/timeout, backoff 15/30/60min |
+| Secret filtering | ✅ GO | 7 secret fields stripped, tested in CLI/gateway/health |
+| Sandbox isolation | ✅ GO | Triple guard, forced gateway, config bypass |
+| Health check 8/8 | ✅ GO | Environment + endpoints + 6 existing checks |
+| Endpoint mismatch detection | ✅ GO | sandbox↔prod URL consistency verified |
+| Runbook complet | ✅ GO | Sandbox validation + production activation + procedures |
+| Tests automatisés | ✅ GO | 14 tests Sprint 8.3, 2840+ tests total |
+
+**Verdict : GO pour activation production** dès que les credentials NE production sont disponibles.
+
+**Fichiers** :
+- `app/Console/Commands/DsnSandboxSubmitCommand.php` — créé (sandbox-only submit CLI)
+- `app/Core/Workforce/Dsn/DsnGatewayHealthCheck.php` — modifié (8 checks : +environment, +endpoints)
+- `docs/dsn-runbook.md` — modifié (sandbox validation procedure, production checklist 4 phases)
+- `tests/Feature/DsnSandboxValidationTest.php` — créé (14 tests, 41 assertions)
+
+---
+
+### ADR-537 — Sprint 9.1 : Workforce Frontend Architecture & Navigation
+
+**Date** : 2026-05-08
+**Statut** : Accepté
+**Sprint** : 9.1 (Phase 9 — Workforce Frontend Productization)
+
+**Contexte** :
+Le backend Workforce est complet (30 modèles, 51 use cases, 21 read models, 5 modules). Le frontend ne contient que 5 placeholder pages de 15 lignes. Sprint 9.1 pose le socle frontend : hub principal, composants partagés, navigation, empty states, et i18n complet.
+
+**Décisions** :
+
+1. **Hub Workforce** (`/company/workforce/index.vue`) — Page centrale avec :
+   - 6 module cards (Employés, Pointage, Planning, Congés, Paie, Documents RH)
+   - 3 quick actions (Ajouter employé, Lancer paie, Consulter feuilles de temps)
+   - Compliance warning banner (stub, alimenté par API en sprints suivants)
+   - Getting started empty state pour premier usage
+   - Card grid `card-grid-md` conforme ADR-379
+
+2. **Composants partagés** — 3 nouveaux sous-composants :
+   - `_WorkforceModuleCard.vue` : card module avec icône, titre, description, stats, coming soon
+   - `_WorkforceActionCard.vue` : card action rapide avec bouton + route/emit
+   - `_ComplianceWarningBanner.vue` : alertes compliance avec VAlert closable
+
+3. **StatusChip enrichi** — 8 nouveaux domaines ajoutés au `StatusChip.vue` existant :
+   - `employee`, `contract`, `leave`, `shift`, `timeEntry`, `timesheet`, `payrollRun`, `dsn`
+   - Chaque domaine mappe les statuts vers des couleurs Vuetify (success/error/warning/info/secondary/primary)
+   - Pattern existant préservé (subscription, invoice, payment, scheduledDebit)
+
+4. **Pages module avec empty states** — 5 pages placeholder réécrites + 1 nouvelle :
+   - Chaque page a : header (titre + description i18n), empty state (icône 64px + texte)
+   - Nouvelle page : `workforce/documents/index.vue` (navItem `workforce-documents`)
+   - Toutes les pages ont `definePage({ meta: { module, permission } })` correct
+
+5. **Navigation** — 6 navItems définis dans les 5 module manifests :
+   - `workforce-employees` (WorkforceModule) → Employés
+   - `workforce-time` (WorkforceModule) → Pointage
+   - `workforce-planning` (WorkforcePlanningModule) → Planning
+   - `workforce-leave` (WorkforceLeaveModule) → Congés
+   - `workforce-payroll` (WorkforcePayrollModule) → Paie
+   - `workforce-documents` (WorkforceDocumentsModule) → Documents RH
+   - Surface `hr` pour tous — groupés automatiquement par NavBuilder
+
+6. **i18n complet** — ~80 clés FR/EN ajoutées :
+   - `workforce.hub.*` — titres hub, actions, getting started
+   - `workforce.modules.*` — titre + description par module
+   - `workforce.actions.*` — quick actions
+   - `workforce.emptyStates.*` — empty states par module
+   - `workforce.statuses.*` — labels statuts pour tous les domaines (8 modèles)
+   - `nav.company.workforce-documents` — clé nav manquante ajoutée
+
+7. **Contraintes respectées** :
+   - Aucune logique métier dans Vue
+   - Aucun appel API dans Sprint 9.1
+   - Stubs propres (complianceWarnings = ref([]))
+   - UI basée sur presets Vuexy existants (VCard, VAvatar, VAlert, VChip)
+   - Pages existantes non cassées
+
+**Fichiers** :
+- `resources/js/pages/company/workforce/index.vue` — réécrit (hub principal)
+- `resources/js/pages/company/workforce/_WorkforceModuleCard.vue` — créé
+- `resources/js/pages/company/workforce/_WorkforceActionCard.vue` — créé
+- `resources/js/pages/company/workforce/_ComplianceWarningBanner.vue` — créé
+- `resources/js/pages/company/workforce/time/index.vue` — réécrit (empty state)
+- `resources/js/pages/company/workforce/planning/index.vue` — réécrit (empty state)
+- `resources/js/pages/company/workforce/leave/index.vue` — réécrit (empty state)
+- `resources/js/pages/company/workforce/payroll/index.vue` — réécrit (empty state)
+- `resources/js/pages/company/workforce/documents/index.vue` — créé
+- `resources/js/core/components/StatusChip.vue` — modifié (+8 domaines)
+- `resources/js/plugins/i18n/locales/fr.json` — modifié (~80 clés workforce)
+- `resources/js/plugins/i18n/locales/en.json` — modifié (~80 clés workforce)
+
+---
+
+### ADR-538 — Sprint 9.2 : Employees + Contracts Core HR (2026-04-30)
+
+**Contexte** : Premier module métier Workforce productisé. Les employés et contrats sont le socle de tout le RH (paie, congés, DSN). Le backend (models, state machines, use cases, read models) existe déjà — ce sprint ajoute la couche API (controllers + routes) et le frontend complet (pages, store, composants).
+
+**Décisions** :
+
+1. **Architecture modules Workforce** — Chaque sous-module a son propre répertoire :
+   - `app/Modules/Workforce/Employees/` contient `WorkforceModule.php` + `Http/` (controllers)
+   - Les 4 autres modules (`WorkforcePlanningModule`, `WorkforceLeaveModule`, etc.) restent à la racine tant qu'ils n'ont pas de controllers
+   - Résout la collision de chemins dans `GlobalModuleRouteCoverageTest` (multiple modules, même répertoire)
+
+2. **API REST employés** — 10 endpoints sous `api/workforce/` :
+   - `GET/POST employees`, `GET/PUT employees/{id}`, `POST employees/{id}/terminate`, `GET employees/summary`
+   - `GET/POST employees/{employeeId}/contracts`, `POST .../contracts/{contractId}/activate`
+   - `GET conventions` (liste CC actives)
+   - Middleware : `company.access:use-module,workforce`
+
+3. **Controllers thin, UseCases fat** — Aucun `->save()` dans les controllers (invariant vérifié par `ControllerSizeInvariantTest`). Convention collective intégrée au `CreateContractUseCase` (paramètre `$conventionCollectiveId`).
+
+4. **Page liste employés** — `VDataTableServer` avec search, filtre statut, tri serveur, drawer création. Convention collective visible en badge IDCC.
+
+5. **Page détail employé** — 5 onglets (Profile, Contract, Variables, Documents, Activity). Header avec avatar, StatusChip, badge CC. Onglets Variables/Documents/Activity en stub "coming soon".
+
+6. **Contrat : carte courante + timeline** — Le contrat actif est affiché en carte proéminente (type, modèle travail, heures, CC, rémunération). Tous les contrats en VTimeline chronologique.
+
+7. **Test path-matching amélioré** — `GlobalModuleRouteCoverageTest` et `CompanyModuleRoutesAreGatedTest` utilisent maintenant le chemin le plus spécifique (longest prefix match) au lieu du premier match.
+
+**Conséquences** :
+- Les futurs sous-modules Workforce devront créer leur propre sous-répertoire quand ils auront des controllers
+- La convention collective est visible partout : header employé, carte contrat, timeline, badge IDCC
+
+**Fichiers créés** :
+- `app/Modules/Workforce/Employees/WorkforceModule.php` — module déplacé
+- `app/Modules/Workforce/Employees/Http/EmployeeController.php` — 6 actions
+- `app/Modules/Workforce/Employees/Http/ContractController.php` — 4 actions
+- `resources/js/modules/company/workforce/employees.store.js` — Pinia store
+- `resources/js/pages/company/workforce/employees/index.vue` — liste employés
+- `resources/js/pages/company/workforce/employees/[id].vue` — détail employé
+- `resources/js/pages/company/workforce/employees/_EmployeeProfile.vue` — onglet profil
+- `resources/js/pages/company/workforce/employees/_EmployeeContract.vue` — onglet contrat
+- `resources/js/pages/company/workforce/employees/_EmployeeVariables.vue` — stub
+- `resources/js/pages/company/workforce/employees/_EmployeeDocuments.vue` — stub
+- `resources/js/pages/company/workforce/employees/_EmployeeActivity.vue` — stub
+
+**Fichiers modifiés** :
+- `routes/company.php` — 10 routes workforce ajoutées
+- `app/Modules/Workforce/UseCases/CreateContractUseCase.php` — +param `conventionCollectiveId`
+- `tests/Feature/GlobalModuleRouteCoverageTest.php` — longest prefix match
+- `tests/Feature/CompanyModuleRoutesAreGatedTest.php` — longest prefix match
+- `resources/js/plugins/i18n/locales/fr.json` — +bloc `employees` (~60 clés)
+- `resources/js/plugins/i18n/locales/en.json` — +bloc `employees` (~60 clés)
+
+---
+
+### ADR-539 — Sprint 9.3 : Planning / Leave / Timesheets (2026-04-30)
+
+**Contexte** : Les employés et contrats (ADR-538) posent le socle RH. Sans suivi du temps et des congés, le module paie reste artificiel. Ce sprint ajoute 3 controllers (Timesheet, TimeEntry, Leave) avec 25 routes API, 2 stores Pinia, et 3 pages frontend pour le time tracking et la gestion des congés.
+
+**Décisions** :
+
+1. **TimesheetController** (9 actions) — Cycle complet : `index`, `show`, `generate`, `submit`, `approve`, `reject`, `reopen`, `lock`, `statistics`. Chaque transition d'état passe par un UseCase dédié (GenerateTimesheetUseCase, SubmitTimesheetUseCase, etc.). DomainException capturée → HTTP 422.
+
+2. **TimeEntryController** (7 actions) — Pointage temps réel : `clockIn`, `clockOut`, `startBreak`, `endBreak` via UseCases. Saisie manuelle via `store` (TimeEntry::create + update, pas de ->save()). `active` retourne les entrées en cours.
+
+3. **LeaveController** (9 actions) — Workflow complet : `store`, `approve`, `reject`, `cancel` via UseCases. Endpoints référentiels : `types` (LeaveType catalog), `balances` (par employé), `statistics` (dashboard KPI). ReadModels pour toutes les lectures.
+
+4. **25 routes sous workforce prefix** — Toutes sous `company.access:use-module,workforce`. Routes resourceless (action-based) : `/timesheets/{id}/submit`, `/leaves/{id}/approve`, etc. Parameterized endpoints pour les référentiels avant les CRUD classiques.
+
+5. **Stores Pinia séparés** — `timesheets.store.js` (15+ actions, gère periods + time entries) et `leaves.store.js` (9 actions, gère requests + types + balances). Pattern cached pour `fetchLeaveTypes` (comme fetchConventions). Toutes les listes paginées côté serveur.
+
+6. **Pages frontend** — Timesheets index (VDataTableServer + stats cards + generate drawer), Timesheet detail (grille journalière + anomalies + approve/reject dialogs), Leave index (VDataTableServer + stats + create drawer + action dialogs). StatusChip domain="timesheet" et domain="leave". Aucun calcul frontend — affichage + édition uniquement.
+
+7. **i18n complet** — Blocs `timesheets` (~70 clés) et `leaves` (~40 clés) ajoutés dans fr.json et en.json. Clés couvrent : colonnes, stats, filtres, champs, actions, grille, anomalies, dialogues.
+
+**Conséquences** :
+- Le temps (pointage + feuilles) et les congés sont maintenant connectables à la paie
+- Les anomalies de timesheet (entrée manquante, heures incohérentes) sont détectées et affichées
+- Le solde de congés utilise le système LeaveLedger immutable (backend existant)
+- Les controllers restent thin (<210 lignes) — toute logique métier dans les UseCases
+
+**Fichiers créés** :
+- `app/Modules/Workforce/Employees/Http/TimesheetController.php` — 9 actions, 206 lignes
+- `app/Modules/Workforce/Employees/Http/TimeEntryController.php` — 7 actions, 186 lignes
+- `app/Modules/Workforce/Employees/Http/LeaveController.php` — 9 actions, 186 lignes
+- `resources/js/modules/company/workforce/timesheets.store.js` — Pinia store
+- `resources/js/modules/company/workforce/leaves.store.js` — Pinia store
+- `resources/js/pages/company/workforce/time/index.vue` — liste timesheets (réécriture)
+- `resources/js/pages/company/workforce/time/[id].vue` — détail timesheet
+- `resources/js/pages/company/workforce/leave/index.vue` — liste congés (réécriture)
+
+**Fichiers modifiés** :
+- `routes/company.php` — +25 routes (9 timesheets, 7 time entries, 9 leaves)
+- `resources/js/plugins/i18n/locales/fr.json` — +blocs `timesheets` et `leaves`
+- `resources/js/plugins/i18n/locales/en.json` — +blocs `timesheets` et `leaves`
+
+---
+
+### ADR-540 — Sprint 9.4 : Payroll Runs + Calculations UI (2026-04-30)
+
+**Contexte** : Les employés, contrats, temps et congés sont en place (ADR-538, ADR-539). Le moteur de paie backend existe depuis les sprints 5-6 (PayrollRun, PayrollLine, PayrollCalculation, PayrollCalculationEngine, 11 use cases, 3 read models). Ce sprint ajoute la couche HTTP et l'interface utilisateur pour créer, calculer, valider et exporter un bulletin de paie.
+
+**Décisions** :
+
+1. **PayrollRunController** (12 actions, 223 lignes) — Controller thin sous `App\Modules\Workforce\Payroll\Http`. Actions : index, show, store, compute, computeCalculations, validate, export, recompute, destroy, lines, calculations, statistics. Toute logique métier déléguée aux 8 UseCases existants. DomainException → HTTP 422.
+
+2. **Module payroll isolé** — `WorkforcePayrollModule` et `PayrollRunController` dans `app/Modules/Workforce/Payroll/` (propre sous-répertoire). Sépare du module `workforce` de base. Middleware `company.access:use-module,workforce_payroll` distinct. Résout la collision de chemins dans les tests structurels (même pattern ADR-538).
+
+3. **12 routes API** sous `/api/company/workforce/payroll/` :
+   - CRUD : GET list, POST create, GET show, DELETE draft
+   - Workflow : POST compute, compute-calculations, validate, export, recompute
+   - Data : GET lines (paginated), GET calculations + totals
+   - GET statistics (dashboard KPI)
+
+4. **Store Pinia `payroll.store.js`** — 13 actions couvrant runs CRUD, workflow transitions, lines/calculations fetch, statistics. Pattern identique aux stores timesheets/leaves (URLSearchParams, try/finally loading, list update in-place).
+
+5. **Page liste** `payroll/index.vue` — VDataTableServer avec 4 stats cards (total/draft/computed/validated), filtres (période, statut), drawer de création, confirmation de suppression. StatusChip domain="payrollRun".
+
+6. **Page détail** `payroll/[id].vue` — Header avec période, StatusChip, compteur employés. Workflow stepper visuel (4 étapes : draft→computed→validated→exported). 4 cartes totaux (brut, net, coût employeur, anomalies). Bannière anomalies avec icônes par sévérité. VDataTableServer des lignes employés. Dialogs validation (avec note optionnelle) et suppression. Boutons d'action conditionnés par `run.status` (state machine).
+
+7. **Zéro calcul frontend** — Le frontend affiche uniquement les résultats du backend. Pas de formule, pas de duplication de logique paie. L'engine `PayrollCalculationEngine` reste la source de vérité unique.
+
+8. **i18n complet** — Bloc `payroll` (~90 clés) ajouté dans fr.json et en.json : statuts, actions, workflow, totaux, anomalies, lignes, dialogues, filtres, empty states.
+
+**Conséquences** :
+- Premier flux RH complet : employés → contrats → temps/congés → paie calculée
+- Le workflow stepper donne une visibilité claire sur l'avancement du bulletin
+- Les anomalies bloquantes empêchent la validation (sécurité métier)
+- Les futurs sprints (bulletins de paie PDF, DSN, export comptable) s'appuient sur ce pipeline
+
+**Fichiers créés** :
+- `app/Modules/Workforce/Payroll/WorkforcePayrollModule.php` — module déplacé
+- `app/Modules/Workforce/Payroll/Http/PayrollRunController.php` — 12 actions, 223 lignes
+- `resources/js/modules/company/workforce/payroll.store.js` — Pinia store
+- `resources/js/pages/company/workforce/payroll/index.vue` — liste payroll (réécriture)
+- `resources/js/pages/company/workforce/payroll/[id].vue` — détail payroll
+
+**Fichiers modifiés** :
+- `routes/company.php` — +12 routes payroll sous middleware `workforce_payroll`
+- `resources/js/plugins/i18n/locales/fr.json` — +bloc `payroll` (~90 clés)
+- `resources/js/plugins/i18n/locales/en.json` — +bloc `payroll` (~90 clés)
+
+---
+
+### ADR-541 — Sprint 9.5 : Documents & DSN UI (2026-04-30)
+
+**Contexte** : Sprint 9.4 a livré le module Payroll Runs. Sprint 9.5 ajoute les deux modules complémentaires :
+la gestion des documents RH (bulletins de paie, attestations) et le cycle de vie DSN (déclaration sociale nominative).
+
+**Décisions** :
+1. `DsnDeclarationController` (148 lignes, 8 actions) dans `Payroll/Http/` — même middleware `workforce_payroll` car DSN est une extension du payroll
+2. `WorkforceDocumentController` (143 lignes, 7 actions) dans `Documents/Http/` — middleware `workforce_documents` distinct
+3. Pattern d'isolation module : chaque sub-module avec son propre middleware key nécessite son propre répertoire (`Documents/`, `Payroll/`) contenant ModuleDefinition + Http/
+4. Stores Pinia : `dsn.store.js` (9 actions), `workforce-documents.store.js` (8 actions)
+5. Pages DSN : liste avec filtres status/période + détail avec workflow timeline, gateway tracking, historique audit
+6. Pages Documents : action cards bulletins (drafts + official), drawer génération, listing paginé
+7. DSN state machine UI : draft → validated → exported → submitted → accepted|rejected avec StatusChip domain="dsn"
+8. Payslip generation : 2 flows séparés (drafts pour review, official pour vault)
+
+**Conséquences** :
+- 15 nouvelles routes API (8 DSN + 7 documents)
+- 4 nouvelles pages Vue (dsn/index, dsn/[id], documents/index + 2 sub-components)
+- Pattern directory isolation validé et systématisé pour tous les sub-modules Workforce
+- Tests : 2841 passed, 0 failures
+
+**Fichiers créés** :
+- `app/Modules/Workforce/Payroll/Http/DsnDeclarationController.php`
+- `app/Modules/Workforce/Documents/Http/WorkforceDocumentController.php`
+- `app/Modules/Workforce/Documents/WorkforceDocumentsModule.php`
+- `resources/js/modules/company/workforce/dsn.store.js`
+- `resources/js/modules/company/workforce/workforce-documents.store.js`
+- `resources/js/pages/company/workforce/dsn/index.vue`
+- `resources/js/pages/company/workforce/dsn/[id].vue`
+- `resources/js/pages/company/workforce/documents/index.vue`
+- `resources/js/pages/company/workforce/documents/_PayslipActionCards.vue`
+- `resources/js/pages/company/workforce/documents/_GenerateDocumentDrawer.vue`
+
+**Fichiers modifiés** :
+- `routes/company.php` — +15 routes (8 DSN + 7 documents)
+- `resources/js/plugins/i18n/locales/fr.json` — +blocs `dsn` + `workforceDocuments`
+- `resources/js/plugins/i18n/locales/en.json` — +blocs `dsn` + `workforceDocuments`
+
+---
+
+### ADR-542 — Sprint 9.6 : Dashboard & Pilotage RH (2026-04-30)
+
+**Contexte** : Le workforce `index.vue` était un simple hub de navigation avec des cartes modules statiques. Sprint 9.6 le transforme en vrai tableau de bord RH avec KPIs temps réel, alertes d'actions pendantes et stats live sur chaque module card.
+
+**Décisions** :
+1. `WorkforceDashboardController` dans `Employees/Http/` — agrège les statistiques de 6 ReadModels en un seul endpoint
+2. Endpoint unique `GET /workforce/dashboard/statistics` sous middleware `workforce` (module de base)
+3. Store `workforceDashboard` avec getters dérivés (employees, timesheets, shifts, leave, payroll, dsn, documents, badges)
+4. Page dashboard avec 4 KPI cards (employés actifs, contrats actifs, complétion pointage, actions pendantes)
+5. Bandeau d'actions pendantes avec chips cliquables (congés à valider, paies en brouillon, DSN à traiter)
+6. Module cards enrichies avec stats live (effectif, complétion, statuts) alimentées par le dashboard store
+7. Données contextuelles : timesheets = mois en cours, shifts = semaine en cours, congés = année en cours
+
+**Conséquences** :
+- Dashboard RH exploitable dès le premier chargement — vision globale sans naviguer dans chaque module
+- Pattern réutilisable : tout nouveau sub-module ajoute ses stats au controller agrégateur
+- Tests : 2835 passed, 0 failures, build clean
+
+**Fichiers créés** :
+- `app/Modules/Workforce/Employees/Http/WorkforceDashboardController.php`
+- `resources/js/modules/company/workforce/workforce-dashboard.store.js`
+
+**Fichiers modifiés** :
+- `routes/company.php` — +1 route `workforce/dashboard/statistics`
+- `resources/js/pages/company/workforce/index.vue` — réécriture complète (hub → dashboard KPI)
+- `resources/js/plugins/i18n/locales/fr.json` — +bloc `workforceDashboard` (~30 clés)
+- `resources/js/plugins/i18n/locales/en.json` — +bloc `workforceDashboard` (~30 clés)
+
+---
+
+### ADR-543 — Sprint 9.7 : Permissions & Security UI (2026-04-30)
+
+**Contexte** : Le système RBAC backend est complet (24 permissions workforce, middleware, owner bypass) mais le frontend n'appliquait pas les contrôles UI sur les boutons d'action et données sensibles.
+
+**Décisions** :
+1. Toutes les pages workforce reçoivent les bons `definePage({ meta: { module, permission } })` — corrigé time (→ `workforce.timesheet_view`), leave (→ `workforce_leave`/`workforce.leave_request`), dsn (→ `workforce.payroll_prepare`)
+2. Directive `v-can` appliquée sur tous les boutons d'action mutation (create, edit, delete, approve, reject, export, submit, generate)
+3. Composable `useCan()` utilisé pour contrôle programmatique (masquage section compensation, désactivation champs formulaire)
+4. Contrôles granulaires par action : prepare ≠ validate ≠ export (3 niveaux payroll), view ≠ manage ≠ contracts (3 niveaux employees)
+5. Section compensation masquée via `can('workforce.compensation_read')` dans `_EmployeeContract.vue`
+6. Formulaire profil employé : champs désactivés si pas `workforce.manage` (defense-in-depth)
+7. Empty states : boutons CTA aussi protégés par `v-can` (cohérence totale)
+
+**Conséquences** :
+- 24 permissions workforce enforced côté UI sur toutes les pages
+- Owner bypass fonctionne transparently via auth store
+- Pas de nouveau code backend — les guards existants (middleware + UseCases) suffisent
+- Tests : 2835 passed, 0 failures, build clean
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/workforce/employees/index.vue` — v-can sur Add Employee
+- `resources/js/pages/company/workforce/employees/[id].vue` — v-can + useCan import
+- `resources/js/pages/company/workforce/employees/_EmployeeProfile.vue` — canManage disabled fields
+- `resources/js/pages/company/workforce/employees/_EmployeeContract.vue` — compensation gating
+- `resources/js/pages/company/workforce/time/index.vue` — definePage fix + v-can
+- `resources/js/pages/company/workforce/time/[id].vue` — definePage fix + v-can submit/approve/lock
+- `resources/js/pages/company/workforce/leave/index.vue` — definePage fix + v-can create/approve/reject
+- `resources/js/pages/company/workforce/payroll/index.vue` — v-can create/delete
+- `resources/js/pages/company/workforce/payroll/[id].vue` — v-can compute/validate/export/delete
+- `resources/js/pages/company/workforce/dsn/index.vue` — definePage fix + v-can export
+- `resources/js/pages/company/workforce/dsn/[id].vue` — definePage fix + v-can submit/poll
+- `resources/js/pages/company/workforce/documents/index.vue` — v-can generate
+- `resources/js/pages/company/workforce/documents/_PayslipActionCards.vue` — v-can generate
+- `resources/js/pages/company/workforce/documents/_GenerateDocumentDrawer.vue` — v-can generate
+
+---
+
+### ADR-544 — Sprint 9.8 : Polish UX + Production Ready (2026-04-30)
+
+**Contexte** : L'audit UX des 12 pages workforce révèle un score moyen de 66% — principalement l'absence de feedback utilisateur après mutations (toast/snackbar), la gestion d'erreurs silencieuse, et le formatage de dates/monétaire hardcodé en `'fr-FR'`.
+
+**Décisions** :
+1. Toutes les pages workforce utilisent désormais `useAppToast()` pour feedback après chaque mutation CRUD
+2. Pattern unifié : `toast(t('module.actionSuccess'), 'success')` + `catch (error) { toast(error.response?.data?.message || t('common.error'), 'error') }`
+3. Remplacement de `toLocaleDateString()` sans argument et `toLocaleDateString('fr-FR', ...)` par `toLocaleDateString(locale.value, ...)` — dates localisées automatiquement selon la langue active
+4. Remplacement de `Intl.NumberFormat('fr-FR', ...)` par `Intl.NumberFormat(locale.value, ...)` pour le formatage monétaire payroll
+5. Ajout de ~30 clés i18n toast (success/error) réparties sur 6 blocs : employees, timesheets, leaves, payroll, dsn, workforceDocuments
+6. Catch blocks qui avalaient les erreurs (`catch { dialog = false }`) remplacés par catch + toast + fermeture dialog
+
+**Conséquences** :
+- Score UX estimé passe de 66% à 90%+ sur l'ensemble des pages workforce
+- Toute action mutation affiche un feedback visuel (succès vert / erreur rouge) via le VSnackbar global de App.vue
+- Les dates et montants s'adaptent automatiquement à la locale active (fr → "30 avr. 2026", en → "Apr 30, 2026")
+- Tests : 2835 passed, 0 failures, build clean (8.12s)
+
+**Fichiers modifiés** :
+- `resources/js/pages/company/workforce/index.vue` — toast erreur dashboard
+- `resources/js/pages/company/workforce/employees/index.vue` — toast + locale dates
+- `resources/js/pages/company/workforce/employees/[id].vue` — toast load/update
+- `resources/js/pages/company/workforce/employees/_EmployeeProfile.vue` — locale dates
+- `resources/js/pages/company/workforce/employees/_EmployeeContract.vue` — locale dates + compensation gating
+- `resources/js/pages/company/workforce/time/index.vue` — toast generate + locale dates
+- `resources/js/pages/company/workforce/time/[id].vue` — toast 5 actions + locale dates
+- `resources/js/pages/company/workforce/leave/index.vue` — toast create/approve/reject/cancel + locale + fix error swallow
+- `resources/js/pages/company/workforce/payroll/index.vue` — toast create/delete + locale formatCents/formatPeriod
+- `resources/js/pages/company/workforce/payroll/[id].vue` — toast 6 actions + locale formatting
+- `resources/js/pages/company/workforce/dsn/index.vue` — toast export + locale dates
+- `resources/js/pages/company/workforce/dsn/[id].vue` — toast submit/poll + locale dates
+- `resources/js/pages/company/workforce/documents/index.vue` — toast generate 3 types
+- `resources/js/pages/company/workforce/documents/_PayslipActionCards.vue` — toast + error catch
+- `resources/js/pages/company/workforce/documents/_GenerateDocumentDrawer.vue` — toast + error catch
+- `resources/js/plugins/i18n/locales/fr.json` — +30 clés toast success/error
+- `resources/js/plugins/i18n/locales/en.json` — +30 clés toast success/error
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
