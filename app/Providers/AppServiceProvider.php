@@ -40,6 +40,19 @@ class AppServiceProvider extends ServiceProvider
         // ADR-411: AI Gateway Manager singleton
         $this->app->singleton(AiGatewayManager::class);
 
+        // ADR-523: DSN Gateway Manager singleton
+        $this->app->singleton(\App\Core\Workforce\Dsn\Gateway\DsnGatewayManager::class);
+
+        $this->app->bind(\App\Core\Workforce\Dsn\Gateway\DsnGatewayInterface::class, function ($app) {
+            return $app->make(\App\Core\Workforce\Dsn\Gateway\DsnGatewayManager::class)->driver();
+        });
+
+        // ADR-534: Bind NE HTTP client (real) — DsnGatewayManager resolves this when driver=net-entreprises
+        $this->app->bind(
+            \App\Core\Workforce\Dsn\Gateway\NetEntreprises\NetEntreprisesClientInterface::class,
+            \App\Core\Workforce\Dsn\Gateway\NetEntreprises\NetEntreprisesHttpClient::class,
+        );
+
         // ADR-125: Bind realtime publisher (sse or null)
         $this->app->singleton(RealtimePublisher::class, function () {
             return match (config('realtime.driver')) {

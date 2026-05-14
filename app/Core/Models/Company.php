@@ -14,6 +14,7 @@ use App\Core\Markets\Market;
 use App\Core\Modules\CompanyModule;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Plans\PlanRegistry;
+use App\Core\Workforce\ConventionCollective;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,11 +26,21 @@ class Company extends Model
 {
     protected $fillable = [
         'name',
+        'siret',
+        'naf_code',
+        'address_street',
+        'address_complement',
+        'address_postal_code',
+        'address_city',
+        'address_insee_code',
+        'address_country_code',
+        'average_headcount',
         'slug',
         'status',
         'financial_freeze',
         'plan_key',
         'market_key',
+        'default_convention_collective_id',
         'jobdomain_key',
         'legal_status_key',
         'onboarding_dismissed_at',
@@ -46,6 +57,11 @@ class Company extends Model
     public function market(): BelongsTo
     {
         return $this->belongsTo(Market::class, 'market_key', 'key');
+    }
+
+    public function defaultConventionCollective(): BelongsTo
+    {
+        return $this->belongsTo(ConventionCollective::class, 'default_convention_collective_id');
     }
 
     public function legalStatus(): BelongsTo

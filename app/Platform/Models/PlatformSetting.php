@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Crypt;
 
 class PlatformSetting extends Model
 {
-    protected $fillable = ['general', 'theme', 'session', 'typography', 'maintenance', 'billing', 'world', 'ai', 'email'];
+    protected $fillable = ['general', 'theme', 'session', 'typography', 'maintenance', 'billing', 'world', 'ai', 'email', 'dsn'];
 
     protected $casts = [
         'general' => 'array',
@@ -39,6 +39,51 @@ class PlatformSetting extends Model
         }
 
         return $first;
+    }
+
+    /**
+     * Encrypt sensitive DSN Net-Entreprises credentials before storing.
+     * Sprint 7.1 — ADR-529.
+     */
+    public function setDsnAttribute($value): void
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        if (is_array($value)) {
+            foreach (['ne_password'] as $key) {
+                if (isset($value[$key]) && $value[$key] !== '' && ! $this->isEncrypted($value[$key])) {
+                    $value[$key] = Crypt::encryptString($value[$key]);
+                }
+            }
+        }
+
+        $this->attributes['dsn'] = is_array($value) ? json_encode($value) : $value;
+    }
+
+    /**
+     * Decrypt sensitive DSN fields when reading.
+     */
+    public function getDsnAttribute($value): ?array
+    {
+        $data = is_string($value) ? json_decode($value, true) : $value;
+
+        if (! is_array($data)) {
+            return $data;
+        }
+
+        foreach (['ne_password'] as $key) {
+            if (isset($data[$key]) && $data[$key] !== '') {
+                try {
+                    $data[$key] = Crypt::decryptString($data[$key]);
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Already plain text (pre-migration data) — leave as-is
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**

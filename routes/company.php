@@ -403,4 +403,100 @@ Route::middleware('company.access:use-module,core.workflows')->group(function ()
     });
 });
 
+// ── Workforce Dashboard ──────────────────────────────────────
+Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
+    Route::get('dashboard/statistics', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'statistics']);
+});
+
+// ── Workforce ──────────────────────────────────────────────────
+Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
+    Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary']);
+    Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index']);
+    Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store']);
+    Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show']);
+    Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update']);
+    Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate']);
+
+    Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index']);
+    Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store']);
+    Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate']);
+
+    Route::get('conventions', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'conventions']);
+
+    // Timesheets
+    Route::get('timesheets/statistics', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'statistics']);
+    Route::get('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'index']);
+    Route::post('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'generate']);
+    Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show']);
+    Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit']);
+    Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve']);
+    Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject']);
+    Route::post('timesheets/{id}/reopen', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reopen']);
+    Route::post('timesheets/{id}/lock', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'lock']);
+
+    // Time Entries
+    Route::get('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'index']);
+    Route::get('time-entries/active', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'active']);
+    Route::post('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'store']);
+    Route::post('time-entries/clock-in', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockIn']);
+    Route::post('time-entries/{id}/clock-out', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockOut']);
+    Route::post('time-entries/{id}/break/start', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'startBreak']);
+    Route::post('time-entries/{id}/break/end', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'endBreak']);
+
+    // Leave
+    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'types']);
+    Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics']);
+    Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index']);
+    Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store']);
+    Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show']);
+    Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve']);
+    Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject']);
+    Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel']);
+    Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances']);
+});
+
+// ── Workforce Payroll ────────────────────────────────────────
+Route::prefix('workforce/payroll')->middleware('company.access:use-module,workforce_payroll')->group(function () {
+    // Payroll Runs
+    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'statistics']);
+    Route::get('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'index']);
+    Route::post('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'store']);
+    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'show']);
+    Route::delete('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'destroy']);
+
+    // Payroll Run Actions
+    Route::post('{id}/compute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'compute']);
+    Route::post('{id}/compute-calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'computeCalculations']);
+    Route::post('{id}/validate', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'validate']);
+    Route::post('{id}/export', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'export']);
+    Route::post('{id}/recompute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'recompute']);
+
+    // Payroll Run Data
+    Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines']);
+    Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations']);
+});
+
+// ── Workforce DSN Declarations ────────────────────────────────
+Route::prefix('workforce/dsn')->middleware('company.access:use-module,workforce_payroll')->group(function () {
+    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'statistics']);
+    Route::get('/', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'index']);
+    Route::post('export', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'export']);
+    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'show']);
+    Route::post('{id}/submit', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'submit']);
+    Route::post('{id}/poll', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'poll']);
+    Route::get('{id}/validation', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'validationErrors']);
+    Route::get('{id}/history', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'history']);
+});
+
+// ── Workforce Documents ───────────────────────────────────────
+Route::prefix('workforce/documents')->middleware('company.access:use-module,workforce_documents')->group(function () {
+    Route::get('statistics', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'statistics']);
+    Route::get('/', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'index']);
+    Route::post('generate', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generate']);
+    Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts']);
+    Route::post('payslip-official', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generateOfficialPayslips']);
+    Route::get('payroll-run/{runId}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'forPayrollRun']);
+    Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show']);
+});
+
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──
