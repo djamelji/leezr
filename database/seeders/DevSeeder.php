@@ -247,6 +247,14 @@ class DevSeeder extends Seeder
             ->whereNotIn('module_key', $companyModuleKeys)
             ->delete();
 
+        // ─── Force-enable workforce modules for demo (addon, not in logistique defaults)
+        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'] as $wfKey) {
+            CompanyModule::updateOrCreate(
+                ['company_id' => $company->id, 'module_key' => $wfKey],
+                ['is_enabled_for_company' => true],
+            );
+        }
+
         // ─── Module commercial config (productization seeds) ────────────
         $this->seedModuleConfigs();
 

@@ -22,12 +22,14 @@ class InvoiceNumbering
     public static function nextInvoiceNumber(): string
     {
         return DB::transaction(function () {
-            $policy = PlatformBillingPolicy::query()->lockForUpdate()->first()
-                ?? PlatformBillingPolicy::instance();
+            $policy = PlatformBillingPolicy::query()->lockForUpdate()->first();
 
-            // Re-lock after potential creation
-            if (!$policy->wasRecentlyCreated) {
-                $policy = PlatformBillingPolicy::where('id', $policy->id)->lockForUpdate()->first();
+            if (! $policy) {
+                // Cache may be stale after migrate:fresh — flush and create
+                PlatformBillingPolicy::clearCache();
+                $policy = PlatformBillingPolicy::instance();
+                $policy = PlatformBillingPolicy::where('id', $policy->id)->lockForUpdate()->first()
+                    ?? $policy;
             }
 
             $prefix = $policy->invoice_prefix ?? 'INV';

@@ -46,25 +46,28 @@ class WorkforceDemoSeeder extends Seeder
                 ['company_id' => $company->id, 'employee_id' => $employee->id, 'contract_type' => 'cdi'],
                 [
                     'start_date' => $employee->hire_date,
-                    'job_title' => match ($index) {
-                        0 => 'Directeur Général',
-                        1 => 'Responsable Logistique',
-                        default => 'Chauffeur-Livreur',
-                    },
-                    'department' => match ($index) {
-                        0 => 'Direction',
-                        1 => 'Logistique',
-                        default => 'Transport',
-                    },
-                    'work_schedule_type' => 'full_time',
-                    'weekly_hours_hundredths' => 3500,
+                    'work_model_key' => 'horaire',
+                    'weekly_hours' => 35.00,
                     'status' => 'active',
+                    'is_current' => true,
+                    'metadata' => [
+                        'job_title' => match ($index) {
+                            0 => 'Directeur Général',
+                            1 => 'Responsable Logistique',
+                            default => 'Chauffeur-Livreur',
+                        },
+                        'department' => match ($index) {
+                            0 => 'Direction',
+                            1 => 'Logistique',
+                            default => 'Transport',
+                        },
+                    ],
                 ],
             );
 
             // ─── Compensation plan ───────────────────────────────
             CompensationPlan::withoutCompanyScope()->updateOrCreate(
-                ['company_id' => $company->id, 'employment_contract_id' => $contract->id],
+                ['company_id' => $company->id, 'contract_id' => $contract->id],
                 [
                     'base_salary_cents' => match ($index) {
                         0 => 650000,   // 6500€/mois
@@ -73,7 +76,7 @@ class WorkforceDemoSeeder extends Seeder
                     },
                     'currency' => 'EUR',
                     'pay_frequency' => 'monthly',
-                    'effective_date' => $contract->start_date,
+                    'effective_from' => $contract->start_date,
                 ],
             );
         }
