@@ -20,6 +20,7 @@ use App\Core\Models\Shipment;
 use App\Core\Models\User;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\EntitlementResolver;
+use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Ai\PlatformAiModule;
 use App\Core\Modules\PlatformModule;
@@ -247,16 +248,14 @@ class DevSeeder extends Seeder
             ->whereNotIn('module_key', $companyModuleKeys)
             ->delete();
 
-        // ─── Force-enable workforce modules for demo (addon, not in logistique defaults)
-        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'] as $wfKey) {
-            CompanyModule::updateOrCreate(
-                ['company_id' => $company->id, 'module_key' => $wfKey],
-                ['is_enabled_for_company' => true],
-            );
-        }
-
         // ─── Module commercial config (productization seeds) ────────────
+        // Must run BEFORE workforce activation so addon_pricing is set
         $this->seedModuleConfigs();
+
+        // ─── Activate workforce modules for demo (addon with pricing set above)
+        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'] as $wfKey) {
+            ModuleActivationEngine::enable($company, $wfKey);
+        }
 
         // ─── Jobdomain assignment (seeds default roles + permissions) ────
         // Note: CompanyPermissionCatalog::sync() already ran in SystemSeeder
@@ -513,11 +512,82 @@ class DevSeeder extends Seeder
             'notes' => 'Additional monthly price varies by plan tier.',
         ]);
 
-        // Future example: image-based icon (e.g., Stripe module)
-        // PlatformModule::where('key', 'payments_stripe')->update([
-        //     'icon_type' => 'image',
-        //     'icon_name' => '/images/modules/stripe.svg',
-        // ]);
+        // ─── Workforce modules: addon pricing (ADR pilot) ──────────
+        PlatformModule::where('key', 'workforce')->update([
+            'display_name_override' => 'RH & Effectifs',
+            'description_override' => 'Gestion des employés, contrats de travail et plans de rémunération.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-users-group',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'addon_pricing' => [
+                'pricing_model' => 'per_seat',
+                'pricing_metric' => 'employees',
+                'pricing_params' => [
+                    'included' => ['starter' => 5, 'pro' => 15, 'business' => 50],
+                    'overage_unit_price' => ['starter' => 3, 'pro' => 2, 'business' => 1],
+                ],
+            ],
+        ]);
+
+        PlatformModule::where('key', 'workforce_leave')->update([
+            'display_name_override' => 'Congés & Absences',
+            'description_override' => 'Suivi des congés, absences et soldes en temps réel.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-calendar-off',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'addon_pricing' => [
+                'pricing_model' => 'flat',
+                'pricing_metric' => 'none',
+                'pricing_params' => ['price_monthly' => 19],
+            ],
+        ]);
+
+        PlatformModule::where('key', 'workforce_planning')->update([
+            'display_name_override' => 'Planning & Pointage',
+            'description_override' => 'Planification des horaires et suivi du temps de travail.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-clock-hour-4',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'addon_pricing' => [
+                'pricing_model' => 'flat',
+                'pricing_metric' => 'none',
+                'pricing_params' => ['price_monthly' => 29],
+            ],
+        ]);
+
+        PlatformModule::where('key', 'workforce_payroll')->update([
+            'display_name_override' => 'Paie & Déclarations',
+            'description_override' => 'Calcul de paie, fiches de paie et déclarations DSN.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-receipt-2',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'addon_pricing' => [
+                'pricing_model' => 'per_seat',
+                'pricing_metric' => 'employees',
+                'pricing_params' => [
+                    'included' => ['starter' => 5, 'pro' => 15, 'business' => 50],
+                    'overage_unit_price' => ['starter' => 5, 'pro' => 3, 'business' => 2],
+                ],
+            ],
+        ]);
+
+        PlatformModule::where('key', 'workforce_documents')->update([
+            'display_name_override' => 'Documents Employés',
+            'description_override' => 'Coffre-fort numérique et suivi documentaire des employés.',
+            'icon_type' => 'tabler',
+            'icon_name' => 'tabler-file-certificate',
+            'is_listed' => true,
+            'is_sellable' => true,
+            'addon_pricing' => [
+                'pricing_model' => 'flat',
+                'pricing_metric' => 'none',
+                'pricing_params' => ['price_monthly' => 9],
+            ],
+        ]);
     }
 
     /**
