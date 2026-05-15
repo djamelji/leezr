@@ -49,6 +49,13 @@ class SystemSeeder extends Seeder
         // ─── Payment modules (ADR-124) ─────────────────────
         $this->call(PaymentModuleSeeder::class);
 
+        // ─── Workforce system data (ADR-479→536) ──────────────
+        $this->call(MarketRuleSetSeeder::class);
+        $this->call(ConventionCollectiveSeeder::class);
+        $this->call(WorkforcePayrollRuleSeeder::class);
+        $this->call(PayslipDraftTemplateSeeder::class);
+        $this->call(PayslipOfficialFrTemplateSeeder::class);
+
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();
     }

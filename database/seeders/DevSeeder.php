@@ -394,6 +394,9 @@ class DevSeeder extends Seeder
 
         // Billing demo data is handled by FinanceDemoSeeder (called from DatabaseSeeder)
 
+        // ─── Workforce demo data (employees, contracts, compensation) ─
+        $this->call(WorkforceDemoSeeder::class);
+
         // ─── Sample shipments (stable references for idempotency) ─
         Shipment::updateOrCreate(
             ['company_id' => $company->id, 'reference' => 'SHP-DEMO-0001'],

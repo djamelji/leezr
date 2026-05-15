@@ -124,7 +124,7 @@ class DsnProductionHardeningTest extends TestCase
             ],
         ]);
         config(['workforce.dsn.submit_enabled' => true]);
-        config(['workforce.dsn.gateway_driver' => 'net-entreprises']);
+        config(['workforce.dsn.gateway' => 'net-entreprises']);
         config(['workforce.dsn.ne_auth_url' => 'https://services.net-entreprises.fr/authentifier/1.0/']);
         config(['workforce.dsn.ne_deposit_url' => 'https://dsnrg.net-entreprises.fr/deposer-dsn/1.0/']);
         config(['workforce.dsn.ne_status_url' => 'https://dsnrg.net-entreprises.fr/consulter-retour/1.0/']);
@@ -343,7 +343,7 @@ class DsnProductionHardeningTest extends TestCase
     public function test_gateway_driver_fallback_when_disabled(): void
     {
         config(['workforce.dsn.submit_enabled' => false]);
-        config(['workforce.dsn.gateway_driver' => 'net-entreprises']);
+        config(['workforce.dsn.gateway' => 'net-entreprises']);
 
         // The kill-switch in SubmitDsnDeclarationUseCase forces NullGateway
         // Health check should show yellow for submit_enabled

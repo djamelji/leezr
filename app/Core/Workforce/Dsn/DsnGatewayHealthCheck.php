@@ -155,7 +155,7 @@ class DsnGatewayHealthCheck
 
     private function checkGatewayDriver(): array
     {
-        $driver = config('workforce.dsn.gateway_driver', 'null');
+        $driver = config('workforce.dsn.gateway', 'null');
 
         $status = match ($driver) {
             'net-entreprises' => 'green',
