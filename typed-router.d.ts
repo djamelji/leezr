@@ -87,6 +87,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-employees-employee-variables': RouteRecordInfo<'company-workforce-employees-employee-variables', '/company/workforce/employees/_EmployeeVariables', Record<never, never>, Record<never, never>>,
     'company-workforce-employees-id': RouteRecordInfo<'company-workforce-employees-id', '/company/workforce/employees/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-leave': RouteRecordInfo<'company-workforce-leave', '/company/workforce/leave', Record<never, never>, Record<never, never>>,
+    'company-workforce-me': RouteRecordInfo<'company-workforce-me', '/company/workforce/me', Record<never, never>, Record<never, never>>,
     'company-workforce-payroll': RouteRecordInfo<'company-workforce-payroll', '/company/workforce/payroll', Record<never, never>, Record<never, never>>,
     'company-workforce-payroll-id': RouteRecordInfo<'company-workforce-payroll-id', '/company/workforce/payroll/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-planning': RouteRecordInfo<'company-workforce-planning', '/company/workforce/planning', Record<never, never>, Record<never, never>>,

@@ -155,6 +155,23 @@ class ComputePayrollUseCase
                 $overtimeRateBps = $compensation->overtime_rate_bps;
                 $weeklyHours = (float) ($contract->weekly_hours ?? 35);
 
+                // Safety anomalies: zero salary / invalid hours
+                if ($baseSalaryCents <= 0) {
+                    $lineAnomalies[] = [
+                        'type' => PayrollRun::ANOMALY_ZERO_BASE_SALARY,
+                        'severity' => 'error',
+                        'message' => "Base salary is zero for {$employee->first_name} {$employee->last_name}",
+                    ];
+                }
+
+                if ($weeklyHours <= 0) {
+                    $lineAnomalies[] = [
+                        'type' => PayrollRun::ANOMALY_INVALID_WEEKLY_HOURS,
+                        'severity' => 'error',
+                        'message' => "Weekly hours invalid ({$weeklyHours}) for {$employee->first_name} {$employee->last_name}",
+                    ];
+                }
+
                 // Overtime valorization
                 $monthlyHours = $weeklyHours * 52 / 12;
                 $hourlyRateCents = $monthlyHours > 0

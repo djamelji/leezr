@@ -152,6 +152,7 @@ class PageLayoutMetaTest extends TestCase
             '403.vue',                    // EXEMPT_ERROR_PAGE
             'dashboard.vue',              // EXEMPT_NO_DEFINEPAGE (core.dashboard)
             'home.vue',                   // EXEMPT_NO_DEFINEPAGE (workspace home)
+            'me.vue',                     // EXEMPT_SELF_SERVICE (workforce self-service, module-gated, no specific permission — ADR-466)
         ];
 
         $violations = [];

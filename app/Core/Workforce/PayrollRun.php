@@ -41,6 +41,8 @@ class PayrollRun extends Model
     const ANOMALY_TIMESHEET_HAS_ERRORS = 'timesheet_has_errors';
     const ANOMALY_ZERO_WORKED = 'zero_worked_minutes';
     const ANOMALY_COMPENSATION_GAP = 'compensation_gap';
+    const ANOMALY_ZERO_BASE_SALARY = 'zero_base_salary';
+    const ANOMALY_INVALID_WEEKLY_HOURS = 'invalid_weekly_hours';
 
     const ANOMALY_SEVERITIES = [
         self::ANOMALY_MISSING_TIMESHEET => 'error',
@@ -48,6 +50,8 @@ class PayrollRun extends Model
         self::ANOMALY_TIMESHEET_HAS_ERRORS => 'warning',
         self::ANOMALY_ZERO_WORKED => 'warning',
         self::ANOMALY_COMPENSATION_GAP => 'warning',
+        self::ANOMALY_ZERO_BASE_SALARY => 'error',
+        self::ANOMALY_INVALID_WEEKLY_HOURS => 'error',
     ];
 
     protected $fillable = [

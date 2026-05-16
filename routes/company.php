@@ -403,6 +403,21 @@ Route::middleware('company.access:use-module,core.workflows')->group(function ()
     });
 });
 
+// ── Workforce Self-Service (P0 security: auto-resolve employee from auth) ──
+// Module-gated but no specific permission — any company member with an active employee record can access
+Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')->group(function () {
+    Route::get('/', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'profile']);
+    Route::get('/today', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'today']);
+    Route::post('/clock-in', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'clockIn']);
+    Route::post('/clock-out', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'clockOut']);
+    Route::post('/break/start', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'startBreak']);
+    Route::post('/break/end', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'endBreak']);
+    Route::get('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaves']);
+    Route::post('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'createLeave']);
+    Route::get('/leave-balances', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveBalances']);
+    Route::get('/documents', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'documents']);
+});
+
 // ── Workforce Dashboard ──────────────────────────────────────
 Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
     Route::get('dashboard/statistics', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'statistics']);

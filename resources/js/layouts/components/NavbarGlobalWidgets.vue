@@ -7,6 +7,7 @@ import NotificationToast from '@/layouts/components/NotificationToast.vue'
 import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavBarSupport from '@/layouts/components/NavBarSupport.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
+import WorkforceClockWidget from '@/layouts/components/WorkforceClockWidget.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { themeConfig } from '@themeConfig'
 
@@ -40,6 +41,7 @@ const activeWidgets = computed(() => {
     :key="widget.key"
     :is="widgetComponents[widget.component]"
   />
+  <WorkforceClockWidget />
   <NavbarShortcuts />
   <NavBarSupport />
   <NavBarNotifications class="me-1" />

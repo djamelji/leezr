@@ -147,6 +147,7 @@
       "documentation": "Centre d'aide",
       "documents": "Documents",
       "workflows": "Workflows",
+      "workforce-me": "Mon espace",
       "workforce-employees": "Employés",
       "workforce-time": "Pointage",
       "workforce-leave": "Congés",
@@ -5873,6 +5874,44 @@
       "validated": "validés"
     }
   },
+  "workforceMe": {
+    "title": "Mon espace",
+    "welcome": "Bonjour, {name}",
+    "refresh": "Actualiser",
+    "loadError": "Erreur lors du chargement de votre espace",
+    "noEmployee": "Aucun dossier employé trouvé pour votre compte.",
+    "todayStatus": "Aujourd'hui",
+    "hoursWorked": "Heures travaillées",
+    "breakTime": "Temps de pause",
+    "clockIn": "Arrivée",
+    "myContract": "Mon contrat",
+    "leaveBalances": "Solde congés",
+    "recentDocuments": "Derniers documents",
+    "noContract": "Aucun contrat actif",
+    "noDocuments": "Aucun document",
+    "noLeaveBalances": "Aucun solde de congés disponible",
+    "requestLeave": "Demander un congé",
+    "viewAllDocuments": "Voir tous mes documents",
+    "contractType": "Type de contrat",
+    "workModel": "Modèle de travail",
+    "weeklyHours": "Heures/semaine",
+    "startDate": "Date de début",
+    "jobTitle": "Poste",
+    "leaveType": "Type",
+    "leaveAvailable": "Disponible",
+    "leaveConsumed": "Pris",
+    "leaveAccrued": "Acquis",
+    "signatureNone": "Non signé",
+    "signaturePending": "En attente",
+    "signatureSigned": "Signé",
+    "signatureDeclined": "Refusé",
+    "status": {
+      "working": "En cours",
+      "onBreak": "En pause",
+      "completed": "Terminé",
+      "notStarted": "Non démarré"
+    }
+  },
   "employees": {
     "title": "Employés",
     "subtitle": "Gérez vos employés, leurs contrats et rémunérations",
@@ -6280,5 +6319,19 @@
     "exported": "Déclaration DSN exportée",
     "submitted": "Déclaration DSN soumise",
     "polled": "Statut DSN actualisé"
+  },
+  "workforceClock": {
+    "title": "Pointage",
+    "notStarted": "Journée non commencée",
+    "working": "En cours",
+    "onBreak": "En pause",
+    "completed": "Journée terminée",
+    "clockIn": "Commencer la journée",
+    "clockOut": "Terminer la journée",
+    "startBreak": "Début pause",
+    "endBreak": "Fin pause",
+    "workedToday": "Travaillé aujourd'hui",
+    "breakTime": "Temps de pause",
+    "todayStatus": "Statut du jour"
   }
 }

@@ -20770,4 +20770,106 @@ la gestion des documents RH (bulletins de paie, attestations) et le cycle de vie
 
 ---
 
+## ADR-463 : Workforce Clock Widget — Frontend + Employee Self-Service Store (2026-05-16)
+
+**Contexte** : Les employés doivent pouvoir pointer (clock-in/out, pauses) directement depuis la navbar de l'application sans naviguer vers une page dédiée. Le backend expose des endpoints `/workforce/me/*` en parallèle.
+
+**Décisions** :
+1. **Pinia store `workforce-clock`** (Composition API setup) — gère l'état employé, le pointage du jour, les soldes de congés. Utilise `$api` (ofetch) comme tous les stores existants. Actions : fetchProfile, refreshToday, clockIn, clockOut, startBreak, endBreak.
+2. **WorkforceClockWidget.vue** — widget compact dans la navbar (pattern IconBtn + VMenu + VCard identique à NavBarNotifications). Affiche : icone avec badge couleur statut, dropdown avec temps travaillé, boutons d'action contextuels selon le statut (not_started/working/on_break/completed).
+3. **Intégration NavbarGlobalWidgets** — widget rendu uniquement quand : (a) pas sur une page platform, (b) module `workforce` actif via `moduleStore.isActive('workforce')`. Placé avant NavbarShortcuts.
+4. **Compteur live** — incrémente chaque minute côté client quand status=working, refresh API complet toutes les 5 minutes.
+5. **i18n** — clés `workforceClock.*` ajoutées en fr.json et en.json (13 clés chacun).
+
+**Conséquences** :
+- Le widget est invisible si l'utilisateur n'a pas de fiche employé (404 → employee=null → template v-if masque)
+- Le widget est invisible si le module workforce n'est pas activé pour la company
+- Aucune modification de @core/ ou @layouts/ — widget dans layouts/components/ comme les autres navbar widgets
+- Backend endpoints `/workforce/me/*` requis pour que le widget fonctionne (implémentation parallèle)
+
+**Fichiers** :
+- `resources/js/core/stores/workforce-clock.js` — Pinia store (setup syntax)
+- `resources/js/layouts/components/WorkforceClockWidget.vue` — widget navbar
+- `resources/js/layouts/components/NavbarGlobalWidgets.vue` — intégration widget
+- `resources/js/plugins/i18n/locales/en.json` — +13 clés workforceClock
+- `resources/js/plugins/i18n/locales/fr.json` — +13 clés workforceClock
+
+---
+
+## ADR-464 : Payroll Safety Anomalies + Workforce Functional Smoke Tests (2026-05-16)
+
+**Contexte** : Le moteur de paie (`ComputePayrollUseCase`) produit silencieusement des lignes de paie à valeur zéro lorsque le salaire de base est 0 ou les heures hebdomadaires sont 0. Pas de signal d'erreur visible — risque de bulletins de paie à 0 EUR envoyés en production. Par ailleurs, il manque un test fonctionnel prouvant que le produit fonctionne de bout en bout (self-service employé, cycle RH → paie, isolation multi-tenant).
+
+**Décisions** :
+1. **Nouveaux anomaly constants** — `ANOMALY_ZERO_BASE_SALARY` et `ANOMALY_INVALID_WEEKLY_HOURS` ajoutés à `PayrollRun`, avec severity `error` dans `ANOMALY_SEVERITIES`
+2. **Détection dans ComputePayrollUseCase** — après lecture de `$baseSalaryCents` et `$weeklyHours`, ajout de checks qui produisent des `$lineAnomalies[]` de type error. La ligne de paie est toujours créée (pour visibilité), mais l'anomalie empêche la validation sans note explicative
+3. **WorkforceFunctionalSmokeTest** — 15 tests, 89 assertions couvrant :
+   - Scénario 1 : Self-service employé (profil, clock in/out, pauses, demande de congé)
+   - Scénario 2 : Cycle RH → Paie (time entry → locked timesheet → draft payroll → compute → assertions gross_breakdown, snapshots)
+   - Scénario 3 : Sécurité multi-tenant (isolation CompanyScope sur Employee, TimeEntry)
+   - Scénario 4 : Anomalies paie (zero salary, zero hours, vérification absence de faux positifs)
+   - Scénario 5 : Intégrité des constantes (tous ANOMALY_* ont une severity)
+
+**Conséquences** :
+- Les runs de paie avec salaire=0 ou heures=0 afficheront des anomalies error, bloquant la validation sans note explicite du gestionnaire
+- Couverture fonctionnelle end-to-end : clock → timesheet → payroll prouvée par test
+- Aucun run de paie ne peut plus produire silencieusement des lignes à 0 EUR
+- Tests : 2852 passed (+ 15 nouveaux), build clean (9.56s)
+
+**Fichiers** :
+- `app/Core/Workforce/PayrollRun.php` — +2 constantes ANOMALY, +2 entrées ANOMALY_SEVERITIES
+- `app/Modules/Workforce/UseCases/ComputePayrollUseCase.php` — détection zero salary + invalid hours
+- `tests/Feature/WorkforceFunctionalSmokeTest.php` — 15 tests fonctionnels (nouveau)
+
+---
+
+## ADR-465 : Employee Self-Service Backend — P0 Security Fix (2026-05-16)
+
+**Contexte** : Les endpoints workforce existants (`POST time-entries/clock-in`, `POST leaves`, etc.) acceptent un `employee_id` fourni par le client dans le body de la requête. Cela constitue une faille de sécurité (IDOR) : un utilisateur authentifié peut pointer/demander un congé au nom d'un autre employé en modifiant simplement l'ID. Le modèle `Employee` possède un FK `user_id` vers `User`, permettant une résolution automatique côté serveur.
+
+**Décisions** :
+1. **Nouveau controller `EmployeeSelfController`** — dans `app/Modules/Workforce/Employees/Http/`, 238 lignes (< 250 limit). Méthode privée `resolveEmployee()` résout automatiquement l'employé actif à partir de `$request->user()->id` + `company_id`. Aucun `employee_id` n'est accepté du client
+2. **10 endpoints `/workforce/me/*`** — profile, today, clock-in, clock-out, break/start, break/end, leaves (GET+POST), leave-balances, documents. Tous délèguent aux use cases existants (`ClockInUseCase`, `ClockOutUseCase`, `StartBreakUseCase`, `EndBreakUseCase`, `RequestLeaveUseCase`) et read models existants
+3. **Module-gated** — middleware `company.access:use-module,workforce` (pas de permission spécifique). Tout membre de la company avec un employee record actif peut accéder à ses propres données
+4. **Routes AVANT les routes paramétriques** — placées dans `routes/company.php` avant le groupe `workforce/` existant pour éviter les conflits de routage (`/workforce/me` ne matche pas `{id}`)
+5. **Réutilisation complète** — aucune nouvelle logique métier, aucun nouveau use case. Le controller est un thin wrapper sécurisé autour de l'infrastructure existante
+6. **`source` limité** — le self-service accepte `manual`, `mobile`, `kiosk` (pas `import` qui est réservé aux imports batch)
+
+**Conséquences** :
+- Les frontends doivent migrer vers `/workforce/me/*` pour toutes les actions self-service
+- Les anciens endpoints avec `employee_id` dans le body restent disponibles pour l'interface admin RH
+- La résolution 404 se fait automatiquement si l'utilisateur n'a pas de fiche employé active — pas besoin de guard supplémentaire
+- Tests : 2855 passed (0 regressions), build clean (8.71s)
+
+**Fichiers** :
+- `app/Modules/Workforce/Employees/Http/EmployeeSelfController.php` — nouveau controller (238 lignes)
+- `routes/company.php` — +13 lignes (groupe `/workforce/me/*`)
+
+---
+
+## ADR-466 : Employee Personal Dashboard Page — /company/workforce/me (2026-05-16)
+
+**Contexte** : Les employés disposent d'un widget de pointage dans la navbar (ADR-463) et d'endpoints self-service (ADR-465), mais aucune page dédiée ne leur donne une vue d'ensemble de leur situation : pointage du jour, contrat actif, soldes de congés, documents récents. La page `/company/workforce/me` comble ce manque en tant que point d'entrée principal de l'espace employé.
+
+**Décisions** :
+1. **Page `me.vue`** dans `resources/js/pages/company/workforce/` — pas de `layout:` dans `definePage()` (company default), meta `module: 'workforce'` sans permission spécifique (tout employé avec fiche active y accède)
+2. **4 sections** : KPI cards today status (card-grid-xs : statut pointage, heures travaillées, temps pause, heure arrivée), contrat actif (VList avec type, modèle, heures, date début, poste), soldes congés (VTable avec type/disponible/pris/acquis + bouton demande), derniers documents (VList des 5 derniers + bouton tout voir)
+3. **Réutilisation du store `workforce-clock`** pour les données profile (employee, todayClock, leaveBalances). Appel séparé `$api('/workforce/me/documents')` pour les documents récents (non inclus dans le profile endpoint)
+4. **Nav item `workforce-me`** ajouté au `WorkforceModule.php` avec `sort: 5` (avant Employees sort:10), sans permission (accessible à tout utilisateur du module workforce), icone `tabler-user-circle`
+5. **i18n** : 35 clés `workforceMe.*` (fr+en) + 1 clé nav `workforce-me` (fr: "Mon espace", en: "My Space")
+
+**Conséquences** :
+- L'espace employé apparaît comme premier item de la section RH dans la sidebar pour tous les utilisateurs du module workforce
+- Le store workforce-clock est partagé entre le widget navbar et cette page (pas de duplication de données)
+- Les données documents nécessitent un appel API supplémentaire (`/workforce/me/documents`) car elles ne sont pas incluses dans le profile endpoint
+- Aucune modification de @core/ ou @layouts/ — patterns Vuexy existants (VCard, VList, VTable, VChip, VAvatar)
+
+**Fichiers** :
+- `resources/js/pages/company/workforce/me.vue` — page dashboard employé (nouveau)
+- `app/Modules/Workforce/Employees/WorkforceModule.php` — +1 navItem workforce-me
+- `resources/js/plugins/i18n/locales/fr.json` — +35 clés workforceMe + 1 clé nav
+- `resources/js/plugins/i18n/locales/en.json` — +35 clés workforceMe + 1 clé nav
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

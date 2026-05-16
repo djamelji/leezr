@@ -147,6 +147,7 @@
       "documentation": "Help Center",
       "documents": "Documents",
       "workflows": "Workflows",
+      "workforce-me": "My Space",
       "workforce-employees": "Employees",
       "workforce-time": "Time Tracking",
       "workforce-leave": "Leave",
@@ -5868,6 +5869,44 @@
       "validated": "validated"
     }
   },
+  "workforceMe": {
+    "title": "My Space",
+    "welcome": "Hello, {name}",
+    "refresh": "Refresh",
+    "loadError": "Error loading your space",
+    "noEmployee": "No employee record found for your account.",
+    "todayStatus": "Today",
+    "hoursWorked": "Hours worked",
+    "breakTime": "Break time",
+    "clockIn": "Clock in",
+    "myContract": "My Contract",
+    "leaveBalances": "Leave Balances",
+    "recentDocuments": "Recent Documents",
+    "noContract": "No active contract",
+    "noDocuments": "No documents",
+    "noLeaveBalances": "No leave balances available",
+    "requestLeave": "Request Leave",
+    "viewAllDocuments": "View all documents",
+    "contractType": "Contract type",
+    "workModel": "Work model",
+    "weeklyHours": "Hours/week",
+    "startDate": "Start date",
+    "jobTitle": "Job title",
+    "leaveType": "Type",
+    "leaveAvailable": "Available",
+    "leaveConsumed": "Used",
+    "leaveAccrued": "Accrued",
+    "signatureNone": "Unsigned",
+    "signaturePending": "Pending",
+    "signatureSigned": "Signed",
+    "signatureDeclined": "Declined",
+    "status": {
+      "working": "Working",
+      "onBreak": "On break",
+      "completed": "Completed",
+      "notStarted": "Not started"
+    }
+  },
   "employees": {
     "title": "Employees",
     "subtitle": "Manage your employees, contracts and compensation",
@@ -6275,5 +6314,19 @@
     "exported": "DSN declaration exported",
     "submitted": "DSN declaration submitted",
     "polled": "DSN status updated"
+  },
+  "workforceClock": {
+    "title": "Clock",
+    "notStarted": "Not started",
+    "working": "Working",
+    "onBreak": "On break",
+    "completed": "Day complete",
+    "clockIn": "Start day",
+    "clockOut": "End day",
+    "startBreak": "Start break",
+    "endBreak": "End break",
+    "workedToday": "Worked today",
+    "breakTime": "Break time",
+    "todayStatus": "Today's status"
   }
 }
