@@ -18,4 +18,12 @@ class LeaveTypeReadModel
                     'carry_over_hundredths', 'requires_approval', 'is_paid',
                     'is_system', 'sort_order']);
     }
+
+    public static function allForCompany(int $companyId): Collection
+    {
+        return LeaveType::withoutCompanyScope()
+            ->where('company_id', $companyId)
+            ->orderBy('sort_order')
+            ->get();
+    }
 }

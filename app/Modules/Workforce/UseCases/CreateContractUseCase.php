@@ -24,12 +24,16 @@ class CreateContractUseCase
         int $overtimeRateBps = 2500,
         ?array $customComplianceRules = null,
         ?int $conventionCollectiveId = null,
+        string $compensationType = 'monthly',
+        ?int $hourlyRateCents = null,
+        ?int $dailyRateCents = null,
     ): EmploymentContract {
         return DB::transaction(function () use (
             $employee, $contractType, $workModelKey, $startDate,
             $weeklyHours, $endDate, $probationEndDate,
             $baseSalaryCents, $currency, $payFrequency,
             $overtimeRateBps, $customComplianceRules, $conventionCollectiveId,
+            $compensationType, $hourlyRateCents, $dailyRateCents,
         ) {
             // Deactivate previous current contract
             EmploymentContract::where('employee_id', $employee->id)
@@ -51,12 +55,16 @@ class CreateContractUseCase
                 'convention_collective_id' => $conventionCollectiveId,
             ]);
 
-            // Create initial compensation plan if salary provided
-            if ($baseSalaryCents !== null) {
+            // Create initial compensation plan if any salary info provided
+            $hasSalaryInfo = $baseSalaryCents !== null || $hourlyRateCents !== null || $dailyRateCents !== null;
+            if ($hasSalaryInfo) {
                 CompensationPlan::create([
                     'company_id' => $employee->company_id,
                     'contract_id' => $contract->id,
-                    'base_salary_cents' => $baseSalaryCents,
+                    'compensation_type' => $compensationType,
+                    'base_salary_cents' => $baseSalaryCents ?? 0,
+                    'hourly_rate_cents' => $hourlyRateCents,
+                    'daily_rate_cents' => $dailyRateCents,
                     'currency' => $currency,
                     'pay_frequency' => $payFrequency,
                     'overtime_rate_bps' => $overtimeRateBps,

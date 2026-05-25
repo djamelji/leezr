@@ -34,7 +34,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/documents${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/documents${qs ? `?${qs}` : ''}`)
 
         this._documents = data.data ?? []
         this._totalDocuments = data.total ?? 0
@@ -48,7 +48,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
     async fetchDocument(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/documents/${id}`)
+        const data = await $api(`/workforce/documents/${id}`)
 
         this._currentDocument = data
 
@@ -62,7 +62,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
     async fetchStatistics() {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/documents/statistics')
+        const data = await $api('/workforce/documents/statistics')
 
         this._statistics = data
 
@@ -84,7 +84,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
 
         if (forceVault !== undefined) body.force_vault = forceVault
 
-        const data = await $api('/company/workforce/documents/generate', {
+        const data = await $api('/workforce/documents/generate', {
           method: 'POST',
           body,
         })
@@ -101,7 +101,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
     async generatePayslipDrafts(payrollRunId) {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/documents/payslip-drafts', {
+        const data = await $api('/workforce/documents/payslip-drafts', {
           method: 'POST',
           body: { payroll_run_id: payrollRunId },
         })
@@ -115,7 +115,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
     async generateOfficialPayslips(payrollRunId) {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/documents/payslip-official', {
+        const data = await $api('/workforce/documents/payslip-official', {
           method: 'POST',
           body: { payroll_run_id: payrollRunId },
         })
@@ -130,7 +130,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
     async fetchPayrollRunDocuments(runId) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/documents/payroll-run/${runId}`)
+        const data = await $api(`/workforce/documents/payroll-run/${runId}`)
 
         this._payrollRunDocuments = data
 

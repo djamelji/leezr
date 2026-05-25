@@ -26,6 +26,69 @@ class PayrollLineReadModel
             ->get();
     }
 
+    public static function detail(int $lineId, int $companyId): ?array
+    {
+        $line = PayrollLine::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->with(['employee:id,first_name,last_name,employee_number', 'calculation', 'payrollRun:id,period_start,period_end,status,currency'])
+            ->find($lineId);
+
+        if (! $line) {
+            return null;
+        }
+
+        $calc = $line->calculation;
+
+        return [
+            'id' => $line->id,
+            'employee' => $line->employee ? [
+                'id' => $line->employee->id,
+                'first_name' => $line->employee->first_name,
+                'last_name' => $line->employee->last_name,
+                'employee_number' => $line->employee->employee_number,
+            ] : null,
+            'payroll_run' => $line->payrollRun ? [
+                'id' => $line->payrollRun->id,
+                'period_start' => $line->payrollRun->period_start?->toDateString(),
+                'period_end' => $line->payrollRun->period_end?->toDateString(),
+                'status' => $line->payrollRun->status,
+                'currency' => $line->payrollRun->currency,
+            ] : null,
+            'worked_minutes' => $line->worked_minutes,
+            'break_minutes' => $line->break_minutes,
+            'total_overtime_minutes' => $line->total_overtime_minutes,
+            'daily_overtime_minutes' => $line->daily_overtime_minutes,
+            'weekly_overtime_minutes' => $line->weekly_overtime_minutes,
+            'planned_minutes' => $line->planned_minutes,
+            'leave_days_hundredths' => $line->leave_days_hundredths,
+            'paid_leave_days_hundredths' => $line->paid_leave_days_hundredths,
+            'unpaid_leave_days_hundredths' => $line->unpaid_leave_days_hundredths,
+            'base_salary_cents' => $line->base_salary_cents,
+            'gross_basis_cents' => $line->gross_basis_cents,
+            'gross_breakdown' => $line->gross_breakdown,
+            'compensation_snapshot' => $line->compensation_snapshot,
+            'anomalies' => $line->anomalies,
+            'calculation' => $calc ? [
+                'id' => $calc->id,
+                'status' => $calc->status,
+                'gross_total_cents' => $calc->gross_total_cents,
+                'contributions_employee_cents' => $calc->contributions_employee_cents,
+                'contributions_employer_cents' => $calc->contributions_employer_cents,
+                'total_cost_employer_cents' => $calc->total_cost_employer_cents,
+                'taxable_income_cents' => $calc->taxable_income_cents,
+                'tax_cents' => $calc->tax_cents,
+                'net_before_tax_cents' => $calc->net_before_tax_cents,
+                'net_payable_cents' => $calc->net_payable_cents,
+                'benefits_cents' => $calc->benefits_cents,
+                'deductions_cents' => $calc->deductions_cents,
+                'contribution_lines' => $calc->contribution_lines,
+                'tax_breakdown' => $calc->tax_breakdown,
+                'blocking_anomalies' => $calc->blocking_anomalies,
+                'calculated_at' => $calc->calculated_at?->toIso8601String(),
+            ] : null,
+        ];
+    }
+
     public static function summary(int $payrollRunId): array
     {
         $lines = PayrollLine::withoutGlobalScopes()

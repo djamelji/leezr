@@ -15,5 +15,8 @@ class CreateEmployeeData
         public readonly ?string $phone = null,
         public readonly string $status = 'active',
         public readonly ?array $metadata = null,
+        public readonly ?int $departmentId = null,
+        public readonly ?int $jobRoleId = null,
+        public readonly ?int $managerId = null,
     ) {}
 }

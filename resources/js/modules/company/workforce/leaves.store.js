@@ -7,8 +7,10 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     _totalRequests: 0,
     _currentRequest: null,
     _leaveTypes: [],
+    _allLeaveTypes: [],
     _balances: [],
     _statistics: null,
+    _calendar: [],
     _loading: false,
   }),
 
@@ -17,8 +19,10 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     totalRequests: state => state._totalRequests,
     currentRequest: state => state._currentRequest,
     leaveTypes: state => state._leaveTypes,
+    allLeaveTypes: state => state._allLeaveTypes,
     balances: state => state._balances,
     statistics: state => state._statistics,
+    calendar: state => state._calendar,
     loading: state => state._loading,
   },
 
@@ -37,7 +41,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/leaves${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/leaves${qs ? `?${qs}` : ''}`)
 
         this._leaveRequests = data.data ?? []
         this._totalRequests = data.total ?? 0
@@ -51,7 +55,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     async fetchLeaveRequest(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/leaves/${id}`)
+        const data = await $api(`/workforce/leaves/${id}`)
 
         this._currentRequest = data
 
@@ -62,7 +66,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     },
 
     async createLeaveRequest({ employeeId, leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason }) {
-      const data = await $api('/company/workforce/leaves', {
+      const data = await $api('/workforce/leaves', {
         method: 'POST',
         body: {
           employee_id: employeeId,
@@ -81,7 +85,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     },
 
     async approveLeaveRequest(id, { reviewNote } = {}) {
-      const data = await $api(`/company/workforce/leaves/${id}/approve`, {
+      const data = await $api(`/workforce/leaves/${id}/approve`, {
         method: 'POST',
         body: { review_note: reviewNote },
       })
@@ -94,7 +98,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     },
 
     async rejectLeaveRequest(id, { reviewNote } = {}) {
-      const data = await $api(`/company/workforce/leaves/${id}/reject`, {
+      const data = await $api(`/workforce/leaves/${id}/reject`, {
         method: 'POST',
         body: { review_note: reviewNote },
       })
@@ -107,7 +111,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     },
 
     async cancelLeaveRequest(id, { cancellationReason } = {}) {
-      const data = await $api(`/company/workforce/leaves/${id}/cancel`, {
+      const data = await $api(`/workforce/leaves/${id}/cancel`, {
         method: 'POST',
         body: { cancellation_reason: cancellationReason },
       })
@@ -119,15 +123,51 @@ export const useLeavesStore = defineStore('workforceLeaves', {
       return data
     },
 
-    // ── Leave Types (cached) ─────────────────────────────────
-    async fetchLeaveTypes() {
-      if (this._leaveTypes.length > 0) return this._leaveTypes
+    // ── Leave Types ──────────────────────────────────────────
+    async fetchLeaveTypes({ all = false, force = false } = {}) {
+      const target = all ? '_allLeaveTypes' : '_leaveTypes'
+      if (!force && this[target].length > 0) return this[target]
 
-      const data = await $api('/company/workforce/leaves/types')
+      const data = await $api(`/workforce/leaves/types${all ? '?all=1' : ''}`)
+      this[target] = data.data ?? data
 
-      this._leaveTypes = data.data ?? data
+      return this[target]
+    },
 
-      return this._leaveTypes
+    async createLeaveType(payload) {
+      const data = await $api('/workforce/leaves/types', { method: 'POST', body: payload })
+      this._allLeaveTypes.push(data)
+      this._leaveTypes = [] // invalidate cache
+
+      return data
+    },
+
+    async updateLeaveType(id, payload) {
+      const data = await $api(`/workforce/leaves/types/${id}`, { method: 'PUT', body: payload })
+      const idx = this._allLeaveTypes.findIndex(t => t.id === id)
+      if (idx !== -1) this._allLeaveTypes[idx] = data
+      this._leaveTypes = [] // invalidate cache
+
+      return data
+    },
+
+    async deleteLeaveType(id) {
+      await $api(`/workforce/leaves/types/${id}`, { method: 'DELETE' })
+      this._allLeaveTypes = this._allLeaveTypes.filter(t => t.id !== id)
+      this._leaveTypes = [] // invalidate cache
+    },
+
+    // ── Calendar ──────────────────────────────────────────────
+    async fetchCalendar({ from, to }) {
+      this._loading = true
+      try {
+        const data = await $api(`/workforce/leaves/calendar?from=${from}&to=${to}`)
+        this._calendar = data.data ?? data
+
+        return this._calendar
+      } finally {
+        this._loading = false
+      }
     },
 
     // ── Balances ─────────────────────────────────────────────
@@ -137,7 +177,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
       if (year) params.set('year', year)
 
       const qs = params.toString()
-      const data = await $api(`/company/workforce/employees/${employeeId}/leave-balances${qs ? `?${qs}` : ''}`)
+      const data = await $api(`/workforce/employees/${employeeId}/leave-balances${qs ? `?${qs}` : ''}`)
 
       this._balances = data.data ?? data
 
@@ -151,7 +191,7 @@ export const useLeavesStore = defineStore('workforceLeaves', {
       if (year) params.set('year', year)
 
       const qs = params.toString()
-      const data = await $api(`/company/workforce/leaves/statistics${qs ? `?${qs}` : ''}`)
+      const data = await $api(`/workforce/leaves/statistics${qs ? `?${qs}` : ''}`)
 
       this._statistics = data
 

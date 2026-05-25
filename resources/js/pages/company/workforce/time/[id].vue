@@ -46,22 +46,39 @@ const getDayName = dateStr => {
 // ── Grid headers ─────────────────────────────────────────────
 const gridHeaders = computed(() => [
   { title: t('timesheets.grid.date'), key: 'date', width: 120 },
-  { title: t('timesheets.grid.day'), key: 'day_name', width: 100 },
-  { title: t('timesheets.grid.worked'), key: 'worked_minutes', width: 100 },
-  { title: t('timesheets.grid.break'), key: 'break_minutes', width: 100 },
-  { title: t('timesheets.grid.overtime'), key: 'overtime_minutes', width: 100 },
+  { title: t('timesheets.grid.day'), key: 'day_name', width: 80 },
+  { title: t('timesheets.grid.clockIn'), key: 'clock_in', width: 80 },
+  { title: t('timesheets.grid.clockOut'), key: 'clock_out', width: 80 },
+  { title: t('timesheets.grid.worked'), key: 'worked_minutes', width: 90 },
+  { title: t('timesheets.grid.break'), key: 'break_minutes', width: 90 },
+  { title: t('timesheets.grid.overtime'), key: 'overtime_minutes', width: 90 },
   { title: t('timesheets.grid.leave'), key: 'leave_type', width: 120 },
-  { title: t('timesheets.grid.anomalies'), key: 'anomalies', width: 120 },
+  { title: t('timesheets.grid.anomalies'), key: 'anomalies', width: 100 },
 ])
 
 // ── Grid lines ───────────────────────────────────────────────
+const formatTime = isoString => {
+  if (!isoString) return '-'
+  const d = new Date(isoString)
+
+  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
+}
+
 const gridLines = computed(() => {
   if (!period.value?.lines) return []
 
-  return period.value.lines.map(line => ({
-    ...line,
-    day_name: getDayName(line.date),
-  }))
+  return period.value.lines.map(line => {
+    const entries = line.source_snapshot?.time_entries || []
+    const firstEntry = entries[0]
+    const lastEntry = entries[entries.length - 1]
+
+    return {
+      ...line,
+      day_name: getDayName(line.date),
+      clock_in: firstEntry?.clock_in || null,
+      clock_out: lastEntry?.clock_out || null,
+    }
+  })
 })
 
 const isLeaveDay = line => !!line.leave_type
@@ -360,6 +377,12 @@ const anomalyColor = type => {
             >
               <td>{{ formatDate(item.date) }}</td>
               <td><span class="text-capitalize">{{ item.day_name }}</span></td>
+              <td>
+                <span class="font-weight-medium">{{ formatTime(item.clock_in) }}</span>
+              </td>
+              <td>
+                <span class="font-weight-medium">{{ formatTime(item.clock_out) }}</span>
+              </td>
               <td>
                 <span :class="{ 'text-disabled': isLeaveDay(item) }">
                   {{ formatHours(item.worked_minutes) }}

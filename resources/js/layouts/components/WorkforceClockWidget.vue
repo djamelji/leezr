@@ -8,7 +8,7 @@
  */
 import { useWorkforceClockStore } from '@/core/stores/workforce-clock'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const store = useWorkforceClockStore()
 
@@ -38,6 +38,14 @@ const breakDisplay = computed(() => {
   const m = mins % 60
 
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}min`
+})
+
+const arrivalTime = computed(() => {
+  const clockIn = store.todayClock?.clock_in
+  if (!clockIn) return null
+  const d = new Date(clockIn)
+
+  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
 })
 
 const statusColor = computed(() => {
@@ -174,6 +182,18 @@ async function handleAction(actionFn) {
                   size="24"
                 />
               </VAvatar>
+            </div>
+
+            <!-- Arrival time -->
+            <div
+              v-if="arrivalTime"
+              class="d-flex align-center gap-2 text-body-2 text-medium-emphasis mb-1"
+            >
+              <VIcon
+                icon="tabler-login"
+                size="16"
+              />
+              {{ t('workforceClock.arrival') }}: {{ arrivalTime }}
             </div>
 
             <!-- Break time (if any) -->

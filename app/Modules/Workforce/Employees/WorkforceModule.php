@@ -21,6 +21,7 @@ class WorkforceModule implements ModuleDefinition
                     ['key' => 'workforce-me', 'title' => 'My Space', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-user-circle', 'surface' => 'hr', 'sort' => 5],
                     ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'sort' => 10],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.view', 'surface' => 'hr', 'sort' => 20],
+                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.admin', 'surface' => 'hr', 'sort' => 80],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce',

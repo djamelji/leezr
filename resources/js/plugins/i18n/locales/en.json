@@ -153,7 +153,8 @@
       "workforce-leave": "Leave",
       "workforce-planning": "Planning",
       "workforce-payroll": "Payroll",
-      "workforce-documents": "HR Documents"
+      "workforce-documents": "HR Documents",
+      "workforce-organization": "Organization"
     }
   },
   "roles": {
@@ -5900,6 +5901,7 @@
     "signaturePending": "Pending",
     "signatureSigned": "Signed",
     "signatureDeclined": "Declined",
+    "clockActionSuccess": "Clock action completed",
     "status": {
       "working": "Working",
       "onBreak": "On break",
@@ -5933,7 +5935,10 @@
       "phone": "Phone",
       "employeeNumber": "Employee Number",
       "hireDate": "Hire Date",
-      "terminationDate": "Termination Date"
+      "terminationDate": "Termination Date",
+      "department": "Department",
+      "jobRole": "Job Role",
+      "manager": "Manager"
     },
     "tabs": {
       "profile": "Profile",
@@ -5961,7 +5966,14 @@
       "noCurrentContract": "No active contract. Create a contract for this employee.",
       "history": "Contract History",
       "weeklyHours": "Weekly Hours",
-      "conventionCollective": "Collective Agreement"
+      "conventionCollective": "Collective Agreement",
+      "compensationSection": "Compensation",
+      "compensationType": "Compensation Type",
+      "baseSalaryCents": "Monthly Gross Salary (cents)",
+      "hourlyRateCents": "Hourly Rate (cents)",
+      "dailyRateCents": "Daily Rate (cents)",
+      "amountInCents": "Amount in cents (e.g. 250000 = €2,500.00)",
+      "day": "day"
     },
     "contractTypes": {
       "cdi": "Permanent (CDI)",
@@ -5969,6 +5981,11 @@
       "stage": "Internship",
       "alternance": "Apprenticeship",
       "freelance": "Freelance"
+    },
+    "compensationTypes": {
+      "monthly": "Monthly",
+      "hourly": "Hourly",
+      "daily": "Daily"
     },
     "workModels": {
       "horaire": "Hourly",
@@ -5996,6 +6013,45 @@
     "activity": {
       "title": "Activity Log",
       "emptyDescription": "History of changes and events for this employee will be displayed here."
+    }
+  },
+  "organization": {
+    "title": "Organization",
+    "description": "Manage your company departments and job roles",
+    "tabs": {
+      "departments": "Departments",
+      "roles": "Job Roles"
+    },
+    "departments": {
+      "name": "Name",
+      "manager": "Manager",
+      "employeeCount": "Employees",
+      "add": "Add Department",
+      "edit": "Edit Department",
+      "parentDept": "Parent Department",
+      "sortOrder": "Sort Order",
+      "subDept": "Sub-department",
+      "empty": "No departments registered.",
+      "created": "Department created successfully",
+      "updated": "Department updated",
+      "deleted": "Department deleted"
+    },
+    "roles": {
+      "title": "Job Roles",
+      "titleField": "Job Title",
+      "department": "Department",
+      "level": "Level",
+      "descriptionField": "Description",
+      "defaultRate": "Default Hourly Rate",
+      "defaultRateLabel": "Default Hourly Rate (cents)",
+      "defaultRateHint": "Hourly rate in cents, used when employee has no compensation plan",
+      "employeeCount": "Employees",
+      "add": "Add Job Role",
+      "edit": "Edit Job Role",
+      "empty": "No job roles registered.",
+      "created": "Job role created successfully",
+      "updated": "Job role updated",
+      "deleted": "Job role deleted"
     }
   },
   "payroll": {
@@ -6096,6 +6152,62 @@
       "deleteText": "Are you sure you want to delete this draft? This action is irreversible."
     }
   },
+  "timeTracking": {
+    "tabs": {
+      "entries": "Time Entries",
+      "timesheets": "Timesheets"
+    },
+    "addEntry": "Add Entry",
+    "correctEntry": "Correct Entry",
+    "correct": "Correct",
+    "corrected": "Entry corrected",
+    "created": "Entry created",
+    "deleted": "Entry deleted",
+    "applyCorrection": "Apply Correction",
+    "correctionHint": "Modify the times to correct this entry. Totals will be recalculated automatically.",
+    "columns": {
+      "date": "Date",
+      "employee": "Employee",
+      "clockIn": "Clock In",
+      "clockOut": "Clock Out",
+      "breaks": "Breaks",
+      "total": "Total",
+      "status": "Status",
+      "anomalies": "Anomalies"
+    },
+    "statuses": {
+      "idle": "Idle",
+      "working": "Working",
+      "on_break": "On Break",
+      "completed": "Completed"
+    },
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "employee": "Employee",
+      "status": "Status"
+    },
+    "fields": {
+      "employee": "Employee",
+      "date": "Date",
+      "clockIn": "Clock In Time",
+      "clockOut": "Clock Out Time"
+    },
+    "anomalies": {
+      "missing_clock_out": "Missing clock out",
+      "excessive_hours": "More than 10h worked",
+      "missing_break": "Insufficient break (>6h)",
+      "zero_worked": "0 minutes worked"
+    },
+    "emptyState": {
+      "title": "No time entries",
+      "description": "Time entries will appear here when employees start clocking in."
+    },
+    "deleteConfirm": {
+      "title": "Delete Entry",
+      "message": "Are you sure you want to delete this time entry? This action cannot be undone."
+    }
+  },
   "timesheets": {
     "generateTimesheet": "Generate Timesheet",
     "generate": "Generate",
@@ -6132,6 +6244,8 @@
       "title": "Daily Grid",
       "date": "Date",
       "day": "Day",
+      "clockIn": "Clock In",
+      "clockOut": "Clock Out",
       "worked": "Worked",
       "break": "Break",
       "overtime": "Overtime",
@@ -6327,6 +6441,7 @@
     "endBreak": "End break",
     "workedToday": "Worked today",
     "breakTime": "Break time",
+    "arrival": "Arrival",
     "todayStatus": "Today's status"
   }
 }

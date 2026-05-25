@@ -8,6 +8,8 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     _currentEmployee: null,
     _contracts: [],
     _conventions: [],
+    _departments: [],
+    _jobRoles: [],
     _summary: null,
     _loading: false,
   }),
@@ -18,6 +20,8 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     currentEmployee: state => state._currentEmployee,
     contracts: state => state._contracts,
     conventions: state => state._conventions,
+    departments: state => state._departments,
+    jobRoles: state => state._jobRoles,
     summary: state => state._summary,
     loading: state => state._loading,
 
@@ -50,7 +54,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
         if (sortDir) params.set('sort_dir', sortDir)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/employees${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/employees${qs ? `?${qs}` : ''}`)
 
         this._employees = data.data ?? []
         this._totalEmployees = data.total ?? 0
@@ -64,7 +68,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     async fetchEmployee(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/employees/${id}`)
+        const data = await $api(`/workforce/employees/${id}`)
 
         this._currentEmployee = data
 
@@ -75,7 +79,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     },
 
     async createEmployee(payload) {
-      const data = await $api('/company/workforce/employees', {
+      const data = await $api('/workforce/employees', {
         method: 'POST',
         body: payload,
       })
@@ -87,7 +91,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     },
 
     async updateEmployee(id, payload) {
-      const data = await $api(`/company/workforce/employees/${id}`, {
+      const data = await $api(`/workforce/employees/${id}`, {
         method: 'PUT',
         body: payload,
       })
@@ -100,7 +104,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     },
 
     async terminateEmployee(id, { reason, termination_date }) {
-      const data = await $api(`/company/workforce/employees/${id}/terminate`, {
+      const data = await $api(`/workforce/employees/${id}/terminate`, {
         method: 'POST',
         body: { reason, termination_date },
       })
@@ -114,7 +118,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
 
     // ── Summary ────────────────────────────────────────────
     async fetchSummary() {
-      const data = await $api('/company/workforce/employees/summary')
+      const data = await $api('/workforce/employees/summary')
 
       this._summary = data
 
@@ -123,7 +127,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
 
     // ── Contracts ──────────────────────────────────────────
     async fetchContracts(employeeId) {
-      const data = await $api(`/company/workforce/employees/${employeeId}/contracts`)
+      const data = await $api(`/workforce/employees/${employeeId}/contracts`)
 
       this._contracts = data
 
@@ -131,7 +135,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     },
 
     async createContract(employeeId, payload) {
-      const data = await $api(`/company/workforce/employees/${employeeId}/contracts`, {
+      const data = await $api(`/workforce/employees/${employeeId}/contracts`, {
         method: 'POST',
         body: payload,
       })
@@ -144,7 +148,7 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     },
 
     async activateContract(employeeId, contractId) {
-      const data = await $api(`/company/workforce/employees/${employeeId}/contracts/${contractId}/activate`, {
+      const data = await $api(`/workforce/employees/${employeeId}/contracts/${contractId}/activate`, {
         method: 'POST',
       })
 
@@ -158,11 +162,85 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     async fetchConventions() {
       if (this._conventions.length > 0) return this._conventions
 
-      const data = await $api('/company/workforce/conventions')
+      const data = await $api('/workforce/conventions')
 
       this._conventions = data
 
       return data
+    },
+
+    // ── Departments ────────────────────────────────────────
+    async fetchDepartments() {
+      const data = await $api('/workforce/departments')
+
+      this._departments = data
+
+      return data
+    },
+
+    async createDepartment(payload) {
+      const data = await $api('/workforce/departments', {
+        method: 'POST',
+        body: payload,
+      })
+
+      this._departments.push(data)
+
+      return data
+    },
+
+    async updateDepartment(id, payload) {
+      const data = await $api(`/workforce/departments/${id}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      const idx = this._departments.findIndex(d => d.id === id)
+      if (idx !== -1) this._departments[idx] = data
+
+      return data
+    },
+
+    async deleteDepartment(id) {
+      await $api(`/workforce/departments/${id}`, { method: 'DELETE' })
+      this._departments = this._departments.filter(d => d.id !== id)
+    },
+
+    // ── Job Roles ────────────────────────────────────────
+    async fetchJobRoles() {
+      const data = await $api('/workforce/job-roles')
+
+      this._jobRoles = data
+
+      return data
+    },
+
+    async createJobRole(payload) {
+      const data = await $api('/workforce/job-roles', {
+        method: 'POST',
+        body: payload,
+      })
+
+      this._jobRoles.push(data)
+
+      return data
+    },
+
+    async updateJobRole(id, payload) {
+      const data = await $api(`/workforce/job-roles/${id}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      const idx = this._jobRoles.findIndex(r => r.id === id)
+      if (idx !== -1) this._jobRoles[idx] = data
+
+      return data
+    },
+
+    async deleteJobRole(id) {
+      await $api(`/workforce/job-roles/${id}`, { method: 'DELETE' })
+      this._jobRoles = this._jobRoles.filter(r => r.id !== id)
     },
 
     // ── Reset ──────────────────────────────────────────────

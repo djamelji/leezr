@@ -3,7 +3,7 @@
 namespace App\Modules\Workforce\UseCases;
 
 use App\Core\Audit\AuditLogger;
-use App\Core\Modules\ModuleRegistry;
+use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Workforce\TimesheetPeriod;
 
 class LockTimesheetUseCase
@@ -21,8 +21,11 @@ class LockTimesheetUseCase
         }
 
         // CORR #3: Module workforce_payroll must be enabled
-        $moduleRegistry = app(ModuleRegistry::class);
-        if (! $moduleRegistry->isEnabled($period->company_id, 'workforce_payroll')) {
+        $payrollActive = CompanyModuleActivationReason::where('company_id', $period->company_id)
+            ->where('module_key', 'workforce_payroll')
+            ->exists();
+
+        if (! $payrollActive) {
             throw new \DomainException(
                 'Cannot lock timesheet: the Payroll module (workforce_payroll) is not activated for this company.'
             );

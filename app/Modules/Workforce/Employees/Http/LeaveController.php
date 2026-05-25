@@ -7,7 +7,6 @@ use App\Core\Workforce\LeaveRequest;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\LeaveBalanceReadModel;
 use App\Modules\Workforce\ReadModels\LeaveRequestReadModel;
-use App\Modules\Workforce\ReadModels\LeaveTypeReadModel;
 use App\Modules\Workforce\UseCases\ApproveLeaveRequestUseCase;
 use App\Modules\Workforce\UseCases\CancelLeaveRequestUseCase;
 use App\Modules\Workforce\UseCases\RejectLeaveRequestUseCase;
@@ -34,10 +33,7 @@ class LeaveController extends Controller
                 perPage: $perPage,
             );
         } else {
-            $leaves = LeaveRequestReadModel::pendingForApproval(
-                companyId: $companyId,
-                perPage: $perPage,
-            );
+            $leaves = LeaveRequestReadModel::pendingForApproval($companyId, $perPage);
         }
 
         return response()->json($leaves);
@@ -45,20 +41,17 @@ class LeaveController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-
-        $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->with(['leaveType', 'employee'])
-            ->findOrFail($id);
-
-        return response()->json($leaveRequest);
+        return response()->json(
+            LeaveRequest::withoutGlobalScopes()
+                ->where('company_id', $request->attributes->get('company_id'))
+                ->with(['leaveType', 'employee'])
+                ->findOrFail($id)
+        );
     }
 
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-
         $validated = $request->validate([
             'employee_id' => 'required|integer',
             'leave_type_id' => 'required|integer',
@@ -73,16 +66,14 @@ class LeaveController extends Controller
             ->findOrFail($validated['employee_id']);
 
         try {
-            $leaveRequest = app(RequestLeaveUseCase::class)->execute(
+            return response()->json(app(RequestLeaveUseCase::class)->execute(
                 employee: $employee,
                 leaveTypeId: $validated['leave_type_id'],
                 dateFrom: $validated['date_from'],
                 dateTo: $validated['date_to'],
                 daysCountHundredths: $validated['days_count_hundredths'],
                 reason: $validated['reason'] ?? null,
-            );
-
-            return response()->json($leaveRequest, 201);
+            ), 201);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -90,24 +81,17 @@ class LeaveController extends Controller
 
     public function approve(Request $request, int $id): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-
-        $validated = $request->validate([
-            'review_note' => 'nullable|string|max:1000',
-        ]);
-
+        $validated = $request->validate(['review_note' => 'nullable|string|max:1000']);
         $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
 
         try {
-            $leaveRequest = app(ApproveLeaveRequestUseCase::class)->execute(
+            return response()->json(app(ApproveLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 reviewerId: $request->user()->id,
                 reviewNote: $validated['review_note'] ?? null,
-            );
-
-            return response()->json($leaveRequest);
+            ));
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -115,24 +99,17 @@ class LeaveController extends Controller
 
     public function reject(Request $request, int $id): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-
-        $validated = $request->validate([
-            'review_note' => 'nullable|string|max:1000',
-        ]);
-
+        $validated = $request->validate(['review_note' => 'nullable|string|max:1000']);
         $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
 
         try {
-            $leaveRequest = app(RejectLeaveRequestUseCase::class)->execute(
+            return response()->json(app(RejectLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 reviewerId: $request->user()->id,
                 reviewNote: $validated['review_note'] ?? null,
-            );
-
-            return response()->json($leaveRequest);
+            ));
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -140,59 +117,50 @@ class LeaveController extends Controller
 
     public function cancel(Request $request, int $id): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-
-        $validated = $request->validate([
-            'cancellation_reason' => 'nullable|string|max:1000',
-        ]);
-
+        $validated = $request->validate(['cancellation_reason' => 'nullable|string|max:1000']);
         $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
 
         try {
-            $leaveRequest = app(CancelLeaveRequestUseCase::class)->execute(
+            return response()->json(app(CancelLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 cancellationReason: $validated['cancellation_reason'] ?? null,
-            );
-
-            return response()->json($leaveRequest);
+            ));
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 
-    public function types(Request $request): JsonResponse
+    public function calendar(Request $request): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
+        $request->validate([
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+        ]);
 
-        $types = LeaveTypeReadModel::forCompany($companyId);
-
-        return response()->json($types);
+        return response()->json(LeaveRequestReadModel::calendar(
+            companyId: $request->attributes->get('company_id'),
+            from: Carbon::parse($request->query('from')),
+            to: Carbon::parse($request->query('to')),
+        ));
     }
 
     public function balances(Request $request, int $employeeId): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-        $year = $request->query('year') ? (int) $request->query('year') : null;
+        Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($employeeId);
 
-        // Ensure employee belongs to this company
-        Employee::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($employeeId);
-
-        $balances = LeaveBalanceReadModel::forEmployee($companyId, $employeeId, $year);
-
-        return response()->json($balances);
+        return response()->json(
+            LeaveBalanceReadModel::forEmployee($companyId, $employeeId, $request->query('year') ? (int) $request->query('year') : null)
+        );
     }
 
     public function statistics(Request $request): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-        $year = $request->query('year') ? (int) $request->query('year') : null;
-
-        $stats = LeaveRequestReadModel::statistics($companyId, $year);
-
-        return response()->json($stats);
+        return response()->json(LeaveRequestReadModel::statistics(
+            $request->attributes->get('company_id'),
+            $request->query('year') ? (int) $request->query('year') : null,
+        ));
     }
 }

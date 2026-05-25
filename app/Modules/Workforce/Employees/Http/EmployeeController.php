@@ -53,6 +53,9 @@ class EmployeeController extends Controller
             'phone' => 'nullable|string|max:50',
             'employee_number' => 'nullable|string|max:50',
             'hire_date' => 'required|date',
+            'department_id' => 'nullable|integer|exists:workforce_departments,id',
+            'job_role_id' => 'nullable|integer|exists:workforce_job_roles,id',
+            'manager_id' => 'nullable|integer|exists:workforce_employees,id',
         ]);
 
         $data = new CreateEmployeeData(
@@ -63,6 +66,9 @@ class EmployeeController extends Controller
             email: $validated['email'] ?? null,
             phone: $validated['phone'] ?? null,
             employeeNumber: $validated['employee_number'] ?? null,
+            departmentId: $validated['department_id'] ?? null,
+            jobRoleId: $validated['job_role_id'] ?? null,
+            managerId: $validated['manager_id'] ?? null,
         );
 
         $employee = app(CreateEmployeeUseCase::class)->execute($data);
@@ -81,6 +87,9 @@ class EmployeeController extends Controller
             'email' => 'sometimes|nullable|email|max:255',
             'phone' => 'sometimes|nullable|string|max:50',
             'employee_number' => 'sometimes|nullable|string|max:50',
+            'department_id' => 'sometimes|nullable|integer|exists:workforce_departments,id',
+            'job_role_id' => 'sometimes|nullable|integer|exists:workforce_job_roles,id',
+            'manager_id' => 'sometimes|nullable|integer|exists:workforce_employees,id',
         ]);
 
         $employee->update($validated);

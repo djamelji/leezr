@@ -2,9 +2,6 @@
 import StatusChip from '@/core/components/StatusChip.vue'
 import EmployeeProfile from './_EmployeeProfile.vue'
 import EmployeeContract from './_EmployeeContract.vue'
-import EmployeeVariables from './_EmployeeVariables.vue'
-import EmployeeDocuments from './_EmployeeDocuments.vue'
-import EmployeeActivity from './_EmployeeActivity.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
@@ -40,9 +37,6 @@ const currentTab = ref(0)
 const tabs = computed(() => [
   { title: t('employees.tabs.profile'), icon: 'tabler-user' },
   { title: t('employees.tabs.contract'), icon: 'tabler-file-text' },
-  { title: t('employees.tabs.variables'), icon: 'tabler-adjustments' },
-  { title: t('employees.tabs.documents'), icon: 'tabler-folder' },
-  { title: t('employees.tabs.activity'), icon: 'tabler-activity' },
 ])
 
 // ── Computed helpers ─────────────────────────────────────────
@@ -174,15 +168,6 @@ const conventionLabel = computed(() => {
             </VWindowItem>
             <VWindowItem :value="1">
               <EmployeeContract :employee="employee" />
-            </VWindowItem>
-            <VWindowItem :value="2">
-              <EmployeeVariables :employee="employee" />
-            </VWindowItem>
-            <VWindowItem :value="3">
-              <EmployeeDocuments :employee="employee" />
-            </VWindowItem>
-            <VWindowItem :value="4">
-              <EmployeeActivity :employee="employee" />
             </VWindowItem>
           </VWindow>
         </VCardText>

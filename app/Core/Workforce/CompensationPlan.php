@@ -14,10 +14,15 @@ class CompensationPlan extends Model
 
     const PAY_FREQUENCIES = ['monthly', 'biweekly', 'weekly'];
 
+    const COMPENSATION_TYPES = ['monthly', 'hourly', 'daily'];
+
     protected $fillable = [
         'company_id',
         'contract_id',
+        'compensation_type',
         'base_salary_cents',
+        'hourly_rate_cents',
+        'daily_rate_cents',
         'currency',
         'pay_frequency',
         'overtime_rate_bps',
@@ -28,6 +33,8 @@ class CompensationPlan extends Model
 
     protected $casts = [
         'base_salary_cents' => 'integer',
+        'hourly_rate_cents' => 'integer',
+        'daily_rate_cents' => 'integer',
         'overtime_rate_bps' => 'integer',
         'effective_from' => 'date',
         'effective_until' => 'date',

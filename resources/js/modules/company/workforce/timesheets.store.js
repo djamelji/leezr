@@ -8,7 +8,10 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     _currentPeriod: null,
     _statistics: null,
     _timeEntries: [],
+    _companyEntries: [],
+    _totalCompanyEntries: 0,
     _activeEntries: [],
+    _anomalies: [],
     _loading: false,
   }),
 
@@ -18,7 +21,10 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     currentPeriod: state => state._currentPeriod,
     statistics: state => state._statistics,
     timeEntries: state => state._timeEntries,
+    companyEntries: state => state._companyEntries,
+    totalCompanyEntries: state => state._totalCompanyEntries,
     activeEntries: state => state._activeEntries,
+    anomalies: state => state._anomalies,
     loading: state => state._loading,
   },
 
@@ -36,7 +42,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/timesheets${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/timesheets${qs ? `?${qs}` : ''}`)
 
         this._periods = data.data ?? []
         this._totalPeriods = data.total ?? 0
@@ -50,7 +56,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     async fetchTimesheet(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/timesheets/${id}`)
+        const data = await $api(`/workforce/timesheets/${id}`)
 
         this._currentPeriod = data
 
@@ -61,7 +67,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async generateTimesheet({ employeeId, periodStart, periodEnd }) {
-      const data = await $api('/company/workforce/timesheets', {
+      const data = await $api('/workforce/timesheets', {
         method: 'POST',
         body: { employee_id: employeeId, period_start: periodStart, period_end: periodEnd },
       })
@@ -73,7 +79,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async submitTimesheet(id) {
-      const data = await $api(`/company/workforce/timesheets/${id}/submit`, {
+      const data = await $api(`/workforce/timesheets/${id}/submit`, {
         method: 'POST',
       })
 
@@ -85,7 +91,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async approveTimesheet(id, { approvalNote } = {}) {
-      const data = await $api(`/company/workforce/timesheets/${id}/approve`, {
+      const data = await $api(`/workforce/timesheets/${id}/approve`, {
         method: 'POST',
         body: { approval_note: approvalNote },
       })
@@ -98,7 +104,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async rejectTimesheet(id, { rejectionReason }) {
-      const data = await $api(`/company/workforce/timesheets/${id}/reject`, {
+      const data = await $api(`/workforce/timesheets/${id}/reject`, {
         method: 'POST',
         body: { rejection_reason: rejectionReason },
       })
@@ -111,7 +117,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async reopenTimesheet(id) {
-      const data = await $api(`/company/workforce/timesheets/${id}/reopen`, {
+      const data = await $api(`/workforce/timesheets/${id}/reopen`, {
         method: 'POST',
       })
 
@@ -123,7 +129,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async lockTimesheet(id) {
-      const data = await $api(`/company/workforce/timesheets/${id}/lock`, {
+      const data = await $api(`/workforce/timesheets/${id}/lock`, {
         method: 'POST',
       })
 
@@ -141,7 +147,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
       if (periodEnd) params.set('period_end', periodEnd)
 
       const qs = params.toString()
-      const data = await $api(`/company/workforce/timesheets/statistics${qs ? `?${qs}` : ''}`)
+      const data = await $api(`/workforce/timesheets/statistics${qs ? `?${qs}` : ''}`)
 
       this._statistics = data
 
@@ -159,7 +165,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
         if (to) params.set('to', to)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/time-entries${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/time-entries${qs ? `?${qs}` : ''}`)
 
         this._timeEntries = data.data ?? data
 
@@ -170,7 +176,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async fetchActiveEntries() {
-      const data = await $api('/company/workforce/time-entries/active')
+      const data = await $api('/workforce/time-entries/active')
 
       this._activeEntries = data.data ?? data
 
@@ -178,7 +184,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async clockIn({ employeeId, source }) {
-      const data = await $api('/company/workforce/time-entries/clock-in', {
+      const data = await $api('/workforce/time-entries/clock-in', {
         method: 'POST',
         body: { employee_id: employeeId, source },
       })
@@ -189,7 +195,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async clockOut(id) {
-      const data = await $api(`/company/workforce/time-entries/${id}/clock-out`, {
+      const data = await $api(`/workforce/time-entries/${id}/clock-out`, {
         method: 'POST',
       })
 
@@ -200,7 +206,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async startBreak(id, { type }) {
-      const data = await $api(`/company/workforce/time-entries/${id}/break/start`, {
+      const data = await $api(`/workforce/time-entries/${id}/break/start`, {
         method: 'POST',
         body: { type },
       })
@@ -212,7 +218,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async endBreak(id) {
-      const data = await $api(`/company/workforce/time-entries/${id}/break/end`, {
+      const data = await $api(`/workforce/time-entries/${id}/break/end`, {
         method: 'POST',
       })
 
@@ -223,12 +229,78 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
     },
 
     async createManualEntry({ employeeId, date, clockIn, clockOut }) {
-      const data = await $api('/company/workforce/time-entries', {
+      const data = await $api('/workforce/time-entries', {
         method: 'POST',
         body: { employee_id: employeeId, date, clock_in: clockIn, clock_out: clockOut },
       })
 
       this._timeEntries.push(data)
+
+      return data
+    },
+
+    // ── Company-wide Time Entries ────────────────────────────
+    async fetchCompanyEntries({ from, to, employeeId, status, perPage, page } = {}) {
+      this._loading = true
+      try {
+        const params = new URLSearchParams()
+
+        if (from) params.set('from', from)
+        if (to) params.set('to', to)
+        if (employeeId) params.set('employee_id', employeeId)
+        if (status) params.set('status', status)
+        if (perPage) params.set('per_page', perPage)
+        if (page) params.set('page', page)
+
+        const qs = params.toString()
+        const data = await $api(`/workforce/time-entries/company${qs ? `?${qs}` : ''}`)
+
+        this._companyEntries = data.data ?? []
+        this._totalCompanyEntries = data.total ?? 0
+
+        return data
+      } finally {
+        this._loading = false
+      }
+    },
+
+    async updateTimeEntry(id, { date, clockIn, clockOut }) {
+      const body = {}
+
+      if (date) body.date = date
+      if (clockIn) body.clock_in = clockIn
+      if (clockOut) body.clock_out = clockOut
+
+      const data = await $api(`/workforce/time-entries/${id}`, {
+        method: 'PUT',
+        body,
+      })
+
+      const idx = this._companyEntries.findIndex(e => e.id === id)
+      if (idx !== -1) this._companyEntries[idx] = data
+
+      return data
+    },
+
+    async deleteTimeEntry(id) {
+      await $api(`/workforce/time-entries/${id}`, {
+        method: 'DELETE',
+      })
+
+      this._companyEntries = this._companyEntries.filter(e => e.id !== id)
+      this._totalCompanyEntries--
+    },
+
+    async fetchAnomalies({ from, to }) {
+      const params = new URLSearchParams()
+
+      if (from) params.set('from', from)
+      if (to) params.set('to', to)
+
+      const qs = params.toString()
+      const data = await $api(`/workforce/time-entries/anomalies${qs ? `?${qs}` : ''}`)
+
+      this._anomalies = data.data ?? data
 
       return data
     },

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('contract_id')->constrained('workforce_employment_contracts')->cascadeOnDelete();
-            $table->integer('base_salary_cents');
+            $table->integer('base_salary_cents')->nullable();
             $table->char('currency', 3)->default('EUR');
             $table->string('pay_frequency', 20)->default('monthly'); // monthly, biweekly, weekly
             $table->integer('overtime_rate_bps')->default(2500); // basis points (25.00% = 2500)

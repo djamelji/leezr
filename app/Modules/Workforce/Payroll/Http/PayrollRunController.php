@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\Payroll\Http;
 use App\Core\Workforce\PayrollLine;
 use App\Core\Workforce\PayrollRun;
 use App\Http\Controllers\Controller;
+use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
 use App\Modules\Workforce\ReadModels\PayrollCalculationReadModel;
 use App\Modules\Workforce\ReadModels\PayrollLineReadModel;
 use App\Modules\Workforce\ReadModels\PayrollRunReadModel;
@@ -201,6 +202,20 @@ class PayrollRunController extends Controller
         return response()->json($lines);
     }
 
+    // ── Line Detail ─────────────────────────────────────────────────
+    public function showLine(Request $request, int $id, int $lineId): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        PayrollRun::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
+
+        $detail = PayrollLineReadModel::detail($lineId, $companyId);
+        if (! $detail || $detail['payroll_run']['id'] !== $id) {
+            abort(404);
+        }
+
+        return response()->json($detail);
+    }
+
     // ── Calculations ─────────────────────────────────────────────────
     public function calculations(Request $request, int $id): JsonResponse
     {
@@ -211,6 +226,15 @@ class PayrollRunController extends Controller
             'calculations' => PayrollCalculationReadModel::forRun($id),
             'totals' => PayrollCalculationReadModel::runTotals($id),
         ]);
+    }
+
+    // ── Run Documents ─────────────────────────────────────────────────
+    public function documents(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        PayrollRun::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
+
+        return response()->json(GeneratedDocumentReadModel::forPayrollRun($id, $companyId));
     }
 
     // ── Statistics ───────────────────────────────────────────────────

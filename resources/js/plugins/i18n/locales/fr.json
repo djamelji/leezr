@@ -153,7 +153,8 @@
       "workforce-leave": "Congés",
       "workforce-planning": "Planning",
       "workforce-payroll": "Paie",
-      "workforce-documents": "Documents RH"
+      "workforce-documents": "Documents RH",
+      "workforce-organization": "Organisation"
     }
   },
   "roles": {
@@ -5905,6 +5906,7 @@
     "signaturePending": "En attente",
     "signatureSigned": "Signé",
     "signatureDeclined": "Refusé",
+    "clockActionSuccess": "Action pointage effectuée",
     "status": {
       "working": "En cours",
       "onBreak": "En pause",
@@ -5938,7 +5940,10 @@
       "phone": "Téléphone",
       "employeeNumber": "Matricule",
       "hireDate": "Date d'embauche",
-      "terminationDate": "Date de sortie"
+      "terminationDate": "Date de sortie",
+      "department": "Département",
+      "jobRole": "Poste",
+      "manager": "Responsable"
     },
     "tabs": {
       "profile": "Profil",
@@ -5966,7 +5971,14 @@
       "noCurrentContract": "Aucun contrat actif. Créez un contrat pour cet employé.",
       "history": "Historique des contrats",
       "weeklyHours": "Heures hebdomadaires",
-      "conventionCollective": "Convention collective"
+      "conventionCollective": "Convention collective",
+      "compensationSection": "Rémunération",
+      "compensationType": "Type de rémunération",
+      "baseSalaryCents": "Salaire brut mensuel (centimes)",
+      "hourlyRateCents": "Taux horaire (centimes)",
+      "dailyRateCents": "Taux journalier (centimes)",
+      "amountInCents": "Montant en centimes (ex: 250000 = 2 500,00 €)",
+      "day": "jour"
     },
     "contractTypes": {
       "cdi": "CDI",
@@ -5974,6 +5986,11 @@
       "stage": "Stage",
       "alternance": "Alternance",
       "freelance": "Freelance"
+    },
+    "compensationTypes": {
+      "monthly": "Mensuel",
+      "hourly": "Horaire",
+      "daily": "Journalier"
     },
     "workModels": {
       "horaire": "Horaire",
@@ -6001,6 +6018,45 @@
     "activity": {
       "title": "Journal d'activité",
       "emptyDescription": "L'historique des modifications et événements pour cet employé sera affiché ici."
+    }
+  },
+  "organization": {
+    "title": "Organisation",
+    "description": "Gérez les départements et postes de votre entreprise",
+    "tabs": {
+      "departments": "Départements",
+      "roles": "Postes"
+    },
+    "departments": {
+      "name": "Nom",
+      "manager": "Responsable",
+      "employeeCount": "Employés",
+      "add": "Ajouter un département",
+      "edit": "Modifier le département",
+      "parentDept": "Département parent",
+      "sortOrder": "Ordre d'affichage",
+      "subDept": "Sous-département",
+      "empty": "Aucun département enregistré.",
+      "created": "Département créé avec succès",
+      "updated": "Département mis à jour",
+      "deleted": "Département supprimé"
+    },
+    "roles": {
+      "title": "Postes",
+      "titleField": "Intitulé du poste",
+      "department": "Département",
+      "level": "Niveau",
+      "descriptionField": "Description",
+      "defaultRate": "Taux horaire par défaut",
+      "defaultRateLabel": "Taux horaire par défaut (centimes)",
+      "defaultRateHint": "Taux horaire en centimes, utilisé si l'employé n'a pas de plan de rémunération",
+      "employeeCount": "Employés",
+      "add": "Ajouter un poste",
+      "edit": "Modifier le poste",
+      "empty": "Aucun poste enregistré.",
+      "created": "Poste créé avec succès",
+      "updated": "Poste mis à jour",
+      "deleted": "Poste supprimé"
     }
   },
   "payroll": {
@@ -6101,6 +6157,62 @@
       "deleteText": "Êtes-vous sûr de vouloir supprimer ce brouillon ? Cette action est irréversible."
     }
   },
+  "timeTracking": {
+    "tabs": {
+      "entries": "Pointages",
+      "timesheets": "Feuilles de temps"
+    },
+    "addEntry": "Ajouter un pointage",
+    "correctEntry": "Corriger le pointage",
+    "correct": "Corriger",
+    "corrected": "Pointage corrigé",
+    "created": "Pointage créé",
+    "deleted": "Pointage supprimé",
+    "applyCorrection": "Appliquer la correction",
+    "correctionHint": "Modifiez les horaires pour corriger ce pointage. Les totaux seront recalculés automatiquement.",
+    "columns": {
+      "date": "Date",
+      "employee": "Employé",
+      "clockIn": "Arrivée",
+      "clockOut": "Départ",
+      "breaks": "Pauses",
+      "total": "Total",
+      "status": "Statut",
+      "anomalies": "Anomalies"
+    },
+    "statuses": {
+      "idle": "En attente",
+      "working": "En cours",
+      "on_break": "En pause",
+      "completed": "Terminé"
+    },
+    "filters": {
+      "from": "Du",
+      "to": "Au",
+      "employee": "Employé",
+      "status": "Statut"
+    },
+    "fields": {
+      "employee": "Employé",
+      "date": "Date",
+      "clockIn": "Heure d'arrivée",
+      "clockOut": "Heure de départ"
+    },
+    "anomalies": {
+      "missing_clock_out": "Pointage sans départ",
+      "excessive_hours": "Plus de 10h travaillées",
+      "missing_break": "Pause insuffisante (>6h)",
+      "zero_worked": "0 minutes travaillées"
+    },
+    "emptyState": {
+      "title": "Aucun pointage",
+      "description": "Les pointages apparaîtront ici quand vos employés commenceront à pointer."
+    },
+    "deleteConfirm": {
+      "title": "Supprimer le pointage",
+      "message": "Êtes-vous sûr de vouloir supprimer ce pointage ? Cette action est irréversible."
+    }
+  },
   "timesheets": {
     "generateTimesheet": "Générer une feuille de temps",
     "generate": "Générer",
@@ -6137,6 +6249,8 @@
       "title": "Grille journalière",
       "date": "Date",
       "day": "Jour",
+      "clockIn": "Arrivée",
+      "clockOut": "Départ",
       "worked": "Travaillé",
       "break": "Pause",
       "overtime": "Heures sup.",
@@ -6332,6 +6446,7 @@
     "endBreak": "Fin pause",
     "workedToday": "Travaillé aujourd'hui",
     "breakTime": "Temps de pause",
+    "arrival": "Arrivée",
     "todayStatus": "Statut du jour"
   }
 }

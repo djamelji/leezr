@@ -21,6 +21,9 @@ class CreateEmployeeUseCase
             'hire_date' => $data->hireDate,
             'status' => $data->status,
             'metadata' => $data->metadata,
+            'department_id' => $data->departmentId,
+            'job_role_id' => $data->jobRoleId,
+            'manager_id' => $data->managerId,
         ]);
 
         app(AuditLogger::class)->logCompany(

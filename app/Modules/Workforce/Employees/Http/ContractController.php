@@ -44,6 +44,9 @@ class ContractController extends Controller
             'pay_frequency' => 'nullable|in:monthly,biweekly,weekly',
             'overtime_rate_bps' => 'nullable|integer|min:0',
             'convention_collective_id' => 'nullable|integer|exists:convention_collectives,id',
+            'compensation_type' => 'nullable|in:monthly,hourly,daily',
+            'hourly_rate_cents' => 'nullable|integer|min:0',
+            'daily_rate_cents' => 'nullable|integer|min:0',
         ]);
 
         $contract = app(CreateContractUseCase::class)->execute(
@@ -61,6 +64,9 @@ class ContractController extends Controller
             conventionCollectiveId: isset($validated['convention_collective_id'])
                 ? (int) $validated['convention_collective_id']
                 : null,
+            compensationType: $validated['compensation_type'] ?? 'monthly',
+            hourlyRateCents: isset($validated['hourly_rate_cents']) ? (int) $validated['hourly_rate_cents'] : null,
+            dailyRateCents: isset($validated['daily_rate_cents']) ? (int) $validated['daily_rate_cents'] : null,
         );
 
         $contract->load(['conventionCollective:id,idcc,short_name', 'compensationPlans']);

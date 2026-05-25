@@ -23,7 +23,17 @@ const formData = ref({
   weekly_hours: 35,
   start_date: '',
   convention_collective_id: null,
+  compensation_type: 'monthly',
+  base_salary_cents: null,
+  hourly_rate_cents: null,
+  daily_rate_cents: null,
 })
+
+const compensationTypes = [
+  { title: t('employees.compensationTypes.monthly'), value: 'monthly' },
+  { title: t('employees.compensationTypes.hourly'), value: 'hourly' },
+  { title: t('employees.compensationTypes.daily'), value: 'daily' },
+]
 
 const contractTypes = [
   { title: t('employees.contractTypes.cdi'), value: 'cdi' },
@@ -48,7 +58,7 @@ const submitContract = async () => {
     await store.createContract(props.employee.id, formData.value)
     isDrawerOpen.value = false
     // Reset form
-    formData.value = { contract_type: 'cdi', work_model_key: 'horaire', weekly_hours: 35, start_date: '', convention_collective_id: null }
+    formData.value = { contract_type: 'cdi', work_model_key: 'horaire', weekly_hours: 35, start_date: '', convention_collective_id: null, compensation_type: 'monthly', base_salary_cents: null, hourly_rate_cents: null, daily_rate_cents: null }
   }
   finally {
     formLoading.value = false
@@ -160,10 +170,18 @@ const formatSalary = (cents, currency) => {
           <div class="d-flex gap-6 flex-wrap">
             <div>
               <div class="text-body-2 text-medium-emphasis">
-                {{ $t('employees.contract.baseSalary') }}
+                {{ $t(`employees.compensationTypes.${currentContract.compensation_plans[0].compensation_type || 'monthly'}`) }}
               </div>
               <div class="text-h6">
-                {{ formatSalary(currentContract.compensation_plans[0].base_salary_cents, currentContract.compensation_plans[0].currency) }}
+                <template v-if="currentContract.compensation_plans[0].compensation_type === 'hourly'">
+                  {{ formatSalary(currentContract.compensation_plans[0].hourly_rate_cents, currentContract.compensation_plans[0].currency) }}/h
+                </template>
+                <template v-else-if="currentContract.compensation_plans[0].compensation_type === 'daily'">
+                  {{ formatSalary(currentContract.compensation_plans[0].daily_rate_cents, currentContract.compensation_plans[0].currency) }}/{{ $t('employees.contract.day') }}
+                </template>
+                <template v-else>
+                  {{ formatSalary(currentContract.compensation_plans[0].base_salary_cents, currentContract.compensation_plans[0].currency) }}
+                </template>
               </div>
               <div class="text-caption text-medium-emphasis">
                 / {{ $t(`employees.payFrequency.${currentContract.compensation_plans[0].pay_frequency}`) }}
@@ -307,6 +325,58 @@ const formatSalary = (cents, currency) => {
                 clearable
               />
             </VCol>
+
+            <!-- Compensation Section -->
+            <VCol cols="12">
+              <VDivider class="mb-2" />
+              <div class="text-subtitle-1 font-weight-medium mb-2">
+                {{ $t('employees.contract.compensationSection') }}
+              </div>
+            </VCol>
+            <VCol cols="12">
+              <AppSelect
+                v-model="formData.compensation_type"
+                :items="compensationTypes"
+                :label="$t('employees.contract.compensationType')"
+              />
+            </VCol>
+            <VCol
+              v-if="formData.compensation_type === 'monthly'"
+              cols="12"
+            >
+              <AppTextField
+                v-model="formData.base_salary_cents"
+                :label="$t('employees.contract.baseSalaryCents')"
+                :hint="$t('employees.contract.amountInCents')"
+                type="number"
+                persistent-hint
+              />
+            </VCol>
+            <VCol
+              v-if="formData.compensation_type === 'hourly'"
+              cols="12"
+            >
+              <AppTextField
+                v-model="formData.hourly_rate_cents"
+                :label="$t('employees.contract.hourlyRateCents')"
+                :hint="$t('employees.contract.amountInCents')"
+                type="number"
+                persistent-hint
+              />
+            </VCol>
+            <VCol
+              v-if="formData.compensation_type === 'daily'"
+              cols="12"
+            >
+              <AppTextField
+                v-model="formData.daily_rate_cents"
+                :label="$t('employees.contract.dailyRateCents')"
+                :hint="$t('employees.contract.amountInCents')"
+                type="number"
+                persistent-hint
+              />
+            </VCol>
+
             <VCol cols="12">
               <div class="d-flex gap-3 justify-end">
                 <VBtn

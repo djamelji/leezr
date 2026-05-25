@@ -425,6 +425,18 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
 
 // ── Workforce ──────────────────────────────────────────────────
 Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
+    // Departments
+    Route::get('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'index']);
+    Route::post('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'store']);
+    Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update']);
+    Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy']);
+
+    // Job Roles
+    Route::get('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'index']);
+    Route::post('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'store']);
+    Route::put('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'update']);
+    Route::delete('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'destroy']);
+
     Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary']);
     Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index']);
     Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store']);
@@ -451,15 +463,23 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
 
     // Time Entries
     Route::get('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'index']);
+    Route::get('time-entries/company', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'companyIndex']);
     Route::get('time-entries/active', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'active']);
+    Route::get('time-entries/anomalies', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'anomalies']);
     Route::post('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'store']);
+    Route::put('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'update']);
+    Route::delete('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'destroy']);
     Route::post('time-entries/clock-in', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockIn']);
     Route::post('time-entries/{id}/clock-out', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockOut']);
     Route::post('time-entries/{id}/break/start', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'startBreak']);
     Route::post('time-entries/{id}/break/end', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'endBreak']);
 
     // Leave
-    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'types']);
+    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'index']);
+    Route::post('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'store']);
+    Route::put('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'update']);
+    Route::delete('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'destroy']);
+    Route::get('leaves/calendar', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'calendar']);
     Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics']);
     Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index']);
     Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store']);
@@ -468,6 +488,33 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject']);
     Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel']);
     Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances']);
+});
+
+// ── Workforce Planning ────────────────────────────────────────
+Route::prefix('workforce/planning')->middleware('company.access:use-module,workforce_planning')->group(function () {
+    // Work Locations
+    Route::get('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'index']);
+    Route::post('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'store']);
+    Route::put('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'update']);
+    Route::delete('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'destroy']);
+
+    // Schedule Templates
+    Route::get('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'index']);
+    Route::post('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'store']);
+    Route::put('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'update']);
+    Route::delete('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'destroy']);
+
+    // Shifts
+    Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week']);
+    Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar']);
+    Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics']);
+    Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index']);
+    Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store']);
+    Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish']);
+    Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate']);
+    Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update']);
+    Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy']);
+    Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel']);
 });
 
 // ── Workforce Payroll ────────────────────────────────────────
@@ -488,7 +535,9 @@ Route::prefix('workforce/payroll')->middleware('company.access:use-module,workfo
 
     // Payroll Run Data
     Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines']);
+    Route::get('{id}/lines/{lineId}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'showLine']);
     Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations']);
+    Route::get('{id}/documents', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'documents']);
 });
 
 // ── Workforce DSN Declarations ────────────────────────────────

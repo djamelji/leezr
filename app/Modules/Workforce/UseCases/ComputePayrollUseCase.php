@@ -148,19 +148,37 @@ class ComputePayrollUseCase
                     ];
                 }
 
-                // Calculate gross_basis_cents
-                // MVP: Fixed monthly salary, NOT prorated by worked_minutes
-                // Formula: base_salary + overtime_value - unpaid_leave_deduction
+                // Calculate gross_basis_cents — supports monthly, hourly, daily compensation
+                $compensationType = $compensation->compensation_type ?? 'monthly';
                 $baseSalaryCents = $compensation->base_salary_cents;
                 $overtimeRateBps = $compensation->overtime_rate_bps;
                 $weeklyHours = (float) ($contract->weekly_hours ?? 35);
 
-                // Safety anomalies: zero salary / invalid hours
-                if ($baseSalaryCents <= 0) {
+                // Resolve effective hourly rate (fallback hierarchy via Employee)
+                $hourlyRateCents = $employee->effectiveHourlyRateCents() ?? 0;
+
+                // Safety anomalies
+                if ($compensationType === 'monthly' && $baseSalaryCents <= 0) {
                     $lineAnomalies[] = [
                         'type' => PayrollRun::ANOMALY_ZERO_BASE_SALARY,
                         'severity' => 'error',
                         'message' => "Base salary is zero for {$employee->first_name} {$employee->last_name}",
+                    ];
+                }
+
+                if ($compensationType === 'hourly' && $hourlyRateCents <= 0) {
+                    $lineAnomalies[] = [
+                        'type' => PayrollRun::ANOMALY_ZERO_BASE_SALARY,
+                        'severity' => 'error',
+                        'message' => "Hourly rate is zero for {$employee->first_name} {$employee->last_name}",
+                    ];
+                }
+
+                if ($compensationType === 'daily' && ($compensation->daily_rate_cents ?? 0) <= 0) {
+                    $lineAnomalies[] = [
+                        'type' => PayrollRun::ANOMALY_ZERO_BASE_SALARY,
+                        'severity' => 'error',
+                        'message' => "Daily rate is zero for {$employee->first_name} {$employee->last_name}",
                     ];
                 }
 
@@ -172,52 +190,63 @@ class ComputePayrollUseCase
                     ];
                 }
 
-                // Overtime valorization
+                // Compute base pay per compensation type
                 $monthlyHours = $weeklyHours * 52 / 12;
-                $hourlyRateCents = $monthlyHours > 0
-                    ? (int) round($baseSalaryCents / $monthlyHours)
-                    : 0;
                 $overtimeHours = $timesheet->total_overtime_minutes / 60;
                 $overtimeMultiplier = 1 + ($overtimeRateBps / 10000);
+
+                if ($compensationType === 'hourly') {
+                    // Hourly: gross = worked_hours × hourly_rate (excluding overtime which is computed separately)
+                    $baseWorkedMinutes = $timesheet->total_worked_minutes - $timesheet->total_overtime_minutes;
+                    $baseWorkedHours = max(0, $baseWorkedMinutes) / 60;
+                    $baseSalaryCents = (int) round($baseWorkedHours * $hourlyRateCents);
+                } elseif ($compensationType === 'daily') {
+                    // Daily: gross = worked_days × daily_rate
+                    // Count distinct worked days from timesheet lines
+                    $workedDays = $timesheetLines->filter(fn ($line) => ($line->worked_minutes ?? 0) > 0 && ! $line->is_leave_day)->count();
+                    $dailyRate = $compensation->daily_rate_cents ?? 0;
+                    $baseSalaryCents = (int) round($workedDays * $dailyRate);
+                }
+                // monthly: $baseSalaryCents is already correct from $compensation->base_salary_cents
+
+                // Overtime valorization
                 $overtimeCents = (int) round($overtimeHours * $hourlyRateCents * $overtimeMultiplier);
 
                 // Overtime ventilation (Sprint 6.2 — DSN S21.G00.53 + RGDU)
-                // French law: HS 25% = first 8h above legal weekly hours (35h→43h)
-                //             HS 50% = hours beyond 43h/week
-                //             Daily overtime = from timesheet daily_overtime_minutes
                 $dailyOvertimeMinutes = $timesheetLines->sum('daily_overtime_minutes');
                 $weeklyOvertimeMinutes = $timesheet->total_overtime_minutes - $dailyOvertimeMinutes;
                 $dailyOvertimeHours = $dailyOvertimeMinutes / 60;
                 $weeklyOvertimeHours = $weeklyOvertimeMinutes / 60;
 
-                // Weekly overtime split: HS25 (first 8h/week above legal) vs HS50 (beyond)
                 $hs25ThresholdHours = 8.0;
                 $weeklyHs25Hours = min($weeklyOvertimeHours, $hs25ThresholdHours);
                 $weeklyHs50Hours = max(0, $weeklyOvertimeHours - $hs25ThresholdHours);
 
-                // Valorize each overtime tier at the SAME global multiplier
-                // (financial total stays identical — ventilation is informational for DSN/RGDU)
                 $overtime25Cents = (int) round($weeklyHs25Hours * $hourlyRateCents * $overtimeMultiplier);
                 $overtime50Cents = (int) round($weeklyHs50Hours * $hourlyRateCents * $overtimeMultiplier);
                 $overtimeDailyCents = (int) round($dailyOvertimeHours * $hourlyRateCents * $overtimeMultiplier);
 
-                // Rounding reconciliation: ensure ventilated sum == total
+                // Rounding reconciliation
                 $ventilatedSum = $overtime25Cents + $overtime50Cents + $overtimeDailyCents;
                 if ($ventilatedSum !== $overtimeCents && $overtimeCents > 0) {
                     $overtime25Cents += ($overtimeCents - $ventilatedSum);
                 }
 
                 // Unpaid leave deduction
-                // Convention: working days per month ≈ 21.67 (260 / 12)
                 $workingDaysPerMonth = 260 / 12;
-                $dailyRateCents = (int) round($baseSalaryCents / $workingDaysPerMonth);
                 $unpaidLeaveDays = $unpaidLeaveHundredths / 100;
-                $unpaidLeaveDeductionCents = (int) round($unpaidLeaveDays * $dailyRateCents);
+                if ($compensationType === 'daily') {
+                    $dailyDeductionRate = $compensation->daily_rate_cents ?? 0;
+                } else {
+                    $dailyDeductionRate = (int) round($baseSalaryCents / $workingDaysPerMonth);
+                }
+                $unpaidLeaveDeductionCents = (int) round($unpaidLeaveDays * $dailyDeductionRate);
 
                 $grossBasisCents = $baseSalaryCents + $overtimeCents - $unpaidLeaveDeductionCents;
 
                 // Build gross_breakdown
                 $grossBreakdown = [
+                    'compensation_type' => $compensationType,
                     'base_salary_cents' => $baseSalaryCents,
                     'overtime_cents' => $overtimeCents,
                     'unpaid_leave_deduction_cents' => $unpaidLeaveDeductionCents,
@@ -227,7 +256,7 @@ class ComputePayrollUseCase
                     'overtime_hours' => round($overtimeHours, 2),
                     'overtime_multiplier' => round($overtimeMultiplier, 4),
                     'unpaid_leave_days' => round($unpaidLeaveDays, 2),
-                    'daily_rate_cents' => $dailyRateCents,
+                    'daily_rate_cents' => $compensationType === 'daily' ? ($compensation->daily_rate_cents ?? 0) : $dailyDeductionRate,
                     // Sprint 6.2: Ventilated overtime for DSN/RGDU
                     'overtime_25_cents' => $overtime25Cents,
                     'overtime_50_cents' => $overtime50Cents,
@@ -242,7 +271,11 @@ class ComputePayrollUseCase
                 // Build compensation_snapshot
                 $compensationSnapshot = [
                     'compensation_plan_id' => $compensation->id,
-                    'base_salary_cents' => $baseSalaryCents,
+                    'compensation_type' => $compensationType,
+                    'base_salary_cents' => $compensation->base_salary_cents,
+                    'hourly_rate_cents' => $compensation->hourly_rate_cents,
+                    'daily_rate_cents' => $compensation->daily_rate_cents,
+                    'effective_hourly_rate_cents' => $hourlyRateCents,
                     'overtime_rate_bps' => $overtimeRateBps,
                     'currency' => $compensation->currency,
                     'pay_frequency' => $compensation->pay_frequency,

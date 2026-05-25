@@ -14,6 +14,7 @@ const { toast } = useAppToast()
 const loading = ref(true)
 const documents = ref([])
 const documentsLoading = ref(false)
+const clockActionLoading = ref(false)
 
 // ── Data fetching ───────────────────────────────────────────
 onMounted(async () => {
@@ -54,6 +55,8 @@ const employeeName = computed(() => {
 
   return `${employee.value.first_name} ${employee.value.last_name}`
 })
+
+const payslipDocs = computed(() => documents.value.filter(d => d.template?.code?.startsWith('payslip_')))
 
 const currentContract = computed(() => {
   if (!employee.value) return null
@@ -101,6 +104,20 @@ function formatDate(dateString) {
 }
 
 // ── Contract type labels ────────────────────────────────────
+async function handleClockAction(actionFn) {
+  clockActionLoading.value = true
+  try {
+    await actionFn()
+    toast(t('workforceMe.clockActionSuccess'), 'success')
+  }
+  catch (error) {
+    toast(error.response?.data?.message || t('common.error'), 'error')
+  }
+  finally {
+    clockActionLoading.value = false
+  }
+}
+
 const contractTypeLabels = {
   cdi: 'CDI',
   cdd: 'CDD',
@@ -143,15 +160,57 @@ function signatureChipProps(status) {
           {{ t('workforceMe.welcome', { name: employeeName }) }}
         </p>
       </div>
-      <VBtn
-        variant="tonal"
-        color="primary"
-        prepend-icon="tabler-refresh"
-        :loading="loading"
-        @click="clockStore.fetchProfile(); fetchDocuments()"
-      >
-        {{ t('workforceMe.refresh') }}
-      </VBtn>
+      <div class="d-flex gap-2">
+        <!-- Clock actions -->
+        <VBtn
+          v-if="clockStore.clockStatus === 'not_started'"
+          color="success"
+          prepend-icon="tabler-player-play"
+          :loading="clockActionLoading"
+          @click="handleClockAction(clockStore.clockIn)"
+        >
+          {{ t('workforceClock.clockIn') }}
+        </VBtn>
+        <template v-else-if="clockStore.isWorking">
+          <VBtn
+            color="warning"
+            variant="tonal"
+            prepend-icon="tabler-coffee"
+            :loading="clockActionLoading"
+            @click="handleClockAction(clockStore.startBreak)"
+          >
+            {{ t('workforceClock.startBreak') }}
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="tonal"
+            prepend-icon="tabler-player-stop"
+            :loading="clockActionLoading"
+            @click="handleClockAction(clockStore.clockOut)"
+          >
+            {{ t('workforceClock.clockOut') }}
+          </VBtn>
+        </template>
+        <VBtn
+          v-else-if="clockStore.isOnBreak"
+          color="success"
+          prepend-icon="tabler-player-play"
+          :loading="clockActionLoading"
+          @click="handleClockAction(clockStore.endBreak)"
+        >
+          {{ t('workforceClock.endBreak') }}
+        </VBtn>
+
+        <VBtn
+          variant="tonal"
+          color="primary"
+          prepend-icon="tabler-refresh"
+          :loading="loading"
+          @click="clockStore.fetchProfile(); fetchDocuments()"
+        >
+          {{ t('workforceMe.refresh') }}
+        </VBtn>
+      </div>
     </div>
 
     <!-- Loading state -->
@@ -502,6 +561,93 @@ function signatureChipProps(status) {
                 @click="router.push({ name: 'company-workforce-leave' })"
               >
                 {{ t('workforceMe.requestLeave') }}
+              </VBtn>
+            </VCardActions>
+          </VCard>
+        </VCol>
+      </VRow>
+
+      <!-- Card: Mes bulletins de paie -->
+      <VRow class="mt-2">
+        <VCol cols="12">
+          <VCard>
+            <VCardItem>
+              <template #prepend>
+                <VAvatar
+                  color="primary"
+                  variant="tonal"
+                  rounded
+                  size="40"
+                >
+                  <VIcon icon="tabler-receipt" />
+                </VAvatar>
+              </template>
+              <VCardTitle>{{ t('workforceMe.myPayslips') }}</VCardTitle>
+            </VCardItem>
+
+            <VCardText v-if="!payslipDocs.length">
+              <VAlert
+                type="info"
+                variant="tonal"
+                density="compact"
+              >
+                {{ t('workforceMe.noPayslips') }}
+              </VAlert>
+            </VCardText>
+
+            <VCardText v-else class="px-0">
+              <VTable density="compact">
+                <thead>
+                  <tr>
+                    <th>{{ t('workforceMe.payslipPeriod') }}</th>
+                    <th>{{ t('workforceMe.payslipType') }}</th>
+                    <th>{{ t('workforceMe.payslipGeneratedAt') }}</th>
+                    <th>{{ t('workforceMe.payslipSignatureStatus') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="doc in payslipDocs"
+                    :key="doc.id"
+                  >
+                    <td class="font-weight-medium">
+                      {{ doc.template?.name || doc.subject_type }}
+                    </td>
+                    <td>
+                      <VChip
+                        :color="doc.template?.code === 'payslip_official_fr' ? 'success' : 'warning'"
+                        size="small"
+                        label
+                      >
+                        {{ doc.template?.code === 'payslip_official_fr' ? t('workforceMe.payslipOfficial') : t('workforceMe.payslipDraft') }}
+                      </VChip>
+                    </td>
+                    <td class="text-medium-emphasis">
+                      {{ formatDate(doc.generated_at) }}
+                    </td>
+                    <td>
+                      <VChip
+                        :color="signatureChipProps(doc.signature_status).color"
+                        size="x-small"
+                        label
+                      >
+                        {{ signatureChipProps(doc.signature_status).text }}
+                      </VChip>
+                    </td>
+                  </tr>
+                </tbody>
+              </VTable>
+            </VCardText>
+
+            <VCardActions>
+              <VSpacer />
+              <VBtn
+                variant="tonal"
+                color="primary"
+                prepend-icon="tabler-receipt"
+                @click="router.push({ name: 'company-workforce-payroll' })"
+              >
+                {{ t('workforceMe.viewPayroll') }}
               </VBtn>
             </VCardActions>
           </VCard>

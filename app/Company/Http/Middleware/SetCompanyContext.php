@@ -61,6 +61,7 @@ class SetCompanyContext
 
         $request->merge(['company' => $company]);
         $request->attributes->set('company', $company);
+        $request->attributes->set('company_id', $company->id);
 
         // ADR-432: Bind company to container for CompanyScope global scope
         app()->instance('company.context', $company);

@@ -49,6 +49,9 @@ class Employee extends Model
         'termination_date',
         'status',
         'metadata',
+        'department_id',
+        'job_role_id',
+        'manager_id',
     ];
 
     protected $casts = [
@@ -62,6 +65,26 @@ class Employee extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    public function jobRole(): BelongsTo
+    {
+        return $this->belongsTo(JobRole::class, 'job_role_id');
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'manager_id');
+    }
+
+    public function directReports(): HasMany
+    {
+        return $this->hasMany(self::class, 'manager_id');
     }
 
     public function contracts(): HasMany
@@ -143,5 +166,63 @@ class Employee extends Model
     public function scopeNotTerminated($query)
     {
         return $query->where('status', '!=', self::STATUS_TERMINATED);
+    }
+
+    public function scopeInDepartment($query, int $departmentId)
+    {
+        return $query->where('department_id', $departmentId);
+    }
+
+    // ── Business Methods ──
+
+    /**
+     * Resolve effective hourly rate in cents using fallback hierarchy:
+     * 1. Explicit hourly_rate_cents on current compensation
+     * 2. Derived from monthly: base_salary / (weekly_hours × 52/12)
+     * 3. Derived from daily: daily_rate / (weekly_hours / 5)
+     * 4. Fallback to jobRole.default_hourly_rate_cents
+     * 5. null → anomaly in payroll
+     */
+    public function effectiveHourlyRateCents(): ?int
+    {
+        $contract = $this->currentContract;
+        if (! $contract) {
+            return $this->jobRole?->default_hourly_rate_cents;
+        }
+
+        $compensation = $contract->currentCompensation;
+        if (! $compensation) {
+            return $this->jobRole?->default_hourly_rate_cents;
+        }
+
+        // (a) Explicit hourly rate
+        if ($compensation->hourly_rate_cents !== null) {
+            return $compensation->hourly_rate_cents;
+        }
+
+        $weeklyHours = (float) ($contract->weekly_hours ?? 35);
+
+        if ($weeklyHours <= 0) {
+            return $this->jobRole?->default_hourly_rate_cents;
+        }
+
+        $type = $compensation->compensation_type ?? 'monthly';
+
+        // (b) Monthly → derive hourly
+        if ($type === 'monthly' && $compensation->base_salary_cents > 0) {
+            $monthlyHours = $weeklyHours * 52 / 12;
+
+            return (int) round($compensation->base_salary_cents / $monthlyHours);
+        }
+
+        // (c) Daily → derive hourly
+        if ($type === 'daily' && $compensation->daily_rate_cents !== null && $compensation->daily_rate_cents > 0) {
+            $hoursPerDay = $weeklyHours / 5;
+
+            return (int) round($compensation->daily_rate_cents / $hoursPerDay);
+        }
+
+        // (d) Fallback to job role
+        return $this->jobRole?->default_hourly_rate_cents;
     }
 }

@@ -10,6 +10,8 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     _currentRunTotalLines: 0,
     _currentRunCalculations: null,
     _currentRunTotals: null,
+    _currentLineDetail: null,
+    _currentRunDocuments: [],
     _statistics: null,
     _loading: false,
   }),
@@ -22,6 +24,8 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     currentRunTotalLines: state => state._currentRunTotalLines,
     currentRunCalculations: state => state._currentRunCalculations,
     currentRunTotals: state => state._currentRunTotals,
+    currentLineDetail: state => state._currentLineDetail,
+    currentRunDocuments: state => state._currentRunDocuments,
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -40,7 +44,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/payroll${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/payroll${qs ? `?${qs}` : ''}`)
 
         this._runs = data.data ?? []
         this._totalRuns = data.total ?? 0
@@ -54,7 +58,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async fetchRun(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${id}`)
+        const data = await $api(`/workforce/payroll/${id}`)
 
         this._currentRun = data.run ?? data
         this._currentRunTotals = {
@@ -71,7 +75,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async createRun({ periodStart, periodEnd }) {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/payroll', {
+        const data = await $api('/workforce/payroll', {
           method: 'POST',
           body: { period_start: periodStart, period_end: periodEnd },
         })
@@ -88,7 +92,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async computeRun(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${id}/compute`, {
+        const data = await $api(`/workforce/payroll/${id}/compute`, {
           method: 'POST',
         })
 
@@ -105,7 +109,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async computeCalculations(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${id}/compute-calculations`, {
+        const data = await $api(`/workforce/payroll/${id}/compute-calculations`, {
           method: 'POST',
         })
 
@@ -126,7 +130,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
 
         if (validationNote) body.validation_note = validationNote
 
-        const data = await $api(`/company/workforce/payroll/${id}/validate`, {
+        const data = await $api(`/workforce/payroll/${id}/validate`, {
           method: 'POST',
           body,
         })
@@ -144,7 +148,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async exportRun(id, exportFormat = 'json') {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${id}/export`, {
+        const data = await $api(`/workforce/payroll/${id}/export`, {
           method: 'POST',
           body: { export_format: exportFormat },
         })
@@ -162,7 +166,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async recomputeRun(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${id}/recompute`, {
+        const data = await $api(`/workforce/payroll/${id}/recompute`, {
           method: 'POST',
         })
 
@@ -179,7 +183,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async deleteRun(id) {
       this._loading = true
       try {
-        await $api(`/company/workforce/payroll/${id}`, {
+        await $api(`/workforce/payroll/${id}`, {
           method: 'DELETE',
         })
 
@@ -203,7 +207,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/payroll/${runId}/lines${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/payroll/${runId}/lines${qs ? `?${qs}` : ''}`)
 
         this._currentRunLines = data.data ?? []
         this._currentRunTotalLines = data.total ?? 0
@@ -218,7 +222,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     async fetchCalculations(runId) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/payroll/${runId}/calculations`)
+        const data = await $api(`/workforce/payroll/${runId}/calculations`)
 
         this._currentRunCalculations = data.calculations ?? null
         this._currentRunTotals = data.totals ?? null
@@ -229,11 +233,44 @@ export const usePayrollStore = defineStore('workforcePayroll', {
       }
     },
 
+    // ── Line Detail ─────────────────────────────────────────────
+    async fetchLineDetail(runId, lineId) {
+      const data = await $api(`/workforce/payroll/${runId}/lines/${lineId}`)
+      this._currentLineDetail = data
+      return data
+    },
+
+    clearLineDetail() {
+      this._currentLineDetail = null
+    },
+
+    // ── Run Documents ────────────────────────────────────────────
+    async fetchRunDocuments(runId) {
+      const data = await $api(`/workforce/payroll/${runId}/documents`)
+      this._currentRunDocuments = data.data ?? data
+      return this._currentRunDocuments
+    },
+
+    // ── Payslip Generation ───────────────────────────────────────
+    async generatePayslipDrafts(runId) {
+      return await $api('/workforce/documents/payslip-drafts', {
+        method: 'POST',
+        body: { payroll_run_id: runId },
+      })
+    },
+
+    async generateOfficialPayslips(runId) {
+      return await $api('/workforce/documents/payslip-official', {
+        method: 'POST',
+        body: { payroll_run_id: runId },
+      })
+    },
+
     // ── Statistics ─────────────────────────────────────────────
     async fetchStatistics() {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/payroll/statistics')
+        const data = await $api('/workforce/payroll/statistics')
 
         this._statistics = data
 
@@ -249,6 +286,8 @@ export const usePayrollStore = defineStore('workforcePayroll', {
       this._currentRunLines = []
       this._currentRunCalculations = null
       this._currentRunTotals = null
+      this._currentLineDetail = null
+      this._currentRunDocuments = []
     },
   },
 })

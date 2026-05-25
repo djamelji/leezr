@@ -25,7 +25,12 @@ class EmployeeReadModel
                     ->orWhere('employee_number', 'LIKE', "%{$search}%");
             }))
             ->when($status, fn (Builder $q) => $q->where('status', $status))
-            ->with(['currentContract.compensationPlans' => fn ($q) => $q->activeAt()])
+            ->with([
+                'department:id,name',
+                'jobRole:id,title',
+                'manager:id,first_name,last_name',
+                'currentContract.compensationPlans' => fn ($q) => $q->activeAt(),
+            ])
             ->orderBy($sortBy, $sortDir)
             ->paginate($perPage);
     }
@@ -36,8 +41,12 @@ class EmployeeReadModel
             ->where('company_id', $companyId)
             ->with([
                 'user:id,name,email',
+                'department:id,name',
+                'jobRole:id,title,default_hourly_rate_cents',
+                'manager:id,first_name,last_name',
                 'contracts' => fn ($q) => $q->orderByDesc('start_date'),
                 'contracts.compensationPlans' => fn ($q) => $q->orderByDesc('effective_from'),
+                'contracts.conventionCollective:id,idcc,short_name',
             ])
             ->find($employeeId);
     }

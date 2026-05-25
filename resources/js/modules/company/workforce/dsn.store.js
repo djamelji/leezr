@@ -35,7 +35,7 @@ export const useDsnStore = defineStore('workforceDsn', {
         if (page) params.set('page', page)
 
         const qs = params.toString()
-        const data = await $api(`/company/workforce/dsn${qs ? `?${qs}` : ''}`)
+        const data = await $api(`/workforce/dsn${qs ? `?${qs}` : ''}`)
 
         this._declarations = data.data ?? []
         this._totalDeclarations = data.total ?? 0
@@ -49,7 +49,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async fetchDeclaration(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/dsn/${id}`)
+        const data = await $api(`/workforce/dsn/${id}`)
 
         this._currentDeclaration = data
 
@@ -63,7 +63,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async fetchStatistics() {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/dsn/statistics')
+        const data = await $api('/workforce/dsn/statistics')
 
         this._statistics = data
 
@@ -77,7 +77,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async exportDsn(payrollRunId) {
       this._loading = true
       try {
-        const data = await $api('/company/workforce/dsn/export', {
+        const data = await $api('/workforce/dsn/export', {
           method: 'POST',
           body: { payroll_run_id: payrollRunId },
         })
@@ -94,7 +94,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async submitDeclaration(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/dsn/${id}/submit`, {
+        const data = await $api(`/workforce/dsn/${id}/submit`, {
           method: 'POST',
         })
 
@@ -111,7 +111,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async pollDeclaration(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/dsn/${id}/poll`, {
+        const data = await $api(`/workforce/dsn/${id}/poll`, {
           method: 'POST',
         })
 
@@ -131,7 +131,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async fetchValidation(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/dsn/${id}/validation`)
+        const data = await $api(`/workforce/dsn/${id}/validation`)
 
         this._currentValidation = data
 
@@ -144,7 +144,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     async fetchHistory(id) {
       this._loading = true
       try {
-        const data = await $api(`/company/workforce/dsn/${id}/history`)
+        const data = await $api(`/workforce/dsn/${id}/history`)
 
         this._currentHistory = data
 
