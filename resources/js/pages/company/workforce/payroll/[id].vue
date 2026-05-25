@@ -321,7 +321,6 @@ onBeforeUnmount(() => store.clearCurrentRun())
           </template>
           <VListItemTitle>{{ doc.name }}</VListItemTitle>
           <VListItemSubtitle>
-            <span class="me-3">{{ doc.template_code }}</span>
             <span class="text-medium-emphasis">{{ formatDate(doc.generated_at) }}</span>
           </VListItemSubtitle>
           <template #append>

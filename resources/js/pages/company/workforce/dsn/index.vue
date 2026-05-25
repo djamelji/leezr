@@ -29,7 +29,6 @@ const headers = computed(() => [
   { title: t('dsn.columns.periodMonth'), key: 'period_month', sortable: false },
   { title: t('dsn.columns.status'), key: 'status', sortable: false, width: 130 },
   { title: t('dsn.columns.gatewayStatus'), key: 'gateway_status', sortable: false, width: 140 },
-  { title: t('dsn.columns.payloadHash'), key: 'payload_hash', sortable: false, width: 180 },
   { title: t('dsn.columns.submittedAt'), key: 'submitted_at', sortable: false, width: 160 },
   { title: t('dsn.columns.actions'), key: 'actions', sortable: false, width: 80 },
 ])
@@ -86,13 +85,6 @@ function formatDate(dateStr) {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-function truncateHash(hash) {
-  if (!hash)
-    return '\u2014'
-
-  return hash.length > 12 ? `${hash.substring(0, 12)}\u2026` : hash
 }
 
 // ── Drawer ───────────────────────────────────────────────────
@@ -331,17 +323,12 @@ function goToDeclaration(id) {
             variant="tonal"
             color="secondary"
           >
-            {{ item.gateway_status }}
+            {{ $t(`dsn.gatewayStatuses.${item.gateway_status}`, item.gateway_status) }}
           </VChip>
           <span
             v-else
             class="text-medium-emphasis"
           >&mdash;</span>
-        </template>
-
-        <!-- Payload hash -->
-        <template #item.payload_hash="{ item }">
-          <code class="text-body-2">{{ truncateHash(item.payload_hash) }}</code>
         </template>
 
         <!-- Submitted at -->

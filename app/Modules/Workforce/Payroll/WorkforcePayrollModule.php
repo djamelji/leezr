@@ -19,7 +19,7 @@ class WorkforcePayrollModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'workforce-payroll', 'title' => 'Payroll', 'to' => ['name' => 'company-workforce-payroll'], 'icon' => 'tabler-receipt', 'permission' => 'workforce.payroll_prepare', 'surface' => 'hr', 'sort' => 50],
-                    ['key' => 'workforce-dsn', 'title' => 'DSN / Compliance', 'to' => ['name' => 'company-workforce-dsn'], 'icon' => 'tabler-certificate', 'permission' => 'workforce.payroll_export', 'surface' => 'hr', 'sort' => 60],
+                    ['key' => 'workforce-dsn', 'title' => 'DSN', 'to' => ['name' => 'company-workforce-dsn'], 'icon' => 'tabler-certificate', 'permission' => 'workforce.payroll_export', 'surface' => 'hr', 'sort' => 60],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_payroll',

@@ -5,7 +5,7 @@ import { $api } from '@/utils/api'
 
 definePage({ meta: { module: 'workforce' } })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const clockStore = useWorkforceClockStore()
 const { toast } = useAppToast()
@@ -94,13 +94,13 @@ function formatTime(isoString) {
   if (!isoString) return '--:--'
   const d = new Date(isoString)
 
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatDate(dateString) {
   if (!dateString) return '-'
 
-  return new Date(dateString).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(dateString).toLocaleDateString(locale.value, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 // ── Contract type labels ────────────────────────────────────
@@ -118,18 +118,12 @@ async function handleClockAction(actionFn) {
   }
 }
 
-const contractTypeLabels = {
-  cdi: 'CDI',
-  cdd: 'CDD',
-  stage: 'Stage',
-  alternance: 'Alternance',
-  freelance: 'Freelance',
+function contractTypeLabel(type) {
+  return t(`employees.contractTypes.${type}`, type?.toUpperCase() ?? '-')
 }
 
-const workModelLabels = {
-  horaire: 'Horaire',
-  forfait_jours: 'Forfait jours',
-  forfait_heures: 'Forfait heures',
+function workModelLabel(key) {
+  return t(`employees.workModels.${key}`, key ?? '-')
 }
 
 // ── Signature status ────────────────────────────────────────
@@ -402,7 +396,7 @@ function signatureChipProps(status) {
                     {{ t('workforceMe.contractType') }}
                   </VListItemTitle>
                   <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ contractTypeLabels[currentContract.contract_type] || currentContract.contract_type }}
+                    {{ contractTypeLabel(currentContract.contract_type) }}
                   </VListItemSubtitle>
                 </VListItem>
 
@@ -419,7 +413,7 @@ function signatureChipProps(status) {
                     {{ t('workforceMe.workModel') }}
                   </VListItemTitle>
                   <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ workModelLabels[currentContract.work_model_key] || currentContract.work_model_key || '-' }}
+                    {{ workModelLabel(currentContract.work_model_key) }}
                   </VListItemSubtitle>
                 </VListItem>
 
@@ -457,7 +451,24 @@ function signatureChipProps(status) {
                   </VListItemSubtitle>
                 </VListItem>
 
-                <VListItem v-if="currentContract.metadata?.job_title">
+                <VListItem v-if="employee.department">
+                  <template #prepend>
+                    <VIcon
+                      icon="tabler-building"
+                      size="20"
+                      color="primary"
+                      class="me-2"
+                    />
+                  </template>
+                  <VListItemTitle class="text-body-2 text-medium-emphasis">
+                    {{ t('workforceMe.department') }}
+                  </VListItemTitle>
+                  <VListItemSubtitle class="text-body-1 font-weight-medium">
+                    {{ employee.department.name }}
+                  </VListItemSubtitle>
+                </VListItem>
+
+                <VListItem v-if="employee.job_role">
                   <template #prepend>
                     <VIcon
                       icon="tabler-briefcase"
@@ -467,10 +478,10 @@ function signatureChipProps(status) {
                     />
                   </template>
                   <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.jobTitle') }}
+                    {{ t('workforceMe.jobRole') }}
                   </VListItemTitle>
                   <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ currentContract.metadata.job_title }}
+                    {{ employee.job_role.title }}
                   </VListItemSubtitle>
                 </VListItem>
               </VList>
@@ -538,14 +549,14 @@ function signatureChipProps(status) {
                         size="small"
                         label
                       >
-                        {{ balance.available }}j
+                        {{ t('workforceMe.daysUnit', { count: balance.available }) }}
                       </VChip>
                     </td>
                     <td class="text-end text-medium-emphasis">
-                      {{ balance.consumed }}j
+                      {{ t('workforceMe.daysUnit', { count: balance.consumed }) }}
                     </td>
                     <td class="text-end text-medium-emphasis">
-                      {{ balance.accrued }}j
+                      {{ t('workforceMe.daysUnit', { count: balance.accrued }) }}
                     </td>
                   </tr>
                 </tbody>
@@ -615,11 +626,11 @@ function signatureChipProps(status) {
                     </td>
                     <td>
                       <VChip
-                        :color="doc.template?.code === 'payslip_official_fr' ? 'success' : 'warning'"
+                        :color="doc.template?.code?.includes('official') ? 'success' : 'warning'"
                         size="small"
                         label
                       >
-                        {{ doc.template?.code === 'payslip_official_fr' ? t('workforceMe.payslipOfficial') : t('workforceMe.payslipDraft') }}
+                        {{ doc.template?.code?.includes('official') ? t('workforceMe.payslipOfficial') : t('workforceMe.payslipDraft') }}
                       </VChip>
                     </td>
                     <td class="text-medium-emphasis">
@@ -710,7 +721,7 @@ function signatureChipProps(status) {
                     {{ doc.template?.name || doc.subject_type }}
                   </VListItemTitle>
                   <VListItemSubtitle class="text-body-2 text-medium-emphasis">
-                    {{ doc.template?.code }} &mdash; {{ formatDate(doc.generated_at) }}
+                    {{ formatDate(doc.generated_at) }}
                   </VListItemSubtitle>
                   <template #append>
                     <VChip

@@ -4,7 +4,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.admin' } })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const route = useRoute()
 const router = useRouter()
@@ -161,7 +161,7 @@ const departmentItems = computed(() =>
 const formatRate = cents => {
   if (!cents) return '—'
 
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+  return new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }).format(cents / 100)
 }
 
 onMounted(() => {

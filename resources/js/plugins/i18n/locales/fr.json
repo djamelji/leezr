@@ -154,6 +154,7 @@
       "workforce-planning": "Planning",
       "workforce-payroll": "Paie",
       "workforce-documents": "Documents RH",
+      "workforce-dsn": "DSN",
       "workforce-organization": "Organisation"
     }
   },
@@ -5898,6 +5899,8 @@
     "weeklyHours": "Heures/semaine",
     "startDate": "Date de début",
     "jobTitle": "Poste",
+    "department": "Service",
+    "jobRole": "Fonction",
     "leaveType": "Type",
     "leaveAvailable": "Disponible",
     "leaveConsumed": "Pris",
@@ -5907,6 +5910,7 @@
     "signatureSigned": "Signé",
     "signatureDeclined": "Refusé",
     "clockActionSuccess": "Action pointage effectuée",
+    "daysUnit": "{count} j",
     "status": {
       "working": "En cours",
       "onBreak": "En pause",
@@ -6357,6 +6361,13 @@
       "accepted": "Accepte",
       "rejected": "Rejete"
     },
+    "gatewayStatuses": {
+      "pending": "En attente",
+      "processing": "En cours",
+      "success": "Reussi",
+      "error": "Erreur",
+      "timeout": "Expire"
+    },
     "stats": {
       "total": "Total declarations",
       "submitted": "Transmises",
@@ -6399,6 +6410,7 @@
     "detail": {
       "periodLabel": "Periode",
       "payloadHash": "Hash :",
+      "technicalDetails": "Détails techniques",
       "workflow": "Workflow",
       "generatedBy": "Genere par",
       "exportedBy": "Exporte par",

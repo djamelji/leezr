@@ -11,6 +11,7 @@ const route = useRoute()
 const store = useDsnStore()
 
 const pollResult = ref(null)
+const showTechnicalDetails = ref(false)
 const declaration = computed(() => store.currentDeclaration)
 const validation = computed(() => store.currentValidation)
 const history = computed(() => store.currentHistory)
@@ -117,12 +118,14 @@ onBeforeUnmount(() => store.clearCurrentDeclaration())
                 v-if="declaration.gateway_status"
                 size="small" variant="tonal" :color="gatewayColor(declaration.gateway_status)"
               >
-                {{ declaration.gateway_status }}
+                {{ $t(`dsn.gatewayStatuses.${declaration.gateway_status}`, declaration.gateway_status) }}
               </VChip>
             </div>
             <div v-if="declaration.payload_hash" class="mt-2">
-              <span class="text-body-2 text-medium-emphasis">{{ $t('dsn.detail.payloadHash') }} </span>
-              <code class="text-body-2">{{ truncateHash(declaration.payload_hash) }}</code>
+              <VChip size="x-small" variant="text" class="text-medium-emphasis" prepend-icon="tabler-hash" @click="showTechnicalDetails = !showTechnicalDetails">
+                {{ $t('dsn.detail.technicalDetails') }}
+              </VChip>
+              <code v-if="showTechnicalDetails" class="text-body-2 d-block mt-1">{{ truncateHash(declaration.payload_hash) }}</code>
             </div>
           </div>
           <div class="d-flex gap-2 flex-wrap">

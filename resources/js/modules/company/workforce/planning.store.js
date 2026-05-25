@@ -68,33 +68,49 @@ export const usePlanningStore = defineStore('workforcePlanning', {
 
     async createShift(payload) {
       const data = await $api('/workforce/planning/shifts', { method: 'POST', body: payload })
+      this._shifts.unshift(data)
+      this._weekShifts = []
       return data
     },
 
     async updateShift(id, payload) {
-      return await $api(`/workforce/planning/shifts/${id}`, { method: 'PUT', body: payload })
+      const data = await $api(`/workforce/planning/shifts/${id}`, { method: 'PUT', body: payload })
+      const idx = this._shifts.findIndex(s => s.id === id)
+      if (idx !== -1) this._shifts[idx] = data
+      this._weekShifts = []
+      return data
     },
 
     async deleteShift(id) {
       await $api(`/workforce/planning/shifts/${id}`, { method: 'DELETE' })
+      this._shifts = this._shifts.filter(s => s.id !== id)
+      this._weekShifts = []
     },
 
     async publishShifts(shiftIds) {
-      return await $api('/workforce/planning/shifts/publish', {
+      const data = await $api('/workforce/planning/shifts/publish', {
         method: 'POST',
         body: { shift_ids: shiftIds },
       })
+      this._weekShifts = []
+      return data
     },
 
     async cancelShift(id, reason = null) {
-      return await $api(`/workforce/planning/shifts/${id}/cancel`, {
+      const data = await $api(`/workforce/planning/shifts/${id}/cancel`, {
         method: 'POST',
         body: { reason },
       })
+      const idx = this._shifts.findIndex(s => s.id === id)
+      if (idx !== -1) this._shifts[idx] = data
+      this._weekShifts = []
+      return data
     },
 
     async bulkCreateShifts(payload) {
-      return await $api('/workforce/planning/shifts/bulk', { method: 'POST', body: payload })
+      const data = await $api('/workforce/planning/shifts/bulk', { method: 'POST', body: payload })
+      this._weekShifts = []
+      return data
     },
 
     // ── Templates ─────────────────────────────────────────────

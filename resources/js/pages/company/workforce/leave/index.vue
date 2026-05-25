@@ -21,7 +21,7 @@ const formatDuration = hundredths => {
   if (!hundredths && hundredths !== 0) return '\u2014'
   const days = (hundredths / 100).toFixed(2)
 
-  return `${days} j`
+  return t('workforceMe.daysUnit', { count: days })
 }
 
 const getLeaveTypeColor = leaveType => {

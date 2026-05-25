@@ -21222,4 +21222,41 @@ la gestion des documents RH (bulletins de paie, attestations) et le cycle de vie
 
 ---
 
+### ADR-558 — Audit Produit Réel Workforce : Polish UX + i18n + données techniques masquées (2026-05-25)
+
+**Contexte** : Audit produit orienté utilisateur final (PME dirigeant, RH, employé non technique) — pas un audit technique. L'objectif est de vérifier que le module Workforce est VENDABLE en l'état.
+
+**Décisions** :
+1. Toutes les dates/nombres formatés dynamiquement via `locale.value` (plus aucun `fr-FR` hardcodé)
+2. Labels contrats/modèles de travail → i18n (`employees.contractTypes.*`, `employees.workModels.*`)
+3. Suffixe jours congés `j` → i18n `workforceMe.daysUnit` (FR: `{count} j`, EN: `{count} d`)
+4. DSN : payload_hash supprimé de la liste (donnée technique), caché derrière toggle dans le détail
+5. DSN : gateway_status traduit via `dsn.gatewayStatuses.*` (liste + détail)
+6. Template code brut (`payslip_official_fr`) supprimé des affichages, détection via `.includes('official')`
+7. Nav DSN : titre traduit via i18n (`nav.company.workforce-dsn`)
+8. Planning store : mutations (create/update/delete/publish/cancel shifts) mettent à jour le state local
+9. 3 fichiers Coming Soon inutilisés supprimés (`_EmployeeActivity`, `_EmployeeDocuments`, `_EmployeeVariables`)
+10. Département + Fonction affichés dans l'espace employé (`/me`)
+
+**Conséquences** :
+- Aucune donnée technique brute visible par l'utilisateur final
+- i18n complet pour EN/FR sur tout le module Workforce
+- Store planning réactif après mutations (plus de données stale)
+- 2949 tests passent, build clean
+
+**Fichiers** :
+- `resources/js/pages/company/workforce/me.vue` (locale, labels, department, days unit)
+- `resources/js/pages/company/workforce/dsn/index.vue` (gateway i18n, suppression hash colonne)
+- `resources/js/pages/company/workforce/dsn/[id].vue` (hash toggle, gateway i18n)
+- `resources/js/pages/company/workforce/payroll/[id].vue` (suppression template_code brut)
+- `resources/js/pages/company/workforce/leave/index.vue` (days unit i18n)
+- `resources/js/pages/company/workforce/employees/_EmployeeContract.vue` (locale dynamique)
+- `resources/js/pages/company/workforce/organization/[tab].vue` (locale dynamique)
+- `resources/js/modules/company/workforce/planning.store.js` (state updates après mutations)
+- `resources/js/plugins/i18n/locales/fr.json` (clés ajoutées)
+- `resources/js/plugins/i18n/locales/en.json` (clés ajoutées)
+- `app/Modules/Workforce/Payroll/WorkforcePayrollModule.php` (nav title i18n)
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

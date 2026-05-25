@@ -70,7 +70,7 @@ const formatSalary = (cents, currency) => {
   if (!cents)
     return '—'
 
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency || 'EUR' }).format(cents / 100)
+  return new Intl.NumberFormat(locale.value, { style: 'currency', currency: currency || 'EUR' }).format(cents / 100)
 }
 </script>
 
