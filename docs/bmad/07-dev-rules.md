@@ -4,6 +4,23 @@
 
 ---
 
+## Règles anti-dérive & principes produit (ADR-566 / ADR-567)
+
+> Doctrine opposable en vigueur depuis le réalignement 2026-07. Décisions détaillées dans les ADR (non dupliquées) ; résumé applicable à **chaque** développement :
+
+**Anti-dérive (ADR-566)** — à vérifier avant tout lot :
+1. **Largeur avant profondeur** : pas de nouveau module vertical profond, ni de fonctionnalité majeure ajoutée à Workforce (sa *stabilisation* reste autorisée), tant que le socle horizontal (ADR-563) + 2ᵉ vertical (ADR-564) ne sont pas livrés.
+2. **Core propre** : aucun nouveau code métier/pays-spécifique dans `app/Core/` ; aucun `app/Core/{Vertical}/`.
+3. **Intégrité catalogue** : interdit de rendre vendable un module sans frontend livré (pas de coquille facturée).
+4. **Pas de saisie déductible** : refuser tout champ que le serveur peut calculer ; `validate()` bloquant obligatoire.
+5. **Composition** : réutiliser les Cores (Notifications, Realtime, Automation, Audit, Documents, Fields) ; émettre audit + notification sur les mutations clés.
+6. **Multi-pays par données** : jamais de `if('FR')`.
+
+**Principes produit PP1-PP6 (ADR-567)** — Definition of Done de toute fonctionnalité ; chaque ADR de feature justifie sa conformité :
+PP1 automatiser plutôt que faire saisir · PP2 ne jamais redemander une info connue · PP3 réutiliser les services transverses (IA, Documents, Notifications, Workflows, Audit) · PP4 réduire les clics · PP5 un produit unique (jamais une juxtaposition de modules) · PP6 valeur métier mesurable.
+
+---
+
 ## Workflow BMAD obligatoire
 
 Avant toute implémentation :

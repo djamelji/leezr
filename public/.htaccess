@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Let's Encrypt / ACME http-01 challenge — TOUJOURS servir en statique,
+    # ne jamais router vers l'application (sinon le renouvellement échoue). Cf. ADR-568.
+    RewriteRule ^\.well-known/acme-challenge/ - [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

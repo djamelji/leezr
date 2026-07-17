@@ -21259,4 +21259,262 @@ la gestion des documents RH (bulletins de paie, attestations) et le cycle de vie
 
 ---
 
+### ADR-559 — Workforce UI/UX Consistency Audit (2026-05-20)
+
+**Contexte :** Le module Workforce a été construit sprint par sprint, créant des incohérences visuelles et UX entre les pages. Audit systématique pour uniformiser.
+
+**Décisions :**
+1. **Card grid system** : Toutes les stats rows utilisent `card-grid card-grid-xs` (ADR-379) — 6 pages corrigées
+2. **Tabs pills** : Toutes les VTabs internes utilisent `v-tabs-pill` — 3 pages corrigées (time, leave, planning)
+3. **Dialog titles** : Tous les VCardTitle dans les VDialog utilisent `text-h5 pa-4` — 5 dialogs corrigées
+4. **Drawer width** : Standard = 400px partout — 6 drawers 420→400 (planning, leave, employees)
+5. **Back button** : Pattern standard `VBtn variant="text" :to prepend-icon class="mb-4"` — 2 pages corrigées (employees, time detail)
+6. **Date pickers** : Tous les `AppTextField type="date"` remplacés par `AppDateTimePicker :config="{ dateFormat: 'Y-m-d' }"` — 11 champs
+7. **DateTime pickers** : Tous les `type="datetime-local"` remplacés par `AppDateTimePicker` avec `enableTime: true` — 4 champs
+8. **Textarea** : AppTextarea outlier remplacé par AppTextField type="textarea" — 1 fichier
+9. **Dialog max-width** : Standardisé à 440px pour confirm, 500px pour forms — 1 fix
+10. **Confirm loading** : Ajout loading state sur confirm dialog congés — leave/index.vue
+
+**Conséquences :**
+- UI cohérente entre toutes les pages Workforce
+- DateTimePicker Flatpickr uniforme (plus de date picker natif navigateur)
+- Cards à hauteur égale grâce au card-grid system
+- Aucune régression (2949 tests, build clean)
+
+**Fichiers modifiés :**
+- `resources/js/pages/company/workforce/time/index.vue` (card-grid, tabs, dialogs, date pickers)
+- `resources/js/pages/company/workforce/time/[id].vue` (back button, dialog titles)
+- `resources/js/pages/company/workforce/leave/index.vue` (card-grid, tabs, drawers, date pickers, confirm loading)
+- `resources/js/pages/company/workforce/planning/index.vue` (card-grid, tabs, drawers, date pickers)
+- `resources/js/pages/company/workforce/payroll/index.vue` (card-grid)
+- `resources/js/pages/company/workforce/payroll/[id].vue` (textarea)
+- `resources/js/pages/company/workforce/documents/index.vue` (card-grid)
+- `resources/js/pages/company/workforce/dsn/index.vue` (card-grid)
+- `resources/js/pages/company/workforce/employees/index.vue` (date picker)
+- `resources/js/pages/company/workforce/employees/[id].vue` (back button)
+- `resources/js/pages/company/workforce/employees/_EmployeeContract.vue` (drawer width, date picker)
+
+---
+
+### ADR-560 — Workforce i18n + Departments theme + DSN scope clarification (2026-05-31)
+
+**Contexte :** Trois retours utilisateur sur le module Workforce :
+1. `/company/workforce/organization/departments` ne respectait pas le thème Vuexy (tableau HTML brut, pas de filtres, empty state primitif).
+2. Traductions manquantes sur les pages `planning`, `leave` (congés) et `payroll` (paie).
+3. Question métier : « à quoi sert DSN si c'est juste pour exporter et pas pouvoir déclarer ».
+
+Audit révèle aussi un **bug doublon JSON** : deux blocs top-level `"payroll"` (lignes ~5515 et ~6066 dans fr.json, idem en.json). En JSON le second écrase le premier → toutes les clés du premier bloc (`payroll.created`, `payroll.deleted`, `payroll.computed`, `payroll.validated`, `payroll.recomputed`, etc.) étaient mortes silencieusement depuis l'origine.
+
+**Décisions :**
+
+1. **Résolution du doublon `payroll`** dans fr.json/en.json — fusion du bloc mort dans le bloc vivant puis suppression du doublon. Garantie : exactement 1 seul top-level `payroll` par locale (vérifié par grep).
+2. **Namespace `planning` créé** (totalement absent en top-level) — 88 clés FR + EN couvrant onglets, stats, fields, templates, locations, dialogues.
+3. **`leaves` étendu** — ajout des sous-namespaces `tabs`, `calendar`, `balances`, `config` (≈ 50 clés FR + EN) sans dupliquer l'existant.
+4. **`payroll` complété** — clés `lineDetail.*` (compensation/time/leave/contributions/calculation), `workflow.*`, `totals.*`, `dialogs.*`, `payslips.*`, `documents.*`, `actions.{generateDrafts,generateOfficial}`, plus les toasts récupérés du bloc mort.
+5. **`organization.{departments,roles}` étendus** — 4 clés chacun (`emptyDescription`, `statsTotal`, `statsEmployees`, `statsSub`/`statsWithRate`).
+6. **Re-thématisation de `organization/[tab].vue`** (départements + postes) selon UI policy Vuexy :
+   - Remplacement de `<VTable>` brut par `VDataTable` (client-side, cohérent avec la chargement plein du store) avec `headers` + slots `#item.*` (avatars, chips, tooltips actions).
+   - Slot `#no-data` (icône `tabler-building-skyscraper` / `tabler-briefcase-off` + h6 + body + CTA) — fini les `<tr><td colspan>` primitifs.
+   - Stats rows en `<VRow class="card-grid card-grid-xs mb-6">` (3 cartes par onglet) conformément à ADR-379.
+   - Pattern `[tab].vue` **préservé** (CLAUDE.md interdit la coexistence `foo.vue` + `foo/`).
+   - Drawers create/edit déjà à 400px + App* wrappers — non touchés.
+7. **DSN — clarification de scope (pas de changement de code)** : la chaîne DSN est **complète** depuis ADR-531 (Sprint 7.3) — `export → submit → poll → accepted|rejected` via `NetEntreprisesDsnGateway` (auth, dépôt, consultation retour, archivage AEE/CCO/BAN). Ce qui est désactivé par défaut, pas absent : `DSN_SUBMIT_ENABLED=false` + `DSN_GATEWAY_DRIVER=null` + URLs sandbox `test-…net-entreprises.fr` (`ne_service_code=97`). Les boutons « Soumettre » et « Vérifier le statut » existent déjà dans `dsn/[id].vue` (visibles quand `status=exported` / `status=submitted`). Activation prod = config `.env` + credentials net-entreprises validés (cf. runbook `docs/bmad/dsn-runbook.md` §9), pas un chantier de code.
+
+**Conséquences :**
+- Toutes les clés `t(...)` des 5 pages workforce (planning, leave, payroll index, payroll detail, organization tab) résolvent en FR et EN (vérifié par script de cross-check).
+- Doublon JSON éliminé : la régression silencieuse sur les toasts paie est corrigée.
+- Page `organization/[tab].vue` visuellement alignée avec `employees/index.vue` et `leave/index.vue` — fini la rupture de design.
+- DSN documentée comme « capacité de déclaration réelle, désactivée par défaut pour sécurité » et non « export only ».
+- Tests : 179 tests workforce/layout ciblés OK (3.33s), suite complète exécutée séparément.
+- Build : clean en 9.22s.
+
+**Fichiers modifiés :**
+- `resources/js/plugins/i18n/locales/fr.json` (doublon payroll fusionné, +planning, +leaves, +payroll, +organization extensions)
+- `resources/js/plugins/i18n/locales/en.json` (idem)
+- `resources/js/pages/company/workforce/organization/[tab].vue` (re-thématisation 2 onglets : stats + VDataTable + #no-data)
+- `docs/bmad/04-decisions.md` (cet ADR)
+
+**Hors scope (décisions explicites) :**
+- Aucun changement de code DSN — la déclaration réelle est un sujet ops (credentials + activation), pas dev.
+- `organization` non splitté en pages séparées — pattern `[tab].vue` du projet conservé.
+- Aucune modification de `@core/` ou `@layouts/`.
+
+---
+
+### ADR-561 — Réalignement de la vision produit Leezr (2026-07-17)
+
+**Contexte** : Audit stratégique de niveau comité de direction (2026-07). Constat démontré d'une **dérive** : après 560 ADR, il n'existe toujours qu'**1 seul jobdomain vivant** (`logistique`) et **1 seul market actif** (`FR`) ; les ~2 derniers mois de développement (ADR-479→560, 17 commits, ~82 ADR) ont été investis à **100 %** dans Workforce (RH/paie/DSN franco-spécifique). Leezr risque de devenir *un logiciel de paie française* au lieu de *la plateforme SaaS B2B modulaire multi-vertical* définie dans `00-context.md`. Trois principes fondateurs sont menacés : P1 (Core sans métier), la promesse multi-vertical (priorité #3 jamais exécutée), et la frontière « Leezr n'est PAS un logiciel RH ».
+
+**Décisions** :
+1. **Repositionnement officiel** : Leezr = **plateforme SaaS B2B modulaire, multi-tenant, multi-vertical, multi-pays** — « la plateforme qui assemble automatiquement le logiciel métier de chaque entreprise ». **Interdiction du narratif RH-centric** dans le produit, le marketing et les décisions d'architecture.
+2. **Reclassement et STABILISATION de Workforce** : Workforce est un **module HR HORIZONTAL** (`compatibleJobdomains = null`, universel car toute entreprise a des salariés), **PAS un vertical**. Il n'est **pas gelé mais STABILISÉ** — pour lever toute ambiguïté : le module n'est pas abandonné. La stabilisation **est un travail attendu et autorisé** : terminer les **P0/P1**, **finaliser l'UX**, **renforcer les automatisations** (calculs auto, notifications, scheduler) et **corriger les incohérences**, afin de le rendre *démontrable, cohérent et vendable*. En revanche, **aucune nouvelle fonctionnalité majeure** (conventions collectives étendues, DSN élargie, paie avancée, nouveaux sous-modules) tant que le socle métier horizontal (ADR-563) et la preuve de largeur — 2ᵉ vertical (ADR-564) — ne sont pas réalisés. **Distinction structurante : *finir et polir* est autorisé et attendu ; *étendre* est reporté.**
+3. **Cœur de valeur reconnu et assumé** : (a) l'**infrastructure de composition + l'onboarding orchestré** (`JobdomainGate::assignToCompany`), (b) l'**IA documentaire réelle** (OCR + Anthropic Vision, auto-remplissage d'échéance, auto-rejet, relances de conformité), (c) l'**automatisation billing/compliance** (~20 tâches planifiées). Le go-to-market s'appuie sur ces trois piliers, pas sur la paie.
+4. **Intégrité commerciale du catalogue** : interdiction de facturer un module sans surface utilisateur livrée. Les modules coquilles `logistics_fleet`, `logistics_tracking`, `logistics_analytics` (1 manifeste, 0 page, mais facturés 29 €/mois et per-seat) sont **retirés de la vente** (`is_sellable = false` / type interne / badge « Bientôt »).
+5. **Paie assumée FR-only** : pas de survente d'une paie multi-pays. La paie par pays est un chantier de module par-market (cf. ADR-562/564), non une promesse actuelle.
+6. **Repricing par capacité métier** (et non par quotas) : principe posé ici, détaillé en ADR-564/565.
+
+**Conséquences** : recentrage stratégique ; Workforce cesse d'absorber l'effort ; catalogue crédible ; base d'un pitch « plateforme » et non « SaaS RH ». Les documents de vision doivent refléter ce repositionnement.
+
+**Fichiers** : `docs/bmad/00-context.md` (mise à jour vision), `docs/bmad/01-business.md`, `CLAUDE.md`, cet ADR.
+
+**Hors scope** : aucune suppression de code Workforce ; le masquage catalogue est une opération de config/seed, pas de code métier.
+
+---
+
+### ADR-562 — Frontière définitive Core / Modules / JobDomains / Markets (2026-07-17)
+
+**Contexte** : L'audit a établi une **violation du principe P1** : `app/Core/Workforce/` contient de la logique métier lourde (`PayrollCalculationEngine`, tout le sous-système `Dsn/`, `LeaveLedger`, `YtdCalculator`, `RegularizationCalculator`, calculateurs CSG/RGDU/PAS). Le Core, qui « ne doit connaître aucun métier », connaît désormais la paie et la déclaration sociale françaises. La frontière Core/Module/JobDomain/Market doit être re-clarifiée définitivement et rendue opposable.
+
+**Décisions (contrat de frontière)** :
+1. **CORE = strictement invariant et non-métier**. Y vivent uniquement : auth/tenancy, RBAC 2-scopes, système de modules + entitlement, jobdomain registry/gate (assembleur), Fields/EAV, **Documents infra** (PDF, vault, templates, **AI Gateway**), **Billing-SaaS** (facturation du *locataire* par la plateforme), Notifications/Realtime/Automation/Audit (infra), et le **framework Markets** (paramètres data-driven). Aucune règle métier verticale ni spécificité pays dans le Core.
+2. **MODULES = toute logique métier**, verticale **et** horizontale. Deux familles : (a) modules **HORIZONTAUX** (socle réutilisable, ADR-563), (b) modules **VERTICAUX** (spécifiques à un métier).
+3. **Règle d'or opposable** : **aucun dossier `app/Core/{NomVertical}/` ne doit exister**. L'existence même de `app/Core/Workforce/` est la preuve matérielle de la violation ; sa résorption est un objectif. Migration cible : `PayrollCalculationEngine`, `Dsn/`, `LeaveLedger`, `YtdCalculator` et les calculateurs FR → `app/Modules/Workforce/`. Restent légitimement transverses : `MarketRuleSet` (framework), `CompanyPolicy`.
+4. **Dette assumée et bornée** : tant que la migration n'est pas réalisée, elle est documentée comme **exception explicite (dette P1)**. **Interdiction absolue d'AJOUTER** du nouveau code métier ou pays-spécifique dans `app/Core/`.
+5. **JOBDOMAIN = assembleur pur (P3 réaffirmé)** : il sélectionne modules/champs/rôles/archétypes/documents/nav ; il **ne calcule jamais**. Aucun `if (jobdomain === 'xxx')` hors `JobdomainGate`/`JobdomainRegistry`.
+6. **MARKETS = paramètres data-driven** : devise, TVA, locale, timezone, statuts légaux, langues, identifiants nationaux, règles datées (`MarketRuleSet`). **Toute spécificité pays passe par une donnée de market ou un module par-market — jamais un `if('FR')` dans le Core**. La paie par pays est le concern d'un **module** (adaptateur par market), pas du Core.
+
+**Conséquences** : frontière testable (invariant : pas de nouveau métier dans Core) ; base saine et défendable pour le multi-vertical et le multi-pays ; l'actif architectural (Core propre) redevient l'avantage concurrentiel.
+
+**Fichiers** : `docs/bmad/03-architecture.md`, `docs/bmad/07-dev-rules.md`, cet ADR.
+
+---
+
+### ADR-563 — Définition du socle métier horizontal (2026-07-17)
+
+**Contexte** : L'audit a identifié le **manque structurel n°1** : Leezr ne possède que **2 verticaux isolés** (Logistics, Workforce) et **aucun module métier horizontal**. Aucun concept de `Client/Contact/CRM`, `agenda/RDV`, `devis`, **facturation client**, `stock`, `projet` n'existe (grep négatif sur les classes `Contact/Client/Customer/Lead`). Conséquence : chaque nouvelle verticale devrait **tout reconstruire** — ce qui rend la promesse « 50 verticales » économiquement impossible. Point aggravant : le module `Billing` facture le *locataire par la plateforme* ; **il n'existe aucun moyen pour un locataire de facturer ses propres clients**, alors que garage, médecin, resto, immo, comptable, BTP en ont tous besoin.
+
+**Décisions** : définir et prioriser les **modules HORIZONTAUX** réutilisables par toutes les verticales :
+1. `contacts` — **référentiel universel des personnes et organisations** (clients, prospects, fournisseurs, partenaires, sous-traitants, employés…) : entités polymorphes rattachables, **source unique de vérité** des tiers pour toute la plateforme. **Ce n'est PAS un CRM** : le CRM (relation commerciale, pipeline, opportunités) sera un **module distinct qui s'appuiera sur ce référentiel — jamais l'inverse**. Cette inversion est essentielle pour préserver la **neutralité multi-verticale** : *toute* verticale a besoin d'un référentiel de tiers, mais *toutes* n'ont pas besoin d'un CRM (un cabinet médical gère des patients, un garage des véhicules-clients, un comptable des dossiers — pas des « leads »). *Fondation de tout le reste.*
+2. `invoicing` (facturation **client**) — devis → facture → paiement → relance, **distinct** du Billing-SaaS. **PRIORITÉ #1** (valeur universelle immédiate pour ~80 % des PME).
+3. `catalog` — produits / prestations / tarifs.
+4. `scheduling` — agenda / RDV / réservation / disponibilités.
+5. `inventory` — stock léger.
+6. `projects` — projets / chantiers / interventions / temps passé.
+
+**Règles** :
+- Chaque module horizontal **consomme le Core** (Documents, Notifications, Realtime, Automation, Audit, Fields) — **aucune réinvention**.
+- Chaque module horizontal est **activable indépendamment** et **composable par n'importe quel jobdomain**.
+- **Ordre de construction** : `contacts` → `invoicing` → `catalog` → `scheduling` → `inventory` → `projects`.
+
+**Conséquences** : une verticale future = **assemblage de modules horizontaux + fine couche spécifique** (ADR-564). Réduction drastique du coût marginal d'ouverture d'une verticale ; apparition d'une vraie valeur métier composable justifiant le prix.
+
+**Fichiers** : `docs/bmad/02-domain.md`, `docs/bmad/03-architecture.md`, cet ADR.
+
+**Hors scope** : implémentation (planifiée en ADR-565). Cet ADR définit le périmètre et l'ordre, pas le code.
+
+---
+
+### ADR-564 — Nouvelle stratégie de développement des verticales (2026-07-17)
+
+**Contexte** : La promesse multi-vertical n'est **pas prouvée** (1 seul jobdomain). `CreateJobdomainUseCase` ne génère qu'une **coquille vide** (il n'accepte ni rôles, ni archétypes, ni documents, ni nav_profile) — toute la richesse de `logistique` vit codée en dur dans `JobdomainRegistry.php`. Des couplages logistiques sont figés dans les rôles, widgets et champs. Workforce a été construit comme un vertical isolé plutôt que composé.
+
+**Décisions** :
+1. **Doctrine « vertical = composition »** : une verticale = **jobdomain (assembleur)** + **modules horizontaux (socle ADR-563)** + éventuellement **1-2 modules verticaux fins** spécifiques. **Interdit de démarrer une verticale par de la profondeur métier** avant d'avoir réutilisé le socle horizontal.
+2. **Compléter `CreateJobdomainUseCase`** pour générer un jobdomain **complet et fonctionnel via l'UI platform** (`default_modules`, `default_fields`, `default_roles` + bundles de permissions, `archetypes`, `default_documents`, `nav_profile`). Objectif : **« créer une verticale sans coder »**.
+3. **Découpler logistique** : extraire de `JobdomainRegistry` (logistique) les rôles/widgets/champs codés en dur vers des **presets génériques** ; le `FieldDefinitionCatalog` sépare explicitement champs génériques vs spécifiques métier.
+4. **2ᵉ vertical de preuve** : choisir un vertical **léger et NON réglementaire** (ex. « Services / Artisan » ou « Commerce / Boutique »), **assemblé à 100 % depuis le socle horizontal** (`contacts` + `invoicing` + `catalog` + `scheduling`). **Aucune paie/DSN** dans ce vertical. C'est le **test existentiel** de la plateforme.
+5. **Definition of Done d'une verticale** : assemblable via l'UI ; réutilise ≥ 3 modules horizontaux ; ≤ 1 module spécifique ; nav/rôles/dashboard générés automatiquement ; i18n FR + EN complet.
+6. **Repricing par capacité** : les plans facturent l'accès aux **capacités métier** (modules horizontaux + verticaux), pas les quotas seuls ; **devises réelles par market** (corriger le pricing mono-devise cassé) ; création de **tiers hauts réels** (multi-établissement, API, automations avancées, copilote IA).
+
+**Conséquences** : chemin industriel et reproductible pour ouvrir des verticales ; preuve de scalabilité ; grille tarifaire justifiée par la valeur.
+
+**Fichiers** : `docs/bmad/01-business.md`, `docs/bmad/02-domain.md`, cet ADR.
+
+---
+
+### ADR-565 — Nouvelle roadmap stratégique 12 mois (2026-07-17)
+
+**Contexte** : Les décisions ADR-561→564 doivent être matérialisées en une feuille de route séquencée « largeur avant profondeur », avec des jalons de preuve.
+
+**Décisions (phases)** :
+- **T0 — Réalignement & intégrité (semaines 1-4)** : assainir le catalogue (retirer les 3 addons vides) ; **stabiliser Workforce** (terminer P0/P1, finaliser UX, renforcer automatisations, corriger incohérences — *sans* nouvelle fonctionnalité majeure) ; corriger les **P0 produit Workforce** (montants en **euros** au lieu de centimes, **congé self-service scoped**, **sélecteurs** au lieu d'IDs tapés, **validation de formulaire bloquante**, 9 clés i18n `workforceMe.*`, menu profil FR) ; **réparer le pricing multi-devise** ; **sécuriser le git** (17 commits non-pushés + ADR-559/560 non commités) ; **réparer la suite de tests** (hang de la suite Feature + contamination d'isolation sur `jobdomains.key`) ; publier l'**ADR de frontière** appliquée.
+- **T1 — Socle horizontal (mois 2-4)** : `contacts` (référentiel universel personnes/organisations) + `invoicing` (facturation client) + devis ; **copilote IA** sur Documents + Support ; **alertes proactives côté company** ; **email de bienvenue** + event `CompanyCreated`.
+- **T2 — Preuve de largeur (mois 5-7)** : **2ᵉ vertical léger** assemblé du socle ; `CreateJobdomainUseCase` complet ; repricing par capacité + tiers hauts.
+- **T3 — International maîtrisé (mois 8-10)** : 2ᵉ market vendable (BE ou CH : SaaS + facturation, **sans paie**) ; devises réelles ; langues (nl/de/es) ; identifiants légaux par pays.
+- **T4 — Échelle & WOW (mois 11-12)** : durcissement scalabilité (queue/observabilité/tests) ; copilote IA transverse ; 3ᵉ vertical ; go-to-market.
+
+**Principe directeur** : **plus une ligne de profondeur Workforce/DSN tant que la largeur (socle horizontal + 2ᵉ vertical) n'est pas prouvée.**
+
+**Conséquences** : cadence lisible ; jalons de preuve mesurables ; recentrage de l'effort sur la valeur composable.
+
+**Fichiers** : `docs/bmad/` (roadmap), cet ADR.
+
+---
+
+### ADR-566 — Règles anti-dérive pour les futurs développements (2026-07-17)
+
+**Contexte** : La dérive Workforce s'est produite **malgré** la méthode BMAD. Il faut des garde-fous formels, opposables à toute décision future, pour empêcher qu'un module aspire de nouveau tout l'effort ou que le Core se re-pollue de métier.
+
+**Décisions (règles permanentes)** :
+1. **Largeur avant profondeur** : interdiction de développer un nouveau module **vertical profond**, ou d'**ajouter une fonctionnalité majeure** à Workforce, tant que le socle horizontal (ADR-563) et le 2ᵉ vertical de preuve (ADR-564) ne sont pas livrés. **Nuance (ADR-561)** : la *stabilisation* de Workforce (P0/P1, UX, automatisations, correctifs d'incohérence) reste **autorisée et attendue** — seule l'*extension* est reportée.
+2. **Core propre** : aucun nouveau code métier ou pays-spécifique dans `app/Core/` ; aucun nouveau dossier `app/Core/{Vertical}/`. Toute PR touchant le Core avec de la logique métier est refusée en revue.
+3. **Intégrité catalogue** : interdiction de rendre vendable (`is_sellable` / `addon_pricing`) un module **sans frontend livré ni parcours utilisateur réel**.
+4. **Pas de saisie déductible** : tout nouveau formulaire demandant une donnée que le serveur peut calculer (jours de congé, IDs de run, montants dérivés) est refusé. **Validation de formulaire bloquante (`validate()`) obligatoire** avant soumission.
+5. **Composition obligatoire** : tout nouveau module **réutilise les Cores** disponibles (Notifications, Realtime, Automation, Audit, Documents, Fields) — aucune réinvention ; il **émet audit + notification** sur ses mutations clés.
+6. **Definition of Done d'un module** : réutilise le socle ; i18n FR + EN complet ; empty-states + loaders ; permissions manifest-driven ; tests verts ; ADR. **Aucune coquille ni « coming soon » vendable.**
+7. **Règle de proportion** : aucun module ne doit dépasser un ratio d'effort déraisonnable vs la plateforme sans **décision explicite de comité** (empêcher un second « Workforce » qui aspire tout).
+8. **Multi-pays par données** : toute spécificité pays passe par le Market (donnée) ou un module par-market ; jamais de `if('FR')`.
+9. **Gate BMAD renforcé** : chaque lot se termine par **ADR + tests verts + build clean + revue anti-dérive** (ces 9 règles).
+
+**Conséquences** : la dérive devient **détectable et refusable** ; les principes fondateurs (P1, multi-vertical, Core invariant) redeviennent enforceables ; protection durable de l'actif plateforme.
+
+**Fichiers** : `docs/bmad/07-dev-rules.md`, `CLAUDE.md` (à refléter), cet ADR.
+
+---
+
+### ADR-567 — Philosophie Produit Leezr (2026-07-17)
+
+**Contexte** : Les ADR-561→566 corrigent la trajectoire (vision, frontière, socle, verticales, roadmap, garde-fous). Mais l'audit stratégique a montré que la dérive n'était pas seulement architecturale : elle était **produit**. Leezr accumule d'excellents modules techniques tout en laissant des saisies manuelles que le serveur pourrait déduire (jours de congé tapés, IDs de run tapés, paie en 3 étapes), en ignorant des services transverses déjà payés (Workforce n'émet aucune notification, n'utilise ni Realtime ni Automation, l'IA n'est câblée qu'aux Documents), et en donnant une expérience « à plusieurs vitesses » (un module « magique » à côté de modules « formulaire »). Il manquait une **doctrine produit** — un ensemble de principes non-architecturaux qui doivent guider **chaque** décision de fonctionnalité, opposable au même titre qu'un principe d'architecture. Cet ADR l'établit.
+
+**Décisions — Les 6 principes produit Leezr (PP)** :
+
+Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité doit démontrer sa conformité à chacun ; un écart doit être justifié explicitement dans son ADR.
+
+1. **PP1 — Automatiser plutôt que faire saisir.** Toute action que le système peut exécuter ou calculer à la place de l'utilisateur **doit** l'être. La saisie manuelle est un dernier recours, jamais un défaut de conception. *Contre-exemples à proscrire (constatés) : nombre de jours de congé tapé au lieu d'être calculé (dates − week-ends/fériés du market), paie en 3 étapes manuelles au lieu d'un « Générer la paie du mois ».* Corollaire : préférer les **valeurs par défaut intelligentes** et la **détection proactive** (anomalies, échéances) à l'action requise.
+
+2. **PP2 — Ne jamais redemander une information déjà connue.** Une donnée saisie, calculée ou déductible une fois **ne doit plus jamais** être redemandée à l'utilisateur. On sélectionne, on ne re-tape pas. *Contre-exemples à proscrire (constatés) : ID de run de paie/DSN tapé à la main alors qu'un sélecteur de période validée existe ; sélection manuelle de son propre nom dans une liste de tous les employés.* Le contexte (company, utilisateur, market, module actif) est **toujours** résolu côté serveur, jamais redemandé.
+
+3. **PP3 — Réutiliser systématiquement les services transverses.** Toute fonctionnalité **doit** consommer les services du Core plutôt que réinventer ou ignorer : **IA** (AI Gateway — analyse, suggestion, classification), **Documents** (génération, vault, templates), **Notifications**, **Realtime**, **Workflows/Automation**, **Audit**, **Fields**. *Contre-exemples à proscrire (constatés) : Workforce n'émet aucune notification et n'utilise ni Realtime ni Automation ; l'IA n'est câblée qu'à un seul module.* Règle : toute mutation métier significative **émet un audit + une notification** ; tout écran temps-réel **publie via Realtime** ; toute intelligence exploitable **passe par l'AI Gateway** (déjà en place, coût marginal quasi nul).
+
+4. **PP4 — Réduire au maximum le nombre de clics.** Le chemin le plus court vers la valeur est la mesure de qualité d'un parcours. Chaque clic, chaque étape, chaque champ doit justifier son existence. On privilégie les **flux uniques** (un bouton → un résultat) aux séquences d'étapes techniques exposées à l'utilisateur. *Contre-exemple à proscrire (constaté) : workflow de paie « Calculer » puis « Calculer les calculs ».* L'utilisateur ne doit jamais voir la plomberie interne (statuts techniques, IDs, chemins de fichiers, hash).
+
+5. **PP5 — Donner l'impression d'un produit unique, jamais d'une juxtaposition de modules.** L'utilisateur doit vivre **une** expérience cohérente et continue, pas un patchwork de modules d'inégale finition. Cohérence obligatoire du *chrome* (Vuexy : card-grid, drawers, tabs, dates, empty-states, loaders) **et** de l'*intelligence* (le niveau d'assistance/automatisation ne doit pas s'effondrer d'un module à l'autre). *Contre-exemple à proscrire (constaté) : un module « magique » assisté par IA (Documents) à côté de modules « formulaire » bruts ; un produit « à plusieurs vitesses ».* Les données circulent **entre** modules (le référentiel `contacts`, les documents, la facturation se partagent) — la plateforme agit comme un tout, pas comme des silos.
+
+6. **PP6 — Chaque nouvelle fonctionnalité doit créer une valeur métier mesurable.** Aucune fonctionnalité n'est développée « parce qu'elle est possible » ou « pour compléter ». Chaque ajout doit répondre à : *quel geste métier réel fait-il gagner ? quelle valeur, mesurable, apporte-t-il au client qui paie ?* Une capacité sans parcours utilisateur réel n'a **aucune** valeur. *Contre-exemples à proscrire (constatés) : modules coquilles facturés sans surface utilisateur ; profondeur réglementaire construite avant d'être vendable.* Une fonctionnalité qui n'améliore ni un revenu, ni un temps gagné, ni une erreur évitée, ni une conformité assurée **ne doit pas être développée**.
+
+**Application (opposabilité)** :
+- Ces 6 principes rejoignent la **Definition of Done** de toute fonctionnalité (complète le gate BMAD et les règles anti-dérive d'ADR-566).
+- Tout ADR de fonctionnalité future comporte une courte section **« Conformité aux principes produit (PP1-PP6) »** justifiant le respect de chacun (ou l'écart assumé).
+- Ils s'appliquent à **tous les modules** — existants (dette à résorber lors de la stabilisation, ex. Workforce) et futurs (socle horizontal, verticales).
+
+**Conséquences** : Leezr se dote d'une **boussole produit** partagée, indépendante de l'architecture, qui empêche le retour des travers constatés (saisie manuelle, redondance, silos, plomberie exposée, fonctionnalités sans valeur). La qualité perçue (« produit unique et intelligent ») devient un critère de décision explicite, pas un accident.
+
+**Fichiers** : `docs/bmad/07-dev-rules.md`, `CLAUDE.md` (à refléter comme doctrine produit), cet ADR.
+
+**Hors scope** : aucune règle d'architecture (couverte par ADR-562) ni de code. Cet ADR fixe des principes d'expérience et de conception produit.
+
+---
+
+### ADR-568 — Gestion durable des certificats SSL Let's Encrypt (dev & prod) (2026-07-17)
+
+**Contexte** : Le certificat de `https://dev.leezr.com` a **expiré le 12 mai 2026** (émis le 11 février, jamais renouvelé depuis), provoquant l'erreur SSL constatée. Diagnostic (externe + SSH lecture seule, sans modification) :
+- DNS correct (`213.32.20.37`) ; site servi par **Apache / ISPConfig** (pas Nginx), PHP-FPM 8.4.
+- Le challenge **ACME http-01** `http://dev.leezr.com/.well-known/acme-challenge/*` renvoie un **404 de l'application Laravel** (cookies `leezr-session` / `XSRF-TOKEN`) : le `.htaccess` déployé (copie du repo `public/.htaccess`, sans exclusion `.well-known`) route la requête vers `index.php`.
+- Le vhost ISPConfig exclut pourtant `.well-known` de sa réécriture (`RewriteCond %{REQUEST_URI} !^/.well-known/`), mais le `.htaccess` Laravel du docroot ré-attrape le chemin → challenge non servi statiquement → renouvellement en échec.
+- Prod `leezr.com` renouvelle correctement (valide jusqu'au 8 août 2026). Renouvellement géré par **root/ISPConfig (acme.sh)**, quotidien ; **aucun cron LE côté utilisateur** (les comptes de déploiement `jliouidevleezr`/`jliouiprodleezr` n'ont pas sudo).
+
+**Décisions** :
+1. **Fix durable (code, appliqué à chaque déploiement)** : `public/.htaccess` exclut explicitement le challenge ACME — `RewriteRule ^\.well-known/acme-challenge/ - [L]` en tête du bloc de réécriture. Quel que soit le déploiement, l'application ne peut plus intercepter le challenge → les renouvellements ISPConfig/acme.sh aboutissent.
+2. **Renouvellement automatique inchangé** : reste géré par **ISPConfig (acme.sh, root, quotidien)** qui ré-émet le certificat **et recharge Apache** via son hook standard. Ne **pas** ajouter de cron certbot applicatif en parallèle (risque de conflit sur les vhosts/challenges).
+3. **Remise en état immédiate du cert dev expiré** (nécessite root ou panneau — **hors périmètre des comptes SSH de déploiement sans sudo**) : via le **panneau ISPConfig** (`panel.novamoov.com` → site `dev.leezr.com` → onglet SSL : décocher « SSL » + « Let's Encrypt », sauver, attendre ~1 min, re-cocher « Let's Encrypt », sauver → ISPConfig ré-émet et recharge Apache), ou en root (`acme.sh`/`certbot` force-renew + reload). Procédure détaillée : `docs/runbooks/ssl-letsencrypt.md`.
+4. **Vérification & supervision** : contrôle externe `echo | openssl s_client -servername <domaine> -connect 213.32.20.37:443 | openssl x509 -noout -enddate` ; test de renouvellement à blanc `acme.sh --renew -d <domaine> --dry-run` (root) ; alerte si `notAfter` < 20 jours.
+
+**Conséquences** : dès que (a) le fix `.htaccess` est déployé et (b) le cert dev est ré-émis **une** fois, les renouvellements dev **et** prod deviennent **fiables et sans intervention manuelle**. La configuration est ajoutée au standard d'infrastructure du projet (runbook).
+
+**Fichiers** : `public/.htaccess`, `docs/runbooks/ssl-letsencrypt.md`, cet ADR.
+
+**Hors scope / limite d'exécution** : la ré-émission immédiate du certificat dev et le rechargement d'Apache exigent **root ou le panneau ISPConfig** ; les comptes SSH de déploiement n'ont pas sudo. Cet ADR livre le **fix durable + la procédure** ; l'acte de ré-émission est à exécuter via le panneau ISPConfig (ou root).
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

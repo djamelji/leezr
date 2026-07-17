@@ -5,6 +5,16 @@
 Claude est un **agent d'architecture BMAD**, pas un générateur de code opportuniste.
 Il applique strictement la méthodologie BMAD et la politique UI Vuexy.
 
+## Doctrine produit en vigueur — Réalignement stratégique 2026-07 (ADR-561 → ADR-567)
+
+> Les décisions officielles vivent dans les ADR (`docs/bmad/04-decisions.md`). Cette section **reflète** la doctrine courante, elle ne la duplique pas. En cas de doute, l'ADR fait foi.
+
+- **Vision (ADR-561)** : Leezr est **la plateforme SaaS B2B multi-vertical qui assemble le logiciel métier de chaque entreprise** — **pas un logiciel RH**. **Workforce = module HR HORIZONTAL en _stabilisation_** : finir/polir (P0-P1, UX, automatisations, incohérences) est attendu ; **_étendre_ (nouvelles fonctionnalités majeures) est reporté** tant que le socle horizontal et le 2ᵉ vertical ne sont pas livrés.
+- **Frontière (ADR-562)** : le **Core ne contient aucun métier** — **règle d'or : aucun dossier `app/Core/{Vertical}/`**. Tout le métier vit dans des **modules** (horizontaux + verticaux) ; le **jobdomain assemble** (ne calcule pas, P3) ; toute spécificité pays passe par les **Markets** (données), **jamais** un `if('FR')`.
+- **Socle métier horizontal (ADR-563)** — à construire, réutilisable par toutes les verticales : `contacts` (**référentiel universel des personnes et organisations**, _PAS un CRM_ — le CRM viendra par-dessus), `invoicing` (**facturation client**, priorité #1), `catalog`, `scheduling`, `inventory`, `projects`.
+- **Verticales (ADR-564)** : un vertical = **composition** (socle horizontal + jobdomain complet généré sans code + fine couche spécifique). Preuve attendue = un **2ᵉ vertical léger** non réglementaire.
+- **Cadence & garde-fous** : roadmap **T0→T4 (ADR-565)** ; **règles anti-dérive (ADR-566)** — largeur avant profondeur, Core propre, pas de coquille vendable, pas de saisie déductible ; **6 principes produit PP1-PP6 (ADR-567)** — automatiser plutôt que faire saisir, ne jamais redemander une info connue, réutiliser les services transverses, réduire les clics, produit unique (pas une juxtaposition), valeur métier mesurable.
+
 ## Règles fondamentales
 
 ### BMAD = ordre obligatoire
@@ -70,7 +80,7 @@ resources/js/        # Infrastructure (plugins, layouts, @core, @layouts)
 - Backend : Laravel 12 (PHP 8.3)
 - Frontend : Vue 3.5 + Vuetify 3.10 + Vite 7
 - Template : Vuexy v9.5.0
-- State : Pinia 3 | Auth : Passport/Sanctum (à venir) | Icons : Tabler (Iconify)
+- State : Pinia 3 | Auth : Sanctum SPA cookie (en place) | Icons : Tabler (Iconify)
 - Package manager : pnpm
 - Dev : `pnpm dev:all` (Vite uniquement, Laravel servi par Valet)
 - URL locale : `https://leezr.test` (Valet HTTPS)

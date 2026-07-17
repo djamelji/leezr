@@ -3,6 +3,12 @@
 > Décisions structurantes sur l'architecture du projet.
 > Voir aussi : ADR-006 à ADR-020 dans `04-decisions.md`.
 
+> **Frontière définitive Core / Modules / JobDomains / Markets (ADR-562).** Doctrine en vigueur (décision officielle dans l'ADR, non dupliquée) :
+> - **Core = strictement invariant et non-métier** : auth/tenancy, RBAC, module system + entitlement, jobdomain registry/gate (assembleur), Fields/EAV, Documents infra (+ AI Gateway), Billing-**SaaS** (facturation du locataire), Notifications/Realtime/Automation/Audit, **framework Markets**. **Règle d'or opposable : aucun dossier `app/Core/{Vertical}/`** (l'existant `app/Core/Workforce/` est une dette P1 bornée à résorber ; interdiction d'en ajouter).
+> - **Modules = tout le métier**, en deux familles : **horizontaux** (socle réutilisable, ADR-563) et **verticaux** (spécifiques métier).
+> - **JobDomain = assembleur pur (P3)** : sélectionne/assemble, ne calcule jamais. `CreateJobdomainUseCase` doit générer un jobdomain *complet* (rôles/archétypes/docs/nav) sans code (ADR-564).
+> - **Markets = paramètres data-driven** : toute spécificité pays est une donnée de market (ou un module par-market), **jamais** un `if('FR')` dans le Core. La paie par pays est un concern de module, pas du Core.
+
 ## Architecture générale
 
 - **Plateforme SaaS multi-tenant** : chaque company est un tenant isolé

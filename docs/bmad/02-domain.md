@@ -3,6 +3,11 @@
 > Ce fichier décrit les concepts métier, agrégats, entités, règles et relations.
 > Il est le résultat de la phase Domain du cycle BMAD.
 
+> **Doctrine domaine en vigueur (ADR-561 → ADR-567).** Le modèle ci-dessous reste valide ; le réalignement 2026-07 ajoute (décisions détaillées dans les ADR, non dupliquées) une famille de concepts **métier horizontaux** encore à modéliser, réutilisables par toutes les verticales (ADR-563) :
+> - **`contacts` — référentiel universel des personnes et organisations** (clients, prospects, fournisseurs, partenaires, sous-traitants, employés…) : agrégat polymorphe, **source unique de vérité des tiers**. **Ce n'est PAS un CRM** — le CRM sera un module distinct bâti *au-dessus* de ce référentiel.
+> - **`invoicing`** (facturation client, distincte de la facturation SaaS du Core), **`catalog`**, **`scheduling`**, **`inventory`**, **`projects`**.
+> - **Workforce** est un **module HR horizontal** (toute entreprise a des salariés), pas un vertical (ADR-561). Un **vertical** est une *composition* de modules horizontaux + un jobdomain assembleur (ADR-564), non un agrégat métier distinct.
+
 ## Domaines identifiés
 
 ### LOT 1 — Core SaaS

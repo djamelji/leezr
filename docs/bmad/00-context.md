@@ -27,6 +27,13 @@ Un socle SaaS ou :
 
 Premier vertical concret : **Logistique**. Ce vertical valide la separation core/modules, l'activation par jobdomain, la bulle UX et le modele organisationnel avant d'ajouter d'autres metiers. Un deuxieme vertical (non choisi) servira de test de scalabilite architecturale.
 
+> **⚠️ Doctrine en vigueur — Réalignement stratégique 2026-07 (ADR-561 → ADR-567).** Ce document reste la reference historique de la vision de fevrier 2026 ; la doctrine courante a ete precisee par les ADR-561 a 567 (les decisions officielles y vivent, non dupliquees ici) :
+> - **La preuve de scalabilite multi-vertical est le chantier prioritaire non encore realise** : apres 560 ADR il n'existe toujours qu'un seul jobdomain (`logistique`) et un seul market actif (`FR`). Le 2ᵉ vertical annonce ci-dessus reste a construire (ADR-564).
+> - **Le socle metier HORIZONTAL est le prealable manquant** : `contacts` (referentiel universel des personnes et organisations — *pas un CRM*), `invoicing` (facturation client), `catalog`, `scheduling`, `inventory`, `projects`. Une verticale = **composition** de ce socle + jobdomain complet + fine couche specifique (ADR-563/564).
+> - **Workforce est reclasse en module HR HORIZONTAL en _stabilisation_** (finir/polir oui, etendre non), pas un vertical (ADR-561).
+> - **Frontiere reaffirmee (ADR-562)** : aucun metier dans le Core (`app/Core/{Vertical}/` interdit) ; specificite pays via les Markets, jamais en dur.
+> - Cadence **T0→T4 (ADR-565)**, **regles anti-derive (ADR-566)**, **principes produit PP1-PP6 (ADR-567)**.
+
 ---
 
 ## 2. Modele conceptuel

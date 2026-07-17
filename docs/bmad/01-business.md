@@ -27,6 +27,8 @@ Leezr propose un **socle SaaS flexible** dont l'expérience s'adapte au métier 
 > Le jobdomain **sélectionne**, il ne **calcule** pas.
 > La logique métier vit dans les **modules**, jamais dans le jobdomain ni dans le core.
 
+> **Doctrine en vigueur (ADR-561 → ADR-567).** Le besoin métier reste celui d'un socle SaaS adaptable par métier. Précisions apportées par le réalignement 2026-07 (détail dans les ADR, non dupliqué ici) : la valeur se construit d'abord par un **socle métier HORIZONTAL** réutilisable par tous les métiers — `contacts` (**référentiel universel des personnes et organisations**, pas un CRM), `invoicing` (**facturation client**, que 80 % des PME utilisent au quotidien), `catalog`, `scheduling`, `inventory`, `projects` (ADR-563). Une verticale se **compose** de ce socle plutôt que de se reconstruire (ADR-564). Le module **Workforce (RH/paie FR) est un module horizontal en stabilisation**, pas le produit (ADR-561). La monétisation cible facture la **capacité métier**, pas les quotas.
+
 ## Premier vertical : Logistique
 
 ### Pourquoi la logistique en premier
