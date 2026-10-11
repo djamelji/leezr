@@ -21517,4 +21517,24 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
+### ADR-569 — Épinglage de la version pnpm en CI (déblocage des déploiements) (2026-07-19)
+
+**Contexte** : Le push de `dev` (commit `4ae3e3f`) a déclenché le workflow GitHub Actions « Build & Deploy », qui a **échoué à l'étape `pnpm install --frozen-lockfile`** avec `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` (« The current "overrides" configuration doesn't match the value found in the lockfile »), accompagné du warning « The "pnpm" field in package.json is no longer read by pnpm ». Diagnostic :
+- Le `overrides` de `package.json` **correspond pourtant exactement** à celui de `pnpm-lock.yaml` (`lockfileVersion 9.0`). Il ne s'agit **pas** d'un vrai désaccord de contenu, ni d'une régression de mon commit (dernier commit touchant le lockfile = ADR-360→376, bien antérieur).
+- Le workflow installait pnpm via `pnpm/action-setup@v4` avec **`version: latest`** (`deploy.yml:62`). `latest` a **dérivé** vers une version pnpm plus récente qui a déplacé la configuration (champ `pnpm`, overrides) et recalcule la cohérence du lockfile → refus en mode frozen.
+- Preuve : pnpm **local 10.28.1** passe `pnpm install --frozen-lockfile` sans erreur (et sans ce warning). Le **dernier déploiement réussi date du 2 mai 2026** ; tous les déploiements suivants étaient cassés — ce qui explique aussi pourquoi les ~17 commits Workforce n'avaient **jamais** atteint staging/prod.
+
+**Décisions** :
+1. **Épingler la version pnpm en CI** : `deploy.yml` → `pnpm/action-setup@v4` avec **`version: 10.28.1`** (la version connue-bonne qui a généré le lockfile), au lieu de `latest`. Supprime la dérive et rend les builds reproductibles.
+2. **Déclarer `packageManager: "pnpm@10.28.1"`** dans `package.json` comme **source de vérité unique** (local, corepack, CI), à garder synchronisée avec le workflow.
+3. **Règle durable** : ne jamais utiliser `version: latest` pour un gestionnaire de paquets en CI sur un projet à lockfile figé — toujours épingler et faire évoluer explicitement.
+
+**Conséquences** : les déploiements `dev`/`main` redeviennent fonctionnels ; le backlog non déployé (dont le fix SSL `.htaccess` d'ADR-568) peut enfin atteindre staging. Builds déterministes, plus de dérive silencieuse.
+
+**Fichiers** : `.github/workflows/deploy.yml`, `package.json`, cet ADR.
+
+**Note** : blocage **pré-existant** (dérive `latest`), révélé — non causé — par le push de réalignement. La montée de version pnpm devra désormais être une décision explicite (bump simultané workflow + `packageManager` + lockfile).
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

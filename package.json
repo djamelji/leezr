@@ -3,6 +3,7 @@
   "version": "9.5.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.28.1",
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently -k --names vite,queue-default,queue-ai -c cyan,green,blue \"vite\" \"php artisan queue:work --queue=default --sleep=3 --tries=3 --timeout=60\" \"php artisan queue:work --queue=ai --sleep=3 --tries=3 --timeout=120\"",
