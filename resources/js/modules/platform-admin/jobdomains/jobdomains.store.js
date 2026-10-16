@@ -68,18 +68,23 @@ export const usePlatformJobdomainsStore = defineStore('platformJobdomains', {
     },
 
     async createField(payload) {
-      return await $platformApi('/fields', {
+      // Route réelle = /field-definitions ; la réponse expose `field_definition`.
+      // On normalise en `field` pour la consommation côté vue (jobdomains/[id].vue).
+      const data = await $platformApi('/field-definitions', {
         method: 'POST',
         body: payload,
       })
+
+      return { ...data, field: data.field_definition }
     },
 
     async deleteField(id) {
-      return await $platformApi(`/fields/${id}`, { method: 'DELETE' })
+      return await $platformApi(`/field-definitions/${id}`, { method: 'DELETE' })
     },
 
     async createDocumentType(payload) {
-      return await $platformApi('/documents/types', {
+      // Route réelle = /documents (store) ; la réponse expose `document_type`.
+      return await $platformApi('/documents', {
         method: 'POST',
         body: payload,
       })
