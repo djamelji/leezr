@@ -7,6 +7,7 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Automation\Jobs\RunScheduledTaskJob;
 use App\Core\Automation\ScheduledTaskRegistry;
 use App\Core\Automation\ScheduledTaskRun;
+use App\Core\Automation\ScheduledTaskState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -62,11 +63,15 @@ class AutomationController extends Controller
         $totalFailed = $taskStats->sum('failed_count');
         $avgDuration = $taskStats->avg('avg_duration_ms');
 
+        // ── Enable/disable state (batch, default enabled) ──
+        $states = ScheduledTaskState::map();
+
         // ── Build per-task response ──────────────────────
         $tasks = [];
         foreach (ScheduledTaskRegistry::all() as $name => $meta) {
             $stats = $taskStats->get($name);
             $lastRun = $latestRuns->get($name);
+            $enabled = $states[$name] ?? true;
 
             $tasks[] = [
                 'name' => $name,
@@ -75,7 +80,9 @@ class AutomationController extends Controller
                 'frequency' => $meta['frequency'],
                 'cron' => $meta['cron'],
                 'sensitive' => ScheduledTaskRegistry::isSensitive($name),
-                'health' => ScheduledTaskRegistry::computeHealth($name, $lastRun),
+                'enabled' => $enabled,
+                // 'disabled' is a distinct cockpit state from health (which reflects execution).
+                'health' => $enabled ? ScheduledTaskRegistry::computeHealth($name, $lastRun) : 'disabled',
                 'next_run_at' => ScheduledTaskRegistry::nextRunAt($name)?->toIso8601String(),
                 'last_run_at' => $lastRun?->started_at?->toIso8601String(),
                 'last_status' => $lastRun?->status,
@@ -142,6 +149,15 @@ class AutomationController extends Controller
 
         if (! ScheduledTaskRegistry::exists($task)) {
             return response()->json(['message' => 'Unknown task.'], 404);
+        }
+
+        // A disabled task must not run — not from the scheduler (->when filter) nor
+        // manually. Re-enable it first.
+        if (! ScheduledTaskState::isEnabled($task)) {
+            return response()->json([
+                'message' => 'This task is disabled. Enable it before running.',
+                'code' => 'task_disabled',
+            ], 422);
         }
 
         $sensitive = ScheduledTaskRegistry::isSensitive($task);
@@ -221,5 +237,59 @@ class AutomationController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * POST /platform/automations/toggle
+     *
+     * Enable or disable a task. Disabling is REAL: the scheduler's ->when() filter
+     * skips the command and manual run is refused. Audited.
+     */
+    public function toggle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'task' => 'required|string|max:100',
+            'enabled' => 'required|boolean',
+            'reason' => 'sometimes|nullable|string|max:500',
+        ]);
+
+        $task = $validated['task'];
+
+        if (! ScheduledTaskRegistry::exists($task)) {
+            return response()->json(['message' => 'Unknown task.'], 404);
+        }
+
+        $enabled = $request->boolean('enabled');
+        $actor = $request->user('platform');
+
+        // Re-enabling a sensitive task resumes mass financial execution → requires the
+        // dedicated permission. Disabling (a safety brake) stays allowed for any operator.
+        if ($enabled && ScheduledTaskRegistry::isSensitive($task)
+            && (! $actor || ! $actor->hasPermission('run_sensitive_automations'))) {
+            return response()->json([
+                'message' => 'Re-enabling a sensitive (mass financial) task requires the run_sensitive_automations permission.',
+                'code' => 'sensitive_permission_required',
+            ], 403);
+        }
+
+        $actorLabel = $actor ? ($actor->email ?? (string) $actor->id) : null;
+
+        ScheduledTaskState::setEnabled($task, $enabled, $actorLabel, $validated['reason'] ?? null);
+
+        app(AuditLogger::class)->logPlatform(
+            $enabled ? AuditAction::AUTOMATION_TASK_ENABLED : AuditAction::AUTOMATION_TASK_DISABLED,
+            'automation',
+            $task,
+            [
+                'severity' => $enabled ? 'info' : 'warning',
+                'metadata' => ['reason' => $validated['reason'] ?? null],
+            ],
+        );
+
+        return response()->json([
+            'task' => $task,
+            'enabled' => $enabled,
+            'message' => $enabled ? "Task {$task} enabled." : "Task {$task} disabled.",
+        ]);
     }
 }

@@ -594,6 +594,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/automations', [AutomationController::class, 'index']);
         Route::get('/automations/runs', [AutomationController::class, 'runs']);
         Route::post('/automations/run', [AutomationController::class, 'run']);
+        Route::post('/automations/toggle', [AutomationController::class, 'toggle']);
     });
 
     // ── Alert Center (ADR-438) ──────────────────────────────────

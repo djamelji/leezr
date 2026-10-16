@@ -38,6 +38,18 @@ class RunScheduledTaskJob implements ShouldQueue
             return;
         }
 
+        // Defense in depth: never execute a task that was disabled between dispatch
+        // and execution (the controller also guards, but state may change in-between).
+        if (! \App\Core\Automation\ScheduledTaskState::isEnabled($this->taskName)) {
+            $run->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'error' => 'Task is disabled — execution skipped.',
+            ]);
+
+            return;
+        }
+
         $meta = ScheduledTaskRegistry::get($this->taskName);
         $command = $meta['command'] ?? null;
         if (! $command) {

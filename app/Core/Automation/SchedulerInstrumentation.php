@@ -14,6 +14,16 @@ use Illuminate\Support\Str;
 class SchedulerInstrumentation
 {
     /**
+     * Filter: gates whether a scheduled command is allowed to run at all.
+     * Wired as ->when(SI::enabled($task)) in routes/console.php so a task disabled
+     * from the cockpit is REALLY skipped by the scheduler (not merely hidden).
+     */
+    public static function enabled(string $task): Closure
+    {
+        return fn () => ScheduledTaskState::isEnabled($task);
+    }
+
+    /**
      * Hook: called BEFORE the scheduled command runs.
      * Creates a ScheduledTaskRun record with status=running.
      * Also ensures the scheduler log directory exists.

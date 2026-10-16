@@ -13,6 +13,7 @@ Artisan::command('inspire', function () {
 // FX rate refresh every 6 hours (ADR-104)
 Schedule::command('fx:rates-sync')->cron('0 */6 * * *')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/fx-rates-sync.log'))
+    ->when(SI::enabled('fx:rates-sync'))
     ->before(SI::before('fx:rates-sync'))
     ->onSuccess(SI::onSuccess('fx:rates-sync'))
     ->onFailure(SI::onFailure('fx:rates-sync'));
@@ -21,6 +22,7 @@ Schedule::command('fx:rates-sync')->cron('0 */6 * * *')->withoutOverlapping()
 // Subscription auto-renewal — daily (ADR-223)
 Schedule::command('billing:renew')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-renew.log'))
+    ->when(SI::enabled('billing:renew'))
     ->before(SI::before('billing:renew'))
     ->onSuccess(SI::onSuccess('billing:renew'))
     ->onFailure(SI::onFailure('billing:renew'));
@@ -28,6 +30,7 @@ Schedule::command('billing:renew')->daily()->withoutOverlapping()
 // Dunning retry — daily (ADR-136)
 Schedule::command('billing:process-dunning')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-process-dunning.log'))
+    ->when(SI::enabled('billing:process-dunning'))
     ->before(SI::before('billing:process-dunning'))
     ->onSuccess(SI::onSuccess('billing:process-dunning'))
     ->onFailure(SI::onFailure('billing:process-dunning'));
@@ -35,6 +38,7 @@ Schedule::command('billing:process-dunning')->daily()->withoutOverlapping()
 // Reconciliation — weekly (ADR-140)
 Schedule::command('billing:reconcile')->weekly()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-reconcile.log'))
+    ->when(SI::enabled('billing:reconcile'))
     ->before(SI::before('billing:reconcile'))
     ->onSuccess(SI::onSuccess('billing:reconcile'))
     ->onFailure(SI::onFailure('billing:reconcile'));
@@ -42,6 +46,7 @@ Schedule::command('billing:reconcile')->weekly()->withoutOverlapping()
 // Webhook recovery — every 10 minutes (ADR-228)
 Schedule::command('billing:recover-webhooks')->everyTenMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-recover-webhooks.log'))
+    ->when(SI::enabled('billing:recover-webhooks'))
     ->before(SI::before('billing:recover-webhooks'))
     ->onSuccess(SI::onSuccess('billing:recover-webhooks'))
     ->onFailure(SI::onFailure('billing:recover-webhooks'));
@@ -49,6 +54,7 @@ Schedule::command('billing:recover-webhooks')->everyTenMinutes()->withoutOverlap
 // Checkout recovery — every 10 minutes (ADR-229)
 Schedule::command('billing:recover-checkouts')->everyTenMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-recover-checkouts.log'))
+    ->when(SI::enabled('billing:recover-checkouts'))
     ->before(SI::before('billing:recover-checkouts'))
     ->onSuccess(SI::onSuccess('billing:recover-checkouts'))
     ->onFailure(SI::onFailure('billing:recover-checkouts'));
@@ -56,6 +62,7 @@ Schedule::command('billing:recover-checkouts')->everyTenMinutes()->withoutOverla
 // Dead letter queue monitoring — hourly (ADR-266)
 Schedule::command('billing:check-dlq')->hourly()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-check-dlq.log'))
+    ->when(SI::enabled('billing:check-dlq'))
     ->before(SI::before('billing:check-dlq'))
     ->onSuccess(SI::onSuccess('billing:check-dlq'))
     ->onFailure(SI::onFailure('billing:check-dlq'));
@@ -63,6 +70,7 @@ Schedule::command('billing:check-dlq')->hourly()->withoutOverlapping()
 // Card expiry notifications — daily (ADR-272)
 Schedule::command('billing:check-expiring-cards')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-check-expiring-cards.log'))
+    ->when(SI::enabled('billing:check-expiring-cards'))
     ->before(SI::before('billing:check-expiring-cards'))
     ->onSuccess(SI::onSuccess('billing:check-expiring-cards'))
     ->onFailure(SI::onFailure('billing:check-expiring-cards'));
@@ -70,6 +78,7 @@ Schedule::command('billing:check-expiring-cards')->daily()->withoutOverlapping()
 // Trial expiry notifications — daily (ADR-272)
 Schedule::command('billing:check-trial-expiring')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-check-trial-expiring.log'))
+    ->when(SI::enabled('billing:check-trial-expiring'))
     ->before(SI::before('billing:check-trial-expiring'))
     ->onSuccess(SI::onSuccess('billing:check-trial-expiring'))
     ->onFailure(SI::onFailure('billing:check-trial-expiring'));
@@ -77,6 +86,7 @@ Schedule::command('billing:check-trial-expiring')->daily()->withoutOverlapping()
 // Trial auto-expiration — daily (ADR-360)
 Schedule::command('billing:expire-trials')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-expire-trials.log'))
+    ->when(SI::enabled('billing:expire-trials'))
     ->before(SI::before('billing:expire-trials'))
     ->onSuccess(SI::onSuccess('billing:expire-trials'))
     ->onFailure(SI::onFailure('billing:expire-trials'));
@@ -84,6 +94,7 @@ Schedule::command('billing:expire-trials')->daily()->withoutOverlapping()
 // Scheduled SEPA debits collection — daily at 06:00 (ADR-328 S2)
 Schedule::command('billing:collect-scheduled')->dailyAt('06:00')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/billing-collect-scheduled.log'))
+    ->when(SI::enabled('billing:collect-scheduled'))
     ->before(SI::before('billing:collect-scheduled'))
     ->onSuccess(SI::onSuccess('billing:collect-scheduled'))
     ->onFailure(SI::onFailure('billing:collect-scheduled'));
@@ -92,6 +103,7 @@ Schedule::command('billing:collect-scheduled')->dailyAt('06:00')->withoutOverlap
 // Document expiration check — daily (ADR-389)
 Schedule::command('documents:check-expiration')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/documents-check-expiration.log'))
+    ->when(SI::enabled('documents:check-expiration'))
     ->before(SI::before('documents:check-expiration'))
     ->onSuccess(SI::onSuccess('documents:check-expiration'))
     ->onFailure(SI::onFailure('documents:check-expiration'));
@@ -99,6 +111,7 @@ Schedule::command('documents:check-expiration')->daily()->withoutOverlapping()
 // Document auto-renew — daily at 08:00 (ADR-397)
 Schedule::command('documents:auto-renew')->dailyAt('08:00')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/documents-auto-renew.log'))
+    ->when(SI::enabled('documents:auto-renew'))
     ->before(SI::before('documents:auto-renew'))
     ->onSuccess(SI::onSuccess('documents:auto-renew'))
     ->onFailure(SI::onFailure('documents:auto-renew'));
@@ -106,6 +119,7 @@ Schedule::command('documents:auto-renew')->dailyAt('08:00')->withoutOverlapping(
 // Document auto-remind — daily at 09:00 (ADR-397)
 Schedule::command('documents:auto-remind')->dailyAt('09:00')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/documents-auto-remind.log'))
+    ->when(SI::enabled('documents:auto-remind'))
     ->before(SI::before('documents:auto-remind'))
     ->onSuccess(SI::onSuccess('documents:auto-remind'))
     ->onFailure(SI::onFailure('documents:auto-remind'));
@@ -114,6 +128,7 @@ Schedule::command('documents:auto-remind')->dailyAt('09:00')->withoutOverlapping
 // Reset daily execution counters at midnight
 Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/workflow-reset-daily-counters.log'))
+    ->when(SI::enabled('workflow:reset-daily-counters'))
     ->before(SI::before('workflow:reset-daily-counters'))
     ->onSuccess(SI::onSuccess('workflow:reset-daily-counters'))
     ->onFailure(SI::onFailure('workflow:reset-daily-counters'));
@@ -122,6 +137,7 @@ Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping(
 // Evaluate alert rules every 5 minutes
 Schedule::command('alerts:evaluate')->everyFiveMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/alerts-evaluate.log'))
+    ->when(SI::enabled('alerts:evaluate'))
     ->before(SI::before('alerts:evaluate'))
     ->onSuccess(SI::onSuccess('alerts:evaluate'))
     ->onFailure(SI::onFailure('alerts:evaluate'));
@@ -129,6 +145,7 @@ Schedule::command('alerts:evaluate')->everyFiveMinutes()->withoutOverlapping()
 // Escalate unacknowledged critical alerts every 15 minutes (ADR-469)
 Schedule::command('alerts:escalate')->everyFifteenMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/alerts-escalate.log'))
+    ->when(SI::enabled('alerts:escalate'))
     ->before(SI::before('alerts:escalate'))
     ->onSuccess(SI::onSuccess('alerts:escalate'))
     ->onFailure(SI::onFailure('alerts:escalate'));
@@ -137,6 +154,7 @@ Schedule::command('alerts:escalate')->everyFifteenMinutes()->withoutOverlapping(
 // Collect daily usage snapshots at 23:55
 Schedule::command('usage:collect-snapshots')->dailyAt('23:55')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/usage-collect-snapshots.log'))
+    ->when(SI::enabled('usage:collect-snapshots'))
     ->before(SI::before('usage:collect-snapshots'))
     ->onSuccess(SI::onSuccess('usage:collect-snapshots'))
     ->onFailure(SI::onFailure('usage:collect-snapshots'));
@@ -144,6 +162,7 @@ Schedule::command('usage:collect-snapshots')->dailyAt('23:55')->withoutOverlappi
 // ── Email IMAP fetch ───────────────────────────────────
 Schedule::command('email:fetch-inbox')->everyFiveMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/email-fetch.log'))
+    ->when(SI::enabled('email:fetch-inbox'))
     ->before(SI::before('email:fetch-inbox'))
     ->onSuccess(SI::onSuccess('email:fetch-inbox'))
     ->onFailure(SI::onFailure('email:fetch-inbox'));
@@ -152,6 +171,7 @@ Schedule::command('email:fetch-inbox')->everyFiveMinutes()->withoutOverlapping()
 // Detect abandoned registrations — daily at 08:00
 Schedule::command('registration:detect-abandoned')->dailyAt('08:00')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/registration-detect-abandoned.log'))
+    ->when(SI::enabled('registration:detect-abandoned'))
     ->before(SI::before('registration:detect-abandoned'))
     ->onSuccess(SI::onSuccess('registration:detect-abandoned'))
     ->onFailure(SI::onFailure('registration:detect-abandoned'));
