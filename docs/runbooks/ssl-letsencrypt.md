@@ -42,7 +42,27 @@ Options -MultiViews -Indexes
 
 **⚠️ Activation** : ce fix prend effet **au prochain déploiement** (push `dev`). Pour un certificat **déjà expiré**, soit on attend le prochain passage du cron certbot (qui réussira une fois le challenge servi), soit on force une ré-émission immédiate via le panneau ISPConfig (§4).
 
-## 4. Remise en état d'un certificat expiré (nécessite root ou panneau)
+## 3bis. ⚠️ CONSTAT 2026-10-16 — le fix `.htaccess` est INSUFFISANT sur ce vhost ISPConfig
+
+Après déploiement du fix `.htaccess` (§3) sur dev et **vérification en conditions réelles** :
+un fichier **existant** sous `/.well-known/acme-challenge/` (testé avec `.gitkeep`) est **toujours
+routé vers Laravel** (réponse 404 applicative avec cookies `leezr-session`), au lieu d'être servi
+en statique. Donc le challenge HTTP-01 échoue encore → **certbot ne peut pas renouveler**.
+
+**Cause racine (diagnostiquée, lecture seule)** : le vhost ISPConfig route les requêtes via un
+layout `DocumentRoot → symlink public/` + `RewriteRule ^(.*)$ public/$1`. Le `RewriteCond
+!^/.well-known/` présent dans le vhost **n'aboutit pas** à un service statique sur ce layout ;
+les fichiers du challenge n'atteignent jamais le disque avant le front-controller. Les `.htaccess`
+applicatifs (niveau docroot **et** niveau `.well-known/`) ne peuvent pas court-circuiter ce routage.
+
+**Conséquence** : le renouvellement SSL de dev **n'est PAS réparable au niveau applicatif/dépôt**.
+Il nécessite une action **root / panneau ISPConfig** (§4). Le fix `.htaccess` (§3) reste committé —
+il est correct et utile sur un Apache/nginx standard, mais **ne suffit pas** sur ce vhost ISPConfig.
+
+**Fix autoritatif = mécanisme natif ISPConfig** (ISPConfig gère alors lui-même le challenge au
+niveau vhost, indépendamment de l'app) : voir §4 option A (toggle Let's Encrypt via le panneau).
+
+## 4. Remise en état d'un certificat expiré + réparation du renouvellement (nécessite root ou panneau)
 
 ### Option A — Panneau ISPConfig (recommandé, sans ligne de commande)
 1. `https://panel.novamoov.com` → **Sites** → `dev.leezr.com`.
