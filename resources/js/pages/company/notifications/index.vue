@@ -4,7 +4,7 @@ import NotificationPreferences from './_NotificationPreferences.vue'
 
 definePage({ meta: { module: 'core.notifications' } })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const store = useNotificationStore()
 
@@ -86,7 +86,7 @@ function timeAgo(dateStr) {
   if (diffHours < 24) return t('notifications.timeHourAgo', { n: diffHours })
   if (diffDays < 7) return t('notifications.timeDayAgo', { n: diffDays })
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString(locale.value)
 }
 </script>
 

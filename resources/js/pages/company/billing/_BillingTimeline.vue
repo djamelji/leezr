@@ -1,7 +1,7 @@
 <script setup>
 import EmptyState from '@/core/components/EmptyState.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const events = ref([])
 const loading = ref(true)
@@ -51,7 +51,7 @@ const formatRelativeTime = dateStr => {
   if (diffD < 30)
     return t('billingTimeline.daysAgo', { count: diffD })
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString(locale.value)
 }
 
 onMounted(async () => {
