@@ -67,6 +67,10 @@ const planPrice = computed(() => {
 })
 
 const nextBillingDate = computed(() => {
+  // Audit 13: never present a past period end as a future estimate — show the
+  // renewal-pending state instead (consistent with the Plan tab).
+  if (preview.value?.renewal_overdue) return t('companyPlan.renewalPending')
+
   const date = preview.value?.next_billing_date
   if (!date) return '—'
 
