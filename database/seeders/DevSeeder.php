@@ -591,6 +591,45 @@ class DevSeeder extends Seeder
     }
 
     /**
+     * Demo document fixtures copied into the default (local/private) disk.
+     * destination paths are relative to the disk root (storage/app/private).
+     */
+    public const SEED_FIXTURES = [
+        'dummy_driving_license.png' => 'documents/seed/dummy_driving_license.png',
+        'dummy_id_card.png' => 'documents/seed/dummy_id_card.png',
+        'dummy_kbis.png' => 'documents/seed/dummy_kbis.png',
+    ];
+
+    /**
+     * Copy the demo document fixtures into storage, returning the stored map
+     * [source => dest] for the fixtures actually present on disk.
+     *
+     * Root cause of the past `UnableToCreateDirectory: documents/seed` errors:
+     * Storage::put() relied on IMPLICIT nested-directory creation, which is not
+     * reproducible across deploy states (fresh shared storage, re-runs, differing
+     * perms). We now create the target directory EXPLICITLY and idempotently first.
+     * No exception is masked: a genuine permission failure still propagates.
+     */
+    public static function copySeedFixtures(): array
+    {
+        $fixturesPath = database_path('seeders/fixtures');
+
+        // Idempotent: returns true if the directory already exists.
+        Storage::makeDirectory('documents/seed');
+
+        $stored = [];
+        foreach (self::SEED_FIXTURES as $source => $dest) {
+            $sourcePath = $fixturesPath.'/'.$source;
+            if (file_exists($sourcePath)) {
+                Storage::put($dest, file_get_contents($sourcePath));
+                $stored[$source] = $dest;
+            }
+        }
+
+        return $stored;
+    }
+
+    /**
      * ADR-419: Seed document type activations, document requests, and uploaded
      * documents so the AI pipeline has material to process after migrate:fresh.
      */
@@ -611,22 +650,7 @@ class DevSeeder extends Seeder
         }
 
         // ─── 2. Copy fixture files to storage ───────────────────────
-        $fixturesPath = database_path('seeders/fixtures');
-
-        $storedFiles = [];
-        $fixtures = [
-            'dummy_driving_license.png' => 'documents/seed/dummy_driving_license.png',
-            'dummy_id_card.png' => 'documents/seed/dummy_id_card.png',
-            'dummy_kbis.png' => 'documents/seed/dummy_kbis.png',
-        ];
-
-        foreach ($fixtures as $source => $dest) {
-            $sourcePath = $fixturesPath.'/'.$source;
-            if (file_exists($sourcePath)) {
-                Storage::put($dest, file_get_contents($sourcePath));
-                $storedFiles[$source] = $dest;
-            }
-        }
+        $storedFiles = self::copySeedFixtures();
 
         // ─── 3. Member document requests for Bob (driver) ───────────
         $drivingLicense = DocumentType::where('code', 'driving_license')->first();

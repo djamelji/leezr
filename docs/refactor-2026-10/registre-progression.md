@@ -244,3 +244,12 @@ Toggle enable/disable (VSwitch → `/automations/toggle`), badge « désactivée
 
 ## LOT F — Clôture
 Suite complète + build + livrable + ADR-572. Vérif VPS réelle (non-destructive). **Code prêt, non déployé** (consigne). Opération restante : moniteur externe d'uptime (recommandé) + déploiement du lot pour activer en prod les endpoints toggle/gardes.
+
+---
+
+# Finition Ops & reprise harmonisation (octobre 2026 — suite)
+
+## LOT 1 — DevSeeder `documents/seed` ✅
+**Cause racine** (code+logs) : `DevSeeder::seedDocumentData` faisait `Storage::put('documents/seed/…')` en s'appuyant sur la **création implicite** du répertoire par Flysystem — non reproductible selon l'état du disque au déploiement (shared storage fraîche, ré-exécutions, perms). Les `UnableToCreateDirectory` venaient d'anciens déploiements (ancienne étape `[6.5] seed DevSeeder`), le flux actuel (step 5.5, env staging ≠ local → DatabaseSeeder n'appelle pas DevSeeder) réussit déjà.
+**Fix (source, sans masquer l'exception)** : extraction en `DevSeeder::copySeedFixtures()` qui **crée explicitement et idempotemment** `documents/seed` (`Storage::makeDirectory`) avant `put` ; une vraie erreur de permission se propage toujours. `SEED_FIXTURES` constante.
+**Test** `DevSeederFixturesTest` (2) : copie quand le répertoire n'existe pas (scénario exact de l'échec) + idempotence sur double exécution. Données prod non touchées.
