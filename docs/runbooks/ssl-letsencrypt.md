@@ -22,9 +22,18 @@ par l'alias global, prouvé par selftest sur leezr.com ET www.leezr.com). **Reno
 exécuté avec succès** (acme.sh ECC via le webroot) → cert `leezr.com` valide jusqu'au **14/01/2027**,
 installé sur web2, Apache rechargé. Renouvellement auto prévu **16/12/2026**.
 
-**État final (vérifié externe)** : `dev.leezr.com`, `leezr.com`, `www.leezr.com` → tous valides
-14/01/2027, `ssl_verify=0`. Les deux certs : `Le_Webroot=/var/www/acme-global`, cron acme.sh
-quotidien actif → **renouvellement automatique durable pour dev ET prod**.
+**PANEL ISPConfig — panel.leezr.com provisionné & vérifié** : il n'avait aucun vhost (→ servait
+le cert dev + la mauvaise appli). Créé `/etc/apache2/sites-available/panel.leezr.com.conf`
+(réplique du modèle vetté `panel.novamoov.com` : redirect :80→:443 **excluant** `/.well-known/`,
+proxy :443 → `https://127.0.0.1:8080/` = interface ISPConfig, headers sécurité) + cert acme.sh
+dédié (webroot `/var/www/acme-global`). Vérifié externe : `<title>ISPConfig</title>` servi,
+`ssl_verify=0`, cert valide **14/01/2027**, renouvellement auto **16/12/2026**.
+Script de provisionnement : `scripts/ssl-ops-dev.sh` historique (git) ; vhost = custom .conf
+(hors gestion ISPConfig → persiste).
+
+**État final (vérifié externe)** : `dev.leezr.com`, `leezr.com`, `www.leezr.com`, `panel.leezr.com`
+→ tous valides 14/01/2027, `ssl_verify=0`. Tous : `Le_Webroot=/var/www/acme-global`, cron acme.sh
+quotidien actif → **renouvellement automatique durable pour dev, prod ET panel**.
 
 **Limite (edge case)** : si ISPConfig force une ré-émission avec le webroot du site (routé vers
 l'app), elle échouerait ; le renouvellement de routine (cron acme.sh) utilise désormais le webroot
