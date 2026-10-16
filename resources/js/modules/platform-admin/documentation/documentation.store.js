@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { $api } from '@/utils/api'
+import { $platformApi } from '@/utils/platformApi'
 
 export const usePlatformDocumentationStore = defineStore('platformDocumentation', {
   state: () => ({
@@ -35,7 +35,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
       this._loading = true
       try {
         const query = new URLSearchParams(params).toString()
-        const data = await $api(`/platform/documentation/topics?${query}`)
+        const data = await $platformApi(`/documentation/topics?${query}`)
 
         this._topics = data.data
         this._topicsPagination = {
@@ -51,7 +51,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async createTopic(payload) {
-      const data = await $api('/platform/documentation/topics', {
+      const data = await $platformApi('/documentation/topics', {
         method: 'POST',
         body: payload,
       })
@@ -62,7 +62,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     async fetchTopic(id) {
       this._loading = true
       try {
-        this._currentTopic = await $api(`/platform/documentation/topics/${id}`)
+        this._currentTopic = await $platformApi(`/documentation/topics/${id}`)
       }
       finally {
         this._loading = false
@@ -70,7 +70,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async updateTopic(id, payload) {
-      const data = await $api(`/platform/documentation/topics/${id}`, {
+      const data = await $platformApi(`/documentation/topics/${id}`, {
         method: 'PUT',
         body: payload,
       })
@@ -79,7 +79,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async deleteTopic(id) {
-      await $api(`/platform/documentation/topics/${id}`, {
+      await $platformApi(`/documentation/topics/${id}`, {
         method: 'DELETE',
       })
     },
@@ -88,7 +88,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
       this._loading = true
       try {
         const query = new URLSearchParams(params).toString()
-        const data = await $api(`/platform/documentation/articles?${query}`)
+        const data = await $platformApi(`/documentation/articles?${query}`)
 
         this._articles = data.data
         this._articlesPagination = {
@@ -104,7 +104,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async createArticle(payload) {
-      const data = await $api('/platform/documentation/articles', {
+      const data = await $platformApi('/documentation/articles', {
         method: 'POST',
         body: payload,
       })
@@ -115,7 +115,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     async fetchArticle(id) {
       this._loading = true
       try {
-        const data = await $api(`/platform/documentation/articles/${id}`)
+        const data = await $platformApi(`/documentation/articles/${id}`)
 
         this._currentArticle = data.article
         this._currentArticle.recent_feedbacks = data.recent_feedbacks
@@ -126,7 +126,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async updateArticle(id, payload) {
-      const data = await $api(`/platform/documentation/articles/${id}`, {
+      const data = await $platformApi(`/documentation/articles/${id}`, {
         method: 'PUT',
         body: payload,
       })
@@ -135,7 +135,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async deleteArticle(id) {
-      await $api(`/platform/documentation/articles/${id}`, {
+      await $platformApi(`/documentation/articles/${id}`, {
         method: 'DELETE',
       })
     },
@@ -143,7 +143,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     async fetchFeedbackStats() {
       this._loading = true
       try {
-        this._feedbackStats = await $api('/platform/documentation/feedback-stats')
+        this._feedbackStats = await $platformApi('/documentation/feedback-stats')
       }
       finally {
         this._loading = false
@@ -155,7 +155,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
       this._loading = true
       try {
         const query = new URLSearchParams(params).toString()
-        const data = await $api(`/platform/documentation/groups?${query}`)
+        const data = await $platformApi(`/documentation/groups?${query}`)
 
         this._groups = data.data
         this._groupsPagination = {
@@ -171,21 +171,21 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     },
 
     async createGroup(payload) {
-      return await $api('/platform/documentation/groups', {
+      return await $platformApi('/documentation/groups', {
         method: 'POST',
         body: payload,
       })
     },
 
     async updateGroup(id, payload) {
-      return await $api(`/platform/documentation/groups/${id}`, {
+      return await $platformApi(`/documentation/groups/${id}`, {
         method: 'PUT',
         body: payload,
       })
     },
 
     async deleteGroup(id) {
-      await $api(`/platform/documentation/groups/${id}`, {
+      await $platformApi(`/documentation/groups/${id}`, {
         method: 'DELETE',
       })
     },
@@ -194,7 +194,7 @@ export const usePlatformDocumentationStore = defineStore('platformDocumentation'
     async fetchSearchMisses() {
       this._loading = true
       try {
-        this._searchMisses = await $api('/platform/documentation/search-misses')
+        this._searchMisses = await $platformApi('/documentation/search-misses')
       }
       finally {
         this._loading = false
