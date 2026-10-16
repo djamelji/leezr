@@ -376,6 +376,15 @@ class CompanyBillingReadService
             $trialRemainingDays = max(0, (int) now()->diffInDays($subscription->trial_ends_at, false));
         }
 
+        // Next billing date = the current period end (source of truth). Distinguish the
+        // "next estimated invoice" (period end in the future) from a renewal that is
+        // OVERDUE (period end already in the past because billing:renew has not advanced
+        // it). We do NOT fabricate a future date here (audit 13): the past value is
+        // surfaced honestly with an explicit `renewal_overdue` flag so the UI shows a
+        // "renewal pending" state instead of a past date labelled as a future estimate.
+        $periodEnd = $subscription->current_period_end;
+        $renewalOverdue = $periodEnd !== null && $periodEnd->isPast();
+
         return [
             'is_estimate' => true,
             'currency' => $breakdown->currency,
@@ -391,7 +400,10 @@ class CompanyBillingReadService
             'estimated_wallet_credit' => $estimatedWalletCredit,
             'estimated_wallet_credit_sources' => $estimatedWalletCreditSources,
             'estimated_amount_due' => $breakdown->total - $estimatedWalletCredit,
-            'next_billing_date' => $subscription->current_period_end?->toDateString(),
+            'next_billing_date' => $periodEnd?->toDateString(),
+            // Period boundary has passed → renewal is due now, not a future estimate.
+            'renewal_overdue' => $renewalOverdue,
+            'subscription_status' => $subscription->status,
             'trial_remaining_days' => $trialRemainingDays,
         ];
     }

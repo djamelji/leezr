@@ -75,6 +75,9 @@ class BillingDemoSeeder extends Seeder
                     'interval' => 'monthly',
                     'status' => 'active',
                     'provider' => 'internal',
+                    // is_current=1 required: billing:renew only advances is_current=1 rows
+                    // (audit 13 / next-invoice anomaly).
+                    'is_current' => 1,
                     'current_period_start' => now()->startOfMonth(),
                     'current_period_end' => now()->endOfMonth(),
                 ],

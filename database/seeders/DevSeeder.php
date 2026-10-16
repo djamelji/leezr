@@ -179,6 +179,10 @@ class DevSeeder extends Seeder
                 'interval' => 'monthly',
                 'status' => 'active',
                 'provider' => 'internal',
+                // is_current=1 is REQUIRED for an active subscription: billing:renew only
+                // advances is_current=1 rows, so without it the period stays frozen and
+                // "next invoice" shows a past date (audit 13 / next-invoice anomaly).
+                'is_current' => 1,
                 'current_period_start' => now()->startOfMonth(),
                 'current_period_end' => now()->endOfMonth(),
             ],

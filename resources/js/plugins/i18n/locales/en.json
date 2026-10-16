@@ -1565,6 +1565,7 @@
     "trialEnds": "Trial ends",
     "subscriptionStatus": "Status",
     "estimatedInvoice": "Estimated Next Invoice",
+    "renewalPending": "Renewal pending",
     "planChangePreview": {
       "title": "Plan Change Summary",
       "from": "Current plan",

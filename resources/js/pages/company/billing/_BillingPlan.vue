@@ -285,6 +285,7 @@ const estimatedInvoice = computed(() => {
     amountDue: p.estimated_amount_due ?? p.total ?? (planPrice + addonsTotal),
     currency: p.currency,
     nextBillingDate: p.next_billing_date,
+    renewalOverdue: p.renewal_overdue ?? false,
     isEstimate: p.is_estimate ?? true,
   }
 })
@@ -807,7 +808,10 @@ const estimatedInvoice = computed(() => {
           </VAvatar>
         </template>
         <VCardTitle>{{ t('companyPlan.estimatedInvoice') }}</VCardTitle>
-        <VCardSubtitle v-if="estimatedInvoice.nextBillingDate">
+        <VCardSubtitle v-if="estimatedInvoice.renewalOverdue" class="text-warning">
+          {{ t('companyPlan.renewalPending') }}
+        </VCardSubtitle>
+        <VCardSubtitle v-else-if="estimatedInvoice.nextBillingDate">
           {{ formatDate(estimatedInvoice.nextBillingDate) }}
         </VCardSubtitle>
       </VCardItem>

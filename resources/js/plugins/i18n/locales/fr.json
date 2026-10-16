@@ -1565,6 +1565,7 @@
     "trialEnds": "Fin de l'essai",
     "subscriptionStatus": "Statut",
     "estimatedInvoice": "Prochaine facture estimée",
+    "renewalPending": "Renouvellement en attente",
     "switchToAnnual": "Passer en annuel",
     "switchToMonthly": "Passer en mensuel",
     "changeScheduled": "Changement de plan programmé. Il prendra effet à la fin de la période en cours.",

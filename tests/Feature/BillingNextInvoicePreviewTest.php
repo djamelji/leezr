@@ -315,4 +315,37 @@ class BillingNextInvoicePreviewTest extends TestCase
         $this->assertEmpty($preview['estimated_wallet_credit_sources']);
         $this->assertEquals(0, $preview['estimated_wallet_credit']);
     }
+
+    // ── audit 13: "Prochaine facture estimée" never shows a past date as a future estimate ──
+
+    public function test_future_period_end_is_not_renewal_overdue(): void
+    {
+        Subscription::create([
+            'company_id' => $this->company->id, 'plan_key' => 'pro', 'interval' => 'monthly',
+            'status' => 'active', 'provider' => 'internal', 'is_current' => 1,
+            'current_period_start' => now()->subDays(5), 'current_period_end' => now()->addDays(25),
+        ]);
+
+        $preview = CompanyBillingReadService::nextInvoicePreview($this->company);
+
+        $this->assertFalse($preview['renewal_overdue']);
+        $this->assertNotNull($preview['next_billing_date']);
+    }
+
+    public function test_past_period_end_is_flagged_renewal_overdue(): void
+    {
+        // The exact anomaly: an active subscription whose period ended months ago and was
+        // never advanced (billing:renew skips is_current!=1). The date is surfaced honestly
+        // (source of truth preserved) but flagged so the UI shows "renewal pending".
+        Subscription::create([
+            'company_id' => $this->company->id, 'plan_key' => 'pro', 'interval' => 'monthly',
+            'status' => 'active', 'provider' => 'internal', 'is_current' => 1,
+            'current_period_start' => '2026-05-01 00:00:00', 'current_period_end' => '2026-05-31 23:59:59',
+        ]);
+
+        $preview = CompanyBillingReadService::nextInvoicePreview($this->company);
+
+        $this->assertTrue($preview['renewal_overdue'], 'A past current_period_end must be flagged overdue, not presented as a future estimate.');
+        $this->assertSame('2026-05-31', $preview['next_billing_date']);
+    }
 }
