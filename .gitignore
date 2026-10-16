@@ -71,3 +71,9 @@ resources/js/plugins/iconify/icons.css
 .env*
 !.env.example
 !.env.production.example
+
+# Playwright E2E (ADR — harnais local validation visuelle)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
