@@ -21571,4 +21571,21 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
+### ADR-572 — Intégration réelle scheduler ↔ cockpit Automations : pilotage sécurisé, enable/disable réel, supervision (2026-10-16)
+
+**Contexte** : Finaliser `/platform/operations/automations` comme cockpit opérationnel du scheduler Laravel. Vérification SSH : le cron `schedule:run` (crontab user, 1×/min) est **déjà installé, unique et actif sur staging ET prod** (prod : 159 186 runs, `health=ok` ; AI queue systemd `active`). Le « dead » antérieur était l'environnement **local**. Gaps réels = durcissement du pilotage (le run-now pouvait déclencher `billing:renew` en masse), absence d'enable/disable réel, pas d'alerte scheduler/queue.
+
+**Décisions** :
+1. **Tâches sensibles** (`billing:renew`, `process-dunning`, `expire-trials`, `collect-scheduled`) : run manuel gardé par la permission **`run_sensitive_automations`** + `confirm=true` ; jamais déclenchables librement. Verrou anti-double-exécution + refus si un run est déjà en cours. Chaque run manuel audité (`PlatformAuditLog`).
+2. **Activation/désactivation réelle** : `ScheduledTaskState` (persisté, défaut activé) ; le scheduler **saute vraiment** une tâche désactivée via `->when(SI::enabled($task))` sur les 20 commandes ; run manuel + job refusent une tâche désactivée. Réactiver une tâche sensible exige `run_sensitive_automations`. Toggle audité. `health=disabled` distinct.
+3. **Supervision via l'Alert Center** (ADR-438, pas d'infra parallèle) : `AutomationSupervisor` lève/auto-résout `scheduler_silent`, `queue_backlog`, `automation_task_failing`.
+4. **Source de vérité unique conservée** : registre ⟷ `console.php` bijectif (test anti-dérive) ; frontend sans liste statique.
+5. **Cron = pas de doublon** : l'existant est conservé ; la seule recommandation ops est un **moniteur externe** d'uptime (un scheduler totalement mort ne peut s'auto-signaler via un évaluateur lui-même planifié).
+
+**Conséquences** : cockpit = reflet fidèle du scheduler réel (historique, santé, pilotage sécurisé). Code prêt ; **non déployé** (consigne). Détails : `docs/audit-2026-10/12-scheduler-cockpit-integration.md`.
+
+**Fichiers** : `ScheduledTaskRegistry`, `ScheduledTaskState` (+migration), `SchedulerInstrumentation`, `routes/console.php`, `RunScheduledTaskJob`, `AutomationController`, `routes/platform.php`, `AutomationsModule`, `AuditAction`, `AutomationSupervisor`, `AlertEvaluatorCommand`, cockpit Vue + store + i18n, tests.
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

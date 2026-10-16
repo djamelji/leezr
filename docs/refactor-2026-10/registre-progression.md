@@ -217,3 +217,30 @@ Vérification attendue après installation : `php artisan schedule:list` (20 lig
 **Non différable — exigences dures satisfaites :** (1) scheduler supervisable (registry miroir + test anti-dérive ; cron OS = action ops documentée) ; (2) essai expiré **sans droits métier** (contrôle à la requête, indépendant du scheduler). **Non déployé en prod** (consigne).
 
 **Différés P2 documentés :** F9 (reconcile Stripe-only), F8 (forensics sans détection), F5/F6/F7 (seeders démo), F12 (numérotation annuelle), F2/F10 (grille prix par devise — décision commerciale), régularisation d'écritures historiques (ops).
+
+---
+
+# Intégration Scheduler ↔ Cockpit Automations (octobre 2026)
+
+> Objectif : `/platform/operations/automations` = cockpit opérationnel fidèle au scheduler Laravel réel. Détail : `docs/audit-2026-10/12-scheduler-cockpit-integration.md` (ADR-572). Pas de prod, pas de doublon cron.
+
+## LOT A — Audit ciblé ✅
+Scheduler = cron `schedule:run` → `console.php` (20 cmd instrumentées) → `SchedulerInstrumentation` (ScheduledTaskRun + realtime + alerte échec) → cockpit (`AutomationController`: index/runs/run). Registre miroir 1:1 (test anti-dérive), frontend sans liste statique. Gaps : run-now des tâches financières non protégé, pas d'enable/disable réel, pas d'alerte scheduler/queue.
+
+## LOT C(ops) — État réel VPS vérifié (SSH lecture seule) ✅
+**Cron DÉJÀ installé/unique/actif sur staging ET prod** (le « dead » était local). Prod : 20 tâches, **159 186 runs**, dernier <2 min, `health=ok`, AI queue systemd `active`. Staging : exécution vivante observée (161→174 runs). **Aucun doublon créé.** Chemin : `/usr/bin/php8.4 .../web{2,3}/current/artisan schedule:run` → persiste après déploiement.
+
+## LOT B — Pilotage sécurisé ✅
+Tâches sensibles (renew/dunning/expire/collect) : permission `run_sensitive_automations` + `confirm=true` ; verrou anti-double-exécution (`409`) ; run manuel audité. `isSensitive()` + flag registry + exposé API. Tests `AutomationCockpitSecurityTest` (6).
+
+## LOT C — Enable/disable réel ✅
+`ScheduledTaskState` (persisté, défaut activé) ; `->when(SI::enabled)` sur les 20 commandes → tâche désactivée **vraiment** sautée ; run manuel + job refusent (`422`) ; toggle audité ; réactivation sensible gardée ; `health=disabled`. Tests `AutomationToggleTest` (8).
+
+## LOT D — Supervision ✅
+`AutomationSupervisor` via `alerts:evaluate` (Alert Center) : `scheduler_silent`, `queue_backlog`, `automation_task_failing` (dédup + auto-résolution). Nuance : arrêt total du scheduler non auto-détectable → moniteur externe recommandé. Tests `AutomationSupervisorTest` (3).
+
+## LOT E — Cockpit frontend ✅
+Toggle enable/disable (VSwitch → `/automations/toggle`), badge « désactivée » + couleur santé, dialogue de confirmation pour tâches sensibles (`confirm=true`), indicateur cadenas. Store `runTask(confirm)` + `toggleTask()`. i18n fr/en. Build clean.
+
+## LOT F — Clôture
+Suite complète + build + livrable + ADR-572. Vérif VPS réelle (non-destructive). **Code prêt, non déployé** (consigne). Opération restante : moniteur externe d'uptime (recommandé) + déploiement du lot pour activer en prod les endpoints toggle/gardes.
