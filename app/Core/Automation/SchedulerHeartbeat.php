@@ -17,17 +17,34 @@ class SchedulerHeartbeat extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['beat_at', 'environment'];
+    protected $fillable = ['beat_at', 'installed_at', 'environment'];
 
     protected function casts(): array
     {
-        return ['beat_at' => 'datetime'];
+        return ['beat_at' => 'datetime', 'installed_at' => 'datetime'];
+    }
+
+    /** The singleton heartbeat row, creating it (with an install anchor) if absent. */
+    public static function singleton(): self
+    {
+        $row = static::query()->first();
+
+        if (! $row) {
+            $row = static::create([
+                'beat_at' => null,
+                'installed_at' => now(),
+                'environment' => app()->environment(),
+            ]);
+        }
+
+        return $row;
     }
 
     public static function pulse(): void
     {
-        $row = static::query()->first() ?? new static();
+        $row = static::singleton();
         $row->beat_at = now();
+        $row->installed_at = $row->installed_at ?? now();
         $row->environment = app()->environment();
         $row->save();
     }

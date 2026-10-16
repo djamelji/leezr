@@ -7,19 +7,29 @@
 - Commande `scheduler:heartbeat` (chaque minute, via le `schedule:run` existant) → table `scheduler_heartbeats` (1 ligne, `beat_at`).
 - `ScheduledTaskRegistry::globalHealth()` : `ok` (≤180 s) / `silent` (180–300 s) / `dead` (>300 s) / `unknown` (aucun heartbeat — jamais promu `ok`).
 
-## 2. Endpoint de santé externe (sécurisé, deploy-safe)
+## 2. Endpoint de santé externe (sécurisé, grâce au démarrage)
 
-`GET /health/scheduler` — renvoie `200` si vivant, **`503` si `dead`**. **`unknown` → 200** (pas de faux positif pendant un déploiement). Aucune donnée sensible.
+`GET /health/scheduler`. **Contrat HTTP (pour le moniteur) :**
 
-**Sécurité** : token obligatoire. **Désactivé (404) tant qu'aucun token n'est configuré** → jamais exposé en clair.
+| HTTP | `status` | `healthy` | Signification | Action moniteur |
+|------|----------|-----------|---------------|-----------------|
+| 200 | `ok` / `silent` | `true` | Heartbeat récent → cron actif | — |
+| 200 | `starting` | `false` | Aucun heartbeat **encore**, mais dans la fenêtre de grâce post-déploiement (par défaut 600 s) | **ne pas alerter** (transitoire) |
+| 503 | `dead` | `false` | Heartbeat périmé (>300 s) **ou** aucun heartbeat après la grâce (scheduler jamais démarré) | **ALERTER** |
+| 404 | — | — | Endpoint désactivé (pas de token) ou token invalide | configuration |
+
+Un état `unknown` (aucun heartbeat) **n'est jamais présenté comme sain** : il est `starting` (200, `healthy:false`) pendant la grâce, puis `dead` (503) ensuite.
+
+**Sécurité** : token obligatoire, comparé en temps constant (`hash_equals`), jamais journalisé côté application. **Désactivé (404) tant qu'aucun token n'est configuré** → jamais exposé en clair.
 ```
 # .env serveur (staging + prod) :
 SCHEDULER_MONITOR_TOKEN=<valeur_aléatoire_longue>   # openssl rand -hex 32
+# (optionnel) SCHEDULER_HEARTBEAT_GRACE_SECONDS=600
 ```
-Appel :
+Appel — **préférer l'en-tête** (le query-string `?token=` peut apparaître dans les logs d'accès Apache) :
 ```
-curl -s -o /dev/null -w "%{http_code}" "https://leezr.com/health/scheduler?token=$TOKEN"
-# ou en-tête : -H "X-Monitor-Token: $TOKEN"
+curl -s -o /dev/null -w "%{http_code}" -H "X-Monitor-Token: $TOKEN" "https://leezr.com/health/scheduler"
+# repli (si le moniteur n'accepte que l'URL) : ...?token=$TOKEN
 ```
 
 ## 3. Option A — moniteur d'uptime externe (recommandé)
@@ -52,7 +62,7 @@ Crontab (utilisateur applicatif ou root), **toutes les 5 min**, décalé pour é
 
 ## 5. Faux positifs de déploiement
 
-- Staging : `migrate:fresh` vide `scheduler_heartbeats` → `unknown` → endpoint **200** (pas d'alerte). Le heartbeat revient en < 1 min.
+- Staging : `migrate:fresh` vide `scheduler_heartbeats` → `starting` (grâce, par défaut 600 s) → endpoint **200** (pas d'alerte). Le heartbeat revient en < 1 min. Si le scheduler ne démarrait jamais, le statut passerait `dead` (503) après la grâce → alerte.
 - Prod : `migrate --force` **préserve** la table → reste `ok`.
 - Les deux options exigent 2 échecs consécutifs avant d'alerter → une fenêtre de redéploiement (< 5 min) n'alerte jamais.
 

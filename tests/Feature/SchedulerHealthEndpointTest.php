@@ -46,12 +46,23 @@ class SchedulerHealthEndpointTest extends TestCase
             ->assertJson(['status' => 'dead', 'healthy' => false]);
     }
 
-    public function test_unknown_is_deploy_safe_healthy(): void
+    public function test_no_heartbeat_within_grace_is_starting_not_healthy(): void
     {
-        config(['automations.monitor_token' => 'the-secret']);
-        // No heartbeat yet (fresh / right after a reset) → must NOT false-alert.
+        config(['automations.monitor_token' => 'the-secret', 'automations.heartbeat_grace_seconds' => 600]);
+        // Fresh install (installed_at ~ now, no beat yet) → grace → 200 'starting' but NOT healthy.
         $this->getJson('/health/scheduler?token=the-secret')
             ->assertStatus(200)
-            ->assertJson(['status' => 'unknown', 'healthy' => true]);
+            ->assertJson(['status' => 'starting', 'healthy' => false]);
+    }
+
+    public function test_no_heartbeat_beyond_grace_is_dead_503(): void
+    {
+        config(['automations.monitor_token' => 'the-secret', 'automations.heartbeat_grace_seconds' => 600]);
+        // Installed long ago, scheduler never beat → grace elapsed → unhealthy 503.
+        SchedulerHeartbeat::singleton()->update(['installed_at' => now()->subMinutes(30), 'beat_at' => null]);
+
+        $this->getJson('/health/scheduler?token=the-secret')
+            ->assertStatus(503)
+            ->assertJson(['status' => 'dead', 'healthy' => false]);
     }
 }

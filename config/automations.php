@@ -13,6 +13,14 @@ return [
     'heartbeat_dead_seconds' => (int) env('SCHEDULER_HEARTBEAT_DEAD_SECONDS', 300),
 
     /*
+    | Startup grace: how long after install/deploy the external probe tolerates a
+    | MISSING heartbeat (status 'starting', HTTP 200) before treating it as unhealthy
+    | (HTTP 503). A healthy scheduler beats within ~1 min, so this only absorbs the
+    | deploy/boot window. 'unknown' is NEVER reported as healthy — only tolerated here.
+    */
+    'heartbeat_grace_seconds' => (int) env('SCHEDULER_HEARTBEAT_GRACE_SECONDS', 600),
+
+    /*
     |--------------------------------------------------------------------------
     | Supervision thresholds (Alert Center)
     |--------------------------------------------------------------------------
