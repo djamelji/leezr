@@ -29,6 +29,10 @@ class LedgerService
         self::assertPeriodOpen($invoice->company_id);
         self::assertNotFrozen($invoice->company_id);
 
+        if (self::alreadyPosted('invoice_issued', 'invoice', $invoice->id)) {
+            return; // Idempotent: this invoice was already posted
+        }
+
         $correlationId = Str::uuid()->toString();
         $amount = self::toCents($invoice->amount_due);
 
@@ -36,7 +40,23 @@ class LedgerService
             return; // Zero-amount invoices don't hit the ledger
         }
 
-        DB::transaction(function () use ($invoice, $correlationId, $amount) {
+        // F3: isolate VAT. REVENUE must carry HT only; collected VAT lives on its own
+        // account. When a wallet credit reduced amount_due below the gross (subtotal+VAT),
+        // split the receivable proportionally so the ledger stays balanced
+        // (AR = REVENUE + VAT_PAYABLE) without double-counting the wallet credit.
+        $subtotal = self::toCents($invoice->subtotal);
+        $tax = self::toCents($invoice->tax_amount);
+        $gross = $subtotal + $tax;
+
+        if ($tax > 0 && $gross > 0) {
+            $revenue = round($amount * $subtotal / $gross);
+            $vat = $amount - $revenue;
+        } else {
+            $revenue = $amount;
+            $vat = 0.0;
+        }
+
+        DB::transaction(function () use ($invoice, $correlationId, $amount, $revenue, $vat) {
             $now = now();
             $base = [
                 'company_id' => $invoice->company_id,
@@ -49,6 +69,8 @@ class LedgerService
                 'metadata' => json_encode([
                     'invoice_number' => $invoice->number,
                     'amount_due' => $invoice->amount_due,
+                    'subtotal' => $invoice->subtotal,
+                    'tax_amount' => $invoice->tax_amount,
                 ]),
             ];
 
@@ -61,8 +83,16 @@ class LedgerService
             LedgerEntry::create(array_merge($base, [
                 'account_code' => 'REVENUE',
                 'debit' => 0,
-                'credit' => $amount,
+                'credit' => $revenue,
             ]));
+
+            if ($vat > 0) {
+                LedgerEntry::create(array_merge($base, [
+                    'account_code' => 'VAT_PAYABLE',
+                    'debit' => 0,
+                    'credit' => $vat,
+                ]));
+            }
         });
     }
 
@@ -75,6 +105,10 @@ class LedgerService
     {
         self::assertPeriodOpen($payment->company_id);
         self::assertNotFrozen($payment->company_id);
+
+        if (self::alreadyPosted('payment_received', 'payment', $payment->id)) {
+            return; // Idempotent: this payment was already posted (webhook replay, recovery…)
+        }
 
         $correlationId = Str::uuid()->toString();
         $amount = self::toCents($payment->amount);
@@ -123,6 +157,10 @@ class LedgerService
         self::assertPeriodOpen($creditNote->company_id);
         self::assertNotFrozen($creditNote->company_id);
 
+        if (self::alreadyPosted('refund_issued', 'credit_note', $creditNote->id)) {
+            return; // Idempotent
+        }
+
         $correlationId = Str::uuid()->toString();
         $amount = self::toCents($creditNote->amount);
 
@@ -169,6 +207,10 @@ class LedgerService
     {
         self::assertPeriodOpen($invoice->company_id);
         self::assertNotFrozen($invoice->company_id);
+
+        if (self::alreadyPosted('writeoff', 'invoice', $invoice->id)) {
+            return; // Idempotent
+        }
 
         $correlationId = Str::uuid()->toString();
         $amount = self::toCents($invoice->amount_due);
@@ -228,7 +270,7 @@ class LedgerService
         }
 
         // Ensure all standard accounts are present
-        foreach (['AR', 'CASH', 'REVENUE', 'REFUND', 'BAD_DEBT'] as $code) {
+        foreach (['AR', 'CASH', 'REVENUE', 'VAT_PAYABLE', 'REFUND', 'BAD_DEBT'] as $code) {
             $balance[$code] ??= 0.0;
         }
 
@@ -332,6 +374,20 @@ class LedgerService
         if ($company && $company->financial_freeze) {
             throw new RuntimeException('Company is financially frozen — no ledger writes allowed.');
         }
+    }
+
+    /**
+     * Idempotency guard (audit F4): a given financial event must post exactly once.
+     * Keyed on (entry_type, reference_type, reference_id) so webhook replays, dunning
+     * recovery, or a double-confirm never produce duplicate double-entry postings.
+     * NOT applied to adjustments (recordAdjustment), which are intentionally repeatable.
+     */
+    public static function alreadyPosted(string $entryType, string $referenceType, int $referenceId): bool
+    {
+        return LedgerEntry::where('entry_type', $entryType)
+            ->where('reference_type', $referenceType)
+            ->where('reference_id', $referenceId)
+            ->exists();
     }
 
     /**

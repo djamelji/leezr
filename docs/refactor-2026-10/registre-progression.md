@@ -178,3 +178,15 @@ Vérification attendue après installation : `php artisan schedule:list` (20 lig
 - Tests `TrialDunningLifecycleTest` (3) : essai payant impayé → past_due ; expire-trials termine le gratuit mais saute le payant en collecte ; non-régression active → past_due.
 
 **Régression billing : 726 billing-domain tests OK** (dont `TrialConversionE2ETest`).
+
+## LOT 4 — Grand livre double-entrée fiable (audit F1/F3/F4) ✅
+> Changements de **logique de posting** (prospectifs). Aucune réécriture d'écritures historiques. Toute régularisation du passé passerait par `recordAdjustment` (traçable), non déclenchée automatiquement.
+
+**Fait :**
+- **F4 — idempotence** : garde `LedgerService::alreadyPosted(entry_type, reference_type, reference_id)` sur `recordInvoiceIssued`/`recordPaymentReceived`/`recordRefundIssued`/`recordWriteOff` → un rejeu webhook, la recovery dunning ou un double-confirm ne produit plus de double posting. `recordAdjustment` volontairement exclu (répétable).
+- **F3 — isolation TVA** : `recordInvoiceIssued` crédite désormais `REVENUE` = **HT** (`subtotal`) et `VAT_PAYABLE` = **TVA** (`tax_amount`), débite `AR` = TTC (`amount_due`). Crédit wallet → split **proportionnel** HT/TVA sur l'`amount_due` (reste équilibré, pas de double comptage). TVA=0 → comportement inchangé (pas d'entrée VAT). `VAT_PAYABLE` ajouté aux comptes standards du `trialBalance`.
+- **F1 — CASH pour tous les paiements** : hook modèle `Payment::booted()` → tout paiement `succeeded` avec `invoice_id` poste `CASH ← AR`, pas seulement le webhook Stripe. Les lignes `Payment` représentent du cash externe (stripe/internal/offline/sepa) ; le wallet est géré dans le wallet-ledger et ne crée pas de `Payment` → pas de double comptage. Idempotent (garde F4) donc sûr à côté de l'appel Stripe explicite et des rejeux. **Non-throwing** : échec ledger loggué, ne casse jamais le flux de paiement (contrat ADR-142 D3f).
+
+**Tests :** `LedgerReliabilityTest` (7) — idempotence facture/paiement, isolation TVA (+ split wallet proportionnel + TVA-exempt), paiement non-Stripe solde l'AR, paiement échoué ne poste rien. **Régression : 808 tests billing-domain OK.**
+
+**Différé (documenté, P2) :** `ReconciliationEngine` (F9) ne réconcilie que Stripe (pas internal/wallet/équilibre ledger) ; `FinancialForensicsService` (F8) n'a pas de détection d'anomalie. Non traités ici (risque + P2) ; la réconciliation comptable de test est fournie en synthèse finale.
