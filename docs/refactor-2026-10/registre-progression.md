@@ -253,3 +253,13 @@ Suite complète + build + livrable + ADR-572. Vérif VPS réelle (non-destructiv
 **Cause racine** (code+logs) : `DevSeeder::seedDocumentData` faisait `Storage::put('documents/seed/…')` en s'appuyant sur la **création implicite** du répertoire par Flysystem — non reproductible selon l'état du disque au déploiement (shared storage fraîche, ré-exécutions, perms). Les `UnableToCreateDirectory` venaient d'anciens déploiements (ancienne étape `[6.5] seed DevSeeder`), le flux actuel (step 5.5, env staging ≠ local → DatabaseSeeder n'appelle pas DevSeeder) réussit déjà.
 **Fix (source, sans masquer l'exception)** : extraction en `DevSeeder::copySeedFixtures()` qui **crée explicitement et idempotemment** `documents/seed` (`Storage::makeDirectory`) avant `put` ; une vraie erreur de permission se propage toujours. `SEED_FIXTURES` constante.
 **Test** `DevSeederFixturesTest` (2) : copie quand le répertoire n'existe pas (scénario exact de l'échec) + idempotence sur double exécution. Données prod non touchées.
+
+## LOT 2 — Santé scheduler fiable (heartbeat) ✅
+**Problème** : `globalHealth()` déduisait la vie du scheduler de l'historique des **tâches métier** (≥5 min) → après `migrate:fresh` (0 run) il affichait `dead` à tort (confusion « pas encore d'exécution » vs « scheduler arrêté »).
+**Fix** : heartbeat par minute **indépendant** de l'historique métier (`scheduler:heartbeat` → table `scheduler_heartbeats` 1 ligne, déclenché par le `schedule:run` existant, aucun changement crontab). `globalHealth()` réécrit → états distincts :
+- `unknown` : aucun heartbeat (fresh / après reset) — **jamais promu en `ok`** (absence de signal ≠ santé).
+- `ok` : heartbeat ≤ 180 s (cron actif).
+- `silent` : 180–300 s (retard transitoire).
+- `dead` : > 300 s (cron arrêté).
+`last_activity_at` conservé → le cockpit distingue « scheduler actif, aucune tâche métier encore exécutée » de « actif et travaillant ». Pas d'instrumentation du heartbeat (0 bloat `ScheduledTaskRun`), always-on, exclu du registre par convention documentée (`REGISTRY_EXCLUSIONS` dans le test anti-dérive). Front : `unknown` → couleur neutre (pas rouge). Supervision (`scheduler_silent`) inchangée (lit `globalHealth=dead`), désormais fiable + pas de faux positif pendant les déploiements (fresh → `unknown`, pas `dead`).
+**Tests** `SchedulerHealthTest` (7) + `AutomationSupervisorTest` ajusté (dead = heartbeat périmé).

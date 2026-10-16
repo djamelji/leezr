@@ -300,40 +300,56 @@ class ScheduledTaskRegistry
     // ── Global scheduler health (UPGRADE) ──────────────────
 
     /**
-     * Detect scheduler silence: if no run started in the last N minutes,
-     * the scheduler itself may be dead.
+     * Scheduler liveness, driven by the per-minute heartbeat (scheduler:heartbeat) —
+     * NOT by business-task history (which only runs every few minutes and is wiped on
+     * a staging reset). Distinguishes:
+     *   - 'unknown' : no heartbeat recorded yet (fresh boot / right after a reset).
+     *                 Never promoted to 'ok' — absence of a signal is not health.
+     *   - 'ok'      : heartbeat within the healthy window → cron is firing.
+     *   - 'silent'  : heartbeat late (a few minutes) → possibly a transient delay.
+     *   - 'dead'    : heartbeat stale beyond the dead threshold → cron stopped.
      *
-     * @return array{status: 'ok'|'silent'|'dead', last_activity_at: ?string, silence_minutes: int}
+     * `last_activity_at` keeps reporting the last business run so the cockpit can tell
+     * "scheduler alive but no business task has run yet" apart from "scheduler alive
+     * and working".
+     *
+     * @return array{status: 'ok'|'silent'|'dead'|'unknown', last_heartbeat_at: ?string, heartbeat_age_seconds: ?int, last_activity_at: ?string, business_runs_recorded: bool}
      */
-    public static function globalHealth(int $silenceThresholdMinutes = 2): array
+    public static function globalHealth(?int $okThresholdSeconds = null, ?int $deadThresholdSeconds = null): array
     {
-        $lastRun = ScheduledTaskRun::query()
-            ->latest('started_at')
-            ->first();
+        $okThresholdSeconds ??= (int) config('automations.heartbeat_ok_seconds', 180);
+        $deadThresholdSeconds ??= (int) config('automations.heartbeat_dead_seconds', 300);
 
-        if (! $lastRun || ! $lastRun->started_at) {
+        $lastBeat = SchedulerHeartbeat::lastBeatAt();
+        $lastRun = ScheduledTaskRun::query()->latest('started_at')->first();
+        $lastActivityAt = $lastRun?->started_at?->toIso8601String();
+
+        if ($lastBeat === null) {
+            // No liveness signal at all → unknown (NOT dead, NOT ok).
             return [
-                'status' => 'dead',
-                'last_activity_at' => null,
-                'silence_minutes' => PHP_INT_MAX,
+                'status' => 'unknown',
+                'last_heartbeat_at' => null,
+                'heartbeat_age_seconds' => null,
+                'last_activity_at' => $lastActivityAt,
+                'business_runs_recorded' => $lastRun !== null,
             ];
         }
 
-        $silenceMinutes = (int) $lastRun->started_at->diffInMinutes(now());
+        $ageSeconds = (int) abs($lastBeat->diffInSeconds(now()));
 
-        // We check against the shortest expected interval (every 10 min)
-        // If silence > threshold, something is wrong
         $status = 'ok';
-        if ($silenceMinutes > $silenceThresholdMinutes * 5) {
-            $status = 'dead';  // 10+ minutes of silence
-        } elseif ($silenceMinutes > $silenceThresholdMinutes) {
-            $status = 'silent';  // 2+ minutes, could be normal gap
+        if ($ageSeconds > $deadThresholdSeconds) {
+            $status = 'dead';
+        } elseif ($ageSeconds > $okThresholdSeconds) {
+            $status = 'silent';
         }
 
         return [
             'status' => $status,
-            'last_activity_at' => $lastRun->started_at->toIso8601String(),
-            'silence_minutes' => $silenceMinutes,
+            'last_heartbeat_at' => $lastBeat->toIso8601String(),
+            'heartbeat_age_seconds' => $ageSeconds,
+            'last_activity_at' => $lastActivityAt,
+            'business_runs_recorded' => $lastRun !== null,
         ];
     }
 

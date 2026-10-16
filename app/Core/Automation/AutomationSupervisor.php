@@ -44,8 +44,8 @@ class AutomationSupervisor
                 'status' => 'active',
                 'company_id' => null,
                 'title' => 'Scheduler appears stopped',
-                'description' => 'No scheduled task has run for '.$health['silence_minutes'].' minutes. '
-                    .'Check the cron (schedule:run) on the server.',
+                'description' => 'No scheduler heartbeat for '.(int) round(($health['heartbeat_age_seconds'] ?? 0) / 60)
+                    .' minutes. Check the cron (schedule:run) on the server.',
                 'metadata' => $health,
                 'target_type' => 'scheduler',
                 'target_id' => 1,

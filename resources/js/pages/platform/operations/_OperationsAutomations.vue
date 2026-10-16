@@ -42,6 +42,7 @@ const schedulerHealthColor = computed(() => {
   const s = store.schedulerHealth?.status
   if (s === 'ok') return 'success'
   if (s === 'silent') return 'warning'
+  if (s === 'unknown') return 'secondary' // not yet observed (e.g. after a reset) — not an error
 
   return 'error'
 })

@@ -9,6 +9,13 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// ── Scheduler heartbeat (infra, every minute) ────────────
+// Proves the cron (schedule:run) is firing, independent of business-task history.
+// NOT a cockpit business task: excluded from ScheduledTaskRegistry by convention
+// (see ScheduledTaskRegistryConsistencyTest::REGISTRY_EXCLUSIONS). No instrumentation
+// (no ScheduledTaskRun bloat), always-on (no enable/disable).
+Schedule::command('scheduler:heartbeat')->everyMinute()->withoutOverlapping();
+
 // ── FX ───────────────────────────────────────────────────
 // FX rate refresh every 6 hours (ADR-104)
 Schedule::command('fx:rates-sync')->cron('0 */6 * * *')->withoutOverlapping()

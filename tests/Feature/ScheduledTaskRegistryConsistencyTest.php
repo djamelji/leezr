@@ -15,6 +15,13 @@ use Tests\TestCase;
 class ScheduledTaskRegistryConsistencyTest extends TestCase
 {
     /** @return string[] command signatures actually wired in routes/console.php */
+    /**
+     * Infra tasks intentionally scheduled but NOT exposed as cockpit business tasks
+     * (documented convention). scheduler:heartbeat is the liveness probe that powers
+     * globalHealth — it is always-on, non-disableable, and not instrumented.
+     */
+    private const REGISTRY_EXCLUSIONS = ['scheduler:heartbeat'];
+
     private function scheduledCommands(): array
     {
         $source = file_get_contents(base_path('routes/console.php'));
@@ -23,6 +30,7 @@ class ScheduledTaskRegistryConsistencyTest extends TestCase
         $commands = collect($m[1])
             // Keep only the command signature (strip arguments/options after the name).
             ->map(fn (string $c) => trim(explode(' ', $c)[0]))
+            ->reject(fn (string $c) => in_array($c, self::REGISTRY_EXCLUSIONS, true))
             ->unique()
             ->sort()
             ->values()

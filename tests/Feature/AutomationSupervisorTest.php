@@ -25,17 +25,15 @@ class AutomationSupervisorTest extends TestCase
 
     public function test_scheduler_silence_raises_and_resolves_alert(): void
     {
-        // No runs at all → globalHealth = dead → alert raised.
+        // Stale heartbeat → globalHealth = dead → alert raised.
+        \App\Core\Automation\SchedulerHeartbeat::create(['beat_at' => now()->subMinutes(15), 'environment' => 'testing']);
         $this->supervise();
         $this->assertDatabaseHas('platform_alerts', [
             'type' => 'scheduler_silent', 'status' => 'active', 'severity' => 'critical',
         ]);
 
-        // Fresh activity → health ok → alert auto-resolved.
-        ScheduledTaskRun::create([
-            'task' => 'alerts:evaluate', 'status' => 'success',
-            'started_at' => now(), 'environment' => 'testing',
-        ]);
+        // Fresh heartbeat → health ok → alert auto-resolved.
+        \App\Core\Automation\SchedulerHeartbeat::pulse();
         $this->supervise();
 
         $alert = PlatformAlert::where('type', 'scheduler_silent')->first();
@@ -73,7 +71,8 @@ class AutomationSupervisorTest extends TestCase
 
     public function test_alerts_evaluate_command_invokes_supervision(): void
     {
-        // No runs → dead → the scheduled evaluator must produce the scheduler alert.
+        // Stale heartbeat → dead → the scheduled evaluator must produce the scheduler alert.
+        \App\Core\Automation\SchedulerHeartbeat::create(['beat_at' => now()->subMinutes(15), 'environment' => 'testing']);
         Artisan::call('alerts:evaluate');
         $this->assertDatabaseHas('platform_alerts', ['type' => 'scheduler_silent', 'status' => 'active']);
     }
