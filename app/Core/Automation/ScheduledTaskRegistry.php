@@ -22,6 +22,7 @@ class ScheduledTaskRegistry
             'frequency' => 'daily',
             'cron' => '0 0 * * *',
             'expected_interval_minutes' => 1440,
+            'sensitive' => true,
         ],
         'billing:renew' => [
             'command' => 'billing:renew',
@@ -30,6 +31,7 @@ class ScheduledTaskRegistry
             'frequency' => 'daily',
             'cron' => '0 0 * * *',
             'expected_interval_minutes' => 1440,
+            'sensitive' => true,
         ],
         'billing:process-dunning' => [
             'command' => 'billing:process-dunning',
@@ -38,6 +40,7 @@ class ScheduledTaskRegistry
             'frequency' => 'daily',
             'cron' => '0 0 * * *',
             'expected_interval_minutes' => 1440,
+            'sensitive' => true,
         ],
         'billing:reconcile' => [
             'command' => 'billing:reconcile',
@@ -94,6 +97,7 @@ class ScheduledTaskRegistry
             'frequency' => 'dailyAt06',
             'cron' => '0 6 * * *',
             'expected_interval_minutes' => 1440,
+            'sensitive' => true,
         ],
 
         // ── Documents ────────────────────────────────────────
@@ -216,6 +220,16 @@ class ScheduledTaskRegistry
     public static function command(string $task): ?string
     {
         return self::TASKS[$task]['command'] ?? null;
+    }
+
+    /**
+     * Sensitive tasks perform mass financial mutations (renewals, dunning, trial
+     * expiry, scheduled collection). Manual execution from the cockpit must be gated
+     * by an explicit confirmation + a dedicated permission — never freely triggerable.
+     */
+    public static function isSensitive(string $task): bool
+    {
+        return (bool) (self::TASKS[$task]['sensitive'] ?? false);
     }
 
     // ── Health computation ─────────────────────────────────

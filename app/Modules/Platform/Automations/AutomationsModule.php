@@ -22,13 +22,14 @@ class AutomationsModule implements ModuleDefinition
             ),
             permissions: [
                 ['key' => 'manage_automations', 'label' => 'Manage Automations'],
+                ['key' => 'run_sensitive_automations', 'label' => 'Run Sensitive Automations (mass financial)'],
             ],
             bundles: [
                 [
                     'key' => 'automations.admin',
                     'label' => 'Automation Administration',
                     'hint' => 'Monitor and control all scheduled automation tasks.',
-                    'permissions' => ['manage_automations'],
+                    'permissions' => ['manage_automations', 'run_sensitive_automations'],
                 ],
             ],
             scope: 'admin',

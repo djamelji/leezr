@@ -126,4 +126,9 @@ final class AuditAction
     public const CANCEL_REQUESTED = 'subscription.cancel_requested';
     public const CANCEL_EXECUTED = 'subscription.cancel_executed';
     public const PAID_NOW = 'subscription.paid_now';
+
+    // ─── Automations cockpit ─────────────────────────────
+    public const AUTOMATION_RUN_MANUAL = 'automation.run_manual';
+    public const AUTOMATION_TASK_ENABLED = 'automation.task_enabled';
+    public const AUTOMATION_TASK_DISABLED = 'automation.task_disabled';
 }

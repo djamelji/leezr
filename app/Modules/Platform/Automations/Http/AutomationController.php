@@ -2,12 +2,15 @@
 
 namespace App\Modules\Platform\Automations\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
 use App\Core\Automation\Jobs\RunScheduledTaskJob;
 use App\Core\Automation\ScheduledTaskRegistry;
 use App\Core\Automation\ScheduledTaskRun;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 class AutomationController extends Controller
 {
     /**
@@ -71,6 +74,7 @@ class AutomationController extends Controller
                 'category' => $meta['category'],
                 'frequency' => $meta['frequency'],
                 'cron' => $meta['cron'],
+                'sensitive' => ScheduledTaskRegistry::isSensitive($name),
                 'health' => ScheduledTaskRegistry::computeHealth($name, $lastRun),
                 'next_run_at' => ScheduledTaskRegistry::nextRunAt($name)?->toIso8601String(),
                 'last_run_at' => $lastRun?->started_at?->toIso8601String(),
@@ -131,6 +135,7 @@ class AutomationController extends Controller
     {
         $request->validate([
             'task' => 'required|string|max:100',
+            'confirm' => 'sometimes|boolean',
         ]);
 
         $task = $request->input('task');
@@ -139,21 +144,82 @@ class AutomationController extends Controller
             return response()->json(['message' => 'Unknown task.'], 404);
         }
 
-        // Create the run record
-        $run = ScheduledTaskRun::create([
-            'task' => $task,
-            'status' => 'running',
-            'started_at' => now(),
-            'environment' => app()->environment(),
-        ]);
+        $sensitive = ScheduledTaskRegistry::isSensitive($task);
 
-        // Dispatch async job
-        RunScheduledTaskJob::dispatch($task, $run->id);
+        // Sensitive tasks perform mass financial mutations (renewals, dunning, trial
+        // expiry, scheduled collection). They must NOT be freely triggerable: require a
+        // dedicated permission AND an explicit confirmation flag.
+        if ($sensitive) {
+            $user = $request->user('platform');
 
-        return response()->json([
-            'run_id' => $run->id,
-            'status' => 'dispatched',
-            'message' => "Task {$task} dispatched for execution.",
-        ]);
+            if (! $user || ! $user->hasPermission('run_sensitive_automations')) {
+                return response()->json([
+                    'message' => 'This task performs mass financial operations and requires the run_sensitive_automations permission.',
+                    'code' => 'sensitive_permission_required',
+                ], 403);
+            }
+
+            if ($request->boolean('confirm') !== true) {
+                return response()->json([
+                    'message' => 'This task is sensitive (mass financial). Resend with confirm=true to execute.',
+                    'code' => 'confirmation_required',
+                    'sensitive' => true,
+                ], 422);
+            }
+        }
+
+        // Double-execution guard: a short atomic lock around dispatch + a check that no
+        // non-stale run is already in progress (scheduled OR manual). Scheduled runs use
+        // withoutOverlapping on their side; this prevents a manual run from overlapping.
+        $lock = Cache::lock("automation:run:{$task}", 15);
+
+        if (! $lock->get()) {
+            return response()->json([
+                'message' => 'A run for this task is already being dispatched.',
+                'code' => 'already_running',
+            ], 409);
+        }
+
+        try {
+            $inProgress = ScheduledTaskRun::where('task', $task)
+                ->where('status', 'running')
+                ->where('started_at', '>=', now()->subMinutes(10))
+                ->exists();
+
+            if ($inProgress) {
+                return response()->json([
+                    'message' => 'This task is already running.',
+                    'code' => 'already_running',
+                ], 409);
+            }
+
+            $run = ScheduledTaskRun::create([
+                'task' => $task,
+                'status' => 'running',
+                'started_at' => now(),
+                'environment' => app()->environment(),
+            ]);
+
+            RunScheduledTaskJob::dispatch($task, $run->id);
+
+            // Trace every manual execution (actor, IP, sensitivity) — ADR-130.
+            app(AuditLogger::class)->logPlatform(
+                AuditAction::AUTOMATION_RUN_MANUAL,
+                'automation',
+                $task,
+                [
+                    'severity' => $sensitive ? 'warning' : 'info',
+                    'metadata' => ['run_id' => $run->id, 'sensitive' => $sensitive],
+                ],
+            );
+
+            return response()->json([
+                'run_id' => $run->id,
+                'status' => 'dispatched',
+                'message' => "Task {$task} dispatched for execution.",
+            ]);
+        } finally {
+            $lock->release();
+        }
     }
 }
