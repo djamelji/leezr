@@ -94,6 +94,32 @@
 - **Pas de runner de test JS** (ni vitest ni jest) → les corrections frontend (i18n, debounce, client API) sont validées par le build + revue de code, pas par test unitaire JS.
 - **Artefact de tests connu** : un `php artisan test --filter` large à travers de nombreuses classes produit des faux-échecs (`UniqueConstraintViolationException jobdomains.key` dans des setUp multiples). **La suite complète** (RefreshDatabase isole chaque classe) passe à 2955 — c'est le juge de vérité. (Optimisation paratest/sleep = axe perf séparé, non bloquant.)
 
+### Validation visuelle Playwright (Chrome système, leezr.test) — preuves d'exécution
+
+Faisabilité : **OK** (Chrome système → `channel:'chrome'`, aucun download ; app servie sur leezr.test). Harnais committé : `playwright.config.js` + `tests/e2e/smoke.spec.js` (`pnpm test:e2e`).
+
+**31 écrans parcourus (1er passage), 0 flaggé** (console/JS/réseau/i18n) :
+- Company : dashboard, billing, members, modules, documents, workflows, support, notifications, roles.
+- Workforce : hub, employees, time, leave, planning, payroll, dsn, documents, organization.
+- Employee : /workforce/me.
+- Platform : dashboard, companies, billing, catalog, jobdomains, markets, roles(access), documentation, settings, operations, users, support.
+
+**2e passage ciblé (interactions/permissions/responsive)** :
+- Onglet **coupons** (`/platform/billing/coupons`) : **0 clé brute** + dialog création OK → valide le fix i18n des 62 clés **en conditions réelles**.
+- **/workforce/me** : 0 clé brute → valide les 9 clés `workforceMe.*`.
+- **Responsive 375px** : débordement horizontal = 0.
+- **RBAC** : `bob@leezr.test` (user non-admin) sur `/members` → « 404 Page introuvable » + 0 bouton d'action → gestion non exposée (ACL appliquée côté UI).
+
+**Harnais `pnpm test:e2e` : 20/20 tests verts** (2.2 min).
+
+**Anomalies reproductibles trouvées : 0.** La validation visuelle **confirme** la santé fonctionnelle (cohérent avec la suite 2955✓ et l'harmonisation). Un 404 ressource console vu une fois = **non reproductible**, sans impact fonctionnel (non retenu).
+
+### Parcours NON vérifiés visuellement (limites)
+- Soumissions de formulaires réelles avec persistance (création employé/contrat/coupon jusqu'au succès) : dialogs **ouverts** et rendus validés, mais le submit complet n'a pas été exercé (éviterait de polluer la base dev). Couvert par les tests Feature HTTP côté backend.
+- Actions destructives (suppressions) : non déclenchées en visuel (couvertes par Feature tests).
+- Flux multi-étapes (wizard d'inscription complet, paiement Stripe réel) : non parcourus en E2E.
+- Thème sombre / langues AR-ES à l'écran : non vérifiés visuellement (AR incomplet connu).
+
 ### Anomalies confirmées NON corrigées (gating criterion #6 — réel blocage / produit / externe)
 - **billing.tax_exemption.\*** : clés i18n **dynamiques** (préfixe + variable) → nécessite l'énumération métier des motifs d'exonération (donnée produit).
 - **AR i18n ~96 % manquant** : effort de **traduction** dédié (fallback EN fonctionnel).
