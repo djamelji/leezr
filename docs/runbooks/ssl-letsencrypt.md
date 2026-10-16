@@ -17,16 +17,30 @@
 
 Le challenge **ACME http-01** (`http://<domaine>/.well-known/acme-challenge/<token>`) doit être servi **en fichier statique** depuis le docroot. Le `.htaccess` Laravel déployé (`public/.htaccess`) routait tout vers `index.php` → le token renvoyait un **404 applicatif** → validation Let's Encrypt en échec → **non-renouvellement → expiration** (12 mai 2026).
 
-## 3. Fix durable (déjà appliqué dans le code — ADR-568)
+## 3. Fix durable (dans le code — ADR-568 + renforcement oct 2026)
 
-`public/.htaccess`, en tête du bloc `mod_rewrite` :
+Deux niveaux de protection, déployés à chaque release :
 
+**(a)** `public/.htaccess`, en tête du bloc `mod_rewrite` :
 ```apache
 # Let's Encrypt / ACME http-01 challenge — TOUJOURS servir en statique
 RewriteRule ^\.well-known/acme-challenge/ - [L]
 ```
 
-→ Déployé à chaque release, l'application n'intercepte plus jamais le challenge. **Aucune régression de renouvellement possible côté applicatif.**
+**(b) Renforcement (indispensable)** — un `.htaccess` dédié dans **`public/.well-known/.htaccess`** + le répertoire physique `public/.well-known/acme-challenge/.gitkeep` :
+```apache
+RewriteEngine Off            # coupe net la réécriture Laravel pour ce sous-arbre
+Options -MultiViews -Indexes
+<IfModule mod_mime.c>
+    ForceType text/plain
+</IfModule>
+```
+
+> **Pourquoi (b) est nécessaire** : la règle (a) seule ne suffisait pas sur ce vhost ISPConfig — le challenge tombait quand même sur le front-controller Laravel (→ 404 applicatif → certbot en échec → cert dev expiré). Le `.htaccess` le plus profond l'emporte : `RewriteEngine Off` dans `public/.well-known/` garantit que les jetons certbot sont servis tels quels. Le répertoire physique (`.gitkeep`) assure que le chemin existe après déploiement.
+
+→ Une fois **déployé** (push → CI), l'application n'intercepte plus jamais le challenge. Le cron certbot d'ISPConfig (root, quotidien) peut alors valider et renouveler automatiquement.
+
+**⚠️ Activation** : ce fix prend effet **au prochain déploiement** (push `dev`). Pour un certificat **déjà expiré**, soit on attend le prochain passage du cron certbot (qui réussira une fois le challenge servi), soit on force une ré-émission immédiate via le panneau ISPConfig (§4).
 
 ## 4. Remise en état d'un certificat expiré (nécessite root ou panneau)
 

@@ -1,0 +1,21 @@
+# Let's Encrypt / ACME HTTP-01 challenge — served STATICALLY, never routed to Laravel.
+#
+# Un .htaccess dédié au niveau le plus profond (le plus spécifique l'emporte) garantit
+# que les jetons de validation déposés par certbot dans public/.well-known/acme-challenge/
+# sont servis tels quels, quelle que soit la réécriture front-controller du docroot.
+# C'est le renforcement durable d'ADR-568 : la règle mono-ligne du public/.htaccess parent
+# ne suffisait pas (le challenge tombait sur Laravel → 404 → renouvellement certbot en échec
+# → certificat dev.leezr.com expiré). Ici on coupe net mod_rewrite pour ce sous-arbre.
+RewriteEngine Off
+
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>
+
+# Pas de négociation de contenu ni de listing ; servir le fichier jeton brut.
+Options -MultiViews -Indexes
+
+# Les jetons ACME n'ont pas d'extension : les servir en texte brut.
+<IfModule mod_mime.c>
+    ForceType text/plain
+</IfModule>
