@@ -51,19 +51,14 @@ const conventionLabel = computed(() => {
 <template>
   <div>
     <!-- Back button -->
-    <div class="d-flex align-center gap-2 mb-4">
-      <VBtn
-        icon
-        variant="text"
-        size="small"
-        @click="router.push({ name: 'company-workforce-employees' })"
-      >
-        <VIcon icon="tabler-arrow-left" />
-      </VBtn>
-      <span class="text-body-1 text-medium-emphasis">
-        {{ $t('employees.backToList') }}
-      </span>
-    </div>
+    <VBtn
+      variant="text"
+      :to="{ name: 'company-workforce-employees' }"
+      prepend-icon="tabler-arrow-left"
+      class="mb-4"
+    >
+      {{ $t('employees.backToList') }}
+    </VBtn>
 
     <!-- Loading state -->
     <VCard

@@ -268,7 +268,7 @@ const formatSalary = (cents, currency) => {
       v-model="isDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -310,10 +310,10 @@ const formatSalary = (cents, currency) => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="formData.start_date"
                 :label="$t('employees.contract.startDate')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>

@@ -5512,63 +5512,6 @@
     "dailyTrend": "Tendance quotidienne",
     "noData": "Pas de données pour cette période"
   },
-  "payroll": {
-    "title": "Préparation de paie",
-    "subtitle": "Préparez, validez et exportez les données de paie",
-    "createRun": "Créer une période de paie",
-    "periodStart": "Début de période",
-    "periodEnd": "Fin de période",
-    "status": "Statut",
-    "statusDraft": "Brouillon",
-    "statusComputed": "Calculé",
-    "statusValidated": "Validé",
-    "statusExported": "Exporté",
-    "compute": "Calculer la paie",
-    "recompute": "Recalculer",
-    "validate": "Valider la paie",
-    "export": "Exporter",
-    "delete": "Supprimer",
-    "employeeCount": "Nombre d'employés",
-    "totalGross": "Total brut estimé",
-    "totalWorked": "Total heures travaillées",
-    "totalOvertime": "Total heures supplémentaires",
-    "totalLeave": "Total jours de congé",
-    "grossBasis": "Base brute estimée",
-    "grossBasisNote": "Estimation de préparation, pas le brut officiel",
-    "baseSalary": "Salaire de base",
-    "overtimePay": "Heures supplémentaires",
-    "unpaidLeaveDeduction": "Déduction congés non payés",
-    "paidLeave": "Congés payés",
-    "unpaidLeave": "Congés non payés",
-    "breakdown": "Décomposition",
-    "formulaVersion": "Version de la formule",
-    "compensationSnapshot": "Données de rémunération",
-    "timesheetSnapshot": "Données de feuille de temps",
-    "anomalies": "Anomalies",
-    "anomalyMissingTimesheet": "Feuille de temps manquante",
-    "anomalyMissingCompensation": "Plan de rémunération manquant",
-    "anomalyTimesheetErrors": "Feuille de temps avec erreurs",
-    "anomalyZeroWorked": "Aucune heure travaillée",
-    "anomalyCompensationGap": "Changement de rémunération en cours de période",
-    "validationNote": "Note de validation",
-    "validationNoteRequired": "Une note est requise en présence d'anomalies critiques",
-    "exportFormat": "Format d'export",
-    "noRuns": "Aucune période de paie",
-    "noLines": "Aucune ligne de paie",
-    "confirmDelete": "Supprimer cette période de paie ?",
-    "payFrequency": "Fréquence de paie",
-    "payFrequencyMixed": "Mixte",
-    "payFrequencyMonthly": "Mensuel",
-    "payFrequencyBiweekly": "Bimensuel",
-    "payFrequencyWeekly": "Hebdomadaire",
-    "created": "Cycle de paie créé",
-    "deleted": "Cycle de paie supprimé",
-    "computed": "Lignes de paie calculées",
-    "calculationsComputed": "Calculs brut-net effectués",
-    "validated": "Cycle de paie validé",
-    "exported": "Cycle de paie exporté",
-    "recomputed": "Lignes de paie recalculées"
-  },
   "workforceDocuments": {
     "title": "Documents RH",
     "subtitle": "Générez et gérez les documents RH depuis des modèles",
@@ -6041,6 +5984,10 @@
       "sortOrder": "Ordre d'affichage",
       "subDept": "Sous-département",
       "empty": "Aucun département enregistré.",
+      "emptyDescription": "Créez votre premier département pour structurer votre organisation.",
+      "statsTotal": "Départements",
+      "statsEmployees": "Collaborateurs",
+      "statsSub": "Sous-départements",
       "created": "Département créé avec succès",
       "updated": "Département mis à jour",
       "deleted": "Département supprimé"
@@ -6058,6 +6005,10 @@
       "add": "Ajouter un poste",
       "edit": "Modifier le poste",
       "empty": "Aucun poste enregistré.",
+      "emptyDescription": "Définissez les postes occupés dans votre organisation pour cadrer les rémunérations.",
+      "statsTotal": "Postes",
+      "statsEmployees": "Collaborateurs",
+      "statsWithRate": "Avec tarif défini",
       "created": "Poste créé avec succès",
       "updated": "Poste mis à jour",
       "deleted": "Poste supprimé"
@@ -6069,6 +6020,13 @@
     "createRun": "Créer un bulletin de paie",
     "backToList": "Retour à la liste",
     "employees": "employés",
+    "created": "Cycle de paie créé",
+    "deleted": "Cycle de paie supprimé",
+    "computed": "Lignes de paie calculées",
+    "calculationsComputed": "Calculs brut-net effectués",
+    "validated": "Cycle de paie validé",
+    "exported": "Cycle de paie exporté",
+    "recomputed": "Lignes de paie recalculées",
     "columns": {
       "period": "Période",
       "status": "Statut",
@@ -6109,7 +6067,9 @@
       "export": "Exporter",
       "recompute": "Recalculer",
       "delete": "Supprimer",
-      "view": "Voir le détail"
+      "view": "Voir le détail",
+      "generateDrafts": "Générer les brouillons de bulletins",
+      "generateOfficial": "Générer les bulletins officiels"
     },
     "workflow": {
       "draft": "Brouillon",
@@ -6142,6 +6102,59 @@
       "netPayable": "Net à payer",
       "employerCost": "Coût employeur",
       "anomalies": "Anomalies"
+    },
+    "lineDetail": {
+      "title": "Détail du bulletin",
+      "compensation": {
+        "title": "Rémunération",
+        "baseSalary": "Salaire de base",
+        "grossBasis": "Base brute"
+      },
+      "time": {
+        "title": "Temps de travail",
+        "planned": "Planifié",
+        "worked": "Travaillé",
+        "overtime": "Heures supplémentaires",
+        "breaks": "Pauses"
+      },
+      "leave": {
+        "title": "Congés",
+        "paid": "Congés payés",
+        "unpaid": "Congés non payés",
+        "total": "Total congés"
+      },
+      "contributions": {
+        "title": "Cotisations",
+        "label": "Libellé",
+        "base": "Base",
+        "rate": "Taux",
+        "employee": "Part salariale",
+        "employer": "Part patronale"
+      },
+      "calculation": {
+        "title": "Calcul brut → net",
+        "grossTotal": "Brut total",
+        "contributionsEmployee": "Cotisations salariales",
+        "contributionsEmployer": "Cotisations patronales",
+        "netBeforeTax": "Net avant impôt",
+        "tax": "Prélèvement à la source",
+        "netPayable": "Net à payer",
+        "totalEmployerCost": "Coût employeur total"
+      }
+    },
+    "payslips": {
+      "draftsGenerated": "Brouillons de bulletins générés",
+      "officialGenerated": "Bulletins officiels générés"
+    },
+    "documents": {
+      "title": "Documents associés",
+      "empty": "Aucun document généré pour ce cycle.",
+      "signature": {
+        "none": "Non signé",
+        "pending": "En attente",
+        "signed": "Signé",
+        "declined": "Refusé"
+      }
     },
     "dialogs": {
       "cancel": "Annuler",
@@ -6303,12 +6316,139 @@
     "locked": "Feuille de temps verrouillée",
     "reopened": "Feuille de temps réouverte"
   },
+  "planning": {
+    "title": "Planning",
+    "subtitle": "Planifiez les shifts, gérez les modèles et les lieux d'intervention",
+    "newShift": "Nouveau shift",
+    "editShift": "Modifier le shift",
+    "shiftCreated": "Shift créé",
+    "shiftUpdated": "Shift mis à jour",
+    "shiftDeleted": "Shift supprimé",
+    "shiftCancelled": "Shift annulé",
+    "publish": "Publier",
+    "publishSelected": "Publier la sélection",
+    "published": "Shifts publiés",
+    "selectAll": "Tout sélectionner",
+    "bulkCreate": "Création en lot",
+    "bulkCreated": "Shifts créés en lot",
+    "bulkHint": "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs shifts en une fois.",
+    "weekOf": "Semaine du",
+    "to": "au",
+    "today": "Aujourd'hui",
+    "tabs": {
+      "planning": "Planning",
+      "templates": "Modèles",
+      "locations": "Lieux"
+    },
+    "stats": {
+      "totalShifts": "Shifts au total",
+      "hoursPlanned": "Heures planifiées",
+      "published": "Publiés",
+      "draft": "Brouillons"
+    },
+    "columns": {
+      "employee": "Employé"
+    },
+    "fields": {
+      "date": "Date",
+      "dateFrom": "Date de début",
+      "dateTo": "Date de fin",
+      "employee": "Employé",
+      "employees": "Employés",
+      "startAt": "Début",
+      "endAt": "Fin",
+      "location": "Lieu",
+      "notes": "Notes",
+      "template": "Modèle",
+      "templateHint": "Sélectionnez un modèle pour pré-remplir les horaires et la pause."
+    },
+    "emptyGrid": {
+      "title": "Aucun shift planifié",
+      "description": "Créez un nouveau shift ou utilisez la création en lot pour démarrer votre planning."
+    },
+    "deleteShift": {
+      "title": "Supprimer le shift",
+      "text": "Êtes-vous sûr de vouloir supprimer ce shift ? Cette action est irréversible."
+    },
+    "cancelShift": {
+      "title": "Annuler le shift",
+      "text": "Voulez-vous annuler ce shift ?",
+      "reason": "Motif d'annulation"
+    },
+    "templates": {
+      "newTemplate": "Nouveau modèle",
+      "editTemplate": "Modifier le modèle",
+      "created": "Modèle créé",
+      "updated": "Modèle mis à jour",
+      "deleted": "Modèle supprimé",
+      "empty": "Aucun modèle de shift",
+      "emptyDescription": "Créez votre premier modèle pour accélérer la planification.",
+      "deleteTitle": "Supprimer le modèle",
+      "deleteText": "Êtes-vous sûr de vouloir supprimer ce modèle ?",
+      "columns": {
+        "name": "Nom",
+        "color": "Couleur",
+        "hours": "Horaires",
+        "break": "Pause",
+        "location": "Lieu",
+        "active": "Actif"
+      },
+      "fields": {
+        "name": "Nom du modèle",
+        "color": "Couleur",
+        "startTime": "Heure de début",
+        "endTime": "Heure de fin",
+        "breakDuration": "Durée de pause (min)",
+        "breakDurationHint": "Durée de pause en minutes (déduite du temps travaillé).",
+        "location": "Lieu par défaut"
+      }
+    },
+    "locations": {
+      "newLocation": "Nouveau lieu",
+      "editLocation": "Modifier le lieu",
+      "created": "Lieu créé",
+      "updated": "Lieu mis à jour",
+      "deleted": "Lieu supprimé",
+      "empty": "Aucun lieu d'intervention",
+      "emptyDescription": "Ajoutez vos sites, agences ou lieux clients pour les associer aux shifts.",
+      "deleteTitle": "Supprimer le lieu",
+      "deleteText": "Êtes-vous sûr de vouloir supprimer ce lieu ?",
+      "columns": {
+        "name": "Nom",
+        "address": "Adresse",
+        "type": "Type",
+        "timezone": "Fuseau horaire",
+        "active": "Actif"
+      },
+      "fields": {
+        "name": "Nom du lieu",
+        "address": "Adresse",
+        "timezone": "Fuseau horaire",
+        "timezoneHint": "Utilisé pour l'affichage des horaires (par défaut : Europe/Paris).",
+        "type": "Type de lieu",
+        "clientName": "Nom du client",
+        "clientReference": "Référence client"
+      },
+      "types": {
+        "internal": "Site interne",
+        "client_site": "Site client",
+        "mobile": "Mobile",
+        "remote": "Télétravail"
+      }
+    }
+  },
   "leaves": {
     "title": "Congés",
     "subtitle": "Gérez les demandes de congés de vos employés",
     "newRequest": "Nouvelle demande",
     "searchPlaceholder": "Rechercher un employé\u2026",
     "filterStatus": "Filtrer par statut",
+    "tabs": {
+      "requests": "Demandes",
+      "calendar": "Calendrier",
+      "balances": "Soldes",
+      "config": "Types de congés"
+    },
     "stats": {
       "pending": "En attente",
       "approved": "Approuvées",
@@ -6342,6 +6482,66 @@
       "rejectText": "Voulez-vous refuser cette demande de congé de {name} ?",
       "cancelTitle": "Annuler la demande",
       "cancelText": "Voulez-vous annuler cette demande de congé ?"
+    },
+    "calendar": {
+      "from": "Du",
+      "to": "Au",
+      "empty": "Aucun congé sur la période",
+      "emptyDescription": "Sélectionnez une autre période ou créez une nouvelle demande pour visualiser les absences."
+    },
+    "balances": {
+      "selectEmployee": "Sélectionner un employé",
+      "year": "Année",
+      "leaveType": "Type de congé",
+      "accrued": "Acquis",
+      "consumed": "Consommé",
+      "pending": "En attente",
+      "available": "Solde disponible",
+      "empty": "Aucun solde de congés",
+      "emptyDescription": "Aucun compteur n'a encore été initialisé pour cet employé sur cette année.",
+      "selectPrompt": "Sélectionnez un employé",
+      "selectPromptDescription": "Choisissez un employé pour consulter ses soldes de congés."
+    },
+    "config": {
+      "newType": "Nouveau type de congé",
+      "editType": "Modifier le type de congé",
+      "created": "Type de congé créé",
+      "updated": "Type de congé mis à jour",
+      "deleted": "Type de congé supprimé",
+      "deleteTitle": "Supprimer le type de congé",
+      "deleteText": "Êtes-vous sûr de vouloir supprimer ce type de congé ?",
+      "empty": "Aucun type de congé configuré",
+      "emptyDescription": "Ajoutez un premier type de congé pour permettre aux employés de soumettre des demandes.",
+      "columns": {
+        "code": "Code",
+        "name": "Libellé",
+        "annualDays": "Jours / an",
+        "accrualMode": "Acquisition",
+        "requiresApproval": "Validation requise",
+        "isPaid": "Payé",
+        "active": "Actif"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Libellé",
+        "description": "Description",
+        "annualDays": "Jours par an",
+        "annualDaysHint": "Nombre de jours acquis sur une année pleine.",
+        "accrualMode": "Mode d'acquisition",
+        "carryOver": "Report autorisé",
+        "carryOverHint": "Autorise le report du solde non consommé sur l'année suivante.",
+        "maxBalance": "Solde maximum",
+        "maxBalanceHint": "Plafond de cumul (0 = pas de limite).",
+        "requiresApproval": "Validation requise",
+        "isPaid": "Congé payé",
+        "sortOrder": "Ordre d'affichage"
+      },
+      "accrualModes": {
+        "monthly": "Mensuelle",
+        "annual": "Annuelle",
+        "none": "Sans acquisition",
+        "custom": "Personnalisée"
+      }
     },
     "created": "Demande de congé créée",
     "approved": "Congé approuvé",

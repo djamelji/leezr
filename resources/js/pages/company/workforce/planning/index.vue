@@ -803,7 +803,7 @@ watch(activeTab, tab => {
     <!-- Tabs -->
     <VTabs
       v-model="activeTab"
-      class="mb-6"
+      class="v-tabs-pill mb-6"
     >
       <VTab value="planning">
         <VIcon
@@ -834,7 +834,7 @@ watch(activeTab, tab => {
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="planning">
         <!-- Stats Row -->
-        <VRow class="mb-6">
+        <VRow class="card-grid card-grid-xs mb-6">
           <VCol
             cols="6"
             sm="3"
@@ -1480,7 +1480,7 @@ watch(activeTab, tab => {
       v-model="isShiftDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -1511,10 +1511,10 @@ watch(activeTab, tab => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="shiftFormData.date"
                 :label="$t('planning.fields.date')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -1587,7 +1587,7 @@ watch(activeTab, tab => {
       v-model="isBulkDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -1635,18 +1635,18 @@ watch(activeTab, tab => {
               />
             </VCol>
             <VCol cols="6">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="bulkFormData.date_from"
                 :label="$t('planning.fields.dateFrom')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
             <VCol cols="6">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="bulkFormData.date_to"
                 :label="$t('planning.fields.dateTo')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -1685,7 +1685,7 @@ watch(activeTab, tab => {
       v-model="isTemplateDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -1799,7 +1799,7 @@ watch(activeTab, tab => {
       v-model="isLocationDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">

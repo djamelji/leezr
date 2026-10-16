@@ -428,7 +428,7 @@ onMounted(() => {
     <!-- Tabs -->
     <VTabs
       v-model="activeTab"
-      class="mb-6"
+      class="v-tabs-pill mb-6"
     >
       <VTab value="entries">
         <VIcon
@@ -471,10 +471,10 @@ onMounted(() => {
                 cols="12"
                 md="3"
               >
-                <AppTextField
+                <AppDateTimePicker
                   v-model="entriesDateFrom"
                   :label="$t('timeTracking.filters.from')"
-                  type="date"
+                  :config="{ dateFormat: 'Y-m-d' }"
                   clearable
                   density="compact"
                 />
@@ -483,10 +483,10 @@ onMounted(() => {
                 cols="12"
                 md="3"
               >
-                <AppTextField
+                <AppDateTimePicker
                   v-model="entriesDateTo"
                   :label="$t('timeTracking.filters.to')"
-                  type="date"
+                  :config="{ dateFormat: 'Y-m-d' }"
                   clearable
                   density="compact"
                 />
@@ -708,7 +708,7 @@ onMounted(() => {
         <!-- Stats Cards -->
         <VRow
           v-if="stats"
-          class="mb-6"
+          class="card-grid card-grid-xs mb-6"
         >
           <VCol
             cols="6"
@@ -1097,26 +1097,26 @@ onMounted(() => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="manualData.date"
                 :label="$t('timeTracking.fields.date')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="manualData.clockIn"
                 :label="$t('timeTracking.fields.clockIn')"
-                type="datetime-local"
+                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="manualData.clockOut"
                 :label="$t('timeTracking.fields.clockOut')"
-                type="datetime-local"
+                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -1174,24 +1174,24 @@ onMounted(() => {
         <VForm @submit.prevent="submitCorrection">
           <VRow>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="correctionData.date"
                 :label="$t('timeTracking.fields.date')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="correctionData.clockIn"
                 :label="$t('timeTracking.fields.clockIn')"
-                type="datetime-local"
+                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="correctionData.clockOut"
                 :label="$t('timeTracking.fields.clockOut')"
-                type="datetime-local"
+                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
               />
             </VCol>
             <VCol cols="12">
@@ -1289,10 +1289,10 @@ onMounted(() => {
     <!-- Delete Confirmation Dialog -->
     <VDialog
       v-model="isDeleteOpen"
-      max-width="450"
+      max-width="440"
     >
       <VCard>
-        <VCardTitle class="pa-4">
+        <VCardTitle class="text-h5 pa-4">
           {{ $t('timeTracking.deleteConfirm.title') }}
         </VCardTitle>
         <VDivider />
@@ -1354,7 +1354,7 @@ onMounted(() => {
       max-width="500"
     >
       <VCard>
-        <VCardTitle class="pa-4">
+        <VCardTitle class="text-h5 pa-4">
           {{ $t('timesheets.dialogs.approve.title') }}
         </VCardTitle>
         <VDivider />
@@ -1392,7 +1392,7 @@ onMounted(() => {
       max-width="500"
     >
       <VCard>
-        <VCardTitle class="pa-4">
+        <VCardTitle class="text-h5 pa-4">
           {{ $t('timesheets.dialogs.reject.title') }}
         </VCardTitle>
         <VDivider />

@@ -206,19 +206,14 @@ const anomalyColor = type => {
 <template>
   <div>
     <!-- Back button -->
-    <div class="d-flex align-center gap-2 mb-4">
-      <VBtn
-        icon
-        variant="text"
-        size="small"
-        @click="router.push({ name: 'company-workforce-time' })"
-      >
-        <VIcon icon="tabler-arrow-left" />
-      </VBtn>
-      <span class="text-body-1 text-medium-emphasis">
-        {{ $t('timesheets.backToList') }}
-      </span>
-    </div>
+    <VBtn
+      variant="text"
+      :to="{ name: 'company-workforce-time' }"
+      prepend-icon="tabler-arrow-left"
+      class="mb-4"
+    >
+      {{ $t('timesheets.backToList') }}
+    </VBtn>
 
     <!-- Loading state -->
     <VCard
@@ -501,7 +496,7 @@ const anomalyColor = type => {
       max-width="500"
     >
       <VCard>
-        <VCardTitle class="pa-4">
+        <VCardTitle class="text-h5 pa-4">
           {{ $t('timesheets.dialogs.approve.title') }}
         </VCardTitle>
         <VDivider />
@@ -539,7 +534,7 @@ const anomalyColor = type => {
       max-width="500"
     >
       <VCard>
-        <VCardTitle class="pa-4">
+        <VCardTitle class="text-h5 pa-4">
           {{ $t('timesheets.dialogs.reject.title') }}
         </VCardTitle>
         <VDivider />

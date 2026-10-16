@@ -472,7 +472,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
         <VCardTitle>{{ $t('payroll.dialogs.validate.title') }}</VCardTitle>
         <VCardText>
           <p class="mb-4">{{ $t('payroll.dialogs.validate.message') }}</p>
-          <AppTextarea v-model="validationNote" :label="$t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
+          <AppTextField v-model="validationNote" type="textarea" :label="$t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
         </VCardText>
         <VCardActions>
           <VSpacer />

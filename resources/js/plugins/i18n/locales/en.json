@@ -5507,63 +5507,6 @@
     "error": "Error",
     "never": "Never"
   },
-  "payroll": {
-    "title": "Payroll Preparation",
-    "subtitle": "Prepare, validate and export payroll data",
-    "createRun": "Create payroll period",
-    "periodStart": "Period start",
-    "periodEnd": "Period end",
-    "status": "Status",
-    "statusDraft": "Draft",
-    "statusComputed": "Computed",
-    "statusValidated": "Validated",
-    "statusExported": "Exported",
-    "compute": "Compute payroll",
-    "recompute": "Recompute",
-    "validate": "Validate payroll",
-    "export": "Export",
-    "delete": "Delete",
-    "employeeCount": "Employee count",
-    "totalGross": "Total estimated gross",
-    "totalWorked": "Total worked hours",
-    "totalOvertime": "Total overtime hours",
-    "totalLeave": "Total leave days",
-    "grossBasis": "Estimated gross basis",
-    "grossBasisNote": "Preparation estimate, not official gross salary",
-    "baseSalary": "Base salary",
-    "overtimePay": "Overtime pay",
-    "unpaidLeaveDeduction": "Unpaid leave deduction",
-    "paidLeave": "Paid leave",
-    "unpaidLeave": "Unpaid leave",
-    "breakdown": "Breakdown",
-    "formulaVersion": "Formula version",
-    "compensationSnapshot": "Compensation data",
-    "timesheetSnapshot": "Timesheet data",
-    "anomalies": "Anomalies",
-    "anomalyMissingTimesheet": "Missing timesheet",
-    "anomalyMissingCompensation": "Missing compensation plan",
-    "anomalyTimesheetErrors": "Timesheet with errors",
-    "anomalyZeroWorked": "Zero worked hours",
-    "anomalyCompensationGap": "Compensation change during period",
-    "validationNote": "Validation note",
-    "validationNoteRequired": "A note is required when error-level anomalies exist",
-    "exportFormat": "Export format",
-    "noRuns": "No payroll periods",
-    "noLines": "No payroll lines",
-    "confirmDelete": "Delete this payroll period?",
-    "payFrequency": "Pay frequency",
-    "payFrequencyMixed": "Mixed",
-    "payFrequencyMonthly": "Monthly",
-    "payFrequencyBiweekly": "Biweekly",
-    "payFrequencyWeekly": "Weekly",
-    "created": "Payroll run created",
-    "deleted": "Payroll run deleted",
-    "computed": "Payroll lines computed",
-    "calculationsComputed": "Gross-to-net calculations completed",
-    "validated": "Payroll run validated",
-    "exported": "Payroll run exported",
-    "recomputed": "Payroll lines recomputed"
-  },
   "workforceDocuments": {
     "title": "HR Documents",
     "subtitle": "Generate and manage HR documents from templates",
@@ -6036,6 +5979,10 @@
       "sortOrder": "Sort Order",
       "subDept": "Sub-department",
       "empty": "No departments registered.",
+      "emptyDescription": "Create your first department to structure your organization.",
+      "statsTotal": "Departments",
+      "statsEmployees": "Employees",
+      "statsSub": "Sub-departments",
       "created": "Department created successfully",
       "updated": "Department updated",
       "deleted": "Department deleted"
@@ -6053,6 +6000,10 @@
       "add": "Add Job Role",
       "edit": "Edit Job Role",
       "empty": "No job roles registered.",
+      "emptyDescription": "Define the positions held in your organization to frame compensation.",
+      "statsTotal": "Job Roles",
+      "statsEmployees": "Employees",
+      "statsWithRate": "With default rate",
       "created": "Job role created successfully",
       "updated": "Job role updated",
       "deleted": "Job role deleted"
@@ -6064,6 +6015,13 @@
     "createRun": "Create Payroll Run",
     "backToList": "Back to list",
     "employees": "employees",
+    "created": "Payroll run created",
+    "deleted": "Payroll run deleted",
+    "computed": "Payroll lines computed",
+    "calculationsComputed": "Gross-to-net calculations completed",
+    "validated": "Payroll run validated",
+    "exported": "Payroll run exported",
+    "recomputed": "Payroll lines recomputed",
     "columns": {
       "period": "Period",
       "status": "Status",
@@ -6104,7 +6062,9 @@
       "export": "Export",
       "recompute": "Recompute",
       "delete": "Delete",
-      "view": "View details"
+      "view": "View details",
+      "generateDrafts": "Generate draft payslips",
+      "generateOfficial": "Generate official payslips"
     },
     "workflow": {
       "draft": "Draft",
@@ -6137,6 +6097,59 @@
       "netPayable": "Net Payable",
       "employerCost": "Employer Cost",
       "anomalies": "Anomalies"
+    },
+    "lineDetail": {
+      "title": "Payslip Details",
+      "compensation": {
+        "title": "Compensation",
+        "baseSalary": "Base salary",
+        "grossBasis": "Gross basis"
+      },
+      "time": {
+        "title": "Working time",
+        "planned": "Planned",
+        "worked": "Worked",
+        "overtime": "Overtime",
+        "breaks": "Breaks"
+      },
+      "leave": {
+        "title": "Leave",
+        "paid": "Paid leave",
+        "unpaid": "Unpaid leave",
+        "total": "Total leave"
+      },
+      "contributions": {
+        "title": "Contributions",
+        "label": "Label",
+        "base": "Base",
+        "rate": "Rate",
+        "employee": "Employee share",
+        "employer": "Employer share"
+      },
+      "calculation": {
+        "title": "Gross → Net calculation",
+        "grossTotal": "Total gross",
+        "contributionsEmployee": "Employee contributions",
+        "contributionsEmployer": "Employer contributions",
+        "netBeforeTax": "Net before tax",
+        "tax": "Withholding tax",
+        "netPayable": "Net payable",
+        "totalEmployerCost": "Total employer cost"
+      }
+    },
+    "payslips": {
+      "draftsGenerated": "Draft payslips generated",
+      "officialGenerated": "Official payslips generated"
+    },
+    "documents": {
+      "title": "Related documents",
+      "empty": "No documents generated for this run.",
+      "signature": {
+        "none": "Not signed",
+        "pending": "Pending",
+        "signed": "Signed",
+        "declined": "Declined"
+      }
     },
     "dialogs": {
       "cancel": "Cancel",
@@ -6298,12 +6311,139 @@
     "locked": "Timesheet locked",
     "reopened": "Timesheet reopened"
   },
+  "planning": {
+    "title": "Planning",
+    "subtitle": "Schedule shifts, manage templates and intervention sites",
+    "newShift": "New shift",
+    "editShift": "Edit shift",
+    "shiftCreated": "Shift created",
+    "shiftUpdated": "Shift updated",
+    "shiftDeleted": "Shift deleted",
+    "shiftCancelled": "Shift cancelled",
+    "publish": "Publish",
+    "publishSelected": "Publish selection",
+    "published": "Shifts published",
+    "selectAll": "Select all",
+    "bulkCreate": "Bulk create",
+    "bulkCreated": "Shifts created in bulk",
+    "bulkHint": "Pick a template, a period and the employees concerned to generate several shifts at once.",
+    "weekOf": "Week of",
+    "to": "to",
+    "today": "Today",
+    "tabs": {
+      "planning": "Planning",
+      "templates": "Templates",
+      "locations": "Locations"
+    },
+    "stats": {
+      "totalShifts": "Total shifts",
+      "hoursPlanned": "Hours planned",
+      "published": "Published",
+      "draft": "Drafts"
+    },
+    "columns": {
+      "employee": "Employee"
+    },
+    "fields": {
+      "date": "Date",
+      "dateFrom": "Start date",
+      "dateTo": "End date",
+      "employee": "Employee",
+      "employees": "Employees",
+      "startAt": "Start",
+      "endAt": "End",
+      "location": "Location",
+      "notes": "Notes",
+      "template": "Template",
+      "templateHint": "Pick a template to pre-fill working hours and break duration."
+    },
+    "emptyGrid": {
+      "title": "No shifts scheduled",
+      "description": "Create a new shift or use bulk create to start building your planning."
+    },
+    "deleteShift": {
+      "title": "Delete shift",
+      "text": "Are you sure you want to delete this shift? This action is irreversible."
+    },
+    "cancelShift": {
+      "title": "Cancel shift",
+      "text": "Do you want to cancel this shift?",
+      "reason": "Cancellation reason"
+    },
+    "templates": {
+      "newTemplate": "New template",
+      "editTemplate": "Edit template",
+      "created": "Template created",
+      "updated": "Template updated",
+      "deleted": "Template deleted",
+      "empty": "No shift templates",
+      "emptyDescription": "Create your first template to speed up planning.",
+      "deleteTitle": "Delete template",
+      "deleteText": "Are you sure you want to delete this template?",
+      "columns": {
+        "name": "Name",
+        "color": "Color",
+        "hours": "Hours",
+        "break": "Break",
+        "location": "Location",
+        "active": "Active"
+      },
+      "fields": {
+        "name": "Template name",
+        "color": "Color",
+        "startTime": "Start time",
+        "endTime": "End time",
+        "breakDuration": "Break duration (min)",
+        "breakDurationHint": "Break duration in minutes (deducted from worked time).",
+        "location": "Default location"
+      }
+    },
+    "locations": {
+      "newLocation": "New location",
+      "editLocation": "Edit location",
+      "created": "Location created",
+      "updated": "Location updated",
+      "deleted": "Location deleted",
+      "empty": "No intervention locations",
+      "emptyDescription": "Add your sites, branches or client locations to associate them with shifts.",
+      "deleteTitle": "Delete location",
+      "deleteText": "Are you sure you want to delete this location?",
+      "columns": {
+        "name": "Name",
+        "address": "Address",
+        "type": "Type",
+        "timezone": "Timezone",
+        "active": "Active"
+      },
+      "fields": {
+        "name": "Location name",
+        "address": "Address",
+        "timezone": "Timezone",
+        "timezoneHint": "Used to display working hours (default: Europe/Paris).",
+        "type": "Location type",
+        "clientName": "Client name",
+        "clientReference": "Client reference"
+      },
+      "types": {
+        "internal": "Internal site",
+        "client_site": "Client site",
+        "mobile": "Mobile",
+        "remote": "Remote"
+      }
+    }
+  },
   "leaves": {
     "title": "Leave",
     "subtitle": "Manage your employees' leave requests",
     "newRequest": "New Request",
     "searchPlaceholder": "Search employee\u2026",
     "filterStatus": "Filter by status",
+    "tabs": {
+      "requests": "Requests",
+      "calendar": "Calendar",
+      "balances": "Balances",
+      "config": "Leave types"
+    },
     "stats": {
       "pending": "Pending",
       "approved": "Approved",
@@ -6337,6 +6477,66 @@
       "rejectText": "Do you want to reject this leave request from {name}?",
       "cancelTitle": "Cancel Request",
       "cancelText": "Do you want to cancel this leave request?"
+    },
+    "calendar": {
+      "from": "From",
+      "to": "To",
+      "empty": "No leave during this period",
+      "emptyDescription": "Select another period or create a new request to view absences."
+    },
+    "balances": {
+      "selectEmployee": "Select an employee",
+      "year": "Year",
+      "leaveType": "Leave type",
+      "accrued": "Accrued",
+      "consumed": "Consumed",
+      "pending": "Pending",
+      "available": "Available balance",
+      "empty": "No leave balances",
+      "emptyDescription": "No counter has been initialised yet for this employee this year.",
+      "selectPrompt": "Select an employee",
+      "selectPromptDescription": "Choose an employee to view their leave balances."
+    },
+    "config": {
+      "newType": "New leave type",
+      "editType": "Edit leave type",
+      "created": "Leave type created",
+      "updated": "Leave type updated",
+      "deleted": "Leave type deleted",
+      "deleteTitle": "Delete leave type",
+      "deleteText": "Are you sure you want to delete this leave type?",
+      "empty": "No leave types configured",
+      "emptyDescription": "Add a first leave type so employees can submit requests.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "annualDays": "Days / year",
+        "accrualMode": "Accrual",
+        "requiresApproval": "Approval required",
+        "isPaid": "Paid",
+        "active": "Active"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "description": "Description",
+        "annualDays": "Days per year",
+        "annualDaysHint": "Number of days accrued over a full year.",
+        "accrualMode": "Accrual mode",
+        "carryOver": "Carry over allowed",
+        "carryOverHint": "Allow the unused balance to roll over to the next year.",
+        "maxBalance": "Maximum balance",
+        "maxBalanceHint": "Cumulative cap (0 = no limit).",
+        "requiresApproval": "Approval required",
+        "isPaid": "Paid leave",
+        "sortOrder": "Display order"
+      },
+      "accrualModes": {
+        "monthly": "Monthly",
+        "annual": "Annual",
+        "none": "No accrual",
+        "custom": "Custom"
+      }
     },
     "created": "Leave request created",
     "approved": "Leave approved",

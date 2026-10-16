@@ -173,7 +173,7 @@ const goToRun = id => {
     <!-- Stats Cards -->
     <VRow
       v-if="stats"
-      class="mb-6"
+      class="card-grid card-grid-xs mb-6"
     >
       <VCol
         cols="6"

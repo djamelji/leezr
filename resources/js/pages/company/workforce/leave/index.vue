@@ -155,6 +155,7 @@ const confirmAction = ref(null)
 const confirmTargetId = ref(null)
 const confirmTitle = ref('')
 const confirmText = ref('')
+const confirmLoading = ref(false)
 
 const openConfirm = (action, item) => {
   confirmAction.value = action
@@ -173,6 +174,7 @@ const openConfirm = (action, item) => {
 }
 
 const executeConfirmAction = async () => {
+  confirmLoading.value = true
   try {
     if (confirmAction.value === 'approve') {
       await store.approveLeaveRequest(confirmTargetId.value)
@@ -190,6 +192,8 @@ const executeConfirmAction = async () => {
   } catch (error) {
     toast(error.response?.data?.message || t('common.error'), 'error')
     confirmDialog.value = false
+  } finally {
+    confirmLoading.value = false
   }
 }
 
@@ -499,7 +503,7 @@ watch(activeTab, tab => {
     <!-- Tabs -->
     <VTabs
       v-model="activeTab"
-      class="mb-6"
+      class="v-tabs-pill mb-6"
     >
       <VTab value="requests">
         <VIcon
@@ -537,7 +541,7 @@ watch(activeTab, tab => {
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="requests">
         <!-- Stats Row -->
-        <VRow class="mb-6">
+        <VRow class="card-grid card-grid-xs mb-6">
           <VCol
             cols="12"
             md="4"
@@ -1213,18 +1217,18 @@ watch(activeTab, tab => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="formData.date_from"
                 :label="$t('leaves.fields.dateFrom')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="formData.date_to"
                 :label="$t('leaves.fields.dateTo')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -1273,7 +1277,7 @@ watch(activeTab, tab => {
       v-model="isTypeDrawerOpen"
       temporary
       location="end"
-      width="420"
+      width="400"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -1422,6 +1426,7 @@ watch(activeTab, tab => {
           </VBtn>
           <VBtn
             :color="confirmAction === 'approve' ? 'success' : confirmAction === 'reject' ? 'error' : 'secondary'"
+            :loading="confirmLoading"
             @click="executeConfirmAction"
           >
             {{ $t('common.confirm') }}

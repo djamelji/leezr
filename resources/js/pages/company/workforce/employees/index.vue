@@ -347,10 +347,10 @@ const getContractLabel = employee => {
               />
             </VCol>
             <VCol cols="12">
-              <AppTextField
+              <AppDateTimePicker
                 v-model="formData.hire_date"
                 :label="$t('employees.fields.hireDate')"
-                type="date"
+                :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>

@@ -17,6 +17,12 @@ const currentTab = computed({
 
 // ── Departments ──────────────────────────────────────────
 const deptLoading = ref(false)
+const deptHeaders = computed(() => [
+  { title: t('organization.departments.name'), key: 'name', sortable: true },
+  { title: t('organization.departments.manager'), key: 'manager', sortable: false },
+  { title: t('organization.departments.employeeCount'), key: 'employees_count', sortable: true, width: 160 },
+  { title: '', key: 'actions', sortable: false, width: 100 },
+])
 const deptDrawerOpen = ref(false)
 const deptFormLoading = ref(false)
 const deptEditId = ref(null)
@@ -77,6 +83,14 @@ const deleteDept = async id => {
 
 // ── Job Roles ────────────────────────────────────────────
 const roleLoading = ref(false)
+const roleHeaders = computed(() => [
+  { title: t('organization.roles.title'), key: 'title', sortable: true },
+  { title: t('organization.roles.department'), key: 'department', sortable: false },
+  { title: t('organization.roles.level'), key: 'level', sortable: true, width: 120 },
+  { title: t('organization.roles.defaultRate'), key: 'default_hourly_rate_cents', sortable: true, width: 140 },
+  { title: t('organization.roles.employeeCount'), key: 'employees_count', sortable: true, width: 140 },
+  { title: '', key: 'actions', sortable: false, width: 100 },
+])
 const roleDrawerOpen = ref(false)
 const roleFormLoading = ref(false)
 const roleEditId = ref(null)
@@ -164,6 +178,23 @@ const formatRate = cents => {
   return new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }).format(cents / 100)
 }
 
+// ── Stats ────────────────────────────────────────────────
+const totalDepartments = computed(() => store.departments.length)
+const totalDeptEmployees = computed(() =>
+  store.departments.reduce((sum, d) => sum + (d.employees_count ?? 0), 0),
+)
+const subDepartmentsCount = computed(() =>
+  store.departments.filter(d => d.parent_id).length,
+)
+
+const totalRoles = computed(() => store.jobRoles.length)
+const totalRoleEmployees = computed(() =>
+  store.jobRoles.reduce((sum, r) => sum + (r.employees_count ?? 0), 0),
+)
+const rolesWithRateCount = computed(() =>
+  store.jobRoles.filter(r => r.default_hourly_rate_cents).length,
+)
+
 onMounted(() => {
   fetchDepartments()
   fetchRoles()
@@ -215,6 +246,76 @@ onMounted(() => {
         <VWindow v-model="currentTab">
           <!-- Departments Tab -->
           <VWindowItem value="departments">
+            <!-- Stats Row -->
+            <VRow class="card-grid card-grid-xs mb-6">
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-building"
+                    size="32"
+                    color="primary"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ totalDepartments }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.departments.statsTotal') }}
+                  </div>
+                </VCard>
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-users"
+                    size="32"
+                    color="success"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ totalDeptEmployees }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.departments.statsEmployees') }}
+                  </div>
+                </VCard>
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-hierarchy"
+                    size="32"
+                    color="info"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ subDepartmentsCount }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.departments.statsSub') }}
+                  </div>
+                </VCard>
+              </VCol>
+            </VRow>
+
             <div class="d-flex justify-end mb-4">
               <VBtn
                 color="primary"
@@ -225,86 +326,223 @@ onMounted(() => {
               </VBtn>
             </div>
 
-            <VTable
+            <VDataTable
+              :headers="deptHeaders"
+              :items="store.departments"
               :loading="deptLoading"
-              density="comfortable"
+              :items-per-page="15"
+              class="text-no-wrap"
             >
-              <thead>
-                <tr>
-                  <th>{{ $t('organization.departments.name') }}</th>
-                  <th>{{ $t('organization.departments.manager') }}</th>
-                  <th>{{ $t('organization.departments.employeeCount') }}</th>
-                  <th width="80" />
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="dept in store.departments"
-                  :key="dept.id"
-                >
-                  <td>
-                    <span class="font-weight-medium">{{ dept.name }}</span>
+              <!-- Name -->
+              <template #item.name="{ item }">
+                <div class="d-flex align-center gap-2 py-2">
+                  <VAvatar
+                    color="primary"
+                    variant="tonal"
+                    size="34"
+                  >
+                    <VIcon
+                      icon="tabler-building"
+                      size="18"
+                    />
+                  </VAvatar>
+                  <div>
+                    <div class="font-weight-medium">
+                      {{ item.name }}
+                    </div>
                     <VChip
-                      v-if="dept.parent_id"
+                      v-if="item.parent_id"
                       size="x-small"
                       color="secondary"
                       variant="tonal"
-                      class="ms-2"
+                      class="mt-1"
                     >
                       {{ $t('organization.departments.subDept') }}
                     </VChip>
-                  </td>
-                  <td>
-                    <template v-if="dept.manager">
-                      {{ dept.manager.first_name }} {{ dept.manager.last_name }}
-                    </template>
-                    <span
-                      v-else
-                      class="text-medium-emphasis"
-                    >—</span>
-                  </td>
-                  <td>
-                    <VChip
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ dept.employees_count ?? 0 }}
-                    </VChip>
-                  </td>
-                  <td>
-                    <VBtn
-                      icon
-                      variant="text"
-                      size="small"
-                      @click="openDeptEdit(dept)"
-                    >
-                      <VIcon icon="tabler-edit" />
-                    </VBtn>
-                    <VBtn
-                      icon
-                      variant="text"
-                      size="small"
-                      color="error"
-                      @click="deleteDept(dept.id)"
-                    >
-                      <VIcon icon="tabler-trash" />
-                    </VBtn>
-                  </td>
-                </tr>
-                <tr v-if="store.departments.length === 0 && !deptLoading">
-                  <td
-                    colspan="4"
-                    class="text-center pa-8 text-medium-emphasis"
+                  </div>
+                </div>
+              </template>
+
+              <!-- Manager -->
+              <template #item.manager="{ item }">
+                <div
+                  v-if="item.manager"
+                  class="d-flex align-center gap-2"
+                >
+                  <VAvatar
+                    color="secondary"
+                    variant="tonal"
+                    size="30"
                   >
+                    <span class="text-xs font-weight-medium">
+                      {{ (item.manager.first_name?.[0] || '') + (item.manager.last_name?.[0] || '') }}
+                    </span>
+                  </VAvatar>
+                  <span class="font-weight-medium">
+                    {{ item.manager.first_name }} {{ item.manager.last_name }}
+                  </span>
+                </div>
+                <span
+                  v-else
+                  class="text-medium-emphasis"
+                >—</span>
+              </template>
+
+              <!-- Employee Count -->
+              <template #item.employees_count="{ item }">
+                <VChip
+                  :color="(item.employees_count ?? 0) > 0 ? 'primary' : 'secondary'"
+                  size="small"
+                  variant="tonal"
+                >
+                  <VIcon
+                    icon="tabler-users"
+                    size="14"
+                    class="me-1"
+                  />
+                  {{ item.employees_count ?? 0 }}
+                </VChip>
+              </template>
+
+              <!-- Actions -->
+              <template #item.actions="{ item }">
+                <div class="d-flex gap-1">
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    color="primary"
+                    @click.stop="openDeptEdit(item)"
+                  >
+                    <VIcon
+                      icon="tabler-edit"
+                      size="18"
+                    />
+                    <VTooltip
+                      activator="parent"
+                      :text="$t('common.edit')"
+                      location="top"
+                    />
+                  </VBtn>
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    color="error"
+                    @click.stop="deleteDept(item.id)"
+                  >
+                    <VIcon
+                      icon="tabler-trash"
+                      size="18"
+                    />
+                    <VTooltip
+                      activator="parent"
+                      :text="$t('common.delete')"
+                      location="top"
+                    />
+                  </VBtn>
+                </div>
+              </template>
+
+              <!-- Empty state -->
+              <template #no-data>
+                <div class="text-center pa-8">
+                  <VIcon
+                    icon="tabler-building-skyscraper"
+                    size="48"
+                    color="secondary"
+                    class="mb-4"
+                  />
+                  <h6 class="text-h6 mb-2">
                     {{ $t('organization.departments.empty') }}
-                  </td>
-                </tr>
-              </tbody>
-            </VTable>
+                  </h6>
+                  <p class="text-body-1 text-medium-emphasis mb-4">
+                    {{ $t('organization.departments.emptyDescription') }}
+                  </p>
+                  <VBtn
+                    color="primary"
+                    prepend-icon="tabler-plus"
+                    @click="openDeptCreate"
+                  >
+                    {{ $t('organization.departments.add') }}
+                  </VBtn>
+                </div>
+              </template>
+            </VDataTable>
           </VWindowItem>
 
           <!-- Job Roles Tab -->
           <VWindowItem value="roles">
+            <!-- Stats Row -->
+            <VRow class="card-grid card-grid-xs mb-6">
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-briefcase"
+                    size="32"
+                    color="primary"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ totalRoles }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.roles.statsTotal') }}
+                  </div>
+                </VCard>
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-users"
+                    size="32"
+                    color="success"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ totalRoleEmployees }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.roles.statsEmployees') }}
+                  </div>
+                </VCard>
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VCard
+                  variant="outlined"
+                  class="text-center pa-4"
+                >
+                  <VIcon
+                    icon="tabler-coin-euro"
+                    size="32"
+                    color="info"
+                    class="mb-2"
+                  />
+                  <div class="text-h5 font-weight-bold">
+                    {{ rolesWithRateCount }}
+                  </div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ $t('organization.roles.statsWithRate') }}
+                  </div>
+                </VCard>
+              </VCol>
+            </VRow>
+
             <div class="d-flex justify-end mb-4">
               <VBtn
                 color="primary"
@@ -315,69 +553,172 @@ onMounted(() => {
               </VBtn>
             </div>
 
-            <VTable
+            <VDataTable
+              :headers="roleHeaders"
+              :items="store.jobRoles"
               :loading="roleLoading"
-              density="comfortable"
+              :items-per-page="15"
+              class="text-no-wrap"
             >
-              <thead>
-                <tr>
-                  <th>{{ $t('organization.roles.title') }}</th>
-                  <th>{{ $t('organization.roles.department') }}</th>
-                  <th>{{ $t('organization.roles.level') }}</th>
-                  <th>{{ $t('organization.roles.defaultRate') }}</th>
-                  <th>{{ $t('organization.roles.employeeCount') }}</th>
-                  <th width="80" />
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="role in store.jobRoles"
-                  :key="role.id"
-                >
-                  <td class="font-weight-medium">
-                    {{ role.title }}
-                  </td>
-                  <td>{{ role.department?.name || '—' }}</td>
-                  <td>{{ role.level || '—' }}</td>
-                  <td>{{ formatRate(role.default_hourly_rate_cents) }}/h</td>
-                  <td>
-                    <VChip
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ role.employees_count ?? 0 }}
-                    </VChip>
-                  </td>
-                  <td>
-                    <VBtn
-                      icon
-                      variant="text"
-                      size="small"
-                      @click="openRoleEdit(role)"
-                    >
-                      <VIcon icon="tabler-edit" />
-                    </VBtn>
-                    <VBtn
-                      icon
-                      variant="text"
-                      size="small"
-                      color="error"
-                      @click="deleteRole(role.id)"
-                    >
-                      <VIcon icon="tabler-trash" />
-                    </VBtn>
-                  </td>
-                </tr>
-                <tr v-if="store.jobRoles.length === 0 && !roleLoading">
-                  <td
-                    colspan="6"
-                    class="text-center pa-8 text-medium-emphasis"
+              <!-- Title -->
+              <template #item.title="{ item }">
+                <div class="d-flex align-center gap-2 py-2">
+                  <VAvatar
+                    color="primary"
+                    variant="tonal"
+                    size="34"
                   >
+                    <VIcon
+                      icon="tabler-briefcase"
+                      size="18"
+                    />
+                  </VAvatar>
+                  <div>
+                    <div class="font-weight-medium">
+                      {{ item.title }}
+                    </div>
+                    <div
+                      v-if="item.description"
+                      class="text-body-2 text-medium-emphasis"
+                    >
+                      {{ item.description }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Department -->
+              <template #item.department="{ item }">
+                <VChip
+                  v-if="item.department?.name"
+                  size="small"
+                  color="info"
+                  variant="tonal"
+                >
+                  <VIcon
+                    icon="tabler-building"
+                    size="14"
+                    class="me-1"
+                  />
+                  {{ item.department.name }}
+                </VChip>
+                <span
+                  v-else
+                  class="text-medium-emphasis"
+                >—</span>
+              </template>
+
+              <!-- Level -->
+              <template #item.level="{ item }">
+                <VChip
+                  v-if="item.level"
+                  size="small"
+                  color="secondary"
+                  variant="tonal"
+                >
+                  {{ item.level }}
+                </VChip>
+                <span
+                  v-else
+                  class="text-medium-emphasis"
+                >—</span>
+              </template>
+
+              <!-- Default Rate -->
+              <template #item.default_hourly_rate_cents="{ item }">
+                <span
+                  v-if="item.default_hourly_rate_cents"
+                  class="font-weight-medium"
+                >
+                  {{ formatRate(item.default_hourly_rate_cents) }}/h
+                </span>
+                <span
+                  v-else
+                  class="text-medium-emphasis"
+                >—</span>
+              </template>
+
+              <!-- Employee Count -->
+              <template #item.employees_count="{ item }">
+                <VChip
+                  :color="(item.employees_count ?? 0) > 0 ? 'primary' : 'secondary'"
+                  size="small"
+                  variant="tonal"
+                >
+                  <VIcon
+                    icon="tabler-users"
+                    size="14"
+                    class="me-1"
+                  />
+                  {{ item.employees_count ?? 0 }}
+                </VChip>
+              </template>
+
+              <!-- Actions -->
+              <template #item.actions="{ item }">
+                <div class="d-flex gap-1">
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    color="primary"
+                    @click.stop="openRoleEdit(item)"
+                  >
+                    <VIcon
+                      icon="tabler-edit"
+                      size="18"
+                    />
+                    <VTooltip
+                      activator="parent"
+                      :text="$t('common.edit')"
+                      location="top"
+                    />
+                  </VBtn>
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    color="error"
+                    @click.stop="deleteRole(item.id)"
+                  >
+                    <VIcon
+                      icon="tabler-trash"
+                      size="18"
+                    />
+                    <VTooltip
+                      activator="parent"
+                      :text="$t('common.delete')"
+                      location="top"
+                    />
+                  </VBtn>
+                </div>
+              </template>
+
+              <!-- Empty state -->
+              <template #no-data>
+                <div class="text-center pa-8">
+                  <VIcon
+                    icon="tabler-briefcase-off"
+                    size="48"
+                    color="secondary"
+                    class="mb-4"
+                  />
+                  <h6 class="text-h6 mb-2">
                     {{ $t('organization.roles.empty') }}
-                  </td>
-                </tr>
-              </tbody>
-            </VTable>
+                  </h6>
+                  <p class="text-body-1 text-medium-emphasis mb-4">
+                    {{ $t('organization.roles.emptyDescription') }}
+                  </p>
+                  <VBtn
+                    color="primary"
+                    prepend-icon="tabler-plus"
+                    @click="openRoleCreate"
+                  >
+                    {{ $t('organization.roles.add') }}
+                  </VBtn>
+                </div>
+              </template>
+            </VDataTable>
           </VWindowItem>
         </VWindow>
       </VCardText>
