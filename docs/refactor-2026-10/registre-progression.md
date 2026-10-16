@@ -272,3 +272,12 @@ Un scheduler mort ne peut s'auto-alerter. Livré :
 - Pas de service payant ni dépendance nouvelle.
 **Tests** `SchedulerHealthEndpointTest` (5) : désactivé sans token, mauvais token→404, vivant→200, périmé→503, `unknown`→200.
 **Reste à activer (ops, hors code)** : définir `SCHEDULER_MONITOR_TOKEN` dans `.env` serveur + déployer + brancher le moniteur.
+
+## LOT 4 — Vérification finale Finance & Automations ✅
+Vérification ciblée (aucun paiement réel, aucun rattrapage) des changements récents — **60 tests verts, 0 régression** :
+- Essai expiré → accès restreint ; lecture + billing/paiement conservés ; réactivation auto/idempotente ; expiration ≠ suspension (`RestrictedBusinessAccessTest`).
+- Dunning essai gratuit/payant/impayé (`TrialDunningLifecycleTest`).
+- Ledger : idempotence + HT/TVA/TTC + CASH tous paiements + réconciliation (`LedgerReliabilityTest`, `LedgerReconciliationScenarioTest`).
+- Devise : MRR par devise (`PricingCurrencyTest`).
+- Automations : permission tâches sensibles + anti-double-exécution (`AutomationCockpitSecurityTest`), enable/disable réel (`AutomationToggleTest`), supervision + heartbeat + endpoint externe (`AutomationSupervisorTest`, `SchedulerHealthTest`, `SchedulerHealthEndpointTest`), bijection registre (`ScheduledTaskRegistryConsistencyTest`).
+Aucune régression démontrée → rien à corriger.
