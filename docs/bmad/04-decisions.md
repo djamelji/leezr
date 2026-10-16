@@ -21537,4 +21537,38 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
+### ADR-570 — Tarification nominale multi-devise sans conversion FX (2026-10-16)
+
+**Contexte** : L'audit Finance (F2/F10) a relevé que les prix des plans (`PlanRegistry`) sont un **nombre unique** (ex. 29, 79) sans variante par devise, alors que le système facture déjà en **multi-devise** (une société sur le marché GB est facturée en GBP — comportement **intentionnel et testé**, `BillingCurrencyMarketTest`). Conséquence : le même nombre est appliqué tel quel dans chaque devise de marché, **sans conversion FX** (29 EUR ≡ 29 GBP nominalement). Le commentaire `PlanRegistry` disait à tort « prices in DOLLARS ». De plus le MRR scalaire **additionnait des devises mélangées** en l'étiquetant « EUR » (F10).
+
+**Décisions** :
+1. **Acter la tarification nominale sans FX** comme simplification commerciale **assumée** (pas un bug) : un prix de plan = un nombre, appliqué dans la devise du marché de la société. **Ne pas inventer de prix par devise** (consigne). Documenté dans `PlanRegistry` et `config/billing.php`.
+2. **`config('billing.reporting_currency')`** (défaut EUR) = devise d'étiquette de l'agrégat scalaire MRR/ARR. Remplace le `'EUR'` codé en dur.
+3. **MRR par devise** : `BillingMetricsCalculationService::computeMrrByCurrency()` + clé `mrr_by_currency` dans la sortie métriques → chaque devise reste exacte ; le scalaire `mrr` (somme nominale) ne doit **pas** être lu comme un total converti.
+4. **Avant tout 2ᵉ marché non-EUR commercialisé** : définir une vraie grille de prix par devise **ou** une conversion FX, et remplacer cette simplification.
+
+**Conséquences** : incohérence rendue explicite et documentée, sans toucher aux prix ; reporting multi-devise exact ; le multi-devise existant (GB/GBP) reste fonctionnel. **Différé (P2)** : grille de prix par devise / FX sur plans — décision commerciale.
+
+**Fichiers** : `app/Core/Plans/PlanRegistry.php`, `config/billing.php`, `app/Core/Billing/BillingMetricsCalculationService.php`, `tests/Feature/PricingCurrencyTest.php`.
+
+---
+
+### ADR-571 — Essai expiré → accès restreint + fiabilisation Billing (remédiation audit Finance) (2026-10-16)
+
+**Contexte** : Audit Finance (`docs/audit-2026-10/10-audit-finance-facturation.md`) : essais « bloqués » (scheduler mort + statut d'abo ne gatant aucun accès), scheduler non centralisé, dunning ignorant les essais, grand livre double-entrée non fiable (AR non soldé hors Stripe, TVA non isolée, pas d'idempotence).
+
+**Décision produit (liante)** : à l'expiration d'un essai **sans abonnement valide**, la Company passe en **accès restreint** : elle conserve la **lecture** de ses données + la **gestion de l'abonnement et le paiement**, mais **ne peut plus effectuer d'opérations métier** (écritures). **Données et historiques conservés.** Réactivation après régularisation **automatique et idempotente**. **Distinct** de la suspension de Company. Respect des rôles/permissions/entitlements existants.
+
+**Décisions techniques** :
+1. **Contrôle à la requête** (`Subscription::isExpiredTrial()`/`restrictsBusinessAccess()`, `Company::hasBusinessAccess()`, middleware `EnsureBusinessAccess` → 402) : un essai dont la fenêtre est écoulée est restreint **même si le scheduler n'a pas basculé le statut** → un cron arrêté ne peut plus laisser un essai expiré pleinement actif. Lectures et routes billing/plan toujours permises.
+2. **Scheduler = source de vérité unique** : `ScheduledTaskRegistry` miroir 1:1 de `routes/console.php` (ajout `alerts:escalate`, `registration:detect-abandoned`), test anti-dérive. Cron OS `schedule:run` = action **ops** documentée (non installée par le déploiement — à poser sur le VPS).
+3. **Dunning aligné** : essai gratuit → `expire-trials` (expired → restreint) ; essai **payant** impayé → dunning (`markOverdue` gère `trialing`→`past_due`) ; `expire-trials` saute les essais avec facture ouverte (plus d'orphelin).
+4. **Grand livre fiable** : idempotence du posting (garde F4), TVA isolée (`REVENUE`=HT + `VAT_PAYABLE`), CASH posté pour **tout** paiement succeeded (hook `Payment`, pas que Stripe), non-throwing. Corrections historiques éventuelles = `recordAdjustment` traçable, jamais réécriture silencieuse ni déclenchement automatique sur données réelles.
+
+**Conséquences** : les deux exigences dures sont satisfaites (scheduler supervisable + essai expiré sans droits métier). Reste **différé (P2)** : `ReconciliationEngine` (Stripe-only), `FinancialForensicsService` (pas de détection), régularisation des écritures historiques (ops, sur décision). Non déployé en prod.
+
+**Fichiers** : voir `docs/refactor-2026-10/registre-progression.md` (LOTs 1→6).
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

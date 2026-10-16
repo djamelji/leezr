@@ -11,8 +11,15 @@ namespace App\Core\Plans;
  * All runtime methods read from DB via Plan model.
  *
  * ADR-101: Refactored from code-defined to DB-driven.
- * definitions() return shape stays strictly identical (prices in dollars)
- * so all callers (EntitlementResolver, PublicPlanController, validation rules) work unchanged.
+ * definitions() return shape stays strictly identical so all callers
+ * (EntitlementResolver, PublicPlanController, validation rules) work unchanged.
+ *
+ * Audit F2/F10: prices are a SINGLE nominal figure in MAJOR UNITS — NOT US dollars.
+ * There is one price per plan, applied as-is in each market's own currency with NO
+ * FX conversion (a GB-market company pays the same NUMBER in GBP that an FR company
+ * pays in EUR). This is a deliberate commercial simplification (ADR-570), not a
+ * per-currency price list. The "*Dollars" method names are legacy major-unit
+ * accessors kept for call-site stability, not a USD denomination.
  */
 class PlanRegistry
 {
@@ -21,7 +28,7 @@ class PlanRegistry
 
     /**
      * Hardcoded seed defaults — used by sync() only.
-     * Prices are in DOLLARS (sync() converts to cents for DB storage).
+     * Prices are major units of the pricing currency EUR (sync() converts to cents).
      */
     public static function seedDefaults(): array
     {

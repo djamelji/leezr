@@ -17,6 +17,24 @@ return [
 
     'default_currency' => env('BILLING_DEFAULT_CURRENCY', 'EUR'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reporting currency (audit F2/F10)
+    |--------------------------------------------------------------------------
+    |
+    | Plan prices (PlanRegistry) are a SINGLE nominal figure applied as-is in each
+    | market's own currency — NO FX conversion (a company on the GB market pays the
+    | same NUMBER in GBP that an FR company pays in EUR). This is a deliberate
+    | commercial simplification, not a per-currency price list; see ADR-570.
+    |
+    | `reporting_currency` is the label used for the scalar nominal MRR/ARR aggregate.
+    | Because those scalars sum nominal amounts across currencies WITHOUT FX, they are
+    | only exact in a mono-currency portfolio; `mrr_by_currency` gives the exact
+    | per-currency breakdown. Do NOT read the scalar as a converted total.
+    |
+    */
+    'reporting_currency' => env('BILLING_REPORTING_CURRENCY', 'EUR'),
+
     'stripe' => [
         'key'            => env('STRIPE_KEY'),
         'secret'         => env('STRIPE_SECRET'),

@@ -34,6 +34,7 @@ class BillingMetricsCalculationService
         }
 
         $mrr = $this->computeMrr($activeSubscriptions, $plans);
+        $mrrByCurrency = $this->computeMrrByCurrency($activeSubscriptions, $plans);
 
         try {
             $addonMrr = (int) CompanyAddonSubscription::active()->sum('amount_cents');
@@ -67,7 +68,8 @@ class BillingMetricsCalculationService
             'churn_rate' => $churnRate,
             'mrr_history' => $mrrHistory,
             'trial_conversion_rate' => $this->trialConversionRate(),
-            'currency' => 'EUR',
+            'currency' => config('billing.reporting_currency', 'EUR'),
+            'mrr_by_currency' => $mrrByCurrency,
         ];
     }
 
@@ -76,20 +78,55 @@ class BillingMetricsCalculationService
         $mrr = 0;
 
         foreach ($activeSubscriptions as $sub) {
-            $plan = $plans[$sub->plan_key] ?? null;
-
-            if (! $plan) {
-                continue;
-            }
-
-            if ($sub->interval === 'yearly') {
-                $mrr += (int) round(($plan->price_yearly ?? 0) / 12);
-            } else {
-                $mrr += $plan->price_monthly ?? 0;
-            }
+            $mrr += $this->subscriptionMonthlyAmount($sub, $plans);
         }
 
         return $mrr;
+    }
+
+    /**
+     * F10: per-currency MRR breakdown. Plan prices carry no FX conversion, so a single
+     * scalar MRR silently mixes currencies in a multi-market portfolio. Grouping by the
+     * subscription's billing currency (company market/wallet currency) keeps each figure
+     * exact. Returns ['EUR' => cents, 'GBP' => cents, …].
+     *
+     * @return array<string, int>
+     */
+    public function computeMrrByCurrency(Collection $activeSubscriptions, Collection $plans): array
+    {
+        $byCurrency = [];
+
+        foreach ($activeSubscriptions as $sub) {
+            $amount = $this->subscriptionMonthlyAmount($sub, $plans);
+
+            if ($amount === 0) {
+                continue;
+            }
+
+            $currency = strtoupper(
+                $sub->company?->market?->currency
+                    ?? config('billing.reporting_currency', 'EUR')
+            );
+
+            $byCurrency[$currency] = ($byCurrency[$currency] ?? 0) + $amount;
+        }
+
+        return $byCurrency;
+    }
+
+    private function subscriptionMonthlyAmount($sub, Collection $plans): int
+    {
+        $plan = $plans[$sub->plan_key] ?? null;
+
+        if (! $plan) {
+            return 0;
+        }
+
+        if ($sub->interval === 'yearly') {
+            return (int) round(($plan->price_yearly ?? 0) / 12);
+        }
+
+        return (int) ($plan->price_monthly ?? 0);
     }
 
     public function mrrHistory(Collection $plans): array

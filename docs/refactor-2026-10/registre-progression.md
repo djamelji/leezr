@@ -190,3 +190,15 @@ Vérification attendue après installation : `php artisan schedule:list` (20 lig
 **Tests :** `LedgerReliabilityTest` (7) — idempotence facture/paiement, isolation TVA (+ split wallet proportionnel + TVA-exempt), paiement non-Stripe solde l'AR, paiement échoué ne poste rien. **Régression : 808 tests billing-domain OK.**
 
 **Différé (documenté, P2) :** `ReconciliationEngine` (F9) ne réconcilie que Stripe (pas internal/wallet/équilibre ledger) ; `FinancialForensicsService` (F8) n'a pas de détection d'anomalie. Non traités ici (risque + P2) ; la réconciliation comptable de test est fournie en synthèse finale.
+
+## LOT 5 — Tarifs / devises par Market (audit F2/F10) ✅
+**Constat clé** : le multi-devise est **intentionnel et testé** (`BillingCurrencyMarketTest` : société GB → GBP). Le « prix identique quelle que soit la devise » = **choix commercial assumé** (même nombre appliqué par devise, sans FX), **pas un bug** → ne pas inventer de prix. Le vrai bug technique = **MRR agrégeant des devises mélangées** étiqueté EUR.
+
+**Fait (sans inventer de prix) :**
+- `config/billing.php` : `reporting_currency` (devise d'étiquette de l'agrégat scalaire) remplace le `'EUR'` codé en dur ; documentation du modèle nominal sans FX. (Retrait de ma tentative initiale « mono-devise / supported_pricing » qui contredisait le design multi-devise réel.)
+- `PlanRegistry` : commentaire trompeur « prices in DOLLARS » corrigé → **nombre nominal en unités majeures appliqué dans la devise du marché, sans FX** (ADR-570). Prix inchangés.
+- `BillingMetricsCalculationService` : `computeMrrByCurrency()` + clé `mrr_by_currency` → chaque devise exacte ; `currency` piloté par config.
+- **ADR-570** (tarification nominale multi-devise sans FX) + **ADR-571** (décision produit accès restreint + synthèse remédiation).
+- Tests `PricingCurrencyTest` (3). Régression `BillingCurrencyMarketTest`/`BillingLotFTest` OK.
+
+**Différé (P2, commercial)** : grille de prix par devise ou conversion FX sur plans — avant tout 2ᵉ marché non-EUR commercialisé.
