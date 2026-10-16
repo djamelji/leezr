@@ -8,7 +8,9 @@ use Cron\CronExpression;
 class ScheduledTaskRegistry
 {
     /**
-     * Static registry of all 14 scheduled tasks with metadata.
+     * Static registry of all scheduled tasks with metadata.
+     * Single source of truth for the Automations cockpit; kept in sync with
+     * routes/console.php by ScheduledTaskRegistryConsistencyTest (drift guard).
      * Keys match the task identifier used in SchedulerInstrumentation.
      */
     private const TASKS = [
@@ -148,6 +150,24 @@ class ScheduledTaskRegistry
             'frequency' => 'every5min',
             'cron' => '*/5 * * * *',
             'expected_interval_minutes' => 5,
+        ],
+        'alerts:escalate' => [
+            'command' => 'alerts:escalate',
+            'description' => 'automations.tasks.alertsEscalate',
+            'category' => 'system',
+            'frequency' => 'every15min',
+            'cron' => '*/15 * * * *',
+            'expected_interval_minutes' => 15,
+        ],
+
+        // ── Registration (abandon onboarding) ─────────────────
+        'registration:detect-abandoned' => [
+            'command' => 'registration:detect-abandoned',
+            'description' => 'automations.tasks.registrationDetectAbandoned',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '0 8 * * *',
+            'expected_interval_minutes' => 1440,
         ],
 
         // ── Email ────────────────────────────────────────────

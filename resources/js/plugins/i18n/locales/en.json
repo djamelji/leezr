@@ -4952,6 +4952,8 @@
       "autoRemind": "Auto-remind documents",
       "fxRatesSync": "FX rates synchronization",
       "alertsEvaluate": "Evaluate platform alerts",
+      "alertsEscalate": "Escalate unhandled alerts",
+      "registrationDetectAbandoned": "Detect abandoned registrations",
       "emailFetchInbox": "Fetch incoming emails",
       "usageCollectSnapshots": "Collect usage snapshots",
       "workflowResetCounters": "Reset workflow daily counters"

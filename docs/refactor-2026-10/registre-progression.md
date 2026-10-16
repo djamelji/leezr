@@ -130,3 +130,25 @@ Faisabilité : **OK** (Chrome système → `channel:'chrome'`, aucun download ; 
 - **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : refactors à risque/décision produit — lots dédiés ultérieurs.
 - **SSL dev ré-émission + rotation secret** : actions ops (root/panneau ISPConfig / fournisseur), hors code.
 - **AR i18n ~96% manquant** : effort de traduction dédié (fallback EN fonctionnel).
+
+---
+
+# Remédiation Finance & Facturation (octobre 2026)
+
+> Déclenchée par `docs/audit-2026-10/10-audit-finance-facturation.md`. Décision produit : essai expiré sans abonnement valide → **accès restreint** (lecture + gestion abo/paiement, pas d'opérations métier ; données conservées ; réactivation automatique + idempotente). Ne jamais confondre suspension de Company et expiration d'abonnement. Pas de prod, pas de `migrate:fresh` distant, pas d'opérations massives sur données réelles, écritures de régularisation traçables.
+
+## LOT 1 — Scheduler : source de vérité cohérente ✅
+**Constat (audit §1)** : `routes/console.php` = 20 `Schedule::command`, `ScheduledTaskRegistry` = 18 → 2 tâches fantômes invisibles du cockpit (`alerts:escalate`, `registration:detect-abandoned`). Commentaire périmé « 14 tasks ».
+
+**Fait :**
+- Ajout des 2 entrées manquantes au `ScheduledTaskRegistry` avec métadonnées exactes (cron/fréquence/intervalle) alignées sur `console.php` (`*/15` escalate, `0 8` detect-abandoned). Commentaire corrigé.
+- Clés i18n fr/en : `automations.tasks.alertsEscalate`, `automations.tasks.registrationDetectAbandoned`.
+- **Test anti-dérive** `ScheduledTaskRegistryConsistencyTest` (4 tests, 143 assertions) : bijection stricte registry ↔ `console.php` + métadonnées complètes. Toute future `Schedule::command` sans entrée registry (ou l'inverse) casse le test.
+- `php artisan schedule:list` confirme les 20 tâches wirées ; le registry en est désormais le miroir 1:1 supervisable depuis `/platform/operations/automations`.
+
+**Ops (hors accès — à exécuter sur dev/prod, commandes + résultat attendu) :**
+Le vrai cron `schedule:run` n'est **pas** installé par `deploy/deploy_release.sh` → `ScheduledTaskRun`=0, `globalHealth()=dead` (mesuré local). Correctif ops durable à poser sur le VPS (crontab de l'utilisateur applicatif) :
+```
+* * * * * cd /var/www/leezr/current && php artisan schedule:run >> /dev/null 2>&1
+```
+Vérification attendue après installation : `php artisan schedule:list` (20 lignes), puis sous 5 min `ScheduledTaskRegistry::globalHealth()['status']` passe de `dead` à `ok`, et le cockpit affiche les runs. **La durabilité réelle ne dépend pas de ce cron** : le LOT 2 ajoute un contrôle à la requête qui empêche un essai expiré de rester actif même scheduler arrêté.
