@@ -71,7 +71,6 @@ declare module 'vue-router/auto-routes' {
     'company-workflows-workflow-create-drawer': RouteRecordInfo<'company-workflows-workflow-create-drawer', '/company/workflows/_WorkflowCreateDrawer', Record<never, never>, Record<never, never>>,
     'company-workflows-id': RouteRecordInfo<'company-workflows-id', '/company/workflows/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce': RouteRecordInfo<'company-workforce', '/company/workforce', Record<never, never>, Record<never, never>>,
-    'company-workforce-compliance-warning-banner': RouteRecordInfo<'company-workforce-compliance-warning-banner', '/company/workforce/_ComplianceWarningBanner', Record<never, never>, Record<never, never>>,
     'company-workforce-workforce-action-card': RouteRecordInfo<'company-workforce-workforce-action-card', '/company/workforce/_WorkforceActionCard', Record<never, never>, Record<never, never>>,
     'company-workforce-workforce-module-card': RouteRecordInfo<'company-workforce-workforce-module-card', '/company/workforce/_WorkforceModuleCard', Record<never, never>, Record<never, never>>,
     'company-workforce-documents': RouteRecordInfo<'company-workforce-documents', '/company/workforce/documents', Record<never, never>, Record<never, never>>,
