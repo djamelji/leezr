@@ -160,6 +160,35 @@ class Company extends Model
         return $this->status === 'suspended';
     }
 
+    /**
+     * The subscription that governs business access right now. Prefers the
+     * flagged current one; otherwise the most recent subscription (so a trial
+     * already flipped to 'expired', is_current=null, still governs access).
+     * Null when the company has no subscription yet (onboarding / implicit free).
+     */
+    public function governingSubscription(): ?Subscription
+    {
+        return $this->subscriptions()
+            ->orderByRaw('CASE WHEN is_current = 1 THEN 0 ELSE 1 END')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Restricted access (product decision, audit 2026-10): an expired trial or a
+     * terminated subscription keeps READ access + billing/payment, but blocks
+     * business operations. Evaluated at request time, so a stopped scheduler can
+     * never leave an expired trial fully active. Reactivation is automatic and
+     * idempotent — once a valid subscription exists again this returns false with
+     * no extra step. Distinct from Company suspension (isSuspended()).
+     */
+    public function hasBusinessAccess(): bool
+    {
+        $sub = $this->governingSubscription();
+
+        return $sub === null || ! $sub->restrictsBusinessAccess();
+    }
+
     public function planLevel(): int
     {
         return PlanRegistry::level(CompanyEntitlements::planKey($this));

@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware(['api', 'auth:sanctum', 'company.context', 'session.governance'])
+            Route::middleware(['api', 'auth:sanctum', 'company.context', 'business.access', 'session.governance'])
                 ->prefix('api')
                 ->group(base_path('routes/company.php'));
 
@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo('/login');
         $middleware->alias([
             'company.context' => \App\Company\Http\Middleware\SetCompanyContext::class,
+            'business.access' => \App\Company\Http\Middleware\EnsureBusinessAccess::class,
             'company.access' => \App\Company\Http\Middleware\EnsureCompanyAccess::class,
             'module.active' => \App\Http\Middleware\EnsureModuleActive::class,
 

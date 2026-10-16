@@ -182,6 +182,11 @@ class Subscription extends Model
 
     // ── Relations ────────────────────────────────────────
 
+    public function invoices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     // ── Scopes ───────────────────────────────────────────
 
     public function scopeIsCurrent(Builder $query): Builder
@@ -235,5 +240,39 @@ class Subscription extends Model
     public function isPendingPayment(): bool
     {
         return $this->status === 'pending_payment';
+    }
+
+    /**
+     * Request-time check: a trial whose window has elapsed, regardless of
+     * whether billing:expire-trials has run yet to flip status to 'expired'.
+     * This is what makes restricted access scheduler-independent — a stopped
+     * cron can no longer leave an expired trial with full business rights.
+     */
+    public function isExpiredTrial(): bool
+    {
+        return $this->status === 'trialing'
+            && $this->trial_ends_at !== null
+            && $this->trial_ends_at->isPast();
+    }
+
+    /**
+     * Does this subscription cut off business operations (restricted access)?
+     *
+     * Restricted when the trial window has elapsed (request-time, see
+     * isExpiredTrial) OR the subscription has reached a terminal/ended state.
+     * NOT restricted for active, past_due (dunning grace handles it), a live
+     * trial, or pre-activation states (pending / pending_payment / rejected)
+     * which are governed by the onboarding flow, not by this gate.
+     *
+     * This is intentionally distinct from Company suspension
+     * (company.status = 'suspended'), which is handled separately.
+     */
+    public function restrictsBusinessAccess(): bool
+    {
+        if ($this->isExpiredTrial()) {
+            return true;
+        }
+
+        return in_array($this->status, ['expired', 'suspended', 'cancelled'], true);
     }
 }

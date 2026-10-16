@@ -152,3 +152,15 @@ Le vrai cron `schedule:run` n'est **pas** installé par `deploy/deploy_release.s
 * * * * * cd /var/www/leezr/current && php artisan schedule:run >> /dev/null 2>&1
 ```
 Vérification attendue après installation : `php artisan schedule:list` (20 lignes), puis sous 5 min `ScheduledTaskRegistry::globalHealth()['status']` passe de `dead` à `ok`, et le cockpit affiche les runs. **La durabilité réelle ne dépend pas de ce cron** : le LOT 2 ajoute un contrôle à la requête qui empêche un essai expiré de rester actif même scheduler arrêté.
+
+## LOT 2 — Essai expiré → accès restreint (exigence dure) ✅
+**Décision produit appliquée** : essai expiré / abonnement terminé → la Company garde **lecture + gestion abo/paiement**, perd les **opérations métier** (écritures). Données conservées. Réactivation **automatique + idempotente**. Distinct de la suspension de Company.
+
+**Fait :**
+- `Subscription::isExpiredTrial()` (statut `trialing` + `trial_ends_at` passé) et `restrictsBusinessAccess()` (essai expiré OU `expired`/`suspended`/`cancelled`). **Contrôle à la requête** : un essai dont la fenêtre est écoulée est restreint **même si le scheduler n'a jamais retourné le statut** → un cron arrêté ne peut plus laisser un essai expiré pleinement actif (corrige la cause T2+T1).
+- `Company::governingSubscription()` (courant, sinon le plus récent → capte un essai déjà basculé `expired`, `is_current=null`) + `Company::hasBusinessAccess()`. Null (pas d'abo) = non restreint (onboarding/free). **Réactivation automatique/idempotente** : la décision est purement dérivée de l'état → dès qu'un abo valide existe, l'accès revient sans étape.
+- Middleware `EnsureBusinessAccess` (`business.access`) dans le groupe `company.context` : lectures (GET/HEAD/OPTIONS) toujours permises ; mutations `billing/*`, `company/plan`, UX/sécurité en allowlist ; **toute autre mutation métier → 402** `subscription_required` + `restricted_access:true` en accès restreint. Séparé de la suspension (403 dans `SetCompanyContext`).
+- Front `api.js` : branche 402 → toast d'avertissement (message backend).
+- Tests `RestrictedBusinessAccessTest` (13) : logique d'état (active/live-trial/essai-expiré-sans-scheduler/flipped-expired/cancelled/past_due/sans-abo), réactivation idempotente, **distinction expiration ≠ suspension**, et intégration HTTP (mutation métier bloquée 402, lecture OK, mutation billing OK, abo actif non bloqué).
+
+**Suite complète : 2972 passed / 12 skipped / 0 échec** (baseline 2955 + 17 nouveaux tests) — gate global sans aucune régression.

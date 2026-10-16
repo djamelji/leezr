@@ -118,6 +118,15 @@ export const $api = ofetch.create({
       return
     }
 
+    // 402 Payment Required — restricted access (expired trial / terminated subscription).
+    // Business operations are paused; reads + billing stay available. Surface the reason.
+    if (status === 402) {
+      if (!options._silent402)
+        toast(response._data?.message || 'Your subscription has expired.', 'warning')
+
+      return
+    }
+
     // 500+ Server errors — prefer backend message when available
     if (status >= 500) {
       toast(response._data?.message || 'An unexpected error occurred. Please try again.', 'error')
