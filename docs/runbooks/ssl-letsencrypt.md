@@ -2,6 +2,22 @@
 
 > Référence d'infrastructure standard. Décision : **ADR-568**. Objectif : renouvellement **automatique et fiable, sans intervention manuelle**, en dev comme en prod.
 
+## 0. ✅ RÉSOLU 2026-10-16 — renouvellement durable rétabli (via CI root)
+
+**Problème** : `dev.leezr.com` expiré depuis le 12/05/2026 (`ERR_CERT_DATE_INVALID`). Diagnostic root (via CI, qui a `sudo` sans mot de passe) :
+- Les certificats **des sites** sont émis par **`acme.sh`** (pas certbot — certbot ne sert que `panel`/`webmail`).
+- **Aucun alias ACME global** en `conf-enabled` → le challenge HTTP-01 n'était servi en statique nulle part (le docroot route vers Laravel) → acme.sh échouait à renouveler.
+
+**Fix appliqué** (`scripts/ssl-ops-dev.sh` via workflow `SSL Ops (dev)`) :
+1. Alias ACME **global** `/etc/apache2/conf-available/000-acme-global.conf` : sert `/.well-known/acme-challenge/` en statique depuis `/var/www/acme-global/` pour **tous** les vhosts (`a2enconf` + reload). *(bénéficie aussi à prod/leezr.com.)*
+2. Ré-émission `acme.sh --issue -d dev.leezr.com -w /var/www/acme-global --server letsencrypt`.
+3. Installation au chemin ISPConfig (`.../web3/ssl/dev.leezr.com-le.{crt,key}`) + `reloadcmd systemctl reload apache2`.
+
+**Résultat vérifié (externe)** : cert Let's Encrypt valide **16/10/2026 → 14/01/2027**, `ssl_verify=0`.
+**Durabilité vérifiée** : cron `acme.sh --cron` quotidien (01:48) actif ; dev enregistré avec `Le_Webroot=/var/www/acme-global` (webroot qui marche) → **renouvellement auto le 16/12/2026**. L'alias global persiste → plus d'expiration.
+
+**Limite (edge case)** : si ISPConfig force une ré-émission avec le webroot du site (routé vers l'app), elle échouerait ; le renouvellement de routine (cron acme.sh) utilise le webroot global et fonctionne. Robustesse maximale = aussi via le toggle panneau (§4).
+
 ## 1. Architecture réelle
 
 | Élément | Valeur |
