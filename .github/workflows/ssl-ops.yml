@@ -1,14 +1,14 @@
 name: SSL Ops (dev)
 
-# Déclenchement manuel uniquement. Exécute une action SSL sur le VPS dev via le CI
-# (qui dispose de sudo sans mot de passe). action=diagnose (défaut, lecture seule) ou action=fix.
+# S'exécute quand scripts/ssl-ops-dev.sh change sur dev (déclenchement contrôlé par le contenu
+# du script). Le CI dispose de sudo sans mot de passe sur le VPS → exécute l'action SSL en root.
+# NE touche jamais main/prod.
 on:
-  workflow_dispatch:
-    inputs:
-      action:
-        description: "diagnose | fix"
-        required: true
-        default: "diagnose"
+  push:
+    branches: [dev]
+    paths:
+      - 'scripts/ssl-ops-dev.sh'
+      - '.github/workflows/ssl-ops.yml'
 
 jobs:
   ssl:
@@ -21,13 +21,10 @@ jobs:
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-      - name: Run SSL ${{ github.event.inputs.action }}
+      - name: Run SSL ops script (root via sudo on VPS)
         run: |
-          SCRIPT="scripts/ssl-diagnose-dev.sh"
-          if [ "${{ github.event.inputs.action }}" = "fix" ]; then SCRIPT="scripts/ssl-fix-dev.sh"; fi
-          echo "→ Running $SCRIPT on dev VPS (as ${{ secrets.VPS_USER }})"
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash -s' < "$SCRIPT"
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash -s' < scripts/ssl-ops-dev.sh
       - name: Cleanup
         if: always()
         run: rm -f ~/.ssh/deploy_key

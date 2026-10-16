@@ -27,3 +27,5 @@ echo ""
 echo "===== ISPConfig: statut SSL/LE du site (si DB lisible) ====="
 sudo mysql --defaults-extra-file=/usr/local/ispconfig/server/lib/mysql_clientdb.conf -N -e "SELECT domain,ssl,ssl_letsencrypt FROM dbispconfig.web_domain WHERE domain='dev.leezr.com';" 2>/dev/null || echo "(DB ISPConfig non interrogeable ainsi)"
 echo "===== FIN DIAGNOSTIC ====="
+
+echo "RUN_MARKER: diagnose-v1"
