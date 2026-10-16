@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Roles\UseCases;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Platform\Models\PlatformRole;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpsertPlatformRoleUseCase
@@ -24,21 +25,23 @@ class UpsertPlatformRoleUseCase
 
     private function create(array $validated): PlatformRole
     {
-        $role = PlatformRole::create([
-            'key' => $validated['key'],
-            'name' => $validated['name'],
-        ]);
+        return DB::transaction(function () use ($validated) {
+            $role = PlatformRole::create([
+                'key' => $validated['key'],
+                'name' => $validated['name'],
+            ]);
 
-        if (isset($validated['permissions'])) {
-            $role->permissions()->sync($validated['permissions']);
-        }
+            if (isset($validated['permissions'])) {
+                $role->permissions()->sync($validated['permissions']);
+            }
 
-        $this->audit->logPlatform(
-            AuditAction::ROLE_CREATED, 'platform_role', (string) $role->id,
-            ['diffAfter' => $role->only('key', 'name')],
-        );
+            $this->audit->logPlatform(
+                AuditAction::ROLE_CREATED, 'platform_role', (string) $role->id,
+                ['diffAfter' => $role->only('key', 'name')],
+            );
 
-        return $role->loadCount('users')->load('permissions');
+            return $role->loadCount('users')->load('permissions');
+        });
     }
 
     private function update(int $id, array $validated): PlatformRole
@@ -51,22 +54,24 @@ class UpsertPlatformRoleUseCase
             ]);
         }
 
-        $before = $role->only('key', 'name');
+        return DB::transaction(function () use ($role, $validated) {
+            $before = $role->only('key', 'name');
 
-        $fields = array_intersect_key($validated, array_flip(['key', 'name']));
-        if (! empty($fields)) {
-            $role->update($fields);
-        }
+            $fields = array_intersect_key($validated, array_flip(['key', 'name']));
+            if (! empty($fields)) {
+                $role->update($fields);
+            }
 
-        if (array_key_exists('permissions', $validated)) {
-            $role->permissions()->sync($validated['permissions']);
-        }
+            if (array_key_exists('permissions', $validated)) {
+                $role->permissions()->sync($validated['permissions']);
+            }
 
-        $this->audit->logPlatform(
-            AuditAction::ROLE_UPDATED, 'platform_role', (string) $role->id,
-            ['diffBefore' => $before, 'diffAfter' => $role->only('key', 'name')],
-        );
+            $this->audit->logPlatform(
+                AuditAction::ROLE_UPDATED, 'platform_role', (string) $role->id,
+                ['diffBefore' => $before, 'diffAfter' => $role->only('key', 'name')],
+            );
 
-        return $role->loadCount('users')->load('permissions');
+            return $role->loadCount('users')->load('permissions');
+        });
     }
 }
