@@ -1,24 +1,21 @@
 #!/usr/bin/env bash
-# VÉRIFICATION durabilité SSL (dev + prod) — LECTURE SEULE. Ne ré-émet jamais (pas de --force,
-# pas de quota Let's Encrypt). Confirme : cron acme.sh + webroots de renouvellement + certs servis.
-# Le fix a été appliqué via les itérations précédentes (alias ACME global + webroots → /var/www/acme-global).
+# DIAGNOSTIC (lecture seule) : comment l'interface ISPConfig et panel.* sont servis,
+# pour donner un cert valide + auto-renouvelé à panel.leezr.com sans casser l'accès panneau.
 set +e
-echo "===== cron acme.sh (moteur de renouvellement auto) ====="
-sudo crontab -l 2>/dev/null | grep -iE "acme" || echo "(cron acme introuvable)"
+echo "===== vhost de l'interface ISPConfig (ServerName/port/cert) ====="
+sudo grep -rniE "ServerName|ServerAlias|Listen|SSLCertificateFile|SSLCertificateKeyFile|VirtualHost" \
+  /etc/apache2/sites-enabled/*ispconfig* /etc/apache2/sites-available/ispconfig.vhost 2>/dev/null | head -25
 echo ""
-echo "===== acme.sh --list (domaines + dates de renouvellement) ====="
-sudo /root/.acme.sh/acme.sh --list 2>/dev/null
+echo "===== tout vhost mentionnant panel.leezr.com ou panel.novamoov.com ====="
+sudo grep -rlniE "panel.leezr.com|panel.novamoov.com" /etc/apache2/sites-enabled/ /etc/apache2/sites-available/ 2>/dev/null
+sudo grep -rniE "ServerName|ServerAlias" /etc/apache2/sites-enabled/ 2>/dev/null | grep -iE "panel" | head
 echo ""
-echo "===== alias ACME global (sert le challenge pour TOUS les vhosts) ====="
-ls -la /etc/apache2/conf-enabled/000-acme-global.conf 2>/dev/null && echo "actif" || echo "ABSENT"
+echo "===== vhost par défaut (celui qui répond à panel.leezr.com actuellement) ====="
+sudo apache2ctl -S 2>/dev/null | grep -iE "default server|namevhost|:443|:8080" | head -15
 echo ""
-for C in /root/.acme.sh/dev.leezr.com/dev.leezr.com.conf /root/.acme.sh/leezr.com_ecc/leezr.com.conf; do
-  echo "--- $(basename $(dirname "$C")) : webroot de renouvellement ---"
-  sudo grep -hiE "Le_Webroot|Le_NextRenewTimeStr" "$C" 2>/dev/null | sed "s#$(printf '\t')# #g"
-done
+echo "===== acme.sh : panel.* déjà géré ? ====="
+sudo /root/.acme.sh/acme.sh --list 2>/dev/null | grep -iE "Main_Domain|panel|leezr|novamoov"
 echo ""
-echo "===== certs servis (local) ====="
-for D in dev.leezr.com leezr.com; do
-  printf "%-16s " "$D"; echo | openssl s_client -servername "$D" -connect 127.0.0.1:443 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null
-done
-echo "RUN_MARKER: verify-safe-v1"
+echo "===== certbot (interface ISPConfig) ====="
+sudo certbot certificates 2>/dev/null | grep -iE "Certificate Name|Domains|Expiry" | head
+echo "RUN_MARKER: panel-diag-v1"
