@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Platform\Automations\Http;
+namespace App\Modules\Infrastructure\System\Http;
 
 use App\Core\Automation\ScheduledTaskRegistry;
 use Illuminate\Http\JsonResponse;
@@ -9,8 +9,12 @@ use Illuminate\Routing\Controller;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * External scheduler-liveness endpoint (GET /health/scheduler), for an INDEPENDENT
+ * External scheduler-liveness probe (GET /health/scheduler), for an INDEPENDENT
  * off-host uptime monitor — a fully stopped scheduler cannot raise its own in-app alert.
+ *
+ * This is a system health endpoint (sibling of HealthController), intentionally public
+ * and NOT module-gated — external monitors carry no session/module context. It lives in
+ * Infrastructure\System so it is exempt from the module-activation invariant.
  *
  * Security: token-gated (config automations.monitor_token). When no token is configured
  * the endpoint is DISABLED (404) so it is never exposed unauthenticated. No sensitive

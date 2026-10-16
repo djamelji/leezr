@@ -2,7 +2,7 @@
 
 use App\Modules\Infrastructure\System\Http\HealthController;
 use App\Modules\Infrastructure\System\Http\StorageFileController;
-use App\Modules\Platform\Automations\Http\SchedulerHealthEndpointController;
+use App\Modules\Infrastructure\System\Http\SchedulerHealthEndpointController;
 use Illuminate\Support\Facades\Route;
 
 // Health endpoint (ADR-046 F4) — public, no auth, no-cache headers
