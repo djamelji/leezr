@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\UseCases;
 use App\Core\Audit\AuditLogger;
 use App\Core\Workforce\PayrollCalculation;
 use App\Core\Workforce\PayrollRun;
+use Illuminate\Support\Facades\DB;
 
 class ValidatePayrollUseCase
 {
@@ -48,16 +49,21 @@ class ValidatePayrollUseCase
             );
         }
 
-        $run->transitionTo(PayrollRun::STATUS_VALIDATED);
-        $run->validated_by = $actorId;
-        $run->validated_at = now();
-        $run->validation_note = $validationNote;
-        $run->save();
+        // Atomicité : le run passe à VALIDATED et ses calculations aussi, ensemble.
+        // Sinon un échec partiel laisse un run validé avec des calculations 'computed'
+        // → DSN inexportable (invariant aval). (harmonisation oct 2026)
+        DB::transaction(function () use ($run, $actorId, $validationNote) {
+            $run->transitionTo(PayrollRun::STATUS_VALIDATED);
+            $run->validated_by = $actorId;
+            $run->validated_at = now();
+            $run->validation_note = $validationNote;
+            $run->save();
 
-        // Mark all calculations as validated (Phase 3 — ADR-496)
-        PayrollCalculation::withoutGlobalScopes()
-            ->whereIn('payroll_line_id', $run->lines()->pluck('id'))
-            ->update(['status' => PayrollCalculation::STATUS_VALIDATED]);
+            // Mark all calculations as validated (Phase 3 — ADR-496)
+            PayrollCalculation::withoutGlobalScopes()
+                ->whereIn('payroll_line_id', $run->lines()->pluck('id'))
+                ->update(['status' => PayrollCalculation::STATUS_VALIDATED]);
+        });
 
         app(AuditLogger::class)->logCompany(
             companyId: $run->company_id,

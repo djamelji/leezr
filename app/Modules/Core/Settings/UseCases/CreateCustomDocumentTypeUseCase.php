@@ -4,6 +4,7 @@ namespace App\Modules\Core\Settings\UseCases;
 
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -29,29 +30,35 @@ class CreateCustomDocumentTypeUseCase
             $suffix++;
         }
 
-        // 3. Create DocumentType
-        $type = DocumentType::create([
-            'company_id' => $data->company->id,
-            'code' => $code,
-            'scope' => $data->scope,
-            'label' => $data->label,
-            'is_system' => false,
-            'default_order' => $data->order,
-            'requires_expiration' => $data->requiresExpiration,
-            'validation_rules' => [
-                'max_file_size_mb' => $data->maxFileSizeMb,
-                'accepted_types' => $data->acceptedTypes,
-            ],
-        ]);
+        // 3+4. Atomicité : le type et son activation auto sont créés ensemble.
+        // Sinon un échec partiel laisse un type orphelin sans activation
+        // (invisible/inutilisable), et le retry génère un nouveau code → doublons.
+        $type = DB::transaction(function () use ($data, $code) {
+            $type = DocumentType::create([
+                'company_id' => $data->company->id,
+                'code' => $code,
+                'scope' => $data->scope,
+                'label' => $data->label,
+                'is_system' => false,
+                'default_order' => $data->order,
+                'requires_expiration' => $data->requiresExpiration,
+                'validation_rules' => [
+                    'max_file_size_mb' => $data->maxFileSizeMb,
+                    'accepted_types' => $data->acceptedTypes,
+                ],
+            ]);
 
-        // 4. Auto-create activation (enabled by default)
-        DocumentTypeActivation::create([
-            'company_id' => $data->company->id,
-            'document_type_id' => $type->id,
-            'enabled' => true,
-            'required_override' => $data->required,
-            'order' => $data->order,
-        ]);
+            // Auto-create activation (enabled by default)
+            DocumentTypeActivation::create([
+                'company_id' => $data->company->id,
+                'document_type_id' => $type->id,
+                'enabled' => true,
+                'required_override' => $data->required,
+                'order' => $data->order,
+            ]);
+
+            return $type;
+        });
 
         return new CreateCustomDocumentTypeResult(
             id: $type->id,
