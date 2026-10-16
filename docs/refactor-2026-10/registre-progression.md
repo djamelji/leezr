@@ -303,3 +303,10 @@ Travail sur anomalies **déjà identifiées** (pas de nouvel audit).
 **Anomalie infra signalée (hors scope)** : des dossiers de release format court `20261016_*` appartenant à **web2** présents dans le chemin releases de **web3** (c'est eux qui portent l'ancienne erreur seed, pas la release web3 servie). À investiguer côté ops.
 
 **PROD non touchée** (`main` inchangé à `18b56f8`).
+
+## LOT 7 — Traductions billing.tax_exemption.* (local, NON poussé) ✅
+**Énumération métier** : `TaxContextResolver` n'émet que **2 motifs** d'exonération : `export_extra_eu` et `reverse_charge_intra_eu` (sinon `null` → aucun bandeau). Confirmé par grep exhaustif (`exemptionReason: '…'`).
+**Constat** : les 4 clés (`reverse_charge_intra_eu`, `export_extra_eu`, + `_short`) existent déjà en **FR** (avec réf. légale « art. 283-2 CGI ») et **EN**, et résolvent correctement (pas d'objet `billing` imbriqué en collision). Le « risque clé dynamique sans traduction » du registre n'est donc **pas** réalisé. Seul **AR** était absent (retombait sur EN via `fallbackLocale`).
+**Correctif (sans inventer de règle fiscale)** : ajout des **4 clés en AR** (traduction du sens existant autoliquidation/export, réf. légale conservée telle quelle). `fr`/`en` inchangés.
+**Test** `TaxExemptionI18nCoverageTest` (2) : énumère les motifs depuis la source backend + exige une clé non vide dans **chaque** locale (en/fr/ar) → tout futur motif non traduit casse le test.
+**Build clean.** Non poussé (en attente de validation, consigne).
