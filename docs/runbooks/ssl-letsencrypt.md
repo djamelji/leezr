@@ -16,7 +16,19 @@
 **Résultat vérifié (externe)** : cert Let's Encrypt valide **16/10/2026 → 14/01/2027**, `ssl_verify=0`.
 **Durabilité vérifiée** : cron `acme.sh --cron` quotidien (01:48) actif ; dev enregistré avec `Le_Webroot=/var/www/acme-global` (webroot qui marche) → **renouvellement auto le 16/12/2026**. L'alias global persiste → plus d'expiration.
 
-**Limite (edge case)** : si ISPConfig force une ré-émission avec le webroot du site (routé vers l'app), elle échouerait ; le renouvellement de routine (cron acme.sh) utilise le webroot global et fonctionne. Robustesse maximale = aussi via le toggle panneau (§4).
+**PROD leezr.com (+ www) — même correctif appliqué & vérifié** : son webroot acme.sh était
+`/usr/local/ispconfig/interface/acme` (non servi) → re-pointé vers `/var/www/acme-global` (servi
+par l'alias global, prouvé par selftest sur leezr.com ET www.leezr.com). **Renouvellement réel
+exécuté avec succès** (acme.sh ECC via le webroot) → cert `leezr.com` valide jusqu'au **14/01/2027**,
+installé sur web2, Apache rechargé. Renouvellement auto prévu **16/12/2026**.
+
+**État final (vérifié externe)** : `dev.leezr.com`, `leezr.com`, `www.leezr.com` → tous valides
+14/01/2027, `ssl_verify=0`. Les deux certs : `Le_Webroot=/var/www/acme-global`, cron acme.sh
+quotidien actif → **renouvellement automatique durable pour dev ET prod**.
+
+**Limite (edge case)** : si ISPConfig force une ré-émission avec le webroot du site (routé vers
+l'app), elle échouerait ; le renouvellement de routine (cron acme.sh) utilise désormais le webroot
+global et fonctionne. Robustesse maximale = aussi via le toggle panneau (§4).
 
 ## 1. Architecture réelle
 
