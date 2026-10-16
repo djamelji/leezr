@@ -5,6 +5,7 @@ namespace App\Modules\Core\Billing\UseCases;
 use App\Core\Billing\Adapters\StripePaymentAdapter;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Models\Company;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,16 +51,20 @@ class DeletePaymentMethodUseCase
             }
         }
 
+        // Atomicité : suppression + promotion du suivant ensemble (sinon zéro moyen par défaut).
+        // Le détach Stripe (ci-dessus) reste best-effort hors transaction (appel externe).
         $wasDefault = $profile->is_default;
-        $profile->delete();
+        DB::transaction(function () use ($profile, $wasDefault, $company) {
+            $profile->delete();
 
-        // Promote next card if deleted was default
-        if ($wasDefault) {
-            CompanyPaymentProfile::where('company_id', $company->id)
-                ->orderBy('id')
-                ->first()
-                ?->update(['is_default' => true]);
-        }
+            // Promote next card if deleted was default
+            if ($wasDefault) {
+                CompanyPaymentProfile::where('company_id', $company->id)
+                    ->orderBy('id')
+                    ->first()
+                    ?->update(['is_default' => true]);
+            }
+        });
 
         return ['success' => true, 'message' => 'Card removed.', 'code' => 200];
     }

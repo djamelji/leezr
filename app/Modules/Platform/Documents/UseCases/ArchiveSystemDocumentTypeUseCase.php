@@ -6,6 +6,7 @@ use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ADR-182: Archive a system document type.
@@ -25,13 +26,14 @@ class ArchiveSystemDocumentTypeUseCase
             ->whereNull('archived_at')
             ->findOrFail($data->id);
 
-        // 1. Archive
-        $type->update(['archived_at' => now()]);
+        // 1+2. Atomicité : archive du type + désactivation des activations ensemble.
+        $disabledCount = DB::transaction(function () use ($type) {
+            $type->update(['archived_at' => now()]);
 
-        // 2. Disable all company activations
-        $disabledCount = DocumentTypeActivation::where('document_type_id', $type->id)
-            ->where('enabled', true)
-            ->update(['enabled' => false]);
+            return DocumentTypeActivation::where('document_type_id', $type->id)
+                ->where('enabled', true)
+                ->update(['enabled' => false]);
+        });
 
         // 3. Audit
         app(AuditLogger::class)->logPlatform(

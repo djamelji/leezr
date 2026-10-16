@@ -7,6 +7,7 @@ use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\MemberDocument;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -43,13 +44,15 @@ class DeleteCustomDocumentTypeUseCase
             ]);
         }
 
-        // 5. Cascade-delete requests (ephemeral invitations) + activations + type
-        DocumentRequest::where('document_type_id', $type->id)->delete();
+        // 5. Cascade-delete requests (ephemeral invitations) + activations + type — atomique
+        DB::transaction(function () use ($type, $data) {
+            DocumentRequest::where('document_type_id', $type->id)->delete();
 
-        DocumentTypeActivation::where('company_id', $data->company->id)
-            ->where('document_type_id', $type->id)
-            ->delete();
+            DocumentTypeActivation::where('company_id', $data->company->id)
+                ->where('document_type_id', $type->id)
+                ->delete();
 
-        $type->delete();
+            $type->delete();
+        });
     }
 }

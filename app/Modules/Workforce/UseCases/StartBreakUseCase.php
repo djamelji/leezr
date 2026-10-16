@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\UseCases;
 use App\Core\Audit\AuditLogger;
 use App\Core\Workforce\TimeEntry;
 use App\Core\Workforce\TimeEntryBreak;
+use Illuminate\Support\Facades\DB;
 
 class StartBreakUseCase
 {
@@ -25,15 +26,19 @@ class StartBreakUseCase
             throw new \DomainException('A break is already in progress.');
         }
 
-        $entry->transitionTo(TimeEntry::STATUS_ON_BREAK);
-        $entry->save();
+        // Atomicité : passage ON_BREAK + ouverture de la pause ensemble.
+        // Sinon un échec laisse l'entrée bloquée en ON_BREAK sans pause ouverte.
+        $break = DB::transaction(function () use ($entry, $type) {
+            $entry->transitionTo(TimeEntry::STATUS_ON_BREAK);
+            $entry->save();
 
-        $break = TimeEntryBreak::create([
-            'company_id' => $entry->company_id,
-            'time_entry_id' => $entry->id,
-            'start_at' => now(),
-            'type' => $type,
-        ]);
+            return TimeEntryBreak::create([
+                'company_id' => $entry->company_id,
+                'time_entry_id' => $entry->id,
+                'start_at' => now(),
+                'type' => $type,
+            ]);
+        });
 
         app(AuditLogger::class)->logCompany(
             companyId: $entry->company_id,

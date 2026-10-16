@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\UseCases;
 use App\Core\Audit\AuditLogger;
 use App\Core\Workforce\TimeEntry;
 use App\Core\Workforce\TimeEntryBreak;
+use Illuminate\Support\Facades\DB;
 
 class EndBreakUseCase
 {
@@ -20,12 +21,16 @@ class EndBreakUseCase
             throw new \DomainException('No open break found.');
         }
 
-        $openBreak->end_at = now();
-        $openBreak->computeDuration();
-        $openBreak->save();
+        // Atomicité : clôture de la pause + retour WORKING ensemble.
+        // Sinon pause clôturée mais entrée toujours ON_BREAK → état bloqué (re-run: "No open break").
+        DB::transaction(function () use ($openBreak, $entry) {
+            $openBreak->end_at = now();
+            $openBreak->computeDuration();
+            $openBreak->save();
 
-        $entry->transitionTo(TimeEntry::STATUS_WORKING);
-        $entry->save();
+            $entry->transitionTo(TimeEntry::STATUS_WORKING);
+            $entry->save();
+        });
 
         app(AuditLogger::class)->logCompany(
             companyId: $entry->company_id,

@@ -4,6 +4,7 @@ namespace App\Modules\Core\Settings\UseCases;
 
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -30,12 +31,13 @@ class ArchiveCustomDocumentTypeUseCase
             ]);
         }
 
-        // 4. Archive
-        $type->update(['archived_at' => now()]);
+        // 4+5. Atomicité : archive du type + désactivation de l'activation ensemble.
+        DB::transaction(function () use ($type, $data) {
+            $type->update(['archived_at' => now()]);
 
-        // 5. Disable activation
-        DocumentTypeActivation::where('company_id', $data->company->id)
-            ->where('document_type_id', $type->id)
-            ->update(['enabled' => false]);
+            DocumentTypeActivation::where('company_id', $data->company->id)
+                ->where('document_type_id', $type->id)
+                ->update(['enabled' => false]);
+        });
     }
 }

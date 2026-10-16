@@ -4,6 +4,7 @@ namespace App\Modules\Platform\Markets\UseCases;
 
 use App\Core\Markets\Market;
 use App\Core\Markets\MarketRegistry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class SetDefaultMarketUseCase
@@ -18,9 +19,11 @@ class SetDefaultMarketUseCase
             ]);
         }
 
-        // Invariant: only one default market
-        Market::where('is_default', true)->update(['is_default' => false]);
-        $market->update(['is_default' => true]);
+        // Invariant: only one default market — flip atomique (sinon zéro défaut si échec partiel)
+        DB::transaction(function () use ($market) {
+            Market::where('is_default', true)->update(['is_default' => false]);
+            $market->update(['is_default' => true]);
+        });
 
         MarketRegistry::clearCache();
 

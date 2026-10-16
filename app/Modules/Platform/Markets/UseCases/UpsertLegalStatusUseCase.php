@@ -4,6 +4,7 @@ namespace App\Modules\Platform\Markets\UseCases;
 
 use App\Core\Markets\LegalStatus;
 use App\Core\Markets\Market;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpsertLegalStatusUseCase
@@ -13,6 +14,8 @@ class UpsertLegalStatusUseCase
         // Enforce VAT rules: if not VAT-applicable, vat_rate must be null
         $vatRate = $data->isVatApplicable ? ($data->vatRate ?? 0) : null;
 
+        // Atomicité : flip du défaut (frères) + update/create du statut ensemble.
+        return DB::transaction(function () use ($data, $vatRate) {
         if ($data->id) {
             // Update
             $status = LegalStatus::findOrFail($data->id);
@@ -76,5 +79,6 @@ class UpsertLegalStatusUseCase
         }
 
         return $status;
+        });
     }
 }
