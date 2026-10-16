@@ -61,11 +61,44 @@
 
 **Résultat des scans :** API URLs = 0 endpoint cassé restant (jobdomains corrigé L5) · i18n = 78/79 corrigées · transactions = 11/14 corrigées (L4+L9+L10).
 
-### Anomalies confirmées NON corrigées (DEFER avec justification — gating criterion #6)
-- **Transactions #3 GenerateDocument, #10 UploadOwnDocument** : I/O fichier (vault/Storage) interleavé avec les écritures DB → wrapper une transaction autour d'un `Storage::` est incorrect (fichier non rollback). Fixable par **réordonnancement** (écrire le fichier d'abord, wrapper uniquement les 2 écritures DB) — à faire avec vérification runtime. Risque P3, atténué par idempotency key / re-upload idempotent.
-- **Transaction #9 UpdateDocumentTemplate** : possède déjà un rollback manuel partiel ; gain marginal, à harmoniser avec les autres ultérieurement.
-- **billing.tax_exemption.\*** : clés i18n **dynamiques** (préfixe + variable) → nécessite l'énumération des motifs d'exonération (donnée métier).
-- **AR i18n ~96 % manquant** : effort de traduction dédié (fallback EN fonctionnel).
+### Phase finale — validation fonctionnelle (L11-L12)
+
+| Lot | Commit | Objet | Tests |
+|---|---|---|---|
+| L11 | `29896cc` | Atomicité DB documents #3/#10 (étude idempotence : fichier écrit en amont, tx purement DB) | 228✓ |
+| L12 | `30fd853` | Atomicité versioning template #9 (remplace rollback manuel partiel) | 44✓ |
+
+→ **14/14 cas d'atomicité du scan désormais traités** (L4 + L9 + L10 + L11 + L12).
+
+### Matrice des parcours vérifiés (preuve d'exécution — tests Feature)
+
+| Espace · parcours | Résultat |
+|---|---|
+| PLATFORM · auth/users/companies | 22✓ |
+| PLATFORM · jobdomains/markets/roles | 57✓ (1 skip) |
+| PLATFORM · billing/paiements/coupons | 110✓ |
+| PLATFORM · documents/i18n/ai/doc | 68✓ |
+| COMPANY · auth/register/2FA | 105✓ |
+| COMPANY · billing/abonnement/paiement | 653✓ |
+| COMPANY · modules/membres/RBAC | 550✓ (2 skip) |
+| COMPANY · documents/logistics/workflows/support | 401✓ |
+| WORKFORCE · employés/contrats/org | 69✓ |
+| WORKFORCE · temps/congés/planning | 87✓ |
+| WORKFORCE · paie/DSN/bulletins | 533✓ |
+| EMPLOYEE · self-service/pointage | 19✓ |
+| TRANSVERSE · multi-tenant/sécurité | 45✓ (en classes isolées ; le filtre large affiche un faux-échec = contamination cross-classes connue, cf. ci-dessous) |
+| **SUITE COMPLÈTE** | **2955✓ / 12 skip / 0 échec** |
+
+### Limites de couverture (honnêteté)
+- **Pas de navigateur** → validation UI live (rendu, console, réseau) NON exécutée ; couverture via tests Feature HTTP + build.
+- **Pas de runner de test JS** (ni vitest ni jest) → les corrections frontend (i18n, debounce, client API) sont validées par le build + revue de code, pas par test unitaire JS.
+- **Artefact de tests connu** : un `php artisan test --filter` large à travers de nombreuses classes produit des faux-échecs (`UniqueConstraintViolationException jobdomains.key` dans des setUp multiples). **La suite complète** (RefreshDatabase isole chaque classe) passe à 2955 — c'est le juge de vérité. (Optimisation paratest/sleep = axe perf séparé, non bloquant.)
+
+### Anomalies confirmées NON corrigées (gating criterion #6 — réel blocage / produit / externe)
+- **billing.tax_exemption.\*** : clés i18n **dynamiques** (préfixe + variable) → nécessite l'énumération métier des motifs d'exonération (donnée produit).
+- **AR i18n ~96 % manquant** : effort de **traduction** dédié (fallback EN fonctionnel).
+- **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : **décisions produit / refactors structurels** hors périmètre « harmonisation de l'existant ».
+- **Rotation secret `@Crinshow31`, ré-émission SSL dev, backups/monitoring** : **opérations externes** (root/panneau ISPConfig/fournisseur) — impossibles avec les accès actuels.
 - **Endpoints jobdomains inline (createField/deleteField/createDocumentType)** : appelés par `platform/jobdomains/[id].vue` mais pointent vers des routes 404/405 → **feature cassée au runtime** (pas du code mort). Fix = corriger les routes/endpoints backend + test manuel de la page (navigateur indisponible). Risque de régression si corrigé à l'aveugle → différé, à faire avec vérification end-to-end.
 - **Bandeau conformité mort** (`company/workforce/index.vue:225`) : `complianceWarnings` jamais peuplé → bannière jamais affichée. Retrait cosmétique différé (aucun impact visuel actuel).
 - **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : refactors à risque/décision produit — lots dédiés ultérieurs.
