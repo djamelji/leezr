@@ -290,3 +290,16 @@ Travail sur anomalies **déjà identifiées** (pas de nouvel audit).
 **#3/#7 Note périmée corrigée — endpoints jobdomains** : le registre indiquait « createField/deleteField/createDocumentType → 404/405, feature cassée ». **Vérifié faux aujourd'hui** : `POST/DELETE /field-definitions` (routes 206/208) et `POST /documents` (route 276) **existent, sont routés et testés** (`FieldDefinitionTest`, `PlatformDocumentTypeCatalogTest`, `CustomDocumentTypeTest`). Fonctionnel pour les admins plateforme (super_admin = toutes permissions). Résiduel documenté : couplage ACL — la page jobdomains (`manage_jobdomains`) consomme des endpoints gardés par `manage_field_definitions`/`manage_document_catalog` ; sans effet tant que les admins sont super_admin, à harmoniser (bundle) si des rôles plateforme scopés sont introduits.
 
 **Prochain lot d'harmonisation recommandé** : traductions — soit l'énumération métier des motifs `billing.tax_exemption.*` (clés dynamiques), soit l'effort AR (~96% manquant, fallback EN fonctionnel) ; priorité moyenne, sans risque structurel.
+
+## LOT 6 — Endpoint santé : grâce au démarrage + déploiement STAGING ✅
+**Correctif** : `unknown` n'est plus présenté comme sain. Ancre `installed_at` (créée paresseusement ≈ temps de déploiement) → fenêtre de grâce (`heartbeat_grace_seconds`, défaut 600 s) : sans heartbeat **dans** la grâce → `starting` (HTTP 200, `healthy:false`, ne pas alerter) ; **au-delà** sans heartbeat → `dead` (HTTP 503, alerter). Contrat HTTP documenté (runbook). Token `hash_equals` + jamais loggué + absence→404 (en-tête préféré pour éviter le token dans les logs d'accès).
+**Tests** : suite complète **3018 / 0 échec**.
+**Déployé STAGING** (commit `e55cc20`, release `20261016223558_e55cc20`) — vérifié en réel :
+- `/up`=200 ; endpoint externe **404 sans token / token invalide** (sécurisé, token non configuré = action ops).
+- **Heartbeat OK** : `health=ok` (beat ~50 s) avec `last_activity_at=null` + `business_runs_recorded=false` → distinction « scheduler actif, aucune tâche métier encore exécutée » prouvée en live ; puis `business_runs=4` accumulés, `health=ok`.
+- **DevSeeder sans erreur** sur la release servie (fix `copySeedFixtures` déployé, 0 `UnableToCreateDirectory` pour `223558`). Fichiers seed présents.
+- heartbeat singleton (1 ligne), 0 alerte active, 0 `scheduler_silent`, 0 tâche désactivée, aucune erreur app.
+
+**Anomalie infra signalée (hors scope)** : des dossiers de release format court `20261016_*` appartenant à **web2** présents dans le chemin releases de **web3** (c'est eux qui portent l'ancienne erreur seed, pas la release web3 servie). À investiguer côté ops.
+
+**PROD non touchée** (`main` inchangé à `18b56f8`).
