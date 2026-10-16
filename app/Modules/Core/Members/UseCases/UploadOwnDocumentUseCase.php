@@ -11,6 +11,7 @@ use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Storage\StorageQuotaService;
 use App\Jobs\Documents\ProcessDocumentAiJob;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -111,40 +112,48 @@ class UploadOwnDocumentUseCase
         // 9. Store new file
         $path = $data->file->store("documents/{$data->company->id}/{$data->user->id}", 'local');
 
-        // 10. Upsert MemberDocument
-        $document = MemberDocument::updateOrCreate(
-            [
-                'company_id' => $data->company->id,
-                'user_id' => $data->user->id,
-                'document_type_id' => $type->id,
-            ],
-            [
-                'file_path' => $path,
-                'file_name' => $data->file->getClientOriginalName(),
-                'file_size_bytes' => $fileSizeBytes,
-                'mime_type' => $data->file->getMimeType(),
-                'uploaded_by' => $data->user->id,
-                'expires_at' => $data->expiresAt,
-                'ai_status' => 'pending',
-            ],
-        );
+        // 10+11. Atomicité : le MemberDocument (coffre) et l'état DocumentRequest=submitted
+        // sont écrits ensemble. Le fichier est déjà stocké en amont (étape 9) — aucune écriture
+        // Storage dans la transaction. Les deux updateOrCreate sont idempotents (clés company/user/type)
+        // → un retour arrière DB laisse au pire un fichier orphelin récupérable au re-upload idempotent,
+        // mais évite la désynchro (doc stocké sans soumission visible par l'admin).
+        $document = DB::transaction(function () use ($data, $type, $path, $fileSizeBytes) {
+            $document = MemberDocument::updateOrCreate(
+                [
+                    'company_id' => $data->company->id,
+                    'user_id' => $data->user->id,
+                    'document_type_id' => $type->id,
+                ],
+                [
+                    'file_path' => $path,
+                    'file_name' => $data->file->getClientOriginalName(),
+                    'file_size_bytes' => $fileSizeBytes,
+                    'mime_type' => $data->file->getMimeType(),
+                    'uploaded_by' => $data->user->id,
+                    'expires_at' => $data->expiresAt,
+                    'ai_status' => 'pending',
+                ],
+            );
 
-        // 11. Update DocumentRequest workflow (ADR-176)
-        DocumentRequest::updateOrCreate(
-            [
-                'company_id' => $data->company->id,
-                'user_id' => $data->user->id,
-                'document_type_id' => $type->id,
-            ],
-            [
-                'status' => DocumentRequest::STATUS_SUBMITTED,
-                'submitted_at' => now(),
-                'requested_at' => now(),
-                'reviewer_id' => null,
-                'review_note' => null,
-                'reviewed_at' => null,
-            ],
-        );
+            // Update DocumentRequest workflow (ADR-176)
+            DocumentRequest::updateOrCreate(
+                [
+                    'company_id' => $data->company->id,
+                    'user_id' => $data->user->id,
+                    'document_type_id' => $type->id,
+                ],
+                [
+                    'status' => DocumentRequest::STATUS_SUBMITTED,
+                    'submitted_at' => now(),
+                    'requested_at' => now(),
+                    'reviewer_id' => null,
+                    'review_note' => null,
+                    'reviewed_at' => null,
+                ],
+            );
+
+            return $document;
+        });
 
         // 12. ADR-389: Notify admin users that a document was submitted for review
         $adminUserIds = Membership::where('company_id', $data->company->id)

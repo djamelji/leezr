@@ -12,6 +12,7 @@ use App\Core\Documents\Services\DocumentVariableResolver;
 use App\Core\Models\Company;
 use App\Core\Modules\ModuleGate;
 use App\Core\Workforce\Employee;
+use Illuminate\Support\Facades\DB;
 use App\Core\Workforce\EmploymentContract;
 use Illuminate\Database\Eloquent\Model;
 
@@ -94,35 +95,45 @@ class GenerateDocumentUseCase
             return $existing;
         }
 
-        // Create MemberDocument in vault for employee/contract subjects (or forced)
-        $memberDocumentId = null;
-        if (in_array($subjectType, self::VAULT_SUBJECTS, true) || $forceVault) {
-            $memberDocumentId = $this->createMemberDocument($subjectType, $subject, $companyId, $result);
+        // Atomicité : l'entrée coffre (MemberDocument) et le GeneratedDocument de suivi
+        // sont créés ensemble. Le PDF est déjà écrit en amont (dans $result) — aucune
+        // écriture Storage ici, seulement du DB → transaction sûre. Évite un MemberDocument
+        // orphelin en cas d'échec, et le retry re-créerait un doublon (createMemberDocument
+        // utilise create(), non idempotent) que ce wrap empêche.
+        $doc = DB::transaction(function () use (
+            $subjectType, $forceVault, $subject, $companyId, $result,
+            $template, $subjectId, $actorId, $snapshot, $idempotencyKey, $extraMetadata
+        ) {
+            // Create MemberDocument in vault for employee/contract subjects (or forced)
+            $memberDocumentId = null;
+            if (in_array($subjectType, self::VAULT_SUBJECTS, true) || $forceVault) {
+                $memberDocumentId = $this->createMemberDocument($subjectType, $subject, $companyId, $result);
 
-            // If vault was forced but creation failed (e.g. no resolvable user_id), abort
-            if ($forceVault && $memberDocumentId === null) {
-                throw new \DomainException(
-                    "Cannot create vault entry for {$subjectType}#{$subjectId}: no resolvable user_id."
-                );
+                // If vault was forced but creation failed (e.g. no resolvable user_id), abort
+                if ($forceVault && $memberDocumentId === null) {
+                    throw new \DomainException(
+                        "Cannot create vault entry for {$subjectType}#{$subjectId}: no resolvable user_id."
+                    );
+                }
             }
-        }
 
-        // Create GeneratedDocument
-        $doc = GeneratedDocument::create([
-            'company_id' => $companyId,
-            'document_template_id' => $template->id,
-            'template_version' => $template->version,
-            'subject_type' => $subjectType,
-            'subject_id' => $subjectId,
-            'generated_by' => $actorId,
-            'generated_at' => now(),
-            'file_path' => $result['file_path'],
-            'file_size_bytes' => $result['file_size_bytes'],
-            'generation_snapshot' => $snapshot,
-            'idempotency_key' => $idempotencyKey,
-            'member_document_id' => $memberDocumentId,
-            'metadata' => $extraMetadata,
-        ]);
+            // Create GeneratedDocument
+            return GeneratedDocument::create([
+                'company_id' => $companyId,
+                'document_template_id' => $template->id,
+                'template_version' => $template->version,
+                'subject_type' => $subjectType,
+                'subject_id' => $subjectId,
+                'generated_by' => $actorId,
+                'generated_at' => now(),
+                'file_path' => $result['file_path'],
+                'file_size_bytes' => $result['file_size_bytes'],
+                'generation_snapshot' => $snapshot,
+                'idempotency_key' => $idempotencyKey,
+                'member_document_id' => $memberDocumentId,
+                'metadata' => $extraMetadata,
+            ]);
+        });
 
         app(AuditLogger::class)->logCompany(
             companyId: $companyId,
