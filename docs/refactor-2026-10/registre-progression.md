@@ -46,7 +46,26 @@
 - **L3** : `watch({debounce})` (ignoré par Vue) → `watchDebounced` (VueUse) sur 7 recherches de listes.
 - **L4** : transactions sur create/update de rôle plateforme.
 
-### Anomalies confirmées NON corrigées (DEFER avec justification)
+### Lots 5-10 (reprise — couverture par domaine via scans traçables)
+
+| Lot | Commit | Objet | Tests |
+|---|---|---|---|
+| L5 | `d13ec3f` | Endpoints JobDomains cassés (404/405) → /field-definitions, /documents + normalisation réponse | FieldDefinitionTest + PlatformDocumentTypeCatalogTest (31✓) |
+| L6 | `21e6bf6` | Formatage date locale-aware (2 fallbacks) | build✓ |
+| L7 | `3f775ca` | 78 clés i18n brutes (coupons 62 + 16 autres) FR+EN | build✓, re-scan 1 restant (dynamique) |
+| L8 | `1465cbd` | documentation.store → $platformApi (bon client/guard) | DocumentationModuleTest (33✓) |
+| L9 | `74bbc80` | Atomicité P2 (ValidatePayroll, UpsertMarket, CreateCustomDocumentType) | 279✓ |
+| L10 | `51e6acf` | Atomicité P3 ×8 (breaks, markets défaut, archives, deletes, payment) | 724✓ |
+
+**Scans de couverture traçables (agents) :** 260 .vue / 5610 appels t() (i18n) · ~488 appels API / 52 stores (URLs) · 101 UseCases (transactions). Inventaires dans les rapports d'agents.
+
+**Résultat des scans :** API URLs = 0 endpoint cassé restant (jobdomains corrigé L5) · i18n = 78/79 corrigées · transactions = 11/14 corrigées (L4+L9+L10).
+
+### Anomalies confirmées NON corrigées (DEFER avec justification — gating criterion #6)
+- **Transactions #3 GenerateDocument, #10 UploadOwnDocument** : I/O fichier (vault/Storage) interleavé avec les écritures DB → wrapper une transaction autour d'un `Storage::` est incorrect (fichier non rollback). Fixable par **réordonnancement** (écrire le fichier d'abord, wrapper uniquement les 2 écritures DB) — à faire avec vérification runtime. Risque P3, atténué par idempotency key / re-upload idempotent.
+- **Transaction #9 UpdateDocumentTemplate** : possède déjà un rollback manuel partiel ; gain marginal, à harmoniser avec les autres ultérieurement.
+- **billing.tax_exemption.\*** : clés i18n **dynamiques** (préfixe + variable) → nécessite l'énumération des motifs d'exonération (donnée métier).
+- **AR i18n ~96 % manquant** : effort de traduction dédié (fallback EN fonctionnel).
 - **Endpoints jobdomains inline (createField/deleteField/createDocumentType)** : appelés par `platform/jobdomains/[id].vue` mais pointent vers des routes 404/405 → **feature cassée au runtime** (pas du code mort). Fix = corriger les routes/endpoints backend + test manuel de la page (navigateur indisponible). Risque de régression si corrigé à l'aveugle → différé, à faire avec vérification end-to-end.
 - **Bandeau conformité mort** (`company/workforce/index.vue:225`) : `complianceWarnings` jamais peuplé → bannière jamais affichée. Retrait cosmétique différé (aucun impact visuel actuel).
 - **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : refactors à risque/décision produit — lots dédiés ultérieurs.
