@@ -263,3 +263,12 @@ Suite complète + build + livrable + ADR-572. Vérif VPS réelle (non-destructiv
 - `dead` : > 300 s (cron arrêté).
 `last_activity_at` conservé → le cockpit distingue « scheduler actif, aucune tâche métier encore exécutée » de « actif et travaillant ». Pas d'instrumentation du heartbeat (0 bloat `ScheduledTaskRun`), always-on, exclu du registre par convention documentée (`REGISTRY_EXCLUSIONS` dans le test anti-dérive). Front : `unknown` → couleur neutre (pas rouge). Supervision (`scheduler_silent`) inchangée (lit `globalHealth=dead`), désormais fiable + pas de faux positif pendant les déploiements (fresh → `unknown`, pas `dead`).
 **Tests** `SchedulerHealthTest` (7) + `AutomationSupervisorTest` ajusté (dead = heartbeat périmé).
+
+## LOT 3 — Surveillance externe du cron ✅
+Un scheduler mort ne peut s'auto-alerter. Livré :
+- **Endpoint sécurisé** `GET /health/scheduler` (`SchedulerHealthEndpointController`) : 200 si vivant, **503 si `dead`** ; **token obligatoire** (`automations.monitor_token`) sinon **404** (jamais exposé non sécurisé) ; `hash_equals` (temps constant) ; **deploy-safe** (`unknown`→200, aucune donnée sensible).
+- `config/automations.php` : seuils heartbeat/queue/échecs + `monitor_token` (tous via env).
+- **Runbook** `docs/runbooks/scheduler-monitoring.md` : moniteur externe (offre gratuite, 2 échecs consécutifs avant alerte → pas de faux positif déploiement) **ou** watchdog cron on-VPS indépendant ; opérations serveur restantes + conditions de réussite documentées.
+- Pas de service payant ni dépendance nouvelle.
+**Tests** `SchedulerHealthEndpointTest` (5) : désactivé sans token, mauvais token→404, vivant→200, périmé→503, `unknown`→200.
+**Reste à activer (ops, hors code)** : définir `SCHEDULER_MONITOR_TOKEN` dans `.env` serveur + déployer + brancher le moniteur.
