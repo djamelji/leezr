@@ -25,7 +25,7 @@ const headers = computed(() => [
 ])
 
 // ── Helpers ───────────────────────────────────────────
-const healthColor = h => ({ ok: 'success', delayed: 'warning', broken: 'error', unknown: 'secondary' })[h] || 'secondary'
+const healthColor = h => ({ ok: 'success', delayed: 'warning', broken: 'error', unknown: 'secondary', disabled: 'secondary' })[h] || 'secondary'
 const healthLabel = h => t(`automations.health.${h}`) || h
 const statusColor = s => ({ success: 'success', failed: 'error', running: 'info' })[s] || 'secondary'
 const statusLabel = s => t(`automations.status${s?.charAt(0).toUpperCase()}${s?.slice(1)}`) || '—'
@@ -47,13 +47,50 @@ const schedulerHealthColor = computed(() => {
 })
 
 // ── Actions ───────────────────────────────────────────
-const runNow = async task => {
+const confirmDialog = ref(false)
+const taskToConfirm = ref(null)
+const togglingTask = ref(null)
+
+const execute = async task => {
   try {
-    await store.runTask(task.name)
+    await store.runTask(task.name, true)
     toast(t('automations.runSuccess'), 'success')
   }
   catch {
     toast(t('automations.runFailed'), 'error')
+  }
+}
+
+const runNow = task => {
+  // Sensitive (mass-financial) tasks require an explicit confirmation before dispatch.
+  if (task.sensitive) {
+    taskToConfirm.value = task
+    confirmDialog.value = true
+
+    return
+  }
+
+  return execute(task)
+}
+
+const confirmSensitiveRun = async () => {
+  const task = taskToConfirm.value
+  confirmDialog.value = false
+  if (task) await execute(task)
+  taskToConfirm.value = null
+}
+
+const toggleTask = async item => {
+  togglingTask.value = item.name
+  try {
+    await store.toggleTask(item.name, !item.enabled)
+    toast(item.enabled ? t('automations.disabled') : t('automations.enabled'), 'success')
+  }
+  catch {
+    toast(t('automations.toggleFailed'), 'error')
+  }
+  finally {
+    togglingTask.value = null
   }
 }
 
@@ -284,7 +321,25 @@ onMounted(() => {
         <!-- Task name + description -->
         <template #item.name="{ item }">
           <div>
-            <span class="font-weight-medium">{{ item.name }}</span>
+            <div class="d-flex align-center gap-1">
+              <span class="font-weight-medium">{{ item.name }}</span>
+              <VIcon
+                v-if="item.sensitive"
+                icon="tabler-lock"
+                size="14"
+                color="warning"
+              >
+                <VTooltip activator="parent">{{ t('automations.sensitiveHint') }}</VTooltip>
+              </VIcon>
+              <VChip
+                v-if="!item.enabled"
+                color="secondary"
+                size="x-small"
+                variant="tonal"
+              >
+                {{ t('automations.health.disabled') }}
+              </VChip>
+            </div>
             <div class="text-body-2 text-medium-emphasis text-truncate" style="max-width: 280px">
               {{ t(item.description) }}
             </div>
@@ -348,14 +403,28 @@ onMounted(() => {
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <div class="d-flex gap-1">
+          <div class="d-flex align-center gap-1">
+            <VSwitch
+              :model-value="item.enabled"
+              :loading="togglingTask === item.name"
+              :disabled="togglingTask === item.name"
+              density="compact"
+              hide-details
+              color="primary"
+              @update:model-value="toggleTask(item)"
+            >
+              <VTooltip activator="parent">
+                {{ item.enabled ? t('automations.disableTask') : t('automations.enableTask') }}
+              </VTooltip>
+            </VSwitch>
+
             <VBtn
               icon
               size="small"
               variant="text"
               color="primary"
               :loading="store.runningTask === item.name"
-              :disabled="!!store.runningTask"
+              :disabled="!!store.runningTask || !item.enabled"
               @click="runNow(item)"
             >
               <VIcon icon="tabler-player-play" />
@@ -604,6 +673,40 @@ onMounted(() => {
         </div>
       </template>
     </VNavigationDrawer>
+
+    <!-- Sensitive-task run confirmation (mass financial) -->
+    <VDialog
+      v-model="confirmDialog"
+      max-width="480"
+    >
+      <VCard>
+        <VCardItem>
+          <template #prepend>
+            <VIcon icon="tabler-alert-triangle" color="warning" />
+          </template>
+          <VCardTitle>{{ t('automations.confirmSensitiveTitle') }}</VCardTitle>
+        </VCardItem>
+        <VCardText>
+          {{ t('automations.confirmSensitiveBody', { task: taskToConfirm?.name }) }}
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="tonal"
+            @click="confirmDialog = false"
+          >
+            {{ t('automations.cancel') }}
+          </VBtn>
+          <VBtn
+            color="warning"
+            variant="elevated"
+            @click="confirmSensitiveRun"
+          >
+            {{ t('automations.confirmRun') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 

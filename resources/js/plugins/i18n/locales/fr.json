@@ -4881,6 +4881,16 @@
     "viewDetails": "Voir les détails",
     "runSuccess": "Tâche lancée avec succès",
     "runFailed": "Échec du lancement",
+    "enabled": "Tâche activée",
+    "disabled": "Tâche désactivée",
+    "enableTask": "Activer la tâche",
+    "disableTask": "Désactiver la tâche",
+    "toggleFailed": "Échec du changement d'état",
+    "sensitiveHint": "Tâche sensible (opérations financières de masse)",
+    "confirmSensitiveTitle": "Confirmer l'exécution d'une tâche sensible",
+    "confirmSensitiveBody": "La tâche « {task} » effectue des opérations financières de masse (renouvellements, relances, expirations). Confirmer l'exécution manuelle ?",
+    "confirmRun": "Exécuter",
+    "cancel": "Annuler",
     "statusSuccess": "OK",
     "statusFailed": "Erreur",
     "statusRunning": "En cours",
@@ -4934,7 +4944,8 @@
       "ok": "Sain",
       "delayed": "Retardé",
       "broken": "Cassé",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "disabled": "Désactivée"
     },
     "tasks": {
       "expireTrials": "Expiration automatique des essais gratuits",

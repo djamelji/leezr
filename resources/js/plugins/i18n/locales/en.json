@@ -4881,6 +4881,16 @@
     "viewDetails": "View details",
     "runSuccess": "Task dispatched successfully",
     "runFailed": "Dispatch failed",
+    "enabled": "Task enabled",
+    "disabled": "Task disabled",
+    "enableTask": "Enable task",
+    "disableTask": "Disable task",
+    "toggleFailed": "Failed to change state",
+    "sensitiveHint": "Sensitive task (mass financial operations)",
+    "confirmSensitiveTitle": "Confirm sensitive task execution",
+    "confirmSensitiveBody": "The task \"{task}\" performs mass financial operations (renewals, dunning, expirations). Confirm manual execution?",
+    "confirmRun": "Run",
+    "cancel": "Cancel",
     "statusSuccess": "OK",
     "statusFailed": "Error",
     "statusRunning": "Running",
@@ -4934,7 +4944,8 @@
       "ok": "Healthy",
       "delayed": "Delayed",
       "broken": "Broken",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "disabled": "Disabled"
     },
     "tasks": {
       "expireTrials": "Auto-expire free trial subscriptions",

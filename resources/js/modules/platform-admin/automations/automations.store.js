@@ -96,12 +96,12 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
       }
     },
 
-    async runTask(task) {
+    async runTask(task, confirm = false) {
       this._runningTask = task
       try {
         const data = await $platformApi('/automations/run', {
           method: 'POST',
-          body: { task },
+          body: { task, confirm },
         })
 
         // ADR-431: Start polling every 5s until no tasks are running
@@ -112,6 +112,17 @@ export const usePlatformAutomationsStore = defineStore('platformAutomations', {
       finally {
         this._runningTask = null
       }
+    },
+
+    async toggleTask(task, enabled) {
+      const data = await $platformApi('/automations/toggle', {
+        method: 'POST',
+        body: { task, enabled },
+      })
+
+      await this.fetchTasks({ silent: true })
+
+      return data
     },
 
     /**
