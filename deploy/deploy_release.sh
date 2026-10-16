@@ -181,14 +181,22 @@ OLLAMA_TIMEOUT=120
 AIEOF
 fi
 
-# ─── [5/9] Fresh database (no real clients yet) ──────────────────
-log "→ [5/9] migrate:fresh --seed (dev mode — no real clients)"
+# ─── [5/9] Base de données — séparation d'environnement (sécurité) ──
+# PRODUCTION (main) : JAMAIS de reset destructif. Migrations additives + seeder
+# de référence idempotent uniquement. Protège les données clients réelles.
+# DEV (web3) : base réinitialisable + données de démo (pas de clients réels).
 cd "$RELEASE_DIR"
-$PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
-
-# Demo data on ALL environments (no real clients yet — temporary)
-log "→ [5.5] Run DevSeeder (no real clients yet)"
-$PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "production" ]; then
+  log "→ [5/9] migrate --force (production — aucun reset destructif)"
+  $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
+  log "→ [5.5] db:seed SystemSeeder (données de référence idempotentes)"
+  $PHP_BIN artisan db:seed --class=SystemSeeder --force 2>&1 | tee -a "$LOG_FILE"
+else
+  log "→ [5/9] migrate:fresh --seed (dev — no real clients yet)"
+  $PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
+  log "→ [5.5] Run DevSeeder (demo data — dev only)"
+  $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
+fi
 
 # ADR-422: Fix permissions on seeded document files (created as root, needs to be readable by web user)
 # Laravel 12 local disk = storage/app/private/ (not storage/app/)

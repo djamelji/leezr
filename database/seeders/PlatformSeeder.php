@@ -15,6 +15,7 @@ use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class PlatformSeeder extends Seeder
 {
@@ -47,14 +48,21 @@ class PlatformSeeder extends Seeder
         // Admin gets all platform permissions (super_admin doesn't need pivot — hasPermission bypasses)
         $admin->permissions()->sync(PlatformPermission::pluck('id')->toArray());
 
-        // Create platform admin user
+        // Create platform admin user.
+        // SÉCURITÉ : aucun mot de passe prédéfini hors local/testing. En dev public/prod,
+        // le mot de passe vient de l'env (LEEZR_PLATFORM_ADMIN_PASSWORD) à la première création,
+        // sinon un aléatoire fort (reset via "mot de passe oublié"). Jamais réécrit au redéploiement.
+        $isDevEnv = app()->environment(['local', 'testing']);
+        $adminExists = PlatformUser::where('email', 'admin@leezr.com')->exists();
+        $adminAttrs = ['first_name' => 'Djamel', 'last_name' => 'Ji'];
+        if ($isDevEnv) {
+            $adminAttrs['password'] = 'password';
+        } elseif (!$adminExists) {
+            $adminAttrs['password'] = env('LEEZR_PLATFORM_ADMIN_PASSWORD') ?: Str::password(32);
+        }
         $user = PlatformUser::updateOrCreate(
             ['email' => 'admin@leezr.com'],
-            [
-                'first_name' => 'Djamel',
-                'last_name' => 'Ji',
-                'password' => 'password',
-            ],
+            $adminAttrs,
         );
 
         // Attach role if not already attached
@@ -62,32 +70,24 @@ class PlatformSeeder extends Seeder
             $user->roles()->attach($superAdmin->id);
         }
 
-        // Platform admin — staging test
-        $devAdmin = PlatformUser::updateOrCreate(
-            ['email' => 'dev@leezr.com'],
-            [
-                'first_name' => 'Dev',
-                'last_name' => 'Admin',
-                'password' => 'password',
-            ],
-        );
+        // Comptes de test (dev@/prod@) : créés uniquement en local/testing
+        // (ou si LEEZR_SEED_TEST_ADMINS activé). Jamais de compte à mot de passe connu en production.
+        if ($isDevEnv || env('LEEZR_SEED_TEST_ADMINS', false)) {
+            $devAdmin = PlatformUser::updateOrCreate(
+                ['email' => 'dev@leezr.com'],
+                ['first_name' => 'Dev', 'last_name' => 'Admin', 'password' => 'password'],
+            );
+            if (!$devAdmin->hasRole('admin')) {
+                $devAdmin->roles()->attach($admin->id);
+            }
 
-        if (!$devAdmin->hasRole('admin')) {
-            $devAdmin->roles()->attach($admin->id);
-        }
-
-        // Platform admin — production test
-        $prodAdmin = PlatformUser::updateOrCreate(
-            ['email' => 'prod@leezr.com'],
-            [
-                'first_name' => 'Prod',
-                'last_name' => 'Admin',
-                'password' => 'password',
-            ],
-        );
-
-        if (!$prodAdmin->hasRole('admin')) {
-            $prodAdmin->roles()->attach($admin->id);
+            $prodAdmin = PlatformUser::updateOrCreate(
+                ['email' => 'prod@leezr.com'],
+                ['first_name' => 'Prod', 'last_name' => 'Admin', 'password' => 'password'],
+            );
+            if (!$prodAdmin->hasRole('admin')) {
+                $prodAdmin->roles()->attach($admin->id);
+            }
         }
 
         // Seed platform settings singleton (idempotent — only creates if missing)
@@ -112,21 +112,24 @@ class PlatformSeeder extends Seeder
         $instance = PlatformSetting::instance();
         $currentEmail = $instance->email ?? [];
 
-        if (empty($currentEmail['smtp_host'])) {
+        // SÉCURITÉ : aucun secret email en dur. Les identifiants SMTP/IMAP viennent
+        // de l'environnement (jamais committés). Seedé uniquement si un host est fourni.
+        $smtpHost = env('LEEZR_SMTP_HOST', '');
+        if (empty($currentEmail['smtp_host']) && $smtpHost !== '') {
             $instance->update([
                 'email' => array_merge($currentEmail, [
-                    'smtp_host' => '213.32.20.37',
-                    'smtp_port' => 587,
-                    'smtp_encryption' => 'tls',
-                    'smtp_username' => 'admin@leezr.com',
-                    'smtp_password' => '@Crinshow31',
-                    'imap_host' => '213.32.20.37',
-                    'imap_port' => 993,
-                    'imap_encryption' => 'ssl',
-                    'imap_username' => 'admin@leezr.com',
-                    'imap_password' => '@Crinshow31',
+                    'smtp_host' => $smtpHost,
+                    'smtp_port' => (int) env('LEEZR_SMTP_PORT', 587),
+                    'smtp_encryption' => env('LEEZR_SMTP_ENCRYPTION', 'tls'),
+                    'smtp_username' => env('LEEZR_SMTP_USERNAME', 'admin@leezr.com'),
+                    'smtp_password' => env('LEEZR_SMTP_PASSWORD', ''),
+                    'imap_host' => env('LEEZR_IMAP_HOST', $smtpHost),
+                    'imap_port' => (int) env('LEEZR_IMAP_PORT', 993),
+                    'imap_encryption' => env('LEEZR_IMAP_ENCRYPTION', 'ssl'),
+                    'imap_username' => env('LEEZR_IMAP_USERNAME', 'admin@leezr.com'),
+                    'imap_password' => env('LEEZR_IMAP_PASSWORD', ''),
                     'imap_folder' => 'INBOX',
-                    'from_email' => 'admin@leezr.com',
+                    'from_email' => env('LEEZR_MAIL_FROM', 'admin@leezr.com'),
                     'from_name' => 'Leezr',
                 ]),
             ]);
