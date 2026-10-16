@@ -1172,7 +1172,12 @@
       "cancelImmediate": "Your subscription will be cancelled immediately.",
       "cancelAtPeriodEnd": "Your subscription remains active until {date}.",
       "cancelAddonsImpact": "{count} active addon(s) will also be cancelled.",
-      "cancelWalletInfo": "Your wallet balance ({amount}) will be preserved."
+      "cancelWalletInfo": "Your wallet balance ({amount}) will be preserved.",
+      "scheduledChangeTitle": "Scheduled plan change",
+      "scheduledChangeDesc": "Switching to the {plan} plan ({interval}) on {date}.",
+      "cancelScheduledChange": "Cancel",
+      "scheduledChangeCancelled": "Scheduled change cancelled.",
+      "scheduledChangeCancelFailed": "Failed to cancel the change."
     },
     "nextInvoice": {
       "title": "Estimated Next Invoice",
@@ -5848,6 +5853,15 @@
     "signatureSigned": "Signed",
     "signatureDeclined": "Declined",
     "clockActionSuccess": "Clock action completed",
+    "myPayslips": "My payslips",
+    "noPayslips": "No payslip available",
+    "payslipPeriod": "Period",
+    "payslipType": "Type",
+    "payslipGeneratedAt": "Generated on",
+    "payslipSignatureStatus": "Signature",
+    "payslipOfficial": "Official",
+    "payslipDraft": "Draft",
+    "viewPayroll": "View payroll",
     "daysUnit": "{count} d",
     "status": {
       "working": "Working",
