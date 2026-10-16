@@ -3,7 +3,6 @@ import { useWorkforceDashboardStore } from '@/modules/company/workforce/workforc
 import { useAppToast } from '@/composables/useAppToast'
 import WorkforceModuleCard from './_WorkforceModuleCard.vue'
 import WorkforceActionCard from './_WorkforceActionCard.vue'
-import ComplianceWarningBanner from './_ComplianceWarningBanner.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 
@@ -221,8 +220,6 @@ const quickActions = computed(() => [
   },
 ])
 
-// ── Compliance warnings (fed by API) ─────────────────────────
-const complianceWarnings = ref([])
 </script>
 
 <template>
@@ -247,13 +244,6 @@ const complianceWarnings = ref([])
         {{ $t('workforceDashboard.refresh') }}
       </VBtn>
     </div>
-
-    <!-- Compliance Warnings -->
-    <ComplianceWarningBanner
-      v-if="complianceWarnings.length"
-      :warnings="complianceWarnings"
-      class="mb-6"
-    />
 
     <!-- KPI Cards -->
     <VRow class="card-grid card-grid-xs mb-6">

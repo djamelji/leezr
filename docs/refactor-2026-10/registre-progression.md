@@ -281,3 +281,12 @@ Vérification ciblée (aucun paiement réel, aucun rattrapage) des changements r
 - Devise : MRR par devise (`PricingCurrencyTest`).
 - Automations : permission tâches sensibles + anti-double-exécution (`AutomationCockpitSecurityTest`), enable/disable réel (`AutomationToggleTest`), supervision + heartbeat + endpoint externe (`AutomationSupervisorTest`, `SchedulerHealthTest`, `SchedulerHealthEndpointTest`), bijection registre (`ScheduledTaskRegistryConsistencyTest`).
 Aucune régression démontrée → rien à corriger.
+
+## LOT 5 — Reprise harmonisation : code mort + notes périmées ✅
+Travail sur anomalies **déjà identifiées** (pas de nouvel audit).
+
+**#6 Code mort retiré — bandeau conformité** : `company/workforce/index.vue` déclarait `complianceWarnings = ref([])` **jamais peuplé** (aucun `.value=`, aucune source backend — vérifié : pas d'API/clé compliance warnings ; `custom_compliance_rules` des contrats sans rapport) → `ComplianceWarningBanner` (`v-if="length"`) **jamais affiché**. Retiré : ref + bloc + import ; composant orphelin `_ComplianceWarningBanner.vue` supprimé (usage unique, aucune autre référence). Aucun impact visuel (bandeau déjà invisible).
+
+**#3/#7 Note périmée corrigée — endpoints jobdomains** : le registre indiquait « createField/deleteField/createDocumentType → 404/405, feature cassée ». **Vérifié faux aujourd'hui** : `POST/DELETE /field-definitions` (routes 206/208) et `POST /documents` (route 276) **existent, sont routés et testés** (`FieldDefinitionTest`, `PlatformDocumentTypeCatalogTest`, `CustomDocumentTypeTest`). Fonctionnel pour les admins plateforme (super_admin = toutes permissions). Résiduel documenté : couplage ACL — la page jobdomains (`manage_jobdomains`) consomme des endpoints gardés par `manage_field_definitions`/`manage_document_catalog` ; sans effet tant que les admins sont super_admin, à harmoniser (bundle) si des rôles plateforme scopés sont introduits.
+
+**Prochain lot d'harmonisation recommandé** : traductions — soit l'énumération métier des motifs `billing.tax_exemption.*` (clés dynamiques), soit l'effort AR (~96% manquant, fallback EN fonctionnel) ; priorité moyenne, sans risque structurel.
