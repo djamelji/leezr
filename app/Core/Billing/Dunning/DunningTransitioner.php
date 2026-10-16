@@ -39,10 +39,14 @@ class DunningTransitioner
                 'next_retry_at' => now()->addDays($nextRetryDays),
             ]);
 
-            // Transition subscription to past_due (skip trialing — no dunning during trial)
+            // Transition subscription to past_due. Covers both an active renewal
+            // that failed AND a PAID trial whose conversion invoice went unpaid:
+            // once there is a collectible overdue invoice, the trial is no longer
+            // "free" — it enters dunning like any delinquent subscription. A FREE
+            // trial has no invoice, so it is never touched here (expire-trials ends it).
             if ($invoice->subscription_id) {
                 Subscription::where('id', $invoice->subscription_id)
-                    ->where('status', 'active')
+                    ->whereIn('status', ['active', 'trialing'])
                     ->update(['status' => 'past_due']);
             }
         });

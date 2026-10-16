@@ -12,6 +12,12 @@ use Illuminate\Support\Facades\Log;
  *
  * Transitions trialing subscriptions to expired status when trial period ends.
  * Idempotent: only processes subscriptions still in trialing state with is_current=1.
+ *
+ * Trial lifecycle distinction (audit 2026-10): this command ends FREE trials only
+ * (no collectible invoice owed). A PAID trial whose conversion invoice is still
+ * open/overdue is NOT expired here — it belongs to dunning (DunningTransitioner
+ * moves it trialing → past_due → retries → suspend/cancel), so we never orphan an
+ * outstanding invoice by flipping its subscription to 'expired'.
  */
 class BillingExpireTrialsCommand extends Command implements Isolatable
 {
@@ -27,6 +33,8 @@ class BillingExpireTrialsCommand extends Command implements Isolatable
             ->where('is_current', 1)
             ->whereNotNull('trial_ends_at')
             ->where('trial_ends_at', '<=', now())
+            // Skip PAID trials with an outstanding conversion invoice — dunning owns them.
+            ->whereDoesntHave('invoices', fn ($q) => $q->whereIn('status', ['open', 'overdue']))
             ->with('company')
             ->get();
 

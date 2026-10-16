@@ -164,3 +164,17 @@ Vérification attendue après installation : `php artisan schedule:list` (20 lig
 - Tests `RestrictedBusinessAccessTest` (13) : logique d'état (active/live-trial/essai-expiré-sans-scheduler/flipped-expired/cancelled/past_due/sans-abo), réactivation idempotente, **distinction expiration ≠ suspension**, et intégration HTTP (mutation métier bloquée 402, lecture OK, mutation billing OK, abo actif non bloqué).
 
 **Suite complète : 2972 passed / 12 skipped / 0 échec** (baseline 2955 + 17 nouveaux tests) — gate global sans aucune régression.
+
+## LOT 3 — Dunning aligné sur le cycle essai gratuit / payant / impayé (audit T3/T5) ✅
+**Modèle cohérent :**
+- **Essai gratuit** (aucune facture encaissable) → `expire-trials` termine (trialing → expired → restreint via LOT 2). Pas de dunning.
+- **Essai payant** (facture de conversion impayée) → **dunning** (trialing → past_due → retries → suspend/cancel). Jamais expiré en silence (plus d'orphelin T5).
+- **Facture impayée** sur abo actif → dunning existant (inchangé).
+
+**Fait :**
+- `DunningTransitioner::markOverdue` : la transition past_due couvre désormais `['active','trialing']` (était `active` seul) → un essai payant impayé entre réellement en dunning. Un essai gratuit (sans facture) n'est jamais touché ici (corrige T3).
+- `BillingExpireTrialsCommand` : `whereDoesntHave('invoices', open|overdue)` → n'expire plus un essai payant avec facture ouverte (il appartient au dunning) → supprime la facture orpheline sur abo expiré (corrige T5). Relation `Subscription::invoices()` ajoutée.
+- Commentaires trompeurs « skip trialing — no dunning during trial » remplacés par la distinction free/paid explicite.
+- Tests `TrialDunningLifecycleTest` (3) : essai payant impayé → past_due ; expire-trials termine le gratuit mais saute le payant en collecte ; non-régression active → past_due.
+
+**Régression billing : 726 billing-domain tests OK** (dont `TrialConversionE2ETest`).
