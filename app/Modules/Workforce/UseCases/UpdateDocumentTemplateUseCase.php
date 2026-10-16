@@ -4,6 +4,7 @@ namespace App\Modules\Workforce\UseCases;
 
 use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentTemplate;
+use Illuminate\Support\Facades\DB;
 
 class UpdateDocumentTemplateUseCase
 {
@@ -28,38 +29,44 @@ class UpdateDocumentTemplateUseCase
         if ($bodyChanged) {
             $oldVersion = $template->version;
 
-            // Deactivate current version
-            $template->is_active = false;
-            $template->save();
-
-            // Create new version
-            $newTemplate = DocumentTemplate::create([
-                'company_id' => $template->company_id,
-                'platform_template_id' => $template->platform_template_id,
-                'code' => $template->code,
-                'name' => $name ?? $template->name,
-                'description' => $description ?? $template->description,
-                'subject_type' => $template->subject_type,
-                'body_html' => $bodyHtml,
-                'header_html' => $headerHtml ?? $template->header_html,
-                'footer_html' => $footerHtml ?? $template->footer_html,
-                'variables_schema' => $variablesSchema ?? $template->variables_schema,
-                'version' => $oldVersion + 1,
-                'is_system' => $template->is_system,
-                'is_active' => true,
-                'paper_size' => $template->paper_size,
-                'paper_orientation' => $template->paper_orientation,
-            ]);
-
-            // I13: Validate variables
-            $missing = $newTemplate->validateVariables();
-            if (! empty($missing)) {
-                // Rollback: delete new, reactivate old
-                $newTemplate->delete();
-                $template->is_active = true;
+            // Atomicité : désactivation de l'ancienne version + création de la nouvelle
+            // dans une transaction. Une validation en échec (ou toute exception DB) annule
+            // tout automatiquement (remplace le rollback manuel qui ne couvrait que la validation).
+            $newTemplate = DB::transaction(function () use (
+                $template, $oldVersion, $name, $description,
+                $bodyHtml, $headerHtml, $footerHtml, $variablesSchema
+            ) {
+                // Deactivate current version
+                $template->is_active = false;
                 $template->save();
-                throw new \DomainException('Template uses undefined variables: ' . implode(', ', $missing));
-            }
+
+                // Create new version
+                $newTemplate = DocumentTemplate::create([
+                    'company_id' => $template->company_id,
+                    'platform_template_id' => $template->platform_template_id,
+                    'code' => $template->code,
+                    'name' => $name ?? $template->name,
+                    'description' => $description ?? $template->description,
+                    'subject_type' => $template->subject_type,
+                    'body_html' => $bodyHtml,
+                    'header_html' => $headerHtml ?? $template->header_html,
+                    'footer_html' => $footerHtml ?? $template->footer_html,
+                    'variables_schema' => $variablesSchema ?? $template->variables_schema,
+                    'version' => $oldVersion + 1,
+                    'is_system' => $template->is_system,
+                    'is_active' => true,
+                    'paper_size' => $template->paper_size,
+                    'paper_orientation' => $template->paper_orientation,
+                ]);
+
+                // I13: Validate variables — échec → rollback auto de la transaction
+                $missing = $newTemplate->validateVariables();
+                if (! empty($missing)) {
+                    throw new \DomainException('Template uses undefined variables: ' . implode(', ', $missing));
+                }
+
+                return $newTemplate;
+            });
 
             app(AuditLogger::class)->logCompany(
                 companyId: $template->company_id ?? 0,
