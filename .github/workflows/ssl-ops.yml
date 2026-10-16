@@ -1,0 +1,33 @@
+name: SSL Ops (dev)
+
+# Déclenchement manuel uniquement. Exécute une action SSL sur le VPS dev via le CI
+# (qui dispose de sudo sans mot de passe). action=diagnose (défaut, lecture seule) ou action=fix.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "diagnose | fix"
+        required: true
+        default: "diagnose"
+
+jobs:
+  ssl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Run SSL ${{ github.event.inputs.action }}
+        run: |
+          SCRIPT="scripts/ssl-diagnose-dev.sh"
+          if [ "${{ github.event.inputs.action }}" = "fix" ]; then SCRIPT="scripts/ssl-fix-dev.sh"; fi
+          echo "→ Running $SCRIPT on dev VPS (as ${{ secrets.VPS_USER }})"
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || 22 }} \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash -s' < "$SCRIPT"
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
