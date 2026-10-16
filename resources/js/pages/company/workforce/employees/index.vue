@@ -53,7 +53,7 @@ const fetchData = async () => {
   }
 }
 
-watch([search, statusFilter], () => {
+watchDebounced([search, statusFilter], () => {
   options.value.page = 1
   fetchData()
 }, { debounce: 300 })

@@ -60,7 +60,7 @@ const fetchEntries = async () => {
   }
 }
 
-watch([entriesDateFrom, entriesDateTo, entriesEmployeeFilter, entriesStatusFilter], () => {
+watchDebounced([entriesDateFrom, entriesDateTo, entriesEmployeeFilter, entriesStatusFilter], () => {
   entriesOptions.value.page = 1
   fetchEntries()
 }, { debounce: 300 })
@@ -249,7 +249,7 @@ const fetchStats = async () => {
   }
 }
 
-watch([tsStatusFilter, tsPeriodStart, tsPeriodEnd], () => {
+watchDebounced([tsStatusFilter, tsPeriodStart, tsPeriodEnd], () => {
   tsOptions.value.page = 1
   fetchTimesheets()
   fetchStats()

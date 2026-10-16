@@ -130,7 +130,7 @@ const onOfficialGenerated = () => {
   refreshAll()
 }
 
-watch([subjectTypeFilter, signatureStatusFilter, templateCodeFilter], () => {
+watchDebounced([subjectTypeFilter, signatureStatusFilter, templateCodeFilter], () => {
   options.value.page = 1
   fetchData()
 }, { debounce: 300 })

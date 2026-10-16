@@ -57,7 +57,7 @@ const fetchStats = async () => {
   }
 }
 
-watch([statusFilter, periodStartFilter, periodEndFilter], () => {
+watchDebounced([statusFilter, periodStartFilter, periodEndFilter], () => {
   options.value.page = 1
   fetchData()
 }, { debounce: 300 })
