@@ -36,6 +36,11 @@ class AlertEvaluatorCommand extends Command
 
         $this->autoResolveStaleAlerts();
 
+        // Scheduler + queue supervision (reuses the Alert Center, no parallel infra).
+        $supervision = (new \App\Core\Automation\AutomationSupervisor())->evaluate();
+        $this->created += $supervision['created'];
+        $this->resolved += $supervision['resolved'];
+
         $this->info("Alert evaluation complete: {$this->created} created, {$this->resolved} resolved.");
 
         return self::SUCCESS;
