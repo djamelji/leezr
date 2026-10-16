@@ -202,3 +202,18 @@ Vérification attendue après installation : `php artisan schedule:list` (20 lig
 - Tests `PricingCurrencyTest` (3). Régression `BillingCurrencyMarketTest`/`BillingLotFTest` OK.
 
 **Différé (P2, commercial)** : grille de prix par devise ou conversion FX sur plans — avant tout 2ᵉ marché non-EUR commercialisé.
+
+## LOT 6 — Divergences doc + livrables de clôture ✅
+**Divergences doc corrigées (dans les lots) :** commentaire scheduler « 14 tasks », en-tête dunning « skip trialing », `PlanRegistry` « prices in DOLLARS », MRR `'EUR'` codé en dur. ADR-570 + ADR-571 ajoutés.
+
+**Livrables :**
+- `docs/audit-2026-10/11-remediation-finance-matrice.md` : matrice accès/état d'abonnement, matrice essai/dunning, réconciliation comptable de test, vérif ops scheduler, différés P2.
+- `LedgerReconciliationScenarioTest` : scénario end-to-end (émission HT/TVA → paiement offline → write-off → rejeu) → **grand livre équilibré** (Σ débit = Σ crédit, par correlation_id), TVA isolée, AR soldé, idempotent.
+
+**Résultats de clôture :**
+- **Suite complète : 2986 passed / 12 skipped / 0 échec** (baseline 2955 + 31 tests de remédiation).
+- **`pnpm build` : clean** (✓ built in 10.69s, exit 0).
+
+**Non différable — exigences dures satisfaites :** (1) scheduler supervisable (registry miroir + test anti-dérive ; cron OS = action ops documentée) ; (2) essai expiré **sans droits métier** (contrôle à la requête, indépendant du scheduler). **Non déployé en prod** (consigne).
+
+**Différés P2 documentés :** F9 (reconcile Stripe-only), F8 (forensics sans détection), F5/F6/F7 (seeders démo), F12 (numérotation annuelle), F2/F10 (grille prix par devise — décision commerciale), régularisation d'écritures historiques (ops).
