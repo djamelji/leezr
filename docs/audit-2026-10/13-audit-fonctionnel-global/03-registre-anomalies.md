@@ -25,13 +25,13 @@
 - **Finalisation** : `ModuleProductConfigSeeder` rendu **non destructif** (initialise seulement si `addon_pricing` absent → n'écrase pas une config commerciale admin légitime) + idempotent.
 - **Risque données** : aucun (données produit catalogue, pas tenant ; pas de modif financière).
 
-### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P2** 🔎
+### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P3 (non reproductible, clos)** ✅
 - **Périmètre / page** : Platform Billing — `/platform/billing/coupons`.
 - **Repro** : E2E staging, `admin@leezr.com` → page rend mais 2 ressources `401` (parmi `/billing/coupons`, `/plans`, `/modules`).
 - **Attendu** : aucune erreur console ; dropdowns plans/modules peuplés.
 - **Observé** : 2× `401` ; **non reproduit en local** (20/20 vert).
-- **Cause** : **hypothèse à confirmer** — ni 2FA ni permission (qui renvoient 403) ; probable flaky/parallélisme ou état session staging. **Non corrigé** (repro déterministe requise avant fix).
-- **Test attendu** : une fois reproduit, test API ciblé sur les 3 endpoints sous session platform admin.
+- **Diagnostic (capture réseau Playwright, staging)** : rejeu ciblé → **toutes les requêtes 200** (`/api/platform/plans`, `/modules`, `/billing/coupons`, `me`, `nav`). **Zéro 401.** Le 401×2 initial (pendant le run des 20 pages) était une **course transitoire** (cookie/session platform pas encore établi au moment d'un appel parallèle après login), **pas un défaut déterministe**.
+- **Décision** : **non reproductible → clos, pas de correction** (consigne : corriger seulement après cause identifiée). Reclassé P3. À rouvrir si un repro déterministe apparaît.
 
 ## Items hérités des audits antérieurs (référence, non ré-audités)
 Voir `../03-registre-anomalies.md` et `../06-plan-remediation.md`. État au mieux de la connaissance :
@@ -52,9 +52,12 @@ Voir `../03-registre-anomalies.md` et `../06-plan-remediation.md`. État au mieu
 | TTC utilisé comme HT | Non (isolation TVA ledger faite) | ADR-570 |
 | Mauvaise devise | Non (MRR par devise) | ADR-570 |
 | Compteur différent selon 2 pages | **OUI** (date next-invoice Plan vs Overview) → harmonisé | ANO-001 |
-| Company suspendue affichée active | [NON] à vérifier | — |
-| Module désactivé toujours accessible | [CODE] gated (ModuleGate/entitlements) ; [NON] en E2E | — |
+| Company suspendue conserve accès métier | **NON** → bloquée 403 [TEST] | `SecurityInvariantTest`, `CompanySuspensionTest`, `BillingAdr232Test` |
+| Module désactivé toujours accessible | **NON** → 403 [TEST] (`EnsureModuleActive`: !isActive→403 ; toute route module gatée) | `GlobalModuleRouteCoverageTest`, `ModuleEntitlementEnforcementTest` |
 | Bouton sans endpoint | [NON] balayage non exhaustif ; jobdomains OK | — |
 | Fonctionnalité annoncée non implémentée | voir audits antérieurs (modules horizontaux) | ../02 |
+| Entitlement incohérent avec catalogue commercial | **OUI** (config dev-only) → corrigé | ANO-003 |
+| Abonnement actif non renouvelable | **OUI** (`is_current=NULL`) → corrigé + régularisation | ANO-001 |
+| Config DEV/PROD masquant une dysfonction | **OUI** (seeder dev-only) → corrigé | ANO-003 |
 
 > Les lignes [NON]/[CODE] indiquent explicitement les contrôles **non encore prouvés au navigateur** — à traiter dans les lots d'audit suivants.
