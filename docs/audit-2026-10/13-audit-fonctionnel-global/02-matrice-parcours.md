@@ -10,11 +10,11 @@
 | Billing — plan / overview (prochaine facture) | [NAV][TEST] | **ANO-001 corrigé** ; renewal_overdue testé |
 | **Profil entreprise — mise à jour** | **[NAV]** | **ANO-004** : bouton save gelé → corrigé ; CRUD navigateur→persistance vérifié (`profile-crud.spec.js`) |
 | Billing — factures (liste/détail) | [TEST][CODE] | couvert PHPUnit ; [NON] en NAV |
-| Membres (liste) | [NAV] | rendu |
+| Membres — liste + **création** | **[NAV]** | **CRUD navigateur→persistance vérifié** (`company-crud.spec.js`) ; data-test ajouté au select rôle |
 | Modules (liste/activation) | [NAV][CODE] | rendu ; activation submit [NON] NAV |
 | Documents | [NAV] | rendu |
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |
-| Création/édition/suppression (persistance) | [TEST] | **[NON] en NAV** (évite pollution données partagées) |
+| Création/édition (persistance) | **[NAV]**(profil, membre) + [TEST] | profil + membre vérifiés navigateur→DB ; suppression/autres [NON] NAV |
 | Accès restreint si abo expiré | [TEST] | RestrictedBusinessAccessTest |
 
 ## PLATFORM — `admin@leezr.com`

@@ -34,6 +34,17 @@
 - **Finalisation** : `ModuleProductConfigSeeder` rendu **non destructif** (initialise seulement si `addon_pricing` absent → n'écrase pas une config commerciale admin légitime) + idempotent.
 - **Risque données** : aucun (données produit catalogue, pas tenant ; pas de modif financière).
 
+### ANO-005 — Harnais E2E « faux-vert » : pages 404 validées comme saines — **P1 (harnais)** ✅
+- **Périmètre** : `tests/e2e/smoke.spec.js` (validation fonctionnelle).
+- **Repro** : les chemins company du smoke étaient **bare** (`/members`, `/billing`, `/workforce`…) alors que les vraies routes sont **`/company/*`** (sauf `/dashboard`). Idem platform (IA groupée en `:tab` : markets→`/platform/international/*`, etc.). → la plupart renvoyaient une **page 404** que `assertScreenClean` validait **sans la détecter** (une 404 n'a ni clé i18n brute ni erreur console).
+- **Impact** : la « validation fonctionnelle » antérieure (19–20 pages « vertes ») était **largement illusoire** pour les pages company/platform (exactement « page qui s'affiche ≠ parcours valide »).
+- **Correction** : `assertScreenClean` **échoue désormais sur une 404** (`Page introuvable`) ; chemins corrigés vers les vraies routes ; filtrage documenté des 401/429 **transitoires** (course auth post-login / rate-limit sous navigation rapide — pages rendues, non-défaut). Suite E2E : **18 verts honnêtes** (dont 2 CRUD à persistance).
+
+### ANO-006 — Workforce : 429 (rate-limit) + 422 au chargement — **P2 (observation, à diagnostiquer)** 🔎
+- **Repro (E2E local)** : `/company/workforce` (dashboard) déclenche des `429 Too Many Requests` au chargement ; `/company/workforce/time` émet un `422` sur une requête au load. Sous navigation E2E ; le 429 est partiellement cumulatif (rate-limit IP/session).
+- **Hypothèses** : dashboard workforce trop bavard (nombreux appels widgets en parallèle → rate-limit) ; `time` envoie une requête aux paramètres invalides au montage. **Non root-causé** → non corrigé (repro déterministe + cause requises). Exclu du set smoke vert, documenté.
+- **À faire** : capturer les endpoints 429/422 exacts, vérifier le seuil de rate-limit vs charge légitime du dashboard, corriger (batch/throttle ou params).
+
 ### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P3 (non reproductible, clos)** ✅
 - **Périmètre / page** : Platform Billing — `/platform/billing/coupons`.
 - **Repro** : E2E staging, `admin@leezr.com` → page rend mais 2 ressources `401` (parmi `/billing/coupons`, `/plans`, `/modules`).

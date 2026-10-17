@@ -137,6 +137,7 @@ const handleClose = () => {
                   :items="roleOptions"
                   clearable
                   :placeholder="t('members.noRole')"
+                  data-test="member-role-select"
                 />
               </VCol>
 
