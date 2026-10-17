@@ -5931,6 +5931,8 @@
     "noDocuments": "No documents",
     "noLeaveBalances": "No leave balances available",
     "requestLeave": "Request Leave",
+    "leaveRequested": "Leave request submitted",
+    "leaveRequestFailed": "Leave request failed",
     "viewAllDocuments": "View all documents",
     "contractType": "Contract type",
     "workModel": "Work model",
@@ -6542,6 +6544,10 @@
     }
   },
   "leaves": {
+    "dateFrom": "From",
+    "dateTo": "To",
+    "daysCount": "Number of days",
+    "reason": "Reason",
     "title": "Leave",
     "subtitle": "Manage your employees' leave requests",
     "newRequest": "New Request",

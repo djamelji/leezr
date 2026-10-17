@@ -40,6 +40,15 @@
 - **Impact** : la « validation fonctionnelle » antérieure (19–20 pages « vertes ») était **largement illusoire** pour les pages company/platform (exactement « page qui s'affiche ≠ parcours valide »).
 - **Correction** : `assertScreenClean` **échoue désormais sur une 404** (`Page introuvable`) ; chemins corrigés vers les vraies routes ; filtrage documenté des 401/429 **transitoires** (course auth post-login / rate-limit sous navigation rapide — pages rendues, non-défaut). Suite E2E : **18 verts honnêtes** (dont 2 CRUD à persistance).
 
+### ANO-007 — Self-service congé inaccessible au salarié (bouton → 403) — **P1** ✅
+- **Périmètre** : Employé self-service — `/company/workforce/me`, bouton « Demander un congé ».
+- **Repro déterministe** : `bob@leezr.test` (salarié, rôle Driver) → `/me` charge ; clic « Demander un congé » → **navigue vers `/company/403`**. Le bouton routait vers la **page admin** `/company/workforce/leave` (gardée `workforce.leave_request`), que le salarié n'a pas → **le salarié ne pouvait pas demander de congé via l'UI**, alors que l'endpoint self-service `POST /workforce/me/leaves` est **ouvert à tout employé actif**.
+- **Cause racine** : `me.vue` `@click="router.push({name:'company-workforce-leave'})"` — délègue à une page à permission au lieu d'un formulaire self-service.
+- **Correction** : drawer **self-service** sur `/me` (sélecteur de type + dates + jours + motif) appelant `POST /workforce/me/leaves` via `useWorkforceClockStore.createLeave` ; `data-test` sur les champs Vuetify. Aucune permission contournée (endpoint déjà ouvert aux employés actifs).
+- **Fixture de test** : commande `e2e:prepare-leave-fixture` (local/testing) — accrual congés cohérent pour le salarié démo (contrat actif déjà seedé).
+- **Test de non-régression [NAV]** : `workforce-leave-workflow.spec.js` (salarié demande→201, manager approuve→persistant, non-autorisé→403, range inversé→422). Vérifié vert.
+- **Découverte** : trouvé par la campagne E2E (le parcours métier réel), invisible aux tests backend (l'API marchait ; le bug était le routage front).
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

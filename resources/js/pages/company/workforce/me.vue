@@ -58,6 +58,41 @@ const employeeName = computed(() => {
 
 const payslipDocs = computed(() => documents.value.filter(d => d.template?.code?.startsWith('payslip_')))
 
+// ── Self-service leave request (ANO-007) ────────────────────
+// Employees request their own leave here (open /workforce/me endpoint) instead of
+// being routed to the permission-gated admin page (which 403'd for regular employees).
+const isLeaveDrawerOpen = ref(false)
+const leaveSubmitting = ref(false)
+const leaveForm = ref({ leave_type_id: null, date_from: '', date_to: '', days: 1, reason: '' })
+const leaveTypeOptions = computed(() =>
+  leaveBalances.value.map(b => ({ title: b.leave_type_name, value: b.leave_type_id })))
+
+function openLeaveDrawer() {
+  leaveForm.value = { leave_type_id: leaveTypeOptions.value[0]?.value ?? null, date_from: '', date_to: '', days: 1, reason: '' }
+  isLeaveDrawerOpen.value = true
+}
+
+async function submitSelfLeave() {
+  leaveSubmitting.value = true
+  try {
+    await clockStore.createLeave({
+      leaveTypeId: leaveForm.value.leave_type_id,
+      dateFrom: leaveForm.value.date_from,
+      dateTo: leaveForm.value.date_to,
+      daysCountHundredths: Math.round(Number(leaveForm.value.days) * 100),
+      reason: leaveForm.value.reason,
+    })
+    toast(t('workforceMe.leaveRequested'), 'success')
+    isLeaveDrawerOpen.value = false
+  }
+  catch (error) {
+    toast(error?.data?.message || t('workforceMe.leaveRequestFailed'), 'error')
+  }
+  finally {
+    leaveSubmitting.value = false
+  }
+}
+
 const currentContract = computed(() => {
   if (!employee.value) return null
 
@@ -569,7 +604,8 @@ function signatureChipProps(status) {
                 variant="tonal"
                 color="success"
                 prepend-icon="tabler-plus"
-                @click="router.push({ name: 'company-workforce-leave' })"
+                data-test="me-request-leave"
+                @click="openLeaveDrawer"
               >
                 {{ t('workforceMe.requestLeave') }}
               </VBtn>
@@ -751,5 +787,73 @@ function signatureChipProps(status) {
         </VCol>
       </VRow>
     </template>
+
+    <!-- ANO-007: self-service leave request drawer -->
+    <VNavigationDrawer
+      v-model="isLeaveDrawerOpen"
+      temporary
+      location="end"
+      width="420"
+    >
+      <div class="pa-6">
+        <h5 class="text-h5 mb-4">
+          {{ t('workforceMe.requestLeave') }}
+        </h5>
+        <VForm @submit.prevent="submitSelfLeave">
+          <AppSelect
+            v-model="leaveForm.leave_type_id"
+            :items="leaveTypeOptions"
+            :label="t('workforceMe.leaveType')"
+            data-test="me-leave-type"
+            class="mb-4"
+          />
+          <AppTextField
+            v-model="leaveForm.date_from"
+            type="date"
+            :label="t('leaves.dateFrom')"
+            data-test="me-leave-from"
+            class="mb-4"
+          />
+          <AppTextField
+            v-model="leaveForm.date_to"
+            type="date"
+            :label="t('leaves.dateTo')"
+            data-test="me-leave-to"
+            class="mb-4"
+          />
+          <AppTextField
+            v-model.number="leaveForm.days"
+            type="number"
+            min="0.5"
+            step="0.5"
+            :label="t('leaves.daysCount')"
+            data-test="me-leave-days"
+            class="mb-4"
+          />
+          <AppTextarea
+            v-model="leaveForm.reason"
+            :label="t('leaves.reason')"
+            rows="2"
+            class="mb-4"
+          />
+          <div class="d-flex gap-2">
+            <VBtn
+              type="submit"
+              :loading="leaveSubmitting"
+              data-test="me-leave-submit"
+            >
+              {{ t('common.submit') }}
+            </VBtn>
+            <VBtn
+              variant="tonal"
+              color="secondary"
+              @click="isLeaveDrawerOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+          </div>
+        </VForm>
+      </div>
+    </VNavigationDrawer>
   </div>
 </template>

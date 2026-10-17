@@ -127,6 +127,24 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     return data
   }
 
+  // ANO-007: self-service leave request (open to any active employee via /workforce/me).
+  async function createLeave({ leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason }) {
+    const data = await $api('/workforce/me/leaves', {
+      method: 'POST',
+      body: {
+        leave_type_id: leaveTypeId,
+        date_from: dateFrom,
+        date_to: dateTo,
+        days_count_hundredths: daysCountHundredths,
+        reason: reason || null,
+      },
+    })
+
+    await fetchProfile()
+
+    return data
+  }
+
   function reset() {
     employee.value = null
     todayClock.value = null
@@ -159,6 +177,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     clockOut,
     startBreak,
     endBreak,
+    createLeave,
     reset,
   }
 })

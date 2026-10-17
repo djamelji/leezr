@@ -5931,6 +5931,8 @@
     "noDocuments": "Aucun document",
     "noLeaveBalances": "Aucun solde de congés disponible",
     "requestLeave": "Demander un congé",
+    "leaveRequested": "Demande de congé envoyée",
+    "leaveRequestFailed": "Échec de la demande de congé",
     "viewAllDocuments": "Voir tous mes documents",
     "contractType": "Type de contrat",
     "workModel": "Modèle de travail",
@@ -6542,6 +6544,10 @@
     }
   },
   "leaves": {
+    "dateFrom": "Du",
+    "dateTo": "Au",
+    "daysCount": "Nombre de jours",
+    "reason": "Motif",
     "title": "Congés",
     "subtitle": "Gérez les demandes de congés de vos employés",
     "newRequest": "Nouvelle demande",
