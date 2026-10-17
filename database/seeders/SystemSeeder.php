@@ -34,6 +34,11 @@ class SystemSeeder extends Seeder
         // ─── Module catalog ──────────────────────────────────────
         ModuleRegistry::sync();
 
+        // ─── Module commercial config (sellable add-ons + pricing) ──────
+        // Audit 13: product reference data — MUST run in prod too (was dev-only,
+        // which left Workforce/logistics add-ons unsellable/unactivatable on PROD).
+        $this->call(ModuleProductConfigSeeder::class);
+
         // ─── Jobdomain catalog ───────────────────────────────────
         JobdomainRegistry::sync();
 

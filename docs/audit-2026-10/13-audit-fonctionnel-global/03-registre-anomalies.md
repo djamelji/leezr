@@ -14,6 +14,15 @@
 - **Tests** : `BillingNextInvoicePreviewTest` (future/past), `SubscriptionRenewalEligibilityTest` (skip/advance).
 - **Risque données** : aucun (pas de facture/écriture modifiée). Régularisation PROD = action ops traçable documentée.
 
+### ANO-003 — Modules sellable (Workforce/logistics) invendables en PROD — **P1** ✅
+- **Périmètre** : Company Modules / entitlements — tous les add-ons `type:addon`.
+- **Repro** : PROD `owner@leezr.test` (pro+logistique) → Workforce `is_entitled=false`, `display_state=contact_sales`, 0 module activé ; staging → activé (DevSeeder). « marche en dev, pas en prod ».
+- **Attendu** : un add-on correctement configuré (vendable/inclus) activable par un client entitled, **identiquement** prod et staging (config catalogue = donnée produit).
+- **Cause racine (démontrée)** : la config commerciale (`is_sellable` + `addon_pricing`) vivait **uniquement dans `DevSeeder`** (dev-only). `SystemSeeder` (prod) ne la posait pas → `EntitlementResolver=not_available` → `contact_sales` → invendable/inactivable en prod. La divergence de seeders **masquait** la panne (staging force-activait). `DependencyResolver::canActivate` (qui ignore l'entitlement) avait initialement masqué le vrai état.
+- **Correction** : extraction vers `ModuleProductConfigSeeder` (idempotent, données produit) + appel dans `SystemSeeder` → prod cohérent. Workforce : `contact_sales` → `available`. Valeurs de prix **existantes** (non inventées) ; promotion prod = validation produit (commit local, non déployé).
+- **Tests** : `WorkforceModuleActivationJourneyTest` (3).
+- **Risque données** : aucun (données produit catalogue, pas tenant ; pas de modif financière).
+
 ### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P2** 🔎
 - **Périmètre / page** : Platform Billing — `/platform/billing/coupons`.
 - **Repro** : E2E staging, `admin@leezr.com` → page rend mais 2 ressources `401` (parmi `/billing/coupons`, `/plans`, `/modules`).
