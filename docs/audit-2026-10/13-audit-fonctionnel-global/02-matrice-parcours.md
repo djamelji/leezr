@@ -21,7 +21,7 @@
 | Parcours | Niveau | Note |
 |---|---|---|
 | Connexion platform | [NAV] | smoke staging |
-| Companies | [NAV] | rendu |
+| Companies — liste + **suspend/réactiver** | **[NAV]** | CRUD navigateur→persistance (`platform-crud.spec.js`) ; confirm dialog ; création = via inscription (pas d'UI platform) |
 | JobDomains | [NAV] | rendu |
 | Markets | [NAV] | rendu |
 | Catalog | [NAV] | rendu |
