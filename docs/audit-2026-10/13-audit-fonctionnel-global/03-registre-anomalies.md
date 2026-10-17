@@ -15,6 +15,15 @@
 - **Finalisation** : commande `billing:regularize-current-subscriptions` (dry-run par défaut, **aucune facturation**, respecte l'unicité `(company_id,is_current)`, idempotente) pour régulariser les abos actifs `is_current=NULL` existants (prod). Tests `RegularizeCurrentSubscriptionsTest` (4).
 - **Risque données** : aucun (pas de facture/écriture modifiée). Régularisation PROD = action ops traçable documentée.
 
+### ANO-004 — Formulaire de profil Company non-sauvegardable (bouton gelé) — **P1** ✅
+- **Périmètre / page** : Company — `/company/profile/overview`.
+- **Repro déterministe (Playwright local)** : charger la page, modifier « Nom de l'entreprise » → le bouton **« Enregistrer les modifications » reste désactivé avant ET après saisie** (`BTN_DISABLED_AFTER_FILL=true`), aucun message de validation → **aucune requête PUT** → **profil non modifiable depuis l'UI**.
+- **Cause racine (démontrée)** : `const isFormValid = ref(false)` (v-model du `VForm`) + bouton `:disabled="!isFormValid"`. Vuetify ne bascule `isFormValid` à `true` qu'après une validation déclenchée ; initialisé à `false`, le bouton reste gelé indéfiniment.
+- **Correction** : bouton gardé par le tracker déjà présent `:disabled="!isDirty || isLoading"` ; la validation reste assurée au submit (`handleSave` → `formRef.validate()`). (`isFormValid` conservé comme v-model.)
+- **Portée** : anti-pattern **isolé** (recherche `:disabled="!isFormValid"` = 1 occurrence ; autres `:disabled="!...valid"` sont des `computed` réactifs, ex. `_EmailCompose`, non gelés).
+- **Test de non-régression [NAV]** : `tests/e2e/profile-crud.spec.js` (fill → bouton **enabled** → PUT `/api/company` 2xx → reload → valeur **persistée**). Vérifié vert.
+- **Découverte** : trouvée **par la campagne E2E CRUD** (invisible aux tests PHPUnit — validation front).
+
 ### ANO-003 — Modules sellable (Workforce/logistics) invendables en PROD — **P1** ✅
 - **Périmètre** : Company Modules / entitlements — tous les add-ons `type:addon`.
 - **Repro** : PROD `owner@leezr.test` (pro+logistique) → Workforce `is_entitled=false`, `display_state=contact_sales`, 0 module activé ; staging → activé (DevSeeder). « marche en dev, pas en prod ».

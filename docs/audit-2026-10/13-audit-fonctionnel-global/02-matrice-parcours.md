@@ -8,6 +8,7 @@
 | Connexion + redirection dashboard | [NAV] | smoke staging |
 | Dashboard rendu | [NAV] | propre |
 | Billing — plan / overview (prochaine facture) | [NAV][TEST] | **ANO-001 corrigé** ; renewal_overdue testé |
+| **Profil entreprise — mise à jour** | **[NAV]** | **ANO-004** : bouton save gelé → corrigé ; CRUD navigateur→persistance vérifié (`profile-crud.spec.js`) |
 | Billing — factures (liste/détail) | [TEST][CODE] | couvert PHPUnit ; [NON] en NAV |
 | Membres (liste) | [NAV] | rendu |
 | Modules (liste/activation) | [NAV][CODE] | rendu ; activation submit [NON] NAV |

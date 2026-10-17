@@ -405,7 +405,7 @@ const confirmReset = () => {
         v-can="'settings.manage'"
         type="submit"
         :loading="isLoading"
-        :disabled="!isFormValid"
+        :disabled="!isDirty || isLoading"
       >
         {{ t('companySettings.saveChanges') }}
       </VBtn>
