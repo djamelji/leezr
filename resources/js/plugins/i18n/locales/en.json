@@ -6013,6 +6013,7 @@
     "contract": {
       "title": "Contracts",
       "addContract": "Add Contract",
+      "activate": "Activate",
       "currentContract": "Current Contract",
       "type": "Contract Type",
       "workModel": "Work Model",

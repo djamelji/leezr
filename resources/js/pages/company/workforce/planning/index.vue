@@ -305,13 +305,31 @@ const openCreateShift = (employeeId = null, date = null) => {
   isShiftDrawerOpen.value = true
 }
 
+// ANO-009: the time inputs are type="time" and need "HH:MM", but the backend stores
+// start_at/end_at as full datetimes. Extract the time part for display, and (on submit)
+// recombine with the picked date into a full datetime the backend's `date` rule accepts.
+const toTimeInput = v => {
+  if (!v) return ''
+  const m = String(v).match(/[T\s](\d{2}:\d{2})/)
+  if (m) return m[1]
+
+  return /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : ''
+}
+
+const combineDateTime = (date, time) => {
+  if (!date || !time) return time || null
+  if (/^\d{4}-\d{2}-\d{2}[T ]/.test(time)) return time // already a full datetime
+
+  return `${date}T${time}:00`
+}
+
 const openEditShift = shift => {
   editingShift.value = shift
   shiftFormData.value = {
     employee_id: shift.employee_id,
     date: shift.date?.split('T')[0] || shift.date || '',
-    start_at: shift.start_at || '',
-    end_at: shift.end_at || '',
+    start_at: toTimeInput(shift.start_at),
+    end_at: toTimeInput(shift.end_at),
     timezone: shift.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     schedule_template_id: shift.schedule_template_id || null,
     work_location_id: shift.work_location_id || null,
@@ -339,8 +357,8 @@ const submitShift = async () => {
     const payload = {
       employee_id: shiftFormData.value.employee_id,
       date: shiftFormData.value.date,
-      start_at: shiftFormData.value.start_at,
-      end_at: shiftFormData.value.end_at,
+      start_at: combineDateTime(shiftFormData.value.date, shiftFormData.value.start_at),
+      end_at: combineDateTime(shiftFormData.value.date, shiftFormData.value.end_at),
       timezone: shiftFormData.value.timezone,
       schedule_template_id: shiftFormData.value.schedule_template_id || null,
       work_location_id: shiftFormData.value.work_location_id || null,
@@ -774,6 +792,7 @@ watch(activeTab, tab => {
           v-if="activeTab === 'planning'"
           v-can="'workforce.planning_manage'"
           color="primary"
+          data-test="shift-add"
           prepend-icon="tabler-calendar-plus"
           @click="openCreateShift()"
         >
@@ -1504,6 +1523,7 @@ watch(activeTab, tab => {
             <VCol cols="12">
               <AppAutocomplete
                 v-model="shiftFormData.employee_id"
+                data-test="shift-employee"
                 :items="employeeItems"
                 :label="$t('planning.fields.employee')"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1513,6 +1533,7 @@ watch(activeTab, tab => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="shiftFormData.date"
+                data-test="shift-date"
                 :label="$t('planning.fields.date')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1531,6 +1552,7 @@ watch(activeTab, tab => {
             <VCol cols="6">
               <AppTextField
                 v-model="shiftFormData.start_at"
+                data-test="shift-start"
                 :label="$t('planning.fields.startAt')"
                 type="time"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1539,6 +1561,7 @@ watch(activeTab, tab => {
             <VCol cols="6">
               <AppTextField
                 v-model="shiftFormData.end_at"
+                data-test="shift-end"
                 :label="$t('planning.fields.endAt')"
                 type="time"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1571,6 +1594,7 @@ watch(activeTab, tab => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="shift-submit"
                   :loading="shiftFormLoading"
                 >
                   {{ isShiftEditMode ? $t('common.save') : $t('common.create') }}

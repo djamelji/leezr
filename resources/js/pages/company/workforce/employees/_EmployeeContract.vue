@@ -7,6 +7,8 @@ const props = defineProps({
   employee: { type: Object, required: true },
 })
 
+const emit = defineEmits(['updated'])
+
 const { t, locale } = useI18n()
 const { can } = useCan()
 const store = useEmployeesStore()
@@ -59,9 +61,25 @@ const submitContract = async () => {
     isDrawerOpen.value = false
     // Reset form
     formData.value = { contract_type: 'cdi', work_model_key: 'horaire', weekly_hours: 35, start_date: '', convention_collective_id: null, compensation_type: 'monthly', base_salary_cents: null, hourly_rate_cents: null, daily_rate_cents: null }
+    emit('updated')
   }
   finally {
     formLoading.value = false
+  }
+}
+
+// ANO-010: a contract is created as `draft` and must be activated before the employee can
+// be scheduled (shift rule I4) or paid. The backend endpoint + store action existed but no
+// UI ever called them → draft contracts were a dead end. Expose an Activate action.
+const activatingId = ref(null)
+const activateContract = async contractId => {
+  activatingId.value = contractId
+  try {
+    await store.activateContract(props.employee.id, contractId)
+    emit('updated')
+  }
+  finally {
+    activatingId.value = null
   }
 }
 
@@ -83,6 +101,7 @@ const formatSalary = (cents, currency) => {
       <VBtn
         v-can="'workforce.contracts'"
         color="primary"
+        data-test="contract-add"
         prepend-icon="tabler-file-plus"
         size="small"
         @click="isDrawerOpen = true"
@@ -257,6 +276,19 @@ const formatSalary = (cents, currency) => {
               >
                 IDCC {{ contract.convention_collective.idcc }}
               </VChip>
+              <VSpacer />
+              <VBtn
+                v-if="contract.status === 'draft' && can('workforce.contracts')"
+                data-test="contract-activate"
+                color="success"
+                size="x-small"
+                variant="tonal"
+                prepend-icon="tabler-circle-check"
+                :loading="activatingId === contract.id"
+                @click="activateContract(contract.id)"
+              >
+                {{ $t('employees.contract.activate') }}
+              </VBtn>
             </div>
           </VTimelineItem>
         </VTimeline>
@@ -312,6 +344,7 @@ const formatSalary = (cents, currency) => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.start_date"
+                data-test="contract-start-date"
                 :label="$t('employees.contract.startDate')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -388,6 +421,7 @@ const formatSalary = (cents, currency) => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="contract-submit"
                   :loading="formLoading"
                 >
                   {{ $t('common.create') }}

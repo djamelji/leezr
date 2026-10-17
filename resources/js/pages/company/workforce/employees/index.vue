@@ -136,6 +136,7 @@ const getContractLabel = employee => {
       <VBtn
         v-can="'workforce.manage'"
         color="primary"
+        data-test="emp-add"
         prepend-icon="tabler-user-plus"
         @click="isDrawerOpen = true"
       >
@@ -316,6 +317,7 @@ const getContractLabel = employee => {
             <VCol cols="12">
               <AppTextField
                 v-model="formData.first_name"
+                data-test="emp-first-name"
                 :label="$t('employees.fields.firstName')"
                 :rules="[v => !!v || $t('validation.required')]"
               />
@@ -323,6 +325,7 @@ const getContractLabel = employee => {
             <VCol cols="12">
               <AppTextField
                 v-model="formData.last_name"
+                data-test="emp-last-name"
                 :label="$t('employees.fields.lastName')"
                 :rules="[v => !!v || $t('validation.required')]"
               />
@@ -349,6 +352,7 @@ const getContractLabel = employee => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.hire_date"
+                data-test="emp-hire-date"
                 :label="$t('employees.fields.hireDate')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -365,6 +369,7 @@ const getContractLabel = employee => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="emp-submit"
                   :loading="formLoading"
                 >
                   {{ $t('common.create') }}

@@ -162,7 +162,10 @@ const conventionLabel = computed(() => {
               />
             </VWindowItem>
             <VWindowItem :value="1">
-              <EmployeeContract :employee="employee" />
+              <EmployeeContract
+                :employee="employee"
+                @updated="store.fetchEmployee(route.params.id)"
+              />
             </VWindowItem>
           </VWindow>
         </VCardText>
