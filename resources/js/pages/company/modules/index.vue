@@ -642,6 +642,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         color="primary"
                         variant="tonal"
                         class="flex-grow-1"
+                        :data-test="`module-activate-${mod.key}`"
                         :loading="togglingKey === mod.key"
                         @click="activateModule(mod)"
                       >
@@ -940,6 +941,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         variant="text"
                         color="secondary"
                         size="small"
+                        :data-test="`module-deactivate-${mod.key}`"
                         :loading="togglingKey === mod.key"
                         @click="requestDeactivation(mod)"
                       >
@@ -1417,6 +1419,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             v-can="'modules.manage'"
             color="error"
             variant="elevated"
+            data-test="module-deactivate-confirm"
             :loading="togglingKey === deactivateTarget?.key"
             @click="confirmDeactivation"
           >
@@ -1572,6 +1575,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             v-can="'modules.manage'"
             color="primary"
             variant="elevated"
+            data-test="module-quote-confirm"
             :disabled="quoteLoading || !quoteData"
             @click="confirmQuoteEnable"
           >
