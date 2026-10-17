@@ -53,11 +53,9 @@ test.describe('Company + Employee', () => {
   test.beforeEach(async ({ page }) => { await login(page, '/login', 'owner@leezr.test', 'password') })
 
   // Real routes (verified): /dashboard is root; the rest live under /company/*.
-  // NB: /company/workforce (index) and /company/workforce/time excluded — they emit 429/422
-  // on load even in serial navigation (see ANO-006, under investigation), not a render defect.
   for (const path of ['/dashboard', '/company/billing/plan', '/company/members', '/company/modules',
-    '/company/notifications', '/company/workforce/employees',
-    '/company/workforce/leave', '/company/workforce/payroll',
+    '/company/notifications', '/company/workforce', '/company/workforce/employees',
+    '/company/workforce/time', '/company/workforce/leave', '/company/workforce/payroll',
     '/company/workforce/dsn', '/company/workforce/me']) {
     test(`écran rendu proprement: ${path}`, async ({ page }) => { await assertScreenClean(page, path) })
   }
