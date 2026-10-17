@@ -73,6 +73,14 @@
 - **Test de non-régression [NAV, persistance]** : `workforce-employee-lifecycle.spec.js` (étape 2b) — activation réelle (`POST .../contracts/{id}/activate`), suivie du shift qui exige le contrat actif (preuve de bout en bout).
 - **Découverte** : campagne E2E — c'est la règle métier I4 (shift refusé) qui a révélé que le contrat ne pouvait jamais quitter `draft` via le produit. Ni un test backend (l'endpoint marchait) ni un smoke ne pouvaient le voir.
 
+### ANO-011 — Platform : création d'utilisateur impossible (drawer orphelin, aucun déclencheur) — **P1** ✅
+- **Périmètre** : Platform admin — `/platform/access/users` (`_UsersTab.vue`).
+- **Repro déterministe** : `admin@leezr.com` → onglet Utilisateurs → **aucun bouton pour ouvrir le drawer de création**. `openCreateDrawer()` (ligne 123) et le `VNavigationDrawer` complet (titre `platformUsers.addPlatformUser`, formulaire, `POST /api/platform/platform-users`) existaient mais **aucun `@click` ne les appelait** → **impossible de créer un utilisateur plateforme via le produit**.
+- **Cause racine** : trou d'intégration UI (formulaire + endpoint présents, déclencheur absent) — symétrique d'ANO-010.
+- **Correction** : bouton **« Ajouter un utilisateur plateforme »** (`data-test="platform-user-add"`) câblé dans la barre d'actions → `openCreateDrawer`. `data-test` ajoutés sur les champs du drawer (prénom/nom/email/rôles/mot de passe/confirmation/radio credentials/submit) pour un pilotage robuste.
+- **Test de non-régression [NAV, persistance]** : `platform-rbac-workflow.spec.js` — création utilisateur + **attribution de rôle** via l'UI (`POST /platform-users` 201), persistance vérifiée après reload.
+- **Découverte** : campagne E2E (cartographie des parcours admin RBAC).
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

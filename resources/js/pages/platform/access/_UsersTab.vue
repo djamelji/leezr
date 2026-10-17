@@ -234,6 +234,15 @@ const deleteUser = async member => {
             clear-icon="tabler-x"
             style="inline-size: 10rem;"
           />
+
+          <!-- ANO-011: the create drawer existed but no trigger ever opened it. -->
+          <VBtn
+            data-test="platform-user-add"
+            prepend-icon="tabler-plus"
+            @click="openCreateDrawer"
+          >
+            {{ t('platformUsers.addPlatformUser') }}
+          </VBtn>
         </div>
       </VCardText>
 
@@ -398,6 +407,7 @@ const deleteUser = async member => {
               >
                 <AppTextField
                   v-model="drawerForm.first_name"
+                  data-test="platform-user-first-name"
                   :label="t('platformUsers.firstName')"
                   :placeholder="t('platformUsers.firstNamePlaceholder')"
                 />
@@ -408,6 +418,7 @@ const deleteUser = async member => {
               >
                 <AppTextField
                   v-model="drawerForm.last_name"
+                  data-test="platform-user-last-name"
                   :label="t('platformUsers.lastName')"
                   :placeholder="t('platformUsers.lastNamePlaceholder')"
                 />
@@ -415,6 +426,7 @@ const deleteUser = async member => {
               <VCol cols="12">
                 <AppTextField
                   v-model="drawerForm.email"
+                  data-test="platform-user-email"
                   :label="t('common.email')"
                   type="email"
                   :placeholder="t('platformUsers.emailPlaceholder')"
@@ -423,6 +435,7 @@ const deleteUser = async member => {
               <VCol cols="12">
                 <AppSelect
                   v-model="drawerForm.roles"
+                  data-test="platform-user-roles"
                   :items="roleFilterOptions"
                   :label="t('platformUsers.role')"
                   :placeholder="t('platformUsers.selectRoles')"
@@ -448,6 +461,7 @@ const deleteUser = async member => {
                       value="invite"
                     />
                     <VRadio
+                      data-test="platform-user-cred-password"
                       :label="t('platformUsers.setPasswordNow')"
                       value="password"
                     />
@@ -458,6 +472,7 @@ const deleteUser = async member => {
                   <VCol cols="12">
                     <AppTextField
                       v-model="drawerForm.password"
+                      data-test="platform-user-password"
                       :label="t('platformUsers.password')"
                       type="password"
                       :placeholder="t('credentials.minChars')"
@@ -466,6 +481,7 @@ const deleteUser = async member => {
                   <VCol cols="12">
                     <AppTextField
                       v-model="drawerForm.password_confirmation"
+                      data-test="platform-user-password-confirm"
                       :label="t('platformUsers.confirmPasswordLabel')"
                       type="password"
                       :placeholder="t('credentials.repeatPassword')"
@@ -492,6 +508,7 @@ const deleteUser = async member => {
                 <VBtn
                   type="submit"
                   class="me-3"
+                  data-test="platform-user-submit"
                   :loading="drawerLoading"
                 >
                   {{ t('common.create') }}

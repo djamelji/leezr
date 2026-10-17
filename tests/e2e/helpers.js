@@ -12,12 +12,29 @@ export async function loginCompany(page, email = 'owner@leezr.test', password = 
 }
 
 export async function loginPlatform(page, email = 'admin@leezr.com', password = 'password') {
-  await page.goto('/platform/login', { waitUntil: 'networkidle' })
-  await page.fill('input[type="email"], input[name="email"]', email)
-  await page.fill('input[type="password"], input[name="password"]', password)
-  await page.keyboard.press('Enter')
-  await page.waitForURL(u => !u.pathname.endsWith('/login'), { timeout: 20000 }).catch(() => {})
-  await page.waitForTimeout(2500)
+  // Robust login: submit, wait for the real POST /login result, and retry once past a
+  // transient throttle (429) / 5xx. Never silently proceed unauthenticated (would mask failures).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto('/platform/login', { waitUntil: 'networkidle' })
+    await page.fill('input[type="email"], input[name="email"]', email)
+    await page.fill('input[type="password"], input[name="password"]', password)
+
+    const [resp] = await Promise.all([
+      page.waitForResponse(r => r.url().includes('/platform/login') && r.request().method() === 'POST', { timeout: 20000 }).catch(() => null),
+      page.keyboard.press('Enter'),
+    ])
+    await page.waitForURL(u => !u.pathname.endsWith('/login'), { timeout: 20000 }).catch(() => {})
+    await page.waitForTimeout(1500)
+
+    if (!page.url().endsWith('/login')) return // off the login page → authenticated
+    const status = resp ? resp.status() : 0
+    if (status === 429 || status >= 500 || status === 0) {
+      await page.waitForTimeout(20000) // ride out the 60s login throttle window, then retry
+      continue
+    }
+    throw new Error(`Platform login failed for ${email} (login POST status ${status})`)
+  }
+  throw new Error(`Platform login did not complete for ${email} after retries`)
 }
 
 // Click an action and assert the triggered API call succeeds (real integration).

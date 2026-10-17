@@ -29,7 +29,10 @@
 | Documentation | [NAV] | rendu |
 | Billing / coupons | [NAV] | **ANO-002** (2× 401 à confirmer) |
 | Automations (cockpit scheduler) | [TEST][API] | ADR-572 ; [NON] en NAV cette passe |
-| Plans / Modules / Users / Roles / Settings | [CODE] | **[NON]** en NAV |
+| **Access — Rôles (créer/éditer/supprimer)** | **[NAV][persistance]** | CRUD complet navigateur→DB (`platform-rbac-workflow.spec.js`) |
+| **Access — Utilisateurs (créer + attribuer rôle)** | **[NAV][persistance]** | **ANO-011** corrigé (drawer orphelin câblé) ; création + attribution vérifiées |
+| **RBAC — enforcement effectif (permissions UI = API)** | **[NAV][API]** | utilisateur sans permission → **403** sur `/platform-users` ; admin → **200** |
+| Plans / Modules / Settings | [CODE] | **[NON]** en NAV |
 | Alerts / Notifications | [CODE] | **[NON]** en NAV |
 
 ## EMPLOYEE / USER — `bob@leezr.test`

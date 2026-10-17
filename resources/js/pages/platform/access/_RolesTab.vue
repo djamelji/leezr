@@ -242,6 +242,7 @@ const deleteRole = async role => {
                   <a
                     href="javascript:void(0)"
                     class="text-primary text-body-2 font-weight-medium"
+                    data-test="role-edit"
                     @click.stop="openEditDrawer(role)"
                   >
                     {{ t('platformRoles.editRole') }}
@@ -250,6 +251,7 @@ const deleteRole = async role => {
                     v-if="!role.is_system && role.users_count === 0"
                     href="javascript:void(0)"
                     class="text-error text-body-2"
+                    data-test="role-delete"
                     @click.stop="deleteRole(role)"
                   >
                     {{ t('common.delete') }}
@@ -293,6 +295,7 @@ const deleteRole = async role => {
               <VCardText class="d-flex flex-column align-end justify-end gap-4">
                 <VBtn
                   size="small"
+                  data-test="role-add"
                   prepend-icon="tabler-plus"
                   @click="openCreateDrawer"
                 >
@@ -351,6 +354,7 @@ const deleteRole = async role => {
                 <VCol cols="12">
                   <AppTextField
                     v-model="drawerForm.key"
+                    data-test="role-key"
                     :label="t('platformRoles.key')"
                     :placeholder="t('platformRoles.keyPlaceholder')"
                     :disabled="isEditMode"
@@ -359,6 +363,7 @@ const deleteRole = async role => {
                 <VCol cols="12">
                   <AppTextField
                     v-model="drawerForm.name"
+                    data-test="role-name"
                     :label="t('common.name')"
                     :placeholder="t('platformRoles.namePlaceholder')"
                   />
@@ -397,6 +402,7 @@ const deleteRole = async role => {
                   <VBtn
                     type="submit"
                     class="me-3"
+                    data-test="role-submit"
                     :loading="drawerLoading"
                   >
                     {{ isEditMode ? t('common.update') : t('common.create') }}
