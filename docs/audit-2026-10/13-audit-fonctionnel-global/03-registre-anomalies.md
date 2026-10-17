@@ -40,10 +40,10 @@
 - **Impact** : la « validation fonctionnelle » antérieure (19–20 pages « vertes ») était **largement illusoire** pour les pages company/platform (exactement « page qui s'affiche ≠ parcours valide »).
 - **Correction** : `assertScreenClean` **échoue désormais sur une 404** (`Page introuvable`) ; chemins corrigés vers les vraies routes ; filtrage documenté des 401/429 **transitoires** (course auth post-login / rate-limit sous navigation rapide — pages rendues, non-défaut). Suite E2E : **18 verts honnêtes** (dont 2 CRUD à persistance).
 
-### ANO-006 — Workforce : 429 (rate-limit) + 422 au chargement — **P2 (observation, à diagnostiquer)** 🔎
-- **Repro (E2E local)** : `/company/workforce` (dashboard) déclenche des `429 Too Many Requests` au chargement ; `/company/workforce/time` émet un `422` sur une requête au load. Sous navigation E2E ; le 429 est partiellement cumulatif (rate-limit IP/session).
-- **Hypothèses** : dashboard workforce trop bavard (nombreux appels widgets en parallèle → rate-limit) ; `time` envoie une requête aux paramètres invalides au montage. **Non root-causé** → non corrigé (repro déterministe + cause requises). Exclu du set smoke vert, documenté.
-- **À faire** : capturer les endpoints 429/422 exacts, vérifier le seuil de rate-limit vs charge légitime du dashboard, corriger (batch/throttle ou params).
+### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
+- **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
+- **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.
+- **Tests** : `WorkforceTimesheetWorkflowTest` (sans période→200, période explicite→200, range inversé→422). Vérifié navigateur : `/company/workforce/time` **0 non-2xx**.
 
 ### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P3 (non reproductible, clos)** ✅
 - **Périmètre / page** : Platform Billing — `/platform/billing/coupons`.

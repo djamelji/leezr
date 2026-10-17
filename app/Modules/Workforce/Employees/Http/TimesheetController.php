@@ -190,15 +190,21 @@ class TimesheetController extends Controller
     {
         $companyId = $request->attributes->get('company_id');
 
+        // ANO-006: the time page loads this before the user picks a period. Make the
+        // period optional and default to the current month so the stats widget loads
+        // (previously 422'd on every initial load). Explicit range still honored.
         $validated = $request->validate([
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
+            'period_start' => 'nullable|date',
+            'period_end' => 'nullable|date|after_or_equal:period_start',
         ]);
+
+        $periodStart = $validated['period_start'] ?? now()->startOfMonth()->toDateString();
+        $periodEnd = $validated['period_end'] ?? now()->endOfMonth()->toDateString();
 
         $stats = TimesheetPeriodReadModel::statistics(
             companyId: $companyId,
-            periodStart: $validated['period_start'],
-            periodEnd: $validated['period_end'],
+            periodStart: $periodStart,
+            periodEnd: $periodEnd,
         );
 
         return response()->json($stats);

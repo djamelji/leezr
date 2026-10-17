@@ -361,4 +361,25 @@ class WorkforceTimesheetWorkflowTest extends TestCase
         $response = $this->api('postJson', "/api/workforce/timesheets/{$otherTs->id}/submit");
         $response->assertStatus(404);
     }
+
+    // ── ANO-006: timesheet statistics must load without an explicit period ──
+
+    public function test_timesheet_statistics_loads_without_a_period(): void
+    {
+        // The time page fetches stats on mount before the user picks a period — must NOT 422.
+        $this->api('getJson', '/api/workforce/timesheets/statistics')->assertStatus(200);
+    }
+
+    public function test_timesheet_statistics_accepts_explicit_period(): void
+    {
+        $this->api('getJson', '/api/workforce/timesheets/statistics?period_start=2026-05-01&period_end=2026-05-31')
+            ->assertStatus(200);
+    }
+
+    public function test_timesheet_statistics_rejects_inverted_period(): void
+    {
+        // Explicit but invalid range is still rejected (validation preserved).
+        $this->api('getJson', '/api/workforce/timesheets/statistics?period_start=2026-05-31&period_end=2026-05-01')
+            ->assertStatus(422);
+    }
 }
