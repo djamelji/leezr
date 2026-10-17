@@ -49,6 +49,14 @@
 - **Test de non-régression [NAV]** : `workforce-leave-workflow.spec.js` (salarié demande→201, manager approuve→persistant, non-autorisé→403, range inversé→422). Vérifié vert.
 - **Découverte** : trouvé par la campagne E2E (le parcours métier réel), invisible aux tests backend (l'API marchait ; le bug était le routage front).
 
+### ANO-008 — Pointage self-service cassé : `clock-in` → 422 (contrat `source` divergent) — **P1** ✅
+- **Périmètre** : Employé self-service — `/company/workforce/me`, bouton « Commencer la journée » (widget pointage).
+- **Repro déterministe** : `bob@leezr.test` (salarié) → `/me` → clic « Commencer la journée » → **`422 POST /workforce/me/clock-in`**, corps `{"message":"The selected source is invalid.","errors":{"source":["The selected source is invalid."]}}`. **Aucun salarié ne pouvait pointer via l'UI** (le pointage était entièrement bloqué à la première action).
+- **Cause racine** : divergence de **contrat front/back**. Le store `workforce-clock.js` `clockIn()` envoyait `body:{source:'web'}`, mais `EmployeeSelfController::clockIn` valide `source ∈ {manual, mobile, kiosk}` — `'web'` rejeté. Invisible aux tests backend (l'API acceptait `manual` ; le bug était la valeur envoyée par le front).
+- **Correction** : `clockIn()` → `body:{source:'manual'}` (le pointage web self-service EST une saisie manuelle). Aucune permission ni règle métier contournée.
+- **Test de non-régression [NAV, persistance]** : `workforce-clock-workflow.spec.js` — parcours complet **clock-in → pause → reprise → clock-out**, chaque étape = appel API réel (`<400`) + transition d'état UI ; persistance vérifiée après reload (journée complétée, plus de bouton « Commencer la journée »). Vérifié vert (1/1).
+- **Découverte** : trouvée par la campagne E2E (parcours métier réel multi-étapes), typique d'un décalage de contrat front/back que ni les tests backend ni un smoke de navigation ne révèlent.
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

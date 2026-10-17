@@ -87,9 +87,11 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   }
 
   async function clockIn() {
+    // ANO-008: backend accepts source ∈ {manual, mobile, kiosk}. The web self-service
+    // clock-in is a manual entry — 'web' was rejected (422), breaking clock-in entirely.
     const data = await $api('/workforce/me/clock-in', {
       method: 'POST',
-      body: { source: 'web' },
+      body: { source: 'manual' },
     })
 
     await refreshToday()
