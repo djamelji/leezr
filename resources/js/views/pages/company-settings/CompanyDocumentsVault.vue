@@ -259,6 +259,7 @@ const handleDelete = async code => {
             </VBtn>
             <input
               :ref="`fileInput_${doc.code}`"
+              :data-test="`doc-upload-${doc.code}`"
               type="file"
               hidden
               multiple
@@ -281,6 +282,7 @@ const handleDelete = async code => {
               variant="text"
               size="small"
               color="error"
+              :data-test="`doc-delete-${doc.code}`"
               :title="t('common.delete')"
               @click="handleDelete(doc.code)"
             >
@@ -355,6 +357,7 @@ const handleDelete = async code => {
         <template v-if="pendingUploadDoc?.requires_expiration">
           <AppDateTimePicker
             v-model="uploadExpiresAt"
+            data-test="doc-upload-expires"
             :label="t('documents.expirationDate')"
             :hint="t('documents.expirationDateHint')"
             persistent-hint
@@ -380,6 +383,7 @@ const handleDelete = async code => {
         </VBtn>
         <VBtn
           color="primary"
+          data-test="doc-upload-confirm"
           :disabled="!pendingUploadFiles.length || (pendingUploadDoc?.requires_expiration && !uploadExpiresAt)"
           :loading="uploadingCode === pendingUploadDoc?.code"
           @click="confirmUpload"

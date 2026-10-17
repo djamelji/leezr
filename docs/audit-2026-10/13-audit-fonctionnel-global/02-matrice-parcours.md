@@ -14,7 +14,7 @@
 | **Membres — éditer rôle + supprimer (+ protection owner)** | **[NAV][persistance][API]** | lifecycle complet (`company-member-lifecycle.spec.js`) ; **ANO-012** (update partiel) corrigé ; owner non supprimable |
 | Modules (liste/activation) | [NAV][CODE] | rendu ; activation submit [NON] NAV |
 | **Modules — activer/désactiver (add-on + entitlement)** | **[NAV][persistance][API]** | round-trip complet (`company-module-toggle.spec.js`) : `logistics_tracking` available→active (flux devis `PUT /enable`) → désactivé (`PUT /disable`) ; état vérifié via `/api/modules` ; base restaurée ; pas d'anomalie |
-| Documents | [NAV] | rendu |
+| Documents (coffre) — **upload + suppression** | **[NAV][persistance]** | upload multipart réel → `POST /company/documents/{code}`, persistance vérifiée, puis suppression (`DELETE`) (`company-documents.spec.js`) ; pas d'anomalie |
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |
 | **Workforce — embauche→contrat→activation→planning** | **[NAV][persistance]** | **workflow manager complet** (`workforce-employee-lifecycle.spec.js`) ; **ANO-009** (shift 422) + **ANO-010** (contrat draft non activable) corrigés |
 | Création/édition (persistance) | **[NAV]**(profil, membre) + [TEST] | profil + membre vérifiés navigateur→DB ; suppression/autres [NON] NAV |
