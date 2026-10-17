@@ -214,6 +214,39 @@ class MemberRoleAwareFieldTest extends TestCase
         $this->assertSame('Senior Driver', $jobTitle['value'], 'FieldValue must persist even after role change hiding it');
     }
 
+    /**
+     * ANO-012: a partial update (role change only) must NOT be blocked by required dynamic
+     * fields that the request does not include. Only submitted dynamic fields are validated.
+     */
+    public function test_partial_update_role_only_not_blocked_by_untouched_required_fields(): void
+    {
+        // Driver role requires `phone`, but this member has none set.
+        $this->memberMembership->update(['company_role_id' => $this->driverRole->id]);
+
+        $managerRole = CompanyRole::create([
+            'company_id' => $this->company->id,
+            'key' => 'manager2',
+            'name' => 'Manager2',
+            'field_config' => [
+                ['code' => 'phone', 'required' => true, 'visible' => true, 'order' => 0, 'scope' => 'company_user'],
+            ],
+        ]);
+
+        // Role-only PUT (no dynamic_fields) must succeed despite `phone` being required+empty.
+        $this->actAs($this->admin)
+            ->putJson("/api/company/members/{$this->memberMembership->id}", [
+                'company_role_id' => $managerRole->id,
+            ])
+            ->assertOk();
+
+        // But submitting an invalid value for a field IS still validated.
+        $this->actAs($this->admin)
+            ->putJson("/api/company/members/{$this->memberMembership->id}", [
+                'dynamic_fields' => ['phone' => ''],
+            ])
+            ->assertStatus(422);
+    }
+
     // ═══════════════════════════════════════════════════════
     // PUT /company/roles/{id} — field_config CRUD
     // ═══════════════════════════════════════════════════════

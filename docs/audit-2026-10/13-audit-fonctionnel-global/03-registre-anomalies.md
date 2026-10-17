@@ -81,6 +81,14 @@
 - **Test de non-régression [NAV, persistance]** : `platform-rbac-workflow.spec.js` — création utilisateur + **attribution de rôle** via l'UI (`POST /platform-users` 201), persistance vérifiée après reload.
 - **Découverte** : campagne E2E (cartographie des parcours admin RBAC).
 
+### ANO-012 — Changer le rôle d'un membre impossible si profil incomplet (update non partiel) — **P2** ✅
+- **Périmètre** : Company — `/company/members/{id}`, formulaire profil membre (changement de rôle).
+- **Repro déterministe** : `owner@leezr.test` édite un membre dont des champs dynamiques requis (phone, n° SS, IBAN, type de contrat…) sont **vides**, change uniquement le **rôle**, enregistre → **`422 PUT /api/company/members/{id}`** : `The dynamic fields.phone field is required. (and 7 more errors)`. **Une simple transition de rôle était bloquée** par la validation de champs RH **non touchés**.
+- **Cause racine** : le formulaire envoyait **tous** les `dynamic_fields` (y compris les nuls) à chaque sauvegarde, et `UpdateMemberRequest` appliquait les règles `required` (role-aware) sur **tous** les champs → un `PUT` partiel re-validait des champs absents de l'intention de l'utilisateur.
+- **Correction** : sémantique **update partiel**. (1) `MemberProfileForm` n'envoie que les champs dynamiques **réellement modifiés** (snapshot initial comparé). (2) `UpdateMemberRequest` ne valide que les champs dynamiques **présents** dans la requête (les champs non soumis ne sont pas re-validés). La validation à la **création** reste stricte (requête séparée). Les champs effectivement soumis restent validés (valeur invalide → 422).
+- **Tests de non-régression** : [NAV, persistance] `company-member-lifecycle.spec.js` (créer Driver → changer en Manager → supprimer, + protection owner) ; [API] `MemberRoleAwareFieldTest::test_partial_update_role_only_not_blocked_by_untouched_required_fields`. Suite membres : 88+ verts.
+- **Découverte** : campagne E2E (parcours owner réel de gestion des membres).
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

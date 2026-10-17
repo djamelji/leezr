@@ -11,6 +11,7 @@
 | **Profil entreprise — mise à jour** | **[NAV]** | **ANO-004** : bouton save gelé → corrigé ; CRUD navigateur→persistance vérifié (`profile-crud.spec.js`) |
 | Billing — factures (liste/détail) | [TEST][CODE] | couvert PHPUnit ; [NON] en NAV |
 | Membres — liste + **création** | **[NAV]** | **CRUD navigateur→persistance vérifié** (`company-crud.spec.js`) ; data-test ajouté au select rôle |
+| **Membres — éditer rôle + supprimer (+ protection owner)** | **[NAV][persistance][API]** | lifecycle complet (`company-member-lifecycle.spec.js`) ; **ANO-012** (update partiel) corrigé ; owner non supprimable |
 | Modules (liste/activation) | [NAV][CODE] | rendu ; activation submit [NON] NAV |
 | Documents | [NAV] | rendu |
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |

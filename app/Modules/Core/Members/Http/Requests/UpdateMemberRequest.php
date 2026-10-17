@@ -39,9 +39,26 @@ class UpdateMemberRequest extends FormRequest
             }
         }
 
-        return array_merge(
-            $fixedRules,
-            FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id, $roleKey, $company?->market_key),
-        );
+        // ANO-012: an update is partial by nature. Only validate dynamic fields actually
+        // submitted, so a focused edit (e.g. changing the role) is never blocked by
+        // required-but-untouched fields the user did not include in this request.
+        $dynamicRules = FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id, $roleKey, $company?->market_key);
+        $submitted = $this->input('dynamic_fields', []);
+        $submitted = is_array($submitted) ? $submitted : [];
+
+        $scopedDynamicRules = [];
+        foreach ($dynamicRules as $ruleKey => $ruleValue) {
+            if ($ruleKey === 'dynamic_fields') {
+                $scopedDynamicRules[$ruleKey] = $ruleValue;
+
+                continue;
+            }
+            $code = str_replace('dynamic_fields.', '', $ruleKey);
+            if (array_key_exists($code, $submitted)) {
+                $scopedDynamicRules[$ruleKey] = $ruleValue;
+            }
+        }
+
+        return array_merge($fixedRules, $scopedDynamicRules);
     }
 }

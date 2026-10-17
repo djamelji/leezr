@@ -580,6 +580,7 @@ const typeOptions = computed(() => [
                     size="small"
                     variant="text"
                     color="default"
+                    data-test="member-edit"
                     @click="router.push(`/company/members/${member.id}`)"
                   >
                     <VIcon icon="tabler-edit" />
@@ -590,6 +591,7 @@ const typeOptions = computed(() => [
                     size="small"
                     variant="text"
                     color="error"
+                    data-test="member-delete"
                     @click="removeMember(member)"
                   >
                     <VIcon icon="tabler-trash" />

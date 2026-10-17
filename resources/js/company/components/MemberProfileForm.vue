@@ -74,6 +74,10 @@ watch(
   { immediate: true },
 )
 
+// Snapshot the loaded dynamic values so an update can submit ONLY what the user changed
+// (ANO-012: sending every field re-triggered required-validation of untouched empty fields,
+// making a simple role change impossible for members with an incomplete profile).
+const initialDynamic = ref({})
 watch(
   () => props.dynamicFields,
   fields => {
@@ -82,6 +86,7 @@ watch(
       df[field.code] = field.value ?? null
     }
     dynamicForm.value = df
+    initialDynamic.value = { ...df }
   },
   { immediate: true },
 )
@@ -112,8 +117,14 @@ const handleSave = () => {
     payload.company_role_id = form.value.company_role_id
   }
 
+  // Only submit dynamic fields the user actually changed — a partial update must not
+  // re-validate (and thus require) untouched fields that happen to be empty (ANO-012).
   if (props.dynamicFields.length > 0) {
-    payload.dynamic_fields = { ...dynamicForm.value }
+    const changed = {}
+    for (const [code, value] of Object.entries(dynamicForm.value)) {
+      if (value !== (initialDynamic.value[code] ?? null)) changed[code] = value
+    }
+    if (Object.keys(changed).length > 0) payload.dynamic_fields = changed
   }
 
   emit('save', payload)
@@ -192,6 +203,7 @@ const handleSave = () => {
         <AppSelect
           v-if="editable && !member?._isProtected"
           v-model="form.company_role_id"
+          data-test="member-profile-role"
           :label="t('members.role')"
           :items="roleOptions"
           clearable
@@ -244,6 +256,7 @@ const handleSave = () => {
       >
         <VBtn
           type="submit"
+          data-test="member-profile-save"
           :loading="isSaving"
         >
           {{ t('common.saveChanges') }}
