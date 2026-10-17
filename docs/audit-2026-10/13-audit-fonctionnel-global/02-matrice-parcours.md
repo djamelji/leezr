@@ -14,6 +14,7 @@
 | Modules (liste/activation) | [NAV][CODE] | rendu ; activation submit [NON] NAV |
 | Documents | [NAV] | rendu |
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |
+| **Workforce — embauche→contrat→activation→planning** | **[NAV][persistance]** | **workflow manager complet** (`workforce-employee-lifecycle.spec.js`) ; **ANO-009** (shift 422) + **ANO-010** (contrat draft non activable) corrigés |
 | Création/édition (persistance) | **[NAV]**(profil, membre) + [TEST] | profil + membre vérifiés navigateur→DB ; suppression/autres [NON] NAV |
 | Accès restreint si abo expiré | [TEST] | RestrictedBusinessAccessTest |
 
@@ -36,7 +37,7 @@
 |---|---|---|
 | RBAC : pas de gestion membres | [NAV] | route gardée (vérifié) |
 | **Self-service congé — demande** | **[NAV]** | **ANO-007** corrigé ; drawer self-service → 201 ; workflow complet |
-| Self-service (pointage/pause/documents) | [TEST][CODE] | rendu [NAV] ; submit pointage [NON] NAV (prochain lot) |
+| **Self-service pointage — clock-in→pause→reprise→clock-out** | **[NAV][persistance]** | **workflow complet** (`workforce-clock-workflow.spec.js`) ; **ANO-008** (clock-in 422, `source` divergent) corrigé |
 | Responsive mobile dashboard | [NAV] | pas de débordement |
 
 ## TRANSVERSE
