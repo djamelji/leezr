@@ -12,6 +12,7 @@
 - **Cause racine (démontrée)** : seeders (`DevSeeder`/`BillingDemoSeeder`) créaient des abos `active` **sans `is_current`** → `billing:renew` (`where is_current=1`) les saute → période figée ; le read service émet la date sans clamp. Détail : `04-anomalie-prochaine-facture.md`.
 - **Correction** : `is_current=1` à la source ; `renewal_overdue` exposé par `nextInvoicePreview` (date = source de vérité, non fabriquée) ; UI « Renouvellement en attente » sur **les deux** onglets.
 - **Tests** : `BillingNextInvoicePreviewTest` (future/past), `SubscriptionRenewalEligibilityTest` (skip/advance).
+- **Finalisation** : commande `billing:regularize-current-subscriptions` (dry-run par défaut, **aucune facturation**, respecte l'unicité `(company_id,is_current)`, idempotente) pour régulariser les abos actifs `is_current=NULL` existants (prod). Tests `RegularizeCurrentSubscriptionsTest` (4).
 - **Risque données** : aucun (pas de facture/écriture modifiée). Régularisation PROD = action ops traçable documentée.
 
 ### ANO-003 — Modules sellable (Workforce/logistics) invendables en PROD — **P1** ✅
@@ -20,7 +21,8 @@
 - **Attendu** : un add-on correctement configuré (vendable/inclus) activable par un client entitled, **identiquement** prod et staging (config catalogue = donnée produit).
 - **Cause racine (démontrée)** : la config commerciale (`is_sellable` + `addon_pricing`) vivait **uniquement dans `DevSeeder`** (dev-only). `SystemSeeder` (prod) ne la posait pas → `EntitlementResolver=not_available` → `contact_sales` → invendable/inactivable en prod. La divergence de seeders **masquait** la panne (staging force-activait). `DependencyResolver::canActivate` (qui ignore l'entitlement) avait initialement masqué le vrai état.
 - **Correction** : extraction vers `ModuleProductConfigSeeder` (idempotent, données produit) + appel dans `SystemSeeder` → prod cohérent. Workforce : `contact_sales` → `available`. Valeurs de prix **existantes** (non inventées) ; promotion prod = validation produit (commit local, non déployé).
-- **Tests** : `WorkforceModuleActivationJourneyTest` (3).
+- **Tests** : `WorkforceModuleActivationJourneyTest` (5).
+- **Finalisation** : `ModuleProductConfigSeeder` rendu **non destructif** (initialise seulement si `addon_pricing` absent → n'écrase pas une config commerciale admin légitime) + idempotent.
 - **Risque données** : aucun (données produit catalogue, pas tenant ; pas de modif financière).
 
 ### ANO-002 — `/platform/billing/coupons` : 2× `401` en console — **P2** 🔎

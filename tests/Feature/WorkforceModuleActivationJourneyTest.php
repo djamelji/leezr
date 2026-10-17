@@ -71,6 +71,28 @@ class WorkforceModuleActivationJourneyTest extends TestCase
         $this->assertSame('available', $wf['display_state']);
     }
 
+    public function test_seeder_does_not_overwrite_an_existing_commercial_config(): void
+    {
+        // Simulate an admin-customized price already in place.
+        $custom = ['pricing_model' => 'flat', 'pricing_metric' => 'none', 'pricing_params' => ['price_monthly' => 999]];
+        PlatformModule::where('key', 'workforce')->update(['addon_pricing' => $custom, 'is_sellable' => true]);
+
+        $this->seed(ModuleProductConfigSeeder::class);
+
+        // Must NOT be clobbered by the default config.
+        $this->assertSame(999, PlatformModule::where('key', 'workforce')->value('addon_pricing')['pricing_params']['price_monthly']);
+    }
+
+    public function test_seeder_is_idempotent_on_repeated_runs(): void
+    {
+        $this->seed(ModuleProductConfigSeeder::class);
+        $after1 = PlatformModule::where('key', 'workforce')->value('addon_pricing');
+        $this->seed(ModuleProductConfigSeeder::class);
+        $after2 = PlatformModule::where('key', 'workforce')->value('addon_pricing');
+
+        $this->assertEquals($after1, $after2, 'Re-running the seeder must not change an initialized config.');
+    }
+
     public function test_system_seeder_includes_product_config_so_prod_is_consistent(): void
     {
         // Guard: the product config is wired into SystemSeeder (runs on prod), not dev-only.

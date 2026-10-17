@@ -25,7 +25,22 @@ class ModuleProductConfigSeeder extends Seeder
     public function run(): void
     {
         foreach (self::CONFIG as $key => $attrs) {
-            PlatformModule::where('key', $key)->update($attrs);
+            $module = PlatformModule::where('key', $key)->first();
+
+            if (! $module) {
+                continue; // module not in catalog yet (ModuleRegistry::sync runs first)
+            }
+
+            // INITIALIZE, never OVERWRITE: if a commercial config already exists
+            // (seeded earlier OR customized by a platform admin via the UI), leave it
+            // untouched. We only seed the default config for an uninitialized module
+            // (no addon_pricing). This keeps the seeder idempotent AND non-destructive
+            // of legitimate admin pricing changes (audit 13 / ANO-003 finalization).
+            if ($module->addon_pricing !== null) {
+                continue;
+            }
+
+            $module->update($attrs);
         }
     }
 
