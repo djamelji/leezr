@@ -58,7 +58,10 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
       try {
         const data = await $api(`/workforce/timesheets/${id}`)
 
-        this._currentPeriod = data
+        // ANO-013: the show endpoint wraps the period as { period, lines, anomalies }, but the
+        // detail page reads status/id/lines flat off currentPeriod. Normalize to a flat period
+        // (+ lines/anomalies) so the status chip and the submit/approve/lock buttons work.
+        this._currentPeriod = { ...data.period, lines: data.lines ?? [], anomalies: data.anomalies ?? [] }
 
         return data
       } finally {
@@ -85,7 +88,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       const idx = this._periods.findIndex(p => p.id === id)
       if (idx !== -1) this._periods[idx] = data
-      if (this._currentPeriod?.id === id) this._currentPeriod = data
+      if (this._currentPeriod?.id === id) this._currentPeriod = { ...this._currentPeriod, ...data }
 
       return data
     },
@@ -98,7 +101,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       const idx = this._periods.findIndex(p => p.id === id)
       if (idx !== -1) this._periods[idx] = data
-      if (this._currentPeriod?.id === id) this._currentPeriod = data
+      if (this._currentPeriod?.id === id) this._currentPeriod = { ...this._currentPeriod, ...data }
 
       return data
     },
@@ -111,7 +114,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       const idx = this._periods.findIndex(p => p.id === id)
       if (idx !== -1) this._periods[idx] = data
-      if (this._currentPeriod?.id === id) this._currentPeriod = data
+      if (this._currentPeriod?.id === id) this._currentPeriod = { ...this._currentPeriod, ...data }
 
       return data
     },
@@ -123,7 +126,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       const idx = this._periods.findIndex(p => p.id === id)
       if (idx !== -1) this._periods[idx] = data
-      if (this._currentPeriod?.id === id) this._currentPeriod = data
+      if (this._currentPeriod?.id === id) this._currentPeriod = { ...this._currentPeriod, ...data }
 
       return data
     },
@@ -135,7 +138,7 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       const idx = this._periods.findIndex(p => p.id === id)
       if (idx !== -1) this._periods[idx] = data
-      if (this._currentPeriod?.id === id) this._currentPeriod = data
+      if (this._currentPeriod?.id === id) this._currentPeriod = { ...this._currentPeriod, ...data }
 
       return data
     },

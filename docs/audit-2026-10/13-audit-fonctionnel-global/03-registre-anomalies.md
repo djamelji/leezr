@@ -89,6 +89,14 @@
 - **Tests de non-régression** : [NAV, persistance] `company-member-lifecycle.spec.js` (créer Driver → changer en Manager → supprimer, + protection owner) ; [API] `MemberRoleAwareFieldTest::test_partial_update_role_only_not_blocked_by_untouched_required_fields`. Suite membres : 88+ verts.
 - **Découverte** : campagne E2E (parcours owner réel de gestion des membres).
 
+### ANO-013 — Timesheet : page détail inactionnable (statut `undefined`, aucun bouton) — **P1** ✅
+- **Périmètre** : Company — `/company/workforce/time/{id}` (détail feuille de temps).
+- **Repro déterministe** : `owner` génère une feuille de temps (draft) → ouvre le détail → le chip de statut affiche `workforce.statuses.timesheet.undefined` et **aucun bouton Soumettre/Approuver/Verrouiller n'apparaît** (ils sont gardés par `v-if="period.status === '…'"`). **Le cycle de validation d'une feuille de temps était impossible via l'UI.**
+- **Cause racine** : incohérence de forme de réponse. `GET /workforce/timesheets/{id}` renvoie `{ period, lines, anomalies }` (wrappé) alors que `submit/approve/reject/reopen/lock` renvoient le period **à plat**. Le store faisait `this._currentPeriod = data` dans les deux cas, et la page lit `period.status`/`period.id`/`period.lines` **à plat** → après `fetchTimesheet`, `status` et `id` étaient `undefined` (et après une transition, `lines` disparaissait).
+- **Correction** : normalisation dans `timesheets.store.js` — `fetchTimesheet` aplatit (`{ ...data.period, lines, anomalies }`) ; les transitions fusionnent (`{ ...currentPeriod, ...data }`) pour conserver `lines/anomalies`. `currentPeriod` est désormais toujours un period à plat cohérent.
+- **Test de non-régression [NAV, persistance, API]** : `workforce-timesheet-workflow.spec.js` — générer → soumettre → approuver → verrouiller ; après lock : **aucun bouton d'action** (UI) **et** l'API refuse une transition (`POST /submit` sur `locked` → **422**) ; statut `locked` persistant. Reset ciblé (`e2e:reset-timesheets`) → rejouable sans `migrate:fresh`.
+- **Découverte** : campagne E2E (le parcours manager réel), invisible au backend (les endpoints marchaient) et au smoke (pas de soumission).
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

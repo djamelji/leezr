@@ -294,6 +294,7 @@ const anomalyColor = type => {
                 v-if="period.status === 'draft'"
                 v-can="'workforce.timesheet_submit'"
                 color="primary"
+                data-test="ts-submit"
                 prepend-icon="tabler-send"
                 :loading="actionLoading"
                 @click="handleSubmit"
@@ -306,6 +307,7 @@ const anomalyColor = type => {
                 v-if="period.status === 'submitted'"
                 v-can="'workforce.timesheet_approve'"
                 color="success"
+                data-test="ts-approve"
                 prepend-icon="tabler-check"
                 :loading="actionLoading"
                 @click="showApproveDialog = true"
@@ -329,6 +331,7 @@ const anomalyColor = type => {
                 v-if="period.status === 'approved'"
                 v-can="'workforce.time_approve'"
                 color="primary"
+                data-test="ts-lock"
                 prepend-icon="tabler-lock"
                 :loading="actionLoading"
                 @click="handleLock"
@@ -519,6 +522,7 @@ const anomalyColor = type => {
           </VBtn>
           <VBtn
             color="success"
+            data-test="ts-approve-confirm"
             :loading="actionLoading"
             @click="handleApprove"
           >

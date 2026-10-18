@@ -698,6 +698,7 @@ onMounted(() => {
           <VBtn
             v-can="'workforce.time_manage'"
             color="primary"
+            data-test="ts-generate-open"
             prepend-icon="tabler-clock-plus"
             @click="isGenerateOpen = true"
           >
@@ -1243,6 +1244,7 @@ onMounted(() => {
             <VCol cols="12">
               <AppAutocomplete
                 v-model="generateData.employeeId"
+                data-test="ts-gen-employee"
                 :items="employeeItems"
                 :label="$t('timesheets.fields.employee')"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1251,6 +1253,7 @@ onMounted(() => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="generateData.periodStart"
+                data-test="ts-gen-start"
                 :label="$t('timesheets.fields.periodStart')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1259,6 +1262,7 @@ onMounted(() => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="generateData.periodEnd"
+                data-test="ts-gen-end"
                 :label="$t('timesheets.fields.periodEnd')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1275,6 +1279,7 @@ onMounted(() => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="ts-gen-submit"
                   :loading="generateLoading"
                 >
                   {{ $t('timesheets.generate') }}

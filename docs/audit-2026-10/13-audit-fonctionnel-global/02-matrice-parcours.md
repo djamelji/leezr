@@ -17,6 +17,7 @@
 | Documents (coffre) — **upload + suppression** | **[NAV][persistance]** | upload multipart réel → `POST /company/documents/{code}`, persistance vérifiée, puis suppression (`DELETE`) (`company-documents.spec.js`) ; pas d'anomalie |
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |
 | **Workforce — embauche→contrat→activation→planning** | **[NAV][persistance]** | **workflow manager complet** (`workforce-employee-lifecycle.spec.js`) ; **ANO-009** (shift 422) + **ANO-010** (contrat draft non activable) corrigés |
+| **Workforce — timesheet générer→soumettre→approuver→verrouiller** | **[NAV][persistance][API]** | cycle complet + **interdiction post-lock prouvée API** (`workforce-timesheet-workflow.spec.js`) ; **ANO-013** (détail inactionnable) corrigé ; rejouable (reset ciblé) |
 | Création/édition (persistance) | **[NAV]**(profil, membre) + [TEST] | profil + membre vérifiés navigateur→DB ; suppression/autres [NON] NAV |
 | Accès restreint si abo expiré | [TEST] | RestrictedBusinessAccessTest |
 

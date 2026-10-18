@@ -64,6 +64,43 @@ export async function clickAndExpectApi(page, { urlIncludes, method }, action) {
   return resp
 }
 
+// Call an API with the browser's own authenticated session (cookie + XSRF), exactly as the SPA.
+// Probes what the API ACTUALLY enforces. Retries past transient 0/401/429 so only a stable
+// status is used — a transient is tolerated only if a definitive status is eventually obtained.
+export async function apiRequest(page, { method = 'GET', path, body = null }) {
+  const once = () => page.evaluate(async ({ m, p, b }) => {
+    const get = n => (document.cookie.match(new RegExp(n + '=([^;]+)')) || [])[1]
+    try {
+      const res = await fetch(p, {
+        method: m,
+        headers: {
+          'X-XSRF-TOKEN': decodeURIComponent(get('XSRF-TOKEN') || ''),
+          'X-Company-Id': decodeURIComponent(get('currentCompanyId') || ''),
+          Accept: 'application/json',
+          ...(b ? { 'Content-Type': 'application/json' } : {}),
+        },
+        credentials: 'include',
+        ...(b ? { body: JSON.stringify(b) } : {}),
+      })
+      let json = null
+      try { json = await res.json() } catch { /* no body */ }
+
+      return { status: res.status, json }
+    } catch {
+      return { status: 0, json: null }
+    }
+  }, { m: method, p: path, b: body })
+
+  let out = { status: 0, json: null }
+  for (let i = 0; i < 6; i++) {
+    out = await once()
+    if (out.status !== 0 && out.status !== 401 && out.status !== 429) break
+    await page.waitForTimeout(1200)
+  }
+
+  return out
+}
+
 // Pick an option in a Vuetify VSelect identified by its label.
 export async function selectVuetifyOption(page, selectLabel, optionIndex = 0) {
   await page.getByLabel(selectLabel, { exact: false }).first().click()
