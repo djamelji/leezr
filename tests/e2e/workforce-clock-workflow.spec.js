@@ -1,10 +1,20 @@
 // @ts-check
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { loginCompany, clickAndExpectApi } from './helpers'
 
 // Self-service time-clock workflow (bob, employee): clock-in → break → resume → clock-out.
-// Each step is a real API call + a state transition reflected in the UI. Requires a clean
-// clock day (migrate:fresh --seed resets it). Real endpoints, no bypass.
+// Each step is a real API call + a state transition reflected in the UI. Real endpoints, no bypass.
+//
+// Replayable WITHOUT a global migrate:fresh: a targeted fixture clears only bob's time entries
+// for today (e2e:reset-clock-day, local/testing-guarded). This resets the day to 'not_started'
+// so the real clock-in flow runs every time — it does NOT bypass any clock rule.
+test.beforeAll(() => {
+  execFileSync('php', ['artisan', 'e2e:reset-clock-day', '--employee=3'], {
+    cwd: process.cwd(), stdio: 'pipe',
+  })
+})
+
 test('clock-in → break → resume → clock-out (self-service)', async ({ page }) => {
   await loginCompany(page, 'bob@leezr.test')
   await page.goto('/company/workforce/me', { waitUntil: 'networkidle' })
@@ -13,7 +23,7 @@ test('clock-in → break → resume → clock-out (self-service)', async ({ page
   const btn = name => page.getByRole('button', { name })
 
   const clockIn = btn('Commencer la journée')
-  if (!(await clockIn.count())) test.skip(true, 'Clock already started today (needs a fresh seed to re-run)')
+  await expect(clockIn, 'clock day reset → start button present').toBeVisible({ timeout: 10000 })
 
   // 1) Clock in → working.
   await clickAndExpectApi(page, { urlIncludes: '/workforce/me/clock-in', method: 'POST' },
