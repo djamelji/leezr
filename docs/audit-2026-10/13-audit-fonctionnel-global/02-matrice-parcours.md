@@ -43,6 +43,7 @@
 |---|---|---|
 | RBAC : pas de gestion membres | [NAV] | route gardée (vérifié) |
 | **Self-service congé — demande** | **[NAV]** | **ANO-007** corrigé ; drawer self-service → 201 ; workflow complet |
+| **Congé — ledger/solde/permissions (approbation/refus)** | **[NAV][API][persistance]** | `workforce-leave-ledger.spec.js` : approbation **réserve** (available −N, reserved +N), refus **inchangé**, salarié **interdit d'approuver (403)** ; **ANO-015** (bucket annuel négatif) documenté |
 | **Self-service pointage — clock-in→pause→reprise→clock-out** | **[NAV][persistance]** | **workflow complet** (`workforce-clock-workflow.spec.js`) ; **ANO-008** (clock-in 422, `source` divergent) corrigé |
 | Responsive mobile dashboard | [NAV] | pas de débordement |
 

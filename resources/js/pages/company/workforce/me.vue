@@ -832,6 +832,7 @@ function signatureChipProps(status) {
           />
           <AppTextarea
             v-model="leaveForm.reason"
+            data-test="me-leave-reason"
             :label="t('leaves.reason')"
             rows="2"
             class="mb-4"
