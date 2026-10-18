@@ -425,69 +425,78 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
 
 // ── Workforce ──────────────────────────────────────────────────
 Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
-    // Departments
-    Route::get('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'index']);
-    Route::post('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'store']);
-    Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update']);
-    Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy']);
+    // ANO-014: these are MANAGEMENT endpoints. They were gated by module access only, so any
+    // workforce-module member (e.g. a self-service employee) could create employees, generate
+    // and approve timesheets, approve leave, etc. via the API — the frontend v-can merely hid
+    // the buttons. Each route now also enforces the matching granular permission (mirrors v-can).
+    // Owner bypasses all permission checks; self-service stays under the separate /workforce/me group.
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+
+    // Departments — view to read, manage to mutate
+    Route::get('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'index'])->middleware($perm('workforce.view'));
+    Route::post('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'store'])->middleware($perm('workforce.manage'));
+    Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update'])->middleware($perm('workforce.manage'));
+    Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
     // Job Roles
-    Route::get('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'index']);
-    Route::post('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'store']);
-    Route::put('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'update']);
-    Route::delete('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'destroy']);
+    Route::get('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'index'])->middleware($perm('workforce.view'));
+    Route::post('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'store'])->middleware($perm('workforce.manage'));
+    Route::put('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'update'])->middleware($perm('workforce.manage'));
+    Route::delete('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
-    Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary']);
-    Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index']);
-    Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store']);
-    Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show']);
-    Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update']);
-    Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate']);
+    // Employees — view to read, manage to mutate
+    Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary'])->middleware($perm('workforce.view'));
+    Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index'])->middleware($perm('workforce.view'));
+    Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store'])->middleware($perm('workforce.manage'));
+    Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware($perm('workforce.view'));
+    Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
+    Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));
 
-    Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index']);
-    Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store']);
-    Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate']);
+    // Contracts — view to read, contracts to create/activate
+    Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware($perm('workforce.view'));
+    Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store'])->middleware($perm('workforce.contracts'));
+    Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate'])->middleware($perm('workforce.contracts'));
 
-    Route::get('conventions', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'conventions']);
+    Route::get('conventions', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'conventions'])->middleware($perm('workforce.view'));
 
-    // Timesheets
-    Route::get('timesheets/statistics', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'statistics']);
-    Route::get('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'index']);
-    Route::post('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'generate']);
-    Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show']);
-    Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit']);
-    Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve']);
-    Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject']);
-    Route::post('timesheets/{id}/reopen', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reopen']);
-    Route::post('timesheets/{id}/lock', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'lock']);
+    // Timesheets — view to read, time_manage to generate, submit/approve per action, time_approve to lock
+    Route::get('timesheets/statistics', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'statistics'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'index'])->middleware($perm('workforce.timesheet_view'));
+    Route::post('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'generate'])->middleware($perm('workforce.time_manage'));
+    Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show'])->middleware($perm('workforce.timesheet_view'));
+    Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit'])->middleware($perm('workforce.timesheet_submit'));
+    Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve'])->middleware($perm('workforce.timesheet_approve'));
+    Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject'])->middleware($perm('workforce.timesheet_approve'));
+    Route::post('timesheets/{id}/reopen', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reopen'])->middleware($perm('workforce.time_manage'));
+    Route::post('timesheets/{id}/lock', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'lock'])->middleware($perm('workforce.time_approve'));
 
-    // Time Entries
-    Route::get('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'index']);
-    Route::get('time-entries/company', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'companyIndex']);
-    Route::get('time-entries/active', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'active']);
-    Route::get('time-entries/anomalies', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'anomalies']);
-    Route::post('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'store']);
-    Route::put('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'update']);
-    Route::delete('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'destroy']);
-    Route::post('time-entries/clock-in', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockIn']);
-    Route::post('time-entries/{id}/clock-out', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockOut']);
-    Route::post('time-entries/{id}/break/start', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'startBreak']);
-    Route::post('time-entries/{id}/break/end', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'endBreak']);
+    // Time Entries — view to read, time_manage to mutate
+    Route::get('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'index'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('time-entries/company', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'companyIndex'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('time-entries/active', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'active'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('time-entries/anomalies', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'anomalies'])->middleware($perm('workforce.timesheet_view'));
+    Route::post('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'store'])->middleware($perm('workforce.time_manage'));
+    Route::put('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'update'])->middleware($perm('workforce.time_manage'));
+    Route::delete('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'destroy'])->middleware($perm('workforce.time_manage'));
+    Route::post('time-entries/clock-in', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockIn'])->middleware($perm('workforce.time_manage'));
+    Route::post('time-entries/{id}/clock-out', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'clockOut'])->middleware($perm('workforce.time_manage'));
+    Route::post('time-entries/{id}/break/start', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'startBreak'])->middleware($perm('workforce.time_manage'));
+    Route::post('time-entries/{id}/break/end', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'endBreak'])->middleware($perm('workforce.time_manage'));
 
-    // Leave
-    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'index']);
-    Route::post('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'store']);
-    Route::put('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'update']);
-    Route::delete('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'destroy']);
-    Route::get('leaves/calendar', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'calendar']);
-    Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics']);
-    Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index']);
-    Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store']);
-    Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show']);
-    Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve']);
-    Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject']);
-    Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel']);
-    Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances']);
+    // Leave — leave_request to view/create, leave_approve to approve/reject/cancel, leave_manage for types
+    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'index'])->middleware($perm('workforce.leave_request'));
+    Route::post('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'store'])->middleware($perm('workforce.leave_manage'));
+    Route::put('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'update'])->middleware($perm('workforce.leave_manage'));
+    Route::delete('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'destroy'])->middleware($perm('workforce.leave_manage'));
+    Route::get('leaves/calendar', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'calendar'])->middleware($perm('workforce.leave_request'));
+    Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics'])->middleware($perm('workforce.leave_request'));
+    Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index'])->middleware($perm('workforce.leave_request'));
+    Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store'])->middleware($perm('workforce.leave_request'));
+    Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show'])->middleware($perm('workforce.leave_request'));
+    Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve'])->middleware($perm('workforce.leave_approve'));
+    Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject'])->middleware($perm('workforce.leave_approve'));
+    Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel'])->middleware($perm('workforce.leave_approve'));
+    Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances'])->middleware($perm('workforce.leave_request'));
 });
 
 // ── Workforce Planning ────────────────────────────────────────

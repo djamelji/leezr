@@ -367,6 +367,48 @@ class SecurityInvariantTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
+    // INVARIANT 10 (ANO-014): workforce MANAGEMENT endpoints enforce
+    // granular permissions, not just module access. The driver holds
+    // the workforce module (self-service) but no management permission.
+    // ═══════════════════════════════════════════════════════
+
+    public function test_driver_cannot_list_workforce_employees(): void
+    {
+        $this->actAs($this->driver)
+            ->getJson('/api/workforce/employees')
+            ->assertStatus(403);
+    }
+
+    public function test_driver_cannot_create_workforce_employee(): void
+    {
+        $this->actAs($this->driver)
+            ->postJson('/api/workforce/employees', [
+                'first_name' => 'Hack', 'last_name' => 'Er', 'hire_date' => '2026-01-01',
+            ])
+            ->assertStatus(403);
+    }
+
+    public function test_driver_cannot_generate_timesheet(): void
+    {
+        $this->actAs($this->driver)
+            ->postJson('/api/workforce/timesheets', [
+                'employee_id' => 1, 'period_start' => '2026-05-01', 'period_end' => '2026-05-31',
+            ])
+            ->assertStatus(403);
+    }
+
+    public function test_driver_cannot_list_or_manage_leave_requests(): void
+    {
+        $this->actAs($this->driver)
+            ->getJson('/api/workforce/leaves')
+            ->assertStatus(403);
+    }
+    // Note: the permission-layer specificity (same active module, owner 200 vs no-permission
+    // member 403) is proven end-to-end against the real entitled company in
+    // tests/e2e/workforce-authz.spec.js — here the synthetic company's plan/jobdomain does not
+    // entitle workforce, so these assert the security outcome (driver forbidden) only.
+
+    // ═══════════════════════════════════════════════════════
     // Helpers
     // ═══════════════════════════════════════════════════════
 

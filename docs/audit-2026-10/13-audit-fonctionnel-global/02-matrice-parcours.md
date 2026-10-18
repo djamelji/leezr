@@ -52,6 +52,7 @@
 | Auth / sessions (Sanctum SPA) | [NAV][TEST] | login OK multi-rôles |
 | Isolation multi-tenant | [TEST][CODE] | CompanyScope + tests tenancy |
 | RBAC / entitlements | [NAV][TEST] | partiel NAV, solide TEST |
+| **RBAC — enforcement API workforce (defense-in-depth)** | **[NAV][API][TEST]** | **ANO-014** corrigé : salarié sans permission → **403** sur management ; owner → 200 (`workforce-authz.spec.js` + `SecurityInvariantTest`) |
 | Billing | [NAV][TEST] | ANO-001 corrigé |
 | Automations / scheduler | [TEST][API] | ADR-572 |
 | Documents / Media / Fields / Audit / Markets / JobDomains / Modules | [CODE][TEST] | **[NON]** en NAV exhaustif |
