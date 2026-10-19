@@ -18,6 +18,7 @@
 | Workforce (index, employees, time, leave, payroll, dsn, me) | [NAV] | rendu propre (7 pages) |
 | **Workforce — embauche→contrat→activation→planning** | **[NAV][persistance]** | **workflow manager complet** (`workforce-employee-lifecycle.spec.js`) ; **ANO-009** (shift 422) + **ANO-010** (contrat draft non activable) corrigés |
 | **Workforce — timesheet générer→soumettre→approuver→verrouiller** | **[NAV][persistance][API]** | cycle complet + **interdiction post-lock prouvée API** (`workforce-timesheet-workflow.spec.js`) ; **ANO-013** (détail inactionnable) corrigé ; rejouable (reset ciblé) |
+| **Workforce — paie : run→compute→valider→exporter (sans paiement)** | **[NAV][persistance][API]** | cycle complet `draft→computed→validated→exported` (`workforce-payroll-workflow.spec.js`) ; validation avec note requise si anomalies (règle métier) ; export JSON (aucun mouvement d'argent) ; données préparées (timesheet locked + compensation), rejouable |
 | Création/édition (persistance) | **[NAV]**(profil, membre) + [TEST] | profil + membre vérifiés navigateur→DB ; suppression/autres [NON] NAV |
 | Accès restreint si abo expiré | [TEST] | RestrictedBusinessAccessTest |
 

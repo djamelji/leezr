@@ -175,13 +175,13 @@ onBeforeUnmount(() => store.clearCurrentRun())
           </div>
           <!-- Workflow actions -->
           <div class="d-flex gap-2 flex-wrap">
-            <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="info" :loading="store.loading" @click="handleCompute">
+            <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="info" :loading="store.loading" data-test="pr-compute" @click="handleCompute">
               <VIcon start icon="tabler-calculator" />{{ $t('payroll.actions.compute') }}
             </VBtn>
-            <VBtn v-if="run.status === 'computed' && !hasCalculations" v-can="'workforce.payroll_prepare'" color="info" variant="outlined" :loading="store.loading" @click="handleComputeCalculations">
+            <VBtn v-if="run.status === 'computed' && !hasCalculations" v-can="'workforce.payroll_prepare'" color="info" variant="outlined" :loading="store.loading" data-test="pr-compute-calc" @click="handleComputeCalculations">
               <VIcon start icon="tabler-math-function" />{{ $t('payroll.actions.computeCalculations') }}
             </VBtn>
-            <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" @click="showValidateDialog = true">
+            <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" data-test="pr-validate-open" @click="showValidateDialog = true">
               <VIcon start icon="tabler-check" />{{ $t('payroll.actions.validate') }}
             </VBtn>
             <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" variant="outlined" :loading="store.loading" @click="handleGenerateDrafts">
@@ -190,7 +190,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
             <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" color="success" :loading="store.loading" @click="handleGenerateOfficial">
               <VIcon start icon="tabler-file-certificate" />{{ $t('payroll.actions.generateOfficial') }}
             </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" @click="handleExport">
+            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" data-test="pr-export" @click="handleExport">
               <VIcon start icon="tabler-download" />{{ $t('payroll.actions.export') }}
             </VBtn>
             <VBtn v-if="run.status === 'computed'" v-can="'workforce.payroll_prepare'" color="warning" variant="outlined" :loading="store.loading" @click="handleRecompute">
@@ -472,12 +472,12 @@ onBeforeUnmount(() => store.clearCurrentRun())
         <VCardTitle>{{ $t('payroll.dialogs.validate.title') }}</VCardTitle>
         <VCardText>
           <p class="mb-4">{{ $t('payroll.dialogs.validate.message') }}</p>
-          <AppTextField v-model="validationNote" type="textarea" :label="$t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
+          <AppTextField v-model="validationNote" data-test="pr-validate-note" type="textarea" :label="$t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
         </VCardText>
         <VCardActions>
           <VSpacer />
           <VBtn variant="text" @click="showValidateDialog = false">{{ $t('payroll.dialogs.cancel') }}</VBtn>
-          <VBtn color="success" :loading="store.loading" @click="handleValidate">{{ $t('payroll.actions.validate') }}</VBtn>
+          <VBtn data-test="pr-validate-confirm" color="success" :loading="store.loading" @click="handleValidate">{{ $t('payroll.actions.validate') }}</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>

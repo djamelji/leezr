@@ -501,75 +501,85 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
 
 // ── Workforce Planning ────────────────────────────────────────
 Route::prefix('workforce/planning')->middleware('company.access:use-module,workforce_planning')->group(function () {
+    // ANO-014: management endpoints also enforce the granular permission (mirrors v-can).
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+
     // Work Locations
-    Route::get('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'index']);
-    Route::post('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'store']);
-    Route::put('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'update']);
-    Route::delete('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'destroy']);
+    Route::get('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('locations', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'store'])->middleware($perm('workforce.planning_manage'));
+    Route::put('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'update'])->middleware($perm('workforce.planning_manage'));
+    Route::delete('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
     // Schedule Templates
-    Route::get('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'index']);
-    Route::post('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'store']);
-    Route::put('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'update']);
-    Route::delete('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'destroy']);
+    Route::get('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'store'])->middleware($perm('workforce.planning_manage'));
+    Route::put('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'update'])->middleware($perm('workforce.planning_manage'));
+    Route::delete('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
     // Shifts
-    Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week']);
-    Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar']);
-    Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics']);
-    Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index']);
-    Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store']);
-    Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish']);
-    Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate']);
-    Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update']);
-    Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy']);
-    Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel']);
+    Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish'])->middleware($perm('workforce.planning_publish'));
+    Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate'])->middleware($perm('workforce.planning_manage'));
+    Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->middleware($perm('workforce.planning_manage'));
+    Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));
 });
 
 // ── Workforce Payroll ────────────────────────────────────────
 Route::prefix('workforce/payroll')->middleware('company.access:use-module,workforce_payroll')->group(function () {
+    // ANO-014: prepare to read/compute, validate to validate, export to export.
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+
     // Payroll Runs
-    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'statistics']);
-    Route::get('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'index']);
-    Route::post('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'store']);
-    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'show']);
-    Route::delete('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'destroy']);
+    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'statistics'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'index'])->middleware($perm('workforce.payroll_prepare'));
+    Route::post('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'store'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'show'])->middleware($perm('workforce.payroll_prepare'));
+    Route::delete('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'destroy'])->middleware($perm('workforce.payroll_prepare'));
 
     // Payroll Run Actions
-    Route::post('{id}/compute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'compute']);
-    Route::post('{id}/compute-calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'computeCalculations']);
-    Route::post('{id}/validate', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'validate']);
-    Route::post('{id}/export', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'export']);
-    Route::post('{id}/recompute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'recompute']);
+    Route::post('{id}/compute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'compute'])->middleware($perm('workforce.payroll_prepare'));
+    Route::post('{id}/compute-calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'computeCalculations'])->middleware($perm('workforce.payroll_prepare'));
+    Route::post('{id}/validate', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'validate'])->middleware($perm('workforce.payroll_validate'));
+    Route::post('{id}/export', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'export'])->middleware($perm('workforce.payroll_export'));
+    Route::post('{id}/recompute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'recompute'])->middleware($perm('workforce.payroll_prepare'));
 
     // Payroll Run Data
-    Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines']);
-    Route::get('{id}/lines/{lineId}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'showLine']);
-    Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations']);
-    Route::get('{id}/documents', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'documents']);
+    Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/lines/{lineId}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'showLine'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/documents', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'documents'])->middleware($perm('workforce.payroll_prepare'));
 });
 
 // ── Workforce DSN Declarations ────────────────────────────────
 Route::prefix('workforce/dsn')->middleware('company.access:use-module,workforce_payroll')->group(function () {
-    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'statistics']);
-    Route::get('/', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'index']);
-    Route::post('export', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'export']);
-    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'show']);
-    Route::post('{id}/submit', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'submit']);
-    Route::post('{id}/poll', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'poll']);
-    Route::get('{id}/validation', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'validationErrors']);
-    Route::get('{id}/history', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'history']);
+    // ANO-014: DSN is a social declaration to authorities — gate on payroll_export (its nav gate).
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+    Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'statistics'])->middleware($perm('workforce.payroll_export'));
+    Route::get('/', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'index'])->middleware($perm('workforce.payroll_export'));
+    Route::post('export', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'export'])->middleware($perm('workforce.payroll_export'));
+    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'show'])->middleware($perm('workforce.payroll_export'));
+    Route::post('{id}/submit', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'submit'])->middleware($perm('workforce.payroll_export'));
+    Route::post('{id}/poll', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'poll'])->middleware($perm('workforce.payroll_export'));
+    Route::get('{id}/validation', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'validationErrors'])->middleware($perm('workforce.payroll_export'));
+    Route::get('{id}/history', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'history'])->middleware($perm('workforce.payroll_export'));
 });
 
 // ── Workforce Documents ───────────────────────────────────────
 Route::prefix('workforce/documents')->middleware('company.access:use-module,workforce_documents')->group(function () {
-    Route::get('statistics', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'statistics']);
-    Route::get('/', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'index']);
-    Route::post('generate', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generate']);
-    Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts']);
-    Route::post('payslip-official', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generateOfficialPayslips']);
-    Route::get('payroll-run/{runId}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'forPayrollRun']);
-    Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show']);
+    // ANO-014: view to read, generate to produce documents/payslips.
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+    Route::get('statistics', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'statistics'])->middleware($perm('workforce_documents.view'));
+    Route::get('/', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'index'])->middleware($perm('workforce_documents.view'));
+    Route::post('generate', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generate'])->middleware($perm('workforce_documents.generate'));
+    Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts'])->middleware($perm('workforce_documents.generate'));
+    Route::post('payslip-official', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generateOfficialPayslips'])->middleware($perm('workforce_documents.generate'));
+    Route::get('payroll-run/{runId}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'forPayrollRun'])->middleware($perm('workforce_documents.view'));
+    Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show'])->middleware($perm('workforce_documents.view'));
 });
 
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

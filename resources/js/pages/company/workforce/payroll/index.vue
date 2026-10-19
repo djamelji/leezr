@@ -163,6 +163,7 @@ const goToRun = id => {
       <VBtn
         v-can="'workforce.payroll_prepare'"
         color="primary"
+        data-test="pr-create-open"
         prepend-icon="tabler-receipt-2"
         @click="isDrawerOpen = true"
       >
@@ -482,6 +483,7 @@ const goToRun = id => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.periodStart"
+                data-test="pr-start"
                 :label="$t('payroll.fields.periodStart')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -490,6 +492,7 @@ const goToRun = id => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.periodEnd"
+                data-test="pr-end"
                 :label="$t('payroll.fields.periodEnd')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -506,6 +509,7 @@ const goToRun = id => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="pr-create-submit"
                   :loading="formLoading"
                 >
                   {{ $t('common.create') }}
