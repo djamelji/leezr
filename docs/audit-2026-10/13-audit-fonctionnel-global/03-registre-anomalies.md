@@ -120,6 +120,14 @@
 - **Statut** : **documenté, non corrigé** — définir la règle métier (succession vs concurrence, terminaison automatique de l'ancien à l'activation du nouveau) relève d'une décision produit (ADR) ; la doctrine (stabilisation, largeur avant profondeur) impose de ne pas changer la sémantique contractuelle sans arbitrage.
 - **Couvert par ailleurs** : activation (lifecycle E2E), autorisations (**ANO-014** : `workforce.contracts` requis), dates d'effet (validation `after:start_date`).
 
+### ANO-017 — `workforce/dashboard/statistics` lisible par tout salarié (module-only) — **P2 (sécurité)** ✅
+- **Périmètre** : Company — `GET /api/workforce/dashboard/statistics` (`routes/company.php`, groupe « Workforce Dashboard »).
+- **Repro déterministe (prouvée)** : `bob@leezr.test` (salarié, module workforce pour `/me`, sans permission RH) → `GET /api/workforce/dashboard/statistics` → **200** (fuite de statistiques RH agrégées de l'entreprise). Reliquat du motif ANO-014 : ce groupe à une seule route était gardé **module-only**, hors du périmètre corrigé en ANO-014.
+- **Cause racine** : `Route::prefix('workforce')->middleware('company.access:use-module,workforce')` sans permission.
+- **Correction** : ajout de `company.access:use-permission,workforce.view` sur la route (owner bypasse). Re-vérifié : `bob` → **403**, `owner` → **200**.
+- **Tests de non-régression** : [E2E] `workforce-authz.spec.js` (stats + lecture fiche collègue dans la liste MANAGEMENT) ; [API] `SecurityInvariantTest::test_driver_cannot_read_workforce_dashboard_statistics`.
+- **Découverte** : LOT 1 — audit transversal systématique du middleware résolu par route (`route:list --json`).
+
 ### ANO-006 — Workforce `/time` : 422 au chargement des statistiques — **P2** ✅ (429 = artefact de test)
 - **Diagnostic (capture réseau isolée)** : `/company/workforce` → **0 non-2xx en isolation** → le **429 était un artefact** du smoke (rate-limit cumulatif sous navigation rapide multi-pages), **pas un défaut**. `/company/workforce/time` → **`422 GET /api/workforce/timesheets/statistics`** reproductible : la page appelle les stats au mount **sans période** (`tsPeriodStart/End=null`) alors que le back exigeait `period_start`/`period_end` **required**.
 - **Correction** : `TimesheetController::statistics` → période **optionnelle**, défaut **mois courant** (endpoint résilient ; validation d'un range inversé conservée). Stats chargent au mount sans 422.

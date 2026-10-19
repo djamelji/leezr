@@ -403,6 +403,14 @@ class SecurityInvariantTest extends TestCase
             ->getJson('/api/workforce/leaves')
             ->assertStatus(403);
     }
+
+    public function test_driver_cannot_read_workforce_dashboard_statistics(): void
+    {
+        // ANO-017: company-wide workforce statistics are management data (workforce.view).
+        $this->actAs($this->driver)
+            ->getJson('/api/workforce/dashboard/statistics')
+            ->assertStatus(403);
+    }
     // Note: the permission-layer specificity (same active module, owner 200 vs no-permission
     // member 403) is proven end-to-end against the real entitled company in
     // tests/e2e/workforce-authz.spec.js — here the synthetic company's plan/jobdomain does not

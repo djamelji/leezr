@@ -14,6 +14,8 @@ const MANAGEMENT = [
   { method: 'GET', path: '/api/workforce/leaves', label: 'list leave requests' },
   { method: 'GET', path: '/api/workforce/payroll', label: 'list payroll runs' },
   { method: 'POST', path: '/api/workforce/planning/shifts', body: { employee_id: 3, date: '2026-01-07', start_at: '2026-01-07T09:00:00', end_at: '2026-01-07T17:00:00', timezone: 'Europe/Paris' }, label: 'create shift' },
+  { method: 'GET', path: '/api/workforce/dashboard/statistics', label: 'read workforce dashboard statistics' }, // ANO-017
+  { method: 'GET', path: '/api/workforce/employees/1', label: "read a colleague's HR record" },
 ]
 
 test('employee (no permission) is refused on every workforce management endpoint', async ({ page }) => {
@@ -38,4 +40,6 @@ test('owner (bypass) is allowed on the same endpoints', async ({ page }) => {
   expect(leaves.status, 'owner can list leave requests').toBe(200)
   const payroll = await apiRequest(page, { method: 'GET', path: '/api/workforce/payroll' })
   expect(payroll.status, 'owner can list payroll runs').toBe(200)
+  const stats = await apiRequest(page, { method: 'GET', path: '/api/workforce/dashboard/statistics' })
+  expect(stats.status, 'owner can read workforce statistics').toBe(200)
 })

@@ -420,7 +420,10 @@ Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')
 
 // ── Workforce Dashboard ──────────────────────────────────────
 Route::prefix('workforce')->middleware('company.access:use-module,workforce')->group(function () {
-    Route::get('dashboard/statistics', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'statistics']);
+    // ANO-017: company-wide workforce statistics are management data, not self-service.
+    // Was module-only (any employee could read it); now requires workforce.view (owner bypasses).
+    Route::get('dashboard/statistics', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'statistics'])
+        ->middleware('company.access:use-permission,workforce.view');
 });
 
 // ── Workforce ──────────────────────────────────────────────────
