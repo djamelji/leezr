@@ -1,6 +1,13 @@
 // @ts-check
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { loginCompany, apiRequest } from './helpers'
+
+// Deterministic baseline: the child add-on starts cleanly 'available' (clear any grace-period row).
+test.beforeAll(() => {
+  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=logistics_tracking'],
+    { cwd: process.cwd(), stdio: 'pipe' })
+})
 
 // Module DEPENDENCY behaviour against the live company (owner session):
 //   logistics_tracking REQUIRES logistics_shipments (DependencyGraph).

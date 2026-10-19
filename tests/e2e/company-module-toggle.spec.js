@@ -1,6 +1,14 @@
 // @ts-check
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { loginCompany, clickAndExpectApi } from './helpers'
+
+// Start from a deterministic 'available' baseline: clear any add-on subscription / grace-period
+// row left by a previous run (end-of-period deactivation keeps the module active until period end).
+test.beforeAll(() => {
+  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=logistics_tracking'],
+    { cwd: process.cwd(), stdio: 'pipe' })
+})
 
 // Module activation/deactivation round-trip driven by the owner on the isolated local base.
 // Target: logistics_tracking — a paid add-on in the 'available' state (so this also exercises
@@ -43,9 +51,12 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
   await page.getByRole('tab', { name: 'Extensions' }).click()
   await page.waitForTimeout(800)
   await page.locator(`[data-test="module-activate-${KEY}"]`).click()
-  // Quote dialog → confirm → PUT enable.
+  // Quote dialog → wait for the quote to load (confirm is disabled until quoteData arrives) → PUT enable.
+  const quoteConfirm = page.locator('[data-test="module-quote-confirm"]')
+  await expect(quoteConfirm, 'quote dialog open').toBeVisible({ timeout: 10000 })
+  await expect(quoteConfirm, 'quote loaded → confirm enabled').toBeEnabled({ timeout: 10000 })
   await clickAndExpectApi(page, { urlIncludes: `/modules/${KEY}/enable`, method: 'PUT' },
-    () => page.locator('[data-test="module-quote-confirm"]').click())
+    () => quoteConfirm.click())
 
   await page.waitForTimeout(1500)
   const activated = await getModule(page, KEY)
