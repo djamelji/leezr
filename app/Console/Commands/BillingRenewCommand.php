@@ -50,7 +50,7 @@ class BillingRenewCommand extends Command implements Isolatable
             return $this->handleAsync();
         }
 
-        $stats = ['eligible' => 0, 'renewed' => 0, 'invoiced' => 0, 'failed' => 0, 'skipped' => 0, 'cancelled' => 0];
+        $stats = ['eligible' => 0, 'renewed' => 0, 'invoiced' => 0, 'failed' => 0, 'skipped' => 0, 'cancelled' => 0, 'deferred' => 0];
 
         // Phase 0: Handle subscriptions marked for cancellation at period end
         $this->processCancellations($dryRun, $stats);
@@ -90,6 +90,8 @@ class BillingRenewCommand extends Command implements Isolatable
                         $stats['renewed']++;
                     } elseif ($result === 'invoiced') {
                         $stats['invoiced']++;
+                    } elseif ($result === 'deferred') {
+                        $stats['deferred']++;
                     } else {
                         $stats['skipped']++;
                     }
@@ -108,6 +110,7 @@ class BillingRenewCommand extends Command implements Isolatable
         $this->info("Cancelled (end of period): {$stats['cancelled']}");
         $this->info("Renewed: {$stats['renewed']}");
         $this->info("Invoiced (payment pending): {$stats['invoiced']}");
+        $this->info("Deferred (prolonged delay — manual review): {$stats['deferred']}");
         $this->info("Failed: {$stats['failed']}");
         $this->info("Skipped: {$stats['skipped']}");
 
@@ -144,7 +147,7 @@ class BillingRenewCommand extends Command implements Isolatable
     /**
      * Renew a single subscription.
      *
-     * @return string 'renewed' | 'invoiced' | 'skipped'
+     * @return string 'renewed' | 'invoiced' | 'deferred' | 'skipped'
      */
     private function renewSubscription(Subscription $subscription): string
     {
@@ -210,6 +213,36 @@ class BillingRenewCommand extends Command implements Isolatable
             $this->line("  Renewed (free): company #{$company->id} — {$subscription->plan_key} → {$newPeriodEnd->toDateString()}");
 
             return 'renewed';
+        }
+
+        // ANO-001 / ADR-575 — ANTI-CASCADE for PAID plans.
+        // The due period is [current_period_end → newPeriodEnd] (one interval). If newPeriodEnd is
+        // ALREADY fully in the past, the subscription is in PROLONGED delay (≥ 2 periods elapsed
+        // unbilled): the first due period is entirely over. We MUST NOT auto-bill a retroactive
+        // cascade (one invoice per elapsed month). Defer for a distinct, traceable manual procedure
+        // (service actually provided = ops decides to bill/credit/waive). No invoice, no period
+        // advance. Decision is taken BEFORE any provider resolution (abstraction preserved).
+        // Normal renewal and technical delay (cron late but still within the first due period →
+        // newPeriodEnd ≥ now) fall through and are billed exactly once (idempotent).
+        if ($newPeriodEnd->isPast()) {
+            $subscription->update([
+                'metadata' => array_merge($subscription->metadata ?? [], [
+                    'renewal_review_required' => true,
+                    'renewal_deferred_at' => now()->toIso8601String(),
+                    'renewal_deferred_period_end' => $subscription->current_period_end->toDateString(),
+                ]),
+            ]);
+
+            Log::channel('billing')->warning('[billing:renew] Prolonged delay — renewal deferred for manual review (no retroactive cascade)', [
+                'subscription_id' => $subscription->id,
+                'company_id' => $company->id,
+                'current_period_end' => $subscription->current_period_end->toDateString(),
+                'first_due_period_end' => $newPeriodEnd->toDateString(),
+            ]);
+
+            $this->line("  Deferred (prolonged delay): company #{$company->id} — period ended {$subscription->current_period_end->toDateString()} → manual review (no retroactive billing)");
+
+            return 'deferred';
         }
 
         // Phase 1: Create renewal invoice (inside transaction)

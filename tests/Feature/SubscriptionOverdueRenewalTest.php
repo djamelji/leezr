@@ -44,11 +44,10 @@ class SubscriptionOverdueRenewalTest extends TestCase
     }
 
     /**
-     * PAID internal subscription, no payment method, 5 months overdue.
-     * Current behaviour: one renewal invoice for the FIRST overdue period, then idempotent;
-     * the period stays frozen (extendPeriod only runs on payment success) → NO invoice pile-up.
+     * ADR-575 — PAID subscription in PROLONGED delay (5 months overdue): billing:renew must
+     * DEFER (no retroactive cascade), create NO invoice, flag for manual review, across runs.
      */
-    public function test_paid_internal_overdue_creates_single_invoice_and_freezes_period(): void
+    public function test_paid_prolonged_delay_is_deferred_not_billed(): void
     {
         $sub = $this->overdueSub($this->company('overdue-paid'), 'pro', 5);
         $frozenEnd = $sub->current_period_end->toDateString();
@@ -58,11 +57,12 @@ class SubscriptionOverdueRenewalTest extends TestCase
         Artisan::call('billing:renew'); // run 3
 
         $invoices = Invoice::where('subscription_id', $sub->id)->whereNotIn('status', ['void'])->count();
-        $this->assertSame(1, $invoices, 'Unpaid internal renewal must not pile up invoices across runs (idempotent).');
+        $this->assertSame(0, $invoices, 'Prolonged delay must NOT create a retroactive invoice (no cascade).');
 
-        // Period stays frozen at the first overdue end (no auto-payment → no advance).
-        $this->assertSame($frozenEnd, $sub->fresh()->current_period_end->toDateString(),
-            'Without payment the period stays frozen (not advanced).');
+        $fresh = $sub->fresh();
+        $this->assertSame($frozenEnd, $fresh->current_period_end->toDateString(), 'Period not advanced.');
+        $this->assertTrue((bool) ($fresh->metadata['renewal_review_required'] ?? false),
+            'Subscription must be flagged for manual review (traceable).');
     }
 
     /**
