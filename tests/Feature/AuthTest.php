@@ -115,6 +115,51 @@ class AuthTest extends TestCase
             ->assertJsonPath('user.email', $user->email);
     }
 
+    /**
+     * INCIDENT 1 — identity isolation: login must return the authenticated account's OWN identity,
+     * never another user's (the reported "owner → Alice Martin" must be a client-side artifact,
+     * not a backend leak). Two distinct accounts, asserted independently.
+     */
+    public function test_login_returns_the_authenticated_users_own_identity(): void
+    {
+        User::factory()->create([
+            'email' => 'djamel@example.com', 'first_name' => 'Djamel', 'last_name' => '',
+            'password' => 'P@ssw0rd!Strong',
+        ]);
+        User::factory()->create([
+            'email' => 'alice@example.com', 'first_name' => 'Alice', 'last_name' => 'Martin',
+            'password' => 'P@ssw0rd!Strong',
+        ]);
+
+        $this->get('/sanctum/csrf-cookie');
+        $this->postJson('/api/login', ['email' => 'djamel@example.com', 'password' => 'P@ssw0rd!Strong'])
+            ->assertOk()
+            ->assertJsonPath('user.email', 'djamel@example.com')
+            ->assertJsonPath('user.first_name', 'Djamel');
+
+        $this->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('user.email', 'djamel@example.com')
+            ->assertJsonPath('user.first_name', 'Djamel');
+    }
+
+    public function test_me_never_returns_another_users_identity(): void
+    {
+        $djamel = User::factory()->create(['email' => 'djamel@example.com', 'first_name' => 'Djamel']);
+        $alice = User::factory()->create(['email' => 'alice@example.com', 'first_name' => 'Alice', 'last_name' => 'Martin']);
+
+        // Each authenticated session sees ONLY its own identity.
+        $this->actingAs($djamel)->getJson('/api/me')
+            ->assertOk()->assertJsonPath('user.email', 'djamel@example.com');
+
+        $this->actingAs($alice)->getJson('/api/me')
+            ->assertOk()->assertJsonPath('user.email', 'alice@example.com');
+
+        // Re-assert the first identity is unchanged (no cross-session contamination).
+        $this->actingAs($djamel)->getJson('/api/me')
+            ->assertOk()->assertJsonPath('user.email', 'djamel@example.com');
+    }
+
     public function test_me_returns_401_when_unauthenticated(): void
     {
         $response = $this->getJson('/api/me');
