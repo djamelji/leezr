@@ -405,6 +405,7 @@
     "useMarketFormatting": true,
     "useUnsavedChanges": true,
     "useEmailInbox": true,
-    "useFeatureFlag": true
+    "useFeatureFlag": true,
+    "sameBuild": true
   }
 }

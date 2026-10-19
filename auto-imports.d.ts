@@ -144,6 +144,7 @@ declare global {
   const resolveVuetifyTheme: typeof import('@core/utils/vuetify')['resolveVuetifyTheme']
   const rgbaToHex: typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']
   const safeRedirect: typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']
+  const sameBuild: typeof import('./resources/js/utils/versionCheck.js')['sameBuild']
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setAppName: typeof import('./resources/js/composables/useAppName.js')['setAppName']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
@@ -541,6 +542,7 @@ declare module 'vue' {
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('@core/utils/vuetify')['resolveVuetifyTheme']>
     readonly safeRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']>
+    readonly sameBuild: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['sameBuild']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setAppName: UnwrapRef<typeof import('./resources/js/composables/useAppName.js')['setAppName']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
