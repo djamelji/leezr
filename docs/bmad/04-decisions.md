@@ -21635,4 +21635,31 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
+### ADR-575 — Cycle de renouvellement des abonnements échus (ANO-001) : comportement, fix gratuit, politique recommandée (2026-10-19)
+
+**Contexte** : L'abonnement #1 (PROD, company #1) a été régularisé `is_current=1` alors que sa période se termine le 2026-05-31 (≈5 mois dans le passé). Analyse du cycle `billing:renew` (base locale isolée, tests `SubscriptionOverdueRenewalTest`) pour les abos échus.
+
+**Comportement actuel confirmé (local, non destructif)** :
+1. **Sélection** : `billing:renew` traite `status ∈ {active,trialing} ∧ is_current=1 ∧ current_period_end ≤ now ∧ ¬cancel_at_period_end`. Un abo courant échu **est éligible**. Nouvelle période calculée **à partir de `current_period_end`** (pas de `now`), +1 intervalle.
+2. **Plusieurs mois de retard** :
+   - **Payé non chargeable** (ex. `provider=internal` sans moyen de paiement, cas de #1) : crée **UNE** facture `open` pour la 1ʳᵉ période échue, tente le paiement → `skipped` → `extendPeriod` **non appelé** → **période gelée**. Aux runs suivants, l'**idempotence** (même `period_start/period_end`) empêche tout doublon → **pas d'empilement de factures**. Dunning gère la facture ouverte.
+   - **Payé auto-chargeable** (Stripe, carte en fiche) : chaque run réussi avance **UN** mois et émet **une facture par mois** → sur N runs quotidiens, **N factures rétroactives** (risque de facturation rétroactive après une panne de cron).
+   - **Gratuit** : avançait **+1 mois/run** → un abo gratuit en retard restait affiché avec une date de renouvellement passée pendant plusieurs jours.
+3. **Différenciation** : gratuit (`price≤0`) = extension directe sans facture ; essai (`trialing`) = éligible, converti `active` au 1ᵉʳ renouvellement (notifie l'owner) ; payé = facture + tentative de paiement ; `internal` sans profil de paiement = `attempt` → `skipped` (facture ouverte, jamais auto-payée).
+4. **Cockpit Company** : `nextInvoicePreview` renvoie `renewal_overdue=true` ; l'UI (onglets Plan + Overview) affiche **« Renouvellement en attente »** (warning) **au lieu** d'une date de « prochaine facture » passée (fix audit 13 — pas de date trompeuse).
+5. **Prochains passages du scheduler** : tant que la facture ouverte n'est pas payée, la période reste gelée et la facture passe en dunning (relances) ; à paiement, la période avance d'un intervalle, puis le run suivant facture l'intervalle suivant, etc.
+
+**Correction appliquée (sans arbitrage)** : **plan gratuit** → rattrapage **complet en un seul run** (boucle bornée jusqu'à une période future), car aucun montant n'est en jeu → rien à facturer rétroactivement. Aucune facture créée (gratuit). Test : `SubscriptionOverdueRenewalTest`.
+
+**Politique recommandée pour les périodes échues (payé) — PROPOSITION, arbitrage produit** :
+- **Ne jamais facturer rétroactivement** les intervalles passés **non consommés** après un gel (panne de cron / `is_current=NULL` régularisé). Le comportement actuel « payé non chargeable » (1 facture + gel + dunning) est **acceptable** ; le risque réel est le **payé auto-chargeable** (N factures rétroactives).
+- **Recommandation** : lorsque `current_period_end` est **à plus d'un intervalle** dans le passé, **ré-ancrer** la période au cycle courant (facturer **une seule** période à venir, sans émettre les intervalles sautés) **OU** garder gelé + exiger un paiement de réactivation (modèle accès restreint ADR-571). Choix = décision produit (reconnaissance de revenu). **Non implémenté** (arbitrage) ; garde-fou actuel = idempotence + gel-jusqu'à-paiement qui évite déjà l'empilement sur le cas non chargeable.
+- **Invariant visé** : un abo ne doit pas générer plus d'**une** facture pour une même période, ni facturer des périodes passées non consommées sans décision explicite.
+
+**Conséquences** : le cas PROD #1 (internal) est **sûr** (1 facture open possible au prochain `billing:renew`, période gelée, « Renouvellement en attente » affiché, aucun paiement rétroactif). Le ré-ancrage payé reste à arbitrer. **Aucun renouvellement/paiement réel exécuté sur PROD** (analyse en base locale uniquement).
+
+**Fichiers** : `app/Console/Commands/BillingRenewCommand.php` (fix gratuit), `tests/Feature/SubscriptionOverdueRenewalTest.php`.
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.

@@ -192,10 +192,22 @@ class BillingRenewCommand extends Command implements Isolatable
                 : $newPeriodStart->copy()->addMonth();
         }
 
-        // Free plans: extend period directly, no invoice needed
+        // Free plans: extend period directly, no invoice needed.
+        // ANO-001: a free plan carries NO money, so there is nothing to bill retroactively —
+        // catch it all the way up to a FUTURE period in a single run (otherwise a free sub that
+        // fell months behind would advance only one month/run and keep showing a past renewal
+        // date for days). Bounded loop as a runaway guard.
         if ($price <= 0) {
+            $guard = 0;
+            while ($newPeriodEnd->isPast() && $guard < 120) {
+                $newPeriodStart = $newPeriodEnd->copy();
+                $newPeriodEnd = $interval === 'yearly'
+                    ? $newPeriodEnd->copy()->addYear()
+                    : $newPeriodEnd->copy()->addMonth();
+                $guard++;
+            }
             $this->extendPeriod($subscription, $newPeriodStart, $newPeriodEnd);
-            $this->line("  Renewed (free): company #{$company->id} — {$subscription->plan_key}");
+            $this->line("  Renewed (free): company #{$company->id} — {$subscription->plan_key} → {$newPeriodEnd->toDateString()}");
 
             return 'renewed';
         }
