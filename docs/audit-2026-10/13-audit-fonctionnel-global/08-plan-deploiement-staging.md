@@ -19,14 +19,16 @@ Regroupés par thème (ordre chronologique inverse) :
 
 ## 2. Migrations / seeders / commandes / API
 
-### 2.1 Migrations — **AUCUNE** ✅
-`git diff --name-only origin/dev..dev` → **0 fichier** sous `database/migrations/`. **Zéro changement de schéma** → pas de `migrate` requis, risque DB structurel **nul**.
+### 2.1 Migrations — **AUCUNE dans ce lot** ✅
+`git diff --name-only origin/dev..dev` → **0 fichier** sous `database/migrations/`. **Zéro changement de schéma** dans ce lot.
+> ⚠️ **Précision mécanisme** : le script `deploy_release.sh` lance **toujours** une étape DB selon la branche — **STAGING : `migrate:fresh --seed`** (reconstruit le schéma + reseed, voulu), **PROD : `migrate --force`** (additif). Avec 0 migration, PROD = « Nothing to migrate » (no-op schéma) ; STAGING reconstruit depuis zéro (sans client réel).
 
-### 2.2 Seeders
-| Seeder | Portée staging | Risque |
+### 2.2 Seeders — exécutés automatiquement par `deploy_release.sh`
+| Seeder | Branche | Comportement |
 |---|---|---|
-| `SystemSeeder` → `ModuleProductConfigSeeder` (ANO-003) | **Pertinent** : config produit `is_sellable` + `addon_pricing` | **Non destructif** : `skip` si `addon_pricing` déjà posé. Idempotent. À exécuter : `php artisan db:seed --class=SystemSeeder` (ou `ModuleProductConfigSeeder`). |
-| `DevSeeder`, `BillingDemoSeeder` | **Dev-only** — ne PAS exécuter sur staging | aucun (non lancés) |
+| `SystemSeeder` → `ModuleProductConfigSeeder` (ANO-003) + Platform/Payment/Market/Convention/PayrollRule | **PROD (main)** | Idempotent, non destructif (`skip` si `addon_pricing` déjà posé). **Lancé auto** après `migrate --force`. |
+| `DevSeeder` (+ dépendances) | **STAGING (dev)** | **Lancé auto** après `migrate:fresh` — réinitialise les données de démo. **Jamais sur prod.** |
+| `BillingDemoSeeder` | dev only | non lancé sur prod |
 
 ### 2.3 Nouvelles commandes artisan (8)
 | Commande | Staging |
@@ -56,17 +58,19 @@ Regroupés par thème (ordre chronologique inverse) :
 
 **Pré-requis** : branche `dev`, STAGING uniquement (user `jliouidevleezr` / web3), jamais prod.
 
-### Déploiement
-1. **Pré-vol** (local) : `php artisan test` vert, `pnpm build` clean, `git status` propre (fait — §Clôture).
-2. Push `dev` → `origin/dev` *(sur autorisation)*.
-3. Sur STAGING : `git pull` (déploiement atomique existant), puis :
-   - `composer install --no-dev` (aucune dépendance nouvelle attendue).
-   - `php artisan config:clear && php artisan route:clear && php artisan cache:clear`.
-   - **Pas de `migrate`** (0 migration) — vérifier `php artisan migrate:status` = à jour.
-   - `php artisan db:seed --class=SystemSeeder` (idempotent, config produit).
-   - `pnpm install && pnpm build` (assets).
-   - `php artisan route:cache && php artisan config:cache`.
-4. Smoke immédiat (§5).
+### Déploiement — mécanisme RÉEL (corrigé après livraison)
+> ⚠️ **Correction** : le déploiement n'est **pas** un `git pull` manuel. Il est **100 % piloté par GitHub Actions** (`.github/workflows/deploy.yml`) : build de l'artifact en CI (composer + `pnpm build`), envoi SSH du `tar.gz`, puis `deploy/deploy_release.sh` sur le VPS (symlink atomique `releases/<ts>_<sha>/`). **Déclencheur = push de la branche** (`dev`→staging web3, `main`→prod web2).
+
+1. **Pré-vol** (local) : `php artisan test` vert, `pnpm build` clean, `git status` propre.
+2. **Push `dev` → `origin/dev`** *(sur autorisation)* → déclenche automatiquement le workflow « Build & Deploy » (staging).
+3. **`deploy_release.sh` exécute côté serveur, selon la branche** :
+   - **STAGING (`dev`)** : **`php artisan migrate:fresh --seed --force` + `db:seed DevSeeder`** — la base staging est **réinitialisée et re-seedée à chaque déploiement** (comportement **voulu** : « no real clients yet »). Les données de démo sont donc remises à zéro ; aucune donnée client réelle n'existe sur staging.
+   - **PROD (`main`)** : **`php artisan migrate --force` (additif, jamais de reset) + `db:seed SystemSeeder --force` (idempotent)** — protège les données clients réelles.
+   - Puis (les deux) : fix permissions, systemd queues, `optimize`, `config:cache`/`route:cache`, **health check `/up` → 200**.
+4. **Vérifier le SHA déployé** : `readlink <app_path>/current` = `releases/<ts>_<sha>` ; comparer au SHA poussé.
+5. Smoke immédiat (§5).
+
+> **Note sur les migrations de ce lot** : **0 migration** → sur PROD `migrate --force` = « Nothing to migrate » (aucun changement de schéma). Sur STAGING le `migrate:fresh` reconstruit le schéma puis reseed (sans impact, pas de client réel).
 
 ### Rollback
 - **Code** : le déploiement atomique conserve la release précédente → `rollback` = repointer le symlink sur l'ancienne release + `route:cache`/`config:cache`. Aucune migration à annuler (0).
