@@ -37,7 +37,8 @@
 | **Access — Rôles (créer/éditer/supprimer)** | **[NAV][persistance]** | CRUD complet navigateur→DB (`platform-rbac-workflow.spec.js`) |
 | **Access — Utilisateurs (créer + attribuer rôle)** | **[NAV][persistance]** | **ANO-011** corrigé (drawer orphelin câblé) ; création + attribution vérifiées |
 | **RBAC — enforcement effectif (permissions UI = API)** | **[NAV][API]** | utilisateur sans permission → **403** sur `/platform-users` ; admin → **200** |
-| Plans / Modules / Settings | [CODE] | **[NON]** en NAV |
+| **Settings / Plans / Automations — actions réelles** | **[NAV][API][persistance]** | `platform-admin-workflow.spec.js` : app_name (settings) modifié→persistant→restauré ; description de plan modifiée (prix préservés)→restaurée ; automations lues + toggle d'une tâche **non-sensible** (sans exécution)→restauré ; aucune automatisation sensible/financière exécutée |
+| Modules | [CODE] | **[NON]** en NAV |
 | Alerts / Notifications | [CODE] | **[NON]** en NAV |
 
 ## EMPLOYEE / USER — `bob@leezr.test`
