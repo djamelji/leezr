@@ -12,10 +12,14 @@ use Illuminate\Support\Facades\Log;
  * (seeder bug, audit 13 / ANO-001). Such rows are skipped by billing:renew (which
  * filters is_current=1) → their period freezes → "next invoice" shows a past date.
  *
- * SAFE by design: dry-run by default; sets is_current=1 only; triggers NO renewal,
- * invoice, charge or financial operation. Respects the unique (company_id, is_current)
- * constraint — if a company already has a current subscription, the orphan is reported,
- * never flipped (that would be a conflict needing manual decision). Idempotent.
+ * SAFE by design: sets is_current=1 only; triggers NO renewal, invoice, charge or financial
+ * operation. Respects the unique (company_id, is_current) constraint — if a company already has
+ * a current subscription, the orphan is reported, never flipped (a conflict needing manual
+ * decision). Idempotent.
+ *
+ * EXECUTION MODE: pass `--dry-run` to preview without writing (reports "would set"). WITHOUT the
+ * flag the command WRITES (sets is_current=1). Ops procedure: always run `--dry-run` first, review
+ * the candidate list, then run live only after sign-off.
  */
 class BillingRegularizeCurrentSubscriptionsCommand extends Command
 {
