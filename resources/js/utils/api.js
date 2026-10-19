@@ -2,6 +2,7 @@ import { ofetch } from 'ofetch'
 import { useAppToast } from '@/composables/useAppToast'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 import { safeRedirect } from '@/utils/safeRedirect'
+import { sameBuild } from '@/utils/versionCheck'
 
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
@@ -63,7 +64,8 @@ export const $api = ofetch.create({
     const clientVersion = import.meta.env.VITE_APP_VERSION
     if (!clientVersion || clientVersion === '__dev__') return
 
-    if (serverVersion !== clientVersion && !sessionStorage.getItem('lzr:update-shown')) {
+    // INCIDENT 2: format-tolerant compare (short vs full SHA) to avoid a permanent false mismatch.
+    if (!sameBuild(serverVersion, clientVersion) && !sessionStorage.getItem('lzr:update-shown')) {
       sessionStorage.setItem('lzr:version-mismatch', serverVersion)
     }
   },

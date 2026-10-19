@@ -15,6 +15,23 @@
 let pollingTimer = null
 let visibilityListenerAdded = false
 
+/**
+ * INCIDENT 2 fix — format-tolerant build comparison.
+ * Historically the client baked the FULL 40-char git SHA (VITE_APP_VERSION) while the server
+ * exposes the SHORT 7-char SHA (config app.build_version) → they never compared equal → the
+ * version overlay looped. Treat two builds as the SAME when one SHA is a prefix of the other
+ * (short vs full), so only a GENUINELY different deploy (different 7-char prefix) is detected.
+ */
+export function sameBuild(a, b) {
+  if (!a || !b) return true // missing info → never trigger an update overlay
+  if (a === b) return true
+
+  const x = String(a)
+  const y = String(b)
+
+  return x.startsWith(y) || y.startsWith(x)
+}
+
 // Cooldown: don't check version within 30s of page load.
 // This prevents the reload loop: deploy → overlay → reload → overlay → reload...
 const BOOT_TIME = Date.now()
@@ -61,7 +78,7 @@ async function checkVersion() {
     // Only compare in production (both sides have real versions, not 'dev')
     if (clientVersion && clientVersion !== 'dev'
       && data.version && data.version !== 'dev'
-      && data.version !== clientVersion) {
+      && !sameBuild(data.version, clientVersion)) {
       showOverlay()
     }
   }
@@ -84,7 +101,7 @@ export function checkVersionOnMount() {
       const res = await fetch('/health', { method: 'HEAD', cache: 'no-store' })
       const serverVersion = res.headers.get('x-build-version')
 
-      if (serverVersion && serverVersion !== 'dev' && serverVersion !== clientVersion) {
+      if (serverVersion && serverVersion !== 'dev' && !sameBuild(serverVersion, clientVersion)) {
         showOverlay()
       }
     }

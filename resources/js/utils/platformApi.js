@@ -1,5 +1,6 @@
 import { ofetch } from 'ofetch'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
+import { sameBuild } from '@/utils/versionCheck'
 
 export const $platformApi = ofetch.create({
   baseURL: '/api/platform',
@@ -46,7 +47,8 @@ export const $platformApi = ofetch.create({
     const clientVersion = import.meta.env.VITE_APP_VERSION
     if (!clientVersion || clientVersion === '__dev__') return
 
-    if (serverVersion !== clientVersion && !sessionStorage.getItem('lzr:update-shown')) {
+    // INCIDENT 2: format-tolerant compare (short vs full SHA) to avoid a permanent false mismatch.
+    if (!sameBuild(serverVersion, clientVersion) && !sessionStorage.getItem('lzr:update-shown')) {
       sessionStorage.setItem('lzr:version-mismatch', serverVersion)
     }
   },

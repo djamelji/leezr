@@ -70,8 +70,15 @@ jobs:
 
       - name: Build frontend
         env:
+          # Must match the SERVER build_version (config/app.php → APP_COMMIT_HASH = short 7-char
+          # SHA). Baking the FULL 40-char SHA here made the client version differ from the server's
+          # short SHA forever → the login-page version check looped on "Application mise à jour".
+          # Truncate to the short SHA so client and server compare equal. (INCIDENT 2 fix)
           VITE_APP_VERSION: ${{ github.sha }}
-        run: pnpm build
+        run: |
+          export VITE_APP_VERSION="$(printf '%s' "$VITE_APP_VERSION" | head -c 7)"
+          echo "Building with VITE_APP_VERSION=$VITE_APP_VERSION"
+          pnpm build
 
       - name: Write build metadata
         run: |
