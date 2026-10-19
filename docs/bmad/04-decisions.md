@@ -21635,7 +21635,7 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
-### ADR-575 — Cycle de renouvellement des abonnements échus (ANO-001) : comportement, fix gratuit, politique recommandée (2026-10-19)
+### ADR-575 — Cycle de renouvellement des abonnements échus (ANO-001) : politique anti-cascade, classification des retards (2026-10-19)
 
 **Contexte** : L'abonnement #1 (PROD, company #1) a été régularisé `is_current=1` alors que sa période se termine le 2026-05-31 (≈5 mois dans le passé). Analyse du cycle `billing:renew` (base locale isolée, tests `SubscriptionOverdueRenewalTest`) pour les abos échus.
 
@@ -21651,14 +21651,25 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 **Correction appliquée (sans arbitrage)** : **plan gratuit** → rattrapage **complet en un seul run** (boucle bornée jusqu'à une période future), car aucun montant n'est en jeu → rien à facturer rétroactivement. Aucune facture créée (gratuit). Test : `SubscriptionOverdueRenewalTest`.
 
-**Politique recommandée pour les périodes échues (payé) — PROPOSITION, arbitrage produit** :
-- **Ne jamais facturer rétroactivement** les intervalles passés **non consommés** après un gel (panne de cron / `is_current=NULL` régularisé). Le comportement actuel « payé non chargeable » (1 facture + gel + dunning) est **acceptable** ; le risque réel est le **payé auto-chargeable** (N factures rétroactives).
-- **Recommandation** : lorsque `current_period_end` est **à plus d'un intervalle** dans le passé, **ré-ancrer** la période au cycle courant (facturer **une seule** période à venir, sans émettre les intervalles sautés) **OU** garder gelé + exiger un paiement de réactivation (modèle accès restreint ADR-571). Choix = décision produit (reconnaissance de revenu). **Non implémenté** (arbitrage) ; garde-fou actuel = idempotence + gel-jusqu'à-paiement qui évite déjà l'empilement sur le cas non chargeable.
-- **Invariant visé** : un abo ne doit pas générer plus d'**une** facture pour une même période, ni facturer des périodes passées non consommées sans décision explicite.
+**Politique RETENUE pour les périodes échues (décision produit 2026-10-19)** :
 
-**Conséquences** : le cas PROD #1 (internal) est **sûr** (1 facture open possible au prochain `billing:renew`, période gelée, « Renouvellement en attente » affiché, aucun paiement rétroactif). Le ré-ancrage payé reste à arbitrer. **Aucun renouvellement/paiement réel exécuté sur PROD** (analyse en base locale uniquement).
+> **Principe directeur : aucun rattrapage automatique en cascade de plusieurs périodes payantes échues.** Une période passée n'est ni abandonnée silencieusement (si le service a été fourni), ni facturée par une cascade automatique non contrôlée.
 
-**Fichiers** : `app/Console/Commands/BillingRenewCommand.php` (fix gratuit), `tests/Feature/SubscriptionOverdueRenewalTest.php`.
+Quatre situations distinctes :
+1. **Renouvellement normal** — l'abonnement atteint sa fin de période ; la période **due** (en cours) est facturée. Règle technique : `newPeriodEnd = current_period_end + 1 intervalle` ; si `newPeriodEnd ≥ now` (la période due atteint le présent) → **facturation normale** d'**une** période.
+2. **Retard technique** (cron en retard de quelques heures/jours, mais toujours dans la 1ʳᵉ période due) — traité **comme normal** : une seule période facturée, **idempotence** garantie (déduplication sur `subscription_id + period_start + period_end`) → pas de double facture ni double prélèvement.
+3. **Retard prolongé** (`newPeriodEnd < now`, c.-à-d. ≥ 2 périodes dues, la 1ʳᵉ période due est **entièrement passée**) — **INTERDICTION de la cascade automatique** : `billing:renew` **ne facture pas**, n'avance pas la période, **marque l'abonnement pour revue manuelle** (traçable : `metadata.renewal_review_required=true` + `renewal_deferred_at`), log `billing` explicite, statut `deferred`. Le traitement des périodes **réellement fournies** relève d'une **procédure distincte et traçable** (ops : facturer, créditer ou renoncer, sur décision).
+4. **Suspension / réactivation** — un abonnement suspendu/annulé n'est **pas** `active|trialing` → **non éligible** → **aucune facturation automatique de service non fourni**. La **réactivation** est un flux distinct (checkout/plan-change) qui **ré-ancre** la période au cycle courant (`now`), cohérent avec le contrat — jamais via `billing:renew`.
+
+**Invariants** :
+- **≤ 1 facture par (abonnement, période)** — déduplication conservée.
+- **Jamais** de facturation d'une période **entièrement passée** sans décision explicite (ni cascade N factures).
+- **Historique des factures préservé** (aucune réécriture/suppression) ; **droits acquis** conservés (les factures `paid`/périodes déjà servies restent intactes).
+- **Abstraction provider conservée** (la décision normal/différé est prise **avant** toute résolution de provider ; `internal`, Stripe, etc. traités identiquement).
+
+**Conséquences** : le cas PROD #1 (internal, ~5 mois de retard) est désormais classé **retard prolongé** → `billing:renew` le **diffère** (aucune facture rétroactive, marqué pour revue) au lieu de créer une facture pour une période passée. Le cockpit continue d'afficher « Renouvellement en attente ». **Aucune donnée financière PROD modifiée** (implémentation + tests en base locale ; non déployé).
+
+**Fichiers** : `app/Console/Commands/BillingRenewCommand.php` (fix gratuit + classification normal/technique/prolongé/suspension), `tests/Feature/SubscriptionOverdueRenewalTest.php`, `tests/Feature/SubscriptionRenewalPolicyTest.php`.
 
 ---
 
