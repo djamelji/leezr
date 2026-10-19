@@ -21588,4 +21588,51 @@ Ces principes sont **permanents et opposables**. Toute nouvelle fonctionnalité 
 
 ---
 
+### ADR-573 — PROPOSITION — Invariants du solde de congés & buckets annuels (ANO-015) (2026-10-19)
+
+**Statut** : **PROPOSITION — en attente d'arbitrage produit/légal (FR)**. Aucun code modifié. Aucune écriture du ledger retouchée.
+
+**Contexte** : L'audit E2E (`workforce-leave-ledger.spec.js`) a prouvé que le cycle du grand livre congés est **cohérent** : accrual (crédit) → réservation à l'approbation (débit `reservation`) → consommation (`release` + `consumption`) / annulation (`release`) / refus (aucune écriture). Source de vérité = `workforce_leave_ledger_entries` ; cache `workforce_leave_balances` auto-réparé. **Incohérence observée (ANO-015)** : le **garde de suffisance** à l'approbation (`ApproveLeaveRequestUseCase`) appelle `computeBalance(…)` **sans année** → somme **globale** tous buckets ; mais la réservation est inscrite dans le bucket de **l'année civile de `date_from`** (`periodKey = Y-m`). Un congé daté d'une année future passe le garde global (accrual de l'année courante) mais crée une réservation dans un bucket annuel **sans accrual** → `cached_available` **négatif** pour cette année (observé : emp #3, bucket 2027 = −900 centièmes). Pas de sur-consommation réelle (le garde global reste ≥ 0), mais **affichage/comptabilité annuelle incohérente**.
+
+**Question à arbitrer (marché FR actif)** :
+- Les congés payés FR suivent une **période de référence** (par défaut 1er juin → 31 mai) et des règles d'**acquisition** (2,5 j ouvrables/mois) et de **report**. Un solde annuel **négatif** n'est **pas** acceptable fonctionnellement/légalement (on ne réserve pas plus que l'acquis de la période).
+- Deux options mutuellement exclusives (décision produit requise) :
+  - **(A) Garde par bucket** : le contrôle de suffisance se fait sur le **bucket de l'année ciblée** (`computeBalance(…, year(date_from))`) → une demande future est refusée tant que l'acquisition de cette année n'existe pas. Plus strict, aligné FR, mais bloque la planification anticipée.
+  - **(B) Accrual/report multi-année** : l'acquisition alimente les buckets futurs (report explicite) → la réservation future a un accrual en face. Nécessite un moteur d'acquisition périodique (cron) + politique de report par marché.
+
+**Invariants proposés** (à valider) :
+1. `available(bucket) = accrued − reserved − consumed + adjusted` **≥ 0** pour tout bucket, tout instant.
+2. Transition d'état d'une demande : `pending →(approve)→ approved →(consume)→ consumed` | `pending/approved →(cancel)→ cancelled` | `pending →(reject)→ rejected`. Écritures : approve=`reservation`(débit) ; consume=`release`+`consumption` ; cancel(approved)=`release` ; reject=∅. **(déjà respecté)**
+3. Le **garde** et le **bucket d'inscription** doivent porter sur la **même année** (corrige l'incohérence A, ou B la neutralise par report).
+
+**Décision** : **différé** jusqu'à arbitrage (A vs B) + définition de la période de référence par **Market** (jamais un `if('FR')`). **Aucune correction de code ce lot** (le correctif change la sémantique d'acquisition). Documenté ; test E2E prouve le modèle correct sur l'année courante.
+
+**Fichiers concernés (si implémenté plus tard)** : `ApproveLeaveRequestUseCase`, `LeaveLedger::computeBalance`, moteur d'acquisition (nouveau), données `Market`.
+
+---
+
+### ADR-574 — PROPOSITION — Règles de chevauchement / succession des contrats (ANO-016) (2026-10-19)
+
+**Statut** : **PROPOSITION — en attente d'arbitrage produit**. Aucun code modifié.
+
+**Contexte** : `CreateContractUseCase` ne valide que `end_date`/`probation_end_date` `after:start_date`. **Aucune** vérification de **chevauchement** de périodes entre contrats d'un même employé. La création bascule l'ancien contrat `is_current=false` et crée le nouveau `is_current=true` **sans changer le `status` de l'ancien** ; l'activation (`/activate`, machine d'état `draft→active`) ne touche **ni** `is_current` **ni** les autres contrats. On peut donc avoir **plusieurs contrats `status=active`** dont un seul `is_current`. Effets constatés sur l'aval : planning (règle shift **I4**), pointage et paie s'appuient sur **`currentContract` (`is_current`)** → les contrats non-courants sont ignorés (pas de préjudice immédiat), mais le modèle autorise des états incohérents.
+
+**Cas métier à préserver (ne pas interdire globalement)** :
+- **Succession** : CDD puis CDI (périodes contiguës/se succédant) — légitime.
+- **Avenant** : modification d'un contrat en cours (nouvelle rémunération/temps de travail) — doit idéalement **versionner** sans créer un 2ᵉ contrat « actif » concurrent.
+- **Suspension** : `active→suspended→active` (congé sans solde, etc.) — déjà dans la machine d'état.
+- **Concurrence réelle** (2 contrats actifs simultanés, même employeur) : généralement **interdite** en FR.
+
+**Invariants proposés (à valider)** :
+1. **Au plus un** contrat `is_current` par employé **à tout instant** (déjà tenu à la création). 
+2. **Au plus un** contrat `status=active` dont la période couvre une date donnée (anti-concurrence) — **à arbitrer** selon cas avenant.
+3. L'**activation** d'un nouveau contrat devrait **terminer/suspendre** le précédent `active` (transition explicite) plutôt que le laisser `active` + `is_current=false`.
+4. Validation de **chevauchement de périodes** à la création/activation, avec exception explicite pour succession (dates contiguës) et avenant (versionnement).
+
+**Décision** : **différé** jusqu'à arbitrage produit sur avenant vs nouveau contrat et sur la tolérance de chevauchement. **Pas d'interdiction globale imposée ce lot.** Couvert par ailleurs : activation (lifecycle E2E), autorisations (ANO-014 : `workforce.contracts`), dates d'effet (`after:start_date`).
+
+**Fichiers concernés (si implémenté plus tard)** : `CreateContractUseCase`, `ContractController::activate`, `EmploymentContract` (machine d'état + scopes période).
+
+---
+
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
