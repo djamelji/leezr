@@ -35,6 +35,29 @@ class CreateContractUseCase
             $overtimeRateBps, $customComplianceRules, $conventionCollectiveId,
             $compensationType, $hourlyRateCents, $dailyRateCents,
         ) {
+            // LOT G (ANO-016): forbid genuine period overlap with a non-terminated contract of the
+            // same employee. Contiguous succession (e.g. CDD then CDI on non-overlapping dates) stays
+            // allowed; two concurrent contracts covering the same date do not. Amendment (avenant)
+            // versioning remains a deferred product arbitration (ADR-574) — overlapping on purpose is
+            // intentionally refused here until that flow exists.
+            $overlap = EmploymentContract::where('employee_id', $employee->id)
+                ->where('status', '!=', EmploymentContract::STATUS_TERMINATED)
+                ->where(function ($q) use ($startDate, $endDate) {
+                    // existing.start_date <= newEnd  (newEnd null = open-ended → no upper bound)
+                    if ($endDate !== null) {
+                        $q->whereDate('start_date', '<=', $endDate);
+                    }
+                    // AND (existing.end_date is null OR existing.end_date >= newStart)
+                    $q->where(function ($q2) use ($startDate) {
+                        $q2->whereNull('end_date')->orWhereDate('end_date', '>=', $startDate);
+                    });
+                })
+                ->exists();
+
+            if ($overlap) {
+                throw new \DomainException('Contract period overlaps an existing active contract for this employee; succession must be non-overlapping.');
+            }
+
             // Deactivate previous current contract
             EmploymentContract::where('employee_id', $employee->id)
                 ->where('is_current', true)

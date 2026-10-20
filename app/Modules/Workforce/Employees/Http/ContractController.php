@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Core\Workforce\ConventionCollective;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
+use App\Modules\Workforce\UseCases\ActivateContractUseCase;
 use App\Modules\Workforce\UseCases\CreateContractUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,14 +85,13 @@ class ContractController extends Controller
             ->where('employee_id', $employeeId)
             ->findOrFail($contractId);
 
-        if (! $contract->canTransitionTo(EmploymentContract::STATUS_ACTIVE)) {
-            return response()->json(['message' => 'Cannot activate contract in current status'], 422);
+        try {
+            $contract = app(ActivateContractUseCase::class)->execute($contract);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $contract->transitionTo(EmploymentContract::STATUS_ACTIVE);
-        $contract->update(['status' => $contract->status]);
-
-        return response()->json($contract->fresh());
+        return response()->json($contract);
     }
 
     public function conventions(Request $request): JsonResponse

@@ -21718,3 +21718,22 @@ Quatre situations distinctes :
 **Fichiers** : `app/Modules/Workforce/Services/ShiftRuleValidator.php` (nouveau), `app/Modules/Workforce/UseCases/{CreateShift,UpdateShift,BulkCreateShifts,PublishShifts}UseCase.php`, `tests/Feature/WorkforcePlanningRulesTest.php`.
 
 ---
+
+### ADR-578 — Workforce 2.0 LOT G : intégrité des contrats (ANO-016, tranche décidée) ; congés (ANO-015) confirmés différés (2026-10-20)
+
+**Contexte.** ADR-574 (ANO-016) et ADR-573 (ANO-015) étaient des **PROPOSITIONS différées**. Le LOT G implémente la **partie non-arbitrale** d'ANO-016 (intégrité de données, sans trancher avenant ni tolérance de chevauchement) et **confirme le report** des parties réellement arbitrables.
+
+**Contrats — DÉCIDÉ et implémenté (ANO-016, tranche intégrité) :**
+1. **Pas de chevauchement réel** : `CreateContractUseCase` refuse (422) un contrat dont la période `[start_date, end_date|∞]` chevauche celle d'un contrat **non terminé** du même employé. **Succession contiguë autorisée** (ex. CDD jusqu'au 31/12, CDI à partir du 01/01) ; deux contrats couvrant la même date refusés (anti-concurrence FR).
+2. **Activation supersède le précédent actif** : nouveau `ActivateContractUseCase` — activer un contrat **termine** tout autre contrat `active` du salarié (cas succession : activer le CDI clôt le CDD) et rend le contrat activé **seul `is_current`**. Corrige le bug « deux contrats `active` simultanés, `is_current` découplé du `status` ».
+3. **Invariants tenus** : au plus **un** `status=active` et au plus **un** `is_current` par employé à tout instant. `ContractController::activate` passe par le use case (422 sur transition illégale).
+
+**Contrats — ENCORE DIFFÉRÉ (arbitrage produit) :** le **versionnement d'avenant** (modifier un contrat en cours sans créer un 2ᵉ « actif » concurrent) — un avenant crée volontairement un chevauchement, aujourd'hui **refusé** faute de flux dédié. À arbitrer : avenant = nouvelle version du contrat courant (recommandé) vs nouveau contrat. Tant que non tranché, pas de création chevauchante.
+
+**Congés (ANO-015) — CONFIRMÉ DIFFÉRÉ.** Le cycle du grand livre (accrual → réservation → consommation/annulation/refus) est **cohérent et E2E-prouvé** (ADR-573) ; le seul reliquat est le **bucket annuel négatif** pour des congés datés d'une année sans accrual. Le corriger impose de **trancher la sémantique d'acquisition** (A : garde par bucket, strict FR, bloque l'anticipation ; B : accrual/report multi-année, nécessite un moteur d'acquisition + politique de report **par Market**). **Non implémenté ce lot** — aucune règle légale inventée, aucune écriture du ledger retouchée. Décision produit/légal requise avant code.
+
+**Preuves.** `WorkforceContractIntegrityTest` (3 cas : chevauchement refusé ; succession contiguë autorisée ; activation supersède le précédent actif + invariants un-seul-actif/un-seul-courant). Régression : **365 tests verts** (Workforce/Contract/Shift/Planning/Payroll/Timesheet/Organization). Aucune donnée PROD modifiée.
+
+**Fichiers** : `app/Modules/Workforce/UseCases/CreateContractUseCase.php` (validation chevauchement), `app/Modules/Workforce/UseCases/ActivateContractUseCase.php` (nouveau), `app/Modules/Workforce/Employees/Http/ContractController.php` (activate → use case), `tests/Feature/WorkforceContractIntegrityTest.php`.
+
+---
