@@ -17,14 +17,12 @@ const isPlatform = computed(() => !!route.meta?.platform)
 
 const isMenuOpen = ref(false)
 
-// Live minute counter — ticks every 60s to update displayed time
-const liveMinutes = ref(0)
+// The store derives worked time LIVE from the server clock_in via a shared 1s ticker — no
+// local counter here (the old local ref reset to 0 on every refresh, the confirmed bug).
 let refreshInterval = null
 
 const displayTime = computed(() => {
-  const base = store.workedMinutesToday
-  const extra = store.isWorking ? liveMinutes.value : 0
-  const mins = base + extra
+  const mins = store.workedMinutesToday
   const h = Math.floor(mins / 60)
   const m = mins % 60
 
@@ -79,17 +77,10 @@ onMounted(async () => {
   if (isPlatform.value) return
   await store.fetchProfile()
 
-  // Tick live counter every minute when working
+  // Reconcile with the server periodically (drift correction + break completion). The live
+  // display between reconciliations is driven by the store's 1s ticker from clock_in.
   refreshInterval = setInterval(() => {
-    if (store.isWorking) {
-      liveMinutes.value++
-    }
-
-    // Full refresh every 5 minutes
-    if (liveMinutes.value % 5 === 0 && liveMinutes.value > 0) {
-      store.refreshToday()
-      liveMinutes.value = 0
-    }
+    if (store.isWorking || store.isOnBreak) store.fetchProfile()
   }, 60000)
 })
 
@@ -104,7 +95,6 @@ async function handleAction(actionFn) {
   actionLoading.value = true
   try {
     await actionFn()
-    liveMinutes.value = 0
   }
   catch (e) {
     console.error('[workforce-clock] action failed:', e)
@@ -118,7 +108,10 @@ async function handleAction(actionFn) {
 <template>
   <!-- Only render on company pages when employee record exists -->
   <template v-if="!isPlatform && store.employee">
-    <IconBtn id="workforce-clock-btn">
+    <IconBtn
+      id="workforce-clock-btn"
+      data-test="wfc-widget-btn"
+    >
       <VBadge
         :color="statusColor"
         dot
@@ -168,7 +161,10 @@ async function handleAction(actionFn) {
                 <div class="text-body-2 text-medium-emphasis">
                   {{ t('workforceClock.workedToday') }}
                 </div>
-                <div class="text-h4 font-weight-bold">
+                <div
+                  class="text-h4 font-weight-bold"
+                  data-test="wfc-worked-time"
+                >
                   {{ displayTime }}
                 </div>
               </div>

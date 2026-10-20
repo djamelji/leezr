@@ -16,6 +16,29 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  // ── Single reactive clock — SERVER is the source of truth ───────────────────
+  // The server owns every transition + timestamp (clock_in, break start/end, total_*
+  // minutes). The frontend only derives a smooth live display from those timestamps via a
+  // 1s ticker, so the counters survive refresh / navigation / reconnection (they are always
+  // recomputed from clock_in, never from an in-memory JS counter). A single shared store
+  // model powers both the navbar widget and the /me page — no concurrent counters.
+  const now = ref(Date.now())
+  let ticker = null
+
+  function stopTicker() {
+    if (ticker) { clearInterval(ticker); ticker = null }
+  }
+
+  function syncTicker(status) {
+    const active = status === 'working' || status === 'on_break'
+    if (active && !ticker) {
+      now.value = Date.now()
+      ticker = setInterval(() => { now.value = Date.now() }, 1000)
+    } else if (!active) {
+      stopTicker()
+    }
+  }
+
   // Computed
   const clockStatus = computed(() => {
     if (!todayClock.value) return 'not_started'
@@ -28,23 +51,57 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   const isCompleted = computed(() => clockStatus.value === 'completed')
   const hasStarted = computed(() => todayClock.value !== null)
 
-  const workedMinutesToday = computed(() => {
-    if (!todayClock.value) return 0
-    if (todayClock.value.worked_minutes) return todayClock.value.worked_minutes
+  const clockInMs = computed(() => (todayClock.value?.clock_in ? new Date(todayClock.value.clock_in).getTime() : null))
+  const clockOutMs = computed(() => (todayClock.value?.clock_out ? new Date(todayClock.value.clock_out).getTime() : null))
 
-    // If still working, compute live from clock_in
-    if (todayClock.value.status === 'working' && todayClock.value.clock_in) {
-      const start = new Date(todayClock.value.clock_in)
-      const now = new Date()
-      const breakMins = todayClock.value.break_minutes || 0
+  // Start timestamp of an in-progress break (break row with no end_at), if any.
+  const ongoingBreakStartMs = computed(() => {
+    const b = (todayClock.value?.breaks || []).find(x => x.start_at && !x.end_at)
 
-      return Math.floor((now - start) / 60000) - breakMins
+    return b ? new Date(b.start_at).getTime() : null
+  })
+
+  // Completed breaks (server truth, in seconds).
+  const completedBreakSeconds = computed(() => (todayClock.value?.total_break_minutes || 0) * 60)
+
+  // Live elapsed seconds of the current break (0 when not on break).
+  const currentBreakSeconds = computed(() => {
+    if (clockStatus.value === 'on_break' && ongoingBreakStartMs.value) {
+      return Math.max(0, Math.floor((now.value - ongoingBreakStartMs.value) / 1000))
     }
 
     return 0
   })
 
-  const breakMinutesToday = computed(() => todayClock.value?.break_minutes || 0)
+  // Total break seconds today (completed + ongoing).
+  const breakSeconds = computed(() => completedBreakSeconds.value + currentBreakSeconds.value)
+
+  // Effective worked seconds. Completed → server total_worked_minutes (authoritative).
+  // Working → (now − clock_in) − completed breaks. On break → frozen at break start.
+  const workedSeconds = computed(() => {
+    const tc = todayClock.value
+    if (!tc || clockInMs.value === null) return 0
+    if (tc.status === 'completed') return (tc.total_worked_minutes || 0) * 60
+
+    const until = tc.status === 'on_break' && ongoingBreakStartMs.value ? ongoingBreakStartMs.value : now.value
+
+    return Math.max(0, Math.floor((until - clockInMs.value) / 1000) - completedBreakSeconds.value)
+  })
+
+  // Total elapsed since clock-in (work + breaks), stops at clock_out when completed.
+  const elapsedSeconds = computed(() => {
+    if (clockInMs.value === null) return 0
+    const end = clockStatus.value === 'completed' && clockOutMs.value !== null ? clockOutMs.value : now.value
+
+    return Math.max(0, Math.floor((end - clockInMs.value) / 1000))
+  })
+
+  // Backward-compatible minute getters (navbar + pages).
+  const workedMinutesToday = computed(() => Math.floor(workedSeconds.value / 60))
+  const breakMinutesToday = computed(() => Math.floor(breakSeconds.value / 60))
+
+  // Keep the ticker in sync with the live status.
+  watch(clockStatus, syncTicker, { immediate: true })
 
   // Actions
   async function fetchProfile() {
@@ -94,7 +151,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
       body: { source: 'manual' },
     })
 
-    await refreshToday()
+    await fetchProfile()
 
     return data
   }
@@ -104,7 +161,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
       method: 'POST',
     })
 
-    await refreshToday()
+    await fetchProfile()
 
     return data
   }
@@ -114,7 +171,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
       method: 'POST',
     })
 
-    await refreshToday()
+    await fetchProfile()
 
     return data
   }
@@ -124,7 +181,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
       method: 'POST',
     })
 
-    await refreshToday()
+    await fetchProfile()
 
     return data
   }
@@ -148,6 +205,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   }
 
   function reset() {
+    stopTicker()
     employee.value = null
     todayClock.value = null
     leaveBalances.value = []
@@ -171,6 +229,13 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     hasStarted,
     workedMinutesToday,
     breakMinutesToday,
+    // Live server-truth derived counters (seconds precision)
+    workedSeconds,
+    breakSeconds,
+    currentBreakSeconds,
+    elapsedSeconds,
+    clockInMs,
+    ongoingBreakStartMs,
 
     // Actions
     fetchProfile,
