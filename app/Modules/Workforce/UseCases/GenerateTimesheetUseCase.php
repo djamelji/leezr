@@ -83,14 +83,42 @@ class GenerateTimesheetUseCase
                 ]);
             }
 
-            // Resolve policies for overtime/anomaly thresholds
+            // Resolve policies for overtime/anomaly thresholds.
             $policyResolver = app(CompanyPolicyResolver::class);
             $contract = $employee->currentContract;
             $weeklyHours = $contract?->weekly_hours ?? 35.00;
-            $dailyThreshold = (int) (($policyResolver->get($companyId, 'workforce', 'overtime_daily_threshold') ?? ($weeklyHours / 5)) * 60);
-            $minimumBreak = (int) ($policyResolver->get($companyId, 'workforce', 'minimum_break_minutes') ?? 20);
+
+            // LOT H: effective work-time / break rules from the normative resolver take precedence;
+            // the historical CompanyPolicyResolver fallbacks are preserved so a company that has not
+            // configured a normative rule keeps its previous behaviour (no silent regression).
+            $coreCompany = \App\Core\Models\Company::withoutGlobalScopes()->find($companyId);
+            $workTimeRules = $coreCompany ? app(\App\Core\Workforce\Services\WorkforceRuleResolver::class)->resolveWorkTimeRules($coreCompany, $start, $contract) : [];
+            $breakRules = $coreCompany ? app(\App\Core\Workforce\Services\WorkforceRuleResolver::class)->resolveBreakRules($coreCompany, $start, $contract) : [];
+            $ruleHours = fn (string $k) => is_numeric($workTimeRules[$k]['value'] ?? null) ? (float) $workTimeRules[$k]['value'] : null;
+            $ruleMinutes = fn (string $k) => is_numeric($breakRules[$k]['value'] ?? null) ? (int) $breakRules[$k]['value'] : null;
+
+            // Effective weekly reference (resolver → contract → 35), used for the weekly OT threshold.
+            $weeklyHours = $ruleHours('weekly_hours_reference') ?? $weeklyHours;
+
+            // Daily overtime threshold: resolver hours → legacy policy → weekly/5.
+            $otThresholdHours = $ruleHours('overtime_daily_threshold_hours');
+            $dailyThreshold = $otThresholdHours !== null
+                ? (int) round($otThresholdHours * 60)
+                : (int) (($policyResolver->get($companyId, 'workforce', 'overtime_daily_threshold') ?? ($weeklyHours / 5)) * 60);
+
+            // Minimum break: resolver legal_min → legacy policy → 20.
+            $minimumBreak = $ruleMinutes('min_duration_minutes')
+                ?? (int) ($policyResolver->get($companyId, 'workforce', 'minimum_break_minutes') ?? 20);
+
             $arrivalTolerance = (int) ($policyResolver->get($companyId, 'workforce', 'arrival_tolerance_minutes') ?? 15);
             $standardDayMinutes = (int) ($policyResolver->get($companyId, 'workforce', 'standard_day_minutes') ?? ($weeklyHours / 5 * 60));
+
+            // Paid breaks that COUNT as working time are added back to worked minutes (default: excluded).
+            $breakIncludedInWorktime = (bool) ($breakRules['included_in_worktime']['value'] ?? false);
+            $breakPaid = (bool) ($breakRules['paid']['value'] ?? false);
+            // Night-work window (effective, may be undocumented → null → night minutes stay 0).
+            $nightStart = $workTimeRules['night_work_start']['value'] ?? null;
+            $nightEnd = $workTimeRules['night_work_end']['value'] ?? null;
 
             // Load source data for the period
             $allocator = app(AccountingDayAllocator::class);
@@ -179,6 +207,12 @@ class GenerateTimesheetUseCase
                         $breakMinutes = 0;
                     }
                 }
+
+                // LOT H: classify the break against the effective rule for payroll-prep provenance.
+                // worked_minutes keeps its established meaning (presence allocated per accounting day);
+                // the paid/included classification is recorded in metadata for downstream pay, without
+                // mutating the historical worked-time computation.
+                $paidBreakMinutes = ($breakPaid || $breakIncludedInWorktime) ? $breakMinutes : 0;
 
                 // CORR #11: Non-completed entries → anomaly only
                 $nonCompletedForDay = $nonCompletedEntries->filter(
@@ -333,6 +367,21 @@ class GenerateTimesheetUseCase
                     }
                 }
 
+                // LOT H: premium-hour buckets. Night minutes from the effective night-work window;
+                // Sunday minutes from the calendar day (no invented data). Holiday majoration is NOT
+                // computed — it requires a per-Market public-holiday calendar that does not exist yet
+                // (documented in ADR); omitted rather than guessed.
+                $nightMinutes = 0;
+                if (is_string($nightStart) && is_string($nightEnd)) {
+                    foreach ($dayAllocations as $alloc) {
+                        $e = $alloc['entry'];
+                        if ($e->clock_in && $e->clock_out) {
+                            $nightMinutes += $this->nightOverlapMinutes($e->clock_in, $e->clock_out, $dateCarbon, $nightStart, $nightEnd);
+                        }
+                    }
+                }
+                $sundayMinutes = $dateCarbon->isSunday() ? $workedMinutes : 0;
+
                 // --- Create line ---
                 TimesheetLine::create([
                     'company_id' => $companyId,
@@ -348,6 +397,13 @@ class GenerateTimesheetUseCase
                     'is_leave_day' => $isLeaveDay,
                     'is_rest_day' => false,
                     'anomalies' => ! empty($anomalies) ? $anomalies : null,
+                    'metadata' => [
+                        'night_minutes' => $nightMinutes,
+                        'sunday_minutes' => $sundayMinutes,
+                        'paid_break_minutes' => $paidBreakMinutes,
+                        'break_included_in_worktime' => $breakIncludedInWorktime,
+                        'break_paid' => $breakPaid,
+                    ],
                     'source_snapshot' => [
                         'time_entries' => $timeEntrySnapshots,
                         'shifts' => $shiftSnapshots,
@@ -414,5 +470,39 @@ class GenerateTimesheetUseCase
 
             return $period;
         });
+    }
+
+    /**
+     * Minutes of [clockIn, clockOut] that fall inside the night-work window anchored on $day.
+     * Handles a window crossing midnight (e.g. 21:00 → 06:00) by testing the current and previous
+     * night windows. "HH:MM" strings; returns 0 when the window is malformed.
+     */
+    private function nightOverlapMinutes(Carbon $clockIn, Carbon $clockOut, Carbon $day, string $start, string $end): int
+    {
+        if (! str_contains($start, ':') || ! str_contains($end, ':')) {
+            return 0;
+        }
+
+        [$sh, $sm] = array_map('intval', explode(':', $start));
+        [$eh, $em] = array_map('intval', explode(':', $end));
+
+        $winStart = $day->copy()->startOfDay()->setTime($sh, $sm);
+        $winEnd = $day->copy()->startOfDay()->setTime($eh, $em);
+        if ($winEnd->lte($winStart)) {
+            $winEnd->addDay();
+        }
+
+        $minutes = 0;
+        foreach ([0, -1] as $offset) {
+            $ws = $winStart->copy()->addDays($offset);
+            $we = $winEnd->copy()->addDays($offset);
+            $overlapStart = $clockIn->greaterThan($ws) ? $clockIn : $ws;
+            $overlapEnd = $clockOut->lessThan($we) ? $clockOut : $we;
+            if ($overlapEnd->greaterThan($overlapStart)) {
+                $minutes += $overlapStart->diffInMinutes($overlapEnd);
+            }
+        }
+
+        return $minutes;
     }
 }

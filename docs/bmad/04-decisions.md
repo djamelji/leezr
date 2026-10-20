@@ -21737,3 +21737,24 @@ Quatre situations distinctes :
 **Fichiers** : `app/Modules/Workforce/UseCases/CreateContractUseCase.php` (validation chevauchement), `app/Modules/Workforce/UseCases/ActivateContractUseCase.php` (nouveau), `app/Modules/Workforce/Employees/Http/ContractController.php` (activate → use case), `tests/Feature/WorkforceContractIntegrityTest.php`.
 
 ---
+
+### ADR-579 — Workforce 2.0 LOT H : préparation paie / feuilles de temps adossées au moteur normatif (2026-10-20)
+
+**Contexte.** `GenerateTimesheetUseCase` calculait seuils d'heures supplémentaires et de pause via `CompanyPolicyResolver` (clés plates), sans passer par le moteur normatif ni la convention collective ; aucune notion de pause payée/incluse, de nuit/dimanche, et le verrouillage ne figeait pas les règles **effectives** en vigueur.
+
+**Décision (bridge règle-effective-d'abord, fallback préservé).** Branchement de `WorkforceRuleResolver` dans la génération et le verrouillage, **sans casser l'existant** (les fallbacks historiques restent actifs quand une règle n'est pas documentée → `to_complete`) :
+- **Seuil d'heures sup quotidien** : `overtime_daily_threshold_hours` (resolver) → sinon `CompanyPolicy` → sinon `hebdo/5`.
+- **Référence hebdomadaire** : `weekly_hours_reference` (resolver, FR=35) → sinon `contract.weekly_hours` → 35. Pilote le seuil d'heures sup hebdomadaire.
+- **Pause minimale** (anomalie) : `min_duration_minutes` (legal_min resolver) → sinon `CompanyPolicy` → 20.
+- **Pauses payées / incluses** : `paid` + `included_in_worktime` (resolver) **classent** la pause dans `metadata.paid_break_minutes` + drapeaux, pour la paie — **sans muter `worked_minutes`** (la sémantique « présence allouée par jour comptable » de `AccountingDayAllocator` est préservée ; les tests d'overtime restent verts).
+- **Heures de nuit / dimanche** : minutes de nuit calculées sur la **fenêtre effective** (`night_work_start/end`, gestion minuit) ; minutes du dimanche dérivées du **calendrier** (aucune donnée inventée). Stockées en `metadata` (advisory).
+- **Majoration jours fériés : NON calculée** — nécessite un **calendrier de jours fériés par Market** inexistant ; omise plutôt que devinée (reliquat documenté).
+- **Verrouillage fige les règles effectives** : `LockTimesheetUseCase` capture `resolveWorkTimeRules` + `resolveBreakRules` (à `period_end`, CC du contrat incluse) dans `policy_snapshot.workforce_rules` (provenance + dates d'effet). Un **changement de règle ultérieur ne recalcule PAS une période verrouillée** : les lignes sont immuables hors `draft`, `ComputePayrollUseCase` lit les totaux de la période **verrouillée**, et régénérer une période non-draft est refusé.
+
+**Garde-fous.** Aucun paiement réel, aucun bulletin, aucune déclaration légale. La ventilation HS25/HS50 (seuil 8h figé, `OvertimeVentilationTest`) est inchangée.
+
+**Preuves.** `WorkforceTimesheetRulesTest` (4 cas : seuil d'heures sup effectif pilote l'overtime ; pause classée payée depuis la règle effective ; minutes de nuit depuis la fenêtre effective ; verrouillage fige les règles + période verrouillée immuable). Régression : **349 tests verts** (Timesheet/Payroll/TimeTracking/Overtime/Invariants/Workforce). Aucune donnée PROD modifiée.
+
+**Fichiers** : `app/Modules/Workforce/UseCases/GenerateTimesheetUseCase.php`, `app/Modules/Workforce/UseCases/LockTimesheetUseCase.php`, `tests/Feature/WorkforceTimesheetRulesTest.php`.
+
+---
