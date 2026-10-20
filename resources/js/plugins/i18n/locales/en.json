@@ -6770,6 +6770,15 @@
     "workedToday": "Worked today",
     "breakTime": "Break time",
     "arrival": "Arrival",
-    "todayStatus": "Today's status"
+    "todayStatus": "Today's status",
+    "breakElapsed": "Break elapsed",
+    "breakTarget": "Target duration",
+    "breakRemaining": "Time remaining",
+    "breakOvertime": "Overtime",
+    "resumeAt": "Resume at",
+    "breakTargetReached": "Target reached",
+    "noBreakTarget": "No target duration configured",
+    "breakMinWarning": "A minimum break of {min} min is recommended before resuming.",
+    "breakMinBlocked": "Resume blocked before the {min} min minimum break."
   }
 }

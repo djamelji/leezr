@@ -111,24 +111,33 @@ class CompanyPolicyResolver
         ?Carbon $effectiveFrom = null,
     ): CompanyPolicy {
         $effectiveFrom ??= now();
+        $fromDate = $effectiveFrom->copy()->toDateString();
 
-        // Close previous active policy. NOTE: Carbon is mutable — use copy() so subDay() does not
-        // mutate $effectiveFrom, which is reused below as the new row's effective_from.
+        // Close previously-open policies that START BEFORE this effective date. Carbon is mutable
+        // → copy() so subDay() does not mutate $effectiveFrom. Same-day rows are handled by the
+        // upsert below (not closed), avoiding a unique-key collision on re-config within a day.
         CompanyPolicy::withoutCompanyScope()
             ->where('company_id', $companyId)
             ->domain($domain)
             ->forKey($policyKey)
             ->whereNull('effective_until')
+            ->whereDate('effective_from', '<', $fromDate)
             ->update(['effective_until' => $effectiveFrom->copy()->subDay()]);
 
-        return CompanyPolicy::create([
-            'company_id' => $companyId,
-            'domain' => $domain,
-            'policy_key' => $policyKey,
-            'value' => $value,
-            'effective_from' => $effectiveFrom,
-            'effective_until' => null,
-            'source' => $source,
-        ]);
+        // Idempotent on (company_id, domain, policy_key, effective_from): a re-set on the same
+        // effective date updates the value in place rather than duplicating the row.
+        return CompanyPolicy::withoutCompanyScope()->updateOrCreate(
+            [
+                'company_id' => $companyId,
+                'domain' => $domain,
+                'policy_key' => $policyKey,
+                'effective_from' => $fromDate,
+            ],
+            [
+                'value' => $value,
+                'effective_until' => null,
+                'source' => $source,
+            ],
+        );
     }
 }

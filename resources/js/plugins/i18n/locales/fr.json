@@ -6770,6 +6770,15 @@
     "workedToday": "Travaillé aujourd'hui",
     "breakTime": "Temps de pause",
     "arrival": "Arrivée",
-    "todayStatus": "Statut du jour"
+    "todayStatus": "Statut du jour",
+    "breakElapsed": "Pause écoulée",
+    "breakTarget": "Durée cible",
+    "breakRemaining": "Temps restant",
+    "breakOvertime": "Dépassement",
+    "resumeAt": "Reprise indicative",
+    "breakTargetReached": "Durée cible atteinte",
+    "noBreakTarget": "Aucune durée cible configurée",
+    "breakMinWarning": "Pause minimale de {min} min recommandée avant reprise.",
+    "breakMinBlocked": "Reprise bloquée avant la pause minimale de {min} min."
   }
 }

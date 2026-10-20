@@ -116,6 +116,21 @@ const clockStatusConfig = computed(() => {
   return configs[status] || configs.not_started
 })
 
+// Break countdown helpers (mm:ss) — all durations come from the store (server + resolver).
+function fmtClock(s) {
+  if (s === null || s === undefined) return '—'
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+const meBreakResumeLabel = computed(() => {
+  const d = clockStore.breakResumeAt
+  if (!d) return null
+
+  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
+})
+
 // ── Time formatting ─────────────────────────────────────────
 function formatMinutes(minutes) {
   if (!minutes || minutes <= 0) return '0h00'
@@ -196,6 +211,7 @@ function signatureChipProps(status) {
           color="success"
           prepend-icon="tabler-player-play"
           :loading="clockActionLoading"
+          data-test="me-clock-in"
           @click="handleClockAction(clockStore.clockIn)"
         >
           {{ t('workforceClock.clockIn') }}
@@ -206,6 +222,7 @@ function signatureChipProps(status) {
             variant="tonal"
             prepend-icon="tabler-coffee"
             :loading="clockActionLoading"
+            data-test="me-start-break"
             @click="handleClockAction(clockStore.startBreak)"
           >
             {{ t('workforceClock.startBreak') }}
@@ -215,6 +232,7 @@ function signatureChipProps(status) {
             variant="tonal"
             prepend-icon="tabler-player-stop"
             :loading="clockActionLoading"
+            data-test="me-clock-out"
             @click="handleClockAction(clockStore.clockOut)"
           >
             {{ t('workforceClock.clockOut') }}
@@ -225,6 +243,8 @@ function signatureChipProps(status) {
           color="success"
           prepend-icon="tabler-player-play"
           :loading="clockActionLoading"
+          :disabled="clockStore.breakBelowMinimum && !clockStore.canResumeNow"
+          data-test="me-end-break"
           @click="handleClockAction(clockStore.endBreak)"
         >
           {{ t('workforceClock.endBreak') }}
@@ -380,6 +400,83 @@ function signatureChipProps(status) {
                   {{ todayClock ? formatTime(todayClock.clock_in) : '--:--' }}
                 </div>
               </div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+
+      <!-- Break countdown panel (driven by the server-resolved break rules) -->
+      <VRow v-if="clockStore.isOnBreak">
+        <VCol cols="12">
+          <VCard
+            :color="clockStore.breakTargetReached ? 'warning' : undefined"
+            :variant="clockStore.breakTargetReached ? 'tonal' : 'outlined'"
+            data-test="me-break-panel"
+          >
+            <VCardText>
+              <div class="d-flex align-center justify-space-between mb-2">
+                <div class="d-flex align-center gap-2">
+                  <VIcon icon="tabler-coffee" color="warning" />
+                  <span class="text-h6">{{ t('workforceClock.onBreak') }}</span>
+                </div>
+                <VChip
+                  v-if="clockStore.breakTargetReached"
+                  color="warning"
+                  size="small"
+                  variant="elevated"
+                >
+                  {{ t('workforceClock.breakTargetReached') }}
+                </VChip>
+              </div>
+
+              <VRow>
+                <VCol cols="6" sm="3">
+                  <div class="text-body-2 text-medium-emphasis">{{ t('workforceClock.breakElapsed') }}</div>
+                  <div class="text-h5 font-weight-bold" data-test="me-break-elapsed">{{ fmtClock(clockStore.currentBreakSeconds) }}</div>
+                </VCol>
+                <VCol v-if="clockStore.hasBreakTarget" cols="6" sm="3">
+                  <div class="text-body-2 text-medium-emphasis">{{ t('workforceClock.breakTarget') }}</div>
+                  <div class="text-h5 font-weight-bold">{{ fmtClock(clockStore.breakTargetSeconds) }}</div>
+                </VCol>
+                <VCol v-if="clockStore.hasBreakTarget" cols="6" sm="3">
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ clockStore.breakTargetReached ? t('workforceClock.breakOvertime') : t('workforceClock.breakRemaining') }}
+                  </div>
+                  <div
+                    class="text-h5 font-weight-bold"
+                    :class="clockStore.breakTargetReached ? 'text-warning' : 'text-success'"
+                    data-test="me-break-remaining"
+                  >
+                    {{ clockStore.breakTargetReached ? '+' + fmtClock(clockStore.breakOvershootSeconds) : fmtClock(clockStore.breakRemainingSeconds) }}
+                  </div>
+                </VCol>
+                <VCol v-if="meBreakResumeLabel" cols="6" sm="3">
+                  <div class="text-body-2 text-medium-emphasis">{{ t('workforceClock.resumeAt') }}</div>
+                  <div class="text-h5 font-weight-bold">{{ meBreakResumeLabel }}</div>
+                </VCol>
+              </VRow>
+
+              <VProgressLinear
+                v-if="clockStore.hasBreakTarget"
+                :model-value="clockStore.breakProgress"
+                :color="clockStore.breakTargetReached ? 'warning' : 'primary'"
+                height="8"
+                rounded
+                class="mt-3"
+              />
+              <div v-else class="text-body-2 text-medium-emphasis mt-2">
+                {{ t('workforceClock.noBreakTarget') }}
+              </div>
+
+              <VAlert
+                v-if="clockStore.breakBelowMinimum && !clockStore.canResumeNow"
+                type="warning"
+                variant="tonal"
+                density="compact"
+                class="mt-3"
+              >
+                {{ t('workforceClock.breakMinBlocked', { min: Math.round((clockStore.breakMinSeconds || 0) / 60) }) }}
+              </VAlert>
             </VCardText>
           </VCard>
         </VCol>

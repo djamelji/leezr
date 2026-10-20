@@ -38,6 +38,23 @@ const breakDisplay = computed(() => {
   return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m}min`
 })
 
+// mm:ss formatter for the live break countdown.
+function fmtSeconds(s) {
+  if (s === null || s === undefined) return '—'
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+const breakElapsedLabel = computed(() => fmtSeconds(store.currentBreakSeconds))
+const breakRemainingLabel = computed(() => fmtSeconds(store.breakRemainingSeconds))
+const breakResumeLabel = computed(() => {
+  const d = store.breakResumeAt
+  if (!d) return null
+
+  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
+})
+
 const arrivalTime = computed(() => {
   const clockIn = store.todayClock?.clock_in
   if (!clockIn) return null
@@ -217,6 +234,7 @@ async function handleAction(actionFn) {
               :loading="actionLoading"
               prepend-icon="tabler-player-play"
               @click="handleAction(store.clockIn)"
+              data-test="wfc-clock-in"
             >
               {{ t('workforceClock.clockIn') }}
             </VBtn>
@@ -230,6 +248,7 @@ async function handleAction(actionFn) {
                 :loading="actionLoading"
                 prepend-icon="tabler-coffee"
                 @click="handleAction(store.startBreak)"
+                data-test="wfc-start-break"
               >
                 {{ t('workforceClock.startBreak') }}
               </VBtn>
@@ -245,17 +264,97 @@ async function handleAction(actionFn) {
               </VBtn>
             </template>
 
-            <!-- On break: End Break -->
-            <VBtn
-              v-else-if="store.isOnBreak"
-              color="success"
-              block
-              :loading="actionLoading"
-              prepend-icon="tabler-player-play"
-              @click="handleAction(store.endBreak)"
-            >
-              {{ t('workforceClock.endBreak') }}
-            </VBtn>
+            <!-- On break: countdown + resume -->
+            <template v-else-if="store.isOnBreak">
+              <div
+                class="rounded pa-3 mb-1"
+                :class="store.breakTargetReached ? 'bg-warning-subtle' : 'bg-surface'"
+                style="border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));"
+                data-test="wfc-break-panel"
+              >
+                <div class="d-flex justify-space-between text-body-2 text-medium-emphasis">
+                  <span>{{ t('workforceClock.breakElapsed') }}</span>
+                  <span class="font-weight-bold text-high-emphasis" data-test="wfc-break-elapsed">{{ breakElapsedLabel }}</span>
+                </div>
+
+                <template v-if="store.hasBreakTarget">
+                  <div class="d-flex justify-space-between text-body-2 text-medium-emphasis mt-1">
+                    <span>{{ t('workforceClock.breakTarget') }}</span>
+                    <span>{{ fmtSeconds(store.breakTargetSeconds) }}</span>
+                  </div>
+                  <div class="d-flex justify-space-between text-body-2 mt-1">
+                    <span class="text-medium-emphasis">{{ store.breakTargetReached ? t('workforceClock.breakOvertime') : t('workforceClock.breakRemaining') }}</span>
+                    <span
+                      class="font-weight-bold"
+                      :class="store.breakTargetReached ? 'text-warning' : 'text-success'"
+                      data-test="wfc-break-remaining"
+                    >
+                      {{ store.breakTargetReached ? '+' + fmtSeconds(store.breakOvershootSeconds) : breakRemainingLabel }}
+                    </span>
+                  </div>
+                  <VProgressLinear
+                    :model-value="store.breakProgress"
+                    :color="store.breakTargetReached ? 'warning' : 'primary'"
+                    height="6"
+                    rounded
+                    class="my-2"
+                  />
+                  <div
+                    v-if="breakResumeLabel"
+                    class="text-caption text-medium-emphasis d-flex align-center gap-1"
+                  >
+                    <VIcon icon="tabler-clock" size="13" />
+                    {{ t('workforceClock.resumeAt') }} {{ breakResumeLabel }}
+                    <VChip
+                      v-if="store.breakTargetReached"
+                      size="x-small"
+                      color="warning"
+                      variant="tonal"
+                      class="ms-auto"
+                    >
+                      {{ t('workforceClock.breakTargetReached') }}
+                    </VChip>
+                  </div>
+                </template>
+                <div
+                  v-else
+                  class="text-caption text-medium-emphasis mt-1"
+                >
+                  {{ t('workforceClock.noBreakTarget') }}
+                </div>
+              </div>
+
+              <VAlert
+                v-if="store.breakBelowMinimum && !store.canResumeNow"
+                type="warning"
+                variant="tonal"
+                density="compact"
+                class="mb-1 text-caption"
+              >
+                {{ t('workforceClock.breakMinBlocked', { min: Math.round((store.breakMinSeconds || 0) / 60) }) }}
+              </VAlert>
+              <VAlert
+                v-else-if="store.breakBelowMinimum && store.earlyResumePolicy === 'warn'"
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-1 text-caption"
+              >
+                {{ t('workforceClock.breakMinWarning', { min: Math.round((store.breakMinSeconds || 0) / 60) }) }}
+              </VAlert>
+
+              <VBtn
+                color="success"
+                block
+                :loading="actionLoading"
+                :disabled="store.breakBelowMinimum && !store.canResumeNow"
+                prepend-icon="tabler-player-play"
+                data-test="wfc-end-break"
+                @click="handleAction(store.endBreak)"
+              >
+                {{ t('workforceClock.endBreak') }}
+              </VBtn>
+            </template>
 
             <!-- Completed: no actions, just display -->
             <div

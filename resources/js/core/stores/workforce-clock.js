@@ -13,6 +13,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   const employee = ref(null)
   const todayClock = ref(null)
   const leaveBalances = ref([])
+  const breakRules = ref(null) // resolved by the backend WorkforceRuleResolver (never Vue constants)
   const loading = ref(false)
   const error = ref(null)
 
@@ -76,6 +77,52 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   // Total break seconds today (completed + ongoing).
   const breakSeconds = computed(() => completedBreakSeconds.value + currentBreakSeconds.value)
 
+  // ── Break countdown (driven by the server-resolved break rules) ─────────────
+  const hasBreakTarget = computed(() => {
+    const t = breakRules.value?.target_duration_minutes
+
+    return t !== null && t !== undefined && Number(t) > 0
+  })
+  const breakTargetSeconds = computed(() => (hasBreakTarget.value ? Number(breakRules.value.target_duration_minutes) * 60 : null))
+  const breakMinSeconds = computed(() => {
+    const m = breakRules.value?.min_duration_minutes
+
+    return m !== null && m !== undefined ? Number(m) * 60 : null
+  })
+  // Remaining to the target (0 once reached); null when no target configured.
+  const breakRemainingSeconds = computed(() => {
+    if (!hasBreakTarget.value) return null
+
+    return Math.max(0, breakTargetSeconds.value - currentBreakSeconds.value)
+  })
+  // Overshoot past the target (0 before reaching it); null when no target.
+  const breakOvershootSeconds = computed(() => {
+    if (!hasBreakTarget.value) return null
+
+    return Math.max(0, currentBreakSeconds.value - breakTargetSeconds.value)
+  })
+  const breakTargetReached = computed(() => hasBreakTarget.value && currentBreakSeconds.value >= breakTargetSeconds.value)
+  // Progress 0..100 toward the target (capped at 100); null when no target.
+  const breakProgress = computed(() => {
+    if (!hasBreakTarget.value || breakTargetSeconds.value === 0) return null
+
+    return Math.min(100, Math.round((currentBreakSeconds.value / breakTargetSeconds.value) * 100))
+  })
+  // Indicative resume time (break start + target), as a Date; null when no target or not on break.
+  const breakResumeAt = computed(() => {
+    if (!hasBreakTarget.value || ongoingBreakStartMs.value === null) return null
+
+    return new Date(ongoingBreakStartMs.value + breakTargetSeconds.value * 1000)
+  })
+  // Can the employee resume now given the min-duration + early-resume policy?
+  const earlyResumePolicy = computed(() => breakRules.value?.early_resume_policy ?? 'warn')
+  const breakBelowMinimum = computed(() => breakMinSeconds.value !== null && currentBreakSeconds.value < breakMinSeconds.value)
+  const canResumeNow = computed(() => {
+    if (!breakBelowMinimum.value) return true
+
+    return earlyResumePolicy.value === 'allow' || earlyResumePolicy.value === 'warn'
+  })
+
   // Effective worked seconds. Completed → server total_worked_minutes (authoritative).
   // Working → (now − clock_in) − completed breaks. On break → frozen at break start.
   const workedSeconds = computed(() => {
@@ -113,6 +160,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
       employee.value = data.employee
       todayClock.value = data.today_clock
       leaveBalances.value = data.leave_balances || []
+      breakRules.value = data.break_rules || null
     }
     catch (e) {
       if (e.response?.status === 404 || e.status === 404 || e.statusCode === 404) {
@@ -236,6 +284,19 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     elapsedSeconds,
     clockInMs,
     ongoingBreakStartMs,
+    // Break rules + countdown (resolver-driven)
+    breakRules,
+    hasBreakTarget,
+    breakTargetSeconds,
+    breakMinSeconds,
+    breakRemainingSeconds,
+    breakOvershootSeconds,
+    breakTargetReached,
+    breakProgress,
+    breakResumeAt,
+    earlyResumePolicy,
+    breakBelowMinimum,
+    canResumeNow,
 
     // Actions
     fetchProfile,

@@ -3,7 +3,9 @@
 namespace App\Modules\Workforce\Employees\Http;
 
 use App\Core\Documents\GeneratedDocument;
+use App\Core\Models\Company;
 use App\Core\Workforce\Employee;
+use App\Core\Workforce\Services\WorkforceRuleResolver;
 use App\Core\Workforce\TimeEntry;
 use App\Modules\Workforce\ReadModels\EmployeeReadModel;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
@@ -68,7 +70,30 @@ class EmployeeSelfController
                 ]),
             ] : null,
             'leave_balances' => LeaveBalanceReadModel::forEmployee($companyId, $employee->id),
+            // Resolved break rules (WorkforceRuleResolver §2): the UI countdown/policy come from
+            // the server + rules engine, never from Vue constants. Flattened for the client.
+            'break_rules' => $this->breakRulesPayload($companyId),
         ]);
+    }
+
+    /** Flatten the resolved break spec for the frontend (values + policy only). */
+    private function breakRulesPayload(int $companyId): array
+    {
+        $company = Company::withoutGlobalScopes()->find($companyId);
+        if (! $company) {
+            return [];
+        }
+        $spec = app(WorkforceRuleResolver::class)->resolveBreakRules($company);
+
+        return [
+            'min_duration_minutes' => $spec['min_duration_minutes']['value'] ?? null,
+            'target_duration_minutes' => $spec['target_duration_minutes']['value'] ?? null,
+            'max_duration_minutes' => $spec['max_duration_minutes']['value'] ?? null,
+            'enforcement' => $spec['enforcement']['value'] ?? 'signaled',
+            'early_resume_policy' => $spec['early_resume_policy']['value'] ?? 'warn',
+            'paid' => $spec['paid']['value'] ?? false,
+            'included_in_worktime' => $spec['included_in_worktime']['value'] ?? false,
+        ];
     }
 
     /** GET /workforce/me/today */
@@ -159,6 +184,28 @@ class EmployeeSelfController
             ->where('status', TimeEntry::STATUS_ON_BREAK)
             ->latest('clock_in')
             ->firstOrFail();
+
+        // Early-resume policy (server-enforced, driven by the rules engine — never a Vue constant).
+        $rules = $this->breakRulesPayload($companyId);
+        $minMinutes = $rules['min_duration_minutes'] ?? null;
+        $policy = $rules['early_resume_policy'] ?? 'warn';
+        $openBreak = $entry->breaks()->whereNull('end_at')->latest('start_at')->first();
+        $elapsedMin = $openBreak?->start_at ? $openBreak->start_at->diffInMinutes(now()) : null;
+
+        if ($minMinutes !== null && $elapsedMin !== null && $elapsedMin < $minMinutes) {
+            // 'block' always refuses; 'approve' refuses for self-service (needs a manager with
+            // workforce.time_manage). 'warn'/'allow' proceed (the UI shows the warning).
+            $canApprove = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.time_manage') ?? false;
+            if ($policy === 'block' || ($policy === 'approve' && ! $canApprove)) {
+                return response()->json([
+                    'message' => "Minimum break not reached ({$elapsedMin}/{$minMinutes} min).",
+                    'code' => $policy === 'approve' ? 'break_needs_approval' : 'break_min_not_reached',
+                    'elapsed_minutes' => $elapsedMin,
+                    'min_minutes' => $minMinutes,
+                    'policy' => $policy,
+                ], 422);
+            }
+        }
 
         try {
             $break = app(EndBreakUseCase::class)->execute($entry);
