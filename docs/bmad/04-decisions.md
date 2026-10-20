@@ -21697,3 +21697,24 @@ Quatre situations distinctes :
 **Fichiers** : `app/Core/Workforce/Services/WorkforceRuleResolver.php`, `app/Modules/Workforce/Employees/Http/WorkforceConfigController.php`, `routes/company.php`, `resources/js/pages/company/workforce/configuration.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/WorkforceNormativeResolutionTest.php`.
 
 ---
+
+### ADR-577 — Workforce 2.0 LOT F : validations de planning serveur adossées au moteur normatif (2026-10-20)
+
+**Contexte.** Le planning (shifts) ne validait que des invariants manuels (cohérence temporelle, employé/contrat actif, congé, chevauchement, cross-company). Workforce 2.0 exige des contrôles **serveur** de temps de travail issus des **règles effectives** de chaque salarié (repos, durées max, nuit), sans valeur légale codée en dur ni moteur parallèle.
+
+**Décision.** Nouveau service `ShiftRuleValidator` (adossé à `WorkforceRuleResolver::resolveWorkTimeRules`), injecté dans `CreateShiftUseCase`, `UpdateShiftUseCase`, `BulkCreateShiftsUseCase` et `PublishShiftsUseCase` :
+- **Repos quotidien** (`daily_rest_min_hours`, nature legal_min) : écart minimal **entre journées de travail** — restreint aux shifts de **dates différentes** (les vacations fractionnées d'une même journée ne sont PAS soumises aux 11h). Bloque (422) si l'écart avec le shift adjacent d'un autre jour est inférieur.
+- **Durée quotidienne max** (`daily_hours_max`, legal_max) : somme du temps travaillé (hors pause) du jour > plafond → 422.
+- **Durée hebdomadaire max** (`weekly_hours_max`, legal_max) : somme de la semaine ISO > plafond → 422.
+- **Travail de nuit** : si la fenêtre `night_work_start`/`night_work_end` est configurée, chaque shift chevauchant la fenêtre (gestion du passage minuit) est **annoté** `metadata.night_work=true` — **informatif**, jamais bloquant.
+- **Dégradation gracieuse** : une règle `to_complete` (valeur nulle, dimension non documentée pour le Market) est **ignorée** — aucune contrainte inventée.
+- **Re-contrôle à la publication** : `PublishShiftsUseCase` revalide chaque brouillon (une règle a pu se durcir depuis la création d'un brouillon) et **trace les employés concernés** (`metadata.affected_employee_ids`).
+- **Post-publication** : l'immutabilité existante est conservée — seuls les brouillons sont modifiables (I9) ; modifier un shift publié exige annulation + recréation (pas de réécriture silencieuse).
+
+**Reliquat assumé (non masqué).** La **notification in-app de publication** n'est pas câblée : le centre de notifications (`NotificationDispatcher` + topics + renderer + préférences) impose la création d'un topic `workforce_planning` et de templates de rendu — lot séparé pour ne pas régresser le centre. La publication reste **tracée par audit** (`shifts.published` + employés concernés). À implémenter en LOT I si priorisé.
+
+**Preuves.** `WorkforcePlanningRulesTest` (6 cas : repos inter-journées bloqué ; shifts fractionnés même jour autorisés ; max quotidien bloqué ; max hebdo bloqué ; nuit annotée vs jour ; règle non documentée non bloquante). Régression : **321 tests verts** (Workforce/Shift/Planning/Payroll/Timesheet/CompanyPolicy). Aucune donnée PROD modifiée (local/dev, non déployé).
+
+**Fichiers** : `app/Modules/Workforce/Services/ShiftRuleValidator.php` (nouveau), `app/Modules/Workforce/UseCases/{CreateShift,UpdateShift,BulkCreateShifts,PublishShifts}UseCase.php`, `tests/Feature/WorkforcePlanningRulesTest.php`.
+
+---

@@ -8,6 +8,7 @@ use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\LeaveRequest;
 use App\Core\Workforce\Shift;
 use App\Core\Workforce\WorkLocation;
+use App\Modules\Workforce\Services\ShiftRuleValidator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -85,12 +86,28 @@ class UpdateShiftUseCase
                 }
             }
 
+            // LOT F: effective work-time rules, excluding this shift from its own aggregation.
+            $contract = Employee::withoutGlobalScopes()->find($employeeId)?->currentContract;
+            $breakMinutes = (int) ($shift->template_snapshot['break_duration_minutes'] ?? 0);
+            $ruleCheck = app(ShiftRuleValidator::class)->validate(
+                companyId: $shift->company_id,
+                employeeId: $employeeId,
+                contract: $contract,
+                startAt: $startAt,
+                endAt: $endAt,
+                date: $date,
+                breakMinutes: $breakMinutes,
+                excludeShiftId: $shift->id,
+            );
+
             $before = $shift->only(['employee_id', 'date', 'start_at', 'end_at', 'work_location_id', 'notes']);
 
             $shift->fill(collect($data)->only([
                 'employee_id', 'work_location_id', 'date', 'start_at', 'end_at',
                 'timezone', 'notes', 'metadata',
             ])->toArray());
+
+            $shift->metadata = array_merge($shift->metadata ?? [], ['night_work' => $ruleCheck['night_work']]);
 
             $shift->save();
 

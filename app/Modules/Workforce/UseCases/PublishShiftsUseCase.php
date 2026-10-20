@@ -7,6 +7,7 @@ use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\LeaveRequest;
 use App\Core\Workforce\Shift;
+use App\Modules\Workforce\Services\ShiftRuleValidator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -84,6 +85,24 @@ class PublishShiftsUseCase
                 if ($hasOverlap) {
                     throw new \DomainException("Shift #{$shift->id}: employee already has a shift during this time.");
                 }
+
+                // LOT F: re-check effective work-time rules at publish time — a rule may have been
+                // tightened since the draft was created; an illegal draft must not be published.
+                $breakMinutes = (int) ($shift->template_snapshot['break_duration_minutes'] ?? 0);
+                try {
+                    app(ShiftRuleValidator::class)->validate(
+                        companyId: $companyId,
+                        employeeId: $shift->employee_id,
+                        contract: $contract,
+                        startAt: $shift->start_at,
+                        endAt: $shift->end_at,
+                        date: $dateString,
+                        breakMinutes: $breakMinutes,
+                        excludeShiftId: $shift->id,
+                    );
+                } catch (\DomainException $e) {
+                    throw new \DomainException("Shift #{$shift->id}: {$e->getMessage()}");
+                }
             }
 
             // Check for intra-batch overlaps (same employee, overlapping times within the batch)
@@ -118,6 +137,7 @@ class PublishShiftsUseCase
                         'category' => 'workforce.planning',
                         'shift_count' => count($shiftIds),
                         'shift_ids' => $shiftIds,
+                        'affected_employee_ids' => $shifts->pluck('employee_id')->unique()->values()->all(),
                     ],
                 ],
             );

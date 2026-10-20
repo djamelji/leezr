@@ -9,6 +9,7 @@ use App\Core\Workforce\LeaveRequest;
 use App\Core\Workforce\ScheduleTemplate;
 use App\Core\Workforce\Shift;
 use App\Core\Workforce\WorkLocation;
+use App\Modules\Workforce\Services\ShiftRuleValidator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
@@ -131,6 +132,18 @@ class BulkCreateShiftsUseCase
                         throw new \DomainException("Employee #{$employeeId} already has a shift overlapping on {$dateString}.");
                     }
 
+                    // LOT F: effective work-time rules (daily rest, daily/weekly max, night work).
+                    $breakMinutes = (int) ($templateSnapshot['break_duration_minutes'] ?? 0);
+                    $ruleCheck = app(ShiftRuleValidator::class)->validate(
+                        companyId: $companyId,
+                        employeeId: $employeeId,
+                        contract: $contract,
+                        startAt: $startAt,
+                        endAt: $endAt,
+                        date: $dateString,
+                        breakMinutes: $breakMinutes,
+                    );
+
                     $shift = Shift::create([
                         'company_id' => $companyId,
                         'employee_id' => $employeeId,
@@ -142,6 +155,7 @@ class BulkCreateShiftsUseCase
                         'end_at' => $endAt,
                         'timezone' => $timezone,
                         'status' => Shift::STATUS_DRAFT,
+                        'metadata' => ['night_work' => $ruleCheck['night_work']],
                     ]);
 
                     $created->push($shift);
