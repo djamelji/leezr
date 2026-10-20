@@ -155,7 +155,8 @@
       "workforce-payroll": "Paie",
       "workforce-documents": "Documents RH",
       "workforce-dsn": "DSN",
-      "workforce-organization": "Organisation"
+      "workforce-organization": "Organisation",
+      "workforce-configuration": "Configuration"
     }
   },
   "roles": {

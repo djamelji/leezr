@@ -21758,3 +21758,28 @@ Quatre situations distinctes :
 **Fichiers** : `app/Modules/Workforce/UseCases/GenerateTimesheetUseCase.php`, `app/Modules/Workforce/UseCases/LockTimesheetUseCase.php`, `tests/Feature/WorkforceTimesheetRulesTest.php`.
 
 ---
+
+### ADR-580 — Workforce 2.0 LOT I : preuve multi-entreprise isolée + finition cockpit (2026-10-21)
+
+**Contexte.** Preuve attendue du mandat Workforce 2.0 : **une seule installation** sert **plusieurs entreprises, métiers et conventions**, chacune avec ses **règles effectives** résolues côté serveur, sans fuite entre locataires.
+
+**Décision / livrables.**
+- **Fixture 2 entreprises** (`e2e:setup-two-companies`, local/testing only) :
+  - **Company A** = Leezr Logistics (owner@leezr.test), JobDomain `logistique`, **pause cible 30 min**.
+  - **Company B** = Beta Services (ownerb@leezr.test), JobDomain **différent** `beta-services`, **convention collective distincte** (IDCC 9999 + règle `break_min_minutes`), owner-salarié (pour administrer ET pointer), modules workforce activés via l'entitlement (JobDomain.default_modules), **pause cible 45 min**.
+  - Illustre l'invariant : une entreprise = un JobDomain, mais un JobDomain n'impose pas une CC unique.
+- **Preuve Playwright** (`workforce-two-company-isolation.spec.js`, 2 tests) :
+  1. A résout **30 min**, B résout **45 min** — côté serveur (`/workforce/config/breaks`), **cohérent après rechargement**.
+  2. **Isolation locataire** : connecté en B, forcer `X-Company-Id` = A est **refusé (403)** (`SetCompanyContext`/`isMemberOf`).
+  3. Chaque salarié **pointe** et voit **ses propres** règles de pause (`/workforce/me` → `break_rules` résolues par entreprise).
+- **Nav cockpit** : item `workforce-configuration` ajouté au manifest du module Workforce (permission `workforce.view`, i18n FR/EN) → le cockpit de configuration (pauses + temps de travail) est accessible depuis la barre latérale.
+- **Permissions backend + frontend** : lecture `workforce.view`, écriture `workforce.manage` (serveur, ANO-014) ; nav gaté par permission ; boutons d'édition pilotés par le flag `editable` renvoyé par le serveur. **`v-can` ne remplace jamais** le contrôle backend (prouvé : employé sans `workforce.view` → 403).
+- **UX** : cockpit avec état `loading`, erreurs via toast, provenance/mutabilité/conflits affichés ; compteur/pause synchronisés (LOT A/C) ; reprise anticipée avec approbation manager (LOT C).
+
+**Statut i18n (honnête).** **FR et EN complets** (locales nested maintenues, y c. `workforceConfig`/`workforceClock`/nav). **AR** : fichier à **clés plates partielles** → les chaînes Workforce tombent en **fallback** (non traduites en arabe). **ES** : **locale non enregistrée** dans l'app. → Reliquat : passe de traduction AR + enregistrement de la locale ES (séparé, non bloquant pour la preuve d'isolation).
+
+**Preuves.** E2E `workforce-two-company-isolation` (2/2), régression E2E `workforce-config-cockpit` + `workforce-break-countdown` (5/5). PHPUnit **616 verts** (Workforce/Module/Nav/Entitlement/Manifest/PageLayout). Build front clean. Aucune donnée PROD modifiée (fixture local/testing, non déployé).
+
+**Fichiers** : `app/Console/Commands/E2ESetupTwoCompaniesCommand.php` (nouveau), `tests/e2e/workforce-two-company-isolation.spec.js` (nouveau), `app/Modules/Workforce/Employees/WorkforceModule.php` (nav cockpit), `resources/js/plugins/i18n/locales/{fr,en}.json` (nav).
+
+---
