@@ -6780,5 +6780,50 @@
     "noBreakTarget": "No target duration configured",
     "breakMinWarning": "A minimum break of {min} min is recommended before resuming.",
     "breakMinBlocked": "Resume blocked before the {min} min minimum break."
+  },
+  "workforceConfig": {
+    "title": "Workforce Configuration",
+    "subtitle": "Effective rules, their provenance and whether they are mandatory or configurable.",
+    "breaksSection": "Breaks",
+    "rule": "Rule",
+    "value": "Value",
+    "provenance": "Provenance",
+    "statusCol": "Status",
+    "effectiveFrom": "Effective from",
+    "minutes": "minutes",
+    "sourceLaw": "Legal",
+    "sourceCompany": "Company",
+    "sourceDefault": "Default",
+    "sourceToComplete": "To complete",
+    "mandatory": "Mandatory",
+    "configurable": "Configurable",
+    "toComplete": "To complete",
+    "saved": "Rule saved.",
+    "explainLaw": "Required by law ({ref}) — not editable.",
+    "explainCompany": "Configured by your company.",
+    "explainDefault": "Operational default — editable.",
+    "explainToComplete": "No documented value — to configure.",
+    "rules": {
+      "min_duration_minutes": "Minimum break duration",
+      "trigger_after_minutes": "Break required after",
+      "target_duration_minutes": "Target break duration",
+      "max_duration_minutes": "Maximum break duration",
+      "max_count": "Break count",
+      "earliest_start_after_minutes": "Earliest start after",
+      "latest_start_before_minutes": "Latest start before",
+      "included_in_worktime": "Counted in worktime",
+      "paid": "Paid break",
+      "splittable": "Splittable break",
+      "enforcement": "Enforcement",
+      "early_resume_policy": "Early resume"
+    },
+    "enum": {
+      "signaled": "Signaled",
+      "required": "Required",
+      "allow": "Allow",
+      "warn": "Warn",
+      "block": "Block",
+      "approve": "Approval required"
+    }
   }
 }

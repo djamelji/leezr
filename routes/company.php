@@ -448,6 +448,11 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::delete('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
     // Employees — view to read, manage to mutate
+    // Workforce configuration cockpit (§8) — read = view, write = manage (mandatory rules
+    // additionally protected in the resolver). Isolated per Company via CompanyScope.
+    Route::get('config/breaks', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'breaks'])->middleware($perm('workforce.view'));
+    Route::put('config/breaks/{rule}', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'setBreak'])->middleware($perm('workforce.manage'));
+
     Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary'])->middleware($perm('workforce.view'));
     Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index'])->middleware($perm('workforce.view'));
     Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store'])->middleware($perm('workforce.manage'));
