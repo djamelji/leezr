@@ -112,13 +112,14 @@ class CompanyPolicyResolver
     ): CompanyPolicy {
         $effectiveFrom ??= now();
 
-        // Close previous active policy
+        // Close previous active policy. NOTE: Carbon is mutable — use copy() so subDay() does not
+        // mutate $effectiveFrom, which is reused below as the new row's effective_from.
         CompanyPolicy::withoutCompanyScope()
             ->where('company_id', $companyId)
             ->domain($domain)
             ->forKey($policyKey)
             ->whereNull('effective_until')
-            ->update(['effective_until' => $effectiveFrom->subDay()]);
+            ->update(['effective_until' => $effectiveFrom->copy()->subDay()]);
 
         return CompanyPolicy::create([
             'company_id' => $companyId,
