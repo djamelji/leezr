@@ -5,211 +5,364 @@ namespace App\Core\Workforce\Services;
 use App\Core\Markets\MarketRuleSet;
 use App\Core\Models\Company;
 use App\Core\Policies\CompanyPolicy;
+use App\Core\Workforce\ConventionCollectiveRule;
+use App\Core\Workforce\EmploymentContract;
 use Carbon\Carbon;
 
 /**
- * WorkforceRuleResolver — EXPLAINABLE resolution of Workforce work-time / break rules.
+ * WorkforceRuleResolver — EXPLAINABLE, NORMATIVE resolution of Workforce work-time / break rules.
  *
- * This is NOT a parallel engine: it reuses the existing effective-dated stores
- *   - MarketRuleSet (domain='workforce')  → legal baseline (source='law', Code du travail ref)
- *   - CompanyPolicy  (domain='workforce') → per-Company configurable overrides (effective-dated)
- * and mirrors PayrollRuleResolver's provenance pattern. It adds, for each resolved rule, the
- * information the configuration cockpit needs to EXPLAIN it to an admin:
- *   - value       : the effective value (or null when undocumented)
- *   - source      : market_law | company | default         (provenance)
- *   - reference   : legal/convention reference when applicable
- *   - mutability  : mandatory | configurable | to_complete  (can the admin change it?)
- *   - status      : configured | default | to_complete      (is a real value in place?)
- *   - effective_from
+ * NOT a parallel engine: it reuses the existing effective-dated stores
+ *   - MarketRuleSet (domain='workforce')     → legal baseline (source='law', Code du travail ref)
+ *   - ConventionCollectiveRule (working_time) → applicable CC (contract or Company default)
+ *   - CompanyPolicy (domain='workforce')      → per-Company configurable overrides
+ * and mirrors PayrollRuleResolver's provenance/override-mode pattern.
  *
- * Hard rule (mission §2): legal values are NEVER invented. When a dimension has no documented
- * legal value and no sensible operational default, the rule is returned as `to_complete`
- * (value null) rather than a fabricated number. Operational defaults (e.g. breaks excluded from
- * effective worktime) are tagged source='default' — an operational convention, not a legal claim.
+ * Resolution is NORMATIVE, not a blind override chain. Each rule declares a `nature`:
+ *   - legal_min  : a legal FLOOR. More-favorable = higher. Only raised by CC/Company; a layer
+ *                  proposing a lower (less favorable) value is IGNORED and flagged as a conflict.
+ *   - legal_max  : a legal CEILING. More-favorable = lower. Only lowered.
+ *   - fixed_legal: mandatory, not overridable (e.g. the break trigger threshold).
+ *   - config     : no legal floor/ceiling — highest-priority layer with a value wins
+ *                  (Company > CC > JobDomain > default), clamped to any legal bound.
  *
- * Rules are isolated per Company (CompanyScope on CompanyPolicy); one Company's override never
- * affects another's resolution.
+ * Dimensions (one Company has exactly one JobDomain; a JobDomain does NOT impose a single CC):
+ *   Market(legal) → Convention Collective → JobDomain → Company → Contract → Individual, by date.
+ *
+ * Every resolved rule returns value, source (market_law|convention|jobdomain|company|default|
+ * to_complete), legal reference, mutability, status, effective_from, and the full resolution
+ * chain (for the cockpit to explain the decision and surface conflicts / incomplete config).
+ * Legal values are NEVER invented: an undocumented dimension yields `to_complete` (value null).
  */
 class WorkforceRuleResolver
 {
     public const DOMAIN = 'workforce';
 
-    /**
-     * Resolve the full BREAK rule spec for a company at a date, with provenance.
-     *
-     * @return array<string, array{value: mixed, source: string, reference: ?string, mutability: string, status: string, effective_from: ?string}>
-     */
-    public function resolveBreakRules(Company $company, ?Carbon $at = null): array
+    // ── Rule catalogs ────────────────────────────────────────────────────────────────────
+    // nature: legal_min | legal_max | fixed_legal | config ; type: int|minutes|hours|bool|enum
+    // market: ['rule' => marketRuleKey, 'path' => dotPathInValue] ; cc: ccRuleKey ; policy: CompanyPolicy key
+
+    private function breakCatalog(): array
     {
-        $at ??= now();
-
-        // Legal baseline from the Market rule set (already seeded: break_after_hours L3121-16).
-        $legalBreak = $this->marketRule($company, 'break_after_hours', $at);
-        $legalMin = is_array($legalBreak?->value) ? ($legalBreak->value['break_min'] ?? null) : null;
-        $legalTriggerHours = is_array($legalBreak?->value) ? ($legalBreak->value['amount'] ?? null) : null;
-        $legalRef = $legalBreak?->reference;
-        $legalFrom = $legalBreak?->effective_from?->toDateString();
-
-        $rules = [];
-
-        // ── Mandatory legal floors (admin may be MORE favorable, never less) ──────────────
-        $rules['min_duration_minutes'] = $legalMin !== null
-            ? $this->rule($legalMin, 'market_law', $legalRef, 'mandatory', 'configured', $legalFrom)
-            : $this->toComplete('No documented legal minimum break for this market.');
-
-        $rules['trigger_after_minutes'] = $legalTriggerHours !== null
-            ? $this->rule((int) $legalTriggerHours * 60, 'market_law', $legalRef, 'mandatory', 'configured', $legalFrom)
-            : $this->toComplete('No documented legal break trigger for this market.');
-
-        // ── Company-configurable rules (CompanyPolicy overrides; sensible operational defaults) ──
-        // Target duration: what the UI counts down to. Defaults to the legal minimum when unset.
-        $target = $this->companyPolicy($company, 'break_target_minutes', $at);
-        $rules['target_duration_minutes'] = $target !== null
-            ? $this->rule((int) $target, 'company', null, 'configurable', 'configured')
-            : $this->rule($legalMin ?? null, $legalMin !== null ? 'default' : 'to_complete', $legalRef,
-                'configurable', $legalMin !== null ? 'default' : 'to_complete');
-
-        $rules['max_duration_minutes'] = $this->configurable($company, 'break_max_minutes', $at, null);
-        $rules['max_count'] = $this->configurable($company, 'break_max_count', $at, null);
-        $rules['earliest_start_after_minutes'] = $this->configurable($company, 'break_earliest_after_minutes', $at, null);
-        $rules['latest_start_before_minutes'] = $this->configurable($company, 'break_latest_before_minutes', $at, null);
-
-        // Operational defaults (NOT legal claims): excluded from effective worktime, unpaid,
-        // signalled (not blocking), splittable; the admin can change any of these.
-        $rules['included_in_worktime'] = $this->configurableBool($company, 'break_included_in_worktime', $at, false);
-        $rules['paid'] = $this->configurableBool($company, 'break_paid', $at, false);
-        $rules['splittable'] = $this->configurableBool($company, 'break_splittable', $at, true);
-        $rules['enforcement'] = $this->configurableEnum($company, 'break_enforcement', $at, 'signaled',
-            ['signaled', 'required']);
-        $rules['early_resume_policy'] = $this->configurableEnum($company, 'break_early_resume_policy', $at, 'warn',
-            ['allow', 'warn', 'block', 'approve']);
-
-        return $rules;
+        return [
+            'min_duration_minutes' => ['nature' => 'legal_min', 'type' => 'int', 'market' => ['rule' => 'break_after_hours', 'path' => 'break_min'], 'cc' => 'break_min_minutes', 'policy' => null],
+            'trigger_after_minutes' => ['nature' => 'fixed_legal', 'type' => 'int', 'market' => ['rule' => 'break_after_hours', 'path' => 'amount', 'scale' => 60], 'cc' => null, 'policy' => null],
+            'target_duration_minutes' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => 'break_target_minutes', 'policy' => 'break_target_minutes', 'default_from' => 'min_duration_minutes', 'clamp_min' => 'min_duration_minutes'],
+            'max_duration_minutes' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => 'break_max_minutes', 'policy' => 'break_max_minutes', 'default' => null, 'clamp_min' => 'min_duration_minutes'],
+            'max_count' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => null, 'policy' => 'break_max_count', 'default' => null],
+            'earliest_start_after_minutes' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => null, 'policy' => 'break_earliest_after_minutes', 'default' => null],
+            'latest_start_before_minutes' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => null, 'policy' => 'break_latest_before_minutes', 'default' => null],
+            'included_in_worktime' => ['nature' => 'config', 'type' => 'bool', 'market' => null, 'cc' => 'break_paid', 'policy' => 'break_included_in_worktime', 'default' => false],
+            'paid' => ['nature' => 'config', 'type' => 'bool', 'market' => null, 'cc' => 'break_paid', 'policy' => 'break_paid', 'default' => false],
+            'splittable' => ['nature' => 'config', 'type' => 'bool', 'market' => null, 'cc' => null, 'policy' => 'break_splittable', 'default' => true],
+            'enforcement' => ['nature' => 'config', 'type' => 'enum', 'enum' => ['signaled', 'required'], 'market' => null, 'cc' => null, 'policy' => 'break_enforcement', 'default' => 'signaled'],
+            'early_resume_policy' => ['nature' => 'config', 'type' => 'enum', 'enum' => ['allow', 'warn', 'block', 'approve'], 'market' => null, 'cc' => null, 'policy' => 'break_early_resume_policy', 'default' => 'warn'],
+        ];
     }
 
-    /** Convenience: the effective break target in minutes (what the countdown targets), or null. */
-    public function breakTargetMinutes(Company $company, ?Carbon $at = null): ?int
+    private function workTimeCatalog(): array
     {
-        $spec = $this->resolveBreakRules($company, $at);
-        $v = $spec['target_duration_minutes']['value'] ?? null;
+        return [
+            'weekly_hours_reference' => ['nature' => 'config', 'type' => 'hours', 'market' => ['rule' => 'weekly_hours_legal', 'path' => 'amount'], 'cc' => 'weekly_hours_reference', 'policy' => 'weekly_hours_reference'],
+            'daily_hours_max' => ['nature' => 'legal_max', 'type' => 'hours', 'market' => ['rule' => 'daily_hours_max', 'path' => 'amount'], 'cc' => 'daily_hours_max', 'policy' => 'daily_hours_max'],
+            'weekly_hours_max' => ['nature' => 'legal_max', 'type' => 'hours', 'market' => ['rule' => 'weekly_hours_max', 'path' => 'amount'], 'cc' => 'weekly_hours_max', 'policy' => 'weekly_hours_max'],
+            'daily_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_daily_min', 'path' => 'amount'], 'cc' => 'daily_rest_min_hours', 'policy' => null],
+            'weekly_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_weekly_min', 'path' => 'amount'], 'cc' => 'weekly_rest_min_hours', 'policy' => null],
+            'overtime_daily_threshold_hours' => ['nature' => 'config', 'type' => 'hours', 'market' => null, 'cc' => 'overtime_daily_threshold_hours', 'policy' => 'overtime_daily_threshold_hours', 'default' => null],
+            'night_work_start' => ['nature' => 'config', 'type' => 'enum', 'enum' => null, 'market' => null, 'cc' => 'night_work_start', 'policy' => 'night_work_start', 'default' => null],
+            'night_work_end' => ['nature' => 'config', 'type' => 'enum', 'enum' => null, 'market' => null, 'cc' => 'night_work_end', 'policy' => 'night_work_end', 'default' => null],
+        ];
+    }
+
+    // ── Public API ─────────────────────────────────────────────────────────────────────────
+
+    /** @return array<string, array> keyed by rule — explainable resolved break spec. */
+    public function resolveBreakRules(Company $company, ?Carbon $at = null, ?EmploymentContract $contract = null): array
+    {
+        return $this->resolveCatalog($company, $this->breakCatalog(), $at, $contract);
+    }
+
+    /** @return array<string, array> keyed by rule — explainable resolved work-time spec. */
+    public function resolveWorkTimeRules(Company $company, ?Carbon $at = null, ?EmploymentContract $contract = null): array
+    {
+        return $this->resolveCatalog($company, $this->workTimeCatalog(), $at, $contract);
+    }
+
+    public function breakTargetMinutes(Company $company, ?Carbon $at = null, ?EmploymentContract $contract = null): ?int
+    {
+        $v = $this->resolveBreakRules($company, $at, $contract)['target_duration_minutes']['value'] ?? null;
 
         return $v !== null ? (int) $v : null;
     }
 
-    /**
-     * Set a Company break-rule override, enforcing mutability + legal bounds.
-     * Rejects attempts to configure a mandatory rule, or to set a target below the legal minimum.
-     *
-     * @throws \DomainException
-     */
+    /** Set a configurable break-rule Company override, enforcing mutability + legal bounds. */
     public function setBreakRule(Company $company, string $ruleKey, mixed $value, ?Carbon $at = null): CompanyPolicy
     {
-        $at ??= now();
-        $spec = $this->resolveBreakRules($company, $at);
-
-        if (! array_key_exists($ruleKey, $spec)) {
-            throw new \DomainException("Unknown break rule '{$ruleKey}'.");
-        }
-        if ($spec[$ruleKey]['mutability'] === 'mandatory') {
-            throw new \DomainException("Break rule '{$ruleKey}' is mandatory (legal) and cannot be overridden.");
-        }
-
-        // Legal-bound check: target/max must be >= legal minimum break.
-        $legalMin = $spec['min_duration_minutes']['value'] ?? null;
-        if ($legalMin !== null && in_array($ruleKey, ['target_duration_minutes', 'max_duration_minutes'], true)
-            && $value !== null && (int) $value < (int) $legalMin) {
-            throw new \DomainException("'{$ruleKey}' ({$value}) cannot be below the legal minimum break ({$legalMin} min).");
-        }
-
-        $policyKey = $this->policyKeyFor($ruleKey);
-
-        return app(\App\Core\Policies\CompanyPolicyResolver::class)
-            ->set($company->id, self::DOMAIN, $policyKey, $value, 'admin_manual', $at);
+        return $this->setRule($company, $this->breakCatalog(), $ruleKey, $value, $at);
     }
 
-    // ── internals ────────────────────────────────────────────────────────────────────────
-
-    private function marketRule(Company $company, string $ruleKey, Carbon $at): ?MarketRuleSet
+    /** Set a configurable work-time Company override, enforcing mutability + legal bounds. */
+    public function setWorkTimeRule(Company $company, string $ruleKey, mixed $value, ?Carbon $at = null): CompanyPolicy
     {
-        if (! $company->market_key) {
+        return $this->setRule($company, $this->workTimeCatalog(), $ruleKey, $value, $at);
+    }
+
+    // ── Engine ───────────────────────────────────────────────────────────────────────────
+
+    private function resolveCatalog(Company $company, array $catalog, ?Carbon $at, ?EmploymentContract $contract): array
+    {
+        $at ??= now();
+        $resolved = [];
+        foreach ($catalog as $key => $spec) {
+            $resolved[$key] = $this->resolveRule($company, $key, $spec, $at, $contract, $resolved);
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * Resolve one rule across layers with normative semantics.
+     * $alreadyResolved lets a rule reference a sibling (e.g. target defaults to min).
+     */
+    private function resolveRule(Company $company, string $key, array $spec, Carbon $at, ?EmploymentContract $contract, array $alreadyResolved): array
+    {
+        $nature = $spec['nature'];
+        $chain = [];
+
+        // Layer 1 — Market legal baseline.
+        $legal = $this->readMarket($company, $spec, $at);
+        if ($legal !== null) {
+            $chain[] = ['layer' => 'market_law', 'value' => $legal['value'], 'reference' => $legal['reference']];
+        }
+
+        // Layer 2 — Convention collective (applicable to the contract, else Company default).
+        $cc = $this->readConvention($company, $spec, $at, $contract);
+        if ($cc !== null) {
+            $chain[] = ['layer' => 'convention', 'value' => $cc['value'], 'reference' => $cc['reference'], 'override_mode' => $cc['override_mode']];
+        }
+
+        // Layer 3 — JobDomain (via CompanyPolicy source=jobdomain_preset); none seeded today.
+        $jobdomain = $this->readCompanyPolicy($company, $spec, $at, 'jobdomain_preset');
+        if ($jobdomain !== null) {
+            $chain[] = ['layer' => 'jobdomain', 'value' => $jobdomain['value']];
+        }
+
+        // Layer 4 — Company configurable override.
+        $companyVal = $this->readCompanyPolicy($company, $spec, $at, 'admin_manual');
+        if ($companyVal !== null) {
+            $chain[] = ['layer' => 'company', 'value' => $companyVal['value']];
+        }
+
+        // (Layers 5/6 — contract-specific derogations / individual — extensible; the applicable CC
+        //  is already selected from the contract above. No per-contract policy store yet.)
+
+        return $this->combine($nature, $spec, $key, $chain, $legal, $cc, $jobdomain, $companyVal, $alreadyResolved);
+    }
+
+    private function combine(string $nature, array $spec, string $key, array $chain, ?array $legal, ?array $cc, ?array $jobdomain, ?array $companyVal, array $alreadyResolved): array
+    {
+        $legalVal = $legal['value'] ?? null;
+        $legalRef = $legal['reference'] ?? null;
+        $legalFrom = $legal['effective_from'] ?? null;
+
+        if ($nature === 'fixed_legal') {
+            return $legalVal !== null
+                ? $this->out($legalVal, 'market_law', $legalRef, 'mandatory', 'configured', $legalFrom, $chain)
+                : $this->out(null, 'to_complete', null, 'to_complete', 'to_complete', null, $chain);
+        }
+
+        if ($nature === 'legal_min' || $nature === 'legal_max') {
+            // Start from the legal bound, then apply only MORE-FAVORABLE layer values.
+            $best = $legalVal;
+            $source = $legalVal !== null ? 'market_law' : 'to_complete';
+            $reference = $legalRef;
+            $from = $legalFrom;
+            $conflicts = [];
+
+            foreach ([['convention', $cc], ['jobdomain', $jobdomain], ['company', $companyVal]] as [$layerName, $layer]) {
+                if ($layer === null || $layer['value'] === null) {
+                    continue;
+                }
+                $v = $layer['value'];
+                if ($best === null) {
+                    $best = $v;
+                    $source = $layerName;
+                    $reference = $layer['reference'] ?? null;
+                    $from = $layer['effective_from'] ?? $from;
+
+                    continue;
+                }
+                $moreFavorable = $nature === 'legal_min' ? ($v > $best) : ($v < $best);
+                if ($moreFavorable) {
+                    $best = $v;
+                    $source = $layerName;
+                    $reference = $layer['reference'] ?? null;
+                    $from = $layer['effective_from'] ?? $from;
+                } else {
+                    // Less favorable than the legal/established bound → ignored + flagged.
+                    $conflicts[] = ['layer' => $layerName, 'ignored_value' => $v, 'reason' => 'less_favorable_than_legal'];
+                }
+            }
+
+            if ($best === null) {
+                return $this->out(null, 'to_complete', null, 'to_complete', 'to_complete', null, $chain, $conflicts);
+            }
+            // legal_min with only the legal layer = mandatory floor; a configurable Company override
+            // that is more favorable keeps it adjustable upward. Mutability reflects whether a
+            // Company policy key exists for this rule.
+            $mutability = $spec['policy'] ? 'configurable' : 'mandatory';
+
+            return $this->out($best, $source, $reference, $mutability, 'configured', $from, $chain, $conflicts);
+        }
+
+        // nature === 'config' : highest-priority layer with a value wins (company > jobdomain > cc).
+        foreach ([['company', $companyVal], ['jobdomain', $jobdomain], ['convention', $cc]] as [$layerName, $layer]) {
+            if ($layer !== null && $layer['value'] !== null) {
+                $value = $this->clamp($spec, $layer['value'], $alreadyResolved);
+
+                return $this->out($value, $layerName, $layer['reference'] ?? null, 'configurable', 'configured', $layer['effective_from'] ?? null, $chain);
+            }
+        }
+
+        // A config rule that has a legal baseline uses it as the (editable) default value.
+        if ($legalVal !== null) {
+            return $this->out($legalVal, 'market_law', $legalRef, 'configurable', 'default', $legalFrom, $chain);
+        }
+
+        // No layer set it → default (sibling-derived, explicit default, or to_complete).
+        if (array_key_exists('default_from', $spec)) {
+            $def = $alreadyResolved[$spec['default_from']]['value'] ?? null;
+            if ($def !== null) {
+                return $this->out($def, 'default', null, 'configurable', 'default', null, $chain);
+            }
+        }
+        if (array_key_exists('default', $spec)) {
+            $def = $spec['default'];
+
+            return $this->out($def, $def === null ? 'to_complete' : 'default', null, 'configurable', $def === null ? 'to_complete' : 'default', null, $chain);
+        }
+
+        return $this->out(null, 'to_complete', null, 'configurable', 'to_complete', null, $chain);
+    }
+
+    private function clamp(array $spec, mixed $value, array $alreadyResolved): mixed
+    {
+        if (isset($spec['clamp_min']) && is_numeric($value)) {
+            $min = $alreadyResolved[$spec['clamp_min']]['value'] ?? null;
+            if ($min !== null && (int) $value < (int) $min) {
+                return (int) $min; // never below the legal floor
+            }
+        }
+
+        return $value;
+    }
+
+    // ── Layer readers ──────────────────────────────────────────────────────────────────────
+
+    private function readMarket(Company $company, array $spec, Carbon $at): ?array
+    {
+        if (empty($spec['market']) || ! $company->market_key) {
+            return null;
+        }
+        $rule = MarketRuleSet::where('market_key', $company->market_key)
+            ->domain(self::DOMAIN)
+            ->forRule($spec['market']['rule'])
+            ->activeAt($at)
+            ->orderByDesc('effective_from')
+            ->first();
+        if (! $rule) {
+            return null;
+        }
+        $raw = is_array($rule->value) ? ($rule->value[$spec['market']['path']] ?? null) : null;
+        if ($raw === null) {
+            return null;
+        }
+        $value = isset($spec['market']['scale']) ? (int) $raw * $spec['market']['scale'] : $raw;
+
+        return ['value' => $value, 'reference' => $rule->reference, 'effective_from' => $rule->effective_from?->toDateString()];
+    }
+
+    /** Applicable CC: the contract's, else the Company default. Reads a working_time rule. */
+    private function readConvention(Company $company, array $spec, Carbon $at, ?EmploymentContract $contract): ?array
+    {
+        if (empty($spec['cc'])) {
+            return null;
+        }
+        $ccId = $contract?->convention_collective_id ?? $company->default_convention_collective_id;
+        if (! $ccId) {
+            return null;
+        }
+        $rule = ConventionCollectiveRule::where('convention_collective_id', $ccId)
+            ->domain(self::DOMAIN)
+            ->forRule($spec['cc'])
+            ->activeAt($at)
+            ->orderByDesc('effective_from')
+            ->first();
+        if (! $rule) {
+            return null;
+        }
+        $value = is_array($rule->value) ? ($rule->value['amount'] ?? reset($rule->value)) : $rule->value;
+
+        return ['value' => $value, 'reference' => $rule->reference, 'override_mode' => $rule->override_mode, 'effective_from' => $rule->effective_from?->toDateString()];
+    }
+
+    private function readCompanyPolicy(Company $company, array $spec, Carbon $at, string $source): ?array
+    {
+        if (empty($spec['policy'])) {
+            return null;
+        }
+        $p = CompanyPolicy::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->domain(self::DOMAIN)
+            ->forKey($spec['policy'])
+            ->where('source', $source)
+            ->activeAt($at)
+            ->orderByDesc('effective_from')
+            ->first();
+        if (! $p || $p->value === null) {
             return null;
         }
 
-        return MarketRuleSet::where('market_key', $company->market_key)
-            ->domain(self::DOMAIN)
-            ->forRule($ruleKey)
-            ->activeAt($at)
-            ->orderByDesc('effective_from')
-            ->first();
+        return ['value' => $p->value, 'effective_from' => $p->effective_from?->toDateString()];
     }
 
-    private function companyPolicy(Company $company, string $policyKey, Carbon $at): mixed
-    {
-        $p = CompanyPolicy::withoutCompanyScope()
-            ->where('company_id', $company->id)
-            ->domain(self::DOMAIN)
-            ->forKey($policyKey)
-            ->activeAt($at)
-            ->orderByDesc('effective_from')
-            ->first();
-
-        return $p?->value;
-    }
-
-    private function policyKeyFor(string $ruleKey): string
+    private function out(mixed $value, string $source, ?string $reference, string $mutability, string $status, ?string $from, array $chain, array $conflicts = []): array
     {
         return [
-            'target_duration_minutes' => 'break_target_minutes',
-            'max_duration_minutes' => 'break_max_minutes',
-            'max_count' => 'break_max_count',
-            'earliest_start_after_minutes' => 'break_earliest_after_minutes',
-            'latest_start_before_minutes' => 'break_latest_before_minutes',
-            'included_in_worktime' => 'break_included_in_worktime',
-            'paid' => 'break_paid',
-            'splittable' => 'break_splittable',
-            'enforcement' => 'break_enforcement',
-            'early_resume_policy' => 'break_early_resume_policy',
-        ][$ruleKey] ?? $ruleKey;
+            'value' => $value,
+            'source' => $source,
+            'reference' => $reference,
+            'mutability' => $mutability,
+            'status' => $status,
+            'effective_from' => $from,
+            'chain' => $chain,
+            'conflicts' => $conflicts,
+        ];
     }
 
-    private function rule(mixed $value, string $source, ?string $reference, string $mutability, string $status, ?string $from = null): array
-    {
-        return compact('value', 'source', 'reference', 'mutability', 'status') + ['effective_from' => $from];
-    }
+    // ── Setters (guarded) ────────────────────────────────────────────────────────────────
 
-    private function toComplete(string $reference): array
+    private function setRule(Company $company, array $catalog, string $ruleKey, mixed $value, ?Carbon $at): CompanyPolicy
     {
-        return $this->rule(null, 'to_complete', $reference, 'to_complete', 'to_complete');
-    }
+        $at ??= now();
+        if (! isset($catalog[$ruleKey])) {
+            throw new \DomainException("Unknown rule '{$ruleKey}'.");
+        }
+        $spec = $catalog[$ruleKey];
+        $resolved = $this->resolveCatalog($company, $catalog, $at, null);
 
-    /** Configurable numeric with a sensible operational default (null → optional, stays 'default'). */
-    private function configurable(Company $company, string $policyKey, Carbon $at, mixed $default): array
-    {
-        $v = $this->companyPolicy($company, $policyKey, $at);
-        if ($v !== null) {
-            return $this->rule($v, 'company', null, 'configurable', 'configured');
+        if (($resolved[$ruleKey]['mutability'] ?? null) === 'mandatory' || empty($spec['policy'])) {
+            throw new \DomainException("Rule '{$ruleKey}' is mandatory (legal) and cannot be overridden.");
+        }
+        // legal floor / ceiling bounds.
+        if ($value !== null && isset($spec['clamp_min'])) {
+            $min = $resolved[$spec['clamp_min']]['value'] ?? null;
+            if ($min !== null && (int) $value < (int) $min) {
+                throw new \DomainException("'{$ruleKey}' ({$value}) cannot be below the legal minimum ({$min}).");
+            }
         }
 
-        return $this->rule($default, 'default', null, 'configurable', 'default');
-    }
-
-    private function configurableBool(Company $company, string $policyKey, Carbon $at, bool $default): array
-    {
-        $v = $this->companyPolicy($company, $policyKey, $at);
-        if ($v !== null) {
-            return $this->rule((bool) $v, 'company', null, 'configurable', 'configured');
-        }
-
-        return $this->rule($default, 'default', null, 'configurable', 'default');
-    }
-
-    private function configurableEnum(Company $company, string $policyKey, Carbon $at, string $default, array $allowed): array
-    {
-        $v = $this->companyPolicy($company, $policyKey, $at);
-        if ($v !== null && in_array($v, $allowed, true)) {
-            return $this->rule($v, 'company', null, 'configurable', 'configured');
-        }
-
-        return $this->rule($default, 'default', null, 'configurable', 'default');
+        return app(\App\Core\Policies\CompanyPolicyResolver::class)
+            ->set($company->id, self::DOMAIN, $spec['policy'], $value, 'admin_manual', $at);
     }
 }

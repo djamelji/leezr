@@ -21674,3 +21674,26 @@ Quatre situations distinctes :
 ---
 
 > Pour ajouter une décision : copier le template ci-dessus, incrémenter le numéro.
+
+### ADR-576 — Workforce 2.0 LOT E : moteur normatif multi-dimensionnel de résolution des règles (2026-10-20)
+
+**Contexte.** Workforce 2.0 exige qu'une **seule** installation serve plusieurs entreprises, métiers, conventions collectives et Markets, en appliquant à chaque salarié ses **règles effectives**. Le `WorkforceRuleResolver` existant (LOT B) ne gérait que les pauses via `CompanyPolicy`. Il fallait un moteur qui ne soit **PAS une chaîne d'override aveugle** : obligations légales, comparaison « plus favorable », dérogations autorisées, priorités normatives explicites, conflits, configs incomplètes, provenance et dates d'effet.
+
+**Décision.** Réécriture de `WorkforceRuleResolver` en moteur normatif réutilisant les Cores existants (**aucun moteur parallèle**) :
+- **Catalogues** (`breakCatalog()`, `workTimeCatalog()`) déclarant pour chaque règle sa `nature`, son `type`, et ses sources `market`/`cc`/`policy` + défauts/bornes.
+- **Natures normatives** : `legal_min` (plancher — plus favorable = plus haut), `legal_max` (plafond — plus favorable = plus bas), `fixed_legal` (impératif, non dérogeable), `config` (couche la plus prioritaire gagne, bornée au légal).
+- **Couches résolues** (ordre) : Market (loi, `MarketRuleSet`) → Convention collective (`ConventionCollectiveRule` — **celle du contrat si présente, sinon la CC par défaut de l'entreprise**) → JobDomain (preset) → Company (`CompanyPolicy`, `admin_manual`) → Contrat → Individuel. **Invariant : une entreprise a exactement un JobDomain, mais un JobDomain n'impose pas une CC unique.**
+- **Combinaison** : `fixed_legal` verrouillé ; `legal_min`/`legal_max` ne retiennent une couche supérieure que si elle est **plus favorable**, sinon la valeur moins favorable est **ignorée et tracée dans `conflicts[]`** ; `config` = couche la plus prioritaire, **bornée** au légal, avec baseline légale comme défaut éditable.
+- **Sortie explicable** par règle : `value`, `source` (`market_law|convention|jobdomain|company|default|to_complete`), `reference`, `mutability` (`mandatory|configurable|to_complete`), `status`, `effective_from`, `chain[]` (provenance complète), `conflicts[]`.
+- **Écriture** (`setBreakRule`/`setWorkTimeRule`) : refuse (DomainException → 422) toute tentative sur une règle obligatoire ou sous le plancher légal ; persiste via `CompanyPolicyResolver::set(..., 'admin_manual', $at)` avec dates d'effet (historisation, pas de réécriture du passé).
+- **Temps de travail** exposé : durée hebdo de référence, max quotidien/hebdo, repos quotidien/hebdo minimal, seuil d'heures sup, fenêtre travail de nuit.
+
+**Cockpit & services.** `WorkforceConfigController` expose deux domaines explicables (`config/breaks`, `config/work-time`, GET `workforce.view` / PUT `workforce.manage` — permission serveur réelle, jamais `v-can` seul, ANO-014). La page `configuration.vue` rend les deux sections avec valeur/provenance/mutabilité/explication/date d'effet/conflits.
+
+**Preuves.** `WorkforceNormativeResolutionTest` (5 cas : CC plus favorable relève le plancher ; CC moins favorable ignorée + conflit tracé ; plafond légal quotidien abaissé seulement si plus favorable ; CC du contrat prioritaire sur CC par défaut entreprise ; temps de travail résolu depuis le Market + reconfiguration entreprise). `WorkforceRuleResolverTest` (7 cas LOT B) toujours verts. Régression : **206 tests verts** (resolver/policy/payroll/timesheet). Build front clean.
+
+**Conséquences.** Les règles non documentées restent `to_complete` (jamais de valeur légale inventée). Aucune donnée PROD modifiée (local/dev uniquement, non déployé).
+
+**Fichiers** : `app/Core/Workforce/Services/WorkforceRuleResolver.php`, `app/Modules/Workforce/Employees/Http/WorkforceConfigController.php`, `routes/company.php`, `resources/js/pages/company/workforce/configuration.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/WorkforceNormativeResolutionTest.php`.
+
+---

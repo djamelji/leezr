@@ -452,6 +452,8 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     // additionally protected in the resolver). Isolated per Company via CompanyScope.
     Route::get('config/breaks', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'breaks'])->middleware($perm('workforce.view'));
     Route::put('config/breaks/{rule}', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'setBreak'])->middleware($perm('workforce.manage'));
+    Route::get('config/work-time', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'workTime'])->middleware($perm('workforce.view'));
+    Route::put('config/work-time/{rule}', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'setWorkTime'])->middleware($perm('workforce.manage'));
 
     Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary'])->middleware($perm('workforce.view'));
     Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index'])->middleware($perm('workforce.view'));

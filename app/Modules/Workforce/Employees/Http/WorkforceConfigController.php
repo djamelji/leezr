@@ -19,41 +19,61 @@ class WorkforceConfigController
     /** GET /workforce/config/breaks — resolved break rules with provenance + mutability. */
     public function breaks(Request $request): JsonResponse
     {
-        $company = $this->company($request);
-        $spec = app(WorkforceRuleResolver::class)->resolveBreakRules($company);
+        $spec = app(WorkforceRuleResolver::class)->resolveBreakRules($this->company($request));
 
-        return response()->json([
-            'domain' => 'breaks',
-            'rules' => collect($spec)->map(fn ($r, $key) => [
-                'key' => $key,
-                'value' => $r['value'],
-                'source' => $r['source'],              // market_law | company | default | to_complete
-                'reference' => $r['reference'],         // legal reference when applicable
-                'mutability' => $r['mutability'],       // mandatory | configurable | to_complete
-                'status' => $r['status'],               // configured | default | to_complete
-                'effective_from' => $r['effective_from'],
-                'editable' => $r['mutability'] === 'configurable',
-            ])->values(),
-        ]);
+        return response()->json(['domain' => 'breaks', 'rules' => $this->explain($spec)]);
     }
 
     /** PUT /workforce/config/breaks/{rule} — set a configurable break rule (guarded). */
     public function setBreak(Request $request, string $rule): JsonResponse
     {
-        $validated = $request->validate([
-            'value' => ['present'], // nullable allowed (clears to default); type depends on rule
-        ]);
-
-        $company = $this->company($request);
+        $validated = $request->validate(['value' => ['present']]);
 
         try {
-            app(WorkforceRuleResolver::class)->setBreakRule($company, $rule, $validated['value']);
+            app(WorkforceRuleResolver::class)->setBreakRule($this->company($request), $rule, $validated['value']);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Return the refreshed, explainable spec so the cockpit updates in place.
         return $this->breaks($request);
+    }
+
+    /** GET /workforce/config/work-time — resolved work-time rules (hours, rest, overtime, night). */
+    public function workTime(Request $request): JsonResponse
+    {
+        $spec = app(WorkforceRuleResolver::class)->resolveWorkTimeRules($this->company($request));
+
+        return response()->json(['domain' => 'work_time', 'rules' => $this->explain($spec)]);
+    }
+
+    /** PUT /workforce/config/work-time/{rule} — set a configurable work-time rule (guarded). */
+    public function setWorkTime(Request $request, string $rule): JsonResponse
+    {
+        $validated = $request->validate(['value' => ['present']]);
+
+        try {
+            app(WorkforceRuleResolver::class)->setWorkTimeRule($this->company($request), $rule, $validated['value']);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return $this->workTime($request);
+    }
+
+    /** Flatten a resolved spec into the explainable, cockpit-ready shape. */
+    private function explain(array $spec): array
+    {
+        return collect($spec)->map(fn ($r, $key) => [
+            'key' => $key,
+            'value' => $r['value'],
+            'source' => $r['source'],              // market_law | convention | jobdomain | company | default | to_complete
+            'reference' => $r['reference'],         // legal/conventional reference when applicable
+            'mutability' => $r['mutability'],       // mandatory | configurable | to_complete
+            'status' => $r['status'],               // configured | default | to_complete
+            'effective_from' => $r['effective_from'],
+            'conflicts' => $r['conflicts'] ?? [],   // less-favorable values that were ignored
+            'editable' => $r['mutability'] === 'configurable',
+        ])->values()->all();
     }
 
     private function company(Request $request): Company
