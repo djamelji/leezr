@@ -42,6 +42,7 @@ class Subscription extends Model
         'current_period_end', 'trial_ends_at', 'cancel_at_period_end',
         'billing_anchor_day', 'is_current', 'metadata',
         'coupon_id', 'coupon_months_remaining',
+        'plan_price_cents', // ADR-587: contracted price snapshot (cents) for this subscription's interval
     ];
 
     protected function casts(): array
@@ -54,7 +55,25 @@ class Subscription extends Model
             'billing_anchor_day' => 'integer',
             'metadata' => 'array',
             'coupon_months_remaining' => 'integer',
+            'plan_price_cents' => 'integer',
         ];
+    }
+
+    /**
+     * ADR-587 — the contracted plan price honoured by renewals, in cents. Falls back to the current
+     * catalog price only for legacy rows that predate the snapshot (null), so behaviour is preserved.
+     */
+    public function contractedPlanPriceCents(): ?int
+    {
+        if ($this->plan_price_cents !== null) {
+            return (int) $this->plan_price_cents;
+        }
+        $plan = \App\Core\Plans\Plan::where('key', $this->plan_key)->first();
+        if (! $plan) {
+            return null;
+        }
+
+        return (int) ($this->interval === 'yearly' ? ($plan->price_yearly ?? 0) : ($plan->price_monthly ?? 0));
     }
 
     public function coupon(): BelongsTo
@@ -66,6 +85,19 @@ class Subscription extends Model
 
     protected static function booted(): void
     {
+        // ADR-587: snapshot the contracted plan price at creation (new subscriptions use the currently
+        // published price). Covers every creation path (checkout adapters, register, trial).
+        static::creating(function (Subscription $subscription) {
+            if ($subscription->plan_price_cents === null && $subscription->plan_key) {
+                $plan = \App\Core\Plans\Plan::where('key', $subscription->plan_key)->first();
+                if ($plan) {
+                    $subscription->plan_price_cents = (int) (($subscription->interval ?? 'monthly') === 'yearly'
+                        ? ($plan->price_yearly ?? 0)
+                        : ($plan->price_monthly ?? 0));
+                }
+            }
+        });
+
         static::saving(function (Subscription $subscription) {
             // Transition guard: only on update when status changes
             if ($subscription->exists && $subscription->isDirty('status')) {

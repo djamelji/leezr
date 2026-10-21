@@ -351,6 +351,9 @@ class CompanyBillingReadService
             'trial_ends_at' => $subscription->trial_ends_at?->toISOString(),
             'cancel_at_period_end' => $subscription->cancel_at_period_end ?? false,
             'created_at' => $subscription->created_at->toISOString(),
+            // ADR-587: the CONTRACTED price (cents) honoured at renewal — may differ from the current
+            // public catalog price. The cockpit shows this, not the public price.
+            'plan_price_cents' => $subscription->contractedPlanPriceCents(),
             // ADR-575 / ADR-585: deferred renewal awaiting manual review — surfaced so the company
             // sees the next invoice is NOT confirmed and that NO retroactive charge is auto-triggered.
             'renewal_review_required' => (bool) ($subscription->metadata['renewal_review_required'] ?? false),

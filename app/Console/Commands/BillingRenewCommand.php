@@ -160,9 +160,13 @@ class BillingRenewCommand extends Command implements Isolatable
             return 'skipped';
         }
 
-        // Determine renewal price and period
+        // Determine renewal price and period.
+        // ADR-587: honour the CONTRACTED price snapshot — a public price change must NOT alter the
+        // amount billed to an existing subscriber. Falls back to the live catalog only for legacy
+        // rows without a snapshot.
         $interval = $subscription->interval ?? 'monthly';
-        $price = $interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly;
+        $price = $subscription->contractedPlanPriceCents()
+            ?? ($interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly);
         $standardPeriodDays = $interval === 'yearly' ? 365 : 30;
 
         // Compute new period (start from previous period_end, not from now)

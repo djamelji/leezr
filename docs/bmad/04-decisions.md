@@ -21919,3 +21919,33 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php` (+`agingReport`), `app/Modules/Platform/Billing/Http/PlatformFinancialController.php` (+`aging`), `routes/platform.php`, `resources/js/pages/platform/billing/_BillingReconciliationTab.vue` (nouveau), `resources/js/pages/platform/billing/[tab].vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/FinanceReconciliationTest.php`, `tests/e2e/platform-billing-reconciliation.spec.js`.
 
 ---
+
+### ADR-587 — Protection du tarif contractuel : snapshot de prix par souscription (2026-10-21)
+
+**Audit (Mission 1 — démontré par test, pas supposé).** Trace catalogue → souscription → renouvellement → PricingEngine → facture :
+- Le modèle `Subscription` ne stockait **que** `plan_key` + `interval`, **aucun prix**.
+- `BillingRenewCommand` et `PricingEngine::forCurrentPeriod` lisaient le prix **en direct** sur `plans.price_monthly/price_yearly`.
+- **Conséquence prouvée** (`SubscriptionPriceProtectionTest`, caractérisation initiale) : modifier le prix public d'un plan changeait immédiatement la prochaine facture de **tous** les abonnés existants (ex. 30 €→1 € → renouvellement à 1 €). **Les factures déjà émises restaient immuables** (snapshot d'identité/TVA figé à l'émission).
+- Les **addons** honoraient déjà un snapshot (`company_addon_subscriptions.amount_cents` figé à l'activation) → non concernés.
+- Providers présents : **Stripe + internal** (pas de PayPal/Scalapay) ; ils reçoivent le montant **déjà calculé** de la facture, ne recalculent pas.
+
+**Décision (Missions 2/3 — réutilise le pattern existant, aucune source tarifaire dupliquée).** Snapshot de prix **par souscription** (même principe que les addons), pas de moteur parallèle :
+- Migration additive `subscriptions.plan_price_cents` (nullable, centimes) + **backfill protecteur** : verrouille chaque souscription active/trialing/past_due à son prix catalogue **courant** (aucun montant facturé modifié).
+- `Subscription::creating` **capture** le prix catalogue courant (couvre tous les points de création : adaptateurs checkout, register, trial) → **les nouvelles souscriptions utilisent la version publiée**.
+- `Subscription::contractedPlanPriceCents()` = snapshot, fallback catalogue pour les lignes héritées (null).
+- `BillingRenewCommand` et `PricingEngine::forCurrentPeriod` **honorent le snapshot** → **un changement de prix public ne modifie jamais** la facture (ni l'estimation) d'un abonné existant.
+- **Changement de plan** (`PlanChangeExecutor`) **re-snapshote** au prix publié du nouveau plan (évolution explicite autorisée).
+- **Migration tarifaire** = modification explicite de `plan_price_cents` (ex. acceptée par le client) — **pas de migration de masse automatique**.
+- **Company cockpit** : `currentSubscription` expose `plan_price_cents` ; la carte plan affiche le **prix contractuel** (pas le prix public).
+
+**Invariants tenus.** Facture émise immuable ; renouvellement ne change jamais le prix silencieusement ; nouvelles souscriptions au prix courant ; addons déjà protégés ; ADR-575 (anti-cascade) et règles de renouvellement inchangées.
+
+**Preuves.** `SubscriptionPriceProtectionTest` (5 : snapshot à la création ; abonné existant garde 30 € malgré prix public 1 € ; nouvel abonné B à 1 € ; migration explicite → 1 € ; addon snapshot 500 vs catalogue 800). Régression : **797 tests billing verts** + 42 company billing. Build clean.
+
+**Reliquats (M4/M5/M6).** UI gouvernance Platform (message « ce changement ne concerne que les nouvelles souscriptions » + action de migration tarifaire avec sélection/preview/date d'effet/audit) ; affichage détaillé Company (quantités/remises) ; tests additionnels (prorata+coupon+promo, per-seat non implémenté, multi-devise/Market, isolation). **Per-seat/usage : non implémenté** dans `ModuleQuoteCalculator` (flat/plan_flat seulement) — à historiser quand ajouté.
+
+**Garde-fous.** Aucune donnée financière PROD modifiée (local/test uniquement), **aucun push ni déploiement**.
+
+**Fichiers** : `database/migrations/2026_10_21_160000_add_plan_price_cents_to_subscriptions.php`, `app/Core/Billing/Subscription.php`, `app/Console/Commands/BillingRenewCommand.php`, `app/Core/Billing/PricingEngine.php`, `app/Core/Billing/PlanChangeExecutor.php`, `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/_BillingOverview.vue`, `tests/Feature/SubscriptionPriceProtectionTest.php`.
+
+---

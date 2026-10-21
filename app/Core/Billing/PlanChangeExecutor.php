@@ -287,9 +287,15 @@ class PlanChangeExecutor
             }
 
             // Update subscription — ADR-324: transfer coupon
+            // ADR-587: an explicit plan change re-snapshots the contracted price to the NEW plan's
+            // current published price (price evolution is allowed when the contract explicitly changes).
+            $newPlanForSnapshot = Plan::where('key', $intent->to_plan_key)->first();
             $updateData = [
                 'plan_key' => $intent->to_plan_key,
                 'interval' => $intent->interval_to,
+                'plan_price_cents' => $newPlanForSnapshot
+                    ? (int) ($intent->interval_to === 'yearly' ? ($newPlanForSnapshot->price_yearly ?? 0) : ($newPlanForSnapshot->price_monthly ?? 0))
+                    : null,
             ];
 
             if ($subscription->coupon_id) {

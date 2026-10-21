@@ -58,10 +58,12 @@ const planInterval = computed(() => {
 })
 
 const planPrice = computed(() => {
+  // ADR-587: show the CONTRACTED price honoured at renewal (snapshot), not the current public price.
+  const sub = overview.value?.subscription
   const plan = overview.value?.plan
-  const interval = overview.value?.subscription?.interval
+  if (sub?.plan_price_cents != null) return formatMoney(sub.plan_price_cents, { currency: overview.value?.currency })
   if (!plan) return '—'
-  const price = interval === 'yearly' ? plan.price_yearly : plan.price_monthly
+  const price = sub?.interval === 'yearly' ? plan.price_yearly : plan.price_monthly
 
   return formatMoney(price, { currency: overview.value?.currency })
 })

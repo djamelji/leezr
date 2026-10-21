@@ -37,7 +37,9 @@ class PricingEngine
     {
         $desc = InvoiceLineDescriptor::resolve($locale);
         $plan = Plan::where('key', $subscription->plan_key)->first();
-        $planPriceCents = static::catalogPriceCents($plan, $subscription->interval);
+        // ADR-587: the next-invoice estimate reflects the CONTRACTED price (snapshot), not the live
+        // public price — consistent with what the renewal will actually bill.
+        $planPriceCents = $subscription->contractedPlanPriceCents() ?? static::catalogPriceCents($plan, $subscription->interval);
 
         $lines = [];
 
