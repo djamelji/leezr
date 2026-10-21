@@ -417,6 +417,15 @@
     }
   },
   "plans": {
+    "pricing": {
+      "confirmTitle": "Modifier le tarif public",
+      "current": "Prix public actuel",
+      "proposed": "Nouveau prix",
+      "impactMessage": "Ce changement concernera les nouvelles souscriptions. Les {count} entreprises déjà abonnées conserveront leur tarif contractuel.",
+      "tagPublic": "Tarif public",
+      "tagContracted": "Tarif contractuel préservé",
+      "confirmPublish": "Publier le nouveau prix"
+    },
     "title": "Abonnements",
     "subtitle": "Gérez votre catalogue d'abonnements et la tarification.",
     "addPlan": "Ajouter un abonnement",

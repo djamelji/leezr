@@ -64,6 +64,14 @@ export const usePlatformPlansStore = defineStore('platformPlans', {
       return data
     },
 
+    // ADR-588: governance impact of (optionally) changing a plan's public price — read-only.
+    async fetchPricingImpact(key, interval = 'monthly', proposedCents = null) {
+      const qs = new URLSearchParams({ interval })
+      if (proposedCents != null) qs.set('proposed_cents', String(proposedCents))
+
+      return $platformApi(`/plans/${key}/pricing-impact?${qs.toString()}`)
+    },
+
     async toggleActive(id) {
       const data = await $platformApi(`/plans/${id}/toggle-active`, {
         method: 'PUT',

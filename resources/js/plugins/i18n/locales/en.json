@@ -417,6 +417,15 @@
     }
   },
   "plans": {
+    "pricing": {
+      "confirmTitle": "Change the public price",
+      "current": "Current public price",
+      "proposed": "New price",
+      "impactMessage": "This change applies to new subscriptions. The {count} companies already subscribed keep their contracted price.",
+      "tagPublic": "Public price",
+      "tagContracted": "Contracted price preserved",
+      "confirmPublish": "Publish the new price"
+    },
     "title": "Plans",
     "subtitle": "Manage your plan catalog and pricing.",
     "addPlan": "Add Plan",

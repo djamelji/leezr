@@ -2,6 +2,7 @@
 import { usePlatformPlansStore } from '@/modules/platform-admin/plans/plans.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
+import { formatMoney } from '@/utils/money'
 
 definePage({
   meta: {
@@ -80,10 +81,13 @@ const hydrateForm = () => {
   storageQuotaLimit.value = plan.limits?.storage_quota_gb ?? null
 }
 
-// Section 1: Save commercial info
-const saveCommercialInfo = async () => {
-  saveLoading.value = true
+// Section 1: Save commercial info — with public-price governance (ADR-588).
+const pricingDialog = ref(false)
+const pricingImpact = ref(null)
+const pricingLoading = ref(false)
 
+const doSaveCommercialInfo = async () => {
+  saveLoading.value = true
   try {
     const payload = {
       ...form.value,
@@ -103,6 +107,39 @@ const saveCommercialInfo = async () => {
     saveLoading.value = false
   }
 }
+
+const saveCommercialInfo = async () => {
+  // If the PUBLIC price changes, surface the governance impact (existing subscribers keep their
+  // contracted price — ADR-587/588) and require explicit confirmation before publishing.
+  const plan = plansStore.currentPlan
+  const newMonthlyCents = Math.round((form.value.price_monthly || 0) * 100)
+  const priceChanged = plan && newMonthlyCents !== plan.price_monthly
+
+  if (!priceChanged) {
+    await doSaveCommercialInfo()
+
+    return
+  }
+
+  pricingLoading.value = true
+  pricingDialog.value = true
+  try {
+    pricingImpact.value = await plansStore.fetchPricingImpact(plan.key, 'monthly', newMonthlyCents)
+  }
+  catch {
+    pricingImpact.value = null
+  }
+  finally {
+    pricingLoading.value = false
+  }
+}
+
+const confirmPriceChange = async () => {
+  pricingDialog.value = false
+  await doSaveCommercialInfo()
+}
+
+const fmtCents = cents => formatMoney(cents ?? 0, { currency: pricingImpact.value?.by_currency?.[0]?.currency || 'EUR' })
 
 // Section 2: Features
 const addFeature = () => {
@@ -307,6 +344,7 @@ const fmtDate = dateStr => {
                   type="number"
                   step="0.01"
                   min="0"
+                  data-test="plan-price-monthly"
                 />
               </VCol>
 
@@ -369,6 +407,7 @@ const fmtDate = dateStr => {
                 <VBtn
                   type="submit"
                   :loading="saveLoading"
+                  data-test="plan-save-commercial"
                 >
                   {{ t('common.saveChanges') }}
                 </VBtn>
@@ -643,5 +682,65 @@ const fmtDate = dateStr => {
         </VCardText>
       </VCard>
     </template>
+
+    <!-- ADR-588: public price-change governance confirmation -->
+    <VDialog
+      v-model="pricingDialog"
+      max-width="560"
+      data-test="price-governance-dialog"
+    >
+      <VCard>
+        <VCardItem>
+          <VCardTitle class="d-flex align-center gap-2">
+            <VIcon icon="tabler-report-money" color="warning" />
+            {{ t('plans.pricing.confirmTitle') }}
+          </VCardTitle>
+        </VCardItem>
+        <VDivider />
+        <VCardText>
+          <VSkeletonLoader v-if="pricingLoading" type="paragraph" />
+          <template v-else-if="pricingImpact">
+            <div class="d-flex align-center gap-3 mb-4">
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('plans.pricing.current') }}</div>
+                <div class="text-h6" data-test="pg-current">{{ fmtCents(pricingImpact.current_public_cents) }}</div>
+              </div>
+              <VIcon icon="tabler-arrow-right" class="text-disabled" />
+              <div>
+                <div class="text-caption text-medium-emphasis">{{ t('plans.pricing.proposed') }}</div>
+                <div class="text-h6 text-primary" data-test="pg-proposed">{{ fmtCents(pricingImpact.proposed_cents) }}</div>
+              </div>
+            </div>
+
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="comfortable"
+              data-test="pg-impact"
+            >
+              {{ t('plans.pricing.impactMessage', { count: pricingImpact.affected_subscriptions }) }}
+            </VAlert>
+
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              <VChip size="small" color="primary" variant="tonal">{{ t('plans.pricing.tagPublic') }}</VChip>
+              <VChip size="small" color="success" variant="tonal">{{ t('plans.pricing.tagContracted') }}</VChip>
+            </div>
+          </template>
+          <VAlert v-else type="error" variant="tonal">{{ t('common.loadError') }}</VAlert>
+        </VCardText>
+        <VDivider />
+        <VCardActions class="justify-end">
+          <VBtn variant="text" @click="pricingDialog = false">{{ t('common.cancel') }}</VBtn>
+          <VBtn
+            color="primary"
+            :loading="saveLoading"
+            data-test="pg-confirm"
+            @click="confirmPriceChange"
+          >
+            {{ t('plans.pricing.confirmPublish') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
