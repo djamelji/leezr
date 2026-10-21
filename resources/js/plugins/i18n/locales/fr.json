@@ -609,6 +609,24 @@
   "platformBilling": {
     "title": "Aperçu facturation",
     "subtitle": "Données de facturation inter-entreprises, factures, paiements et relances.",
+    "drilldown": {
+      "receivablesTitle": "Créances nettes comptables — décomposition",
+      "revenueTitle": "Chiffre d'affaires facturé — détail de la période",
+      "grossDocuments": "Soldes documentaires",
+      "writtenOff": "Passé en perte",
+      "netRecoverable": "Créances nettes",
+      "reconciled": "Rapproché avec le grand livre",
+      "gap": "Écart de rapprochement : {amount}",
+      "invoice": "Facture",
+      "status": "Statut",
+      "amountDue": "Restant dû",
+      "writeOffTag": "perte",
+      "openInvoices": "Voir les factures ouvertes",
+      "allInvoices": "Voir toutes les factures",
+      "revenueHtPeriod": "CA facturé HT ({period})",
+      "revenueHt": "CA HT",
+      "issuedAt": "Émise le"
+    },
     "tabs": {
       "dashboard": "Tableau de bord",
       "invoices": "Factures",

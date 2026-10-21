@@ -29,12 +29,23 @@ const formattedAmount = computed(() => {
 
   return formatMoney(Math.round(props.data.outstanding), { currency: props.data.currency || 'EUR' })
 })
+
+// Drill-down: open the Billing cockpit on the receivables breakdown that composes this KPI (ADR-584).
+const router = useRouter()
+function openDrilldown() {
+  router.push({ path: '/platform/billing/overview', query: { drill: 'receivables' } })
+}
 </script>
 
 <template>
   <div
-    class="widget-root"
+    class="widget-root cursor-pointer"
     :class="`density-${density}`"
+    role="button"
+    tabindex="0"
+    data-test="kpi-ar-outstanding"
+    @click="openDrilldown"
+    @keyup.enter="openDrilldown"
   >
     <!-- Header — Vuexy analytics pattern -->
     <div class="d-flex justify-space-between align-center widget-header">

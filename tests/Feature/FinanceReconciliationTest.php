@@ -61,6 +61,44 @@ class FinanceReconciliationTest extends TestCase
         $this->assertCount(0, $r['anomalies']);
     }
 
+    public function test_receivables_drilldown_explains_net_as_gross_minus_writeoff(): void
+    {
+        // Reproduce PROD: 3 open invoices (2280+3480+1080 = 6840 TTC) + 1 uncollectible written-off (3480).
+        foreach ([2280, 3480, 1080] as $due) {
+            $this->invoice(['amount' => $due, 'amount_due' => $due, 'status' => 'open']);
+        }
+        $wo = $this->invoice(['amount' => 3480, 'amount_due' => 3480, 'status' => 'uncollectible']);
+        // Ledger: AR debits for all 4, write-off credit for the uncollectible one.
+        foreach ([2280, 3480, 1080, 3480] as $i => $d) {
+            $this->ledger(['reference_id' => $i + 1, 'entry_type' => 'invoice_issued', 'account_code' => 'AR', 'debit' => $d]);
+        }
+        $this->ledger(['reference_id' => $wo, 'entry_type' => 'writeoff', 'account_code' => 'AR', 'credit' => 3480]);
+        $this->ledger(['reference_id' => $wo, 'entry_type' => 'writeoff', 'account_code' => 'BAD_DEBT', 'debit' => 3480]);
+
+        $eur = collect(FinanceReconciliationService::receivablesBreakdown())->firstWhere('currency', 'EUR');
+
+        $this->assertSame(10320, $eur['gross_documents_cents'], 'gross = 103,20 €');
+        $this->assertSame(3480, $eur['written_off_cents'], 'written-off (uncollectible) = 34,80 €');
+        $this->assertSame(6840, $eur['net_recoverable_cents'], 'net = 68,40 € = gross − write-off');
+        $this->assertSame(6840, $eur['ledger_ar_cents']);
+        $this->assertTrue($eur['reconciled'], 'documents net of write-offs reconciles to ledger AR');
+        $this->assertSame(4, count($eur['invoices']));
+    }
+
+    public function test_revenue_drilldown_total_equals_kpi_for_the_period(): void
+    {
+        foreach ([[1, 1900], [2, 2900], [3, 900]] as [$ref, $ht]) {
+            $this->ledger(['reference_id' => $ref, 'entry_type' => 'invoice_issued', 'account_code' => 'REVENUE', 'credit' => $ht, 'recorded_at' => now()->copy()->subDays(3)]);
+        }
+        // An old REVENUE credit outside the 30-day window must be excluded.
+        $this->ledger(['reference_id' => 9, 'entry_type' => 'invoice_issued', 'account_code' => 'REVENUE', 'credit' => 3480, 'recorded_at' => now()->copy()->subMonths(5)]);
+
+        $eur = collect(FinanceReconciliationService::revenueBreakdown(now()->copy()->subDays(30), now()))->firstWhere('currency', 'EUR');
+
+        $this->assertSame(5700, $eur['revenue_ht_cents'], 'drill-down total = 57,00 € = KPI revenue 30d');
+        $this->assertSame(3, count($eur['invoices']), 'only the 3 in-window invoices contribute');
+    }
+
     public function test_divergences_surface_as_anomalies(): void
     {
         // (1) AR gap: invoice amount_due 1000 but no AR ledger debit → ledger_ar(0) ≠ outstanding(1000).

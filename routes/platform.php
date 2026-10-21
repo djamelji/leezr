@@ -296,6 +296,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/billing/ledger/trial-balance', [PlatformFinancialController::class, 'trialBalance']);
         // Ledger↔documents reconciliation + anomalies (read-only, ADR-583)
         Route::get('/billing/reconciliation', [PlatformFinancialController::class, 'reconciliation']);
+        // KPI drill-downs (read-only, ADR-584) — operations composing each dashboard KPI
+        Route::get('/billing/drilldown/receivables', [PlatformFinancialController::class, 'receivablesDrilldown']);
+        Route::get('/billing/drilldown/revenue', [PlatformFinancialController::class, 'revenueDrilldown']);
         Route::get('/billing/ledger/entries', [PlatformFinancialController::class, 'ledgerEntries']);
         Route::get('/billing/financial-periods', [PlatformFinancialController::class, 'financialPeriods']);
         Route::get('/billing/forensics/timeline', [PlatformFinancialController::class, 'forensicsTimeline']);

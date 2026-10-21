@@ -45,6 +45,31 @@ class PlatformFinancialController
         )->header('Cache-Control', 'no-store, private');
     }
 
+    /**
+     * KPI drill-downs (ADR-584): the operations composing a dashboard KPI, same period/currency/scope
+     * and definition, with a total that reconciles to the KPI (or an explicitly explained decomposition).
+     */
+    public function receivablesDrilldown(Request $request): JsonResponse
+    {
+        $companyId = $request->integer('company_id') ?: null;
+
+        return response()->json([
+            'by_currency' => \App\Core\Billing\ReadModels\FinanceReconciliationService::receivablesBreakdown($companyId),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    public function revenueDrilldown(Request $request): JsonResponse
+    {
+        $companyId = $request->integer('company_id') ?: null;
+        $period = $request->string('period', '30d')->toString();
+        $from = \App\Modules\Dashboard\PeriodParser::parse($period);
+
+        return response()->json([
+            'period' => $period,
+            'by_currency' => \App\Core\Billing\ReadModels\FinanceReconciliationService::revenueBreakdown($from, now(), $companyId),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
     public function ledgerEntries(Request $request): JsonResponse
     {
         $request->validate([

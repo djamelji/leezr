@@ -21859,3 +21859,23 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php` (nouveau), `app/Modules/Platform/Billing/Http/PlatformFinancialController.php` (+`reconciliation`), `routes/platform.php`, `tests/Feature/FinanceReconciliationTest.php`.
 
 ---
+
+### ADR-584 — Billing Cockpit 2.0 PRIORITÉ 2 : drill-down financier Platform (KPI → opérations réconciliées) (2026-10-21)
+
+**Objectif.** Chaque KPI du dashboard Platform doit être **explicable par un clic** menant aux opérations qui composent son montant, mêmes période/devise/périmètre/définition, total réconcilié au KPI (ou écart explicitement documenté). « Un cockpit qui explique les chiffres, pas qui les affiche. »
+
+**Décision (réutilise l'existant, aucun doublon de calcul).**
+- **Backend (lecture seule)** — `FinanceReconciliationService` étendu :
+  - `receivablesBreakdown(?companyId)` : par devise, **brut documents** (Σ `amount_due` hors void) **− passé en perte** (factures `uncollectible`/write-off) **= net recouvrable**, **rapproché** à l'AR du grand livre. Retourne les factures contributrices avec drapeau `written_off`. Sur PROD : **103,20 € − 34,80 € = 68,40 €** (= AR grand livre), et la facture #1 en perte dont le solde documentaire reste dû est **explicitée**, pas masquée.
+  - `revenueBreakdown(from,to,?companyId)` : par devise, les factures dont le crédit `REVENUE` (HT) tombe dans la fenêtre, chacune avec sa contribution HT ; **total = KPI** CA de la période (57,00 € sur 30 j).
+- **Endpoints** gated `view_billing` (lecture seule, `no-store`) : `GET /api/platform/billing/drilldown/receivables`, `GET /api/platform/billing/drilldown/revenue?period=`.
+- **Frontend** — les widgets `_ArOutstandingWidget`/`_RevenueTrendWidget` deviennent **cliquables** (`data-test` kpi-ar-outstanding / kpi-revenue-trend) → `/platform/billing/overview?drill=receivables|revenue&period=`. `_BillingDashboard` lit `?drill=`, appelle l'endpoint et affiche un **panneau d'explication** : décomposition brut−perte=net, **badge rapproché / écart** (jamais masqué), tableau des factures contributrices, lien vers les factures filtrées. i18n FR/EN.
+- **Multi-devise** : agrégats **par devise**, jamais sommés ; centimes entiers.
+
+**Anomalies conservées visibles** (ADR-583) : mismatch AR ledger↔documents, write-off, ventilation TVA historique (#1) — non corrigées, non masquées.
+
+**Preuves.** `FinanceReconciliationTest` (4 cas, dont `receivables_drilldown` 103,20−34,80=68,40 et `revenue_drilldown` total=5700¢) ; `platform-billing-drilldown.spec.js` (3 E2E : décomposition réconciliée UI+API, CA=Σ factures, route authentifiée). Régression : **594 tests billing verts**. Build front clean. Aucune donnée PROD modifiée, aucun push/déploiement.
+
+**Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php`, `app/Modules/Platform/Billing/Http/PlatformFinancialController.php`, `routes/platform.php`, `resources/js/pages/platform/billing/{_ArOutstandingWidget,_RevenueTrendWidget,_BillingDashboard}.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/FinanceReconciliationTest.php`, `tests/e2e/platform-billing-drilldown.spec.js`.
+
+---

@@ -609,6 +609,24 @@
   "platformBilling": {
     "title": "Billing Overview",
     "subtitle": "Cross-company billing data, invoices, payments and dunning.",
+    "drilldown": {
+      "receivablesTitle": "Net accounting receivables — breakdown",
+      "revenueTitle": "Invoiced revenue — period detail",
+      "grossDocuments": "Document balances",
+      "writtenOff": "Written off",
+      "netRecoverable": "Net receivables",
+      "reconciled": "Reconciled with the ledger",
+      "gap": "Reconciliation gap: {amount}",
+      "invoice": "Invoice",
+      "status": "Status",
+      "amountDue": "Amount due",
+      "writeOffTag": "write-off",
+      "openInvoices": "View open invoices",
+      "allInvoices": "View all invoices",
+      "revenueHtPeriod": "Invoiced revenue ex-VAT ({period})",
+      "revenueHt": "Revenue ex-VAT",
+      "issuedAt": "Issued"
+    },
     "tabs": {
       "dashboard": "Dashboard",
       "invoices": "Invoices",

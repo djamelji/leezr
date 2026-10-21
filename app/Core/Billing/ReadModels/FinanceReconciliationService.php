@@ -86,6 +86,94 @@ class FinanceReconciliationService
         ];
     }
 
+    /**
+     * Receivables drill-down (ADR-584) — explains the net accounting receivable, per currency:
+     *   gross document balance (Σ amount_due, non-void) − written-off (uncollectible) = net recoverable,
+     * reconciled against the ledger AR net. Returns the contributing invoices with a written_off flag,
+     * so the operator sees e.g. 103,20 € documents − 34,80 € (uncollectible #1) = 68,40 € net.
+     *
+     * @return array<int, array<string, mixed>>  one entry per currency
+     */
+    public static function receivablesBreakdown(?int $companyId = null): array
+    {
+        $scope = fn ($q) => $companyId ? $q->where('company_id', $companyId) : $q;
+
+        // Ledger AR net per currency (cents).
+        $arByCur = [];
+        foreach ($scope(LedgerEntry::query())->where('account_code', 'AR')
+            ->select('currency', DB::raw('SUM(debit) d'), DB::raw('SUM(credit) c'))
+            ->groupBy('currency')->get() as $row) {
+            $arByCur[$row->currency] = (int) round((float) $row->d - (float) $row->c);
+        }
+
+        $invoices = $scope(Invoice::query())->where('status', '!=', 'void')
+            ->get(['id', 'number', 'company_id', 'status', 'amount_due', 'currency']);
+
+        $out = [];
+        foreach ($invoices->groupBy('currency') as $cur => $rows) {
+            $lines = [];
+            $gross = 0;
+            $writtenOff = 0;
+            foreach ($rows as $inv) {
+                $due = (int) $inv->amount_due;
+                $isWrittenOff = $inv->status === 'uncollectible'
+                    || LedgerEntry::where('reference_type', 'invoice')->where('reference_id', $inv->id)->where('entry_type', 'writeoff')->exists();
+                $gross += $due;
+                if ($isWrittenOff) {
+                    $writtenOff += $due;
+                }
+                $lines[] = ['invoice_id' => $inv->id, 'number' => $inv->number, 'company_id' => $inv->company_id, 'status' => $inv->status, 'amount_due_cents' => $due, 'written_off' => $isWrittenOff];
+            }
+            $net = $gross - $writtenOff;
+            $ledgerAr = $arByCur[$cur] ?? 0;
+            $out[] = [
+                'currency' => $cur,
+                'gross_documents_cents' => $gross,
+                'written_off_cents' => $writtenOff,
+                'net_recoverable_cents' => $net,
+                'ledger_ar_cents' => $ledgerAr,
+                'reconciled' => $net === $ledgerAr,
+                'gap_cents' => $ledgerAr - $net,
+                'invoices' => $lines,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Revenue drill-down (ADR-584) — the invoices whose REVENUE (HT) ledger credit falls within the
+     * window, each with its HT contribution; the total equals the revenue-trend KPI for that period.
+     *
+     * @return array<int, array<string, mixed>>  one entry per currency
+     */
+    public static function revenueBreakdown(\Carbon\Carbon $from, \Carbon\Carbon $to, ?int $companyId = null): array
+    {
+        $scope = fn ($q) => $companyId ? $q->where('company_id', $companyId) : $q;
+
+        $rows = $scope(LedgerEntry::query())
+            ->where('entry_type', 'invoice_issued')->where('account_code', 'REVENUE')
+            ->whereBetween('recorded_at', [$from, $to])
+            ->select('currency', 'reference_type', 'reference_id', DB::raw('SUM(credit) ht'))
+            ->groupBy('currency', 'reference_type', 'reference_id')
+            ->get();
+
+        $out = [];
+        foreach ($rows->groupBy('currency') as $cur => $entries) {
+            $lines = [];
+            $total = 0;
+            foreach ($entries as $e) {
+                $ht = (int) round((float) $e->ht);
+                $total += $ht;
+                $inv = $e->reference_type === 'invoice' ? Invoice::find($e->reference_id) : null;
+                $lines[] = ['invoice_id' => $e->reference_id, 'number' => $inv?->number, 'company_id' => $inv?->company_id, 'ht_cents' => $ht, 'issued_at' => optional($inv?->issued_at)->toDateString()];
+            }
+            $out[] = ['currency' => $cur, 'revenue_ht_cents' => $total, 'invoices' => $lines];
+        }
+
+        return $out;
+    }
+
     /** @return array<int, array<string, mixed>> */
     private static function anomalies(callable $scope, array $byCur): array
     {

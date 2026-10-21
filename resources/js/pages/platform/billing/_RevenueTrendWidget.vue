@@ -240,12 +240,23 @@ const summaryValue = computed(() => {
 
   return formatMoney(total, { currency: cur })
 })
+
+// Drill-down: open the Billing cockpit on the revenue breakdown for the same period (ADR-584).
+const router = useRouter()
+function openDrilldown() {
+  router.push({ path: '/platform/billing/overview', query: { drill: 'revenue', period: '30d' } })
+}
 </script>
 
 <template>
   <div
-    class="widget-root"
+    class="widget-root cursor-pointer"
     :class="[`mode-${mode}`, `h-${hDensity}`]"
+    role="button"
+    tabindex="0"
+    data-test="kpi-revenue-trend"
+    @click="openDrilldown"
+    @keyup.enter="openDrilldown"
   >
     <!-- Header — icon + title, KPI right for M/L -->
     <div class="d-flex align-center gap-2 overflow-hidden widget-header">
