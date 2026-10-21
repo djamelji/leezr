@@ -294,6 +294,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Financial governance read (ADR-144 D4b)
         Route::get('/billing/ledger/trial-balance', [PlatformFinancialController::class, 'trialBalance']);
+        // Ledger↔documents reconciliation + anomalies (read-only, ADR-583)
+        Route::get('/billing/reconciliation', [PlatformFinancialController::class, 'reconciliation']);
         Route::get('/billing/ledger/entries', [PlatformFinancialController::class, 'ledgerEntries']);
         Route::get('/billing/financial-periods', [PlatformFinancialController::class, 'financialPeriods']);
         Route::get('/billing/forensics/timeline', [PlatformFinancialController::class, 'forensicsTimeline']);

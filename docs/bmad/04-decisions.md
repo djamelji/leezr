@@ -21836,3 +21836,26 @@ Quatre situations distinctes :
 **Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php`, `resources/js/pages/platform/billing/_ArOutstandingWidget.vue`, `resources/js/pages/platform/billing/_RevenueTrendWidget.vue`, `tests/Feature/PlatformBillingKpiReconciliationTest.php`.
 
 ---
+
+### ADR-583 — Billing Cockpit 2.0 PRIORITÉ 1 : réconciliation grand livre ↔ documents (lecture seule, anomalies visibles) (2026-10-21)
+
+**Besoin.** Avant tout graphique, établir une cohérence **vérifiable** entre le grand livre (`financial_ledger_entries`, source des KPI — ADR-582) et les documents (factures, lignes, paiements, avoirs). En cas de divergence, l'**afficher comme anomalie** — jamais ajuster le KPI pour masquer l'écart. Une créance comptable (AR) et le solde des factures `open` ne sont **pas** forcément le même ensemble (paiements partiels, write-offs, avoirs créditant CASH et non AR, écritures non rapprochées).
+
+**Décision.** Nouveau **service lecture seule `FinanceReconciliationService::report(?companyId)`** — **distinct** de `ReconciliationEngine` existant (qui réconcilie **provider Stripe ↔ paiements locaux**) ; ici on vérifie l'**intégrité interne grand livre ↔ documents** qui porte les KPI. **Aucune mutation, aucun moteur parallèle** (réutilise les modèles `LedgerEntry`/`Invoice`/`Payment`/`CreditNote`). Tout en **centimes entiers**, **groupé par devise** (jamais sommé entre devises — garde multi-devise ADR-582).
+
+Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue`, `ledger_vat`, `ledger_refund`, `ledger_bad_debt`, `invoices_outstanding` (Σ `amount_due` hors `void`), `invoices_billed`, `payments_succeeded`, `credit_notes_applied`, et les **écarts** `gap_ar_vs_invoices` (= `ledger_ar` − `invoices_outstanding`) et `gap_cash_vs_payments`. `multi_currency` signale la présence de plusieurs devises.
+
+**Anomalies détectées (lecture seule, non masquées)** :
+- `ar_ledger_vs_invoices_mismatch` — l'AR du grand livre ≠ Σ `amount_due` des factures (écart en centimes exact, non masqué).
+- `cash_ledger_vs_payments_mismatch` — CASH grand livre ≠ paiements réussis nets des remboursements.
+- `invoice_paid_with_balance` / `invoice_open_without_balance` — incohérences statut ↔ `amount_due`.
+- `revenue_booked_without_vat_split` — facture avec TVA mais écriture `invoice_issued` **sans** ligne `VAT_PAYABLE` (cas historique de mai : revenu comptabilisé TTC). **Signalé, non corrigé** (pas de réécriture d'historique).
+- `payment_not_reconciled` — paiement réussi sans écriture `payment_received` au grand livre.
+
+**Exposition.** `GET /api/platform/billing/reconciliation` (groupe gated `module.active:platform.billing` + `platform.permission:view_billing`, `Cache-Control: no-store`). Alimente la future vue « Anomalies & rapprochements » du cockpit (Phase E UI, à venir).
+
+**Preuves.** `FinanceReconciliationTest` (2 cas) : scénario réconcilié (AR = `amount_due`, 0 anomalie) ; scénario divergences (AR≠factures → gap 2480 ¢ reporté exactement, TVA non ventilée, paiement non rapproché → 3 anomalies). Régression : **538 tests finance/billing verts**. Aucune donnée PROD modifiée. Aucun push/déploiement.
+
+**Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php` (nouveau), `app/Modules/Platform/Billing/Http/PlatformFinancialController.php` (+`reconciliation`), `routes/platform.php`, `tests/Feature/FinanceReconciliationTest.php`.
+
+---

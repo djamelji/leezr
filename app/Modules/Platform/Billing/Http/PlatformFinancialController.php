@@ -31,6 +31,20 @@ class PlatformFinancialController
         return response()->json(['balance' => $balance]);
     }
 
+    /**
+     * Ledger↔documents reconciliation (read-only, ADR-583). Distinct from the provider↔local
+     * ReconciliationEngine: this one checks the internal integrity that backs the KPIs (AR vs
+     * invoice balances, revenue, VAT split, unreconciled payments), per currency, in cents.
+     */
+    public function reconciliation(Request $request): JsonResponse
+    {
+        $companyId = $request->integer('company_id') ?: null;
+
+        return response()->json(
+            \App\Core\Billing\ReadModels\FinanceReconciliationService::report($companyId),
+        )->header('Cache-Control', 'no-store, private');
+    }
+
     public function ledgerEntries(Request $request): JsonResponse
     {
         $request->validate([
