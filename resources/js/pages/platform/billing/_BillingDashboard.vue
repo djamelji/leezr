@@ -81,8 +81,32 @@ const kpiCards = computed(() => {
   ]
 })
 
-const mrrLabels = computed(() => store.metrics?.mrr_history?.labels || [])
-const mrrSeries = computed(() => store.metrics?.mrr_history?.series || [])
+const fullLabels = computed(() => store.metrics?.mrr_history?.labels || [])
+const fullSeries = computed(() => store.metrics?.mrr_history?.series || [])
+
+// Period selector for the MRR trend (slice the last N months of real history — no fabricated data).
+const trendMonths = ref(12)
+const trendOptions = [{ label: '3M', value: 3 }, { label: '6M', value: 6 }, { label: '12M', value: 12 }]
+const mrrLabels = computed(() => fullLabels.value.slice(-trendMonths.value))
+const mrrSeries = computed(() => fullSeries.value.slice(-trendMonths.value))
+
+// Lightweight inline-SVG sparkline (theme-aware, no margins) from a real series → polyline points
+// over a 100×28 viewBox. Returns '' when there is nothing meaningful to plot.
+function sparkPoints(series) {
+  const s = (series || []).filter(v => typeof v === 'number')
+  if (s.length < 2) return ''
+  const min = Math.min(...s)
+  const max = Math.max(...s)
+  const span = max - min || 1
+  const stepX = 100 / (s.length - 1)
+
+  return s.map((v, i) => `${(i * stepX).toFixed(2)},${(26 - ((v - min) / span) * 24).toFixed(2)}`).join(' ')
+}
+// Cards that carry a real trend get a background sparkline (MRR, ARR share the MRR shape).
+const cardSpark = computed(() => ({
+  [t('platformBilling.metrics.mrrHT')]: sparkPoints(fullSeries.value),
+  [t('platformBilling.metrics.arrHT')]: sparkPoints(fullSeries.value),
+}))
 
 const recovery = computed(() => store.recoveryStatus)
 
@@ -397,20 +421,38 @@ const refreshLabel = computed(() => {
               <VCard
                 flat
                 border
-                class="text-center pa-4"
+                class="text-center pa-4 kpi-card position-relative overflow-hidden"
               >
-                <VAvatar
-                  size="42"
-                  variant="tonal"
-                  :color="card.color"
-                  class="mb-2"
+                <!-- Background sparkline (real history, no margins) — only where a trend exists -->
+                <svg
+                  v-if="cardSpark[card.title]"
+                  class="kpi-spark"
+                  viewBox="0 0 100 28"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
                 >
-                  <VIcon :icon="card.icon" />
-                </VAvatar>
-                <h4 class="text-h5 font-weight-bold">
-                  {{ card.value }}
-                </h4>
-                <span class="text-body-2 text-disabled">{{ card.title }}</span>
+                  <polyline
+                    :points="cardSpark[card.title]"
+                    fill="none"
+                    :stroke="`rgb(var(--v-theme-${card.color}))`"
+                    stroke-width="1.5"
+                    vector-effect="non-scaling-stroke"
+                  />
+                </svg>
+                <div class="position-relative">
+                  <VAvatar
+                    size="42"
+                    variant="tonal"
+                    :color="card.color"
+                    class="mb-2"
+                  >
+                    <VIcon :icon="card.icon" />
+                  </VAvatar>
+                  <h4 class="text-h5 font-weight-bold">
+                    {{ card.value }}
+                  </h4>
+                  <span class="text-body-2 text-disabled">{{ card.title }}</span>
+                </div>
               </VCard>
             </VCol>
           </VRow>
@@ -422,12 +464,31 @@ const refreshLabel = computed(() => {
         v-if="!metricsError && store.metrics?.mrr_history?.series?.length"
         class="mb-6"
       >
-        <VCardTitle>
-          <VIcon
-            icon="tabler-chart-area-line"
-            class="me-2"
-          />
-          {{ t('platformBilling.dashboard.mrrTrend') }}
+        <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-2">
+          <span>
+            <VIcon
+              icon="tabler-chart-area-line"
+              class="me-2"
+            />
+            {{ t('platformBilling.dashboard.mrrTrend') }}
+          </span>
+          <VBtnToggle
+            v-model="trendMonths"
+            density="compact"
+            variant="outlined"
+            divided
+            mandatory
+            data-test="mrr-period"
+          >
+            <VBtn
+              v-for="o in trendOptions"
+              :key="o.value"
+              :value="o.value"
+              size="small"
+            >
+              {{ o.label }}
+            </VBtn>
+          </VBtnToggle>
         </VCardTitle>
         <VCardText>
           <ApexChartRevenueTrend
@@ -482,3 +543,23 @@ const refreshLabel = computed(() => {
     </template>
   </div>
 </template>
+
+<style scoped>
+.kpi-card {
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.kpi-card:hover {
+  box-shadow: 0 4px 18px rgba(var(--v-theme-on-surface), 0.08);
+  transform: translateY(-2px);
+}
+/* Background sparkline — flush to the card edges (no margins), subtle, theme-aware. */
+.kpi-spark {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  inline-size: 100%;
+  block-size: 46%;
+  opacity: 0.16;
+  pointer-events: none;
+}
+</style>
