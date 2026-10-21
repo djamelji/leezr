@@ -27,6 +27,15 @@ class PlanCrudController
             ->header('Cache-Control', 'no-store, private');
     }
 
+    /** ADR-588: selectable subscriptions for the migration wizard — read-only. */
+    public function migrationSubscriptions(Request $request, string $key): JsonResponse
+    {
+        $interval = in_array($request->query('interval'), ['monthly', 'yearly'], true) ? $request->query('interval') : 'monthly';
+
+        return response()->json(['subscriptions' => PlanPricingGovernanceService::subscriptionsForPlan($key, $interval)])
+            ->header('Cache-Control', 'no-store, private');
+    }
+
     /** ADR-588: preview an explicit tariff migration — NO financial effect. */
     public function migrationPreview(Request $request, MigrateSubscriptionPriceUseCase $useCase): JsonResponse
     {

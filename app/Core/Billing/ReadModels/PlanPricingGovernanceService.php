@@ -51,4 +51,29 @@ class PlanPricingGovernanceService
             'note' => 'Existing subscribers keep their contracted price; the new public price applies to new subscriptions only.',
         ];
     }
+
+    /**
+     * Selectable subscriptions for a plan (migration wizard) — id, company, contracted + public price,
+     * currency, and whether a migration is already scheduled. Read-only, integer cents.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function subscriptionsForPlan(string $planKey, string $interval = 'monthly'): array
+    {
+        $plan = Plan::where('key', $planKey)->first();
+        $public = $plan ? (int) ($interval === 'yearly' ? ($plan->price_yearly ?? 0) : ($plan->price_monthly ?? 0)) : null;
+
+        return Subscription::where('plan_key', $planKey)->where('interval', $interval)
+            ->whereIn('status', ['active', 'trialing', 'past_due'])->where('is_current', 1)
+            ->with('company.market')->orderBy('id')->get()
+            ->map(fn ($s) => [
+                'subscription_id' => $s->id,
+                'company_id' => $s->company_id,
+                'company' => $s->company?->name,
+                'currency' => $s->company?->market?->currency ?? 'EUR',
+                'contracted_cents' => (int) ($s->contractedPlanPriceCents() ?? 0),
+                'public_cents' => $public,
+                'scheduled_migration' => $s->metadata['scheduled_price_migration'] ?? null,
+            ])->all();
+    }
 }

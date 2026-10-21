@@ -3,6 +3,7 @@ import { usePlatformPlansStore } from '@/modules/platform-admin/plans/plans.stor
 import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
+import TariffMigrationWizard from './_TariffMigrationWizard.vue'
 
 definePage({
   meta: {
@@ -140,6 +141,9 @@ const confirmPriceChange = async () => {
 }
 
 const fmtCents = cents => formatMoney(cents ?? 0, { currency: pricingImpact.value?.by_currency?.[0]?.currency || 'EUR' })
+
+// ADR-588: tariff migration wizard
+const migrationWizard = ref(false)
 
 // Section 2: Features
 const addFeature = () => {
@@ -403,13 +407,22 @@ const fmtDate = dateStr => {
                 />
               </VCol>
 
-              <VCol cols="12">
+              <VCol cols="12" class="d-flex gap-2 flex-wrap">
                 <VBtn
                   type="submit"
                   :loading="saveLoading"
                   data-test="plan-save-commercial"
                 >
                   {{ t('common.saveChanges') }}
+                </VBtn>
+                <VBtn
+                  variant="tonal"
+                  color="warning"
+                  prepend-icon="tabler-transfer"
+                  data-test="open-migration-wizard"
+                  @click="migrationWizard = true"
+                >
+                  {{ t('plans.migration.open') }}
                 </VBtn>
               </VCol>
             </VRow>
@@ -682,6 +695,12 @@ const fmtDate = dateStr => {
         </VCardText>
       </VCard>
     </template>
+
+    <TariffMigrationWizard
+      v-model="migrationWizard"
+      :plan-key="plansStore.currentPlan?.key || route.params.key"
+      interval="monthly"
+    />
 
     <!-- ADR-588: public price-change governance confirmation -->
     <VDialog

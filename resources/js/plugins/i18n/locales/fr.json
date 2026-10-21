@@ -417,6 +417,26 @@
     }
   },
   "plans": {
+    "migration": {
+      "open": "Migrer les tarifs",
+      "title": "Migration tarifaire",
+      "selectHint": "Sélectionnez les souscriptions à migrer. Chaque client conserve son tarif contractuel tant qu'il n'est pas explicitement migré.",
+      "noSubs": "Aucune souscription active sur ce plan.",
+      "scheduledTag": "Migration programmée",
+      "newPrice": "Nouveau tarif contractuel (HT)",
+      "immediate": "Immédiatement",
+      "atRenewal": "Au prochain renouvellement",
+      "effectiveAt": "Date d'effet",
+      "preview": "Prévisualiser",
+      "noEffect": "Cette prévisualisation ne crée aucune facture ni aucun paiement.",
+      "subs": "souscription(s)",
+      "totalDelta": "impact total",
+      "from": "Actuel",
+      "to": "Nouveau",
+      "confirm": "Confirmer la migration",
+      "applied": "Migration appliquée.",
+      "resultSummary": "{migrated} migrée(s), {scheduled} programmée(s), {skipped} inchangée(s)."
+    },
     "pricing": {
       "confirmTitle": "Modifier le tarif public",
       "current": "Prix public actuel",

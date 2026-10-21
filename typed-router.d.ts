@@ -211,6 +211,7 @@ declare module 'vue-router/auto-routes' {
     'platform-operations-operations-security': RouteRecordInfo<'platform-operations-operations-security', '/platform/operations/_OperationsSecurity', Record<never, never>, Record<never, never>>,
     'platform-operations-operations-usage': RouteRecordInfo<'platform-operations-operations-usage', '/platform/operations/_OperationsUsage', Record<never, never>, Record<never, never>>,
     'platform-operations-tab': RouteRecordInfo<'platform-operations-tab', '/platform/operations/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
+    'platform-plans-tariff-migration-wizard': RouteRecordInfo<'platform-plans-tariff-migration-wizard', '/platform/plans/_TariffMigrationWizard', Record<never, never>, Record<never, never>>,
     'platform-plans-key': RouteRecordInfo<'platform-plans-key', '/platform/plans/:key', { key: ParamValue<true> }, { key: ParamValue<false> }>,
     'platform-reset-password': RouteRecordInfo<'platform-reset-password', '/platform/reset-password', Record<never, never>, Record<never, never>>,
     'platform-settings-settings-billing': RouteRecordInfo<'platform-settings-settings-billing', '/platform/settings/_SettingsBilling', Record<never, never>, Record<never, never>>,

@@ -55,6 +55,19 @@ class PlanPricingGovernanceTest extends TestCase
         $this->assertSame(3000, $eur['max_contracted_cents']);
     }
 
+    public function test_subscriptions_for_plan_lists_selectable_rows_with_contracted_and_public_price(): void
+    {
+        $s = $this->subscribe('co-list');
+        $rows = PlanPricingGovernanceService::subscriptionsForPlan('pro', 'monthly');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($s->id, $rows[0]['subscription_id']);
+        $this->assertSame(3000, $rows[0]['contracted_cents']);
+        $this->assertSame(3000, $rows[0]['public_cents']);
+        $this->assertSame('EUR', $rows[0]['currency']);
+        $this->assertNull($rows[0]['scheduled_migration']);
+    }
+
     public function test_changing_public_price_does_not_migrate_existing_subscribers(): void
     {
         $sub = $this->subscribe('co-keep');

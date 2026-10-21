@@ -163,6 +163,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
     // Tariff migration (explicit, financial) — stronger permission (ADR-588)
     Route::middleware(['module.active:platform.plans', 'platform.permission:manage_billing'])->group(function () {
+        Route::get('/plans/{key}/migration-subscriptions', [PlanCrudController::class, 'migrationSubscriptions']);
         Route::post('/pricing/migration/preview', [PlanCrudController::class, 'migrationPreview']);
         Route::post('/pricing/migration/apply', [PlanCrudController::class, 'migrationApply']);
     });

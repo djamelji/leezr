@@ -72,6 +72,27 @@ export const usePlatformPlansStore = defineStore('platformPlans', {
       return $platformApi(`/plans/${key}/pricing-impact?${qs.toString()}`)
     },
 
+    // ADR-588: tariff migration wizard — read-only list + preview (no effect) + explicit apply.
+    async fetchMigrationSubscriptions(key, interval = 'monthly') {
+      const data = await $platformApi(`/plans/${key}/migration-subscriptions?interval=${interval}`)
+
+      return data.subscriptions || []
+    },
+
+    async previewMigration(subscriptionIds, newPriceCents) {
+      return $platformApi('/pricing/migration/preview', {
+        method: 'POST',
+        body: { subscription_ids: subscriptionIds, new_price_cents: newPriceCents },
+      })
+    },
+
+    async applyMigration(subscriptionIds, newPriceCents, timing, effectiveAt = null) {
+      return $platformApi('/pricing/migration/apply', {
+        method: 'POST',
+        body: { subscription_ids: subscriptionIds, new_price_cents: newPriceCents, timing, effective_at: effectiveAt },
+      })
+    },
+
     async toggleActive(id) {
       const data = await $platformApi(`/plans/${id}/toggle-active`, {
         method: 'PUT',

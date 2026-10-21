@@ -417,6 +417,26 @@
     }
   },
   "plans": {
+    "migration": {
+      "open": "Migrate prices",
+      "title": "Tariff migration",
+      "selectHint": "Select the subscriptions to migrate. Each customer keeps its contracted price until explicitly migrated.",
+      "noSubs": "No active subscription on this plan.",
+      "scheduledTag": "Migration scheduled",
+      "newPrice": "New contracted price (ex-VAT)",
+      "immediate": "Immediately",
+      "atRenewal": "At next renewal",
+      "effectiveAt": "Effective date",
+      "preview": "Preview",
+      "noEffect": "This preview creates no invoice and no payment.",
+      "subs": "subscription(s)",
+      "totalDelta": "total impact",
+      "from": "Current",
+      "to": "New",
+      "confirm": "Confirm migration",
+      "applied": "Migration applied.",
+      "resultSummary": "{migrated} migrated, {scheduled} scheduled, {skipped} unchanged."
+    },
     "pricing": {
       "confirmTitle": "Change the public price",
       "current": "Current public price",
