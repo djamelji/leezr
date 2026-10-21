@@ -22003,3 +22003,17 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Modules/Platform/Plans/UseCases/MigrateSubscriptionPriceUseCase.php`, `app/Modules/Platform/Plans/UseCases/StalePreviewException.php` (nouveau), `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `resources/js/pages/platform/plans/_TariffMigrationWizard.vue`, `resources/js/modules/platform-admin/plans/plans.store.js`, `tests/Feature/PlanPricingGovernanceTest.php`.
 
 ---
+
+### ADR-591 — MRR calculé sur le prix contractuel (snapshot), pas le prix public (2026-10-22)
+
+**Incident signalé (PROD).** Sur `/platform/billing/overview`, modifier le prix public d'un plan faisait passer le **MRR (HT) de 108,00 € à 90 €** — alors que les abonnés existants conservent leur tarif (ADR-587).
+
+**Cause racine.** `BillingMetricsCalculationService::subscriptionMonthlyAmount()` (et `mrrHistory`) lisaient `Plan::price_monthly/price_yearly` (**prix catalogue public**) au lieu du **snapshot contractuel** `subscription.plan_price_cents`. Le MRR suivait donc le prix public, incohérent avec ce qui est réellement facturé. (PROD : sub#1 pro 2900¢ + sub#3 business 7900¢ = **10800¢ = 108,00 €** ; baisser un prix public affichait la somme recalculée au catalogue.)
+
+**Décision.** `subscriptionMonthlyAmount()` utilise le **prix contractuel** (`plan_price_cents`, mensualisé pour l'annuel), fallback catalogue pour les lignes héritées (null). `mrrHistory` et `computeMrrByCurrency` passent par le même helper → MRR et MRR par devise reflètent le contrat. Changer un prix public ne déplace plus le MRR des abonnés existants.
+
+**Preuve.** `MrrUsesContractedPriceTest` (MRR = 108,00 € stable après passage du prix public de pro à 11,00 €). Régression : **240 tests verts** (metrics/overview/subscription/pricing/plan).
+
+**Fichiers** : `app/Core/Billing/BillingMetricsCalculationService.php`, `tests/Feature/MrrUsesContractedPriceTest.php`.
+
+---

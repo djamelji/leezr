@@ -118,15 +118,17 @@ class BillingMetricsCalculationService
     {
         $plan = $plans[$sub->plan_key] ?? null;
 
-        if (! $plan) {
-            return 0;
-        }
+        // ADR-591: MRR must reflect the CONTRACTED price (snapshot, ADR-587), not the live public
+        // price — changing a plan's public price must NOT move the MRR of existing subscribers.
+        $contracted = $sub->plan_price_cents;
 
         if ($sub->interval === 'yearly') {
-            return (int) round(($plan->price_yearly ?? 0) / 12);
+            $yearly = $contracted ?? ($plan->price_yearly ?? 0);
+
+            return (int) round(($yearly ?? 0) / 12);
         }
 
-        return (int) ($plan->price_monthly ?? 0);
+        return (int) ($contracted ?? ($plan->price_monthly ?? 0));
     }
 
     public function mrrHistory(Collection $plans): array
@@ -141,22 +143,13 @@ class BillingMetricsCalculationService
             $subs = Subscription::where('is_current', 1)
                 ->whereIn('status', ['active', 'past_due'])
                 ->where('created_at', '<=', $monthEnd)
-                ->get(['plan_key', 'interval']);
+                ->get(['plan_key', 'interval', 'plan_price_cents']);
 
             $monthMrr = 0;
 
             foreach ($subs as $sub) {
-                $plan = $plans[$sub->plan_key] ?? null;
-
-                if (! $plan) {
-                    continue;
-                }
-
-                if ($sub->interval === 'yearly') {
-                    $monthMrr += (int) round(($plan->price_yearly ?? 0) / 12);
-                } else {
-                    $monthMrr += $plan->price_monthly ?? 0;
-                }
+                // ADR-591: use the contracted snapshot (fallback to catalog for legacy rows).
+                $monthMrr += $this->subscriptionMonthlyAmount($sub, $plans);
             }
 
             $series[] = $monthMrr;
