@@ -393,6 +393,13 @@ class DevSeeder extends Seeder
             ],
         );
 
+        // ADR-592: guarantee every seeded subscription carries a contracted-price snapshot. The
+        // creating hook (ADR-587) covers fresh rows, but idempotent re-seeds via updateOrCreate on
+        // PRE-EXISTING rows don't fire it — so backfill any null snapshot from the catalog here.
+        Subscription::whereNull('plan_price_cents')->get()->each(function (Subscription $sub) {
+            $sub->update(['plan_price_cents' => $sub->contractedPlanPriceCents()]);
+        });
+
         JobdomainGate::assignToCompany($pendingCompany, 'logistique');
 
         foreach (array_keys(ModuleRegistry::forScope('company')) as $key) {

@@ -22017,3 +22017,22 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/BillingMetricsCalculationService.php`, `tests/Feature/MrrUsesContractedPriceTest.php`.
 
 ---
+
+### ADR-592 — Sécurité du snapshot : capture explicite au renouvellement + garantie de seeding (2026-10-22)
+
+**Contexte (3 vérifications post-livraison).**
+1. **PROD dry-run** (`billing:reconstruct-contracted-price`, lecture seule) : abonnements **#1 (pro)** et **#3 (business)** = **ambigus** (aucune facture finalisée) → snapshot = catalogue courant (2900/7900), **aucune modification proposée, aucune écriture**.
+2. **DevSeeder** créait des subscriptions via `updateOrCreate` ; sur des rows **pré-existants**, le hook `creating` (ADR-587) ne se déclenche pas → `plan_price_cents` restait null (artefact DEV, invisible en PROD où les subs pré-existent la migration).
+3. **Renouvellement** : `contractedPlanPriceCents()` retombait **silencieusement** sur le catalogue quand le snapshot manquait.
+
+**Décision.**
+- **Renouvellement sûr & explicite** : si `plan_price_cents` est null et qu'un plan existe, `BillingRenewCommand` **capture** le prix catalogue courant comme snapshot contractuel **et le journalise explicitement** (`subscription.snapshot_captured_at_renewal` + log `billing`), puis facture ce prix figé — plus de fallback silencieux. Si **aucun plan** (prix indéterminable), le renouvellement est **différé** (jamais facturé à l'aveugle). ADR-575 (anti-cascade) préservé.
+- **Seeding garanti** : DevSeeder backfille toute souscription seedée sans snapshot (`whereNull('plan_price_cents')` → `contractedPlanPriceCents()`), idempotent.
+
+**Comportement snapshot absent/ambigu** : jamais de facturation à un prix inconnu ; soit capture explicite auditée (plan connu), soit différé (plan inconnu). Les cas **historiquement ambigus** (sans facture) restent au prix catalogue courant (= prix actuel, aucun changement de montant) et sont **signalés** par la reconstruction.
+
+**Preuves.** `SubscriptionSnapshotSafetyTest` (3 : capture explicite + audit au renouvellement ; backfill de seeding garantit un tarif exploitable ; hook snapshot à la création). Régression : **716 tests verts**.
+
+**Fichiers** : `app/Console/Commands/BillingRenewCommand.php`, `database/seeders/DevSeeder.php`, `tests/Feature/SubscriptionSnapshotSafetyTest.php`.
+
+---

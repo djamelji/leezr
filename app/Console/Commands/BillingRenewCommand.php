@@ -172,13 +172,36 @@ class BillingRenewCommand extends Command implements Isolatable
             $subscription->save();
         }
 
+        $interval = $subscription->interval ?? 'monthly';
+
+        // ADR-592: a MISSING contracted snapshot must never lead to a SILENT catalog-price billing.
+        // If a plan exists, capture its current price as the contracted snapshot NOW and record it
+        // explicitly (audit + log) so the pricing basis is deliberate and locked. If no plan exists,
+        // the price cannot be determined safely — the existing guard below defers (never bills blind).
+        if ($subscription->plan_price_cents === null && $plan) {
+            $captured = (int) ($interval === 'yearly' ? ($plan->price_yearly ?? 0) : ($plan->price_monthly ?? 0));
+            $subscription->plan_price_cents = $captured;
+            $subscription->save();
+            \Illuminate\Support\Facades\Log::channel('billing')->warning('[billing:renew] captured missing contracted snapshot from catalog', [
+                'subscription_id' => $subscription->id, 'company_id' => $company->id, 'captured_cents' => $captured,
+            ]);
+            app(\App\Core\Audit\AuditLogger::class)->logPlatform('subscription.snapshot_captured_at_renewal', 'subscription', (string) $subscription->id, [
+                'severity' => 'warning', 'metadata' => ['company_id' => $company->id, 'captured_cents' => $captured, 'reason' => 'missing_snapshot'],
+            ]);
+        }
+
         // Determine renewal price and period.
         // ADR-587: honour the CONTRACTED price snapshot — a public price change must NOT alter the
-        // amount billed to an existing subscriber. Falls back to the live catalog only for legacy
-        // rows without a snapshot.
-        $interval = $subscription->interval ?? 'monthly';
-        $price = $subscription->contractedPlanPriceCents()
-            ?? ($interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly);
+        // amount billed to an existing subscriber. A null snapshot with NO plan cannot be priced and
+        // is deferred by the guard below (never billed at an unknown price).
+        $price = $subscription->plan_price_cents
+            ?? ($plan ? ($interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly) : null);
+
+        if ($price === null) {
+            $this->line("  Deferred (no contracted price and no plan): company #{$company->id} — subscription #{$subscription->id}");
+
+            return 'deferred';
+        }
         $standardPeriodDays = $interval === 'yearly' ? 365 : 30;
 
         // Compute new period (start from previous period_end, not from now)
