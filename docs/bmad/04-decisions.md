@@ -21973,3 +21973,21 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/PlanPricingGovernanceService.php` (nouveau), `app/Modules/Platform/Plans/UseCases/MigrateSubscriptionPriceUseCase.php` (nouveau), `app/Modules/Platform/Plans/UseCases/UpsertPlanUseCase.php` (audit), `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `app/Console/Commands/BillingRenewCommand.php` (migration programmée), `routes/platform.php`, `tests/Feature/PlanPricingGovernanceTest.php`.
 
 ---
+
+### ADR-589 — Reconstruction du prix contractuel historique (pré-requis déploiement PROD) (2026-10-21)
+
+**Risque identifié (M4 §3).** Le backfill ADR-587 fige `plan_price_cents` au prix **catalogue courant**, qui n'est **pas nécessairement** le prix initialement souscrit. Sur PROD, migrer ou renouveler sur cette base pourrait appliquer un mauvais tarif.
+
+**Décision.** Commande `billing:reconstruct-contracted-price` (**dry-run par défaut**, `--apply` pour écrire) :
+- Source fiable = **première facture finalisée** de la souscription → ligne `plan` (`unit_amount` = montant réellement facturé HT).
+- Reconstruit `plan_price_cents` depuis cette ligne quand un historique existe ; **audite** chaque correction (`subscription.contracted_price_reconstructed`, avec facture source).
+- **N'invente jamais** : les souscriptions **sans facture** sont signalées **ambiguës** et laissées intactes (le snapshot de création — prix catalogue au moment de la souscription — reste, et leur migration doit être bloquée jusqu'à revue).
+- Idempotente, lecture seule sauf `--apply`, jamais exécutée automatiquement.
+
+**Procédure de déploiement PROD (à autoriser).** 1) `billing:reconstruct-contracted-price` (dry-run) → revue du rapport (reconstruites / déjà correctes / ambiguës) ; 2) correction des ambiguës hors bande si nécessaire ; 3) `--apply` sous autorisation. Aucune donnée PROD modifiée ici.
+
+**Preuves.** `ReconstructContractedPriceTest` (2 : reconstruit 3000 depuis la facture et non 5000 du catalogue ; sub sans historique = ambiguë, non modifiée). Dry-run n'écrit rien.
+
+**Fichiers** : `app/Console/Commands/ReconstructContractedPriceCommand.php`, `tests/Feature/ReconstructContractedPriceTest.php`.
+
+---
