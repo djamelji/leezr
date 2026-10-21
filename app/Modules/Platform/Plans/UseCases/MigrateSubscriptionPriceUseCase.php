@@ -41,7 +41,14 @@ class MigrateSubscriptionPriceUseCase
             $byCur[$cur]['total_delta_cents'] += $delta;
         }
 
-        return ['lines' => $lines, 'by_currency' => array_values($byCur)];
+        // Concurrency basis: the contracted price each selected subscription had AT PREVIEW time.
+        // apply() re-checks it so a stale preview (price/contract changed meanwhile) is never applied.
+        $basis = [];
+        foreach ($subs as $s) {
+            $basis[$s->id] = (int) ($s->contractedPlanPriceCents() ?? 0);
+        }
+
+        return ['lines' => $lines, 'by_currency' => array_values($byCur), 'basis' => $basis];
     }
 
     /**
@@ -52,15 +59,30 @@ class MigrateSubscriptionPriceUseCase
      * @param  array<int>  $subscriptionIds
      * @return array{migrated: int, scheduled: int, skipped: int}
      */
-    public function apply(array $subscriptionIds, int $newPriceCents, string $timing = 'immediate', ?Carbon $effectiveAt = null, ?int $actorId = null): array
+    public function apply(array $subscriptionIds, int $newPriceCents, string $timing = 'immediate', ?Carbon $effectiveAt = null, ?int $actorId = null, ?array $expected = null): array
     {
         if (! in_array($timing, ['immediate', 'at_renewal'], true)) {
             throw new \DomainException('Invalid migration timing.');
         }
 
-        return DB::transaction(function () use ($subscriptionIds, $newPriceCents, $timing, $effectiveAt, $actorId) {
+        return DB::transaction(function () use ($subscriptionIds, $newPriceCents, $timing, $effectiveAt, $actorId, $expected) {
             $stats = ['migrated' => 0, 'scheduled' => 0, 'skipped' => 0];
             $subs = Subscription::whereIn('id', $subscriptionIds)->lockForUpdate()->get();
+
+            // Concurrency guard (ADR-590): refuse a STALE preview — if any selected subscription's
+            // contracted price changed since the preview, abort the whole operation (no silent apply).
+            if ($expected !== null) {
+                $conflicts = [];
+                foreach ($subs as $s) {
+                    $current = (int) ($s->contractedPlanPriceCents() ?? 0);
+                    if (array_key_exists($s->id, $expected) && (int) $expected[$s->id] !== $current) {
+                        $conflicts[] = $s->id;
+                    }
+                }
+                if (! empty($conflicts)) {
+                    throw new StalePreviewException($conflicts);
+                }
+            }
 
             foreach ($subs as $s) {
                 if ($timing === 'immediate') {

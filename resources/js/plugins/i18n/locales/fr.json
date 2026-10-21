@@ -435,6 +435,7 @@
       "to": "Nouveau",
       "confirm": "Confirmer la migration",
       "applied": "Migration appliquée.",
+      "stale": "Les conditions ont changé depuis la prévisualisation. Veuillez prévisualiser à nouveau.",
       "resultSummary": "{migrated} migrée(s), {scheduled} programmée(s), {skipped} inchangée(s)."
     },
     "pricing": {

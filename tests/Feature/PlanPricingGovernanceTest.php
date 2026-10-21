@@ -120,6 +120,33 @@ class PlanPricingGovernanceTest extends TestCase
         $this->assertSame(100, (int) $inv->subtotal, 'renewal billed the migrated price');
     }
 
+    public function test_stale_preview_is_refused_when_contracted_price_changed_meanwhile(): void
+    {
+        $sub = $this->subscribe('co-stale');
+        $uc = new MigrateSubscriptionPriceUseCase();
+
+        // Preview captures the basis (3000).
+        $preview = $uc->preview([$sub->id], 3900);
+        $this->assertSame(3000, $preview['basis'][$sub->id]);
+
+        // Someone changes the contracted price in between.
+        $sub->update(['plan_price_cents' => 2500]);
+
+        // Confirming against the STALE basis is refused — no silent apply.
+        try {
+            $uc->apply([$sub->id], 3900, 'immediate', null, 1, $preview['basis']);
+            $this->fail('stale preview should be refused');
+        } catch (\App\Modules\Platform\Plans\UseCases\StalePreviewException $e) {
+            $this->assertContains($sub->id, $e->subscriptionIds);
+        }
+        $this->assertSame(2500, (int) $sub->fresh()->plan_price_cents, 'not migrated by a stale apply');
+
+        // A fresh preview + apply succeeds.
+        $fresh = $uc->preview([$sub->id], 3900);
+        $r = $uc->apply([$sub->id], 3900, 'immediate', null, 1, $fresh['basis']);
+        $this->assertSame(1, $r['migrated']);
+    }
+
     public function test_public_price_change_is_audited(): void
     {
         $plan = Plan::where('key', 'pro')->first();

@@ -86,10 +86,10 @@ export const usePlatformPlansStore = defineStore('platformPlans', {
       })
     },
 
-    async applyMigration(subscriptionIds, newPriceCents, timing, effectiveAt = null) {
+    async applyMigration(subscriptionIds, newPriceCents, timing, effectiveAt = null, expected = null) {
       return $platformApi('/pricing/migration/apply', {
         method: 'POST',
-        body: { subscription_ids: subscriptionIds, new_price_cents: newPriceCents, timing, effective_at: effectiveAt },
+        body: { subscription_ids: subscriptionIds, new_price_cents: newPriceCents, timing, effective_at: effectiveAt, expected },
       })
     },
 

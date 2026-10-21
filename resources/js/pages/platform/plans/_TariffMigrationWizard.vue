@@ -65,12 +65,17 @@ async function goPreview() {
 async function confirmApply() {
   loading.value = true
   try {
-    result.value = await store.applyMigration(selected.value, newPriceCents.value, timing.value, timing.value === 'at_renewal' ? effectiveAt.value : null)
+    // Pass the preview basis so a stale preview (price changed meanwhile) is refused (409).
+    result.value = await store.applyMigration(selected.value, newPriceCents.value, timing.value, timing.value === 'at_renewal' ? effectiveAt.value : null, preview.value?.basis || null)
     step.value = 5
     toast(t('plans.migration.applied'), 'success')
   }
   catch (e) {
-    toast(e?.data?.message || t('common.error'), 'error')
+    if (e?.status === 409) {
+      toast(t('plans.migration.stale'), 'warning')
+      step.value = 1 // force re-preview
+    }
+    else { toast(e?.data?.message || t('common.error'), 'error') }
   }
   finally { loading.value = false }
 }

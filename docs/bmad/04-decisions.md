@@ -21991,3 +21991,15 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Console/Commands/ReconstructContractedPriceCommand.php`, `tests/Feature/ReconstructContractedPriceTest.php`.
 
 ---
+
+### ADR-590 — Contrôle de concurrence du wizard de migration tarifaire (preview périmé refusé) (2026-10-21)
+
+**Risque (pré-déploiement).** Entre la prévisualisation et la confirmation d'une migration tarifaire, le prix contractuel d'une souscription sélectionnée peut changer (autre opérateur, autre migration). Appliquer alors l'opération sur une base **périmée** fausserait le tarif.
+
+**Décision.** `MigrateSubscriptionPriceUseCase::preview()` renvoie une **base de concurrence** `basis` (id → prix contractuel au moment du preview). `apply(..., ?array $expected)` re-vérifie, **sous verrou** (`lockForUpdate`), que le prix contractuel courant de chaque souscription correspond à la base ; en cas d'écart, lève `StalePreviewException` → l'API répond **409** avec `conflict_subscription_ids`, **aucune écriture**. Le wizard transmet `preview.basis` et, sur 409, repasse à l'étape de sélection pour re-prévisualiser. Idempotence et audit (ADR-588) conservés.
+
+**Preuves.** `PlanPricingGovernanceTest::test_stale_preview_is_refused_when_contracted_price_changed_meanwhile` (preview 3000 → changement à 2500 → apply refusé, non migré ; preview frais → apply OK). Régression : **678 tests verts**. Build clean.
+
+**Fichiers** : `app/Modules/Platform/Plans/UseCases/MigrateSubscriptionPriceUseCase.php`, `app/Modules/Platform/Plans/UseCases/StalePreviewException.php` (nouveau), `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `resources/js/pages/platform/plans/_TariffMigrationWizard.vue`, `resources/js/modules/platform-admin/plans/plans.store.js`, `tests/Feature/PlanPricingGovernanceTest.php`.
+
+---

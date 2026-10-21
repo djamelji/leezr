@@ -58,6 +58,7 @@ class PlanCrudController
             'new_price_cents' => ['required', 'integer', 'min:0'],
             'timing' => ['required', 'in:immediate,at_renewal'],
             'effective_at' => ['nullable', 'date'],
+            'expected' => ['nullable', 'array'], // concurrency basis from the preview (id => cents)
         ]);
 
         try {
@@ -67,7 +68,11 @@ class PlanCrudController
                 $validated['timing'],
                 isset($validated['effective_at']) ? \Carbon\Carbon::parse($validated['effective_at']) : null,
                 $request->user()?->id,
+                $validated['expected'] ?? null,
             );
+        } catch (\App\Modules\Platform\Plans\UseCases\StalePreviewException $e) {
+            // 409 Conflict — the preview is stale; the operator must re-preview before applying.
+            return response()->json(['message' => $e->getMessage(), 'conflict_subscription_ids' => $e->subscriptionIds], 409);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
