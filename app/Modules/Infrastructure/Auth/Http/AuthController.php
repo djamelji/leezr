@@ -187,4 +187,37 @@ class AuthController extends Controller
             'companies' => UserCompaniesReadModel::forUser($request->user()),
         ]);
     }
+
+    /**
+     * Temporary identity diagnostic — returns ONLY the current session's own authenticated user
+     * (no other accounts), so a reported "owner shows Alice" mismatch can be settled definitively:
+     * server session identity vs client display. Read-only, never cached. Also logged server-side.
+     */
+    public function whoami(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        \Illuminate\Support\Facades\Log::info('whoami.diagnostic', [
+            'auth_user_id' => $user?->id,
+            'auth_user_email' => $user?->email,
+            'x_company_id' => $request->header('X-Company-Id'),
+            'ip' => $request->ip(),
+            'ua' => substr((string) $request->userAgent(), 0, 120),
+        ]);
+
+        return response()->json([
+            'authenticated_user' => $user ? [
+                'id' => $user->id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'display_name' => $user->display_name,
+                'is_platform_admin' => (bool) $user->is_platform_admin,
+            ] : null,
+            'guard' => 'sanctum',
+            'x_company_id_header' => $request->header('X-Company-Id'),
+            'server_time' => now()->toIso8601String(),
+            'note' => 'This is the user your SESSION COOKIE authenticates as, server-side.',
+        ])->header('Cache-Control', 'no-store, private');
+    }
 }

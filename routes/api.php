@@ -85,6 +85,9 @@ Route::post('/runtime-error', RuntimeErrorController::class)->middleware('thrott
 Route::middleware(['auth:sanctum', 'session.governance'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    // Temporary identity diagnostic (read-only, own session only) — reveals the server-authenticated
+    // user for the current session cookie, to disambiguate a reported identity mismatch.
+    Route::get('/whoami', [AuthController::class, 'whoami']);
     Route::get('/my-companies', [AuthController::class, 'myCompanies']);
 
     // Heartbeat (session keepalive — governance middleware handles TTL header)
