@@ -118,6 +118,11 @@ const cancelAtPeriodEnd = computed(() => overview.value?.subscription?.cancel_at
 const scheduledChange = computed(() => overview.value?.subscription?.scheduled_change)
 const pendingSub = computed(() => store.pendingSubscription)
 
+// ADR-585: consolidated finance summary (shared ledger definitions) + ADR-575 deferred renewal.
+const financeSummary = computed(() => overview.value?.finance_summary?.[0] ?? null)
+const renewalReview = computed(() => overview.value?.subscription?.renewal_review_required === true)
+const fmtSum = key => financeSummary.value ? formatMoney(financeSummary.value[key], { currency: financeSummary.value.currency }) : '—'
+
 const statusColor = computed(() => subscriptionStatusColor(subscriptionStatus.value))
 
 const canCancel = computed(() => {
@@ -221,6 +226,44 @@ const cancelSubscription = async () => {
     </VAlert>
 
     <template v-else-if="overview">
+      <!-- ADR-575: deferred renewal awaiting review — next invoice not confirmed, no auto retro-charge -->
+      <VAlert
+        v-if="renewalReview"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+        data-test="billing-renewal-review"
+      >
+        <VAlertTitle>{{ t('companyBilling.renewalReview.title') }}</VAlertTitle>
+        {{ t('companyBilling.renewalReview.desc') }}
+      </VAlert>
+
+      <!-- ADR-585: finance summary (billed / paid / outstanding = ledger AR / overdue), shared defs -->
+      <VCard
+        v-if="financeSummary"
+        class="mb-4"
+        data-test="billing-finance-summary"
+      >
+        <VCardText class="d-flex flex-wrap gap-6">
+          <div>
+            <div class="text-caption text-medium-emphasis">{{ t('companyBilling.summary.billed') }}</div>
+            <div class="text-h6">{{ fmtSum('billed_cents') }}</div>
+          </div>
+          <div>
+            <div class="text-caption text-medium-emphasis">{{ t('companyBilling.summary.paid') }}</div>
+            <div class="text-h6 text-success">{{ fmtSum('paid_cents') }}</div>
+          </div>
+          <div>
+            <div class="text-caption text-medium-emphasis">{{ t('companyBilling.summary.outstanding') }}</div>
+            <div class="text-h6 text-primary" data-test="summary-outstanding">{{ fmtSum('outstanding_cents') }}</div>
+          </div>
+          <div v-if="financeSummary.overdue_cents > 0">
+            <div class="text-caption text-medium-emphasis">{{ t('companyBilling.summary.overdue') }}</div>
+            <div class="text-h6 text-error">{{ fmtSum('overdue_cents') }}</div>
+          </div>
+        </VCardText>
+      </VCard>
+
       <BillingAlerts
         :overview="overview"
         :has-payment-issue="hasPaymentIssue"

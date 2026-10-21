@@ -1211,6 +1211,16 @@
   },
   "companyBilling": {
     "title": "Facturation",
+    "summary": {
+      "billed": "Facturé",
+      "paid": "Déjà payé",
+      "outstanding": "Restant dû",
+      "overdue": "Échu"
+    },
+    "renewalReview": {
+      "title": "Renouvellement en cours de revue",
+      "desc": "Votre prochaine facture n'est pas encore confirmée : elle fait l'objet d'une revue. Aucun prélèvement rétroactif automatique n'est déclenché (ADR-575)."
+    },
     "tabs": {
       "plan": "Abonnement",
       "overview": "Vue d'ensemble",

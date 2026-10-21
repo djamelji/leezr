@@ -21879,3 +21879,23 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php`, `app/Modules/Platform/Billing/Http/PlatformFinancialController.php`, `routes/platform.php`, `resources/js/pages/platform/billing/{_ArOutstandingWidget,_RevenueTrendWidget,_BillingDashboard}.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/FinanceReconciliationTest.php`, `tests/e2e/platform-billing-drilldown.spec.js`.
 
 ---
+
+### ADR-585 — Billing Cockpit 2.0 Phase D : cockpit Company adossé aux définitions financières partagées + renouvellement différé visible (2026-10-21)
+
+**Objectif.** `/company/billing` doit répondre aux 6 questions du dirigeant (ce qu'il paie, pourquoi, déjà payé, restant dû, prochaine échéance, conséquences d'un changement) avec des montants **cohérents entre pages** et **alignés sur les définitions Platform**.
+
+**Constats (audit lecture seule).** Le cockpit Company existait (overview/plan/invoices/payment-methods/activity) mais : (1) `overview()` calculait les créances via `Σ amount_due (open+overdue)` — pouvant **diverger du grand livre AR** utilisé côté Platform ; (2) **aucun total « déjà payé » ni « facturé »** consolidé ; (3) l'état **`renewal_review_required` (ADR-575) n'était pas surfacé au Company** (seul un `renewal_overdue` générique l'était). Le next-invoice preview était déjà correctement **étiqueté estimation** (`is_estimate`, aucune persistance — vérifié).
+
+**Décision.**
+- **Résumé financier partagé** : `CompanyBillingReadService::financeSummary(company)` (ADR-585) réutilise `FinanceReconciliationService::receivablesBreakdown($companyId)` → **mêmes définitions que Platform** : `billed` (Σ montant factures finalisées), `paid` (**grand livre CASH net**), `outstanding` (**grand livre AR net** = net recouvrable), `overdue` (factures échues), `reconciled` + `gap_cents`. **Par devise, en centimes entiers** (jamais sommé entre devises). Ajouté au payload `/billing/overview` (clé additive, aucune régression). Les deux cockpits ne peuvent plus se contredire.
+- **Renouvellement différé visible** : `currentSubscription()` expose `renewal_review_required` + `renewal_deferred_at` (depuis `subscription.metadata`, ADR-575). Le cockpit affiche une **alerte claire** : prochaine facture **non confirmée**, **aucun prélèvement rétroactif automatique**, actions réelles seulement (pas de paiement/réactivation inventés).
+- **UI** (`_BillingOverview.vue`) : bande résumé (Facturé / Déjà payé / Restant dû / Échu) + alerte renouvellement, i18n FR/EN. Parcours existants (changement de plan, paiement, PDF, previews) préservés.
+- **Isolation** : inchangée et confirmée — tout est `where('company_id', …)` + `SetCompanyContext` (membership) ; `financeSummary` est strictement company-scopé.
+
+**Preuves.** `CompanyFinanceSummaryTest` (3 : résumé partagé + paiement partiel réconcilié ; isolation A≠B ; renouvellement différé surfacé) ; `company-billing-cockpit.spec.js` (3 E2E : résumé réconcilié en centimes, next-invoice **estimation** jamais émise, contexte company étranger refusé). Régression : **1107 tests verts** (billing/finance/company/invoice/payment/subscription/ledger). Build front clean. Aucune donnée PROD modifiée, aucun push/déploiement.
+
+**Limites / reliquats (phases E/F).** Vue Platform « Anomalies & rapprochements » (branchée sur l'endpoint réconciliation ADR-583) ; ancienneté des créances (0-30/31-60/61-90/90+) ; filtres/tableaux opérationnels ; UI multi-devise ; i18n AR/ES ; E2E de régression complets Platform+Company.
+
+**Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (financeSummary + renewal flag), `resources/js/pages/company/billing/_BillingOverview.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/CompanyFinanceSummaryTest.php`, `tests/e2e/company-billing-cockpit.spec.js`.
+
+---

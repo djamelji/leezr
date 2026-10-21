@@ -125,6 +125,9 @@ class CompanyBillingReadService
             'wallet_balance' => $walletBalance,
             'outstanding_invoices' => $outstandingCount,
             'outstanding_amount' => $outstandingAmount,
+            // ADR-585: consolidated finance summary sharing the Platform ledger definitions
+            // (billed / paid / outstanding = ledger AR / overdue), per currency, in cents.
+            'finance_summary' => self::financeSummary($company),
             'currency' => $currency,
             'payment_method' => $paymentMethod,
             'allowed_payment_methods' => PaymentPolicy::allowedMethods($company),
@@ -284,6 +287,44 @@ class CompanyBillingReadService
     /**
      * Current active/trialing/past_due subscription for the company.
      */
+    /**
+     * Consolidated, per-currency finance summary for a company (ADR-585). Shares the Platform
+     * ledger definitions so the two cockpits never contradict each other:
+     *   billed  = Σ invoice amount (finalized, non-void)
+     *   paid    = ledger CASH net (encaissé)
+     *   outstanding = ledger AR net (= net recoverable, same as Platform receivables)
+     *   overdue = Σ amount_due of past-due open invoices (document view)
+     * A `reconciled` flag + `gap_cents` expose any ledger↔documents divergence (never hidden).
+     *
+     * @return array<int, array<string, mixed>>  one entry per currency, integer cents
+     */
+    public static function financeSummary(Company $company): array
+    {
+        $recv = collect(FinanceReconciliationService::receivablesBreakdown($company->id))->keyBy('currency');
+
+        $cash = LedgerEntry::where('company_id', $company->id)->where('account_code', 'CASH')
+            ->selectRaw('currency, SUM(debit) d, SUM(credit) c')->groupBy('currency')->get()->keyBy('currency');
+
+        $billed = Invoice::where('company_id', $company->id)->where('status', '!=', 'void')
+            ->selectRaw('currency, SUM(amount) billed')->groupBy('currency')->get()->keyBy('currency');
+
+        $overdue = Invoice::where('company_id', $company->id)->whereIn('status', ['open', 'overdue'])
+            ->where('amount_due', '>', 0)->whereNotNull('due_at')->where('due_at', '<', now())
+            ->selectRaw('currency, SUM(amount_due) overdue')->groupBy('currency')->get()->keyBy('currency');
+
+        $currencies = collect([$recv->keys(), $cash->keys(), $billed->keys()])->flatten()->unique()->values();
+
+        return $currencies->map(fn ($cur) => [
+            'currency' => $cur,
+            'billed_cents' => (int) ($billed[$cur]->billed ?? 0),
+            'paid_cents' => (int) round((float) ($cash[$cur]->d ?? 0) - (float) ($cash[$cur]->c ?? 0)),
+            'outstanding_cents' => (int) ($recv[$cur]['net_recoverable_cents'] ?? 0),
+            'overdue_cents' => (int) ($overdue[$cur]->overdue ?? 0),
+            'reconciled' => (bool) ($recv[$cur]['reconciled'] ?? true),
+            'gap_cents' => (int) ($recv[$cur]['gap_cents'] ?? 0),
+        ])->all();
+    }
+
     public static function currentSubscription(Company $company): ?array
     {
         $subscription = Subscription::where('company_id', $company->id)
@@ -310,6 +351,10 @@ class CompanyBillingReadService
             'trial_ends_at' => $subscription->trial_ends_at?->toISOString(),
             'cancel_at_period_end' => $subscription->cancel_at_period_end ?? false,
             'created_at' => $subscription->created_at->toISOString(),
+            // ADR-575 / ADR-585: deferred renewal awaiting manual review — surfaced so the company
+            // sees the next invoice is NOT confirmed and that NO retroactive charge is auto-triggered.
+            'renewal_review_required' => (bool) ($subscription->metadata['renewal_review_required'] ?? false),
+            'renewal_deferred_at' => $subscription->metadata['renewal_deferred_at'] ?? null,
             'scheduled_change' => $scheduledIntent ? [
                 'id' => $scheduledIntent->id,
                 'from_plan_key' => $scheduledIntent->from_plan_key,

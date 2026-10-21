@@ -1211,6 +1211,16 @@
   },
   "companyBilling": {
     "title": "Billing",
+    "summary": {
+      "billed": "Billed",
+      "paid": "Paid",
+      "outstanding": "Outstanding",
+      "overdue": "Overdue"
+    },
+    "renewalReview": {
+      "title": "Renewal under review",
+      "desc": "Your next invoice is not confirmed yet: it is under review. No automatic retroactive charge is triggered (ADR-575)."
+    },
     "tabs": {
       "plan": "Plan",
       "overview": "Overview",
