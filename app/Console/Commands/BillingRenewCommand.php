@@ -160,6 +160,18 @@ class BillingRenewCommand extends Command implements Isolatable
             return 'skipped';
         }
 
+        // ADR-588: apply a SCHEDULED tariff migration whose effective date has arrived (explicit,
+        // previously authorized + audited). This re-snapshots the contracted price at renewal.
+        $scheduled = $subscription->metadata['scheduled_price_migration'] ?? null;
+        if ($scheduled && isset($scheduled['new_price_cents'], $scheduled['effective_at'])
+            && \Carbon\Carbon::parse($scheduled['effective_at'])->lte(now())) {
+            $meta = $subscription->metadata ?? [];
+            unset($meta['scheduled_price_migration']);
+            $subscription->plan_price_cents = (int) $scheduled['new_price_cents'];
+            $subscription->metadata = $meta;
+            $subscription->save();
+        }
+
         // Determine renewal price and period.
         // ADR-587: honour the CONTRACTED price snapshot — a public price change must NOT alter the
         // amount billed to an existing subscriber. Falls back to the live catalog only for legacy

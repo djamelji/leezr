@@ -157,6 +157,14 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/plans', [PlanCrudController::class, 'store']);
         Route::put('/plans/{id}', [PlanCrudController::class, 'update']);
         Route::put('/plans/{id}/toggle-active', [PlanCrudController::class, 'toggleActive']);
+        // ADR-588: pricing governance impact (read-only) — who keeps their contracted price.
+        Route::get('/plans/{key}/pricing-impact', [PlanCrudController::class, 'pricingImpact']);
+    });
+
+    // Tariff migration (explicit, financial) — stronger permission (ADR-588)
+    Route::middleware(['module.active:platform.plans', 'platform.permission:manage_billing'])->group(function () {
+        Route::post('/pricing/migration/preview', [PlanCrudController::class, 'migrationPreview']);
+        Route::post('/pricing/migration/apply', [PlanCrudController::class, 'migrationApply']);
     });
 
     // Company users (read-only supervision)

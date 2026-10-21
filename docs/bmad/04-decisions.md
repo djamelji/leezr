@@ -21949,3 +21949,27 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `database/migrations/2026_10_21_160000_add_plan_price_cents_to_subscriptions.php`, `app/Core/Billing/Subscription.php`, `app/Console/Commands/BillingRenewCommand.php`, `app/Core/Billing/PricingEngine.php`, `app/Core/Billing/PlanChangeExecutor.php`, `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/_BillingOverview.vue`, `tests/Feature/SubscriptionPriceProtectionTest.php`.
 
 ---
+
+### ADR-588 — Gouvernance tarifaire Platform (M4-A/B/C) : impact, audit du prix public, migration tarifaire explicite (2026-10-21)
+
+**Contexte.** Suite à ADR-587 (snapshot de prix protégeant les abonnés existants), il faut outiller la **gouvernance** : comprendre l'impact d'un changement de prix public, tracer qui change quoi, et migrer explicitement des clients vers un nouveau tarif — **sans migration de masse automatique**.
+
+**Décision (backend, lecture seule + UseCase métier — aucun moteur tarifaire parallèle).**
+- **Impact (M4-A)** : `PlanPricingGovernanceService::impact(planKey, interval, ?proposedCents)` — prix public actuel, prix envisagé, **nombre réel de souscriptions concernées**, et distribution des **prix contractuels par devise** (jamais mélangées), en centimes. Alimente le message « les N entreprises déjà abonnées conservent leur tarif contractuel ». Endpoint `GET /api/platform/plans/{key}/pricing-impact` (gated `manage_plans`, `no-store`).
+- **Audit du prix public (M4-B)** : `UpsertPlanUseCase` journalise `plan.public_price_changed` (qui/quand/avant/après, severity warning) dans l'Audit Core à chaque changement de prix. Les abonnés existants **ne sont pas migrés** (snapshot ADR-587 conservé).
+- **Migration tarifaire explicite (M4-C)** : `MigrateSubscriptionPriceUseCase` —
+  - `preview(ids, newPriceCents)` : différentiel par souscription + total **par devise**, **aucun effet financier** (aucune facture/paiement émis).
+  - `apply(ids, newPriceCents, timing, effectiveAt, actorId)` : **atomique** (lock), **idempotent** (saute les souscriptions déjà au tarif), **audité** (`subscription.price_migrated` / `subscription.price_migration_scheduled`). `immediate` re-snapshote `plan_price_cents` ; `at_renewal` planifie dans `metadata.scheduled_price_migration` (date d'effet).
+  - `BillingRenewCommand` **applique la migration programmée** au renouvellement dont la date d'effet est atteinte (re-snapshot + purge du planning), puis facture au nouveau tarif.
+  - Endpoints `POST /api/platform/pricing/migration/{preview,apply}` gated **`manage_billing`** (permission financière renforcée).
+- **Aucune migration de masse auto** : un changement de prix public ne migre jamais ; seule une migration explicite autorisée modifie un tarif contractuel.
+
+**Garde-fous.** Transactions atomiques, idempotence, audit, pas de facture/paiement en preview, isolation (requêtes company-scopées en aval), ADR-575/587 préservés, pas de mélange de devises. Aucune donnée financière PROD modifiée, aucun push/déploiement.
+
+**Preuves.** `PlanPricingGovernanceTest` (6 : impact réel par devise ; changement public ne migre pas ; preview sans effet ; apply immédiat idempotent + audité ; migration programmée appliquée au renouvellement ; changement de prix public audité). Régression : **1226 tests verts**.
+
+**Reliquats (M4-D/E).** UI premium Platform (dialogue de changement de prix avec impact + wizard de migration tarifaire preview/date d'effet/confirmation renforcée, badges « Tarif public / contractuel / historique », thème Vuexy, responsive, dark mode) ; cohérence Company (comparaison de plans = tarifs publics vs contractuel affiché) ; E2E Playwright UI→API→DB.
+
+**Fichiers** : `app/Core/Billing/ReadModels/PlanPricingGovernanceService.php` (nouveau), `app/Modules/Platform/Plans/UseCases/MigrateSubscriptionPriceUseCase.php` (nouveau), `app/Modules/Platform/Plans/UseCases/UpsertPlanUseCase.php` (audit), `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `app/Console/Commands/BillingRenewCommand.php` (migration programmée), `routes/platform.php`, `tests/Feature/PlanPricingGovernanceTest.php`.
+
+---
