@@ -23,9 +23,11 @@ const amountColor = computed(() => {
 
 const formattedAmount = computed(() => {
   if (!props.data) return '—'
-  if (props.data.currency === 'MULTI') return props.data.outstanding.toFixed(2)
+  // `outstanding` is returned in integer CENTS by the ledger read service; formatMoney expects
+  // cents and divides by 100 (bugfix ADR-582: the previous `* 100` showed cents as euros, ×100).
+  if (props.data.currency === 'MULTI') return (props.data.outstanding / 100).toFixed(2)
 
-  return formatMoney(Math.round(props.data.outstanding * 100), { currency: props.data.currency || 'EUR' })
+  return formatMoney(Math.round(props.data.outstanding), { currency: props.data.currency || 'EUR' })
 })
 </script>
 

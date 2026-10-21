@@ -1,6 +1,7 @@
 <script setup>
 import { hexToRgb } from '@layouts/utils'
 import { useTheme } from 'vuetify'
+import { formatMoney } from '@/utils/money'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -90,10 +91,11 @@ function formatTooltipDate(val) {
 }
 
 function formatCurrencyValue(val) {
+  // Series values are integer CENTS from the ledger (bugfix ADR-582). formatMoney divides by 100.
   const cur = props.data?.currency
-  if (!cur || cur === 'MULTI') return val.toFixed(2)
+  if (!cur || cur === 'MULTI') return (val / 100).toFixed(2)
 
-  return new Intl.NumberFormat(locale.value, { style: 'currency', currency: cur }).format(val)
+  return formatMoney(val, { currency: cur })
 }
 
 // ── Chart options by visual mode (width-driven) ──
@@ -232,11 +234,11 @@ const chartSeries = computed(() => [
 const summaryValue = computed(() => {
   const series = props.data?.chart?.series || []
   if (!series.length) return null
-  const total = series.reduce((acc, v) => acc + v, 0)
+  const total = series.reduce((acc, v) => acc + v, 0) // integer cents
   const cur = props.data?.currency
-  if (!cur || cur === 'MULTI') return total.toFixed(0)
+  if (!cur || cur === 'MULTI') return (total / 100).toFixed(0)
 
-  return new Intl.NumberFormat(locale.value, { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(total)
+  return formatMoney(total, { currency: cur })
 })
 </script>
 

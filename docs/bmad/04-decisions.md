@@ -21802,3 +21802,37 @@ Quatre situations distinctes :
 **Fichiers** : `tests/e2e/workforce-owner-identity-members.spec.js`, `tests/e2e/workforce-remote-smoke.spec.js` (tests uniquement — aucun changement runtime).
 
 ---
+
+### ADR-582 — Billing Cockpit 2.0 Phase A/B : source unique = grand livre, KPI en centimes, correction du bug d'échelle ×100 (2026-10-21)
+
+**Incident de départ.** `/platform/dashboard/overview` affichait « Tendance du chiffre d'affaires : 5 700 € » et « Créances clients : 6 840 € », introuvables dans `/platform/billing/overview`.
+
+**Diagnostic (preuves PROD, lecture seule).** Les deux KPI ne viennent **pas** des tables `invoices`/`payments` mais du **grand livre en partie double `financial_ledger_entries`** (via `PlatformBillingWidgetsReadService`, widgets dashboard-engine `BillingRevenueTrendWidget`/`BillingArOutstandingWidget`). PROD : **4 factures, 0 paiement, 0 avoir**.
+- `financial_ledger_entries.debit/credit` sont en **centimes** (ADR-274 a multiplié ×100 les décimales historiques). Valeurs PROD : AR débit 10320 / crédit 3480 → **net 6840** ; REVENUE crédits 30 j = **5700**.
+- **« 5 700 € » = 5700 centimes = 57,00 €** = Σ crédits `invoice_issued`/`REVENUE` (HT) sur 30 j (3 factures émises le 2026-10-21, company 1). Factures **impayées** → c'est du **facturé HT**, pas de l'encaissé.
+- **« 6 840 € » = 6840 centimes = 68,40 €** = AR net (Σ débit − Σ crédit) tout l'historique = 4 factures (10320) − write-off de la facture `uncollectible` #1 (3480). **Exclut** la facture passée en perte.
+- **Cause racine #1 — bug d'échelle ×100** : les widgets front traitaient ces centimes comme des **euros** (`_ArOutstandingWidget` faisait `formatMoney(outstanding * 100)`, `formatMoney` divisant déjà par 100 ; `_RevenueTrendWidget` formatait via `Intl.format(val)` sans ÷100). → montants affichés **×100**.
+- **Cause racine #2 — deux sources sans définition commune** : `/platform/billing/overview` calcule **MRR/ARR depuis `subscriptions`** (`BillingMetricsCalculationService`), pas le grand livre → irréconciliable avec le dashboard.
+- **Cause racine #3 — libellés ambigus** : « chiffre d'affaires » = facturé HT non encaissé ; « solde net impayé sur l'ensemble des factures » exclut en réalité les factures en write-off.
+
+**Décision.**
+1. **Le grand livre `financial_ledger_entries` est la source de vérité financière** des KPI transverses (facturation/encaissement/créances), en **centimes entiers**. `PlatformBillingWidgetsReadService::revenueTrendGlobal/arOutstandingGlobal` renvoient désormais des **`int` centimes** explicites.
+2. **Correction du bug ×100** côté front : les widgets consomment des centimes via `formatMoney(cents)` (sans `* 100` ; sans `Intl.format` brut). → 57,00 € / 68,40 € corrects.
+3. **Matrice de définitions KPI** (périmètre Platform, grand livre, EUR mono-devise ; agrégation multi-devise interdite sans conversion explicite — à traiter en phase ultérieure si `currency='MULTI'`) :
+
+| KPI | Signification | Source (ledger) | Période | TVA | Avoirs/Write-off |
+|---|---|---|---|---|---|
+| CA facturé (HT) | Montant **facturé** hors taxe émis | crédit `invoice_issued`/`REVENUE` | fenêtre glissante (30 j déf.) | **exclue** (VAT_PAYABLE séparé) | n/a |
+| Créances (AR) | Solde **restant dû** réel | Σ débit−crédit `AR` (tout l'historique) | — | **incluse** (TTC) | write-off **réduit** l'AR ; remboursement (CR CASH) **ne réduit pas** l'AR |
+| Encaissé | Montant réellement perçu | `payment_received`/`CASH` | fenêtre | incluse | — |
+
+   **Note métier (à arbitrer, non implémenté)** : pas de moteur de reconnaissance comptable du revenu → ces indicateurs sont **commerciaux/de facturation**, pas un résultat comptable. « CA facturé » ≠ « encaissé » ≠ « revenu reconnu ».
+4. **Incohérence de posting historique repérée** (non corrigée — pas de réécriture d'historique) : la facture #1 (mai) a posté REVENUE = TTC (3480) sans ligne VAT_PAYABLE, alors que les factures d'octobre splittent HT+TVA. Hors fenêtre 30 j, sans impact sur le KPI courant ; documenté.
+
+**Preuves.** `PlatformBillingKpiReconciliationTest` (2 cas) reproduit la composition PROD exacte : AR = **6840 centimes** (int, exclut le write-off, = Σ TTC des 3 factures open), CA 30 j = **5700 centimes** (int, HT, hors facture de mai). Régression : **766 tests billing verts**. Build front clean.
+
+**Garde-fous.** Aucune donnée financière PROD modifiée (lecture seule). Aucun déploiement (en attente d'autorisation). Prochaines phases : service de métriques unifié Platform/Company, drill-down créances (liste des factures composant le total), cockpit Company (payé/dû/prochaine échéance étiquetés), vues de rapprochement/anomalies, multi-devise explicite, i18n, E2E A-J.
+
+**Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php`, `resources/js/pages/platform/billing/_ArOutstandingWidget.vue`, `resources/js/pages/platform/billing/_RevenueTrendWidget.vue`, `tests/Feature/PlatformBillingKpiReconciliationTest.php`.
+
+---

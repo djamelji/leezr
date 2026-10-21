@@ -134,7 +134,8 @@ class PlatformBillingWidgetsReadService
             )
             ->first();
 
-        $outstanding = (float) $result->total_debit - (float) $result->total_credit;
+        // Integer CENTS (ADR-582): AR net = Σ debit − Σ credit over all AR ledger rows.
+        $outstanding = (int) round((float) $result->total_debit - (float) $result->total_credit);
 
         return ['outstanding' => $outstanding];
     }
@@ -180,7 +181,9 @@ class PlatformBillingWidgetsReadService
         $seriesMap = [];
 
         foreach ($rows as $row) {
-            $seriesMap[$row->date_label] = (float) $row->total;
+            // Ledger debit/credit are stored in integer CENTS (ADR-274). Return integer cents so the
+            // frontend formats via formatMoney(cents) without a double-scale ×100 (ADR-582).
+            $seriesMap[$row->date_label] = (int) round((float) $row->total);
         }
 
         $labels = [];
@@ -191,7 +194,7 @@ class PlatformBillingWidgetsReadService
         while ($current->lte($end)) {
             $key = $current->toDateString();
             $labels[] = $key;
-            $series[] = $seriesMap[$key] ?? 0.0;
+            $series[] = $seriesMap[$key] ?? 0;
             $current->addDay();
         }
 
@@ -245,7 +248,8 @@ class PlatformBillingWidgetsReadService
             )
             ->first();
 
-        $outstanding = (float) $result->total_debit - (float) $result->total_credit;
+        // Integer CENTS (ADR-582): AR net = Σ debit − Σ credit over all AR ledger rows.
+        $outstanding = (int) round((float) $result->total_debit - (float) $result->total_credit);
 
         return ['outstanding' => $outstanding];
     }
@@ -466,7 +470,9 @@ class PlatformBillingWidgetsReadService
         $seriesMap = [];
 
         foreach ($rows as $row) {
-            $seriesMap[$row->date_label] = (float) $row->total;
+            // Ledger debit/credit are stored in integer CENTS (ADR-274). Return integer cents so the
+            // frontend formats via formatMoney(cents) without a double-scale ×100 (ADR-582).
+            $seriesMap[$row->date_label] = (int) round((float) $row->total);
         }
 
         $labels = [];
@@ -477,7 +483,7 @@ class PlatformBillingWidgetsReadService
         while ($current->lte($end)) {
             $key = $current->toDateString();
             $labels[] = $key;
-            $series[] = $seriesMap[$key] ?? 0.0;
+            $series[] = $seriesMap[$key] ?? 0;
             $current->addDay();
         }
 
