@@ -21783,3 +21783,22 @@ Quatre situations distinctes :
 **Fichiers** : `app/Console/Commands/E2ESetupTwoCompaniesCommand.php` (nouveau), `tests/e2e/workforce-two-company-isolation.spec.js` (nouveau), `app/Modules/Workforce/Employees/WorkforceModule.php` (nav cockpit), `resources/js/plugins/i18n/locales/{fr,en}.json` (nav).
 
 ---
+
+### ADR-581 — Incident PROD « owner voit Alice Martin / Dispatcher sur /company/members/3 » : membre consulté, PAS usurpation d'identité (2026-10-21)
+
+**Signalement.** Connecté en `owner@leezr.test`, l'utilisateur dit « retrouver Alice Martin / admin@leezr.test / Dispatcher » à l'URL `https://leezr.com/company/members/3`.
+
+**Diagnostic (preuves PROD + DEV, reproduction du scénario exact, y compris la persistance).**
+- `/company/members/{id}` utilise l'**id de membership** (`MembershipController`). **Membership #3 = Alice Martin** (`admin@leezr.test`) — un **membre de l'entreprise consulté**, pas l'utilisateur connecté.
+- Après login owner, le **landing = `/dashboard`** — **aucune redirection** anormale vers une fiche membre ; on atteint `/company/members/3` en **cliquant la ligne d'Alice** dans la liste des membres.
+- **Identité de session** (`/api/me`) = `owner@leezr.test`, `display_name=Djamel` — **avant, pendant** la consultation de `/company/members/3`, **et après refresh**, **y compris** après une session `admin@leezr.test` (Alice) antérieure **dans le même contexte navigateur** (scénario de persistance).
+- **Navbar** (`UserProfile.vue`, lié à `authStore.user.display_name` hydraté par `/api/me`) = **« Djamel / Propriétaire »**. La navbar n'affiche qu'un avatar ; le nom/rôle n'apparaissent qu'au clic dans le menu.
+- `members/[id].vue` **n'écrit jamais** dans `authStore` ni le cookie `userData` ; il affiche `base_fields.display_name` du **membre consulté** (Alice) et lit seulement `auth.user.id` pour calculer `isSelf`.
+
+**Conclusion.** Ce n'est **ni** une usurpation d'identité, **ni** un bug de session/rôle/store, **ni** une redirection anormale. « Alice Martin / Dispatcher » est le **contenu de la fiche du membre #3** (Alice) ouverte par l'owner ; l'identité de session et la navbar restent correctement **Djamel / Propriétaire**. Le correctif d'isolation d'identité (fuite Alice→Djamel) reste valide et prouvé en prod (ADR antérieurs). **Aucune modification de code runtime justifiée** (pas de défaut) ; un correctif spéculatif aurait été contraire à la consigne.
+
+**Preuve / non-régression.** `tests/e2e/workforce-owner-identity-members.spec.js` reproduit : session Alice préalable → logout → login owner (même contexte) → `/company/members/3` → retour dashboard → refresh. Assertions : session = Djamel, navbar = « Djamel / Propriétaire », `/api/me` = owner inchangé en consultant un membre, membre #3 = Alice (contenu). **Vert sur PROD et DEV.** Également `tests/e2e/workforce-remote-smoke.spec.js` (vérif distante auto-contenue).
+
+**Fichiers** : `tests/e2e/workforce-owner-identity-members.spec.js`, `tests/e2e/workforce-remote-smoke.spec.js` (tests uniquement — aucun changement runtime).
+
+---
