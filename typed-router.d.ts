@@ -136,6 +136,7 @@ declare module 'vue-router/auto-routes' {
     'platform-billing-billing-ledger-tab': RouteRecordInfo<'platform-billing-billing-ledger-tab', '/platform/billing/_BillingLedgerTab', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-metrics-widget': RouteRecordInfo<'platform-billing-billing-metrics-widget', '/platform/billing/_BillingMetricsWidget', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-payments-tab': RouteRecordInfo<'platform-billing-billing-payments-tab', '/platform/billing/_BillingPaymentsTab', Record<never, never>, Record<never, never>>,
+    'platform-billing-billing-reconciliation-tab': RouteRecordInfo<'platform-billing-billing-reconciliation-tab', '/platform/billing/_BillingReconciliationTab', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-recovery': RouteRecordInfo<'platform-billing-billing-recovery', '/platform/billing/_BillingRecovery', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-scheduled-debits-tab': RouteRecordInfo<'platform-billing-billing-scheduled-debits-tab', '/platform/billing/_BillingScheduledDebitsTab', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-subscriptions-tab': RouteRecordInfo<'platform-billing-billing-subscriptions-tab', '/platform/billing/_BillingSubscriptionsTab', Record<never, never>, Record<never, never>>,

@@ -99,6 +99,33 @@ class FinanceReconciliationTest extends TestCase
         $this->assertSame(3, count($eur['invoices']), 'only the 3 in-window invoices contribute');
     }
 
+    public function test_aging_buckets_by_due_date_and_separates_written_off(): void
+    {
+        $asOf = \Carbon\Carbon::parse('2026-06-01');
+        // not due (due in future)
+        $this->invoice(['amount' => 1000, 'amount_due' => 1000, 'status' => 'open', 'due_at' => '2026-06-20']);
+        // 0-30 (due 15 days ago)
+        $this->invoice(['amount' => 2000, 'amount_due' => 2000, 'status' => 'open', 'due_at' => '2026-05-17']);
+        // 31-60 (due 45 days ago)
+        $this->invoice(['amount' => 3000, 'amount_due' => 3000, 'status' => 'open', 'due_at' => '2026-04-17']);
+        // 90+ (due ~150 days ago)
+        $this->invoice(['amount' => 4000, 'amount_due' => 4000, 'status' => 'open', 'due_at' => '2026-01-02']);
+        // written off (uncollectible) — excluded from recoverable buckets
+        $this->invoice(['amount' => 3480, 'amount_due' => 3480, 'status' => 'uncollectible', 'due_at' => '2026-02-01']);
+
+        $eur = collect(FinanceReconciliationService::agingReport(null, $asOf))->firstWhere('currency', 'EUR');
+
+        $this->assertSame(1000, $eur['buckets']['not_due']);
+        $this->assertSame(2000, $eur['buckets']['d0_30']);
+        $this->assertSame(3000, $eur['buckets']['d31_60']);
+        $this->assertSame(0, $eur['buckets']['d61_90']);
+        $this->assertSame(4000, $eur['buckets']['d90_plus']);
+        $this->assertSame(3480, $eur['buckets']['written_off'], 'bad debt reported separately');
+        $this->assertSame(9000, $eur['overdue_cents'], 'overdue = 2000+3000+4000 (not_due + write-off excluded)');
+        $this->assertSame(10000, $eur['net_recoverable_cents'], 'recoverable excludes the written-off balance');
+        $this->assertSame(13480, $eur['total_documentary_cents']);
+    }
+
     public function test_divergences_surface_as_anomalies(): void
     {
         // (1) AR gap: invoice amount_due 1000 but no AR ledger debit → ledger_ar(0) ≠ outstanding(1000).

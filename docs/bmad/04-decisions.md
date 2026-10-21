@@ -21899,3 +21899,23 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php` (financeSummary + renewal flag), `resources/js/pages/company/billing/_BillingOverview.vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/CompanyFinanceSummaryTest.php`, `tests/e2e/company-billing-cockpit.spec.js`.
 
 ---
+
+### ADR-586 — Billing Cockpit 2.0 Phases E/F : vue Anomalies & rapprochement + ancienneté des créances (2026-10-21)
+
+**Objectif.** Donner à la Platform un cockpit de **gouvernance** : détecter et investiguer les écarts financiers (lecture seule, aucune correction automatique) et analyser l'ancienneté des créances.
+
+**Décision.**
+- **E2 — Ancienneté des créances** : `FinanceReconciliationService::agingReport(?companyId, ?asOf)` — par devise, en centimes, buckets `not_due / d0_30 / d31_60 / d61_90 / d90_plus` selon la **date d'échéance** vs une **date de référence explicite** (`as_of`, défaut = aujourd'hui). Les factures **passées en perte** (uncollectible / write-off ledger) sont comptées **séparément** (`written_off_cents`) et **exclues du net recouvrable** — une créance irrécouvrable n'est pas une créance normalement recouvrable. Distinction explicite `total_documentary` vs `net_recoverable`. Endpoint `GET /api/platform/billing/aging` (gated `view_billing`, `no-store`).
+- **E1 — Vue « Anomalies & rapprochement »** : nouvel onglet `_BillingReconciliationTab.vue` consommant `/billing/reconciliation` (ADR-583) + `/billing/aging`. Affiche : rapprochement par devise (AR grand livre, soldes documentaires, **écart** coloré, encaissé), table d'**anomalies** (gravité, type, devise, montant, explication, lien vers la facture), table d'**ancienneté** (buckets + write-off séparé). i18n FR/EN.
+- **F1 — Multi-devise** : garanti au niveau service — **agrégats par devise, jamais sommés** ; centimes entiers partout ; l'UI affiche une ligne par devise. Aucun total global trompeur.
+- **F2 — Ergonomie** : onglet dédié navigable, KPI dashboard déjà cliquables (ADR-584), états loading/empty, définitions visibles (intro + colonnes explicites).
+
+**Garde-fous.** Lecture seule, aucune correction financière automatique (un écart reste visible), routes `view_billing`-gated, aucun accès inter-Company, aucun effet financier déclenché par consultation, pas de second grand livre (réutilise `FinanceReconciliationService`).
+
+**Preuves.** `FinanceReconciliationTest` (5, dont aging buckets + write-off séparé) ; `platform-billing-reconciliation.spec.js` (3 E2E : onglet rendu, aging net exclut write-off en centimes entiers, routes authentifiées). Build front clean. Aucune donnée PROD modifiée, aucun push/déploiement.
+
+**Reliquats (F2/F3).** i18n **AR/ES** du bloc billing (FR/EN faits) ; filtres d'ancienneté par Company/période dans l'UI (backend paramétré `company_id`/`as_of`) ; suite E2E complète des 10 parcours + cas limites (plusieurs couverts : créances/CA drill-down, write-off, paiement partiel, aging, isolation, renouvellement différé, estimation).
+
+**Fichiers** : `app/Core/Billing/ReadModels/FinanceReconciliationService.php` (+`agingReport`), `app/Modules/Platform/Billing/Http/PlatformFinancialController.php` (+`aging`), `routes/platform.php`, `resources/js/pages/platform/billing/_BillingReconciliationTab.vue` (nouveau), `resources/js/pages/platform/billing/[tab].vue`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/FinanceReconciliationTest.php`, `tests/e2e/platform-billing-reconciliation.spec.js`.
+
+---

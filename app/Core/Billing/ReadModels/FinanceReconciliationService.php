@@ -174,6 +174,61 @@ class FinanceReconciliationService
         return $out;
     }
 
+    /**
+     * Accounts-receivable AGING (ADR-586) — buckets outstanding invoice balances by how long past
+     * their due date they are, as of an explicit reference date. Per currency, integer cents.
+     * Written-off (uncollectible) balances are reported SEPARATELY and excluded from the recoverable
+     * buckets — a bad debt is not a normally-recoverable receivable. Documentary vs net is explicit.
+     *
+     * Buckets: not_due (no due date or due in the future), d0_30, d31_60, d61_90, d90_plus.
+     *
+     * @return array<int, array<string, mixed>>  one entry per currency
+     */
+    public static function agingReport(?int $companyId = null, ?\Carbon\Carbon $asOf = null): array
+    {
+        $asOf = $asOf ?: now();
+        $scope = fn ($q) => $companyId ? $q->where('company_id', $companyId) : $q;
+
+        $invoices = $scope(Invoice::query())
+            ->where('status', '!=', 'void')->where('amount_due', '>', 0)
+            ->get(['id', 'company_id', 'status', 'amount_due', 'currency', 'due_at']);
+
+        $out = [];
+        foreach ($invoices->groupBy('currency') as $cur => $rows) {
+            $b = ['not_due' => 0, 'd0_30' => 0, 'd31_60' => 0, 'd61_90' => 0, 'd90_plus' => 0, 'written_off' => 0];
+            foreach ($rows as $inv) {
+                $due = (int) $inv->amount_due;
+                $isWrittenOff = $inv->status === 'uncollectible'
+                    || LedgerEntry::where('reference_type', 'invoice')->where('reference_id', $inv->id)->where('entry_type', 'writeoff')->exists();
+                if ($isWrittenOff) {
+                    $b['written_off'] += $due;
+
+                    continue; // a bad debt is not a normally-recoverable receivable
+                }
+                if (! $inv->due_at || $inv->due_at->greaterThanOrEqualTo($asOf)) {
+                    $b['not_due'] += $due;
+
+                    continue;
+                }
+                $daysLate = (int) $inv->due_at->copy()->startOfDay()->diffInDays($asOf->copy()->startOfDay());
+                $bucket = $daysLate <= 30 ? 'd0_30' : ($daysLate <= 60 ? 'd31_60' : ($daysLate <= 90 ? 'd61_90' : 'd90_plus'));
+                $b[$bucket] += $due;
+            }
+            $recoverable = $b['not_due'] + $b['d0_30'] + $b['d31_60'] + $b['d61_90'] + $b['d90_plus'];
+            $out[] = [
+                'currency' => $cur,
+                'as_of' => $asOf->toDateString(),
+                'buckets' => $b,
+                'overdue_cents' => $b['d0_30'] + $b['d31_60'] + $b['d61_90'] + $b['d90_plus'],
+                'net_recoverable_cents' => $recoverable,
+                'written_off_cents' => $b['written_off'],
+                'total_documentary_cents' => $recoverable + $b['written_off'],
+            ];
+        }
+
+        return $out;
+    }
+
     /** @return array<int, array<string, mixed>> */
     private static function anomalies(callable $scope, array $byCur): array
     {

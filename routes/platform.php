@@ -299,6 +299,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         // KPI drill-downs (read-only, ADR-584) — operations composing each dashboard KPI
         Route::get('/billing/drilldown/receivables', [PlatformFinancialController::class, 'receivablesDrilldown']);
         Route::get('/billing/drilldown/revenue', [PlatformFinancialController::class, 'revenueDrilldown']);
+        // Accounts-receivable aging (read-only, ADR-586)
+        Route::get('/billing/aging', [PlatformFinancialController::class, 'aging']);
         Route::get('/billing/ledger/entries', [PlatformFinancialController::class, 'ledgerEntries']);
         Route::get('/billing/financial-periods', [PlatformFinancialController::class, 'financialPeriods']);
         Route::get('/billing/forensics/timeline', [PlatformFinancialController::class, 'forensicsTimeline']);

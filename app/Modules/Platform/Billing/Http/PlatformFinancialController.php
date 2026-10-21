@@ -70,6 +70,18 @@ class PlatformFinancialController
         ])->header('Cache-Control', 'no-store, private');
     }
 
+    /** Accounts-receivable aging (ADR-586) — buckets by days past due, as of a reference date. */
+    public function aging(Request $request): JsonResponse
+    {
+        $companyId = $request->integer('company_id') ?: null;
+        $asOf = $request->filled('as_of') ? \Carbon\Carbon::parse($request->string('as_of')->toString()) : null;
+
+        return response()->json([
+            'as_of' => ($asOf ?: now())->toDateString(),
+            'by_currency' => \App\Core\Billing\ReadModels\FinanceReconciliationService::agingReport($companyId, $asOf),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
     public function ledgerEntries(Request $request): JsonResponse
     {
         $request->validate([

@@ -627,7 +627,27 @@
       "revenueHt": "CA HT",
       "issuedAt": "Émise le"
     },
+    "reconciliation": {
+      "intro": "Détection et investigation en lecture seule — aucun écart n'est corrigé automatiquement.",
+      "summaryTitle": "Rapprochement grand livre ↔ documents",
+      "anomaliesTitle": "Anomalies",
+      "agingTitle": "Ancienneté des créances (au {date})",
+      "currency": "Devise",
+      "ledgerAr": "Créances (grand livre)",
+      "invoicesOutstanding": "Soldes documentaires",
+      "ledgerCash": "Encaissé (grand livre)",
+      "gap": "Écart",
+      "severity": "Gravité",
+      "type": "Type",
+      "amount": "Montant",
+      "detail": "Explication",
+      "noAnomalies": "Aucune anomalie détectée.",
+      "notDue": "Non échu",
+      "netRecoverable": "Net recouvrable",
+      "writtenOff": "Passé en perte"
+    },
     "tabs": {
+      "reconciliation": "Anomalies & rapprochement",
       "dashboard": "Tableau de bord",
       "invoices": "Factures",
       "creditNotes": "Avoirs",

@@ -627,7 +627,27 @@
       "revenueHt": "Revenue ex-VAT",
       "issuedAt": "Issued"
     },
+    "reconciliation": {
+      "intro": "Read-only detection & investigation — no discrepancy is auto-corrected.",
+      "summaryTitle": "Ledger ↔ documents reconciliation",
+      "anomaliesTitle": "Anomalies",
+      "agingTitle": "Receivables aging (as of {date})",
+      "currency": "Currency",
+      "ledgerAr": "Receivables (ledger)",
+      "invoicesOutstanding": "Document balances",
+      "ledgerCash": "Collected (ledger)",
+      "gap": "Gap",
+      "severity": "Severity",
+      "type": "Type",
+      "amount": "Amount",
+      "detail": "Explanation",
+      "noAnomalies": "No anomaly detected.",
+      "notDue": "Not due",
+      "netRecoverable": "Net recoverable",
+      "writtenOff": "Written off"
+    },
     "tabs": {
+      "reconciliation": "Anomalies & reconciliation",
       "dashboard": "Dashboard",
       "invoices": "Invoices",
       "creditNotes": "Credit Notes",
