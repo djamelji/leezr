@@ -22036,3 +22036,24 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Console/Commands/BillingRenewCommand.php`, `database/seeders/DevSeeder.php`, `tests/Feature/SubscriptionSnapshotSafetyTest.php`.
 
 ---
+
+### ADR-593 — Provenance du snapshot & renouvellement sûr : le prix catalogue n'est jamais une preuve contractuelle (2026-10-22)
+
+**Décision produit.** Le **prix catalogue actuel ne doit JAMAIS** être considéré automatiquement comme la preuve du prix contractuel historique. (Révise le comportement de capture-au-renouvellement d'ADR-592, abandonné.)
+
+**Provenance du snapshot** — nouvelle colonne `subscriptions.plan_price_source` :
+- **Fiables** : `subscribed` (nouvelle souscription au prix publié), `plan_change` (changement de plan accepté), `migrated` (migration tarifaire admin), `reconstructed` (reconstruit depuis une facture réelle), `admin_confirmed` (confirmation administrative).
+- **Non fiables** : `provisional` (backfill catalogue, non vérifié), `null`.
+- Backfill de migration : tout snapshot existant (issu du backfill catalogue ADR-587) est marqué **`provisional`** → jamais présenté comme historiquement vérifié (point 4 : PROD #1/#3 = provisional).
+
+**Renouvellement sûr (révisé).** `BillingRenewCommand` ne facture **que** si `hasReliableContractedPrice()` (snapshot non nul **et** provenance fiable). Sinon (provisional/null) : classe l'abonnement en **revue tarifaire** (`metadata.pricing_review_required` + raison `missing_snapshot`/`unverified_snapshot`), **diffère** le renouvellement (**aucune facture**, aucun prix inventé, aucune capture catalogue), log + audit `subscription.renewal_deferred_pricing_review`. **ADR-575** (anti-cascade) préservé — différé, pas de rattrapage rétroactif.
+
+**Capture automatique du prix uniquement** : à la **création** (hook → `subscribed`) ou au **changement contractuel explicite** (plan change → `plan_change`, migration admin → `migrated`, reconstruction depuis facture → `reconstructed`). Jamais au renouvellement.
+
+**Confirmation administrative contrôlée (point 5).** `ConfirmContractedPriceUseCase` + `POST /api/platform/pricing/confirm-price` (gated `manage_billing`) : confirme le prix contractuel (explicite ou le snapshot provisoire), passe la provenance à `admin_confirmed`, **lève la revue**, et **trace preuve + date + acteur** dans l'Audit Core → le renouvellement peut alors reprendre.
+
+**Preuves.** `SubscriptionSnapshotSafetyTest` (5 : création fiable `subscribed` ; provisional → différé sans facture ; manquant → différé sans inventer ; fiable → facture normale ; confirmation admin → fiable + facturable + audit). Régression : **887 tests verts**. Migration additive (colonne + marquage provisional), aucun montant modifié.
+
+**Fichiers** : `database/migrations/2026_10_22_100000_add_plan_price_source_to_subscriptions.php`, `app/Core/Billing/Subscription.php`, `app/Console/Commands/BillingRenewCommand.php`, `app/Core/Billing/PlanChangeExecutor.php`, `app/Modules/Platform/Plans/UseCases/{MigrateSubscriptionPriceUseCase,ConfirmContractedPriceUseCase}.php`, `app/Console/Commands/ReconstructContractedPriceCommand.php`, `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `routes/platform.php`, `tests/Feature/SubscriptionSnapshotSafetyTest.php`.
+
+---

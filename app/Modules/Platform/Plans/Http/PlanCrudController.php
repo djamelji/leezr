@@ -27,6 +27,24 @@ class PlanCrudController
             ->header('Cache-Control', 'no-store, private');
     }
 
+    /** ADR-593: administrative confirmation of a subscription's contracted price (audited). */
+    public function confirmContractedPrice(Request $request, \App\Modules\Platform\Plans\UseCases\ConfirmContractedPriceUseCase $useCase): JsonResponse
+    {
+        $validated = $request->validate([
+            'subscription_id' => ['required', 'integer'],
+            'price_cents' => ['nullable', 'integer', 'min:0'],
+            'proof' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $sub = $useCase->confirm($validated['subscription_id'], $validated['price_cents'] ?? null, $request->user()?->id, $validated['proof'] ?? null);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['subscription_id' => $sub->id, 'plan_price_cents' => $sub->plan_price_cents, 'plan_price_source' => $sub->plan_price_source]);
+    }
+
     /** ADR-588: selectable subscriptions for the migration wizard — read-only. */
     public function migrationSubscriptions(Request $request, string $key): JsonResponse
     {

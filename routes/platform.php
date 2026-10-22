@@ -166,6 +166,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/plans/{key}/migration-subscriptions', [PlanCrudController::class, 'migrationSubscriptions']);
         Route::post('/pricing/migration/preview', [PlanCrudController::class, 'migrationPreview']);
         Route::post('/pricing/migration/apply', [PlanCrudController::class, 'migrationApply']);
+        // ADR-593: administrative confirmation of a contracted price (provisional → reliable)
+        Route::post('/pricing/confirm-price', [PlanCrudController::class, 'confirmContractedPrice']);
     });
 
     // Company users (read-only supervision)

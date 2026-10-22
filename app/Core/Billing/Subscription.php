@@ -43,7 +43,11 @@ class Subscription extends Model
         'billing_anchor_day', 'is_current', 'metadata',
         'coupon_id', 'coupon_months_remaining',
         'plan_price_cents', // ADR-587: contracted price snapshot (cents) for this subscription's interval
+        'plan_price_source', // ADR-593: provenance of the snapshot (reliability)
     ];
+
+    /** ADR-593 — snapshot provenances that are trusted as the contracted price. */
+    const RELIABLE_PRICE_SOURCES = ['subscribed', 'plan_change', 'migrated', 'reconstructed', 'admin_confirmed'];
 
     protected function casts(): array
     {
@@ -57,6 +61,13 @@ class Subscription extends Model
             'coupon_months_remaining' => 'integer',
             'plan_price_cents' => 'integer',
         ];
+    }
+
+    /** ADR-593 — true when the contracted price is backed by a trusted provenance (not provisional/null). */
+    public function hasReliableContractedPrice(): bool
+    {
+        return $this->plan_price_cents !== null
+            && in_array($this->plan_price_source, self::RELIABLE_PRICE_SOURCES, true);
     }
 
     /**
@@ -94,6 +105,8 @@ class Subscription extends Model
                     $subscription->plan_price_cents = (int) (($subscription->interval ?? 'monthly') === 'yearly'
                         ? ($plan->price_yearly ?? 0)
                         : ($plan->price_monthly ?? 0));
+                    // ADR-593: a NEW subscription contracts at the currently published price — reliable.
+                    $subscription->plan_price_source ??= 'subscribed';
                 }
             }
         });

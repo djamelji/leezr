@@ -93,6 +93,7 @@ class MigrateSubscriptionPriceUseCase
                     }
                     $before = $s->plan_price_cents;
                     $s->plan_price_cents = $newPriceCents;
+                    $s->plan_price_source = 'migrated'; // ADR-593: explicit admin migration → reliable
                     $s->save();
                     $stats['migrated']++;
                     $this->audit($s, 'subscription.price_migrated', $actorId, ['from_cents' => $before, 'to_cents' => $newPriceCents, 'timing' => 'immediate']);

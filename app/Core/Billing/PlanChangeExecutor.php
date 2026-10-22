@@ -296,6 +296,7 @@ class PlanChangeExecutor
                 'plan_price_cents' => $newPlanForSnapshot
                     ? (int) ($intent->interval_to === 'yearly' ? ($newPlanForSnapshot->price_yearly ?? 0) : ($newPlanForSnapshot->price_monthly ?? 0))
                     : null,
+                'plan_price_source' => 'plan_change', // ADR-593: explicit, accepted contractual change → reliable
             ];
 
             if ($subscription->coupon_id) {

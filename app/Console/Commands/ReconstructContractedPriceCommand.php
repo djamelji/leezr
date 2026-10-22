@@ -62,6 +62,7 @@ class ReconstructContractedPriceCommand extends Command
             if ($apply) {
                 $before = $sub->plan_price_cents;
                 $sub->plan_price_cents = $historical;
+                $sub->plan_price_source = 'reconstructed'; // ADR-593: derived from real billing history → reliable
                 $sub->save();
                 $stats['corrected']++;
                 app(AuditLogger::class)->logPlatform('subscription.contracted_price_reconstructed', 'subscription', (string) $sub->id, [

@@ -168,40 +168,38 @@ class BillingRenewCommand extends Command implements Isolatable
             $meta = $subscription->metadata ?? [];
             unset($meta['scheduled_price_migration']);
             $subscription->plan_price_cents = (int) $scheduled['new_price_cents'];
+            $subscription->plan_price_source = 'migrated'; // ADR-593: scheduled migration is explicit → reliable
             $subscription->metadata = $meta;
             $subscription->save();
         }
 
         $interval = $subscription->interval ?? 'monthly';
 
-        // ADR-592: a MISSING contracted snapshot must never lead to a SILENT catalog-price billing.
-        // If a plan exists, capture its current price as the contracted snapshot NOW and record it
-        // explicitly (audit + log) so the pricing basis is deliberate and locked. If no plan exists,
-        // the price cannot be determined safely — the existing guard below defers (never bills blind).
-        if ($subscription->plan_price_cents === null && $plan) {
-            $captured = (int) ($interval === 'yearly' ? ($plan->price_yearly ?? 0) : ($plan->price_monthly ?? 0));
-            $subscription->plan_price_cents = $captured;
-            $subscription->save();
-            \Illuminate\Support\Facades\Log::channel('billing')->warning('[billing:renew] captured missing contracted snapshot from catalog', [
-                'subscription_id' => $subscription->id, 'company_id' => $company->id, 'captured_cents' => $captured,
+        // ADR-593: the current CATALOG price is NEVER proof of the contracted price. Bill only when the
+        // snapshot has a reliable provenance (subscribed / plan_change / migrated / reconstructed /
+        // admin_confirmed). Otherwise (provisional or missing) classify the subscription for tariff
+        // review and DEFER — no invoice, no blind billing. Administrative confirmation re-enables it.
+        if (! $subscription->hasReliableContractedPrice()) {
+            $meta = $subscription->metadata ?? [];
+            $meta['pricing_review_required'] = true;
+            $meta['pricing_review_reason'] = $subscription->plan_price_cents === null ? 'missing_snapshot' : 'unverified_snapshot';
+            $meta['pricing_review_at'] = now()->toIso8601String();
+            $subscription->update(['metadata' => $meta]);
+            \Illuminate\Support\Facades\Log::channel('billing')->warning('[billing:renew] deferred — contracted price not reliably verified', [
+                'subscription_id' => $subscription->id, 'company_id' => $company->id, 'source' => $subscription->plan_price_source,
             ]);
-            app(\App\Core\Audit\AuditLogger::class)->logPlatform('subscription.snapshot_captured_at_renewal', 'subscription', (string) $subscription->id, [
-                'severity' => 'warning', 'metadata' => ['company_id' => $company->id, 'captured_cents' => $captured, 'reason' => 'missing_snapshot'],
+            app(\App\Core\Audit\AuditLogger::class)->logPlatform('subscription.renewal_deferred_pricing_review', 'subscription', (string) $subscription->id, [
+                'severity' => 'warning',
+                'metadata' => ['company_id' => $company->id, 'reason' => $meta['pricing_review_reason'], 'source' => $subscription->plan_price_source],
             ]);
-        }
-
-        // Determine renewal price and period.
-        // ADR-587: honour the CONTRACTED price snapshot — a public price change must NOT alter the
-        // amount billed to an existing subscriber. A null snapshot with NO plan cannot be priced and
-        // is deferred by the guard below (never billed at an unknown price).
-        $price = $subscription->plan_price_cents
-            ?? ($plan ? ($interval === 'yearly' ? $plan->price_yearly : $plan->price_monthly) : null);
-
-        if ($price === null) {
-            $this->line("  Deferred (no contracted price and no plan): company #{$company->id} — subscription #{$subscription->id}");
+            $this->line("  Deferred (tariff review — unverified contracted price): company #{$company->id} — subscription #{$subscription->id}");
 
             return 'deferred';
         }
+
+        // ADR-587: honour the reliable CONTRACTED price snapshot — a public price change must NOT
+        // alter the amount billed to an existing subscriber.
+        $price = (int) $subscription->plan_price_cents;
         $standardPeriodDays = $interval === 'yearly' ? 365 : 30;
 
         // Compute new period (start from previous period_end, not from now)
