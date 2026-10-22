@@ -53,6 +53,51 @@ class PlanPricingGovernanceService
     }
 
     /**
+     * ADR-594 — subscriptions whose contracted price is NOT reliably verified and whose renewal is
+     * therefore held for tariff review: provenance provisional/null, or flagged pricing_review_required.
+     * Read-only; integer cents; includes the last finalized invoice and the renewal status.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function reviewSubscriptions(): array
+    {
+        $subs = Subscription::query()
+            ->whereIn('status', ['active', 'trialing', 'past_due'])->where('is_current', 1)
+            ->where(function ($q) {
+                $q->whereNull('plan_price_source')
+                    ->orWhere('plan_price_source', 'provisional')
+                    ->orWhereJsonContains('metadata->pricing_review_required', true);
+            })
+            ->with('company.market')->orderBy('id')->get();
+
+        return $subs->map(function (Subscription $s) {
+            $plan = Plan::where('key', $s->plan_key)->first();
+            $public = $plan ? (int) ($s->interval === 'yearly' ? ($plan->price_yearly ?? 0) : ($plan->price_monthly ?? 0)) : null;
+            $lastInvoice = \App\Core\Billing\Invoice::withoutGlobalScopes()
+                ->where('subscription_id', $s->id)->whereNotNull('finalized_at')
+                ->orderByDesc('finalized_at')->first();
+            $meta = $s->metadata ?? [];
+
+            return [
+                'subscription_id' => $s->id,
+                'company_id' => $s->company_id,
+                'company' => $s->company?->name,
+                'plan_key' => $s->plan_key,
+                'interval' => $s->interval,
+                'currency' => $s->company?->market?->currency ?? 'EUR',
+                'contracted_cents' => $s->plan_price_cents,
+                'public_cents' => $public,
+                'price_source' => $s->plan_price_source,
+                'review_reason' => $meta['pricing_review_reason'] ?? ($s->plan_price_source === 'provisional' ? 'unverified_snapshot' : 'missing_snapshot'),
+                'pricing_review_required' => (bool) ($meta['pricing_review_required'] ?? false),
+                'last_invoice' => $lastInvoice ? ['id' => $lastInvoice->id, 'number' => $lastInvoice->number, 'subtotal_cents' => (int) $lastInvoice->subtotal, 'finalized_at' => optional($lastInvoice->finalized_at)->toDateString()] : null,
+                'next_due' => optional($s->current_period_end)->toDateString(),
+                'reliable' => $s->hasReliableContractedPrice(),
+            ];
+        })->all();
+    }
+
+    /**
      * Selectable subscriptions for a plan (migration wizard) — id, company, contracted + public price,
      * currency, and whether a migration is already scheduled. Read-only, integer cents.
      *

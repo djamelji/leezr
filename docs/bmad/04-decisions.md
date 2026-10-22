@@ -22057,3 +22057,21 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `database/migrations/2026_10_22_100000_add_plan_price_source_to_subscriptions.php`, `app/Core/Billing/Subscription.php`, `app/Console/Commands/BillingRenewCommand.php`, `app/Core/Billing/PlanChangeExecutor.php`, `app/Modules/Platform/Plans/UseCases/{MigrateSubscriptionPriceUseCase,ConfirmContractedPriceUseCase}.php`, `app/Console/Commands/ReconstructContractedPriceCommand.php`, `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `routes/platform.php`, `tests/Feature/SubscriptionSnapshotSafetyTest.php`.
 
 ---
+
+### ADR-594 — Gouvernance tarifaire opérationnelle : onglet « Abonnements à vérifier » dans le cockpit Billing (2026-10-22)
+
+**Business.** Rendre la revue tarifaire (ADR-593) **administrable** par un non-technicien, directement dans le cockpit **Platform Billing/Plans existant** — pas de cockpit parallèle. L'admin doit comprendre **pourquoi** un abonnement est bloqué et pouvoir **confirmer** son tarif avec preuve, sans jamais déclencher de facturation rétroactive.
+
+**Domain.** Un abonnement est « à vérifier » si `plan_price_source ∈ {provisional, null}` **ou** `metadata.pricing_review_required = true`. `PlanPricingGovernanceService::reviewSubscriptions()` (read-model) expose pour chacun : entreprise, plan, prix contractuel enregistré, devise+intervalle, provenance, motif de revue, dernière facture pertinente, prochaine échéance, fiabilité.
+
+**Confirmation (point 2+3).** `ConfirmContractedPriceUseCase::confirm(subId, priceCents?, actorId?, proof, expected?)` : **preuve obligatoire** (serveur, `min:3`), validation prix/devise/intervalle, **contrôle de concurrence** (`expected{source,cents}` re-vérifié sous `lockForUpdate` → `StaleConfirmationException` → **HTTP 409**), **idempotence** (ré-confirmation au même prix = no-op, pas de double audit), passage à `admin_confirmed`, levée de la revue, **audit** `subscription.contracted_price_confirmed` (prix, preuve, acteur, date). **Aucune facture ni paiement** généré ; **pas de renouvellement rétroactif** — le prix confirmé n'est utilisé qu'au **prochain renouvellement normal**. Isolation Company préservée.
+
+**UI (point 4).** Nouvel onglet `tariff-review` dans `pages/platform/billing/[tab].vue` (composant `_BillingTariffReviewTab.vue`) : alerte explicative, recherche, table (chips de provenance colorés, motif, prochaine échéance), **empty-state** « rien à vérifier », **skeleton** au chargement, **dialog de confirmation** (comparaison prix contractuel/public, conséquence explicite « aucune facture rétroactive », saisie prix + preuve obligatoire, alerte de risque), responsive + dark mode. Stock Vuexy/Vuetify 3 uniquement. i18n fr/en `platformBilling.tariffReview.*`.
+
+**Preuves (point 5).** `TariffReviewGovernanceTest` (5 PHPUnit : provisional listé / fiable exclu ; confirmation avec preuve → fiable + audit + **0 facture** ; concurrence → refus ; double confirmation idempotente ; prix confirmé utilisé au renouvellement suivant **sans facturation rétroactive**). E2E `platform-tariff-review.spec.js` (2 : onglet rendu + liste 200 + preuve `required` → 422 ; session company → 401/403). Build front clean.
+
+**Sécurité PROD.** Les abonnements historiques **#1** (`pro`, 2900¢) et **#3** (`business`, 7900¢) sont `provisional` → ils apparaîtront dans l'onglet et leur renouvellement sera **différé** (ADR-593) jusqu'à confirmation administrative via cet onglet. Workflow complet : **détection → revue → justification → confirmation → renouvellement normal sécurisé**.
+
+**Fichiers** : `app/Core/Billing/ReadModels/PlanPricingGovernanceService.php` (`reviewSubscriptions()`), `app/Modules/Platform/Plans/UseCases/{ConfirmContractedPriceUseCase,StaleConfirmationException}.php`, `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `routes/platform.php`, `resources/js/pages/platform/billing/{[tab].vue,_BillingTariffReviewTab.vue}`, `resources/js/modules/platform-admin/plans/plans.store.js`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/TariffReviewGovernanceTest.php`, `tests/e2e/platform-tariff-review.spec.js`.
+
+---

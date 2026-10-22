@@ -16,10 +16,26 @@ class ConfirmContractedPriceUseCase
     /**
      * @param  int|null  $priceCents  explicit confirmed price; null confirms the current snapshot as-is.
      */
-    public function confirm(int $subscriptionId, ?int $priceCents, ?int $actorId, ?string $proof = null): Subscription
+    public function confirm(int $subscriptionId, ?int $priceCents, ?int $actorId, ?string $proof = null, ?array $expected = null): Subscription
     {
-        return DB::transaction(function () use ($subscriptionId, $priceCents, $actorId, $proof) {
+        return DB::transaction(function () use ($subscriptionId, $priceCents, $actorId, $proof, $expected) {
             $sub = Subscription::lockForUpdate()->findOrFail($subscriptionId);
+
+            // Concurrency guard (ADR-594): refuse if the subscription changed since the dialog opened.
+            if ($expected !== null) {
+                $currentSource = $sub->plan_price_source;
+                $currentCents = $sub->plan_price_cents;
+                if ((array_key_exists('plan_price_source', $expected) && $expected['plan_price_source'] !== $currentSource)
+                    || (array_key_exists('plan_price_cents', $expected) && (int) $expected['plan_price_cents'] !== (int) $currentCents)) {
+                    throw new StaleConfirmationException($sub->id);
+                }
+            }
+
+            // Idempotent: already confirmed at the same price → no-op (no re-audit, no double op).
+            if ($sub->plan_price_source === 'admin_confirmed'
+                && ($priceCents === null || (int) $priceCents === (int) $sub->plan_price_cents)) {
+                return $sub;
+            }
 
             $before = $sub->plan_price_cents;
             if ($priceCents !== null) {

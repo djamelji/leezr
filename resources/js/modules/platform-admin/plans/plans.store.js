@@ -93,6 +93,20 @@ export const usePlatformPlansStore = defineStore('platformPlans', {
       })
     },
 
+    // ADR-594: tariff-review subscriptions + administrative confirmation.
+    async fetchReviewSubscriptions() {
+      const data = await $platformApi('/pricing/review-subscriptions')
+
+      return data.subscriptions || []
+    },
+
+    async confirmContractedPrice(subscriptionId, priceCents, proof, expected = null) {
+      return $platformApi('/pricing/confirm-price', {
+        method: 'POST',
+        body: { subscription_id: subscriptionId, price_cents: priceCents, proof, expected },
+      })
+    },
+
     async toggleActive(id) {
       const data = await $platformApi(`/plans/${id}/toggle-active`, {
         method: 'PUT',

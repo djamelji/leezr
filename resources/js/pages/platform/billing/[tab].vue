@@ -13,6 +13,7 @@ import BillingGovernanceTab from './_BillingGovernanceTab.vue'
 import BillingLedgerTab from './_BillingLedgerTab.vue'
 import BillingRecovery from './_BillingRecovery.vue'
 import BillingReconciliationTab from './_BillingReconciliationTab.vue'
+import BillingTariffReviewTab from './_BillingTariffReviewTab.vue'
 
 definePage({
   meta: {
@@ -48,6 +49,7 @@ const tabs = computed(() => [
   { title: t('platformBilling.tabs.ledger'), icon: 'tabler-book', tab: 'ledger' },
   { title: t('platformBilling.tabs.recovery'), icon: 'tabler-first-aid-kit', tab: 'recovery' },
   { title: t('platformBilling.tabs.reconciliation'), icon: 'tabler-scale', tab: 'reconciliation' },
+  { title: t('platformBilling.tabs.tariffReview'), icon: 'tabler-shield-dollar', tab: 'tariff-review' },
 ])
 </script>
 
@@ -150,6 +152,10 @@ const tabs = computed(() => [
 
       <VWindowItem value="reconciliation">
         <BillingReconciliationTab />
+      </VWindowItem>
+
+      <VWindowItem value="tariff-review">
+        <BillingTariffReviewTab />
       </VWindowItem>
 
     </VWindow>

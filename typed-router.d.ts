@@ -140,6 +140,7 @@ declare module 'vue-router/auto-routes' {
     'platform-billing-billing-recovery': RouteRecordInfo<'platform-billing-billing-recovery', '/platform/billing/_BillingRecovery', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-scheduled-debits-tab': RouteRecordInfo<'platform-billing-billing-scheduled-debits-tab', '/platform/billing/_BillingScheduledDebitsTab', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-subscriptions-tab': RouteRecordInfo<'platform-billing-billing-subscriptions-tab', '/platform/billing/_BillingSubscriptionsTab', Record<never, never>, Record<never, never>>,
+    'platform-billing-billing-tariff-review-tab': RouteRecordInfo<'platform-billing-billing-tariff-review-tab', '/platform/billing/_BillingTariffReviewTab', Record<never, never>, Record<never, never>>,
     'platform-billing-billing-wallets-tab': RouteRecordInfo<'platform-billing-billing-wallets-tab', '/platform/billing/_BillingWalletsTab', Record<never, never>, Record<never, never>>,
     'platform-billing-cashflow-trend-widget': RouteRecordInfo<'platform-billing-cashflow-trend-widget', '/platform/billing/_CashflowTrendWidget', Record<never, never>, Record<never, never>>,
     'platform-billing-failed-payments7d-widget': RouteRecordInfo<'platform-billing-failed-payments7d-widget', '/platform/billing/_FailedPayments7dWidget', Record<never, never>, Record<never, never>>,

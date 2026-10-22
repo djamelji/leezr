@@ -27,17 +27,33 @@ class PlanCrudController
             ->header('Cache-Control', 'no-store, private');
     }
 
-    /** ADR-593: administrative confirmation of a subscription's contracted price (audited). */
+    /** ADR-594: subscriptions held for tariff review (unverified contracted price) — read-only. */
+    public function reviewSubscriptions(): JsonResponse
+    {
+        return response()->json(['subscriptions' => PlanPricingGovernanceService::reviewSubscriptions()])
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    /** ADR-593/594: administrative confirmation of a subscription's contracted price (audited). */
     public function confirmContractedPrice(Request $request, \App\Modules\Platform\Plans\UseCases\ConfirmContractedPriceUseCase $useCase): JsonResponse
     {
         $validated = $request->validate([
             'subscription_id' => ['required', 'integer'],
-            'price_cents' => ['nullable', 'integer', 'min:0'],
-            'proof' => ['nullable', 'string', 'max:500'],
+            'price_cents' => ['nullable', 'integer', 'min:0', 'max:100000000'],
+            'proof' => ['required', 'string', 'min:3', 'max:500'], // contractual proof is mandatory (ADR-594)
+            'expected' => ['nullable', 'array'], // concurrency basis captured when the dialog opened
         ]);
 
         try {
-            $sub = $useCase->confirm($validated['subscription_id'], $validated['price_cents'] ?? null, $request->user()?->id, $validated['proof'] ?? null);
+            $sub = $useCase->confirm(
+                $validated['subscription_id'],
+                $validated['price_cents'] ?? null,
+                $request->user()?->id,
+                $validated['proof'],
+                $validated['expected'] ?? null,
+            );
+        } catch (\App\Modules\Platform\Plans\UseCases\StaleConfirmationException $e) {
+            return response()->json(['message' => $e->getMessage(), 'conflict_subscription_id' => $e->subscriptionId], 409);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
