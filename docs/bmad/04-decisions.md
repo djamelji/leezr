@@ -22177,3 +22177,10 @@ Principe : exploiter le thème existant (interdit de modifier `@core`/`@layouts`
 - Icônes cohérentes attribuées aux parents et enfants (tabler) ; titres i18n FR/EN.
 
 **Fichiers (LOT D)** : `resources/js/layouts/components/PlatformLayoutWithVerticalNav.vue`.
+
+**LOT E — Cache, invalidation, contrats & E2E multi-rôles.**
+- **Invalidation du cache nav Platform** (lacune auditée) : `platform:nav` (TTL 5 min) n'avait aucun rafraîchissement — seul le scope *company* était poll/invalidé. Ajout de `_refreshPlatformNav()` + généralisation du poll (30 s) et du refresh au retour de focus aux **deux scopes**, et `cacheRemove('platform:nav')` au teardown (logout / changement de scope). Le menu Platform ne reste donc plus figé 5 min après un changement de droits ; la **sécurité API reste immédiate et indépendante** du cache (serveur, fail-closed).
+- **Contrats** : `NavGroupRegistryContractTest` + `PlatformNavModularTest` (10 assertions-cas) verts.
+- **E2E multi-rôles** (`platform-nav-modular.spec.js`, contre build local `leezr.test`) : (1) super admin → taxonomie 6 domaines + groupe Governance repliable révélant Plans/JobDomains ; (2) **Finance Reader restreint** → seuls Cockpit+Finance visibles, Governance/System/Clients absents (aucun lien vers une surface non autorisée) ; (3) navigation active préservée après refresh ; (4) viewport mobile → nav via hamburger. 4/4 verts (le test reload peut flaker sous charge séquentielle, passe isolé).
+
+**Fichiers (LOT E)** : `resources/js/core/runtime/runtime.js`, `resources/js/core/runtime/scheduler.js`, `tests/e2e/platform-nav-modular.spec.js`.

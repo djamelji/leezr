@@ -479,8 +479,9 @@ export const useRuntimeStore = defineStore('runtime', {
         // Tab became visible — immediate refresh if hidden long enough
         const hiddenMs = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0
 
-        if (hiddenMs > 10_000 && this._scope === 'company' && this._phase === 'ready') {
-          this._refreshNavAndAuth()
+        if (hiddenMs > 10_000 && this._phase === 'ready') {
+          if (this._scope === 'company') this._refreshNavAndAuth()
+          else if (this._scope === 'platform') this._refreshPlatformNav()
         }
 
         // Restart polling
@@ -505,15 +506,28 @@ export const useRuntimeStore = defineStore('runtime', {
       ]).catch(() => {})
     },
 
+    /**
+     * ADR-598 LOT E: keep the PLATFORM sidebar in sync with effective permissions.
+     * The API is always enforced server-side; this prevents a stale menu (old items) from
+     * lingering up to the 5-min TTL after a role/permission change.
+     */
+    _refreshPlatformNav() {
+      cacheRemove('platform:nav')
+
+      const navStore = resolveStore('nav')
+
+      navStore.fetchPlatformNav().catch(() => {})
+    },
+
     _startNavPoll() {
       // Skip polling when SSE is active (ADR-125)
       if (_realtimeActive) return
 
       this._stopNavPoll()
       _pollTimer = setInterval(() => {
-        if (this._scope === 'company' && this._phase === 'ready') {
-          this._refreshNavAndAuth()
-        }
+        if (this._phase !== 'ready') return
+        if (this._scope === 'company') this._refreshNavAndAuth()
+        else if (this._scope === 'platform') this._refreshPlatformNav()
       }, NAV_POLL_MS)
     },
 

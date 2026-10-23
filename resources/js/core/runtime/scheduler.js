@@ -386,6 +386,7 @@ export function createScheduler(deps) {
       cacheRemove('tenant:jobdomain')
       cacheRemove('features:modules')
       cacheRemove('features:nav')
+      cacheRemove('platform:nav') // ADR-598 LOT E: drop stale platform sidebar on teardown/logout/scope switch
 
       // Reset tenant/features stores
       const jobdomainStore = deps.resolveStore('jobdomain')
