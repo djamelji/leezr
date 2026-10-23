@@ -123,31 +123,38 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // All routes below require 2FA to be enabled (ADR-351)
     Route::middleware(['platform.2fa'])->group(function () {
 
-    // Companies
-    Route::middleware(['module.active:platform.companies', 'platform.permission:manage_companies'])->group(function () {
-        Route::get('/companies', [CompanyController::class, 'index']);
-        Route::get('/companies/{id}', [CompanyController::class, 'show']);
-        Route::put('/companies/{id}', [CompanyProfileAdminController::class, 'update']);
-        Route::get('/companies/{id}/billing', [CompanyController::class, 'billing']);
-        Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
-        Route::get('/companies/{id}/activity', [CompanyController::class, 'activity']);
-        Route::put('/companies/{id}/suspend', [CompanyController::class, 'suspend']);
-        Route::put('/companies/{id}/reactivate', [CompanyController::class, 'reactivate']);
-        Route::get('/companies/{id}/plan-preview', [CompanyBillingAdminController::class, 'planChangePreview']);
-        Route::put('/companies/{id}/plan', [CompanyBillingAdminController::class, 'updatePlan']);
-        Route::post('/companies/{id}/wallet', [CompanyBillingAdminController::class, 'adjustWallet']);
-        Route::get('/companies/{id}/wallet-history', [CompanyBillingAdminController::class, 'walletHistory']);
-        Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
-        Route::put('/companies/{id}/payment-methods/{pmId}/default', [CompanySubscriptionAdminController::class, 'setDefaultPaymentMethod']);
-        Route::delete('/companies/{id}/payment-methods/{pmId}', [CompanySubscriptionAdminController::class, 'deletePaymentMethod']);
-        Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
-        Route::put('/companies/{id}/subscription/cancel', [CompanySubscriptionAdminController::class, 'cancelSubscription']);
-        Route::put('/companies/{id}/subscription/undo-cancel', [CompanySubscriptionAdminController::class, 'undoCancelSubscription']);
-        Route::put('/companies/{id}/subscription/extend-trial', [CompanySubscriptionAdminController::class, 'extendTrial']);
-        Route::post('/companies/{id}/payment-methods/setup-intent', [CompanySubscriptionAdminController::class, 'createSetupIntent']);
-        Route::post('/companies/{id}/payment-methods/confirm', [CompanySubscriptionAdminController::class, 'confirmPaymentMethod']);
-        Route::put('/companies/{id}/modules/{key}/enable', [CompanyModuleController::class, 'enable']);
-        Route::put('/companies/{id}/modules/{key}/disable', [CompanyModuleController::class, 'disable']);
+    // Companies (ADR-597 LOT 3 — read/write split for granular RBAC)
+    Route::middleware(['module.active:platform.companies'])->group(function () {
+        // Read-only supervision — `view_companies` (manage_companies holders keep it via migration)
+        Route::middleware(['platform.permission:view_companies'])->group(function () {
+            Route::get('/companies', [CompanyController::class, 'index']);
+            Route::get('/companies/{id}', [CompanyController::class, 'show']);
+            Route::get('/companies/{id}/billing', [CompanyController::class, 'billing']);
+            Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
+            Route::get('/companies/{id}/activity', [CompanyController::class, 'activity']);
+            Route::get('/companies/{id}/plan-preview', [CompanyBillingAdminController::class, 'planChangePreview']);
+            Route::get('/companies/{id}/wallet-history', [CompanyBillingAdminController::class, 'walletHistory']);
+            Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
+            Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
+        });
+
+        // Mutations — `manage_companies`
+        Route::middleware(['platform.permission:manage_companies'])->group(function () {
+            Route::put('/companies/{id}', [CompanyProfileAdminController::class, 'update']);
+            Route::put('/companies/{id}/suspend', [CompanyController::class, 'suspend']);
+            Route::put('/companies/{id}/reactivate', [CompanyController::class, 'reactivate']);
+            Route::put('/companies/{id}/plan', [CompanyBillingAdminController::class, 'updatePlan']);
+            Route::post('/companies/{id}/wallet', [CompanyBillingAdminController::class, 'adjustWallet']);
+            Route::put('/companies/{id}/payment-methods/{pmId}/default', [CompanySubscriptionAdminController::class, 'setDefaultPaymentMethod']);
+            Route::delete('/companies/{id}/payment-methods/{pmId}', [CompanySubscriptionAdminController::class, 'deletePaymentMethod']);
+            Route::put('/companies/{id}/subscription/cancel', [CompanySubscriptionAdminController::class, 'cancelSubscription']);
+            Route::put('/companies/{id}/subscription/undo-cancel', [CompanySubscriptionAdminController::class, 'undoCancelSubscription']);
+            Route::put('/companies/{id}/subscription/extend-trial', [CompanySubscriptionAdminController::class, 'extendTrial']);
+            Route::post('/companies/{id}/payment-methods/setup-intent', [CompanySubscriptionAdminController::class, 'createSetupIntent']);
+            Route::post('/companies/{id}/payment-methods/confirm', [CompanySubscriptionAdminController::class, 'confirmPaymentMethod']);
+            Route::put('/companies/{id}/modules/{key}/enable', [CompanyModuleController::class, 'enable']);
+            Route::put('/companies/{id}/modules/{key}/disable', [CompanyModuleController::class, 'disable']);
+        });
     });
 
     // Plans

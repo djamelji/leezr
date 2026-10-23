@@ -154,12 +154,10 @@ class PlatformBillingModuleToggleTest extends TestCase
     {
         PlatformPermissionCatalog::sync();
 
+        // ADR-597: dead billing permissions removed — only enforced ones remain.
         $expected = [
             'view_billing',
             'manage_billing',
-            'manage_billing_providers',
-            'manage_billing_policies',
-            'view_billing_audit',
         ];
 
         foreach ($expected as $key) {

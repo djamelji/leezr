@@ -22112,3 +22112,24 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Navigation/NavGroupRegistry.php` (nouveau), `app/Core/Navigation/NavBuilder.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/NavGroupRegistryContractTest.php`.
 
 ---
+
+### ADR-597 — Correction architecturale Platform LOT 3 : permissions Platform granulaires (2026-10-23)
+
+**Contexte (audit A-02/A-04).** Deux défauts RBAC : (a) **permissions déclarées mais mortes** — assignables dans le catalogue/bundles mais référencées par aucune route (fausse granularité) ; (b) **protections trop larges** — la plupart des modules exposaient toute leur surface derrière UNE permission, empêchant « voir sans modifier ».
+
+**Décision (réutilise `PlatformPermissionCatalog`, rôles, bundles, `EnsurePlatformPermission` — aucun nouveau moteur RBAC).**
+1. **Companies lecture/écriture** : nouvelle permission `view_companies` ; le bloc de routes Companies est scindé en sous-groupe lecture (`view_companies` : index, show, billing, members, activity, previews, wallet-history, payment-methods GET) et écriture (`manage_companies` : update, suspend/reactivate, plan, wallet, payment-methods mutations, subscription, modules enable/disable). Le nav item `platform-companies` ne requiert plus que `view_companies`. Bundles `companies.readonly` / `companies.supervision`.
+2. **Suppression des permissions mortes** (aucune route ne les vérifiait) : `manage_billing_providers`, `manage_billing_policies`, `view_billing_audit`, `security.view`, `security.manage`, `security.audit.view`, `realtime.view`, `realtime.manage`, `view_documentation` — retirées des manifests + bundles. Les permissions réellement enforced subsistent (`view_billing`/`manage_billing`, `security.alerts.*`, `realtime.metrics.view`/`connections.view`/`governance`, `manage_documentation`).
+3. **Indépendances déjà correctes, verrouillées par test** : factures (`view_billing`) consultables sans administration (`manage_billing`) ; JobDomains (`manage_jobdomains`) sans accès paiements.
+
+**Transition compatible (migration `2026_10_23_110000`).** `view_companies` accordé à tout rôle détenant déjà `manage_companies` (les managers gardent la lecture — pas de narrowing). Les permissions mortes sont détachées des rôles puis supprimées : comme elles ne gataient aucune route, l'accès effectif est **inchangé** (ni élargi, ni réduit). `super_admin` bypass, `admin` resynchronisé sur le nouveau catalogue.
+
+**Invariants.** Toute API sensible reste protégée côté serveur indépendamment du menu (`EnsurePlatformPermission`, fail-closed). Tout item de nav protégé porte une permission adaptée (`platform-companies` → `view_companies`).
+
+**Preuves.** `PlatformGranularPermissionsTest` (6) : view_companies lit mais n'écrit pas ; manager atteint les écritures ; view_billing lit les factures sans administrer ; rôle jobdomains sans accès paiements ; accès à une seule fonction sans les voisines ; permissions mortes absentes du catalogue. Régressions adaptées (NavBuilder/ModuleToggle expected lists). Suite large RBAC/permissions/billing/security/realtime/companies/nav : **1342 passed, 0 failed**.
+
+**Fichiers** : `routes/platform.php`, `app/Modules/Platform/Companies/CompaniesModule.php`, `app/Modules/Platform/Billing/BillingModule.php`, `app/Modules/Platform/Security/SecurityModule.php`, `app/Modules/Platform/Realtime/RealtimeModule.php`, `app/Modules/Platform/Documentation/PlatformDocumentationModule.php`, `database/migrations/2026_10_23_110000_granular_platform_permissions_transition.php`, `tests/Feature/PlatformGranularPermissionsTest.php`, + tests adaptés (`NavBuilderTest`, `Platform{Billing,Security,Realtime}ModuleToggleTest`).
+
+**Reste (hors périmètre, à planifier).** `manage_audience` reste déclarée (module Audience orphelin — décision UI/retrait au lot dédié) ; granularité fine d'autres modules coarse (markets, translations, users, settings…) à traiter à la demande ; alignement permission des items de hub (operations/communications/messaging) à la refonte du menu.
+
+---

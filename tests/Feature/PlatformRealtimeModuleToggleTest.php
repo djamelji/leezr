@@ -135,9 +135,8 @@ class PlatformRealtimeModuleToggleTest extends TestCase
     {
         PlatformPermissionCatalog::sync();
 
+        // ADR-597: dead realtime permissions (realtime.view/manage) removed.
         $expected = [
-            'realtime.view',
-            'realtime.manage',
             'realtime.metrics.view',
             'realtime.connections.view',
             'realtime.governance',

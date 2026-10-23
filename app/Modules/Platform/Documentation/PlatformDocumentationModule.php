@@ -30,15 +30,16 @@ class PlatformDocumentationModule implements ModuleDefinition
                     ],
                 ],
             ),
+            // ADR-597 (LOT 3): removed dead permission view_documentation — all documentation
+            // routes are gated by manage_documentation.
             permissions: [
                 ['key' => 'manage_documentation', 'label' => 'Manage Documentation'],
-                ['key' => 'view_documentation', 'label' => 'View Documentation'],
             ],
             bundles: [
                 [
                     'key' => 'documentation.admin',
                     'label' => 'Documentation Administration',
-                    'permissions' => ['manage_documentation', 'view_documentation'],
+                    'permissions' => ['manage_documentation'],
                 ],
             ],
             scope: 'admin',

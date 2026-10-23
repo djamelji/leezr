@@ -92,14 +92,14 @@ class NavBuilderTest extends TestCase
 
     public function test_for_admin_filters_by_permissions(): void
     {
-        // Grant manage_companies + view_dashboard (ADR-595: dashboard is now permission-gated)
-        $groups = NavBuilder::forAdmin(['manage_companies', 'view_dashboard']);
+        // Grant view_companies + view_dashboard (ADR-595/597: both nav items are permission-gated)
+        $groups = NavBuilder::forAdmin(['view_companies', 'view_dashboard']);
         $allKeys = $this->extractItemKeys($groups);
 
         // Dashboard requires view_dashboard — present when granted (ADR-595)
         $this->assertContains('dashboard', $allKeys);
 
-        // Companies requires manage_companies — should be present (ADR-381)
+        // Companies nav item requires view_companies (ADR-597) — present
         $this->assertContains('platform-companies', $allKeys);
 
         // Roles requires manage_roles — should NOT be present
@@ -109,7 +109,7 @@ class NavBuilderTest extends TestCase
     public function test_dashboard_hidden_without_view_dashboard_permission(): void
     {
         // ADR-595: dashboard nav item is gated by view_dashboard
-        $groups = NavBuilder::forAdmin(['manage_companies']);
+        $groups = NavBuilder::forAdmin(['view_companies']);
         $allKeys = $this->extractItemKeys($groups);
 
         $this->assertNotContains('dashboard', $allKeys);

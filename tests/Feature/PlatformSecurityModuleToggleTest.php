@@ -101,12 +101,10 @@ class PlatformSecurityModuleToggleTest extends TestCase
     {
         PlatformPermissionCatalog::sync();
 
+        // ADR-597: dead security permissions (security.view/manage/audit.view) removed.
         $expected = [
-            'security.view',
-            'security.manage',
             'security.alerts.view',
             'security.alerts.manage',
-            'security.audit.view',
         ];
 
         foreach ($expected as $key) {

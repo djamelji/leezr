@@ -22,25 +22,25 @@ class BillingModule implements ModuleDefinition
                 ],
                 routeNames: ['platform-billing-tab', 'platform-billing-invoices-id'],
             ),
+            // ADR-597 (LOT 3): removed dead permissions (manage_billing_providers,
+            // manage_billing_policies, view_billing_audit) — no route ever checked them; all billing
+            // writes are gated by manage_billing and reads by view_billing.
             permissions: [
                 ['key' => 'view_billing', 'label' => 'View Billing'],
                 ['key' => 'manage_billing', 'label' => 'Manage Billing'],
-                ['key' => 'manage_billing_providers', 'label' => 'Manage Payment Providers'],
-                ['key' => 'manage_billing_policies', 'label' => 'Manage Billing Policies'],
-                ['key' => 'view_billing_audit', 'label' => 'View Billing Audit'],
             ],
             bundles: [
                 [
                     'key' => 'billing.full',
                     'label' => 'Full Billing Management',
                     'hint' => 'Complete billing governance access.',
-                    'permissions' => ['view_billing', 'manage_billing', 'manage_billing_providers', 'manage_billing_policies', 'view_billing_audit'],
+                    'permissions' => ['view_billing', 'manage_billing'],
                 ],
                 [
                     'key' => 'billing.readonly',
                     'label' => 'Billing Read-Only',
-                    'hint' => 'View billing data and audit logs.',
-                    'permissions' => ['view_billing', 'view_billing_audit'],
+                    'hint' => 'View billing data.',
+                    'permissions' => ['view_billing'],
                 ],
             ],
             scope: 'admin',

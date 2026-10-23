@@ -20,25 +20,24 @@ class SecurityModule implements ModuleDefinition
                 navItems: [],
                 routeNames: [],
             ),
+            // ADR-597 (LOT 3): removed dead permissions (security.view, security.manage,
+            // security.audit.view) — only security.alerts.* are enforced on routes.
             permissions: [
-                ['key' => 'security.view', 'label' => 'View Security Dashboard'],
-                ['key' => 'security.manage', 'label' => 'Manage Security Settings'],
                 ['key' => 'security.alerts.view', 'label' => 'View Security Alerts'],
                 ['key' => 'security.alerts.manage', 'label' => 'Manage Security Alerts'],
-                ['key' => 'security.audit.view', 'label' => 'View Security Audit'],
             ],
             bundles: [
                 [
                     'key' => 'security.full',
                     'label' => 'Full Security Management',
-                    'hint' => 'Complete security governance access.',
-                    'permissions' => ['security.view', 'security.manage', 'security.alerts.view', 'security.alerts.manage', 'security.audit.view'],
+                    'hint' => 'View and manage security alerts.',
+                    'permissions' => ['security.alerts.view', 'security.alerts.manage'],
                 ],
                 [
                     'key' => 'security.readonly',
                     'label' => 'Security Read-Only',
-                    'hint' => 'View security alerts and audit logs.',
-                    'permissions' => ['security.view', 'security.alerts.view', 'security.audit.view'],
+                    'hint' => 'View security alerts.',
+                    'permissions' => ['security.alerts.view'],
                 ],
             ],
             scope: 'admin',

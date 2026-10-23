@@ -20,9 +20,9 @@ class RealtimeModule implements ModuleDefinition
                 navItems: [],
                 routeNames: ['platform-realtime', 'platform-operations-tab'],
             ),
+            // ADR-597 (LOT 3): removed dead permissions (realtime.view, realtime.manage) —
+            // only realtime.metrics.view / realtime.connections.view / realtime.governance are enforced.
             permissions: [
-                ['key' => 'realtime.view', 'label' => 'View Realtime Dashboard'],
-                ['key' => 'realtime.manage', 'label' => 'Manage Realtime Settings'],
                 ['key' => 'realtime.metrics.view', 'label' => 'View Event Metrics'],
                 ['key' => 'realtime.connections.view', 'label' => 'View Active Connections'],
                 ['key' => 'realtime.governance', 'label' => 'Kill Switch & Flush Operations'],
@@ -32,13 +32,13 @@ class RealtimeModule implements ModuleDefinition
                     'key' => 'realtime.full',
                     'label' => 'Full Realtime Governance',
                     'hint' => 'Monitor connections, metrics, and control the SSE backbone.',
-                    'permissions' => ['realtime.view', 'realtime.manage', 'realtime.metrics.view', 'realtime.connections.view', 'realtime.governance'],
+                    'permissions' => ['realtime.metrics.view', 'realtime.connections.view', 'realtime.governance'],
                 ],
                 [
                     'key' => 'realtime.readonly',
                     'label' => 'Realtime Read-Only',
                     'hint' => 'View realtime metrics and connection stats.',
-                    'permissions' => ['realtime.view', 'realtime.metrics.view', 'realtime.connections.view'],
+                    'permissions' => ['realtime.metrics.view', 'realtime.connections.view'],
                 ],
             ],
             scope: 'admin',
