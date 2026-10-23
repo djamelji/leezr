@@ -140,7 +140,18 @@
       "settings-general": "General",
       "settings-international": "International & Markets",
       "operations": "Operations",
-      "communications": "Communications"
+      "ops-health": "System Health",
+      "ops-alerts": "Alerts",
+      "ops-security": "Security",
+      "ops-ai": "AI Gateway",
+      "ops-automations": "Automations",
+      "ops-realtime": "Realtime",
+      "ops-usage": "Usage Monitoring",
+      "communications": "Communications",
+      "comms-support": "Support",
+      "comms-documentation": "Documentation",
+      "messaging-email": "Email",
+      "messaging-notifications": "Notifications"
     },
     "company": {
       "dashboard": "Dashboard",

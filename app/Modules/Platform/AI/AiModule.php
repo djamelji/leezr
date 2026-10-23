@@ -17,7 +17,10 @@ class AiModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 63,
             capabilities: new Capabilities(
-                navItems: [],
+                // ADR-598 LOT F: AI surfaced as an independent child of the System → Operations group.
+                navItems: [
+                    ['key' => 'ops-ai', 'title' => 'AI Gateway', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'ai']], 'icon' => 'tabler-brain', 'permission' => 'view_ai', 'parent' => 'operations', 'sort' => 30],
+                ],
                 routeNames: ['platform-ai-tab', 'platform-operations-tab'],
             ),
             permissions: [

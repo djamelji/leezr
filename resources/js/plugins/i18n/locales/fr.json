@@ -140,7 +140,18 @@
       "settings-general": "Général",
       "settings-international": "International & Markets",
       "operations": "Opérations",
-      "communications": "Communications"
+      "ops-health": "Santé système",
+      "ops-alerts": "Alertes",
+      "ops-security": "Sécurité",
+      "ops-ai": "Passerelle IA",
+      "ops-automations": "Automatisations",
+      "ops-realtime": "Temps réel",
+      "ops-usage": "Supervision d'usage",
+      "communications": "Communications",
+      "comms-support": "Support",
+      "comms-documentation": "Documentation",
+      "messaging-email": "E-mail",
+      "messaging-notifications": "Notifications"
     },
     "company": {
       "dashboard": "Tableau de bord",

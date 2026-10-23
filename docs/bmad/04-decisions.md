@@ -22184,3 +22184,13 @@ Principe : exploiter le thème existant (interdit de modifier `@core`/`@layouts`
 - **E2E multi-rôles** (`platform-nav-modular.spec.js`, contre build local `leezr.test`) : (1) super admin → taxonomie 6 domaines + groupe Governance repliable révélant Plans/JobDomains ; (2) **Finance Reader restreint** → seuls Cockpit+Finance visibles, Governance/System/Clients absents (aucun lien vers une surface non autorisée) ; (3) navigation active préservée après refresh ; (4) viewport mobile → nav via hamburger. 4/4 verts (le test reload peut flaker sous charge séquentielle, passe isolé).
 
 **Fichiers (LOT E)** : `resources/js/core/runtime/runtime.js`, `resources/js/core/runtime/scheduler.js`, `tests/e2e/platform-nav-modular.spec.js`.
+
+**LOT F — Hubs à permissions partielles (enfants indépendants par module).**
+Problème : les items de hub Operations/Messaging/Communications étaient gatés sur UNE permission d'atterrissage → un rôle n'ayant qu'une permission d'onglet secondaire (ex. `view_ai`) ne voyait pas l'entrée.
+- Operations/Messaging/Communications deviennent des **parents repliables sans permission** ; ils s'affichent si **au moins un enfant est autorisé**, sinon élagués.
+- Enfants contribués **indépendamment par chaque module** via `parent` : Operations ← AlertsModule (health/alerts/usage) + AiModule (ai) + AutomationsModule (automations) + RealtimeModule (realtime) + SecurityModule (security) ; Messaging ← EmailModule (email) + NotificationsModule (notifications) ; Communications ← SupportModule (support) + DocumentationModule (documentation). SecurityModule déclare désormais `routeNames` (platform-operations-tab).
+- Chaque enfant porte sa permission minimale ; onglets internes et endpoints restent protégés serveur (LOT C + middleware). Pas de permission globale de hub, pas de 2ᵉ moteur.
+- i18n `nav.platform.{ops-health,ops-alerts,ops-security,ops-ai,ops-automations,ops-realtime,ops-usage,messaging-email,messaging-notifications,comms-support,comms-documentation}` (en+fr).
+- Preuves `PlatformNavModularTest` (+4 : `view_ai` seul → Operations avec AI seul ; `view_system_health` seul → Operations sans AI ; `manage_roles` seul → Accès avec Rôles seul ; `manage_notifications` seul → Messaging via Notifications). Régression : **1109 passed**, build clean.
+
+**Fichiers (LOT F)** : `app/Modules/Platform/{Alerts,AI,Automations,Realtime,Security,Email,Notifications,Support,Documentation}/*Module.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/PlatformNavModularTest.php`.

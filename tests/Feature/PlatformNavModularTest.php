@@ -92,4 +92,44 @@ class PlatformNavModularTest extends TestCase
         $this->assertArrayNotHasKey('governance', $t);
         $this->assertArrayNotHasKey('configuration', $t);
     }
+
+    // ── LOT F: partial-permission hubs show via ANY authorized child ──────────
+    public function test_view_ai_only_sees_operations_with_only_ai(): void
+    {
+        $t = $this->tree(['view_ai']);
+        $this->assertArrayHasKey('system', $t, 'Operations visible for an AI-only role');
+        $this->assertContains('operations', $t['system']); // parent
+        $this->assertContains('ops-ai', $t['system']);
+        foreach (['ops-health', 'ops-usage', 'ops-alerts', 'ops-security', 'ops-automations', 'ops-realtime'] as $forbidden) {
+            $this->assertNotContains($forbidden, $t['system'], "{$forbidden} must stay hidden");
+        }
+    }
+
+    public function test_view_system_health_only_sees_operations_without_ai(): void
+    {
+        $t = $this->tree(['view_system_health']);
+        $this->assertArrayHasKey('system', $t);
+        $this->assertContains('ops-health', $t['system']);
+        $this->assertNotContains('ops-ai', $t['system']);
+    }
+
+    public function test_manage_roles_only_sees_access_with_only_roles(): void
+    {
+        $t = $this->tree(['manage_roles']);
+        $this->assertArrayHasKey('governance', $t);
+        $this->assertContains('platform-access', $t['governance']); // parent
+        $this->assertContains('access-roles', $t['governance']);
+        $this->assertNotContains('access-users', $t['governance']);
+        // Catalogue parent is pruned (no catalog child authorized).
+        $this->assertNotContains('catalog', $t['governance']);
+    }
+
+    public function test_messaging_parent_shows_for_notifications_only_role(): void
+    {
+        $t = $this->tree(['manage_notifications']);
+        $this->assertArrayHasKey('cockpit', $t);
+        $this->assertContains('platform-messaging', $t['cockpit']);
+        $this->assertContains('messaging-notifications', $t['cockpit']);
+        $this->assertNotContains('messaging-email', $t['cockpit']);
+    }
 }

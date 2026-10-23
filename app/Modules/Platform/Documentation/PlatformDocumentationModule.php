@@ -17,7 +17,11 @@ class PlatformDocumentationModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 96,
             capabilities: new Capabilities(
-                navItems: [],
+                // ADR-598 LOT F: Documentation surfaced as an independent child of Clients → Communications
+                // (the footer help-center link below is preserved — ADR-377).
+                navItems: [
+                    ['key' => 'comms-documentation', 'title' => 'Documentation', 'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'documentation']], 'icon' => 'tabler-book', 'permission' => 'manage_documentation', 'parent' => 'communications', 'sort' => 20],
+                ],
                 routeNames: ['platform-documentation', 'platform-documentation-slug', 'platform-communications-tab'],
                 footerLinks: [
                     [

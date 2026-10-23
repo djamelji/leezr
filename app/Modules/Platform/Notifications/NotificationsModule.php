@@ -17,7 +17,10 @@ class NotificationsModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 91,
             capabilities: new Capabilities(
-                navItems: [],
+                // ADR-598 LOT F: Notifications surfaced as an independent child of Cockpit → Messaging.
+                navItems: [
+                    ['key' => 'messaging-notifications', 'title' => 'Notifications', 'to' => ['name' => 'platform-messaging-tab', 'params' => ['tab' => 'notifications']], 'icon' => 'tabler-bell', 'permission' => 'manage_notifications', 'parent' => 'platform-messaging', 'sort' => 20],
+                ],
                 routeNames: ['platform-notifications', 'platform-messaging-tab'],
             ),
             permissions: [
