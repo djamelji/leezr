@@ -145,9 +145,9 @@ class NavEndpointTest extends TestCase
         ]);
 
         $role = PlatformRole::create(['name' => 'Module Admin', 'key' => 'module_admin_nav']);
-        $perm = PlatformPermission::where('key', 'manage_modules')->first();
-
-        if ($perm) {
+        // ADR-595: dashboard is now gated by view_dashboard — grant it alongside manage_modules
+        $perms = PlatformPermission::whereIn('key', ['manage_modules', 'view_dashboard'])->get();
+        foreach ($perms as $perm) {
             $role->permissions()->attach($perm);
         }
 
@@ -158,7 +158,7 @@ class NavEndpointTest extends TestCase
 
         $allKeys = $this->extractItemKeysFromResponse($response);
 
-        // Dashboard (no permission) — should be visible
+        // Dashboard (view_dashboard granted) — should be visible
         $this->assertContains('dashboard', $allKeys);
 
         // Catalog (manage_modules) — should be visible

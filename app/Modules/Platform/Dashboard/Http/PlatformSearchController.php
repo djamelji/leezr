@@ -15,6 +15,10 @@ use Illuminate\Http\Request;
  *
  * Multi-table search across Companies, Users, Invoices, Support Tickets.
  * Returns grouped results matching the AppBarSearch component format.
+ *
+ * ADR-595 (LOT 1): each result category is gated by the caller's effective permission so
+ * global search can never leak a resource the user is not otherwise authorized to see
+ * (e.g. a Support agent must not discover invoice numbers). Super admin bypasses via hasPermission.
  */
 class PlatformSearchController extends Controller
 {
@@ -26,13 +30,16 @@ class PlatformSearchController extends Controller
             return response()->json([]);
         }
 
+        $user = $request->user('platform');
+        $can = fn (string $permission): bool => $user !== null && $user->hasPermission($permission);
+
         $like = '%' . $q . '%';
         $results = [];
 
-        // 1. Companies
-        $companies = Company::where('name', 'LIKE', $like)
-            ->limit(5)
-            ->get(['id', 'name']);
+        // 1. Companies — requires company visibility
+        $companies = $can('manage_companies') || $can('view_company_users')
+            ? Company::where('name', 'LIKE', $like)->limit(5)->get(['id', 'name'])
+            : collect();
 
         if ($companies->isNotEmpty()) {
             $results[] = [
@@ -48,12 +55,14 @@ class PlatformSearchController extends Controller
             ];
         }
 
-        // 2. Users (company members)
-        $users = User::where('email', 'LIKE', $like)
-            ->orWhere('first_name', 'LIKE', $like)
-            ->orWhere('last_name', 'LIKE', $like)
-            ->limit(5)
-            ->get(['id', 'first_name', 'last_name', 'email']);
+        // 2. Users (company members) — requires user visibility
+        $users = $can('view_company_users') || $can('manage_platform_users')
+            ? User::where('email', 'LIKE', $like)
+                ->orWhere('first_name', 'LIKE', $like)
+                ->orWhere('last_name', 'LIKE', $like)
+                ->limit(5)
+                ->get(['id', 'first_name', 'last_name', 'email'])
+            : collect();
 
         if ($users->isNotEmpty()) {
             $results[] = [
@@ -69,11 +78,13 @@ class PlatformSearchController extends Controller
             ];
         }
 
-        // 3. Invoices
-        $invoices = Invoice::withoutCompanyScope()
-            ->where('number', 'LIKE', $like)
-            ->limit(5)
-            ->get(['id', 'number', 'company_id', 'amount', 'status']);
+        // 3. Invoices — requires billing visibility
+        $invoices = $can('view_billing')
+            ? Invoice::withoutCompanyScope()
+                ->where('number', 'LIKE', $like)
+                ->limit(5)
+                ->get(['id', 'number', 'company_id', 'amount', 'status'])
+            : collect();
 
         if ($invoices->isNotEmpty()) {
             $results[] = [
@@ -89,11 +100,13 @@ class PlatformSearchController extends Controller
             ];
         }
 
-        // 4. Support Tickets
-        $tickets = SupportTicket::withoutCompanyScope()
-            ->where('subject', 'LIKE', $like)
-            ->limit(5)
-            ->get(['id', 'subject', 'status', 'priority']);
+        // 4. Support Tickets — requires support visibility
+        $tickets = $can('manage_support')
+            ? SupportTicket::withoutCompanyScope()
+                ->where('subject', 'LIKE', $like)
+                ->limit(5)
+                ->get(['id', 'subject', 'status', 'priority'])
+            : collect();
 
         if ($tickets->isNotEmpty()) {
             $results[] = [

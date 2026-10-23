@@ -22075,3 +22075,22 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Core/Billing/ReadModels/PlanPricingGovernanceService.php` (`reviewSubscriptions()`), `app/Modules/Platform/Plans/UseCases/{ConfirmContractedPriceUseCase,StaleConfirmationException}.php`, `app/Modules/Platform/Plans/Http/PlanCrudController.php`, `routes/platform.php`, `resources/js/pages/platform/billing/{[tab].vue,_BillingTariffReviewTab.vue}`, `resources/js/modules/platform-admin/plans/plans.store.js`, `resources/js/plugins/i18n/locales/{fr,en}.json`, `tests/Feature/TariffReviewGovernanceTest.php`, `tests/e2e/platform-tariff-review.spec.js`.
 
 ---
+
+### ADR-595 — Correction architecturale Platform LOT 1 : sécurité P0 du Dashboard (permissions fail-closed) (2026-10-23)
+
+**Contexte (audit A-01).** Le groupe de routes Dashboard (`routes/platform.php:338`) n'avait **aucun** middleware de permission : tout PlatformUser authentifié+2FA atteignait system-health, recherche globale, onboarding-funnel et **usage-monitoring par entreprise**, exposant des KPIs/santé système à un rôle restreint. L'autorisation Platform étant mono-couche (middleware uniquement, aucune défense contrôleur), le middleware manquant n'avait aucun filet.
+
+**Décision.** Gating fail-closed par fonctionnalité, sans faire du Dashboard un privilège Super Admin exclusif :
+1. **3 permissions** déclarées dans `DashboardModule` : `view_dashboard` (landing : widgets, layout, recherche), `view_system_health` (santé système), `view_usage_monitoring` (usage + onboarding funnel). Bundles `dashboard.base` et `dashboard.supervision`.
+2. **Routes découpées** en sous-groupes `platform.permission:*` sous le gate module existant : base `view_dashboard` ; `/system/health` → `view_system_health` ; `/usage/*` + `/onboarding/funnel` → `view_usage_monitoring`.
+3. **Nav item `dashboard`** porte désormais `permission: 'view_dashboard'` (tout item visible a une permission adaptée).
+4. **Recherche globale** (`PlatformSearchController`) : chaque catégorie de résultats est filtrée par la permission du demandeur (Companies→`manage_companies`/`view_company_users`, Users→`view_company_users`/`manage_platform_users`, Invoices→`view_billing`, Support→`manage_support`). Super admin bypass via `hasPermission`. La recherche ne peut plus divulguer une ressource non autorisée.
+5. **Transition compatible** (migration `2026_10_23_100000`) : `view_dashboard` accordé à **tous les rôles Platform existants** (préserve le landing) ; les 2 permissions sensibles **non** auto-accordées aux rôles restreints (lock-down intentionnel). `super_admin` bypass, `admin` reçoit tout via `PlatformSeeder`.
+
+**Invariant renforcé.** La sécurité des routes/API est enforce côté serveur (middleware `EnsurePlatformPermission`, fail-closed) **indépendamment du menu** — le filtre nav client reste purement UX.
+
+**Preuves.** `PlatformDashboardAuthorizationTest` (7) : super admin 200 partout ; sans permission 403 partout ; Finance/Support → dashboard oui, supervision 403 ; accès API direct enforce ; révocation de permission bascule l'accès ; recherche filtrée par catégorie (Finance voit factures pas support, Support l'inverse, super admin tout). Régressions : `NavBuilderTest`/`NavEndpointTest` adaptés (dashboard gaté par `view_dashboard` + nouveau test « dashboard caché sans permission ») ; rôles « viewer » de `DashboardEngineTest`/`PlatformBillingDashboardBatchTest` dotés de `view_dashboard` (gating par widget toujours vérifié). Suite ciblée : **978 passed, 0 failed**.
+
+**Fichiers** : `app/Modules/Platform/Dashboard/DashboardModule.php`, `routes/platform.php`, `app/Modules/Platform/Dashboard/Http/PlatformSearchController.php`, `database/migrations/2026_10_23_100000_grant_dashboard_base_permission_to_platform_roles.php`, `tests/Feature/PlatformDashboardAuthorizationTest.php`, `tests/Unit/NavBuilderTest.php`, `tests/Feature/NavEndpointTest.php`, `tests/Feature/DashboardEngineTest.php`, `tests/Feature/PlatformBillingDashboardBatchTest.php`.
+
+---

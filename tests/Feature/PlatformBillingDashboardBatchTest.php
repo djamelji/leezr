@@ -57,6 +57,13 @@ class PlatformBillingDashboardBatchTest extends TestCase
             'email' => 'viewer-batch@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
+        // ADR-595: base dashboard access so the viewer reaches widgets/data; per-widget
+        // billing gating (no view_billing) is what this test asserts.
+        $viewerBase = \App\Platform\Models\PlatformRole::create(['key' => 'dashboard_base_batch', 'name' => 'Dashboard Base']);
+        $viewerBase->permissions()->sync(
+            \App\Platform\Models\PlatformPermission::where('key', 'view_dashboard')->pluck('id')->all()
+        );
+        $this->viewer->roles()->attach($viewerBase);
 
         // Company with realistic data
         $this->company = Company::create([

@@ -334,30 +334,37 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/billing/scheduled-debits', [PlatformBillingController::class, 'scheduledDebits']);
     });
 
-    // Dashboard engine (ADR-149 D4e.3)
+    // Dashboard engine (ADR-149 D4e.3 / ADR-595 LOT 1 — permission-gated, fail-closed)
     Route::middleware(['module.active:platform.dashboard'])->group(function () {
-        Route::get('/dashboard/widgets/catalog', [DashboardWidgetController::class, 'catalog']);
-        Route::post('/dashboard/widgets/data', [DashboardWidgetController::class, 'batchResolve']);
-        Route::get('/dashboard/layout', [DashboardLayoutController::class, 'show']);
-        Route::put('/dashboard/layout', [DashboardLayoutController::class, 'update']);
-        Route::get('/dashboard/layout/presets', [DashboardLayoutController::class, 'presets']);
+        // Base dashboard landing — any platform role with `view_dashboard`.
+        // Widget data stays additionally per-widget permission-gated in DashboardWidgetController,
+        // and global search filters each result category by the caller's permission.
+        Route::middleware(['platform.permission:view_dashboard'])->group(function () {
+            Route::get('/dashboard/widgets/catalog', [DashboardWidgetController::class, 'catalog']);
+            Route::post('/dashboard/widgets/data', [DashboardWidgetController::class, 'batchResolve']);
+            Route::get('/dashboard/layout', [DashboardLayoutController::class, 'show']);
+            Route::put('/dashboard/layout', [DashboardLayoutController::class, 'update']);
+            Route::get('/dashboard/layout/presets', [DashboardLayoutController::class, 'presets']);
 
-        // Cockpit — decision-oriented landing (ADR-441)
-        Route::get('/dashboard/attention', [DashboardCockpitController::class, 'attention']);
-        Route::get('/dashboard/health', [DashboardCockpitController::class, 'health']);
+            // Cockpit — decision-oriented landing (ADR-441)
+            Route::get('/dashboard/attention', [DashboardCockpitController::class, 'attention']);
+            Route::get('/dashboard/health', [DashboardCockpitController::class, 'health']);
 
-        // System health aggregated view
-        Route::get('/system/health', [SystemHealthController::class, 'index']);
+            // Global search (ADR-468) — results are permission-filtered per category in the controller
+            Route::get('/search', PlatformSearchController::class);
+        });
 
-        // Global search (ADR-468)
-        Route::get('/search', PlatformSearchController::class);
+        // System health aggregated view — sensitive supervision data.
+        Route::middleware(['platform.permission:view_system_health'])->group(function () {
+            Route::get('/system/health', [SystemHealthController::class, 'index']);
+        });
 
-        // Onboarding funnel analytics (P3-1)
-        Route::get('/onboarding/funnel', OnboardingFunnelController::class);
-
-        // Usage monitoring (P3-4)
-        Route::get('/usage/overview', [UsageMonitoringController::class, 'overview']);
-        Route::get('/usage/company/{companyId}', [UsageMonitoringController::class, 'company']);
+        // Usage monitoring + onboarding funnel — per-company usage analytics (sensitive).
+        Route::middleware(['platform.permission:view_usage_monitoring'])->group(function () {
+            Route::get('/onboarding/funnel', OnboardingFunnelController::class);
+            Route::get('/usage/overview', [UsageMonitoringController::class, 'overview']);
+            Route::get('/usage/company/{companyId}', [UsageMonitoringController::class, 'company']);
+        });
     });
 
     // Billing / Payments governance (ADR-101, ADR-102)

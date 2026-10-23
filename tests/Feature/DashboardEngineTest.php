@@ -45,13 +45,19 @@ class DashboardEngineTest extends TestCase
         $superAdmin = PlatformRole::where('key', 'super_admin')->first();
         $this->admin->roles()->attach($superAdmin);
 
-        // Viewer without view_billing
+        // Viewer without view_billing, but WITH view_dashboard base access (ADR-595):
+        // reaches the dashboard endpoints, then per-widget permission gating applies.
         $this->viewer = PlatformUser::create([
             'first_name' => 'Viewer',
             'last_name' => 'Test',
             'email' => 'viewer@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
+        $viewerBase = PlatformRole::create(['key' => 'dashboard_base', 'name' => 'Dashboard Base']);
+        $viewerBase->permissions()->sync(
+            \App\Platform\Models\PlatformPermission::where('key', 'view_dashboard')->pluck('id')->all()
+        );
+        $this->viewer->roles()->attach($viewerBase);
 
         // Company with ledger data
         $this->company = Company::create([
