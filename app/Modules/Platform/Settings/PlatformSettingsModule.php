@@ -18,15 +18,9 @@ class PlatformSettingsModule implements ModuleDefinition
             sortOrder: 90,
             capabilities: new Capabilities(
                 navItems: [
-                    [
-                        'key' => 'settings',
-                        'title' => 'Settings',
-                        'to' => ['name' => 'platform-settings-tab', 'params' => ['tab' => 'general']],
-                        'icon' => 'tabler-settings',
-                        'permission' => 'manage_theme_settings',
-                        'group' => 'configuration',
-                        'sort' => 71,
-                    ],
+                    // ADR-598 LOT B: 'settings' is a collapsible parent under Configuration.
+                    ['key' => 'settings', 'title' => 'Settings', 'icon' => 'tabler-settings', 'group' => 'configuration', 'sort' => 50],
+                    ['key' => 'settings-general', 'title' => 'General', 'to' => ['name' => 'platform-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments', 'permission' => 'manage_theme_settings', 'parent' => 'settings', 'sort' => 10],
                 ],
                 routeNames: ['platform-settings-tab', 'platform-feature-flags', 'platform-account-tab'],
             ),

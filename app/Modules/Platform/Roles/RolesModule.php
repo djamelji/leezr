@@ -17,7 +17,10 @@ class RolesModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 30,
             capabilities: new Capabilities(
-                navItems: [],
+                // ADR-598 LOT B: surfaced as a child of the Governance → Access group.
+                navItems: [
+                    ['key' => 'access-roles', 'title' => 'Roles & Permissions', 'to' => ['name' => 'platform-access-tab', 'params' => ['tab' => 'roles']], 'icon' => 'tabler-lock-cog', 'permission' => 'manage_roles', 'parent' => 'platform-access', 'sort' => 20],
+                ],
                 routeNames: ['platform-access-tab'],
             ),
             permissions: [

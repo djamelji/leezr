@@ -17,7 +17,10 @@ class PlansModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 15,
             capabilities: new Capabilities(
-                navItems: [],
+                // ADR-598 LOT B: surfaced as a child of the Governance → Catalogue group.
+                navItems: [
+                    ['key' => 'plans', 'title' => 'Plans & Pricing', 'to' => ['name' => 'platform-catalog-tab', 'params' => ['tab' => 'plans']], 'icon' => 'tabler-receipt-2', 'permission' => 'manage_plans', 'parent' => 'catalog', 'sort' => 20],
+                ],
                 routeNames: ['platform-plans', 'platform-plans-key', 'platform-catalog-tab'],
             ),
             permissions: [

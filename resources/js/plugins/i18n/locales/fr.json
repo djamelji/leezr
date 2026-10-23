@@ -134,6 +134,11 @@
       "feature-flags": "Feature Flags",
       "usage-monitoring": "Monitoring utilisation",
       "catalog": "Catalogue",
+      "catalog-modules": "Modules",
+      "access-users": "Utilisateurs",
+      "access-roles": "Rôles & permissions",
+      "settings-general": "Général",
+      "settings-international": "International & Markets",
       "operations": "Opérations",
       "communications": "Communications"
     },

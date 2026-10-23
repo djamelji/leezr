@@ -22152,3 +22152,13 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers (LOT A)** : `app/Core/Navigation/NavGroupRegistry.php`, `app/Modules/Platform/{Modules/ModulesModule,Users/UsersModule,Settings/PlatformSettingsModule,Alerts/AlertsModule}.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/NavGroupRegistryContractTest.php`.
 
 ---
+
+**LOT B — Contributions ModuleManifest (sortir les fonctionnalités majeures des hubs).**
+Contrainte : `@layouts/utils.js::isNavLinkActive` matche par nom de route (params ignorés) et `@layouts` est intouchable ; les features Plans/JobDomains/Markets n'ont pas de route standalone (ADR-475). **Décision produit retenue** : sous-items repliables sous le hub parent (pas de pages factices, pas de modif `@layouts`, ADR-475 préservé ; surlignage exact d'un enfant limité, groupe parent correct).
+- `catalog` et `platform-access` et `settings` deviennent des **parents repliables** (sans `to`, sans permission → le groupe s'affiche si ≥1 enfant est autorisé, sinon élagué).
+- Enfants contribués par leurs propres modules via `parent` : **Governance → Catalogue** = {Modules (manage_modules), Plans & Tarifs (manage_plans), JobDomains (manage_jobdomains)} ; **Governance → Accès** = {Utilisateurs (manage_platform_users), Rôles (manage_roles)} ; **Configuration → Paramètres** = {Général (manage_theme_settings), International & Markets (manage_markets)}.
+- Secondaires conservés en onglets de hub (Fields, Documents, AI, Automations, Realtime, Security, Notifications, Audit) — pas d'item dédié.
+- i18n `nav.platform.{catalog-modules,access-users,access-roles,settings-general,settings-international}` (en+fr).
+- Arborescence rendue vérifiée ; 985 tests passed, build clean.
+
+**Fichiers (LOT B)** : `app/Modules/Platform/{Modules,Plans,Jobdomains,Users,Roles,Settings,Markets}/*Module.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`.
