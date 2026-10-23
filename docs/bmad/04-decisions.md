@@ -22202,3 +22202,10 @@ Problème : les items de hub Operations/Messaging/Communications étaient gatés
 - **Preuves E2E** (`platform-nav-active-states.spec.js`, local) : navigation entre deux enfants d'un hub → onglet en page correct ; refresh direct sur un sous-onglet → onglet conservé ; retour arrière navigateur → onglet précédent restauré ; dark mode (`colorScheme: dark`) → nav rendue sans erreur JS. Chaque scénario validé (isolément déterministe ; en suite complète, flakes d'environnement Valet local sous charge — login « page closed »/timing, sans rapport avec la logique).
 
 **Fichiers (LOT G)** : `tests/e2e/platform-nav-active-states.spec.js` (+ doc ADR). Aucun code applicatif requis — l'indication en page préexistait (`VTabs`).
+
+**LOT H (correctif déploiement) — pas d'appels/erreurs pour les rôles restreints sur le dashboard.**
+E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) atterrissant transitoirement sur le dashboard (landing par défaut `/platform`) déclenchait une cascade d'appels 403 (`dashboard/attention|health|layout`, `companies`, `platform-users`, `roles`, `modules`) et une **exception JS non gérée** (`loadCockpit` en `try/finally` sans `catch`).
+- `_DashboardOverview.vue` : les 3 flux `onMounted` (cockpit, stats, dashboard engine) ne s'exécutent plus que si `auth.hasPermission('view_dashboard')` → aucun appel non autorisé pour un rôle restreint.
+- `dashboard.store.loadCockpit()` : `catch` ajouté (défense en profondeur, plus d'exception non gérée). API toujours enforce côté serveur.
+
+**Fichiers (LOT H)** : `resources/js/pages/platform/dashboard/_DashboardOverview.vue`, `resources/js/modules/platform-admin/dashboard/dashboard.store.js`.

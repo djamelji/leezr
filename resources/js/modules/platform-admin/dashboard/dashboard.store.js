@@ -32,6 +32,12 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     try {
       await Promise.all([fetchAttention(), fetchHealth()])
     }
+    catch {
+      // ADR-598 (Phase 2 deploy): swallow (e.g. 403 for a role without view_dashboard) so a
+      // restricted user never triggers an uncaught rejection. API stays server-enforced.
+      attentionItems.value = []
+      healthBadges.value = {}
+    }
     finally {
       cockpitLoading.value = false
     }

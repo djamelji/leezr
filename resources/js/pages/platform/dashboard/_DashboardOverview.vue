@@ -6,6 +6,7 @@ import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.stor
 import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useDashboardStore } from '@/modules/platform-admin/dashboard/dashboard.store'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
 
@@ -16,6 +17,7 @@ const usersStore = usePlatformUsersStore()
 const rolesStore = usePlatformRolesStore()
 const settingsStore = usePlatformSettingsStore()
 const dashboardStore = useDashboardStore()
+const auth = usePlatformAuthStore()
 
 // ── Stats (optional — fail-safe, never blocks dashboard) ──
 const isStatsLoading = ref(true)
@@ -103,7 +105,12 @@ const healthBadgesList = computed(() => {
 })
 
 // ── Mount: three independent flows ──
+// ADR-598 (Phase 2 deploy): the dashboard only loads its data for users who actually hold
+// view_dashboard. A restricted platform role (e.g. view_ai only) that transiently lands here
+// must not fire unauthorized (403) data calls. API stays server-enforced regardless.
 onMounted(() => {
+  if (!auth.hasPermission('view_dashboard')) return
+
   // 1. Cockpit (attention + health) — hero
   dashboardStore.loadCockpit()
 
