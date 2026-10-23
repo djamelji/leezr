@@ -1,6 +1,7 @@
 <script setup>
 import CommunicationsSupport from './_CommunicationsSupport.vue'
 import CommunicationsDocumentation from './_CommunicationsDocumentation.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
   meta: {
@@ -14,16 +15,22 @@ definePage({
 const { t } = useI18n()
 const route = useRoute('platform-communications-tab')
 const router = useRouter()
+const auth = usePlatformAuthStore()
+
+// ADR-598 LOT C: communications tabs filtered by effective permission.
+const tabs = computed(() => [
+  { title: t('platformCommunications.tabs.support'), icon: 'tabler-message-circle-cog', tab: 'support', permission: 'manage_support' },
+  { title: t('platformCommunications.tabs.documentation'), icon: 'tabler-book', tab: 'documentation', permission: 'manage_documentation' },
+].filter(item => !item.permission || auth.hasPermission(item.permission)))
 
 const activeTab = computed({
-  get: () => route.params.tab,
+  get: () => {
+    const allowed = tabs.value.map(tb => tb.tab)
+
+    return allowed.includes(route.params.tab) ? route.params.tab : (allowed[0] ?? route.params.tab)
+  },
   set: val => router.replace({ name: 'platform-communications-tab', params: { tab: val } }),
 })
-
-const tabs = computed(() => [
-  { title: t('platformCommunications.tabs.support'), icon: 'tabler-message-circle-cog', tab: 'support' },
-  { title: t('platformCommunications.tabs.documentation'), icon: 'tabler-book', tab: 'documentation' },
-])
 </script>
 
 <template>

@@ -29,6 +29,7 @@ class EmailModule implements ModuleDefinition
                         'title' => 'Messaging',
                         'to' => ['name' => 'platform-messaging-tab', 'params' => ['tab' => 'inbox']],
                         'icon' => 'tabler-mail',
+                        'permission' => 'manage_email', // ADR-598 LOT C: item gated by its landing resource
                         'group' => 'cockpit',
                         'sort' => 5,
                     ],

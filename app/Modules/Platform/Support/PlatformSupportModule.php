@@ -23,6 +23,7 @@ class PlatformSupportModule implements ModuleDefinition
                         'title' => 'Communications',
                         'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']],
                         'icon' => 'tabler-message-circle-cog',
+                        'permission' => 'manage_support', // ADR-598 LOT C: item gated by its landing resource
                         'group' => 'clients',
                         'sort' => 40,
                     ],

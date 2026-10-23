@@ -6,6 +6,7 @@ import OperationsAi from './_OperationsAi.vue'
 import OperationsUsage from './_OperationsUsage.vue'
 import OperationsAutomations from './_OperationsAutomations.vue'
 import OperationsRealtime from './_OperationsRealtime.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
   meta: {
@@ -19,21 +20,27 @@ definePage({
 const { t } = useI18n()
 const route = useRoute('platform-operations-tab')
 const router = useRouter()
+const auth = usePlatformAuthStore()
+
+// ADR-598 LOT C: operations tabs filtered by effective permission.
+const tabs = computed(() => [
+  { title: t('platformOperations.tabs.health'), icon: 'tabler-heartbeat', tab: 'health', permission: 'view_system_health' },
+  { title: t('platformOperations.tabs.alerts'), icon: 'tabler-bell-ringing', tab: 'alerts', permission: 'view_alerts' },
+  { title: t('platformOperations.tabs.security'), icon: 'tabler-shield-lock', tab: 'security', permission: 'security.alerts.view' },
+  { title: t('platformOperations.tabs.ai'), icon: 'tabler-brain', tab: 'ai', permission: 'view_ai' },
+  { title: t('platformOperations.tabs.usage'), icon: 'tabler-chart-bar', tab: 'usage', permission: 'view_usage_monitoring' },
+  { title: t('platformOperations.tabs.automations'), icon: 'tabler-robot', tab: 'automations', permission: 'manage_automations' },
+  { title: t('platformOperations.tabs.realtime'), icon: 'tabler-broadcast', tab: 'realtime', permission: 'realtime.metrics.view' },
+].filter(item => !item.permission || auth.hasPermission(item.permission)))
 
 const activeTab = computed({
-  get: () => route.params.tab,
+  get: () => {
+    const allowed = tabs.value.map(tb => tb.tab)
+
+    return allowed.includes(route.params.tab) ? route.params.tab : (allowed[0] ?? route.params.tab)
+  },
   set: val => router.replace({ name: 'platform-operations-tab', params: { tab: val } }),
 })
-
-const tabs = computed(() => [
-  { title: t('platformOperations.tabs.health'), icon: 'tabler-heartbeat', tab: 'health' },
-  { title: t('platformOperations.tabs.alerts'), icon: 'tabler-bell-ringing', tab: 'alerts' },
-  { title: t('platformOperations.tabs.security'), icon: 'tabler-shield-lock', tab: 'security' },
-  { title: t('platformOperations.tabs.ai'), icon: 'tabler-brain', tab: 'ai' },
-  { title: t('platformOperations.tabs.usage'), icon: 'tabler-chart-bar', tab: 'usage' },
-  { title: t('platformOperations.tabs.automations'), icon: 'tabler-robot', tab: 'automations' },
-  { title: t('platformOperations.tabs.realtime'), icon: 'tabler-broadcast', tab: 'realtime' },
-])
 </script>
 
 <template>

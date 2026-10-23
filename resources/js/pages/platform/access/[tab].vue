@@ -7,6 +7,7 @@
 import PlatformLogsTab from './_PlatformLogsTab.vue'
 import RolesTab from './_RolesTab.vue'
 import UsersTab from './_UsersTab.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
   meta: {
@@ -19,17 +20,23 @@ definePage({
 
 const { t } = useI18n()
 const route = useRoute('platform-access-tab')
+const auth = usePlatformAuthStore()
+
+// ADR-598 LOT C: access tabs filtered by effective permission.
+const tabs = computed(() => [
+  { title: t('platformUsers.title'), icon: 'tabler-user-shield', tab: 'users', permission: 'manage_platform_users' },
+  { title: t('platformRoles.title'), icon: 'tabler-shield-lock', tab: 'roles', permission: 'manage_roles' },
+  { title: t('audit.platformTab'), icon: 'tabler-file-search', tab: 'logs', permission: 'view_audit_logs' },
+].filter(item => !item.permission || auth.hasPermission(item.permission)))
 
 const activeTab = computed({
-  get: () => route.params.tab,
+  get: () => {
+    const allowed = tabs.value.map(tb => tb.tab)
+
+    return allowed.includes(route.params.tab) ? route.params.tab : (allowed[0] ?? route.params.tab)
+  },
   set: () => route.params.tab,
 })
-
-const tabs = computed(() => [
-  { title: t('platformUsers.title'), icon: 'tabler-user-shield', tab: 'users' },
-  { title: t('platformRoles.title'), icon: 'tabler-shield-lock', tab: 'roles' },
-  { title: t('audit.platformTab'), icon: 'tabler-file-search', tab: 'logs' },
-])
 </script>
 
 <template>

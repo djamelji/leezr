@@ -22162,3 +22162,11 @@ Contrainte : `@layouts/utils.js::isNavLinkActive` matche par nom de route (param
 - Arborescence rendue vérifiée ; 985 tests passed, build clean.
 
 **Fichiers (LOT B)** : `app/Modules/Platform/{Modules,Plans,Jobdomains,Users,Roles,Settings,Markets}/*Module.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`.
+
+**LOT C — Permissions de navigation, routes et onglets (filtrage effectif).**
+- Items de hub précédemment sans permission désormais gatés par la permission de leur onglet d'atterrissage : Messaging→`manage_email`, Communications/Support→`manage_support`, Operations/System→`view_system_health`. Plus aucun lien visible vers une surface non autorisée.
+- **Filtrage des onglets internes** des hubs par permission effective (store `platformAuth`) dans `catalog`, `operations`, `access`, `communications` `[tab].vue` : chaque onglet porte sa permission ; les onglets non autorisés sont masqués et l'onglet actif retombe sur le premier autorisé si l'URL cible un onglet interdit. La sécurité API reste serveur (fail-closed) — ceci est la couche UX empêchant d'exposer les autres onglets d'un hub.
+- Cohérence vérifiée manifest→permission item→route→endpoint→middleware pour les enfants surfacés (plans/jobdomains/markets/roles/users).
+- Preuves `PlatformNavModularTest` (5) : taxonomie 6 domaines pour super admin ; rôle `manage_plans` → Catalogue avec Plans seul ; `view_billing` → Finance/Billing seul ; items de hub gatés par leur permission d'atterrissage ; parent élagué si aucun enfant autorisé. Régression : **1041 passed**, build clean.
+
+**Fichiers (LOT C)** : `app/Modules/Platform/{Email,Support,Alerts}/*Module.php`, `resources/js/pages/platform/{catalog,operations,access,communications}/[tab].vue`, `tests/Feature/PlatformNavModularTest.php`.
