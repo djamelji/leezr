@@ -18,9 +18,7 @@ class UsersModule implements ModuleDefinition
             sortOrder: 20,
             capabilities: new Capabilities(
                 navItems: [
-                    // ADR-598 LOT B: 'platform-access' is a collapsible parent under Governance.
-                    ['key' => 'platform-access', 'title' => 'Access Management', 'icon' => 'tabler-user-shield', 'group' => 'governance', 'sort' => 40],
-                    ['key' => 'access-users', 'title' => 'Users', 'to' => ['name' => 'platform-access-tab', 'params' => ['tab' => 'users']], 'icon' => 'tabler-users', 'permission' => 'manage_platform_users', 'parent' => 'platform-access', 'sort' => 10],
+                    ['key' => 'platform-access', 'title' => 'Access Management', 'to' => ['name' => 'platform-access-tab', 'params' => ['tab' => 'users']], 'icon' => 'tabler-user-shield', 'permission' => 'manage_platform_users', 'group' => 'governance', 'sort' => 40],
                 ],
                 routeNames: ['platform-access-tab', 'platform-users-id'],
             ),

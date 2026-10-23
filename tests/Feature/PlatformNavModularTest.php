@@ -7,9 +7,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ADR-598 (Phase 2) — modular, permission-driven platform navigation.
- * Groups are shared, hubs expose children, each item carries an effective permission, and a
- * parent group is pruned when the user is authorized for none of its children.
+ * Platform navigation = ONE link per hub (post Phase-1 behaviour, ADR-598 LOT A taxonomy kept).
+ * No internal hub tab is injected as a sidebar item; a restricted role sees only the hubs it can
+ * access. Permissions stay server-side (RBAC untouched). Rolls back the ADR-598 LOT B/F sub-item
+ * injection that caused internal tabs in the sidebar + multiple active highlight.
  */
 class PlatformNavModularTest extends TestCase
 {
@@ -21,7 +22,7 @@ class PlatformNavModularTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
     }
 
-    /** @return array<string,array<string>> group key => flattened item+child keys */
+    /** @return array<string,array<string>> group key => item keys (incl. any children) */
     private function tree(?array $permissions): array
     {
         $out = [];
@@ -39,97 +40,64 @@ class PlatformNavModularTest extends TestCase
         return $out;
     }
 
-    public function test_super_admin_sees_full_six_domain_taxonomy(): void
+    public function test_super_admin_sees_one_link_per_hub_with_no_children(): void
     {
         $t = $this->tree(null);
-        foreach (['cockpit', 'clients', 'finance', 'governance', 'configuration', 'system'] as $g) {
-            $this->assertArrayHasKey($g, $t, "group {$g} present for super admin");
-        }
-        $this->assertContains('plans', $t['governance']);
-        $this->assertContains('jobdomains', $t['governance']);
-        $this->assertContains('settings-international', $t['configuration']);
+        $this->assertSame(['dashboard', 'platform-messaging'], $t['cockpit']);
+        $this->assertSame(['platform-companies', 'communications'], $t['clients']);
+        $this->assertSame(['platform-billing'], $t['finance']);
+        $this->assertSame(['catalog', 'platform-access'], $t['governance']);
+        $this->assertSame(['settings'], $t['configuration']);
+        $this->assertSame(['operations'], $t['system']);
     }
 
-    public function test_plans_only_role_sees_catalogue_with_only_plans(): void
+    public function test_no_internal_hub_tab_is_rendered_as_a_sidebar_item(): void
     {
-        $t = $this->tree(['manage_plans']);
-        $this->assertArrayHasKey('governance', $t);
-        $this->assertContains('catalog', $t['governance']); // parent present
-        $this->assertContains('plans', $t['governance']);
-        $this->assertNotContains('catalog-modules', $t['governance']);
-        $this->assertNotContains('jobdomains', $t['governance']);
-        // No finance / system / configuration groups for a plans-only role.
-        $this->assertArrayNotHasKey('finance', $t);
-        $this->assertArrayNotHasKey('system', $t);
+        $all = collect($this->tree(null))->flatten()->all();
+        // These are hub tabs / pages — they must NEVER appear as sidebar items (the ADR-599 defect).
+        foreach ([
+            'plans', 'jobdomains', 'markets', 'catalog-modules',
+            'access-users', 'access-roles', 'settings-general', 'settings-international',
+            'fin-overview', 'fin-subscriptions', 'fin-invoices', 'fin-payments', 'fin-reconciliation',
+            'messaging-email', 'messaging-notifications', 'comms-support', 'comms-documentation',
+            'ops-health', 'ops-alerts', 'ops-security', 'ops-ai', 'ops-automations', 'ops-realtime', 'ops-usage', 'ops-audit',
+        ] as $internal) {
+            $this->assertNotContains($internal, $all, "internal tab '{$internal}' must not be a sidebar item");
+        }
     }
 
-    public function test_finance_reader_sees_only_billing(): void
+    public function test_finance_reader_sees_only_the_finance_hub(): void
     {
         $t = $this->tree(['view_billing']);
         $this->assertSame(['finance'], array_keys($t));
         $this->assertSame(['platform-billing'], $t['finance']);
     }
 
-    public function test_hub_items_require_their_landing_permission(): void
+    public function test_restricted_role_sees_only_accessible_hubs(): void
     {
-        // Without the landing permissions, messaging/operations items are hidden.
-        $t = $this->tree(['view_dashboard']);
-        $this->assertArrayHasKey('cockpit', $t);
-        $this->assertContains('dashboard', $t['cockpit']);
-        $this->assertNotContains('platform-messaging', $t['cockpit'], 'messaging hidden without manage_email');
-        $this->assertArrayNotHasKey('system', $t, 'operations hidden without view_system_health');
-
-        // With the permissions, they appear.
-        $t2 = $this->tree(['view_dashboard', 'manage_email', 'view_system_health']);
-        $this->assertContains('platform-messaging', $t2['cockpit']);
-        $this->assertContains('operations', $t2['system']);
+        // manage_modules → Governance shows ONLY the Catalogue hub (Access needs manage_platform_users).
+        $t = $this->tree(['manage_modules']);
+        $this->assertSame(['governance'], array_keys($t));
+        $this->assertSame(['catalog'], $t['governance']);
     }
 
-    public function test_empty_parent_group_is_pruned(): void
+    public function test_hubs_are_gated_by_their_landing_permission(): void
     {
-        // A role with an unrelated permission sees no governance group at all (all children filtered).
+        // A role with only view_dashboard sees just the dashboard hub — no messaging/system/etc.
+        $t = $this->tree(['view_dashboard']);
+        $this->assertSame(['cockpit'], array_keys($t));
+        $this->assertSame(['dashboard'], $t['cockpit']);
+
+        // Operations hub hidden without view_system_health; messaging hidden without manage_email.
+        $this->assertArrayNotHasKey('system', $t);
+        $this->assertNotContains('platform-messaging', $t['cockpit']);
+    }
+
+    public function test_empty_groups_are_pruned(): void
+    {
         $t = $this->tree(['view_billing']);
         $this->assertArrayNotHasKey('governance', $t);
+        $this->assertArrayNotHasKey('system', $t);
         $this->assertArrayNotHasKey('configuration', $t);
-    }
-
-    // ── LOT F: partial-permission hubs show via ANY authorized child ──────────
-    public function test_view_ai_only_sees_operations_with_only_ai(): void
-    {
-        $t = $this->tree(['view_ai']);
-        $this->assertArrayHasKey('system', $t, 'Operations visible for an AI-only role');
-        $this->assertContains('operations', $t['system']); // parent
-        $this->assertContains('ops-ai', $t['system']);
-        foreach (['ops-health', 'ops-usage', 'ops-alerts', 'ops-security', 'ops-automations', 'ops-realtime'] as $forbidden) {
-            $this->assertNotContains($forbidden, $t['system'], "{$forbidden} must stay hidden");
-        }
-    }
-
-    public function test_view_system_health_only_sees_operations_without_ai(): void
-    {
-        $t = $this->tree(['view_system_health']);
-        $this->assertArrayHasKey('system', $t);
-        $this->assertContains('ops-health', $t['system']);
-        $this->assertNotContains('ops-ai', $t['system']);
-    }
-
-    public function test_manage_roles_only_sees_access_with_only_roles(): void
-    {
-        $t = $this->tree(['manage_roles']);
-        $this->assertArrayHasKey('governance', $t);
-        $this->assertContains('platform-access', $t['governance']); // parent
-        $this->assertContains('access-roles', $t['governance']);
-        $this->assertNotContains('access-users', $t['governance']);
-        // Catalogue parent is pruned (no catalog child authorized).
-        $this->assertNotContains('catalog', $t['governance']);
-    }
-
-    public function test_messaging_parent_shows_for_notifications_only_role(): void
-    {
-        $t = $this->tree(['manage_notifications']);
-        $this->assertArrayHasKey('cockpit', $t);
-        $this->assertContains('platform-messaging', $t['cockpit']);
-        $this->assertContains('messaging-notifications', $t['cockpit']);
-        $this->assertNotContains('messaging-email', $t['cockpit']);
     }
 }

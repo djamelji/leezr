@@ -25,12 +25,7 @@ class AlertsModule implements ModuleDefinition
             sortOrder: 3,
             capabilities: new Capabilities(
                 navItems: [
-                    // ADR-598 LOT F: 'operations' is a collapsible parent (no permission) — it shows if
-                    // ANY child is authorized. Children are contributed independently per module.
-                    ['key' => 'operations', 'title' => 'Operations', 'icon' => 'tabler-settings-cog', 'group' => 'system', 'sort' => 60],
-                    ['key' => 'ops-health', 'title' => 'System Health', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-heartbeat', 'permission' => 'view_system_health', 'parent' => 'operations', 'sort' => 10],
-                    ['key' => 'ops-alerts', 'title' => 'Alerts', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'alerts']], 'icon' => 'tabler-bell-ringing', 'permission' => 'view_alerts', 'parent' => 'operations', 'sort' => 20],
-                    ['key' => 'ops-usage', 'title' => 'Usage Monitoring', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'usage']], 'icon' => 'tabler-chart-bar', 'permission' => 'view_usage_monitoring', 'parent' => 'operations', 'sort' => 50],
+                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'permission' => 'view_system_health', 'group' => 'system', 'sort' => 60],
                 ],
                 routeNames: ['platform-alerts', 'platform-operations-tab'],
             ),

@@ -18,10 +18,15 @@ class PlatformSupportModule implements ModuleDefinition
             sortOrder: 92,
             capabilities: new Capabilities(
                 navItems: [
-                    // ADR-598 LOT F: 'communications' is a collapsible parent (no permission) that
-                    // shows if any child (Support / Documentation) is authorized.
-                    ['key' => 'communications', 'title' => 'Communications', 'icon' => 'tabler-message-circle-cog', 'group' => 'clients', 'sort' => 40],
-                    ['key' => 'comms-support', 'title' => 'Support', 'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']], 'icon' => 'tabler-headset', 'permission' => 'manage_support', 'parent' => 'communications', 'sort' => 10],
+                    [
+                        'key' => 'communications',
+                        'title' => 'Communications',
+                        'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']],
+                        'icon' => 'tabler-message-circle-cog',
+                        'permission' => 'manage_support', // gated so restricted roles only see accessible hubs
+                        'group' => 'clients',
+                        'sort' => 40,
+                    ],
                 ],
                 routeNames: ['platform-support', 'platform-support-id', 'platform-communications-tab'],
                 footerLinks: [

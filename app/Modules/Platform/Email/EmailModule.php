@@ -24,10 +24,15 @@ class EmailModule implements ModuleDefinition
             sortOrder: 59,
             capabilities: new Capabilities(
                 navItems: [
-                    // ADR-598 LOT F: 'platform-messaging' is a collapsible parent (no permission) that
-                    // shows if any child (Email / Notifications) is authorized.
-                    ['key' => 'platform-messaging', 'title' => 'Messaging', 'icon' => 'tabler-mail', 'group' => 'cockpit', 'sort' => 5],
-                    ['key' => 'messaging-email', 'title' => 'Email', 'to' => ['name' => 'platform-messaging-tab', 'params' => ['tab' => 'inbox']], 'icon' => 'tabler-inbox', 'permission' => 'manage_email', 'parent' => 'platform-messaging', 'sort' => 10],
+                    [
+                        'key' => 'platform-messaging',
+                        'title' => 'Messaging',
+                        'to' => ['name' => 'platform-messaging-tab', 'params' => ['tab' => 'inbox']],
+                        'icon' => 'tabler-mail',
+                        'permission' => 'manage_email', // gated so restricted roles only see accessible hubs
+                        'group' => 'cockpit',
+                        'sort' => 5,
+                    ],
                 ],
                 routeNames: ['platform-email-tab', 'platform-messaging-tab'],
             ),

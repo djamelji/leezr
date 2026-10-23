@@ -17,10 +17,7 @@ class AutomationsModule implements ModuleDefinition
             surface: 'governance',
             sortOrder: 97,
             capabilities: new Capabilities(
-                // ADR-598 LOT F: Automations surfaced as an independent child of System → Operations.
-                navItems: [
-                    ['key' => 'ops-automations', 'title' => 'Automations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'automations']], 'icon' => 'tabler-robot', 'permission' => 'manage_automations', 'parent' => 'operations', 'sort' => 40],
-                ],
+                navItems: [],
                 routeNames: ['platform-automations', 'platform-operations-tab'],
             ),
             permissions: [

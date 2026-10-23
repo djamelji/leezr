@@ -1,50 +1,56 @@
 // @ts-check
-// ADR-598 (Phase 2) — modular, permission-driven platform navigation rendered by Vuexy.
-// Real UI → API → navigation: the sidebar is built from manifests + NavGroupRegistry + the
-// user's effective permissions. Runs against the local build (leezr.test).
+// Platform navigation = ONE link per hub (no internal hub tab injected into the sidebar, no
+// multiple active highlight). Restricted roles see only the hubs they can access. Runs against
+// the deployed build.
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
 
 const nav = page => page.locator('.layout-vertical-nav')
 
-test('super admin sees the full 6-domain taxonomy with a collapsible Governance group', async ({ page }) => {
+test('super admin sees exactly one link per hub across the six groups', async ({ page }) => {
   await loginPlatform(page, 'admin@leezr.com')
   await page.goto('/platform/dashboard/overview', { waitUntil: 'networkidle' })
   await expect(nav(page)).toBeVisible({ timeout: 8000 })
 
-  // The six canonical group headings are present (bilingual-tolerant).
   for (const re of [/Cockpit/i, /Clients/i, /Finance/i, /Governance|Gouvernance/i, /Configuration/i, /System|Système/i]) {
     await expect(nav(page).locator('.nav-section-title', { hasText: re }).first()).toBeVisible()
   }
 
-  // Governance is a collapsible group; expanding reveals its children (Catalogue → Plans/JobDomains).
-  const governanceGroup = nav(page).locator('.nav-group', { hasText: /Catalog|Catalogue/i }).first()
-  await governanceGroup.locator('.nav-group-label, .nav-link').first().click()
-  await expect(nav(page).getByText(/Plans/i).first()).toBeVisible({ timeout: 5000 })
+  // Hub links present…
+  for (const re of [/Dashboard|Tableau/i, /Billing|Facturation/i, /Catalog|Catalogue/i, /Operations|Opérations/i]) {
+    await expect(nav(page).getByRole('link', { name: re }).first()).toBeVisible()
+  }
+
+  // …and NO internal hub tab injected as a sidebar link (the regression we rolled back).
+  for (const re of [/^Plans/i, /Job ?domains|Domaines/i, /^Markets/i, /^Invoices$|^Factures$/i, /^Payments$|^Paiements$/i, /Reconciliation|Rapprochement/i]) {
+    await expect(nav(page).getByRole('link', { name: re })).toHaveCount(0)
+  }
 })
 
-test('a restricted Finance Reader sees only its authorized groups', async ({ page }) => {
+test('exactly one sidebar link is active on a hub page (no multiple highlight)', async ({ page }) => {
+  await loginPlatform(page, 'admin@leezr.com')
+  await page.goto('/platform/billing/invoices', { waitUntil: 'networkidle' })
+  await expect(nav(page)).toBeVisible({ timeout: 8000 })
+  // Only the single Billing hub link is active.
+  await expect(nav(page).locator('a.router-link-active')).toHaveCount(1)
+  await expect(nav(page).locator('a.router-link-active')).toContainText(/Billing|Facturation/i)
+})
+
+test('a restricted Finance Reader sees only the Finance hub', async ({ page }) => {
   await loginPlatform(page, 'finance-reader@leezr.com')
   await page.goto('/platform/dashboard/overview', { waitUntil: 'networkidle' })
   await expect(nav(page)).toBeVisible({ timeout: 8000 })
-
-  // Authorized: Cockpit (dashboard) + Finance (billing).
   await expect(nav(page).locator('.nav-section-title', { hasText: /Finance/i }).first()).toBeVisible()
-  await expect(nav(page).getByText(/Billing|Facturation/i).first()).toBeVisible()
-
-  // NOT authorized → groups absent (no link to unavailable features).
+  await expect(nav(page).getByRole('link', { name: /Billing|Facturation/i }).first()).toBeVisible()
   await expect(nav(page).locator('.nav-section-title', { hasText: /Governance|Gouvernance/i })).toHaveCount(0)
   await expect(nav(page).locator('.nav-section-title', { hasText: /System|Système/i })).toHaveCount(0)
-  await expect(nav(page).locator('.nav-section-title', { hasText: /Clients/i })).toHaveCount(0)
 })
 
-test('navigation survives a full page reload (active state preserved)', async ({ page }) => {
+test('internal hub tabs still work (billing invoices tab active in page)', async ({ page }) => {
   await loginPlatform(page, 'admin@leezr.com')
-  await page.goto('/platform/billing/overview', { waitUntil: 'networkidle' })
-  await expect(nav(page)).toBeVisible({ timeout: 8000 })
+  await page.goto('/platform/billing/invoices', { waitUntil: 'networkidle' })
   await page.reload({ waitUntil: 'networkidle' })
-  // Billing link is marked active after reload.
-  await expect(nav(page).locator('.router-link-active, .router-link-exact-active').filter({ hasText: /Billing|Facturation/i }).first()).toBeVisible({ timeout: 8000 })
+  await expect(page.locator('.v-tab', { hasText: /Invoices|Factures/i }).first()).toHaveClass(/v-tab--selected|v-slide-group-item--active/, { timeout: 8000 })
 })
 
 test('mobile viewport exposes the nav via the hamburger toggle', async ({ page }) => {

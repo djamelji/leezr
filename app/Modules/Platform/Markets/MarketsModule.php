@@ -17,10 +17,7 @@ class MarketsModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 12,
             capabilities: new Capabilities(
-                // ADR-598 LOT B: surfaced as a child of Configuration → Settings (International & Markets).
-                navItems: [
-                    ['key' => 'settings-international', 'title' => 'International & Markets', 'to' => ['name' => 'platform-settings-tab', 'params' => ['tab' => 'international']], 'icon' => 'tabler-world', 'permission' => 'manage_markets', 'parent' => 'settings', 'sort' => 20],
-                ],
+                navItems: [],
                 routeNames: ['platform-international-tab', 'platform-markets-key', 'platform-settings-tab'],
             ),
             permissions: [

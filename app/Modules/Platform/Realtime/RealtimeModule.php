@@ -17,10 +17,7 @@ class RealtimeModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 95,
             capabilities: new Capabilities(
-                // ADR-598 LOT F: Realtime surfaced as an independent child of System → Operations.
-                navItems: [
-                    ['key' => 'ops-realtime', 'title' => 'Realtime Backbone', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'realtime']], 'icon' => 'tabler-broadcast', 'permission' => 'realtime.metrics.view', 'parent' => 'operations', 'sort' => 60],
-                ],
+                navItems: [],
                 routeNames: ['platform-realtime', 'platform-operations-tab'],
             ),
             // ADR-597 (LOT 3): removed dead permissions (realtime.view, realtime.manage) —

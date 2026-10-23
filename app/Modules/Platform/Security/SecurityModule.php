@@ -17,11 +17,8 @@ class SecurityModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 94,
             capabilities: new Capabilities(
-                // ADR-598 LOT F: Security surfaced as an independent child of System → Operations.
-                navItems: [
-                    ['key' => 'ops-security', 'title' => 'Security', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'security']], 'icon' => 'tabler-shield-lock', 'permission' => 'security.alerts.view', 'parent' => 'operations', 'sort' => 25],
-                ],
-                routeNames: ['platform-operations-tab'],
+                navItems: [],
+                routeNames: [],
             ),
             // ADR-597 (LOT 3): removed dead permissions (security.view, security.manage,
             // security.audit.view) — only security.alerts.* are enforced on routes.

@@ -22209,3 +22209,21 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 - `dashboard.store.loadCockpit()` : `catch` ajouté (défense en profondeur, plus d'exception non gérée). API toujours enforce côté serveur.
 
 **Fichiers (LOT H)** : `resources/js/pages/platform/dashboard/_DashboardOverview.vue`, `resources/js/modules/platform-admin/dashboard/dashboard.store.js`.
+
+### ADR-600 — Restauration navigation Platform : un seul lien par hub (rollback des sous-items LOT B/F) (2026-10-23)
+
+**Contexte.** La Phase 2 (ADR-598) a injecté les onglets internes des hubs comme **sous-items repliables** de la sidebar (LOT B `c2cbb67` + LOT F `93e540c`) : Catalogue{Modules,Plans,JobDomains}, Accès{Utilisateurs,Rôles}, Paramètres{Général,International}, Opérations{…}, Messagerie{Email,Notifications}, Communications{Support,Documentation}. Défaut en PROD (`fb394a5`) : onglets internes rendus comme items de navigation principale + **surlignage multiple** entre pages d'un même hub (items partageant une route de hub). ADR-599 (aplatissement) a aggravé le défaut et a été **annulé en local** (jamais poussé).
+
+**Décision.** Restaurer le comportement **un seul lien par hub** (état LOT A `487688a`, antérieur à l'injection de sous-items), **en conservant** la taxonomie 6 groupes (ADR-596) et tous les correctifs indépendants déployés.
+- 16 manifests Platform restaurés à l'état LOT A (un item par hub, `navItems:[]` pour Plans/JobDomains/Markets/Fields/Documents/Roles/Audit/Notifications/Documentation/AI/Automations/Realtime/Security). Les onglets Plans, JobDomains, Markets, Factures, Paiements, Rapprochement, Rôles… restent **dans leurs pages/onglets de hub**.
+- Permissions d'atterrissage réappliquées sur les 3 hubs sans permission (Messagerie→`manage_email`, Communications→`manage_support`, Opérations→`view_system_health`) afin qu'un rôle restreint ne voie **que les hubs accessibles**.
+
+**Conservé (non annulé) :** ADR-595 (sécurité Dashboard), ADR-596 (NavGroupRegistry 6 groupes), ADR-597 (permissions granulaires), le filtrage des onglets internes par permission dans les hubs `[tab].vue` (LOT C), l'invalidation du cache nav Platform (LOT E `runtime.js`/`scheduler.js`), et la **protection Dashboard des rôles restreints** (`_DashboardOverview` + `dashboard.store`, correctif `fb394a5`). RBAC, routes, permissions serveur : **inchangés**. `@layouts`/`@core` : **non modifiés**.
+
+**Menu restauré (rendu vérifié) :** Cockpit(Tableau de bord, Messagerie) · Clients(Entreprises, Communications) · Finance(Facturation) · Gouvernance(Catalogue, Gestion des accès) · Configuration(Paramètres) · Système(Opérations).
+
+**Preuves.** `PlatformNavModularTest` réécrit (6 cas : un lien par hub sans enfant ; aucun onglet interne en sidebar ; Finance Reader → hub Finance seul ; rôle restreint → hubs accessibles seulement ; hubs gatés par permission d'atterrissage ; groupes vides élagués). Régression nav/RBAC/billing/dashboard/company : **1557 passed, 0 failed**. Build clean (JS inchangé vs `fb394a5`). E2E `platform-nav-modular.spec.js` réécrit (un lien/hub, un seul actif par page, onglets internes fonctionnels).
+
+**Fichiers** : 16 `app/Modules/Platform/**/*Module.php` (restaurés LOT A + 3 permissions), `tests/Feature/PlatformNavModularTest.php`, `tests/e2e/platform-nav-modular.spec.js`.
+
+---
