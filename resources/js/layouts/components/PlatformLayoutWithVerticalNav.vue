@@ -76,4 +76,25 @@ const effectiveNavItems = computed(() => navStore.platformLoaded ? navItems.valu
     font-size: 14px !important;
   }
 }
+
+// ADR-598 LOT D: clearer visual separation between the 6 canonical nav groups.
+// Uses currentColor/opacity so it adapts to light & dark themes (no new design system).
+.layout-vertical-nav {
+  .nav-section-title {
+    margin-block-start: 0.75rem;
+
+    .title-text {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.6;
+    }
+  }
+
+  // First section title needs no extra top gap.
+  .nav-items > .nav-section-title:first-child {
+    margin-block-start: 0;
+  }
+}
 </style>

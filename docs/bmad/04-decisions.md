@@ -22170,3 +22170,10 @@ Contrainte : `@layouts/utils.js::isNavLinkActive` matche par nom de route (param
 - Preuves `PlatformNavModularTest` (5) : taxonomie 6 domaines pour super admin ; rôle `manage_plans` → Catalogue avec Plans seul ; `view_billing` → Finance/Billing seul ; items de hub gatés par leur permission d'atterrissage ; parent élagué si aucun enfant autorisé. Régression : **1041 passed**, build clean.
 
 **Fichiers (LOT C)** : `app/Modules/Platform/{Email,Support,Alerts}/*Module.php`, `resources/js/pages/platform/{catalog,operations,access,communications}/[tab].vue`, `tests/Feature/PlatformNavModularTest.php`.
+
+**LOT D — UX/UI Vuexy & responsive.**
+Principe : exploiter le thème existant (interdit de modifier `@core`/`@layouts`), ne pas inventer de design system. L'essentiel est déjà fourni par Vuexy à partir des données résolues en A–C : groupes (section titles), sous-menus repliables (`VerticalNavGroup`), **ouverture automatique du groupe actif** (`VerticalNavGroup` isActive/isOpen), indication de page active, dark mode, responsive desktop/tablette/mobile, navigation clavier. La navigation est **préservée au refresh** (store `nav` + cache sessionStorage) et **sans clignotement** d'items non autorisés (gate `effectiveNavItems = [] tant que !platformLoaded`, ADR-153).
+- Seule évolution de style (dans le fichier layout **autorisé** `PlatformLayoutWithVerticalNav.vue`, pas `@layouts`) : distinction visuelle renforcée des 6 groupes canoniques (titres de section en petites capitales, espacement, opacité) via `currentColor`/opacité → compatible light & dark, sans nouveau design system.
+- Icônes cohérentes attribuées aux parents et enfants (tabler) ; titres i18n FR/EN.
+
+**Fichiers (LOT D)** : `resources/js/layouts/components/PlatformLayoutWithVerticalNav.vue`.
