@@ -22227,3 +22227,27 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : 16 `app/Modules/Platform/**/*Module.php` (restaurés LOT A + 3 permissions), `tests/Feature/PlatformNavModularTest.php`, `tests/e2e/platform-nav-modular.spec.js`.
 
 ---
+
+### ADR-601 — Consolidation « Utilisation & Consommation » (Operations) (2026-10-23)
+
+**Diagnostic.** Les deux surfaces « utilisation » (Opérations→Supervision d'usage et Opérations→IA→Utilisation) ne sont **pas de vrais doublons** : vues **complémentaires** mal rangées. A = usage ressources **agrégé quotidien** (`/usage/overview` + `/usage/company/{id}`, `view_usage_monitoring`, snapshots : IA + emails + sièges + stockage + API). B = **observabilité IA temps réel** (`/ai/usage`, `view_ai`, logs live : latence, erreurs, providers, modèles, requêtes). Seul l'en-tête requêtes/tokens IA + top-consommateurs se chevauche, via deux chemins (snapshot vs live) → **jamais additionnés**.
+
+**Décision.** Une page premium unique **« Utilisation & Consommation »** (slot Opérations `tab=usage`, `_OperationsUsageConsumption.vue`) à 3 sections **gatées par permission** :
+- **Vue d'ensemble & ressources** + **Analyse par entreprise** (`view_usage_monitoring`) ← `/usage/overview` + `/usage/company/{id}` (ce dernier enfin exploité). Badge « Agrégé quotidien ».
+- **Observabilité IA** (`view_ai`) ← `/ai/usage`. Badge « Temps réel ».
+- Chaque section ne **rend ET ne fetch** que si la permission est détenue → **aucun appel API interdit** pour une section masquée ; middleware serveur reste la garde réelle. Aucune métrique de coût ni de quota (inexistantes) ; aucun total inter-unités ; pas de double comptage snapshot/live.
+
+**Navigation (réutilise ModuleManifest/NavBuilder/NavGroupRegistry, `@layouts` intact) :**
+- Sous-onglet **IA→Utilisation supprimé** → remplacé par un **lien contextuel** vers la page consolidée. IA conserve providers/operations(santé)/routing/settings.
+- Onglet Opérations renommé « Utilisation & Consommation » ; visible si `view_usage_monitoring` **OU** `view_ai`.
+- **Extension NavBuilder opt-in `anyPermission`** (visible si ≥1 permission) appliquée à l'item Opérations → joignable par tout détenteur d'une capacité Opérations (dont `view_ai`/`view_usage_monitoring`) ; le hub retombe sur le premier onglet autorisé. Ancienne URL `/platform/operations/usage` préservée.
+
+**Permissions.** `view_usage_monitoring` → stats globales + analyse Company uniquement ; `view_ai` → observabilité IA uniquement ; aucune fuite inter-périmètre. Appliqué backend (endpoints) **et** affichage par section.
+
+**Preuves.** `UsageConsolidationTest` (3 : hub joignable par toute capacité ; endpoints gatés par section — `view_ai` 403 sur `/usage/*`, `view_usage_monitoring` 403 sur `/ai/usage` ; super admin OK). E2E `platform-usage-consolidation.spec.js` (5 : 3 sections super admin sans erreur JS ; usage-only sans section IA ni appel IA interdit ; ai-only sans section ressources ni appel usage interdit ; plus de sous-onglet IA→Utilisation + lien contextuel ; ancienne URL + dark mode). Régression **1618 passed, 0 failed** ; build clean.
+
+**Limites de données.** Pas de coût IA (€), pas de quota/dépassement (aucune donnée) → sections non créées. Drill-down Company limité aux entreprises présentes dans `top_ai_companies` (évite d'exiger `view_companies`). Chiffres IA de la section ressources (snapshot) peuvent retarder d'un jour vs la section observabilité (live) — distingués par badge.
+
+**Fichiers** : `resources/js/pages/platform/operations/_OperationsUsageConsumption.vue` (nouveau), `resources/js/modules/platform-admin/usage/usage.store.js` (nouveau), `resources/js/pages/platform/operations/{[tab].vue,_OperationsAi.vue}`, `app/Core/Navigation/{NavItem.php,NavBuilder.php}`, `app/Modules/Platform/Alerts/AlertsModule.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/UsageConsolidationTest.php`, `tests/e2e/platform-usage-consolidation.spec.js`.
+
+---

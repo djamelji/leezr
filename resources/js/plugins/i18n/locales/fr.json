@@ -614,6 +614,46 @@
     "specificity": "Spécificité",
     "supportedMethods": "Méthodes supportées"
   },
+  "platformUsage": {
+    "title": "Utilisation & Consommation",
+    "subtitle": "Utilisation des ressources de la plateforme et observabilité IA au même endroit.",
+    "aggregatedDaily": "Agrégé quotidien",
+    "realtime": "Temps réel",
+    "noAccess": "Vous n'avez pas la permission de voir les données d'utilisation.",
+    "daysShort": "j",
+    "empty": "Aucune donnée pour cette période.",
+    "dailyTrend": "Tendance quotidienne",
+    "topCompanies": "Entreprises les plus consommatrices",
+    "selectCompany": "Sélectionner une entreprise…",
+    "selectCompanyHint": "Sélectionnez une entreprise pour voir son utilisation.",
+    "aiLinkHint": "Les métriques de consommation IA ont été regroupées dans la page Utilisation & Consommation.",
+    "sections": {
+      "overview": "Vue d'ensemble & ressources",
+      "company": "Analyse par entreprise",
+      "ai": "Observabilité IA"
+    },
+    "metrics": {
+      "aiRequests": "Requêtes IA",
+      "aiTokens": "Tokens IA",
+      "emails": "E-mails envoyés",
+      "apiRequests": "Requêtes API",
+      "members": "Membres (sièges)",
+      "storage": "Stockage"
+    },
+    "ai": {
+      "requests": "Requêtes",
+      "tokens": "Tokens",
+      "latency": "Latence moy.",
+      "errors": "Erreurs",
+      "byProvider": "Par fournisseur",
+      "byCompany": "Par entreprise",
+      "provider": "Fournisseur",
+      "model": "Modèle",
+      "capability": "Capacité",
+      "status": "Statut",
+      "recent": "Requêtes récentes"
+    }
+  },
   "platformOperations": {
     "title": "Opérations",
     "subtitle": "Supervision, alertes, sécurité, IA, usage et automatisations.",

@@ -127,6 +127,19 @@ class NavBuilder
         if ($permissions !== null) {
             $permissionSet = array_flip($permissions);
             $items = array_filter($items, function (NavItem $item) use ($permissionSet) {
+                // ADR-601: `anyPermission` — visible if the user holds AT LEAST ONE of the keys
+                // (used by multi-capability hubs like Operations so holders of view_ai OR
+                // view_usage_monitoring can reach the Usage & Consumption page).
+                if ($item->anyPermission !== null) {
+                    foreach ($item->anyPermission as $perm) {
+                        if (isset($permissionSet[$perm])) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
                 if ($item->permission === null) {
                     return true;
                 }

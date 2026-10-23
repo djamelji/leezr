@@ -7,23 +7,46 @@ import AiOperationsTab from '../ai/_AiOperationsTab.vue'
 import AiProvidersTab from '../ai/_AiProvidersTab.vue'
 import AiRoutingTab from '../ai/_AiRoutingTab.vue'
 import AiSettingsTab from '../ai/_AiSettingsTab.vue'
-import AiUsageTab from '../ai/_AiUsageTab.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 const { t } = useI18n()
+const router = useRouter()
+const auth = usePlatformAuthStore()
 
 const activeTab = ref('providers')
 
+// ADR-601: the AI "Usage" sub-tab is removed (its consumption metrics now live in the consolidated
+// "Usage & Consumption" page). A contextual link points there. Providers/operations(health)/routing/
+// settings are AI-specific features and stay here.
 const tabs = computed(() => [
   { title: t('platformAi.tabs.providers'), icon: 'tabler-server-cog', tab: 'providers' },
-  { title: t('platformAi.tabs.usage'), icon: 'tabler-chart-bar', tab: 'usage' },
   { title: t('platformAi.tabs.operations'), icon: 'tabler-activity', tab: 'operations' },
   { title: t('platformAi.tabs.routing'), icon: 'tabler-route', tab: 'routing' },
   { title: t('platformAi.tabs.settings'), icon: 'tabler-settings', tab: 'settings' },
 ])
+
+const goToUsageConsumption = () => router.push({ name: 'platform-operations-tab', params: { tab: 'usage' } })
 </script>
 
 <template>
   <div>
+    <!-- ADR-601: contextual link to the consolidated AI usage section -->
+    <VAlert
+      v-if="auth.hasPermission('view_ai')"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      data-test="ai-usage-link"
+    >
+      <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+        <span>{{ t('platformUsage.aiLinkHint') }}</span>
+        <VBtn size="small" variant="tonal" color="info" append-icon="tabler-arrow-right" @click="goToUsageConsumption">
+          {{ t('platformUsage.title') }}
+        </VBtn>
+      </div>
+    </VAlert>
+
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill"
@@ -49,10 +72,6 @@ const tabs = computed(() => [
     >
       <VWindowItem value="providers">
         <AiProvidersTab />
-      </VWindowItem>
-
-      <VWindowItem value="usage">
-        <AiUsageTab />
       </VWindowItem>
 
       <VWindowItem value="operations">

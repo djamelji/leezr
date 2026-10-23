@@ -3,7 +3,7 @@ import OperationsHealth from './_OperationsHealth.vue'
 import OperationsAlerts from './_OperationsAlerts.vue'
 import OperationsSecurity from './_OperationsSecurity.vue'
 import OperationsAi from './_OperationsAi.vue'
-import OperationsUsage from './_OperationsUsage.vue'
+import OperationsUsageConsumption from './_OperationsUsageConsumption.vue'
 import OperationsAutomations from './_OperationsAutomations.vue'
 import OperationsRealtime from './_OperationsRealtime.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
@@ -22,16 +22,22 @@ const route = useRoute('platform-operations-tab')
 const router = useRouter()
 const auth = usePlatformAuthStore()
 
-// ADR-598 LOT C: operations tabs filtered by effective permission.
+// ADR-598 LOT C / ADR-601: operations tabs filtered by effective permission.
+// `permissionAny` = visible if the user holds AT LEAST ONE of the listed permissions (used by the
+// consolidated Usage & Consumption page, reachable with view_usage_monitoring OR view_ai).
 const tabs = computed(() => [
   { title: t('platformOperations.tabs.health'), icon: 'tabler-heartbeat', tab: 'health', permission: 'view_system_health' },
   { title: t('platformOperations.tabs.alerts'), icon: 'tabler-bell-ringing', tab: 'alerts', permission: 'view_alerts' },
   { title: t('platformOperations.tabs.security'), icon: 'tabler-shield-lock', tab: 'security', permission: 'security.alerts.view' },
   { title: t('platformOperations.tabs.ai'), icon: 'tabler-brain', tab: 'ai', permission: 'view_ai' },
-  { title: t('platformOperations.tabs.usage'), icon: 'tabler-chart-bar', tab: 'usage', permission: 'view_usage_monitoring' },
+  { title: t('platformUsage.title'), icon: 'tabler-gauge', tab: 'usage', permissionAny: ['view_usage_monitoring', 'view_ai'] },
   { title: t('platformOperations.tabs.automations'), icon: 'tabler-robot', tab: 'automations', permission: 'manage_automations' },
   { title: t('platformOperations.tabs.realtime'), icon: 'tabler-broadcast', tab: 'realtime', permission: 'realtime.metrics.view' },
-].filter(item => !item.permission || auth.hasPermission(item.permission)))
+].filter(item => {
+  if (item.permissionAny) return item.permissionAny.some(p => auth.hasPermission(p))
+
+  return !item.permission || auth.hasPermission(item.permission)
+}))
 
 const activeTab = computed({
   get: () => {
@@ -86,7 +92,7 @@ const activeTab = computed({
       </VWindowItem>
 
       <VWindowItem value="usage">
-        <OperationsUsage />
+        <OperationsUsageConsumption />
       </VWindowItem>
 
       <VWindowItem value="automations">

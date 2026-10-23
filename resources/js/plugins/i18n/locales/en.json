@@ -614,6 +614,46 @@
     "specificity": "Specificity",
     "supportedMethods": "Supported Methods"
   },
+  "platformUsage": {
+    "title": "Usage & Consumption",
+    "subtitle": "Platform resource usage and AI observability in one place.",
+    "aggregatedDaily": "Daily-aggregated",
+    "realtime": "Real-time",
+    "noAccess": "You do not have permission to view usage data.",
+    "daysShort": "d",
+    "empty": "No data for this period.",
+    "dailyTrend": "Daily trend",
+    "topCompanies": "Top consuming companies",
+    "selectCompany": "Select a company…",
+    "selectCompanyHint": "Select a company to see its usage.",
+    "aiLinkHint": "AI consumption metrics have moved to the consolidated Usage & Consumption page.",
+    "sections": {
+      "overview": "Overview & resources",
+      "company": "Per-company analysis",
+      "ai": "AI observability"
+    },
+    "metrics": {
+      "aiRequests": "AI requests",
+      "aiTokens": "AI tokens",
+      "emails": "Emails sent",
+      "apiRequests": "API requests",
+      "members": "Members (seats)",
+      "storage": "Storage"
+    },
+    "ai": {
+      "requests": "Requests",
+      "tokens": "Tokens",
+      "latency": "Avg latency",
+      "errors": "Errors",
+      "byProvider": "By provider",
+      "byCompany": "By company",
+      "provider": "Provider",
+      "model": "Model",
+      "capability": "Capability",
+      "status": "Status",
+      "recent": "Recent requests"
+    }
+  },
   "platformOperations": {
     "title": "Operations",
     "subtitle": "Monitoring, alerts, security, AI, usage and automations.",

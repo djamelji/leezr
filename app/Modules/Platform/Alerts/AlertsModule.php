@@ -25,7 +25,10 @@ class AlertsModule implements ModuleDefinition
             sortOrder: 3,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'permission' => 'view_system_health', 'group' => 'system', 'sort' => 60],
+                    // ADR-601: Operations hub is reachable by holders of ANY operations capability
+                    // (so view_ai / view_usage_monitoring users reach the Usage & Consumption page).
+                    // The hub page itself falls back to the first tab the user is allowed to see.
+                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'anyPermission' => ['view_system_health', 'view_alerts', 'security.alerts.view', 'view_ai', 'view_usage_monitoring', 'manage_automations', 'realtime.metrics.view'], 'group' => 'system', 'sort' => 60],
                 ],
                 routeNames: ['platform-alerts', 'platform-operations-tab'],
             ),
