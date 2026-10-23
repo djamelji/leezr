@@ -22,13 +22,15 @@ class NavGroupRegistry
      * A high fallback order (900) is reserved for the scope's implicit default bucket.
      */
     private const GROUPS = [
+        // ADR-598 (Phase 2 LOT A): canonical 6-domain platform taxonomy.
         'admin' => [
-            'cockpit' => 10,
-            'clients' => 20,
-            'finance' => 30,
-            'operations' => 50,
-            'administration' => 60,
-            'management' => 900, // default bucket for admin items without an explicit group
+            'cockpit' => 10,       // dashboard, messaging
+            'clients' => 20,       // companies, support
+            'finance' => 30,       // billing
+            'governance' => 40,    // module catalog, plans, jobdomains, access/roles
+            'configuration' => 50, // settings, international/markets
+            'system' => 60,        // operations: health, alerts, security, ai, usage, automations, realtime
+            'management' => 900,   // default bucket for admin items without an explicit group
         ],
         'company' => [
             'identity' => 10,

@@ -25,7 +25,7 @@ class AlertsModule implements ModuleDefinition
             sortOrder: 3,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'group' => 'operations', 'sort' => 60],
+                    ['key' => 'operations', 'title' => 'Operations', 'to' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'health']], 'icon' => 'tabler-settings-cog', 'group' => 'system', 'sort' => 60],
                 ],
                 routeNames: ['platform-alerts', 'platform-operations-tab'],
             ),

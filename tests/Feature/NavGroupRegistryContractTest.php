@@ -83,11 +83,13 @@ class NavGroupRegistryContractTest extends TestCase
         $keys = collect(NavBuilder::forAdmin(null))->pluck('key')->all();
         $pos = array_flip($keys);
 
-        // Rendered groups follow the registry order (cockpit < clients < finance < operations < administration).
+        // Rendered groups follow the registry order (ADR-598 taxonomy:
+        // cockpit < clients < finance < governance < configuration < system).
         $this->assertTrue($pos['cockpit'] < $pos['clients'], 'cockpit before clients');
         $this->assertTrue($pos['clients'] < $pos['finance'], 'clients before finance');
-        $this->assertTrue($pos['finance'] < $pos['operations'], 'finance before operations');
-        $this->assertTrue($pos['operations'] < $pos['administration'], 'operations before administration');
+        $this->assertTrue($pos['finance'] < $pos['governance'], 'finance before governance');
+        $this->assertTrue($pos['governance'] < $pos['configuration'], 'governance before configuration');
+        $this->assertTrue($pos['configuration'] < $pos['system'], 'configuration before system');
     }
 
     public function test_dead_product_group_is_not_registered(): void

@@ -22133,3 +22133,22 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Reste (hors périmètre, à planifier).** `manage_audience` reste déclarée (module Audience orphelin — décision UI/retrait au lot dédié) ; granularité fine d'autres modules coarse (markets, translations, users, settings…) à traiter à la demande ; alignement permission des items de hub (operations/communications/messaging) à la refonte du menu.
 
 ---
+
+### ADR-598 — Phase 2 : navigation Platform modulaire (taxonomie canonique 6 domaines) (2026-10-23)
+
+**Objectif.** Navigation Platform entièrement pilotée par les manifests + `NavGroupRegistry` (ADR-596) + permissions effectives, sans menu hardcodé ni second moteur. Exécution par lots (A→E), un lot = un commit.
+
+**LOT A — Cartographie + normalisation des groupes.**
+- Cartographie exhaustive des 25 modules `scope:'admin'` établie (9 items actuels, 16 masqués `navItems:[]`), avec pour chacun : navItems/group/permission/route, routeNames, permissions, permission de garde de route.
+- **Taxonomie canonique** fixée dans `NavGroupRegistry` (admin) : `cockpit(10)` · `clients(20)` · `finance(30)` · `governance(40)` · `configuration(50)` · `system(60)` + `management(900)` fallback. Groupes morts/transitoires `product`, `operations`, `administration` retirés de la taxonomie admin.
+- **Réassignation des items existants** vers les domaines : Catalogue de modules `clients→governance` ; Accès (users/roles) `administration→governance` ; Paramètres `administration→configuration` ; Opérations (hub santé/alertes/sécurité/AI/usage/automations/realtime) `operations→system`. Dashboard/Messaging restent `cockpit`, Companies/Support `clients`, Billing `finance`.
+- i18n : ajout `nav.groups.{configuration,system}` (en+fr) ; `governance` déjà présent.
+- Contrat `NavGroupRegistryContractTest` mis à jour (ordre cockpit<clients<finance<governance<configuration<system). Régression nav/module/page : **521 passed**, build clean.
+
+**Sidebar résultante après LOT A** (avant ajout des nouveaux items en LOT B) : Cockpit (Dashboard, Messaging) · Clients (Companies, Support) · Finance (Billing) · Governance (Catalogue, Accès) · Configuration (Paramètres) · System (Opérations).
+
+**LOTs suivants** : B = sortir des hubs les fonctionnalités majeures (Plans, JobDomains, Markets…) en items de manifest ; C = permissions/routes/onglets effectifs par utilisateur ; D = UX/UI Vuexy + responsive ; E = cache/invalidation + E2E multi-rôles.
+
+**Fichiers (LOT A)** : `app/Core/Navigation/NavGroupRegistry.php`, `app/Modules/Platform/{Modules/ModulesModule,Users/UsersModule,Settings/PlatformSettingsModule,Alerts/AlertsModule}.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/NavGroupRegistryContractTest.php`.
+
+---

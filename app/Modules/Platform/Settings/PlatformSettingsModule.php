@@ -24,7 +24,7 @@ class PlatformSettingsModule implements ModuleDefinition
                         'to' => ['name' => 'platform-settings-tab', 'params' => ['tab' => 'general']],
                         'icon' => 'tabler-settings',
                         'permission' => 'manage_theme_settings',
-                        'group' => 'administration',
+                        'group' => 'configuration',
                         'sort' => 71,
                     ],
                 ],
