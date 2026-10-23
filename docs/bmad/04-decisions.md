@@ -22194,3 +22194,11 @@ Problème : les items de hub Operations/Messaging/Communications étaient gatés
 - Preuves `PlatformNavModularTest` (+4 : `view_ai` seul → Operations avec AI seul ; `view_system_health` seul → Operations sans AI ; `manage_roles` seul → Accès avec Rôles seul ; `manage_notifications` seul → Messaging via Notifications). Régression : **1109 passed**, build clean.
 
 **Fichiers (LOT F)** : `app/Modules/Platform/{Alerts,AI,Automations,Realtime,Security,Email,Notifications,Support,Documentation}/*Module.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/PlatformNavModularTest.php`.
+
+**LOT G — États actifs & cohérence UX.**
+Étude finale de l'identification de l'enfant actif dans les hubs, **sans modifier `@layouts`**.
+- **Limitation incompressible documentée** : `@layouts/utils.js::isNavLinkActive` matche par **nom de route** (params ignorés) et `@layouts` est intouchable (loi projet). Les enfants d'un même hub partagent un nom de route → la **sidebar** ne peut pas surligner exactement un seul enfant (le groupe parent s'ouvre/s'active correctement). Compromis conservé (validé en LOT B).
+- **Garantie compensatoire** : l'onglet actif est clairement indiqué **dans la page** par `VTabs` (v-model `activeTab`), avec repli LOT C sur le premier onglet autorisé si l'URL cible un onglet interdit. Aucune page créée pour contourner la limite.
+- **Preuves E2E** (`platform-nav-active-states.spec.js`, local) : navigation entre deux enfants d'un hub → onglet en page correct ; refresh direct sur un sous-onglet → onglet conservé ; retour arrière navigateur → onglet précédent restauré ; dark mode (`colorScheme: dark`) → nav rendue sans erreur JS. Chaque scénario validé (isolément déterministe ; en suite complète, flakes d'environnement Valet local sous charge — login « page closed »/timing, sans rapport avec la logique).
+
+**Fichiers (LOT G)** : `tests/e2e/platform-nav-active-states.spec.js` (+ doc ADR). Aucun code applicatif requis — l'indication en page préexistait (`VTabs`).
