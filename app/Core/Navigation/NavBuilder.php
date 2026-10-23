@@ -30,20 +30,6 @@ use RuntimeException;
 class NavBuilder
 {
     /**
-     * Explicit group ordering for admin scope.
-     * Groups are sorted by their position in this array.
-     * Groups not listed here appear at the end.
-     */
-    private const ADMIN_GROUP_ORDER = [
-        'cockpit',
-        'clients',
-        'finance',
-        'product',
-        'operations',
-        'administration',
-    ];
-
-    /**
      * Build grouped navigation for admin (platform) scope.
      *
      * @param  array|null  $permissions  Permission keys. null = bypass (super_admin).
@@ -208,10 +194,9 @@ class NavBuilder
         // 10. Prune: empty groups + non-clickable parents without children
         $grouped = static::pruneGroups($grouped);
 
-        // 10b. Sort groups by explicit order (admin scope has ADMIN_GROUP_ORDER)
-        if ($scope === 'admin') {
-            $grouped = static::sortGroupsByOrder($grouped, self::ADMIN_GROUP_ORDER);
-        }
+        // 10b. Sort groups by the canonical order from NavGroupRegistry (single source of truth,
+        //      both scopes). Unregistered groups are appended last (and flagged by the contract test).
+        $grouped = static::sortGroupsByOrder($grouped, NavGroupRegistry::orderedKeys($scope));
 
         // 11. Sort within groups + clean output
         $result = [];
@@ -331,15 +316,11 @@ class NavBuilder
     }
 
     /**
-     * Group title keys — i18n keys, NOT hardcoded strings.
+     * Group title keys — delegated to NavGroupRegistry (i18n keys, NOT hardcoded strings).
      */
     private static function groupTitleKey(string $groupKey): string
     {
-        if ($groupKey === '' || $groupKey === 'root') {
-            return '';
-        }
-
-        return "nav.groups.{$groupKey}";
+        return NavGroupRegistry::titleKey($groupKey);
     }
 
     /**

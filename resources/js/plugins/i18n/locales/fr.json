@@ -91,7 +91,12 @@
       "product": "Produit",
       "ai": "Intelligence artificielle",
       "international": "International",
-      "administration": "Administration"
+      "administration": "Administration",
+      "identity": "Identité",
+      "contact": "Contact",
+      "dispatch": "Exploitation",
+      "driving": "Conduite",
+      "hr": "RH"
     },
     "platform": {
       "dashboard": "Tableau de bord",

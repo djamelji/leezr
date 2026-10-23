@@ -22094,3 +22094,21 @@ Sorties `by_currency` (par devise) : `ledger_ar`, `ledger_cash`, `ledger_revenue
 **Fichiers** : `app/Modules/Platform/Dashboard/DashboardModule.php`, `routes/platform.php`, `app/Modules/Platform/Dashboard/Http/PlatformSearchController.php`, `database/migrations/2026_10_23_100000_grant_dashboard_base_permission_to_platform_roles.php`, `tests/Feature/PlatformDashboardAuthorizationTest.php`, `tests/Unit/NavBuilderTest.php`, `tests/Feature/NavEndpointTest.php`, `tests/Feature/DashboardEngineTest.php`, `tests/Feature/PlatformBillingDashboardBatchTest.php`.
 
 ---
+
+### ADR-596 — Correction architecturale Platform LOT 2 : registre canonique des groupes de navigation (2026-10-23)
+
+**Contexte (audit A-03/A-08).** L'identité et l'ordre des groupes de navigation vivaient dans **3 sources concurrentes** non synchronisées — chaînes `group` des manifests, constante `NavBuilder::ADMIN_GROUP_ORDER`, et i18n `nav.groups.*` — sans ordre déterministe côté company et avec un groupe mort `product`. Aucune validation ne reliait ces listes.
+
+**Décision.** Introduction de `app/Core/Navigation/NavGroupRegistry.php` comme **source de vérité unique** des groupes (clé stable, scope, ordre), **sans second moteur de navigation** :
+1. Le registre déclare, par scope, les groupes réellement utilisés et leur ordre d'affichage : admin = `cockpit(10) · clients(20) · finance(30) · operations(50) · administration(60) · management(900 défaut)` ; company = `identity(10) · contact(20) · dispatch(30) · driving(40) · hr(50) · account(60) · operations(70) · company(900 défaut)`.
+2. `NavBuilder` lit désormais l'ordre **pour les deux scopes** via `NavGroupRegistry::orderedKeys($scope)` (remplace `ADMIN_GROUP_ORDER`, supprimée) et le titre via `NavGroupRegistry::titleKey()`. Les modules continuent d'assigner un item à un groupe via `capabilities.navItems.group` — **plusieurs modules peuvent partager un groupe** (ex. `clients` alimenté par Companies + Modules + Support).
+3. **i18n conservé comme ressource linguistique** : ajout des clés manquantes `nav.groups.{identity,contact,dispatch,driving,hr}` (en + fr) — ces entêtes de groupe company n'étaient pas traduits auparavant.
+4. **Groupe mort `product` supprimé** du vocabulaire.
+
+**Portée (volontairement limitée).** Ce lot pose la fondation et **ne réorganise pas** le menu Platform ni l'appartenance des modules aux groupes (déféré au lot de refonte du menu). Taxonomie cible proposée pour ce futur lot, à partir des domaines réels : Cockpit, Clients, Finance, **Gouvernance** (tariff-review, audit, sécurité), Opérations, **Configuration** (settings, access), **Système** (santé, usage) — à appliquer en déplaçant les modules, pas en créant des rubriques vides.
+
+**Preuves.** `NavGroupRegistryContractTest` (5) : tout groupe de manifest est enregistré pour son scope ; tout groupe enregistré a une i18n en+fr ; plusieurs modules partagent un groupe ; ordre piloté par le registre et déterministe ; `product` absent. Régression nav/module/company : **153 passed**, build front clean.
+
+**Fichiers** : `app/Core/Navigation/NavGroupRegistry.php` (nouveau), `app/Core/Navigation/NavBuilder.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/NavGroupRegistryContractTest.php`.
+
+---
