@@ -99,6 +99,7 @@ class EmailInboxController
     public function compose(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'idempotency_key' => 'required|string|min:8|max:64',
             'to' => 'required|email',
             'to_name' => 'nullable|string|max:255',
             'subject' => 'required|string|max:500',
@@ -110,48 +111,75 @@ class EmailInboxController
             'attachment_ids.*' => 'integer',
         ]);
 
-        // ADR-603 (LOT 2): idempotency — a double-click / retried request with the same payload
-        // within a short window must not send twice.
-        $key = 'email:compose:'.md5(($request->user('platform')?->id ?? 0).'|'.$validated['to'].'|'.$validated['subject'].'|'.$validated['body']);
-        if (! Cache::add($key, true, now()->addSeconds(10))) {
-            return response()->json(['message' => 'Duplicate send ignored.', 'duplicate' => true]);
-        }
+        return $this->idempotent($request, $validated['idempotency_key'], function () use ($validated) {
+            [$thread, $log] = app(EmailComposeService::class)->compose($validated);
 
-        [$thread, $log] = app(EmailComposeService::class)->compose($validated);
+            if (! empty($validated['attachment_ids'])) {
+                app(EmailAttachmentService::class)->attach($log, $validated['attachment_ids']);
+            }
 
-        if (! empty($validated['attachment_ids'])) {
-            app(EmailAttachmentService::class)->attach($log, $validated['attachment_ids']);
-        }
+            $this->publishEmailEvent('compose', $thread->id);
 
-        $this->publishEmailEvent('compose', $thread->id);
-
-        // Honest status: queued (SMTP acceptance happens later on the worker → status becomes "sent").
-        return response()->json(['message' => 'Email queued.', 'thread' => $thread, 'log' => $log]);
+            // Honest status: queued (SMTP acceptance happens later on the worker → status "sent").
+            return ['body' => ['message' => 'Email queued.', 'thread' => $thread, 'log' => $log], 'result' => ['thread_id' => $thread->id, 'log_id' => $log->id]];
+        });
     }
 
     public function reply(Request $request, int $id): JsonResponse
     {
         $thread = EmailThread::findOrFail($id);
         $validated = $request->validate([
+            'idempotency_key' => 'required|string|min:8|max:64',
             'body' => 'required|string|max:50000',
             'attachment_ids' => 'nullable|array',
             'attachment_ids.*' => 'integer',
         ]);
 
-        $key = 'email:reply:'.md5(($request->user('platform')?->id ?? 0).'|'.$thread->id.'|'.$validated['body']);
-        if (! Cache::add($key, true, now()->addSeconds(10))) {
-            return response()->json(['message' => 'Duplicate reply ignored.', 'duplicate' => true]);
+        return $this->idempotent($request, $validated['idempotency_key'], function () use ($thread, $validated) {
+            $log = app(EmailComposeService::class)->reply($thread, $validated['body'], $validated['attachment_ids'] ?? []);
+
+            if (! empty($validated['attachment_ids'])) {
+                app(EmailAttachmentService::class)->attach($log, $validated['attachment_ids']);
+            }
+
+            $this->publishEmailEvent('reply', $thread->id);
+
+            return ['body' => ['message' => 'Reply queued.', 'log' => $log], 'result' => ['thread_id' => $thread->id, 'log_id' => $log->id]];
+        });
+    }
+
+    /**
+     * ADR-603b (LOT 2 fix): explicit-idempotency-key guard. The client sends a stable key per send
+     * attempt (reused on automatic network retries, renewed for a new voluntary send). We reserve
+     * the key ATOMICALLY (Cache::add, cross-worker via the shared store) BEFORE any write/send:
+     *  - a replay of the SAME key returns the first result (one send only), regardless of content;
+     *  - two voluntary sends use different keys → both proceed (even identical content/cc/bcc/files);
+     *  - on error the key is RELEASED so a genuine retry is not blocked;
+     *  - concurrent duplicates lose the atomic add and get 202 "in progress".
+     */
+    private function idempotent(Request $request, string $key, Closure $fn): JsonResponse
+    {
+        $cacheKey = 'email:idem:'.($request->user('platform')?->id ?? 0).':'.$key;
+
+        if (! Cache::add($cacheKey, 'pending', now()->addMinutes(10))) {
+            $stored = Cache::get($cacheKey);
+            if (is_array($stored)) {
+                return response()->json(array_merge(['message' => 'Already processed.', 'idempotent_replay' => true], $stored));
+            }
+
+            return response()->json(['message' => 'Send already in progress.', 'duplicate' => true], 202);
         }
 
-        $log = app(EmailComposeService::class)->reply($thread, $validated['body'], $validated['attachment_ids'] ?? []);
+        try {
+            $out = $fn();
+            Cache::put($cacheKey, $out['result'], now()->addMinutes(10));
 
-        if (! empty($validated['attachment_ids'])) {
-            app(EmailAttachmentService::class)->attach($log, $validated['attachment_ids']);
+            return response()->json($out['body']);
+        } catch (\Throwable $e) {
+            Cache::forget($cacheKey); // release — a legitimate retry must be able to proceed
+
+            throw $e;
         }
-
-        $this->publishEmailEvent('reply', $thread->id);
-
-        return response()->json(['message' => 'Reply queued.', 'log' => $log]);
     }
 
     /** ADR-603 (LOT 2): validate a comma/semicolon-separated list of email addresses. */

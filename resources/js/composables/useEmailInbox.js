@@ -9,6 +9,13 @@ import { useI18n } from 'vue-i18n'
 import { $platformApi } from '@/utils/platformApi'
 import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 
+// ADR-603b: stable-per-attempt idempotency key (UUID with a safe fallback for older browsers).
+function newIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+}
+
 // Labels definition (from Vuexy preset)
 const LABELS = [
   { title: 'personal', color: 'success' },
@@ -122,17 +129,20 @@ export function useEmailInbox() {
     }
   }
 
+  // ADR-603b (LOT 2 fix): one idempotency key per send ATTEMPT. Generated here, so an automatic
+  // transport retry of the SAME call reuses it (no double send), while a new voluntary send calls
+  // compose()/reply() again → fresh key (duplicate sends stay possible on purpose).
   async function compose(data) {
     return await $platformApi('/email/inbox/compose', {
       method: 'POST',
-      body: data,
+      body: { ...data, idempotency_key: newIdempotencyKey() },
     })
   }
 
   async function reply(threadId, body, attachmentIds = []) {
     return await $platformApi(`/email/inbox/${threadId}/reply`, {
       method: 'POST',
-      body: { body, attachment_ids: attachmentIds },
+      body: { body, attachment_ids: attachmentIds, idempotency_key: newIdempotencyKey() },
     })
   }
 

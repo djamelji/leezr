@@ -113,7 +113,18 @@ class EmailService
         $notification->emailMessageId = $newMessageId;
         $notification->cc = $failedLog->cc;
         $notification->bcc = $failedLog->bcc;
-        $notification->attachmentIds = EmailAttachment::where('email_log_id', $failedLog->id)->pluck('id')->all();
+
+        // ADR-603b (LOT 2 fix): re-attach the original files to the NEW send. The physical file is
+        // reused (same disk/path); a fresh EmailAttachment row is linked to the new log so the retry
+        // owns its own attachments (download stays gated by manage_email on the attachment endpoint).
+        $newAttachmentIds = [];
+        foreach (EmailAttachment::where('email_log_id', $failedLog->id)->get() as $att) {
+            $copy = $att->replicate(['email_log_id']);
+            $copy->email_log_id = $newLog->id;
+            $copy->save();
+            $newAttachmentIds[] = $copy->id;
+        }
+        $notification->attachmentIds = $newAttachmentIds;
 
         $this->configureSmtp();
 

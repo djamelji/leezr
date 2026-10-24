@@ -22284,3 +22284,15 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Notifications/Email/ManualEmailNotification.php`, `app/Core/Email/{EmailService,EmailComposeService}.php`, `app/Modules/Platform/Email/Http/EmailInboxController.php`, `tests/Feature/EmailSendReliabilityTest.php`.
 
 ---
+
+### ADR-603b — Messagerie LOT 2 (correctif) : idempotence par clé explicite (2026-10-24)
+
+**Contexte.** L'idempotence ADR-603 reposait sur un hash de contenu (destinataire+sujet+corps, 10 s) → bloquait deux envois volontairement identiques et ignorait cc/cci/pièces jointes.
+
+**Décision.** Remplacement par une **identité de tentative explicite** (`idempotency_key`, requise). Serveur : réservation **atomique** `Cache::add` **avant toute écriture/expédition** (cross-worker via le store partagé) ; un rejeu de la **même clé** renvoie le résultat mémorisé (un seul envoi) quel que soit le contenu ; **clés différentes** → deux envois possibles même contenu/cc/cci ; **libération** de la clé sur erreur (retry légitime non bloqué) ; duplicata concurrents → 202 « in progress ». Frontend (`useEmailInbox.js`) : une clé UUID **par tentative** (réutilisée sur retry transport, renouvelée pour un nouvel envoi). Retry : pièces jointes **dupliquées et associées au nouvel envoi** (nouvelle ligne `EmailAttachment` liée au nouveau log, fichier réutilisé ; téléchargement toujours gaté `manage_email`).
+
+**Preuves.** `EmailSendReliabilityTest` (7 : pièce jointe réellement envoyée ; même clé→1 envoi (replay) ; clés différentes même contenu→2 envois ; clé requise + cc invalide→422 ; retry ré-expédie ; retry réassocie les pièces jointes ; retry refuse non-échec). Régression email **21 passed**, build clean.
+
+**Fichiers** : `app/Modules/Platform/Email/Http/EmailInboxController.php`, `app/Core/Email/EmailService.php`, `resources/js/composables/useEmailInbox.js`, `tests/Feature/EmailSendReliabilityTest.php`.
+
+---

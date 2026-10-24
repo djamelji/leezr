@@ -54,25 +54,43 @@ class EmailSendReliabilityTest extends TestCase
         $this->assertSame('Contract.pdf', $mail->rawAttachments[0]['name']);
     }
 
-    public function test_compose_is_idempotent_on_duplicate_submit(): void
+    public function test_same_idempotency_key_sends_only_once(): void
     {
         $admin = $this->superAdmin();
-        $payload = ['to' => 'client@acme.com', 'subject' => 'Hi', 'body' => 'Hello there'];
+        $payload = ['idempotency_key' => 'attempt-key-0001', 'to' => 'client@acme.com', 'subject' => 'Hi', 'body' => 'Hello there'];
 
-        $first = $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', $payload);
-        $first->assertOk()->assertJsonPath('message', 'Email queued.');
+        $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', $payload)
+            ->assertOk()->assertJsonPath('message', 'Email queued.');
 
-        $second = $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', $payload);
-        $second->assertOk()->assertJsonPath('duplicate', true);
+        // Same attempt replayed (same key) → idempotent replay, NO second send.
+        $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', $payload)
+            ->assertOk()->assertJsonPath('idempotent_replay', true);
 
-        $this->assertSame(1, EmailLog::where('direction', 'sent')->where('subject', 'Hi')->count(), 'only one email sent');
+        $this->assertSame(1, EmailLog::where('direction', 'sent')->where('subject', 'Hi')->count());
     }
 
-    public function test_compose_rejects_invalid_cc(): void
+    public function test_two_voluntary_identical_sends_with_different_keys_both_go_through(): void
     {
         $admin = $this->superAdmin();
+        $base = ['to' => 'client@acme.com', 'subject' => 'Same subject', 'body' => 'Same body', 'cc' => 'x@a.com'];
+
+        $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', array_merge($base, ['idempotency_key' => 'k-A-11111111']))->assertOk();
+        $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', array_merge($base, ['idempotency_key' => 'k-B-22222222']))->assertOk();
+
+        // Identical content + cc, but two distinct attempts → two sends (no content-collision).
+        $this->assertSame(2, EmailLog::where('direction', 'sent')->where('subject', 'Same subject')->count());
+    }
+
+    public function test_compose_requires_idempotency_key_and_validates_cc(): void
+    {
+        $admin = $this->superAdmin();
+        // Missing key → 422.
         $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', [
-            'to' => 'ok@acme.com', 'subject' => 'S', 'body' => 'B', 'cc' => 'valid@a.com, NOT-an-email',
+            'to' => 'ok@acme.com', 'subject' => 'S', 'body' => 'B',
+        ])->assertStatus(422);
+        // Invalid cc → 422.
+        $this->actingAs($admin, 'platform')->postJson('/api/platform/email/inbox/compose', [
+            'idempotency_key' => 'kkkkkkkk', 'to' => 'ok@acme.com', 'subject' => 'S', 'body' => 'B', 'cc' => 'valid@a.com, NOT-an-email',
         ])->assertStatus(422);
     }
 
@@ -90,6 +108,29 @@ class EmailSendReliabilityTest extends TestCase
 
         $this->assertSame('queued', $newLog->status);
         Notification::assertSentOnDemand(ManualEmailNotification::class);
+    }
+
+    public function test_retry_reassociates_attachments_to_the_new_send(): void
+    {
+        Notification::fake();
+
+        $failed = EmailLog::create([
+            'message_id' => 'fa@leezr.com', 'recipient_email' => 'd@acme.com', 'from_email' => 'admin@leezr.com',
+            'subject' => 'With file', 'body_html' => '<p>x</p>', 'template_key' => 'manual.compose',
+            'notification_class' => 'ManualEmailNotification', 'status' => 'failed', 'direction' => 'sent',
+        ]);
+        EmailAttachment::create([
+            'email_log_id' => $failed->id, 'filename' => 'a.pdf', 'original_filename' => 'A.pdf',
+            'mime_type' => 'application/pdf', 'size_bytes' => 10, 'disk' => 'local', 'path' => 'email-attachments/a.pdf',
+        ]);
+
+        $newLog = app(EmailService::class)->retry($failed);
+
+        // A fresh attachment row is linked to the NEW send (original preserved), same file path.
+        $copies = EmailAttachment::where('email_log_id', $newLog->id)->get();
+        $this->assertCount(1, $copies);
+        $this->assertSame('email-attachments/a.pdf', $copies[0]->path);
+        $this->assertSame(1, EmailAttachment::where('email_log_id', $failed->id)->count(), 'original attachment preserved');
     }
 
     public function test_retry_refuses_non_failed(): void
