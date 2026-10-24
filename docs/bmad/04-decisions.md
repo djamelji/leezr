@@ -22373,3 +22373,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/{_EmailCompose,_EmailInboxTab,_EmailView,_EmailLeftSidebar}.vue`, `scripts/dev/seed_email_recette.php`, `tests/e2e/platform-email-{reply-forward,folders,responsive,draft-resume,network}.spec.js`.
 
 ---
+
+### ADR-610 — Messagerie : temps réel email (réutilisation du moteur SSE/Redis, 4 lots) (2026-10-24)
+
+**Contexte.** Audit validé : le moteur **SSE/Redis** existant fonctionne et `ImapFetcher` publie déjà `email.updated` (prouvé en PROD). **Aucun Reverb/Echo/nouveau moteur.** La latence perçue vient surtout du cron IMAP (5 min) et de l'absence de badge non-lus. Objectif : dès qu'un email est récupéré → apparition auto + badge à jour + animation Vuexy discrète.
+
+**LOT 1 — Compteur de non-lus (source de vérité + store).** Endpoint `GET /email/inbox/unread-count` (gaté `manage_email`) = **messages** `direction=received` ∧ `is_read=false` ∧ thread `folder=inbox` (exclut envoyés/Spam/Corbeille ; compte des **messages**, pas des threads). Déclaré **avant** `/email/inbox/{id}` (sinon capturé comme id). Store Pinia `emailUnread` : getter `badgeContent` (0→undefined, 1-99→"N", 100+→"99+") ; `fetch()` **single-flight + coalescing** (`_inFlight`/`_pending`) → jamais deux refetchs concurrents, pas de réponse obsolète (requêtes sérialisées) ; `init()` idempotent (fetch initial + abonnement `domainEventBus.on('email.updated')`). *Preuves* : `EmailUnreadCountTest` (2 : compte reçus-non-lus-inbox = 2 en excluant lus/sent/spam/trash ; 403 sans `manage_email`). Build clean.
+*Fichiers* : `app/Modules/Platform/Email/Http/EmailInboxController.php`, `routes/platform.php`, `resources/js/core/stores/emailUnread.js`, `tests/Feature/EmailUnreadCountTest.php`.
+
+---

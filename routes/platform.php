@@ -676,6 +676,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
             // Inbox (ADR-447, ADR-453)
             Route::get('/email/inbox', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'index']);
+            // ADR-610 (LOT 1): declared BEFORE /email/inbox/{id} so "unread-count" isn't captured as an id.
+            Route::get('/email/inbox/unread-count', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'unreadCount']);
             Route::get('/email/inbox/{id}', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'show']);
             Route::post('/email/inbox/compose', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'compose']);
             Route::post('/email/inbox/bulk', [\App\Modules\Platform\Email\Http\EmailInboxController::class, 'bulkAction']);

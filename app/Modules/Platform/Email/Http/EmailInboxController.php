@@ -210,6 +210,21 @@ class EmailInboxController
         return response()->json(['message' => 'Thread marked as read.']);
     }
 
+    /**
+     * ADR-610 (LOT 1): authoritative unread MESSAGE count for the nav badge.
+     * Counts real received messages that are unread AND belong to an inbox-folder thread —
+     * i.e. excludes sent messages, Spam and Trash. This is a message count, not a thread count.
+     */
+    public function unreadCount(): JsonResponse
+    {
+        $count = EmailLog::where('direction', 'received')
+            ->where('is_read', false)
+            ->whereHas('thread', fn ($q) => $q->where('folder', 'inbox'))
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
     public function updateStatus(Request $request, int $id): JsonResponse
     {
         $thread = EmailThread::findOrFail($id);
