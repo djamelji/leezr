@@ -22447,3 +22447,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/composables/useMarketFormatting.js`, `resources/js/pages/company/billing/_BillingPlan.vue`, `resources/js/pages/company/billing/_BillingInvoices.vue` (via i18n), `resources/js/plugins/i18n/locales/{en,fr}.json`.
 
 ---
+
+### ADR-617 — Billing 3.0 / LOT 3 : caractérisation checkout/preview/renewal (2026-10-24)
+
+**Contexte.** BILL-004 : le renouvellement (`BillingRenewCommand`) reconstruit ses lignes de facture **hors** `PricingEngine`, d'où un risque supposé de divergence (coupons/addons/taxe/exonération).
+**Démonstration (tests AVANT refonte, comme exigé).** `BillingRenewalCharacterizationTest` (3) : pour un abo à prix **fiable** (ADR-593) avec plan + addon, la facture réellement émise par `billing:renew` **égale** le `PriceBreakdown` de `PricingEngine::forCurrentPeriod` — subtotal **4800**, TTC **5760** (identiques) ; renouvellement **idempotent** (3 runs → 1 facture) ; prix **provisional non facturé** (différé). Analyse code : `InvoiceIssuer::createDraft` applique **déjà** `TaxContextResolver` (reverse-charge/exonération) et `$price = plan_price_cents ≡ contractedPlanPriceCents()` pour les snapshots fiables (seuls facturés).
+**Conclusion.** **Aucune divergence de calcul** sur les cas facturés → **BILL-004 reclassé P2 (duplication/maintenabilité)**, pas un bug financier. La seule différence restante est **cosmétique** (libellé de ligne `planRenewal` vs `plan`). Unification `renew → PricingEngine` **différée volontairement** : elle changerait les libellés des lignes de factures de renouvellement (impact PDF/affichage) pour un gain nul sur les montants — risque de régression non justifié maintenant. Tests de caractérisation conservés comme **garde** avant toute unification future. ADR-575/593 intactes.
+**Fichiers** : `tests/Feature/BillingRenewalCharacterizationTest.php`.
+
+---
