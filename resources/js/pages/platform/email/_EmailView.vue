@@ -144,11 +144,17 @@ const handleReply = async () => {
   try {
     const attachmentIds = replyAttachments.value.map(a => a.id)
 
-    emit('reply-sent', { body: replyBody.value, attachment_ids: attachmentIds })
-    replyBody.value = ''
-    replyAttachments.value = []
-    showReplyBox.value = false
-    showReplyCard.value = true
+    // ADR-609: clear the reply box ONLY once the send is confirmed — a failed send keeps the typed
+    // reply so the user can retry without re-typing.
+    const ok = await new Promise(resolve => {
+      emit('reply-sent', { body: replyBody.value, attachment_ids: attachmentIds, ack: resolve })
+    })
+    if (ok) {
+      replyBody.value = ''
+      replyAttachments.value = []
+      showReplyBox.value = false
+      showReplyCard.value = true
+    }
   } finally {
     isSending.value = false
   }

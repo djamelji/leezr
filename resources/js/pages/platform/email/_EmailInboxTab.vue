@@ -67,7 +67,9 @@ const {
 
 const showCompose = ref(false)
 const composePrefill = ref(null)
-const isLeftSidebarOpen = ref(true)
+// ADR-609: desktop ignores this flag (sidebar shown via mdAndUp); on mobile it drives the overlay
+// drawer, starting closed so the conversation list is visible on load.
+const isLeftSidebarOpen = ref(false)
 
 // ADR-607 (LOT 5): never miss a message visually — a background refresh that detects new inbox mail
 // (via SSE push or the 30s safety-net poll) surfaces a non-intrusive toast.
@@ -138,13 +140,17 @@ const handleRefresh = async () => {
 }
 
 const handleComposeSent = async data => {
+  // ADR-609: acknowledge the composer so it only closes/deletes the draft on real success.
+  const { ack, ...payload } = data
   try {
-    await compose(data)
+    await compose(payload)
     toast(t('emailInbox.composeSent'), 'success')
     composePrefill.value = null
     await fetchThreads(pagination.value.page)
+    ack?.(true)
   } catch {
     toast(t('emailInbox.compose.error'), 'error')
+    ack?.(false)
   }
 }
 
@@ -159,6 +165,7 @@ const handleReplySent = async payload => {
   // Support both string (backward compat) and object { body, attachment_ids }
   const body = typeof payload === 'string' ? payload : payload.body
   const attachmentIds = typeof payload === 'string' ? [] : (payload.attachment_ids || [])
+  const ack = typeof payload === 'object' ? payload.ack : null
 
   try {
     await reply(selectedThread.value.id, body, attachmentIds)
@@ -167,8 +174,10 @@ const handleReplySent = async payload => {
     const data = await $platformApi(`/email/inbox/${selectedThread.value.id}`)
     selectedThread.value = data.thread
     selectedThreadMessages.value = data.messages
+    ack?.(true)
   } catch {
     toast(t('emailInbox.replyError'), 'error')
+    ack?.(false)
   }
 }
 
@@ -232,10 +241,17 @@ const selectAllModel = computed({
     class="email-app-layout"
     :style="{ height: $vuetify.display.mdAndUp ? 'calc(100vh - 200px)' : 'calc(100vh - 220px)', minHeight: '500px' }"
   >
-    <!-- Left sidebar -->
+    <!-- Left sidebar — overlay drawer on mobile (ADR-609) -->
+    <div
+      v-if="$vuetify.display.smAndDown && isLeftSidebarOpen"
+      class="email-sidebar-scrim"
+      @click="isLeftSidebarOpen = false"
+    />
     <div
       class="email-left-sidebar h-100"
-      :class="$vuetify.display.mdAndUp ? 'd-block' : 'd-none'"
+      :class="$vuetify.display.mdAndUp
+        ? 'd-block'
+        : (isLeftSidebarOpen ? 'email-left-sidebar--mobile d-block' : 'd-none')"
     >
       <EmailLeftSidebar
         :folder-counts="folderCounts"
@@ -243,9 +259,9 @@ const selectAllModel = computed({
         :current-label="currentLabel"
         :folders="FOLDERS"
         :labels="LABELS"
-        @update:current-folder="changeFolder"
-        @update:current-label="changeLabel"
-        @compose="showCompose = true"
+        @update:current-folder="f => { changeFolder(f); isLeftSidebarOpen = false }"
+        @update:current-label="l => { changeLabel(l); isLeftSidebarOpen = false }"
+        @compose="showCompose = true; isLeftSidebarOpen = false"
       />
     </div>
 
@@ -256,6 +272,7 @@ const selectAllModel = computed({
         <!-- Mobile: hamburger -->
         <IconBtn
           v-if="$vuetify.display.smAndDown"
+          data-test="email-mobile-menu"
           @click="isLeftSidebarOpen = !isLeftSidebarOpen"
         >
           <VIcon icon="tabler-menu-2" />
@@ -686,6 +703,25 @@ const selectAllModel = computed({
       line-height: 1.375rem !important;
     }
   }
+}
+
+// ADR-609: mobile folder drawer as an overlay over the conversation list + dimming scrim.
+.email-sidebar-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.email-left-sidebar--mobile {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 6;
+  inline-size: 260px;
+  max-inline-size: 85%;
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
 }
 
 .email-list {

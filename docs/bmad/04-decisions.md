@@ -22359,3 +22359,17 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/_EmailInboxTab.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/platform-email-keyboard.spec.js`.
 
 ---
+
+### ADR-609 — Messagerie : recette DEV approfondie — anti-perte de contenu & tiroir mobile (2026-10-24)
+
+**Contexte.** Recette DEV (SHA `15e4dae` validé applicativement). En complétant les parcours E2E non encore prouvés, deux **défauts de fiabilité réels** sont apparus :
+1. **Perte de contenu sur échec d'envoi.** `handleSend` fermait le compositeur et supprimait le brouillon **optimistiquement** (avant la réponse réseau) ; `handleReply` vidait la zone de réponse avant confirmation. Un échec réseau/SMTP → contenu **perdu**.
+2. **Tiroir de dossiers inaccessible en mobile.** La sidebar était `d-none` en permanence sous `smAndDown` ; le hamburger (`isLeftSidebarOpen`) ne la révélait jamais → **navigation entre dossiers impossible** sur mobile.
+**Décision.**
+- **Accusé de réception (anti-perte).** Le compositeur/la réponse émettent un `ack` ; le parent (`handleComposeSent`/`handleReplySent`) le résout à `true` (succès) ou `false` (échec). Le compositeur ne **ferme + ne supprime le brouillon** qu'à `true` ; à `false` il **reste ouvert, contenu intact, autosave repris** (`draftDiscarded=false`). La réponse inline ne se vide qu'à `true`. Un retry utilise une **nouvelle clé d'idempotence** (nouvel envoi volontaire, cf. ADR-603b).
+- **Tiroir mobile.** La sidebar s'affiche en **overlay** (`position:absolute`, scrim cliquable, tokens de thème) quand `isLeftSidebarOpen` sous `smAndDown` ; elle démarre **fermée** (liste visible au chargement) et se referme à la sélection d'un dossier/label/compose. Desktop inchangé (visibilité via `mdAndUp`).
+- **Hooks de test stables** : `data-test` `folder-{key}` (sidebar) + `email-mobile-menu` (hamburger) — robustes quelle que soit la locale (défaut `fr`).
+**Preuves.** 8 E2E (local + DEV) : `platform-email-reply-forward` (reply-all → To=expéditeur + sujet `Re:` ; forward → `Fwd:` + To vide), `platform-email-folders` (recherche serveur isole 1 résultat ; Inbox/Spam/Corbeille), `platform-email-responsive` (hamburger 390 px → dossiers ; dark mode appliqué), `platform-email-draft-resume` (autosave → reload → brouillon repris), `platform-email-network` (envoi 500 → compositeur ouvert, contenu conservé). Seeder isolé `scripts/dev/seed_email_recette.php` (préfixe `[E2E]`, idempotent). Build clean.
+**Fichiers** : `resources/js/pages/platform/email/{_EmailCompose,_EmailInboxTab,_EmailView,_EmailLeftSidebar}.vue`, `scripts/dev/seed_email_recette.php`, `tests/e2e/platform-email-{reply-forward,folders,responsive,draft-resume,network}.spec.js`.
+
+---

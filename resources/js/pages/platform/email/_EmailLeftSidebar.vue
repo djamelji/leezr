@@ -45,6 +45,7 @@ const folderBadgeColor = key => {
         <li
           v-for="folder in folders"
           :key="folder.key"
+          :data-test="`folder-${folder.key}`"
           :class="[
             'd-flex align-center cursor-pointer',
             currentFolder === folder.key && !currentLabel && 'email-filter-active text-primary',

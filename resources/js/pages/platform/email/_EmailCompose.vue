@@ -161,25 +161,34 @@ const handleSend = async () => {
   if (!isValid.value) return
 
   isSending.value = true
-  // ADR-605 (LOT 4): stop autosave and remove the backing draft (so a sent email does not also
-  // linger in Drafts, and no late save resurrects it).
+  // ADR-605 (LOT 4): pause autosave during the attempt (no late save resurrects a sent mail).
   draftDiscarded.value = true
   draftSaveSeq.value++
   clearTimeout(draftTimer)
   const sentDraftId = draftId.value
   try {
-    emit('sent', {
-      to: to.value,
-      subject: subject.value,
-      body: body.value,
-      cc: cc.value || null,
-      bcc: bcc.value || null,
-      attachment_ids: uploadedFiles.value.map(f => f.id),
+    // ADR-609: close + delete the backing draft ONLY once the send is confirmed. The parent
+    // acknowledges success/failure via `ack`; on a network/SMTP failure we keep the composer open
+    // with the content intact and resume autosave — the user never loses what they typed.
+    const ok = await new Promise(resolve => {
+      emit('sent', {
+        to: to.value,
+        subject: subject.value,
+        body: body.value,
+        cc: cc.value || null,
+        bcc: bcc.value || null,
+        attachment_ids: uploadedFiles.value.map(f => f.id),
+        ack: resolve,
+      })
     })
-    if (sentDraftId) {
-      $platformApi(`/email/inbox/draft/${sentDraftId}`, { method: 'DELETE' }).catch(() => {})
+    if (ok) {
+      if (sentDraftId) {
+        $platformApi(`/email/inbox/draft/${sentDraftId}`, { method: 'DELETE' }).catch(() => {})
+      }
+      handleClose()
+    } else {
+      draftDiscarded.value = false // failure → keep draft alive, resume autosave
     }
-    handleClose()
   } finally {
     isSending.value = false
   }
