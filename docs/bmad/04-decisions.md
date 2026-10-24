@@ -22400,3 +22400,13 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/{_EmailInboxTab,_EmailView,_EmailLeftSidebar}.vue`, `tests/e2e/platform-email-scroll.spec.js`.
 
 ---
+
+### ADR-612 — Réception : les réponses entrantes atterrissaient hors Inbox (trash/sent) (2026-10-24)
+
+**Contexte.** Signalement « emails jamais reçus » (DEV **et** PROD). Diagnostic PROD **réel** : `ImapFetcher->connect()=OUI`, 34 messages dans la boîte, **2053 reçus en base (dernier à 18:37 le jour même)** → la réception IMAP **fonctionne**. Mais la répartition des dossiers était **inbox=0**, trash=12, spam=5, sent=2 : toutes les réponses « Re: test » de l'utilisateur étaient importées puis **classées en trash/sent**, donc **invisibles dans l'Inbox**. (DEV : aucune boîte IMAP configurée → ne reçoit jamais, comportement attendu/séparé.)
+**Cause.** `findOrCreateThread` rattache un message entrant à un thread **existant** (In-Reply-To / References / sujet+participant) et le renvoie **tel quel**. Si ce thread était en `trash`/`sent`/`draft` (conversation supprimée ou initiée en sortant), le nouveau message **hérite du dossier** et ne remonte pas dans l'Inbox.
+**Décision.** `resurrectToInbox()` : un message **entrant provenant de la boîte INBOX** (`incomingFolder='inbox'`) qui rejoint un thread en `trash`/`sent`/`draft` **ramène la conversation dans `inbox`** (comportement mail standard : une nouvelle réponse ressuscite le fil). Le **Spam** (Junk serveur, `incomingFolder='spam'`) n'est **pas** ressuscité. Les premiers contacts (nouveau thread) arrivaient déjà en `inbox`.
+**Preuves.** `ImapThreadingTest` (+3 : réponse→thread trashé ressuscité en inbox ; thread sent ressuscité ; arrivée Junk non ressuscitée ; +3 threading existants toujours verts).
+**Fichiers** : `app/Core/Email/ImapFetcher.php`, `tests/Feature/ImapThreadingTest.php`.
+
+---

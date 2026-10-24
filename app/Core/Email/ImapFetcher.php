@@ -389,7 +389,7 @@ class ImapFetcher
         if ($inReplyTo) {
             $referencedLog = EmailLog::where('message_id', $inReplyTo)->first();
             if ($referencedLog && $referencedLog->thread_id) {
-                return EmailThread::find($referencedLog->thread_id);
+                return $this->resurrectToInbox(EmailThread::find($referencedLog->thread_id), $folder);
             }
         }
 
@@ -401,7 +401,7 @@ class ImapFetcher
             foreach ($refIds as $refId) {
                 $referencedLog = EmailLog::where('message_id', $refId)->first();
                 if ($referencedLog && $referencedLog->thread_id) {
-                    return EmailThread::find($referencedLog->thread_id);
+                    return $this->resurrectToInbox(EmailThread::find($referencedLog->thread_id), $folder);
                 }
             }
         }
@@ -426,7 +426,7 @@ class ImapFetcher
                 ->first();
 
             if ($existing) {
-                return $existing;
+                return $this->resurrectToInbox($existing, $folder);
             }
         }
 
@@ -441,6 +441,22 @@ class ImapFetcher
             'message_count' => 0,
             'unread_count' => 0,
         ]);
+    }
+
+    /**
+     * ADR-612: a new INBOUND message arriving from the server INBOX resurrects a conversation that
+     * was trashed / sent / drafted back into the Inbox — standard mail behaviour (a fresh reply to a
+     * trashed thread reappears). Without this, replies attaching to an old non-inbox thread inherit
+     * its folder and never surface in the Inbox. Spam stays spam (server-flagged); Junk arrives as
+     * 'spam' and is not resurrected.
+     */
+    private function resurrectToInbox(EmailThread $thread, string $incomingFolder): EmailThread
+    {
+        if ($incomingFolder === 'inbox' && in_array($thread->folder, ['trash', 'sent', 'draft'], true)) {
+            $thread->update(['folder' => 'inbox']);
+        }
+
+        return $thread;
     }
 
     public function disconnect(): void
