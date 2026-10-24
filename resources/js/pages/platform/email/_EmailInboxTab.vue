@@ -75,6 +75,48 @@ watch(newMailSignal, sig => {
   if (sig?.count > 0) toast(t('emailInbox.newMail', { count: sig.count }), 'info')
 })
 
+// ADR-608 (LOT 6): full keyboard navigation of the conversation list — j/k or ↑/↓ to move the
+// highlight, Enter/o to open, x to (de)select, s to star, e to archive. Keeps the mailbox usable
+// without a mouse. activeIndex resets whenever the visible list changes (folder/search/sort).
+const activeIndex = ref(-1)
+const listRef = ref(null)
+
+watch(threads, () => { activeIndex.value = -1 })
+
+function scrollActiveIntoView() {
+  nextTick(() => {
+    const el = listRef.value?.$el?.querySelector('.email-item.is-active')
+    el?.scrollIntoView({ block: 'nearest' })
+  })
+}
+
+function onListKeydown(e) {
+  if (!threads.value.length) return
+  const key = e.key
+  if (key === 'ArrowDown' || key === 'j') {
+    e.preventDefault()
+    activeIndex.value = Math.min(activeIndex.value + 1, threads.value.length - 1)
+    scrollActiveIntoView()
+  } else if (key === 'ArrowUp' || key === 'k') {
+    e.preventDefault()
+    activeIndex.value = Math.max(activeIndex.value - 1, 0)
+    scrollActiveIntoView()
+  } else if ((key === 'Enter' || key === 'o') && activeIndex.value >= 0) {
+    e.preventDefault()
+    openThread(threads.value[activeIndex.value])
+  } else if (key === 'x' && activeIndex.value >= 0) {
+    e.preventDefault()
+    toggleSelect(threads.value[activeIndex.value].id)
+  } else if (key === 's' && activeIndex.value >= 0) {
+    e.preventDefault()
+    toggleStar(threads.value[activeIndex.value].id)
+  } else if (key === 'e' && activeIndex.value >= 0) {
+    e.preventDefault()
+    selectedIds.value = new Set([threads.value[activeIndex.value].id])
+    handleBulkAction('trash')
+  }
+}
+
 // Event handlers
 const handleBulkAction = async action => {
   const count = selectedIds.value.size
@@ -413,17 +455,26 @@ const selectAllModel = computed({
 
       <!-- Thread list -->
       <PerfectScrollbar
+        ref="listRef"
         tag="ul"
+        role="listbox"
+        :aria-label="t('emailInbox.conversations')"
+        tabindex="0"
         :options="{ wheelPropagation: false }"
         class="email-list flex-grow-1"
+        @keydown="onListKeydown"
       >
-        <!-- Loading -->
-        <li
-          v-if="isLoading && threads.length === 0"
-          class="d-flex justify-center align-center pa-8"
-        >
-          <VProgressCircular indeterminate />
-        </li>
+        <!-- Loading — skeletons that mirror the row layout (perceived speed, LOT 6) -->
+        <template v-if="isLoading && threads.length === 0">
+          <li
+            v-for="n in 7"
+            :key="`sk-${n}`"
+            class="d-flex align-center pa-4 gap-3"
+          >
+            <VSkeletonLoader type="avatar" />
+            <VSkeletonLoader type="text" class="flex-grow-1" />
+          </li>
+        </template>
 
         <!-- Empty state -->
         <li
@@ -446,11 +497,14 @@ const selectAllModel = computed({
         <!-- Threads -->
         <template v-else>
           <li
-            v-for="thread in threads"
+            v-for="(thread, idx) in threads"
             :key="thread.id"
+            role="option"
+            :aria-selected="activeIndex === idx"
             class="email-item d-flex align-center pa-4 gap-2 cursor-pointer"
-            :class="[{ 'email-read': thread.unread_count === 0 }]"
+            :class="[{ 'email-read': thread.unread_count === 0, 'is-active': activeIndex === idx }]"
             @click="openThread(thread)"
+            @mouseenter="activeIndex = idx"
           >
             <VCheckbox
               :model-value="selectedIds.has(thread.id)"
@@ -639,6 +693,19 @@ const selectAllModel = computed({
   list-style: none;
   padding: 0;
   margin: 0;
+
+  // ADR-608 (LOT 6): the list owns keyboard focus; suppress the native outline (the active-row
+  // highlight below is the visible focus indicator).
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  // Keyboard-highlighted row — accent bar + subtle tint, no layout shift (unlike :hover's lift).
+  .email-item.is-active {
+    background-color: rgba(var(--v-theme-primary), 0.08);
+    box-shadow: inset 3px 0 0 0 rgb(var(--v-theme-primary));
+  }
 
   .email-item {
     block-size: 4.375rem;

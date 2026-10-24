@@ -22347,3 +22347,15 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Modules/Platform/Email/Http/EmailInboxController.php`, `resources/js/composables/useEmailInbox.js`, `resources/js/pages/platform/email/_EmailInboxTab.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/EmailInboxSortTest.php`.
 
 ---
+
+### ADR-608 — Messagerie LOT 6 : UX premium — skeletons & navigation clavier (2026-10-24)
+
+**Contexte.** La boîte est bâtie sur le preset email Vuexy (liste, volet de lecture, compositeur, sidebar, actions au survol déjà en place). Manques **fonctionnels** (pas cosmétiques) pour un usage quotidien : chargement = simple spinner (pas de perception de vitesse) ; la liste de conversations n'était **pas accessible au clavier** (`<li @click>` non focusables, pas de rôle ARIA) — trou a11y réel.
+**Décision** (depuis le stock Vuexy, aucun composant inventé, `@core`/`@layouts` intacts).
+- **Skeletons** : l'état de chargement (changement de dossier/recherche/tri, liste vide) affiche 7 lignes `VSkeletonLoader` (avatar + texte) qui épousent la géométrie d'une ligne. Les refresh d'arrière-plan (ADR-607) ne déclenchent **pas** de skeleton.
+- **Navigation clavier complète** : la liste (`role="listbox"`, `tabindex=0`) porte un `@keydown` — `j`/`↓` et `k`/`↑` déplacent la surbrillance, `Enter`/`o` ouvre, `x` (dé)sélectionne, `s` favori, `e` archive. `activeIndex` se réinitialise à chaque changement de liste ; la ligne active (`role="option"` + `aria-selected`) se recentre (`scrollIntoView`) et porte un style dédié (barre d'accent `inset box-shadow` + fond teinté, **sans décalage** contrairement au `:hover` qui soulève). Outline natif de focus neutralisé (la surbrillance EST l'indicateur de focus). Le survol souris synchronise aussi `activeIndex`.
+- **Dark mode / mobile** : surbrillance et skeletons utilisent les tokens `--v-theme-*` → s'adaptent au thème ; hamburger mobile déjà présent (preset).
+**Preuves.** E2E `platform-email-keyboard.spec.js` (focus liste → `↓` surligne une ligne → `Enter` ouvre le volet de lecture). Build clean, suite email verte.
+**Fichiers** : `resources/js/pages/platform/email/_EmailInboxTab.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/platform-email-keyboard.spec.js`.
+
+---

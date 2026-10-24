@@ -5632,6 +5632,7 @@
     "syncing": "Syncing...",
     "syncSuccess": "{count} email(s) synced",
     "newMail": "{count} new message(s)",
+    "conversations": "Conversations",
     "sort": {
       "label": "Sort",
       "date_desc": "Newest first",
