@@ -1457,6 +1457,7 @@
     "invoiceAmount": "Montant TTC",
     "invoiceAmountDue": "Reste dû TTC",
     "invoicePay": "Payer",
+    "ht": "HT",
     "invoiceIssuedAt": "Émise le",
     "invoiceDueAt": "Échéance",
     "invoicePaidAt": "Payée le",

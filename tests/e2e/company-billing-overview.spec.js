@@ -34,6 +34,18 @@ test('owner invoices tab renders (table or empty state) without JS errors', asyn
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
+test('owner plan tab renders with HT-qualified price and no JS errors', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+
+  await loginCompany(page, 'owner@leezr.test')
+  await page.goto('/company/billing/plan', { waitUntil: 'networkidle' })
+
+  // Compare-plans section must render; current plan price is HT-qualified.
+  await expect(page.getByText(/Starter|Pro|Business/).first()).toBeVisible({ timeout: 10000 })
+  expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
+})
+
 test('owner billing overview renders in dark mode', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await loginCompany(page, 'owner@leezr.test')

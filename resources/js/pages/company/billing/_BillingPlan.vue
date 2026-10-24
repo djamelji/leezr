@@ -417,17 +417,18 @@ const estimatedInvoice = computed(() => {
             </div>
 
             <div v-if="currentPlan">
+              <!-- ADR-620 (LOT 6c): catalog plan prices are HT (tax_mode=exclusive) → qualify them. -->
               <h3 class="text-body-1 text-high-emphasis font-weight-medium mb-1">
                 <template v-if="currentInterval === 'yearly'">
                   <span class="me-2">
-                    {{ formatMoney(Math.round(currentPlan.price_yearly / 12 * 100)) }} / {{ t('common.monthly').toLowerCase() }}
+                    {{ formatMoney(Math.round(currentPlan.price_yearly / 12 * 100)) }} {{ t('companyBilling.ht') }} / {{ t('common.monthly').toLowerCase() }}
                   </span>
                   <span class="text-body-2 text-disabled">
-                    ({{ formatMoney(currentPlan.price_yearly * 100) }} / {{ t('common.annually').toLowerCase() }})
+                    ({{ formatMoney(currentPlan.price_yearly * 100) }} {{ t('companyBilling.ht') }} / {{ t('common.annually').toLowerCase() }})
                   </span>
                 </template>
                 <template v-else>
-                  {{ formatMoney(currentPlan.price_monthly * 100) }} / {{ t('common.monthly').toLowerCase() }}
+                  {{ formatMoney(currentPlan.price_monthly * 100) }} {{ t('companyBilling.ht') }} / {{ t('common.monthly').toLowerCase() }}
                 </template>
               </h3>
             </div>

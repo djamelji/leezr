@@ -1457,6 +1457,7 @@
     "invoiceAmount": "Amount TTC",
     "invoiceAmountDue": "Due TTC",
     "invoicePay": "Pay",
+    "ht": "excl. tax",
     "invoiceIssuedAt": "Issued",
     "invoiceDueAt": "Due Date",
     "invoicePaidAt": "Paid",

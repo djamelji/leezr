@@ -22474,3 +22474,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/utils/billing.js`, `resources/js/pages/company/billing/_BillingInvoices.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
 
 ---
+
+### ADR-620 — Billing 3.0 / LOT 6c : écran Plan Company — prix HT qualifié (2026-10-25)
+
+**Contexte.** L'écran Plan affiche déjà statut/période/prochain renouvellement + gère `renewal_overdue` (« renouvellement en attente », jamais de date passée). Le prix du plan actuel était **non qualifié** alors que le catalogue est **HT** (`tax_mode=exclusive`).
+**Décision.** Qualification **HT** du prix du plan actuel (mensuel, équivalent mensuel annuel, total annuel) via `companyBilling.ht`. Distinction contractuel/couverture/renouvellement et restriction de revue déjà présentes (bannière overview ADR-614 + `renewal_overdue`). Aucun changement de calcul.
+**Preuves.** E2E `company-billing-overview.spec.js` (onglet Plan rend la comparaison Starter/Pro/Business sans erreur JS) ; 4/4 local. Build clean.
+**Fichiers** : `resources/js/pages/company/billing/_BillingPlan.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
+
+---
