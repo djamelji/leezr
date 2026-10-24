@@ -43,5 +43,20 @@
 - `database/seeders/BillingRecetteSeeder.php` : 3 cas (Overdue Provisional = Leezr-like ; Healthy Paid ; Overdue Failed). Local/DEV only (skip PROD). Seedé + vérifié sur DEV.
 - **À compléter LOT 8** : personas (Platform super-admin/finance/restreint, Company owner/admin/employee), market intra-UE pour la fiscalité, moyens de paiement présents/absents.
 
-## Point de reprise
-Prochain incrément : **LOT 4 (suite)** — qualification HT/TVA/TTC sur overview Company, plan, addons, paiements, portefeuille, puis onglets Platform, puis PDF ; vérifier contrats cents/euros par composant. Puis LOT 5, 6, 7, 8.
+## Commits (suite)
+| SHA | Lot | Portée | Statut |
+|---|---|---|---|
+| d3eaa13 | 3b | caractérisation étendue + doc d'état | ✅ sur DEV |
+| c1a04b5 | 4b | finance-summary overview TTC | ✅ sur DEV |
+| 97f01b9 | 6a | hiérarchie overview (subscription→échéance→situation) + E2E | ✅ **sur DEV, vérifié navigateur (2/2)** |
+
+**Tous les commits Billing 3.0 sont sur `origin/dev` (HEAD DEV = `97f01b9`). `main`/PROD intacts.**
+
+## Point de reprise (précis)
+Prochain incrément : **LOT 6b** — refonte des écrans Company restants (`_BillingPlan` comparaison/changement, `_BillingInvoices` liste, `invoices/[id]` détail, `_BillingPaymentMethods`, `pay.vue`, portefeuille/timeline, résiliation) avec HT/TTC qualifié + Playwright par écran (owner). Puis **LOT 7** (15 onglets Platform, en réutilisant la recette), **LOT 5** (audit automatisations), **LOT 8** (personas + matrice complète).
+Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona navigateur disponible : `owner@leezr.test` = owner de company #1 (Pro active) sur DEV/local.
+
+## Playwright (preuves accumulées)
+| Spéc | Écran | Personas | Statut |
+|---|---|---|---|
+| `company-billing-overview.spec.js` | Overview Company | owner | ✅ DEV (rendu 3 sections, 0 erreur JS, dark mode) |
