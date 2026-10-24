@@ -22438,3 +22438,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `tests/Feature/BillingSubscriptionIntegrityTest.php`.
 
 ---
+
+### ADR-616 — Billing 3.0 / LOT 4 : présentation monétaire & HT/TTC (2026-10-24)
+
+**Contexte.** Deux formateurs monétaires concurrents (`utils/money.js` + `composables/useMarketFormatting.js`), risque de divergence ; montants de factures affichés sans qualification HT/TTC ; code mort d'unité dans `_BillingPlan.vue`.
+**Décision.** (1) **Source unique** : `useMarketFormatting.formatAmount` **délègue** désormais à `formatMoney` (même signature, aucun changement de comportement) → une seule implémentation du formatage cents→devise. (2) `_BillingPlan.displayPrice` nettoyé (×100 cohérent, suppression de la branche morte). (3) **Qualification TTC** explicite des colonnes de la liste de factures (`Montant TTC` / `Reste dû TTC`). Le détail de facture qualifiait déjà HT/TVA/exonération ; les factures émises conservent leur **snapshot fiscal historique** (pas de recalcul).
+**Preuves.** Build clean. (Qualification HT/TTC exhaustive sur tous les écrans + PDF = poursuite LOT 4/6/7 ; vérif visuelle Playwright = LOT 8.)
+**Fichiers** : `resources/js/composables/useMarketFormatting.js`, `resources/js/pages/company/billing/_BillingPlan.vue`, `resources/js/pages/company/billing/_BillingInvoices.vue` (via i18n), `resources/js/plugins/i18n/locales/{en,fr}.json`.
+
+---

@@ -1,5 +1,8 @@
 // ADR-435: Market-aware formatting composable
+// ADR-616 (LOT 4): money formatting converges on the single `formatMoney` implementation to avoid
+// two divergent formatters. `formatAmount` is kept as the market-aware alias (same signature).
 import { useWorldStore } from '@/core/stores/world'
+import { formatMoney } from '@/utils/money'
 
 /**
  * Composable for market-aware formatting (currency, dates).
@@ -27,12 +30,7 @@ export function useMarketFormatting() {
    * @returns {string}
    */
   function formatAmount(cents, currencyOverride) {
-    if (typeof cents !== 'number') return ''
-
-    return new Intl.NumberFormat(world.locale, {
-      style: 'currency',
-      currency: currencyOverride || world.currency,
-    }).format(cents / 100)
+    return formatMoney(cents, { currency: currencyOverride || world.currency, locale: world.locale })
   }
 
   /**

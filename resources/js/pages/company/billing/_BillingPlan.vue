@@ -245,10 +245,11 @@ const planButtonLabel = plan => {
 }
 
 const displayPrice = (plan, annual) => {
-  const cents = annual ? plan.price_yearly : plan.price_monthly * 100
-  const monthlyFromAnnual = annual ? Math.round(plan.price_yearly / 12 * 100) : plan.price_monthly * 100
+  // ADR-616: plan catalog prices are in EUROS (PlanRegistry) → ×100 to cents for formatMoney.
+  const monthlyCents = plan.price_monthly * 100
+  const monthlyFromAnnual = Math.round(plan.price_yearly / 12 * 100)
 
-  return formatMoney(annual ? monthlyFromAnnual : cents)
+  return formatMoney(annual ? monthlyFromAnnual : monthlyCents)
 }
 
 const planMonthlyDisplay = plan => {
