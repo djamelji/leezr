@@ -22456,3 +22456,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `tests/Feature/BillingRenewalCharacterizationTest.php`.
 
 ---
+
+### ADR-618 — Billing 3.0 / LOT 6a : hiérarchie de l'overview Company (2026-10-24)
+
+**Contexte.** L'overview owner empilait la situation financière en premier et l'abonnement en dernier, sans hiérarchie lisible.
+**Décision.** Restructuration top-down : (1) alertes contextuelles (seulement si réelles, ADR-614) → (2) **« Mon abonnement »** (BillingCards) → (3) **« Prochaine échéance »** (BillingNextInvoice, HT/TVA/TTC) → (4) **« Ma situation financière »** (finance-summary TTC). En-têtes de section ajoutés. Composants Vuexy existants réutilisés, aucun changement de données/calcul.
+**Preuves.** E2E `company-billing-overview.spec.js` (2 : rendu des 3 sections sans erreur JS ; dark mode) — vert en local (owner = company Pro active). Build clean.
+**Fichiers** : `resources/js/pages/company/billing/_BillingOverview.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
+
+---

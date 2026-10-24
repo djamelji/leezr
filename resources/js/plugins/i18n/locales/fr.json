@@ -1347,6 +1347,11 @@
   },
   "companyBilling": {
     "title": "Facturation",
+    "sections": {
+      "subscription": "Mon abonnement",
+      "nextInvoice": "Prochaine échéance",
+      "situation": "Ma situation financière"
+    },
     "summary": {
       "billed": "Facturé TTC",
       "paid": "Déjà payé TTC",

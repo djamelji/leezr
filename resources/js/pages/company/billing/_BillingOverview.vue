@@ -240,10 +240,53 @@ const cancelSubscription = async () => {
         {{ t('companyBilling.renewalReview.desc') }}
       </VAlert>
 
-      <!-- ADR-585: finance summary (billed / paid / outstanding = ledger AR / overdue), shared defs -->
+      <!-- ADR-618 (LOT 6): owner overview hierarchy — contextual alerts, THEN subscription,
+           THEN next due estimate, THEN financial situation. The owner reads top-down what they
+           have, what's coming, and where they stand. -->
+      <BillingAlerts
+        :overview="overview"
+        :has-payment-issue="hasPaymentIssue"
+        :trial-days-remaining="trialDaysRemaining"
+        :trial-progress="trialProgress"
+        :payment-method="paymentMethod"
+        :cancel-at-period-end="cancelAtPeriodEnd"
+        :next-billing-date="nextBillingDate"
+        :scheduled-change="scheduledChange"
+        :is-cancelling-change="isCancellingChange"
+        :pending-sub="pendingSub"
+        :is-dismissing="isDismissing"
+        @cancel-scheduled-change="cancelScheduledPlanChange"
+        @dismiss-rejected="dismissRejected"
+      />
+
+      <!-- A. Mon abonnement -->
+      <h6 class="text-h6 mb-2 mt-2">{{ t('companyBilling.sections.subscription') }}</h6>
+      <BillingCards
+        :overview="overview"
+        :plan-name="planName"
+        :plan-price="planPrice"
+        :plan-interval="planInterval"
+        :subscription-status="subscriptionStatus"
+        :status-color="statusColor"
+        :can-cancel="canCancel"
+        :payment-method="paymentMethod"
+        :payment-method-label="paymentMethodLabel"
+        :wallet-balance="walletBalance"
+        @open-cancel-dialog="openCancelDialog"
+      />
+
+      <!-- B. Prochaine échéance -->
+      <h6 class="text-h6 mb-2 mt-6">{{ t('companyBilling.sections.nextInvoice') }}</h6>
+      <BillingNextInvoice
+        v-if="preview"
+        :preview="preview"
+        :next-billing-date="nextBillingDate"
+      />
+
+      <!-- C. Ma situation financière (montants TTC) -->
+      <h6 class="text-h6 mb-2 mt-6">{{ t('companyBilling.sections.situation') }}</h6>
       <VCard
         v-if="financeSummary"
-        class="mb-4"
         data-test="billing-finance-summary"
       >
         <VCardText class="d-flex flex-wrap gap-6">
@@ -265,42 +308,6 @@ const cancelSubscription = async () => {
           </div>
         </VCardText>
       </VCard>
-
-      <BillingAlerts
-        :overview="overview"
-        :has-payment-issue="hasPaymentIssue"
-        :trial-days-remaining="trialDaysRemaining"
-        :trial-progress="trialProgress"
-        :payment-method="paymentMethod"
-        :cancel-at-period-end="cancelAtPeriodEnd"
-        :next-billing-date="nextBillingDate"
-        :scheduled-change="scheduledChange"
-        :is-cancelling-change="isCancellingChange"
-        :pending-sub="pendingSub"
-        :is-dismissing="isDismissing"
-        @cancel-scheduled-change="cancelScheduledPlanChange"
-        @dismiss-rejected="dismissRejected"
-      />
-
-      <BillingNextInvoice
-        v-if="preview"
-        :preview="preview"
-        :next-billing-date="nextBillingDate"
-      />
-
-      <BillingCards
-        :overview="overview"
-        :plan-name="planName"
-        :plan-price="planPrice"
-        :plan-interval="planInterval"
-        :subscription-status="subscriptionStatus"
-        :status-color="statusColor"
-        :can-cancel="canCancel"
-        :payment-method="paymentMethod"
-        :payment-method-label="paymentMethodLabel"
-        :wallet-balance="walletBalance"
-        @open-cancel-dialog="openCancelDialog"
-      />
     </template>
 
     <VCard v-else>

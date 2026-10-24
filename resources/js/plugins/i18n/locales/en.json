@@ -1347,6 +1347,11 @@
   },
   "companyBilling": {
     "title": "Billing",
+    "sections": {
+      "subscription": "My subscription",
+      "nextInvoice": "Next invoice",
+      "situation": "My financial situation"
+    },
     "summary": {
       "billed": "Billed (incl. tax)",
       "paid": "Paid (incl. tax)",

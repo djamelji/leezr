@@ -35,7 +35,7 @@
 | 3 | Caractérisation checkout/preview/renew | ✅ fait (3 cas restants documentés, non couverts) |
 | 4 | Fiscalité HT/TTC complète (toutes pages + PDF) | 🟡 partiel (4a formateur+liste factures ; 4b finance-summary overview TTC) — RESTE : plan, addons, paiements, avoirs, portefeuille, PDF, onglets Platform |
 | 5 | Automatisations (renew/dunning/webhooks/reconcile/reprise) | ⏳ à auditer/tester |
-| 6 | Refonte UX/UI Company (12+ écrans) | ⏳ non commencé |
+| 6 | Refonte UX/UI Company (12+ écrans) | 🟡 en cours (6a : hiérarchie overview — subscription→échéance→situation, E2E vert local) |
 | 7 | Refonte UX/UI Platform (15 onglets + connexes) | ⏳ non commencé |
 | 8 | Recette Playwright 6 personas + matrice | ⏳ non commencé (recette backend prête via BillingRecetteSeeder) |
 
