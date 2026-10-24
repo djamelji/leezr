@@ -109,11 +109,11 @@ const walletBalance = computed(() => {
   return formatMoney(overview.value.wallet_balance, { currency: overview.value?.currency })
 })
 
-const hasPaymentIssue = computed(() => {
-  const status = overview.value?.subscription?.status
-
-  return status === 'past_due' || overview.value?.outstanding_invoices > 0
-})
+// ADR-614 (LOT 2): a payment issue is a REAL overdue document or a failed payment — never a bill
+// that is merely awaiting its due date. Backend computes `has_payment_issue` from reconciled data.
+const hasPaymentIssue = computed(() => overview.value?.has_payment_issue === true)
+const invoicesNotDue = computed(() => overview.value?.invoices_not_due ?? 0)
+const invoicesOverdue = computed(() => overview.value?.invoices_overdue ?? 0)
 
 const subscriptionStatus = computed(() => overview.value?.subscription?.status)
 const cancelAtPeriodEnd = computed(() => overview.value?.subscription?.cancel_at_period_end)

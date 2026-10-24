@@ -43,6 +43,28 @@ class CompanyBillingReadService
             ->whereIn('status', ['open', 'overdue'])
             ->sum('amount_due');
 
+        // ADR-614 (LOT 2 — vérité financière): truthful classification for the owner UI.
+        // Count PARENT invoices only (annexes, ADR-328, are not standalone bills), and separate
+        // "not yet due" from "overdue" so a document that is merely awaiting its due date is NEVER
+        // presented as a payment problem. A real payment problem = an overdue document OR a payment
+        // that actually failed on a still-open/overdue invoice.
+        $parentOutstanding = Invoice::where('company_id', $company->id)
+            ->whereNull('parent_invoice_id')
+            ->whereIn('status', ['open', 'overdue']);
+
+        $invoicesNotDue = (clone $parentOutstanding)
+            ->where('status', 'open')->where('due_at', '>=', now())->count();
+
+        $invoicesOverdue = (clone $parentOutstanding)
+            ->where(fn ($q) => $q->where('status', 'overdue')
+                ->orWhere(fn ($q2) => $q2->where('status', 'open')->where('due_at', '<', now())))
+            ->count();
+
+        $openInvoiceIds = Invoice::where('company_id', $company->id)
+            ->whereIn('status', ['open', 'overdue'])->pluck('id');
+        $hasFailedPayment = $openInvoiceIds->isNotEmpty() && Payment::where('company_id', $company->id)
+            ->where('status', 'failed')->whereIn('invoice_id', $openInvoiceIds)->exists();
+
         // Plan details
         $plan = null;
         if ($subscription) {
@@ -125,6 +147,12 @@ class CompanyBillingReadService
             'wallet_balance' => $walletBalance,
             'outstanding_invoices' => $outstandingCount,
             'outstanding_amount' => $outstandingAmount,
+            // ADR-614: truthful, reconciled counts for honest alerting (parent invoices only).
+            'invoices_not_due' => $invoicesNotDue,
+            'invoices_overdue' => $invoicesOverdue,
+            'has_failed_payment' => $hasFailedPayment,
+            'has_payment_issue' => $invoicesOverdue > 0 || $hasFailedPayment
+                || ($subscription['status'] ?? null) === 'past_due',
             // ADR-585: consolidated finance summary sharing the Platform ledger definitions
             // (billed / paid / outstanding = ledger AR / overdue), per currency, in cents.
             'finance_summary' => self::financeSummary($company),

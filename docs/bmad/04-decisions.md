@@ -22419,3 +22419,13 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `routes/console.php`, `app/Core/Automation/ScheduledTaskRegistry.php`.
 
 ---
+
+### ADR-614 — Billing 3.0 / LOT 2 : vérité financière (alertes & comptage) (2026-10-24)
+
+**Contexte.** La page owner déclarait « problème de paiement / N factures impayées » sur des factures **non échues** (échéance future) et **comptait les annexes** (ADR-328) comme des factures distinctes. Pour Leezr Logistics (PROD, lecture seule) : 3 documents = 1 facture + 2 annexes, tous `open` dus au 20/11, **0 paiement échoué**, `overdue_cents=0` → alerte **fausse**.
+**Décision.** `CompanyBillingReadService::overview()` expose une classification **réconciliée** : `invoices_not_due` (open, échéance ≥ now), `invoices_overdue` (status `overdue` OU open échu), `has_failed_payment` (paiement `failed` sur une facture open/overdue), `has_payment_issue` (overdue>0 OU échec OU subscription `past_due`). **Comptage des factures parentes uniquement** (`parent_invoice_id IS NULL`). Frontend : `hasPaymentIssue` lit `has_payment_issue` ; l'alerte d'erreur n'apparaît que pour un **retard/échec réel** (compte = `invoices_overdue`) ; une bannière **info non alarmante** « N factures à venir » couvre les documents non échus.
+**Recette.** `database/seeders/BillingRecetteSeeder.php` (LOCAL/DEV only, skip production) — 3 cas : (A) Leezr-like (provisional, période échue, 1 facture + 2 annexes non échues) → `issue=NON` ; (B) sain payé → `issue=NON` ; (C) retard + échec → `issue=OUI`. Vérifié en base locale.
+**Preuves.** `BillingFinancialTruthTest` (4 : non-échu≠problème + annexes exclues ; overdue=problème ; open échu=overdue ; échec=problème). Build clean. Gardes ADR-575/593 intactes. Aucune écriture PROD.
+**Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/{_BillingOverview,_BillingAlerts}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `database/seeders/BillingRecetteSeeder.php`, `tests/Feature/BillingFinancialTruthTest.php`.
+
+---

@@ -34,7 +34,7 @@ const { t } = useI18n()
       {{ t('companyBilling.overview.paymentFailedTitle') }}
     </VAlertTitle>
     <span>
-      {{ t('companyBilling.overview.paymentFailedDesc', { count: overview.outstanding_invoices }) }}
+      {{ t('companyBilling.overview.paymentFailedDesc', { count: overview.invoices_overdue ?? 0 }) }}
     </span>
 
     <template #append>
@@ -58,6 +58,32 @@ const { t } = useI18n()
           {{ t('companyBilling.overview.changePaymentMethod') }}
         </VBtn>
       </div>
+    </template>
+  </VAlert>
+
+  <!-- ADR-614 (LOT 2): upcoming (not yet due) invoices — informational, NOT a payment problem. -->
+  <VAlert
+    v-if="!hasPaymentIssue && (overview.invoices_not_due ?? 0) > 0"
+    type="info"
+    variant="tonal"
+    icon="tabler-calendar-due"
+    class="mb-6"
+    data-test="billing-upcoming-invoices"
+  >
+    <VAlertTitle>
+      {{ t('companyBilling.overview.invoicesUpcomingTitle', { count: overview.invoices_not_due }) }}
+    </VAlertTitle>
+    <span>{{ t('companyBilling.overview.invoicesUpcomingDesc') }}</span>
+    <template #append>
+      <VBtn
+        v-can="'billing.manage'"
+        variant="tonal"
+        color="info"
+        size="small"
+        :to="{ name: 'company-billing-tab', params: { tab: 'invoices' } }"
+      >
+        {{ t('companyBilling.overview.viewInvoices') }}
+      </VBtn>
     </template>
   </VAlert>
 
