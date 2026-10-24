@@ -5593,7 +5593,10 @@
       "maxFileSize": "Max size: {size} MB",
       "maxFiles": "Max {count} files",
       "discardDraft": "Discard draft",
-      "moreOptions": "More options"
+      "moreOptions": "More options",
+      "draftSaving": "Saving…",
+      "draftSaved": "Draft saved",
+      "draftError": "Not saved"
     },
     "folders": {
       "inbox": "Inbox",
@@ -5612,6 +5615,7 @@
     },
     "composeBtn": "Compose",
     "reply": "Reply",
+    "replyAll": "Reply all",
     "forward": "Forward",
     "moveTo": "Move to",
     "addLabel": "Add label",

@@ -33,6 +33,15 @@ const toError = ref('')
 const ccError = ref('')
 const bccError = ref('')
 
+// ADR-605 (LOT 4): draft autosave state. `draftSaveSeq` guards against a stale network response
+// overwriting newer content (last-writer-wins by sequence); `draftDiscarded` prevents a late save
+// from resurrecting a draft that was already sent/deleted.
+const draftId = ref(null)
+const draftStatus = ref('idle') // idle | saving | saved | error
+const draftSaveSeq = ref(0)
+const draftDiscarded = ref(false)
+let draftTimer = null
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const validateEmail = email => emailRegex.test(email.trim())
@@ -124,6 +133,8 @@ const removeFile = index => {
 }
 
 const resetValues = () => {
+  clearTimeout(draftTimer)
+  draftSaveSeq.value++ // invalidate any in-flight autosave
   to.value = ''
   subject.value = ''
   body.value = ''
@@ -136,6 +147,9 @@ const resetValues = () => {
   ccError.value = ''
   bccError.value = ''
   uploadedFiles.value = []
+  draftId.value = null
+  draftStatus.value = 'idle'
+  draftDiscarded.value = false
 }
 
 const handleClose = () => {
@@ -147,6 +161,12 @@ const handleSend = async () => {
   if (!isValid.value) return
 
   isSending.value = true
+  // ADR-605 (LOT 4): stop autosave and remove the backing draft (so a sent email does not also
+  // linger in Drafts, and no late save resurrects it).
+  draftDiscarded.value = true
+  draftSaveSeq.value++
+  clearTimeout(draftTimer)
+  const sentDraftId = draftId.value
   try {
     emit('sent', {
       to: to.value,
@@ -156,6 +176,9 @@ const handleSend = async () => {
       bcc: bcc.value || null,
       attachment_ids: uploadedFiles.value.map(f => f.id),
     })
+    if (sentDraftId) {
+      $platformApi(`/email/inbox/draft/${sentDraftId}`, { method: 'DELETE' }).catch(() => {})
+    }
     handleClose()
   } finally {
     isSending.value = false
@@ -181,6 +204,49 @@ const handleKeydown = e => {
   else if (e.shiftKey && key === 'b') { e.preventDefault(); isEmailBcc.value = !isEmailBcc.value }
 }
 
+// ── ADR-605 (LOT 4): draft autosave ──
+const hasContent = () => !!(to.value || subject.value || body.value || cc.value || bcc.value)
+
+async function autosaveDraft() {
+  if (draftDiscarded.value || !hasContent()) { draftStatus.value = 'idle'; return }
+  const seq = ++draftSaveSeq.value
+  draftStatus.value = 'saving'
+  const payload = { to: to.value, subject: subject.value, body: body.value, cc: cc.value || null, bcc: bcc.value || null }
+  try {
+    const res = draftId.value
+      ? await $platformApi(`/email/inbox/draft/${draftId.value}`, { method: 'PUT', body: payload })
+      : await $platformApi('/email/inbox/draft', { method: 'POST', body: payload })
+
+    // Ignore a stale response (a newer save started, or the draft was sent/deleted meanwhile).
+    if (seq !== draftSaveSeq.value || draftDiscarded.value) return
+    if (res?.draft_id) draftId.value = res.draft_id
+    draftStatus.value = 'saved'
+  } catch {
+    if (seq === draftSaveSeq.value) draftStatus.value = 'error' // keep local content; user can retry
+  }
+}
+
+function scheduleAutosave() {
+  if (draftDiscarded.value) return
+  if (hasContent()) draftStatus.value = 'saving'
+  clearTimeout(draftTimer)
+  draftTimer = setTimeout(autosaveDraft, 1200)
+}
+
+watch([to, subject, body, cc, bcc], () => {
+  if (props.modelValue) scheduleAutosave()
+})
+
+// Warn before leaving with unsaved (not yet persisted) content.
+const beforeUnloadGuard = e => {
+  if (props.modelValue && hasContent() && draftStatus.value !== 'saved') {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+onMounted(() => window.addEventListener('beforeunload', beforeUnloadGuard))
+onBeforeUnmount(() => { window.removeEventListener('beforeunload', beforeUnloadGuard); clearTimeout(draftTimer) })
+
 // Watch for prefill data (forward, draft editing)
 watch(() => props.prefill, val => {
   if (!val) return
@@ -191,6 +257,10 @@ watch(() => props.prefill, val => {
   bcc.value = val.bcc || ''
   if (val.cc) isEmailCc.value = true
   if (val.bcc) isEmailBcc.value = true
+  // ADR-605 (LOT 4): resuming an existing draft → keep updating the same draft row.
+  draftId.value = val.draft_id || null
+  draftDiscarded.value = false
+  draftStatus.value = val.draft_id ? 'saved' : 'idle'
 }, { immediate: true })
 </script>
 
@@ -210,6 +280,19 @@ watch(() => props.prefill, val => {
         <h5 class="text-h5">
           {{ t('emailInbox.compose.title') }}
         </h5>
+        <!-- ADR-605 (LOT 4): autosave indicator -->
+        <span
+          v-if="draftStatus !== 'idle'"
+          class="text-caption ms-3 d-inline-flex align-center gap-1"
+          :class="draftStatus === 'error' ? 'text-error' : 'text-disabled'"
+          data-test="compose-draft-status"
+        >
+          <VIcon
+            size="14"
+            :icon="draftStatus === 'saving' ? 'tabler-loader-2' : draftStatus === 'error' ? 'tabler-alert-circle' : 'tabler-check'"
+          />
+          {{ t(`emailInbox.compose.draft${draftStatus === 'saving' ? 'Saving' : draftStatus === 'error' ? 'Error' : 'Saved'}`) }}
+        </span>
         <VSpacer />
 
         <div class="d-flex align-center gap-x-2">

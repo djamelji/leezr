@@ -22314,3 +22314,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/_EmailCompose.vue`, `resources/js/pages/platform/email/_EmailLeftSidebar.vue`, `tests/e2e/platform-email-composer.spec.js`.
 
 ---
+
+### ADR-605 — Messagerie LOT 4 : brouillons & conversations (2026-10-24)
+
+**Contexte.** Backend brouillons complet mais **non câblé** à l'UI (fonctionnalité injoignable) ; pas de « répondre à tous ».
+**Décision.** `_EmailCompose.vue` : **autosave debounce 1,2 s** avec indicateur (idle/saving/saved/error), **garde de concurrence** (séquence `draftSaveSeq` → une réponse réseau ancienne n'écrase pas un contenu plus récent) et **anti-résurrection** (`draftDiscarded` → un save tardif ne recrée pas un brouillon envoyé/supprimé) ; **reprise** d'un brouillon existant (prefill `draft_id` → PUT sur la même ligne) ; **suppression** du brouillon à l'envoi (pas de doublon dans Brouillons) ; **avertissement** `beforeunload` si contenu non sauvegardé. `_EmailView.vue` : **Répondre à tous** (To = expéditeur, Cc = autres destinataires dédupliqués hors self). `data-test` ajoutés.
+**Preuves.** `EmailDraftTest` (4 : persist crée un brouillon dossier draft ; update réutilise la même ligne ; send → email réel + brouillon supprimé ; delete) ; E2E `platform-email-drafts.spec.js` (autosave → indicateur « enregistré » + brouillon présent côté serveur). Régression email **verte**, build clean.
+**Fichiers** : `resources/js/pages/platform/email/{_EmailCompose,_EmailView}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/EmailDraftTest.php`, `tests/e2e/platform-email-drafts.spec.js`.
+
+---

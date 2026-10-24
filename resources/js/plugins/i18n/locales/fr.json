@@ -5593,7 +5593,10 @@
       "maxFileSize": "Taille max : {size} Mo",
       "maxFiles": "Max {count} fichiers",
       "discardDraft": "Supprimer le brouillon",
-      "moreOptions": "Plus d'options"
+      "moreOptions": "Plus d'options",
+      "draftSaving": "Enregistrement…",
+      "draftSaved": "Brouillon enregistré",
+      "draftError": "Non enregistré"
     },
     "folders": {
       "inbox": "Boîte de réception",
@@ -5612,6 +5615,7 @@
     },
     "composeBtn": "Rédiger",
     "reply": "Répondre",
+    "replyAll": "Répondre à tous",
     "forward": "Transmettre",
     "moveTo": "Déplacer vers",
     "addLabel": "Ajouter un label",

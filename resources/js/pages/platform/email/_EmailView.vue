@@ -88,6 +88,29 @@ const handleClickForward = () => {
   })
 }
 
+// ADR-605 (LOT 4): Reply all — reply to the original sender AND carry the other recipients as Cc,
+// de-duplicated and excluding the participant already in To. Opens the composer (via 'forward').
+const handleClickReplyAll = () => {
+  const msg = lastMessage.value
+  if (!msg) return
+
+  const to = props.thread?.participant_email || msg.from_email || ''
+  const extras = []
+  for (const part of [msg.recipient_email, msg.cc]) {
+    if (!part) continue
+    for (const addr of String(part).split(/[,;]+/).map(s => s.trim()).filter(Boolean)) extras.push(addr)
+  }
+  const cc = [...new Set(extras)].filter(a => a.toLowerCase() !== to.toLowerCase()).join(', ')
+  const subject = props.thread?.subject || ''
+
+  emit('forward', {
+    to,
+    cc: cc || null,
+    subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
+    body: buildQuote(),
+  })
+}
+
 const handleFileSelect = async event => {
   const files = event.target.files
   if (!files?.length) return
@@ -448,18 +471,27 @@ watch(() => props.thread, () => {
                   {{ t('emailInbox.forward') }}
                 </span>
               </template>
-              <!-- Received threads: reply + forward -->
+              <!-- Received threads: reply + reply-all + forward -->
               <template v-else>
                 {{ t('emailInbox.replyOrForwardPrefix') }}
                 <span
                   class="text-primary cursor-pointer"
+                  data-test="thread-reply"
                   @click="handleClickReply"
                 >
                   {{ t('emailInbox.reply') }}
+                </span>,
+                <span
+                  class="text-primary cursor-pointer"
+                  data-test="thread-reply-all"
+                  @click="handleClickReplyAll"
+                >
+                  {{ t('emailInbox.replyAll') }}
                 </span>
                 {{ t('emailInbox.replyOrForwardOr') }}
                 <span
                   class="text-primary cursor-pointer"
+                  data-test="thread-forward"
                   @click="handleClickForward"
                 >
                   {{ t('emailInbox.forward') }}
