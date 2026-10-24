@@ -179,9 +179,9 @@ class ScheduledTaskRegistry
             'command' => 'email:fetch-inbox',
             'description' => 'automations.tasks.emailFetchInbox',
             'category' => 'system',
-            'frequency' => 'every5min',
-            'cron' => '*/5 * * * *',
-            'expected_interval_minutes' => 5,
+            'frequency' => 'everyMinute',
+            'cron' => '* * * * *',
+            'expected_interval_minutes' => 1,
         ],
 
         // ── Usage Monitoring (P3-4) ─────────────────────────────
