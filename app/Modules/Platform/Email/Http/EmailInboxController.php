@@ -91,8 +91,8 @@ class EmailInboxController
                 'sent_at' => $m->sent_at?->toISOString(),
             ]);
 
-        $thread->markAllRead();
-
+        // ADR-606 (LOT 7): GET is side-effect-free — read state is changed only via the explicit
+        // POST /email/inbox/{id}/read endpoint (called by the client when a thread is opened).
         return response()->json(['thread' => $thread, 'messages' => $messages]);
     }
 

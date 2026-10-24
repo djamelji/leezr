@@ -102,10 +102,12 @@ export function useEmailInbox() {
       selectedThread.value = data.thread
       selectedThreadMessages.value = data.messages
 
-      // Update thread in list as read
+      // ADR-606 (LOT 7): persist read-state via the explicit endpoint (the GET no longer mutates).
       const idx = threads.value.findIndex(t => t.id === id)
-      if (idx !== -1) {
-        threads.value[idx].unread_count = 0
+      const wasUnread = idx !== -1 && threads.value[idx].unread_count > 0
+      if (idx !== -1) threads.value[idx].unread_count = 0
+      if (wasUnread) {
+        $platformApi(`/email/inbox/${id}/read`, { method: 'POST' }).catch(() => {})
       }
     } catch {
       selectedThread.value = null

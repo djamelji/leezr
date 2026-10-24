@@ -1,5 +1,10 @@
 <script setup>
+import DOMPurify from 'dompurify'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+
+// ADR-606 (LOT 7): neutralize untrusted inbound HTML before rendering (XSS defense). Strips
+// <script>, event handlers, javascript: URLs, etc. Applied at render and in reply/forward quotes.
+const sanitizeHtml = html => DOMPurify.sanitize(html || '', { FORBID_TAGS: ['script', 'style', 'iframe'], FORBID_ATTR: ['onerror', 'onload', 'onclick'] })
 
 const props = defineProps({
   thread: { type: Object, default: null },
@@ -63,7 +68,7 @@ const buildQuote = () => {
 
   const date = formatDate(msg.created_at || msg.sent_at)
   const from = msg.direction === 'sent' ? (msg.recipient_email || '') : (msg.from_email || '')
-  const originalBody = msg.body_html || msg.body_text || ''
+  const originalBody = sanitizeHtml(msg.body_html || msg.body_text || '')
 
   return `<br><br><blockquote style="border-left: 2px solid #ccc; padding-left: 8px; color: #666;">${t('emailInbox.quote', { date, from })}<br>${originalBody}</blockquote>`
 }
@@ -410,7 +415,7 @@ watch(() => props.thread, () => {
             <div
               v-if="msg.body_html"
               class="text-base email-body-content"
-              v-html="msg.body_html"
+              v-html="sanitizeHtml(msg.body_html)"
             />
             <!-- eslint-enable -->
             <div

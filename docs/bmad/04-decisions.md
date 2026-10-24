@@ -22323,3 +22323,15 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/{_EmailCompose,_EmailView}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/EmailDraftTest.php`, `tests/e2e/platform-email-drafts.spec.js`.
 
 ---
+
+### ADR-606 — Messagerie LOT 7 : sécurité & fiabilité finale (2026-10-24)
+
+**Contexte.** Trois failles de la surface messagerie : (1) le HTML entrant non fiable était rendu via `v-html` **sans assainissement** (XSS stocké possible depuis un email reçu) ; (2) `GET /email/inbox/{id}` **mutait l'état** (`markAllRead`) — effet de bord sur une requête de lecture, non rejouable/non idempotent ; (3) il fallait confirmer le contrôle d'accès du téléchargement des pièces jointes.
+**Décision.**
+- **XSS** : `_EmailView.vue` assainit tout corps reçu avec **DOMPurify** (`sanitizeHtml` : `FORBID_TAGS [script,style,iframe]`, `FORBID_ATTR [onerror,onload,onclick]`) avant `v-html` **et** avant la citation de réponse (`buildQuote`). DOMPurify est déjà une dépendance (help-center) — pas de nouveau moteur.
+- **Effet de bord GET** : `show()` ne fait **plus** `markAllRead()` ; la lecture est persistée uniquement via `POST /email/inbox/{id}/read` (endpoint explicite déjà routé). Le client (`useEmailInbox.fetchThread`) déclenche ce POST à l'ouverture, **seulement si le thread était non lu**, en best-effort (n'altère pas l'UI si l'appel échoue).
+- **Pièces jointes** : le téléchargement reste gaté par le groupe de routes `platform.permission:manage_email` → un utilisateur sans la permission reçoit **403**.
+**Preuves.** `EmailSecurityTest` (3 : le GET ne marque pas lu ; le POST /read marque lu ; téléchargement interdit → 403) ; E2E `platform-email-xss.spec.js` (thread malveillant seedé → `<script>` retiré, `onerror` jamais déclenché, texte légitime préservé). Build clean, régression email verte.
+**Fichiers** : `resources/js/pages/platform/email/_EmailView.vue`, `resources/js/composables/useEmailInbox.js`, `app/Modules/Platform/Email/Http/EmailInboxController.php`, `tests/Feature/EmailSecurityTest.php`, `tests/e2e/platform-email-xss.spec.js`.
+
+---
