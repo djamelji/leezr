@@ -702,9 +702,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::post('/email/health/test', [\App\Modules\Platform\Email\Http\EmailHealthController::class, 'test']);
         });
 
-        // Inbound webhook (no auth — secured by webhook secret)
+        // Inbound webhook (ADR-602 LOT 1): fail-closed. The controller DISABLES itself (404) unless
+        // `services.email_inbound.secret` is set, then verifies the secret + dedupes by Message-ID.
+        // Session/2FA middleware are stripped so a real provider POST is not redirected (302).
         Route::post('/email/inbound', [\App\Modules\Platform\Email\Http\EmailInboundController::class, 'store'])
-            ->withoutMiddleware(['auth:platform', 'platform.permission:manage_email']);
+            ->withoutMiddleware(['auth:platform', 'platform.permission:manage_email', 'session.governance', 'platform.2fa']);
     });
 
     }); // end platform.2fa

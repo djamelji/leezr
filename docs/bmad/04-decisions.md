@@ -22251,3 +22251,18 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/operations/_OperationsUsageConsumption.vue` (nouveau), `resources/js/modules/platform-admin/usage/usage.store.js` (nouveau), `resources/js/pages/platform/operations/{[tab].vue,_OperationsAi.vue}`, `app/Core/Navigation/{NavItem.php,NavBuilder.php}`, `app/Modules/Platform/Alerts/AlertsModule.php`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/UsageConsolidationTest.php`, `tests/e2e/platform-usage-consolidation.spec.js`.
 
 ---
+
+### ADR-602 — Messagerie Platform LOT 1 : sécurité du canal entrant + threading (2026-10-24)
+
+**Contexte (audit).** Réception techniquement opérationnelle (IMAP, 1911 reçus en PROD) mais : (a) webhook `/email/inbound` **non authentifié & spoofable** (commentaire « secured by webhook secret » faux, aucune vérification), schéma custom → 422 providers réels, re-livraison d'un `message_id` → 500 (unique sans try/catch), POST → 302 ; (b) **threading sur-collapsant** : 1902/1911 reçus fusionnés dans 2 threads `spam` via le fallback participant+sujet.
+
+**Décision (réutilise le module Email, aucun 2ᵉ moteur).**
+- **Webhook fail-closed** : `config/services.php` `email_inbound.secret` (env `LEEZR_EMAIL_INBOUND_SECRET`, vide par défaut). `EmailInboundController::store` → **404 si aucun secret** (endpoint désactivé, IMAP intact), sinon vérification `hash_equals` (header `X-Inbound-Secret`), **idempotence** par Message-ID (re-livraison = no-op, plus de 500), `try/catch` + log. Route : `withoutMiddleware` étendu à `session.governance`/`platform.2fa` (plus de 302 pour un vrai provider). Bug préexistant `Undefined array key "in_reply_to"` (payload sans clé → 500) corrigé (normalisation de `$validated`).
+- **Threading** : `ImapFetcher::findOrCreateThread` — le fallback participant+sujet ne s'applique **que** si le message est une réponse/transfert (`Re:`/`Fwd:`) dans une fenêtre ≤30j ; les blasts indépendants de même expéditeur/sujet ne fusionnent plus. `In-Reply-To`/`References` restent prioritaires.
+- **Spam** : dossier explicite + compteurs + reclassement (spam↔inbox) **déjà présents** (`_EmailLeftSidebar.vue`, `folderCounts.spam`, `bulkAction` in:spam,inbox) — vérifié, pas de régression. **Aucune reclassification ni suppression de l'historique.**
+
+**Preuves.** `EmailInboundSecurityTest` (5 : 404 sans secret ; 401 mauvais secret ; persistance OK ; idempotent sur doublon ; reply threadé via In-Reply-To) + `ImapThreadingTest` (3 : non-collapse same-sender/subject ; vraie réponse threadée ; References prioritaire). Régression email/platform **721 passed, 0 failed**.
+
+**Fichiers** : `config/services.php`, `app/Modules/Platform/Email/Http/EmailInboundController.php`, `routes/platform.php`, `app/Core/Email/ImapFetcher.php`, `tests/Feature/{EmailInboundSecurityTest,ImapThreadingTest}.php`.
+
+---

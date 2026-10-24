@@ -406,19 +406,28 @@ class ImapFetcher
             }
         }
 
-        // 3. Try to match by participant email + normalized subject
+        // 3. Fallback match by participant + normalized subject — ADR-602 (LOT 1): ONLY when the
+        //    incoming message is itself a reply/forward (Re:/Fwd:/Fw: prefix) AND lands in a recent
+        //    (≤30d) open thread. This preserves real conversations whose clients omit References,
+        //    while preventing independent same-sender/same-subject blasts (e.g. bounce spam) from
+        //    collapsing into a single giant thread.
         $normalizedSubject = preg_replace('/^(Re:\s*|Fwd:\s*|Fw:\s*)+/i', '', $subject);
-        $existing = EmailThread::where('participant_email', $fromEmail)
-            ->where(function ($q) use ($normalizedSubject, $subject) {
-                $q->where('subject', $subject)
-                    ->orWhere('subject', $normalizedSubject);
-            })
-            ->where('status', '!=', 'archived')
-            ->orderByDesc('last_message_at')
-            ->first();
+        $isReplyOrForward = (bool) preg_match('/^\s*(Re|Fwd|Fw)\s*:/i', $subject);
 
-        if ($existing) {
-            return $existing;
+        if ($isReplyOrForward) {
+            $existing = EmailThread::where('participant_email', $fromEmail)
+                ->where(function ($q) use ($normalizedSubject, $subject) {
+                    $q->where('subject', $subject)
+                        ->orWhere('subject', $normalizedSubject);
+                })
+                ->where('status', '!=', 'archived')
+                ->where('last_message_at', '>=', now()->subDays(30))
+                ->orderByDesc('last_message_at')
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
         }
 
         // 4. Create new thread

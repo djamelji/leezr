@@ -6,16 +6,33 @@ use App\Core\Email\EmailLog;
 use App\Core\Email\EmailThread;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class EmailInboundController
 {
     /**
      * Webhook endpoint for inbound emails.
-     * Supports generic format compatible with Mailgun, Postmark, SES.
+     *
+     * ADR-602 (LOT 1) — fail-closed security:
+     *  - DISABLED (404) unless a provider secret is configured (`services.email_inbound.secret`).
+     *    Current environments have no secret → endpoint is effectively off; IMAP reception is the
+     *    live channel and is untouched.
+     *  - When enabled: constant-time secret verification (header `X-Inbound-Secret` or `secret`
+     *    field) + idempotent handling (replay of the same Message-ID is a no-op, never a 500).
      */
     public function store(Request $request): JsonResponse
     {
+        $secret = (string) config('services.email_inbound.secret', '');
+        if ($secret === '') {
+            abort(404);
+        }
+
+        $provided = (string) ($request->header('X-Inbound-Secret') ?? $request->input('secret', ''));
+        if (! hash_equals($secret, $provided)) {
+            abort(401, 'Invalid inbound secret.');
+        }
+
         $validated = $request->validate([
             'from' => 'required|email',
             'from_name' => 'nullable|string|max:255',
@@ -27,6 +44,43 @@ class EmailInboundController
             'in_reply_to' => 'nullable|string',
             'references' => 'nullable|string',
         ]);
+
+        // Idempotency / replay guard: a Message-ID already stored is a no-op (never a 500).
+        $messageId = ! empty($validated['message_id'])
+            ? trim($validated['message_id'], '<>')
+            : Str::uuid()->toString().'@inbound.leezr.com';
+
+        $duplicate = EmailLog::where('message_id', $messageId)->first();
+        if ($duplicate) {
+            return response()->json([
+                'message' => 'Duplicate ignored.',
+                'thread_id' => $duplicate->thread_id,
+                'log_id' => $duplicate->id,
+            ]);
+        }
+
+        try {
+            return $this->persist($validated, $messageId);
+        } catch (\Throwable $e) {
+            Log::channel('single')->warning('[email:inbound] failed to persist', [
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Inbound processing failed.'], 500);
+        }
+    }
+
+    private function persist(array $validated, string $messageId): JsonResponse
+    {
+        // Normalize optional keys (absent 'nullable' fields are not present in $validated).
+        $validated = array_merge([
+            'from_name' => null,
+            'body_html' => null,
+            'body_text' => null,
+            'in_reply_to' => null,
+            'references' => null,
+        ], $validated);
 
         // Try to find existing thread via In-Reply-To or References
         $thread = null;
@@ -64,10 +118,6 @@ class EmailInboundController
         }
 
         // Create inbound email log
-        $messageId = $validated['message_id']
-            ? trim($validated['message_id'], '<>')
-            : Str::uuid()->toString().'@inbound.leezr.com';
-
         $log = EmailLog::create([
             'message_id' => $messageId,
             'thread_id' => $thread->id,

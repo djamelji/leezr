@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // ADR-602 (LOT 1): inbound email webhook secret. EMPTY by default → the public /email/inbound
+    // endpoint is DISABLED (fail-closed 404). Reception runs over IMAP (unaffected). Set this env
+    // only when a verified provider is wired to the webhook.
+    'email_inbound' => [
+        'secret' => env('LEEZR_EMAIL_INBOUND_SECRET', ''),
+    ],
+
 ];
