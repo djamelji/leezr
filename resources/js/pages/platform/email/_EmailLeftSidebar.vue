@@ -37,7 +37,7 @@ const folderBadgeColor = key => {
 
     <!-- Folders + Labels -->
     <PerfectScrollbar
-      :options="{ wheelPropagation: false }"
+      :options="{ wheelPropagation: true }"
       class="h-100"
     >
       <!-- Folders -->

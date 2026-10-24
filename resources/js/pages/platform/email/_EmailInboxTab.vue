@@ -503,7 +503,7 @@ const selectAllModel = computed({
         role="listbox"
         :aria-label="t('emailInbox.conversations')"
         tabindex="0"
-        :options="{ wheelPropagation: false }"
+        :options="{ wheelPropagation: true }"
         class="email-list flex-grow-1"
         @keydown="onListKeydown"
       >

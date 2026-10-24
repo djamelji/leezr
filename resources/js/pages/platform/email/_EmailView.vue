@@ -360,7 +360,7 @@ watch(() => props.thread, () => {
       <PerfectScrollbar
         tag="div"
         class="mail-content-container flex-grow-1 pa-sm-6 pa-4"
-        :options="{ wheelPropagation: false }"
+        :options="{ wheelPropagation: true }"
       >
         <VCard
           v-for="msg in props.messages"

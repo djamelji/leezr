@@ -22391,3 +22391,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 *Fichiers* : `resources/js/composables/useEmailInbox.js`, `resources/js/pages/platform/email/_EmailInboxTab.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `resources/styles/styles.scss`, `tests/e2e/platform-email-animation.spec.js`.
 
 ---
+
+### ADR-611 — Messagerie : correctif P1 scroll (PerfectScrollbar piégeait la molette) (2026-10-24)
+
+**Contexte.** P1 bloquant signalé : curseur dans la boîte mail → impossible de scroller les emails **ni** la page. **Reproduction prouvée** (Playwright DEV, `scrollTop`/`window.scrollY` mesurés, pas une simple présence d'`overflow-y`) : sur un volet dont le contenu **ne déborde pas**, `mouse.wheel()` → `window.scrollY` **0→0** alors que la page a du contenu sous le pli. **Cause structurelle** : les trois `PerfectScrollbar` (liste, volet de lecture, sidebar) étaient configurés `{{ wheelPropagation: false }}` → PerfectScrollbar `preventDefault` la molette et, sans débordement interne (ou à la borne du scroll), **n'empêche pas seulement le scroll interne mais bloque aussi la propagation à la page**. Un volet qui déborde scrollait (d'où le bug intermittent selon la taille d'écran et le nombre d'emails), mais un volet court piégeait la molette.
+**Décision.** `wheelPropagation: true` sur les trois instances (`_EmailInboxTab`, `_EmailView`, `_EmailLeftSidebar`). Comportement : le volet scrolle en interne tant qu'il peut, puis **propage** la molette à la page quand il ne peut plus (contenu non débordant ou borne atteinte). Correctif minimal, conserve le style de scrollbar Vuexy (pas de remplacement par scroll natif). Aucun `@core`/`@layouts` touché.
+**Preuves.** `platform-email-scroll.spec.js` (3, stubs déterministes, assertions sur `scrollTop`/`scrollY` réels) : liste qui déborde → `scrollTop` augmente ; liste courte → `window.scrollY` augmente (propagation, plus de piège) ; volet de lecture long → `scrollTop` augmente. Diagnostic avant/après : page winY `Δ0` → `Δ118`. Build clean.
+**Fichiers** : `resources/js/pages/platform/email/{_EmailInboxTab,_EmailView,_EmailLeftSidebar}.vue`, `tests/e2e/platform-email-scroll.spec.js`.
+
+---
