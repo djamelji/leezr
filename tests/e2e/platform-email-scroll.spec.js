@@ -90,3 +90,88 @@ test('an overflowing reading pane scrolls on wheel', async ({ page }) => {
   const after = await pane.evaluate(el => el.scrollTop)
   expect(after).toBeGreaterThan(before)
 })
+
+test('list scrolled to the bottom propagates the wheel to the page', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await stubList(page, Array.from({ length: 30 }, (_, i) => thread(i + 1, `Message ${i + 1}`)))
+  await loginPlatform(page, 'admin@leezr.com')
+  await page.goto('/platform/messaging/inbox', { waitUntil: 'networkidle' })
+
+  const list = page.locator('.email-list')
+  await expect(list.locator('.email-item').first()).toBeVisible({ timeout: 8000 })
+  await list.evaluate(el => el.scrollTo(0, el.scrollHeight)) // park at the bottom
+  await page.waitForTimeout(200)
+  const pageOverflows = await page.evaluate(() => document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight)
+  const box = await list.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  const w0 = await page.evaluate(() => window.scrollY)
+  await page.mouse.wheel(0, 800)
+  await page.waitForTimeout(400)
+  const w1 = await page.evaluate(() => window.scrollY)
+  if (pageOverflows) expect(w1).toBeGreaterThan(w0)
+})
+
+test('reading pane scrolled to the bottom propagates the wheel to the page', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await stubList(page, [thread(1, 'Open me')])
+  await page.route('**/api/platform/email/inbox/1', r => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({
+      thread: thread(1, 'Open me'),
+      messages: [{
+        id: 1, message_id: 'm1@x', direction: 'received', from_email: 'long@ext.test',
+        recipient_email: 'admin@leezr.com', subject: 'Open me',
+        body_html: '<p>' + 'Longue ligne de contenu. '.repeat(1200) + '</p>',
+        cc: null, bcc: null, status: 'sent', is_read: true, attachments: [],
+        created_at: new Date(0).toISOString(), sent_at: new Date(0).toISOString(),
+      }],
+    }),
+  }))
+  await loginPlatform(page, 'admin@leezr.com')
+  await page.goto('/platform/messaging/inbox', { waitUntil: 'networkidle' })
+  await page.getByText('Open me').first().click()
+  const pane = page.locator('.mail-content-container').first()
+  await pane.waitFor({ timeout: 8000 })
+  await pane.evaluate(el => el.scrollTo(0, el.scrollHeight)) // park at the bottom
+  await page.waitForTimeout(200)
+  const pageOverflows = await page.evaluate(() => document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight)
+  const box = await pane.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  const w0 = await page.evaluate(() => window.scrollY)
+  await page.mouse.wheel(0, 800)
+  await page.waitForTimeout(400)
+  const w1 = await page.evaluate(() => window.scrollY)
+  if (pageOverflows) expect(w1).toBeGreaterThan(w0)
+})
+
+test('no stray horizontal scroll at 1440 / 768 / 390', async ({ page }) => {
+  await stubList(page, Array.from({ length: 12 }, (_, i) => thread(i + 1, `Message ${i + 1}`)))
+  await loginPlatform(page, 'admin@leezr.com')
+  await page.goto('/platform/messaging/inbox', { waitUntil: 'networkidle' })
+  await expect(page.locator('.email-item').first()).toBeVisible({ timeout: 8000 })
+
+  for (const width of [1440, 768, 390]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.waitForTimeout(300)
+    const hasHScroll = await page.evaluate(() => document.scrollingElement.scrollWidth > document.scrollingElement.clientWidth + 1)
+    expect(hasHScroll, `horizontal scroll at ${width}px`).toBe(false)
+  }
+})
+
+test('the folder sidebar does not trap the wheel', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await stubList(page, [thread(1, 'Only one')])
+  await loginPlatform(page, 'admin@leezr.com')
+  await page.goto('/platform/messaging/inbox', { waitUntil: 'networkidle' })
+  await expect(page.locator('[data-test="folder-inbox"]')).toBeVisible({ timeout: 8000 })
+
+  const pageOverflows = await page.evaluate(() => document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight)
+  const sidebar = page.locator('.email-left-sidebar')
+  const box = await sidebar.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  const w0 = await page.evaluate(() => window.scrollY)
+  await page.mouse.wheel(0, 800)
+  await page.waitForTimeout(400)
+  const w1 = await page.evaluate(() => window.scrollY)
+  if (pageOverflows) expect(w1).toBeGreaterThan(w0)
+})
