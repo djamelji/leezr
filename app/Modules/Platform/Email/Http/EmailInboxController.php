@@ -206,6 +206,8 @@ class EmailInboxController
     public function markRead(int $id): JsonResponse
     {
         EmailThread::findOrFail($id)->markAllRead();
+        // ADR-610 (LOT 2): emit so the unread badge (and other tabs/users) recount after a read.
+        $this->publishEmailEvent('read', $id);
 
         return response()->json(['message' => 'Thread marked as read.']);
     }

@@ -1,5 +1,6 @@
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useNavStore } from '@/core/stores/nav'
+import { useEmailUnreadStore } from '@/core/stores/emailUnread'
 
 /**
  * Platform navigation items — manifest-driven, permission-filtered.
@@ -10,9 +11,15 @@ import { useNavStore } from '@/core/stores/nav'
 export function usePlatformNav() {
   const auth = usePlatformAuthStore()
   const navStore = useNavStore()
+  const emailUnread = useEmailUnreadStore()
+
+  // ADR-610 (LOT 2): boot the unread counter for users who can access messaging, so the badge is
+  // live even when the Inbox page is never opened. Idempotent (the store guards re-subscription).
+  if (auth.hasPermission('manage_email')) emailUnread.init()
 
   const navItems = computed(() => {
-    return groupsToNavItems(navStore.platformGroups, auth)
+    // Reading badgeContent here makes navItems recompute when the count changes (reactive badge).
+    return groupsToNavItems(navStore.platformGroups, auth, emailUnread.badgeContent)
   })
 
   const firstAccessibleRoute = computed(() => {
@@ -29,7 +36,7 @@ export function usePlatformNav() {
  * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Last-barrier permission check only (backend already filtered).
  */
-function groupsToNavItems(groups, auth) {
+function groupsToNavItems(groups, auth, messagingBadge = undefined) {
   const items = []
 
   for (const group of groups) {
@@ -43,6 +50,13 @@ function groupsToNavItems(groups, auth) {
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
+      }
+
+      // ADR-610 (LOT 2): live unread badge on the Messaging item (native Vuexy badgeContent).
+      // Falsy → no badge (count 0). bg-error = the Vuexy error-tinted pill.
+      if (item.key === 'platform-messaging' && messagingBadge) {
+        navItem.badgeContent = messagingBadge
+        navItem.badgeClass = 'bg-error'
       }
 
       // Only set children when non-empty — Vuexy uses 'children' in item
