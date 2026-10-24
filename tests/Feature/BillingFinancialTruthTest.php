@@ -79,6 +79,22 @@ class BillingFinancialTruthTest extends TestCase
         $this->assertTrue($ov['has_payment_issue']);
     }
 
+    public function test_void_and_written_off_invoices_are_not_exigible(): void
+    {
+        // ADR-619: cancelled / written-off / uncollectible invoices must NEVER be counted as due or
+        // presented as a payment problem.
+        $c = $this->company('Void Co');
+        $this->inv($c, ['status' => 'void', 'amount_due' => 0, 'due_at' => now()->subDays(5)]);
+        $this->inv($c, ['status' => 'written_off', 'due_at' => now()->subDays(5)]);
+        $this->inv($c, ['status' => 'uncollectible', 'due_at' => now()->subDays(5)]);
+
+        $ov = CompanyBillingReadService::overview($c);
+
+        $this->assertSame(0, $ov['invoices_not_due']);
+        $this->assertSame(0, $ov['invoices_overdue'], 'void/written_off/uncollectible are not overdue');
+        $this->assertFalse($ov['has_payment_issue'], 'a cancelled/written-off invoice is not a payment problem');
+    }
+
     public function test_failed_payment_on_open_invoice_is_a_payment_issue(): void
     {
         $c = $this->company('Failed Co');
