@@ -33,7 +33,7 @@
 | 1 | Intégrité abonnements (4 dimensions) | ✅ validé (tests) |
 | 2 | Vérité financière (alertes/comptage) | ✅ fait + DEV |
 | 3 | Caractérisation checkout/preview/renew | ✅ fait (3 cas restants documentés, non couverts) |
-| 4 | Fiscalité HT/TTC complète (toutes pages + PDF) | 🟡 partiel (4a : formateur + liste factures) — RESTE : overview, plan, addons, paiements, avoirs, portefeuille, PDF, onglets Platform |
+| 4 | Fiscalité HT/TTC complète (toutes pages + PDF) | 🟡 partiel (4a formateur+liste factures ; 4b finance-summary overview TTC) — RESTE : plan, addons, paiements, avoirs, portefeuille, PDF, onglets Platform |
 | 5 | Automatisations (renew/dunning/webhooks/reconcile/reprise) | ⏳ à auditer/tester |
 | 6 | Refonte UX/UI Company (12+ écrans) | ⏳ non commencé |
 | 7 | Refonte UX/UI Platform (15 onglets + connexes) | ⏳ non commencé |

@@ -1348,10 +1348,10 @@
   "companyBilling": {
     "title": "Billing",
     "summary": {
-      "billed": "Billed",
-      "paid": "Paid",
-      "outstanding": "Outstanding",
-      "overdue": "Overdue"
+      "billed": "Billed (incl. tax)",
+      "paid": "Paid (incl. tax)",
+      "outstanding": "Outstanding (incl. tax)",
+      "overdue": "Overdue (incl. tax)"
     },
     "renewalReview": {
       "title": "Renewal under review",

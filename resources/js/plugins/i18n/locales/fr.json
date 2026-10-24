@@ -1348,10 +1348,10 @@
   "companyBilling": {
     "title": "Facturation",
     "summary": {
-      "billed": "Facturé",
-      "paid": "Déjà payé",
-      "outstanding": "Restant dû",
-      "overdue": "Échu"
+      "billed": "Facturé TTC",
+      "paid": "Déjà payé TTC",
+      "outstanding": "Restant dû TTC",
+      "overdue": "Échu TTC"
     },
     "renewalReview": {
       "title": "Renouvellement en cours de revue",
