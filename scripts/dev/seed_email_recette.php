@@ -54,6 +54,11 @@ $mk('[E2E] Spam item', 'spam');
 $mk('[E2E] Trash item', 'trash');
 // Search: a unique token
 $mk('[E2E] UNICORNTOKEN unique subject', 'inbox');
+// Hostile HTML (XSS neutralization proof) — subject contains "XSS Probe Subject".
+$mk('[E2E] XSS Probe Subject', 'inbox', [
+    'from_email' => 'attacker@evil.test',
+    'body_html' => '<p>Safe content here.</p><script>window.__xss=1</script><img src=x onerror="window.__xss=1">',
+]);
 
 echo 'E2E recette seeded: reply-all='.$ra->id.' forward='.$fw->id.PHP_EOL;
 echo 'inbox threads total='.EmailThread::where('folder', 'inbox')->count().PHP_EOL;
