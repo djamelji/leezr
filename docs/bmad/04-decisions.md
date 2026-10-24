@@ -22296,3 +22296,21 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Modules/Platform/Email/Http/EmailInboxController.php`, `app/Core/Email/EmailService.php`, `resources/js/composables/useEmailInbox.js`, `tests/Feature/EmailSendReliabilityTest.php`.
 
 ---
+
+### ADR-604 — Messagerie LOT 3 : compositeur clavier professionnel (2026-10-24)
+
+**Contexte.** Priorité UX #1 : rédiger un email **sans souris** (À → Sujet → Corps au Tab). L'ordre DOM était correct mais les toggles CC/CCI étaient des `<span>` non focusables (inaccessibles clavier) et le Tab Sujet→Corps retombait sur la barre d'outils du `TiptapEditor` (`@core`, intouchable).
+
+**Décision (compositeur uniquement, `@core`/`@layouts` intacts).**
+- **Tab À → Sujet → Corps** garanti : sur Tab depuis le Sujet, `handleKeydown` (au niveau de la carte) saute directement dans l'éditeur (`focusEditor` → `.ProseMirror`), contournant la barre d'outils `@core`.
+- **Toggles CC/CCI accessibles** : convertis en vrais `<button>` (sémantique) avec `tabindex=-1` (préserve le flux À→Sujet) + **raccourcis** Cmd/Ctrl+Shift+C / +B. Quand CC/CCI sont affichés, ils s'insèrent dans le Tab (À→CC→CCI→Sujet→Corps).
+- **Raccourci d'envoi** Cmd/Ctrl+Enter.
+- **`data-test`** ajoutés (compose-to/cc/bcc/subject/body/send + toggles + bouton Composer) pour l'E2E.
+
+**Preuves.** `platform-email-composer.spec.js` (3, contre build local) : Tab À→Sujet→Corps (CC/CCI masqués) ; raccourcis CC/CCI puis ordre À→CC→CCI→Sujet ; envoi 100 % clavier (Cmd/Ctrl+Enter ferme le compositeur). Build clean. (Débogage focus : tab1→Sujet, tab2→ProseMirror focalisé — confirmé.)
+
+**Limite.** Shift+Tab depuis le corps retombe sur la barre d'outils Tiptap (`@core`, non modifiable) ; le flux **avant** À→Sujet→Corps est garanti.
+
+**Fichiers** : `resources/js/pages/platform/email/_EmailCompose.vue`, `resources/js/pages/platform/email/_EmailLeftSidebar.vue`, `tests/e2e/platform-email-composer.spec.js`.
+
+---

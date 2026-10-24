@@ -28,6 +28,7 @@ const folderBadgeColor = key => {
     <div class="px-6 pb-5 pt-6">
       <VBtn
         block
+        data-test="email-compose-btn"
         @click="emit('compose')"
       >
         {{ t('emailInbox.composeBtn') }}

@@ -10,8 +10,15 @@ const emit = defineEmits(['update:modelValue', 'sent'])
 
 const { t } = useI18n()
 const fileInput = ref(null)
+const bodyWrapper = ref(null)
 const uploadedFiles = ref([])
 const isUploading = ref(false)
+
+// ADR-604 (LOT 3): Tab from Subject jumps straight into the body editor, skipping the Tiptap
+// toolbar (which lives in the immutable @core TiptapEditor). Preserves To → Subject → Body.
+const focusEditor = () => {
+  bodyWrapper.value?.querySelector('.ProseMirror')?.focus()
+}
 
 const to = ref('')
 const subject = ref('')
@@ -155,6 +162,25 @@ const handleSend = async () => {
   }
 }
 
+// ADR-604 (LOT 3): keyboard productivity shortcuts (mouse-free composition).
+// Cmd/Ctrl+Enter = send; Cmd/Ctrl+Shift+C = toggle Cc; Cmd/Ctrl+Shift+B = toggle Bcc.
+const handleKeydown = e => {
+  // Tab from Subject → jump into the body editor (skip the immutable @core Tiptap toolbar).
+  if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.metaKey && e.target?.closest?.('[data-test="compose-subject"]')) {
+    e.preventDefault()
+    focusEditor()
+
+    return
+  }
+
+  const meta = e.ctrlKey || e.metaKey
+  if (!meta) return
+  const key = (e.key || '').toLowerCase()
+  if (key === 'enter') { e.preventDefault(); handleSend() }
+  else if (e.shiftKey && key === 'c') { e.preventDefault(); isEmailCc.value = !isEmailCc.value }
+  else if (e.shiftKey && key === 'b') { e.preventDefault(); isEmailBcc.value = !isEmailBcc.value }
+}
+
 // Watch for prefill data (forward, draft editing)
 watch(() => props.prefill, val => {
   if (!val) return
@@ -173,8 +199,10 @@ watch(() => props.prefill, val => {
     v-show="modelValue"
     class="email-compose-dialog"
     elevation="10"
+    data-test="email-compose"
     :max-width="$vuetify.display.smAndDown ? '100%' : '30vw'"
     :min-width="$vuetify.display.smAndDown ? '100%' : '400px'"
+    @keydown="handleKeydown"
   >
     <!-- Header -->
     <VCardItem class="py-3 px-6">
@@ -207,6 +235,7 @@ watch(() => props.prefill, val => {
           <VTextField
             v-model="to"
             density="compact"
+            data-test="compose-to"
             :error-messages="toError"
             @blur="validateToField"
           >
@@ -216,10 +245,26 @@ watch(() => props.prefill, val => {
               </div>
             </template>
             <template #append>
-              <span class="cursor-pointer text-sm">
-                <span @click="isEmailCc = !isEmailCc">{{ t('emailInbox.compose.cc') }}</span>
-                <span> | </span>
-                <span @click="isEmailBcc = !isEmailBcc">{{ t('emailInbox.compose.bcc') }}</span>
+              <span class="text-sm d-inline-flex align-center gap-1">
+                <!-- tabindex=-1 keeps the natural To → Subject → Body tab flow; reachable via
+                     Cmd/Ctrl+Shift+C / +B shortcuts and by click (ADR-604 LOT 3). -->
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="compose-toggle"
+                  data-test="compose-cc-toggle"
+                  :title="t('emailInbox.compose.cc') + ' (Ctrl/Cmd+Shift+C)'"
+                  @click="isEmailCc = !isEmailCc"
+                >{{ t('emailInbox.compose.cc') }}</button>
+                <span>|</span>
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="compose-toggle"
+                  data-test="compose-bcc-toggle"
+                  :title="t('emailInbox.compose.bcc') + ' (Ctrl/Cmd+Shift+B)'"
+                  @click="isEmailBcc = !isEmailBcc"
+                >{{ t('emailInbox.compose.bcc') }}</button>
               </span>
             </template>
           </VTextField>
@@ -233,6 +278,7 @@ watch(() => props.prefill, val => {
               <VTextField
                 v-model="cc"
                 density="compact"
+                data-test="compose-cc"
                 :error-messages="ccError"
                 @blur="validateCcField"
               >
@@ -254,6 +300,7 @@ watch(() => props.prefill, val => {
               <VTextField
                 v-model="bcc"
                 density="compact"
+                data-test="compose-bcc"
                 :error-messages="bccError"
                 @blur="validateBccField"
               >
@@ -274,6 +321,7 @@ watch(() => props.prefill, val => {
           <VTextField
             v-model="subject"
             density="compact"
+            data-test="compose-subject"
           >
             <template #prepend-inner>
               <div class="text-base font-weight-medium text-disabled">
@@ -286,11 +334,13 @@ watch(() => props.prefill, val => {
         <VDivider />
 
         <!-- TiptapEditor body -->
-        <TiptapEditor
-          v-model="body"
-          class="compose-editor"
-          :placeholder="t('emailInbox.compose.body')"
-        />
+        <div ref="bodyWrapper" data-test="compose-body">
+          <TiptapEditor
+            v-model="body"
+            class="compose-editor"
+            :placeholder="t('emailInbox.compose.body')"
+          />
+        </div>
 
         <!-- Uploaded files list -->
         <div
@@ -338,6 +388,7 @@ watch(() => props.prefill, val => {
             color="primary"
             class="me-4"
             append-icon="tabler-send"
+            data-test="compose-send"
             :disabled="!isValid"
             :loading="isSending"
             @click="handleSend"
@@ -390,6 +441,20 @@ watch(() => props.prefill, val => {
 </template>
 
 <style lang="scss">
+// ADR-604 (LOT 3): Cc/Bcc toggles rendered as real buttons (semantics) styled like inline links.
+.compose-toggle {
+  border: none;
+  background: transparent;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  cursor: pointer;
+  padding: 0 2px;
+  font: inherit;
+
+  &:hover {
+    color: rgb(var(--v-theme-primary));
+  }
+}
+
 .v-card.email-compose-dialog {
   position: fixed;
   z-index: 910 !important;
