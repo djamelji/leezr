@@ -10,8 +10,10 @@ use App\Core\Email\EmailThread;
 use App\Core\Email\ImapFetcher;
 use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -101,12 +103,19 @@ class EmailInboxController
             'to_name' => 'nullable|string|max:255',
             'subject' => 'required|string|max:500',
             'body' => 'required|string|max:50000',
-            'cc' => 'nullable|string|max:1000',
-            'bcc' => 'nullable|string|max:1000',
+            'cc' => ['nullable', 'string', 'max:1000', $this->emailListRule()],
+            'bcc' => ['nullable', 'string', 'max:1000', $this->emailListRule()],
             'company_id' => 'nullable|exists:companies,id',
             'attachment_ids' => 'nullable|array',
             'attachment_ids.*' => 'integer',
         ]);
+
+        // ADR-603 (LOT 2): idempotency — a double-click / retried request with the same payload
+        // within a short window must not send twice.
+        $key = 'email:compose:'.md5(($request->user('platform')?->id ?? 0).'|'.$validated['to'].'|'.$validated['subject'].'|'.$validated['body']);
+        if (! Cache::add($key, true, now()->addSeconds(10))) {
+            return response()->json(['message' => 'Duplicate send ignored.', 'duplicate' => true]);
+        }
 
         [$thread, $log] = app(EmailComposeService::class)->compose($validated);
 
@@ -116,7 +125,8 @@ class EmailInboxController
 
         $this->publishEmailEvent('compose', $thread->id);
 
-        return response()->json(['message' => 'Email sent.', 'thread' => $thread, 'log' => $log]);
+        // Honest status: queued (SMTP acceptance happens later on the worker → status becomes "sent").
+        return response()->json(['message' => 'Email queued.', 'thread' => $thread, 'log' => $log]);
     }
 
     public function reply(Request $request, int $id): JsonResponse
@@ -128,7 +138,12 @@ class EmailInboxController
             'attachment_ids.*' => 'integer',
         ]);
 
-        $log = app(EmailComposeService::class)->reply($thread, $validated['body']);
+        $key = 'email:reply:'.md5(($request->user('platform')?->id ?? 0).'|'.$thread->id.'|'.$validated['body']);
+        if (! Cache::add($key, true, now()->addSeconds(10))) {
+            return response()->json(['message' => 'Duplicate reply ignored.', 'duplicate' => true]);
+        }
+
+        $log = app(EmailComposeService::class)->reply($thread, $validated['body'], $validated['attachment_ids'] ?? []);
 
         if (! empty($validated['attachment_ids'])) {
             app(EmailAttachmentService::class)->attach($log, $validated['attachment_ids']);
@@ -136,7 +151,21 @@ class EmailInboxController
 
         $this->publishEmailEvent('reply', $thread->id);
 
-        return response()->json(['message' => 'Reply sent.', 'log' => $log]);
+        return response()->json(['message' => 'Reply queued.', 'log' => $log]);
+    }
+
+    /** ADR-603 (LOT 2): validate a comma/semicolon-separated list of email addresses. */
+    private function emailListRule(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            foreach (preg_split('/[,;]+/', (string) $value, -1, PREG_SPLIT_NO_EMPTY) as $entry) {
+                if (! filter_var(trim($entry), FILTER_VALIDATE_EMAIL)) {
+                    $fail("Invalid email address in {$attribute}: ".trim($entry));
+
+                    return;
+                }
+            }
+        };
     }
 
     public function markRead(int $id): JsonResponse

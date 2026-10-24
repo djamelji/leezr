@@ -22266,3 +22266,21 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `config/services.php`, `app/Modules/Platform/Email/Http/EmailInboundController.php`, `routes/platform.php`, `app/Core/Email/ImapFetcher.php`, `tests/Feature/{EmailInboundSecurityTest,ImapThreadingTest}.php`.
 
 ---
+
+### ADR-603 — Messagerie Platform LOT 2 : envoi réellement fiable (2026-10-24)
+
+**Contexte (audit).** Pièces jointes **jamais envoyées** (seulement liées en DB) ; `EmailService::retry` créait un log mais **ne ré-expédiait jamais** ; **aucune idempotence** (double-clic → double envoi) ; cc/cci non validés serveur ; statut « Email sent. » renvoyé avant confirmation ; erreurs SMTP transitoires (450) sans retry.
+
+**Décision (réutilise les services existants).**
+- **Pièces jointes réellement attachées** : `ManualEmailNotification` reçoit `attachmentIds` et attache les fichiers via `Storage::disk(...)->get()` + `attachData` (indépendant du disque et de l'ordre de liaison DB → fonctionne en queue sync et async). `EmailComposeService::compose/reply` propagent les IDs.
+- **Retry ré-expédie vraiment** : `EmailService::retry` reconstruit la notification (sujet/corps/cc/cci + pièces jointes de l'original) et **dispatche** via `Notification::route('mail', …)`.
+- **Idempotence** : `EmailInboxController::compose/reply` posent un verrou `Cache::add` (clé = user+destinataire+sujet+corps, fenêtre 10 s) → un double-clic renvoie `duplicate:true` sans second envoi.
+- **Validation serveur** cc/cci : règle `emailListRule` (chaque adresse séparée par , ou ; validée) → 422 sinon.
+- **Erreurs SMTP transitoires** : `ManualEmailNotification` `$tries=3` + `backoff [60,300,900]`.
+- **Statuts honnêtes** : réponse « Email queued. » (plus « sent »). Cycle `queued → sent` (accepté SMTP via `MessageSent`) `→ failed`. `delivery_status` **jamais écrit** → aucun « livré » sans preuve.
+
+**Preuves.** `EmailSendReliabilityTest` (5 : pièce jointe réellement présente dans `rawAttachments` ; compose idempotent (1 seul envoi) ; cc invalide → 422 ; retry ré-expédie (`assertSentOnDemand`) ; retry refuse un non-échec). Régression email/platform **409 passed, 0 failed**.
+
+**Fichiers** : `app/Notifications/Email/ManualEmailNotification.php`, `app/Core/Email/{EmailService,EmailComposeService}.php`, `app/Modules/Platform/Email/Http/EmailInboxController.php`, `tests/Feature/EmailSendReliabilityTest.php`.
+
+---

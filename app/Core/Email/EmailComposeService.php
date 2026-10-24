@@ -32,6 +32,7 @@ class EmailComposeService
         $notification = new ManualEmailNotification($data['subject'], $data['body']);
         $notification->cc = $data['cc'] ?? null;
         $notification->bcc = $data['bcc'] ?? null;
+        $notification->attachmentIds = array_values($data['attachment_ids'] ?? []); // ADR-603 LOT 2
 
         $log = app(EmailService::class)->send($notification, $recipient, 'manual.compose', $company, [
             'thread_id' => $thread->id,
@@ -64,7 +65,7 @@ class EmailComposeService
     /**
      * Reply to an existing thread.
      */
-    public function reply(EmailThread $thread, string $body): EmailLog
+    public function reply(EmailThread $thread, string $body, array $attachmentIds = []): EmailLog
     {
         $lastMessage = EmailLog::where('thread_id', $thread->id)
             ->orderByDesc('created_at')
@@ -72,6 +73,7 @@ class EmailComposeService
 
         $recipient = new EmailRecipient($thread->participant_email, $thread->participant_name);
         $notification = new ManualEmailNotification("Re: {$thread->subject}", $body);
+        $notification->attachmentIds = array_values($attachmentIds); // ADR-603 LOT 2
 
         $log = app(EmailService::class)->send($notification, $recipient, 'manual.reply', $thread->company, [
             'thread_id' => $thread->id,

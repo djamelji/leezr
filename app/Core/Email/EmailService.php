@@ -4,10 +4,12 @@ namespace App\Core\Email;
 
 use App\Core\Models\Company;
 use App\Core\Theme\UIResolverService;
+use App\Notifications\Email\ManualEmailNotification;
 use App\Platform\Models\PlatformSetting;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Str;
 
 class EmailService
@@ -89,12 +91,38 @@ class EmailService
             'from_email' => $fromEmail,
             'reply_to' => $failedLog->reply_to,
             'subject' => $failedLog->subject,
+            'cc' => $failedLog->cc,
+            'bcc' => $failedLog->bcc,
+            'body_html' => $failedLog->body_html,
+            'body_text' => $failedLog->body_text,
+            'thread_id' => $failedLog->thread_id,
+            'direction' => $failedLog->direction,
             'template_key' => $failedLog->template_key,
             'notification_class' => $failedLog->notification_class,
             'status' => 'queued',
             'headers' => ['Message-ID' => "<{$newMessageId}>", 'References' => "<{$failedLog->message_id}>"],
             'metadata' => array_merge($failedLog->metadata ?? [], ['retry_of' => $failedLog->id]),
         ]);
+
+        // ADR-603 (LOT 2): actually re-dispatch (previously the retry log was created but NEVER sent).
+        $notification = new ManualEmailNotification(
+            $failedLog->subject ?? '(no subject)',
+            $failedLog->body_html ?: ($failedLog->body_text ?? ''),
+        );
+        $notification->emailLogId = $newLog->id;
+        $notification->emailMessageId = $newMessageId;
+        $notification->cc = $failedLog->cc;
+        $notification->bcc = $failedLog->bcc;
+        $notification->attachmentIds = EmailAttachment::where('email_log_id', $failedLog->id)->pluck('id')->all();
+
+        $this->configureSmtp();
+
+        try {
+            NotificationFacade::route('mail', $failedLog->recipient_email)->notify($notification);
+        } catch (\Throwable $e) {
+            $newLog->markFailed($e->getMessage());
+            Log::error('[email] Retry dispatch failed', ['retry_of' => $failedLog->id, 'error' => $e->getMessage()]);
+        }
 
         return $newLog;
     }
