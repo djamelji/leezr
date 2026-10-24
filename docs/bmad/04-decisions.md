@@ -22335,3 +22335,15 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/platform/email/_EmailView.vue`, `resources/js/composables/useEmailInbox.js`, `app/Modules/Platform/Email/Http/EmailInboxController.php`, `tests/Feature/EmailSecurityTest.php`, `tests/e2e/platform-email-xss.spec.js`.
 
 ---
+
+### ADR-607 — Messagerie LOT 5 : inbox, recherche & fiabilité du temps réel (2026-10-24)
+
+**Contexte.** Recherche/filtres/pagination/counts/read-unread/bulk/spam étaient déjà côté serveur (ADR-453). Deux manques : (1) **tri** non exposé (date desc figé) ; (2) consigne explicite — *vérifier la fiabilité du SSE avant de retirer le polling de secours : un utilisateur ne doit pas manquer visuellement un message si le temps réel tombe.*
+**Vérification SSE.** `@core/realtime/RealtimeClient` (immuable) ne retente que **3 fois** (backoff 2s/4s/8s ≈ 14 s) puis **abandonne définitivement** (`onFallback()`, plus aucune reconnexion). → Le SSE n'est **pas** un canal fiable dans la durée. **Décision : le polling de secours 30 s RESTE** (seul filet garanti) — non retiré.
+**Décision.**
+- **Tri serveur** : `index()` accepte `sort` ∈ `date_desc` (défaut) | `date_asc` | `unread_first` ; menu de tri Vuexy (IconBtn+VMenu+VList) dans la barre d'outils ; `useEmailInbox` porte `sort` (watch → refetch page 1).
+- **Jamais manquer un message visuellement** : `fetchThreads(page, {background})` — le poll 30 s **et** le push SSE `email.updated` passent en mode *background* (pas de flash skeleton, **garde anti-chevauchement** `_fetchInFlight` pour qu'un poll n'écrase pas une liste en cours de chargement). Si le nombre de non-lus inbox **augmente** lors d'un refresh d'arrière-plan → `newMailSignal` → toast « N nouveau(x) message(s) ». Ainsi, même SSE tombé, le filet 30 s notifie l'arrivée (≤ 30 s), aucun message visuellement perdu.
+**Preuves.** `EmailInboxSortTest` (3 : défaut=plus récents ; date_asc ; unread_first). Build clean, suite email verte.
+**Fichiers** : `app/Modules/Platform/Email/Http/EmailInboxController.php`, `resources/js/composables/useEmailInbox.js`, `resources/js/pages/platform/email/_EmailInboxTab.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/EmailInboxSortTest.php`.
+
+---

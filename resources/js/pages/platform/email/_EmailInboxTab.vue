@@ -21,10 +21,12 @@ const {
   currentFolder,
   currentLabel,
   searchQuery,
+  sort,
   folderCounts,
   isLoading,
   isSyncing,
   pagination,
+  newMailSignal,
 
   // Computed
   isAllSelected,
@@ -66,6 +68,12 @@ const {
 const showCompose = ref(false)
 const composePrefill = ref(null)
 const isLeftSidebarOpen = ref(true)
+
+// ADR-607 (LOT 5): never miss a message visually — a background refresh that detects new inbox mail
+// (via SSE push or the 30s safety-net poll) surfaces a non-intrusive toast.
+watch(newMailSignal, sig => {
+  if (sig?.count > 0) toast(t('emailInbox.newMail', { count: sig.count }), 'info')
+})
 
 // Event handlers
 const handleBulkAction = async action => {
@@ -244,9 +252,28 @@ const selectAllModel = computed({
 
         <IconBtn>
           <VIcon
-            icon="tabler-dots-vertical"
+            icon="tabler-arrows-sort"
             size="22"
           />
+          <VTooltip
+            activator="parent"
+            location="top"
+          >
+            {{ t('emailInbox.sort.label') }}
+          </VTooltip>
+          <VMenu activator="parent">
+            <VList
+              :selected="[sort]"
+              @update:selected="val => sort = val[0] || 'date_desc'"
+            >
+              <VListItem
+                v-for="opt in ['date_desc', 'date_asc', 'unread_first']"
+                :key="opt"
+                :value="opt"
+                :title="t(`emailInbox.sort.${opt}`)"
+              />
+            </VList>
+          </VMenu>
         </IconBtn>
       </div>
 

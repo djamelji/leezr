@@ -25,7 +25,14 @@ class EmailInboxController
         $starred = $request->boolean('starred');
         $label = $request->query('label');
 
-        $query = EmailThread::with(['company:id,name'])->orderByDesc('last_message_at');
+        $query = EmailThread::with(['company:id,name']);
+
+        // ADR-607 (LOT 5): server-side sort — newest (default), oldest, or unread first.
+        match ($request->query('sort', 'date_desc')) {
+            'date_asc' => $query->orderBy('last_message_at'),
+            'unread_first' => $query->orderByDesc('unread_count')->orderByDesc('last_message_at'),
+            default => $query->orderByDesc('last_message_at'),
+        };
 
         if ($starred) {
             $query->starred();

@@ -45,10 +45,19 @@ export function useEmailInbox() {
   const currentFolder = ref('inbox')
   const searchQuery = ref('')
   const currentLabel = ref(null)
+  const sort = ref('date_desc')
   const folderCounts = ref({ inbox: 0, sent: 0, draft: 0, starred: 0, spam: 0, trash: 0 })
   const isLoading = ref(false)
   const isSyncing = ref(false)
   const pagination = ref({ page: 1, lastPage: 1, total: 0 })
+
+  // ADR-607 (LOT 5): the SSE layer (@core) gives up permanently after 3 reconnect attempts, so the
+  // 30s background poll is the guaranteed safety net. To ensure a new message is never *visually*
+  // missed when realtime drops, a background refresh that sees the inbox unread count rise raises
+  // `newMailSignal` — the page turns it into a non-intrusive toast.
+  const newMailSignal = ref(null)
+  let _lastInboxUnread = null
+  let _fetchInFlight = false
 
   // Computed
   const isAllSelected = computed(() =>
@@ -71,12 +80,16 @@ export function useEmailInbox() {
 
   // ── API ────────────────────────────────────────────
 
-  async function fetchThreads(page = 1) {
-    isLoading.value = true
+  async function fetchThreads(page = 1, { background = false } = {}) {
+    // Anti-overlap: a background poll must never race a user-initiated fetch (stale list clobber).
+    if (background && _fetchInFlight) return
+    _fetchInFlight = true
+    if (!background) isLoading.value = true
     try {
       const params = new URLSearchParams()
       params.set('page', page)
       params.set('folder', currentFolder.value)
+      params.set('sort', sort.value)
       if (currentFolder.value === 'starred') params.set('starred', '1')
       if (currentLabel.value) params.set('label', currentLabel.value)
       if (searchQuery.value) params.set('search', searchQuery.value)
@@ -89,10 +102,18 @@ export function useEmailInbox() {
         lastPage: data.last_page,
         total: data.total,
       }
+
+      // New-mail detection — only on a background refresh, so a manual open never self-toasts.
+      const inboxUnread = folderCounts.value.inbox ?? 0
+      if (background && _lastInboxUnread !== null && inboxUnread > _lastInboxUnread) {
+        newMailSignal.value = { count: inboxUnread - _lastInboxUnread, at: Date.now() }
+      }
+      _lastInboxUnread = inboxUnread
     } catch {
       // handled by caller
     } finally {
       isLoading.value = false
+      _fetchInFlight = false
     }
   }
 
@@ -308,8 +329,8 @@ export function useEmailInbox() {
 
   // ── Watchers ───────────────────────────────────────
 
-  // Folder/label → fetch immédiat
-  watch([currentFolder, currentLabel], () => {
+  // Folder/label/sort → fetch immédiat
+  watch([currentFolder, currentLabel, sort], () => {
     pagination.value.page = 1
     fetchThreads(1)
   })
@@ -330,7 +351,8 @@ export function useEmailInbox() {
   let pollInterval = null
 
   function startPolling() {
-    pollInterval = setInterval(() => fetchThreads(pagination.value.page), 30000)
+    // Safety net — runs as a background refresh (no skeleton flash, new-mail detection on).
+    pollInterval = setInterval(() => fetchThreads(pagination.value.page, { background: true }), 30000)
   }
 
   function stopPolling() {
@@ -340,9 +362,9 @@ export function useEmailInbox() {
     }
   }
 
-  // SSE subscription — auto-refresh on email.updated
+  // SSE subscription — auto-refresh on email.updated (background: new-mail detection + no flash)
   useRealtimeSubscription('email.updated', () => {
-    fetchThreads(pagination.value.page)
+    fetchThreads(pagination.value.page, { background: true })
   })
 
   // Lifecycle
@@ -368,10 +390,12 @@ export function useEmailInbox() {
     currentFolder,
     currentLabel,
     searchQuery,
+    sort,
     folderCounts,
     isLoading,
     isSyncing,
     pagination,
+    newMailSignal,
 
     // Computed
     isAllSelected,

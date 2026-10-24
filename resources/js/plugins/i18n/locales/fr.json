@@ -5631,6 +5631,13 @@
     "refresh": "Actualiser",
     "syncing": "Synchronisation...",
     "syncSuccess": "{count} email(s) synchronisé(s)",
+    "newMail": "{count} nouveau(x) message(s)",
+    "sort": {
+      "label": "Trier",
+      "date_desc": "Plus récents d'abord",
+      "date_asc": "Plus anciens d'abord",
+      "unread_first": "Non lus d'abord"
+    },
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner",
     "bulkSuccess": "Action appliquée à {count} conversation(s)",
