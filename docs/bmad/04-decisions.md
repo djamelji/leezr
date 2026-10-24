@@ -22429,3 +22429,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/{_BillingOverview,_BillingAlerts}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `database/seeders/BillingRecetteSeeder.php`, `tests/Feature/BillingFinancialTruthTest.php`.
 
 ---
+
+### ADR-615 — Billing 3.0 / LOT 1 : validation réelle de l'intégrité des abonnements (2026-10-24)
+
+**Contexte.** Exigence : ne pas considérer l'intégrité validée au seul motif que les gardes ADR-575/593 existent — prouver le rendu réel des 4 dimensions sur le scénario Leezr-like.
+**Vérification.** `BillingSubscriptionIntegrityTest` (5) sur un abo Pro `active`, période échue (−5 mois), prix `provisional`, provider `internal`, 1 facture addon `open` non échue : (1) **contractuel** = `active` ; (2) **couverture** échue → `nextInvoicePreview.renewal_overdue=true` (jamais une date passée présentée comme futur renouvellement) ; (3) **renouvellement** `renewal_review_required=true` ; (4) **paiement** indépendant → `has_payment_issue=false` (la revue n'est pas un problème de paiement) ; (5) **aucune facturation rétroactive** (1 seule facture, pas de rattrapage des 5 périodes échues — ADR-575).
+**Décision.** Comportement **conforme, aucune correction nécessaire** ; test de non-régression ajouté pour verrouiller les 4 dimensions. Gardes ADR-575/593 intactes.
+**Fichiers** : `tests/Feature/BillingSubscriptionIntegrityTest.php`.
+
+---
