@@ -56,7 +56,7 @@ export function useEmailInbox() {
   // missed when realtime drops, a background refresh that sees the inbox unread count rise raises
   // `newMailSignal` — the page turns it into a non-intrusive toast.
   const newMailSignal = ref(null)
-  let _lastInboxUnread = null
+  let _knownThreadIds = null   // baseline of thread ids seen in the current folder/filter context
   let _fetchInFlight = false
 
   // Computed
@@ -103,12 +103,18 @@ export function useEmailInbox() {
         total: data.total,
       }
 
-      // New-mail detection — only on a background refresh, so a manual open never self-toasts.
-      const inboxUnread = folderCounts.value.inbox ?? 0
-      if (background && _lastInboxUnread !== null && inboxUnread > _lastInboxUnread) {
-        newMailSignal.value = { count: inboxUnread - _lastInboxUnread, at: Date.now() }
+      // ADR-610 (LOT 4): detect genuinely NEW conversations by id diff — only on a background
+      // refresh (SSE push / 30s poll), so the initial load and folder/search/sort changes (which
+      // fetch WITHOUT background) just reset the baseline silently and never trigger an arrival
+      // animation or notification. A user manually opening a thread never self-notifies.
+      const currentIds = threads.value.map(t => t.id)
+      if (background && _knownThreadIds) {
+        const arrived = currentIds.filter(id => !_knownThreadIds.has(id))
+        if (arrived.length > 0) {
+          newMailSignal.value = { count: arrived.length, threadIds: arrived, at: Date.now() }
+        }
       }
-      _lastInboxUnread = inboxUnread
+      _knownThreadIds = new Set(currentIds)
     } catch {
       // handled by caller
     } finally {

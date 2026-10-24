@@ -71,11 +71,37 @@ const composePrefill = ref(null)
 // drawer, starting closed so the conversation list is visible on load.
 const isLeftSidebarOpen = ref(false)
 
-// ADR-607 (LOT 5): never miss a message visually — a background refresh that detects new inbox mail
-// (via SSE push or the 30s safety-net poll) surfaces a non-intrusive toast.
+// ADR-610 (LOT 4): on a new conversation arriving (background refresh only), (1) mark its row for a
+// soft entrance + temporary highlight, auto-cleared after 2.6s, and (2) raise ONE coalesced,
+// non-intrusive snackbar per arrival batch (no repeat on grouped arrival) with an "Open" action.
+const newThreadIds = ref(new Set())
+const arrivalSnackbar = ref({ show: false, count: 0, threadId: null, label: '' })
+
 watch(newMailSignal, sig => {
-  if (sig?.count > 0) toast(t('emailInbox.newMail', { count: sig.count }), 'info')
+  if (!sig?.threadIds?.length) return
+
+  const set = new Set(newThreadIds.value)
+  sig.threadIds.forEach(id => set.add(id))
+  newThreadIds.value = set
+  sig.threadIds.forEach(id => setTimeout(() => {
+    const s = new Set(newThreadIds.value)
+    s.delete(id)
+    newThreadIds.value = s
+  }, 2600))
+
+  if (sig.count === 1) {
+    const th = threads.value.find(t => t.id === sig.threadIds[0])
+    arrivalSnackbar.value = { show: true, count: 1, threadId: sig.threadIds[0], label: th?.participant_name || th?.participant_email || '' }
+  } else {
+    arrivalSnackbar.value = { show: true, count: sig.count, threadId: null, label: '' }
+  }
 })
+
+function openArrival() {
+  const th = threads.value.find(t => t.id === arrivalSnackbar.value.threadId)
+  if (th) openThread(th)
+  arrivalSnackbar.value.show = false
+}
 
 // ADR-608 (LOT 6): full keyboard navigation of the conversation list — j/k or ↑/↓ to move the
 // highlight, Enter/o to open, x to (de)select, s to star, e to archive. Keeps the mailbox usable
@@ -519,7 +545,7 @@ const selectAllModel = computed({
             role="option"
             :aria-selected="activeIndex === idx"
             class="email-item d-flex align-center pa-4 gap-2 cursor-pointer"
-            :class="[{ 'email-read': thread.unread_count === 0, 'is-active': activeIndex === idx }]"
+            :class="[{ 'email-read': thread.unread_count === 0, 'is-active': activeIndex === idx, 'is-new': newThreadIds.has(thread.id) }]"
             @click="openThread(thread)"
             @mouseenter="activeIndex = idx"
           >
@@ -654,6 +680,27 @@ const selectAllModel = computed({
       :prefill="composePrefill"
       @sent="handleComposeSent"
     />
+
+    <!-- ADR-610 (LOT 4): non-intrusive arrival notification (coalesced), with an Open action. -->
+    <VSnackbar
+      v-model="arrivalSnackbar.show"
+      location="top end"
+      :timeout="6000"
+      color="info"
+    >
+      {{ arrivalSnackbar.count === 1
+        ? t('emailInbox.newMailFrom', { name: arrivalSnackbar.label })
+        : t('emailInbox.newMail', { count: arrivalSnackbar.count }) }}
+      <template #actions>
+        <VBtn
+          v-if="arrivalSnackbar.threadId"
+          variant="text"
+          @click="openArrival"
+        >
+          {{ t('emailInbox.open') }}
+        </VBtn>
+      </template>
+    </VSnackbar>
   </div>
 </template>
 
@@ -741,6 +788,23 @@ const selectAllModel = computed({
   .email-item.is-active {
     background-color: rgba(var(--v-theme-primary), 0.08);
     box-shadow: inset 3px 0 0 0 rgb(var(--v-theme-primary));
+  }
+
+  // ADR-610 (LOT 4): newly-arrived conversation — soft entrance + temporary highlight that fades
+  // when the .is-new class is removed (~2.6s later). Theme tokens → dark-safe; translateY → RTL-neutral.
+  .email-item.is-new {
+    animation: email-item-in 0.35s ease-out;
+    background-color: rgba(var(--v-theme-primary), 0.12);
+    transition: background-color 0.6s ease;
+  }
+
+  @keyframes email-item-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .email-item.is-new { animation: none; }
   }
 
   .email-item {

@@ -5632,6 +5632,8 @@
     "syncing": "Synchronisation...",
     "syncSuccess": "{count} email(s) synchronisé(s)",
     "newMail": "{count} nouveau(x) message(s)",
+    "newMailFrom": "Nouveau message de {name}",
+    "open": "Ouvrir",
     "conversations": "Conversations",
     "sort": {
       "label": "Trier",

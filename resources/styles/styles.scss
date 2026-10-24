@@ -55,3 +55,20 @@
     }
   }
 }
+
+// ─── Email unread nav badge — discrete pop on appearance (ADR-610, LOT 4) ───
+// Styled via the global class so @layouts/VerticalNavLink.vue is never modified.
+// Plays once when the badge mounts (0 → N). Theme-token colours keep it dark-safe.
+.layout-vertical-nav .nav-item-badge {
+  animation: nav-badge-pop 0.3s ease-out;
+}
+
+@keyframes nav-badge-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-vertical-nav .nav-item-badge { animation: none; }
+}
