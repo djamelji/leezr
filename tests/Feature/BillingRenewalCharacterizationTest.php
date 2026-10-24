@@ -92,4 +92,59 @@ class BillingRenewalCharacterizationTest extends TestCase
         $this->assertSame(0, Invoice::where('company_id', $company->id)->count(),
             'provisional price must not produce a renewal invoice (deferred to review)');
     }
+
+    /** ADR-617b: previously-uncovered case — YEARLY renewal. */
+    public function test_yearly_renewal_matches_pricing_engine(): void
+    {
+        $company = Company::create(['name' => 'Yr', 'slug' => 'yr-'.uniqid(), 'jobdomain_key' => 'logistique', 'market_key' => 'FR', 'address_country_code' => 'FR', 'plan_key' => 'pro']);
+        $sub = Subscription::create([
+            'company_id' => $company->id, 'plan_key' => 'pro', 'interval' => 'yearly', 'status' => 'active',
+            'provider' => 'internal', 'is_current' => true, 'plan_price_cents' => 29000, 'plan_price_source' => 'subscribed',
+            'current_period_start' => now()->subYear()->subDays(2), 'current_period_end' => now()->subDays(2),
+        ]);
+        CompanyAddonSubscription::create(['company_id' => $company->id, 'module_key' => 'workforce_leave', 'amount_cents' => 1900, 'currency' => 'EUR', 'interval' => 'yearly', 'activated_at' => now()->subYear(), 'deactivated_at' => null]);
+
+        Artisan::call('billing:renew');
+        $invoice = Invoice::where('company_id', $company->id)->whereNotNull('finalized_at')->first();
+        $b = PricingEngine::forCurrentPeriod($sub->fresh(), $company->fresh());
+
+        $this->assertNotNull($invoice);
+        $this->assertSame($b->subtotal, $invoice->subtotal);
+        $this->assertSame($b->total, $invoice->amount);
+    }
+
+    /** ADR-617b: previously-uncovered case — MULTIPLE addons combined. */
+    public function test_multi_addon_renewal_matches_pricing_engine(): void
+    {
+        [$company, $sub] = $this->dueSubscription();
+        CompanyAddonSubscription::create(['company_id' => $company->id, 'module_key' => 'workforce_planning', 'amount_cents' => 2900, 'currency' => 'EUR', 'interval' => 'monthly', 'activated_at' => now()->subMonth(), 'deactivated_at' => null]);
+        CompanyAddonSubscription::create(['company_id' => $company->id, 'module_key' => 'workforce_documents', 'amount_cents' => 900, 'currency' => 'EUR', 'interval' => 'monthly', 'activated_at' => now()->subMonth(), 'deactivated_at' => null]);
+
+        Artisan::call('billing:renew');
+        $invoice = Invoice::where('company_id', $company->id)->whereNotNull('finalized_at')->first();
+        $b = PricingEngine::forCurrentPeriod($sub->fresh(), $company->fresh());
+
+        $this->assertSame($b->subtotal, $invoice->subtotal, 'multi-addon subtotal diverges');
+        $this->assertSame($b->total, $invoice->amount, 'multi-addon total diverges');
+        // Plan 2900 + leave 1900 + planning 2900 + documents 900 = 8600 HT.
+        $this->assertSame(8600, $invoice->subtotal);
+    }
+
+    /** ADR-617b: previously-uncovered case — a COUPON attached (same discount logic on both paths). */
+    public function test_coupon_renewal_matches_pricing_engine(): void
+    {
+        $coupon = \App\Core\Billing\BillingCoupon::create([
+            'code' => 'RECETTE10', 'name' => '10%', 'type' => 'percentage', 'value' => 10,
+            'is_active' => true, 'used_count' => 0, 'duration_months' => null,
+        ]);
+        [$company, $sub] = $this->dueSubscription(['coupon_id' => $coupon->id, 'coupon_months_remaining' => null]);
+
+        Artisan::call('billing:renew');
+        $invoice = Invoice::where('company_id', $company->id)->whereNotNull('finalized_at')->first();
+        $b = PricingEngine::forCurrentPeriod($sub->fresh(), $company->fresh());
+
+        // Both paths must apply the SAME coupon discount (whatever it computes to).
+        $this->assertSame($b->subtotal, $invoice->subtotal, 'coupon subtotal diverges renew vs PricingEngine');
+        $this->assertSame($b->total, $invoice->amount, 'coupon total diverges renew vs PricingEngine');
+    }
 }
