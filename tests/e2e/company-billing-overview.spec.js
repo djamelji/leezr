@@ -20,6 +20,20 @@ test('owner billing overview renders the new hierarchy without JS errors', async
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
+test('owner invoices tab renders (table or empty state) without JS errors', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+
+  await loginCompany(page, 'owner@leezr.test')
+  await page.goto('/company/billing/invoices', { waitUntil: 'networkidle' })
+
+  // Either the data table or the empty state must render (never a blank/error screen).
+  const table = page.locator('.v-data-table')
+  const empty = page.getByText(/facture|invoice/i).first()
+  await expect(table.or(empty).first()).toBeVisible({ timeout: 10000 })
+  expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
+})
+
 test('owner billing overview renders in dark mode', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await loginCompany(page, 'owner@leezr.test')

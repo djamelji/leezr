@@ -30,7 +30,7 @@ const statusOptions = computed(() => [
   { title: t('companyBilling.invoiceStatusOpen'), value: 'open' },
   { title: t('companyBilling.invoiceStatusOverdue'), value: 'overdue' },
   { title: t('companyBilling.invoiceStatusPaid'), value: 'paid' },
-  { title: t('companyBilling.invoiceStatusVoided'), value: 'voided' },
+  { title: t('companyBilling.invoiceStatusVoided'), value: 'void' },
 ])
 
 const statusLabel = status => {
@@ -39,6 +39,7 @@ const statusLabel = status => {
     open: t('companyBilling.invoiceStatusOpen'),
     overdue: t('companyBilling.invoiceStatusOverdue'),
     paid: t('companyBilling.invoiceStatusPaid'),
+    void: t('companyBilling.invoiceStatusVoided'),
     voided: t('companyBilling.invoiceStatusVoided'),
   }
 
@@ -188,10 +189,10 @@ watch(statusFilter, () => loadInvoices(1))
               v-can="'billing.manage'"
               size="small"
               variant="tonal"
-              color="warning"
+              :color="item.status === 'overdue' ? 'error' : 'primary'"
               @click="goToPay(item)"
             >
-              {{ t('companyBilling.retryPayment') }}
+              {{ t('companyBilling.invoicePay') }}
             </VBtn>
           </div>
         </template>

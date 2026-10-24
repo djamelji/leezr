@@ -22465,3 +22465,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/company/billing/_BillingOverview.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
 
 ---
+
+### ADR-619 — Billing 3.0 / LOT 6b : écran Factures Company (cohérence statut void + action) (2026-10-25)
+
+**Contexte.** Incohérence `void` vs `voided` : le statut réellement stocké est **`void`** (`AdminInvoiceMutationService`), mais la liste Company filtrait/labellisait/colorait sur `voided` → factures annulées **jamais filtrées**, label brut « void », couleur par défaut. Le bouton de paiement affichait « Réessayer le paiement » même sur une facture simplement ouverte (aucun échec).
+**Décision.** `utils/billing.js` : couleur `void` (+ `written_off`/`uncollectible`), alias `voided` conservé. `_BillingInvoices.vue` : valeur de filtre `voided→void`, label mappé sur `void`, bouton **« Payer »** (`invoicePay`, couleur `error` si overdue sinon `primary`) au lieu de « Réessayer » (aligné ADR-614 : « réessayer » n'a de sens qu'après échec). Colonnes déjà qualifiées TTC (ADR-616).
+**Preuves.** E2E `company-billing-overview.spec.js` étendu (onglet Factures rend table/empty sans erreur JS) ; 3/3 vert local + DEV. Build clean.
+**Fichiers** : `resources/js/utils/billing.js`, `resources/js/pages/company/billing/_BillingInvoices.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
+
+---

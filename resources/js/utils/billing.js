@@ -8,7 +8,10 @@ export const invoiceStatusColor = status => ({
   open: 'warning',
   overdue: 'error',
   paid: 'success',
-  voided: 'secondary',
+  void: 'secondary',   // ADR-619: real stored status is 'void' (not 'voided')
+  voided: 'secondary', // back-compat alias
+  written_off: 'secondary',
+  uncollectible: 'error',
   uncollectible: 'error',
 })[status] || 'secondary'
 

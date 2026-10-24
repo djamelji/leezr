@@ -1456,6 +1456,7 @@
     "invoicePeriod": "Période",
     "invoiceAmount": "Montant TTC",
     "invoiceAmountDue": "Reste dû TTC",
+    "invoicePay": "Payer",
     "invoiceIssuedAt": "Émise le",
     "invoiceDueAt": "Échéance",
     "invoicePaidAt": "Payée le",
