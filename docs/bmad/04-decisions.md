@@ -22410,3 +22410,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Core/Email/ImapFetcher.php`, `tests/Feature/ImapThreadingTest.php`.
 
 ---
+
+### ADR-613 — Réception : latence quasi temps réel (récupération IMAP sous-minute) (2026-10-24)
+
+**Contexte.** Après ADR-612, réception OK mais **~2 min** ressentis entre l'envoi Gmail et l'affichage. **Mesure PROD réelle** : livraison Gmail→boîte Dovecot = **<1 s** (LMTP `delay=0.6s`, **aucun greylisting**) ; l'écart envoi→import des derniers reçus = **44 s / 48 s / 71 s** (le `141 s` datait du cron à 5 min). → La latence = **la fenêtre d'attente du cron** de récupération (1 min).
+**Décision.** `email:fetch-inbox` passe de `everyMinute()` à **`everyFifteenSeconds()`** (scheduler sous-minute natif Laravel, invoqué par le `schedule:run` minute existant), avec `withoutOverlapping(10)` conservé. Latence arrivée→import ramenée à **≤ ~15 s** sans démon IMAP IDLE. Coût : ~4 connexions IMAP/min sur un Dovecot local (négligeable ; fetch ~0,9 s, verrou anti-chevauchement). Pour un vrai « instantané » (<1 s), seul **IMAP IDLE** (démon persistant via supervisor) le permettrait — écarté ici (surcoût d'exploitation), réévaluable si besoin.
+**Preuves.** `ScheduledTaskRegistryConsistencyTest` (4, bijection registry↔scheduler) ; `schedule:list` affiche `15s`.
+**Fichiers** : `routes/console.php`, `app/Core/Automation/ScheduledTaskRegistry.php`.
+
+---

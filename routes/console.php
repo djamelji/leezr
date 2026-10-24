@@ -167,11 +167,12 @@ Schedule::command('usage:collect-snapshots')->dailyAt('23:55')->withoutOverlappi
     ->onFailure(SI::onFailure('usage:collect-snapshots'));
 
 // ── Email IMAP fetch ───────────────────────────────────
-// ADR-610 (LOT 3): every minute (was every 5) to cut arrival→inbox latency. Safe because:
-// real fetch ≈ <1s; withoutOverlapping(10) holds a 10-min mutex so a hung run self-heals and can
-// never pile up on the next tick; IMAP/Redis unavailability degrade gracefully (command guards +
-// non-blocking SSE publish); dedup is by Message-ID so re-runs never duplicate or touch history.
-Schedule::command('email:fetch-inbox')->everyMinute()->withoutOverlapping(10)
+// ADR-613: every 15s (was every minute) — measured arrival→import latency was ~45-70s (the cron
+// wait window; delivery to the mailbox is <1s). Sub-minute polling brings it to ≤~15s without a
+// persistent IDLE daemon. Safe: real fetch ≈ <1s; withoutOverlapping(10) holds a 10-min mutex so a
+// hung run self-heals and never piles up; IMAP/Redis unavailability degrade gracefully; dedup by
+// Message-ID so re-runs never duplicate or touch history.
+Schedule::command('email:fetch-inbox')->everyFifteenSeconds()->withoutOverlapping(10)
     ->appendOutputTo(storage_path('logs/scheduler/email-fetch.log'))
     ->when(SI::enabled('email:fetch-inbox'))
     ->before(SI::before('email:fetch-inbox'))

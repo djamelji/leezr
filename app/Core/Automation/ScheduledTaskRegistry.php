@@ -179,7 +179,7 @@ class ScheduledTaskRegistry
             'command' => 'email:fetch-inbox',
             'description' => 'automations.tasks.emailFetchInbox',
             'category' => 'system',
-            'frequency' => 'everyMinute',
+            'frequency' => 'everyFifteenSeconds',
             'cron' => '* * * * *',
             'expected_interval_minutes' => 1,
         ],
