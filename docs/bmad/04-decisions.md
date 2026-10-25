@@ -22574,3 +22574,12 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php`, `tests/Feature/BillingCockpitKpiTest.php`, `tests/e2e/platform-billing-cockpit.spec.js`.
 
 ---
+
+### ADR-630 — Billing 3.0 / LOT 7.3-7.5 : couverture produit des 15 onglets Platform (2026-10-25)
+
+**Produit.** Couverture navigateur (admin) des onglets Platform restants — invoices, payments, dunning, scheduled-debits, credit-notes, coupons, wallets, forensics, governance, ledger, recovery, reconciliation — chacun **rend le shell billing + un contenu (table/card/empty-state) sans erreur JS**. Avec ADR-629 (overview, subscriptions, tariff-review), **les 15 onglets** sont couverts en rendu+navigation. Fiabilité des données/actions = moteur existant (déjà testé). 
+**Niveau de couverture** : rendu + navigation. Les **actions sensibles** (mutations, confirmations, conséquences contractuelles) et les **tests multi-persona/permissions** → LOT 8.
+**Preuves.** E2E `platform-billing-tabs` (12 onglets, 1 login, 0 erreur JS) + `platform-billing-cockpit` (3). 
+**Fichiers** : `tests/e2e/platform-billing-tabs.spec.js`.
+
+---
