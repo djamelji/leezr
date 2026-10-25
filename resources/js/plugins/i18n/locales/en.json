@@ -802,6 +802,7 @@
       "filterUncollectible": "Uncollectible",
       "writeOffTitle": "Write Off Invoice",
       "writeOffConfirm": "Write off this invoice as uncollectible? This action is irreversible.",
+      "writeOffImpact": "The {amount} receivable (invoice {number}) will be removed from recoverable amounts and recorded as a loss in the ledger.",
       "writeOff": "Write Off"
     },
     "scheduledDebits": {
@@ -1294,6 +1295,11 @@
       "isActive": "Active",
       "actions": "Actions",
       "confirmDelete": "Are you sure you want to delete this coupon? This action is irreversible.",
+      "confirmDeactivateTitle": "Deactivate coupon",
+      "confirmDeactivate": "This coupon has already been used: it will be deactivated (not deleted) to preserve its redemption history.",
+      "deactivateAction": "Deactivate",
+      "deactivated": "Coupon deactivated (history preserved)",
+      "deactivateImpact": "Used {count} times — subscriptions and discounts already applied are preserved. The coupon can no longer be used for new subscriptions.",
       "emptyTitle": "No coupons yet",
       "emptyDesc": "Create your first promo code to offer discounts.",
       "status_active": "Active",

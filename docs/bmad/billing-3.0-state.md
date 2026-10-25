@@ -65,7 +65,13 @@
 - **ADR-631c (BILL-010)** : admin Platform factures corrigé — statut canonique `void` (filtre + libellé + garde d'avoir ; fallback = statut brut, plus de « Brouillon » trompeur) ; export Prometheus comptait `voided` (bucket toujours 0) → corrigé en `void`+uncollectible+written_off. Preuve `BillingMetricsExportVoidTest`.
 - **ADR-631d** : protection avoir **vérifiée côté backend** (pas que frontend) — `issueCreditNote` → `assertFinalized` + `assertNotVoided` (teste `voided_at`, pas le littéral) ; `refund` exige `status==='paid'`. Verrouillé par `CreditNoteVoidProtectionTest` (void/draft/refund-void → exception + facture & ledger intacts).
 - **ADR-631e — 7B tarifaire bouclé** : plans (liste HT + détail HT/gouvernance ADR-588 contractuel vs public), markets (TVA), paiements (encaissé par statut, pas de mislabel) **déjà fiables** ; addons qualifiés HT (mention unique). **Autorisations gated** (manage_plans/billing/modules/markets). **Finding** : aucune période de validité de prix dans le modèle — validité contractuelle = snapshot abonnement ; prix public = catalogue courant (pas d'historique). Non fabriqué.
-- **LOT 7B : TERMINÉ.** Prochain : **LOT 7C** (dunning, scheduled-debits, credit-notes, coupons, wallets — prévisualisation d'impact avant confirmation quand le backend le permet).
+- **LOT 7B : TERMINÉ.**
+
+## LOT 7C — recouvrement / opérations (impact avant confirmation) · ADR-631f
+- **Dunning** : retry/escalate montraient déjà l'impact (montant/conséquence, ADR-446) ; **write-off** corrigé → alerte « créance de {montant} retirée de l'AR, enregistrée en perte ».
+- **Scheduled-debits / credit-notes / wallets** : lecture seule (pas de mutation à prévisualiser ici ; émission avoir gardée ADR-631d côté factures).
+- **Coupons** : backend désactive-si-utilisé / supprime-si-inutilisé ; dialogue rendu **conforme** (titre/texte/bouton/toast conditionnels + alerte impact). Verrouillé `CouponDeleteBehaviorTest`.
+- **LOT 7C : TERMINÉ.** Prochain : **LOT 7D** (forensics, governance, ledger, recovery, reconciliation — rendre les incidents diagnosticables sans SQL).
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).

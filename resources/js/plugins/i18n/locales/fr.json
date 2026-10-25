@@ -802,6 +802,7 @@
       "filterUncollectible": "Irrécouvrables",
       "writeOffTitle": "Passer en perte",
       "writeOffConfirm": "Passer cette facture en perte ? Cette action est irréversible.",
+      "writeOffImpact": "La créance de {amount} (facture {number}) sera retirée des montants recouvrables et enregistrée en perte au grand livre.",
       "writeOff": "Passer en perte"
     },
     "scheduledDebits": {
@@ -1293,6 +1294,11 @@
       "isActive": "Actif",
       "actions": "Actions",
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce coupon ? Cette action est irréversible.",
+      "confirmDeactivateTitle": "Désactiver le coupon",
+      "confirmDeactivate": "Ce coupon a déjà été utilisé : il sera désactivé (et non supprimé) afin de préserver l'historique des utilisations.",
+      "deactivateAction": "Désactiver",
+      "deactivated": "Coupon désactivé (historique conservé)",
+      "deactivateImpact": "Utilisé {count} fois — les abonnements et remises déjà appliqués sont conservés. Le coupon ne pourra plus être utilisé pour de nouvelles souscriptions.",
       "emptyTitle": "Aucun coupon",
       "emptyDesc": "Créez votre premier code promo pour offrir des réductions.",
       "status_active": "Actif",

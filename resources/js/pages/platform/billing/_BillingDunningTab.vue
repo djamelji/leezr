@@ -409,7 +409,19 @@ onMounted(() => load())
         {{ t('platformBilling.dunning.writeOffTitle') }}
       </VCardTitle>
       <VCardText>
-        {{ t('platformBilling.dunning.writeOffConfirm') }}
+        <p class="mb-3">
+          {{ t('platformBilling.dunning.writeOffConfirm') }}
+        </p>
+        <!-- ADR-631f: write-off is financially sensitive — surface the amount removed from AR. -->
+        <VAlert
+          v-if="writeOffTarget"
+          type="error"
+          variant="tonal"
+          density="compact"
+          data-test="writeoff-impact"
+        >
+          {{ t('platformBilling.dunning.writeOffImpact', { amount: formatMoney(writeOffTarget.total_amount, writeOffTarget.currency), number: writeOffTarget.number }) }}
+        </VAlert>
       </VCardText>
       <VCardActions>
         <VSpacer />

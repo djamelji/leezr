@@ -22654,3 +22654,18 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `resources/js/pages/platform/modules/[key].vue`, i18n `platformModules.pricesAreExclTax` (fr/en).
 
 ---
+
+### ADR-631f — Billing 3.0 / LOT 7C : prévisualisation d'impact des actions de recouvrement (2026-10-25)
+
+**Contexte.** Audit des 5 onglets opérations/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets. Exigence : chaque **action sensible** doit montrer son **impact avant confirmation** quand le backend permet un calcul fiable.
+
+**Constats.**
+- **Dunning** : retry (montant + nb tentatives) et escalate (montant + conséquence `uncollectible`) affichaient déjà leur impact (ADR-446). **Gap corrigé** : le dialogue **write-off** n'affichait qu'un « Êtes-vous sûr ? » générique → ajout d'une alerte montrant le **montant de la créance retirée de l'AR et enregistrée en perte** (`dunning.writeOffImpact`).
+- **Scheduled-debits / credit-notes / wallets** : **lecture seule** (navigation vers l'entreprise, listes) — aucune mutation financière à prévisualiser depuis ces onglets (l'émission d'avoir se fait depuis l'onglet factures, déjà gardé ADR-631d).
+- **Coupons — vérité d'action (important)** : le backend **désactive** un coupon déjà utilisé (préserve l'historique `used_count`) et ne **supprime** réellement qu'un coupon inutilisé. Le dialogue frontend disait « Supprimer » pour tous → **trompeur**. Corrigé : titre/texte/bouton/toast **conditionnels** (`couponWillDeactivate = used_count > 0`), avec alerte d'impact (« utilisé {count} fois, remises déjà appliquées conservées »).
+
+**Conséquences.** Les actions de recouvrement exposent leur conséquence financière réelle ; l'admin ne croit plus supprimer un coupon qui n'est en fait que désactivé. 
+**Preuves.** PHPUnit `CouponDeleteBehaviorTest` (used → deactivated+history ; unused → hard-deleted) ; build clean. Aucune action de paiement/émission réelle déclenchée.
+**Fichiers** : `resources/js/pages/platform/billing/_BillingDunningTab.vue`, `_BillingCouponsTab.vue`, i18n `platformBilling.dunning.writeOffImpact` + `coupons.{confirmDeactivateTitle,confirmDeactivate,deactivateAction,deactivated,deactivateImpact}` (fr/en), `tests/Feature/CouponDeleteBehaviorTest.php`.
+
+---

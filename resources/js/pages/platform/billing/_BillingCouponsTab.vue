@@ -222,15 +222,20 @@ const confirmDeleteCoupon = coupon => {
   deleteDialog.value = true
 }
 
+// ADR-631f: the backend DEACTIVATES a coupon that already has usages (preserves redemption history)
+// and only hard-deletes an unused one. The dialog must reflect the REAL outcome, not always "delete".
+const couponWillDeactivate = computed(() => (couponToDelete.value?.used_count ?? 0) > 0)
+
 const deleteCoupon = async () => {
   const coupon = couponToDelete.value
   if (!coupon) return
 
+  const deactivating = couponWillDeactivate.value
   deleteDialog.value = false
   isDeleting.value = coupon.id
   try {
     await $platformApi(`/billing/coupons/${coupon.id}`, { method: 'DELETE' })
-    toast(t('coupons.deleted'), 'success')
+    toast(deactivating ? t('coupons.deactivated') : t('coupons.deleted'), 'success')
     await fetchCoupons()
   }
   catch (error) {
@@ -647,10 +652,23 @@ onMounted(async () => {
     v-model="deleteDialog"
     max-width="400"
   >
-    <VCard :title="t('coupons.confirmDeleteTitle')">
+    <VCard :title="couponWillDeactivate ? t('coupons.confirmDeactivateTitle') : t('coupons.confirmDeleteTitle')">
       <VCardText>
-        {{ t('coupons.confirmDelete') }}
-        <strong v-if="couponToDelete">{{ couponToDelete.code }}</strong>
+        <p class="mb-0">
+          {{ couponWillDeactivate ? t('coupons.confirmDeactivate') : t('coupons.confirmDelete') }}
+          <strong v-if="couponToDelete">{{ couponToDelete.code }}</strong>
+        </p>
+        <!-- ADR-631f: a used coupon is deactivated (not deleted) to preserve its redemption history. -->
+        <VAlert
+          v-if="couponWillDeactivate && couponToDelete"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mt-3"
+          data-test="coupon-deactivate-impact"
+        >
+          {{ t('coupons.deactivateImpact', { count: couponToDelete.used_count }) }}
+        </VAlert>
       </VCardText>
       <VCardActions>
         <VSpacer />
@@ -661,11 +679,11 @@ onMounted(async () => {
           {{ t('common.cancel') }}
         </VBtn>
         <VBtn
-          color="error"
+          :color="couponWillDeactivate ? 'warning' : 'error'"
           variant="elevated"
           @click="deleteCoupon"
         >
-          {{ t('common.delete') }}
+          {{ couponWillDeactivate ? t('coupons.deactivateAction') : t('common.delete') }}
         </VBtn>
       </VCardActions>
     </VCard>
