@@ -22595,3 +22595,15 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Core/Billing/BillingMetricsCalculationService.php`, `resources/js/pages/platform/billing/_BillingDashboard.vue`, i18n `platformBilling.metrics.blockedRenewals` (fr/en), `tests/Feature/BillingCockpitKpiTest.php`.
 
 ---
+
+### ADR-631b — Billing 3.0 / LOT 7B : vérité des montants sur la liste des abonnements Platform (2026-10-25)
+
+**Contexte.** La liste Platform des abonnements (`PlatformBillingReadService::subscriptions`) affichait un **montant estimé du prochain renouvellement** calculé sur le **prix public du catalogue** (`plan->price_monthly/yearly`). Deux tromperies : (1) une entreprise à **prix négocié** voyait le prix public, pas son prix contracté (`plan_price_cents`) ; (2) un abonnement à prix **non fiable** (provisional/null → renouvellement reporté, ADR-593/575) affichait un montant « à venir » sans signaler qu'**il ne facturera pas**.
+
+**Décision.** L'estimation utilise désormais le **prix contracté** (`plan_price_cents`) quand il existe, le prix public n'étant qu'un **fallback legacy**. Le read model expose `renewal_blocked` (même définition que le KPI cockpit `blocked_renewals` : source non fiable + `is_current` + statut active/trialing/past_due). Le front (`_BillingSubscriptionsTab`) affiche une **icône warning + tooltip** sur ces lignes (« montant indicatif — ne facturera pas tant que le prix n'est pas confirmé »). Aucune action, aucune confirmation auto — simple vérité d'affichage. ADR-575/593 intacts.
+
+**Conséquences.** Un administrateur ne lit plus l'estimation d'un abonnement bloqué comme une recette garantie ; le prix négocié prime sur le public. 
+**Preuves.** PHPUnit `PlatformSubscriptionsReadTruthTest` (3 : contracté prime sur public ; provisional → flaggé ; annulé/non-current → non flaggé) ; non-régression `BillingSubscriptionIntegrityTest`/`SubscriptionPriceProtectionTest`/`BillingCockpitKpiTest` (13) ; build clean.
+**Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingReadService.php`, `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue`, i18n `platformBilling.subscriptions.renewalBlocked` (fr/en), `tests/Feature/PlatformSubscriptionsReadTruthTest.php`.
+
+---

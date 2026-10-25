@@ -233,9 +233,22 @@ watch(searchQuery, () => {
         </template>
 
         <template #item.estimated_next_amount="{ item }">
-          <span class="font-weight-medium">
-            {{ formatMoney(item.estimated_next_amount ?? 0) }}
-          </span>
+          <div class="d-flex align-center justify-end gap-1">
+            <span class="font-weight-medium" :class="{ 'text-medium-emphasis': item.renewal_blocked }">
+              {{ formatMoney(item.estimated_next_amount ?? 0) }}
+            </span>
+            <VIcon
+              v-if="item.renewal_blocked"
+              icon="tabler-lock-exclamation"
+              size="18"
+              color="warning"
+              data-test="sub-renewal-blocked"
+            >
+              <VTooltip activator="parent" location="top">
+                {{ t('platformBilling.subscriptions.renewalBlocked') }}
+              </VTooltip>
+            </VIcon>
+          </div>
         </template>
 
         <template #item.current_period_end="{ item }">

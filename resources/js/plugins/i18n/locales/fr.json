@@ -784,6 +784,7 @@
       "headerTitle": "Abonnements",
       "headerDesc": "Tous les abonnements actifs, en essai ou en attente. Approuvez ou rejetez les demandes d'abonnement nécessitant une approbation admin.",
       "searchPlaceholder": "Rechercher par entreprise ou plan…",
+      "renewalBlocked": "Renouvellement en revue : le prix contracté n'est pas fiable (provisoire/manquant). Ce montant est indicatif — l'abonnement ne sera pas facturé tant que le prix n'est pas confirmé (revue tarifaire).",
       "viewCompany": "Voir l'entreprise",
       "viewInvoices": "Voir les factures"
     },

@@ -230,18 +230,32 @@ class PlatformBillingReadService
             ->groupBy('company_id')
             ->map(fn ($addons) => $addons->sum('amount_cents'));
 
-        // Append estimated_next_amount to each subscription
+        // Append estimated_next_amount to each subscription.
+        // ADR-631 (LOT 7B — financial truth): the estimate uses the CONTRACTED price snapshot
+        // (plan_price_cents) when present, not the public catalog price — a negotiated price must
+        // never be displayed as the public one. Public price is only a fallback for legacy rows.
+        // We also expose renewal_blocked (ADR-593): an unreliable price defers renewal (never bills),
+        // so the admin must not read estimated_next_amount as a guaranteed upcoming charge.
         $paginator->getCollection()->transform(function ($sub) use ($plans, $addonTotals) {
             $plan = $plans->get($sub->plan_key);
-            $planPrice = 0;
+            $publicPlanPrice = 0;
             if ($plan) {
-                $planPrice = $sub->interval === 'yearly'
+                $publicPlanPrice = $sub->interval === 'yearly'
                     ? ($plan->price_yearly ?? 0)
                     : ($plan->price_monthly ?? 0);
             }
 
+            $planPrice = $sub->plan_price_cents ?? $publicPlanPrice;
+
             $addonsTotal = $addonTotals->get($sub->company_id, 0);
             $sub->estimated_next_amount = $planPrice + $addonsTotal;
+
+            // Renewal held for tariff review (same definition as the cockpit blocked_renewals KPI).
+            $unreliable = ! $sub->hasReliableContractedPrice()
+                || (bool) data_get($sub->metadata, 'pricing_review_required', false);
+            $sub->renewal_blocked = $unreliable
+                && $sub->is_current
+                && in_array($sub->status, ['active', 'trialing', 'past_due'], true);
 
             return $sub;
         });

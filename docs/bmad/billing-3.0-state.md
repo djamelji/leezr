@@ -58,8 +58,14 @@
 - Preuves : PHPUnit `BillingCockpitKpiTest::test_metrics_payload_exposes_blocked_renewals` ✅ (1 provisional + 1 fiable → 1 bloqué) ; build clean ; `BillingCockpitKpiTest` 3/3 vert.
 - Niveau de couverture : **donnée + rendu**. Interaction (clic drilldown)/responsive/dark/permission multi-persona → LOT 8.
 
+## LOT 7B — revenus / abonnements (vérité des montants)
+- **Revue tarifaire** (`_BillingTariffReviewTab`) : déjà de qualité — contracté vs public, provenance colorée (warning/error), raison, échéance ; dialogue de confirmation **avec preuve obligatoire (≥3)**, avertissement de conséquence, concurrency-safe (409), **zéro facture créée**, aucune confirmation auto. Fiabilité ✅.
+- **ADR-631b** : liste des abonnements (`_BillingSubscriptionsTab`) corrigée — l'estimation du prochain renouvellement utilise le **prix contracté** (`plan_price_cents`), plus le prix public ; drapeau `renewal_blocked` exposé + **icône warning/tooltip** sur les abonnements à prix non fiable (ne facturera pas, ADR-593). Vérité d'affichage, aucune action.
+- Preuves : `PlatformSubscriptionsReadTruthTest` (3) ✅ + non-régression (13) ✅ + build clean.
+- Reste 7B à auditer visuellement : plans, addons (pricing), invoices, payments.
+
 ## Point de reprise (précis)
-Prochain incrément : **LOT 7B** — revenus/abonnements (subscriptions, tariff-review, plans, addons, invoices, payments) : audit visuel par écran + vérité des montants (HT/TTC, source prix). Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
+Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
 ~~Prochain incrément : **LOT 6b**~~ — refonte des écrans Company restants (`_BillingPlan` comparaison/changement, `_BillingInvoices` liste, `invoices/[id]` détail, `_BillingPaymentMethods`, `pay.vue`, portefeuille/timeline, résiliation) avec HT/TTC qualifié + Playwright par écran (owner). Puis **LOT 7** (15 onglets Platform, en réutilisant la recette), **LOT 5** (audit automatisations), **LOT 8** (personas + matrice complète).
 Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona navigateur disponible : `owner@leezr.test` = owner de company #1 (Pro active) sur DEV/local.
 

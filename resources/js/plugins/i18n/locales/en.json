@@ -784,6 +784,7 @@
       "headerTitle": "Subscriptions",
       "headerDesc": "All active, trialing or pending subscriptions. Approve or reject subscriptions pending admin approval.",
       "searchPlaceholder": "Search by company or plan…",
+      "renewalBlocked": "Renewal under review: the contracted price is unreliable (provisional/missing). This amount is indicative — the subscription will not be billed until the price is confirmed (tariff review).",
       "viewCompany": "View company",
       "viewInvoices": "View invoices"
     },
