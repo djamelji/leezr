@@ -2500,6 +2500,7 @@
     "perGbStored": "Per GB stored",
     "flatMonthlyPrice": "Additional monthly price (same for all plans)",
     "monthlyAddonPrice": "Monthly add-on price",
+    "pricesAreExclTax": "All prices are entered excluding tax. The applicable VAT depends on the company's market.",
     "planFlatPrice": "Additional monthly price per subscription plan",
     "planFlatHint": "This amount is added to the company's selected subscription plan price.",
     "includedSeats": "Included seats per plan (no additional cost)",

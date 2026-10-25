@@ -22633,3 +22633,24 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `tests/Feature/CreditNoteVoidProtectionTest.php`.
 
 ---
+
+### ADR-631e — Billing 3.0 / LOT 7B : audit tarifaire Platform + clarification HT des addons (2026-10-25)
+
+**Contexte.** Audit écran par écran de la surface tarifaire Platform : plans (liste + détail), prix par market, tarification addons, modules payants, paiements. Objectif utilisateur : présentation claire des **tarifs contractuels**, des **prix publics** et de leurs **périodes de validité**.
+
+**Constats (déjà fiables, conservés).**
+- **Plans — liste** (`_CatalogPlans.vue`) : prix mensuel/annuel qualifiés **HT** (`common.exclTax`), statut actif/masqué.
+- **Plans — détail** (`plans/[key].vue`) : labels `monthlyPriceHT`/`yearlyPriceHT` ; **gouvernance ADR-588** — modifier le **prix public** affiche l'impact et confirme que les abonnés existants **conservent leur prix contractuel** (ADR-587/588). C'est exactement la distinction contractuel/public demandée, déjà implémentée.
+- **Markets** (`markets/[key].vue`) : TVA par market (`vat_rate` %, `is_vat_applicable`).
+- **Paiements** (`_BillingPaymentsTab.vue`) : encaissements réels par statut (succeeded/pending/failed/refunded), fallback libellé = statut brut (pas de mislabel) — vue **encaissé** distincte du facturé.
+- **Autorisations** : écritures gated — plans `manage_plans`, migration tarifaire/revue `manage_billing`, modules `manage_modules`, markets `manage_markets`.
+
+**Décision (correctif).** Les **prix d'addons** (`modules/[key].vue` — flat/usage/tiered) n'étaient pas qualifiés HT alors que, comme les plans, ils sont au catalogue **HT** (`tax_mode=exclusive`). Ajout d'une **mention unique** en tête de la section tarification (`platformModules.pricesAreExclTax`) plutôt que suffixer 7 labels (principe PP : vérité sans redondance).
+
+**Finding structurant — périodes de validité.** Le modèle **ne possède pas** de versioning/fenêtres de validité de prix (`effective_at`/`valid_from`/`price_history` inexistants ; les correspondances sont des *plan-change intents*, pas des validités). La « validité » d'un **prix contractuel** = le **snapshot** de l'abonnement (`plan_price_cents` gelé + `plan_price_source` + date de souscription/dernier plan_change, honoré par les renouvellements ADR-587) ; le **prix public** = valeur **courante** du catalogue (sans historique). Aucune période de validité n'est donc affichable sans fabrication — non fait volontairement. Si un historique de prix public devient un besoin produit, ce sera un ADR dédié (nouvelle table versionnée), pas un affichage décoratif.
+
+**Conséquences.** Surface tarifaire Platform cohérente HT ; distinction contractuel/public déjà assurée au niveau plan. 
+**Preuves.** Build clean ; audit routes (permissions) ; audit modèle (absence de validité confirmée). 
+**Fichiers** : `resources/js/pages/platform/modules/[key].vue`, i18n `platformModules.pricesAreExclTax` (fr/en).
+
+---

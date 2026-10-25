@@ -2500,6 +2500,7 @@
     "perGbStored": "Par Go stocké",
     "flatMonthlyPrice": "Prix mensuel supplémentaire (identique pour tous les abonnements)",
     "monthlyAddonPrice": "Prix mensuel de l'extension",
+    "pricesAreExclTax": "Tous les tarifs sont saisis hors taxes (HT). La TVA applicable dépend du marché de l'entreprise.",
     "planFlatPrice": "Prix mensuel supplémentaire par abonnement",
     "planFlatHint": "Ce montant s'ajoute au prix de l'abonnement sélectionné par l'entreprise.",
     "includedSeats": "Places incluses par abonnement (sans coût supplémentaire)",

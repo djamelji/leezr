@@ -903,6 +903,15 @@ const planLabel = planKey => {
                   class="my-4"
                 />
 
+                <!-- ADR-631e: all addon prices are catalog HT (tax_mode=exclusive), like plan prices. -->
+                <div
+                  v-if="pricingModel"
+                  class="text-caption text-medium-emphasis mb-3 d-flex align-center gap-1"
+                >
+                  <VIcon icon="tabler-info-circle" size="16" />
+                  {{ t('platformModules.pricesAreExclTax') }}
+                </div>
+
                 <!-- Flat -->
                 <template v-if="pricingModel === 'flat'">
                   <div class="text-body-2 font-weight-medium mb-3">
