@@ -87,7 +87,19 @@
 ## LOT 5 — automatisations (supervision) · ADR-631i
 - 10 commandes planifiées (`routes/console.php`, `withoutOverlapping`) auditées : renew/dunning/reconcile/recover-webhooks/recover-checkouts/check-dlq/collect-scheduled/expire-trials/check-trial-expiring/check-expiring-cards. Détail : `docs/bmad/billing-automations-audit-5.md`.
 - **Gap corrigé** : 4 commandes (collect-scheduled SEPA, expire-trials, check-trial-expiring, check-expiring-cards) tournaient sans heartbeat → instrumentées. Supervision via `BillingJobHeartbeat` → onglet recovery + Prometheus. Dry-run n'enregistre pas de heartbeat. Verrouillé `BillingAutomationHeartbeatTest`.
-- **LOT 5 : TERMINÉ.** Prochain : **LOT 8** (matrice multi-persona + parcours Company incomplets : wallet, résiliation, providers).
+- **LOT 5 : TERMINÉ.**
+
+## LOT 8 — matrice multi-persona · ADR-631j
+- `billing-persona-matrix.spec.js` (5 tests, **DEV, SHA servi**, 5/5) : cockpit responsive+dark (0 débordement, KPI présent), recovery dead-letter inspect (payload visible, conditionnel+log), subscriptions blocked-renewal flag (conditionnel+log), company owner overview responsive+dark, provider internal → aucun CTA paiement en ligne.
+- Dimensions couvertes : rendu + interaction + responsive + dark + persona + validation financière. Données absentes → **journalisées** (pas de skip silencieux).
+- **LOT 8 : TERMINÉ.**
+
+---
+## BILLING 3.0 — ÉTAT GLOBAL
+- **LOT 7 Platform (7A-7E) : TERMINÉ** · **LOT 5 automatisations : TERMINÉ** · **LOT 8 matrice : TERMINÉ**.
+- Lots antérieurs : LOT1 (intégrité abonnements), LOT2 (vérité financière), LOT3 (characterization PricingEngine), LOT4 (HT/TTC + PDF), LOT6 (UX Company) — déjà livrés.
+- ADR de ce cycle : 631 (7A), 631b (7B montants), 631c/d (void + protection avoir backend), 631e (tarifaire/HT), 631f (7C impact), 631g (7D dead-letter), 631h (7E config), 631i (LOT5 heartbeats), 631j (LOT8 matrice).
+- Garde-fous respectés tout le cycle : aucun push main, aucun déploiement PROD, aucune écriture financière réelle, ADR-575/593 intacts (aucun renouvellement rétroactif, aucune confirmation auto de prix provisional).
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).

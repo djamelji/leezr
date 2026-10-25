@@ -22715,3 +22715,19 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Console/Commands/{BillingCollectScheduledCommand,BillingExpireTrialsCommand,BillingCheckTrialExpiringCommand,BillingCheckExpiringCardsCommand}.php`, `docs/bmad/billing-automations-audit-5.md`, `tests/Feature/BillingAutomationHeartbeatTest.php`.
 
 ---
+
+### ADR-631j — Billing 3.0 / LOT 8 : matrice multi-persona + dimensions non couvertes (2026-10-25)
+
+**Contexte.** Recette multi-persona billing au-delà du rendu : les dimensions **responsive (mobile), dark mode, permission, interaction réelle, validation financière** n'étaient pas couvertes de bout en bout.
+
+**Décision.** Spec `tests/e2e/billing-persona-matrix.spec.js` (exécutée **sur DEV, SHA servi**) :
+- **Platform cockpit** — viewport mobile 390×844 + dark : thème sombre appliqué, **aucun débordement horizontal**, carte KPI « renouvellements bloqués » présente (contenu).
+- **Platform recovery** — ouverture du dialogue d'inspection dead-letter → **payload + erreur visibles** (ADR-631g), **conditionnel** sur présence de donnée avec **log explicite si absente** (pas de skip silencieux).
+- **Platform subscriptions** — drapeau `renewal_blocked` (ADR-631b), conditionnel + log.
+- **Company owner (persona 2)** — overview mobile + dark (pas de débordement) ; **provider internal** → **aucun CTA de paiement en ligne** (vérité de capacité financière, ADR-623).
+
+**Conséquences.** Triple suivi complété : rendu + **interaction** + **responsive** + **dark** + **permission/persona** + **validation financière**, sur le SHA réellement déployé. Les interactions dépendantes de données sont **journalisées** quand la donnée manque (jamais masquées). 
+**Preuves.** `billing-persona-matrix.spec.js` 5/5 sur DEV ; 545 tests PHPUnit billing verts.
+**Fichiers** : `tests/e2e/billing-persona-matrix.spec.js`.
+
+---
