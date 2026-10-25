@@ -22,21 +22,14 @@ test('owner can open an invoice detail and download a real PDF', async ({ page }
   // The detail renders monetary amounts (formatMoney → "… €").
   await expect(page.getByText(/€/).first()).toBeVisible({ timeout: 10000 })
 
-  // Back to the list and download the PDF for real.
+  // Back to the list and download the PDF for real (PDF gen can be slow on the VPS → generous wait).
   await page.goto('/company/billing/invoices', { waitUntil: 'networkidle' })
-  const downloadBtn = page.locator('.v-data-table [title]').filter({ has: page.locator('.tabler-download') }).first()
+  const downloadBtn = page.locator('.v-data-table button:has(.tabler-download)').first()
+  await expect(downloadBtn).toBeVisible({ timeout: 10000 })
   const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 15000 }),
-    page.locator('.v-data-table').locator('button:has(.tabler-download), a:has(.tabler-download)').first().click(),
-  ]).catch(async () => {
-    // Fallback: some icon sets render differently — click the first action icon button.
-    const [dl] = await Promise.all([
-      page.waitForEvent('download', { timeout: 15000 }),
-      downloadBtn.click(),
-    ])
-
-    return [dl]
-  })
+    page.waitForEvent('download', { timeout: 45000 }),
+    downloadBtn.click(),
+  ])
 
   expect(download.suggestedFilename()).toMatch(/\.pdf$/)
   const path = await download.path()

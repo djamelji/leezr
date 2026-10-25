@@ -68,7 +68,7 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 | Factures liste | ✅ (ADR-619) | ✅ Playwright |
 | Plan | ✅ | ✅ Playwright (HT) |
 | Addons catalogue | ✅ (ADR-621) | ⏳ UI 6g |
-| Détail facture + PDF | ✅ (ADR-622) | ⏳ render+PDF nav |
+| Détail facture + PDF | ✅ (ADR-622) | ✅ (ADR-625/626) parcours complet LOCAL+DEV, PDF `%PDF-` 13,7s |
 | Paiements : bouton gaté capacité provider | ✅ (ADR-623) | ⏳ parcours pay/wallet/résiliation nav |
 
 ## Observations perf
