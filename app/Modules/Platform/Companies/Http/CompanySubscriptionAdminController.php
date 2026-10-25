@@ -123,7 +123,11 @@ class CompanySubscriptionAdminController
 
         $walletBalance = \App\Core\Billing\WalletLedger::balance($company);
 
-        $timing = \App\Core\Billing\BillingPolicy::get('downgrade_timing', $company->market_key) === 'immediate'
+        // ADR-631h: read the SAME source the real cancellation uses (SubscriptionCanceller), so the
+        // preview can never diverge from the action. The previous call referenced a non-existent class
+        // (App\Core\Billing\BillingPolicy::get) and would fatal-error, and implied a per-market policy
+        // that is not implemented.
+        $timing = \App\Core\Billing\PlatformBillingPolicy::instance()->downgrade_timing === 'immediate'
             ? 'immediate'
             : 'end_of_period';
 

@@ -22683,3 +22683,21 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `resources/js/pages/platform/billing/_BillingRecovery.vue`, i18n `platformBilling.recovery.{dlInspect,dlReplay,dlDetailTitle,dlEventId,dlPayload}` (fr/en), `tests/Feature/DeadLetterPayloadExposedTest.php`.
 
 ---
+
+### ADR-631h — Billing 3.0 / LOT 7E : audit exhaustif des paramètres financiers + élimination des décoratifs (2026-10-25)
+
+**Contexte.** Contrôle réel de **tous** les paramètres de configuration Billing (`_SettingsBilling.vue` : 30 clés `PlatformBillingPolicy` + 3 legacy `PlatformSetting->billing['policies']`). Exigence : pour chaque paramètre — valeur, source de vérité, consommateur backend, portée, permissions, impact contrats, validation, traçabilité, comportement réel ; **aucun paramètre décoratif**. Audit détaillé : `docs/bmad/billing-config-audit-7E.md`.
+
+**Constats (vérifiés un par un).**
+- **28 paramètres consommés** — chacun avec un consommateur backend identifié (numérotation `InvoiceNumbering`, taxe `TaxResolver`, timings `PlanChangeTimingResolver`/`PricingEngine`, dunning `DunningEngine`/`DunningTransitioner`, wallet `WalletLedger`/`InvoiceIssuer`, SEPA `PaymentPolicy`, etc.). Source : singleton `PlatformBillingPolicy` (cache 1h) ; permission `manage_billing` ; validation inline (`Rule::in`, bornes, regex préfixe) + invariants `UpdateBillingPolicyUseCase` (numéros non-décroissants, intervalles de retry cohérents) ; **traçabilité** `AuditAction::BILLING_POLICY_UPDATED` avec diff ; portée **globale** ; impact **forward-only** (ADR-587/593 — pas de rétro).
+- **5 paramètres décoratifs** (vérifiés sans aucun lecteur backend ni frontend) : `proration_strategy` (proration toujours day_based en dur), `addon_billing_interval` (listener lit `default_billing_interval`), `payment_method_expiry_check_days` (fenêtre codée en dur), `payment_required`, `annual_only`.
+
+**Décision.**
+1. **Retrait des 5 contrôles décoratifs** de l'UI de configuration (plus de paramètre inactif/trompeur). Clés conservées en base (round-trip, aucune migration destructive) ; valeurs transmises inchangées (hydratation serveur). Câbler l'un d'eux = ADR dédié futur avec tests, jamais un contrôle « coming soon » affiché.
+2. **Correction d'un call-site fatal** : `CompanySubscriptionAdminController::cancelPreview` appelait `\App\Core\Billing\BillingPolicy::get(...)` (classe **inexistante** → fatal ; API par-market fantôme). Corrigé pour lire `PlatformBillingPolicy::instance()->downgrade_timing` — **même source que la résiliation réelle** (`SubscriptionCanceller`), aperçu et action ne divergent plus.
+
+**Conséquences.** Configuration Billing 100 % honnête : 28 paramètres actifs documentés, 0 décoratif, 1 bug fatal éliminé. 
+**Preuves.** PHPUnit `CancelPreviewPolicyTest` (2 : timing reflète la policy, plus de fatal) ; build clean ; audit `billing-config-audit-7E.md`.
+**Fichiers** : `resources/js/pages/platform/settings/_SettingsBilling.vue`, `app/Modules/Platform/Companies/Http/CompanySubscriptionAdminController.php`, `docs/bmad/billing-config-audit-7E.md`, `tests/Feature/CancelPreviewPolicyTest.php`.
+
+---

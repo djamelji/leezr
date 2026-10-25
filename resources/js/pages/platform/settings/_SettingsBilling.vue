@@ -176,11 +176,6 @@ const intervalChangeTimingOptions = computed(() => [
   { title: t('platformSettings.billing.endOfPeriod'), value: 'end_of_period' },
 ])
 
-const prorationStrategyOptions = computed(() => [
-  { title: t('platformSettings.billing.prorationDayBased'), value: 'day_based' },
-  { title: t('platformSettings.billing.prorationNone'), value: 'none' },
-])
-
 const trialPlanChangeBehaviorOptions = computed(() => [
   { title: t('platformSettings.billing.continueTrial'), value: 'continue_trial' },
   { title: t('platformSettings.billing.endTrial'), value: 'end_trial' },
@@ -201,11 +196,6 @@ const taxModeOptions = computed(() => [
   { title: t('platformSettings.billing.taxNone'), value: 'none' },
   { title: t('platformSettings.billing.taxInclusive'), value: 'inclusive' },
   { title: t('platformSettings.billing.taxExclusive'), value: 'exclusive' },
-])
-
-const addonBillingIntervalOptions = computed(() => [
-  { title: t('platformSettings.billing.planAligned'), value: 'plan_aligned' },
-  { title: t('platformSettings.billing.monthly'), value: 'monthly' },
 ])
 
 const addonDeactivationTimingOptions = computed(() => [
@@ -424,14 +414,6 @@ const resetToDefaults = async () => {
 
             <VCardText>
               <AppSelect
-                v-model="form.addon_billing_interval"
-                :label="t('platformSettings.billing.addonBillingInterval')"
-                :items="addonBillingIntervalOptions"
-                :hint="t('platformSettings.billing.addonBillingIntervalHint')"
-                persistent-hint
-                class="mb-4"
-              />
-              <AppSelect
                 v-model="form.addon_deactivation_timing"
                 :label="t('platformSettings.billing.addonDeactivationTiming')"
                 :items="addonDeactivationTimingOptions"
@@ -494,19 +476,6 @@ const resetToDefaults = async () => {
                 v-model="form.interval_change_timing"
                 :label="t('platformSettings.billing.intervalChangeTiming')"
                 :items="intervalChangeTimingOptions"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              sm="6"
-              md="3"
-            >
-              <AppSelect
-                v-model="form.proration_strategy"
-                :label="t('platformSettings.billing.prorationStrategy')"
-                :items="prorationStrategyOptions"
-                :hint="t('platformSettings.billing.prorationStrategyHint')"
-                persistent-hint
               />
             </VCol>
           </VRow>
@@ -607,19 +576,6 @@ const resetToDefaults = async () => {
                 type="number"
                 :min="1"
                 :max="30"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              sm="6"
-              md="3"
-            >
-              <AppTextField
-                v-model.number="form.payment_method_expiry_check_days"
-                :label="t('platformSettings.billing.paymentMethodExpiryCheckDays')"
-                type="number"
-                :min="1"
-                :max="90"
               />
             </VCol>
             <VCol
@@ -758,35 +714,6 @@ const resetToDefaults = async () => {
 
             <VCardText>
               <div class="d-flex flex-column gap-5">
-                <div class="d-flex align-center justify-space-between">
-                  <div>
-                    <VLabel for="payment-required">
-                      {{ t('payments.paymentRequired') }}
-                    </VLabel>
-                    <p class="text-caption text-medium-emphasis mt-1 mb-0">
-                      {{ t('platformSettings.billing.paymentRequiredHint') }}
-                    </p>
-                  </div>
-                  <VSwitch
-                    id="payment-required"
-                    v-model="policiesForm.payment_required"
-                    density="compact"
-                    hide-details
-                  />
-                </div>
-
-                <div class="d-flex align-center justify-space-between">
-                  <VLabel for="annual-only">
-                    {{ t('payments.annualOnly') }}
-                  </VLabel>
-                  <VSwitch
-                    id="annual-only"
-                    v-model="policiesForm.annual_only"
-                    density="compact"
-                    hide-details
-                  />
-                </div>
-
                 <div class="d-flex align-center justify-space-between">
                   <VLabel for="admin-approval">
                     {{ t('platformSettings.billing.adminApprovalRequired') }}

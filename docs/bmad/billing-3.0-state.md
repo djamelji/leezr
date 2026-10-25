@@ -76,7 +76,14 @@
 ## LOT 7D — supervision / gouvernance (diagnostic sans SQL) · ADR-631g
 - Forensics (timeline+snapshots+export), governance (périodes/drift/freeze), ledger (balance+écritures expandables), reconciliation (gaps jamais masqués + anomalies liées à la facture + aging) : **déjà diagnosticables**.
 - **Gap recovery corrigé** : dead-letters n'exposaient que l'erreur tronquée → ajout d'une **vue d'inspection** (erreur complète + **payload JSON**) avant replay. Payload déjà renvoyé par l'API → correctif frontend, verrouillé `DeadLetterPayloadExposedTest`.
-- **LOT 7D : TERMINÉ.** Prochain : **LOT 7E** (paramètres financiers — contrôle exhaustif : valeur/source de vérité/consommateur backend/portée/permissions/impact contrats/validation/traçabilité/comportement réel ; aucun paramètre décoratif).
+- **LOT 7D : TERMINÉ.**
+
+## LOT 7E — paramètres financiers (contrôle exhaustif) · ADR-631h
+- Audit vérifié des **33 paramètres** → **28 consommés** (consommateur backend identifié, cf. `docs/bmad/billing-config-audit-7E.md`), **5 décoratifs** (proration_strategy, addon_billing_interval, payment_method_expiry_check_days, payment_required, annual_only) → **retirés de l'UI** (clés conservées en base, round-trip).
+- Dimensions documentées : source (`PlatformBillingPolicy` singleton), permission (`manage_billing`), validation (Rule::in + invariants use case), traçabilité (`BILLING_POLICY_UPDATED` + diff), portée globale, impact forward-only (ADR-587/593).
+- **Bug fatal corrigé** : `cancelPreview` référençait `App\Core\Billing\BillingPolicy` (inexistant) → lit désormais `PlatformBillingPolicy::instance()->downgrade_timing` (même source que la résiliation). Verrouillé `CancelPreviewPolicyTest`.
+- **LOT 7E : TERMINÉ.** → **LOT 7 PLATFORM COMPLET** (7A cockpit, 7B revenus, 7C recouvrement, 7D supervision, 7E config).
+- Prochain : **LOT 5** (audit opérationnel des automatisations) puis **LOT 8** (matrice multi-persona + parcours Company incomplets).
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
