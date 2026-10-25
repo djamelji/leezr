@@ -22511,3 +22511,11 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/{_BillingInvoices,_BillingAlerts}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/BillingFinancialTruthTest.php`.
 
 ---
+
+### ADR-624 — Billing 3.0 / LOT 6g-A : catalogue addons premium (prix contractuel + HT) (2026-10-25)
+
+**Produit.** Le catalogue addons Company distingue déjà included/active/available/locked (groupes + badges). Ajouts : (1) **qualification HT** de tous les prix catalogue (`modulePriceLabel`) ; (2) **prix contractuel figé** affiché sur les addons **souscrits actifs** (`contractualPriceLabel` = `contracted_amount_cents` HT /périodicité, ADR-621) — distinct du prix catalogue courant, avec libellé « Prix contractuel ». Actions déjà liées aux permissions/entitlements/endpoints réels.
+**Preuves.** E2E `company-billing-overview.spec.js` (catalogue modules rend sans erreur JS) ; 5/5 local. Build clean. Fiabilité des distinctions couverte par `BillingAddonCatalogTest` (ADR-621).
+**Fichiers** : `resources/js/pages/company/modules/index.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
+
+---

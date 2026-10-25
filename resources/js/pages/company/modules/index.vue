@@ -231,12 +231,12 @@ const modulePriceLabel = mod => {
 
   if (pricing_model === 'flat') {
     const price = pricing_params?.price_monthly
-    return price != null ? `${price} \u20AC/${t('companyModules.perMonth')}` : null
+    return price != null ? `${price} \u20AC HT/${t('companyModules.perMonth')}` : null
   }
 
   if (pricing_model === 'plan_flat') {
     const price = pricing_params?.[planKey]
-    return price != null ? `${price} \u20AC/${t('companyModules.perMonth')}` : null
+    return price != null ? `${price} \u20AC HT/${t('companyModules.perMonth')}` : null
   }
 
   if (pricing_model === 'per_seat') {
@@ -257,13 +257,13 @@ const modulePriceLabel = mod => {
 
     // Simple per-unit
     const price = pricing_params?.price_per_unit
-    return price != null ? `${price} \u20AC/${metricLabel}` : null
+    return price != null ? `${price} \u20AC HT/${metricLabel}` : null
   }
 
   if (pricing_model === 'usage') {
     const metricLabel = t(`companyModules.metric_${pricing_metric || 'units'}`)
     const price = pricing_params?.price_per_unit
-    return price != null ? `${price} \u20AC/${metricLabel}` : null
+    return price != null ? `${price} \u20AC HT/${metricLabel}` : null
   }
 
   if (pricing_model === 'tiered') {
@@ -271,6 +271,18 @@ const modulePriceLabel = mod => {
   }
 
   return null
+}
+
+// ADR-624 (LOT 6g): for a SUBSCRIBED paid addon, show its FROZEN contractual price (snapshot, HT),
+// which may differ from the current catalog price. Distinct from modulePriceLabel (catalog).
+const contractualPriceLabel = mod => {
+  if (!mod.is_subscribed || mod.contracted_amount_cents == null) return null
+
+  const period = mod.subscribed_interval === 'yearly'
+    ? t('common.annually').toLowerCase()
+    : t('companyModules.perMonth')
+
+  return `${formatMoney(mod.contracted_amount_cents)} ${t('companyModules.previewHT')}/${period}`
 }
 
 const dependencyLabel = reqKey => {
@@ -888,6 +900,16 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       >
                         {{ t('companyModules.stateActive') }}
                       </VChip>
+
+                      <!-- ADR-624 (LOT 6g): frozen contractual price for a subscribed paid addon -->
+                      <div
+                        v-if="contractualPriceLabel(mod)"
+                        class="mt-3"
+                        data-test="addon-contractual-price"
+                      >
+                        <span class="text-caption text-medium-emphasis d-block">{{ t('companyModules.contractualPrice') }}</span>
+                        <span class="text-subtitle-2 font-weight-bold">{{ contractualPriceLabel(mod) }}</span>
+                      </div>
 
                       <!-- ADR-210: Active dependencies -->
                       <template v-if="mod.requires?.length">

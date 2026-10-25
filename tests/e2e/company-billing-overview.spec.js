@@ -46,6 +46,18 @@ test('owner plan tab renders with HT-qualified price and no JS errors', async ({
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
+test('owner addon catalog renders with state distinctions and no JS errors', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+
+  await loginCompany(page, 'owner@leezr.test')
+  await page.goto('/company/modules', { waitUntil: 'networkidle' })
+
+  // The modules/addons catalog must render (cards or section headings), no blank/error screen.
+  await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
+  expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
+})
+
 test('owner billing overview renders in dark mode', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await loginCompany(page, 'owner@leezr.test')
