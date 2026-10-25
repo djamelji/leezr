@@ -107,6 +107,23 @@ const handleReplayAll = async () => {
   }
 }
 
+// ADR-631g: inspect a dead-letter (full error + webhook payload) BEFORE replaying — diagnose
+// the incident from the UI, no SQL on billing_webhook_dead_letters required.
+const detailDialog = ref(false)
+const detailItem = ref(null)
+
+const openDeadLetterDetail = dl => {
+  detailItem.value = dl
+  detailDialog.value = true
+}
+
+const prettyPayload = computed(() => {
+  const p = detailItem.value?.payload
+  if (p == null) return '—'
+  try { return JSON.stringify(p, null, 2) }
+  catch { return String(p) }
+})
+
 const handleReplayOne = async dl => {
   replayItemLoading.value = { ...replayItemLoading.value, [dl.id]: true }
   try {
@@ -398,15 +415,32 @@ const deadLetterHeaders = computed(() => [
             </template>
 
             <template #item.actions="{ item }">
-              <VBtn
-                size="x-small"
-                color="primary"
-                variant="tonal"
-                icon="tabler-player-play"
-                :loading="replayItemLoading[item.id]"
-                :disabled="!!replayItemLoading[item.id]"
-                @click="handleReplayOne(item)"
-              />
+              <div class="d-flex gap-1 justify-center">
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  icon="tabler-eye"
+                  :aria-label="t('platformBilling.recovery.dlInspect')"
+                  data-test="dl-inspect"
+                  @click="openDeadLetterDetail(item)"
+                >
+                  <VIcon icon="tabler-eye" />
+                  <VTooltip activator="parent" location="top">{{ t('platformBilling.recovery.dlInspect') }}</VTooltip>
+                </VBtn>
+                <VBtn
+                  size="x-small"
+                  color="primary"
+                  variant="tonal"
+                  icon="tabler-player-play"
+                  :aria-label="t('platformBilling.recovery.dlReplay')"
+                  :loading="replayItemLoading[item.id]"
+                  :disabled="!!replayItemLoading[item.id]"
+                  @click="handleReplayOne(item)"
+                >
+                  <VIcon icon="tabler-player-play" />
+                  <VTooltip activator="parent" location="top">{{ t('platformBilling.recovery.dlReplay') }}</VTooltip>
+                </VBtn>
+              </div>
             </template>
 
             <template #bottom>
@@ -602,6 +636,69 @@ const deadLetterHeaders = computed(() => [
             @click="handleReplayAll"
           >
             {{ t('platformBilling.recovery.replayAll') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- ADR-631g: dead-letter inspection (full error + webhook payload) -->
+    <VDialog
+      v-model="detailDialog"
+      max-width="720"
+      data-test="dl-detail-dialog"
+    >
+      <VCard v-if="detailItem">
+        <VCardItem>
+          <VCardTitle class="d-flex align-center gap-2">
+            <VIcon icon="tabler-search" size="20" />
+            {{ t('platformBilling.recovery.dlDetailTitle') }}
+          </VCardTitle>
+        </VCardItem>
+        <VDivider />
+        <VCardText>
+          <VRow class="mb-2">
+            <VCol cols="12" sm="6">
+              <div class="text-caption text-medium-emphasis">{{ t('platformBilling.recovery.dlEventType') }}</div>
+              <div class="font-weight-medium">{{ detailItem.event_type }}</div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <div class="text-caption text-medium-emphasis">{{ t('platformBilling.recovery.dlEventId') }}</div>
+              <div class="font-weight-medium"><code>{{ detailItem.event_id || '—' }}</code></div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <div class="text-caption text-medium-emphasis">{{ t('platformBilling.recovery.dlFailedAt') }}</div>
+              <div class="font-weight-medium">{{ formatDate(detailItem.failed_at) }}</div>
+            </VCol>
+            <VCol cols="12" sm="6">
+              <div class="text-caption text-medium-emphasis">{{ t('platformBilling.recovery.dlAttempts') }}</div>
+              <div class="font-weight-medium">{{ detailItem.replay_attempts }}/3</div>
+            </VCol>
+          </VRow>
+
+          <div class="text-caption text-medium-emphasis mb-1">{{ t('platformBilling.recovery.dlError') }}</div>
+          <VAlert type="error" variant="tonal" density="compact" class="mb-4" data-test="dl-detail-error">
+            {{ detailItem.error_message || '—' }}
+          </VAlert>
+
+          <div class="text-caption text-medium-emphasis mb-1">{{ t('platformBilling.recovery.dlPayload') }}</div>
+          <pre
+            class="pa-3 rounded text-caption overflow-auto"
+            style="background: rgb(var(--v-theme-surface)); max-block-size: 320px;"
+            data-test="dl-detail-payload"
+          >{{ prettyPayload }}</pre>
+        </VCardText>
+        <VDivider />
+        <VCardActions class="justify-end">
+          <VBtn variant="text" @click="detailDialog = false">{{ t('common.close') }}</VBtn>
+          <VBtn
+            color="primary"
+            variant="elevated"
+            prepend-icon="tabler-player-play"
+            :loading="replayItemLoading[detailItem.id]"
+            :disabled="!!replayItemLoading[detailItem.id]"
+            @click="() => { const it = detailItem; detailDialog = false; handleReplayOne(it) }"
+          >
+            {{ t('platformBilling.recovery.dlReplay') }}
           </VBtn>
         </VCardActions>
       </VCard>

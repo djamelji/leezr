@@ -22669,3 +22669,17 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `resources/js/pages/platform/billing/_BillingDunningTab.vue`, `_BillingCouponsTab.vue`, i18n `platformBilling.dunning.writeOffImpact` + `coupons.{confirmDeactivateTitle,confirmDeactivate,deactivateAction,deactivated,deactivateImpact}` (fr/en), `tests/Feature/CouponDeleteBehaviorTest.php`.
 
 ---
+
+### ADR-631g — Billing 3.0 / LOT 7D : incidents diagnosticables sans SQL (recovery / supervision) (2026-10-25)
+
+**Contexte.** Audit des 5 onglets de supervision/gouvernance : forensics (timeline audit + snapshots + export), governance (périodes financières + drift + freeze), ledger (balance + écritures expandables), recovery (statut + dead-letters + replay), reconciliation (gaps ledger↔documents jamais masqués + anomalies liées à la facture + aging). Objectif : **diagnostiquer un incident financier depuis l'UI, sans SQL**.
+
+**Constats.** Forensics, governance, ledger, reconciliation sont déjà diagnosticables (chaque anomalie de réconciliation porte un lien vers la facture concernée ; gaps error-colorés ; aging par échéance). **Gap recovery** : le tableau des dead-letters n'exposait que `error_message` **tronqué** — le **payload** du webhook (donnée clé pour comprendre l'échec) n'était **lisible que par SQL** (`billing_webhook_dead_letters.payload`).
+
+**Décision.** Ajout d'une **vue d'inspection** (dialogue) sur chaque dead-letter, ouverte avant replay : type/ID d'événement, date d'échec, tentatives, **erreur complète** + **payload JSON formaté**. Le payload était déjà renvoyé par l'API (`listDeadLetters` sérialise le modèle, `payload` casté array) — correctif **frontend**, contrat API verrouillé par test. Replay possible directement depuis le dialogue (après diagnostic). Aucun rejeu réel déclenché pendant les tests.
+
+**Conséquences.** Un admin diagnostique un webhook en échec (ex. `invoice.payment_failed`, signature invalide) entièrement depuis l'UI. 
+**Preuves.** PHPUnit `DeadLetterPayloadExposedTest` (payload + erreur + event_id renvoyés) ; build clean.
+**Fichiers** : `resources/js/pages/platform/billing/_BillingRecovery.vue`, i18n `platformBilling.recovery.{dlInspect,dlReplay,dlDetailTitle,dlEventId,dlPayload}` (fr/en), `tests/Feature/DeadLetterPayloadExposedTest.php`.
+
+---

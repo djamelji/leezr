@@ -885,6 +885,11 @@
       "dlEventType": "Event type",
       "dlError": "Error",
       "dlFailedAt": "Failed at",
+      "dlInspect": "Inspect",
+      "dlReplay": "Replay",
+      "dlDetailTitle": "Failed event detail",
+      "dlEventId": "Event ID",
+      "dlPayload": "Received payload",
       "dlAttempts": "Attempts"
     },
     "advanced": {

@@ -885,6 +885,11 @@
       "dlEventType": "Type d'événement",
       "dlError": "Erreur",
       "dlFailedAt": "Échoué le",
+      "dlInspect": "Inspecter",
+      "dlReplay": "Rejouer",
+      "dlDetailTitle": "Détail de l'événement en échec",
+      "dlEventId": "Identifiant d'événement",
+      "dlPayload": "Charge utile (payload) reçue",
       "dlAttempts": "Tentatives"
     },
     "advanced": {

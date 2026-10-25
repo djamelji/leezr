@@ -71,7 +71,12 @@
 - **Dunning** : retry/escalate montraient déjà l'impact (montant/conséquence, ADR-446) ; **write-off** corrigé → alerte « créance de {montant} retirée de l'AR, enregistrée en perte ».
 - **Scheduled-debits / credit-notes / wallets** : lecture seule (pas de mutation à prévisualiser ici ; émission avoir gardée ADR-631d côté factures).
 - **Coupons** : backend désactive-si-utilisé / supprime-si-inutilisé ; dialogue rendu **conforme** (titre/texte/bouton/toast conditionnels + alerte impact). Verrouillé `CouponDeleteBehaviorTest`.
-- **LOT 7C : TERMINÉ.** Prochain : **LOT 7D** (forensics, governance, ledger, recovery, reconciliation — rendre les incidents diagnosticables sans SQL).
+- **LOT 7C : TERMINÉ.**
+
+## LOT 7D — supervision / gouvernance (diagnostic sans SQL) · ADR-631g
+- Forensics (timeline+snapshots+export), governance (périodes/drift/freeze), ledger (balance+écritures expandables), reconciliation (gaps jamais masqués + anomalies liées à la facture + aging) : **déjà diagnosticables**.
+- **Gap recovery corrigé** : dead-letters n'exposaient que l'erreur tronquée → ajout d'une **vue d'inspection** (erreur complète + **payload JSON**) avant replay. Payload déjà renvoyé par l'API → correctif frontend, verrouillé `DeadLetterPayloadExposedTest`.
+- **LOT 7D : TERMINÉ.** Prochain : **LOT 7E** (paramètres financiers — contrôle exhaustif : valeur/source de vérité/consommateur backend/portée/permissions/impact contrats/validation/traçabilité/comportement réel ; aucun paramètre décoratif).
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
