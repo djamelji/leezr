@@ -22492,3 +22492,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Core/Modules/ModuleCatalogReadModel.php`, `tests/Feature/BillingAddonCatalogTest.php`.
 
 ---
+
+### ADR-622 — Billing 3.0 / LOT 6e : détail facture & PDF — invariants + historique (2026-10-25)
+
+**Fiabilité.** `invoiceDetail` expose déjà number/display_number/annexes/HT/TVA/TTC/amount_due/lignes/avoirs/dates/statut (valeurs **stockées**, non recalculées). Le PDF (`CompanyBillingController::invoicePdf`) rend depuis `billing_snapshot` + champs stockés. Invariants prouvés : **HT + TVA = TTC** (2900+580=3480), réconciliation `amount_due`, **préservation fiscale historique** (un changement du taux Market FR 20%→10% **ne modifie pas** une facture émise), **isolation multi-tenant** (company B ne lit pas la facture de A). 
+**Preuves.** `BillingInvoiceDetailTest` (3). 
+**Produit (en attente)** : rendu navigateur du détail + téléchargement PDF réel → nécessite une facture finalisée sur la company de l'owner (recette) ; cadré LOT 6e-produit / LOT 8.
+**Fichiers** : `tests/Feature/BillingInvoiceDetailTest.php` (+ vérif code `CompanyBillingController::invoicePdf`).
+
+---
