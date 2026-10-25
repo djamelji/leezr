@@ -63,7 +63,8 @@
 - **ADR-631b** : liste des abonnements (`_BillingSubscriptionsTab`) corrigée — l'estimation du prochain renouvellement utilise le **prix contracté** (`plan_price_cents`), plus le prix public ; drapeau `renewal_blocked` exposé + **icône warning/tooltip** sur les abonnements à prix non fiable (ne facturera pas, ADR-593). Vérité d'affichage, aucune action.
 - Preuves : `PlatformSubscriptionsReadTruthTest` (3) ✅ + non-régression (13) ✅ + build clean.
 - **ADR-631c (BILL-010)** : admin Platform factures corrigé — statut canonique `void` (filtre + libellé + garde d'avoir ; fallback = statut brut, plus de « Brouillon » trompeur) ; export Prometheus comptait `voided` (bucket toujours 0) → corrigé en `void`+uncollectible+written_off. Preuve `BillingMetricsExportVoidTest`.
-- Reste 7B à auditer : plans, addons (pricing), payments.
+- **ADR-631d** : protection avoir **vérifiée côté backend** (pas que frontend) — `issueCreditNote` → `assertFinalized` + `assertNotVoided` (teste `voided_at`, pas le littéral) ; `refund` exige `status==='paid'`. Verrouillé par `CreditNoteVoidProtectionTest` (void/draft/refund-void → exception + facture & ledger intacts).
+- Reste 7B à auditer : plans, prix par market, addons (pricing), modules payants, payments.
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).

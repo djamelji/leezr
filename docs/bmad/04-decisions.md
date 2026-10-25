@@ -22619,3 +22619,17 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `resources/js/pages/platform/billing/_BillingInvoicesTab.vue`, `app/Modules/Platform/Billing/Http/BillingMetricsExportController.php`, `tests/Feature/BillingMetricsExportVoidTest.php`.
 
 ---
+
+### ADR-631d — Billing 3.0 / LOT 7B : protection backend de l'émission d'avoir (BILL-010 suite) (2026-10-25)
+
+**Contexte.** La correction 631c a aligné le **frontend** sur le statut `void`. Reste à prouver que l'interdiction d'émettre un avoir sur une facture annulée est **imposée par le service backend**, pas seulement par le gating des boutons (un appel API direct ne doit pas passer).
+
+**Constat (audit).** La garde existe et est **robuste** : `AdminAdvancedMutationService::issueCreditNote()` appelle `assertFinalized()` **et** `assertNotVoided()`, cette dernière testant **`voided_at !== null`** (un timestamp — indépendant du littéral de statut, donc non vulnérable au bug 631c). Le chemin `refund()` exige `status === 'paid'` (une facture `void` est rejetée avant toute écriture). Statuts interdisant un avoir : **non finalisée** (draft) et **annulée** (voided_at posé).
+
+**Décision.** Pin par test de mutation interdite `CreditNoteVoidProtectionTest` : (1) avoir sur facture annulée → exception + **0 avoir**, **0 écriture ledger**, facture **inchangée octet par octet** (`toArray()` DB avant/après) ; (2) avoir sur facture non finalisée → exception + 0 avoir ; (3) refund sur facture annulée → exception (`status !== 'paid'`) + 0 avoir + 0 ledger. Aucune modification de code applicatif nécessaire — la protection était déjà correcte, elle est désormais **verrouillée par test**.
+
+**Conséquences.** Régression future sur la garde d'avoir détectée au test. 
+**Preuves.** PHPUnit `CreditNoteVoidProtectionTest` (3 cas, 9 assertions). 
+**Fichiers** : `tests/Feature/CreditNoteVoidProtectionTest.php`.
+
+---
