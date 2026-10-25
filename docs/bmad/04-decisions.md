@@ -22519,3 +22519,11 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/company/modules/index.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
 
 ---
+
+### ADR-625 — Billing 3.0 / LOT 6g-B : parcours détail facture + PDF réel (2026-10-25)
+
+**Produit (parcours complet).** Test Playwright **réel** : liste factures → ouverture du détail (URL `/invoices/{id}`, montants € rendus) → **téléchargement PDF** via `page.waitForEvent('download')` → fichier vérifié `%PDF-` (magic bytes), 0 erreur JS. Le seeder de recette attache une facture finalisée (plan + addon) à la company de l'owner persona pour permettre ce parcours sur données isolées. Fiabilité (HT+TVA=TTC, historique, isolation) déjà couverte par ADR-622 ; le PDF rend depuis `billing_snapshot` (historique).
+**Niveau de couverture** : **parcours complet** (rendu + interaction + téléchargement), pas seulement rendu.
+**Fichiers** : `database/seeders/BillingRecetteSeeder.php`, `tests/e2e/company-invoice-detail-pdf.spec.js`.
+
+---

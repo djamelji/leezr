@@ -34,6 +34,33 @@ class BillingRecetteSeeder extends Seeder
         $this->seedOverdueProvisionalCase();      // reproduces Leezr Logistics
         $this->seedHealthyPaidCase();             // confirmed price, paid, card on file
         $this->seedOverdueFailedPaymentCase();    // genuine payment problem
+        $this->seedOwnerCompanyInvoice();         // a finalized invoice on the owner persona's company (browser recette)
+    }
+
+    /**
+     * Attach a finalized invoice (plan + addon lines, one recorded payment) to the company owned by
+     * the owner persona, so the owner invoice-detail + PDF browser journey can be tested on recette
+     * data. Idempotent: wipes only the [RECETTE]-numbered invoice it owns.
+     */
+    private function seedOwnerCompanyInvoice(): void
+    {
+        $user = \App\Core\Models\User::where('email', 'owner@leezr.test')->first();
+        $company = $user?->memberships()->where('role', 'owner')->first()?->company
+            ?? Company::where('name', 'Leezr Logistics')->first();
+        if (! $company) {
+            return;
+        }
+
+        Invoice::where('company_id', $company->id)->where('number', 'INV-RECETTE-OWNER')->get()
+            ->each(function ($i) {
+                InvoiceLine::where('invoice_id', $i->id)->delete();
+                Payment::where('invoice_id', $i->id)->delete();
+                $i->delete();
+            });
+
+        $inv = $this->invoice($company, 'INV-RECETTE-OWNER', null, null, 4800, 960, now()->addMonth(), 'open');
+        $this->line($inv, 'plan', null, 'Abonnement Pro', 2900);
+        $this->line($inv, 'addon', 'workforce_leave', 'Addon Congés & Absences', 1900);
     }
 
     /** Company A — active Pro, period ended, provisional price, 3 flat addons (1 invoice + 2 annexes), not due. */
