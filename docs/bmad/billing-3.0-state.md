@@ -77,3 +77,6 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 ## Matrice qualité — points de vérification ouverts (non bloquants)
 - **PDF factures longues / annexes / sauts de page / alignements** : vérification visuelle à mener (facture multi-lignes + annexes A/B). Statut : ⏳ ouvert (n'empêche pas les autres lots).
 - **Décomposition du parcours Playwright PDF (~11,6 s DEV)** : génération PDF mesurée **≈ 0,37 s** (tinker DEV) ; le reste ≈ login persona (~3–5 s, waitForURL + attente) + 3 navigations `networkidle` (~2 s chacune) + transfert PDF (léger, 19,7 Ko). → **La génération/transfert PDF est marginale (<1 s)** ; le temps est dominé par login + navigations de test, pas par le PDF. Statut : documenté.
+
+## LOT 7 — permissions (fiabilité)
+- `BillingPlatformPermissionTest` ✅ : lecture refusée sans `view_billing` (403) ; mutation (void) refusée sans `manage_billing` (403) + facture **intacte** (aucun effet financier sur requête refusée). Isolation/permissions Platform confirmées côté serveur.
