@@ -52,8 +52,15 @@
 
 **Tous les commits Billing 3.0 sont sur `origin/dev` (HEAD DEV = `97f01b9`). `main`/PROD intacts.**
 
+## LOT 7A — pilotage financier / cockpit (vérité financière)
+- **Cockpit déjà substantiel** : MRR/ARR **contractuels** (KPI), revenu **facturé** (drilldown `revenue`, ADR-584), **créances** (drilldown `receivables` : brut − write-offs = net, **réconcilié au grand livre AR**), churn, conversion trial, tendance MRR (historique réel, aucune donnée fabriquée). Règle « facturé ≠ encaissé » tenue (drilldowns séparés, jamais fusionnés).
+- **ADR-631** : `blocked_renewals` promu **métrique de premier plan** (`BillingMetricsCalculationService::calculate()` + carte KPI cockpit, verte à 0 / warning si >0). Séparé de dunning (créances échues) et paiements échoués. Lecture seule, aucune confirmation auto de prix provisional. ADR-575/593 intacts.
+- Preuves : PHPUnit `BillingCockpitKpiTest::test_metrics_payload_exposes_blocked_renewals` ✅ (1 provisional + 1 fiable → 1 bloqué) ; build clean ; `BillingCockpitKpiTest` 3/3 vert.
+- Niveau de couverture : **donnée + rendu**. Interaction (clic drilldown)/responsive/dark/permission multi-persona → LOT 8.
+
 ## Point de reprise (précis)
-Prochain incrément : **LOT 6b** — refonte des écrans Company restants (`_BillingPlan` comparaison/changement, `_BillingInvoices` liste, `invoices/[id]` détail, `_BillingPaymentMethods`, `pay.vue`, portefeuille/timeline, résiliation) avec HT/TTC qualifié + Playwright par écran (owner). Puis **LOT 7** (15 onglets Platform, en réutilisant la recette), **LOT 5** (audit automatisations), **LOT 8** (personas + matrice complète).
+Prochain incrément : **LOT 7B** — revenus/abonnements (subscriptions, tariff-review, plans, addons, invoices, payments) : audit visuel par écran + vérité des montants (HT/TTC, source prix). Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
+~~Prochain incrément : **LOT 6b**~~ — refonte des écrans Company restants (`_BillingPlan` comparaison/changement, `_BillingInvoices` liste, `invoices/[id]` détail, `_BillingPaymentMethods`, `pay.vue`, portefeuille/timeline, résiliation) avec HT/TTC qualifié + Playwright par écran (owner). Puis **LOT 7** (15 onglets Platform, en réutilisant la recette), **LOT 5** (audit automatisations), **LOT 8** (personas + matrice complète).
 Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona navigateur disponible : `owner@leezr.test` = owner de company #1 (Pro active) sur DEV/local.
 
 ## Playwright (preuves accumulées)

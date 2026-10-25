@@ -22583,3 +22583,15 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `tests/e2e/platform-billing-tabs.spec.js`.
 
 ---
+
+### ADR-631 — Billing 3.0 / LOT 7A : renouvellements bloqués en KPI de premier plan du cockpit (2026-10-25)
+
+**Contexte.** Le cockpit Platform distingue déjà MRR/ARR **contractuels**, revenu **facturé** (drilldown `revenue`), et **créances** (drilldown `receivables` : brut − write-offs = net, réconcilié au grand livre AR — ADR-584). La règle « ne jamais présenter le facturé comme de l'encaissé » est donc tenue. Manquait : le **nombre de renouvellements bloqués** (ADR-593 — prix contractuel non fiable : `plan_price_source` null/`provisional`/`pricing_review_required`), qui n'existait que dans le *risk widget* (`PlatformBillingWidgetsReadService::riskDataset`), pas comme métrique directe du cockpit.
+
+**Décision.** `blocked_renewals` devient une **métrique de premier plan** de `BillingMetricsCalculationService::calculate()` (même définition que le risk dataset), exposée dans `store.metrics` et rendue en **carte KPI** du cockpit (verte à 0, `warning` si >0 — aucune confirmation auto, lecture seule). Aucune modification du moteur de renouvellement : ADR-575 (anti-rétro) et ADR-593 (report tant que prix non fiable) **intacts**.
+
+**Conséquences.** Les renouvellements bloqués sont visibles d'un coup d'œil, séparés des paiements échoués et du dunning (créances échues). 
+**Niveau de couverture** : donnée (PHPUnit `test_metrics_payload_exposes_blocked_renewals` : 1 provisional + 1 fiable → `blocked_renewals=1`) + rendu (carte KPI, build clean). Interaction/responsive/dark/permission multi-persona → LOT 8.
+**Fichiers** : `app/Core/Billing/BillingMetricsCalculationService.php`, `resources/js/pages/platform/billing/_BillingDashboard.vue`, i18n `platformBilling.metrics.blockedRenewals` (fr/en), `tests/Feature/BillingCockpitKpiTest.php`.
+
+---

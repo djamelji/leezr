@@ -1252,6 +1252,7 @@
       "trialing": "En essai",
       "addonRevenue": "Revenus addons",
       "addonRevenueHT": "Revenus addons (HT)",
+      "blockedRenewals": "Renouvellements bloqués",
       "churn": "Taux de churn",
       "trialConversion": "Conversion essai",
       "noData": "Aucune donnée disponible",

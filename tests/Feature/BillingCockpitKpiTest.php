@@ -59,4 +59,19 @@ class BillingCockpitKpiTest extends TestCase
 
         $this->assertSame(0, $risk['blocked_renewals'], 'reliable price → not blocked');
     }
+
+    /**
+     * ADR-631 (LOT 7A). The cockpit KPI payload (store.metrics) exposes blocked_renewals as a
+     * first-class metric so the dashboard surfaces it directly — not only via the risk widget.
+     */
+    public function test_metrics_payload_exposes_blocked_renewals(): void
+    {
+        $this->sub($this->company(), 'provisional'); // one blocked
+        $this->sub($this->company(), 'subscribed');  // one reliable
+
+        $metrics = app(\App\Core\Billing\BillingMetricsCalculationService::class)->calculate();
+
+        $this->assertArrayHasKey('blocked_renewals', $metrics);
+        $this->assertSame(1, $metrics['blocked_renewals'], 'exactly the provisional subscription is blocked');
+    }
 }

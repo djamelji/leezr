@@ -76,6 +76,7 @@ const kpiCards = computed(() => {
     { title: t('platformBilling.metrics.activeSubscriptions'), value: m.active_subscriptions, icon: 'tabler-receipt', color: 'info' },
     { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning' },
     { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency }), icon: 'tabler-puzzle', color: 'secondary' },
+    { title: t('platformBilling.metrics.blockedRenewals'), value: m.blocked_renewals ?? 0, icon: 'tabler-lock-exclamation', color: (m.blocked_renewals ?? 0) > 0 ? 'warning' : 'success' },
     { title: t('platformBilling.metrics.churn'), value: `${(m.churn_rate * 100).toFixed(1)}%`, icon: 'tabler-arrow-down-right', color: m.churn_rate > 0.05 ? 'error' : 'success' },
     { title: t('platformBilling.metrics.trialConversion'), value: m.trial_conversion_rate != null ? `${(m.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
   ]

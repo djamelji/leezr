@@ -58,9 +58,19 @@ class BillingMetricsCalculationService
         $mrrHistory = $this->mrrHistory($plans);
         $mrrPreviousMonth = $mrrHistory['series'][count($mrrHistory['series']) - 2] ?? 0;
 
+        // ADR-631 (LOT 7A): renewals BLOCKED for tariff review (ADR-593) — unreliable contracted
+        // price (null/provisional/flagged) on a current subscription, deferred (never billed).
+        $blockedRenewals = Subscription::whereIn('status', ['active', 'trialing', 'past_due'])
+            ->where('is_current', 1)
+            ->where(fn ($q) => $q->whereNull('plan_price_source')
+                ->orWhere('plan_price_source', 'provisional')
+                ->orWhereJsonContains('metadata->pricing_review_required', true))
+            ->count();
+
         return [
             'mrr' => $mrr,
             'arr' => $arr,
+            'blocked_renewals' => $blockedRenewals,
             'mrr_previous_month' => $mrrPreviousMonth,
             'active_subscriptions' => $activeSubscriptions->count(),
             'trialing_subscriptions' => $trialingSubscriptions,

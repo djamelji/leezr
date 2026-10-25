@@ -1253,6 +1253,7 @@
       "trialing": "Trialing",
       "addonRevenue": "Addon Revenue",
       "addonRevenueHT": "Addon Revenue (excl. tax)",
+      "blockedRenewals": "Blocked renewals",
       "churn": "Churn Rate",
       "trialConversion": "Trial Conversion",
       "noData": "No data available",
