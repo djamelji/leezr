@@ -73,6 +73,8 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 | Spéc | Écran | Personas | Statut |
 |---|---|---|---|
 | `company-billing-overview.spec.js` | Overview Company | owner | ✅ DEV (rendu 3 sections, 0 erreur JS, dark mode) |
+| `platform-billing-cockpit.spec.js` | Cockpit + tariff-review + subscriptions | admin | ✅ **DEV SHA 63a5220** (3/3, 0 erreur JS ; **contenu** : carte KPI « renouvellements bloqués » présente) |
+| `platform-billing-tabs.spec.js` | 12 onglets Platform | admin | ✅ DEV (rendu + nav, 0 erreur JS) |
 
 ## Double suivi (par écran)
 | Écran | Fiabilité métier | Qualité produit |
