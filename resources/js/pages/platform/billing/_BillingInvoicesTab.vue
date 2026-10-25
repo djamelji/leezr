@@ -58,7 +58,9 @@ const dunningTarget = invoice => {
 }
 
 const canIssueCreditNote = invoice => {
-  return !!invoice.finalized_at && invoice.status !== 'voided'
+  // BILL-010: the canonical voided status stored by the backend is 'void' (not 'voided').
+  // Using the wrong literal here would wrongly allow a credit note against a voided invoice.
+  return !!invoice.finalized_at && invoice.status !== 'void'
 }
 
 // ── Headers ────────────────────────────────────────────
@@ -85,13 +87,15 @@ const statusOptions = computed(() => [
   { title: t('platformBilling.statusOpen'), value: 'open' },
   { title: t('platformBilling.statusOverdue'), value: 'overdue' },
   { title: t('platformBilling.statusPaid'), value: 'paid' },
-  { title: t('platformBilling.statusVoided'), value: 'voided' },
+  { title: t('platformBilling.statusVoided'), value: 'void' },
 ])
 
 const statusLabel = status => {
-  const map = { draft: 'statusDraft', open: 'statusOpen', overdue: 'statusOverdue', paid: 'statusPaid', voided: 'statusVoided', uncollectible: 'statusUncollectible' }
+  // Keys mapped from the canonical stored values ('void', not 'voided' — BILL-010).
+  const map = { draft: 'statusDraft', open: 'statusOpen', overdue: 'statusOverdue', paid: 'statusPaid', void: 'statusVoided', uncollectible: 'statusUncollectible' }
 
-  return t(`platformBilling.${map[status] || 'statusDraft'}`)
+  // Unknown status → show the raw value, never silently mislabel it as "Draft".
+  return map[status] ? t(`platformBilling.${map[status]}`) : status
 }
 
 

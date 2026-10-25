@@ -45,7 +45,9 @@ class BillingMetricsExportController extends Controller
             ->groupBy('status')
             ->pluck('cnt', 'status');
 
-        foreach (['open', 'overdue', 'paid', 'voided', 'draft'] as $status) {
+        // BILL-010: canonical stored statuses — 'void' (not 'voided'), plus uncollectible/written_off,
+        // otherwise those buckets always export 0 and voided invoices vanish from monitoring.
+        foreach (['draft', 'open', 'overdue', 'paid', 'void', 'uncollectible', 'written_off'] as $status) {
             $lines[] = sprintf('billing_invoices_total{status="%s"} %d', $status, $invCounts[$status] ?? 0);
         }
 

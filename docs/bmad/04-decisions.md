@@ -22607,3 +22607,15 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingReadService.php`, `resources/js/pages/platform/billing/_BillingSubscriptionsTab.vue`, i18n `platformBilling.subscriptions.renewalBlocked` (fr/en), `tests/Feature/PlatformSubscriptionsReadTruthTest.php`.
 
 ---
+
+### ADR-631c — Billing 3.0 / LOT 7B : statut `void` canonique sur l'admin Platform factures (BILL-010) (2026-10-25)
+
+**Contexte.** Le backend stocke le statut annulé sous la valeur canonique **`void`** (`AdminInvoiceMutationService`). L'admin Platform des factures utilisait le littéral **`voided`** à trois endroits, tous faux : (1) **filtre** statut (option `voided` → ne matche jamais) ; (2) **libellé** (`map[status]` sur `void` → `undefined` → fallback **« Brouillon »** : une facture annulée s'affichait « Draft ») ; (3) **garde d'avoir** (`status !== 'voided'` toujours vrai pour `void` → **un avoir pouvait être émis contre une facture annulée**). Même bug dans l'export Prometheus (`BillingMetricsExportController` itérait `voided` → bucket toujours 0, factures annulées invisibles du monitoring).
+
+**Décision.** Alignement sur `void` partout : filtre, libellé (clé i18n `statusVoided` conservée comme texte, mappée depuis la valeur `void`), garde d'avoir. Le **fallback de libellé** affiche désormais la valeur brute du statut (jamais « Brouillon » silencieux pour un statut inconnu). Export Prometheus : buckets `draft/open/overdue/paid/void/uncollectible/written_off`.
+
+**Conséquences.** Les factures annulées sont correctement filtrées, libellées « Annulée », exclues de l'émission d'avoir, et comptées dans le monitoring. 
+**Preuves.** PHPUnit `BillingMetricsExportVoidTest` (void compté dans le bucket `void`, pas `voided`) ; build clean.
+**Fichiers** : `resources/js/pages/platform/billing/_BillingInvoicesTab.vue`, `app/Modules/Platform/Billing/Http/BillingMetricsExportController.php`, `tests/Feature/BillingMetricsExportVoidTest.php`.
+
+---
