@@ -143,15 +143,13 @@ class CompanyBillingController
             $typography = ['active_family_name' => null, 'active_source' => null];
         }
 
-        // ADR-626 (BILL-PERF-PDF): invoice PDFs must NOT depend on a blocking remote font fetch.
-        // Previously a Google Fonts CSS was downloaded per render (file_get_contents, 5s timeout) and
-        // embedded (~882KB, slow). The blade already falls back to the bundled **DejaVu Sans**
-        // (ships with dompdf; supports French accents + the € sign) via its font chain, so we drop
-        // the remote fetch entirely: no network dependency, lighter and faster PDF. Local platform
-        // fonts (font_faces in the snapshot) are still honoured by the blade when present.
-        $fontFaceCss = null;
+        // ADR-626 + finition (ADR-627): keep the PREMIUM typography (Poppins, OFL 1.1) but load it
+        // from the LOCAL font cache (storage/fonts/*.ttf) instead of a blocking per-render Google
+        // fetch — premium look, zero network dependency. Font subsetting keeps the file light.
+        // Falls back to the bundled DejaVu Sans (French accents + €) if the local TTFs are absent.
         $fontFamily = $typography['active_family_name'] ?? null;
         $fontSource = $typography['active_source'] ?? null;
+        $fontFaceCss = $fontFamily ? static::localFontFaceCss($fontFamily) : null;
 
         // Resolve platform primary color for PDF branding
         try {
@@ -195,5 +193,41 @@ class CompanyBillingController
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    /**
+     * ADR-627: build @font-face CSS from the LOCALLY cached TTF files (storage/fonts/{family}_*.ttf),
+     * so the premium platform font (e.g. Poppins, OFL 1.1) is embedded WITHOUT any network request.
+     * Returns null if no local TTF is found → the blade falls back to the bundled DejaVu Sans.
+     */
+    protected static function localFontFaceCss(string $family): ?string
+    {
+        $slug = strtolower(preg_replace('/[^A-Za-z0-9]+/', '', $family));
+        $weightMap = ['normal' => 400, 'regular' => 400, 'bold' => 700];
+
+        // 1) Prefer the fonts BUNDLED in the repo (resources/fonts/{slug}/{slug}-{weight}.ttf) — always
+        //    deployed with the app. 2) Fall back to the dompdf local cache (storage/fonts/{slug}_*.ttf).
+        $bundled = glob(base_path("resources/fonts/{$slug}/{$slug}-*.ttf")) ?: [];
+        $cached = glob(storage_path("fonts/{$slug}_*.ttf")) ?: [];
+        $files = ! empty($bundled) ? $bundled : $cached;
+        if (empty($files)) {
+            return null;
+        }
+
+        $css = '';
+        foreach ($files as $path) {
+            $base = basename($path);
+            if (preg_match('/-([a-z0-9]+)\.ttf$/i', $base, $m)) {          // bundled: poppins-700.ttf
+                $token = strtolower($m[1]);
+            } elseif (preg_match('/_([a-z0-9]+)_[0-9a-f]+\.ttf$/i', $base, $m)) { // cache: poppins_bold_hash.ttf
+                $token = strtolower($m[1]);
+            } else {
+                continue;
+            }
+            $weight = $weightMap[$token] ?? (ctype_digit($token) ? (int) $token : 400);
+            $css .= "@font-face{font-family:'{$family}';font-style:normal;font-weight:{$weight};src:url('file://{$path}') format('truetype');}";
+        }
+
+        return $css !== '' ? $css : null;
     }
 }

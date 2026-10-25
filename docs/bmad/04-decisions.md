@@ -22536,3 +22536,23 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `app/Modules/Core/Billing/Http/CompanyBillingController.php`, `tests/Feature/BillingPdfPerfTest.php`.
 
 ---
+
+### ADR-627 — Billing 3.0 : finition PDF premium (Poppins local, sans réseau) (2026-10-25)
+
+**Contexte.** ADR-626 avait retiré le fetch Google bloquant mais basculé sur DejaVu Sans — dégradation du design premium (la typographie **Poppins** était un choix identité Leezr).
+**Audit visuel & technique.** Police d'origine = **Poppins** (source google), **OFL 1.1** (embarquement PDF autorisé). TTF déjà présents en cache dompdf (`storage/fonts/`). 
+**Décision.** Poppins **bundlé dans le dépôt** (`resources/fonts/poppins/poppins-{300,400,500,600,700}.ttf` + `LICENSE.md` OFL), toujours déployé. `CompanyBillingController::localFontFaceCss()` construit un `@font-face` **local** (fichiers du dépôt, fallback cache storage) → **aucune requête réseau**. **Font subsetting** conservé. Fallback DejaVu si absent. Montants/snapshot fiscal **inchangés**.
+**Mesures (même facture de recette).**
+| | Original (Google embed) | ADR-626 DejaVu subset | **ADR-627 Poppins bundlé subset** |
+|---|---|---|---|
+| Police | Poppins (réseau) | DejaVu (fallback) | **Poppins (premium)** |
+| Réseau | fetch bloquant 5s | aucun | **aucun** |
+| Poids | ~882 KB | 22,6 KB | **18,6 KB** |
+| Temps (local) | 120 ms | 77 ms | **82 ms** |
+| DEV téléchargement | >45 s (échec) | — | **à vérifier (Playwright)** |
+
+Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
+**Preuves.** `BillingPdfPerfTest` (2 : PDF valide <200 KB ; Poppins chargé depuis le dépôt, aucun `http`, poids bold présent).
+**Fichiers** : `app/Modules/Core/Billing/Http/CompanyBillingController.php`, `resources/fonts/poppins/*.ttf` + `LICENSE.md`, `tests/Feature/BillingPdfPerfTest.php`.
+
+---

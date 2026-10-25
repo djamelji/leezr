@@ -46,4 +46,18 @@ class BillingPdfPerfTest extends TestCase
         $this->assertSame('%PDF-', substr($pdf, 0, 5), 'must be a valid PDF');
         $this->assertLessThan(200_000, strlen($pdf), 'subset font keeps the PDF light (<200KB), not the ~882KB full-face');
     }
+
+    public function test_premium_poppins_font_loads_locally_without_network(): void
+    {
+        // ADR-627: the premium platform font (Poppins) is embedded from the REPO-BUNDLED TTFs,
+        // never fetched from Google at render time.
+        $m = new \ReflectionMethod(\App\Modules\Core\Billing\Http\CompanyBillingController::class, 'localFontFaceCss');
+        $m->setAccessible(true);
+        $css = $m->invoke(null, 'Poppins');
+
+        $this->assertNotNull($css, 'Poppins must resolve to a local @font-face');
+        $this->assertStringContainsString('resources/fonts/poppins', $css, 'font loaded from the bundled repo fonts');
+        $this->assertStringNotContainsString('http', $css, 'no remote URL in the font-face CSS');
+        $this->assertStringContainsString("font-weight:700", $css, 'includes a bold weight for headings/totals');
+    }
 }
