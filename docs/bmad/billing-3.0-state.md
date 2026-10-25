@@ -36,7 +36,7 @@
 | 4 | Fiscalité HT/TTC complète (toutes pages + PDF) | 🟡 partiel (4a formateur+liste factures ; 4b finance-summary overview TTC) — RESTE : plan, addons, paiements, avoirs, portefeuille, PDF, onglets Platform |
 | 5 | Automatisations (renew/dunning/webhooks/reconcile/reprise) | ⏳ à auditer/tester |
 | 6 | Refonte UX/UI Company (12+ écrans) | 🟡 en cours (6a overview ✅DEV ; 6b Factures void/action ✅ ; 6c Plan HT ✅ ; 6d addons : read model activation/droit/souscription + prix figé ✅) — 6e détail facture/PDF : fiabilité ✅ (invariants+historique+isolation), produit ⏳ (render+PDF nav) — RESTE : 6f paiements/moyens/portefeuille/résiliation, 6g finition UX |
-| 7 | Refonte UX/UI Platform (15 onglets + connexes) | ⏳ non commencé |
+| 7 | Refonte UX/UI Platform (15 onglets + connexes) | 🟡 en cours (7.1 cockpit KPI blocked_renewals + facturé≠encaissé ✅ ; 7.2 renouvellements en revue surfacés tariff-review ✅ ; rendu dashboard/tariff-review/subscriptions E2E) — RESTE : 7.3 factures/paiements/dunning, 7.4 tarifs/config, 7.5 gouvernance/ledger/forensics/recovery/reconciliation |
 | 8 | Recette Playwright 6 personas + matrice | ⏳ non commencé (recette backend prête via BillingRecetteSeeder) |
 
 ## Recette

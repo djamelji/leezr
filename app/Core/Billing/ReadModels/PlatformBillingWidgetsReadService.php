@@ -4,6 +4,7 @@ namespace App\Core\Billing\ReadModels;
 
 use App\Core\Billing\CreditNote;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\Subscription;
 use App\Core\Billing\LedgerEntry;
 use App\Core\Billing\Payment;
 use Carbon\Carbon;
@@ -396,6 +397,19 @@ class PlatformBillingWidgetsReadService
         $failedCount = $failedQuery->count();
         $overdueCount = $overdueQuery->count();
 
+        // ADR-629 (LOT 7): renewals BLOCKED for tariff review (ADR-593) — contracted price unreliable
+        // (null/provisional) or flagged, on a current subscription. These are NOT billed (anti-retro).
+        // Distinct from dunning (overdue invoices) and from failed payments.
+        $blockedQuery = Subscription::whereIn('status', ['active', 'trialing', 'past_due'])
+            ->where('is_current', 1)
+            ->where(fn ($q) => $q->whereNull('plan_price_source')
+                ->orWhere('plan_price_source', 'provisional')
+                ->orWhereJsonContains('metadata->pricing_review_required', true));
+        if ($scope === 'company' && $companyId) {
+            $blockedQuery->where('company_id', $companyId);
+        }
+        $blockedRenewals = $blockedQuery->count();
+
         // Top failure reasons from payment metadata
         $reasonQuery = Payment::where('status', 'failed')
             ->where('created_at', '>=', now()->subDays(7));
@@ -415,6 +429,7 @@ class PlatformBillingWidgetsReadService
         return [
             'failed_payments_7d' => $failedCount,
             'pending_dunning' => $overdueCount,
+            'blocked_renewals' => $blockedRenewals,
             'top_failure_reasons' => $reasons,
         ];
     }

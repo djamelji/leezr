@@ -22564,3 +22564,13 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `tests/e2e/company-payments-journeys.spec.js`.
 
 ---
+
+### ADR-629 — Billing 3.0 / LOT 7 (sous-lots 1-2) : cockpit financier + renouvellements en revue (2026-10-25)
+
+**Fiabilité.** Nouveau KPI cockpit **`blocked_renewals`** (dataset risque, `PlatformBillingWidgetsReadService::riskDataset`) = abonnements courants dont le prix contractuel est **non fiable** (null/provisional/`pricing_review_required`, ADR-593) → renouvellement **différé, jamais facturé** (anti-rétro ADR-575). **Distinct** du dunning (factures échues) et des paiements échoués. Les KPI existants séparent déjà **facturé** (`revenue`) et **encaissé** (`cashflow`/ledger CASH) — le CA facturé n'est jamais présenté comme encaissé. AR = ledger net.
+**Produit.** Le cas Leezr Logistics (Pro, période échue, provisional, internal) est **identifiable** dans l'onglet **tariff-review** (`reviewSubscriptions`). Rendu Platform vérifié (admin) : cockpit (overview), tariff-review, subscriptions — sans erreur JS.
+**Preuves.** `BillingCockpitKpiTest` (2 : provisional→bloqué ; fiable→non) ; E2E `platform-billing-cockpit` (3 : dashboard, tariff-review, subscriptions rendent, 0 erreur JS). Permissions `view_billing`/`manage_billing` par middleware de route (tests multi-persona → LOT 8).
+*Produit à étoffer* : carte KPI dédiée « renouvellements bloqués » dans le dashboard (système de widgets manifeste-driven) ; surfacé pour l'instant via tariff-review.
+**Fichiers** : `app/Core/Billing/ReadModels/PlatformBillingWidgetsReadService.php`, `tests/Feature/BillingCockpitKpiTest.php`, `tests/e2e/platform-billing-cockpit.spec.js`.
+
+---
