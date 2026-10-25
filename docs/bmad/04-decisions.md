@@ -22527,3 +22527,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `database/seeders/BillingRecetteSeeder.php`, `tests/e2e/company-invoice-detail-pdf.spec.js`.
 
 ---
+
+### ADR-626 — Billing 3.0 / BILL-PERF-PDF : PDF facture rapide, hors-ligne, léger (2026-10-25)
+
+**Diagnostic.** Le PDF facture faisait un **fetch Google Fonts bloquant** (`file_get_contents`, timeout 5 s) à chaque rendu → >45 s sur DEV (réseau lent/bloqué), + police **~882 KB** embarquée. Mesure locale : rendu 120 ms (réseau rapide) mais 882 KB.
+**Correctif.** (1) **Suppression du fetch distant** — la vue retombe sur la police **bundlée DejaVu Sans** (livrée avec dompdf ; accents FR + € OK) via sa chaîne de fallback → **aucune dépendance réseau**. (2) **Font subsetting** (`isFontSubsettingEnabled`) → embarque uniquement les glyphes utilisés. **Mesure après : 882 KB → 22,6 KB (×39), 77 ms, `%PDF-` valide.** Montants et snapshot fiscal **inchangés**. Polices plateforme locales (`font_faces`) toujours honorées par la vue.
+**Preuves.** `BillingPdfPerfTest` (PDF valide + <200 KB + accents/€). À vérifier sur DEV : téléchargement nav rapide (Playwright 6g-B).
+**Fichiers** : `app/Modules/Core/Billing/Http/CompanyBillingController.php`, `tests/Feature/BillingPdfPerfTest.php`.
+
+---

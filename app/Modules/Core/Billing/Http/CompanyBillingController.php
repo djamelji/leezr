@@ -143,26 +143,15 @@ class CompanyBillingController
             $typography = ['active_family_name' => null, 'active_source' => null];
         }
 
+        // ADR-626 (BILL-PERF-PDF): invoice PDFs must NOT depend on a blocking remote font fetch.
+        // Previously a Google Fonts CSS was downloaded per render (file_get_contents, 5s timeout) and
+        // embedded (~882KB, slow). The blade already falls back to the bundled **DejaVu Sans**
+        // (ships with dompdf; supports French accents + the € sign) via its font chain, so we drop
+        // the remote fetch entirely: no network dependency, lighter and faster PDF. Local platform
+        // fonts (font_faces in the snapshot) are still honoured by the blade when present.
         $fontFaceCss = null;
         $fontFamily = $typography['active_family_name'] ?? null;
         $fontSource = $typography['active_source'] ?? null;
-
-        if ($fontFamily && $fontSource === 'google') {
-            try {
-                $url = 'https://fonts.googleapis.com/css2?family='
-                    . urlencode($fontFamily) . ':wght@300;400;500;600;700&display=swap';
-                $ctx = stream_context_create([
-                    'http' => ['header' => "User-Agent: Mozilla/4.0\r\n", 'timeout' => 5],
-                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
-                ]);
-                $fontFaceCss = @file_get_contents($url, false, $ctx);
-                if ($fontFaceCss === false) {
-                    $fontFaceCss = null;
-                }
-            } catch (\Throwable) {
-                $fontFaceCss = null;
-            }
-        }
 
         // Resolve platform primary color for PDF branding
         try {
@@ -187,13 +176,17 @@ class CompanyBillingController
             'platformConfig' => config('billing.platform'),
         ];
 
-        // Render PDF with font fallback: if custom font fails (network, cache),
-        // retry with safe DejaVu Sans to guarantee PDF generation.
+        // ADR-626 (BILL-PERF-PDF): font subsetting embeds only the glyphs actually used → a much
+        // lighter PDF (instead of the full ~800KB DejaVu face). No network, deterministic output.
+        $render = fn (array $data) => \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $data)
+            ->setOption('isFontSubsettingEnabled', true)
+            ->output();
+
         try {
-            $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $viewData)->output();
+            $pdfContent = $render($viewData);
         } catch (\Throwable) {
             $viewData['typography'] = ['active_family_name' => null, 'active_source' => null];
-            $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $viewData)->output();
+            $pdfContent = $render($viewData);
         }
 
         $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
