@@ -95,6 +95,21 @@ class BillingFinancialTruthTest extends TestCase
         $this->assertFalse($ov['has_payment_issue'], 'a cancelled/written-off invoice is not a payment problem');
     }
 
+    public function test_can_pay_online_only_for_stripe_provider(): void
+    {
+        // ADR-623: self-service payment is possible only when the provider can collect (Stripe).
+        $stripe = $this->company('Stripe Co');
+        Subscription::create(['company_id' => $stripe->id, 'plan_key' => 'pro', 'interval' => 'monthly', 'status' => 'active', 'provider' => 'stripe', 'is_current' => true, 'current_period_start' => now(), 'current_period_end' => now()->addMonth()]);
+        $this->assertTrue(CompanyBillingReadService::overview($stripe)['can_pay_online']);
+
+        $internal = $this->company('Internal Co');
+        Subscription::create(['company_id' => $internal->id, 'plan_key' => 'pro', 'interval' => 'monthly', 'status' => 'active', 'provider' => 'internal', 'is_current' => true, 'current_period_start' => now(), 'current_period_end' => now()->addMonth()]);
+        $this->assertFalse(CompanyBillingReadService::overview($internal)['can_pay_online'], 'internal provider cannot self-service pay');
+
+        $none = $this->company('No Sub Co');
+        $this->assertFalse(CompanyBillingReadService::overview($none)['can_pay_online'], 'no subscription → no online payment');
+    }
+
     public function test_failed_payment_on_open_invoice_is_a_payment_issue(): void
     {
         $c = $this->company('Failed Co');

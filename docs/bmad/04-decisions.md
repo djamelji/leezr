@@ -22501,3 +22501,13 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `tests/Feature/BillingInvoiceDetailTest.php` (+ vérif code `CompanyBillingController::invoicePdf`).
 
 ---
+
+### ADR-623 — Billing 3.0 / LOT 6f : payabilité réelle (capacité provider) (2026-10-25)
+
+**Contexte.** Le bouton « Payer » ne dépendait que du statut de facture, pas de la capacité réelle du fournisseur. Or `InternalPaymentAdapter::collectInvoice()` **lève une exception** (approbation manuelle) et `null` est no-op → seul **Stripe** collecte en self-service. Proposer « Payer » à un compte `internal` = simulation trompeuse menant à une impasse.
+**Décision.** `overview.can_pay_online = (provider === 'stripe')`. Front : le bouton « Payer » de la liste de factures et les actions de l'alerte paiement ne s'affichent que si `can_pay_online` ; sinon message **« contactez le support »** (`contactSupportToPay`). `_BillingInvoices` charge l'overview pour connaître la capacité. Chaîne complète respectée : UI → capacité provider → endpoint autorisé.
+**Preuves.** `BillingFinancialTruthTest::can_pay_online_only_for_stripe_provider` (stripe=vrai, internal/null=faux) ; suite 6 verts ; Playwright Company 4/4 (non-régression). Build clean.
+*Produit (en attente)* : parcours pay/portefeuille/résiliation bout-en-bout en navigateur (6f-produit / LOT 8).
+**Fichiers** : `app/Core/Billing/ReadModels/CompanyBillingReadService.php`, `resources/js/pages/company/billing/{_BillingInvoices,_BillingAlerts}.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/Feature/BillingFinancialTruthTest.php`.
+
+---

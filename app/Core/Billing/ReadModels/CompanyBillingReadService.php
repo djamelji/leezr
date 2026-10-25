@@ -153,6 +153,10 @@ class CompanyBillingReadService
             'has_failed_payment' => $hasFailedPayment,
             'has_payment_issue' => $invoicesOverdue > 0 || $hasFailedPayment
                 || ($subscription['status'] ?? null) === 'past_due',
+            // ADR-623 (LOT 6f): real self-service payability. Only the Stripe provider supports
+            // collectInvoice; `internal` throws (manual approval) and `null` is a no-op. A "Pay"
+            // action must NOT be offered when the provider cannot actually collect online.
+            'can_pay_online' => ($subscription['provider'] ?? null) === 'stripe',
             // ADR-585: consolidated finance summary sharing the Platform ledger definitions
             // (billed / paid / outstanding = ledger AR / overdue), per currency, in cents.
             'finance_summary' => self::financeSummary($company),

@@ -15,6 +15,10 @@ const { toast } = useAppToast()
 const isLoading = ref(true)
 const statusFilter = ref('')
 
+// ADR-623 (LOT 6f): a "Pay" action is only offered when the provider can actually collect online
+// (Stripe). internal/null providers cannot self-service pay → no misleading button.
+const canPayOnline = computed(() => store.overview?.can_pay_online === true)
+
 const headers = computed(() => [
   { title: t('companyBilling.invoiceNumber'), key: 'number' },
   { title: t('companyBilling.invoiceStatus'), key: 'status', width: '130px' },
@@ -97,7 +101,10 @@ const downloadPdf = async invoice => {
   }
 }
 
-onMounted(() => loadInvoices())
+onMounted(() => {
+  loadInvoices()
+  if (!store.overview) store.fetchOverview().catch(() => {}) // ensure payability capability is known
+})
 watch(statusFilter, () => loadInvoices(1))
 </script>
 
@@ -185,7 +192,7 @@ watch(statusFilter, () => loadInvoices(1))
               <VIcon icon="tabler-download" />
             </IconBtn>
             <VBtn
-              v-if="['open', 'overdue'].includes(item.status) && item.amount_due > 0"
+              v-if="canPayOnline && ['open', 'overdue'].includes(item.status) && item.amount_due > 0"
               v-can="'billing.manage'"
               size="small"
               variant="tonal"

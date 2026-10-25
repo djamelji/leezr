@@ -981,6 +981,7 @@
     "advancedActions": {
       "refund": "Refund…",
       "retryPayment": "Retry payment",
+      "contactSupportToPay": "Online payment is unavailable for your account — please contact support to settle this invoice.",
       "forceDunning": "Force dunning transition…",
       "creditNote": "Issue credit note…",
       "writeOff": "Write off"

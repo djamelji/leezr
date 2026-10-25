@@ -1397,6 +1397,7 @@
       "cancelPendingTitle": "Annulation programmée",
       "cancelPendingDesc": "Votre abonnement prendra fin le {date}.",
       "retryPayment": "Réessayer le paiement",
+      "contactSupportToPay": "Le paiement en ligne n'est pas disponible pour votre compte — contactez le support pour régler cette facture.",
       "changePaymentMethod": "Changer de moyen de paiement",
       "addPaymentMethod": "Ajouter un moyen de paiement",
       "billingSettings": "Paramètres de facturation",

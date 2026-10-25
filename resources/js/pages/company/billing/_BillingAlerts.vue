@@ -38,7 +38,11 @@ const { t } = useI18n()
     </span>
 
     <template #append>
-      <div class="d-flex gap-2">
+      <!-- ADR-623 (LOT 6f): online payment actions only when the provider can actually collect. -->
+      <div
+        v-if="overview.can_pay_online"
+        class="d-flex gap-2"
+      >
         <VBtn
           v-can="'billing.manage'"
           variant="tonal"
@@ -58,6 +62,12 @@ const { t } = useI18n()
           {{ t('companyBilling.overview.changePaymentMethod') }}
         </VBtn>
       </div>
+      <span
+        v-else
+        class="text-body-2"
+      >
+        {{ t('companyBilling.overview.contactSupportToPay') }}
+      </span>
     </template>
   </VAlert>
 
