@@ -22483,3 +22483,12 @@ E2E DEV a révélé un défaut réel : un rôle restreint (ex. `view_ai` seul) a
 **Fichiers** : `resources/js/pages/company/billing/_BillingPlan.vue`, `resources/js/plugins/i18n/locales/{en,fr}.json`, `tests/e2e/company-billing-overview.spec.js`.
 
 ---
+
+### ADR-621 — Billing 3.0 / LOT 6d : catalogue addons — activation ≠ droit ≠ souscription (2026-10-25)
+
+**Contexte.** L'UI confondait activation technique (`CompanyModule.is_enabled`), droit contractuel (entitlement) et **souscription payante** (`CompanyAddonSubscription`). Le prix contractuel figé n'était pas exposé.
+**Décision.** `ModuleCatalogReadModel::forCompany()` expose désormais, par module : `is_subscribed` (une souscription payante active existe — distinct de `is_active`/`is_entitled`/`is_included`), `contracted_amount_cents` (**snapshot HT figé** ADR-220, pas le prix catalogue courant), `subscribed_interval`. Le catalogue reste filtré par JobDomain unique (ADR-204). Aucune double souscription (clé unique (company, module), ADR-220).
+**Preuves.** `BillingAddonCatalogTest` (4 : prix contractuel figé exposé ; pas de prix si non souscrit ; pas de double souscription ; distinction portée par chaque entrée). Régression catalogue/entitlement/addon **62 verts**.
+**Fichiers** : `app/Core/Modules/ModuleCatalogReadModel.php`, `tests/Feature/BillingAddonCatalogTest.php`.
+
+---

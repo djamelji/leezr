@@ -2,6 +2,7 @@
 
 namespace App\Core\Modules;
 
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\Company;
 use App\Core\Plans\PlanRegistry;
@@ -37,6 +38,10 @@ class ModuleCatalogReadModel
 
         $entitlements = EntitlementResolver::allForCompany($company);
 
+        // ADR-621 (LOT 6d): the PAID addon subscriptions actually contracted (distinct from technical
+        // activation and from contractual entitlement). Carries the FROZEN snapshot price (ADR-220).
+        $addonSubs = CompanyAddonSubscription::where('company_id', $company->id)->active()->get()->keyBy('module_key');
+
         // ADR-167a: jobdomain is always present — structural invariant
         $jobdomain = $company->jobdomain;
         $companyPlan = CompanyEntitlements::planKey($company);
@@ -53,7 +58,7 @@ class ModuleCatalogReadModel
         return $platformModules
             ->sortBy(fn (PlatformModule $pm) => $pm->sort_order_override ?? $pm->sort_order)
             ->values()
-            ->map(function (PlatformModule $pm) use ($company, $companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan, $dependentsMap) {
+            ->map(function (PlatformModule $pm) use ($company, $companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan, $dependentsMap, $addonSubs) {
                 $cm = $companyModules->get($pm->key);
                 $capabilities = ModuleRegistry::capabilities($pm->key);
                 $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
@@ -125,6 +130,13 @@ class ModuleCatalogReadModel
                     'purchase_mode' => self::derivePurchaseMode($displayState),
                     'is_featured' => $manifest->marketplace['featured'] ?? false,
                     'is_included' => $displayState === ModuleDisplayState::INCLUDED,
+
+                    // ADR-621 (LOT 6d): paid-subscription truth, distinct from activation/entitlement.
+                    // is_subscribed = a real paid CompanyAddonSubscription exists; contracted_amount_cents
+                    // is its FROZEN snapshot price (HT) — NOT the current catalog price.
+                    'is_subscribed' => $addonSubs->has($pm->key),
+                    'contracted_amount_cents' => $addonSubs->get($pm->key)?->amount_cents,
+                    'subscribed_interval' => $addonSubs->get($pm->key)?->interval,
                 ];
             })
             ->filter()
