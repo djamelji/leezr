@@ -70,3 +70,6 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 | Addons catalogue | ✅ (ADR-621) | ⏳ UI 6g |
 | Détail facture + PDF | ✅ (ADR-622) | ⏳ render+PDF nav |
 | Paiements : bouton gaté capacité provider | ✅ (ADR-623) | ⏳ parcours pay/wallet/résiliation nav |
+
+## Observations perf
+- **BILL-perf-PDF** : le PDF facture embarque une police Google (fetch bloquant 5s + fichier ~882KB) → génération lente sur VPS. Optimisation future : mettre en cache la police TTF / utiliser DejaVu par défaut pour alléger et accélérer. Non bloquant (PDF valide).
