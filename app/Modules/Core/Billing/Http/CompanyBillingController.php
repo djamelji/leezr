@@ -176,8 +176,26 @@ class CompanyBillingController
 
         // ADR-626 (BILL-PERF-PDF): font subsetting embeds only the glyphs actually used → a much
         // lighter PDF (instead of the full ~800KB DejaVu face). No network, deterministic output.
+        // ADR-627 fix: on atomic deploys `storage/` is a symlink OUTSIDE base_path (the dompdf
+        // chroot), so dompdf cannot write the subset-font cache there (fwrite false). Point the font
+        // cache + temp dir to a writable path INSIDE the release (bootstrap/cache), and widen the
+        // chroot to also allow reading the bundled TTFs + the storage cache.
+        $fontCacheDir = base_path('bootstrap/cache/dompdf-fonts');
+        if (! is_dir($fontCacheDir)) {
+            @mkdir($fontCacheDir, 0775, true);
+        }
+        $chroot = array_values(array_unique(array_filter([
+            realpath(base_path()),
+            realpath(storage_path()),
+            $fontCacheDir,
+        ])));
+
         $render = fn (array $data) => \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', $data)
             ->setOption('isFontSubsettingEnabled', true)
+            ->setOption('fontDir', $fontCacheDir)
+            ->setOption('fontCache', $fontCacheDir)
+            ->setOption('tempDir', $fontCacheDir)
+            ->setOption('chroot', $chroot)
             ->output();
 
         try {
