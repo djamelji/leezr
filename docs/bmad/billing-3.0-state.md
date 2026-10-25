@@ -68,8 +68,8 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 | Factures liste | ✅ (ADR-619) | ✅ Playwright |
 | Plan | ✅ | ✅ Playwright (HT) |
 | Addons catalogue | ✅ (ADR-621) | ⏳ UI 6g |
-| Détail facture + PDF | ✅ (ADR-622) | ✅ (ADR-625/626) parcours complet LOCAL+DEV, PDF `%PDF-` 13,7s |
+| Détail facture + PDF | ✅ (ADR-622) | ✅ (ADR-625/626/627) parcours complet LOCAL+DEV — **PDF Poppins premium local, 19,7Ko, DEV 11,6s** |
 | Paiements : bouton gaté capacité provider | ✅ (ADR-623) | ⏳ parcours pay/wallet/résiliation nav |
 
 ## Observations perf
-- **BILL-perf-PDF** : ✅ **CORRIGÉ (ADR-626)** — fetch Google supprimé (DejaVu bundlée) + font subsetting → 882 KB→22,6 KB, 77 ms, aucun réseau. Test `BillingPdfPerfTest`.
+- **BILL-perf-PDF** : ✅ **CORRIGÉ (ADR-626+627)** — fetch Google supprimé ; **Poppins premium bundlé** (repo, OFL) + subsetting → 882 KB→**18-20 KB**, ~80-370 ms, **aucun réseau** ; chroot/font-cache réglé pour déploiements atomiques. Vérifié DEV (téléchargement 11,6s). Tests `BillingPdfPerfTest`.
