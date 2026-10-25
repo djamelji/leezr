@@ -83,7 +83,11 @@
 - Dimensions documentées : source (`PlatformBillingPolicy` singleton), permission (`manage_billing`), validation (Rule::in + invariants use case), traçabilité (`BILLING_POLICY_UPDATED` + diff), portée globale, impact forward-only (ADR-587/593).
 - **Bug fatal corrigé** : `cancelPreview` référençait `App\Core\Billing\BillingPolicy` (inexistant) → lit désormais `PlatformBillingPolicy::instance()->downgrade_timing` (même source que la résiliation). Verrouillé `CancelPreviewPolicyTest`.
 - **LOT 7E : TERMINÉ.** → **LOT 7 PLATFORM COMPLET** (7A cockpit, 7B revenus, 7C recouvrement, 7D supervision, 7E config).
-- Prochain : **LOT 5** (audit opérationnel des automatisations) puis **LOT 8** (matrice multi-persona + parcours Company incomplets).
+
+## LOT 5 — automatisations (supervision) · ADR-631i
+- 10 commandes planifiées (`routes/console.php`, `withoutOverlapping`) auditées : renew/dunning/reconcile/recover-webhooks/recover-checkouts/check-dlq/collect-scheduled/expire-trials/check-trial-expiring/check-expiring-cards. Détail : `docs/bmad/billing-automations-audit-5.md`.
+- **Gap corrigé** : 4 commandes (collect-scheduled SEPA, expire-trials, check-trial-expiring, check-expiring-cards) tournaient sans heartbeat → instrumentées. Supervision via `BillingJobHeartbeat` → onglet recovery + Prometheus. Dry-run n'enregistre pas de heartbeat. Verrouillé `BillingAutomationHeartbeatTest`.
+- **LOT 5 : TERMINÉ.** Prochain : **LOT 8** (matrice multi-persona + parcours Company incomplets : wallet, résiliation, providers).
 
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).

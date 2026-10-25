@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Core\Notifications\NotificationDispatcher;
@@ -25,6 +26,12 @@ class BillingCheckTrialExpiringCommand extends Command implements Isolatable
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+
+        // ADR-631i: supervisable automation.
+        if (! $dryRun) {
+            BillingJobHeartbeat::start('billing:check-trial-expiring');
+        }
+
         $days = PlatformBillingPolicy::instance()->trial_expiry_notification_days ?? 3;
         $threshold = now()->addDays($days);
 
@@ -97,6 +104,13 @@ class BillingCheckTrialExpiringCommand extends Command implements Isolatable
             'total' => $subscriptions->count(),
             'notified' => $notified,
         ]);
+
+        if (! $dryRun) {
+            BillingJobHeartbeat::finish('billing:check-trial-expiring', 'ok', [
+                'total' => $subscriptions->count(),
+                'notified' => $notified,
+            ]);
+        }
 
         return self::SUCCESS;
     }

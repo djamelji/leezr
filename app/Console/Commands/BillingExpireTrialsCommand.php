@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\Subscription;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -28,6 +29,11 @@ class BillingExpireTrialsCommand extends Command implements Isolatable
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+
+        // ADR-631i: supervisable automation — record a heartbeat so ops can see it actually ran.
+        if (! $dryRun) {
+            BillingJobHeartbeat::start('billing:expire-trials');
+        }
 
         $subscriptions = Subscription::where('status', 'trialing')
             ->where('is_current', 1)
@@ -72,6 +78,13 @@ class BillingExpireTrialsCommand extends Command implements Isolatable
             'total' => $subscriptions->count(),
             'expired' => $expired,
         ]);
+
+        if (! $dryRun) {
+            BillingJobHeartbeat::finish('billing:expire-trials', 'ok', [
+                'total' => $subscriptions->count(),
+                'expired' => $expired,
+            ]);
+        }
 
         return self::SUCCESS;
     }

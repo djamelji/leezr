@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Notifications\NotificationDispatcher;
 use App\Notifications\Billing\PaymentMethodExpiring;
@@ -24,6 +25,12 @@ class BillingCheckExpiringCardsCommand extends Command implements Isolatable
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+
+        // ADR-631i: supervisable automation.
+        if (! $dryRun) {
+            BillingJobHeartbeat::start('billing:check-expiring-cards');
+        }
+
         $now = now();
         $currentMonth = (int) $now->format('n');
         $currentYear = (int) $now->format('Y');
@@ -122,6 +129,13 @@ class BillingCheckExpiringCardsCommand extends Command implements Isolatable
             'total' => $profiles->count(),
             'notified' => $notified,
         ]);
+
+        if (! $dryRun) {
+            BillingJobHeartbeat::finish('billing:check-expiring-cards', 'ok', [
+                'total' => $profiles->count(),
+                'notified' => $notified,
+            ]);
+        }
 
         return self::SUCCESS;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\DunningEngine;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\PaymentGatewayManager;
@@ -28,6 +29,11 @@ class BillingCollectScheduledCommand extends Command implements Isolatable
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+
+        // ADR-631i: supervisable automation — SEPA collection must be visible in ops monitoring.
+        if (! $dryRun) {
+            BillingJobHeartbeat::start('billing:collect-scheduled');
+        }
 
         $dueDebits = ScheduledDebit::with(['invoice', 'invoice.company', 'paymentProfile'])
             ->pending()
@@ -104,6 +110,10 @@ class BillingCollectScheduledCommand extends Command implements Isolatable
         }
 
         $this->info("Scheduled debits: {$stats['processed']} processed, {$stats['collected']} collected, {$stats['failed']} failed, {$stats['skipped']} skipped");
+
+        if (! $dryRun) {
+            BillingJobHeartbeat::finish('billing:collect-scheduled', $stats['failed'] > 0 ? 'alert' : 'ok', $stats);
+        }
 
         return self::SUCCESS;
     }

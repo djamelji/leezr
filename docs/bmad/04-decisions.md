@@ -22701,3 +22701,17 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `resources/js/pages/platform/settings/_SettingsBilling.vue`, `app/Modules/Platform/Companies/Http/CompanySubscriptionAdminController.php`, `docs/bmad/billing-config-audit-7E.md`, `tests/Feature/CancelPreviewPolicyTest.php`.
 
 ---
+
+### ADR-631i — Billing 3.0 / LOT 5 : automatisations 100 % supervisables (2026-10-25)
+
+**Contexte.** Audit opérationnel des automatisations billing (`routes/console.php`) : planification, exécution réelle, supervision. Détail : `docs/bmad/billing-automations-audit-5.md`.
+
+**Constat.** 10 commandes planifiées (`withoutOverlapping`) : renew (quotidien), dunning (quotidien), reconcile (hebdo), recover-webhooks/checkouts (10 min), check-dlq (horaire), collect-scheduled (06:00), expire-trials/check-trial-expiring/check-expiring-cards (quotidien). Supervision via `BillingJobHeartbeat` (ADR-233) exposée à l'UI (onglet recovery) + Prometheus. **Gap** : seules 6 des 10 enregistraient un heartbeat — `collect-scheduled` (**encaissement SEPA**), `expire-trials` (état d'abonnement), `check-trial-expiring`, `check-expiring-cards` tournaient **en aveugle** (non supervisables).
+
+**Décision.** Instrumentation `BillingJobHeartbeat::start()/finish()` des 4 commandes manquantes (statut `alert` si échecs sur collect-scheduled). Le **dry-run n'enregistre pas** de heartbeat (ne pas simuler une exécution réelle).
+
+**Conséquences.** Les 10 automatisations sont supervisables (dernier run / statut / stats / erreur) depuis l'UI et le monitoring. 
+**Preuves.** PHPUnit `BillingAutomationHeartbeatTest` (4 commandes → heartbeat `finished`/`ok` ; dry-run → aucun heartbeat).
+**Fichiers** : `app/Console/Commands/{BillingCollectScheduledCommand,BillingExpireTrialsCommand,BillingCheckTrialExpiringCommand,BillingCheckExpiringCardsCommand}.php`, `docs/bmad/billing-automations-audit-5.md`, `tests/Feature/BillingAutomationHeartbeatTest.php`.
+
+---
