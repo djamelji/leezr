@@ -22556,3 +22556,11 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Modules/Core/Billing/Http/CompanyBillingController.php`, `resources/fonts/poppins/*.ttf` + `LICENSE.md`, `tests/Feature/BillingPdfPerfTest.php`.
 
 ---
+
+### ADR-628 — Billing 3.0 / LOT 6g-C : parcours paiements / portefeuille / résiliation Company (2026-10-25)
+
+**Produit.** Couverture navigateur des écrans financiers Company pour le persona owner (provider **internal**, `can_pay_online=false`) : onglet **moyens de paiement**, onglet **activité/portefeuille**, page **paiement par lot** — tous rendent **sans erreur JS**. La **fiabilité** (bouton « Payer » gaté par la capacité réelle du provider : Stripe collecte, internal/null non) est déjà prouvée (ADR-623) ; aucun paiement externe réel déclenché.
+**Niveau de couverture** : rendu + navigation (shell billing + onglets). Les parcours data-dépendants (mouvements wallet, confirmation résiliation) restent à étoffer avec un jeu de recette dédié (LOT 8).
+**Fichiers** : `tests/e2e/company-payments-journeys.spec.js`.
+
+---

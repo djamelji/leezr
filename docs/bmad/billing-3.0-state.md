@@ -69,7 +69,11 @@ Recette backend prête (`BillingRecetteSeeder`, 3 cas, seedé sur DEV). Persona 
 | Plan | ✅ | ✅ Playwright (HT) |
 | Addons catalogue | ✅ (ADR-621) | ⏳ UI 6g |
 | Détail facture + PDF | ✅ (ADR-622) | ✅ (ADR-625/626/627) parcours complet LOCAL+DEV — **PDF Poppins premium local, 19,7Ko, DEV 11,6s** |
-| Paiements : bouton gaté capacité provider | ✅ (ADR-623) | ⏳ parcours pay/wallet/résiliation nav |
+| Paiements / wallet / résiliation | ✅ (ADR-623) | ✅ (ADR-628) rendu+nav (methods/activity/pay, 0 erreur JS, gating internal) — parcours data (wallet/cancel) → LOT 8 |
 
 ## Observations perf
 - **BILL-perf-PDF** : ✅ **CORRIGÉ (ADR-626+627)** — fetch Google supprimé ; **Poppins premium bundlé** (repo, OFL) + subsetting → 882 KB→**18-20 KB**, ~80-370 ms, **aucun réseau** ; chroot/font-cache réglé pour déploiements atomiques. Vérifié DEV (téléchargement 11,6s). Tests `BillingPdfPerfTest`.
+
+## Matrice qualité — points de vérification ouverts (non bloquants)
+- **PDF factures longues / annexes / sauts de page / alignements** : vérification visuelle à mener (facture multi-lignes + annexes A/B). Statut : ⏳ ouvert (n'empêche pas les autres lots).
+- **Décomposition du parcours Playwright PDF (~11,6 s DEV)** : génération PDF mesurée **≈ 0,37 s** (tinker DEV) ; le reste ≈ login persona (~3–5 s, waitForURL + attente) + 3 navigations `networkidle` (~2 s chacune) + transfert PDF (léger, 19,7 Ko). → **La génération/transfert PDF est marginale (<1 s)** ; le temps est dominé par login + navigations de test, pas par le PDF. Statut : documenté.
