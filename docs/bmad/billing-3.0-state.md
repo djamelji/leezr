@@ -101,6 +101,12 @@
 - ADR de ce cycle : 631 (7A), 631b (7B montants), 631c/d (void + protection avoir backend), 631e (tarifaire/HT), 631f (7C impact), 631g (7D dead-letter), 631h (7E config), 631i (LOT5 heartbeats), 631j (LOT8 matrice).
 - Garde-fous respectés tout le cycle : aucun push main, aucun déploiement PROD, aucune écriture financière réelle, ADR-575/593 intacts (aucun renouvellement rétroactif, aucune confirmation auto de prix provisional).
 
+## MISE EN SERVICE PROD — 2026-10-26 ✅
+- **Billing 3.0 EN SERVICE sur leezr.com.** `origin/main` = `e963264` (ff `1097d8a..e963264`, sans force). Release servie : `releases/20261026215934_e963264` (runtime commit confirmé `e963264`). Workflow PROD `success` (build+deploy).
+- Santé : `/up`+home → 200, 0 erreur Laravel, scheduler+worker actifs, 0 migration (no-op), assets OK. SystemSeeder = sync référentiel **sans impact financier** (Σ prix contractés 10800¢ inchangé).
+- **Données financières identiques à la baseline** (subs 3/2, 4 factures, 0 void, ledger 13, dlq 0). **2 abonnements provisional restent bloqués** (#1=2900¢, #3=7900¢, source `provisional` inchangée, cockpit `blocked_renewals=2`) — aucune confirmation, aucun renouvellement rétroactif, aucun prélèvement (driver `null`).
+- **Rollback disponible** : `releases/20261024191921_1097d8a` présent/intact (repointage symlink, 0 migration à réverser).
+
 ## RECETTE FINALE (préproduction) — voir `docs/bmad/billing-3.0-recette-finale.md`
 - **Verdict : GO AVEC RÉSERVES.** Suite complète : **3224 ✅ / 1 ❌ (non-billing, pré-existant Email/Workforce, identique sur main) / 12 skip (env)**. 0 régression imputable Billing 3.0. **0 migration** → rollback = redeploy.
 - Correctifs recette : 2 contrôleurs billing ramenés sous 250 lignes ; seeder étendu (dead-letter, void, non-échue, portefeuille) → 9 scénarios seedés sur DEV + interactions réelles exercées (dead-letter inspect, blocked-renewal). Heartbeat : succès/échec/absence/crash distinguables (`BillingHeartbeatStatesTest`).
