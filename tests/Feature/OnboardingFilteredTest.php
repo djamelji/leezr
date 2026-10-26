@@ -71,22 +71,39 @@ class OnboardingFilteredTest extends TestCase
         return $this->actingAs($user)->withHeaders(['X-Company-Id' => $this->company->id]);
     }
 
-    public function test_owner_sees_6_onboarding_steps(): void
+    public function test_owner_sees_5_steps_without_card_capable_provider(): void
     {
+        // No Stripe subscription → adding a card is impossible → payment_method step is EXCLUDED
+        // (audit post-prod: never leave the owner stuck at an unreachable 6th step).
+        $response = $this->actAs($this->owner)->getJson('/api/dashboard/onboarding');
+
+        $response->assertOk();
+        $this->assertCount(5, $response->json('steps'));
+        $this->assertEquals(5, $response->json('total_count'));
+
+        $keys = collect($response->json('steps'))->pluck('key')->all();
+        $this->assertNotContains('payment_method', $keys, 'payment_method not applicable without a card-capable provider');
+        $this->assertContains('account_created', $keys);
+        $this->assertContains('company_profile', $keys);
+        $this->assertContains('invite_member', $keys);
+        $this->assertContains('activate_module', $keys);
+        $this->assertContains('first_document', $keys);
+    }
+
+    public function test_payment_method_step_appears_with_stripe_provider(): void
+    {
+        \App\Core\Billing\Subscription::create([
+            'company_id' => $this->company->id, 'plan_key' => 'starter', 'interval' => 'monthly',
+            'status' => 'active', 'provider' => 'stripe', 'is_current' => true, 'plan_price_cents' => 2900,
+            'plan_price_source' => 'subscribed', 'current_period_start' => now(), 'current_period_end' => now()->addMonth(),
+        ]);
+
         $response = $this->actAs($this->owner)->getJson('/api/dashboard/onboarding');
 
         $response->assertOk();
         $this->assertCount(6, $response->json('steps'));
-        $this->assertEquals(6, $response->json('total_count'));
-
         $keys = collect($response->json('steps'))->pluck('key')->all();
-        $this->assertContains('account_created', $keys);
-        $this->assertContains('company_profile', $keys);
-        $this->assertContains('payment_method', $keys);
-        $this->assertContains('invite_member', $keys);
-        $this->assertContains('activate_module', $keys);
-        $this->assertContains('first_document', $keys);
-        $this->assertNotContains('plan_selected', $keys);
+        $this->assertContains('payment_method', $keys, 'payment_method applicable with Stripe provider');
     }
 
     public function test_non_owner_gets_403(): void
@@ -139,7 +156,7 @@ class OnboardingFilteredTest extends TestCase
         $response->assertOk();
         $this->assertNull($this->company->fresh()->onboarding_dismissed_at);
         $this->assertArrayHasKey('steps', $response->json());
-        $this->assertCount(6, $response->json('steps'));
+        $this->assertCount(5, $response->json('steps')); // no card-capable provider → 5 steps
         $this->assertArrayNotHasKey('dismissed', $response->json());
     }
 
