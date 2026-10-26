@@ -49,8 +49,9 @@
 - Les 4 commandes nouvellement instrumentées (collect-scheduled, expire-trials, check-trial-expiring, check-expiring-cards) **enregistrent désormais un heartbeat** (bénin, lecture/écriture sur table heartbeat uniquement). Aucun nouveau job mutant, aucun événement financier nouveau.
 - `cancelPreview` ne fait plus d'erreur fatale (lisait une classe inexistante) → appel read-only de la policy.
 
-### Rollback
-- **0 migration ⇒ rollback = repointage du symlink `current` sur `…_8573ba8`** (release précédente, présente). Aucune réversion de schéma/donnée nécessaire.
+### Rollback (CORRIGÉ — restaure EXACTEMENT la version en service)
+- Cible de rollback = **la release physique servant actuellement `1097d8a`** : `releases/20261024191921_1097d8a` (vérifiée intacte : artisan, vendor 40 pkg, public/build ; `.env` + `storage` = symlinks **partagés** préservés quel que soit `current`). **Jamais une version plus ancienne (8573ba8 écarté).**
+- **0 migration ⇒ rollback = repointage atomique du symlink `current` sur `releases/20261024191921_1097d8a`.** Aucune réversion de schéma/donnée. Comme `.env`/`storage` sont partagés, la config et l'état sont identiques après repointage.
 
 ### Contrôles de santé post-déploiement
 1. SHA servi PROD = `a6a767d` (lecture symlink `current`).
@@ -121,8 +122,10 @@ git push origin main                  # déclenche le workflow de déploiement P
 #    - cockpit : KPI renouvellements bloqués == 2
 #    - heartbeats == ok
 
-# 3. Rollback si besoin (aucune migration à réverser)
-#    repointer le symlink current sur releases/..._8573ba8 (procédure déploiement atomique)
+# 3. Rollback si besoin (aucune migration à réverser) — RESTAURE EXACTEMENT 1097d8a
+#    ln -sfn /var/www/clients/client1/web2/releases/20261024191921_1097d8a \
+#            /var/www/clients/client1/web2/current
+#    (puis reload php-fpm/opcache ; .env + storage partagés → inchangés)
 ```
 
 **Aucune commande ci-dessus n'est exécutée sans autorisation explicite de l'utilisateur.**
