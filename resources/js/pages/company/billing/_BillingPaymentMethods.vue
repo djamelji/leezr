@@ -69,6 +69,11 @@ const updateDebitDay = async (profileId, day) => {
 const allowedPaymentMethods = computed(() => store.overview?.allowed_payment_methods ?? ['card'])
 const showSepaOption = computed(() => allowedPaymentMethods.value.includes('sepa_debit'))
 
+// ADR-623 / audit post-prod: only a provider that can actually collect online (Stripe) supports
+// registering a card. With provider null/internal (can_pay_online=false), we must NOT offer a card
+// form the owner cannot complete — show a professional "unavailable" state instead (no trap button).
+const canRegisterCard = computed(() => store.overview?.can_pay_online === true)
+
 // Delete confirmation
 const deletingCard = ref(null)
 
@@ -118,6 +123,9 @@ const fundingLabel = funding => {
 // ── Add Payment Method ──
 
 const showAddPicker = () => {
+  if (!canRegisterCard.value) {
+    return // defensive: no card registration when the provider cannot collect online
+  }
   if (store.savedCards.length >= store.maxPaymentMethods) {
     toast(t('companyBilling.maxMethodsReached'), 'warning')
 
@@ -412,8 +420,27 @@ const executeDelete = async () => {
         </template>
       </VAlert>
 
-      <!-- Empty state -->
-      <VCard v-if="!loadError && store.savedCards.length === 0 && !showMethodPicker && !showCardForm && !showSepaForm">
+      <!-- Online payment UNAVAILABLE (provider null/internal) — professional state, no trap button -->
+      <VCard v-if="!loadError && !canRegisterCard && store.savedCards.length === 0">
+        <EmptyState
+          icon="tabler-credit-card-off"
+          :title="t('companyBilling.onlinePaymentUnavailable')"
+          :description="t('companyBilling.onlinePaymentUnavailableDesc')"
+          data-test="pm-unavailable"
+        >
+          <VBtn
+            variant="tonal"
+            color="primary"
+            prepend-icon="tabler-headset"
+            :to="{ name: 'company-support' }"
+          >
+            {{ t('companyBilling.contactSupport') }}
+          </VBtn>
+        </EmptyState>
+      </VCard>
+
+      <!-- Empty state (provider can register a card) -->
+      <VCard v-else-if="!loadError && canRegisterCard && store.savedCards.length === 0 && !showMethodPicker && !showCardForm && !showSepaForm">
         <EmptyState
           icon="tabler-credit-card"
           :title="t('companyBilling.noPaymentMethods')"
@@ -609,7 +636,7 @@ const executeDelete = async () => {
 
         <!-- Add another card (dashed placeholder) — replaced by picker/form when clicked -->
         <VCol
-          v-if="store.savedCards.length < store.maxPaymentMethods && !showMethodPicker && !showCardForm && !showSepaForm"
+          v-if="canRegisterCard && store.savedCards.length < store.maxPaymentMethods && !showMethodPicker && !showCardForm && !showSepaForm"
           cols="12"
           sm="6"
         >
