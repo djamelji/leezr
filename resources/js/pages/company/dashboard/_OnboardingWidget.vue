@@ -23,7 +23,7 @@ const allCompleted = computed(() => steps.value && completedCount.value === tota
 const stepMeta = {
   account_created: { icon: 'tabler-user-check', label: 'onboarding.steps.accountCreated.label', to: null },
   company_profile: { icon: 'tabler-building', label: 'onboarding.steps.companyProfile.label', to: '/company/profile/overview' },
-  payment_method: { icon: 'tabler-wallet', label: 'onboarding.steps.paymentMethod.label', to: '/company/billing?tab=payment-methods' },
+  payment_method: { icon: 'tabler-wallet', label: 'onboarding.steps.paymentMethod.label', to: { name: 'company-billing-tab', params: { tab: 'payment-methods' } } },
   invite_member: { icon: 'tabler-users-plus', label: 'onboarding.steps.inviteMember.label', to: '/company/members' },
   activate_module: { icon: 'tabler-puzzle', label: 'onboarding.steps.activateModule.label', to: '/company/modules' },
   first_document: { icon: 'tabler-file-upload', label: 'onboarding.steps.firstDocument.label', to: { name: 'company-documents-tab', params: { tab: 'overview' } } },

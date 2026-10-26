@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     'audience-unsubscribe': RouteRecordInfo<'audience-unsubscribe', '/audience/unsubscribe', Record<never, never>, Record<never, never>>,
     'company403': RouteRecordInfo<'company403', '/company/403', Record<never, never>, Record<never, never>>,
     'company-audit': RouteRecordInfo<'company-audit', '/company/audit', Record<never, never>, Record<never, never>>,
+    'company-billing': RouteRecordInfo<'company-billing', '/company/billing', Record<never, never>, Record<never, never>>,
     'company-billing-billing-alerts': RouteRecordInfo<'company-billing-billing-alerts', '/company/billing/_BillingAlerts', Record<never, never>, Record<never, never>>,
     'company-billing-billing-cancel-dialog': RouteRecordInfo<'company-billing-billing-cancel-dialog', '/company/billing/_BillingCancelDialog', Record<never, never>, Record<never, never>>,
     'company-billing-billing-cards': RouteRecordInfo<'company-billing-billing-cards', '/company/billing/_BillingCards', Record<never, never>, Record<never, never>>,
