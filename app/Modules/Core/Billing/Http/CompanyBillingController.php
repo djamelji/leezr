@@ -134,9 +134,7 @@ class CompanyBillingController
             ->where('status', '!=', 'failed')
             ->get();
 
-        // Resolve platform typography for font embedding in PDF.
-        // DomPDF needs TTF (not WOFF2). For Google Fonts, fetch the CSS with
-        // an old user-agent so Google serves TTF @font-face declarations.
+        // Resolve platform typography for font embedding in PDF (local TTF only — see ADR-627 below).
         try {
             $typography = \App\Core\Typography\TypographyResolverService::forPlatform();
         } catch (\Throwable) {
