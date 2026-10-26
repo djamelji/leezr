@@ -101,6 +101,12 @@
 - ADR de ce cycle : 631 (7A), 631b (7B montants), 631c/d (void + protection avoir backend), 631e (tarifaire/HT), 631f (7C impact), 631g (7D dead-letter), 631h (7E config), 631i (LOT5 heartbeats), 631j (LOT8 matrice).
 - Garde-fous respectés tout le cycle : aucun push main, aucun déploiement PROD, aucune écriture financière réelle, ADR-575/593 intacts (aucun renouvellement rétroactif, aucune confirmation auto de prix provisional).
 
+## RECETTE FINALE (préproduction) — voir `docs/bmad/billing-3.0-recette-finale.md`
+- **Verdict : GO AVEC RÉSERVES.** Suite complète : **3224 ✅ / 1 ❌ (non-billing, pré-existant Email/Workforce, identique sur main) / 12 skip (env)**. 0 régression imputable Billing 3.0. **0 migration** → rollback = redeploy.
+- Correctifs recette : 2 contrôleurs billing ramenés sous 250 lignes ; seeder étendu (dead-letter, void, non-échue, portefeuille) → 9 scénarios seedés sur DEV + interactions réelles exercées (dead-letter inspect, blocked-renewal). Heartbeat : succès/échec/absence/crash distinguables (`BillingHeartbeatStatesTest`).
+- Playwright DEV (SHA servi) : 14/14 (cockpit 3, tabs 1, company-overview 5, persona-matrix 5).
+- **Réserves opérateur** (hors code) : config/secrets/providers PROD, scheduler+worker actifs, cycle Stripe réel bout-en-bout à jouer sur env doté de Stripe. Dette non-billing : 2 contrôleurs Email/Workforce > 250 l. (ticket séparé).
+
 ## Point de reprise (précis)
 Prochain incrément : **LOT 7B (suite)** — audit visuel + vérité des écrans plans / addons-pricing / invoices / payments. Puis **LOT 7C** (encaissement/recouvrement : dunning, scheduled-debits, credit-notes, coupons, wallets), **7D** (gouvernance/supervision : forensics, governance, ledger, recovery, reconciliation), **7E** (configuration : vérification poussée de chaque paramètre financier). Puis **LOT 5** (automatisations), **LOT 8** (matrice multi-persona).
 ~~Prochain incrément : **LOT 6b**~~ — refonte des écrans Company restants (`_BillingPlan` comparaison/changement, `_BillingInvoices` liste, `invoices/[id]` détail, `_BillingPaymentMethods`, `pay.vue`, portefeuille/timeline, résiliation) avec HT/TTC qualifié + Playwright par écran (owner). Puis **LOT 7** (15 onglets Platform, en réutilisant la recette), **LOT 5** (audit automatisations), **LOT 8** (personas + matrice complète).
