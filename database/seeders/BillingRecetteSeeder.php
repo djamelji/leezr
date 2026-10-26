@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Core\Billing\BillingWebhookDeadLetter;
 use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceLine;
 use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
+use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\App;
@@ -31,10 +33,61 @@ class BillingRecetteSeeder extends Seeder
             return;
         }
 
-        $this->seedOverdueProvisionalCase();      // reproduces Leezr Logistics
-        $this->seedHealthyPaidCase();             // confirmed price, paid, card on file
-        $this->seedOverdueFailedPaymentCase();    // genuine payment problem
+        $this->seedOverdueProvisionalCase();      // reproduces Leezr Logistics — blocked renewal (provisional)
+        $this->seedHealthyPaidCase();             // confirmed price, paid, card on file — cancellable subscription
+        $this->seedOverdueFailedPaymentCase();    // genuine payment problem — failed payment + overdue invoice
         $this->seedOwnerCompanyInvoice();         // a finalized invoice on the owner persona's company (browser recette)
+        $this->seedOperationalArtifactsCase();    // dead-letter + void + not-due invoices + wallet movements
+    }
+
+    /**
+     * Operational artifacts for the recette matrix (LOT 8 / recette finale) — the remaining scenarios
+     * that let the real UI interactions be exercised (not frontend-faked):
+     *   - a financial dead-letter (inspectable + replayable, ADR-631g);
+     *   - a VOID invoice (status truth + forbidden credit-note guard, ADR-631c/d);
+     *   - a NOT-DUE invoice (open, due in the future);
+     *   - a wallet with real credit/debit movements (activity/history).
+     */
+    private function seedOperationalArtifactsCase(): void
+    {
+        // 1) A pending financial dead-letter (idempotent on event_id).
+        BillingWebhookDeadLetter::updateOrCreate(
+            ['event_id' => 'evt_recette_failed_1'],
+            [
+                'provider_key' => 'stripe',
+                'event_type' => 'invoice.payment_failed',
+                'payload' => ['id' => 'evt_recette_failed_1', 'type' => 'invoice.payment_failed', 'data' => ['object' => ['amount_due' => 3480, 'currency' => 'eur', 'attempt_count' => 2]]],
+                'error_message' => 'Signature verification failed (recette fixture)',
+                'failed_at' => now()->subHours(2),
+                'status' => 'pending',
+                'replay_attempts' => 1,
+            ],
+        );
+
+        // 2) A company carrying a void invoice, a not-due invoice, and wallet movements.
+        $c = Company::firstOrCreate(['name' => '[RECETTE] Financial Artifacts'], ['slug' => uniqid('recette-'), 'market_key' => 'FR', 'address_country_code' => 'FR', 'jobdomain_key' => 'logistique']);
+        $this->wipe($c);
+        Invoice::where('company_id', $c->id)->delete();
+
+        $sub = Subscription::create([
+            'company_id' => $c->id, 'plan_key' => 'pro', 'interval' => 'monthly', 'status' => 'active',
+            'provider' => 'internal', 'is_current' => true, 'plan_price_cents' => 2900, 'plan_price_source' => 'subscribed',
+            'current_period_start' => now()->subDays(10), 'current_period_end' => now()->addDays(20),
+        ]);
+
+        // Not-due invoice (open, future due date).
+        $notDue = $this->invoice($c, 'INV-RECETTE-NOTDUE', null, null, 2900, 580, now()->addDays(20), 'open', null, $sub->id);
+        $this->line($notDue, 'plan', null, '[RECETTE] Plan Pro (not due)', 2900);
+
+        // Void invoice (finalized then voided) — exercises void status + forbidden credit-note guard.
+        $void = $this->invoice($c, 'INV-RECETTE-VOID', null, null, 2900, 580, now()->subDays(5), 'void', null, $sub->id);
+        $void->update(['voided_at' => now()->subDays(1), 'amount_due' => 0]);
+        $this->line($void, 'plan', null, '[RECETTE] Plan Pro (voided)', 2900);
+
+        // Wallet movements (credit then partial debit) — activity/history recette.
+        WalletLedger::ensureWallet($c);
+        WalletLedger::credit($c, 5000, 'recette_fixture', null, '[RECETTE] Crédit initial', 'system', null, 'recette-wallet-credit');
+        WalletLedger::debit($c, 1500, 'recette_fixture', null, '[RECETTE] Débit partiel', 'system', null, 'recette-wallet-debit');
     }
 
     /**
