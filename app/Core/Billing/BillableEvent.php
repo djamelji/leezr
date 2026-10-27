@@ -36,7 +36,7 @@ class BillableEvent extends Model
         'contractual_period_start', 'contractual_period_end',
         'price_snapshot_cents', 'proration_num', 'proration_den', 'rounding', 'amount_ht_cents',
         'tax_context_snapshot', 'commercial_policy_version',
-        'status', 'reserved_by_run_id', 'reserved_at', 'invoice_line_id', 'compensation_of_event_id',
+        'status', 'bill_immediately', 'reserved_by_run_id', 'reserved_at', 'invoice_line_id', 'compensation_of_event_id',
         'idempotency_key',
     ];
 
@@ -54,6 +54,7 @@ class BillableEvent extends Model
             'amount_ht_cents' => 'integer',
             'tax_context_snapshot' => 'array',
             'reserved_at' => 'datetime',
+            'bill_immediately' => 'boolean',
             'invoice_line_id' => 'integer',
             'compensation_of_event_id' => 'integer',
         ];

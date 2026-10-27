@@ -101,19 +101,25 @@ class BillingRun
 
                 $billedPrestations = [];
 
-                // Lignes récurrentes (plan + modules) — skip celles déjà couvertes par le watermark.
+                // Lignes récurrentes (plan + modules) — skip celles déjà couvertes (watermark OU intervalle).
+                $coverageToRecord = [];
                 foreach ($breakdown->lines as $pl) {
                     /** @var PriceLine $pl */
                     if (in_array($pl->type, ['plan', 'addon'], true)) {
                         $key = $pl->type === 'plan' ? 'plan' : $pl->moduleKey;
                         $wm = $watermarks->get($key);
-                        if ($wm && $wm->billed_through && $wm->billed_through->gte($periodEnd)) {
-                            continue; // déjà facturée pour cette période → pas de double
+                        if (($wm && $wm->billed_through && $wm->billed_through->gte($periodEnd))
+                            || BillingCoverage::overlaps($sub->id, $key, $currency, $periodStart, $periodEnd)) {
+                            continue; // déjà couverte (watermark ou intervalle facturé) → pas de double
                         }
                         $billedPrestations[$key] = true;
                     }
-                    InvoiceIssuer::addLine($invoice, $pl->type, $pl->description, $pl->unitAmount, $pl->quantity, $pl->moduleKey,
+                    $line = InvoiceIssuer::addLine($invoice, $pl->type, $pl->description, $pl->unitAmount, $pl->quantity, $pl->moduleKey,
                         $periodStart->toDateString(), $periodEnd->toDateString());
+                    if (isset($key) && isset($billedPrestations[$key])) {
+                        $coverageToRecord[] = [$key, $periodStart, $periodEnd, $line->id];
+                    }
+                    $key = null;
                 }
 
                 // Proratas antérieurs : réserver puis facturer + lier (markInvoiced).
@@ -126,6 +132,9 @@ class BillingRun
                         ($ev->module_key ?? $ev->type).' — prorata', (int) $ev->amount_ht_cents, 1, $ev->module_key,
                         optional($ev->service_period_start)->toDateString(), optional($ev->service_period_end)->toDateString());
                     app(BillableEventService::class)->markInvoiced($ev->id, $line->id, $runIdentity);
+                    if ($ev->module_key && $ev->service_period_start && $ev->service_period_end) {
+                        $coverageToRecord[] = [$ev->module_key, Carbon::parse($ev->service_period_start), Carbon::parse($ev->service_period_end), $line->id];
+                    }
                     $eventsInvoiced++;
                 }
 
@@ -143,6 +152,11 @@ class BillingRun
                     );
                 }
 
+                // Enregistrer les intervalles couverts (preuve anti-double pour les cycles suivants / immédiat).
+                foreach ($coverageToRecord as [$pk, $cs, $ce, $lineId]) {
+                    BillingCoverage::record($company->id, $sub->id, $pk, $currency, $cs, $ce, $finalized->id, $lineId);
+                }
+
                 $run->update(['invoice_id' => $finalized->id, 'period_end' => $periodEnd]);
 
                 return new EmissionResult(
@@ -158,6 +172,105 @@ class BillingRun
             throw $e;
         } catch (QueryException $e) {
             // Course concurrente sur run_identity → récupérer la facture émise par le run gagnant.
+            $run = BillingRunRecord::where('run_identity', $runIdentity)->first();
+            if ($run && $run->invoice_id) {
+                return EmissionResult::replayed($run->invoice_id, $runIdentity);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * ADR-632 (M5) — ÉMISSION IMMÉDIATE HORS CYCLE d'un événement `bill_immediately` (politique
+     * contractuelle). Même protocole atomique que emit(), document autonome ne portant QUE cet
+     * événement. DÉSACTIVÉE par défaut (billing.consolidated.emit). Anti-double : l'intervalle facturé
+     * est confronté aux intervalles déjà couverts ; il sera ensuite ignoré par la facture récurrente.
+     */
+    public function emitImmediate(BillableEvent $event): EmissionResult
+    {
+        if (! config('billing.consolidated.emit', false)) {
+            return EmissionResult::disabled();
+        }
+        if (! $event->bill_immediately) {
+            return EmissionResult::blocked(['not_immediate']);
+        }
+        // Idempotence AVANT la garde d'état : un rejeu (event déjà facturé par CE run) retourne la
+        // facture existante plutôt qu'un refus.
+        $priorRun = BillingRunRecord::where('run_identity', 'run:imm:'.$event->id)->first();
+        if ($priorRun && $priorRun->invoice_id) {
+            return EmissionResult::replayed($priorRun->invoice_id, $priorRun->run_identity);
+        }
+        if ($event->status !== BillableEvent::STATUS_ELIGIBLE) {
+            return EmissionResult::blocked(['event_not_eligible']);
+        }
+        if (! $event->service_period_start || ! $event->service_period_end) {
+            return EmissionResult::blocked(['ambiguous_period']);
+        }
+
+        $sub = Subscription::findOrFail($event->subscription_id);
+        if ($sub->v2_effective_at === null || $sub->v2_effective_at->isFuture()) {
+            return EmissionResult::blocked(['not_eligible']);
+        }
+        if (! $sub->hasReliableContractedPrice()) {
+            return EmissionResult::blocked(['cycle_hold', 'pricing_review_required']); // ADR-593 : hors cycle aussi
+        }
+
+        $company = Company::findOrFail($event->company_id);
+        $currency = $event->currency;
+        $start = Carbon::parse($event->service_period_start)->utc();
+        $end = Carbon::parse($event->service_period_end);
+        $prestation = $event->module_key ?? 'adjustment';
+
+        if (BillingCoverage::overlaps($sub->id, $prestation, $currency, $start, $end)) {
+            return EmissionResult::blocked(['already_covered']);
+        }
+
+        $runIdentity = 'run:imm:'.$event->id;
+
+        try {
+            return DB::transaction(function () use ($event, $sub, $company, $currency, $start, $end, $prestation, $runIdentity) {
+                $run = BillingRunRecord::where('run_identity', $runIdentity)->lockForUpdate()->first();
+                if ($run && $run->invoice_id) {
+                    return EmissionResult::replayed($run->invoice_id, $runIdentity);
+                }
+                if (! $run) {
+                    $run = BillingRunRecord::create([
+                        'run_identity' => $runIdentity, 'company_id' => $company->id, 'subscription_id' => $sub->id,
+                        'currency' => $currency, 'period_start' => $start, 'period_end' => $end, 'status' => 'emitted',
+                    ]);
+                }
+
+                $reserved = app(BillableEventService::class)->reserve($runIdentity, $company->id, $currency, [$event->id]);
+                if ($reserved->isEmpty()) {
+                    throw new \RuntimeException('__nothing_to_bill__'); // course : déjà réservé/facturé
+                }
+
+                $invoice = InvoiceIssuer::createDraft($company, $sub->id, $start->toDateString(), $end->toDateString());
+                $invoice->billing_model_version = 2;
+                $invoice->save();
+
+                $line = InvoiceIssuer::addLine($invoice, $event->module_key ? 'module' : 'adjustment',
+                    ($event->module_key ?? $event->type).' — facturation immédiate', (int) $event->amount_ht_cents, 1, $event->module_key,
+                    $start->toDateString(), $end->toDateString());
+                app(BillableEventService::class)->markInvoiced($event->id, $line->id, $runIdentity);
+
+                $finalized = InvoiceIssuer::finalize($invoice, suppressExternalSideEffects: true);
+
+                BillingCoverage::record($company->id, $sub->id, $prestation, $currency, $start, $end, $finalized->id, $line->id);
+                $run->update(['invoice_id' => $finalized->id]);
+
+                return new EmissionResult(
+                    status: 'emitted', invoiceId: $finalized->id, runIdentity: $runIdentity,
+                    linesCount: 1, subtotalHtCents: $finalized->subtotal, taxAmountCents: $finalized->tax_amount,
+                    totalTtcCents: $finalized->amount, eventsInvoiced: 1,
+                );
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === '__nothing_to_bill__') {
+                return EmissionResult::blocked(['nothing_to_bill'], $runIdentity);
+            }
+            throw $e;
+        } catch (QueryException $e) {
             $run = BillingRunRecord::where('run_identity', $runIdentity)->first();
             if ($run && $run->invoice_id) {
                 return EmissionResult::replayed($run->invoice_id, $runIdentity);
