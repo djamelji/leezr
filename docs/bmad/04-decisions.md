@@ -22731,3 +22731,29 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `tests/e2e/billing-persona-matrix.spec.js`.
 
 ---
+
+### ADR-632 — Facturation consolidée V2 + convention temporelle semi-ouverte (2026-10-27)
+
+**Statut.** VALIDÉE (décisions métier arrêtées). Conception complète : `docs/bmad/billing-consolidation-design.md` + `billing-consolidation-design-v2.md`. Implémentation **par lots M0→M10** ; **M0 livré sur DEV** par cet ADR (strictement additif, 0 comportement).
+
+**Contexte.** Le modèle actuel fragmente la facturation : `AddonBillingListener` crée un document séparé (annexe ADR-328 ou facture autonome) à chaque activation de module **mi-cycle**, facturé **plein + immédiat**, car la facture de période est finalisée **à l'avance** et **immuable**. Conséquences : jusqu'à 135 documents/soldes pour 134 modules, fuites de vérité dans les read models (ADR-614), et facturation des modules **malgré le blocage du plan** (provisional, ADR-593) — cas Leezr Logistics (aucune facture de plan ; 3 factures addon). Le modèle de données supporte déjà la consolidation (`InvoiceLine` typées, `PricingEngine`, `BillingRenewCommand`).
+
+**Décisions métier arrêtées.**
+1. **Facture consolidée V2** : une facture / (company, devise, cycle, période) — plan + modules + addons + proratas datés + ajustements — émise/finalisée **à l'avance**. `Invoice.billing_model_version` (1 = ADR-328 historique, 2 = consolidé).
+2. **Convention temporelle semi-ouverte `[start, end)`**, **minuit UTC** (fuseau de référence V2). Durée = jours entiers ; le `16/31` découle de l'exclusivité de `end` (pas de `+1` arbitraire).
+3. **Anniversaires non-minuit** (abonnements historiques) : **instant contractuel conservé**, jamais normalisé arbitrairement ; leur prorata reste cohérent avec l'instant (pas de calcul en jours civils entiers forcé).
+4. **Activation ⟂ facturation** : `activation_mode∈{immediate,scheduled,next_cycle}`, `billing_mode∈{immediate,deferred_next_invoice}`. L'activation **n'émet jamais** de facture. **Défaut V2 = `deferred_next_invoice`** (prorata reporté sur la prochaine conso.).
+5. **Facturation immédiate** : uniquement sur **politique contractuelle explicite** (frais d'activation, prestation hors cycle, condition commerciale) ; **aucun** déclenchement automatique non prévu.
+6. **Événements facturables immuables** (`billable_events`) : CREATED→ELIGIBLE→RESERVED→INVOICED (+ CANCELLED/COMPENSATED) ; idempotence (`idempotency_key` UNIQUE), réservation atomique, consommation dans la même transaction que la finalisation (+ `invoice_line_id` UNIQUE), reprise des events `reserved`.
+7. **Prix provisional** : **génération** de nouvelles charges bloquée (ADR-593, `cycle_hold`) ; **recouvrement** des factures historiques finalisées **conservé et indépendant** (wallet/paiement/dunning/réconciliation/avoir — audité). **Aucun rattrapage rétroactif automatique** au déblocage (ADR-575) ; revue ops tracée. Pas de suspension technique auto des modules.
+8. **Migration V1→V2** : contrats existants **V1 par défaut** ; bascule **explicite** par `v2_effective_at` + `commercial_policy_version` + watermark `billed_through` (anti-double-facturation) ; prix/devise/périodes historiques **inchangés** ; aucun changement économique silencieux.
+9. **Compatibilité & rollback** : flag `billing.consolidated.create` = **création** de nouveaux V2 uniquement ; **traitement V1+V2 permanent** ; version minimale de rollback = premier release contenant le lecteur V2 (ne jamais revenir en-deçà tant que des V2 existent).
+
+**Interprétation des bornes historiques** : `App\Core\Billing\PeriodBounds::fromLegacy` — `23:59:59`→exclusif +1s ; `00:00`→inchangé ; anniversaire (heure=début)→instant conservé ; **ambigu→non résolu + revue, jamais de charge dérivée**.
+
+**M0 (livré sur DEV, strictement additif).** Migration `invoices.billing_model_version` (défaut 1) + table `billable_events` (**vide, non branchée**) + helper `PeriodBounds`. **Aucun** chemin du moteur (InvoiceIssuer/BillingRenewCommand/AddonBillingListener) n'est modifié ; aucune facture V2 émise ; aucun event facturé ; aucune donnée historique touchée.
+**Preuves.** `tests/Unit/PeriodBoundsTest` (8), `tests/Feature/BillingModelVersionM0Test` (3) ; migration **up/down/up** réversible vérifiée ; non-régression **541 tests billing + 38 moteur** verts.
+**Préserve** : ADR-328 (historique), ADR-575 (anti-rétro), ADR-593 (blocage provisional), snapshots, numéros, factures émises, règles fiscales.
+**Fichiers** : `database/migrations/2026_10_27_100000_add_billing_model_version_to_invoices.php`, `..._100001_create_billable_events_table.php`, `app/Core/Billing/PeriodBounds.php`, `tests/Unit/PeriodBoundsTest.php`, `tests/Feature/BillingModelVersionM0Test.php`.
+
+---
