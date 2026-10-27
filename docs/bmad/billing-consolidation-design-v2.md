@@ -213,3 +213,75 @@ Plan+134 modules (1 facture, 135 lignes, 1 solde) · avance · terme échu · ac
 **Invariants** : §5 du dossier (pas de double facturation, immutabilité, blocage respecté, taxes par contexte, pas de confirmation implicite, pas de rétroactif, pas de calcul front, pas de double paiement, ajustements tracés, partiels imputés).
 
 **Ne modifie pas** : ADR-328 (documents historiques), ADR-575/593. **Préserve** : snapshots, numéros stockés, factures émises.
+
+---
+
+# AUDIT FINAL — faits confirmés sur le code + compléments (avant M0)
+
+## A. Comportement RÉEL confirmé (références code)
+| Fait | Référence | Implication |
+|---|---|---|
+| Renouvellement = **avance**, facture finalisée au début de cycle | `BillingRenewCommand:256,361` | mi-cycle ne peut pas modifier (immuable) |
+| Plan + addons actifs consolidés au renouvellement | `BillingRenewCommand:308-337` | consolidation **déjà réelle** au renouvellement |
+| **Addon mi-cycle = montant PLEIN, AUCUN prorata** | `AddonBillingListener:160-167` (`$amount` = `amount_cents`, qté 1) | le prorata v2 serait un **NOUVEAU comportement** |
+| Addon mi-cycle = période **`[now → now+1 mois]`** (désalignée du plan) | `AddonBillingListener:142-143` | v2 alignerait sur la période du plan = **changement** |
+| Addon mi-cycle facturé **immédiatement** (auto-charge) | `AddonBillingListener:170-173` | v2 par défaut **différé** = **changement** |
+| `PricingEngine::forCurrentPeriod` = montants **pleins** (pas de prorata) | `PricingEngine:36-73` | prorata **uniquement** pour changements de plan |
+| Prorata existe **seulement** pour changement de plan | `PricingEngine:155-175` → `ProrationCalculator` | aucun prorata module/addon aujourd'hui |
+| **Fuseau applicatif = UTC** | `config/app.php:68` | bornes de période en UTC, pas de DST |
+| Activation **programmée / au-prochain-cycle** de module | **inexistante** (seul `PlanChangeIntent.scheduled_at` pour les plans) | à **développer** (ne pas présenter comme existant) |
+
+### ⚠️ Changements de comportement induits par v2 (décision métier)
+Aujourd'hui, un module activé mi-cycle : **document séparé + mois plein depuis l'activation + encaissement immédiat**. En v2 par défaut : **ligne consolidée + prorata jusqu'à la fin du cycle du plan + report sur la prochaine facture**. Ce sont **3 changements réels** (ce que paie le client change), pas de la cosmétique — à valider explicitement.
+
+## B. Point 1 — Activation × Facturation : existant / partiel / à construire
+| Capacité | État |
+|---|---|
+| Activation **immédiate** | ✅ existe (`ModuleEnabled` → `AddonBillingListener`) |
+| Activation **programmée** (module) | ❌ à construire (seuls les **changements de plan** ont `scheduled_at`) |
+| Activation **au prochain cycle** (module) | ⚠️ partiel : uniquement via le **trial guard** (addon en trial facturé au 1ᵉʳ renouvellement) ; pas de programmation générique |
+| Facturation **immédiate** | ✅ existe (auto-charge addon) |
+| Facturation **prochaine conso.** | ⚠️ partiel : le renouvellement consolide, mais le mi-cycle crée un doc séparé (pas de report) |
+| Facturation **selon politique contractuelle** | ❌ pas de moteur de politique par-contrat ; à construire |
+
+## C. Point 3 — Convention de prorata (complète, reproductible)
+- **Source** : `ProrationCalculator` (pur, cents) ; `credit=floor(r/t×oldPrice)`, `charge=floor(r/t×newPrice)`, `net=charge−credit`.
+- **Mensuel** : dénominateur `t = diffInDays(periodStart, periodEnd)` = **jours calendaires réels de LA période** → gère nativement **28/29/30/31** (février inclus). Numérateur `r = diffInDays(changeDate, periodEnd)`.
+- **Annuel** : même formule, période = 1 an calendaire (365/366 j).
+- **Bornes** : `diffInDays` **exclusif** → activation 16/10 (01→31/10) = **15 j** (`r=15`, `t=31`). [Arbitrage A/B §4].
+- **Fuseau** : **UTC** (dates `toDateString()` en UTC) → **pas de DST** ; bornes = minuit UTC (nuance : peut différer de minuit local — décision si alignement local requis).
+- **Jours calendaires**, pas de secondes. **Arrondi : floor** sur les cents (favorable client).
+- **Prorata négatif** (désactivation / downgrade) : `net < 0` → **crédit** (avoir/ligne négative reportée), jamais une facture négative.
+- **Quantités** : ligne `qty` (actuellement 1) ; prorata appliqué au montant unitaire snapshot.
+- **Coupons/remises** : appliqués **après** le prorata, sur la facture consolidée (ligne `discount`), coupon-aware (`PricingEngine` gère déjà effective price).
+- **Taxe** : calculée par `TaxContextResolver` **par ligne** sur le HT proratisé (contexte : domestique/reverse-charge/export).
+- **Reproductibilité** : chaque `BillableEvent` fige `price_snapshot_cents`, `service_period_start/end`, `proration_num/den`, `rounding='floor'`, `tax_context_snapshot` → recalcul identique à l'émission.
+
+## D. Point 5 — Machine d'état BillableEvent (complète)
+```
+CREATED ──(validé/éligible)──▶ ELIGIBLE ──(BillingRun lock atomique)──▶ RESERVED ──(finalize facture)──▶ INVOICED (terminal)
+   │                              │                                        │
+   │                              ├─(annulation avant résa)──▶ CANCELLED   ├─(échec run)──▶ ELIGIBLE (re-libéré, reprise)
+   │                              │                                        │
+   └─(compensation : NOUVEL event)──────────────────────────────▶ COMPENSATED (terminal, réf. event d'origine)
+```
+- **Figé à l'ACTIVATION** : `price_snapshot_cents`, `service_date`, `contractual_period`, `tax_context_snapshot`, `idempotency_key`, `proration_num/den`, `rounding`.
+- **Calculé à l'ÉMISSION** : `amount_ht` final (= snapshot × prorata), regroupement d'affichage, total facture, taxe agrégée.
+- **Réservation atomique** : `UPDATE … SET status='reserved', reserved_by_run_id=? WHERE id IN(...) AND status='eligible'` (verrou optimiste) → **concurrence sûre** (un seul run réserve).
+- **Crash après finalize mais avant marquage `invoiced`** : la facture porte `invoice_line_id`↔`billable_event` ; une reprise idempotente **réconcilie** (si la ligne existe → marquer `invoiced` ; sinon re-libérer). Jamais perdu, jamais doublé.
+- **Rejeu BillingRun** : clé `run:{company}:{currency}:{cycle}:{periodStart}` + idempotency par event → rejeu = **no-op** (facture existante retournée).
+- **Retry/échec provider** : l'événement reste `invoiced` (document émis) ; l'échec de collecte relève du dunning, pas de l'événement.
+
+## E. Couverture des 14 livrables demandés
+1 Comportement réel + refs → §A, §1. · 2 Diagramme cycle → §1. · 3 Matrice activation×facturation → §2 + §B (exemples A-I ci-dessous). · 4 Convention prorata → §C + §4. · 5 Machine d'état BillableEvent → §D + §3. · 6 BillingRun + idempotence → §3, §D. · 7 Facturation immédiate → §6 (politique). · 8 Blocage provisional → §6 (5 autorisations). · 9 Exemples factures + périodes → §7. · 10 Coexistence v1/v2 → §8. · 11 Rollback → §9. · 12 Plan M0-M10 → §10. · 13 Matrice tests → §Matrice + ci-dessous. · 14 Décisions métier → §Arbitrages + §A changements.
+
+### Exemples matrice (A–I) — invariant clé par cas
+- **A** immédiate+immédiate : 1 doc hors-cycle (prorata), payable maintenant ; event `bill_immediately`→`invoiced` ; **pas de re-facturation** au cycle suivant (clé idempotence).
+- **B** immédiate+prochaine conso. : 0 doc now ; event `eligible` ; prorata sur facture N+1. *(≠ comportement actuel = plein+immédiat)*.
+- **C** programmée+à la date : event créé à t', facturé à t' (doc hors-cycle). *(activation programmée module = à construire)*.
+- **D** programmée+prochaine conso. : event à t', consommé au BillingRun suivant.
+- **E** prochain cycle+avance : activation t1, facturée sur la conso. de t1 (plein, pas de prorata).
+- **F** désactivation+avoir : event `module_deactivation`, `net<0` → crédit reporté (ou avoir immédiat si contrat). Jamais de facture négative.
+- **G** changement de plan mi-période : `ProrationCalculator` (existant), event `plan_change`, net reporté ou doc selon policy timing.
+- **H** activ/désactiv répétées : chaque transition = event distinct **non fusionné** ; compensations tracées ; somme nette correcte.
+- **I** 134 modules dates ≠ : 134 events `eligible` de périodes de service différentes → **1 facture conso.** au cycle, 135 lignes (plan + 134), périodes **non fusionnées**, 1 solde.
