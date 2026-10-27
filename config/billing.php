@@ -125,4 +125,21 @@ return [
         'token' => env('BILLING_METRICS_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Consolidated billing (ADR-632 — V2)
+    |--------------------------------------------------------------------------
+    |
+    | `route_activations` : OPERATIONAL gate (OFF by default). Even a company
+    | contractually eligible to V2 (subscriptions.v2_effective_at) only routes
+    | mid-cycle activations to the V2 BillableEvent path when this is ON. It must
+    | stay OFF until M4 can consume/finalize consolidated invoices, so no real
+    | company accumulates deferred events no BillingRun can bill.
+    |
+    */
+
+    'consolidated' => [
+        'route_activations' => (bool) env('BILLING_CONSOLIDATED_ROUTE_ACTIVATIONS', false),
+    ],
+
 ];

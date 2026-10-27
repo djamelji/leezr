@@ -44,6 +44,7 @@ class Subscription extends Model
         'coupon_id', 'coupon_months_remaining',
         'plan_price_cents', // ADR-587: contracted price snapshot (cents) for this subscription's interval
         'plan_price_source', // ADR-593: provenance of the snapshot (reliability)
+        'v2_effective_at', 'commercial_policy_version', // ADR-632 (M3): V2 consolidated eligibility
     ];
 
     /** ADR-593 — snapshot provenances that are trusted as the contracted price. */
@@ -60,6 +61,7 @@ class Subscription extends Model
             'metadata' => 'array',
             'coupon_months_remaining' => 'integer',
             'plan_price_cents' => 'integer',
+            'v2_effective_at' => 'datetime',
         ];
     }
 
