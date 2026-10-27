@@ -299,7 +299,13 @@
             <tbody>
                 @foreach($invoice->lines as $line)
                 <tr>
-                    <td>{{ $line->description }}</td>
+                    <td>
+                        {{ $line->description }}
+                        {{-- ADR-632 (M8): service period per line on consolidated V2 invoices --}}
+                        @if(($invoice->billing_model_version ?? 1) === 2 && $line->period_start && $line->period_end)
+                        <div style="font-size: 9px; color: #888;">{{ $fmtDate($line->period_start) }} – {{ $fmtDate($line->period_end) }}</div>
+                        @endif
+                    </td>
                     <td><span class="type-chip">{{ $typeLabels[$line->type] ?? $line->type }}</span></td>
                     <td class="text-center">{{ $line->quantity }}</td>
                     <td class="text-end">{{ $fmtMoney($line->unit_amount) }}</td>

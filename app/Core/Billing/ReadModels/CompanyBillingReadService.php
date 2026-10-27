@@ -211,6 +211,7 @@ class CompanyBillingReadService
         return [
             'id' => $invoice->id,
             'number' => $invoice->number,
+            'billing_model_version' => (int) ($invoice->billing_model_version ?? 1), // ADR-632 (M8)
             'display_number' => $invoice->displayNumber(),
             'is_annexe' => $invoice->isAnnexe(),
             'parent_invoice_id' => $invoice->parent_invoice_id,
@@ -251,7 +252,13 @@ class CompanyBillingReadService
                 'quantity' => $line->quantity,
                 'unit_amount' => $line->unit_amount,
                 'amount' => $line->amount,
+                'module_key' => $line->module_key,
+                'service_period_start' => $line->period_start?->toDateString(),
+                'service_period_end' => $line->period_end?->toDateString(),
             ])->toArray(),
+            // ADR-632 (M8): V2 consolidated sections from the persisted analytical ventilation (M7).
+            // No recompute in Vue; amounts reconcile to the invoice totals. Empty for V1.
+            'consolidated_sections' => static::consolidatedSections($invoice),
             'credit_notes' => $invoice->creditNotes->map(fn ($cn) => [
                 'id' => $cn->id,
                 'number' => $cn->number,
@@ -708,5 +715,59 @@ class CompanyBillingReadService
         }
 
         return $sources;
+    }
+
+    /**
+     * ADR-632 (M8) — sections consolidées V2 depuis la ventilation analytique persistée (M7).
+     * Regroupe par famille (abonnement / modules / proratas / remises), avec périodes de service et
+     * HT/TVA/TTC par ligne + sous-totaux + synthèse fiscale. AUCUN recalcul. Vide pour V1.
+     */
+    private static function consolidatedSections(Invoice $invoice): array
+    {
+        if ((int) ($invoice->billing_model_version ?? 1) !== 2) {
+            return [];
+        }
+
+        $analytics = \App\Core\Billing\BillingInvoiceLineAnalytic::where('invoice_id', $invoice->id)->get();
+        if ($analytics->isEmpty()) {
+            return [];
+        }
+
+        $family = fn (string $type) => match ($type) {
+            'plan' => 'subscription',
+            'addon', 'module' => 'modules',
+            'discount' => 'discounts',
+            default => 'adjustments',
+        };
+
+        $sections = [];
+        foreach ($analytics as $a) {
+            $f = $family($a->prestation_type);
+            $sections[$f]['key'] = $f;
+            $sections[$f]['lines'][] = [
+                'prestation_type' => $a->prestation_type,
+                'module_key' => $a->module_key,
+                'service_period_start' => $a->service_period_start?->toDateString(),
+                'service_period_end' => $a->service_period_end?->toDateString(),
+                'ht_cents' => $a->ht_cents,
+                'tax_cents' => $a->tax_cents,
+                'ttc_cents' => $a->ttc_cents,
+                'invoice_line_id' => $a->invoice_line_id,
+                'billable_event_id' => $a->billable_event_id,
+            ];
+            $sections[$f]['subtotal_ht_cents'] = ($sections[$f]['subtotal_ht_cents'] ?? 0) + $a->ht_cents;
+            $sections[$f]['subtotal_tax_cents'] = ($sections[$f]['subtotal_tax_cents'] ?? 0) + $a->tax_cents;
+            $sections[$f]['subtotal_ttc_cents'] = ($sections[$f]['subtotal_ttc_cents'] ?? 0) + $a->ttc_cents;
+        }
+
+        return [
+            'sections' => array_values($sections),
+            'fiscal_summary' => [
+                'subtotal_ht_cents' => (int) $invoice->subtotal,
+                'tax_rate_bps' => (int) $invoice->tax_rate_bps,
+                'tax_cents' => (int) $invoice->tax_amount,
+                'total_ttc_cents' => (int) $invoice->amount,
+            ],
+        ];
     }
 }
