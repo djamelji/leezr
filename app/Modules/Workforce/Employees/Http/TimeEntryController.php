@@ -6,6 +6,7 @@ use App\Core\Workforce\Employee;
 use App\Core\Workforce\TimeEntry;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\TimeEntryReadModel;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ClockInUseCase;
 use App\Modules\Workforce\UseCases\ClockOutUseCase;
 use App\Modules\Workforce\UseCases\DeleteTimeEntryUseCase;
@@ -27,6 +28,13 @@ class TimeEntryController extends Controller
             'from' => 'nullable|date',
             'to' => 'nullable|date',
         ]);
+
+        // ADR-634 : voir les pointages d'un collaborateur exige « voir tout », soi-même, ou rapport direct.
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, (int) $request->query('employee_id'), 'time'),
+            403,
+            'Not authorized to view this employee\'s time entries.'
+        );
 
         $entries = TimeEntryReadModel::forEmployee(
             companyId: $companyId,
@@ -50,11 +58,28 @@ class TimeEntryController extends Controller
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
+        // ADR-634 : la vue entreprise des pointages est réservée aux capacités « voir tout » temps ;
+        // ciblée sur un collaborateur, elle applique le scope (soi + rapports directs).
+        $reqEmployeeId = $request->query('employee_id') ? (int) $request->query('employee_id') : null;
+        if ($reqEmployeeId !== null) {
+            abort_unless(
+                WorkforceAccess::canViewEmployeeData($request, $reqEmployeeId, 'time'),
+                403,
+                'Not authorized to view this employee\'s time entries.'
+            );
+        } else {
+            abort_unless(
+                WorkforceAccess::hasViewAll($request, 'time'),
+                403,
+                'Not authorized to view company-wide time entries.'
+            );
+        }
+
         return response()->json(TimeEntryReadModel::forCompany(
             companyId: $companyId,
             from: $request->query('from'),
             to: $request->query('to'),
-            employeeId: $request->query('employee_id') ? (int) $request->query('employee_id') : null,
+            employeeId: $reqEmployeeId,
             status: $request->query('status'),
             perPage: (int) $request->query('per_page', 15),
         ));

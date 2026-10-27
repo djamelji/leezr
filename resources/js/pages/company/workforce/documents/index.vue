@@ -10,6 +10,26 @@ const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const store = useWorkforceDocumentsStore()
 
+// ── Download (ADR-634) — route authentifiée, jamais file_path brut ──
+const downloadDocument = async (item, { save = true } = {}) => {
+  try {
+    const blob = await store.downloadDocument(item.id)
+    const url = URL.createObjectURL(blob)
+    if (save) {
+      const a = document.createElement('a')
+
+      a.href = url
+      a.download = `${item.template_code || 'document'}-${item.id}.pdf`
+      a.click()
+    } else {
+      window.open(url, '_blank')
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  } catch {
+    // erreur gérée par $api
+  }
+}
+
 // ── Table state ──────────────────────────────────────────────
 const options = ref({ page: 1, itemsPerPage: 15 })
 const loading = ref(false)
@@ -361,8 +381,7 @@ const isDrawerOpen = ref(false)
               variant="text"
               size="small"
               :title="$t('workforceDocuments.preview')"
-              :href="item.file_path"
-              target="_blank"
+              @click="downloadDocument(item, { save: false })"
             >
               <VIcon icon="tabler-eye" />
             </VBtn>
@@ -372,8 +391,7 @@ const isDrawerOpen = ref(false)
               variant="text"
               size="small"
               :title="$t('workforceDocuments.download')"
-              :href="item.file_path"
-              download
+              @click="downloadDocument(item, { save: true })"
             >
               <VIcon icon="tabler-download" />
             </VBtn>

@@ -7,6 +7,7 @@ use App\Modules\Workforce\Data\CreateEmployeeData;
 use App\Modules\Workforce\ReadModels\EmployeeReadModel;
 use App\Modules\Workforce\UseCases\CreateEmployeeUseCase;
 use App\Modules\Workforce\UseCases\TerminateEmployeeUseCase;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Core\Workforce\Employee;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,7 @@ class EmployeeController extends Controller
             perPage: (int) $request->query('per_page', 15),
             sortBy: $request->query('sort_by', 'last_name'),
             sortDir: $request->query('sort_dir', 'asc'),
+            canSeeCompensation: WorkforceAccess::canReadCompensation($request),
         );
 
         return response()->json($employees);
@@ -33,7 +35,7 @@ class EmployeeController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-        $employee = EmployeeReadModel::detail($companyId, $id);
+        $employee = EmployeeReadModel::detail($companyId, $id, WorkforceAccess::canReadCompensation($request));
 
         if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);

@@ -22757,3 +22757,39 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `database/migrations/2026_10_27_100000_add_billing_model_version_to_invoices.php`, `..._100001_create_billable_events_table.php`, `app/Core/Billing/PeriodBounds.php`, `tests/Unit/PeriodBoundsTest.php`, `tests/Feature/BillingModelVersionM0Test.php`.
 
 ---
+
+### ADR-633 — Priorité produit : programme « Workforce 2.0 » (suite RH) sous contrainte d'architecture horizontale (2026-10-27)
+
+**Statut** : **DÉCISION DE PRIORITÉ PRODUIT**, prise explicitement (ne contourne pas ADR-561/566, les encadre).
+
+**Contexte** : L'audit `docs/bmad/workforce-rh-suite-audit-design.md` (6 audits parallèles) démontre que le backend Workforce est mûr mais que l'UX/assemblage, la génération documentaire, la signature, les presets d'organisation et le RBAC fin sont déficitaires. La direction valide l'objectif de transformer Workforce en **suite RH professionnelle**. ADR-561/566 **interdisent d'« étendre » Workforce** tant que le socle horizontal (ADR-563) et le 2ᵉ vertical ne sont pas livrés — seule la **stabilisation** est autorisée.
+
+**Décision** : le programme est autorisé **sans violer la doctrine**, via ce cadrage opposable :
+1. **Reclassement des chantiers** : (a) **Signature** (`signature`), **éditeur/dépôt documentaire** et **presets d'organisation** sont des **capacités HORIZONTALES** réutilisables par les futures verticales et par `invoicing` → conformes ADR-563 ; (b) **nav « Ressources humaines », fiche collaborateur unifiée, modernisation UX** = **stabilisation** autorisée (ADR-561.2) ; (c) **Workforce Contract** = fine couche d'assemblage sur le socle horizontal.
+2. **Gel maintenu** : **paie/DSN ne sont PAS étendues** (ADR-561.5) — stabilisation uniquement.
+3. **Core propre** : aucune nouvelle logique métier/pays dans `app/Core/{Vertical}/` ; les capacités horizontales vivent hors de tout vertical ; **remédiation** de la violation P1 existante (`app/Core/Workforce/` + `if('FR')`) planifiée (lot W-P), non aggravée.
+4. **Garde-fous ADR-566 actifs** : DoD module (socle réutilisé, i18n FR+EN, empty-states, permissions manifest-driven, tests verts, ADR) ; aucun module vendable sans surface livrée ; multi-pays par Market ; aucune conformité juridique auto-affirmée.
+5. **Ordonnancement** (phases 1→5) : Sécurité & fondations → Organisation → Expérience collaborateur → Documents & contrats → Signature & automatisations ; transverse W-P/W-R.
+
+**Conséquences** : la refonte RH devient exécutable tout en **servant** l'architecture horizontale (les capacités créées profitent au-delà de Workforce). Les décisions métier différées (avenants ADR-578, buckets congés ADR-573, établissements, type d'entreprise, niveau/prestataire de signature, ouverture Markets) restent à arbitrer avant leurs lots respectifs.
+
+**Fichiers** : `docs/bmad/workforce-rh-suite-audit-design.md`, cet ADR.
+
+---
+
+### ADR-634 — Workforce 2.0 Phase 1 / lot W-D : sécurisation RBAC (salaire, scope manager, téléchargements documentaires) (2026-10-27)
+
+**Contexte** : L'audit a identifié des expositions P0 : (1) salaire/compensation (`compensationPlans.base_salary_cents`…) exposés sous la permission générale `workforce.view` dans `EmployeeReadModel` (list+detail) et `ContractController::index` ; les permissions fines `workforce.compensation_read/manage`, `workforce.sensitive_read`, `workforce.leave_view_all` sont **déclarées mais appliquées par 0 route** ; (2) **IDOR** sur congés/pointages : tout détenteur d'une permission « employé » peut lire les données d'un collègue via un `employee_id` arbitraire (`LeaveController::index`, `TimeEntryController`) ; (3) téléchargement des documents générés via `file_path` **brut** (pas de route authentifiée), contrairement au coffre `Core/Documents` (ADR-401).
+
+**Décisions (lot additif, non destructif)** :
+1. **Masquage serveur du salaire** : la compensation n'est chargée/renvoyée que si l'utilisateur possède `workforce.compensation_read` (filtré dans `EmployeeReadModel` + `ContractController`, PAS seulement caché en Vue). SSN/IBAN restent gérés par le système Fields (déjà masqué) — `sensitive_read` cadré pour ce canal.
+2. **Scope manager/self sur congés & pointages** : lire les données d'**un autre** collaborateur exige une capacité « voir tout » (congés : `leave_view_all`|`leave_approve` ; temps : `timesheet_approve`|`time_manage`) ; sinon accès restreint à **soi + rapports directs** (`manager_id`). Ferme l'IDOR et **active enfin** `leave_view_all`. `owner` conserve son bypass.
+3. **Téléchargement authentifié** : nouvelle route `GET /workforce/documents/{id}/download` (permission `workforce_documents.view` + tenant + scope collaborateur pour les sujets employé/contrat) servant via `Storage::disk()->download()` ; le front cesse d'utiliser `file_path` brut. Les documents signés restent immuables.
+4. **Compatibilité (anti-régression)** : migration additive idempotente — les rôles **administratifs** détenant `workforce.view` reçoivent `workforce.compensation_read` (les RH/admins conservent la visibilité salaire) ; les rôles détenant `workforce.leave_approve` reçoivent `workforce.leave_view_all`. Aucun accès légitime retiré ; `owner` bypass inchangé.
+5. **DEV uniquement** : aucune donnée RH réelle modifiée, aucune génération de contrat, aucune signature opérationnelle, aucun module activé, Billing intouché, ni push main ni PROD.
+
+**Conséquences** : salaire et données d'autrui ne fuient plus sous une permission générale ; téléchargements RH sécurisés ; base RBAC pour la suite (matrice §16 du dossier). Lots suivants (W-A nav RH, puis phases 2→5) sur autorisation.
+
+**Fichiers** : `app/Modules/Workforce/Security/WorkforceAccess.php` (nouveau), `EmployeeReadModel.php`, `EmployeeController.php`, `ContractController.php`, `LeaveController.php`, `TimeEntryController.php`, `WorkforceDocumentController.php`, `routes/company.php`, migration compat, pages Vue documents/me, tests.
+
+---

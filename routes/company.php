@@ -590,6 +590,7 @@ Route::prefix('workforce/documents')->middleware('company.access:use-module,work
     Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts'])->middleware($perm('workforce_documents.generate'));
     Route::post('payslip-official', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generateOfficialPayslips'])->middleware($perm('workforce_documents.generate'));
     Route::get('payroll-run/{runId}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'forPayrollRun'])->middleware($perm('workforce_documents.view'));
+    Route::get('{id}/download', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'download'])->middleware($perm('workforce_documents.view')); // ADR-634 : téléchargement authentifié
     Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show'])->middleware($perm('workforce_documents.view'));
 });
 

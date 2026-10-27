@@ -7,6 +7,7 @@ use App\Core\Workforce\LeaveRequest;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\LeaveBalanceReadModel;
 use App\Modules\Workforce\ReadModels\LeaveRequestReadModel;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ApproveLeaveRequestUseCase;
 use App\Modules\Workforce\UseCases\CancelLeaveRequestUseCase;
 use App\Modules\Workforce\UseCases\RejectLeaveRequestUseCase;
@@ -24,6 +25,12 @@ class LeaveController extends Controller
         $employeeId = $request->query('employee_id');
 
         if ($employeeId) {
+            // ADR-634 : lire les congés d'un collaborateur exige « voir tout », soi-même, ou rapport direct.
+            abort_unless(
+                WorkforceAccess::canViewEmployeeData($request, (int) $employeeId, 'leave'),
+                403,
+                'Not authorized to view this employee\'s leave.'
+            );
             $leaves = LeaveRequestReadModel::forEmployee(
                 companyId: $companyId,
                 employeeId: (int) $employeeId,
@@ -33,6 +40,12 @@ class LeaveController extends Controller
                 perPage: $perPage,
             );
         } else {
+            // File d'approbation = vue de gestion : réservée aux capacités « voir tout » congés.
+            abort_unless(
+                WorkforceAccess::hasViewAll($request, 'leave'),
+                403,
+                'Not authorized to view the approval queue.'
+            );
             $leaves = LeaveRequestReadModel::pendingForApproval($companyId, $perPage);
         }
 

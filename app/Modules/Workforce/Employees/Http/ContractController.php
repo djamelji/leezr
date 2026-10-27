@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Core\Workforce\ConventionCollective;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ActivateContractUseCase;
 use App\Modules\Workforce\UseCases\CreateContractUseCase;
 use Illuminate\Http\JsonResponse;
@@ -18,10 +19,16 @@ class ContractController extends Controller
         $companyId = $request->attributes->get('company_id');
         $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($employeeId);
 
+        // ADR-634 : la compensation n'est exposée que sous workforce.compensation_read.
+        $with = ['conventionCollective:id,idcc,short_name'];
+        if (WorkforceAccess::canReadCompensation($request)) {
+            $with[] = 'compensationPlans';
+        }
+
         $contracts = EmploymentContract::withoutGlobalScopes()
             ->where('employee_id', $employee->id)
             ->where('company_id', $companyId)
-            ->with(['conventionCollective:id,idcc,short_name', 'compensationPlans'])
+            ->with($with)
             ->orderByDesc('start_date')
             ->get();
 

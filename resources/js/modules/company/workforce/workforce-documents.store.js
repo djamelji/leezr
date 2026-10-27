@@ -58,6 +58,11 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
       }
     },
 
+    // ── Download (ADR-634) — route authentifiée, jamais file_path brut ──
+    async downloadDocument(id) {
+      return await $api(`/workforce/documents/${id}/download`, { responseType: 'blob' })
+    },
+
     // ── Statistics ───────────────────────────────────────────
     async fetchStatistics() {
       this._loading = true

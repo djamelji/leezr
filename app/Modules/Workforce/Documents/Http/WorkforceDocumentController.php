@@ -3,15 +3,19 @@
 namespace App\Modules\Workforce\Documents\Http;
 
 use App\Core\Documents\GeneratedDocument;
+use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\PayrollRun;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\GenerateDocumentUseCase;
 use App\Modules\Workforce\UseCases\GenerateOfficialPayslipsUseCase;
 use App\Modules\Workforce\UseCases\GeneratePayslipDraftsUseCase;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkforceDocumentController extends Controller
 {
@@ -44,6 +48,53 @@ class WorkforceDocumentController extends Controller
             ->findOrFail($id);
 
         return response()->json($document);
+    }
+
+    // ── Download (ADR-634) — route authentifiée + tenant + scope collaborateur ────────
+    // Remplace l'ancien accès via `file_path` brut. Les documents signés restent immuables.
+    public function download(Request $request, int $id): StreamedResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+
+        $document = GeneratedDocument::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->findOrFail($id);
+
+        $this->assertSubjectScope($request, $document);
+
+        $disk = config('documents.generated_disk', 'local');
+        abort_unless(
+            $document->file_path && Storage::disk($disk)->exists($document->file_path),
+            404,
+            'Document file not found.'
+        );
+
+        return Storage::disk($disk)->download($document->file_path, basename($document->file_path));
+    }
+
+    /** Scope collaborateur pour les documents individuels (employé/contrat). */
+    private function assertSubjectScope(Request $request, GeneratedDocument $document): void
+    {
+        if ($document->subject_type === 'employee') {
+            abort_unless(
+                WorkforceAccess::canViewEmployeeData($request, (int) $document->subject_id, 'employee'),
+                403,
+                'Not authorized to download this employee document.'
+            );
+        } elseif ($document->subject_type === 'contract') {
+            $employeeId = EmploymentContract::withoutGlobalScopes()
+                ->where('company_id', $document->company_id)
+                ->where('id', $document->subject_id)
+                ->value('employee_id');
+            if ($employeeId) {
+                abort_unless(
+                    WorkforceAccess::canViewEmployeeData($request, (int) $employeeId, 'employee'),
+                    403,
+                    'Not authorized to download this contract.'
+                );
+            }
+        }
+        // payroll_run / payroll_line / leave_request : gérés par la permission workforce_documents.view.
     }
 
     // ── Statistics ───────────────────────────────────────────────────
