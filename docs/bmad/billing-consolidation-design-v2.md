@@ -375,3 +375,80 @@ GO M0 **si et seulement si** :
 **Préserve** : ADR-328 (historique intact), ADR-575 (anti-rétro), ADR-593 (blocage provisional), snapshots, numéros, factures émises, règles fiscales.
 
 **Invariants** (tests d'acceptation) : pas de double facturation (event+run idempotents) ; une prestation courante jamais refacturée par un event historique ; document finalisé immuable ; Σ lignes = Σ taxes = total au **centime près** ; prorata reproductible depuis snapshots ; concurrence/crash/rejeu sûrs ; historique v1 intègre ; facture v2 payable même flag OFF.
+
+---
+
+# VERROUILLAGE FINAL — 4 sujets (preuves code/données) avant de figer ADR-632
+
+## 1. `PeriodBounds::fromLegacy()` — interprétation DISCRIMINANTE (pas de `ceil` aveugle)
+**Formes réelles observées en PROD** : sub#1 `05-31 23:59:59` (inclusif) · sub#2 `01:32:28` / sub#3 `12:14:35` (fin = début même heure → **anniversaire, déjà exclusif**) · factures `00:00:00` (fin = début suivant → **déjà exclusif**).
+
+Règle de normalisation vers une borne **exclusive** `end_x`, par classe :
+| Cas détecté | Test | `end_x` | Justification |
+|---|---|---|---|
+| **Fin de journée inclusive** | `H:M:S == 23:59:59` (ou `.999999`) | `end + 1s` (→ jour suivant 00:00) | borne inclusive dernière seconde → exclusive = instant suivant |
+| **Minuit** | `H:M:S == 00:00:00` | `end` **inchangé** | déjà exclusif (convention semi-ouverte) |
+| **Anniversaire à heure précise** | `time(end) == time(start)` et ≠ 00:00 | `end` **inchangé** | la souscription renouvelle À cet instant → déjà exclusif |
+| **Ambiguë / inconnue** | aucun des cas ci-dessus | **`null` + flag `period_ambiguous`** | **ne pas interpréter pour produire une charge** (exigence) → revue manuelle |
+
+- **Aucune normalisation ne crée de jour supplémentaire, chevauchement ou trou** : minuit et anniversaire restent inchangés ; seul le `23:59:59` inclusif est ramené à l'instant suivant (sans ajouter de jour de service — il **était** déjà couvert jusqu'à cette seconde).
+- **Les documents v1 finalisés ne sont jamais recalculés** : `fromLegacy` sert (a) à l'affichage/analytique de durée, (b) à la **transition** vers un cycle v2 (contiguïté). Une période **ambiguë** bloque la transition auto → **revue manuelle**, jamais de charge dérivée arbitrairement.
+- **Tests de transition** : sub#1 (23:59:59) → nouveau cycle v2 `start = 06-01 00:00` (contigu, 0 trou/0 chevauchement) ; sub#3 (anniversaire 12:14:35) → v2 `start = 12:14:35` conservé (ou normalisé minuit **sur décision explicite**, documentée) ; période ambiguë → **pas de transition auto**.
+
+## 2. Provisional vs factures historiques — séparation GÉNÉRATION / RECOUVREMENT (audité)
+**Audit code** : `InvoiceBatchPayService`, `DunningEngine`, `FinanceReconciliationService`, `CreditNoteIssuer` **ne lisent jamais** `hasReliableContractedPrice`/`plan_price_source` → le **recouvrement est indépendant** de la fiabilité du prix.
+| Opération | Dépend du prix fiable ? | Règle verrouillée |
+|---|---|---|
+| **A. Créer une NOUVELLE charge/facture** (renew, BillingRun) | **OUI → bloqué** si plan non fiable (`cycle_hold`, ADR-593) | aucune nouvelle charge en contournant le blocage |
+| **B. Facture historique finalisée** | **NON** | reste **juridiquement exigible** |
+| Wallet (imputation) | NON | opère sur `amount_due` existant |
+| Paiement manuel / provider | NON | règle une facture déjà émise |
+| Dunning | NON | relance les factures open/overdue existantes |
+| Réconciliation | NON | par `invoice_id` |
+| Avoirs | NON (garde `assertNotVoided` + finalized, ADR-631d) | sur facture existante |
+| Litiges | NON | sur créance constituée |
+
+➡️ **Une facture historique valide ne devient JAMAIS impayable** parce que l'abonnement courant est en revue tarifaire. Le blocage ADR-593 est **exclusivement** sur la **génération**.
+
+## 3. Migration commerciale V2 — politique de transition (pas de changement économique silencieux)
+Changement réel : aujourd'hui **mois plein depuis activation + immédiat** → demain **aligné cycle + prorata + différé**.
+- **Date d'effet** `v2_effective_at` **par Company/contrat** (activation progressive), pas global d'un coup.
+- **Version de politique commerciale** `commercial_policy_version` figée sur l'abonnement + snapshot sur chaque `BillableEvent` (le calcul reflète la politique en vigueur à l'activation).
+- **Modules déjà actifs** : conservent leur **couverture v1** jusqu'à sa fin ; un **watermark `billed_through`** par (module, subscription) empêche toute **re-facturation d'une période déjà couverte** (invariant anti-double-facturation inter-modèles).
+- **Pas de double facturation** : le 1ᵉʳ cycle v2 ne facture un module que pour `[max(v2_effective_at, billed_through), cycle_end)`.
+- **Prix/devise/périodes historiques inchangés.**
+- **Communication** : si les modalités changent pour un contrat existant, prérequis = notification/consentement selon contrat (hors moteur, piloté ops).
+- **Par défaut** : les contrats existants **restent v1** tant que `v2_effective_at` n'est pas posé → **aucun** changement silencieux.
+
+## 4. Atomicité financière & idempotence (au-delà de la réservation)
+`InvoiceIssuer::finalize` = `DB::transaction` (invoice + lignes + **ledger**, l.198-283) ; SEPA/notification **hors tx** (best-effort, l.328-338).
+**Conception BillingRun v2 — cohérence crash :**
+- **T1 (atomique, tx imbriquée Laravel)** : `finalize(facture conso.)` **+** `UPDATE billable_events SET status='invoiced', invoice_line_id=? WHERE id IN(reserved_by_this_run)`. Les deux commitent ensemble (le ledger est dans la même tx).
+- **Contraintes DB** : `billable_events.idempotency_key` **UNIQUE** ; `billable_events.invoice_line_id` **UNIQUE** (1 ligne ↔ 1 event) ; clé de run `UNIQUE(company_id, currency, cycle, period_start)` → **impossible** d'émettre 2 factures pour le même run (2 workers concurrents : le 2ᵉ viole la contrainte → retombe sur la facture existante).
+- **Post-commit (idempotent, balayage)** : auto-charge provider + SEPA + notification. Échec → dunning (pas une incohérence de facturation).
+- **Reprise** : events `reserved` sans `invoice_line_id` (T1 rollback) → **re-libérés** `eligible` par un job de reprise ; events `invoiced` sans facture → **impossible** (même tx). Crash après commit avant auto-charge → facture+events cohérents, auto-charge rejouée idempotemment.
+- **Scénarios verrouillés** : activation pendant BillingRun (event créé `eligible` **après** la réservation du run → facturé au run **suivant**, jamais perdu) ; activation répétée (idempotency_key → 1 event) ; immédiat puis récurrent (watermark `billed_through` → pas de recouvrement) ; wallet simultané (idempotency wallet par facture) ; changement de politique (snapshot figé par event) ; annulation/désactivation (event de compensation, jamais suppression).
+
+---
+
+## ADR-632 — AJOUTS FINAUX (à intégrer à la décision)
+- **7. Interprétation historique** : `PeriodBounds::fromLegacy` discriminant (inclusif-23:59:59 / minuit / anniversaire / **ambigu→revue**) ; jamais de charge dérivée d'une période ambiguë ; documents v1 jamais recalculés.
+- **8. Séparation génération/recouvrement** : blocage provisional **uniquement** sur la création de nouvelles charges ; les factures historiques restent exigibles (wallet/paiement/dunning/réconciliation/avoir indépendants — audité).
+- **9. Politique commerciale** : `v2_effective_at` + `commercial_policy_version` + watermark `billed_through` par (module, subscription) → **aucun changement économique silencieux, aucune double facturation** ; contrats existants v1 par défaut.
+- **10. Atomicité** : T1 finalize+consommation events atomique (tx imbriquée) ; contraintes UNIQUE (idempotency_key, invoice_line_id, run key) ; side-effects post-commit idempotents ; reprise des events reserved.
+
+## M0 — tests d'acceptation (strictement additif)
+1. Migration **up** : `invoices.billing_model_version` (défaut 1) + table `billable_events` (vide) → `migrate:status` OK ; **down** rejoue proprement (drop colonne + table).
+2. **Aucun** chemin existant n'écrit v2 ni ne crée d'event (grep + test : renew/addon/checkout produisent toujours v1).
+3. `PeriodBounds::fromLegacy` : `23:59:59`→+1s · `00:00`→inchangé · anniversaire(=start time)→inchangé · ambigu→`null`+flag. Durées correctes (28/29/30/31, bissextile, annuel).
+4. **0 changement de comportement financier** : suite billing complète (≈3200 tests) reste verte ; montants/factures/abonnements inchangés.
+5. Aucune donnée historique modifiée ; aucun event facturé.
+
+## Risques bloquants restants (avant M0)
+- **Décision fuseau** : UTC (défaut) vs minuit **local** — impacte les bornes de tous les nouveaux cycles. **À trancher.**
+- **Anniversaires non-minuit** (sub#2/#3) : conserver l'heure exacte en v2, ou **normaliser à minuit** lors de la transition (décision — léger décalage de borne, documenté, sans trou/chevauchement).
+- **Liste des cas de facturation immédiate** (contractuels) — sinon tout différé.
+- **Watermark `billed_through`** : nécessite une reconstitution fiable de la couverture v1 par module avant toute transition (sinon risque de double facturation) → **prérequis M-transition**, pas M0.
+
+## VERDICT TECHNIQUE
+Architecture **cohérente, vérifiable, prête à être figée** sous réserve des 4 décisions ci-dessus. **M0 est sûr** (additif, réversible, 0 comportement). **GO M0 conditionné** à : validation ADR-632 + tranche fuseau + confirmation que M0 reste strictement additif. **Je n'exécute pas M0** sans votre validation de l'ADR révisée.
