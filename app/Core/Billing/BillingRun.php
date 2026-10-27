@@ -108,9 +108,14 @@ class BillingRun
                     if (in_array($pl->type, ['plan', 'addon'], true)) {
                         $key = $pl->type === 'plan' ? 'plan' : $pl->moduleKey;
                         $wm = $watermarks->get($key);
-                        if (($wm && $wm->billed_through && $wm->billed_through->gte($periodEnd))
-                            || BillingCoverage::overlaps($sub->id, $key, $currency, $periodStart, $periodEnd)) {
-                            continue; // déjà couverte (watermark ou intervalle facturé) → pas de double
+                        $cov = BillingCoverage::coverageStatus($sub->id, $key, $currency, $periodStart, $periodEnd);
+                        if (($wm && $wm->billed_through && $wm->billed_through->gte($periodEnd)) || $cov === 'full') {
+                            $key = null;
+
+                            continue; // entièrement couverte → pas de double
+                        }
+                        if ($cov === 'partial') {
+                            throw new \RuntimeException('__partial_coverage__:'.$key); // ni ignorée, ni résidu ambigu
                         }
                         $billedPrestations[$key] = true;
                     }
@@ -169,6 +174,9 @@ class BillingRun
             if ($e->getMessage() === '__nothing_to_bill__') {
                 return EmissionResult::blocked(['nothing_to_bill'], $runIdentity);
             }
+            if (str_starts_with($e->getMessage(), '__partial_coverage__:')) {
+                return EmissionResult::blocked(['partial_coverage:'.substr($e->getMessage(), 21)], $runIdentity);
+            }
             throw $e;
         } catch (QueryException $e) {
             // Course concurrente sur run_identity → récupérer la facture émise par le run gagnant.
@@ -221,8 +229,12 @@ class BillingRun
         $end = Carbon::parse($event->service_period_end);
         $prestation = $event->module_key ?? 'adjustment';
 
-        if (BillingCoverage::overlaps($sub->id, $prestation, $currency, $start, $end)) {
+        $cov = BillingCoverage::coverageStatus($sub->id, $prestation, $currency, $start, $end);
+        if ($cov === 'full') {
             return EmissionResult::blocked(['already_covered']);
+        }
+        if ($cov === 'partial') {
+            return EmissionResult::blocked(['partial_coverage:'.$prestation]); // ni ignoré, ni résidu ambigu
         }
 
         $runIdentity = 'run:imm:'.$event->id;
