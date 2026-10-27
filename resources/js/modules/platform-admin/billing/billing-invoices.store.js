@@ -5,6 +5,7 @@ export const usePlatformBillingInvoicesStore = defineStore('platformBillingInvoi
   state: () => ({
     // Invoice detail
     _invoiceDetail: null,
+    _consolidatedPreview: null,
 
     // Invoice mutation loading locks (ADR-135 D2b)
     _mutationLoading: {},
@@ -26,6 +27,7 @@ export const usePlatformBillingInvoicesStore = defineStore('platformBillingInvoi
 
   getters: {
     invoiceDetail: state => state._invoiceDetail,
+    consolidatedPreview: state => state._consolidatedPreview,
     mutationLoading: state => state._mutationLoading,
     allInvoices: state => state._allInvoices,
     allInvoicesPagination: state => state._allInvoicesPagination,
@@ -48,6 +50,13 @@ export const usePlatformBillingInvoicesStore = defineStore('platformBillingInvoi
       const data = await $platformApi(`/billing/invoices/${id}`)
 
       this._invoiceDetail = data.invoice
+    },
+
+    // ADR-632 — aperçu consolidé V2 (read-only) d'une Company
+    async fetchConsolidatedPreview(companyId) {
+      this._consolidatedPreview = await $platformApi(`/billing/companies/${companyId}/consolidated-preview`)
+
+      return this._consolidatedPreview
     },
 
     // ── Read-only billing data (view_billing, ADR-135 Phase A) ──

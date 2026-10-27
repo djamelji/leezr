@@ -594,14 +594,31 @@ const bulkRetry = async () => {
         hide-default-footer
       >
         <template #item.company="{ item }">
-          <RouterLink
+          <div
             v-if="item.company?.id"
-            :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
-            class="font-weight-medium text-high-emphasis text-decoration-none"
+            class="d-flex align-center gap-1"
           >
-            {{ item.company.name }}
-          </RouterLink>
-          <span v-else class="font-weight-medium">—</span>
+            <RouterLink
+              :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+              class="font-weight-medium text-high-emphasis text-decoration-none"
+            >
+              {{ item.company.name }}
+            </RouterLink>
+            <IconBtn
+              size="x-small"
+              :title="t('companyBilling.consolidatedPreview.accessButton')"
+              :to="{ path: '/platform/billing/consolidated-preview', query: { company: item.company.id } }"
+            >
+              <VIcon
+                icon="tabler-layers-intersect"
+                size="16"
+              />
+            </IconBtn>
+          </div>
+          <span
+            v-else
+            class="font-weight-medium"
+          >—</span>
         </template>
 
         <template #item.number="{ item }">

@@ -7,6 +7,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     _invoices: [],
     _invoicePagination: { current_page: 1, per_page: 15, total: 0, last_page: 1 },
     _invoiceDetail: null,
+    _consolidatedPreview: null,
     _subscription: null,
     _savedCards: [],
     _maxPaymentMethods: 4,
@@ -26,6 +27,7 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
     invoices: state => state._invoices,
     invoicePagination: state => state._invoicePagination,
     invoiceDetail: state => state._invoiceDetail,
+    consolidatedPreview: state => state._consolidatedPreview,
     subscription: state => state._subscription,
     pendingSubscription: state => state._pendingSubscription,
     savedCards: state => state._savedCards,
@@ -82,6 +84,13 @@ export const useCompanyBillingStore = defineStore('companyBilling', {
       const data = await $api(`/billing/invoices/${id}`)
 
       this._invoiceDetail = data.invoice
+    },
+
+    // ADR-632 — aperçu consolidé V2 (read-only, ne modifie aucune facture)
+    async fetchConsolidatedPreview() {
+      this._consolidatedPreview = await $api('/billing/consolidated-preview')
+
+      return this._consolidatedPreview
     },
 
     async fetchSubscription() {

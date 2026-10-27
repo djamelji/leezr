@@ -117,6 +117,7 @@ Route::middleware(['company.access:use-module,core.billing', 'company.access:use
     // Billing details (ADR-124, ADR-135 LOT4 — billing.manage required for all reads)
     Route::get('/billing/overview', [CompanyBillingController::class, 'overview']);
     Route::get('/billing/invoices', [CompanyBillingController::class, 'invoices']);
+    Route::get('/billing/consolidated-preview', [CompanyBillingController::class, 'consolidatedPreview']); // ADR-632 (aperçu read-only)
     Route::get('/billing/invoices/outstanding', [InvoiceBatchPayController::class, 'listOutstanding']);
     Route::get('/billing/invoices/{id}', [CompanyBillingController::class, 'invoiceDetail']);
     Route::get('/billing/subscription', [CompanyBillingController::class, 'subscription']);

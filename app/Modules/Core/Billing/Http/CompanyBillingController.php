@@ -5,6 +5,7 @@ namespace App\Modules\Core\Billing\Http;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\ReadModels\CompanyBillingReadService;
+use App\Core\Billing\ReadModels\ConsolidatedPreviewReadService;
 use App\Core\Billing\Subscription;
 use App\Core\Plans\PlanRegistry;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,17 @@ class CompanyBillingController
         return response()->json(
             CompanyBillingReadService::invoices($company, $filters, $perPage),
         );
+    }
+
+    /**
+     * ADR-632 — « Aperçu consolidé V2 » : projection visuelle read-only des factures V1 existantes.
+     * N'écrit rien, ne crée aucune créance, ne modifie aucune facture.
+     */
+    public function consolidatedPreview(Request $request): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+
+        return response()->json(ConsolidatedPreviewReadService::forCompany($company));
     }
 
     public function invoiceDetail(Request $request, int $id): JsonResponse

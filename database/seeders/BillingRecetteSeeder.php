@@ -42,6 +42,40 @@ class BillingRecetteSeeder extends Seeder
         $this->seedOwnerCompanyInvoice();         // a finalized invoice on the owner persona's company (browser recette)
         $this->seedOperationalArtifactsCase();    // dead-letter + void + not-due invoices + wallet movements
         $this->seedConsolidatedV2Case();          // ADR-632 (M9): V2 consolidated invoices for the UI recette
+        $this->seedConsolidatedPreviewMirror();   // ADR-632 (aperçu): miroir fidèle de Leezr Logistics PROD
+    }
+
+    /**
+     * ADR-632 — miroir EXACT de Leezr Logistics PROD pour la recette de l'« Aperçu consolidé V2 » :
+     * 3 modules facturés (1 parent + 2 annexes), AUCUNE période (→ « à confirmer »), prix Pro
+     * provisional NON facturé (→ section simulation, hors total). Purement V1, aucune donnée V2.
+     */
+    private function seedConsolidatedPreviewMirror(): void
+    {
+        $c = Company::firstOrCreate(['name' => '[RECETTE] Leezr Logistics (aperçu)'], ['slug' => uniqid('recette-'), 'market_key' => 'FR', 'address_country_code' => 'FR', 'jobdomain_key' => 'logistique']);
+        $this->wipe($c);
+
+        $sub = Subscription::create([
+            'company_id' => $c->id, 'plan_key' => 'pro', 'interval' => 'monthly', 'status' => 'active',
+            'provider' => 'internal', 'is_current' => true, 'plan_price_cents' => 2900, 'plan_price_source' => 'provisional',
+            'current_period_start' => now()->subMonths(5)->startOfMonth(), 'current_period_end' => now()->subMonths(5)->endOfMonth(),
+        ]);
+
+        // Parent = module Congés (comme PROD : aucun plan Pro facturé), + 2 annexes modules. Sans période.
+        $parent = $this->invoice($c, 'INV-APERCU-0001', null, null, 1900, 380, now()->addMonth(), 'open', null, $sub->id);
+        $this->lineNoPeriod($parent, 'workforce_leave', 'Congés & Absences', 1900);
+        $a = $this->invoice($c, null, $parent->id, 'A', 2900, 580, now()->addMonth(), 'open', null, $sub->id);
+        $this->lineNoPeriod($a, 'workforce_planning', 'Planning & Pointage', 2900);
+        $b = $this->invoice($c, null, $parent->id, 'B', 900, 180, now()->addMonth(), 'open', null, $sub->id);
+        $this->lineNoPeriod($b, 'workforce_documents', 'Documents Employés', 900);
+    }
+
+    private function lineNoPeriod(Invoice $inv, string $moduleKey, string $desc, int $amount): void
+    {
+        InvoiceLine::create([
+            'invoice_id' => $inv->id, 'type' => 'addon', 'module_key' => $moduleKey, 'description' => $desc,
+            'quantity' => 1, 'unit_amount' => $amount, 'amount' => $amount, 'period_start' => null, 'period_end' => null,
+        ]);
     }
 
     /**

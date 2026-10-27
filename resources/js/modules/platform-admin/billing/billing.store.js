@@ -54,6 +54,7 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', () => {
 
     // ── Actions — invoices ──
     fetchInvoiceDetail: inv.fetchInvoiceDetail,
+    fetchConsolidatedPreview: inv.fetchConsolidatedPreview,
     fetchAllInvoices: inv.fetchAllInvoices,
     fetchAllPayments: inv.fetchAllPayments,
     fetchAllCreditNotes: inv.fetchAllCreditNotes,

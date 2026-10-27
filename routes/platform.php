@@ -304,6 +304,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/billing/invoices', [PlatformBillingController::class, 'invoices']);
         Route::get('/billing/invoices/export', BillingExportController::class);
         Route::get('/billing/invoices/{id}', [PlatformBillingController::class, 'invoiceDetail']);
+        Route::get('/billing/companies/{id}/consolidated-preview', [PlatformBillingController::class, 'consolidatedPreview']); // ADR-632 (aperçu read-only)
         Route::get('/billing/invoices/{id}/pdf', [PlatformBillingController::class, 'invoicePdf']);
         Route::get('/billing/payments', [PlatformBillingController::class, 'payments']);
         Route::get('/billing/credit-notes', [PlatformBillingController::class, 'creditNotes']);

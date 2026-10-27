@@ -7,8 +7,10 @@ use App\Core\Billing\BillingExpectedConfirmation;
 use App\Core\Billing\BillingJobHeartbeat;
 use App\Core\Billing\BillingWebhookDeadLetter;
 use App\Core\Billing\Invoice;
+use App\Core\Billing\ReadModels\ConsolidatedPreviewReadService;
 use App\Core\Billing\ReadModels\PlatformBillingReadService;
 use App\Core\Billing\Subscription;
+use App\Core\Models\Company;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -38,6 +40,20 @@ class PlatformBillingController
         }
 
         return response()->json(['invoice' => $invoice]);
+    }
+
+    /**
+     * ADR-632 — « Aperçu consolidé V2 » (read-only) d'une Company, côté Platform. N'écrit rien.
+     */
+    public function consolidatedPreview(int $companyId): JsonResponse
+    {
+        $company = Company::find($companyId);
+
+        if (!$company) {
+            return response()->json(['message' => 'Company not found.'], 404);
+        }
+
+        return response()->json(ConsolidatedPreviewReadService::forCompany($company));
     }
 
     public function payments(Request $request): JsonResponse

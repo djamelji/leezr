@@ -701,6 +701,7 @@
     }
   },
   "platformBilling": {
+    "consolidatedPreview": { "accessButton": "Aperçu consolidé V2", "missingCompany": "Aucune Company spécifiée pour l\u2019aperçu." },
     "title": "Aperçu facturation",
     "subtitle": "Données de facturation inter-entreprises, factures, paiements et relances.",
     "drilldown": {
@@ -1476,6 +1477,30 @@
     "invoiceAmountDue": "Reste dû TTC",
     "invoiceSubtotal": "Montant HT",
     "invoiceTax": "TVA",
+    "consolidatedPreview": {
+      "accessButton": "Aperçu consolidé V2",
+      "title": "Aperçu consolidé V2",
+      "badge": "Simulation",
+      "backToInvoices": "Factures officielles V1",
+      "accessHint": "Prévisualisation des factures existantes en présentation consolidée",
+      "sourceNote": "Agrégation visuelle des factures existantes, sans recalcul ni fusion comptable.",
+      "warningTitle": "Simulation visuelle — ne constitue pas une facture",
+      "warningBody": "Aucune facture n'est créée, fusionnée ni modifiée. Les documents comptables officiels restent les factures V1.",
+      "multiCurrency": "Plusieurs devises détectées — seule {currency} est affichée (aucun mélange).",
+      "prestation": "Prestation",
+      "invoiceRef": "Facture",
+      "periodToConfirm": "Période à confirmer",
+      "annexe": "Annexe",
+      "existingTotalHt": "Total HT des factures existantes",
+      "existingTotalTtc": "Total TTC des factures existantes",
+      "paid": "Déjà payé",
+      "due": "Reste dû",
+      "noData": "Aucune facture existante à agréger.",
+      "provisionalTitle": "Simulation non facturée",
+      "provisionalNote": "Prix contractuel non confirmé (provisional) — montant indicatif, non ajouté au total des créances.",
+      "notBilled": "Non facturé",
+      "htIndicative": "HT indicatifs"
+    },
     "invoicePay": "Payer",
     "ht": "HT",
     "invoiceIssuedAt": "Émise le",

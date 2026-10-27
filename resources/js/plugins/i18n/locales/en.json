@@ -701,6 +701,7 @@
     }
   },
   "platformBilling": {
+    "consolidatedPreview": { "accessButton": "Consolidated preview V2", "missingCompany": "No company specified for the preview." },
     "title": "Billing Overview",
     "subtitle": "Cross-company billing data, invoices, payments and dunning.",
     "drilldown": {
@@ -1476,6 +1477,30 @@
     "invoiceAmountDue": "Due TTC",
     "invoiceSubtotal": "Net amount",
     "invoiceTax": "VAT",
+    "consolidatedPreview": {
+      "accessButton": "Consolidated preview V2",
+      "title": "Consolidated preview V2",
+      "badge": "Simulation",
+      "backToInvoices": "Official V1 invoices",
+      "accessHint": "Preview existing invoices in a consolidated presentation",
+      "sourceNote": "Visual aggregation of existing invoices, with no recomputation or accounting merge.",
+      "warningTitle": "Visual simulation — not an invoice",
+      "warningBody": "No invoice is created, merged or modified. The official accounting documents remain the V1 invoices.",
+      "multiCurrency": "Multiple currencies detected — only {currency} is shown (no mixing).",
+      "prestation": "Item",
+      "invoiceRef": "Invoice",
+      "periodToConfirm": "Period to confirm",
+      "annexe": "Annex",
+      "existingTotalHt": "Existing invoices net total",
+      "existingTotalTtc": "Existing invoices gross total",
+      "paid": "Already paid",
+      "due": "Amount due",
+      "noData": "No existing invoice to aggregate.",
+      "provisionalTitle": "Unbilled simulation",
+      "provisionalNote": "Unconfirmed contracted price (provisional) — indicative amount, not added to receivables.",
+      "notBilled": "Not billed",
+      "htIndicative": "net (indicative)"
+    },
     "invoicePay": "Pay",
     "ht": "excl. tax",
     "invoiceIssuedAt": "Issued",

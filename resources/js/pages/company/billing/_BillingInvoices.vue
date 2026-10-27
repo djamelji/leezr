@@ -119,6 +119,16 @@ watch(statusFilter, () => loadInvoices(1))
       />
       {{ t('companyBilling.invoices') }}
       <VSpacer />
+      <VBtn
+        variant="tonal"
+        size="small"
+        color="secondary"
+        prepend-icon="tabler-layers-intersect"
+        class="me-2"
+        :to="'/company/billing/consolidated-preview'"
+      >
+        {{ t('companyBilling.consolidatedPreview.accessButton') }}
+      </VBtn>
       <AppSelect
         v-model="statusFilter"
         :items="statusOptions"
