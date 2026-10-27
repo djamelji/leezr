@@ -25,7 +25,12 @@ class InvoiceBatchPayController
     {
         $company = $request->attributes->get('company');
 
-        $invoices = Invoice::where('company_id', $company->id)
+        // ADR-328: annexes carry addon/module charges with number=NULL (the number lives on the parent
+        // + an annexe_suffix). They remain INDIVIDUALLY payable (own amount_due, settled by id), so we
+        // expose a reliable PRESENTATION contract — display_number + business label — without ever
+        // emitting a NULL label. Eager-load lines + parent to avoid N+1. Amounts are NOT recomputed.
+        $invoices = Invoice::with(['lines:id,invoice_id,description', 'parentInvoice:id,number'])
+            ->where('company_id', $company->id)
             ->whereIn('status', ['open', 'overdue', 'uncollectible'])
             ->where('amount_due', '>', 0)
             ->whereNotNull('finalized_at')
@@ -34,6 +39,11 @@ class InvoiceBatchPayController
             ->map(fn ($inv) => [
                 'id' => $inv->id,
                 'number' => $inv->number,
+                'display_number' => $inv->displayNumber(),               // e.g. INV-2026-000002 or ...-A
+                'is_annexe' => $inv->isAnnexe(),
+                'parent_invoice_id' => $inv->parent_invoice_id,
+                'parent_number' => $inv->parentInvoice?->number,
+                'label' => $inv->lines->first()?->description,           // business label (e.g. "Addon Planning")
                 'status' => $inv->status,
                 'amount' => $inv->amount,
                 'amount_due' => $inv->amount_due,

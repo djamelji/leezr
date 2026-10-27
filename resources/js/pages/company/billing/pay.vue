@@ -146,6 +146,34 @@ const allSelected = computed(() =>
   invoices.value.length > 0 && selectedIds.value.length === invoices.value.length,
 )
 
+// ADR-623: online settlement only when the provider can actually collect (Stripe). With null/internal
+// we show the amounts/documents but never a payment flow that cannot complete.
+const canPayOnline = computed(() => store.overview?.can_pay_online === true)
+
+// ADR-328: display annexes nested under their parent invoice (visual grouping only — each row stays
+// individually selectable by its real id; totals are unchanged, summed by selected id).
+const orderedRows = computed(() => {
+  const list = invoices.value
+  const byParent = {}
+  list.forEach(inv => {
+    if (inv.is_annexe && inv.parent_invoice_id) (byParent[inv.parent_invoice_id] ??= []).push(inv)
+  })
+  const rows = []
+  const seen = new Set()
+  list.forEach(inv => {
+    if (inv.is_annexe) return
+    rows.push(inv); seen.add(inv.id)
+    ;(byParent[inv.id] || []).forEach(a => { rows.push(a); seen.add(a.id) })
+  })
+  // Annexes whose parent is not itself outstanding → still payable, shown standalone.
+  list.forEach(inv => { if (!seen.has(inv.id)) rows.push(inv) })
+
+  return rows
+})
+
+// Never emit an empty label: display_number is always non-null (displayNumber()); fall back defensively.
+const rowTitle = inv => inv.display_number || inv.number || `#${inv.id}`
+
 const isNewMethod = computed(() => selectedMethod.value === 'new-card' || selectedMethod.value === 'new-sepa')
 
 const selectedSavedCard = computed(() =>
@@ -613,9 +641,10 @@ const goToBilling = () => {
               </thead>
               <tbody>
                 <tr
-                  v-for="inv in invoices"
+                  v-for="inv in orderedRows"
                   :key="inv.id"
                   class="cursor-pointer"
+                  :data-test="`pay-row-${inv.id}`"
                   @click="toggleInvoice(inv.id)"
                 >
                   <td>
@@ -626,8 +655,14 @@ const goToBilling = () => {
                       @update:model-value="toggleInvoice(inv.id)"
                     />
                   </td>
-                  <td class="font-weight-medium">
-                    {{ inv.number }}
+                  <td>
+                    <div class="d-flex flex-column" :class="inv.is_annexe ? 'ps-6' : ''">
+                      <span class="font-weight-medium d-flex align-center gap-1">
+                        <VIcon v-if="inv.is_annexe" icon="tabler-corner-down-right" size="14" class="text-disabled" />
+                        {{ rowTitle(inv) }}
+                      </span>
+                      <span v-if="inv.label" class="text-caption text-medium-emphasis">{{ inv.label }}</span>
+                    </div>
                   </td>
                   <td>
                     <VChip
@@ -641,7 +676,7 @@ const goToBilling = () => {
                     {{ formatDate(inv.due_at) }}
                   </td>
                   <td class="text-end font-weight-medium">
-                    {{ fmt(inv.amount_due) }}
+                    {{ fmt(inv.amount_due) }} <span class="text-caption text-disabled">{{ t('common.inclTax') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -907,9 +942,24 @@ const goToBilling = () => {
                 />
               </template>
 
-              <!-- Pay button (step=select) -->
+              <!-- Online payment UNAVAILABLE (provider null/internal) and a provider amount remains -->
+              <VAlert
+                v-if="step === 'select' && !canPayOnline && remaining > 0"
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+                data-test="pay-unavailable"
+              >
+                <div class="mb-2">{{ t('companyBilling.onlinePaymentUnavailableDesc') }}</div>
+                <VBtn size="small" variant="tonal" color="primary" prepend-icon="tabler-headset" :to="{ name: 'company-support' }">
+                  {{ t('companyBilling.contactSupport') }}
+                </VBtn>
+              </VAlert>
+
+              <!-- Pay button (step=select) — online when provider can collect, OR wallet covers the full amount -->
               <VBtn
-                v-if="step === 'select'"
+                v-if="step === 'select' && (canPayOnline || remaining === 0)"
                 v-can="'billing.manage'"
                 block
                 color="primary"

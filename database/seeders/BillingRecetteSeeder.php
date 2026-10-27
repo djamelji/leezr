@@ -104,16 +104,30 @@ class BillingRecetteSeeder extends Seeder
             return;
         }
 
-        Invoice::where('company_id', $company->id)->where('number', 'INV-RECETTE-OWNER')->get()
-            ->each(function ($i) {
-                InvoiceLine::where('invoice_id', $i->id)->delete();
-                Payment::where('invoice_id', $i->id)->delete();
-                $i->delete();
-            });
+        // Wipe the parent AND its annexes (children) to stay idempotent.
+        $parents = Invoice::where('company_id', $company->id)->where('number', 'INV-RECETTE-OWNER')->pluck('id');
+        Invoice::whereIn('parent_invoice_id', $parents)->get()->each(function ($a) {
+            InvoiceLine::where('invoice_id', $a->id)->delete();
+            Payment::where('invoice_id', $a->id)->delete();
+            $a->delete();
+        });
+        Invoice::whereIn('id', $parents)->get()->each(function ($i) {
+            InvoiceLine::where('invoice_id', $i->id)->delete();
+            Payment::where('invoice_id', $i->id)->delete();
+            $i->delete();
+        });
 
+        // Parent invoice (plan) — carries the real number.
         $inv = $this->invoice($company, 'INV-RECETTE-OWNER', null, null, 4800, 960, now()->addMonth(), 'open');
         $this->line($inv, 'plan', null, 'Abonnement Pro', 2900);
         $this->line($inv, 'addon', 'workforce_leave', 'Addon Congés & Absences', 1900);
+
+        // ADR-328 annexes (number=NULL, own balance) — reproduce the "module invoice without a name"
+        // scenario so /company/billing/pay can be validated: each annexe carries an addon module line.
+        $annexeA = $this->invoice($company, null, $inv->id, 'A', 2900, 580, now()->addMonth(), 'open');
+        $this->line($annexeA, 'addon', 'workforce_planning', 'Addon Planning & Pointage', 2900);
+        $annexeB = $this->invoice($company, null, $inv->id, 'B', 900, 180, now()->addMonth(), 'open');
+        $this->line($annexeB, 'addon', 'workforce_documents', 'Addon Documents Employés', 900);
     }
 
     /** Company A — active Pro, period ended, provisional price, 3 flat addons (1 invoice + 2 annexes), not due. */

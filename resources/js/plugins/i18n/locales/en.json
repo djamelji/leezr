@@ -342,6 +342,7 @@
     "perMonth": "/mo",
     "perYear": "/yr",
     "exclTax": "excl. tax",
+    "inclTax": "incl. tax",
     "free": "Free",
     "monthly": "Monthly",
     "annually": "Annually",

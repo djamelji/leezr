@@ -342,6 +342,7 @@
     "perMonth": "/mois",
     "perYear": "/an",
     "exclTax": "HT",
+    "inclTax": "TTC",
     "free": "Gratuit",
     "monthly": "Mensuel",
     "annually": "Annuel",
