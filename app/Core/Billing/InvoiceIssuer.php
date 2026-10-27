@@ -189,8 +189,12 @@ class InvoiceIssuer
      *
      * @throws RuntimeException If invoice is already finalized or has no lines
      */
-    public static function finalize(Invoice $invoice): Invoice
+    public static function finalize(Invoice $invoice, bool $suppressExternalSideEffects = false): Invoice
     {
+        // ADR-632 (M4): $suppressExternalSideEffects=true skips the POST-COMMIT external effects
+        // (customer notification + deferred SEPA scheduling) while preserving the atomic finalization
+        // (totals, number, snapshot, LEDGER). Used by the consolidated BillingRun emitter, which must
+        // never send notifications or schedule debits. Default false → V1 behaviour strictly unchanged.
         if ($invoice->isFinalized()) {
             throw new RuntimeException('Invoice is already finalized.');
         }
@@ -290,6 +294,11 @@ class InvoiceIssuer
 
             return $invoice;
         });
+
+        // ADR-632 (M4): the consolidated emitter suppresses external effects (no notification/SEPA).
+        if ($suppressExternalSideEffects) {
+            return $finalizedInvoice;
+        }
 
         // ADR-272: Notify company owner about new invoice / payment (outside transaction)
         try {

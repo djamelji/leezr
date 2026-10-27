@@ -140,6 +140,10 @@ return [
 
     'consolidated' => [
         'route_activations' => (bool) env('BILLING_CONSOLIDATED_ROUTE_ACTIVATIONS', false),
+        // ADR-632 (M4): OPERATIONAL emission gate (OFF by default). Even with everything else green,
+        // the consolidated BillingRun emits a real invoice ONLY when this is ON. Kept OFF in all
+        // deployed envs until the full V2 chain (payment/dunning/read models/PDF) is ready.
+        'emit' => (bool) env('BILLING_CONSOLIDATED_EMIT', false),
     ],
 
 ];
