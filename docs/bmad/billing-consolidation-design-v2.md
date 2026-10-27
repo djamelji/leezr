@@ -285,3 +285,93 @@ CREATED ──(validé/éligible)──▶ ELIGIBLE ──(BillingRun lock atomi
 - **G** changement de plan mi-période : `ProrationCalculator` (existant), event `plan_change`, net reporté ou doc selon policy timing.
 - **H** activ/désactiv répétées : chaque transition = event distinct **non fusionné** ; compensations tracées ; somme nette correcte.
 - **I** 134 modules dates ≠ : 134 events `eligible` de périodes de service différentes → **1 facture conso.** au cycle, 135 lignes (plan + 134), périodes **non fusionnées**, 1 solde.
+
+---
+
+# RÉVISION FINALE — convention temporelle, bornes & ADR-632 complet
+
+## I. Audit des bornes ACTUELLES (incohérences confirmées, refs)
+| Chemin | Borne de fin stockée/utilisée | Réf |
+|---|---|---|
+| Inscription (free) | `now()->addMonth()` → **porte l'heure de now()** | `RegisterCompanyUseCase:136-138` |
+| Renouvellement | `newStart = current_period_end` (hérite l'heure) ; `newEnd = start + interval`/anchor | `BillingRenewCommand:206-246` |
+| Données legacy/seed | `startOfMonth 00:00 → endOfMonth 23:59:59` (**inclusif, dernière seconde**) | ex. sub#1 PROD `05-01 00:00 → 05-31 23:59:59` |
+| Facture | `period_end = $newPeriodEnd->toDateString()` → **00:00, perd l'heure** | `BillingRenewCommand:302` |
+| Prorata | `ProrationCalculator` reçoit **timestamps complets** + `round()` → **sensible à l'heure** | `PlanChangeExecutor:117-119`, `ProrationCalculator:57-58` |
+
+➡️ **Conclusion** : 3 représentations coexistent (heure-de-now / 23:59:59 inclusif / 00:00 date) + un `round()` time-sensitive. **Incohérent.** Un simple `+1` ne corrige pas la cause.
+
+## II. Convention cible : intervalles semi-ouverts `[start, end)`
+- **Définition** : `start` = minuit UTC du 1ᵉʳ jour ; `end` = **minuit UTC du 1ᵉʳ jour de la période suivante (EXCLUSIF)**. Durée = `end − start` en jours **entiers** (pas de 23:59:59, pas de `round`).
+- Octobre : `[2026-10-01 00:00, 2026-11-01 00:00)` = **31 j**. Activation `2026-10-16 00:00` → durée facturable `[2026-10-16, 2026-11-01)` = **16 j** → **16/31** ✅ (sans `+1` arbitraire : conséquence directe de l'exclusivité de `end`).
+- **Prorata** = `floor( billableDays / periodDays × prix_snapshot )`, `billableDays = (end − activationStart)` jours entiers, `periodDays = (end − start)`. Mensuel : `periodDays` = jours réels (28/29/30/31). Annuel : 365/366.
+- **Fuseau** : UTC (conforme `config/app.php`). Bornes = minuit UTC. Si un alignement minuit **local** est voulu → décision explicite (sinon UTC).
+- **Prorata négatif** (désactivation) : jours **non consommés** `[deactivation, end)` → **crédit** `floor(...)`, jamais facture négative.
+
+## III. Stratégie de migration des bornes (sans toucher l'historique)
+- **Normalisation au niveau de la DÉFINITION de borne**, pas un `+1` dans le calcul : une période v2 est **toujours** écrite en `[00:00, 00:00_suivant)`.
+- **Lecture des périodes historiques (v1)** via un helper unique `PeriodBounds::fromLegacy($start,$end)` : interprète un `end` à `23:59:59` **ou** un timestamp comme **instant inclusif** → `end_exclusive = $end->ceil('day')` (jour suivant 00:00). **Aucune écriture** sur les lignes historiques ; normalisation **à la lecture** pour les calculs cohérents.
+- **Cycles existants non modifiés** : la bascule semi-ouverte s'applique aux **nouveaux** cycles v2 (date d'effet). Tests de transition : un abonnement dont le `current_period_end` est `23:59:59` doit, au prochain renouvellement v2, produire une borne `[.., 00:00_suivant)` **contiguë** (pas de trou d'1 s, pas de chevauchement).
+- **Non négociable** : ne jamais réécrire silencieusement `current_period_end` des abonnements actifs ; la normalisation est appliquée au **moment du renouvellement v2** (nouvelle période) et **à la lecture** (helper), avec logs.
+
+## IV. Options commerciales définitives (paramètres, portée, défauts)
+| Paramètre | Portée | Valeurs | Défaut |
+|---|---|---|---|
+| `activation_mode` | par module/addon (sur l'intent/événement) | `immediate` \| `scheduled(date)` \| `next_cycle` | `immediate` |
+| `billing_mode` | par module/addon | `immediate` \| `deferred_next_invoice` | **`deferred_next_invoice`** |
+| `immediate_billing_requires` | politique contrat | drapeau explicite | off |
+
+- **Indépendance** garantie : `activation_mode` ≠ `billing_mode`. **L'activation n'émet jamais une facture** (découplage) — elle crée un `BillableEvent`.
+- **Compatibilité existant** : `scheduled` réutilise le pattern `PlanChangeIntent.scheduled_at` (généralisé aux modules) ; `next_cycle` réutilise la logique trial-guard ; `immediate` = chemin actuel mais **sans auto-facturation** (→ event différé par défaut).
+
+## V. Cardinalité des lignes (≥135) & lisibilité
+- 1 ligne plan + N lignes modules récurrents + **jusqu'à N lignes de prorata antérieur** + ajustements/remises → **pas de limite arbitraire**.
+- **Document comptable unique**, N lignes, **1 solde, 1 règlement**.
+- Affichage : **regroupement par famille** + **sous-totaux** (plan / modules récurrents / proratas / remises / taxes) ; **détail comptable jamais masqué**. PDF **multipage paginé** (Poppins local). Read models paginés. Performance : 1 requête lignes + agrégats SQL (pas de calcul front).
+
+## VI. v1/v2 — rollback & version minimale (précisé)
+- `billing.consolidated.create` contrôle **uniquement** la création de nouveaux v2.
+- **Prérequis de sûreté (ajout Point 7)** : avant d'activer la création v2 en PROD, la version **déployée ET la version cible de rollback** doivent **toutes deux savoir lire/traiter v1 ET v2** (lecture, PDF, paiement, avoir, dunning, ledger, réconciliation). ⇒ **version minimale de rollback = premier release contenant le lecteur v2** (pas une version antérieure). On n'active jamais la création v2 avant que le lecteur v2 soit en PROD depuis ≥ 1 release stable.
+- Rollback = **flag création OFF** (nouveaux cycles en v1) ; les v2 déjà émises **restent** traitées. **Jamais** revenir à une version sans lecteur v2 tant que des documents v2 existent.
+- Déploiement progressif : (1) release lecteur v1+v2 (création OFF) ; (2) observation ; (3) création v2 ON par date d'effet ; (4) rollback = création OFF (lecteur reste).
+
+## VII. Exemples RECALCULÉS (convention semi-ouverte, floor, TVA 20%)
+**Facture émise 2026-11-01 — période `[2026-11-01, 2026-12-01)` (30 j) — EUR**
+| # | Type | Libellé | Période service | Prorata | HT | TVA | TTC |
+|---|---|---|---|---|---|---|---|
+| 1 | plan | Abonnement Pro — du 01/11/2026 au 30/11/2026 | [11-01,12-01) | — | 29,00 | 5,80 | 34,80 |
+| 2 | module | Module Planning & Pointage — du 01/11/2026 au 30/11/2026 | [11-01,12-01) | — | 29,00 | 5,80 | 34,80 |
+| 3 | module | Module Documents Employés — du 01/11/2026 au 30/11/2026 | [11-01,12-01) | — | 9,00 | 1,80 | 10,80 |
+| 4 | adjustment | Module Planning & Pointage — prorata du 16/10/2026 au 31/10/2026 (**16/31 j**) | [10-16,11-01) | 16/31 | `floor(16/31×2900)`=**14,96** | 2,99 | 17,95 |
+| | | | | **HT 81,96** | **TVA 16,39** | **TTC 98,35** | |
+
+Calcul prorata ligne 4 : `floor(16/31 × 2900) = floor(1496,77) = 1496` cents = **14,96 €**. TVA `floor(0.20×1496)=299`=2,99. **Somme des floors par ligne** (invariant : total TVA = Σ TVA lignes, pas TVA du total — documenté pour éviter 1 cent d'écart sur 134 lignes).
+
+## VIII. Plan M0→M10 (inchangé §10) + **conditions de GO pour M0**
+GO M0 **si et seulement si** :
+1. ADR-632 figée (ci-dessous) **validée** par vous.
+2. Arbitrages tranchés : convention semi-ouverte ✅ (vous), défaut `deferred_next_invoice` ✅, fuseau UTC (à confirmer), cas de facturation immédiate listés.
+3. M0 = **migration additive seule** : `Invoice.billing_model_version` (défaut 1) + table `billable_events` (vide) + helper `PeriodBounds` (lecture) **sans aucun branchement moteur** → **0 changement de comportement**, réversible (drop table + colonne).
+4. Tests M0 : migration up/down, aucun chemin existant n'écrit v2, `PeriodBounds::fromLegacy` sur bornes 23:59:59/00:00/timestamp → durées correctes.
+
+---
+
+## ADR-632 (RÉVISÉE, COMPLÈTE — proposée, à figer dans `04-decisions.md` après votre GO)
+
+**ADR-632 — Facturation consolidée V2 + convention temporelle semi-ouverte.** Statut : PROPOSÉ.
+
+**Contexte.** Fragmentation (annexe/facture par module mi-cycle, facturé plein+immédiat), absence de facture plan (provisional bloqué + chemin addon découplé), et **conventions de bornes incohérentes** (heure-de-now / 23:59:59 inclusif / 00:00 date / `round` time-sensitive). Le modèle de données supporte déjà la consolidation (`InvoiceLine` typées, `PricingEngine`, `BillingRenewCommand`).
+
+**Décision.**
+1. **Facture consolidée v2** : 1 doc / (company, devise, cycle, période), N lignes typées, émise+finalisée **à l'avance** ; `Invoice.billing_model_version`.
+2. **Convention temporelle semi-ouverte `[start, end)`** (end exclusif = minuit du jour suivant, UTC) ; durée = jours entiers ; prorata `floor(billableDays/periodDays × snapshot)` ; négatif → crédit. Normalisation historique **à la lecture** (`PeriodBounds::fromLegacy`), **jamais** de réécriture des cycles existants.
+3. **BillableEvent immuable** (machine d'état CREATED→ELIGIBLE→RESERVED→INVOICED + CANCELLED/COMPENSATED) : mi-cycle → event différé (défaut) ; idempotence + réservation atomique + reprise ; figé-à-l'activation vs calculé-à-l'émission.
+4. **Activation ⟂ facturation** : `activation_mode∈{immediate,scheduled,next_cycle}`, `billing_mode∈{immediate,deferred_next_invoice}` (défaut deferred). L'activation **n'émet jamais** de facture.
+5. **Provisional (5 autorisations)** : activer ✅ / utiliser ✅ / accumuler ✅ / **émettre ❌** / **encaisser ❌** (`cycle_hold`). Déblocage **en avant, jamais rétroactif auto** (ADR-575) ; revue ops tracée. **Pas de suspension technique auto** des modules.
+6. **v1/v2** : flag = création seule ; traitement v1+v2 **permanent** ; **version minimale de rollback = premier release avec lecteur v2** ; jamais revenir en-deçà tant que des v2 existent.
+
+**Conséquences.** 1 facture lisible/cycle (plan+modules+proratas datés, 1 solde) ; **3 changements de comportement assumés** (consolidation + prorata + report, vs plein/immédiat actuel) impactant le CA reconnu sous provisional ; double modèle encadré ; migration M0→M10 réversible.
+
+**Préserve** : ADR-328 (historique intact), ADR-575 (anti-rétro), ADR-593 (blocage provisional), snapshots, numéros, factures émises, règles fiscales.
+
+**Invariants** (tests d'acceptation) : pas de double facturation (event+run idempotents) ; une prestation courante jamais refacturée par un event historique ; document finalisé immuable ; Σ lignes = Σ taxes = total au **centime près** ; prorata reproductible depuis snapshots ; concurrence/crash/rejeu sûrs ; historique v1 intègre ; facture v2 payable même flag OFF.
