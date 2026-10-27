@@ -444,6 +444,14 @@ Changement réel : aujourd'hui **mois plein depuis activation + immédiat** → 
 4. **0 changement de comportement financier** : suite billing complète (≈3200 tests) reste verte ; montants/factures/abonnements inchangés.
 5. Aucune donnée historique modifiée ; aucun event facturé.
 
+## M9 — écrans Company/Platform V2 (LIVRÉ, DEV uniquement, émission OFF)
+SHA DEV servi : `9a22eec` (`releases/20261027060816_9a22eec`). `emit=OFF`, `route_activations=OFF`.
+- **Company** `invoices/[id].vue` : rendu V2 par sections (abonnement / modules / remises / ajustements) en panneaux dépliables (ouverts par défaut, aucune ligne masquée définitivement) ; par ligne : libellé historique, période de prestation, qté, HT/TVA/TTC ; badge **Prorata** sur les lignes portant un `billable_event_id`. Branchement sur `billing_model_version` → V1 inchangé (table classique). **Aucun recalcul Vue** (montants API). Liste : colonnes HT/TVA ajoutées ; 1 facture V2 = 1 ligne.
+- **Platform** `invoices/[id].vue` : même rendu ; `PlatformBillingReadService::invoiceDetail` expose `billing_model_version`, périodes par ligne et `consolidated_sections` **en réutilisant** `CompanyBillingReadService::consolidatedSections` → montants **identiques** Company = Platform = PDF (test de parité PHPUnit). RBAC inchangé (permission `view_billing`, endpoint détail refusé sans session).
+- **Fixtures recette** (`BillingRecetteSeeder`, DEV/local) : 2 factures V2 (mixte 6 lignes + 135 lignes) construites **directement** via `LedgerService::recordInvoiceAnalytics` — **sans pipeline d'émission, sans toggle de flag** → données V2 navigables sans activer l'émission sur une Company réelle. Réconciliées au centime sur DEV (`v2_invoices_total=2`).
+- **Tests** : `BillingV2ReadModelPdfTest` (+ parité Company/Platform) ; e2e `company/platform-billing-consolidated-v2` (sections, prorata, périodes, PDF multipage réel, dark mode, V1 préservé, endpoint protégé). Billing+Platform PHPUnit **872 passés** ; build Vite propre ; **7 specs Playwright navigateur vertes**.
+- **Aucun effet financier** : lecture seule, aucune émission, aucun encaissement, historique V1 intact.
+
 ## Risques bloquants restants (avant M0)
 - **Décision fuseau** : UTC (défaut) vs minuit **local** — impacte les bornes de tous les nouveaux cycles. **À trancher.**
 - **Anniversaires non-minuit** (sub#2/#3) : conserver l'heure exacte en v2, ou **normaliser à minuit** lors de la transition (décision — léger décalage de borne, documenté, sans trou/chevauchement).
