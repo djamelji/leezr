@@ -398,4 +398,55 @@ class LedgerService
     {
         return (float) $amountInCents;
     }
+
+    /**
+     * ADR-632 (M7) — VENTILATION ANALYTIQUE d'une facture consolidée V2 (pas une créance, pas un
+     * débit/crédit). Décompose le HT/TVA/TTC PAR LIGNE (plan/module/prorata/remise), TVA répartie
+     * déterministe (Σ == invoice.tax_amount, la TVA agrégée faisant foi). Référence invoice_id +
+     * invoice_line_id + l'éventuel BillableEvent. Idempotent (unique invoice_line_id). N'altère JAMAIS
+     * le grand livre ni les factures historiques V1. Ne lève jamais.
+     */
+    public static function recordInvoiceAnalytics(Invoice $invoice): void
+    {
+        try {
+            $lines = $invoice->lines()->get();
+            if ($lines->isEmpty()) {
+                return;
+            }
+
+            $lineHts = $lines->mapWithKeys(fn ($l) => [$l->id => (int) $l->amount])->all();
+            $taxByLine = TaxAllocation::allocate($lineHts, (int) $invoice->tax_amount);
+
+            $eventByLine = BillableEvent::whereIn('invoice_line_id', array_keys($lineHts))
+                ->pluck('id', 'invoice_line_id');
+
+            foreach ($lines as $line) {
+                if (BillingInvoiceLineAnalytic::where('invoice_line_id', $line->id)->exists()) {
+                    continue; // idempotent
+                }
+                $ht = (int) $line->amount;
+                $tax = $taxByLine[$line->id] ?? 0;
+                BillingInvoiceLineAnalytic::create([
+                    'invoice_id' => $invoice->id,
+                    'invoice_line_id' => $line->id,
+                    'company_id' => $invoice->company_id,
+                    'subscription_id' => $invoice->subscription_id,
+                    'prestation_type' => $line->type,
+                    'module_key' => $line->module_key,
+                    'service_period_start' => $line->period_start,
+                    'service_period_end' => $line->period_end,
+                    'ht_cents' => $ht,
+                    'tax_rate_bps' => (int) $invoice->tax_rate_bps,
+                    'tax_cents' => $tax,
+                    'ttc_cents' => $ht + $tax,
+                    'currency' => $invoice->currency,
+                    'billable_event_id' => $eventByLine[$line->id] ?? null,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[ledger] analytics ventilation failed', [
+                'invoice_id' => $invoice->id, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }

@@ -148,6 +148,7 @@ class BillingRun
                 }
 
                 $finalized = InvoiceIssuer::finalize($invoice, suppressExternalSideEffects: true);
+                LedgerService::recordInvoiceAnalytics($finalized); // ADR-632 M7 : ventilation analytique
 
                 // Avancer les watermarks des prestations facturées (borne exclusive = fin de période).
                 foreach (array_keys($billedPrestations) as $p) {
@@ -267,6 +268,7 @@ class BillingRun
                 app(BillableEventService::class)->markInvoiced($event->id, $line->id, $runIdentity);
 
                 $finalized = InvoiceIssuer::finalize($invoice, suppressExternalSideEffects: true);
+                LedgerService::recordInvoiceAnalytics($finalized); // ADR-632 M7 : ventilation analytique
 
                 BillingCoverage::record($company->id, $sub->id, $prestation, $currency, $start, $end, $finalized->id, $line->id);
                 $run->update(['invoice_id' => $finalized->id]);
