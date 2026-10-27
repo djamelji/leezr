@@ -58,3 +58,13 @@
 **GO conditionnel** — déployer le code V1/V2 avec flags OFF est **sûr** : additif, réversible, aucune Company éligible, aucune émission, V1 intact (898 tests verts). Conditions d'exécution : (a) sauvegarde PROD préalable, (b) check-list déploiement respectée, (c) **autorisation explicite d'exécution** (push main + déploiement PROD).
 
 **M10-B2 reste NO-GO** tant que les prérequis ci-dessus ne sont pas remplis sur un contrat réel.
+
+## Exécution M10-B1 — 2026-10-27 : **SUCCESS**
+- `main` ← `7c4fc86` (fast-forward depuis `2bcf3a4`) ; déploiement PROD (run GitHub Actions `success`) ; SHA servi `releases/20261027161457_7c4fc86`.
+- Sauvegarde pré-déploiement : `~/backups/preM10B1_20261027_161213.sql.gz` (2.8 Mo, web2). SHA précédent conservé : `2bcf3a4`.
+- 7 migrations V2 additives `Ran` (batch 8).
+- Flags (config Laravel chargée) : `emit=false`, `route_activations=false`.
+- Conditions PROD vérifiées : `v2_effective_at` NULL partout ; 0 billable_event / billing_run / watermark / covered_interval / line_analytic ; invoices_v1=4, invoices_v2=0 ; nouvelles tables V2 inutilisées.
+- Contrôle financier avant=après (inchangé) : invoices 4, annexes 2, amount 10320, amount_due 10320, payments 0, credit_notes 0, ledger 13, subscriptions 3, addons actifs 3.
+- Contrôles read-only : read models Company & Platform (v=1, 0 section) OK ; endpoint PDF `302` (auth), page billing `200`, root `200`.
+- **Aucune activation V2, aucun encaissement, aucune facture consolidée, aucun abonnement modifié.** M10-B2 non lancé.
