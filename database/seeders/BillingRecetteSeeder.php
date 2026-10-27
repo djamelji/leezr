@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Core\Billing\BillableEvent;
+use App\Core\Billing\BillingInvoiceLineAnalytic;
 use App\Core\Billing\BillingWebhookDeadLetter;
 use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceLine;
+use App\Core\Billing\LedgerService;
 use App\Core\Billing\Payment;
 use App\Core\Billing\Subscription;
 use App\Core\Billing\WalletLedger;
@@ -38,6 +41,102 @@ class BillingRecetteSeeder extends Seeder
         $this->seedOverdueFailedPaymentCase();    // genuine payment problem — failed payment + overdue invoice
         $this->seedOwnerCompanyInvoice();         // a finalized invoice on the owner persona's company (browser recette)
         $this->seedOperationalArtifactsCase();    // dead-letter + void + not-due invoices + wallet movements
+        $this->seedConsolidatedV2Case();          // ADR-632 (M9): V2 consolidated invoices for the UI recette
+    }
+
+    /**
+     * ADR-632 (M9) — V2 consolidated-invoice fixtures for the Company/Platform UI recette.
+     *
+     * These are READ-MODEL fixtures: the consolidated invoice + its analytic ventilation are built
+     * directly (no emission pipeline, no feature flag toggled — billing.consolidated.emit stays OFF),
+     * so a browser recette has real V2 data WITHOUT activating emission on any company. Analytics are
+     * derived from the invoice lines by LedgerService, exactly like a real V2 emission would produce,
+     * so the sections reconcile to the cent. Attached to the owner persona's company so the owner can
+     * browse list → V2 detail → PDF in the same account that already carries a V1 invoice.
+     *
+     * Two fixtures: a readable mixed invoice (plan + addons + a mid-cycle prorata + discount +
+     * adjustment) and a large 135-line invoice to exercise multipage PDF + responsive rendering.
+     */
+    private function seedConsolidatedV2Case(): void
+    {
+        $user = \App\Core\Models\User::where('email', 'owner@leezr.test')->first();
+        $company = $user?->memberships()->where('role', 'owner')->first()?->company
+            ?? Company::where('name', 'Leezr Logistics')->first();
+        if (! $company) {
+            return;
+        }
+
+        // Idempotent wipe of prior V2 recette invoices (+ lines + analytics + events).
+        $prior = Invoice::where('company_id', $company->id)
+            ->whereIn('number', ['INV-RECETTE-V2', 'INV-RECETTE-V2-LARGE'])->pluck('id');
+        if ($prior->isNotEmpty()) {
+            BillingInvoiceLineAnalytic::whereIn('invoice_id', $prior)->delete();
+            BillableEvent::whereIn('invoice_line_id', InvoiceLine::whereIn('invoice_id', $prior)->pluck('id'))->delete();
+            InvoiceLine::whereIn('invoice_id', $prior)->delete();
+            Invoice::whereIn('id', $prior)->delete();
+        }
+
+        $sub = Subscription::where('company_id', $company->id)->where('is_current', true)->first()?->id;
+
+        // ── Fixture 1 : readable mixed consolidated invoice ──
+        $periodStart = now()->startOfMonth();
+        $periodEnd = now()->startOfMonth()->addMonth(); // semi-open [start, end)
+        $lines = [
+            ['plan', null, 'Abonnement Pro', 2900, $periodStart, $periodEnd, false],
+            ['addon', 'workforce_leave', 'Module Congés & Absences', 1900, $periodStart, $periodEnd, false],
+            ['addon', 'workforce_planning', 'Module Planning & Pointage', 2900, $periodStart, $periodEnd, false],
+            // Mid-cycle activation → prorata (backed by a BillableEvent → "Prorata" badge in the UI).
+            ['addon', 'workforce_documents', 'Module Documents Employés (prorata)', 465, now()->startOfMonth()->addDays(16), $periodEnd, true],
+            ['discount', null, 'Remise fidélité', -500, $periodStart, $periodEnd, false],
+            ['charge', null, 'Ajustement commercial', 300, $periodStart, $periodEnd, false],
+        ];
+        $subtotal = array_sum(array_map(fn ($l) => $l[3], $lines));
+        $tax = (int) round($subtotal * 0.20);
+        $inv = $this->v2Invoice($company, 'INV-RECETTE-V2', $subtotal, $tax, $sub);
+        foreach ($lines as [$type, $mod, $desc, $amount, $ps, $pe, $isProrata]) {
+            $line = $this->v2Line($inv, $type, $mod, $desc, $amount, $ps, $pe);
+            if ($isProrata) {
+                BillableEvent::create([
+                    'company_id' => $company->id, 'subscription_id' => $sub, 'currency' => 'EUR',
+                    'type' => 'module_activation', 'module_key' => $mod,
+                    'service_period_start' => $ps, 'service_period_end' => $pe,
+                    'amount_ht_cents' => $amount, 'status' => 'invoiced', 'invoice_line_id' => $line->id,
+                    'idempotency_key' => 'recette-v2-prorata-'.$line->id,
+                ]);
+            }
+        }
+        LedgerService::recordInvoiceAnalytics($inv->fresh());
+
+        // ── Fixture 2 : large 135-line invoice (multipage PDF + responsive) ──
+        $big = $this->v2Invoice($company, 'INV-RECETTE-V2-LARGE', 0, 0, $sub);
+        $this->v2Line($big, 'plan', null, 'Abonnement Pro', 2900, $periodStart, $periodEnd);
+        for ($i = 1; $i <= 134; $i++) {
+            $this->v2Line($big, 'addon', "mod_{$i}", "Module #{$i}", 100, $periodStart, $periodEnd);
+        }
+        $bigSubtotal = 2900 + 134 * 100;
+        $bigTax = (int) round($bigSubtotal * 0.20);
+        $big->update(['subtotal' => $bigSubtotal, 'tax_amount' => $bigTax, 'amount' => $bigSubtotal + $bigTax, 'amount_due' => $bigSubtotal + $bigTax]);
+        LedgerService::recordInvoiceAnalytics($big->fresh());
+    }
+
+    private function v2Invoice(Company $c, string $number, int $subtotal, int $tax, ?int $subId): Invoice
+    {
+        return Invoice::create([
+            'company_id' => $c->id, 'subscription_id' => $subId, 'billing_model_version' => 2,
+            'number' => $number, 'subtotal' => $subtotal, 'tax_amount' => $tax, 'tax_rate_bps' => 2000,
+            'amount' => $subtotal + $tax, 'amount_due' => $subtotal + $tax, 'wallet_credit_applied' => 0,
+            'currency' => 'EUR', 'status' => 'open', 'issued_at' => now()->subDay(), 'finalized_at' => now()->subDay(),
+            'due_at' => now()->addMonth(), 'period_start' => now()->startOfMonth(), 'period_end' => now()->startOfMonth()->addMonth(),
+        ]);
+    }
+
+    private function v2Line(Invoice $inv, string $type, ?string $moduleKey, string $desc, int $amount, $periodStart, $periodEnd): InvoiceLine
+    {
+        return InvoiceLine::create([
+            'invoice_id' => $inv->id, 'type' => $type, 'module_key' => $moduleKey, 'description' => $desc,
+            'quantity' => 1, 'unit_amount' => $amount, 'amount' => $amount,
+            'period_start' => $periodStart, 'period_end' => $periodEnd,
+        ]);
     }
 
     /**

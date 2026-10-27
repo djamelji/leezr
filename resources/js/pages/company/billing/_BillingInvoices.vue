@@ -23,6 +23,8 @@ const headers = computed(() => [
   { title: t('companyBilling.invoiceNumber'), key: 'number' },
   { title: t('companyBilling.invoiceStatus'), key: 'status', width: '130px' },
   { title: t('companyBilling.invoicePeriod'), key: 'period', sortable: false },
+  { title: t('companyBilling.invoiceSubtotal'), key: 'subtotal', align: 'end' },
+  { title: t('companyBilling.invoiceTax'), key: 'tax_amount', align: 'end' },
   { title: t('companyBilling.invoiceAmount'), key: 'amount', align: 'end' },
   { title: t('companyBilling.invoiceAmountDue'), key: 'amount_due', align: 'end' },
   { title: t('companyBilling.invoiceIssuedAt'), key: 'issued_at' },
@@ -166,6 +168,14 @@ watch(statusFilter, () => loadInvoices(1))
 
         <template #item.period="{ item }">
           {{ formatPeriod(item) }}
+        </template>
+
+        <template #item.subtotal="{ item }">
+          {{ formatMoney(item.subtotal, { currency: item.currency }) }}
+        </template>
+
+        <template #item.tax_amount="{ item }">
+          {{ formatMoney(item.tax_amount, { currency: item.currency }) }}
         </template>
 
         <template #item.amount="{ item }">

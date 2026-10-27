@@ -84,6 +84,39 @@ const taxPercent = computed(() => {
 
 const fmt = (amount, currency) => formatMoney(amount, { currency: currency || invoice.value?.currency })
 
+// ── ADR-632 (M9) : présentation consolidée V2 ──
+// V2 = une facture consolidée rendue par sections (abonnement / modules / proratas / ajustements /
+// remises). Aucun recalcul côté Vue : montants (cents) issus de la ventilation analytique persistée.
+const isV2 = computed(() => Number(invoice.value?.billing_model_version) === 2)
+
+// Index des InvoiceLine par id → libellé historique + quantité (les analytics ne portent pas le texte).
+const lineById = computed(() => {
+  const m = {}
+  for (const l of (invoice.value?.lines || [])) m[l.id] = l
+
+  return m
+})
+
+const v2Sections = computed(() => invoice.value?.consolidated_sections?.sections || [])
+
+const V2_SECTION_ORDER = ['subscription', 'modules', 'proratas', 'adjustments', 'discounts']
+
+const v2SectionsSorted = computed(() =>
+  [...v2Sections.value].sort((a, b) => V2_SECTION_ORDER.indexOf(a.key) - V2_SECTION_ORDER.indexOf(b.key)),
+)
+
+const openSections = ref([])
+
+watch(v2Sections, s => { openSections.value = (s || []).map(x => x.key) }, { immediate: true })
+
+const sectionLabel = key => t(`companyBilling.invoiceDetail.sections.${key}`, key)
+const v2LineDesc = l => lineById.value[l.invoice_line_id]?.description || l.module_key || typeLabel(l.prestation_type)
+const v2LineQty = l => lineById.value[l.invoice_line_id]?.quantity ?? 1
+
+const v2LinePeriod = l => (l.service_period_start && l.service_period_end)
+  ? `${formatDate(l.service_period_start)} – ${formatDate(l.service_period_end)}`
+  : '—'
+
 const canPay = computed(() => {
   if (!invoice.value) return false
 
@@ -269,8 +302,11 @@ const payInvoice = () => {
               </VCol>
             </VRow>
 
-            <!-- Line Items Table -->
-            <VTable class="invoice-preview-table border text-high-emphasis overflow-hidden mb-4">
+            <!-- Line Items Table (V1) -->
+            <VTable
+              v-if="!isV2"
+              class="invoice-preview-table border text-high-emphasis overflow-hidden mb-4"
+            >
               <thead>
                 <tr>
                   <th scope="col">
@@ -327,6 +363,129 @@ const payInvoice = () => {
                 </tr>
               </tbody>
             </VTable>
+
+            <!-- Consolidated sections (V2 — ADR-632) -->
+            <div
+              v-else
+              class="v2-sections mb-4"
+            >
+              <VExpansionPanels
+                v-model="openSections"
+                multiple
+                variant="accordion"
+                class="border rounded"
+              >
+                <VExpansionPanel
+                  v-for="section in v2SectionsSorted"
+                  :key="section.key"
+                  :value="section.key"
+                >
+                  <VExpansionPanelTitle>
+                    <div class="d-flex align-center justify-space-between w-100 pe-2">
+                      <span class="font-weight-medium">
+                        {{ sectionLabel(section.key) }}
+                        <span class="text-disabled">({{ section.lines.length }})</span>
+                      </span>
+                      <span class="font-weight-medium">{{ fmt(section.subtotal_ttc_cents) }}</span>
+                    </div>
+                  </VExpansionPanelTitle>
+                  <VExpansionPanelText>
+                    <VTable
+                      density="compact"
+                      class="v2-section-table text-high-emphasis"
+                    >
+                      <thead>
+                        <tr>
+                          <th scope="col">
+                            {{ t('companyBilling.invoiceDetail.lineDescription') }}
+                          </th>
+                          <th scope="col">
+                            {{ t('companyBilling.invoiceDetail.servicePeriod') }}
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-center"
+                          >
+                            {{ t('companyBilling.invoiceDetail.lineQty') }}
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-end"
+                          >
+                            {{ t('companyBilling.invoiceDetail.ht') }}
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-end"
+                          >
+                            {{ t('companyBilling.invoiceDetail.vat') }}
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-end"
+                          >
+                            {{ t('companyBilling.invoiceDetail.ttc') }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(l, idx) in section.lines"
+                          :key="l.invoice_line_id || idx"
+                        >
+                          <td>
+                            {{ v2LineDesc(l) }}
+                            <VChip
+                              v-if="l.billable_event_id"
+                              size="x-small"
+                              color="info"
+                              variant="tonal"
+                              class="ms-1"
+                            >
+                              {{ t('companyBilling.invoiceDetail.prorataBadge') }}
+                            </VChip>
+                          </td>
+                          <td class="text-no-wrap text-body-2">
+                            {{ v2LinePeriod(l) }}
+                          </td>
+                          <td class="text-center">
+                            {{ v2LineQty(l) }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(l.ht_cents) }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(l.tax_cents) }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(l.ttc_cents) }}
+                          </td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr class="font-weight-medium">
+                          <td
+                            colspan="3"
+                            class="text-end"
+                          >
+                            {{ t('companyBilling.invoiceDetail.sectionSubtotal') }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(section.subtotal_ht_cents) }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(section.subtotal_tax_cents) }}
+                          </td>
+                          <td class="text-end">
+                            {{ fmt(section.subtotal_ttc_cents) }}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </VTable>
+                  </VExpansionPanelText>
+                </VExpansionPanel>
+              </VExpansionPanels>
+            </div>
 
             <!-- Totals + Note -->
             <div class="d-flex justify-space-between flex-column flex-sm-row print-row">

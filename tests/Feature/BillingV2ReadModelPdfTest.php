@@ -133,6 +133,23 @@ class BillingV2ReadModelPdfTest extends TestCase
         $this->assertNotEmpty($detail['consolidated_sections']);
     }
 
+    public function test_platform_and_company_sections_are_identical(): void
+    {
+        // ADR-632 (M9) : montants identiques Company = Platform (même source, aucun recalcul).
+        $c = $this->company();
+        $inv = $this->emitV2($c, 3);
+
+        $company = CompanyBillingReadService::invoiceDetail($c, $inv->id)['consolidated_sections'];
+        $platform = \App\Core\Billing\ReadModels\PlatformBillingReadService::invoiceDetail($inv->id)['consolidated_sections'];
+
+        $this->assertSame($company['fiscal_summary'], $platform['fiscal_summary'], 'synthèse fiscale identique');
+        $this->assertSame(
+            collect($company['sections'])->map(fn ($s) => [$s['key'], $s['subtotal_ht_cents'], $s['subtotal_tax_cents'], $s['subtotal_ttc_cents']])->all(),
+            collect($platform['sections'])->map(fn ($s) => [$s['key'], $s['subtotal_ht_cents'], $s['subtotal_tax_cents'], $s['subtotal_ttc_cents']])->all(),
+            'sections et sous-totaux identiques Company/Platform',
+        );
+    }
+
     public function test_v2_pdf_renders_multipage_offline(): void
     {
         $c = $this->company();

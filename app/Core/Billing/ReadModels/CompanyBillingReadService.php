@@ -722,7 +722,13 @@ class CompanyBillingReadService
      * Regroupe par famille (abonnement / modules / proratas / remises), avec périodes de service et
      * HT/TVA/TTC par ligne + sous-totaux + synthèse fiscale. AUCUN recalcul. Vide pour V1.
      */
-    private static function consolidatedSections(Invoice $invoice): array
+    /**
+     * ADR-632 (M8/M9): groups the persisted analytic ventilation of a V2 invoice into display sections
+     * (subscription / modules / discounts / adjustments) + a fiscal summary. Public so the Platform read
+     * service renders the exact same sections and amounts as Company (single source of truth, no recompute).
+     * Returns [] for V1 invoices or when no analytics exist.
+     */
+    public static function consolidatedSections(Invoice $invoice): array
     {
         if ((int) ($invoice->billing_model_version ?? 1) !== 2) {
             return [];

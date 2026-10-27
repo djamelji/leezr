@@ -72,6 +72,7 @@ class PlatformBillingReadService
         return [
             'id' => $invoice->id,
             'number' => $invoice->number,
+            'billing_model_version' => (int) ($invoice->billing_model_version ?? 1), // ADR-632 (M9)
             'company' => $invoice->company ? [
                 'id' => $invoice->company->id,
                 'name' => $invoice->company->name,
@@ -103,7 +104,12 @@ class PlatformBillingReadService
                 'quantity' => $line->quantity,
                 'unit_amount' => $line->unit_amount,
                 'amount' => $line->amount,
+                'module_key' => $line->module_key, // ADR-632 (M9)
+                'service_period_start' => $line->period_start?->toDateString(),
+                'service_period_end' => $line->period_end?->toDateString(),
             ])->toArray(),
+            // ADR-632 (M9): identical consolidated sections as Company (same source, no recompute).
+            'consolidated_sections' => CompanyBillingReadService::consolidatedSections($invoice),
             'credit_notes' => $invoice->creditNotes->map(fn ($cn) => [
                 'id' => $cn->id,
                 'number' => $cn->number,
