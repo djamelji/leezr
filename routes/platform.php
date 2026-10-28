@@ -584,12 +584,15 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Market Overlays
         // ADR-636 (W-E) — administration minimale des presets organisationnels (gardée manage_jobdomains)
+        Route::get('/organization-presets/meta', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'meta']); // W-E2 référentiels
         Route::get('/organization-presets', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'index']);
         Route::get('/organization-presets/{id}', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'show']);
         Route::post('/organization-presets', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'store']);
         Route::put('/organization-presets/{id}', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'update']);
         Route::post('/organization-presets/{id}/publish', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'publish']);
         Route::post('/organization-presets/{id}/archive', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'archive']);
+        Route::post('/organization-presets/{id}/duplicate', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'duplicate']); // W-E2 : nouvelle version
+        Route::get('/organization-presets/{id}/simulate', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'simulate']); // W-E2 : simulation read-only
 
         Route::get('/jobdomains/{jobdomainKey}/overlays', [JobdomainOverlayController::class, 'index']);
         Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);

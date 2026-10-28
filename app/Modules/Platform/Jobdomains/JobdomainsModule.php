@@ -17,8 +17,11 @@ class JobdomainsModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 50,
             capabilities: new Capabilities(
-                navItems: [],
-                routeNames: ['platform-jobdomains', 'platform-jobdomains-id', 'platform-catalog-tab'],
+                // ADR-638 (W-E2) : administration visuelle des presets organisationnels (groupe gouvernance).
+                navItems: [
+                    ['key' => 'organization-presets', 'title' => 'Organization Presets', 'to' => ['name' => 'platform-organization-presets'], 'icon' => 'tabler-sitemap', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 60],
+                ],
+                routeNames: ['platform-jobdomains', 'platform-jobdomains-id', 'platform-catalog-tab', 'platform-organization-presets', 'platform-organization-presets-id'],
             ),
             permissions: [
                 ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],

@@ -28,6 +28,16 @@ class OrganizationPresetService
             return ['has_preset' => false, 'org_profile_key' => $company->org_profile_key];
         }
 
+        return ['has_preset' => true] + static::diffAgainst($company, $preset);
+    }
+
+    /**
+     * ADR-638 (W-E2) — diff READ-ONLY d'un preset DONNÉ (pas forcément résolu) contre l'organisation
+     * d'une Company. Réutilisé par preview() (preset résolu) et par la simulation Platform (preset arbitraire).
+     * N'écrit RIEN.
+     */
+    public static function diffAgainst(Company $company, OrganizationPreset $preset): array
+    {
         $existingDeptByKey = Department::withoutCompanyScope()->where('company_id', $company->id)
             ->whereNotNull('preset_item_key')->get()->keyBy('preset_item_key');
         $existingDeptByName = Department::withoutCompanyScope()->where('company_id', $company->id)
@@ -64,7 +74,6 @@ class OrganizationPresetService
         $count = fn (array $items, string $s) => count(array_filter($items, fn ($i) => $i['status'] === $s));
 
         return [
-            'has_preset' => true,
             'preset_key' => $preset->key,
             'preset_version' => $preset->version,
             'preset_label' => $preset->label,

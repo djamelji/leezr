@@ -218,6 +218,8 @@ declare module 'vue-router/auto-routes' {
     'platform-operations-operations-usage': RouteRecordInfo<'platform-operations-operations-usage', '/platform/operations/_OperationsUsage', Record<never, never>, Record<never, never>>,
     'platform-operations-operations-usage-consumption': RouteRecordInfo<'platform-operations-operations-usage-consumption', '/platform/operations/_OperationsUsageConsumption', Record<never, never>, Record<never, never>>,
     'platform-operations-tab': RouteRecordInfo<'platform-operations-tab', '/platform/operations/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
+    'platform-organization-presets': RouteRecordInfo<'platform-organization-presets', '/platform/organization-presets', Record<never, never>, Record<never, never>>,
+    'platform-organization-presets-id': RouteRecordInfo<'platform-organization-presets-id', '/platform/organization-presets/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'platform-plans-tariff-migration-wizard': RouteRecordInfo<'platform-plans-tariff-migration-wizard', '/platform/plans/_TariffMigrationWizard', Record<never, never>, Record<never, never>>,
     'platform-plans-key': RouteRecordInfo<'platform-plans-key', '/platform/plans/:key', { key: ParamValue<true> }, { key: ParamValue<false> }>,
     'platform-reset-password': RouteRecordInfo<'platform-reset-password', '/platform/reset-password', Record<never, never>, Record<never, never>>,

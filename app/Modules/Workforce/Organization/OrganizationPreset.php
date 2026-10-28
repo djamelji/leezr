@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 class OrganizationPreset extends Model
 {
     protected $fillable = [
-        'key', 'label', 'jobdomain_key', 'market_key', 'org_profile_key',
-        'version', 'status', 'structure', 'description', 'created_by', 'published_at',
+        'key', 'family_key', 'label', 'jobdomain_key', 'market_key', 'org_profile_key',
+        'version', 'status', 'structure', 'description', 'created_by', 'updated_by', 'published_at',
     ];
 
     protected $casts = [

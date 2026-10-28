@@ -22844,3 +22844,21 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : migration `2026_10_28_110000`, `app/Modules/Workforce/Onboarding/**` (WorkforceOnboarding, Service, Http), `routes/company.php`, page `workforce/onboarding.vue` + entrée `organization/[tab].vue`, i18n, `tests/Feature/WorkforceOnboardingTest.php`, cet ADR.
 
 ---
+
+### ADR-638 — Workforce 2.0 / lot W-E2 : administration visuelle des presets organisationnels (2026-10-28)
+
+**Contexte** : W-E livrait l'API Platform des presets mais aucun éditeur visuel (structure en JSON brut). W-E2 livre l'UI d'administration, en **étendant** le moteur W-E (aucun second modèle/moteur).
+
+**Décisions (additives, DEV)** :
+1. **Versionnement par famille** : colonne `family_key` (identifiant stable) + `version` ; `key` reste l'identifiant unique de version. Un **publié est immuable** → « Nouvelle version » (duplicate → brouillon, même famille, version+1). **Une seule version publiée par famille** : publier archive la précédente (résolution sans ambiguïté). `updated_by` = auteur.
+2. **Validation SERVEUR** (`OrganizationPresetStructureValidator`, jamais remplacée par le front) : parent inexistant, **référence circulaire**, clés dupliquées, poste rattaché à un département inexistant, profil non autorisé pour le jobdomain, jobdomain/market inexistant, structure invalide à la publication.
+3. **Archivage non destructif** : retire de la résolution future ; **les Companies ayant appliqué conservent leur organisation + la trace** (`organization_preset_applications`). Rien n'est supprimé.
+4. **Simulation read-only** : `GET …/{id}/simulate?company_id=` réutilise `OrganizationPresetService::diffAgainst` (0 écriture) — jamais d'application depuis la Platform.
+5. **Permissions** : `manage_jobdomains` (portée gouvernance métier, couvre légitimement les presets). **Aucun accès superadmin implicite** ; toutes les mutations **auditées** (`AuditLogger::logPlatform`). Granularité view/create/publish/archive = raffinement possible, non requis pour W-E2.
+6. **UI** : catalogue (liste réelle, filtres jobdomain/statut/recherche, statut/version/auteur, actions) + **éditeur visuel** (arborescence départements avec ajout/renommage/parent/déplacement explicite/suppression ; postes rattachés) **sans JSON brut**, aperçu live, garde modifications non enregistrées, publié = lecture seule. Entrée nav « Presets d'organisation » (groupe gouvernance, manifest-driven, `manage_jobdomains`).
+
+**Conséquences** : un admin Platform autorisé construit et publie un modèle sectoriel visuellement ; le preset publié devient immédiatement **résolvable par W-E** (prouvé en test). Dette W-E close.
+
+**Fichiers** : migration `2026_10_28_120000`, `OrganizationPresetStructureValidator`, `OrganizationPresetService::diffAgainst`, `PlatformOrganizationPresetController` (validation/versioning/duplicate/simulate/meta/audit), `routes/platform.php`, `JobdomainsModule` (navItem), pages `platform/organization-presets/{index,[id]}.vue`, i18n, `tests/Feature/OrganizationPresetAdminTest.php`, cet ADR.
+
+---
