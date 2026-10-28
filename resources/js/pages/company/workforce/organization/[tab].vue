@@ -206,7 +206,7 @@ onMounted(() => {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
       <div>
         <h4 class="text-h4 font-weight-bold">
           {{ $t('organization.title') }}
@@ -215,6 +215,14 @@ onMounted(() => {
           {{ $t('organization.description') }}
         </p>
       </div>
+      <VBtn
+        v-can="'workforce.manage'"
+        variant="tonal"
+        prepend-icon="tabler-wand"
+        :to="'/company/workforce/onboarding'"
+      >
+        {{ $t('workforceOnboarding.launch') }}
+      </VBtn>
     </div>
 
     <!-- Organisation proposée (preset) — ADR-636 / W-E -->

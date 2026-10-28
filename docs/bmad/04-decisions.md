@@ -22827,3 +22827,20 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : migrations `2026_10_28_1000*`, `app/Modules/Workforce/Organization/**` (OrganizationPreset(+Application), OrgProfileRegistry, Resolver, Service, Http), `app/Modules/Platform/Organization/Http/**`, `app/Core/Workforce/{Department,JobRole}.php` + `app/Core/Models/Company.php` (fillable), `routes/{company,platform}.php`, `database/seeders/OrganizationPresetSeeder.php`, pages `organization/_OrganizationPresetCard.vue` + `[tab].vue`, i18n, `tests/Feature/OrganizationPresetTest.php`, cet ADR.
 
 ---
+
+### ADR-637 — Workforce 2.0 Phase 2 / lot W-F : assistant d'onboarding RH (2026-10-28)
+
+**Contexte** : W-E fournit les presets d'organisation ; manquait un parcours guidé rendant une Company opérationnelle sans paramétrer chaque module. L'onboarding général existant (dashboard setup) ne couvre pas un état multi-étapes propre à Workforce.
+
+**Décisions (additives, non destructives, DEV)** :
+1. **État persisté** : table dédiée `workforce_onboardings` (1/Company : version, status, current_step, completed_steps, deferred_steps, applied_summary, started/completed_at). **Reprise serveur** (multi-navigateur) — jamais fondée sur `localStorage`. Une étape n'est marquée terminée qu'après **succès métier** réel (ex. 'organization' exige une organisation existante). Finaliser pose aussi `onboarding_dismissed_at` (pas d'assistant bloquant).
+2. **Parcours adaptatif** : étapes `company → organization → roles → [leave] → [worktime] → first_employee → done`, **conditionnées par les modules réellement actifs** (`leave`/`worktime` masqués si module inactif). Un restaurant/transporteur/salon reçoivent des propositions différentes (via le profil + presets W-E).
+3. **Non destructif & idempotent** : l'étape organisation **réutilise W-E** (preview sans écriture, apply transactionnel/idempotent, préserve personnalisations) — aucun second moteur. `completeStep` idempotent + verrouillé (anti-double-soumission). Companies existantes : org/collaborateurs existants reflétés dans le **contexte** (has_org, existing_employees) ; compléments seulement, jamais de réinitialisation ; wizard **facultatif** (ne bloque pas l'accès RH).
+4. **Sécurité** : `show` sous `workforce.view`, `start/step/defer/finish` sous `workforce.manage` ; vérifs backend systématiques ; isolation tenant ; **aucune attribution implicite** de permission sensible (salaires/contrats restent gated ADR-634).
+5. **UX métier** : stepper Vuexy, termes métier (« Votre entreprise », « Votre organisation »), aucun champ technique (ni ID ni clé), profil **suggéré non contraignant**, report d'étapes optionnelles, progression, reprise. Entrée depuis la page Organisation RH (bouton), déclarative/permission — pas d'entrée statique de menu.
+
+**Conséquences** : un dirigeant de petite entreprise configure Workforce en quelques étapes compréhensibles ; une Company structurée reprend/complète sans risque. **Dette identifiée** : l'administration Platform des presets reste API-only → lot **W-E2** (éditeur visuel) à proposer après W-F.
+
+**Fichiers** : migration `2026_10_28_110000`, `app/Modules/Workforce/Onboarding/**` (WorkforceOnboarding, Service, Http), `routes/company.php`, page `workforce/onboarding.vue` + entrée `organization/[tab].vue`, i18n, `tests/Feature/WorkforceOnboardingTest.php`, cet ADR.
+
+---

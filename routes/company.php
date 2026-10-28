@@ -442,6 +442,13 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
+    // Onboarding RH (ADR-637 / W-F) : état+contexte (view) ; démarrage/étapes/finalisation (manage)
+    Route::get('onboarding', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'show'])->middleware($perm('workforce.view'));
+    Route::post('onboarding/start', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'start'])->middleware($perm('workforce.manage'));
+    Route::post('onboarding/step', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'completeStep'])->middleware($perm('workforce.manage'));
+    Route::post('onboarding/defer', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'deferStep'])->middleware($perm('workforce.manage'));
+    Route::post('onboarding/finish', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'finish'])->middleware($perm('workforce.manage'));
+
     // Organisation — presets (ADR-636 / W-E) : profil + aperçu read-only + application non destructive
     Route::get('organization/profile', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'profile'])->middleware($perm('workforce.view'));
     Route::put('organization/profile', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'setProfile'])->middleware($perm('workforce.manage'));
