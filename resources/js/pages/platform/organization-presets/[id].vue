@@ -104,6 +104,8 @@ onBeforeRouteLeave(() => {
 })
 
 onMounted(load)
+// Recharger quand on navigue vers un autre preset (ex. après « Nouvelle version »).
+watch(() => route.params.id, load)
 </script>
 
 <template>
@@ -138,7 +140,7 @@ onMounted(load)
           prepend-icon="tabler-device-floppy"
           @click="save"
         >
-          {{ t('orgPresetAdmin.save') }}
+          {{ t('common.save') }}
         </VBtn>
         <VBtn
           v-if="!readOnly"
