@@ -22793,3 +22793,19 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Modules/Workforce/Security/WorkforceAccess.php` (nouveau), `EmployeeReadModel.php`, `EmployeeController.php`, `ContractController.php`, `LeaveController.php`, `TimeEntryController.php`, `WorkforceDocumentController.php`, `routes/company.php`, migration compat, pages Vue documents/me, tests.
 
 ---
+
+### ADR-635 — Workforce 2.0 Phase 1 / lot W-A : navigation « Ressources humaines » (2026-10-28)
+
+**Contexte** : Les 10 entrées de navigation des 5 modules Workforce (toutes `surface:'hr'`) tombaient dans le groupe générique **« Entreprise »** (`company`), car `NavBuilder::resolveGroup()` ne dérivait un groupe depuis la surface que pour `operations`. Le groupe `hr` (« RH ») était pourtant déjà enregistré dans `NavGroupRegistry` (ordre 50) mais **mort** (aucun item n'y était routé).
+
+**Décision (déclarative, additive, sans Vue en dur)** :
+1. **Routage de groupe** : `NavBuilder::resolveGroup()` mappe désormais `surface==='hr' → 'hr'`. Tout module (présent ou futur) déclarant `surface:'hr'` rejoint automatiquement le groupe RH. Aucun item ne code son groupe en dur ; aucune liste statique côté Vue.
+2. **Libellés** : `nav.groups.hr` renommé **« Ressources humaines » (fr)**, **« Human Resources » (en)**, **« الموارد البشرية » (ar)**. Les autres locales/clés restent en fallback (ar n'a pas d'arbre nav structuré — hors périmètre W-A).
+3. **Invariants préservés** (déjà assurés par le pipeline) : respect des permissions/entitlements/modules actifs ; ordre par `sort` ; **groupe caché si vide** (`pruneGroups`) ; routes inchangées ; aucun déplacement des fonctionnalités non-RH (seul `surface:'hr'`, exclusif à Workforce, bascule) ; aucun doublon.
+4. **Pas de coquille** : aucun lien vers Workforce Contract/Signature tant que leurs modules/pages n'existent pas ; ils rejoindront le groupe automatiquement une fois déclarés et accessibles.
+
+**Conséquences** : les fonctionnalités RH sont présentées sous un vrai groupe « Ressources humaines », base de la suite RH. Changement à très faible risque (1 branche dans `resolveGroup` + 3 libellés). Prochain lot : W-E (presets d'organisation).
+
+**Fichiers** : `app/Core/Navigation/NavBuilder.php`, `resources/js/plugins/i18n/locales/{fr,en,ar}.json`, `tests/Feature/WorkforceNavHrGroupTest.php`, cet ADR.
+
+---

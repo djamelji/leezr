@@ -266,5 +266,6 @@
   "billing.tax_exemption.reverse_charge_intra_eu": "الاحتساب العكسي لضريبة القيمة المضافة داخل الاتحاد الأوروبي (المادة 283-2 من قانون الضرائب العام الفرنسي)",
   "billing.tax_exemption.export_extra_eu": "إعفاء من ضريبة القيمة المضافة — تصدير خارج الاتحاد الأوروبي",
   "billing.tax_exemption.reverse_charge_short": "الاحتساب العكسي",
-  "billing.tax_exemption.export_short": "تصدير (خارج الاتحاد الأوروبي)"
+  "billing.tax_exemption.export_short": "تصدير (خارج الاتحاد الأوروبي)",
+  "nav": { "groups": { "hr": "الموارد البشرية" } }
 }

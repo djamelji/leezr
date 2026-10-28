@@ -325,6 +325,12 @@ class NavBuilder
             return 'operations';
         }
 
+        // ADR-635 (W-A) : les entrées RH (surface 'hr') rejoignent le groupe « Ressources humaines ».
+        // Tout futur module déclarant surface:'hr' y sera automatiquement regroupé.
+        if ($item->surface === 'hr') {
+            return 'hr';
+        }
+
         return 'company';
     }
 
