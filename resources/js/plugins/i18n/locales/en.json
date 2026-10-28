@@ -180,7 +180,8 @@
       "workforce-documents": "HR Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
-      "workforce-configuration": "Configuration"
+      "workforce-configuration": "Configuration",
+      "workforce-settings": "HR Settings"
     }
   },
   "roles": {
@@ -1459,6 +1460,7 @@
     "levels": { "manager": "Manager", "agent": "Staff" },
     "noRole": "No position yet. Add roles attached to departments."
   },
+  "hrSettings": {"title": "HR Settings", "subtitle": "Configure your company rules in one place, adapted to your country, industry and modules.", "company": "Company", "market": "Country", "jobdomain": "Industry", "profile": "Organization profile", "noProfile": "Not set", "generalIntro": "Your company's known information, used to adapt HR rules.", "organizationIntro": "Manage your departments, services and roles, or apply a sector template.", "manageOrganization": "Manage organization", "worktimeIntro": "Working-time and break rules. Each rule's source is shown; mandatory rules are locked.", "breaks": "Breaks", "leaveIntro": "Leave types and applicable rules, adapted to your country.", "manageLeave": "Manage leave", "planningIntro": "Schedule templates, work locations and publication rules.", "managePlanning": "Manage planning", "documentsIntro": "HR document repository and document generation.", "manageDocuments": "Manage HR documents", "rulesIntro": "Overview of applicable rules and their source (law, convention, sector, company). Mandatory legal rules are not editable.", "rule": "Rule", "value": "Value", "source": "Source", "mandatory": "Mandatory (not editable)", "toComplete": "To complete", "ruleSaved": "Rule saved.", "sources": {"market_law": "Law (country)", "convention": "Convention", "jobdomain": "Sector", "company": "Company", "default": "Default", "to_complete": "To complete"}, "sections": {"general": "General", "organization": "Organization", "worktime": "Working time & breaks", "leave": "Leave & absence", "planning": "Planning", "documents": "HR documents", "rules": "Rules & conventions"}, "rules": {"min_duration_minutes": "Minimum break duration (min)", "trigger_after_minutes": "Break triggered after (min)", "target_duration_minutes": "Target break duration (min)", "max_duration_minutes": "Maximum break duration (min)", "max_count": "Maximum number of breaks", "earliest_start_after_minutes": "Earliest break start after (min)", "latest_start_before_minutes": "Latest break start before (min)", "included_in_worktime": "Break counted as working time", "paid": "Paid break", "weekly_hours_reference": "Reference weekly hours (h)", "daily_hours_max": "Maximum daily hours (h)", "weekly_hours_max": "Maximum weekly hours (h)", "daily_rest_min_hours": "Minimum daily rest (h)", "weekly_rest_min_hours": "Minimum weekly rest (h)", "overtime_daily_threshold_hours": "Overtime daily threshold (h)", "night_work_start": "Night work start", "night_work_end": "Night work end"}},
   "companyBilling": {
     "title": "Billing",
     "sections": {

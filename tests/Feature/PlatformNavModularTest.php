@@ -46,7 +46,7 @@ class PlatformNavModularTest extends TestCase
         $this->assertSame(['dashboard', 'platform-messaging'], $t['cockpit']);
         $this->assertSame(['platform-companies', 'communications'], $t['clients']);
         $this->assertSame(['platform-billing'], $t['finance']);
-        $this->assertSame(['catalog', 'platform-access'], $t['governance']);
+        $this->assertSame(['catalog', 'platform-access', 'organization-presets'], $t['governance']); // ADR-638 (W-E2)
         $this->assertSame(['settings'], $t['configuration']);
         $this->assertSame(['operations'], $t['system']);
     }

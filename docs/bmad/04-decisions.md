@@ -22862,3 +22862,21 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : migration `2026_10_28_120000`, `OrganizationPresetStructureValidator`, `OrganizationPresetService::diffAgainst`, `PlatformOrganizationPresetController` (validation/versioning/duplicate/simulate/meta/audit), `routes/platform.php`, `JobdomainsModule` (navItem), pages `platform/organization-presets/{index,[id]}.vue`, i18n, `tests/Feature/OrganizationPresetAdminTest.php`, cet ADR.
 
 ---
+
+### ADR-639 — Workforce 2.0 / lot W-B : centre de paramètres RH + résolution réserve B (2026-10-28)
+
+**Contexte** : La configuration RH était dispersée (≥4 endroits : pauses/temps `configuration.vue`, types de congés, organisation, planning). W-B livre un **point d'entrée unique** « Paramètres RH ». La **réserve B** (e2e `workforce-two-company-isolation` en échec depuis W-D) est investiguée et close.
+
+**Décisions (additives, DEV)** :
+1. **Hub agrégateur** (`settings/[tab].vue`) : sections **conditionnées par les modules actifs** (endpoint `GET /workforce/settings` → sections {general, organization, worktime, leave?, planning?, documents?, rules} + contexte market/jobdomain/profil). **Ne duplique aucune donnée, ne crée aucun second moteur** : chaque section consomme les endpoints existants.
+2. **Temps de travail & pauses** (éditable) : composant `_WorkforceRulesSection` réutilisant `/workforce/config/{breaks,work-time}` avec **PROVENANCE affichée** (loi/convention/secteur/entreprise/défaut) et **mutabilité** (obligatoire = verrouillé non modifiable ; configurable = éditable). Résolution **serveur** (`WorkforceRuleResolver`) ; une surcharge Company ne contourne pas une règle impérative. Onglet **Règles & conventions** = vue provenance lecture seule.
+3. **Autres domaines** : liens contextuels vers les pages spécialisées (organisation, congés, planning, documents) — **évite deux interfaces modifiant la même donnée de façon incohérente**. Sections Contract/Signature **non affichées** (modules non livrés — pas de faux interrupteurs).
+4. **Compatibilité** : nav « Configuration » remplacée par « **Paramètres RH** » (manifest-driven, `surface:'hr'`) ; l'ancienne route `company-workforce-configuration` **redirige** vers le hub (deep-links, **aucun 404**, aucun doublon de menu).
+5. **RBAC** : hub sous `workforce.view` ; les mutations de règles via les endpoints existants gardés serveur. Sections sensibles à venir restent gated (ADR-634).
+6. **Modularité** : sections pilotées par un petit contrat de capacités (modules actifs) — proportionné, sans infrastructure disproportionnée.
+
+**Réserve B — RÉSOLUE (diagnostic)** : l'échec ne venait ni du moteur, ni de l'endpoint, ni de l'assertion, mais d'un **prérequis de fixture non exécuté** (`php artisan e2e:setup-two-companies`, documenté dans l'en-tête du spec). **Avec la fixture, l'e2e passe (2/2).** Deux tests PHPUnit déterministes (`WorkforceBreakRuleIsolationTest`) verrouillent l'isolation per-tenant (A=30 / B=45, aucune fuite) sans dépendre de l'ordre d'exécution. **Aucune durée de pause modifiée arbitrairement, aucune règle légale contournée.**
+
+**Fichiers** : `WorkforceSettingsController` + route ; `settings/[tab].vue` + `_WorkforceRulesSection.vue` ; `configuration.vue` (redirection) ; `WorkforceModule` (navItem « Paramètres RH ») ; i18n ; `WorkforceSettingsHubTest`, `WorkforceBreakRuleIsolationTest` ; cet ADR.
+
+---

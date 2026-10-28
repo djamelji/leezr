@@ -180,7 +180,8 @@
       "workforce-documents": "Documents RH",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
-      "workforce-configuration": "Configuration"
+      "workforce-configuration": "Configuration",
+      "workforce-settings": "Paramètres RH"
     }
   },
   "roles": {
@@ -1458,6 +1459,7 @@
     "levels": { "manager": "Responsable", "agent": "Agent" },
     "noRole": "Aucun poste. Ajoutez des fonctions rattachées aux départements."
   },
+  "hrSettings": {"title": "Paramètres RH", "subtitle": "Configurez les règles de votre entreprise en un seul endroit, adaptées à votre pays, votre secteur et vos modules.", "company": "Entreprise", "market": "Pays", "jobdomain": "Secteur d'activité", "profile": "Profil organisationnel", "noProfile": "Non défini", "generalIntro": "Informations connues de votre entreprise, utilisées pour adapter les règles RH.", "organizationIntro": "Gérez vos départements, services et fonctions, ou appliquez un modèle sectoriel.", "manageOrganization": "Gérer l'organisation", "worktimeIntro": "Règles de temps de travail et de pauses. L'origine de chaque règle est indiquée ; les règles obligatoires sont verrouillées.", "breaks": "Pauses", "leaveIntro": "Types de congés et règles applicables, adaptés à votre pays.", "manageLeave": "Gérer les congés", "planningIntro": "Modèles de planning, lieux de travail et règles de publication.", "managePlanning": "Gérer le planning", "documentsIntro": "Référentiel documentaire RH et génération de documents.", "manageDocuments": "Gérer les documents RH", "rulesIntro": "Vue d'ensemble des règles applicables et de leur origine (loi, convention, secteur, entreprise). Les règles légales obligatoires ne sont pas modifiables.", "rule": "Règle", "value": "Valeur", "source": "Origine", "mandatory": "Obligatoire (non modifiable)", "toComplete": "À compléter", "ruleSaved": "Règle enregistrée.", "sources": {"market_law": "Loi (pays)", "convention": "Convention", "jobdomain": "Secteur", "company": "Entreprise", "default": "Défaut", "to_complete": "À compléter"}, "sections": {"general": "Général", "organization": "Organisation", "worktime": "Temps de travail & pauses", "leave": "Congés & absences", "planning": "Planning", "documents": "Documents RH", "rules": "Règles & conventions"}, "rules": {"min_duration_minutes": "Durée minimale de pause (min)", "trigger_after_minutes": "Pause déclenchée après (min)", "target_duration_minutes": "Durée de pause cible (min)", "max_duration_minutes": "Durée de pause maximale (min)", "max_count": "Nombre de pauses maximal", "earliest_start_after_minutes": "Début de pause au plus tôt après (min)", "latest_start_before_minutes": "Début de pause au plus tard avant (min)", "included_in_worktime": "Pause incluse dans le temps de travail", "paid": "Pause rémunérée", "weekly_hours_reference": "Durée hebdomadaire de référence (h)", "daily_hours_max": "Durée journalière maximale (h)", "weekly_hours_max": "Durée hebdomadaire maximale (h)", "daily_rest_min_hours": "Repos quotidien minimal (h)", "weekly_rest_min_hours": "Repos hebdomadaire minimal (h)", "overtime_daily_threshold_hours": "Seuil heures supplémentaires / jour (h)", "night_work_start": "Début du travail de nuit", "night_work_end": "Fin du travail de nuit"}},
   "companyBilling": {
     "title": "Facturation",
     "sections": {

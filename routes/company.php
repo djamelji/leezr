@@ -442,6 +442,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
+    // Paramètres RH — hub agrégateur (ADR-639 / W-B)
+    Route::get('settings', [\App\Modules\Workforce\Settings\Http\WorkforceSettingsController::class, 'index'])->middleware($perm('workforce.view'));
+
     // Onboarding RH (ADR-637 / W-F) : état+contexte (view) ; démarrage/étapes/finalisation (manage)
     Route::get('onboarding', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'show'])->middleware($perm('workforce.view'));
     Route::post('onboarding/start', [\App\Modules\Workforce\Onboarding\Http\WorkforceOnboardingController::class, 'start'])->middleware($perm('workforce.manage'));
