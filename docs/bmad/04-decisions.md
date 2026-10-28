@@ -22809,3 +22809,21 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `app/Core/Navigation/NavBuilder.php`, `resources/js/plugins/i18n/locales/{fr,en,ar}.json`, `tests/Feature/WorkforceNavHrGroupTest.php`, cet ADR.
 
 ---
+
+### ADR-636 — Workforce 2.0 Phase 2 / lot W-E : presets organisationnels intelligents (2026-10-28)
+
+**Contexte** : À la première utilisation, Workforce part d'une organisation **vide**. L'audit (`workforce-rh-suite-audit-design.md`) a montré que le moteur de scaffolding sectoriel existe déjà (`JobdomainGate`, `JobdomainPresetResolver`, `JobdomainMarketOverlay`, `PresetReconciler`, `CompanyPresetSnapshot`) et que les tables cibles `Department`(auto-imbriqué)/`JobRole` sont prêtes ; manquait la **couche organisation** (presets org jamais seedés) et un discriminant **profil d'entreprise**.
+
+**Décisions (additives, non destructives, DEV)** :
+1. **Discriminant** : `companies.org_profile_key` (nullable, fallback). Validé par un **catalogue** `OrgProfileRegistry` cohérent avec les JobDomains réellement déclarés (aujourd'hui `logistique` → last_mile_delivery / freight_transport / warehouse_operations). Jamais un switch en dur dans Vue (le front consomme le catalogue). Modifiable par la Company, **jamais rétroactif** (ne touche pas l'organisation existante).
+2. **Catalogue Platform** : table `organization_presets` versionnée (draft/published/archived), clé de résolution `(jobdomain_key, market_key?, org_profile_key?)`, structure JSON (départements + postes). Global/partagé ; les **organisations résultantes** restent propres à chaque Company.
+3. **Résolution** (`OrganizationPresetResolver`) : preset PUBLIÉ le plus spécifique (profil > market > version), sans effet de bord. Les **règles légales impératives** ne vivent PAS dans ce catalogue structurel (elles restent MarketRuleSet/conventions) — une surcharge Company ne peut donc rien neutraliser de légal.
+4. **Service** (`OrganizationPresetService`) : `preview()` **n'écrit rien** (diff new/existing/customized/conflict) ; `apply()` **transactionnel + verrou (anti-concurrence) + IDEMPOTENT** : crée uniquement le manquant (match par `preset_item_key`), **ne modifie/supprime jamais** l'existant, **préserve** renommages et entités Company, signale les homonymes (conflits) sans dédoubler. Provenance : `workforce_departments/job_roles.source` + `preset_item_key` ; trace `organization_preset_applications` (version appliquée + résumé). « reset » = re-preview sûr, jamais une suppression globale.
+5. **API** : Company `GET/PUT /workforce/organization/profile`, `GET …/preset/preview` (view), `POST …/preset/apply` (manage). Platform (minimum, `manage_jobdomains`) : CRUD + publish/archive de `organization_presets`.
+6. **Périmètre livré vs complément** : livré = moteur + API Company + **UI Company** (carte Organisation proposée : profil, aperçu, application) + API Platform + **presets seedés** (démonstration logistique). **Complément déclaré (non livré)** : interface Platform visuelle d'édition de la structure (éditeur WYSIWYG d'arborescence) — la donnée seedée n'est PAS présentée comme une UI d'admin terminée. **W-Q** introduira établissements/services/équipes/postes (nouvelles entités) ; W-E reste compatible.
+
+**Conséquences** : une Company logistique obtient une organisation initiale pertinente (Direction → Exploitation {Responsable, Planification, Livreurs} + Administration), entièrement personnalisable et jamais écrasée. Base de l'onboarding guidé **W-F**.
+
+**Fichiers** : migrations `2026_10_28_1000*`, `app/Modules/Workforce/Organization/**` (OrganizationPreset(+Application), OrgProfileRegistry, Resolver, Service, Http), `app/Modules/Platform/Organization/Http/**`, `app/Core/Workforce/{Department,JobRole}.php` + `app/Core/Models/Company.php` (fillable), `routes/{company,platform}.php`, `database/seeders/OrganizationPresetSeeder.php`, pages `organization/_OrganizationPresetCard.vue` + `[tab].vue`, i18n, `tests/Feature/OrganizationPresetTest.php`, cet ADR.
+
+---

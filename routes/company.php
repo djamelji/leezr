@@ -442,6 +442,12 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::put('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::delete('departments/{id}', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'destroy'])->middleware($perm('workforce.manage'));
 
+    // Organisation — presets (ADR-636 / W-E) : profil + aperçu read-only + application non destructive
+    Route::get('organization/profile', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'profile'])->middleware($perm('workforce.view'));
+    Route::put('organization/profile', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'setProfile'])->middleware($perm('workforce.manage'));
+    Route::get('organization/preset/preview', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'preview'])->middleware($perm('workforce.view'));
+    Route::post('organization/preset/apply', [\App\Modules\Workforce\Organization\Http\OrganizationPresetController::class, 'apply'])->middleware($perm('workforce.manage'));
+
     // Job Roles
     Route::get('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'index'])->middleware($perm('workforce.view'));
     Route::post('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'store'])->middleware($perm('workforce.manage'));

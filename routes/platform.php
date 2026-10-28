@@ -583,6 +583,14 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::delete('/jobdomains/{id}', [JobdomainController::class, 'destroy']);
 
         // Market Overlays
+        // ADR-636 (W-E) — administration minimale des presets organisationnels (gardée manage_jobdomains)
+        Route::get('/organization-presets', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'index']);
+        Route::get('/organization-presets/{id}', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'show']);
+        Route::post('/organization-presets', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'store']);
+        Route::put('/organization-presets/{id}', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'update']);
+        Route::post('/organization-presets/{id}/publish', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'publish']);
+        Route::post('/organization-presets/{id}/archive', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'archive']);
+
         Route::get('/jobdomains/{jobdomainKey}/overlays', [JobdomainOverlayController::class, 'index']);
         Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);
         Route::delete('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'destroy']);

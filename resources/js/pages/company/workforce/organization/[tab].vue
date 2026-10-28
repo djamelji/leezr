@@ -1,6 +1,7 @@
 <script setup>
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import OrganizationPresetCard from './_OrganizationPresetCard.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.admin' } })
 
@@ -215,6 +216,9 @@ onMounted(() => {
         </p>
       </div>
     </div>
+
+    <!-- Organisation proposée (preset) — ADR-636 / W-E -->
+    <OrganizationPresetCard @applied="fetchDepartments(); fetchRoles()" />
 
     <!-- Tabs -->
     <VCard>

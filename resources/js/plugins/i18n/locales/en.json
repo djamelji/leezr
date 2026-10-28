@@ -1361,6 +1361,28 @@
     "confirmResetBtn": "Reset",
     "noMessages": "No messages yet"
   },
+  "orgPreset": {
+    "title": "Suggested organization",
+    "subtitle": "Initialize your organization from a sector-adapted template, then customize it freely.",
+    "profile": "Company profile",
+    "noProfile": "No profile",
+    "saveProfile": "Save profile",
+    "profileSaved": "Profile saved.",
+    "preview": "Preview template",
+    "previewTitle": "Suggested organization preview",
+    "nonDestructive": "Non-destructive simulation: your existing departments and customizations are never modified or deleted. Only missing items are added.",
+    "apply": "Apply template",
+    "applied": "Template applied: {created} created, {skipped} kept, {conflicts} conflict(s).",
+    "lastApplied": "Last applied template: {key} (v{v}).",
+    "new": "New",
+    "existing": "Existing",
+    "customized": "Customized",
+    "conflicts": "Conflicts",
+    "departments": "Departments",
+    "jobRoles": "Positions & roles",
+    "noPreset": "No template available for this profile.",
+    "status": { "new": "new", "existing": "existing", "customized": "customized", "conflict": "name conflict" }
+  },
   "companyBilling": {
     "title": "Billing",
     "sections": {

@@ -42,6 +42,7 @@ class Company extends Model
         'market_key',
         'default_convention_collective_id',
         'jobdomain_key',
+        'org_profile_key', // ADR-636 (W-E): profil organisationnel (presets)
         'legal_status_key',
         'onboarding_dismissed_at',
     ];

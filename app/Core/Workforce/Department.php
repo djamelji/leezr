@@ -20,6 +20,8 @@ class Department extends Model
         'manager_id',
         'sort_order',
         'metadata',
+        'source',          // ADR-636 (W-E): provenance ('preset'|'company')
+        'preset_item_key', // ADR-636 (W-E): clé d'idempotence du preset
     ];
 
     protected $casts = [

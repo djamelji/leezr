@@ -1360,6 +1360,28 @@
     "confirmResetBtn": "Réinitialiser",
     "noMessages": "Aucun message pour le moment"
   },
+  "orgPreset": {
+    "title": "Organisation proposée",
+    "subtitle": "Initialisez votre organisation à partir d'un modèle adapté à votre secteur, puis personnalisez-la librement.",
+    "profile": "Profil de l'entreprise",
+    "noProfile": "Aucun profil",
+    "saveProfile": "Enregistrer le profil",
+    "profileSaved": "Profil enregistré.",
+    "preview": "Prévisualiser le modèle",
+    "previewTitle": "Aperçu de l'organisation proposée",
+    "nonDestructive": "Simulation non destructive : vos départements et personnalisations existants ne seront jamais modifiés ni supprimés. Seuls les éléments manquants seront ajoutés.",
+    "apply": "Appliquer le modèle",
+    "applied": "Modèle appliqué : {created} créé(s), {skipped} conservé(s), {conflicts} conflit(s).",
+    "lastApplied": "Dernier modèle appliqué : {key} (v{v}).",
+    "new": "Nouveaux",
+    "existing": "Existants",
+    "customized": "Personnalisés",
+    "conflicts": "Conflits",
+    "departments": "Départements",
+    "jobRoles": "Postes et fonctions",
+    "noPreset": "Aucun modèle disponible pour ce profil.",
+    "status": { "new": "nouveau", "existing": "existant", "customized": "personnalisé", "conflict": "conflit de nom" }
+  },
   "companyBilling": {
     "title": "Facturation",
     "sections": {

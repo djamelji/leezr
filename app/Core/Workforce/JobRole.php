@@ -21,6 +21,8 @@ class JobRole extends Model
         'description',
         'default_hourly_rate_cents',
         'metadata',
+        'source',          // ADR-636 (W-E): provenance ('preset'|'company')
+        'preset_item_key', // ADR-636 (W-E): clé d'idempotence du preset
     ];
 
     protected $casts = [
