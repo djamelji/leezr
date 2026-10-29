@@ -3,7 +3,10 @@
 import { useSignatureStore } from '@/modules/company/workforce/signature.store'
 import { useAppToast } from '@/composables/useAppToast'
 
-const props = defineProps({ isDialogVisible: { type: Boolean, default: false } })
+const props = defineProps({
+  isDialogVisible: { type: Boolean, default: false },
+  preselectedDocumentId: { type: [Number, String], default: null },
+})
 const emit = defineEmits(['update:isDialogVisible', 'created'])
 
 const { t } = useI18n()
@@ -45,6 +48,9 @@ watch(() => props.isDialogVisible, async v => {
   try {
     [documents.value, options.value] = await Promise.all([store.fetchEligibleDocuments(), store.fetchOptions()])
     reset()
+    if (props.preselectedDocumentId) {
+      form.value.generated_document_id = Number(props.preselectedDocumentId)
+    }
   } finally { loading.value = false }
 })
 

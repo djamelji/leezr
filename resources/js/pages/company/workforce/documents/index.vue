@@ -1,14 +1,22 @@
 <script setup>
 import { useAppToast } from '@/composables/useAppToast'
 import { useWorkforceDocumentsStore } from '@/modules/company/workforce/workforce-documents.store'
+import { useCan } from '@/composables/useCan'
 import PayslipActionCards from './_PayslipActionCards.vue'
 import GenerateDocumentDrawer from './_GenerateDocumentDrawer.vue'
+import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizard.vue'
 
 definePage({ meta: { module: 'workforce_documents', permission: 'workforce_documents.view' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const { can } = useCan()
 const store = useWorkforceDocumentsStore()
+
+// W-SIGNATURE-1 : demander une signature depuis la page Documents (assistant prérempli).
+const sigWizardOpen = ref(false)
+const sigDocId = ref(null)
+const requestSignature = item => { sigDocId.value = item.id; sigWizardOpen.value = true }
 
 // ── Download (ADR-634) — route authentifiée, jamais file_path brut ──
 const downloadDocument = async (item, { save = true } = {}) => {
@@ -395,6 +403,17 @@ const isDrawerOpen = ref(false)
             >
               <VIcon icon="tabler-download" />
             </VBtn>
+            <VBtn
+              v-if="item.file_path && item.signature_status !== 'signed' && can('workforce_signature.request')"
+              icon
+              variant="text"
+              size="small"
+              color="primary"
+              :title="$t('signature.actions.new')"
+              @click="requestSignature(item)"
+            >
+              <VIcon icon="tabler-signature" />
+            </VBtn>
           </div>
         </template>
 
@@ -431,6 +450,13 @@ const isDrawerOpen = ref(false)
       v-model="isDrawerOpen"
       :store="store"
       @generated="onDocumentGenerated"
+    />
+
+    <!-- W-SIGNATURE-1 : assistant de demande de signature prérempli depuis un document -->
+    <SignatureWizard
+      v-model:is-dialog-visible="sigWizardOpen"
+      :preselected-document-id="sigDocId"
+      @created="() => { sigWizardOpen = false; toast(t('signature.toasts.created'), 'success'); refreshAll() }"
     />
   </div>
 </template>
