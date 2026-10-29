@@ -32,6 +32,29 @@ class EmployeeController extends Controller
         return response()->json($employees);
     }
 
+    /**
+     * ADR-640 (W-C) — fiche collaborateur unifiée : synthèse composite. Scope W-D (soi / rapport direct /
+     * RH), compensation masquée sans workforce.compensation_read.
+     */
+    public function file(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $id, 'employee'),
+            403,
+            'Not authorized to view this employee file.'
+        );
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->find($id);
+        if (! $employee) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+        $company = \App\Core\Models\Company::withoutGlobalScopes()->findOrFail($companyId);
+
+        return response()->json(\App\Modules\Workforce\ReadModels\EmployeeFileReadModel::overview(
+            $company, $employee, WorkforceAccess::canReadCompensation($request),
+        ));
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');

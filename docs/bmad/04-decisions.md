@@ -22880,3 +22880,20 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `WorkforceSettingsController` + route ; `settings/[tab].vue` + `_WorkforceRulesSection.vue` ; `configuration.vue` (redirection) ; `WorkforceModule` (navItem « Paramètres RH ») ; i18n ; `WorkforceSettingsHubTest`, `WorkforceBreakRuleIsolationTest` ; cet ADR.
 
 ---
+
+### ADR-640 — Workforce 2.0 / lot W-C : fiche collaborateur unifiée (2026-10-29)
+
+**Contexte** : `employees/[id].vue` se limitait au Profil + Contrat (4/10). W-C en fait un **espace central** : un responsable RH gère un collaborateur depuis une seule fiche, sans naviguer entre 5-6 modules.
+
+**Décisions (additives, DEV)** :
+1. **Read-model composite** `EmployeeFileReadModel::overview` (endpoint `GET /workforce/employees/{id}/file`) : agrège des **synthèses légères** (identité, poste/org, contrat, prochain shift, dernier pointage, soldes congés, demandes en attente, nb documents, alertes) depuis les sources existantes — **aucune nouvelle table**, aucune copie redondante. **Tenant-scoped**, **conditionné par les modules actifs** (`available_sections`), **permission-aware** (compensation incluse uniquement sous `workforce.compensation_read`, filtrée au read-model).
+2. **Sécurité W-D réutilisée** : route gardée au niveau **module** + **scope manager** dans le contrôleur (`WorkforceAccess::canViewEmployeeData('employee')` → soi / rapport direct / RH) — un `employee_id` d'URL n'accorde pas l'accès. 404 collaborateur inconnu, 403 cross-tenant. Salaire absent du JSON sans permission (même onglet masqué). Documents via **téléchargement authentifié** (W-D), jamais `file_path` brut.
+3. **Fiche à onglets conditionnels** : En-tête permanent (identité, poste, dept, responsable, statut, date d'entrée) + **Vue d'ensemble** (synthèse + alertes réelles, aucune valeur inventée) + sections **Profil / Contrats** (composants existants réutilisés) + **Planning / Pointages / Congés / Documents** (composants légers, **chargés à la demande** depuis les endpoints existants scopés) + **Historique**. Onglets affichés selon modules actifs + permissions. **Aucun onglet vide pour Contract/Signature** (modules non livrés).
+4. **Actions rapides** contextuelles gated (Éditer le profil, Congés, Pointages) réutilisant les flux existants — **aucun second workflow**, aucun bouton inopérant. Montants affichés en **devise** (jamais centimes bruts dans la synthèse).
+5. **Compatibilité** : route `/company/workforce/employees/:id` préservée, deep-links/contrats/permissions intacts, aucune migration, machine à états contractuelle inchangée, Contract/Signature **non construits**.
+
+**Conséquences** : gestion d'un collaborateur de bout en bout depuis une seule fiche. Prépare l'accueil des futures actions « Générer un contrat »/« Demander une signature » (sections contractuelle/documentaire extensibles).
+
+**Fichiers** : `EmployeeFileReadModel`, `EmployeeController::file` + route, `employees/[id].vue` (refonte) + `_Employee{Leave,Time,Planning,Documents}Section.vue`, i18n, `WorkforceEmployeeFileTest`, cet ADR.
+
+---

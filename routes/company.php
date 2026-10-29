@@ -475,6 +475,8 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary'])->middleware($perm('workforce.view'));
     Route::get('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'index'])->middleware($perm('workforce.view'));
     Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store'])->middleware($perm('workforce.manage'));
+    // ADR-640 (W-C) — fiche unifiée : autorisation de scope (soi/rapport/RH) dans le contrôleur
+    Route::get('employees/{id}/file', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'file']);
     Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware($perm('workforce.view'));
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));

@@ -1,56 +1,71 @@
 <script setup>
+// ADR-640 (W-C) — fiche collaborateur UNIFIÉE : en-tête + synthèse RH + sections conditionnées par les
+// modules actifs et les permissions. Agrège via /workforce/employees/{id}/file (read-model composite) ;
+// chaque section détaillée se charge à la demande depuis les endpoints existants (scope W-D).
 import StatusChip from '@/core/components/StatusChip.vue'
 import EmployeeProfile from './_EmployeeProfile.vue'
 import EmployeeContract from './_EmployeeContract.vue'
+import EmployeeLeaveSection from './_EmployeeLeaveSection.vue'
+import EmployeeTimeSection from './_EmployeeTimeSection.vue'
+import EmployeePlanningSection from './_EmployeePlanningSection.vue'
+import EmployeeDocumentsSection from './_EmployeeDocumentsSection.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
-import { useCan } from '@/composables/useCan'
+import { $api } from '@/utils/api'
+import { formatDate, formatDateTime } from '@/utils/datetime'
+import { formatMoney } from '@/utils/money'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 
-const { can } = useCan()
 const store = useEmployeesStore()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const { toast } = useAppToast()
 
-// ── Data fetching ────────────────────────────────────────────
 const loading = ref(true)
+const file = ref(null)
+const currentTab = ref('overview')
 
-onMounted(async () => {
+const employee = computed(() => store.currentEmployee)
+const empId = computed(() => route.params.id)
+
+const load = async () => {
+  loading.value = true
   try {
-    await store.fetchEmployee(route.params.id)
-  } catch {
-    toast(t('employees.loadError'), 'error')
-  } finally {
-    loading.value = false
+    const [, f] = await Promise.all([
+      store.fetchEmployee(empId.value),
+      $api(`/workforce/employees/${empId.value}/file`),
+    ])
+    file.value = f
   }
-})
+  catch { toast(t('employees.loadError'), 'error') }
+  finally { loading.value = false }
+}
 
+onMounted(load)
 onBeforeUnmount(() => store.clearCurrentEmployee())
 
-// ── Reactive state ───────────────────────────────────────────
-const employee = computed(() => store.currentEmployee)
-const currentTab = ref(0)
+const TAB_META = {
+  overview: 'tabler-layout-dashboard', profile: 'tabler-user', contract: 'tabler-file-text',
+  planning: 'tabler-calendar', time: 'tabler-clock', leave: 'tabler-beach',
+  documents: 'tabler-file-certificate', history: 'tabler-history',
+}
+const TAB_ORDER = ['overview', 'profile', 'contract', 'planning', 'time', 'leave', 'documents', 'history']
+const visibleTabs = computed(() => {
+  const avail = file.value?.available_sections || []
 
-const tabs = computed(() => [
-  { title: t('employees.tabs.profile'), icon: 'tabler-user' },
-  { title: t('employees.tabs.contract'), icon: 'tabler-file-text' },
-])
-
-// ── Computed helpers ─────────────────────────────────────────
-const conventionLabel = computed(() => {
-  const cc = employee.value?.current_contract?.convention_collective
-  if (!cc) return null
-
-  return `${cc.short_name} (IDCC ${cc.idcc})`
+  return TAB_ORDER.filter(k => ['overview', 'profile', 'contract', 'history'].includes(k) || avail.includes(k))
 })
+
+const ident = computed(() => file.value?.identity || {})
+const pos = computed(() => file.value?.position || {})
+const contract = computed(() => file.value?.contract)
+const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.currency || 'EUR' })
 </script>
 
 <template>
   <div>
-    <!-- Back button -->
     <VBtn
       variant="text"
       :to="{ name: 'company-workforce-employees' }"
@@ -60,7 +75,6 @@ const conventionLabel = computed(() => {
       {{ $t('employees.backToList') }}
     </VBtn>
 
-    <!-- Loading state -->
     <VCard
       v-if="loading"
       class="pa-8 text-center"
@@ -71,101 +85,200 @@ const conventionLabel = computed(() => {
       />
     </VCard>
 
-    <template v-else-if="employee">
-      <!-- Employee Header -->
+    <template v-else-if="file">
+      <!-- En-tête permanent -->
       <VCard class="mb-6">
         <VCardText>
           <div class="d-flex align-center gap-4 flex-wrap">
-            <!-- Avatar -->
             <VAvatar
               color="primary"
               variant="tonal"
               size="64"
             >
-              <span class="text-h5 font-weight-medium">
-                {{ (employee.first_name?.[0] || '') + (employee.last_name?.[0] || '') }}
-              </span>
+              <span class="text-h5 font-weight-medium">{{ (ident.first_name?.[0] || '') + (ident.last_name?.[0] || '') }}</span>
             </VAvatar>
-
-            <!-- Info -->
             <div class="flex-grow-1">
               <h4 class="text-h4 font-weight-bold">
-                {{ employee.first_name }} {{ employee.last_name }}
+                {{ ident.first_name }} {{ ident.last_name }}
               </h4>
-              <div class="d-flex align-center gap-3 mt-1 flex-wrap">
+              <div class="d-flex align-center gap-3 mt-1 flex-wrap text-body-2 text-medium-emphasis">
                 <StatusChip
-                  :status="employee.status"
+                  :status="ident.status"
                   domain="employee"
                 >
-                  {{ $t(`workforce.statuses.employee.${employee.status}`) }}
+                  {{ $t(`workforce.statuses.employee.${ident.status}`, ident.status) }}
                 </StatusChip>
-                <span
-                  v-if="employee.employee_number"
-                  class="text-body-2 text-medium-emphasis"
-                >
-                  {{ $t('employees.fields.employeeNumber') }}: {{ employee.employee_number }}
-                </span>
-                <VChip
-                  v-if="conventionLabel"
-                  size="small"
-                  color="info"
-                  variant="tonal"
-                  prepend-icon="tabler-scale"
-                >
-                  {{ conventionLabel }}
-                </VChip>
+                <span v-if="pos.job_role">{{ pos.job_role }}</span>
+                <span v-if="pos.department">· {{ pos.department }}</span>
+                <span v-if="pos.manager">· {{ t('employeeFile.manager') }}: {{ pos.manager }}</span>
+                <span v-if="ident.hire_date">· {{ t('employeeFile.since') }} {{ formatDate(ident.hire_date) }}</span>
               </div>
             </div>
-
-            <!-- Actions -->
-            <div class="d-flex gap-2">
+            <!-- Actions rapides (conditionnées par permissions / modules) -->
+            <div class="d-flex gap-2 flex-wrap">
               <VBtn
                 v-can="'workforce.manage'"
                 variant="outlined"
                 prepend-icon="tabler-edit"
-                @click="currentTab = 0"
+                @click="currentTab = 'profile'"
               >
                 {{ $t('common.edit') }}
+              </VBtn>
+              <VBtn
+                v-if="(file.available_sections || []).includes('leave')"
+                variant="tonal"
+                prepend-icon="tabler-beach"
+                @click="router.push('/company/workforce/leave')"
+              >
+                {{ t('employeeFile.actions.leave') }}
+              </VBtn>
+              <VBtn
+                v-if="(file.available_sections || []).includes('time')"
+                v-can="'workforce.time_manage'"
+                variant="tonal"
+                prepend-icon="tabler-clock"
+                @click="router.push('/company/workforce/time')"
+              >
+                {{ t('employeeFile.actions.time') }}
               </VBtn>
             </div>
           </div>
         </VCardText>
       </VCard>
 
-      <!-- Tabs -->
       <VCard>
         <VTabs
           v-model="currentTab"
           class="v-tabs-pill"
+          show-arrows
         >
           <VTab
-            v-for="(tab, i) in tabs"
-            :key="i"
+            v-for="k in visibleTabs"
+            :key="k"
+            :value="k"
           >
             <VIcon
-              :icon="tab.icon"
+              :icon="TAB_META[k]"
               size="20"
               class="me-2"
             />
-            {{ tab.title }}
+            {{ t('employeeFile.tabs.' + k) }}
           </VTab>
         </VTabs>
-
         <VDivider />
-
         <VCardText>
           <VWindow v-model="currentTab">
-            <VWindowItem :value="0">
+            <!-- Vue d'ensemble (synthèse RH) -->
+            <VWindowItem value="overview">
+              <VAlert
+                v-for="(a, i) in file.alerts"
+                :key="i"
+                :type="a.level"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                {{ t('employeeFile.alerts.' + a.key, { count: a.count || 0 }) }}
+              </VAlert>
+
+              <VRow class="mt-2">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <VCard variant="tonal">
+                    <VCardText>
+                      <div class="text-overline mb-2">
+                        {{ t('employeeFile.tabs.contract') }}
+                      </div>
+                      <template v-if="contract">
+                        <div>{{ t('employeeFile.contractType') }}: <strong>{{ contract.contract_type?.toUpperCase() }}</strong> ({{ contract.status }})</div>
+                        <div>{{ t('employeeFile.weeklyHours') }}: {{ contract.weekly_hours }} h</div>
+                        <div v-if="contract.convention">
+                          {{ contract.convention }}
+                        </div>
+                        <div v-if="contract.compensation">
+                          {{ t('employeeFile.salary') }}: <strong>{{ fmtMoney(contract.compensation.base_salary_cents) }}</strong> / {{ contract.compensation.pay_frequency }}
+                        </div>
+                      </template>
+                      <div
+                        v-else
+                        class="text-disabled"
+                      >
+                        {{ t('employeeFile.noContract') }}
+                      </div>
+                    </VCardText>
+                  </VCard>
+                </VCol>
+                <VCol
+                  cols="12"
+                  md="6"
+                >
+                  <VCard variant="tonal">
+                    <VCardText>
+                      <div class="text-overline mb-2">
+                        {{ t('employeeFile.situation') }}
+                      </div>
+                      <div v-if="file.planning">
+                        {{ t('employeeFile.nextShift') }}: {{ file.planning.date ? formatDate(file.planning.date) : '—' }}
+                      </div>
+                      <div v-if="file.time">
+                        {{ t('employeeFile.lastClock') }}: {{ file.time.date ? formatDate(file.time.date) : '—' }} ({{ file.time.status }})
+                      </div>
+                      <div v-if="file.leave">
+                        {{ t('employeeFile.pendingLeave') }}: {{ file.leave.pending_requests }}
+                      </div>
+                      <div v-if="file.documents">
+                        {{ t('employeeFile.tabs.documents') }}: {{ file.documents.count }}
+                      </div>
+                    </VCardText>
+                  </VCard>
+                </VCol>
+              </VRow>
+            </VWindowItem>
+
+            <VWindowItem value="profile">
               <EmployeeProfile
+                v-if="employee"
                 :employee="employee"
-                @updated="store.fetchEmployee(route.params.id).then(() => toast(t('employees.updated'), 'success'))"
+                @updated="load().then(() => toast(t('employees.updated'), 'success'))"
               />
             </VWindowItem>
-            <VWindowItem :value="1">
+            <VWindowItem value="contract">
               <EmployeeContract
+                v-if="employee"
                 :employee="employee"
-                @updated="store.fetchEmployee(route.params.id)"
+                @updated="load"
               />
+            </VWindowItem>
+            <VWindowItem value="planning">
+              <EmployeePlanningSection
+                v-if="currentTab === 'planning'"
+                :employee-id="empId"
+              />
+            </VWindowItem>
+            <VWindowItem value="time">
+              <EmployeeTimeSection
+                v-if="currentTab === 'time'"
+                :employee-id="empId"
+              />
+            </VWindowItem>
+            <VWindowItem value="leave">
+              <EmployeeLeaveSection
+                v-if="currentTab === 'leave'"
+                :employee-id="empId"
+              />
+            </VWindowItem>
+            <VWindowItem value="documents">
+              <EmployeeDocumentsSection
+                v-if="currentTab === 'documents'"
+                :employee-id="empId"
+              />
+            </VWindowItem>
+            <VWindowItem value="history">
+              <div class="text-center text-disabled py-8">
+                {{ t('employeeFile.historyEmpty') }}
+              </div>
             </VWindowItem>
           </VWindow>
         </VCardText>
