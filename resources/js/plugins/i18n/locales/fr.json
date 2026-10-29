@@ -110,6 +110,7 @@
       "fields": "Champs personnalisés",
       "jobdomains": "Domaines d'activité",
       "organization-presets": "Presets d'organisation",
+      "contract-templates": "Modèles de contrat",
       "settings": "Paramètres",
       "international": "International",
       "security": "Sécurité",
@@ -1539,6 +1540,7 @@
       "leave": "Congés & absences",
       "planning": "Planning",
       "documents": "Documents RH",
+      "contract": "Contrats de travail",
       "rules": "Règles & conventions"
     },
     "rules": {
@@ -1560,6 +1562,28 @@
       "night_work_start": "Début du travail de nuit",
       "night_work_end": "Fin du travail de nuit"
     }
+  },
+  "contractSettings": {
+    "intro": "Configurez l'identité documentaire de votre entreprise et les modèles de contrat par défaut. Ces informations apparaissent dans l'en-tête et le pied de vos contrats.",
+    "identity": {
+      "title": "Identité documentaire employeur",
+      "hint": "Reprise de votre fiche entreprise — aucune ressaisie.",
+      "name": "Raison sociale",
+      "legalStatus": "Forme juridique",
+      "siret": "SIRET",
+      "naf": "Code NAF/APE",
+      "address": "Adresse",
+      "city": "Ville",
+      "empty": "Aucune information d'entreprise renseignée. Complétez votre fiche entreprise pour enrichir vos contrats.",
+      "edit": "Modifier la fiche entreprise"
+    },
+    "defaults": {
+      "title": "Modèles par défaut",
+      "hint": "Le modèle utilisé par défaut à la génération, pour chaque type de contrat.",
+      "empty": "Aucun modèle par défaut défini. Choisissez-en un dans la bibliothèque.",
+      "manage": "Gérer les modèles"
+    },
+    "notice": "L'en-tête et le pied de page apparaissent dans l'aperçu PDF. Toute modification est sans effet rétroactif sur les contrats déjà générés."
   },
   "employeeFile": {
     "days": "jours",
@@ -7634,5 +7658,19 @@
     "compensation": "Rémunération",
     "field": "Champs",
     "today": "Date"
+  },
+  "platformContract": {
+    "title": "Modèles de contrat",
+    "subtitle": "Catalogue des modèles de contrat par Market et JobDomain.",
+    "create": "Nouveau modèle",
+    "governanceNote": "La publication est TECHNIQUE : elle n'accorde jamais une validation juridique. Le statut juridique se gère séparément.",
+    "legalCol": "Validation juridique",
+    "legalUpdated": "Statut juridique mis à jour",
+    "jurisdiction": "Juridiction",
+    "legal": {
+      "in_review": "En cours de vérification",
+      "validated": "Validé juridiquement",
+      "obsolete": "Obsolète"
+    }
   }
 }

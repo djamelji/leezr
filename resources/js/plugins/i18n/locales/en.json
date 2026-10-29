@@ -110,6 +110,7 @@
       "fields": "Custom Fields",
       "jobdomains": "Job Domains",
       "organization-presets": "Organization presets",
+      "contract-templates": "Contract templates",
       "settings": "Settings",
       "international": "International",
       "security": "Security",
@@ -1540,6 +1541,7 @@
       "leave": "Leave & absence",
       "planning": "Planning",
       "documents": "HR documents",
+      "contract": "Employment contracts",
       "rules": "Rules & conventions"
     },
     "rules": {
@@ -1561,6 +1563,28 @@
       "night_work_start": "Night work start",
       "night_work_end": "Night work end"
     }
+  },
+  "contractSettings": {
+    "intro": "Configure your company's documentary identity and default contract templates. This information appears in the header and footer of your contracts.",
+    "identity": {
+      "title": "Employer documentary identity",
+      "hint": "Pulled from your company profile — no re-entry.",
+      "name": "Legal name",
+      "legalStatus": "Legal form",
+      "siret": "SIRET",
+      "naf": "NAF/APE code",
+      "address": "Address",
+      "city": "City",
+      "empty": "No company information set. Complete your company profile to enrich your contracts.",
+      "edit": "Edit company profile"
+    },
+    "defaults": {
+      "title": "Default templates",
+      "hint": "The template used by default when generating, for each contract type.",
+      "empty": "No default template set. Pick one in the library.",
+      "manage": "Manage templates"
+    },
+    "notice": "The header and footer appear in the PDF preview. Any change has no retroactive effect on already-generated contracts."
   },
   "employeeFile": {
     "days": "days",
@@ -7634,5 +7658,19 @@
     "compensation": "Compensation",
     "field": "Fields",
     "today": "Date"
+  },
+  "platformContract": {
+    "title": "Contract templates",
+    "subtitle": "Catalogue of contract templates by Market and JobDomain.",
+    "create": "New template",
+    "governanceNote": "Publishing is TECHNICAL: it never grants legal validation. The legal status is managed separately.",
+    "legalCol": "Legal validation",
+    "legalUpdated": "Legal status updated",
+    "jurisdiction": "Jurisdiction",
+    "legal": {
+      "in_review": "In review",
+      "validated": "Legally validated",
+      "obsolete": "Obsolete"
+    }
   }
 }

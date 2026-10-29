@@ -60,6 +60,10 @@ class DocumentVariableResolver
             ['key' => 'company.market', 'type' => 'string', 'label' => 'Market'],
             ['key' => 'company.siret', 'type' => 'string', 'label' => 'SIRET'],
             ['key' => 'company.naf_code', 'type' => 'string', 'label' => 'Code NAF/APE'],
+            // W-CONTRACT-3B : identité documentaire employeur (en-tête/pied de contrat) — données Company existantes.
+            ['key' => 'company.address', 'type' => 'string', 'label' => 'Address (street)'],
+            ['key' => 'company.city', 'type' => 'string', 'label' => 'City (postal code + city)'],
+            ['key' => 'company.address_full', 'type' => 'string', 'label' => 'Full address (one line)'],
             ['key' => 'today', 'type' => 'date', 'label' => 'Today (Y-m-d)'],
             ['key' => 'today_formatted', 'type' => 'string', 'label' => 'Today (formatted)'],
             ['key' => 'resolver_version', 'type' => 'string', 'label' => 'Resolver version'],
@@ -88,6 +92,13 @@ class DocumentVariableResolver
             'company.slug' => $company->slug ?? '',
             'company.siret' => $company->siret ?? '',
             'company.naf_code' => $company->naf_code ?? '',
+            'company.address' => trim(implode(' ', array_filter([$company->address_street, $company->address_complement]))),
+            'company.city' => trim(implode(' ', array_filter([$company->address_postal_code, $company->address_city]))),
+            'company.address_full' => trim(implode(', ', array_filter([
+                trim(implode(' ', array_filter([$company->address_street, $company->address_complement]))),
+                trim(implode(' ', array_filter([$company->address_postal_code, $company->address_city]))),
+                $company->address_country_code,
+            ]))),
         ];
     }
 

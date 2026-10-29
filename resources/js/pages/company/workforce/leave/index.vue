@@ -103,9 +103,10 @@ watchDebounced([search, statusFilter], () => {
 watch(options, fetchData, { deep: true })
 
 // ── Stats ────────────────────────────────────────────────────
-const pendingCount = computed(() => store.statistics?.pending ?? 0)
-const approvedCount = computed(() => store.statistics?.approved ?? 0)
-const rejectedCount = computed(() => store.statistics?.rejected ?? 0)
+// Backend renvoie { [status]: { count, total_days_hundredths } } (LeaveRequestReadModel::statistics).
+const pendingCount = computed(() => store.statistics?.pending?.count ?? 0)
+const approvedCount = computed(() => store.statistics?.approved?.count ?? 0)
+const rejectedCount = computed(() => store.statistics?.rejected?.count ?? 0)
 
 // ── Drawer (create request) ─────────────────────────────────
 const isDrawerOpen = ref(false)

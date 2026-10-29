@@ -23108,3 +23108,33 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `_ContractEditor.vue` ; `ContractController::previewPdf` (contenu non enregistré) + `setDefault` ; `ContractTemplateService::setDefault` ; routes ; `contract.store` ; `contract/templates.vue` (éditeur local + curseur + défaut + aperçu non enregistré) ; `_GenerateContractDialog.vue` (présélection défaut) ; i18n. 4 tests de gouvernance (commit séparé). Tests + e2e.
 
 ---
+
+### ADR-650 — Workforce Contract (W-CONTRACT-3B) : administration catalogue Platform, identité documentaire employeur (Paramètres RH), harmonisation UI/UX Vuexy (2026-10-29)
+
+**Contexte** : fermer les dernières pièces de Workforce Contract (W-CONTRACT-3B) — (1) administration VISUELLE du catalogue Platform, (2) section Company « Contrats de travail » dans Paramètres RH, (3) passe d'harmonisation visuelle Vuexy — **sans** nouveau design system, sans refonte globale, sans toucher Core/@layouts, sans activation commerciale. Réutilise `DocumentTemplate`, `ContractTemplateService`, `DocumentPdfGenerator`, `HtmlSanitizer` — **aucun moteur parallèle**.
+
+**Décision** :
+
+1. **Administration catalogue Platform (§1)** — page `platform/contract-templates/index.vue` (gate `module.active:platform.jobdomains` + `platform.permission:manage_jobdomains`, groupe gouvernance ; **pas de super-admin par défaut**). Liste + filtres (Market/Type/État), création (brouillon), édition via l'éditeur Tiptap **PARTAGÉ avec Company** (`_ContractEditor.vue`), palette de variables catégorisée, **aperçu PDF fidèle** (même pipeline, contenu non enregistré sanitizé + `replicate()`), versionnement, publication, archivage. Backend `PlatformContractController` + méthodes `platform*` de `ContractTemplateService` ; attributs contrat stockés en `metadata` (aucun changement de schéma Core).
+
+2. **Gouvernance juridique (publication ≠ validation)** — champ `legal_status` **distinct** du `status` technique : `LEGAL_STATUSES = [example_unvalidated, in_review, validated, obsolete]`. `platformCreate` force toujours `example_unvalidated` ; `platformPublish` passe `status=published` **sans jamais toucher `legal_status`** ; `platformSetLegalStatus` = décision séparée (422 si statut invalide). Modèles publiés **immuables** → nouvelle version pour éditer. Bandeau de gouvernance explicite dans l'UI.
+
+3. **Identité documentaire employeur + Paramètres RH → Contrats de travail (§9)** — section `contract` dans `/workforce/settings`, **visible UNIQUEMENT si `workforce_contract` actif** (gate `ModuleGate::isActive`, masquée sinon). Sous-composant `_ContractSettingsSection.vue` : (a) **identité documentaire employeur** reprise des **données Company existantes** (raison sociale, forme juridique, SIRET, NAF, adresse, ville) — **aucune ressaisie (PP2)** ; (b) **modèles par défaut** publiés par type (gérés dans la bibliothèque) ; (c) rappel « en-tête/pied visibles à l'aperçu PDF » + **non-rétroactivité** sur les contrats déjà générés. Nouvelles variables resolver `company.address`, `company.city`, `company.address_full` (composées depuis Company, pour en-tête/pied).
+
+4. **Harmonisation UI/UX Vuexy (§UI)** — **audit visuel RÉEL** (inspection des captures en clair + dark réel `prefers-color-scheme` + responsive 390/768), **3 incohérences concrètes trouvées et corrigées** (correctifs ciblés, tokens du thème, pas de CSS magique ni `!important`) :
+   - **Fiche collaborateur** (`employees/[id].vue`) : sous-cartes « Vue d'ensemble » en `variant="tonal"` (fond gris plein → effet *carte-dans-carte*) → `variant="outlined"` + `h-100` (bordure, hauteurs égales, pattern Vuexy sous-section).
+   - **Congés** (`leave/index.vue`) : KPI « Approuvées/Refusées » affichaient l'**objet JSON brut** (`{count, total_days_hundredths}`) → binding corrigé `statistics?.<status>?.count` (le backend renvoie un objet par statut). **Bug utilisateur réel**, pas cosmétique.
+   - **Catalogue Platform** : item de navigation affichait la **clé i18n brute** `nav.platform.contract-templates` → clé ajoutée (FR « Modèles de contrat » / EN « Contract templates »).
+
+**Conséquences** :
+- Chaîne Platform complète : créer → éditer (Tiptap partagé) → aperçu PDF → publier → validation juridique séparée → versionner/archiver. Plus de gestion par seeder/API seule.
+- Company : le responsable voit son identité documentaire sans ressaisie et ses modèles par défaut, directement dans Paramètres RH ; section auto-masquée si module inactif.
+- **Aucune** activation commerciale, **aucune** modification de contrat historique, **aucun** changement de calcul paie/congés, **aucun** développement Signature.
+
+**Tests** : `PlatformContractTemplateTest` **7/7** (création non validée juridiquement, sanitation, publication technique ≠ validation, validation juridique séparée + 422, immutabilité/versionnement, aperçu %PDF, RBAC `manage_jobdomains`). `WorkforceSettingsHubTest` **4/4** (+ `contract` visible seulement si module actif + `employer_identity` exposée). Régression contract/platform/resolver/documents/gouvernance **105 verts** (dont `PageModuleAlignment` avec override `platform-contract-templates`). `pnpm build` propre. e2e `workforce-visual-audit` **4/4** (captures clair + **dark réel** + responsive, **inspectées**). Rapport qualité UI : 9 écrans inspectés, 3 incohérences réelles corrigées et **revérifiées visuellement**.
+
+**Fichiers** : `platform/contract-templates/index.vue`, `PlatformContractController`, `routes/platform.php`, `JobdomainsModule` (navItem + routeName), `ContractTemplateService` (méthodes `platform*` + `LEGAL_STATUSES`) ; `WorkforceSettingsController` (section contract + employer_identity), `_ContractSettingsSection.vue`, `settings/[tab].vue` ; `DocumentVariableResolver` (company.address/city/address_full) ; `employees/[id].vue`, `leave/index.vue`, i18n FR/EN (nav + contractSettings + section). Tests : `PlatformContractTemplateTest`, `WorkforceSettingsHubTest`, `PageModuleAlignmentTest` (override), e2e `workforce-visual-audit`.
+
+**Prochain lot — Workforce Signature** : module **INDÉPENDANT** (`workforce_signature`), `requires: [workforce_documents]` **(PAS `workforce_contract`)** — signe tout `GeneratedDocument`, pas seulement les contrats. Hors périmètre de ce lot.
+
+---

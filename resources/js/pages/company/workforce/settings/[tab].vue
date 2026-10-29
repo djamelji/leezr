@@ -6,6 +6,7 @@ definePage({
 })
 
 import WorkforceRulesSection from './_WorkforceRulesSection.vue'
+import ContractSettingsSection from './_ContractSettingsSection.vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
@@ -45,7 +46,8 @@ const saveWeekStart = async () => {
 
 const SECTION_ICON = {
   general: 'tabler-info-circle', organization: 'tabler-sitemap', worktime: 'tabler-clock',
-  leave: 'tabler-beach', planning: 'tabler-calendar', documents: 'tabler-file-certificate', rules: 'tabler-scale',
+  leave: 'tabler-beach', planning: 'tabler-calendar', documents: 'tabler-file-certificate',
+  contract: 'tabler-file-text', rules: 'tabler-scale',
 }
 
 const sections = computed(() => data.value?.sections || [])
@@ -232,6 +234,11 @@ onMounted(() => { load(); loadWeekStart() })
             >
               {{ t('hrSettings.manageDocuments') }}
             </VBtn>
+          </VWindowItem>
+
+          <!-- Contrats de travail (W-CONTRACT-3B) — visible si module Contract actif -->
+          <VWindowItem value="contract">
+            <ContractSettingsSection :employer-identity="ctx.employer_identity || {}" />
           </VWindowItem>
 
           <!-- Règles locales & conventions (provenance, lecture seule) -->

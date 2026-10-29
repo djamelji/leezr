@@ -20,8 +20,10 @@ class JobdomainsModule implements ModuleDefinition
                 // ADR-638 (W-E2) : administration visuelle des presets organisationnels (groupe gouvernance).
                 navItems: [
                     ['key' => 'organization-presets', 'title' => 'Organization Presets', 'to' => ['name' => 'platform-organization-presets'], 'icon' => 'tabler-sitemap', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 60],
+                    // W-CONTRACT-3B (ADR-650) : catalogue des modèles de contrat.
+                    ['key' => 'contract-templates', 'title' => 'Contract Templates', 'to' => ['name' => 'platform-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 61],
                 ],
-                routeNames: ['platform-jobdomains', 'platform-jobdomains-id', 'platform-catalog-tab', 'platform-organization-presets', 'platform-organization-presets-id'],
+                routeNames: ['platform-jobdomains', 'platform-jobdomains-id', 'platform-catalog-tab', 'platform-organization-presets', 'platform-organization-presets-id', 'platform-contract-templates'],
             ),
             permissions: [
                 ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],

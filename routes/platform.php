@@ -594,6 +594,19 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/organization-presets/{id}/duplicate', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'duplicate']); // W-E2 : nouvelle version
         Route::get('/organization-presets/{id}/simulate', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'simulate']); // W-E2 : simulation read-only
 
+        // W-CONTRACT-3B (ADR-650) — catalogue Platform des modèles de contrat (gated manage_jobdomains).
+        $pc = \App\Modules\Platform\Contract\Http\PlatformContractController::class;
+        Route::get('/contract-templates/variables', [$pc, 'variables']);
+        Route::get('/contract-templates', [$pc, 'index']);
+        Route::get('/contract-templates/{id}', [$pc, 'show']);
+        Route::post('/contract-templates', [$pc, 'store']);
+        Route::put('/contract-templates/{id}', [$pc, 'update']);
+        Route::post('/contract-templates/{id}/version', [$pc, 'version']);
+        Route::post('/contract-templates/{id}/publish', [$pc, 'publish']);
+        Route::post('/contract-templates/{id}/archive', [$pc, 'archive']);
+        Route::post('/contract-templates/{id}/legal-status', [$pc, 'legalStatus']);
+        Route::post('/contract-templates/preview-pdf', [$pc, 'previewPdf']);
+
         Route::get('/jobdomains/{jobdomainKey}/overlays', [JobdomainOverlayController::class, 'index']);
         Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);
         Route::delete('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'destroy']);

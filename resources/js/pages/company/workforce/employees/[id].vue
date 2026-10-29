@@ -199,7 +199,10 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                   cols="12"
                   md="6"
                 >
-                  <VCard variant="tonal">
+                  <VCard
+                    variant="outlined"
+                    class="h-100"
+                  >
                     <VCardText>
                       <div class="text-overline mb-2">
                         {{ t('employeeFile.tabs.contract') }}
@@ -227,7 +230,10 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                   cols="12"
                   md="6"
                 >
-                  <VCard variant="tonal">
+                  <VCard
+                    variant="outlined"
+                    class="h-100"
+                  >
                     <VCardText>
                       <div class="text-overline mb-2">
                         {{ t('employeeFile.situation') }}

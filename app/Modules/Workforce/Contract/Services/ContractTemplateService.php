@@ -36,6 +36,8 @@ class ContractTemplateService
             'legal_status' => $m['legal_status'] ?? 'example_unvalidated',
             'status' => $m['status'] ?? ($t->is_active ? self::STATUS_PUBLISHED : self::STATUS_DRAFT),
             'is_default' => (bool) ($m['is_default'] ?? false),
+            'effective_date' => $m['effective_date'] ?? null,
+            'jurisdiction' => $m['jurisdiction'] ?? null,
         ];
     }
 
@@ -97,6 +99,8 @@ class ContractTemplateService
             'is_default' => $a['is_default'],
             'is_active' => (bool) $t->is_active,
             'platform_template_id' => $t->platform_template_id,
+            'effective_date' => $a['effective_date'],
+            'jurisdiction' => $a['jurisdiction'],
             'updated_at' => $t->updated_at?->toIso8601String(),
         ];
     }
@@ -247,6 +251,141 @@ class ContractTemplateService
         self::audit($company->id, $actorId, 'contract_template.archived', $t->id, "Modèle « {$t->name} » archivé");
 
         return $t;
+    }
+
+    // ══ Administration PLATFORM (catalogue) — W-CONTRACT-3B ══════════════════════════════════════
+    public const LEGAL_STATUSES = ['example_unvalidated', 'in_review', 'validated', 'obsolete'];
+
+    /** @param array<string,mixed> $filters market_key/jobdomain_key/contract_type/status */
+    public static function platformList(array $filters = []): array
+    {
+        return DocumentTemplate::whereNull('company_id')->where('subject_type', self::SUBJECT)
+            ->orderBy('name')->get()
+            ->filter(function (DocumentTemplate $t) use ($filters) {
+                $a = self::attrs($t);
+                foreach (['market_key', 'jobdomain_key', 'contract_type'] as $f) {
+                    if (! empty($filters[$f]) && $a[$f] !== $filters[$f]) {
+                        return false;
+                    }
+                }
+
+                return empty($filters['status']) || $a['status'] === $filters['status'];
+            })->map(fn ($t) => self::present($t))->values()->all();
+    }
+
+    public static function platformCreate(array $data, int $actorId): DocumentTemplate
+    {
+        $t = DocumentTemplate::create([
+            'company_id' => null, 'platform_template_id' => null,
+            'code' => $data['code'] ?? ('contract_'.\Illuminate\Support\Str::slug($data['name'] ?? 'tpl', '_').'_'.substr(uniqid(), -4)),
+            'name' => $data['name'] ?? 'Nouveau modèle', 'description' => $data['description'] ?? null,
+            'subject_type' => self::SUBJECT,
+            'body_html' => \App\Core\Documents\Services\HtmlSanitizer::sanitize($data['body_html'] ?? '<h1>Contrat</h1>'),
+            'header_html' => \App\Core\Documents\Services\HtmlSanitizer::sanitize($data['header_html'] ?? ''),
+            'footer_html' => \App\Core\Documents\Services\HtmlSanitizer::sanitize($data['footer_html'] ?? ''),
+            'variables_schema' => [], 'version' => 1, 'is_system' => true, 'is_active' => false,
+            'metadata' => [
+                'contract_type' => $data['contract_type'] ?? null,
+                'market_key' => $data['market_key'] ?? null,
+                'jobdomain_key' => $data['jobdomain_key'] ?? null,
+                'legal_status' => 'example_unvalidated', // JAMAIS « validé » automatiquement
+                'status' => self::STATUS_DRAFT, 'is_default' => false,
+                'effective_date' => $data['effective_date'] ?? null, 'jurisdiction' => $data['jurisdiction'] ?? null,
+            ],
+        ]);
+        self::auditPlatform($actorId, 'platform_contract_template.created', $t->id, "Modèle Platform « {$t->name} » créé");
+
+        return $t;
+    }
+
+    public static function platformUpdate(int $id, array $data, int $actorId): DocumentTemplate
+    {
+        $t = self::platformTemplate($id);
+        if (self::attrs($t)['status'] === self::STATUS_PUBLISHED) {
+            throw new \DomainException('Un modèle Platform publié est immuable. Créez une nouvelle version.');
+        }
+        $clean = collect($data)->only(['name', 'description'])->toArray();
+        foreach (['body_html', 'header_html', 'footer_html'] as $f) {
+            if (isset($data[$f])) {
+                $t->$f = \App\Core\Documents\Services\HtmlSanitizer::sanitize($data[$f]);
+            }
+        }
+        $t->fill($clean);
+        $meta = $t->metadata ?? [];
+        foreach (['contract_type', 'market_key', 'jobdomain_key', 'effective_date', 'jurisdiction'] as $m) {
+            if (array_key_exists($m, $data)) {
+                $meta[$m] = $data[$m];
+            }
+        }
+        $t->metadata = $meta;
+        $t->save();
+        self::auditPlatform($actorId, 'platform_contract_template.updated', $t->id, "Modèle Platform « {$t->name} » modifié");
+
+        return $t;
+    }
+
+    public static function platformVersion(int $id, int $actorId): DocumentTemplate
+    {
+        $src = self::platformTemplate($id);
+        $copy = $src->replicate();
+        $copy->is_active = false;
+        $copy->version = (int) DocumentTemplate::whereNull('company_id')->where('code', $src->code)->max('version') + 1;
+        $copy->metadata = array_merge(self::attrs($src), ['status' => self::STATUS_DRAFT, 'is_default' => false]);
+        $copy->save();
+        self::auditPlatform($actorId, 'platform_contract_template.versioned', $copy->id, "Nouvelle version Platform de « {$src->name} »");
+
+        return $copy;
+    }
+
+    public static function platformPublish(int $id, int $actorId): DocumentTemplate
+    {
+        $t = self::platformTemplate($id);
+
+        return DB::transaction(function () use ($t, $actorId) {
+            DocumentTemplate::whereNull('company_id')->where('subject_type', self::SUBJECT)
+                ->where('code', $t->code)->where('id', '!=', $t->id)->where('is_active', true)
+                ->get()->each(fn ($o) => tap($o, fn ($x) => $x->update(['is_active' => false, 'metadata' => array_merge($x->metadata ?? [], ['status' => self::STATUS_ARCHIVED])])));
+            // Publication TECHNIQUE : ne touche PAS legal_status (publication ≠ validation juridique).
+            $t->update(['is_active' => true, 'metadata' => array_merge($t->metadata ?? [], ['status' => self::STATUS_PUBLISHED])]);
+            self::auditPlatform($actorId, 'platform_contract_template.published', $t->id, "Modèle Platform « {$t->name} » publié (publication technique ≠ validation juridique)");
+
+            return $t;
+        });
+    }
+
+    public static function platformArchive(int $id, int $actorId): DocumentTemplate
+    {
+        $t = self::platformTemplate($id);
+        $t->update(['is_active' => false, 'metadata' => array_merge($t->metadata ?? [], ['status' => self::STATUS_ARCHIVED])]);
+        self::auditPlatform($actorId, 'platform_contract_template.archived', $t->id, "Modèle Platform archivé");
+
+        return $t;
+    }
+
+    /** Validation JURIDIQUE — décision distincte de la publication technique. */
+    public static function platformSetLegalStatus(int $id, string $legalStatus, int $actorId): DocumentTemplate
+    {
+        if (! in_array($legalStatus, self::LEGAL_STATUSES, true)) {
+            throw new \DomainException("Statut juridique invalide : {$legalStatus}");
+        }
+        $t = self::platformTemplate($id);
+        $t->update(['metadata' => array_merge($t->metadata ?? [], ['legal_status' => $legalStatus])]);
+        self::auditPlatform($actorId, 'platform_contract_template.legal_status', $t->id, "Statut juridique du modèle « {$t->name} » → {$legalStatus}");
+
+        return $t;
+    }
+
+    private static function platformTemplate(int $id): DocumentTemplate
+    {
+        return DocumentTemplate::whereNull('company_id')->where('subject_type', self::SUBJECT)->findOrFail($id);
+    }
+
+    private static function auditPlatform(int $actorId, string $action, int $id, string $desc): void
+    {
+        app(AuditLogger::class)->logPlatform(
+            action: $action, targetType: 'contract_template', targetId: (string) $id,
+            options: ['metadata' => ['category' => 'platform.contract', 'actor_id' => $actorId, 'description' => $desc]],
+        );
     }
 
     private static function ownTemplate(Company $company, int $templateId): DocumentTemplate
