@@ -43,6 +43,7 @@ class Company extends Model
         'default_convention_collective_id',
         'jobdomain_key',
         'org_profile_key', // ADR-636 (W-E): profil organisationnel (presets)
+        'week_start_day',  // ADR-645 (W-G4B): premier jour de semaine (0=dim..6=sam), null = repli Market/locale
         'legal_status_key',
         'onboarding_dismissed_at',
     ];

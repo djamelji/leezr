@@ -109,7 +109,7 @@ class WorkforcePlanningBoardTest extends TestCase
     {
         $this->shift($this->report, '2026-06-02');
         $this->leave($this->stranger, 'approved', '2026-06-10', '2026-06-12');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $res = $this->board($hr)->assertOk();
         $this->assertCount(1, $res->json('shifts'));
@@ -133,7 +133,7 @@ class WorkforcePlanningBoardTest extends TestCase
     {
         $this->shift($this->report, '2026-06-11'); // pendant l'absence
         $this->leave($this->report, 'approved', '2026-06-10', '2026-06-12');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $res = $this->board($hr)->assertOk();
         $this->assertTrue($res->json('shifts.0.has_conflict'));
@@ -144,7 +144,7 @@ class WorkforcePlanningBoardTest extends TestCase
     {
         $this->shift($this->report, '2026-06-11');
         $this->leave($this->report, 'pending', '2026-06-10', '2026-06-12');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $res = $this->board($hr)->assertOk();
         $this->assertFalse($res->json('shifts.0.has_conflict'));
@@ -155,7 +155,7 @@ class WorkforcePlanningBoardTest extends TestCase
     {
         $this->shift($this->report, '2026-06-02');   // dept Alpha
         $this->shift($this->stranger, '2026-06-03'); // sans dept
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $res = $this->board($hr, '&department_id='.$this->deptA->id)->assertOk();
         $this->assertCount(1, $res->json('shifts'));
@@ -164,7 +164,7 @@ class WorkforcePlanningBoardTest extends TestCase
     public function test_board_is_bounded_by_dates(): void
     {
         $this->shift($this->report, '2026-07-15'); // hors plage juin
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
         $this->assertCount(0, $this->board($hr)->assertOk()->json('shifts'));
     }
 
@@ -172,7 +172,7 @@ class WorkforcePlanningBoardTest extends TestCase
     {
         $this->shift($this->report, '2026-06-02', status: 'draft');
         $this->shift($this->report, '2026-06-03', status: 'published');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $shifts = collect($this->board($hr)->assertOk()->json('shifts'));
         $this->assertFalse($shifts->firstWhere('status', 'draft')['is_published']);
@@ -182,7 +182,7 @@ class WorkforcePlanningBoardTest extends TestCase
     public function test_shift_crossing_midnight_preserved(): void
     {
         $this->shift($this->report, '2026-06-05', '22:00', '06:00', 'published', '2026-06-06');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
 
         $shift = $this->board($hr)->assertOk()->json('shifts.0');
         $this->assertStringContainsString('2026-06-05', $shift['start']);
@@ -200,7 +200,7 @@ class WorkforcePlanningBoardTest extends TestCase
         // report avec shift mais AUCUN pointage → missing.
         $this->shift($this->manager, '2026-06-04');
 
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
         $res = $this->actingAs($hr)->getJson('/api/workforce/planning/shifts/comparison?from=2026-06-01&to=2026-06-30', ['X-Company-Id' => $this->company->id])->assertOk();
 
         $byEmp = collect($res->json())->keyBy('employee_id');
@@ -218,7 +218,7 @@ class WorkforcePlanningBoardTest extends TestCase
         Shift::withoutGlobalScopes()->create(['company_id' => $other->id, 'employee_id' => $oe->id, 'date' => '2026-06-02', 'start_at' => '2026-06-02 09:00:00', 'end_at' => '2026-06-02 17:00:00', 'timezone' => 'Europe/Paris', 'status' => 'published', 'template_snapshot' => []]);
 
         $this->shift($this->report, '2026-06-02');
-        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage']);
+        $hr = $this->user(['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish']);
         $this->assertCount(1, $this->board($hr)->assertOk()->json('shifts'));
     }
 

@@ -24,6 +24,28 @@ class WorkforceConfigController
         return response()->json(['domain' => 'breaks', 'rules' => $this->explain($spec)]);
     }
 
+    /** GET /workforce/config/week-start — premier jour de semaine résolu (Company→Market→locale). */
+    public function weekStart(Request $request): JsonResponse
+    {
+        $canEdit = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.manage') ?? false;
+
+        return response()->json(\App\Modules\Workforce\Support\WeekStartResolver::describe($this->company($request), $canEdit));
+    }
+
+    /** PUT /workforce/config/week-start — définit la préférence Company (0=dim..6=sam ou null=repli). */
+    public function setWeekStart(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['week_start_day' => ['present', 'nullable', 'integer', 'between:0,6']]);
+
+        $company = $this->company($request);
+        $company->week_start_day = $validated['week_start_day'];
+        $company->save();
+
+        $canEdit = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.manage') ?? false;
+
+        return response()->json(\App\Modules\Workforce\Support\WeekStartResolver::describe($company, $canEdit));
+    }
+
     /** PUT /workforce/config/breaks/{rule} — set a configurable break rule (guarded). */
     public function setBreak(Request $request, string $rule): JsonResponse
     {

@@ -7187,6 +7187,23 @@
       "plannedMinutes": "Planned duration",
       "conflictDetail": "This shift overlaps an approved absence — review required.",
       "conflictsBanner": "{count} shift(s) overlapping an approved absence."
+    },
+    "ops": {
+      "moved": "Shift moved",
+      "reassigned": "Employee reassigned",
+      "resolve": "Resolve",
+      "reassign": "Reassign",
+      "reassignTitle": "Reassign shift",
+      "reassignHint": "Potentially available employees for this slot (explicit choice required).",
+      "confirmReassign": "Reassign",
+      "moveTitle": "Confirm move",
+      "confirmMove": "Confirm"
+    },
+    "availability": {
+      "available": "Available",
+      "to_verify": "To verify",
+      "busy": "Busy",
+      "unavailable": "On leave"
     }
   },
   "leaves": {
@@ -7495,6 +7512,16 @@
       "warn": "Warn",
       "block": "Block",
       "approve": "Approval required"
+    }
+  },
+  "workforceSettings": {
+    "weekStart": {
+      "title": "First day of week",
+      "hint": "Applied to planning and leave calendars.",
+      "auto": "Automatic (Market/locale)",
+      "monday": "Monday",
+      "sunday": "Sunday",
+      "saved": "Preference saved"
     }
   }
 }

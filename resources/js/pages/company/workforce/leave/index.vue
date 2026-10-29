@@ -3,6 +3,7 @@ import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
+import { $api } from '@/utils/api'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import LeaveCalendar from './_LeaveCalendar.vue'
 import LeaveRequestDetailDialog from './_LeaveRequestDetailDialog.vue'
@@ -228,6 +229,7 @@ const calLeaveTypeOptions = computed(() => store.leaveTypes.map(lt => ({ title: 
 
 const selectedRequest = ref(null)
 const detailOpen = ref(false)
+const weekStartDay = ref(null) // W-G4B : préférence Company (premier jour de semaine)
 const onSelectEvent = ev => { selectedRequest.value = ev; detailOpen.value = true }
 const onCalendarUpdated = () => calendarRef.value?.refetch()
 const resetCalFilters = () => { calDepartment.value = null; calLeaveType.value = null; calEmployee.value = null }
@@ -448,6 +450,7 @@ watch(activeTab, tab => {
     // Options de filtre (le calendrier se charge lui-même via datesSet, scope serveur).
     employeesStore.fetchDepartments()
     store.fetchLeaveTypes({ all: true })
+    $api('/workforce/config/week-start').then(r => { weekStartDay.value = r.week_start_day }).catch(() => {})
   } else if (tab === 'config' && !configLoaded.value) {
     configLoaded.value = true
     fetchAllLeaveTypes()
@@ -833,6 +836,7 @@ watch(activeTab, tab => {
             <LeaveCalendar
               ref="calendarRef"
               :filters="calendarFilters"
+              :first-day="weekStartDay"
               @select="onSelectEvent"
             />
           </VCardText>

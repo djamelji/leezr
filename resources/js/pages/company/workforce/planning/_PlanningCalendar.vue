@@ -6,13 +6,16 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
+import interactionPlugin from '@fullcalendar/interaction'
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useWorldStore } from '@/core/stores/world'
 
 const props = defineProps({
   filters: { type: Object, default: () => ({}) },
+  firstDay: { type: Number, default: null }, // premier jour de semaine (préférence Company)
+  editable: { type: Boolean, default: false }, // drag-drop autorisé (brouillons uniquement)
 })
-const emit = defineEmits(['select', 'conflicts'])
+const emit = defineEmits(['select', 'conflicts', 'move'])
 
 const { locale } = useI18n()
 const store = usePlanningStore()
@@ -34,17 +37,25 @@ const fetchEvents = (info, successCallback) => {
   store.fetchBoard({ from, to, ...props.filters }).then(board => {
     emit('conflicts', board.conflicts || [])
 
-    const shiftEvents = (board.shifts || []).map(s => ({
-      id: s.id,
-      title: s.employee_name + (s.location ? ` · ${s.location}` : ''),
-      start: s.start,
-      end: s.end,
-      allDay: false,
-      backgroundColor: SHIFT_COLOR[s.status] || SHIFT_COLOR.published,
-      borderColor: s.has_conflict ? CONFLICT : (SHIFT_COLOR[s.status] || SHIFT_COLOR.published),
-      classNames: s.status === 'draft' ? ['shift-draft'] : [],
-      extendedProps: { ...s, kind: 'shift' },
-    }))
+    const shiftEvents = (board.shifts || []).map(s => {
+      const isDraft = s.status === 'draft'
+
+      return {
+        id: s.id,
+        title: s.employee_name + (s.location ? ` · ${s.location}` : ''),
+        start: s.start,
+        end: s.end,
+        allDay: false,
+        // Édition directe (drag/resize) UNIQUEMENT pour les brouillons — les publiés sont figés.
+        editable: props.editable && isDraft,
+        startEditable: props.editable && isDraft,
+        durationEditable: props.editable && isDraft,
+        backgroundColor: SHIFT_COLOR[s.status] || SHIFT_COLOR.published,
+        borderColor: s.has_conflict ? CONFLICT : (SHIFT_COLOR[s.status] || SHIFT_COLOR.published),
+        classNames: isDraft ? ['shift-draft'] : [],
+        extendedProps: { ...s, kind: 'shift' },
+      }
+    })
 
     const absenceEvents = (board.absences || []).map(a => ({
       id: a.id,
@@ -61,19 +72,39 @@ const fetchEvents = (info, successCallback) => {
   }).catch(() => successCallback([])).finally(() => { loading.value = false })
 }
 
+// Drag/resize d'un brouillon → on délègue au parent (confirmation + PUT verrou optimiste + revert).
+const onEventChange = info => {
+  if (info.event.extendedProps.kind !== 'shift' || info.event.extendedProps.status !== 'draft') {
+    info.revert()
+
+    return
+  }
+  emit('move', {
+    shift: info.event.extendedProps,
+    start: info.event.start?.toISOString(),
+    end: info.event.end?.toISOString(),
+    revert: info.revert,
+  })
+}
+
 const calendarOptions = computed(() => ({
-  plugins: [dayGridPlugin, timeGridPlugin, listPlugin],
+  plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: 'timeGridWeek',
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
   timeZone: world.timezone || 'local',
-  // Premier jour de semaine : déduit de la locale par FullCalendar (fr→lundi, en-US→dimanche) —
-  // jamais présumé lundi en dur. (À brancher sur un réglage Company si introduit plus tard.)
+  // Premier jour de semaine : préférence Company (W-G4B) si fournie, sinon déduit de la locale par
+  // FullCalendar (fr→lundi, en-US→dimanche). Jamais présumé lundi en dur.
+  ...(props.firstDay !== null ? { firstDay: props.firstDay } : {}),
   height: 'auto',
   nowIndicator: true,
+  editable: props.editable,
+  eventDurationEditable: props.editable,
   headerToolbar: { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' },
   buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Liste' },
   events: fetchEvents,
   eventClick({ event }) { emit('select', event.extendedProps) },
+  eventDrop: onEventChange,
+  eventResize: onEventChange,
   slotMinTime: '05:00:00',
   slotMaxTime: '24:00:00',
   expandRows: true,

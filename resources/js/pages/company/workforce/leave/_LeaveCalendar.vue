@@ -11,6 +11,7 @@ import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 
 const props = defineProps({
   filters: { type: Object, default: () => ({}) }, // departmentId/leaveTypeId/employeeId/statuses
+  firstDay: { type: Number, default: null }, // W-G4B : préférence Company de premier jour de semaine
 })
 const emit = defineEmits(['select', 'range'])
 
@@ -60,7 +61,7 @@ const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
-  firstDay: 1,
+  ...(props.firstDay !== null ? { firstDay: props.firstDay } : {}),
   height: 'auto',
   headerToolbar: {
     start: 'prev,next today',

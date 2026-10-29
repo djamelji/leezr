@@ -7,13 +7,41 @@ definePage({
 
 import WorkforceRulesSection from './_WorkforceRulesSection.vue'
 import { $api } from '@/utils/api'
+import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { toast } = useAppToast()
+const { can } = useCan()
 
 const data = ref(null)
 const loading = ref(true)
+
+// ── W-G4B : préférence de premier jour de semaine (Company) ──
+const weekStart = ref(null) // null = auto (Market/locale), 1 = lundi, 0 = dimanche
+const weekStartSaving = ref(false)
+const weekStartOptions = computed(() => [
+  { title: t('workforceSettings.weekStart.auto'), value: null },
+  { title: t('workforceSettings.weekStart.monday'), value: 1 },
+  { title: t('workforceSettings.weekStart.sunday'), value: 0 },
+])
+const loadWeekStart = async () => {
+  try {
+    const r = await $api('/workforce/config/week-start')
+    weekStart.value = r.source === 'company' ? r.week_start_day : null
+  } catch { /* ignore */ }
+}
+const saveWeekStart = async () => {
+  weekStartSaving.value = true
+  try {
+    await $api('/workforce/config/week-start', { method: 'PUT', body: { week_start_day: weekStart.value } })
+    toast(t('workforceSettings.weekStart.saved'), 'success')
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  } finally { weekStartSaving.value = false }
+}
 
 const SECTION_ICON = {
   general: 'tabler-info-circle', organization: 'tabler-sitemap', worktime: 'tabler-clock',
@@ -35,7 +63,7 @@ const load = async () => {
 
 const go = p => router.push(p)
 
-onMounted(load)
+onMounted(() => { load(); loadWeekStart() })
 </script>
 
 <template>
@@ -98,6 +126,34 @@ onMounted(load)
                 :subtitle="t('hrSettings.profile')"
               />
             </VList>
+            <!-- W-G4B : premier jour de semaine (préférence Company) -->
+            <VDivider class="my-4" />
+            <div class="text-subtitle-1 font-weight-medium mb-1">
+              {{ t('workforceSettings.weekStart.title') }}
+            </div>
+            <p class="text-body-2 text-medium-emphasis mb-2">
+              {{ t('workforceSettings.weekStart.hint') }}
+            </p>
+            <div class="d-flex gap-3 align-center flex-wrap mb-4">
+              <AppSelect
+                v-model="weekStart"
+                :items="weekStartOptions"
+                density="compact"
+                style="max-inline-size: 280px;"
+                :disabled="!can('workforce.manage')"
+                data-test="week-start-select"
+              />
+              <VBtn
+                color="primary"
+                size="small"
+                :loading="weekStartSaving"
+                :disabled="!can('workforce.manage')"
+                @click="saveWeekStart"
+              >
+                {{ t('common.save') }}
+              </VBtn>
+            </div>
+
             <VBtn
               variant="tonal"
               prepend-icon="tabler-wand"

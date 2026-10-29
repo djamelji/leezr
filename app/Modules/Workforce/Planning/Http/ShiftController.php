@@ -92,6 +92,28 @@ class ShiftController extends Controller
     }
 
     /**
+     * W-G4B — suggestions de collaborateurs disponibles pour une (ré)affectation. Scopé + borné.
+     */
+    public function availability(Request $request): JsonResponse
+    {
+        $request->validate([
+            'start' => 'required|date',
+            'end' => 'required|date|after:start',
+            'exclude_shift_id' => 'sometimes|integer',
+            'job_role_id' => 'sometimes|integer',
+        ]);
+
+        return response()->json(PlanningBoardReadModel::availability(
+            companyId: $request->attributes->get('company_id'),
+            start: Carbon::parse($request->query('start')),
+            end: Carbon::parse($request->query('end')),
+            excludeShiftId: $request->filled('exclude_shift_id') ? (int) $request->query('exclude_shift_id') : null,
+            jobRoleId: $request->filled('job_role_id') ? (int) $request->query('job_role_id') : null,
+            visibleIds: $this->planningScope($request),
+        ));
+    }
+
+    /**
      * W-G4A — comparaison prévu (shifts) / réalisé (pointages), bornée + scopée. Informatif.
      */
     public function comparison(Request $request): JsonResponse
@@ -111,12 +133,15 @@ class ShiftController extends Controller
         ));
     }
 
-    /** Scope planning : vue globale si gestion/publication ou RH (view+manage) ; sinon soi + rapports. */
+    /**
+     * Scope planning : vue GLOBALE si RH (workforce.view+manage) ou publication (planning_publish) ;
+     * `planning_manage` SEUL = manager d'équipe → scopé à soi + rapports directs. Ainsi un manager ne
+     * peut (ré)affecter/voir que son périmètre, un RH/publieur gère toute l'entreprise (W-G4B §8).
+     */
     private function planningScope(Request $request): ?array
     {
-        $viewAll = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_manage')
-            || $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish')
-            || WorkforceAccess::hasViewAll($request, 'employee');
+        $viewAll = WorkforceAccess::hasViewAll($request, 'employee')
+            || ($request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish') ?? false);
 
         return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
     }
@@ -179,7 +204,31 @@ class ShiftController extends Controller
             'schedule_template_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:500',
+            'employee_id' => 'nullable|integer',                 // W-G4B : réaffectation (brouillon)
+            'expected_updated_at' => 'nullable|date',            // W-G4B : verrou optimiste (concurrence)
         ]);
+
+        // W-G4B — VERROU OPTIMISTE : si le client fournit l'horodatage lu et qu'il ne correspond plus,
+        // une autre modification concurrente est intervenue → 409 (pas d'écrasement silencieux).
+        if (! empty($validated['expected_updated_at'])
+            && Carbon::parse($validated['expected_updated_at'])->ne($shift->updated_at)) {
+            return response()->json([
+                'message' => 'Ce shift a été modifié par une autre personne entre-temps. Rechargez puis réessayez.',
+                'code' => 'stale_version',
+                'current_updated_at' => $shift->updated_at?->toIso8601String(),
+            ], 409);
+        }
+
+        // W-G4B — SCOPE MANAGER sur réaffectation : on ne peut affecter qu'un collaborateur visible,
+        // sauf vue globale (planning_manage/publish ou RH). Le backend reste la source d'autorité.
+        if (! empty($validated['employee_id']) && (int) $validated['employee_id'] !== $shift->employee_id) {
+            $visible = $this->planningScope($request);
+            if ($visible !== null && ! in_array((int) $validated['employee_id'], $visible, true)) {
+                return response()->json(['message' => 'Collaborateur hors de votre périmètre de gestion.'], 403);
+            }
+        }
+
+        unset($validated['expected_updated_at']);
 
         try {
             return response()->json(app(UpdateShiftUseCase::class)->execute($shift, $validated));

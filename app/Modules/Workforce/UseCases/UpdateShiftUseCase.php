@@ -54,8 +54,8 @@ class UpdateShiftUseCase
                 ->where('company_id', $shift->company_id)
                 ->where('employee_id', $employeeId)
                 ->whereIn('status', [LeaveRequest::STATUS_APPROVED, LeaveRequest::STATUS_CONSUMED])
-                ->where('date_from', '<=', $date)
-                ->where('date_to', '>=', $date)
+                ->whereDate('date_from', '<=', $date)
+                ->whereDate('date_to', '>=', $date)
                 ->exists();
 
             if ($hasLeave) {

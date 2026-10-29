@@ -2,6 +2,7 @@
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import PlanningCalendar from './_PlanningCalendar.vue'
 
@@ -11,6 +12,7 @@ const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const store = usePlanningStore()
 const employeesStore = useEmployeesStore()
+const { can } = useCan()
 
 // ── Tab navigation ───────────────────────────────────────────
 const activeTab = ref('calendar')
@@ -37,6 +39,74 @@ const onSelectEvent = ev => { calSelected.value = ev; calDetailOpen.value = true
 const calLoaded = ref(false)
 const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : '—'
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+
+// ── W-G4B : premier jour de semaine (préférence Company) ──
+const weekStartDay = ref(null)
+const canEditShifts = computed(() => can('workforce.planning_manage'))
+onMounted(async () => {
+  try { weekStartDay.value = (await store.fetchWeekStart()).week_start_day } catch { /* repli locale */ }
+})
+
+// ── W-G4B : drag-and-drop d'un brouillon → confirmation + verrou optimiste + revert ──
+const moveDialog = ref(false)
+const moveLoading = ref(false)
+const pendingMove = ref(null)
+const onShiftMove = payload => { pendingMove.value = payload; moveDialog.value = true }
+const cancelMove = () => { pendingMove.value?.revert(); pendingMove.value = null; moveDialog.value = false }
+const confirmMove = async () => {
+  moveLoading.value = true
+  try {
+    await store.updateShift(pendingMove.value.shift.shift_id, {
+      start_at: pendingMove.value.start,
+      end_at: pendingMove.value.end,
+      expected_updated_at: pendingMove.value.shift.updated_at,
+    })
+    toast(t('planning.ops.moved'), 'success')
+    moveDialog.value = false
+    pendingMove.value = null
+    calRef.value?.refetch()
+  } catch (e) {
+    // Échec (conflit concurrence 409, règle 422…) → revert visuel + message.
+    pendingMove.value?.revert()
+    toast(e.response?.data?.message || t('common.error'), 'error')
+    moveDialog.value = false
+    pendingMove.value = null
+  } finally { moveLoading.value = false }
+}
+
+// ── W-G4B : résolution / réaffectation d'un brouillon ──
+const reassignOpen = ref(false)
+const reassignLoading = ref(false)
+const reassignCandidates = ref([])
+const reassignTarget = ref(null)
+const openReassign = async () => {
+  reassignOpen.value = true
+  reassignTarget.value = null
+  reassignCandidates.value = []
+  try {
+    reassignCandidates.value = await store.fetchAvailability({
+      start: calSelected.value.start,
+      end: calSelected.value.end,
+      excludeShiftId: calSelected.value.shift_id,
+    })
+  } catch { /* liste vide */ }
+}
+const availColor = a => ({ available: 'success', to_verify: 'warning', busy: 'secondary', unavailable: 'error' }[a] || 'secondary')
+const confirmReassign = async () => {
+  reassignLoading.value = true
+  try {
+    await store.updateShift(calSelected.value.shift_id, {
+      employee_id: reassignTarget.value,
+      expected_updated_at: calSelected.value.updated_at,
+    })
+    toast(t('planning.ops.reassigned'), 'success')
+    reassignOpen.value = false
+    calDetailOpen.value = false
+    calRef.value?.refetch()
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  } finally { reassignLoading.value = false }
+}
 
 // ── Shared helpers ───────────────────────────────────────────
 const employeeItems = computed(() =>
@@ -939,8 +1009,11 @@ watch(activeTab, tab => {
             <PlanningCalendar
               ref="calRef"
               :filters="calFilters"
+              :first-day="weekStartDay"
+              :editable="canEditShifts"
               @select="onSelectEvent"
               @conflicts="calConflicts = $event"
+              @move="onShiftMove"
             />
           </VCardText>
         </VCard>
@@ -980,9 +1053,104 @@ watch(activeTab, tab => {
                 <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('leaves.calendar.period') }}</span><span>{{ fmtTime(calSelected.start) ? calSelected.start : '' }} {{ calSelected.start }} → {{ calSelected.end }}</span></div>
               </template>
             </VCardText>
-            <VCardText class="d-flex justify-end pt-0">
+            <VCardText class="d-flex justify-end gap-3 pt-0">
               <VBtn variant="outlined" color="secondary" @click="calDetailOpen = false">
                 {{ $t('common.close') }}
+              </VBtn>
+              <!-- Résolution/réaffectation : brouillons uniquement (publié figé) -->
+              <VBtn
+                v-if="calSelected.kind === 'shift' && calSelected.status === 'draft' && canEditShifts"
+                color="primary"
+                prepend-icon="tabler-user-check"
+                @click="openReassign"
+              >
+                {{ calSelected.has_conflict ? $t('planning.ops.resolve') : $t('planning.ops.reassign') }}
+              </VBtn>
+            </VCardText>
+          </VCard>
+        </VDialog>
+
+        <!-- Réaffectation guidée (suggestions de disponibilité) -->
+        <VDialog
+          v-model="reassignOpen"
+          max-width="520"
+        >
+          <VCard>
+            <VCardItem>
+              <VCardTitle>{{ $t('planning.ops.reassignTitle') }}</VCardTitle>
+              <VCardSubtitle>{{ $t('planning.ops.reassignHint') }}</VCardSubtitle>
+            </VCardItem>
+            <VCardText>
+              <VRadioGroup v-model="reassignTarget">
+                <VList
+                  density="compact"
+                  max-height="300"
+                >
+                  <VListItem
+                    v-for="c in reassignCandidates"
+                    :key="c.employee_id"
+                    :disabled="c.availability === 'unavailable' || c.availability === 'busy'"
+                    @click="(c.availability === 'available' || c.availability === 'to_verify') && (reassignTarget = c.employee_id)"
+                  >
+                    <template #prepend>
+                      <VRadio
+                        :value="c.employee_id"
+                        :disabled="c.availability === 'unavailable' || c.availability === 'busy'"
+                      />
+                    </template>
+                    <VListItemTitle>{{ c.employee_name }}<span v-if="c.job_role" class="text-caption text-medium-emphasis"> · {{ c.job_role }}</span></VListItemTitle>
+                    <template #append>
+                      <VChip
+                        :color="availColor(c.availability)"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        {{ $t('planning.availability.' + c.availability) }}
+                      </VChip>
+                    </template>
+                  </VListItem>
+                </VList>
+              </VRadioGroup>
+            </VCardText>
+            <VCardText class="d-flex justify-end gap-3 pt-0">
+              <VBtn variant="outlined" color="secondary" @click="reassignOpen = false">
+                {{ $t('common.cancel') }}
+              </VBtn>
+              <VBtn
+                color="primary"
+                :loading="reassignLoading"
+                :disabled="!reassignTarget"
+                @click="confirmReassign"
+              >
+                {{ $t('planning.ops.confirmReassign') }}
+              </VBtn>
+            </VCardText>
+          </VCard>
+        </VDialog>
+
+        <!-- Confirmation de déplacement (drag-and-drop) -->
+        <VDialog
+          v-model="moveDialog"
+          max-width="420"
+          persistent
+        >
+          <VCard v-if="pendingMove">
+            <VCardItem>
+              <VCardTitle>{{ $t('planning.ops.moveTitle') }}</VCardTitle>
+            </VCardItem>
+            <VCardText>
+              <p class="mb-2">
+                {{ pendingMove.shift.employee_name }}
+              </p>
+              <div class="d-flex justify-space-between"><span class="text-medium-emphasis">{{ $t('planning.fields.start') }}</span><span>{{ fmtDateTime(pendingMove.start) }}</span></div>
+              <div class="d-flex justify-space-between"><span class="text-medium-emphasis">{{ $t('planning.fields.end') }}</span><span>{{ fmtDateTime(pendingMove.end) }}</span></div>
+            </VCardText>
+            <VCardText class="d-flex justify-end gap-3 pt-0">
+              <VBtn variant="outlined" color="secondary" :disabled="moveLoading" @click="cancelMove">
+                {{ $t('common.cancel') }}
+              </VBtn>
+              <VBtn color="primary" :loading="moveLoading" @click="confirmMove">
+                {{ $t('planning.ops.confirmMove') }}
               </VBtn>
             </VCardText>
           </VCard>

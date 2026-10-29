@@ -56,6 +56,23 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       return await $api(`/workforce/planning/shifts/board?${params.toString()}`)
     },
 
+    // W-G4B : suggestions de collaborateurs disponibles pour une (ré)affectation.
+    async fetchAvailability({ start, end, excludeShiftId, jobRoleId } = {}) {
+      const params = new URLSearchParams({ start, end })
+      if (excludeShiftId) params.set('exclude_shift_id', excludeShiftId)
+      if (jobRoleId) params.set('job_role_id', jobRoleId)
+
+      return await $api(`/workforce/planning/shifts/availability?${params.toString()}`)
+    },
+
+    // W-G4B : premier jour de semaine (préférence Company résolue).
+    async fetchWeekStart() {
+      return await $api('/workforce/config/week-start')
+    },
+    async setWeekStart(weekStartDay) {
+      return await $api('/workforce/config/week-start', { method: 'PUT', body: { week_start_day: weekStartDay } })
+    },
+
     // W-G4A : comparaison prévu / réalisé (shifts vs pointages).
     async fetchComparison({ from, to, employeeId } = {}) {
       const params = new URLSearchParams({ from, to })

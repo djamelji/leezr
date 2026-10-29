@@ -68,6 +68,12 @@ class PlanningBoardReadModel
                         'employee_name' => $shift->employee->full_name,
                         'date' => $shift->date->toDateString(),
                         'leave_type' => $leave->leaveType?->name,
+                        // Chevauchement shift/congé approuvé = AVERTISSEMENT (à résoudre), pas une
+                        // infraction légale automatique. Les violations de règles sont bloquées à
+                        // l'écriture (ShiftRuleValidator), donc absentes ici.
+                        'type' => 'approved_leave',
+                        'severity' => $shift->status === Shift::STATUS_DRAFT ? 'warning' : 'info',
+                        'resolvable' => $shift->status === Shift::STATUS_DRAFT,
                     ];
                     break;
                 }
@@ -92,6 +98,7 @@ class PlanningBoardReadModel
                 'planned_minutes' => $s->plannedWorkMinutes(),
                 'date' => $s->date->toDateString(),
                 'timezone' => $s->timezone,
+                'updated_at' => $s->updated_at?->toIso8601String(), // W-G4B : verrou optimiste côté client
                 'has_conflict' => isset($conflictShiftIds[$s->id]),
             ])->values(),
             'absences' => $leaves->map(fn (LeaveRequest $l) => [
@@ -109,6 +116,65 @@ class PlanningBoardReadModel
             ])->values(),
             'conflicts' => $conflicts,
         ];
+    }
+
+    /**
+     * W-G4B — suggestions de disponibilité pour une (ré)affectation sur une plage horaire donnée.
+     * Scopé + borné. Marque chaque candidat : indisponible (congé approuvé), occupé (shift
+     * chevauchant), disponible, ou « à vérifier » (infos insuffisantes). JAMAIS d'auto-sélection ;
+     * ne présume PAS que deux salariés au même poste sont interchangeables (jobrole = simple indice).
+     *
+     * @param  array<int>|null  $visibleIds
+     */
+    public static function availability(int $companyId, Carbon $start, Carbon $end, ?int $excludeShiftId = null, ?int $jobRoleId = null, ?array $visibleIds = null): array
+    {
+        $date = $start->toDateString();
+
+        $employees = Employee::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('status', Employee::STATUS_ACTIVE)
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
+            ->with(['currentContract:id,employee_id,status', 'jobRole:id,title'])
+            ->orderBy('last_name')
+            ->limit(200)
+            ->get();
+
+        // Congés approuvés couvrant la date (une requête).
+        $onLeave = LeaveRequest::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('status', LeaveRequest::STATUS_APPROVED)
+            ->whereDate('date_from', '<=', $date)->whereDate('date_to', '>=', $date)
+            ->pluck('employee_id')->flip();
+
+        // Shifts chevauchant la plage (hors shift en cours d'édition) — une requête.
+        $busy = Shift::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->notCancelled()
+            ->when($excludeShiftId, fn ($q) => $q->where('id', '!=', $excludeShiftId))
+            ->where('start_at', '<', $end)->where('end_at', '>', $start)
+            ->pluck('employee_id')->flip();
+
+        return $employees->map(function (Employee $e) use ($onLeave, $busy, $jobRoleId) {
+            $hasContract = $e->currentContract && $e->currentContract->status === 'active';
+            if ($onLeave->has($e->id)) {
+                $status = 'unavailable';
+            } elseif ($busy->has($e->id)) {
+                $status = 'busy';
+            } elseif (! $hasContract) {
+                $status = 'to_verify'; // infos insuffisantes (pas de contrat actif) → ne pas affirmer dispo
+            } else {
+                $status = 'available';
+            }
+
+            return [
+                'employee_id' => $e->id,
+                'employee_name' => $e->full_name,
+                'job_role' => $e->jobRole?->title,
+                'availability' => $status,
+                'job_role_match' => $jobRoleId ? ($e->job_role_id === $jobRoleId) : null,
+            ];
+        })->sortBy(fn ($c) => ['available' => 0, 'to_verify' => 1, 'busy' => 2, 'unavailable' => 3][$c['availability']])
+            ->values()->all();
     }
 
     /**

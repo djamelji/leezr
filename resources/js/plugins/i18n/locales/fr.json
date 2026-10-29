@@ -7187,6 +7187,23 @@
       "plannedMinutes": "Durée prévue",
       "conflictDetail": "Ce shift chevauche une absence approuvée — vérification requise.",
       "conflictsBanner": "{count} shift(s) en chevauchement avec une absence approuvée."
+    },
+    "ops": {
+      "moved": "Shift déplacé",
+      "reassigned": "Collaborateur réaffecté",
+      "resolve": "Résoudre",
+      "reassign": "Réaffecter",
+      "reassignTitle": "Réaffecter le shift",
+      "reassignHint": "Collaborateurs potentiellement disponibles sur cette plage (choix explicite requis).",
+      "confirmReassign": "Réaffecter",
+      "moveTitle": "Confirmer le déplacement",
+      "confirmMove": "Confirmer"
+    },
+    "availability": {
+      "available": "Disponible",
+      "to_verify": "À vérifier",
+      "busy": "Occupé",
+      "unavailable": "En congé"
     }
   },
   "leaves": {
@@ -7495,6 +7512,16 @@
       "warn": "Avertir",
       "block": "Bloquer",
       "approve": "Approbation requise"
+    }
+  },
+  "workforceSettings": {
+    "weekStart": {
+      "title": "Premier jour de semaine",
+      "hint": "Appliqué aux calendriers planning et congés.",
+      "auto": "Automatique (Market/locale)",
+      "monday": "Lundi",
+      "sunday": "Dimanche",
+      "saved": "Préférence enregistrée"
     }
   }
 }
