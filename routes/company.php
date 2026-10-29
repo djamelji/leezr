@@ -643,6 +643,7 @@ Route::prefix('workforce/contract')->middleware('company.access:use-module,workf
     Route::post('templates/{id}/publish', [$c, 'publish'])->middleware($perm('workforce_contract.manage_templates'));
     Route::post('templates/{id}/archive', [$c, 'archive'])->middleware($perm('workforce_contract.manage_templates'));
     Route::post('preview', [$c, 'preview'])->middleware($perm('workforce_contract.generate'));
+    Route::post('preview-pdf', [$c, 'previewPdf'])->middleware($perm('workforce_contract.generate')); // W-CONTRACT-2 : aperçu PDF fidèle
     Route::post('generate', [$c, 'generate'])->middleware($perm('workforce_contract.generate'));
 });
 

@@ -7607,7 +7607,8 @@
     "legal": {
       "validated": "Validated",
       "example_unvalidated": "Unvalidated example"
-    }
+    },
+    "previewPdf": "PDF preview"
   },
   "generateContract": {
     "action": "Generate contract",
@@ -7620,5 +7621,15 @@
     "generate": "Generate",
     "generated": "Contract generated and archived in the file.",
     "missing": "Missing variables: {vars}"
+  },
+  "contractVars": {
+    "employee": "Employee",
+    "contract": "Contract",
+    "company": "Employer",
+    "employer": "Employer",
+    "organization": "Organization",
+    "compensation": "Compensation",
+    "field": "Fields",
+    "today": "Date"
   }
 }

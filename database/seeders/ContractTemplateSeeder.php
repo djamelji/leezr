@@ -22,11 +22,11 @@ class ContractTemplateSeeder extends Seeder
 <p><strong>{{ company.name }}</strong>, SIRET {{ company.siret }}, ci-après « l'Employeur »,</p>
 <p>Et <strong>{{ employee.full_name }}</strong>, ci-après « le Collaborateur »,</p>
 <h2>Article 1 — Engagement</h2>
-<p>Le Collaborateur est engagé à compter du {{ contract.start_date }} en qualité de {{ employee.job_role }}, au sein du département {{ employee.department }}.</p>
+<p>Le Collaborateur {{ employee.full_name }} (réf. {{ employee.employee_number }}) est engagé à compter du {{ contract.start_date_formatted }}.</p>
 <h2>Article 2 — Durée du travail</h2>
-<p>La durée hebdomadaire de travail est fixée à {{ contract.weekly_hours }} heures.</p>
+<p>La durée hebdomadaire de travail est fixée à {{ contract.weekly_hours }} heures ({{ contract.work_model }}).</p>
 <h2>Article 3 — Type de contrat</h2>
-<p>Le présent contrat est conclu en {{ contract.contract_type }}.</p>
+<p>Le présent contrat est conclu en {{ contract.contract_type_label }}.</p>
 <p><em>Document d'exemple non validé juridiquement — à adapter par l'entreprise.</em></p>
 HTML;
 

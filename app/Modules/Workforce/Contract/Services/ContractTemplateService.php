@@ -165,7 +165,14 @@ class ContractTemplateService
             throw new \DomainException('Un modèle publié est immuable. Créez une nouvelle version pour le modifier.');
         }
 
-        $t->fill(collect($data)->only(['name', 'description', 'body_html', 'header_html', 'footer_html'])->toArray());
+        $clean = collect($data)->only(['name', 'description', 'body_html', 'header_html', 'footer_html'])->toArray();
+        // W-CONTRACT-2 : sanitation SERVEUR du contenu WYSIWYG (défense en profondeur).
+        foreach (['body_html', 'header_html', 'footer_html'] as $f) {
+            if (isset($clean[$f])) {
+                $clean[$f] = \App\Core\Documents\Services\HtmlSanitizer::sanitize($clean[$f]);
+            }
+        }
+        $t->fill($clean);
         if (isset($data['contract_type']) || isset($data['legal_status'])) {
             $t->metadata = array_merge($t->metadata ?? [], array_filter([
                 'contract_type' => $data['contract_type'] ?? null,

@@ -21,14 +21,7 @@ class DocumentPdfGenerator
      */
     public function generate(DocumentTemplate $template, array $variables, int $companyId): array
     {
-        // 1. Render HTML with variables
-        $html = $this->renderHtml($template, $variables);
-
-        // 2. Generate PDF via dompdf
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-        $pdf->setPaper($template->paper_size ?? 'a4', $template->paper_orientation ?? 'portrait');
-
-        $pdfContent = $pdf->output();
+        $pdfContent = $this->renderPdf($template, $variables);
 
         // 3. Store in structured path
         $disk = config('documents.generated_disk', 'local');
@@ -42,6 +35,20 @@ class DocumentPdfGenerator
             'file_path' => $relativePath,
             'file_size_bytes' => strlen($pdfContent),
         ];
+    }
+
+    /**
+     * W-CONTRACT-2 (ADR-648) — rend le PDF en MÉMOIRE via le MÊME pipeline que la génération
+     * définitive (renderHtml + dompdf), sans persistance. Utilisé par l'aperçu PDF fidèle : garantit
+     * que l'aperçu correspond exactement au document émis.
+     */
+    public function renderPdf(DocumentTemplate $template, array $variables): string
+    {
+        $html = $this->renderHtml($template, $variables);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper($template->paper_size ?? 'a4', $template->paper_orientation ?? 'portrait');
+
+        return $pdf->output();
     }
 
     /**

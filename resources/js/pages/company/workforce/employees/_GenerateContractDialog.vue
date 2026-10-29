@@ -19,7 +19,7 @@ const isOpen = computed({ get: () => props.modelValue, set: v => emit('update:mo
 const templates = ref([])
 const templateId = ref(null)
 const loading = ref(false)
-const previewHtml = ref('')
+const previewUrl = ref('')   // URL blob du PDF d'aperçu (même pipeline que la génération)
 const previewing = ref(false)
 const generating = ref(false)
 
@@ -27,25 +27,32 @@ const templateItems = computed(() => templates.value
   .filter(t => t.status === 'published')
   .map(t => ({ title: `${t.name} (${t.source === 'company' ? t('contractTpl.source.company') : t('contractTpl.source.platform')})`, value: t.id, raw: t })))
 
+const revokePreview = () => { if (previewUrl.value) { URL.revokeObjectURL(previewUrl.value); previewUrl.value = '' } }
+
 watch(isOpen, async v => {
   if (v) {
-    previewHtml.value = ''
+    revokePreview()
     templateId.value = null
     loading.value = true
     try { templates.value = await store.fetchTemplates() } finally { loading.value = false }
-  }
+  } else { revokePreview() }
 })
 
 const selectedTemplate = computed(() => templates.value.find(t => t.id === templateId.value))
 
+// Aperçu PDF FIDÈLE (même pipeline que la génération, sans émission).
 const runPreview = async () => {
   if (!templateId.value) return
   previewing.value = true
   try {
-    const res = await store.preview({ templateId: templateId.value, employeeId: props.employeeId })
-    previewHtml.value = res.html
-    if (res.missing_variables?.length)
-      toast(t('generateContract.missing', { vars: res.missing_variables.join(', ') }), 'warning')
+    // Signale d'abord les variables manquantes (léger).
+    const info = await store.preview({ templateId: templateId.value, employeeId: props.employeeId })
+    if (info.missing_variables?.length)
+      toast(t('generateContract.missing', { vars: info.missing_variables.join(', ') }), 'warning')
+    const blob = await store.previewPdf({ templateId: templateId.value, employeeId: props.employeeId })
+
+    revokePreview()
+    previewUrl.value = URL.createObjectURL(blob)
   } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
   finally { previewing.value = false }
 }
@@ -99,7 +106,7 @@ const runGenerate = async () => {
           v-if="templateId"
           variant="tonal"
           size="small"
-          prepend-icon="tabler-eye"
+          prepend-icon="tabler-file-type-pdf"
           :loading="previewing"
           class="mb-3"
           @click="runPreview"
@@ -107,19 +114,17 @@ const runGenerate = async () => {
           {{ t('generateContract.preview') }}
         </VBtn>
 
-        <!-- Aperçu (jamais un document émis ni signé) -->
-        <VCard
-          v-if="previewHtml"
-          variant="outlined"
-          class="pa-4 contract-preview"
-          style="max-block-size: 320px; overflow-y: auto;"
-        >
+        <!-- Aperçu PDF FIDÈLE (même pipeline que la génération) — jamais un document émis ni signé -->
+        <div v-if="previewUrl">
           <div class="text-caption text-medium-emphasis mb-2">
             {{ t('generateContract.previewBadge') }}
           </div>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-html="previewHtml" />
-        </VCard>
+          <iframe
+            :src="previewUrl"
+            title="apercu-contrat"
+            style="inline-size: 100%; block-size: 360px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));"
+          />
+        </div>
       </VCardText>
       <VDivider />
       <VCardText class="d-flex justify-end gap-3">

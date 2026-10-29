@@ -174,6 +174,37 @@ class WorkforceContractTest extends TestCase
         $this->assertSame($docId, $res2->json('id'));
     }
 
+    public function test_preview_pdf_uses_same_pipeline_without_emission(): void
+    {
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.generate', 'workforce.view', 'workforce.manage']);
+        $before = GeneratedDocument::withoutGlobalScopes()->count();
+        $res = $this->api($u, 'POST', '/preview-pdf', ['template_id' => $this->platformTplId, 'employee_id' => $this->employee->id])->assertOk();
+        $this->assertSame('application/pdf', $res->headers->get('Content-Type'));
+        $this->assertStringStartsWith('%PDF', $res->getContent());
+        $this->assertSame($before, GeneratedDocument::withoutGlobalScopes()->count(), 'aperçu PDF : aucun document émis');
+    }
+
+    public function test_preview_pdf_sample_mode_without_employee(): void
+    {
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.generate']);
+        $res = $this->api($u, 'POST', '/preview-pdf', ['template_id' => $this->platformTplId])->assertOk();
+        $this->assertStringStartsWith('%PDF', $res->getContent());
+    }
+
+    public function test_server_sanitizes_wysiwyg_content(): void
+    {
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.manage_templates']);
+        $copy = $this->api($u, 'POST', "/templates/{$this->platformTplId}/duplicate")->json();
+        $malicious = '<p>Bonjour {{ employee.full_name }}</p><script>alert(1)</script><a href="javascript:evil()">x</a><img src="https://tracker.example/p.gif">';
+        $this->api($u, 'PUT', "/templates/{$copy['id']}", ['body_html' => $malicious])->assertOk();
+
+        $saved = DocumentTemplate::find($copy['id'])->body_html;
+        $this->assertStringNotContainsString('<script', $saved);
+        $this->assertStringNotContainsString('javascript:', $saved);
+        $this->assertStringNotContainsString('tracker.example', $saved, 'ressource externe retirée');
+        $this->assertStringContainsString('{{ employee.full_name }}', $saved, 'variables préservées');
+    }
+
     public function test_generate_requires_generate_permission(): void
     {
         $u = $this->user(['workforce_contract.view']);

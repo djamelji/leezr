@@ -7607,7 +7607,8 @@
     "legal": {
       "validated": "Validé",
       "example_unvalidated": "Exemple non validé"
-    }
+    },
+    "previewPdf": "Aperçu PDF"
   },
   "generateContract": {
     "action": "Générer un contrat",
@@ -7620,5 +7621,15 @@
     "generate": "Générer",
     "generated": "Contrat généré et archivé dans le dossier.",
     "missing": "Variables manquantes : {vars}"
+  },
+  "contractVars": {
+    "employee": "Collaborateur",
+    "contract": "Contrat",
+    "company": "Employeur",
+    "employer": "Employeur",
+    "organization": "Organisation",
+    "compensation": "Rémunération",
+    "field": "Champs",
+    "today": "Date"
   }
 }

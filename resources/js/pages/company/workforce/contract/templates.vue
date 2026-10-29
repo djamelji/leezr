@@ -5,6 +5,7 @@
 import { useContractStore } from '@/modules/company/workforce/contract.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
+import TiptapEditor from '@core/components/TiptapEditor.vue'
 
 definePage({ meta: { module: 'workforce_contract', permission: 'workforce_contract.view' } })
 
@@ -50,6 +51,32 @@ const openEdit = async tpl => {
   editOpen.value = true
 }
 const insertVar = key => { editForm.value.body_html += ` {{ ${key} }}` }
+
+// Palette catégorisée (par préfixe de variable : employee/contract/company/compensation…).
+const variablesByCategory = computed(() => {
+  const groups = {}
+  for (const v of variables.value) {
+    const cat = (v.key || '').split('.')[0] || 'autre'
+    ;(groups[cat] ||= []).push(v)
+  }
+
+  return groups
+})
+
+// Aperçu PDF FIDÈLE : on enregistre le brouillon puis on ouvre le PDF (même pipeline, échantillon).
+const previewing = ref(false)
+const previewPdf = async () => {
+  previewing.value = true
+  try {
+    await store.updateTemplate(editTpl.value.id, editForm.value) // persiste le brouillon avant aperçu
+    const blob = await store.previewPdf({ templateId: editTpl.value.id })
+    const url = URL.createObjectURL(blob)
+
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 20000)
+  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  finally { previewing.value = false }
+}
 const saveEdit = async () => {
   editSaving.value = true
   try {
@@ -208,28 +235,47 @@ const saveEdit = async () => {
           :label="t('contractTpl.col.type')"
           class="mb-3"
         />
+        <!-- Palette de variables catégorisée (cliquer pour insérer) -->
         <div class="text-caption text-medium-emphasis mb-1">
           {{ t('contractTpl.variables') }}
         </div>
-        <div class="d-flex gap-1 flex-wrap mb-3" style="max-block-size: 120px; overflow-y: auto;">
-          <VChip
-            v-for="v in variables"
-            :key="v.key"
-            size="x-small"
-            variant="outlined"
-            class="cursor-pointer"
-            @click="insertVar(v.key)"
-          >
-            {{ v.key }}
-          </VChip>
+        <div class="mb-3" style="max-block-size: 160px; overflow-y: auto;">
+          <div v-for="(vars, cat) in variablesByCategory" :key="cat" class="mb-1">
+            <span class="text-caption font-weight-medium me-1">{{ t('contractVars.' + cat, cat) }}:</span>
+            <VChip
+              v-for="v in vars"
+              :key="v.key"
+              size="x-small"
+              variant="outlined"
+              class="cursor-pointer me-1 mb-1"
+              @click="insertVar(v.key)"
+            >
+              {{ v.label || v.key }}
+            </VChip>
+          </div>
         </div>
-        <VTextarea
+
+        <!-- Éditeur WYSIWYG (Tiptap) — aucun HTML à écrire -->
+        <div class="text-caption text-medium-emphasis mb-1">
+          {{ t('contractTpl.body') }}
+        </div>
+        <TiptapEditor
           v-model="editForm.body_html"
-          :label="t('contractTpl.body')"
-          rows="12"
-          auto-grow
-          class="mb-3"
+          :placeholder="t('contractTpl.body')"
+          class="mb-3 contract-tiptap"
         />
+
+        <VBtn
+          variant="tonal"
+          size="small"
+          prepend-icon="tabler-file-type-pdf"
+          :loading="previewing"
+          class="mb-3"
+          @click="previewPdf"
+        >
+          {{ t('contractTpl.previewPdf') }}
+        </VBtn>
+
         <div class="d-flex gap-3 justify-end">
           <VBtn variant="outlined" @click="editOpen = false">
             {{ t('common.cancel') }}

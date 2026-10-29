@@ -148,6 +148,52 @@ class ContractController extends Controller
         ]);
     }
 
+    /**
+     * W-CONTRACT-2 — APERÇU PDF FIDÈLE : même pipeline que la génération (DocumentPdfGenerator),
+     * en mémoire, SANS émission (aucun GeneratedDocument, aucune modification métier, non signé).
+     * Avec employee_id → données réelles (scope + salaire masqué) ; sinon → échantillon (Platform).
+     */
+    public function previewPdf(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $validated = $request->validate([
+            'template_id' => 'required|integer',
+            'employee_id' => 'sometimes|integer',
+        ]);
+        $companyId = $request->attributes->get('company_id');
+
+        $template = DocumentTemplate::where('subject_type', ContractTemplateService::SUBJECT)
+            ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId))
+            ->findOrFail($validated['template_id']);
+
+        if ($request->filled('employee_id')) {
+            abort_unless(WorkforceAccess::canViewEmployeeData($request, (int) $validated['employee_id'], 'employee'), 403);
+            $resolved = $this->resolveContractSubject($companyId, (int) $validated['employee_id']);
+            if ($resolved['error']) {
+                return response()->json(['message' => $resolved['error']], 422);
+            }
+            $variables = DocumentVariableResolver::resolve('contract', $resolved['contract'], $this->company($request));
+            if (! WorkforceAccess::canReadCompensation($request)) {
+                foreach (array_keys($variables) as $k) {
+                    if (self::isCompensationVar($k)) {
+                        $variables[$k] = '•••';
+                    }
+                }
+            }
+        } else {
+            // Contexte Platform / échantillon : chaque variable rendue par son libellé entre crochets.
+            $variables = collect(DocumentVariableResolver::availableVariables('contract'))
+                ->mapWithKeys(fn ($v) => [$v['key'] => '['.($v['label'] ?? $v['key']).']'])->all();
+        }
+
+        $pdf = app(\App\Core\Documents\Services\DocumentPdfGenerator::class)->renderPdf($template, $variables);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="apercu-contrat.pdf"',
+            'X-Preview' => 'true', // Aperçu — document non émis
+        ]);
+    }
+
     // ── Génération (émission + archivage) ────────────────────────────
     public function generate(Request $request): JsonResponse
     {
