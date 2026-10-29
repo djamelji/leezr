@@ -256,8 +256,24 @@ class DevSeeder extends Seeder
         // Must run BEFORE workforce activation so addon_pricing is set
         $this->seedModuleConfigs();
 
-        // ─── Activate workforce modules for demo (addon with pricing set above)
-        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'] as $wfKey) {
+        // ─── ENTITLEMENT DE TEST DEV (W-SIGNATURE-1 / correctif persistance modules, ADR-652) ──────
+        // workforce_contract + workforce_signature NE sont PAS productisés (aucun tarif en PROD :
+        // ModuleProductConfigSeeder ne les contient pas, volontairement). Ici, UNIQUEMENT dans le
+        // DevSeeder (jamais exécuté en PROD), on pose un entitlement de TEST marqué `dev_test` pour
+        // qu'ils soient disponibles sur DEV. L'entitlement rend le module *achetable* (addon) mais
+        // n'active rien : SEULE la Company leezr-logistics reçoit ensuite une activation (enable).
+        // → persistant entre releases (ré-exécuté à chaque migrate:fresh --seed DEV), idempotent,
+        //   réversible (retirer ce bloc), non propagé à PROD, sans auto-activation des autres companies.
+        foreach (['workforce_contract', 'workforce_signature'] as $devAddonKey) {
+            $pm = PlatformModule::where('key', $devAddonKey)->first();
+            if ($pm && $pm->addon_pricing === null) {
+                $pm->update(['is_enabled_globally' => true, 'addon_pricing' => ['dev_test' => true, 'price_monthly' => 0]]);
+            }
+        }
+
+        // ─── Activate workforce modules for demo (addon with pricing set above) ───────────────────
+        // Contract + Signature inclus APRÈS workforce_documents (leur dépendance `requires`).
+        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_contract', 'workforce_signature'] as $wfKey) {
             ModuleActivationEngine::enable($company, $wfKey);
         }
 

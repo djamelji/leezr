@@ -374,6 +374,7 @@
     "error": "An error occurred. Please try again.",
     "loadError": "Unable to load data. Please try again.",
     "retry": "Retry",
+    "download": "Download",
     "copied": "Copied to clipboard",
     "next": "Next",
     "previous": "Previous",

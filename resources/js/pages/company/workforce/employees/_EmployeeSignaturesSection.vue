@@ -3,6 +3,7 @@
 // (contrat, attestations…) avec statut + date de signature + téléchargement du document signé.
 import { useSignatureStore } from '@/modules/company/workforce/signature.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { fetchPdfBlob, downloadBlob } from '@/utils/pdf'
 
 const props = defineProps({ employeeId: { type: [String, Number], required: true } })
 
@@ -32,15 +33,12 @@ const signedAt = r => {
   return r.completed_at ? new Date(r.completed_at).toLocaleDateString() : null
 }
 
-const download = async (r, save = true) => {
+const download = async r => {
   downloadingId.value = r.id
   try {
-    const blob = await store.downloadSigned(r.id)
-    const url = URL.createObjectURL(blob)
-    if (save) { const a = document.createElement('a'); a.href = url; a.download = `document-signe-${r.id}.pdf`; a.click() }
-    else { window.open(url, '_blank') }
-    setTimeout(() => URL.revokeObjectURL(url), 10000)
-  } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') } finally { downloadingId.value = null }
+    const blob = await fetchPdfBlob(`/workforce/signature/${r.id}/download`)
+    downloadBlob(blob, `document-signe-${r.id}.pdf`)
+  } catch (e) { toast(e?.message || t('common.error'), 'error') } finally { downloadingId.value = null }
 }
 </script>
 

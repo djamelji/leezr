@@ -44,6 +44,7 @@ declare global {
   const createTemplatePromise: typeof import('@vueuse/core')['createTemplatePromise']
   const createUnrefFn: typeof import('@vueuse/core')['createUnrefFn']
   const createUrl: typeof import('@core/composable/createUrl')['createUrl']
+  const createViewerUrl: typeof import('./resources/js/utils/pdf.js')['createViewerUrl']
   const currencySymbol: typeof import('./resources/js/utils/money.js')['currencySymbol']
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
@@ -52,10 +53,12 @@ declare global {
   const defineComponent: typeof import('vue')['defineComponent']
   const definePage: typeof import('unplugin-vue-router/runtime')['definePage']
   const defineStore: typeof import('pinia')['defineStore']
+  const downloadBlob: typeof import('./resources/js/utils/pdf.js')['downloadBlob']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const emailValidator: typeof import('@core/utils/validators')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const fetchPdfBlob: typeof import('./resources/js/utils/pdf.js')['fetchPdfBlob']
   const formatDate: typeof import('./resources/js/utils/datetime.js')['formatDate']
   const formatDateTime: typeof import('./resources/js/utils/datetime.js')['formatDateTime']
   const formatDateToMonthShort: typeof import('@core/utils/formatters')['formatDateToMonthShort']
@@ -145,6 +148,7 @@ declare global {
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('@core/utils/vuetify')['resolveVuetifyTheme']
+  const revokeObjectUrl: typeof import('./resources/js/utils/pdf.js')['revokeObjectUrl']
   const rgbaToHex: typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']
   const safeRedirect: typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']
   const sameBuild: typeof import('./resources/js/utils/versionCheck.js')['sameBuild']
@@ -453,6 +457,7 @@ declare module 'vue' {
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
     readonly createUrl: UnwrapRef<typeof import('@core/composable/createUrl')['createUrl']>
+    readonly createViewerUrl: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['createViewerUrl']>
     readonly currencySymbol: UnwrapRef<typeof import('./resources/js/utils/money.js')['currencySymbol']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
@@ -461,10 +466,12 @@ declare module 'vue' {
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly definePage: UnwrapRef<typeof import('unplugin-vue-router/runtime')['definePage']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
+    readonly downloadBlob: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['downloadBlob']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly emailValidator: UnwrapRef<typeof import('@core/utils/validators')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly fetchPdfBlob: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['fetchPdfBlob']>
     readonly formatDate: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDate']>
     readonly formatDateTime: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDateTime']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('@core/utils/formatters')['formatDateToMonthShort']>
@@ -547,6 +554,7 @@ declare module 'vue' {
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('@core/utils/vuetify')['resolveVuetifyTheme']>
+    readonly revokeObjectUrl: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['revokeObjectUrl']>
     readonly safeRedirect: UnwrapRef<typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']>
     readonly sameBuild: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['sameBuild']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>

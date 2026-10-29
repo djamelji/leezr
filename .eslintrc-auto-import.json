@@ -409,6 +409,10 @@
     "sameBuild": true,
     "centsToInput": true,
     "currencySymbol": true,
-    "parseMoneyToCents": true
+    "parseMoneyToCents": true,
+    "createViewerUrl": true,
+    "downloadBlob": true,
+    "fetchPdfBlob": true,
+    "revokeObjectUrl": true
   }
 }

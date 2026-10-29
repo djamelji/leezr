@@ -234,6 +234,45 @@ class WorkforceSignatureTest extends TestCase
         }
     }
 
+    // ── Téléchargement du document signé : authentifié, PDF, scope, 404 (§9 correctif) ──
+    public function test_download_signed_document_authenticated_pdf(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $signer = $req->signers()->first();
+        $raw = $this->issueToken($signer, $req);
+        $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
+        $req->refresh();
+        $this->assertSame(SignatureRequest::STATUS_COMPLETED, $req->status);
+
+        $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/download')->assertOk();
+        $this->assertStringContainsString('pdf', strtolower($res->headers->get('content-type') ?? ''));
+        $this->assertStringStartsWith('%PDF', $res->streamedContent());
+    }
+
+    public function test_download_no_signed_document_404(): void
+    {
+        $req = $this->createAndSend($this->twoSigners()); // pending, pas de doc signé
+        $this->api($this->adminUser(), 'GET', '/' . $req->id . '/download')->assertNotFound();
+    }
+
+    public function test_download_cross_tenant_404(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $raw = $this->issueToken($req->signers()->first(), $req);
+        $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
+
+        // Company B (module actif, droits OK) ne peut pas télécharger le doc signé de A.
+        $other = Company::create(['name' => 'DL B', 'slug' => 'dl-b', 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
+        foreach (['workforce', 'workforce_documents', 'workforce_signature'] as $m) {
+            CompanyModuleActivationReason::create(['company_id' => $other->id, 'module_key' => $m, 'reason' => CompanyModuleActivationReason::REASON_DIRECT]);
+        }
+        $ub = User::factory()->create();
+        $roleB = CompanyRole::create(['company_id' => $other->id, 'key' => 'dlb-' . uniqid(), 'name' => 'R', 'is_administrative' => true]);
+        $roleB->permissions()->sync(CompanyPermission::whereIn('key', ['workforce.view', 'workforce.manage', 'workforce_signature.view'])->pluck('id')->toArray());
+        Membership::create(['user_id' => $ub->id, 'company_id' => $other->id, 'role' => 'member', 'company_role_id' => $roleB->id]);
+        $this->api($ub, 'GET', '/' . $req->id . '/download', [], $other)->assertNotFound();
+    }
+
     // ── 10. Invitation sécurisée : hash stocké (jamais le token brut) + show public ──
     public function test_secure_invitation_token_hashed(): void
     {

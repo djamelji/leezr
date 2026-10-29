@@ -3,6 +3,8 @@
 import { useSignatureStore } from '@/modules/company/workforce/signature.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
+import { fetchPdfBlob, downloadBlob } from '@/utils/pdf'
+import PdfViewerDialog from '@/components/PdfViewerDialog.vue'
 
 const props = defineProps({
   isDrawerOpen: { type: Boolean, default: false },
@@ -55,22 +57,20 @@ const doCancel = async () => {
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') } finally { acting.value = false }
 }
 const downloading = ref(false)
-const triggerDownload = async (save = true) => {
+const viewerOpen = ref(false)
+const downloadPath = computed(() => `/workforce/signature/${props.requestId}/download`)
+
+// Visualiser → visionneuse intégrée (valide que c'est bien un PDF, sinon message clair).
+const openViewer = () => { viewerOpen.value = true }
+
+// Télécharger → util unifié (en-têtes auth + X-Company-Id, validation du contenu).
+const triggerDownload = async () => {
   downloading.value = true
   try {
-    const blob = await store.downloadSigned(props.requestId)
-    const url = URL.createObjectURL(blob)
-    if (save) {
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `document-signe-${props.requestId}.pdf`
-      a.click()
-    } else {
-      window.open(url, '_blank')
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    const blob = await fetchPdfBlob(downloadPath.value)
+    downloadBlob(blob, `document-signe-${props.requestId}.pdf`)
   } catch (e) {
-    toast(e.response?._data?.message || t('common.error'), 'error')
+    toast(e?.message || t('common.error'), 'error')
   } finally { downloading.value = false }
 }
 
@@ -201,8 +201,7 @@ const doRemind = async () => {
             variant="tonal"
             size="small"
             prepend-icon="tabler-eye"
-            :loading="downloading"
-            @click="triggerDownload(false)"
+            @click="openViewer"
           >
             {{ t('signature.detail.view') }}
           </VBtn>
@@ -210,7 +209,7 @@ const doRemind = async () => {
             size="small"
             prepend-icon="tabler-download"
             :loading="downloading"
-            @click="triggerDownload(true)"
+            @click="triggerDownload"
           >
             {{ t('signature.detail.download') }}
           </VBtn>
@@ -238,5 +237,12 @@ const doRemind = async () => {
         </VBtn>
       </div>
     </div>
+
+    <PdfViewerDialog
+      v-model="viewerOpen"
+      :path="downloadPath"
+      :title="req?.document_label || t('signature.detail.title')"
+      :filename="`document-signe-${requestId}.pdf`"
+    />
   </VNavigationDrawer>
 </template>
