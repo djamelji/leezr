@@ -23015,3 +23015,26 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : migration `week_start_day` + `Company` fillable ; `WeekStartResolver` ; `WorkforceConfigController` (weekStart/setWeekStart) + routes ; `ShiftController` (update : employee_id + verrou optimiste + scope ; availability ; planningScope revu) ; `PlanningBoardReadModel` (availability, conflits type/sévérité, updated_at) ; `UpdateShiftUseCase` (whereDate) ; `planning.store` (fetchAvailability/fetchWeekStart/setWeekStart) ; `_PlanningCalendar.vue` (firstDay, editable draft-only, drag→move) + `planning/index.vue` (réaffectation guidée + confirm déplacement) ; `_LeaveCalendar.vue` + `leave/index.vue` (firstDay) ; `settings/[tab].vue` (sélecteur) ; i18n fr/en ; `WorkforcePlanningOperationsTest` + e2e ; cet ADR.
 
 ---
+### ADR-646 — Workforce 2.0 / lot W-G5 : cockpit Pointage et suivi des temps (2026-10-29)
+
+**Contexte** : le Pointage restait une liste. W-G5 en fait un **cockpit opérationnel** de supervision (qui travaille, pauses, incomplets, anomalies, prévu/réalisé, feuilles à valider, corrections), cohérent avec Planning (W-G4) et Congés (W-G3), fiable pour préparer de futures intégrations paie **sans modifier les calculs actuels**. Stabilisation (ADR-561). Réutilise les moteurs existants (`TimeEntry`, `TimesheetPeriod/Line`, `Shift`, `UpdateTimeEntryUseCase`, `WorkforceAccess`, anomalies).
+
+**Décision** :
+1. **Cockpit** (`TimeCockpitReadModel`, endpoints `GET /workforce/time-entries/cockpit/{summary,board}`) : synthèse du jour (en travail / en pause / terminés / **non pointés** / incomplets / anomalies / feuilles à valider) + **tableau opérationnel** par collaborateur, **scopé** (manager = soi+rapports ; global = `timesheet_approve`/`time_manage`) + **filtré serveur** (date/département/employé/statut). KPIs **cliquables** (filtre statut). Données issues des modèles existants — **jamais déduites** : distingue sans-pointage / **congé approuvé** / non-planifié / incomplet (un salarié en congé approuvé n'est **pas** « non pointé » ni « en retard »).
+2. **Comparaison prévu/réalisé PAR collaborateur** (réconciliation shift↔pointage du jour) : prévu (shift), réalisé (pointage), travaillé, pause, écart. **Rattachement** marqué **« à vérifier » si ambigu** (plusieurs shifts/pointages) — jamais d'association forcée sur dates proches ; « Hors planning » / « Non pointé » gérés. **Shifts de nuit** préservés (start/end conservés). **Jamais `00:00` pour une valeur inconnue** → « Non renseigné » / « Non pointé ». Aucun recalcul paie/heures sup, aucune faute déduite d'un simple écart.
+3. **Correction guidée** : réutilise `UpdateTimeEntryUseCase` (déjà : seulement completed/idle corrigeables, **intégrité feuille verrouillée/approuvée** → 422, recompute totals). Ajouts W-G5 : **MOTIF OBLIGATOIRE** (422 sans), **scope manager** (`canViewEmployeeData('time')` → 403 hors périmètre), **traçabilité** enrichie (ancienne/nouvelle valeur + **motif + auteur + collaborateur** dans l'audit). Tenant d'abord (404 avant validation). Pas de SQL direct en contrôleur.
+4. **Feuilles de temps** : machine à états réelle respectée (draft/submitted/approved/locked) ; validation via le use case existant (onglet Feuilles conservé).
+5. **Intégration Planning/Congés** : prévu (shift) affiché dans la correction ; contexte d'absence approuvée (statut « en congé »).
+6. **Market/JobDomain** : règles via les capacités existantes (`WorkforceRuleResolver`/anomalies) ; **aucune durée 35h / pause 30min / journée 8h codée en dur**.
+
+**Performance (vrai MySQL)** : board cockpit = **5 requêtes CONSTANTES** (eager-load, pas de N+1) — **100 collaborateurs = 15 ms ; 500 = 47,9 ms**. Bornes de date, pas de chargement historique. (CI SQLite non présenté comme benchmark prod.)
+
+**Tests** : `WorkforceTimeCockpitTest` (14 — synthèse par statut, non-pointés hors congé approuvé, réconciliation matched/ambiguous, **shift de nuit**, congé approuvé=on_leave, scope manager, RBAC, correction motif obligatoire/tracée/verrou feuille/scope/time_manage, tenant). `WorkforceTimeTrackingTest` ajusté (motif + ordre tenant/validation). Régression Time/Workforce/Planning/Leave/Employee/Timesheet **416 verts**. `pnpm build` propre. e2e `workforce-wg5-time-cockpit` (4 — KPIs+table réconciliée, **correction réelle motif obligatoire + persistance**, filtre KPI, responsive/dark).
+
+**Temps réel** : non branché dans W-G5 (actualisation fiable à l'ouverture + rechargement manuel/au-save) — Reverb/Echo Workforce non étendu ici (pas de faux temps réel ; extension documentée pour un lot ultérieur).
+
+**Exclusions (confirmées)** : nouveau moteur de pointage/paie, calcul indépendant heures sup, géoloc, reconnaissance faciale, modification rétroactive bulletins, révision shifts publiés, Contract/Signature. Self-service `/me` conservé (non régressé) — amélioration approfondie reportée.
+
+**Fichiers** : `TimeCockpitReadModel` ; `TimeEntryController` (cockpitSummary/cockpitBoard/timeScope, update : tenant-first + motif + scope) ; `UpdateTimeEntryUseCase` (actorId + motif audit) ; routes ; `timesheets.store` (fetchCockpit*/correctTimeEntry) ; `time/index.vue` (onglet Cockpit) + `_TimeCockpit.vue` ; i18n fr/en ; `WorkforceTimeCockpitTest` + ajustement `WorkforceTimeTrackingTest` + e2e ; cet ADR.
+
+---

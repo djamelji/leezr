@@ -101,6 +101,48 @@ class TimeEntryController extends Controller
         ));
     }
 
+    /** W-G5 — scope temps : vue globale si « voir tout » (timesheet_approve/time_manage) ; sinon soi + rapports. */
+    private function timeScope(Request $request): ?array
+    {
+        return WorkforceAccess::hasViewAll($request, 'time')
+            ? null
+            : WorkforceAccess::visibleEmployeeIds($request, 'time');
+    }
+
+    /** W-G5 — synthèse opérationnelle du cockpit Pointage (jour borné, scopé). */
+    public function cockpitSummary(Request $request): JsonResponse
+    {
+        $request->validate(['date' => 'nullable|date']);
+
+        return response()->json(\App\Modules\Workforce\ReadModels\TimeCockpitReadModel::summary(
+            companyId: $request->attributes->get('company_id'),
+            date: $request->filled('date') ? Carbon::parse($request->query('date')) : Carbon::today(),
+            visibleIds: $this->timeScope($request),
+        ));
+    }
+
+    /** W-G5 — tableau opérationnel prévu/réalisé réconcilié (jour borné, scopé + filtré). */
+    public function cockpitBoard(Request $request): JsonResponse
+    {
+        $request->validate([
+            'date' => 'nullable|date',
+            'department_id' => 'sometimes|integer',
+            'employee_id' => 'sometimes|integer',
+            'status' => 'sometimes|string',
+        ]);
+
+        return response()->json(\App\Modules\Workforce\ReadModels\TimeCockpitReadModel::board(
+            companyId: $request->attributes->get('company_id'),
+            date: $request->filled('date') ? Carbon::parse($request->query('date')) : Carbon::today(),
+            visibleIds: $this->timeScope($request),
+            filters: [
+                'department_id' => $request->query('department_id'),
+                'employee_id' => $request->query('employee_id'),
+                'status' => $request->query('status'),
+            ],
+        ));
+    }
+
     public function active(Request $request): JsonResponse
     {
         return response()->json(
@@ -221,18 +263,28 @@ class TimeEntryController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
-        $validated = $request->validate([
-            'date' => 'nullable|date',
-            'clock_in' => 'nullable|date',
-            'clock_out' => 'nullable|date',
-        ]);
-
+        // Tenant d'abord (404 pour une ressource inexistante/d'une autre Company avant toute validation).
         $entry = TimeEntry::withoutGlobalScopes()
             ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
 
+        // W-G5 : correction guidée → MOTIF OBLIGATOIRE (traçabilité). reason transmis au use case.
+        $validated = $request->validate([
+            'date' => 'nullable|date',
+            'clock_in' => 'nullable|date',
+            'clock_out' => 'nullable|date',
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        // W-G5 : scope manager — on ne corrige que les pointages de collaborateurs visibles.
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $entry->employee_id, 'time'),
+            403,
+            'Not authorized to correct this employee\'s time entry.'
+        );
+
         try {
-            $entry = app(UpdateTimeEntryUseCase::class)->execute($entry, $validated);
+            $entry = app(UpdateTimeEntryUseCase::class)->execute($entry, $validated, $request->user()->id);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

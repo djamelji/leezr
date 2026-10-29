@@ -7523,5 +7523,50 @@
       "sunday": "Dimanche",
       "saved": "Préférence enregistrée"
     }
+  },
+  "timeCockpit": {
+    "tab": "Cockpit",
+    "date": "Date",
+    "notProvided": "Non renseigné",
+    "notClocked": "Non pointé",
+    "notClockedOut": "Fin manquante",
+    "correct": "Corriger",
+    "correctTitle": "Corriger le pointage",
+    "correctionSaved": "Correction enregistrée",
+    "clockIn": "Entrée",
+    "clockOut": "Sortie",
+    "reason": "Motif (obligatoire)",
+    "empty": "Aucune donnée pour cette date.",
+    "status": {
+      "label": "Statut",
+      "working": "En travail",
+      "on_break": "En pause",
+      "completed": "Terminé",
+      "idle": "Inactif",
+      "on_leave": "En congé"
+    },
+    "kpi": {
+      "working": "En travail",
+      "on_break": "En pause",
+      "completed": "Terminés",
+      "not_clocked": "Non pointés",
+      "incomplete": "Incomplets",
+      "anomalies": "Anomalies",
+      "pending_timesheets": "Feuilles à valider"
+    },
+    "recon": {
+      "matched": "Rattaché",
+      "ambiguous": "À vérifier",
+      "not_clocked": "Non pointé",
+      "no_shift": "Hors planning"
+    },
+    "col": {
+      "status": "Statut",
+      "planned": "Prévu",
+      "actual": "Réalisé",
+      "worked": "Travaillé",
+      "gap": "Écart",
+      "recon": "Rattachement"
+    }
   }
 }

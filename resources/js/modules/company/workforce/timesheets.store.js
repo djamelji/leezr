@@ -178,6 +178,28 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
       }
     },
 
+    // ── W-G5 : cockpit Pointage ──
+    async fetchCockpitSummary(date) {
+      return await $api(`/workforce/time-entries/cockpit/summary${date ? `?date=${date}` : ''}`)
+    },
+    async fetchCockpitBoard({ date, departmentId, employeeId, status } = {}) {
+      const params = new URLSearchParams()
+      if (date) params.set('date', date)
+      if (departmentId) params.set('department_id', departmentId)
+      if (employeeId) params.set('employee_id', employeeId)
+      if (status) params.set('status', status)
+      const qs = params.toString()
+
+      return await $api(`/workforce/time-entries/cockpit/board${qs ? `?${qs}` : ''}`)
+    },
+    // Correction guidée d'un pointage (motif obligatoire, traçabilité serveur).
+    async correctTimeEntry(id, { date, clockIn, clockOut, reason }) {
+      return await $api(`/workforce/time-entries/${id}`, {
+        method: 'PUT',
+        body: { date, clock_in: clockIn, clock_out: clockOut, reason },
+      })
+    },
+
     async fetchActiveEntries() {
       const data = await $api('/workforce/time-entries/active')
 

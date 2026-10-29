@@ -7523,5 +7523,50 @@
       "sunday": "Sunday",
       "saved": "Preference saved"
     }
+  },
+  "timeCockpit": {
+    "tab": "Cockpit",
+    "date": "Date",
+    "notProvided": "Not provided",
+    "notClocked": "Not clocked",
+    "notClockedOut": "Missing clock-out",
+    "correct": "Correct",
+    "correctTitle": "Correct time entry",
+    "correctionSaved": "Correction saved",
+    "clockIn": "Clock in",
+    "clockOut": "Clock out",
+    "reason": "Reason (required)",
+    "empty": "No data for this date.",
+    "status": {
+      "label": "Status",
+      "working": "Working",
+      "on_break": "On break",
+      "completed": "Completed",
+      "idle": "Idle",
+      "on_leave": "On leave"
+    },
+    "kpi": {
+      "working": "Working",
+      "on_break": "On break",
+      "completed": "Completed",
+      "not_clocked": "Not clocked",
+      "incomplete": "Incomplete",
+      "anomalies": "Anomalies",
+      "pending_timesheets": "Timesheets to approve"
+    },
+    "recon": {
+      "matched": "Matched",
+      "ambiguous": "To verify",
+      "not_clocked": "Not clocked",
+      "no_shift": "Off schedule"
+    },
+    "col": {
+      "status": "Status",
+      "planned": "Planned",
+      "actual": "Actual",
+      "worked": "Worked",
+      "gap": "Gap",
+      "recon": "Match"
+    }
   }
 }

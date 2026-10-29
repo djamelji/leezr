@@ -9,7 +9,7 @@ use Carbon\Carbon;
 
 class UpdateTimeEntryUseCase
 {
-    public function execute(TimeEntry $entry, array $data): TimeEntry
+    public function execute(TimeEntry $entry, array $data, ?int $actorId = null): TimeEntry
     {
         // Guard: only completed or idle entries can be corrected
         if (! in_array($entry->status, [TimeEntry::STATUS_COMPLETED, TimeEntry::STATUS_IDLE], true)) {
@@ -63,7 +63,10 @@ class UpdateTimeEntryUseCase
                         'clock_in' => $entry->clock_in?->toIso8601String(),
                         'clock_out' => $entry->clock_out?->toIso8601String(),
                     ],
-                    'description' => 'Time entry corrected',
+                    'reason' => $data['reason'] ?? null,   // W-G5 : motif obligatoire (traçabilité)
+                    'actor_id' => $actorId,
+                    'employee_id' => $entry->employee_id,
+                    'description' => 'Time entry corrected'.(isset($data['reason']) ? ' — '.$data['reason'] : ''),
                 ],
             ],
         );

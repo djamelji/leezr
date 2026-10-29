@@ -321,6 +321,7 @@ class WorkforceTimeTrackingTest extends TestCase
             ->putJson("/api/workforce/time-entries/{$this->completedEntry->id}", [
                 'clock_in' => '2026-05-19 09:30:00',
                 'clock_out' => '2026-05-19 17:30:00',
+                'reason' => 'Correction oubli de pointage', // W-G5 : motif obligatoire
             ]);
 
         $response->assertOk();

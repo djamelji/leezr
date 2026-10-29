@@ -514,6 +514,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('time-entries/company', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'companyIndex'])->middleware($perm('workforce.timesheet_view'));
     Route::get('time-entries/active', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'active'])->middleware($perm('workforce.timesheet_view'));
     Route::get('time-entries/anomalies', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'anomalies'])->middleware($perm('workforce.timesheet_view'));
+    // W-G5 : cockpit Pointage (synthèse + tableau prévu/réalisé réconcilié, scopé).
+    Route::get('time-entries/cockpit/summary', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'cockpitSummary'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('time-entries/cockpit/board', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'cockpitBoard'])->middleware($perm('workforce.timesheet_view'));
     Route::post('time-entries', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'store'])->middleware($perm('workforce.time_manage'));
     Route::put('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'update'])->middleware($perm('workforce.time_manage'));
     Route::delete('time-entries/{id}', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'destroy'])->middleware($perm('workforce.time_manage'));

@@ -3,6 +3,7 @@ import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
+import TimeCockpit from './_TimeCockpit.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
 
@@ -13,7 +14,7 @@ const store = useTimesheetsStore()
 const employeesStore = useEmployeesStore()
 
 // ── Tab navigation ───────────────────────────────────────────
-const activeTab = ref('entries')
+const activeTab = ref('cockpit')
 
 // ══════════════════════════════════════════════════════════════
 // TAB 1 — POINTAGES (Time Entries)
@@ -430,6 +431,13 @@ onMounted(() => {
       v-model="activeTab"
       class="v-tabs-pill mb-6"
     >
+      <VTab value="cockpit">
+        <VIcon
+          icon="tabler-dashboard"
+          class="me-2"
+        />
+        {{ $t('timeCockpit.tab') }}
+      </VTab>
       <VTab value="entries">
         <VIcon
           icon="tabler-clock-record"
@@ -447,6 +455,13 @@ onMounted(() => {
     </VTabs>
 
     <VWindow v-model="activeTab">
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- TAB: COCKPIT (W-G5)                                    -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <VWindowItem value="cockpit">
+        <TimeCockpit v-if="activeTab === 'cockpit'" />
+      </VWindowItem>
+
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- TAB: POINTAGES                                         -->
       <!-- ═══════════════════════════════════════════════════════ -->

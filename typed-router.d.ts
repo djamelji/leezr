@@ -105,6 +105,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-settings-workforce-rules-section': RouteRecordInfo<'company-workforce-settings-workforce-rules-section', '/company/workforce/settings/_WorkforceRulesSection', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-tab': RouteRecordInfo<'company-workforce-settings-tab', '/company/workforce/settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-workforce-time': RouteRecordInfo<'company-workforce-time', '/company/workforce/time', Record<never, never>, Record<never, never>>,
+    'company-workforce-time-time-cockpit': RouteRecordInfo<'company-workforce-time-time-cockpit', '/company/workforce/time/_TimeCockpit', Record<never, never>, Record<never, never>>,
     'company-workforce-time-id': RouteRecordInfo<'company-workforce-time-id', '/company/workforce/time/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'dashboard': RouteRecordInfo<'dashboard', '/dashboard', Record<never, never>, Record<never, never>>,
     'forgot-password': RouteRecordInfo<'forgot-password', '/forgot-password', Record<never, never>, Record<never, never>>,
