@@ -180,6 +180,22 @@ class WorkforceEmployeeImportTest extends TestCase
         $this->assertSame(1, $res->json('counts.invalid'), 'département d’une autre Company non résolu → ligne invalide');
     }
 
+    public function test_row_without_business_key_is_blocked_not_silently_created(): void
+    {
+        // W-G2 réserve : sans employee_number, l'identité n'est pas stable → ligne BLOQUÉE (jamais
+        // créée), donc jamais re-créable au second import. Idempotence réellement garantie.
+        $u = $this->importer(['workforce.view', 'workforce.manage', 'workforce.import']);
+        $csv = $this->csv(['Sans,Reference,,sans@example.com,2026-01-15,active,Logistique,Préparateur,']);
+
+        $preview = $this->postApi($u, '/workforce/employees/import/preview', ['content' => $csv, 'mapping' => self::MAPPING])->assertOk();
+        $this->assertSame(0, $preview->json('counts.create'));
+        $this->assertSame(1, $preview->json('counts.invalid'));
+
+        $res = $this->postApi($u, '/workforce/employees/import', ['content' => $csv, 'mapping' => self::MAPPING])->assertCreated();
+        $this->assertSame(0, $res->json('created'));
+        $this->assertDatabaseMissing('workforce_employees', ['first_name' => 'Sans', 'last_name' => 'Reference']);
+    }
+
     public function test_does_not_create_user_contract_or_compensation(): void
     {
         $u = $this->importer(['workforce.view', 'workforce.manage', 'workforce.import']);

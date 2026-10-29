@@ -76,6 +76,44 @@ test('export triggers a CSV download', async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(/\.csv$/)
 })
 
+test('bulk change department: select → confirm → persisted (reserve W-G2 §3)', async ({ page }) => {
+  await loginCompany(page, 'owner@leezr.test')
+  await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
+  await expect(page.locator('.v-data-table tbody tr').first()).toBeVisible({ timeout: 10000 })
+
+  // Noms des deux premières lignes (pour vérifier la persistance après coup).
+  const name0 = (await page.locator('.v-data-table tbody tr').nth(0).locator('td').nth(1).innerText()).trim()
+  const name1 = (await page.locator('.v-data-table tbody tr').nth(1).locator('td').nth(1).innerText()).trim()
+
+  const checkboxes = page.locator('.v-data-table tbody tr .v-selection-control input[type="checkbox"]')
+  await checkboxes.nth(0).check()
+  await checkboxes.nth(1).check()
+
+  await page.getByRole('button', { name: /Changer de département|Change department/ }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible({ timeout: 6000 })
+
+  // Choisir le premier département proposé.
+  await dialog.locator('.v-select').first().click()
+  const option = page.locator('.v-overlay .v-list-item').first()
+  const deptName = (await option.innerText()).trim()
+  await option.click()
+
+  // Prévisualisation d'éligibilité puis application.
+  await expect(dialog.getByText(/éligible|eligible/)).toBeVisible({ timeout: 6000 })
+  await dialog.getByRole('button', { name: /Appliquer|Apply/ }).click()
+  await expect(page.locator('.v-snackbar, [role="alert"]').first()).toBeVisible({ timeout: 8000 })
+
+  // Persistance : filtrer par ce département → les 2 collaborateurs y figurent.
+  const deptFilter = page.locator('.v-card .v-select').nth(1) // 2e select = département (après statut)
+  await deptFilter.click()
+  await page.getByRole('option', { name: deptName }).first().click()
+  await page.waitForTimeout(800)
+  const bodyText = await page.locator('.v-data-table tbody').innerText()
+  expect(bodyText).toContain(name0.split('\n')[0])
+  expect(bodyText).toContain(name1.split('\n')[0])
+})
+
 test('multi-select reveals the bulk action bar with exact count', async ({ page }) => {
   await loginCompany(page, 'owner@leezr.test')
   await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })

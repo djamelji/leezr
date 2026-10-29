@@ -92,6 +92,8 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-employees-employee-time-section': RouteRecordInfo<'company-workforce-employees-employee-time-section', '/company/workforce/employees/_EmployeeTimeSection', Record<never, never>, Record<never, never>>,
     'company-workforce-employees-id': RouteRecordInfo<'company-workforce-employees-id', '/company/workforce/employees/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-leave': RouteRecordInfo<'company-workforce-leave', '/company/workforce/leave', Record<never, never>, Record<never, never>>,
+    'company-workforce-leave-leave-calendar': RouteRecordInfo<'company-workforce-leave-leave-calendar', '/company/workforce/leave/_LeaveCalendar', Record<never, never>, Record<never, never>>,
+    'company-workforce-leave-leave-request-detail-dialog': RouteRecordInfo<'company-workforce-leave-leave-request-detail-dialog', '/company/workforce/leave/_LeaveRequestDetailDialog', Record<never, never>, Record<never, never>>,
     'company-workforce-me': RouteRecordInfo<'company-workforce-me', '/company/workforce/me', Record<never, never>, Record<never, never>>,
     'company-workforce-onboarding': RouteRecordInfo<'company-workforce-onboarding', '/company/workforce/onboarding', Record<never, never>, Record<never, never>>,
     'company-workforce-organization-organization-preset-card': RouteRecordInfo<'company-workforce-organization-organization-preset-card', '/company/workforce/organization/_OrganizationPresetCard', Record<never, never>, Record<never, never>>,

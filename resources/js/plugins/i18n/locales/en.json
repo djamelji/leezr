@@ -1605,7 +1605,8 @@
       "no_active_contract": "No active contract for this employee.",
       "contract_to_activate": "A draft contract needs activation.",
       "pending_leave": "{count} pending leave request(s)."
-    }
+    },
+    "openCalendar": "Calendar"
   },
   "companyBilling": {
     "title": "Billing",
@@ -7211,12 +7212,14 @@
       "dateTo": "End Date",
       "duration": "Duration (hundredths of day)",
       "durationHint": "E.g. 100 = 1 day, 50 = 0.5 day",
-      "reason": "Reason"
+      "reason": "Reason",
+      "reviewNote": "Reason / note"
     },
     "actions": {
       "approve": "Approve",
       "reject": "Reject",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "confirmReject": "Confirm rejection"
     },
     "confirm": {
       "approveTitle": "Approve Request",
@@ -7230,7 +7233,12 @@
       "from": "From",
       "to": "To",
       "empty": "No leave during this period",
-      "emptyDescription": "Select another period or create a new request to view absences."
+      "emptyDescription": "Select another period or create a new request to view absences.",
+      "period": "Period",
+      "days": "Days",
+      "simultaneous": "Simultaneous absences",
+      "simultaneousCount": "{count} other employee(s) absent during this period",
+      "noSimultaneous": "No other absence during this period."
     },
     "balances": {
       "selectEmployee": "Select an employee",
@@ -7243,7 +7251,10 @@
       "empty": "No leave balances",
       "emptyDescription": "No counter has been initialised yet for this employee this year.",
       "selectPrompt": "Select an employee",
-      "selectPromptDescription": "Choose an employee to view their leave balances."
+      "selectPromptDescription": "Choose an employee to view their leave balances.",
+      "title": "Balance",
+      "reserved": "Reserved",
+      "unavailable": "Balance unavailable"
     },
     "config": {
       "newType": "New leave type",
@@ -7289,7 +7300,8 @@
     "created": "Leave request created",
     "approved": "Leave approved",
     "rejected": "Leave rejected",
-    "cancelled": "Leave cancelled"
+    "cancelled": "Leave cancelled",
+    "reasonHidden": "Reason not visible with your permissions."
   },
   "dsn": {
     "title": "DSN - Social Declarations",

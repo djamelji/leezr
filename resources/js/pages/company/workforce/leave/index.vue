@@ -3,6 +3,9 @@ import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
+import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
+import LeaveCalendar from './_LeaveCalendar.vue'
+import LeaveRequestDetailDialog from './_LeaveRequestDetailDialog.vue'
 
 definePage({ meta: { module: 'workforce_leave', permission: 'workforce.leave_request' } })
 
@@ -198,60 +201,36 @@ const executeConfirmAction = async () => {
 }
 
 // ══════════════════════════════════════════════════════════════
-// TAB 2 — CALENDRIER (Calendar)
+// TAB 2 — CALENDRIER (W-G3 : vrai calendrier visuel, scope + filtres serveur)
 // ══════════════════════════════════════════════════════════════
-const calendarMonth = ref(new Date())
-const calendarLoading = ref(false)
+const calendarRef = ref()
+const calDepartment = ref(null)
+const calLeaveType = ref(null)
+const calEmployee = ref(null)
+const calStatuses = ref(['pending', 'approved', 'consumed'])
 
-const calendarMonthLabel = computed(() => {
-  const d = calendarMonth.value
+const calendarFilters = computed(() => ({
+  departmentId: calDepartment.value || undefined,
+  leaveTypeId: calLeaveType.value || undefined,
+  employeeId: calEmployee.value || undefined,
+  statuses: calStatuses.value?.length ? calStatuses.value : undefined,
+}))
 
-  return d.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
-})
+const calStatusOptions = [
+  { title: t('workforce.statuses.leave.pending'), value: 'pending' },
+  { title: t('workforce.statuses.leave.approved'), value: 'approved' },
+  { title: t('workforce.statuses.leave.consumed'), value: 'consumed' },
+  { title: t('workforce.statuses.leave.rejected'), value: 'rejected' },
+  { title: t('workforce.statuses.leave.cancelled'), value: 'cancelled' },
+]
+const calDepartmentOptions = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
+const calLeaveTypeOptions = computed(() => store.leaveTypes.map(lt => ({ title: lt.name, value: lt.id })))
 
-const calendarFrom = computed(() => {
-  const d = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth(), 1)
-
-  return d.toISOString().slice(0, 10)
-})
-
-const calendarTo = computed(() => {
-  const d = new Date(calendarMonth.value.getFullYear(), calendarMonth.value.getMonth() + 1, 0)
-
-  return d.toISOString().slice(0, 10)
-})
-
-const calendarHeaders = computed(() => [
-  { title: t('leaves.columns.employee'), key: 'employee', sortable: false },
-  { title: t('leaves.columns.type'), key: 'leave_type', sortable: false, width: 160 },
-  { title: t('leaves.calendar.from'), key: 'date_from', sortable: true, width: 130 },
-  { title: t('leaves.calendar.to'), key: 'date_to', sortable: true, width: 130 },
-  { title: t('leaves.columns.duration'), key: 'days_count_hundredths', sortable: false, width: 100 },
-  { title: t('leaves.columns.status'), key: 'status', sortable: false, width: 120 },
-])
-
-const fetchCalendar = async () => {
-  calendarLoading.value = true
-  try {
-    await store.fetchCalendar({ from: calendarFrom.value, to: calendarTo.value })
-  } finally {
-    calendarLoading.value = false
-  }
-}
-
-const prevMonth = () => {
-  const d = new Date(calendarMonth.value)
-  d.setMonth(d.getMonth() - 1)
-  calendarMonth.value = d
-}
-
-const nextMonth = () => {
-  const d = new Date(calendarMonth.value)
-  d.setMonth(d.getMonth() + 1)
-  calendarMonth.value = d
-}
-
-watch(calendarMonth, () => fetchCalendar())
+const selectedRequest = ref(null)
+const detailOpen = ref(false)
+const onSelectEvent = ev => { selectedRequest.value = ev; detailOpen.value = true }
+const onCalendarUpdated = () => calendarRef.value?.refetch()
+const resetCalFilters = () => { calDepartment.value = null; calLeaveType.value = null; calEmployee.value = null }
 
 // ══════════════════════════════════════════════════════════════
 // TAB 3 — SOLDES (Balances)
@@ -444,7 +423,13 @@ const confirmDeleteType = async () => {
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
+const route = useRoute()
+
 onMounted(async () => {
+  // W-G3 : deep-link depuis la fiche collaborateur (?tab=calendar&employee=<id>).
+  if (route.query.tab) activeTab.value = String(route.query.tab)
+  if (route.query.employee) calEmployee.value = Number(route.query.employee)
+
   await Promise.all([
     fetchData(),
     store.fetchLeaveTypes(),
@@ -460,7 +445,9 @@ const configLoaded = ref(false)
 watch(activeTab, tab => {
   if (tab === 'calendar' && !calendarLoaded.value) {
     calendarLoaded.value = true
-    fetchCalendar()
+    // Options de filtre (le calendrier se charge lui-même via datesSet, scope serveur).
+    employeesStore.fetchDepartments()
+    store.fetchLeaveTypes({ all: true })
   } else if (tab === 'config' && !configLoaded.value) {
     configLoaded.value = true
     fetchAllLeaveTypes()
@@ -782,116 +769,81 @@ watch(activeTab, tab => {
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="calendar">
         <VCard>
-          <!-- Month navigation -->
+          <!-- Filtres (serveur) + l\u00e9gende -->
           <VCardText>
-            <div class="d-flex align-center justify-center gap-4">
+            <VRow>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="calDepartment"
+                  :items="calDepartmentOptions"
+                  :placeholder="$t('employees.filters.department')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="calLeaveType"
+                  :items="calLeaveTypeOptions"
+                  :placeholder="$t('leaves.columns.type')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <EmployeePicker
+                  v-model="calEmployee"
+                  :label="$t('employees.filters.manager') ? $t('leaves.columns.employee') : ''"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="calStatuses"
+                  :items="calStatusOptions"
+                  :placeholder="$t('leaves.columns.status')"
+                  multiple
+                  chips
+                  closable-chips
+                  density="compact"
+                />
+              </VCol>
+            </VRow>
+            <!-- L\u00e9gende statuts -->
+            <div class="d-flex gap-4 flex-wrap mt-1 text-caption align-center">
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#ff9f43" />{{ $t('workforce.statuses.leave.pending') }}</span>
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#28c76f" />{{ $t('workforce.statuses.leave.approved') }}</span>
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#00cfe8" />{{ $t('workforce.statuses.leave.consumed') }}</span>
+              <VSpacer />
               <VBtn
-                icon
                 variant="text"
                 size="small"
-                @click="prevMonth"
+                prepend-icon="tabler-filter-off"
+                @click="resetCalFilters"
               >
-                <VIcon icon="tabler-chevron-left" />
-              </VBtn>
-              <h5 class="text-h5 font-weight-medium text-capitalize">
-                {{ calendarMonthLabel }}
-              </h5>
-              <VBtn
-                icon
-                variant="text"
-                size="small"
-                @click="nextMonth"
-              >
-                <VIcon icon="tabler-chevron-right" />
+                {{ $t('employees.filters.reset') }}
               </VBtn>
             </div>
           </VCardText>
 
           <VDivider />
 
-          <!-- Calendar table -->
-          <VDataTableServer
-            :headers="calendarHeaders"
-            :items="store.calendar"
-            :items-length="store.calendar.length"
-            :loading="calendarLoading"
-            :items-per-page="-1"
-            class="text-no-wrap"
-            hide-default-footer
-          >
-            <!-- Employee -->
-            <template #item.employee="{ item }">
-              <div class="d-flex align-center gap-3 py-2">
-                <VAvatar
-                  color="primary"
-                  variant="tonal"
-                  size="32"
-                >
-                  <span class="text-xs font-weight-medium">
-                    {{ (item.employee?.first_name?.[0] || '') + (item.employee?.last_name?.[0] || '') }}
-                  </span>
-                </VAvatar>
-                <span class="font-weight-medium">
-                  {{ item.employee?.first_name }} {{ item.employee?.last_name }}
-                </span>
-              </div>
-            </template>
-
-            <!-- Leave Type -->
-            <template #item.leave_type="{ item }">
-              <VChip
-                :color="getLeaveTypeColor(item.leave_type)"
-                size="small"
-                variant="tonal"
-              >
-                {{ item.leave_type?.name || '\u2014' }}
-              </VChip>
-            </template>
-
-            <!-- From -->
-            <template #item.date_from="{ item }">
-              {{ formatDate(item.date_from) }}
-            </template>
-
-            <!-- To -->
-            <template #item.date_to="{ item }">
-              {{ formatDate(item.date_to) }}
-            </template>
-
-            <!-- Duration -->
-            <template #item.days_count_hundredths="{ item }">
-              {{ formatDuration(item.days_count_hundredths) }}
-            </template>
-
-            <!-- Status -->
-            <template #item.status="{ item }">
-              <StatusChip
-                :status="item.status"
-                domain="leave"
-              >
-                {{ $t(`workforce.statuses.leave.${item.status}`) }}
-              </StatusChip>
-            </template>
-
-            <!-- Empty state -->
-            <template #no-data>
-              <div class="text-center pa-8">
-                <VIcon
-                  icon="tabler-calendar-off"
-                  size="48"
-                  color="secondary"
-                  class="mb-4"
-                />
-                <h6 class="text-h6 mb-2">
-                  {{ $t('leaves.calendar.empty') }}
-                </h6>
-                <p class="text-body-1 text-medium-emphasis">
-                  {{ $t('leaves.calendar.emptyDescription') }}
-                </p>
-              </div>
-            </template>
-          </VDataTableServer>
+          <VCardText>
+            <LeaveCalendar
+              ref="calendarRef"
+              :filters="calendarFilters"
+              @select="onSelectEvent"
+            />
+          </VCardText>
         </VCard>
+
+        <LeaveRequestDetailDialog
+          v-model="detailOpen"
+          :request="selectedRequest"
+          :all-events="store.calendar"
+          @updated="onCalendarUpdated"
+        />
       </VWindowItem>
 
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -1466,3 +1418,12 @@ watch(activeTab, tab => {
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+.legend-dot {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+}
+</style>

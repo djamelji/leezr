@@ -22945,3 +22945,24 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `EmployeeController` (index filtres+scope, export, importTemplate, importPreview, import, bulkPreview, bulk) ; `Services/{EmployeeImportService,EmployeeExportService,EmployeeBulkActionService}` ; `EmployeeReadModel::filteredQuery` ; `WorkforceModule` (perms import/export) ; migration compat ; routes ; `employees.store` ; `employees/index.vue` + `_EmployeeImportDrawer.vue` + `_EmployeeBulkActionDialog.vue` ; i18n fr/en ; 3 tests PHPUnit + e2e ; cet ADR.
 
 ---
+### ADR-643 — Workforce 2.0 / lot W-G3 : calendrier intelligent des congés et absences (2026-10-29)
+
+**Contexte** : la page Congés restait une liste administrative. Objectif : un outil visuel permettant à un manager/RH de piloter les absences (qui est absent, demandes en attente, absences simultanées), avec approbation inline. Lot de **stabilisation** (ADR-561, sous-lot 3 de W-G) : aucune règle légale, acquisition ou période de référence modifiée ; aucun recalcul rétroactif ; use cases d'approbation existants réutilisés.
+
+**Décision** :
+1. **Vrai calendrier visuel** (FullCalendar 6 déjà présent — aucune dépendance ajoutée) : vues **mois / semaine / liste**, navigation (préc./suiv./aujourd'hui), couleurs par statut (en attente/approuvé/consommé), chargement par plage de dates (`datesSet`). `_LeaveCalendar.vue`.
+2. **Scope + filtres SERVEUR** : `LeaveRequestReadModel::calendar` étendu (scope manager via `visibleIds`, filtres département/type/employé/statuts). `LeaveController::calendar` applique le scope (`WorkforceAccess::hasViewAll('leave')` ? vue globale RH : soi + rapports directs). **Jamais de filtrage Vue pour la sécurité.** Une demande **refusée n'apparaît pas** comme absence confirmée (statuts par défaut = en attente + approuvé + consommé ; refusé/annulé en vues historiques).
+3. **Approbation / refus INLINE** (`_LeaveRequestDetailDialog.vue`) : détail (période, jours, statut), **solde** (read model existant), **absences simultanées** (indicateur **factuel** calculé des événements chargés — **pas de faux seuil de sous-effectif**), puis Approuver / Refuser (avec motif). Réutilise `Approve/RejectLeaveRequestUseCase` (transition + ledger). **Anti-double-écriture** : la 2ᵉ approbation échoue (transition pending→approved invalide) → 422, aucun double débit ledger.
+4. **Confidentialité** : le calendrier n'expose **jamais le motif**. `LeaveController::show` : voir une absence ≠ voir son **motif** — le motif n'est renvoyé qu'à soi-même ou à la vue globale RH (`reason_hidden` sinon). Garde scope ajouté sur `show`/`approve`/`reject` (`canViewEmployeeData('leave')`).
+5. **Intégration fiche W-C** : lien « Calendrier » filtré sur le collaborateur (`?tab=calendar&employee=<id>`) ; la page congés lit ces query params (deep-link, sans perdre les filtres).
+6. **Réorganisation** : onglets Demandes / Calendrier / Soldes / Types — routes et workflows existants conservés.
+
+**Réserves W-G2 corrigées** : (a) import **sans `employee_number`** → désormais **bloqué** (`invalid`), jamais recréé silencieusement → idempotence réellement garantie (`WorkforceEmployeeImportTest::test_row_without_business_key_is_blocked_not_silently_created`) ; (b) e2e **actions groupées complet** : sélection → changement de département → confirmation → **persistance vérifiée** par re-filtrage.
+
+**Limites** : le modèle de permissions actuel fait que `workforce.leave_approve` ⇒ vue globale (`hasViewAll`) — un approbateur approuve donc au-delà de son équipe ; le **scope manager est pleinement appliqué au calendrier/vue** et le garde `canViewEmployeeData` sur approve/reject empêche toute approbation hors périmètre pour un futur rôle d'approbateur non global. Un « approbateur d'équipe » strict nécessiterait une permission dédiée (hors W-G3). Intégration planning (shifts) : **non incluse** (étudiée, reportée — aucune modification de planning publié). Mobile : vue liste/semaine adaptée, détail en dialog.
+
+**Tests** : `WorkforceLeaveCalendarTest` (10 — scope HR/manager, refusé exclu, filtres type/statut, motif jamais dans le calendrier, gating motif self/HR/manager, approbation inline + double-approbation 422, refus inline, RBAC, tenant). Régression Leave/Workforce/Employee **294 verts**. `pnpm build` propre. e2e `workforce-wg3-leave-calendar` (4) + non-régression W-G1 (9) + W-G2 (incl. bulk persistance).
+
+**Fichiers** : `LeaveRequestReadModel::calendar` ; `LeaveController` (calendar scope+filtres, show gating motif, approve/reject garde scope) ; `EmployeeImportService` (réserve sans clé) ; `leaves.store.fetchCalendar` ; `leave/index.vue` (onglet Calendrier refondu + deep-link) + `_LeaveCalendar.vue` + `_LeaveRequestDetailDialog.vue` ; `_EmployeeLeaveSection.vue` (lien calendrier) ; i18n fr/en ; `WorkforceLeaveCalendarTest` + 1 test import ; e2e W-G3 + bulk ; cet ADR.
+
+---

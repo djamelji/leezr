@@ -1604,7 +1604,8 @@
       "no_active_contract": "Aucun contrat actif pour ce collaborateur.",
       "contract_to_activate": "Un contrat en brouillon est à activer.",
       "pending_leave": "{count} demande(s) de congé en attente."
-    }
+    },
+    "openCalendar": "Calendrier"
   },
   "companyBilling": {
     "title": "Facturation",
@@ -7211,12 +7212,14 @@
       "dateTo": "Date de fin",
       "duration": "Durée (centièmes de jour)",
       "durationHint": "Ex : 100 = 1 jour, 50 = 0,5 jour",
-      "reason": "Motif"
+      "reason": "Motif",
+      "reviewNote": "Motif / commentaire"
     },
     "actions": {
       "approve": "Approuver",
       "reject": "Refuser",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "confirmReject": "Confirmer le refus"
     },
     "confirm": {
       "approveTitle": "Approuver la demande",
@@ -7230,7 +7233,12 @@
       "from": "Du",
       "to": "Au",
       "empty": "Aucun congé sur la période",
-      "emptyDescription": "Sélectionnez une autre période ou créez une nouvelle demande pour visualiser les absences."
+      "emptyDescription": "Sélectionnez une autre période ou créez une nouvelle demande pour visualiser les absences.",
+      "period": "Période",
+      "days": "Jours",
+      "simultaneous": "Absences simultanées",
+      "simultaneousCount": "{count} autre(s) collaborateur(s) absent(s) sur cette période",
+      "noSimultaneous": "Aucune autre absence sur cette période."
     },
     "balances": {
       "selectEmployee": "Sélectionner un employé",
@@ -7243,7 +7251,10 @@
       "empty": "Aucun solde de congés",
       "emptyDescription": "Aucun compteur n'a encore été initialisé pour cet employé sur cette année.",
       "selectPrompt": "Sélectionnez un employé",
-      "selectPromptDescription": "Choisissez un employé pour consulter ses soldes de congés."
+      "selectPromptDescription": "Choisissez un employé pour consulter ses soldes de congés.",
+      "title": "Solde",
+      "reserved": "Réservé",
+      "unavailable": "Solde indisponible"
     },
     "config": {
       "newType": "Nouveau type de congé",
@@ -7289,7 +7300,8 @@
     "created": "Demande de congé créée",
     "approved": "Congé approuvé",
     "rejected": "Congé refusé",
-    "cancelled": "Congé annulé"
+    "cancelled": "Congé annulé",
+    "reasonHidden": "Motif non visible avec vos droits."
   },
   "dsn": {
     "title": "DSN - Declarations Sociales",

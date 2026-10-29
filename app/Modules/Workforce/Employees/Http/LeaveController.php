@@ -54,12 +54,32 @@ class LeaveController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        return response()->json(
-            LeaveRequest::withoutGlobalScopes()
-                ->where('company_id', $request->attributes->get('company_id'))
-                ->with(['leaveType', 'employee'])
-                ->findOrFail($id)
+        $leave = LeaveRequest::withoutGlobalScopes()
+            ->where('company_id', $request->attributes->get('company_id'))
+            ->with(['leaveType', 'employee'])
+            ->findOrFail($id);
+
+        // W-D/W-G3 : lire une demande exige de pouvoir voir ce collaborateur (soi / rapport / vue globale).
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $leave->employee_id, 'leave'),
+            403,
+            'Not authorized to view this leave request.'
         );
+
+        // W-G3 : voir une absence ≠ voir son MOTIF. Le motif n'est exposé qu'à soi-même ou à la vue
+        // globale RH (approbateurs). Un manager en vue d'équipe (lecture seule) ne voit pas le motif.
+        $data = $leave->toArray();
+        if (! WorkforceAccess::hasViewAll($request, 'leave') && ! static::isSelf($request, $leave->employee_id)) {
+            $data['reason'] = null;
+            $data['reason_hidden'] = true;
+        }
+
+        return response()->json($data);
+    }
+
+    private static function isSelf(Request $request, int $employeeId): bool
+    {
+        return optional(WorkforceAccess::requesterEmployee($request))->id === $employeeId;
     }
 
     public function store(Request $request): JsonResponse
@@ -99,6 +119,13 @@ class LeaveController extends Controller
             ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
 
+        // W-G3 : périmètre manager — on ne peut approuver que les demandes de collaborateurs visibles.
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $leaveRequest->employee_id, 'leave'),
+            403,
+            'Not authorized to approve this leave request.'
+        );
+
         try {
             return response()->json(app(ApproveLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
@@ -116,6 +143,13 @@ class LeaveController extends Controller
         $leaveRequest = LeaveRequest::withoutGlobalScopes()
             ->where('company_id', $request->attributes->get('company_id'))
             ->findOrFail($id);
+
+        // W-G3 : périmètre manager — on ne peut refuser que les demandes de collaborateurs visibles.
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $leaveRequest->employee_id, 'leave'),
+            403,
+            'Not authorized to reject this leave request.'
+        );
 
         try {
             return response()->json(app(RejectLeaveRequestUseCase::class)->execute(
@@ -150,12 +184,28 @@ class LeaveController extends Controller
         $request->validate([
             'from' => 'required|date',
             'to' => 'required|date|after_or_equal:from',
+            'department_id' => 'sometimes|integer',
+            'leave_type_id' => 'sometimes|integer',
+            'employee_id' => 'sometimes|integer',
+            'statuses' => 'sometimes|array',
         ]);
+
+        // W-G3 : scope manager — vue globale RH (leave_view_all / leave_approve) sinon soi + rapports.
+        $visibleIds = WorkforceAccess::hasViewAll($request, 'leave')
+            ? null
+            : WorkforceAccess::visibleEmployeeIds($request, 'leave');
 
         return response()->json(LeaveRequestReadModel::calendar(
             companyId: $request->attributes->get('company_id'),
             from: Carbon::parse($request->query('from')),
             to: Carbon::parse($request->query('to')),
+            visibleIds: $visibleIds,
+            filters: [
+                'department_id' => $request->query('department_id'),
+                'leave_type_id' => $request->query('leave_type_id'),
+                'employee_id' => $request->query('employee_id'),
+                'statuses' => $request->query('statuses'),
+            ],
         ));
     }
 

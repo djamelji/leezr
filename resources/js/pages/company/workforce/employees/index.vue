@@ -342,13 +342,11 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         :items="store.employees"
         :items-length="store.totalEmployees"
         :loading="loading"
-        class="text-no-wrap"
+        class="text-no-wrap cursor-pointer"
+        @click:row="(_, { item }) => goToEmployee(item.id)"
       >
         <template #item.last_name="{ item }">
-          <div
-            class="d-flex align-center gap-3 py-2 cursor-pointer"
-            @click="goToEmployee(item.id)"
-          >
+          <div class="d-flex align-center gap-3 py-2">
             <VAvatar color="primary" variant="tonal" size="38">
               <span class="text-sm font-weight-medium">{{ (item.first_name?.[0] || '') + (item.last_name?.[0] || '') }}</span>
             </VAvatar>

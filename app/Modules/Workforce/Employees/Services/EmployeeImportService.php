@@ -181,6 +181,9 @@ class EmployeeImportService
             }
 
             // Doublon par clé métier (employee_number). Jamais par nom seul.
+            // W-G2 réserve : SANS référence, l'identité n'est pas stable → on BLOQUE la ligne en conflit
+            // (jamais de création silencieuse re-créable au second import). L'opérateur doit fournir une
+            // référence pour garantir l'idempotence.
             $action = 'create';
             if ($number !== '') {
                 $key = mb_strtolower($number);
@@ -195,7 +198,8 @@ class EmployeeImportService
                     $seenNumbers[$key] = $parsed['_line'];
                 }
             } else {
-                $warnings[] = "Aucune référence collaborateur — déduplication impossible, création d'un nouveau dossier.";
+                $isConflict = true;
+                $errors[] = "Référence collaborateur (employee_number) requise : sans clé stable, l'import ne peut garantir l'absence de doublon.";
             }
 
             if (! empty($errors)) {

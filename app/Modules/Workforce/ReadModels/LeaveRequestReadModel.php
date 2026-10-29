@@ -43,27 +43,56 @@ class LeaveRequestReadModel
             ->paginate($perPage);
     }
 
-    public static function calendar(int $companyId, Carbon $from, Carbon $to): Collection
+    /**
+     * W-G3 (ADR-643) — événements calendrier des congés, scopés + filtrés côté serveur.
+     *
+     * Sécurité : `visibleIds` (null = vue globale RH ; sinon soi + rapports directs). Le MOTIF n'est
+     * JAMAIS exposé ici (vues d'équipe). Statuts par défaut = en attente + approuvés + consommés
+     * (une demande refusée n'apparaît pas comme une absence confirmée ; disponible en vue Historique).
+     *
+     * @param  array<int>|null  $visibleIds
+     * @param  array<string,mixed>  $filters  department_id/leave_type_id/employee_id/statuses[]
+     */
+    public static function calendar(int $companyId, Carbon $from, Carbon $to, ?array $visibleIds = null, array $filters = []): Collection
     {
+        $statuses = $filters['statuses'] ?? [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_APPROVED, LeaveRequest::STATUS_CONSUMED];
+        $statuses = array_values(array_intersect($statuses, LeaveRequest::STATUSES));
+
+        $colors = [
+            LeaveRequest::STATUS_PENDING => 'warning',
+            LeaveRequest::STATUS_APPROVED => 'success',
+            LeaveRequest::STATUS_CONSUMED => 'info',
+            LeaveRequest::STATUS_REJECTED => 'error',
+            LeaveRequest::STATUS_CANCELLED => 'secondary',
+        ];
+
         return LeaveRequest::withoutCompanyScope()
             ->where('company_id', $companyId)
-            ->whereIn('status', [LeaveRequest::STATUS_APPROVED, LeaveRequest::STATUS_CONSUMED])
+            ->whereIn('status', $statuses)
             ->where('date_from', '<=', $to->toDateString())
             ->where('date_to', '>=', $from->toDateString())
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('employee_id', $visibleIds))
+            ->when(! empty($filters['employee_id']), fn ($q) => $q->where('employee_id', (int) $filters['employee_id']))
+            ->when(! empty($filters['leave_type_id']), fn ($q) => $q->where('leave_type_id', (int) $filters['leave_type_id']))
+            ->when(! empty($filters['department_id']), fn ($q) => $q->whereHas('employee', fn ($e) => $e->where('department_id', (int) $filters['department_id'])))
             ->with([
-                'employee:id,first_name,last_name',
+                'employee:id,first_name,last_name,department_id',
                 'leaveType:id,code,name',
             ])
+            ->orderBy('date_from')
             ->get()
             ->map(fn (LeaveRequest $r) => [
                 'id' => $r->id,
                 'employee_id' => $r->employee_id,
                 'employee_name' => $r->employee ? "{$r->employee->first_name} {$r->employee->last_name}" : null,
+                'department_id' => $r->employee?->department_id,
                 'leave_type' => $r->leaveType?->name,
+                'leave_type_code' => $r->leaveType?->code,
                 'date_from' => $r->date_from->toDateString(),
                 'date_to' => $r->date_to->toDateString(),
                 'days_count' => $r->days_count_hundredths / 100,
                 'status' => $r->status,
+                'color' => $colors[$r->status] ?? 'secondary',
             ]);
     }
 

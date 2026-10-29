@@ -158,10 +158,17 @@ export const useLeavesStore = defineStore('workforceLeaves', {
     },
 
     // ── Calendar ──────────────────────────────────────────────
-    async fetchCalendar({ from, to }) {
+    // W-G3 : filtres serveur (department_id/leave_type_id/employee_id/statuses[]).
+    async fetchCalendar({ from, to, departmentId, leaveTypeId, employeeId, statuses } = {}) {
       this._loading = true
       try {
-        const data = await $api(`/workforce/leaves/calendar?from=${from}&to=${to}`)
+        const params = new URLSearchParams({ from, to })
+        if (departmentId) params.set('department_id', departmentId)
+        if (leaveTypeId) params.set('leave_type_id', leaveTypeId)
+        if (employeeId) params.set('employee_id', employeeId)
+        if (statuses?.length) statuses.forEach(s => params.append('statuses[]', s))
+
+        const data = await $api(`/workforce/leaves/calendar?${params.toString()}`)
         this._calendar = data.data ?? data
 
         return this._calendar
