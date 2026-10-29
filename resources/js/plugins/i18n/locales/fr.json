@@ -1621,7 +1621,7 @@
     "detail": {
       "title": "Détail de la demande", "levelOrder": "Niveau · Ordre", "expires": "Expire le",
       "certification": "Certification", "signers": "Signataires", "timeline": "Chronologie des preuves",
-      "verification": "Vérification", "download": "Télécharger le document signé", "remind": "Relancer", "cancel": "Annuler"
+      "verification": "Vérification", "view": "Visualiser", "download": "Télécharger le document signé", "remind": "Relancer", "cancel": "Annuler"
     }
   },
   "signaturePublic": {

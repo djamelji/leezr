@@ -1622,7 +1622,7 @@
     "detail": {
       "title": "Request detail", "levelOrder": "Level · Order", "expires": "Expires",
       "certification": "Certification", "signers": "Signers", "timeline": "Evidence timeline",
-      "verification": "Verification", "download": "Download signed document", "remind": "Remind", "cancel": "Cancel"
+      "verification": "Verification", "view": "View", "download": "Download signed document", "remind": "Remind", "cancel": "Cancel"
     }
   },
   "signaturePublic": {

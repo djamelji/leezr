@@ -50,8 +50,9 @@ export const useSignatureStore = defineStore('workforceSignature', {
     async updateSettings(payload) {
       return await $api('/workforce/signature/settings', { method: 'PUT', body: payload })
     },
-    downloadSignedUrl(id) {
-      return `/api/workforce/signature/${id}/download`
+    // Téléchargement via blob ($api ajoute l'en-tête X-Company-Id — un <a href> ne le ferait pas).
+    async downloadSigned(id) {
+      return await $api(`/workforce/signature/${id}/download`, { responseType: 'blob' })
     },
   },
 })

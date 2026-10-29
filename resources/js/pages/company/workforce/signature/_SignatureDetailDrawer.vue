@@ -54,6 +54,26 @@ const doCancel = async () => {
     emit('changed'); await load()
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') } finally { acting.value = false }
 }
+const downloading = ref(false)
+const triggerDownload = async (save = true) => {
+  downloading.value = true
+  try {
+    const blob = await store.downloadSigned(props.requestId)
+    const url = URL.createObjectURL(blob)
+    if (save) {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `document-signe-${props.requestId}.pdf`
+      a.click()
+    } else {
+      window.open(url, '_blank')
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  } catch (e) {
+    toast(e.response?._data?.message || t('common.error'), 'error')
+  } finally { downloading.value = false }
+}
+
 const doRemind = async () => {
   acting.value = true
   try {
@@ -91,7 +111,16 @@ const doRemind = async () => {
       <VProgressCircular indeterminate color="primary" />
     </div>
 
-    <div v-else-if="req" class="pa-4">
+    <div
+      v-else-if="req"
+      class="d-flex flex-column"
+      style="max-block-size: calc(100vh - 65px);"
+    >
+      <!-- Corps scrollable -->
+      <div
+        class="flex-grow-1 pa-4"
+        style="overflow-y: auto; min-block-size: 0;"
+      >
       <div class="d-flex align-center justify-space-between mb-3">
         <div class="font-weight-medium">
           {{ req.document_label || t('signature.unknownDocument') }}
@@ -160,18 +189,32 @@ const doRemind = async () => {
           </VTimelineItem>
         </VTimeline>
       </template>
+      </div>
+      <!-- fin corps scrollable -->
 
-      <!-- Actions -->
-      <div class="d-flex flex-wrap gap-2">
-        <VBtn
-          v-if="req.has_signed_document"
-          :href="store.downloadSignedUrl(req.id)"
-          target="_blank"
-          prepend-icon="tabler-download"
-          size="small"
-        >
-          {{ t('signature.detail.download') }}
-        </VBtn>
+      <VDivider />
+
+      <!-- Footer d'actions — TOUJOURS visible (ne défile pas) -->
+      <div class="pa-4 d-flex flex-wrap gap-2">
+        <template v-if="req.has_signed_document">
+          <VBtn
+            variant="tonal"
+            size="small"
+            prepend-icon="tabler-eye"
+            :loading="downloading"
+            @click="triggerDownload(false)"
+          >
+            {{ t('signature.detail.view') }}
+          </VBtn>
+          <VBtn
+            size="small"
+            prepend-icon="tabler-download"
+            :loading="downloading"
+            @click="triggerDownload(true)"
+          >
+            {{ t('signature.detail.download') }}
+          </VBtn>
+        </template>
         <VBtn
           v-if="isActive && can('workforce_signature.manage')"
           variant="tonal"
