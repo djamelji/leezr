@@ -24,8 +24,8 @@ return new class extends Migration
             $table->dateTime('occurred_at');
             $table->timestamps();
 
-            $table->index(['signature_request_id', 'occurred_at']);
-            $table->index(['company_id']);
+            $table->index(['signature_request_id', 'occurred_at'], 'sig_events_request_time_idx');
+            $table->index(['company_id'], 'sig_events_company_idx');
         });
     }
 

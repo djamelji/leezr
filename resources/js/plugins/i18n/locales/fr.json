@@ -183,7 +183,8 @@
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
       "workforce-settings": "Paramètres RH",
-      "workforce-contract-templates": "Contrats de travail"
+      "workforce-contract-templates": "Contrats de travail",
+      "workforce-signature": "Signatures"
     }
   },
   "roles": {
@@ -1541,6 +1542,7 @@
       "planning": "Planning",
       "documents": "Documents RH",
       "contract": "Contrats de travail",
+      "signature": "Signature électronique",
       "rules": "Règles & conventions"
     },
     "rules": {
@@ -1584,6 +1586,67 @@
       "manage": "Gérer les modèles"
     },
     "notice": "L'en-tête et le pied de page apparaissent dans l'aperçu PDF. Toute modification est sans effet rétroactif sur les contrats déjà générés."
+  },
+  "signature": {
+    "title": "Signatures",
+    "subtitle": "Demandes de signature électronique des documents RH.",
+    "searchPlaceholder": "Rechercher un signataire…",
+    "empty": "Aucune demande de signature.",
+    "unknownDocument": "Document",
+    "certified": "Certifiée",
+    "uncertified": "Non certifiée",
+    "actions": { "new": "Nouvelle demande" },
+    "tabs": { "all": "Toutes", "pending": "En attente", "inProgress": "En cours", "completed": "Terminées", "declined": "Refusées", "expired": "Expirées" },
+    "columns": { "document": "Document", "signers": "Signataires", "provider": "Prestataire", "status": "Statut", "created": "Créée le" },
+    "status": { "draft": "Brouillon", "pending": "En attente", "partially_signed": "Partiellement signée", "completed": "Terminée", "declined": "Refusée", "cancelled": "Annulée", "expired": "Expirée", "failed": "Échec" },
+    "signerStatus": { "pending": "En attente", "invited": "Invité", "signed": "Signé", "declined": "Refusé" },
+    "level": { "simple": "Simple", "advanced": "Avancée", "qualified": "Qualifiée", "uncertified": "non certifiée" },
+    "order": { "sequential": "Séquentiel", "parallel": "Parallèle" },
+    "role": { "employee": "Collaborateur", "company_representative": "Représentant entreprise", "external": "Signataire externe" },
+    "event": { "created": "Demande créée", "sent": "Envoyée", "invited": "Invitation envoyée", "viewed": "Document consulté", "signed": "Signé", "declined": "Refusé", "cancelled": "Annulée", "expired": "Expirée", "completed": "Terminée", "failed": "Échec", "webhook_received": "Événement prestataire", "verification_passed": "Vérification réussie", "verification_failed": "Vérification échouée" },
+    "toasts": { "created": "Demande de signature envoyée", "cancelled": "Demande annulée", "reminded": "{count} relance(s) envoyée(s)" },
+    "wizard": {
+      "title": "Nouvelle demande de signature",
+      "step1": "Document", "step2": "Signataires", "step3": "Prestataire", "step4": "Récapitulatif",
+      "pickDocument": "Choisissez un document RH déjà émis à faire signer.",
+      "document": "Document", "noEligible": "Aucun document éligible",
+      "order": "Ordre de signature", "signer": "Signataire", "addSigner": "Ajouter un signataire",
+      "role": "Rôle", "name": "Nom", "email": "E-mail", "signers": "Signataires",
+      "provider": "Prestataire", "level": "Niveau de signature", "noLevel": "Aucun niveau disponible",
+      "devOnlyWarning": "prestataire de TEST (preuves non certifiées, environnement de développement).",
+      "uncertifiedWarning": "ce prestataire ne produit pas de preuve certifiée.",
+      "confirm": "Confirmer et envoyer",
+      "confirmNotice": "À la confirmation, les invitations sont envoyées aux signataires. Le document source est verrouillé pendant la procédure."
+    },
+    "detail": {
+      "title": "Détail de la demande", "levelOrder": "Niveau · Ordre", "expires": "Expire le",
+      "certification": "Certification", "signers": "Signataires", "timeline": "Chronologie des preuves",
+      "verification": "Vérification", "download": "Télécharger le document signé", "remind": "Relancer", "cancel": "Annuler"
+    }
+  },
+  "signaturePublic": {
+    "title": "Signature électronique",
+    "invalid": "Lien invalide ou expiré.",
+    "document": "Document", "signer": "Signataire",
+    "certifiedNotice": "Signature électronique certifiée.",
+    "uncertifiedNotice": "Ceci est une signature de démonstration non certifiée juridiquement.",
+    "viewDocument": "Consulter le document",
+    "sign": "Signer le document", "decline": "Refuser de signer",
+    "declineReason": "Motif du refus (facultatif)", "confirmDecline": "Confirmer le refus",
+    "signedTitle": "Document signé", "declinedTitle": "Signature refusée",
+    "closeHint": "Vous pouvez fermer cette page.",
+    "notActionable": "Cette demande n'attend plus d'action de votre part."
+  },
+  "signatureSettings": {
+    "intro": "Configurez le prestataire, le niveau par défaut, la validité, les relances et la remise de la copie signée.",
+    "devOnlyNotice": "Prestataire de TEST actif (environnement de développement) : les signatures ne sont pas certifiées juridiquement.",
+    "defaultLevel": "Niveau par défaut", "defaultOrder": "Ordre par défaut",
+    "validityDays": "Validité (jours)", "reminderDays": "Relance après (jours)",
+    "reminderHint": "Laisser vide pour désactiver les relances automatiques.",
+    "notifyEnabled": "Activer les notifications e-mail",
+    "sendSignedCopy": "Envoyer une copie signée au collaborateur",
+    "signedCopyNotice": "Sans supprimer l'accès au document lorsque la loi impose sa remise ou sa mise à disposition.",
+    "saved": "Paramètres de signature enregistrés"
   },
   "employeeFile": {
     "days": "jours",

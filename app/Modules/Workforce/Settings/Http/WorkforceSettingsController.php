@@ -31,6 +31,8 @@ class WorkforceSettingsController extends Controller
             ['key' => 'documents', 'available' => ModuleGate::isActive($company, 'workforce_documents')],
             // W-CONTRACT-3B : section Contrats de travail — visible UNIQUEMENT si le module Contract est actif.
             ['key' => 'contract', 'available' => ModuleGate::isActive($company, 'workforce_contract')],
+            // W-SIGNATURE-1 : section Signature électronique — visible UNIQUEMENT si le module Signature est actif.
+            ['key' => 'signature', 'available' => ModuleGate::isActive($company, 'workforce_signature')],
             ['key' => 'rules', 'available' => ModuleGate::isActive($company, 'workforce')],
         ];
 

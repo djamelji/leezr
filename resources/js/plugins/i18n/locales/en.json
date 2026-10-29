@@ -183,7 +183,8 @@
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
       "workforce-settings": "HR Settings",
-      "workforce-contract-templates": "Employment contracts"
+      "workforce-contract-templates": "Employment contracts",
+      "workforce-signature": "Signatures"
     }
   },
   "roles": {
@@ -1542,6 +1543,7 @@
       "planning": "Planning",
       "documents": "HR documents",
       "contract": "Employment contracts",
+      "signature": "Electronic signature",
       "rules": "Rules & conventions"
     },
     "rules": {
@@ -1585,6 +1587,67 @@
       "manage": "Manage templates"
     },
     "notice": "The header and footer appear in the PDF preview. Any change has no retroactive effect on already-generated contracts."
+  },
+  "signature": {
+    "title": "Signatures",
+    "subtitle": "Electronic signature requests for HR documents.",
+    "searchPlaceholder": "Search a signer…",
+    "empty": "No signature request.",
+    "unknownDocument": "Document",
+    "certified": "Certified",
+    "uncertified": "Uncertified",
+    "actions": { "new": "New request" },
+    "tabs": { "all": "All", "pending": "Pending", "inProgress": "In progress", "completed": "Completed", "declined": "Declined", "expired": "Expired" },
+    "columns": { "document": "Document", "signers": "Signers", "provider": "Provider", "status": "Status", "created": "Created" },
+    "status": { "draft": "Draft", "pending": "Pending", "partially_signed": "Partially signed", "completed": "Completed", "declined": "Declined", "cancelled": "Cancelled", "expired": "Expired", "failed": "Failed" },
+    "signerStatus": { "pending": "Pending", "invited": "Invited", "signed": "Signed", "declined": "Declined" },
+    "level": { "simple": "Simple", "advanced": "Advanced", "qualified": "Qualified", "uncertified": "uncertified" },
+    "order": { "sequential": "Sequential", "parallel": "Parallel" },
+    "role": { "employee": "Employee", "company_representative": "Company representative", "external": "External signer" },
+    "event": { "created": "Request created", "sent": "Sent", "invited": "Invitation sent", "viewed": "Document viewed", "signed": "Signed", "declined": "Declined", "cancelled": "Cancelled", "expired": "Expired", "completed": "Completed", "failed": "Failed", "webhook_received": "Provider event", "verification_passed": "Verification passed", "verification_failed": "Verification failed" },
+    "toasts": { "created": "Signature request sent", "cancelled": "Request cancelled", "reminded": "{count} reminder(s) sent" },
+    "wizard": {
+      "title": "New signature request",
+      "step1": "Document", "step2": "Signers", "step3": "Provider", "step4": "Summary",
+      "pickDocument": "Choose an already-emitted HR document to have signed.",
+      "document": "Document", "noEligible": "No eligible document",
+      "order": "Signing order", "signer": "Signer", "addSigner": "Add a signer",
+      "role": "Role", "name": "Name", "email": "Email", "signers": "Signers",
+      "provider": "Provider", "level": "Signature level", "noLevel": "No level available",
+      "devOnlyWarning": "TEST provider (uncertified proofs, development environment).",
+      "uncertifiedWarning": "this provider does not produce certified proof.",
+      "confirm": "Confirm and send",
+      "confirmNotice": "On confirmation, invitations are sent to the signers. The source document is locked during the process."
+    },
+    "detail": {
+      "title": "Request detail", "levelOrder": "Level · Order", "expires": "Expires",
+      "certification": "Certification", "signers": "Signers", "timeline": "Evidence timeline",
+      "verification": "Verification", "download": "Download signed document", "remind": "Remind", "cancel": "Cancel"
+    }
+  },
+  "signaturePublic": {
+    "title": "Electronic signature",
+    "invalid": "Invalid or expired link.",
+    "document": "Document", "signer": "Signer",
+    "certifiedNotice": "Certified electronic signature.",
+    "uncertifiedNotice": "This is a legally uncertified demonstration signature.",
+    "viewDocument": "View the document",
+    "sign": "Sign the document", "decline": "Decline to sign",
+    "declineReason": "Decline reason (optional)", "confirmDecline": "Confirm decline",
+    "signedTitle": "Document signed", "declinedTitle": "Signature declined",
+    "closeHint": "You may close this page.",
+    "notActionable": "This request no longer awaits action from you."
+  },
+  "signatureSettings": {
+    "intro": "Configure the provider, default level, validity, reminders and signed-copy delivery.",
+    "devOnlyNotice": "TEST provider active (development environment): signatures are not legally certified.",
+    "defaultLevel": "Default level", "defaultOrder": "Default order",
+    "validityDays": "Validity (days)", "reminderDays": "Remind after (days)",
+    "reminderHint": "Leave empty to disable automatic reminders.",
+    "notifyEnabled": "Enable email notifications",
+    "sendSignedCopy": "Send a signed copy to the employee",
+    "signedCopyNotice": "Without removing access to the document where the law requires its delivery or availability.",
+    "saved": "Signature settings saved"
   },
   "employeeFile": {
     "days": "days",

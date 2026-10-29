@@ -27,9 +27,9 @@ class WorkforceSettingsHubTest extends TestCase
     {
         parent::setUp();
         Model::unguard();
-        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_documents', 'workforce_contract']]);
+        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_documents', 'workforce_contract', 'workforce_signature']]);
         Market::create(['key' => 'FR', 'name' => 'France', 'currency' => 'EUR', 'locale' => 'fr-FR', 'timezone' => 'Europe/Paris', 'vat_rate_bps' => 2000, 'dial_code' => '+33', 'flag_code' => 'fr', 'flag_svg' => '']);
-        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_documents', 'workforce_contract'] as $m) {
+        foreach (['workforce', 'workforce_leave', 'workforce_planning', 'workforce_documents', 'workforce_contract', 'workforce_signature'] as $m) {
             PlatformModule::create(['key' => $m, 'name' => $m, 'is_enabled_globally' => true]);
         }
         CompanyPermissionCatalog::sync();
@@ -100,6 +100,19 @@ class WorkforceSettingsHubTest extends TestCase
         $this->assertArrayHasKey('employer_identity', $res2['context']);
         $this->assertSame('12345678900011', $res2['context']['employer_identity']['siret']);
         $this->assertSame('75001 Paris', $res2['context']['employer_identity']['city']);
+    }
+
+    public function test_signature_section_visible_only_when_module_active(): void
+    {
+        $without = $this->company(['workforce']);
+        $u1 = $this->user($without, ['workforce.view']);
+        $res1 = $this->actingAs($u1)->getJson('/api/workforce/settings', ['X-Company-Id' => $without->id])->assertOk()->json();
+        $this->assertNotContains('signature', $this->keys($res1));
+
+        $with = $this->company(['workforce', 'workforce_signature']);
+        $u2 = $this->user($with, ['workforce.view']);
+        $res2 = $this->actingAs($u2)->getJson('/api/workforce/settings', ['X-Company-Id' => $with->id])->assertOk()->json();
+        $this->assertContains('signature', $this->keys($res2));
     }
 
     public function test_requires_view_permission(): void

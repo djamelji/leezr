@@ -654,6 +654,7 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     $s = \App\Modules\Workforce\Signature\Http\SignatureController::class;
     // Routes littérales AVANT {id} pour éviter la capture.
     Route::get('options', [$s, 'options'])->middleware($perm('workforce_signature.view'));
+    Route::get('eligible-documents', [$s, 'eligibleDocuments'])->middleware($perm('workforce_signature.request'));
     Route::get('settings', [$s, 'getSettings'])->middleware($perm('workforce_signature.admin'));
     Route::put('settings', [$s, 'updateSettings'])->middleware($perm('workforce_signature.admin'));
     Route::get('/', [$s, 'index'])->middleware($perm('workforce_signature.view'));

@@ -72,6 +72,34 @@ class SignatureController extends Controller
         ]);
     }
 
+    /** Documents RH émis éligibles à une demande (scopés, non signés, sans demande active). */
+    public function eligibleDocuments(Request $request): JsonResponse
+    {
+        $companyId = $this->companyId($request);
+        $activeDocIds = SignatureRequest::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereNotIn('status', SignatureRequest::TERMINAL_STATUSES)
+            ->pluck('generated_document_id')->all();
+
+        $docs = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('signature_status', '!=', \App\Core\Documents\GeneratedDocument::SIGNATURE_SIGNED)
+            ->whereNotIn('id', $activeDocIds ?: [-1])
+            ->with('template')
+            ->orderByDesc('generated_at')
+            ->limit(100)->get()
+            ->filter(fn ($d) => $this->subjectInScope($request, $d->subject_type, (int) $d->subject_id))
+            ->map(fn ($d) => [
+                'id' => $d->id,
+                'label' => $d->template?->name ?? 'Document',
+                'subject_type' => $d->subject_type,
+                'subject_id' => $d->subject_id,
+                'generated_at' => $d->generated_at?->toIso8601String(),
+            ])->values();
+
+        return response()->json(['data' => $docs]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -179,6 +207,22 @@ class SignatureController extends Controller
             ->where('company_id', $this->companyId($request))
             ->findOrFail($generatedDocumentId);
         $this->assertSubjectScope($request, $doc->subject_type, (int) $doc->subject_id);
+    }
+
+    private function subjectInScope(Request $request, ?string $subjectType, int $subjectId): bool
+    {
+        if ($subjectType === 'employee') {
+            return WorkforceAccess::canViewEmployeeData($request, $subjectId, 'employee');
+        }
+        if ($subjectType === 'contract') {
+            $employeeId = EmploymentContract::withoutGlobalScopes()
+                ->where('company_id', $this->companyId($request))
+                ->where('id', $subjectId)->value('employee_id');
+
+            return ! $employeeId || WorkforceAccess::canViewEmployeeData($request, (int) $employeeId, 'employee');
+        }
+
+        return true;
     }
 
     private function assertSubjectScope(Request $request, ?string $subjectType, int $subjectId): void

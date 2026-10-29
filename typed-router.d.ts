@@ -106,8 +106,12 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-planning': RouteRecordInfo<'company-workforce-planning', '/company/workforce/planning', Record<never, never>, Record<never, never>>,
     'company-workforce-planning-planning-calendar': RouteRecordInfo<'company-workforce-planning-planning-calendar', '/company/workforce/planning/_PlanningCalendar', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-contract-settings-section': RouteRecordInfo<'company-workforce-settings-contract-settings-section', '/company/workforce/settings/_ContractSettingsSection', Record<never, never>, Record<never, never>>,
+    'company-workforce-settings-signature-settings-section': RouteRecordInfo<'company-workforce-settings-signature-settings-section', '/company/workforce/settings/_SignatureSettingsSection', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-workforce-rules-section': RouteRecordInfo<'company-workforce-settings-workforce-rules-section', '/company/workforce/settings/_WorkforceRulesSection', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-tab': RouteRecordInfo<'company-workforce-settings-tab', '/company/workforce/settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
+    'company-workforce-signature': RouteRecordInfo<'company-workforce-signature', '/company/workforce/signature', Record<never, never>, Record<never, never>>,
+    'company-workforce-signature-signature-detail-drawer': RouteRecordInfo<'company-workforce-signature-signature-detail-drawer', '/company/workforce/signature/_SignatureDetailDrawer', Record<never, never>, Record<never, never>>,
+    'company-workforce-signature-signature-wizard': RouteRecordInfo<'company-workforce-signature-signature-wizard', '/company/workforce/signature/_SignatureWizard', Record<never, never>, Record<never, never>>,
     'company-workforce-time': RouteRecordInfo<'company-workforce-time', '/company/workforce/time', Record<never, never>, Record<never, never>>,
     'company-workforce-time-time-cockpit': RouteRecordInfo<'company-workforce-time-time-cockpit', '/company/workforce/time/_TimeCockpit', Record<never, never>, Record<never, never>>,
     'company-workforce-time-id': RouteRecordInfo<'company-workforce-time-id', '/company/workforce/time/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
@@ -261,5 +265,6 @@ declare module 'vue-router/auto-routes' {
     'register-register-step-summary': RouteRecordInfo<'register-register-step-summary', '/register/_RegisterStepSummary', Record<never, never>, Record<never, never>>,
     'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
     'shared-permission-matrix': RouteRecordInfo<'shared-permission-matrix', '/shared/_PermissionMatrix', Record<never, never>, Record<never, never>>,
+    'sign-token': RouteRecordInfo<'sign-token', '/sign/:token', { token: ParamValue<true> }, { token: ParamValue<false> }>,
   }
 }
