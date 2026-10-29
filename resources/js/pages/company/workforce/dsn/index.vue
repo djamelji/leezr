@@ -2,6 +2,7 @@
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { useDsnStore } from '@/modules/company/workforce/dsn.store'
+import PayrollRunPicker from '@/components/workforce/PayrollRunPicker.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
@@ -404,11 +405,10 @@ function goToDeclaration(id) {
         <VForm @submit.prevent="submitExport">
           <VRow>
             <VCol cols="12">
-              <AppTextField
-                v-model.number="exportPayrollRunId"
-                :label="$t('dsn.fields.payrollRunId')"
-                :placeholder="$t('dsn.fields.payrollRunIdPlaceholder')"
-                type="number"
+              <PayrollRunPicker
+                v-model="exportPayrollRunId"
+                :label="$t('dsn.fields.selectRun')"
+                status-filter="validated"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>

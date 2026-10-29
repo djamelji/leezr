@@ -603,6 +603,7 @@ Route::prefix('workforce/documents')->middleware('company.access:use-module,work
     // ANO-014: view to read, generate to produce documents/payslips.
     $perm = fn (string $key) => 'company.access:use-permission,'.$key;
     Route::get('statistics', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'statistics'])->middleware($perm('workforce_documents.view'));
+    Route::get('templates', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'templates'])->middleware($perm('workforce_documents.view')); // W-G1 : modèles disponibles pour le sélecteur
     Route::get('/', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'index'])->middleware($perm('workforce_documents.view'));
     Route::post('generate', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generate'])->middleware($perm('workforce_documents.generate'));
     Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts'])->middleware($perm('workforce_documents.generate'));

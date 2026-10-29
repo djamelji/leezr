@@ -405,7 +405,11 @@
     "notificationsDesc": "Gérez vos préférences de notifications pour les événements platform."
   },
   "validation": {
-    "required": "Ce champ est requis"
+    "required": "Ce champ est requis",
+    "money": {
+      "invalid": "Montant invalide",
+      "negative": "Le montant ne peut pas être négatif"
+    }
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",
@@ -703,7 +707,10 @@
     }
   },
   "platformBilling": {
-    "consolidatedPreview": { "accessButton": "Aperçu consolidé V2", "missingCompany": "Aucune Company spécifiée pour l\u2019aperçu." },
+    "consolidatedPreview": {
+      "accessButton": "Aperçu consolidé V2",
+      "missingCompany": "Aucune Company spécifiée pour l’aperçu."
+    },
     "title": "Aperçu facturation",
     "subtitle": "Données de facturation inter-entreprises, factures, paiements et relances.",
     "drilldown": {
@@ -762,8 +769,19 @@
       "warning": "Confirmez uniquement un tarif réellement convenu. Cette décision est tracée (prix, preuve, acteur, date).",
       "confirmed": "Tarif contractuel confirmé.",
       "stale": "L'abonnement a changé depuis l'ouverture. Rechargez avant de confirmer.",
-      "source": { "provisional": "Provisoire (catalogue)", "null": "Inconnue", "subscribed": "Souscription", "plan_change": "Changement de plan", "migrated": "Migration", "reconstructed": "Reconstruit", "admin_confirmed": "Confirmé admin" },
-      "reasons": { "missing_snapshot": "Aucun tarif enregistré", "unverified_snapshot": "Tarif non vérifié (catalogue)" }
+      "source": {
+        "provisional": "Provisoire (catalogue)",
+        "null": "Inconnue",
+        "subscribed": "Souscription",
+        "plan_change": "Changement de plan",
+        "migrated": "Migration",
+        "reconstructed": "Reconstruit",
+        "admin_confirmed": "Confirmé admin"
+      },
+      "reasons": {
+        "missing_snapshot": "Aucun tarif enregistré",
+        "unverified_snapshot": "Tarif non vérifié (catalogue)"
+      }
     },
     "tabs": {
       "tariffReview": "Abonnements à vérifier",
@@ -1382,7 +1400,12 @@
     "departments": "Départements",
     "jobRoles": "Postes et fonctions",
     "noPreset": "Aucun modèle disponible pour ce profil.",
-    "status": { "new": "nouveau", "existing": "existant", "customized": "personnalisé", "conflict": "conflit de nom" }
+    "status": {
+      "new": "nouveau",
+      "existing": "existant",
+      "customized": "personnalisé",
+      "conflict": "conflit de nom"
+    }
   },
   "workforceOnboarding": {
     "title": "Assistant de configuration RH",
@@ -1411,7 +1434,15 @@
     "finishBtn": "Terminer",
     "finished": "Configuration terminée.",
     "launch": "Assistant de configuration",
-    "steps": { "company": "Votre entreprise", "organization": "Votre organisation", "roles": "Responsabilités et accès", "leave": "Congés et absences", "worktime": "Temps de travail", "first_employee": "Premier collaborateur", "done": "Terminé" }
+    "steps": {
+      "company": "Votre entreprise",
+      "organization": "Votre organisation",
+      "roles": "Responsabilités et accès",
+      "leave": "Congés et absences",
+      "worktime": "Temps de travail",
+      "first_employee": "Premier collaborateur",
+      "done": "Terminé"
+    }
   },
   "orgPresetAdmin": {
     "title": "Presets d'organisation",
@@ -1429,7 +1460,11 @@
     "version": "Version",
     "status": "Statut",
     "updated": "Modifié le",
-    "statuses": { "draft": "Brouillon", "published": "Publié", "archived": "Archivé" },
+    "statuses": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
     "edit": "Éditer",
     "publish": "Publier",
     "published": "Preset publié.",
@@ -1456,11 +1491,121 @@
     "roleTitle": "Intitulé du poste",
     "department": "Département",
     "level": "Niveau",
-    "levels": { "manager": "Responsable", "agent": "Agent" },
+    "levels": {
+      "manager": "Responsable",
+      "agent": "Agent"
+    },
     "noRole": "Aucun poste. Ajoutez des fonctions rattachées aux départements."
   },
-  "hrSettings": {"title": "Paramètres RH", "subtitle": "Configurez les règles de votre entreprise en un seul endroit, adaptées à votre pays, votre secteur et vos modules.", "company": "Entreprise", "market": "Pays", "jobdomain": "Secteur d'activité", "profile": "Profil organisationnel", "noProfile": "Non défini", "generalIntro": "Informations connues de votre entreprise, utilisées pour adapter les règles RH.", "organizationIntro": "Gérez vos départements, services et fonctions, ou appliquez un modèle sectoriel.", "manageOrganization": "Gérer l'organisation", "worktimeIntro": "Règles de temps de travail et de pauses. L'origine de chaque règle est indiquée ; les règles obligatoires sont verrouillées.", "breaks": "Pauses", "leaveIntro": "Types de congés et règles applicables, adaptés à votre pays.", "manageLeave": "Gérer les congés", "planningIntro": "Modèles de planning, lieux de travail et règles de publication.", "managePlanning": "Gérer le planning", "documentsIntro": "Référentiel documentaire RH et génération de documents.", "manageDocuments": "Gérer les documents RH", "rulesIntro": "Vue d'ensemble des règles applicables et de leur origine (loi, convention, secteur, entreprise). Les règles légales obligatoires ne sont pas modifiables.", "rule": "Règle", "value": "Valeur", "source": "Origine", "mandatory": "Obligatoire (non modifiable)", "toComplete": "À compléter", "ruleSaved": "Règle enregistrée.", "sources": {"market_law": "Loi (pays)", "convention": "Convention", "jobdomain": "Secteur", "company": "Entreprise", "default": "Défaut", "to_complete": "À compléter"}, "sections": {"general": "Général", "organization": "Organisation", "worktime": "Temps de travail & pauses", "leave": "Congés & absences", "planning": "Planning", "documents": "Documents RH", "rules": "Règles & conventions"}, "rules": {"min_duration_minutes": "Durée minimale de pause (min)", "trigger_after_minutes": "Pause déclenchée après (min)", "target_duration_minutes": "Durée de pause cible (min)", "max_duration_minutes": "Durée de pause maximale (min)", "max_count": "Nombre de pauses maximal", "earliest_start_after_minutes": "Début de pause au plus tôt après (min)", "latest_start_before_minutes": "Début de pause au plus tard avant (min)", "included_in_worktime": "Pause incluse dans le temps de travail", "paid": "Pause rémunérée", "weekly_hours_reference": "Durée hebdomadaire de référence (h)", "daily_hours_max": "Durée journalière maximale (h)", "weekly_hours_max": "Durée hebdomadaire maximale (h)", "daily_rest_min_hours": "Repos quotidien minimal (h)", "weekly_rest_min_hours": "Repos hebdomadaire minimal (h)", "overtime_daily_threshold_hours": "Seuil heures supplémentaires / jour (h)", "night_work_start": "Début du travail de nuit", "night_work_end": "Fin du travail de nuit"}},
-  "employeeFile": {"days": "jours", "period": "Période", "type": "Type", "status": "Statut", "noLeave": "Aucune demande de congé.", "seeAll": "Voir tout", "date": "Date", "clockIn": "Pointage", "noTime": "Aucun pointage récent.", "hours": "Heures", "noPlanning": "Aucun shift à venir.", "document": "Document", "download": "Télécharger", "noDocuments": "Aucun document.", "manager": "Responsable", "since": "depuis le", "contractType": "Type de contrat", "weeklyHours": "Temps de travail", "salary": "Rémunération", "noContract": "Aucun contrat actif.", "situation": "Situation", "nextShift": "Prochain shift", "lastClock": "Dernier pointage", "pendingLeave": "Congés en attente", "historyEmpty": "Aucun événement à afficher.", "actions": {"leave": "Congés", "time": "Pointages"}, "tabs": {"overview": "Vue d'ensemble", "profile": "Profil", "contract": "Contrats", "planning": "Planning", "time": "Pointages", "leave": "Congés", "documents": "Documents", "history": "Historique"}, "alerts": {"no_active_contract": "Aucun contrat actif pour ce collaborateur.", "contract_to_activate": "Un contrat en brouillon est à activer.", "pending_leave": "{count} demande(s) de congé en attente."}},
+  "hrSettings": {
+    "title": "Paramètres RH",
+    "subtitle": "Configurez les règles de votre entreprise en un seul endroit, adaptées à votre pays, votre secteur et vos modules.",
+    "company": "Entreprise",
+    "market": "Pays",
+    "jobdomain": "Secteur d'activité",
+    "profile": "Profil organisationnel",
+    "noProfile": "Non défini",
+    "generalIntro": "Informations connues de votre entreprise, utilisées pour adapter les règles RH.",
+    "organizationIntro": "Gérez vos départements, services et fonctions, ou appliquez un modèle sectoriel.",
+    "manageOrganization": "Gérer l'organisation",
+    "worktimeIntro": "Règles de temps de travail et de pauses. L'origine de chaque règle est indiquée ; les règles obligatoires sont verrouillées.",
+    "breaks": "Pauses",
+    "leaveIntro": "Types de congés et règles applicables, adaptés à votre pays.",
+    "manageLeave": "Gérer les congés",
+    "planningIntro": "Modèles de planning, lieux de travail et règles de publication.",
+    "managePlanning": "Gérer le planning",
+    "documentsIntro": "Référentiel documentaire RH et génération de documents.",
+    "manageDocuments": "Gérer les documents RH",
+    "rulesIntro": "Vue d'ensemble des règles applicables et de leur origine (loi, convention, secteur, entreprise). Les règles légales obligatoires ne sont pas modifiables.",
+    "rule": "Règle",
+    "value": "Valeur",
+    "source": "Origine",
+    "mandatory": "Obligatoire (non modifiable)",
+    "toComplete": "À compléter",
+    "ruleSaved": "Règle enregistrée.",
+    "sources": {
+      "market_law": "Loi (pays)",
+      "convention": "Convention",
+      "jobdomain": "Secteur",
+      "company": "Entreprise",
+      "default": "Défaut",
+      "to_complete": "À compléter"
+    },
+    "sections": {
+      "general": "Général",
+      "organization": "Organisation",
+      "worktime": "Temps de travail & pauses",
+      "leave": "Congés & absences",
+      "planning": "Planning",
+      "documents": "Documents RH",
+      "rules": "Règles & conventions"
+    },
+    "rules": {
+      "min_duration_minutes": "Durée minimale de pause (min)",
+      "trigger_after_minutes": "Pause déclenchée après (min)",
+      "target_duration_minutes": "Durée de pause cible (min)",
+      "max_duration_minutes": "Durée de pause maximale (min)",
+      "max_count": "Nombre de pauses maximal",
+      "earliest_start_after_minutes": "Début de pause au plus tôt après (min)",
+      "latest_start_before_minutes": "Début de pause au plus tard avant (min)",
+      "included_in_worktime": "Pause incluse dans le temps de travail",
+      "paid": "Pause rémunérée",
+      "weekly_hours_reference": "Durée hebdomadaire de référence (h)",
+      "daily_hours_max": "Durée journalière maximale (h)",
+      "weekly_hours_max": "Durée hebdomadaire maximale (h)",
+      "daily_rest_min_hours": "Repos quotidien minimal (h)",
+      "weekly_rest_min_hours": "Repos hebdomadaire minimal (h)",
+      "overtime_daily_threshold_hours": "Seuil heures supplémentaires / jour (h)",
+      "night_work_start": "Début du travail de nuit",
+      "night_work_end": "Fin du travail de nuit"
+    }
+  },
+  "employeeFile": {
+    "days": "jours",
+    "period": "Période",
+    "type": "Type",
+    "status": "Statut",
+    "noLeave": "Aucune demande de congé.",
+    "seeAll": "Voir tout",
+    "date": "Date",
+    "clockIn": "Pointage",
+    "noTime": "Aucun pointage récent.",
+    "hours": "Heures",
+    "noPlanning": "Aucun shift à venir.",
+    "document": "Document",
+    "download": "Télécharger",
+    "noDocuments": "Aucun document.",
+    "manager": "Responsable",
+    "since": "depuis le",
+    "contractType": "Type de contrat",
+    "weeklyHours": "Temps de travail",
+    "salary": "Rémunération",
+    "noContract": "Aucun contrat actif.",
+    "situation": "Situation",
+    "nextShift": "Prochain shift",
+    "lastClock": "Dernier pointage",
+    "pendingLeave": "Congés en attente",
+    "historyEmpty": "Aucun événement à afficher.",
+    "actions": {
+      "leave": "Congés",
+      "time": "Pointages"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "profile": "Profil",
+      "contract": "Contrats",
+      "planning": "Planning",
+      "time": "Pointages",
+      "leave": "Congés",
+      "documents": "Documents",
+      "history": "Historique"
+    },
+    "alerts": {
+      "no_active_contract": "Aucun contrat actif pour ce collaborateur.",
+      "contract_to_activate": "Un contrat en brouillon est à activer.",
+      "pending_leave": "{count} demande(s) de congé en attente."
+    }
+  },
   "companyBilling": {
     "title": "Facturation",
     "sections": {
@@ -1717,7 +1862,13 @@
       "ttc": "TTC",
       "prorataBadge": "Prorata",
       "sectionSubtotal": "Sous-total",
-      "sections": { "subscription": "Abonnement", "modules": "Modules et add-ons", "proratas": "Proratas", "adjustments": "Ajustements", "discounts": "Remises" }
+      "sections": {
+        "subscription": "Abonnement",
+        "modules": "Modules et add-ons",
+        "proratas": "Proratas",
+        "adjustments": "Ajustements",
+        "discounts": "Remises"
+      }
     },
     "addCard": "Ajouter une carte",
     "addPaymentMethod": "Ajouter un moyen de paiement",
@@ -1917,9 +2068,9 @@
       "newPlanAt": "Nouveau plan : {name} à {price}/mois",
       "daysDetail": "{remaining} jours restants sur {total}",
       "creditOldPlan": "Crédit plan actuel ({name})",
-      "creditFormula": "({price} \u00d7 {remaining}/{total} jours)",
+      "creditFormula": "({price} × {remaining}/{total} jours)",
       "chargeNewPlan": "Coût nouveau plan ({name})",
-      "chargeFormula": "({price} \u00d7 {remaining}/{total} jours)",
+      "chargeFormula": "({price} × {remaining}/{total} jours)",
       "prorationNet": "Ajustement au prorata",
       "netToPay": "Montant à payer",
       "netCredit": "Crédit sur votre portefeuille",
@@ -4104,12 +4255,24 @@
     "resumeHint": "Vous n'avez pas terminé la mise en route de votre entreprise.",
     "reopening": "Réouverture...",
     "steps": {
-      "accountCreated": { "label": "Créer votre compte" },
-      "companyProfile": { "label": "Compléter le profil entreprise" },
-      "paymentMethod": { "label": "Ajouter un moyen de paiement" },
-      "inviteMember": { "label": "Inviter un collaborateur" },
-      "activateModule": { "label": "Activer un module métier" },
-      "firstDocument": { "label": "Déposer un premier document" }
+      "accountCreated": {
+        "label": "Créer votre compte"
+      },
+      "companyProfile": {
+        "label": "Compléter le profil entreprise"
+      },
+      "paymentMethod": {
+        "label": "Ajouter un moyen de paiement"
+      },
+      "inviteMember": {
+        "label": "Inviter un collaborateur"
+      },
+      "activateModule": {
+        "label": "Activer un module métier"
+      },
+      "firstDocument": {
+        "label": "Déposer un premier document"
+      }
     }
   },
   "landing": {
@@ -4917,7 +5080,6 @@
     "new": "Nouveau | Nouveaux",
     "viewAll": "Voir toutes les notifications",
     "noNotifications": "Aucune notification",
-    "markAllRead": "Tout marquer comme lu",
     "markAllUnread": "Tout marquer comme non lu",
     "timeJustNow": "À l'instant",
     "timeMinAgo": "Il y a {n} min",
@@ -4932,19 +5094,49 @@
     "categorySupport": "Support",
     "categorySystem": "Système",
     "bundle": {
-      "billing": { "label": "Facturation et paiements", "description": "Factures, paiements, abonnement et alertes de facturation" },
-      "documents": { "label": "Documents", "description": "Alertes d'expiration, soumissions et demandes de documents" },
-      "members": { "label": "Équipe", "description": "Invitations, arrivées, départs et changements de rôle" },
-      "modules": { "label": "Modules", "description": "Activation et désactivation de modules" },
-      "security": { "label": "Sécurité", "description": "Alertes de sécurité et connexions suspectes" },
-      "support": { "label": "Support", "description": "Réponses et résolutions de vos tickets" }
+      "billing": {
+        "label": "Facturation et paiements",
+        "description": "Factures, paiements, abonnement et alertes de facturation"
+      },
+      "documents": {
+        "label": "Documents",
+        "description": "Alertes d'expiration, soumissions et demandes de documents"
+      },
+      "members": {
+        "label": "Équipe",
+        "description": "Invitations, arrivées, départs et changements de rôle"
+      },
+      "modules": {
+        "label": "Modules",
+        "description": "Activation et désactivation de modules"
+      },
+      "security": {
+        "label": "Sécurité",
+        "description": "Alertes de sécurité et connexions suspectes"
+      },
+      "support": {
+        "label": "Support",
+        "description": "Réponses et résolutions de vos tickets"
+      }
     },
     "lockedNotice": "Les notifications de sécurité en application ne peuvent pas être désactivées.",
     "platformBundle": {
-      "billing": { "label": "Facturation et abonnements", "description": "Nouveaux abonnements, changements de plan, échecs de paiement et alertes facturation" },
-      "support": { "label": "Tickets support", "description": "Nouveaux tickets, assignations et escalades" },
-      "security": { "label": "Sécurité", "description": "Alertes de sécurité et activité suspecte" },
-      "system": { "label": "Système", "description": "Inscriptions d'entreprises, expirations d'essai et événements système" }
+      "billing": {
+        "label": "Facturation et abonnements",
+        "description": "Nouveaux abonnements, changements de plan, échecs de paiement et alertes facturation"
+      },
+      "support": {
+        "label": "Tickets support",
+        "description": "Nouveaux tickets, assignations et escalades"
+      },
+      "security": {
+        "label": "Sécurité",
+        "description": "Alertes de sécurité et activité suspecte"
+      },
+      "system": {
+        "label": "Système",
+        "description": "Inscriptions d'entreprises, expirations d'essai et événements système"
+      }
     },
     "billing_payment_failed_title": "Paiement échoué",
     "billing_payment_failed_body": "Une tentative de paiement pour la facture #{invoice_id} a échoué.",
@@ -5365,20 +5557,20 @@
     "emptyDesc": "Créez des règles pour automatiser les tâches récurrentes de votre entreprise."
   },
   "activity": {
-    "title": "Activit\u00e9",
-    "subtitle": "Journal des \u00e9v\u00e9nements de la plateforme",
-    "events": "\u00e9v\u00e9nements",
-    "refresh": "Rafra\u00eechir",
-    "filterType": "Cat\u00e9gorie",
-    "filterSeverity": "S\u00e9v\u00e9rit\u00e9",
-    "dateFrom": "Date d\u00e9but",
+    "title": "Activité",
+    "subtitle": "Journal des événements de la plateforme",
+    "events": "événements",
+    "refresh": "Rafraîchir",
+    "filterType": "Catégorie",
+    "filterSeverity": "Sévérité",
+    "dateFrom": "Date début",
     "dateTo": "Date fin",
-    "resetFilters": "R\u00e9initialiser les filtres",
-    "allTypes": "Toutes les cat\u00e9gories",
-    "allSeverities": "Toutes les s\u00e9v\u00e9rit\u00e9s",
-    "empty": "Aucune activit\u00e9",
-    "emptyHint": "Les \u00e9v\u00e9nements de la plateforme appara\u00eetront ici au fur et \u00e0 mesure.",
-    "groupedEvents": "\u00e9v\u00e9nements group\u00e9s",
+    "resetFilters": "Réinitialiser les filtres",
+    "allTypes": "Toutes les catégories",
+    "allSeverities": "Toutes les sévérités",
+    "empty": "Aucune activité",
+    "emptyHint": "Les événements de la plateforme apparaîtront ici au fur et à mesure.",
+    "groupedEvents": "événements groupés",
     "categories": {
       "billing": "Facturation",
       "auth": "Authentification",
@@ -5392,32 +5584,32 @@
   "alerts": {
     "title": "Alertes",
     "subtitle": "Centre d'alertes de la plateforme",
-    "refresh": "Rafra\u00eechir",
+    "refresh": "Rafraîchir",
     "activeCritical": "Critiques actives",
     "activeTotal": "Alertes actives",
-    "resolved24h": "R\u00e9solues (24h)",
+    "resolved24h": "Résolues (24h)",
     "source": "Source",
-    "severity": "S\u00e9v\u00e9rit\u00e9",
+    "severity": "Sévérité",
     "alertTitle": "Titre",
     "company": "Entreprise",
-    "createdAt": "Cr\u00e9\u00e9e le",
+    "createdAt": "Créée le",
     "status": "Statut",
     "actions": "Actions",
     "alertsCount": "alertes",
     "allSources": "Toutes les sources",
-    "allSeverities": "Toutes les s\u00e9v\u00e9rit\u00e9s",
+    "allSeverities": "Toutes les sévérités",
     "allStatuses": "Tous les statuts",
     "active": "Active",
     "acknowledged": "Prise en charge",
-    "resolved": "R\u00e9solue",
-    "dismissed": "Ignor\u00e9e",
-    "acknowledge": "Accuser r\u00e9ception",
-    "resolve": "R\u00e9soudre",
+    "resolved": "Résolue",
+    "dismissed": "Ignorée",
+    "acknowledge": "Accuser réception",
+    "resolve": "Résoudre",
     "dismiss": "Ignorer",
     "acknowledgedSuccess": "Alerte prise en charge",
-    "resolvedSuccess": "Alerte r\u00e9solue",
-    "dismissedSuccess": "Alerte ignor\u00e9e",
-    "actionFailed": "\u00c9chec de l'action",
+    "resolvedSuccess": "Alerte résolue",
+    "dismissedSuccess": "Alerte ignorée",
+    "actionFailed": "Échec de l'action",
     "noAlerts": "Aucune alerte",
     "noAlertsDescription": "Tout fonctionne normalement.",
     "critical": "Critique",
@@ -5427,15 +5619,15 @@
     "support": "Support",
     "ai": "IA",
     "infra": "Infrastructure",
-    "security": "S\u00e9curit\u00e9",
+    "security": "Sécurité",
     "business": "Business"
   },
   "incidents": {
     "event": {
-      "created": "Alerte cr\u00e9\u00e9e",
-      "acknowledged": "Acquitt\u00e9e",
-      "escalated": "Escalad\u00e9e",
-      "resolved": "R\u00e9solue"
+      "created": "Alerte créée",
+      "acknowledged": "Acquittée",
+      "escalated": "Escaladée",
+      "resolved": "Résolue"
     },
     "escalationCount": "Escalade #{count}",
     "timeline": "Chronologie de l'incident",
@@ -5636,7 +5828,6 @@
     "category": "Catégorie",
     "active": "Actif",
     "inactive": "Inactif",
-    "preview": "Aperçu",
     "sendTest": "Envoyer un test",
     "templateSaved": "Template mis à jour",
     "templateEnabled": "Template activé",
@@ -5646,7 +5837,6 @@
     "subjectEn": "Sujet (EN)",
     "bodyFr": "Contenu (FR)",
     "bodyEn": "Contenu (EN)",
-    "subject": "Sujet",
     "createTemplate": "Créer un template",
     "templateCreated": "Template créé avec succès.",
     "templateKey": "Clé du template",
@@ -6034,7 +6224,10 @@
       "description": "Commencez par générer un document depuis un modèle."
     },
     "drawer": {
-      "title": "Générer un document"
+      "title": "Générer un document",
+      "documentType": "Type de document",
+      "contextSummary": "Document « {template} » pour {employee}.",
+      "noActiveContract": "Ce collaborateur n'a aucun contrat exploitable."
     },
     "fields": {
       "templateCode": "Code du modèle",
@@ -6047,7 +6240,8 @@
       "generateDraftsDesc": "Génère les bulletins de paie en brouillon pour un cycle donné.",
       "generateOfficial": "Générer bulletins officiels",
       "generateOfficialDesc": "Génère les bulletins officiels signés. Action irréversible.",
-      "payrollRunId": "ID du cycle de paie"
+      "payrollRunId": "ID du cycle de paie",
+      "selectRun": "Cycle de paie"
     },
     "confirm": {
       "officialTitle": "Générer les bulletins officiels ?",
@@ -6057,6 +6251,12 @@
       "generated": "Document généré avec succès",
       "draftsGenerated": "Brouillons générés avec succès",
       "officialGenerated": "Bulletins officiels générés avec succès"
+    },
+    "templatePicker": {
+      "label": "Modèle de document",
+      "noResult": "Aucun modèle disponible",
+      "companyTemplate": "Modèle entreprise",
+      "platformTemplate": "Modèle standard"
     }
   },
   "payslipDraft": {
@@ -6226,6 +6426,13 @@
         "accepted": "Accepté",
         "rejected": "Rejeté"
       }
+    },
+    "pickers": {
+      "employee": "Collaborateur",
+      "employeeNoResult": "Aucun collaborateur trouvé",
+      "payrollRun": "Cycle de paie",
+      "payrollRunNoResult": "Aucun cycle de paie disponible",
+      "employeesShort": "salariés"
     }
   },
   "workforceDashboard": {
@@ -6375,7 +6582,9 @@
       "hourlyRateCents": "Taux horaire (centimes)",
       "dailyRateCents": "Taux journalier (centimes)",
       "amountInCents": "Montant en centimes (ex: 250000 = 2 500,00 €)",
-      "day": "jour"
+      "day": "jour",
+      "hourlyRate": "Taux horaire",
+      "dailyRate": "Taux journalier"
     },
     "contractTypes": {
       "cdi": "CDI",
@@ -6440,7 +6649,8 @@
       "statsSub": "Sous-départements",
       "created": "Département créé avec succès",
       "updated": "Département mis à jour",
-      "deleted": "Département supprimé"
+      "deleted": "Département supprimé",
+      "deleteConsequence": "Un département contenant des collaborateurs ou des sous-départements ne peut pas être supprimé."
     },
     "roles": {
       "title": "Postes",
@@ -6461,7 +6671,12 @@
       "statsWithRate": "Avec tarif défini",
       "created": "Poste créé avec succès",
       "updated": "Poste mis à jour",
-      "deleted": "Poste supprimé"
+      "deleted": "Poste supprimé",
+      "deleteConsequence": "Cette action est définitive. Les collaborateurs rattachés devront être réaffectés."
+    },
+    "deleteConfirm": {
+      "title": "Confirmer la suppression",
+      "message": "Voulez-vous vraiment supprimer :"
     }
   },
   "payroll": {
@@ -6895,7 +7110,7 @@
     "title": "Congés",
     "subtitle": "Gérez les demandes de congés de vos employés",
     "newRequest": "Nouvelle demande",
-    "searchPlaceholder": "Rechercher un employé\u2026",
+    "searchPlaceholder": "Rechercher un employé…",
     "filterStatus": "Filtrer par statut",
     "tabs": {
       "requests": "Demandes",
@@ -7042,7 +7257,8 @@
     },
     "fields": {
       "payrollRunId": "ID du run de paie",
-      "payrollRunIdPlaceholder": "Saisissez l'ID du run de paie"
+      "payrollRunIdPlaceholder": "Saisissez l'ID du run de paie",
+      "selectRun": "Cycle de paie"
     },
     "actions": {
       "view": "Voir le detail",

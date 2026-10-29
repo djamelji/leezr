@@ -2,6 +2,7 @@
 
 namespace App\Modules\Workforce\Documents\Http;
 
+use App\Core\Documents\DocumentTemplate;
 use App\Core\Documents\GeneratedDocument;
 use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\PayrollRun;
@@ -36,6 +37,51 @@ class WorkforceDocumentController extends Controller
         );
 
         return response()->json($documents);
+    }
+
+    /**
+     * W-G1 (ADR-641) — modèles documentaires DISPONIBLES pour la Company, pour alimenter les
+     * sélecteurs métier (fin de la saisie d'un code template à l'aveugle). Résolution identique
+     * au moteur de génération : surcharge Company > plateforme (par `code`), actifs uniquement,
+     * tenant-safe (jamais les templates d'une autre Company). Filtre optionnel par subject_type
+     * (ne propose jamais un modèle incompatible).
+     */
+    public function templates(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $subjectType = $request->query('subject_type');
+
+        if ($subjectType !== null && ! in_array($subjectType, DocumentTemplate::SUBJECT_TYPES, true)) {
+            return response()->json(['data' => []]);
+        }
+
+        $query = DocumentTemplate::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($companyId) {
+                $q->whereNull('company_id')->orWhere('company_id', $companyId);
+            });
+
+        if ($subjectType !== null) {
+            $query->where('subject_type', $subjectType);
+        }
+
+        // Company override (platform_template_id = celui de plateforme) gagne sur la plateforme, par `code`.
+        $resolved = [];
+        foreach ($query->orderBy('name')->get() as $tpl) {
+            $key = $tpl->code;
+            $isCompany = $tpl->company_id !== null;
+            if (! isset($resolved[$key]) || $isCompany) {
+                $resolved[$key] = [
+                    'code' => $tpl->code,
+                    'name' => $tpl->name,
+                    'description' => $tpl->description,
+                    'subject_type' => $tpl->subject_type,
+                    'source' => $isCompany ? 'company' : 'platform',
+                ];
+            }
+        }
+
+        return response()->json(['data' => array_values($resolved)]);
     }
 
     // ── Detail ───────────────────────────────────────────────────────

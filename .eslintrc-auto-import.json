@@ -406,6 +406,9 @@
     "useUnsavedChanges": true,
     "useEmailInbox": true,
     "useFeatureFlag": true,
-    "sameBuild": true
+    "sameBuild": true,
+    "centsToInput": true,
+    "currencySymbol": true,
+    "parseMoneyToCents": true
   }
 }

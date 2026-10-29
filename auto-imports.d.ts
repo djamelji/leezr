@@ -20,6 +20,7 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('@core/utils/formatters')['avatarText']
   const betweenValidator: typeof import('@core/utils/validators')['betweenValidator']
+  const centsToInput: typeof import('./resources/js/utils/money.js')['centsToInput']
   const checkVersionOnMount: typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']
   const clearVersionState: typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']
   const computed: typeof import('vue')['computed']
@@ -43,6 +44,7 @@ declare global {
   const createTemplatePromise: typeof import('@vueuse/core')['createTemplatePromise']
   const createUnrefFn: typeof import('@vueuse/core')['createUnrefFn']
   const createUrl: typeof import('@core/composable/createUrl')['createUrl']
+  const currencySymbol: typeof import('./resources/js/utils/money.js')['currencySymbol']
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
@@ -113,6 +115,7 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const paginationMeta: typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']
+  const parseMoneyToCents: typeof import('./resources/js/utils/money.js')['parseMoneyToCents']
   const passwordValidator: typeof import('@core/utils/validators')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const prefixWithPlus: typeof import('@core/utils/formatters')['prefixWithPlus']
@@ -426,6 +429,7 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('@core/utils/formatters')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('@core/utils/validators')['betweenValidator']>
+    readonly centsToInput: UnwrapRef<typeof import('./resources/js/utils/money.js')['centsToInput']>
     readonly checkVersionOnMount: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']>
     readonly clearVersionState: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
@@ -449,6 +453,7 @@ declare module 'vue' {
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
     readonly createUrl: UnwrapRef<typeof import('@core/composable/createUrl')['createUrl']>
+    readonly currencySymbol: UnwrapRef<typeof import('./resources/js/utils/money.js')['currencySymbol']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
@@ -513,6 +518,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly paginationMeta: UnwrapRef<typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']>
+    readonly parseMoneyToCents: UnwrapRef<typeof import('./resources/js/utils/money.js')['parseMoneyToCents']>
     readonly passwordValidator: UnwrapRef<typeof import('@core/utils/validators')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly prefixWithPlus: UnwrapRef<typeof import('@core/utils/formatters')['prefixWithPlus']>

@@ -22897,3 +22897,27 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `EmployeeFileReadModel`, `EmployeeController::file` + route, `employees/[id].vue` (refonte) + `_Employee{Leave,Time,Planning,Documents}Section.vue`, i18n, `WorkforceEmployeeFileTest`, cet ADR.
 
 ---
+### ADR-641 — Workforce 2.0 / lot W-G1 : modernisation UI/UX des formulaires (sélecteurs métier, saisie monétaire, confirmations) (2026-10-29)
+
+**Contexte** : certains formulaires Workforce exposaient encore des comportements « outil de développeur » : saisie d'un ID numérique de collaborateur, code de modèle documentaire à deviner, ID technique de run de paie/DSN, salaires saisis en **centimes bruts**, suppressions d'organisation sans confirmation. Incompatible avec un SaaS RH professionnel (PP4 réduire les clics, PP2 ne jamais redemander une info connue, PP6 valeur métier). Lot de **stabilisation** (ADR-561) : aucune nouvelle fonctionnalité, aucun calcul touché.
+
+**Décision** : premier sous-lot d'une série W-G (W-G2/3/4 préparés, non implémentés). Périmètre strictement UX/formulaires :
+1. **Sélecteurs métier** remplaçant les identifiants techniques :
+   - `EmployeePicker` (recherche serveur debounced, jamais de chargement global — adapté aux grandes Company).
+   - `DocumentTemplatePicker` alimenté par un nouvel endpoint `GET /workforce/documents/templates?subject_type=` (résolution **Company > plateforme** par `code`, actifs seuls, filtré par subject_type, **tenant-safe**, ne propose jamais un modèle incompatible/inaccessible).
+   - `PayrollRunPicker` (période + statut + effectif, issu des runs réels autorisés) pour bulletins (brouillon/officiel) et export DSN.
+   - Drawer de génération documentaire refondu : type → modèle → **collaborateur** → contexte → génération ; le `subject_id` est **résolu** (collaborateur, ou contrat courant), jamais saisi.
+2. **Saisie monétaire** : composant partagé `AppMoneyField` — l'utilisateur saisit en **devise locale** (ex. `2 500,00 €`), le v-model expose **toujours des centimes entiers** ; conversion par **arithmétique entière** (jamais `float × 100`) → précision garantie (prouvé : `2.500,75 → 250075`, `1,234.56 → 123456`). Devise issue du contexte Company/Market (world store). Branché sur `_EmployeeContract.vue` (salaire/taux) et Organisation (taux horaire par défaut). Le taux par défaut (donnée de rémunération) est **masqué sans `workforce.compensation_read`** (colonne + champ).
+3. **Confirmations de suppression** : `AppConfirmDialog` partagé (nom de l'élément + conséquence + remontée **lisible** du 422 serveur). Les garde-fous métier restent **backend** (`DeleteDepartmentUseCase`/`DeleteJobRoleUseCase` : jamais de suppression d'un département avec collaborateurs/sous-départements ni d'un poste avec collaborateurs).
+
+**Contrôle d'accès / non-régression** : scope collaborateur et masquage salaire **W-D réutilisés** (aucun contournement). Aucune migration. Aucune modification des machines à états contractuelles, des calculs de paie/congés, de la DSN, de la comptabilité, de la facturation, des règles légales de temps de travail, ni de l'isolation tenant. Les écrans dépendant d'une capacité indisponible pour le Market conservent leurs protections.
+
+**Tests** : `WorkforceDocumentTemplatesTest` (7 — résolution, override Company, filtrage subject_type, rejet type invalide, isolation tenant, RBAC) + `WorkforceOrganizationDeleteGuardTest` (6 — départements/postes avec dépendances, suppressions légitimes, cross-tenant). Conversion monétaire validée (13/13 cas, incl. groupements EU/US). Régression ciblée **889 verts**. `pnpm build` propre. e2e Playwright.
+
+**Conséquences** : formulaires Workforce sans manipulation d'ID technique ni de centimes, confirmations cohérentes, modèles toujours compatibles. Base réutilisable (pickers + AppMoneyField + AppConfirmDialog) pour les prochains sous-lots.
+
+**Limites / dette** : drawer de génération centré sur les documents **collaborateur/contrat** (bulletins/DSN via leurs écrans dédiés, avec run picker) ; conversion monétaire JS prouvée par e2e round-trip (pas de runner JS unitaire dans le repo). Clés i18n ajoutées fr/en (le `json.dump` a ré-étalé quelques objets inline — bruit de diff cosmétique, contenu identique).
+
+**Fichiers** : `WorkforceDocumentController::templates` + route ; `utils/money.js` (`parseMoneyToCents`/`centsToInput`/`currencySymbol`) ; `components/AppMoneyField.vue`, `components/AppConfirmDialog.vue`, `components/workforce/{EmployeePicker,PayrollRunPicker,DocumentTemplatePicker}.vue` ; `_GenerateDocumentDrawer.vue`, `_PayslipActionCards.vue`, `dsn/index.vue`, `_EmployeeContract.vue`, `organization/[tab].vue` ; store `fetchTemplates` ; i18n fr/en ; `WorkforceDocumentTemplatesTest`, `WorkforceOrganizationDeleteGuardTest` ; cet ADR.
+
+---

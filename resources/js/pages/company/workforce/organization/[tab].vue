@@ -1,15 +1,61 @@
 <script setup>
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import OrganizationPresetCard from './_OrganizationPresetCard.vue'
+import AppMoneyField from '@/components/AppMoneyField.vue'
+import AppConfirmDialog from '@/components/AppConfirmDialog.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.admin' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const { can } = useCan()
 const route = useRoute()
 const router = useRouter()
 const store = useEmployeesStore()
+
+// ── Suppression avec confirmation (W-G1) ─────────────────
+// Nom de l'élément + conséquence + remontée lisible de l'erreur serveur (ex. 422 département
+// avec collaborateurs). Le backend reste la source de vérité (DeleteDepartmentUseCase).
+const deleteDialog = ref(false)
+const deleteLoading = ref(false)
+const deleteError = ref('')
+const deleteTarget = ref(null) // { kind: 'dept'|'role', id, name, consequence }
+
+const askDelete = (kind, item) => {
+  deleteError.value = ''
+  deleteTarget.value = {
+    kind,
+    id: item.id,
+    name: kind === 'dept' ? item.name : item.title,
+    consequence: kind === 'dept'
+      ? t('organization.departments.deleteConsequence')
+      : t('organization.roles.deleteConsequence'),
+  }
+  deleteDialog.value = true
+}
+
+const confirmDelete = async () => {
+  if (!deleteTarget.value) return
+  deleteLoading.value = true
+  deleteError.value = ''
+  try {
+    if (deleteTarget.value.kind === 'dept') {
+      await store.deleteDepartment(deleteTarget.value.id)
+      toast(t('organization.departments.deleted'), 'success')
+    } else {
+      await store.deleteJobRole(deleteTarget.value.id)
+      toast(t('organization.roles.deleted'), 'success')
+    }
+    deleteDialog.value = false
+  } catch (error) {
+    // Garde-fou backend (422) : on affiche le message métier dans le dialogue, sans fermer.
+    deleteError.value = error.response?.data?.message || t('common.error')
+  } finally {
+    deleteLoading.value = false
+  }
+}
 
 const currentTab = computed({
   get: () => route.params.tab || 'departments',
@@ -72,23 +118,14 @@ const submitDept = async () => {
   }
 }
 
-const deleteDept = async id => {
-  try {
-    await store.deleteDepartment(id)
-    toast(t('organization.departments.deleted'), 'success')
-  }
-  catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  }
-}
-
 // ── Job Roles ────────────────────────────────────────────
 const roleLoading = ref(false)
 const roleHeaders = computed(() => [
   { title: t('organization.roles.title'), key: 'title', sortable: true },
   { title: t('organization.roles.department'), key: 'department', sortable: false },
   { title: t('organization.roles.level'), key: 'level', sortable: true, width: 120 },
-  { title: t('organization.roles.defaultRate'), key: 'default_hourly_rate_cents', sortable: true, width: 140 },
+  // Taux par défaut = donnée de rémunération → masquée sans workforce.compensation_read (W-D/W-G1).
+  ...(can('workforce.compensation_read') ? [{ title: t('organization.roles.defaultRate'), key: 'default_hourly_rate_cents', sortable: true, width: 140 }] : []),
   { title: t('organization.roles.employeeCount'), key: 'employees_count', sortable: true, width: 140 },
   { title: '', key: 'actions', sortable: false, width: 100 },
 ])
@@ -151,16 +188,6 @@ const submitRole = async () => {
   }
   finally {
     roleFormLoading.value = false
-  }
-}
-
-const deleteRole = async id => {
-  try {
-    await store.deleteJobRole(id)
-    toast(t('organization.roles.deleted'), 'success')
-  }
-  catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
   }
 }
 
@@ -441,7 +468,7 @@ onMounted(() => {
                     variant="text"
                     size="x-small"
                     color="error"
-                    @click.stop="deleteDept(item.id)"
+                    @click.stop="askDelete('dept', item)"
                   >
                     <VIcon
                       icon="tabler-trash"
@@ -691,7 +718,7 @@ onMounted(() => {
                     variant="text"
                     size="x-small"
                     color="error"
-                    @click.stop="deleteRole(item.id)"
+                    @click.stop="askDelete('role', item)"
                   >
                     <VIcon
                       icon="tabler-trash"
@@ -863,12 +890,14 @@ onMounted(() => {
                 :label="$t('organization.roles.descriptionField')"
               />
             </VCol>
-            <VCol cols="12">
-              <AppTextField
+            <VCol
+              v-if="can('workforce.compensation_read')"
+              cols="12"
+            >
+              <AppMoneyField
                 v-model="roleForm.default_hourly_rate_cents"
                 :label="$t('organization.roles.defaultRateLabel')"
                 :hint="$t('organization.roles.defaultRateHint')"
-                type="number"
                 persistent-hint
               />
             </VCol>
@@ -893,5 +922,17 @@ onMounted(() => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <!-- Confirmation de suppression (département / poste) — W-G1 -->
+    <AppConfirmDialog
+      v-model="deleteDialog"
+      :title="$t('organization.deleteConfirm.title')"
+      :message="$t('organization.deleteConfirm.message')"
+      :item-name="deleteTarget?.name"
+      :consequence="deleteTarget?.consequence"
+      :loading="deleteLoading"
+      :error="deleteError"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

@@ -77,6 +77,14 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
       }
     },
 
+    // ── Templates disponibles (W-G1) — alimente le sélecteur métier ──
+    async fetchTemplates(subjectType) {
+      const qs = subjectType ? `?subject_type=${encodeURIComponent(subjectType)}` : ''
+      const data = await $api(`/workforce/documents/templates${qs}`)
+
+      return data.data ?? []
+    },
+
     // ── Generate ─────────────────────────────────────────────
     async generateDocument({ templateCode, subjectType, subjectId, forceVault }) {
       this._loading = true

@@ -405,7 +405,11 @@
     "notificationsDesc": "Manage your notification preferences for platform events."
   },
   "validation": {
-    "required": "This field is required"
+    "required": "This field is required",
+    "money": {
+      "invalid": "Invalid amount",
+      "negative": "Amount cannot be negative"
+    }
   },
   "dashboard": {
     "welcome": "Welcome, {name}",
@@ -703,7 +707,10 @@
     }
   },
   "platformBilling": {
-    "consolidatedPreview": { "accessButton": "Consolidated preview V2", "missingCompany": "No company specified for the preview." },
+    "consolidatedPreview": {
+      "accessButton": "Consolidated preview V2",
+      "missingCompany": "No company specified for the preview."
+    },
     "title": "Billing Overview",
     "subtitle": "Cross-company billing data, invoices, payments and dunning.",
     "drilldown": {
@@ -762,8 +769,19 @@
       "warning": "Only confirm a genuinely agreed tariff. This decision is tracked (price, proof, actor, date).",
       "confirmed": "Contracted tariff confirmed.",
       "stale": "The subscription changed since you opened this. Reload before confirming.",
-      "source": { "provisional": "Provisional (catalog)", "null": "Unknown", "subscribed": "Subscription", "plan_change": "Plan change", "migrated": "Migration", "reconstructed": "Reconstructed", "admin_confirmed": "Admin confirmed" },
-      "reasons": { "missing_snapshot": "No recorded tariff", "unverified_snapshot": "Unverified tariff (catalog)" }
+      "source": {
+        "provisional": "Provisional (catalog)",
+        "null": "Unknown",
+        "subscribed": "Subscription",
+        "plan_change": "Plan change",
+        "migrated": "Migration",
+        "reconstructed": "Reconstructed",
+        "admin_confirmed": "Admin confirmed"
+      },
+      "reasons": {
+        "missing_snapshot": "No recorded tariff",
+        "unverified_snapshot": "Unverified tariff (catalog)"
+      }
     },
     "tabs": {
       "tariffReview": "Subscriptions to verify",
@@ -1383,7 +1401,12 @@
     "departments": "Departments",
     "jobRoles": "Positions & roles",
     "noPreset": "No template available for this profile.",
-    "status": { "new": "new", "existing": "existing", "customized": "customized", "conflict": "name conflict" }
+    "status": {
+      "new": "new",
+      "existing": "existing",
+      "customized": "customized",
+      "conflict": "name conflict"
+    }
   },
   "workforceOnboarding": {
     "title": "HR setup assistant",
@@ -1412,7 +1435,15 @@
     "finishBtn": "Finish",
     "finished": "Setup complete.",
     "launch": "Setup assistant",
-    "steps": { "company": "Your company", "organization": "Your organization", "roles": "Responsibilities & access", "leave": "Leave & absence", "worktime": "Working time", "first_employee": "First employee", "done": "Done" }
+    "steps": {
+      "company": "Your company",
+      "organization": "Your organization",
+      "roles": "Responsibilities & access",
+      "leave": "Leave & absence",
+      "worktime": "Working time",
+      "first_employee": "First employee",
+      "done": "Done"
+    }
   },
   "orgPresetAdmin": {
     "title": "Organization presets",
@@ -1430,7 +1461,11 @@
     "version": "Version",
     "status": "Status",
     "updated": "Updated",
-    "statuses": { "draft": "Draft", "published": "Published", "archived": "Archived" },
+    "statuses": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    },
     "edit": "Edit",
     "publish": "Publish",
     "published": "Preset published.",
@@ -1457,11 +1492,121 @@
     "roleTitle": "Position title",
     "department": "Department",
     "level": "Level",
-    "levels": { "manager": "Manager", "agent": "Staff" },
+    "levels": {
+      "manager": "Manager",
+      "agent": "Staff"
+    },
     "noRole": "No position yet. Add roles attached to departments."
   },
-  "hrSettings": {"title": "HR Settings", "subtitle": "Configure your company rules in one place, adapted to your country, industry and modules.", "company": "Company", "market": "Country", "jobdomain": "Industry", "profile": "Organization profile", "noProfile": "Not set", "generalIntro": "Your company's known information, used to adapt HR rules.", "organizationIntro": "Manage your departments, services and roles, or apply a sector template.", "manageOrganization": "Manage organization", "worktimeIntro": "Working-time and break rules. Each rule's source is shown; mandatory rules are locked.", "breaks": "Breaks", "leaveIntro": "Leave types and applicable rules, adapted to your country.", "manageLeave": "Manage leave", "planningIntro": "Schedule templates, work locations and publication rules.", "managePlanning": "Manage planning", "documentsIntro": "HR document repository and document generation.", "manageDocuments": "Manage HR documents", "rulesIntro": "Overview of applicable rules and their source (law, convention, sector, company). Mandatory legal rules are not editable.", "rule": "Rule", "value": "Value", "source": "Source", "mandatory": "Mandatory (not editable)", "toComplete": "To complete", "ruleSaved": "Rule saved.", "sources": {"market_law": "Law (country)", "convention": "Convention", "jobdomain": "Sector", "company": "Company", "default": "Default", "to_complete": "To complete"}, "sections": {"general": "General", "organization": "Organization", "worktime": "Working time & breaks", "leave": "Leave & absence", "planning": "Planning", "documents": "HR documents", "rules": "Rules & conventions"}, "rules": {"min_duration_minutes": "Minimum break duration (min)", "trigger_after_minutes": "Break triggered after (min)", "target_duration_minutes": "Target break duration (min)", "max_duration_minutes": "Maximum break duration (min)", "max_count": "Maximum number of breaks", "earliest_start_after_minutes": "Earliest break start after (min)", "latest_start_before_minutes": "Latest break start before (min)", "included_in_worktime": "Break counted as working time", "paid": "Paid break", "weekly_hours_reference": "Reference weekly hours (h)", "daily_hours_max": "Maximum daily hours (h)", "weekly_hours_max": "Maximum weekly hours (h)", "daily_rest_min_hours": "Minimum daily rest (h)", "weekly_rest_min_hours": "Minimum weekly rest (h)", "overtime_daily_threshold_hours": "Overtime daily threshold (h)", "night_work_start": "Night work start", "night_work_end": "Night work end"}},
-  "employeeFile": {"days": "days", "period": "Period", "type": "Type", "status": "Status", "noLeave": "No leave request.", "seeAll": "See all", "date": "Date", "clockIn": "Clock-in", "noTime": "No recent clock entry.", "hours": "Hours", "noPlanning": "No upcoming shift.", "document": "Document", "download": "Download", "noDocuments": "No document.", "manager": "Manager", "since": "since", "contractType": "Contract type", "weeklyHours": "Working time", "salary": "Compensation", "noContract": "No active contract.", "situation": "Situation", "nextShift": "Next shift", "lastClock": "Last clock", "pendingLeave": "Pending leave", "historyEmpty": "No event to display.", "actions": {"leave": "Leave", "time": "Time"}, "tabs": {"overview": "Overview", "profile": "Profile", "contract": "Contracts", "planning": "Planning", "time": "Time", "leave": "Leave", "documents": "Documents", "history": "History"}, "alerts": {"no_active_contract": "No active contract for this employee.", "contract_to_activate": "A draft contract needs activation.", "pending_leave": "{count} pending leave request(s)."}},
+  "hrSettings": {
+    "title": "HR Settings",
+    "subtitle": "Configure your company rules in one place, adapted to your country, industry and modules.",
+    "company": "Company",
+    "market": "Country",
+    "jobdomain": "Industry",
+    "profile": "Organization profile",
+    "noProfile": "Not set",
+    "generalIntro": "Your company's known information, used to adapt HR rules.",
+    "organizationIntro": "Manage your departments, services and roles, or apply a sector template.",
+    "manageOrganization": "Manage organization",
+    "worktimeIntro": "Working-time and break rules. Each rule's source is shown; mandatory rules are locked.",
+    "breaks": "Breaks",
+    "leaveIntro": "Leave types and applicable rules, adapted to your country.",
+    "manageLeave": "Manage leave",
+    "planningIntro": "Schedule templates, work locations and publication rules.",
+    "managePlanning": "Manage planning",
+    "documentsIntro": "HR document repository and document generation.",
+    "manageDocuments": "Manage HR documents",
+    "rulesIntro": "Overview of applicable rules and their source (law, convention, sector, company). Mandatory legal rules are not editable.",
+    "rule": "Rule",
+    "value": "Value",
+    "source": "Source",
+    "mandatory": "Mandatory (not editable)",
+    "toComplete": "To complete",
+    "ruleSaved": "Rule saved.",
+    "sources": {
+      "market_law": "Law (country)",
+      "convention": "Convention",
+      "jobdomain": "Sector",
+      "company": "Company",
+      "default": "Default",
+      "to_complete": "To complete"
+    },
+    "sections": {
+      "general": "General",
+      "organization": "Organization",
+      "worktime": "Working time & breaks",
+      "leave": "Leave & absence",
+      "planning": "Planning",
+      "documents": "HR documents",
+      "rules": "Rules & conventions"
+    },
+    "rules": {
+      "min_duration_minutes": "Minimum break duration (min)",
+      "trigger_after_minutes": "Break triggered after (min)",
+      "target_duration_minutes": "Target break duration (min)",
+      "max_duration_minutes": "Maximum break duration (min)",
+      "max_count": "Maximum number of breaks",
+      "earliest_start_after_minutes": "Earliest break start after (min)",
+      "latest_start_before_minutes": "Latest break start before (min)",
+      "included_in_worktime": "Break counted as working time",
+      "paid": "Paid break",
+      "weekly_hours_reference": "Reference weekly hours (h)",
+      "daily_hours_max": "Maximum daily hours (h)",
+      "weekly_hours_max": "Maximum weekly hours (h)",
+      "daily_rest_min_hours": "Minimum daily rest (h)",
+      "weekly_rest_min_hours": "Minimum weekly rest (h)",
+      "overtime_daily_threshold_hours": "Overtime daily threshold (h)",
+      "night_work_start": "Night work start",
+      "night_work_end": "Night work end"
+    }
+  },
+  "employeeFile": {
+    "days": "days",
+    "period": "Period",
+    "type": "Type",
+    "status": "Status",
+    "noLeave": "No leave request.",
+    "seeAll": "See all",
+    "date": "Date",
+    "clockIn": "Clock-in",
+    "noTime": "No recent clock entry.",
+    "hours": "Hours",
+    "noPlanning": "No upcoming shift.",
+    "document": "Document",
+    "download": "Download",
+    "noDocuments": "No document.",
+    "manager": "Manager",
+    "since": "since",
+    "contractType": "Contract type",
+    "weeklyHours": "Working time",
+    "salary": "Compensation",
+    "noContract": "No active contract.",
+    "situation": "Situation",
+    "nextShift": "Next shift",
+    "lastClock": "Last clock",
+    "pendingLeave": "Pending leave",
+    "historyEmpty": "No event to display.",
+    "actions": {
+      "leave": "Leave",
+      "time": "Time"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "profile": "Profile",
+      "contract": "Contracts",
+      "planning": "Planning",
+      "time": "Time",
+      "leave": "Leave",
+      "documents": "Documents",
+      "history": "History"
+    },
+    "alerts": {
+      "no_active_contract": "No active contract for this employee.",
+      "contract_to_activate": "A draft contract needs activation.",
+      "pending_leave": "{count} pending leave request(s)."
+    }
+  },
   "companyBilling": {
     "title": "Billing",
     "sections": {
@@ -1717,7 +1862,13 @@
       "ttc": "Gross",
       "prorataBadge": "Prorated",
       "sectionSubtotal": "Subtotal",
-      "sections": { "subscription": "Subscription", "modules": "Modules & add-ons", "proratas": "Proration", "adjustments": "Adjustments", "discounts": "Discounts" }
+      "sections": {
+        "subscription": "Subscription",
+        "modules": "Modules & add-ons",
+        "proratas": "Proration",
+        "adjustments": "Adjustments",
+        "discounts": "Discounts"
+      }
     },
     "addCard": "Add card",
     "addPaymentMethod": "Add payment method",
@@ -1906,9 +2057,9 @@
       "newPlanAt": "New plan: {name} at {price}/mo",
       "daysDetail": "{remaining} days remaining out of {total}",
       "creditOldPlan": "Current plan credit ({name})",
-      "creditFormula": "({price} \u00d7 {remaining}/{total} days)",
+      "creditFormula": "({price} × {remaining}/{total} days)",
       "chargeNewPlan": "New plan charge ({name})",
-      "chargeFormula": "({price} \u00d7 {remaining}/{total} days)",
+      "chargeFormula": "({price} × {remaining}/{total} days)",
       "prorationNet": "Proration adjustment",
       "netToPay": "Amount to pay",
       "netCredit": "Credit to your wallet",
@@ -4104,12 +4255,24 @@
     "resumeHint": "You haven't finished setting up your company.",
     "reopening": "Reopening...",
     "steps": {
-      "accountCreated": { "label": "Create your account" },
-      "companyProfile": { "label": "Complete company profile" },
-      "paymentMethod": { "label": "Add a payment method" },
-      "inviteMember": { "label": "Invite a team member" },
-      "activateModule": { "label": "Activate a business module" },
-      "firstDocument": { "label": "Upload a first document" }
+      "accountCreated": {
+        "label": "Create your account"
+      },
+      "companyProfile": {
+        "label": "Complete company profile"
+      },
+      "paymentMethod": {
+        "label": "Add a payment method"
+      },
+      "inviteMember": {
+        "label": "Invite a team member"
+      },
+      "activateModule": {
+        "label": "Activate a business module"
+      },
+      "firstDocument": {
+        "label": "Upload a first document"
+      }
     }
   },
   "landing": {
@@ -4917,7 +5080,6 @@
     "new": "New",
     "viewAll": "View All Notifications",
     "noNotifications": "No notifications",
-    "markAllRead": "Mark all as read",
     "markAllUnread": "Mark all as unread",
     "timeJustNow": "Just now",
     "timeMinAgo": "{n} min ago",
@@ -4932,19 +5094,49 @@
     "categorySupport": "Support",
     "categorySystem": "System",
     "bundle": {
-      "billing": { "label": "Billing & Payments", "description": "Invoices, payments, subscriptions, and billing alerts" },
-      "documents": { "label": "Documents", "description": "Expiration alerts, submissions, and document requests" },
-      "members": { "label": "Team", "description": "Invitations, arrivals, departures, and role changes" },
-      "modules": { "label": "Modules", "description": "Module activation and deactivation" },
-      "security": { "label": "Security", "description": "Security alerts and suspicious sign-ins" },
-      "support": { "label": "Support", "description": "Replies and resolutions for your tickets" }
+      "billing": {
+        "label": "Billing & Payments",
+        "description": "Invoices, payments, subscriptions, and billing alerts"
+      },
+      "documents": {
+        "label": "Documents",
+        "description": "Expiration alerts, submissions, and document requests"
+      },
+      "members": {
+        "label": "Team",
+        "description": "Invitations, arrivals, departures, and role changes"
+      },
+      "modules": {
+        "label": "Modules",
+        "description": "Module activation and deactivation"
+      },
+      "security": {
+        "label": "Security",
+        "description": "Security alerts and suspicious sign-ins"
+      },
+      "support": {
+        "label": "Support",
+        "description": "Replies and resolutions for your tickets"
+      }
     },
     "lockedNotice": "Security in-app notifications cannot be disabled.",
     "platformBundle": {
-      "billing": { "label": "Billing & Subscriptions", "description": "New subscriptions, plan changes, payment failures, and billing alerts" },
-      "support": { "label": "Support Tickets", "description": "New tickets, assignments, and escalations" },
-      "security": { "label": "Security", "description": "Security alerts and suspicious activity" },
-      "system": { "label": "System", "description": "Company registrations, trial expirations, and system events" }
+      "billing": {
+        "label": "Billing & Subscriptions",
+        "description": "New subscriptions, plan changes, payment failures, and billing alerts"
+      },
+      "support": {
+        "label": "Support Tickets",
+        "description": "New tickets, assignments, and escalations"
+      },
+      "security": {
+        "label": "Security",
+        "description": "Security alerts and suspicious activity"
+      },
+      "system": {
+        "label": "System",
+        "description": "Company registrations, trial expirations, and system events"
+      }
     },
     "billing_payment_failed_title": "Payment Failed",
     "billing_payment_failed_body": "A payment attempt for invoice #{invoice_id} has failed.",
@@ -5636,7 +5828,6 @@
     "category": "Category",
     "active": "Active",
     "inactive": "Inactive",
-    "preview": "Preview",
     "sendTest": "Send Test",
     "templateSaved": "Template updated",
     "templateEnabled": "Template enabled",
@@ -5646,7 +5837,6 @@
     "subjectEn": "Subject (EN)",
     "bodyFr": "Content (FR)",
     "bodyEn": "Content (EN)",
-    "subject": "Subject",
     "createTemplate": "Create template",
     "templateCreated": "Template created successfully.",
     "templateKey": "Template key",
@@ -6034,7 +6224,10 @@
       "description": "Start by generating a document from a template."
     },
     "drawer": {
-      "title": "Generate a document"
+      "title": "Generate a document",
+      "documentType": "Document type",
+      "contextSummary": "“{template}” document for {employee}.",
+      "noActiveContract": "This employee has no usable contract."
     },
     "fields": {
       "templateCode": "Template code",
@@ -6047,7 +6240,8 @@
       "generateDraftsDesc": "Generate draft payslips for a given payroll run.",
       "generateOfficial": "Generate official payslips",
       "generateOfficialDesc": "Generate signed official payslips. This action is irreversible.",
-      "payrollRunId": "Payroll run ID"
+      "payrollRunId": "Payroll run ID",
+      "selectRun": "Payroll run"
     },
     "confirm": {
       "officialTitle": "Generate official payslips?",
@@ -6057,6 +6251,12 @@
       "generated": "Document generated successfully",
       "draftsGenerated": "Drafts generated successfully",
       "officialGenerated": "Official payslips generated successfully"
+    },
+    "templatePicker": {
+      "label": "Document template",
+      "noResult": "No template available",
+      "companyTemplate": "Company template",
+      "platformTemplate": "Standard template"
     }
   },
   "payslipDraft": {
@@ -6226,6 +6426,13 @@
         "accepted": "Accepted",
         "rejected": "Rejected"
       }
+    },
+    "pickers": {
+      "employee": "Employee",
+      "employeeNoResult": "No employee found",
+      "payrollRun": "Payroll run",
+      "payrollRunNoResult": "No payroll run available",
+      "employeesShort": "employees"
     }
   },
   "workforceDashboard": {
@@ -6375,7 +6582,9 @@
       "hourlyRateCents": "Hourly Rate (cents)",
       "dailyRateCents": "Daily Rate (cents)",
       "amountInCents": "Amount in cents (e.g. 250000 = €2,500.00)",
-      "day": "day"
+      "day": "day",
+      "hourlyRate": "Hourly rate",
+      "dailyRate": "Daily rate"
     },
     "contractTypes": {
       "cdi": "Permanent (CDI)",
@@ -6440,7 +6649,8 @@
       "statsSub": "Sub-departments",
       "created": "Department created successfully",
       "updated": "Department updated",
-      "deleted": "Department deleted"
+      "deleted": "Department deleted",
+      "deleteConsequence": "A department with employees or sub-departments cannot be deleted."
     },
     "roles": {
       "title": "Job Roles",
@@ -6461,7 +6671,12 @@
       "statsWithRate": "With default rate",
       "created": "Job role created successfully",
       "updated": "Job role updated",
-      "deleted": "Job role deleted"
+      "deleted": "Job role deleted",
+      "deleteConsequence": "This action is permanent. Assigned employees will need reassignment."
+    },
+    "deleteConfirm": {
+      "title": "Confirm deletion",
+      "message": "Do you really want to delete:"
     }
   },
   "payroll": {
@@ -6895,7 +7110,7 @@
     "title": "Leave",
     "subtitle": "Manage your employees' leave requests",
     "newRequest": "New Request",
-    "searchPlaceholder": "Search employee\u2026",
+    "searchPlaceholder": "Search employee…",
     "filterStatus": "Filter by status",
     "tabs": {
       "requests": "Requests",
@@ -7042,7 +7257,8 @@
     },
     "fields": {
       "payrollRunId": "Payroll Run ID",
-      "payrollRunIdPlaceholder": "Enter the payroll run ID"
+      "payrollRunIdPlaceholder": "Enter the payroll run ID",
+      "selectRun": "Payroll run"
     },
     "actions": {
       "view": "View details",

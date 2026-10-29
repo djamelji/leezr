@@ -2,6 +2,7 @@
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { useCan } from '@/composables/useCan'
+import AppMoneyField from '@/components/AppMoneyField.vue'
 
 const props = defineProps({
   employee: { type: Object, required: true },
@@ -377,36 +378,27 @@ const formatSalary = (cents, currency) => {
               v-if="formData.compensation_type === 'monthly'"
               cols="12"
             >
-              <AppTextField
+              <AppMoneyField
                 v-model="formData.base_salary_cents"
-                :label="$t('employees.contract.baseSalaryCents')"
-                :hint="$t('employees.contract.amountInCents')"
-                type="number"
-                persistent-hint
+                :label="$t('employees.contract.baseSalary')"
               />
             </VCol>
             <VCol
               v-if="formData.compensation_type === 'hourly'"
               cols="12"
             >
-              <AppTextField
+              <AppMoneyField
                 v-model="formData.hourly_rate_cents"
-                :label="$t('employees.contract.hourlyRateCents')"
-                :hint="$t('employees.contract.amountInCents')"
-                type="number"
-                persistent-hint
+                :label="$t('employees.contract.hourlyRate')"
               />
             </VCol>
             <VCol
               v-if="formData.compensation_type === 'daily'"
               cols="12"
             >
-              <AppTextField
+              <AppMoneyField
                 v-model="formData.daily_rate_cents"
-                :label="$t('employees.contract.dailyRateCents')"
-                :hint="$t('employees.contract.amountInCents')"
-                type="number"
-                persistent-hint
+                :label="$t('employees.contract.dailyRate')"
               />
             </VCol>
 

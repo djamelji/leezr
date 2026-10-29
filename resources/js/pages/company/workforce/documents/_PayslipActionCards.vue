@@ -1,5 +1,6 @@
 <script setup>
 import { useAppToast } from '@/composables/useAppToast'
+import PayrollRunPicker from '@/components/workforce/PayrollRunPicker.vue'
 
 const { t } = useI18n()
 const { toast } = useAppToast()
@@ -83,10 +84,9 @@ const executeOfficialGeneration = async () => {
             </div>
           </div>
           <div class="d-flex align-center gap-3">
-            <AppTextField
+            <PayrollRunPicker
               v-model="draftRunId"
-              :label="$t('workforceDocuments.payslipActions.payrollRunId')"
-              type="number"
+              :label="$t('workforceDocuments.payslipActions.selectRun')"
               density="compact"
               class="flex-grow-1"
             />
@@ -133,10 +133,10 @@ const executeOfficialGeneration = async () => {
             </div>
           </div>
           <div class="d-flex align-center gap-3">
-            <AppTextField
+            <PayrollRunPicker
               v-model="officialRunId"
-              :label="$t('workforceDocuments.payslipActions.payrollRunId')"
-              type="number"
+              :label="$t('workforceDocuments.payslipActions.selectRun')"
+              status-filter="validated"
               density="compact"
               class="flex-grow-1"
             />
