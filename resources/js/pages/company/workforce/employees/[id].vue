@@ -9,9 +9,11 @@ import EmployeeLeaveSection from './_EmployeeLeaveSection.vue'
 import EmployeeTimeSection from './_EmployeeTimeSection.vue'
 import EmployeePlanningSection from './_EmployeePlanningSection.vue'
 import EmployeeDocumentsSection from './_EmployeeDocumentsSection.vue'
+import EmployeeSignaturesSection from './_EmployeeSignaturesSection.vue'
 import GenerateContractDialog from './_GenerateContractDialog.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import { $api } from '@/utils/api'
 import { formatDate, formatDateTime } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
@@ -22,6 +24,7 @@ const store = useEmployeesStore()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const { can } = useCan()
 const { toast } = useAppToast()
 
 const loading = ref(true)
@@ -292,6 +295,12 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               <EmployeeDocumentsSection
                 v-if="currentTab === 'documents'"
                 :employee-id="empId"
+              />
+              <!-- W-SIGNATURE-1 : demandes de signature liées (contrat, attestations…), masqué si module inactif -->
+              <EmployeeSignaturesSection
+                v-if="currentTab === 'documents' && can('workforce_signature.view')"
+                :employee-id="empId"
+                class="mt-6"
               />
             </VWindowItem>
             <VWindowItem value="history">

@@ -24,6 +24,11 @@ export const useSignatureStore = defineStore('workforceSignature', {
     async fetchOptions() {
       return await $api('/workforce/signature/options')
     },
+    async fetchByEmployee(employeeId) {
+      const data = await $api(`/workforce/signature/by-employee/${employeeId}`)
+
+      return data.data ?? []
+    },
     async fetchEligibleDocuments() {
       const data = await $api('/workforce/signature/eligible-documents')
 

@@ -1655,6 +1655,7 @@
     "type": "Type",
     "status": "Status",
     "noLeave": "No leave request.",
+    "signatures": { "title": "Signatures", "empty": "No signature request for this employee.", "signers": "signer(s)", "signedOn": "signed on" },
     "seeAll": "See all",
     "date": "Date",
     "clockIn": "Clock-in",

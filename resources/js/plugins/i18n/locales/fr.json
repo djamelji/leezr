@@ -1654,6 +1654,7 @@
     "type": "Type",
     "status": "Statut",
     "noLeave": "Aucune demande de congé.",
+    "signatures": { "title": "Signatures", "empty": "Aucune demande de signature pour ce collaborateur.", "signers": "signataire(s)", "signedOn": "signé le" },
     "seeAll": "Voir tout",
     "date": "Date",
     "clockIn": "Pointage",

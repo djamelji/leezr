@@ -72,6 +72,30 @@ class SignatureController extends Controller
         ]);
     }
 
+    /** Demandes de signature liées à un collaborateur (sujet employé OU ses contrats), scopées. */
+    public function byEmployee(Request $request, int $employeeId): JsonResponse
+    {
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'employee'), 403);
+        $companyId = $this->companyId($request);
+
+        $contractIds = EmploymentContract::withoutGlobalScopes()
+            ->where('company_id', $companyId)->where('employee_id', $employeeId)->pluck('id')->all();
+
+        $rows = SignatureRequest::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->with(['signers', 'document.template'])
+            ->where(function ($q) use ($employeeId, $contractIds) {
+                $q->where(fn ($s) => $s->where('subject_type', 'employee')->where('subject_id', $employeeId));
+                if ($contractIds) {
+                    $q->orWhere(fn ($s) => $s->where('subject_type', 'contract')->whereIn('subject_id', $contractIds));
+                }
+            })
+            ->orderByDesc('created_at')->get()
+            ->map(fn ($r) => SignatureReadModel::present($r));
+
+        return response()->json(['data' => $rows]);
+    }
+
     /** Documents RH émis éligibles à une demande (scopés, non signés, sans demande active). */
     public function eligibleDocuments(Request $request): JsonResponse
     {
