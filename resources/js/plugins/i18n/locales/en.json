@@ -6624,6 +6624,80 @@
     "activity": {
       "title": "Activity Log",
       "emptyDescription": "History of changes and events for this employee will be displayed here."
+    },
+    "filters": {
+      "department": "Department",
+      "jobRole": "Job role",
+      "contractType": "Contract type",
+      "manager": "Manager",
+      "reset": "Reset"
+    },
+    "export": {
+      "button": "Export"
+    },
+    "import": {
+      "button": "Import",
+      "title": "Import employees",
+      "done": "Import complete",
+      "intro": "Import NEW employees from a CSV file. Existing records are never overwritten; no contract, account or compensation is created.",
+      "downloadTemplate": "Download template",
+      "chooseFile": "Choose a CSV file",
+      "mappingHelp": "Map each field to a column in your file. Fields marked * are required.",
+      "runPreview": "Preview",
+      "line": "Line",
+      "action": "Action",
+      "details": "Details",
+      "nothingToCreate": "No row to create. Fix your file or review the mapping.",
+      "confirm": "Import {count} employee(s)",
+      "resultSummary": "{created} created, {skipped} skipped, {failed} failed.",
+      "steps": {
+        "file": "File",
+        "mapping": "Mapping",
+        "preview": "Preview",
+        "result": "Result"
+      },
+      "counts": {
+        "create": "To create",
+        "skip_duplicate": "Duplicate skipped",
+        "conflict": "Conflict",
+        "invalid": "Invalid"
+      },
+      "fields": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "hire_date": "Hire date",
+        "employee_number": "Reference",
+        "email": "Email",
+        "phone": "Phone",
+        "status": "Status",
+        "department": "Department",
+        "job_role": "Job role",
+        "manager": "Manager"
+      }
+    },
+    "bulk": {
+      "selected": "{count} selected",
+      "affected": "{count} employee(s) affected",
+      "eligible": "{count} eligible",
+      "ineligible": "{count} ineligible",
+      "applied": "{updated} updated, {skipped} skipped",
+      "confirm": "Apply to {count}",
+      "clear": "Clear",
+      "actions": {
+        "set_department": "Change department",
+        "set_job_role": "Change job role",
+        "set_manager": "Change manager"
+      },
+      "titles": {
+        "set_department": "Change department",
+        "set_job_role": "Change job role",
+        "set_manager": "Change manager"
+      },
+      "targets": {
+        "set_department": "New department",
+        "set_job_role": "New job role",
+        "set_manager": "New manager"
+      }
     }
   },
   "organization": {

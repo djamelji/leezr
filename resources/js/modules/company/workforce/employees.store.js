@@ -41,13 +41,12 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
 
   actions: {
     // ── Employees CRUD ─────────────────────────────────────
-    async fetchEmployees({ search, status, perPage, page, sortBy, sortDir } = {}) {
+    // W-G2 : filtres avancés serveur (department_id/job_role_id/manager_id/contract_type).
+    async fetchEmployees({ search, status, perPage, page, sortBy, sortDir, departmentId, jobRoleId, managerId, contractType } = {}) {
       this._loading = true
       try {
-        const params = new URLSearchParams()
+        const params = this._employeeQuery({ search, status, departmentId, jobRoleId, managerId, contractType })
 
-        if (search) params.set('search', search)
-        if (status) params.set('status', status)
         if (perPage) params.set('per_page', perPage)
         if (page) params.set('page', page)
         if (sortBy) params.set('sort_by', sortBy)
@@ -63,6 +62,48 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
       } finally {
         this._loading = false
       }
+    },
+
+    // Construit les query params de filtre (partagés liste/export).
+    _employeeQuery({ search, status, departmentId, jobRoleId, managerId, contractType } = {}) {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      if (status) params.set('status', status)
+      if (departmentId) params.set('department_id', departmentId)
+      if (jobRoleId) params.set('job_role_id', jobRoleId)
+      if (managerId) params.set('manager_id', managerId)
+      if (contractType) params.set('contract_type', contractType)
+
+      return params
+    },
+
+    // ── W-G2 : export CSV (respecte les filtres actifs + scope + permissions) ──
+    async exportEmployees(filters = {}) {
+      const qs = this._employeeQuery(filters).toString()
+
+      return await $api(`/workforce/employees/export${qs ? `?${qs}` : ''}`, { responseType: 'blob' })
+    },
+
+    async downloadImportTemplate() {
+      return await $api('/workforce/employees/import/template', { responseType: 'blob' })
+    },
+
+    // ── W-G2 : import guidé (dry-run puis application) ──
+    async importPreview({ content, mapping }) {
+      return await $api('/workforce/employees/import/preview', { method: 'POST', body: { content, mapping } })
+    },
+
+    async importApply({ content, mapping }) {
+      return await $api('/workforce/employees/import', { method: 'POST', body: { content, mapping } })
+    },
+
+    // ── W-G2 : actions groupées (dry-run puis application) ──
+    async bulkPreview({ action, employeeIds, targetId }) {
+      return await $api('/workforce/employees/bulk/preview', { method: 'POST', body: { action, employee_ids: employeeIds, target_id: targetId } })
+    },
+
+    async bulkApply({ action, employeeIds, targetId }) {
+      return await $api('/workforce/employees/bulk', { method: 'POST', body: { action, employee_ids: employeeIds, target_id: targetId } })
     },
 
     async fetchEmployee(id) {

@@ -22921,3 +22921,27 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `WorkforceDocumentController::templates` + route ; `utils/money.js` (`parseMoneyToCents`/`centsToInput`/`currencySymbol`) ; `components/AppMoneyField.vue`, `components/AppConfirmDialog.vue`, `components/workforce/{EmployeePicker,PayrollRunPicker,DocumentTemplatePicker}.vue` ; `_GenerateDocumentDrawer.vue`, `_PayslipActionCards.vue`, `dsn/index.vue`, `_EmployeeContract.vue`, `organization/[tab].vue` ; store `fetchTemplates` ; i18n fr/en ; `WorkforceDocumentTemplatesTest`, `WorkforceOrganizationDeleteGuardTest` ; cet ADR.
 
 ---
+### ADR-642 — Workforce 2.0 / lot W-G2 : gestion avancée des collaborateurs (filtres, import, export, actions groupées) (2026-10-29)
+
+**Contexte** : la liste Collaborateurs ne permettait ni filtres avancés, ni gestion de masse, ni import/export. Gérer 100 salariés y était aussi laborieux que d'en saisir 100 un par un. Lot de **stabilisation** (ADR-561, sous-lot 2 de W-G) : aucune fonctionnalité métier nouvelle (ni paie, ni sortie), uniquement de l'ergonomie opérationnelle sûre.
+
+**Décision** :
+1. **Filtres avancés serveur** : statut, département, poste, responsable, type de contrat, recherche nom/référence — combinables, réinitialisables, paginés serveur, conservés dans l'URL. `EmployeeReadModel::filteredQuery` (partagé liste/export) + **scope manager** appliqué à la liste ET à l'export (`WorkforceAccess::hasViewAll('employee')` ? vue globale RH : soi + rapports directs). Jamais de chargement client de tous les collaborateurs.
+2. **Import CSV guidé** (`EmployeeImportService`) : parcours fichier → correspondance colonnes → **dry-run** (`preview`, STRICTEMENT sans écriture) → confirmation → résultat. **Nouveaux collaborateurs uniquement** ; dédup par **clé métier `employee_number`** (jamais par nom seul) ; identité ambiguë → conflit. **Ne crée que l'Employee** : aucun compte, invitation, contrat, rémunération, congé ni accès. `apply` transactionnel, **idempotent** (ré-import = 0 création, via l'unique `(company_id, employee_number)`), audité. CSV natif (UTF-8, BOM, délimiteurs `,`/`;`/tab), borné (1000 lignes / 2 Mo). **XLSX différé** (aucune lib fiable présente — ajout de dépendance hors cadre).
+3. **Export CSV** (`EmployeeExportService`) : respecte Company + filtres actifs + scope + permissions. **Aucune donnée sensible** (ni salaire même avec `compensation_read`, ni IBAN/numéros nationaux) — le masquage W-D s'applique de fait. Streaming borné (10 000 lignes). Modèle d'import téléchargeable.
+4. **Actions groupées sûres** (`EmployeeBulkActionService`) : changer département / poste / responsable. Preview (éligibles / inéligibles+motif / cible) puis apply (bilan par collaborateur, audit). **Garde-fous backend** : tenant, scope, cible même Company, **pas de cycle hiérarchique**, pas de soi-même, collaborateur sorti inéligible. **Exclus** : contrat, rémunération, rôle applicatif, **sortie/clôture** (workflow RH distinct, hors W-G2).
+5. **Multi-sélection** honnête : sélection de la page visible, **compte exact affiché**, vidée à tout changement de filtre (périmètre devenu ambigu).
+
+**Permissions (ADR-642)** : nouvelles capacités distinctes `workforce.export` et `workforce.import` (is_admin). Migration compat **additive/idempotente** : `export`→rôles ayant `workforce.view`, `import`→rôles administratifs ayant `workforce.manage`. `owner` bypasse. Actions groupées = `workforce.manage`. Jamais d'attribution implicite à tous les rôles.
+
+**Architecture** : réutilise Employee + `CreateEmployeeUseCase`, `EmployeeReadModel`, `WorkforceAccess`, `EmployeePicker`, Department/JobRole, l'audit. **Aucune table intermédiaire** (dédup via clé métier + transaction). Fichier importé **traité en mémoire, jamais persisté** (renvoyé à la confirmation → `apply` revalide exactement ce qu'il écrit). Pas de fausse progression.
+
+**Tests** : `WorkforceEmployeeImportTest` (9), `WorkforceEmployeeBulkActionTest` (8), `WorkforceEmployeeListExportTest` (5) — dry-run sans écriture, dédup/idempotence, non-écrasement, dates/dept/poste/manager invalides, conflit ambigu, tenant, RBAC, cycle, scope, export sans sensible. Régression Workforce **733 verts**. `pnpm build` propre. e2e `workforce-wg2-employees` (4).
+
+**Conséquences** : gérer des centaines de collaborateurs devient opérationnel (filtres, import en masse sûr, export, réaffectations groupées) sans compromettre sécurité ni intégrité RH.
+
+**Limites / dette** : XLSX non supporté (CSV only) ; export borné 10 000 lignes (synchrone, pas de queue) ; import synchrone ≤ 1000 lignes (queue différée) ; lignes sans `employee_number` non dédupliquables (création, avertissement) ; sélection « toutes pages » non proposée (page visible uniquement, assumé). Clés i18n ajoutées fr/en.
+
+**Fichiers** : `EmployeeController` (index filtres+scope, export, importTemplate, importPreview, import, bulkPreview, bulk) ; `Services/{EmployeeImportService,EmployeeExportService,EmployeeBulkActionService}` ; `EmployeeReadModel::filteredQuery` ; `WorkforceModule` (perms import/export) ; migration compat ; routes ; `employees.store` ; `employees/index.vue` + `_EmployeeImportDrawer.vue` + `_EmployeeBulkActionDialog.vue` ; i18n fr/en ; 3 tests PHPUnit + e2e ; cet ADR.
+
+---

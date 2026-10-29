@@ -6624,6 +6624,80 @@
     "activity": {
       "title": "Journal d'activité",
       "emptyDescription": "L'historique des modifications et événements pour cet employé sera affiché ici."
+    },
+    "filters": {
+      "department": "Département",
+      "jobRole": "Poste",
+      "contractType": "Type de contrat",
+      "manager": "Responsable",
+      "reset": "Réinitialiser"
+    },
+    "export": {
+      "button": "Exporter"
+    },
+    "import": {
+      "button": "Importer",
+      "title": "Importer des collaborateurs",
+      "done": "Import terminé",
+      "intro": "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; aucun contrat, compte ou rémunération n'est créé.",
+      "downloadTemplate": "Télécharger le modèle",
+      "chooseFile": "Choisir un fichier CSV",
+      "mappingHelp": "Associez chaque champ à une colonne de votre fichier. Les champs suivis de * sont obligatoires.",
+      "runPreview": "Prévisualiser",
+      "line": "Ligne",
+      "action": "Action",
+      "details": "Détails",
+      "nothingToCreate": "Aucune ligne à créer. Corrigez votre fichier ou vérifiez la correspondance.",
+      "confirm": "Importer {count} collaborateur(s)",
+      "resultSummary": "{created} créé(s), {skipped} ignoré(s), {failed} échec(s).",
+      "steps": {
+        "file": "Fichier",
+        "mapping": "Correspondance",
+        "preview": "Prévisualisation",
+        "result": "Résultat"
+      },
+      "counts": {
+        "create": "À créer",
+        "skip_duplicate": "Doublon ignoré",
+        "conflict": "Conflit",
+        "invalid": "Invalide"
+      },
+      "fields": {
+        "first_name": "Prénom",
+        "last_name": "Nom",
+        "hire_date": "Date d'embauche",
+        "employee_number": "Référence",
+        "email": "Email",
+        "phone": "Téléphone",
+        "status": "Statut",
+        "department": "Département",
+        "job_role": "Poste",
+        "manager": "Responsable"
+      }
+    },
+    "bulk": {
+      "selected": "{count} sélectionné(s)",
+      "affected": "{count} collaborateur(s) concerné(s)",
+      "eligible": "{count} éligible(s)",
+      "ineligible": "{count} inéligible(s)",
+      "applied": "{updated} mis à jour, {skipped} ignoré(s)",
+      "confirm": "Appliquer à {count}",
+      "clear": "Désélectionner",
+      "actions": {
+        "set_department": "Changer de département",
+        "set_job_role": "Changer de poste",
+        "set_manager": "Changer de responsable"
+      },
+      "titles": {
+        "set_department": "Changer de département",
+        "set_job_role": "Changer de poste",
+        "set_manager": "Changer de responsable"
+      },
+      "targets": {
+        "set_department": "Nouveau département",
+        "set_job_role": "Nouveau poste",
+        "set_manager": "Nouveau responsable"
+      }
     }
   },
   "organization": {

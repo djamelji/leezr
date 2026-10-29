@@ -32,6 +32,9 @@ class WorkforceModule implements ModuleDefinition
             permissions: [
                 ['key' => 'workforce.view', 'label' => 'View Employees', 'hint' => 'View employee list and basic details.'],
                 ['key' => 'workforce.manage', 'label' => 'Manage Employees', 'hint' => 'Create, edit, and manage employees.'],
+                // W-G2 (ADR-642) — capacités distinctes import/export (data egress & création en masse).
+                ['key' => 'workforce.export', 'label' => 'Export Employees', 'hint' => 'Export the employee list (within your visibility, no sensitive data).'],
+                ['key' => 'workforce.import', 'label' => 'Import Employees', 'is_admin' => true, 'hint' => 'Bulk-import new employees from a CSV file.'],
                 ['key' => 'workforce.contracts', 'label' => 'Manage Contracts', 'is_admin' => true, 'hint' => 'Create and manage employment contracts.'],
                 ['key' => 'workforce.compensation_read', 'label' => 'View Compensation', 'is_admin' => true, 'hint' => 'View salary and compensation details.'],
                 ['key' => 'workforce.compensation_manage', 'label' => 'Manage Compensation', 'is_admin' => true, 'hint' => 'Modify salary and compensation plans.'],
@@ -48,13 +51,13 @@ class WorkforceModule implements ModuleDefinition
                     'key' => 'workforce.team',
                     'label' => 'Team Management',
                     'hint' => 'View and manage employees, manage time entries.',
-                    'permissions' => ['workforce.view', 'workforce.manage', 'workforce.time_manage'],
+                    'permissions' => ['workforce.view', 'workforce.manage', 'workforce.time_manage', 'workforce.export'],
                 ],
                 [
                     'key' => 'workforce.hr_management',
                     'label' => 'HR Management',
                     'hint' => 'Full HR access: contracts, compensation, sensitive data.',
-                    'permissions' => ['workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin'],
+                    'permissions' => ['workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin', 'workforce.import', 'workforce.export'],
                     'is_admin' => true,
                 ],
                 [
