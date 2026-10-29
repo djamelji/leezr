@@ -1633,7 +1633,9 @@
       "cryptoInvalid": "Signature cryptographique invalide",
       "certNotRecognized": "Certificat Leezr auto-signé (chaîne de confiance non reconnue)",
       "trustNote": "Cachet cryptographique organisationnel (serveur) vérifiable. L'attribution au signataire repose sur le dossier de preuves, non sur une clé contrôlée par le signataire. Non eIDAS.",
-      "noSeal": "Aucun cachet cryptographique (document antérieur au cachet natif)."
+      "noSeal": "Aucun cachet cryptographique (document antérieur au cachet natif).",
+      "toastValid": "Cachet cryptographique valide — document intact",
+      "toastInvalid": "Vérification échouée — document modifié ou signature invalide"
     }
   },
   "signaturePublic": {

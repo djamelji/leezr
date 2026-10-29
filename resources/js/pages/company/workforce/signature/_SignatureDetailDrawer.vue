@@ -71,7 +71,11 @@ const runVerify = async () => {
   verifying.value = true
   verifyResult.value = null
   try {
-    verifyResult.value = await store.verifySignature(props.requestId)
+    const r = await store.verifySignature(props.requestId)
+    verifyResult.value = r
+    if (!r.has_seal) toast(t('signature.verify.noSeal'), 'info')
+    else if (r.overall_valid) toast(t('signature.verify.toastValid'), 'success')
+    else toast(t('signature.verify.toastInvalid'), 'error')
   } catch (e) {
     toast(e?.message || t('common.error'), 'error')
   } finally { verifying.value = false }

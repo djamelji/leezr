@@ -1634,7 +1634,9 @@
       "cryptoInvalid": "Cryptographic signature invalid",
       "certNotRecognized": "Self-signed Leezr certificate (trust chain not recognized)",
       "trustNote": "Verifiable organizational (server) cryptographic seal. Attribution to the signer relies on the evidence trail, not on a signer-controlled key. Not eIDAS.",
-      "noSeal": "No cryptographic seal (document predates native sealing)."
+      "noSeal": "No cryptographic seal (document predates native sealing).",
+      "toastValid": "Cryptographic seal valid — document intact",
+      "toastInvalid": "Verification failed — document modified or signature invalid"
     }
   },
   "signaturePublic": {
