@@ -60,6 +60,7 @@ class SystemSeeder extends Seeder
         $this->call(WorkforcePayrollRuleSeeder::class);
         $this->call(PayslipDraftTemplateSeeder::class);
         $this->call(PayslipOfficialFrTemplateSeeder::class);
+        $this->call(ContractTemplateSeeder::class); // ADR-647 (W-CONTRACT-1) : modèle de contrat démo
 
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();

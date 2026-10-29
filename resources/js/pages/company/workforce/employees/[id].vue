@@ -9,6 +9,7 @@ import EmployeeLeaveSection from './_EmployeeLeaveSection.vue'
 import EmployeeTimeSection from './_EmployeeTimeSection.vue'
 import EmployeePlanningSection from './_EmployeePlanningSection.vue'
 import EmployeeDocumentsSection from './_EmployeeDocumentsSection.vue'
+import GenerateContractDialog from './_GenerateContractDialog.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { $api } from '@/utils/api'
@@ -26,6 +27,7 @@ const { toast } = useAppToast()
 const loading = ref(true)
 const file = ref(null)
 const currentTab = ref('overview')
+const contractDialogOpen = ref(false) // W-CONTRACT-1
 
 const employee = computed(() => store.currentEmployee)
 const empId = computed(() => route.params.id)
@@ -140,6 +142,17 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                 @click="router.push('/company/workforce/time')"
               >
                 {{ t('employeeFile.actions.time') }}
+              </VBtn>
+              <!-- W-CONTRACT-1 : générer un contrat (si module actif + permission) -->
+              <VBtn
+                v-can="'workforce_contract.generate'"
+                color="primary"
+                variant="tonal"
+                prepend-icon="tabler-file-text"
+                data-test="generate-contract"
+                @click="contractDialogOpen = true"
+              >
+                {{ t('generateContract.action') }}
               </VBtn>
             </div>
           </div>
@@ -283,6 +296,13 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
           </VWindow>
         </VCardText>
       </VCard>
+
+      <!-- W-CONTRACT-1 : génération de contrat -->
+      <GenerateContractDialog
+        v-model="contractDialogOpen"
+        :employee-id="empId"
+        @generated="load"
+      />
     </template>
   </div>
 </template>

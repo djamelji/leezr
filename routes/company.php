@@ -630,4 +630,20 @@ Route::prefix('workforce/documents')->middleware('company.access:use-module,work
     Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show'])->middleware($perm('workforce_documents.view'));
 });
 
+// ── Workforce Contract (ADR-647, W-CONTRACT-1) — module distinct, réutilise les docs horizontaux ──
+Route::prefix('workforce/contract')->middleware('company.access:use-module,workforce_contract')->group(function () {
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+    $c = \App\Modules\Workforce\Contract\Http\ContractController::class;
+    Route::get('templates/variables', [$c, 'variables'])->middleware($perm('workforce_contract.view'));
+    Route::get('templates', [$c, 'templates'])->middleware($perm('workforce_contract.view'));
+    Route::get('templates/{id}', [$c, 'showTemplate'])->middleware($perm('workforce_contract.view'));
+    Route::post('templates/{id}/duplicate', [$c, 'duplicate'])->middleware($perm('workforce_contract.manage_templates'));
+    Route::post('templates/{id}/version', [$c, 'createVersion'])->middleware($perm('workforce_contract.manage_templates'));
+    Route::put('templates/{id}', [$c, 'updateTemplate'])->middleware($perm('workforce_contract.manage_templates'));
+    Route::post('templates/{id}/publish', [$c, 'publish'])->middleware($perm('workforce_contract.manage_templates'));
+    Route::post('templates/{id}/archive', [$c, 'archive'])->middleware($perm('workforce_contract.manage_templates'));
+    Route::post('preview', [$c, 'preview'])->middleware($perm('workforce_contract.generate'));
+    Route::post('generate', [$c, 'generate'])->middleware($perm('workforce_contract.generate'));
+});
+
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

@@ -181,7 +181,8 @@
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Paramètres RH"
+      "workforce-settings": "Paramètres RH",
+      "workforce-contract-templates": "Contrats de travail"
     }
   },
   "roles": {
@@ -7568,5 +7569,56 @@
       "gap": "Écart",
       "recon": "Rattachement"
     }
+  },
+  "contractTpl": {
+    "title": "Contrats de travail",
+    "subtitle": "Modèles de contrat : catalogue standard et modèles de votre entreprise.",
+    "legalDisclaimer": "Les modèles fournis sont des exemples non validés juridiquement. Leezr ne garantit pas leur conformité : adaptez-les à votre situation.",
+    "duplicate": "Dupliquer",
+    "duplicated": "Modèle dupliqué",
+    "publish": "Publier",
+    "published": "Modèle publié",
+    "archive": "Archiver",
+    "archived": "Modèle archivé",
+    "newVersion": "Nouvelle version",
+    "versioned": "Nouvelle version créée",
+    "edit": "Modifier",
+    "editTitle": "Modifier le modèle",
+    "variables": "Variables (cliquer pour insérer)",
+    "body": "Contenu du modèle",
+    "empty": "Aucun modèle disponible.",
+    "col": {
+      "name": "Nom",
+      "type": "Type",
+      "source": "Origine",
+      "version": "Version",
+      "status": "État",
+      "legal": "Validation"
+    },
+    "source": {
+      "platform": "Standard",
+      "company": "Entreprise"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
+    "legal": {
+      "validated": "Validé",
+      "example_unvalidated": "Exemple non validé"
+    }
+  },
+  "generateContract": {
+    "action": "Générer un contrat",
+    "title": "Générer un contrat",
+    "hint": "Sélectionnez un modèle compatible, prévisualisez, puis générez le document.",
+    "chooseTemplate": "Modèle de contrat",
+    "preview": "Aperçu",
+    "previewBadge": "Aperçu — document non émis, non signé",
+    "notValidated": "Modèle non validé juridiquement — vérifiez le contenu avant génération.",
+    "generate": "Générer",
+    "generated": "Contrat généré et archivé dans le dossier.",
+    "missing": "Variables manquantes : {vars}"
   }
 }

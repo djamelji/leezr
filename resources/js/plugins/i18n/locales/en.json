@@ -181,7 +181,8 @@
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "HR Settings"
+      "workforce-settings": "HR Settings",
+      "workforce-contract-templates": "Employment contracts"
     }
   },
   "roles": {
@@ -7568,5 +7569,56 @@
       "gap": "Gap",
       "recon": "Match"
     }
+  },
+  "contractTpl": {
+    "title": "Employment contracts",
+    "subtitle": "Contract templates: standard catalogue and your company templates.",
+    "legalDisclaimer": "Provided templates are legally unvalidated examples. Leezr does not guarantee compliance: adapt them to your situation.",
+    "duplicate": "Duplicate",
+    "duplicated": "Template duplicated",
+    "publish": "Publish",
+    "published": "Template published",
+    "archive": "Archive",
+    "archived": "Template archived",
+    "newVersion": "New version",
+    "versioned": "New version created",
+    "edit": "Edit",
+    "editTitle": "Edit template",
+    "variables": "Variables (click to insert)",
+    "body": "Template content",
+    "empty": "No template available.",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "source": "Source",
+      "version": "Version",
+      "status": "Status",
+      "legal": "Validation"
+    },
+    "source": {
+      "platform": "Standard",
+      "company": "Company"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "legal": {
+      "validated": "Validated",
+      "example_unvalidated": "Unvalidated example"
+    }
+  },
+  "generateContract": {
+    "action": "Generate contract",
+    "title": "Generate a contract",
+    "hint": "Select a compatible template, preview, then generate the document.",
+    "chooseTemplate": "Contract template",
+    "preview": "Preview",
+    "previewBadge": "Preview — document not emitted, not signed",
+    "notValidated": "Legally unvalidated template — review the content before generating.",
+    "generate": "Generate",
+    "generated": "Contract generated and archived in the file.",
+    "missing": "Missing variables: {vars}"
   }
 }
