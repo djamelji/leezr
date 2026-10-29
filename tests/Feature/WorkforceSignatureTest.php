@@ -369,6 +369,41 @@ class WorkforceSignatureTest extends TestCase
         Notification::assertSentOnDemand(\App\Notifications\Signature\SignedCopyNotification::class);
     }
 
+    // ── W-SIGNATURE-2 : cachet cryptographique réel + vérification indépendante honnête ──
+    public function test_completed_request_has_cryptographic_seal_and_verifies(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $raw = $this->issueToken($req->signers()->first(), $req);
+        $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
+        $req->refresh();
+        $this->assertSame(SignatureRequest::STATUS_COMPLETED, $req->status);
+        $this->assertArrayHasKey('crypto_seal', $req->metadata ?? [], 'cachet cryptographique présent');
+        $this->assertFalse($req->metadata['crypto_seal']['certified'], 'jamais présenté comme certifié');
+
+        $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/verify')->assertOk();
+        $res->assertJsonPath('overall_valid', true)
+            ->assertJsonPath('document_intact', true)
+            ->assertJsonPath('signature_valid', true)
+            // Honnêteté : certificat identifié mais NON reconnu, cachet serveur, eIDAS non démontré.
+            ->assertJsonPath('certificate.recognized_trust_chain', false)
+            ->assertJsonPath('trust.seal_type', 'organizational_server_seal')
+            ->assertJsonPath('trust.signer_identity_cryptographically_bound', false)
+            ->assertJsonPath('trust.eidas_advanced', 'not_demonstrated');
+    }
+
+    public function test_verify_detects_tampered_signed_document(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $raw = $this->issueToken($req->signers()->first(), $req);
+        $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
+        $req->refresh();
+
+        // Altération du document final APRÈS cachet.
+        Storage::disk('local')->put($req->signed_document_path, '%PDF-ALTERED-AFTER-SEAL');
+        $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/verify')->assertOk();
+        $res->assertJsonPath('document_intact', false)->assertJsonPath('overall_valid', false);
+    }
+
     // ── 22/27. Empreinte altérée → échec, aucun statut signé sans preuve ──
     public function test_tampered_source_fails_finalization(): void
     {

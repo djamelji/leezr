@@ -23198,3 +23198,40 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `utils/pdf.js`, `components/PdfViewerDialog.vue`, `_SignatureDetailDrawer.vue` (viewer+util), `_EmployeeSignaturesSection.vue` (util), i18n `common.download` ; `DevSeeder` (entitlement test + enable contract/signature) ; tests `DevModuleEntitlementPersistenceTest`, `WorkforceSignatureTest` (+3 download). Build clean.
 
 ---
+
+### ADR-654 — W-SIGNATURE-2 : conservation des données DEV + cœur de signature cryptographique natif (2026-10-29)
+
+**Contexte** : moteur de signature propre à Leezr (sans prestataire commercial), produisant une signature cryptographique vérifiable, SANS revendiquer de qualification eIDAS non obtenue. Précédé d'une précondition impérative : arrêter la destruction des données de recette DEV. DEV only ; interdits : main/PROD/Billing/activation commerciale/prestataire payant/qualification eIDAS fictive/signer sans consentement/reset destructif DEV sans autorisation.
+
+**A. Conservation des données DEV (précondition, LIVRÉE + PROUVÉE).**
+- **Cause** : `deploy/deploy_release.sh` exécutait `migrate:fresh --seed` à CHAQUE déploiement DEV → destruction de tous les collaborateurs/contrats/documents/demandes/preuves + reset des activations.
+- **Fix** : déploiement DEV **non destructif par défaut** — `migrate --force` (additif) + `leezr:dev-bootstrap` (population initiale si base vide, sinon `DevBootstrapSeeder` **idempotent non destructif**, ré-garantit les modules de Leezr Logistics par slug stable). Le reset destructif est isolé dans `leezr:dev-reset --force --i-have-a-backup` (garde PROD + confirmation + rappel sauvegarde). PROD inchangé (migrate additif + SystemSeeder). **Preuve** : après un vrai déploiement DEV avec le nouveau script, le contrat signé + documents + 3 collaborateurs + 4 modules ont **tous survécu** (avant : repassaient à 0). Test `DevModuleEntitlementPersistenceTest` : 2 déploiements successifs préservent une donnée de recette + les activations.
+
+**B. Cœur cryptographique natif (LIVRÉ, testé, vérifié indépendamment).**
+- **Architecture** : couche `App\Core\Crypto\CryptographicSealService` **distincte du métier Workforce** (réutilisable sur tout document Leezr, pas de dépendance à Workforce Contract). Pas d'algorithme maison.
+- **Bibliothèques** : **OpenSSL** (ext-openssl 3.6, fonctions `openssl_cms_sign`/`openssl_cms_verify`/X.509). `setasign/fpdi` + `barryvdh/dompdf` présents (génération). Aucune dépendance commerciale ajoutée.
+- **Mécanisme** : cachet **CMS/PKCS#7** (RSA-2048, SHA-256) sur l'**empreinte SHA-256** du document final (contenu signé = le hash). Vérification = (1) signature CMS cryptographiquement valide, (2) hash encapsulé == SHA-256 recalculé du PDF courant → toute altération ultérieure est détectée. **Vérifié par un outil EXTERNE** (`openssl cms -verify` CLI → « CMS Verification successful »), indépendamment du code Leezr. (Le test `%PDF` seul ne suffit pas et n'est pas utilisé comme preuve.)
+- **Gestion des clés** : paire RSA + certificat **X.509 auto-signé** généré à la demande ; **clé privée chiffrée au repos** (Laravel Crypt / clé d'app), stockée sur disque (jamais en base métier, jamais exposée au frontend/logs/API). Copie mémoire de la clé effacée après usage.
+- **Format PDF** : le cachet est **détaché/associé** (CMS stocké dans les métadonnées + dossier de preuves), **PAS encore embarqué dans le PDF (PAdES)**. Intégration PAdES incrémentale non livrée (voir limites).
+- **Méthode d'identification** : le signataire s'identifie via le **lien sécurisé** (token opaque haute entropie, usage unique) + consentement explicite sur le document exact consulté. L'identité et le consentement vivent dans le **dossier de preuves** (événements append-only), pas dans la clé.
+- **Contrôle de l'opération** : la clé est **contrôlée par le SERVEUR Leezr** (cachet organisationnel), **pas par le signataire**. → voir niveau réel.
+- **Niveau de signature réellement atteint** : **cachet cryptographique organisationnel (signature serveur)**. Prouve l'intégrité du document + l'existence du dossier de preuves. **CE N'EST PAS** une signature contrôlée par le signataire, **NI** une signature avancée ou qualifiée eIDAS. L'UI et l'API l'affichent explicitement (`seal_type=organizational_server_seal`, `certificate.recognized_trust_chain=false`, `trust.signer_identity_cryptographically_bound=false`, `eidas_advanced/qualified=not_demonstrated`). Jamais de badge « Certifié » sur une simple vérification SHA-256.
+- **Capacités de vérification** (§7) : endpoint `GET /workforce/signature/{id}/verify` + UI (états DISTINCTS : document intact / signature crypto valide / certificat non reconnu / cachet serveur / eIDAS non démontré). Vérification reproductible hors application (openssl).
+- **Dossier de preuves** : document source + empreinte, identité/méthode, consentement, cachet (CMS + empreinte cert), dates/événements append-only, résultats de vérification, provenance du moteur. Historisé, immuable (`SignatureEvent` append-only). Export dossier = capacité existante `evidence` (gated `view_evidence`).
+- **Intégration** : cachet appliqué aux **NOUVELLES finalisations uniquement** (best-effort, un échec ne casse jamais la finalisation). **Aucune modification des preuves/documents historiques** (les anciennes démos conservent leur qualification réelle = non cachetées).
+
+**Menaces & limites de confiance (honnêtes)** :
+- Clé serveur → un compromis serveur permettrait un cachet non légitime : le cachet **n'empêche pas** un administrateur d'apposer le sceau. Il n'atteste donc pas à lui seul que « le signataire a signé », seulement que « le système Leezr a scellé ce document + ce dossier de preuves ».
+- Cachet **non embarqué dans le PDF** → pas de validation PAdES par Adobe Reader (prochaine étape).
+- Certificat **auto-signé** → aucune reconnaissance par une AC.
+- Horodatage = **applicatif**, PAS un horodatage qualifié (RFC 3161/TSA non intégré).
+
+**Conditions pour une signature AVANCÉE eIDAS** (documentées, non réalisées) : clé **contrôlée exclusivement par le signataire** (génération côté client / WebCrypto clé non-extractible, ou carte/HSM), lien univoque clé↔identité vérifiée, détection de toute modification ultérieure, consentement démontrable. **Conditions SUPPLÉMENTAIRES pour QUALIFIÉE** : certificat qualifié émis par un **prestataire de services de confiance qualifié (QTSP)** + dispositif de création de signature qualifié (QSCD) + horodatage qualifié. **La qualification réglementaire ne résulte pas d'un simple développement logiciel.**
+
+**Tests** : `CryptographicSealTest` **4/4** (round-trip valide, altération détectée, clé chiffrée au repos, cachet auto-signé) + vérification openssl CLI externe. `WorkforceSignatureTest` **+2** (finalisation cachetée + `/verify` honnête ; altération du PDF final → `document_intact=false`). `DevModuleEntitlementPersistenceTest` **+1** (préservation 2 déploiements). Gouvernance verte. Build propre.
+
+**Fichiers** : `deploy/deploy_release.sh` (DEV additif) ; `DevBootstrapSeeder`, `DevBootstrapCommand` (leezr:dev-bootstrap), `DevResetCommand` (leezr:dev-reset) ; `App\Core\Crypto\CryptographicSealService` ; `FinalizeSignatureRequestUseCase` (cachet best-effort + événement) ; `SignatureController::verify` + route ; `_SignatureDetailDrawer.vue` (bouton + panneau Vérifier), `signature.store` (verifySignature), i18n `signature.verify.*` ; tests.
+
+**Limites restantes / prochaines étapes** : (1) **PAdES embarqué** dans le PDF (FPDI import + signeur ; attention : re-wrap invalide les signatures antérieures → multi-signatures incrémentales = problème ouvert, lib libre insuffisante) ; (2) **clé signataire-contrôlée** (WebCrypto/HSM) pour viser l'avancée ; (3) **horodatage qualifié** (TSA RFC 3161) ; (4) export du dossier de preuves en paquet signé. **⚠️ Sécurité : mot de passe SSH DEV exposé en session → À RENOUVELER côté infra.**
+
+---

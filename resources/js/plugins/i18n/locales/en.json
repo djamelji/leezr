@@ -1624,6 +1624,17 @@
       "title": "Request detail", "levelOrder": "Level · Order", "expires": "Expires",
       "certification": "Certification", "signers": "Signers", "timeline": "Evidence timeline",
       "verification": "Verification", "view": "View", "download": "Download signed document", "remind": "Remind", "cancel": "Cancel"
+    },
+    "verify": {
+      "action": "Verify",
+      "title": "Cryptographic verification",
+      "intact": "Document intact (unmodified since sealing)",
+      "modified": "Document MODIFIED after sealing",
+      "cryptoValid": "Cryptographic signature valid",
+      "cryptoInvalid": "Cryptographic signature invalid",
+      "certNotRecognized": "Self-signed Leezr certificate (trust chain not recognized)",
+      "trustNote": "Verifiable organizational (server) cryptographic seal. Attribution to the signer relies on the evidence trail, not on a signer-controlled key. Not eIDAS.",
+      "noSeal": "No cryptographic seal (document predates native sealing)."
     }
   },
   "signaturePublic": {

@@ -58,11 +58,32 @@ class FinalizeSignatureRequestUseCase
         }
         $archive = $this->documents->archiveSignedArtifact($request, $finalBytes);
 
+        // 3bis. Cachet cryptographique RÉEL (CMS/PKCS#7 + X.509) sur le document final — best-effort :
+        // un échec de cachet ne casse jamais la finalisation. Cachet SERVEUR (organisationnel),
+        // NON signataire-contrôlé, NON eIDAS. Appliqué uniquement aux NOUVELLES finalisations.
+        $seal = null;
+        try {
+            $seal = app(\App\Core\Crypto\CryptographicSealService::class)->seal($finalBytes);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Signature seal failed: '.$e->getMessage());
+        }
+
         // 4. Transition completed + artefact.
         $request->transitionTo(SignatureRequest::STATUS_COMPLETED);
         $request->completed_at = now();
         $request->signed_document_path = $archive['path'];
         $request->signed_document_sha256 = $archive['sha256'];
+        if ($seal) {
+            $request->metadata = array_merge($request->metadata ?? [], ['crypto_seal' => [
+                'cms_b64' => $seal['cms_b64'],
+                'document_sha256' => $seal['document_sha256'],
+                'algorithm' => $seal['algorithm'],
+                'cert_fingerprint' => $seal['cert_fingerprint'],
+                'sealed_at' => $seal['sealed_at'],
+                'seal_type' => 'organizational_server_seal',
+                'certified' => false,
+            ]]);
+        }
         $request->save();
 
         // 5. Projection document source → signed.
@@ -79,9 +100,18 @@ class FinalizeSignatureRequestUseCase
             $document->save();
         }
 
+        if ($seal) {
+            $this->events->record($request, SignatureEvent::TYPE_VERIFICATION_PASSED, [
+                'actorType' => SignatureEvent::ACTOR_SYSTEM,
+                'verification' => 'passed',
+                'documentSha256' => $seal['document_sha256'],
+                'payload' => ['cryptographic_seal' => true, 'algorithm' => $seal['algorithm'], 'cert_fingerprint' => $seal['cert_fingerprint'], 'seal_type' => 'organizational_server_seal', 'certified' => false],
+            ]);
+        }
+
         $this->events->record($request, SignatureEvent::TYPE_COMPLETED, [
             'actorType' => SignatureEvent::ACTOR_SYSTEM,
-            'payload' => ['signed_sha256' => $archive['sha256'], 'certified' => $adapter->isCertified()],
+            'payload' => ['signed_sha256' => $archive['sha256'], 'certified' => $adapter->isCertified(), 'cryptographically_sealed' => $seal !== null],
         ]);
 
         app(\App\Core\Audit\AuditLogger::class)->logCompany(

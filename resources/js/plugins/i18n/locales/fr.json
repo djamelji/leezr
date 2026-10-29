@@ -1623,6 +1623,17 @@
       "title": "Détail de la demande", "levelOrder": "Niveau · Ordre", "expires": "Expire le",
       "certification": "Certification", "signers": "Signataires", "timeline": "Chronologie des preuves",
       "verification": "Vérification", "view": "Visualiser", "download": "Télécharger le document signé", "remind": "Relancer", "cancel": "Annuler"
+    },
+    "verify": {
+      "action": "Vérifier",
+      "title": "Vérification cryptographique",
+      "intact": "Document intact (non modifié depuis le cachet)",
+      "modified": "Document MODIFIÉ après le cachet",
+      "cryptoValid": "Signature cryptographique valide",
+      "cryptoInvalid": "Signature cryptographique invalide",
+      "certNotRecognized": "Certificat Leezr auto-signé (chaîne de confiance non reconnue)",
+      "trustNote": "Cachet cryptographique organisationnel (serveur) vérifiable. L'attribution au signataire repose sur le dossier de preuves, non sur une clé contrôlée par le signataire. Non eIDAS.",
+      "noSeal": "Aucun cachet cryptographique (document antérieur au cachet natif)."
     }
   },
   "signaturePublic": {

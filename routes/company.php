@@ -663,6 +663,7 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     Route::get('{id}', [$s, 'show'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
     Route::get('{id}/evidence', [$s, 'evidence'])->whereNumber('id')->middleware($perm('workforce_signature.view_evidence'));
     Route::get('{id}/download', [$s, 'downloadSigned'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
+    Route::get('{id}/verify', [$s, 'verify'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
     Route::post('{id}/cancel', [$s, 'cancel'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
     Route::post('{id}/remind', [$s, 'remind'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
 });

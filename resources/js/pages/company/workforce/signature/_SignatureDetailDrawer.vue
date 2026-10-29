@@ -32,6 +32,7 @@ const load = async () => {
   if (!props.requestId) return
   loading.value = true
   events.value = []
+  verifyResult.value = null
   try {
     req.value = await store.fetchOne(props.requestId)
     if (can('workforce_signature.view_evidence')) {
@@ -62,6 +63,19 @@ const downloadPath = computed(() => `/workforce/signature/${props.requestId}/dow
 
 // Visualiser → visionneuse intégrée (valide que c'est bien un PDF, sinon message clair).
 const openViewer = () => { viewerOpen.value = true }
+
+// Vérification cryptographique indépendante (rapport honnête).
+const verifying = ref(false)
+const verifyResult = ref(null)
+const runVerify = async () => {
+  verifying.value = true
+  verifyResult.value = null
+  try {
+    verifyResult.value = await store.verifySignature(props.requestId)
+  } catch (e) {
+    toast(e?.message || t('common.error'), 'error')
+  } finally { verifying.value = false }
+}
 
 // Télécharger → util unifié (en-têtes auth + X-Company-Id, validation du contenu).
 const triggerDownload = async () => {
@@ -189,6 +203,51 @@ const doRemind = async () => {
           </VTimelineItem>
         </VTimeline>
       </template>
+
+      <!-- Résultat de vérification cryptographique (états DISTINCTS, pas un simple badge « Certifié ») -->
+      <VCard
+        v-if="verifyResult"
+        variant="outlined"
+        class="mt-2"
+      >
+        <VCardText class="py-3">
+          <div class="text-caption text-medium-emphasis mb-2">
+            {{ t('signature.verify.title') }}
+          </div>
+          <template v-if="verifyResult.has_seal">
+            <div class="d-flex flex-column gap-1">
+              <VChip
+                size="small"
+                :color="verifyResult.document_intact ? 'success' : 'error'"
+                variant="tonal"
+                label
+              >
+                <VIcon :icon="verifyResult.document_intact ? 'tabler-check' : 'tabler-x'" start size="14" />
+                {{ verifyResult.document_intact ? t('signature.verify.intact') : t('signature.verify.modified') }}
+              </VChip>
+              <VChip
+                size="small"
+                :color="verifyResult.signature_valid ? 'success' : 'error'"
+                variant="tonal"
+                label
+              >
+                <VIcon :icon="verifyResult.signature_valid ? 'tabler-check' : 'tabler-x'" start size="14" />
+                {{ verifyResult.signature_valid ? t('signature.verify.cryptoValid') : t('signature.verify.cryptoInvalid') }}
+              </VChip>
+              <VChip size="small" color="warning" variant="tonal" label>
+                <VIcon icon="tabler-certificate-off" start size="14" />
+                {{ t('signature.verify.certNotRecognized') }}
+              </VChip>
+            </div>
+            <VAlert type="info" variant="tonal" density="compact" class="mt-2">
+              {{ t('signature.verify.trustNote') }}
+            </VAlert>
+          </template>
+          <VAlert v-else type="info" variant="tonal" density="compact">
+            {{ verifyResult.message || t('signature.verify.noSeal') }}
+          </VAlert>
+        </VCardText>
+      </VCard>
       </div>
       <!-- fin corps scrollable -->
 
@@ -212,6 +271,16 @@ const doRemind = async () => {
             @click="triggerDownload"
           >
             {{ t('signature.detail.download') }}
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            size="small"
+            color="info"
+            prepend-icon="tabler-shield-check"
+            :loading="verifying"
+            @click="runVerify"
+          >
+            {{ t('signature.verify.action') }}
           </VBtn>
         </template>
         <VBtn

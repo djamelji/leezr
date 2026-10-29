@@ -40,6 +40,9 @@ export const useSignatureStore = defineStore('workforceSignature', {
     async fetchEvidence(id) {
       return await $api(`/workforce/signature/${id}/evidence`)
     },
+    async verifySignature(id) {
+      return await $api(`/workforce/signature/${id}/verify`)
+    },
     async create(payload) {
       return await $api('/workforce/signature', { method: 'POST', body: payload })
     },

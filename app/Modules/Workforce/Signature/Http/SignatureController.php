@@ -182,6 +182,60 @@ class SignatureController extends Controller
         return response()->json(['reminded' => $count]);
     }
 
+    /**
+     * Vérification cryptographique INDÉPENDANTE du document final (§7). Rapport honnête : la validité
+     * cryptographique du cachet N'IMPLIQUE PAS l'identité du signataire ni une reconnaissance eIDAS.
+     */
+    public function verify(Request $request, int $id): JsonResponse
+    {
+        $req = $this->findScoped($request, $id);
+        $seal = $req->metadata['crypto_seal'] ?? null;
+
+        if (! $seal || ! $req->signed_document_path) {
+            return response()->json([
+                'has_seal' => false,
+                'message' => 'Aucun cachet cryptographique (document antérieur au cachet natif ou non finalisé).',
+            ]);
+        }
+
+        $disk = config('documents.generated_disk', 'local');
+        if (! Storage::disk($disk)->exists($req->signed_document_path)) {
+            return response()->json(['has_seal' => true, 'document_available' => false, 'message' => 'Document final introuvable.'], 404);
+        }
+
+        $bytes = Storage::disk($disk)->get($req->signed_document_path);
+        $svc = app(\App\Core\Crypto\CryptographicSealService::class);
+        $result = $svc->verify($bytes, $seal['cms_b64']);
+        $certInfo = $svc->certificateInfo();
+
+        return response()->json([
+            'has_seal' => true,
+            'document_available' => true,
+            // Faits cryptographiques vérifiés.
+            'document_intact' => $result['document_intact'],              // le PDF n'a pas été modifié depuis le cachet
+            'signature_valid' => $result['signature_valid'],              // signature CMS cryptographiquement valide
+            'overall_valid' => $result['valid'],
+            'algorithm' => $seal['algorithm'],
+            'sealed_at' => $seal['sealed_at'],
+            // Certificat : identifié mais auto-signé (pas de chaîne de confiance reconnue).
+            'certificate' => [
+                'identified' => true,
+                'recognized_trust_chain' => false,
+                'self_signed' => $certInfo['self_signed'] ?? true,
+                'subject' => $certInfo['subject'] ?? [],
+                'sha256_fingerprint' => $certInfo['sha256_fingerprint'] ?? null,
+            ],
+            // Limites explicites (ne pas afficher un simple badge « Certifié »).
+            'trust' => [
+                'seal_type' => 'organizational_server_seal',             // cachet SERVEUR Leezr, non signataire-contrôlé
+                'signer_identity_cryptographically_bound' => false,       // l'identité est dans le dossier de preuves, pas dans la clé
+                'eidas_advanced' => 'not_demonstrated',
+                'eidas_qualified' => 'not_demonstrated',
+                'note' => 'Cachet cryptographique organisationnel vérifiable. L\'attribution au signataire repose sur le dossier de preuves (consentement + identification), pas sur une clé contrôlée par le signataire.',
+            ],
+        ]);
+    }
+
     public function downloadSigned(Request $request, int $id): StreamedResponse
     {
         $req = $this->findScoped($request, $id);
