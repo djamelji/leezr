@@ -192,10 +192,15 @@ if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "production
   log "→ [5.5] db:seed SystemSeeder (données de référence idempotentes)"
   $PHP_BIN artisan db:seed --class=SystemSeeder --force 2>&1 | tee -a "$LOG_FILE"
 else
-  log "→ [5/9] migrate:fresh --seed (dev — no real clients yet)"
-  $PHP_BIN artisan migrate:fresh --seed --force 2>&1 | tee -a "$LOG_FILE"
-  log "→ [5.5] Run DevSeeder (demo data — dev only)"
-  $PHP_BIN artisan db:seed --class=DevSeeder --force 2>&1 | tee -a "$LOG_FILE"
+  # DEV (web3) : déploiement NON destructif par défaut (ADR-654). `migrate --force` est additif ;
+  # le seeding est idempotent (bootstrap) sur une base existante → collaborateurs, contrats,
+  # documents, demandes et preuves de recette PRÉSERVÉS entre déploiements. Population initiale
+  # complète uniquement si la base est vide. Le reset destructif n'est JAMAIS fait au déploiement :
+  # il passe par la commande explicite `php artisan leezr:dev-reset --force --i-have-a-backup`.
+  log "→ [5/9] migrate --force (DEV additif — préserve les données de recette)"
+  $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
+  log "→ [5.5] leezr:dev-bootstrap (non destructif : population initiale si vide, sinon bootstrap idempotent)"
+  $PHP_BIN artisan leezr:dev-bootstrap 2>&1 | tee -a "$LOG_FILE"
 fi
 
 # ADR-422: Fix permissions on seeded document files (created as root, needs to be readable by web user)

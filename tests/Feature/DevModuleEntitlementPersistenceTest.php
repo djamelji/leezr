@@ -73,4 +73,32 @@ class DevModuleEntitlementPersistenceTest extends TestCase
             $this->assertTrue(($pm->addon_pricing['dev_test'] ?? false) === true, "{$key} addon_pricing marqué dev_test");
         }
     }
+
+    // ── Précondition W-SIGNATURE-2 : un déploiement DEV ordinaire (bootstrap) PRÉSERVE les données ──
+    public function test_dev_bootstrap_preserves_recette_data_over_two_deploys(): void
+    {
+        $this->runSeeders();
+        $company = $this->leezr();
+
+        // Donnée de recette : un collaborateur fictif créé pendant les tests.
+        $emp = \App\Core\Workforce\Employee::withoutGlobalScopes()->create([
+            'company_id' => $company->id, 'first_name' => 'Recette', 'last_name' => 'Persist',
+            'status' => 'active', 'hire_date' => '2026-01-01', 'employee_number' => 'REC-PERSIST-1',
+        ]);
+        $before = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->count();
+
+        // Deux déploiements ordinaires successifs = bootstrap idempotent (PAS de migrate:fresh).
+        $this->seed(\Database\Seeders\DevBootstrapSeeder::class);
+        $this->seed(\Database\Seeders\DevBootstrapSeeder::class);
+
+        // La donnée de recette est PRÉSERVÉE (ni supprimée ni dupliquée).
+        $this->assertDatabaseHas('workforce_employees', ['id' => $emp->id, 'employee_number' => 'REC-PERSIST-1']);
+        $after = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->count();
+        $this->assertSame($before, $after, 'aucun collaborateur supprimé ni dupliqué par le bootstrap');
+
+        // Les activations restent identiques.
+        foreach (self::EXPECTED as $key) {
+            $this->assertTrue(ModuleGate::isActive($company->fresh(), $key), "module {$key} toujours actif après 2 déploiements");
+        }
+    }
 }
