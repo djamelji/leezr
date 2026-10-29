@@ -2,6 +2,8 @@
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
+import PlanningCalendar from './_PlanningCalendar.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
 
@@ -11,7 +13,30 @@ const store = usePlanningStore()
 const employeesStore = useEmployeesStore()
 
 // ── Tab navigation ───────────────────────────────────────────
-const activeTab = ref('planning')
+const activeTab = ref('calendar')
+
+// ── Calendrier Planning (W-G4A : scope + filtres serveur, absences + conflits) ──
+const calRef = ref()
+const calEmployee = ref(null)
+const calDepartment = ref(null)
+const calStatus = ref(null)
+const calConflicts = ref([])
+const calFilters = computed(() => ({
+  employeeId: calEmployee.value || undefined,
+  departmentId: calDepartment.value || undefined,
+  status: calStatus.value || undefined,
+}))
+const calDepartmentOptions = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
+const calStatusOptions = [
+  { title: t('workforce.statuses.shift.draft', 'Brouillon'), value: 'draft' },
+  { title: t('workforce.statuses.shift.published', 'Publié'), value: 'published' },
+]
+const calSelected = ref(null)
+const calDetailOpen = ref(false)
+const onSelectEvent = ev => { calSelected.value = ev; calDetailOpen.value = true }
+const calLoaded = ref(false)
+const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : '—'
+const fmtDateTime = iso => iso ? new Date(iso).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 
 // ── Shared helpers ───────────────────────────────────────────
 const employeeItems = computed(() =>
@@ -734,6 +759,7 @@ const confirmDeleteLocation = async () => {
 // INIT
 // ══════════════════════════════════════════════════════════════
 onMounted(async () => {
+  employeesStore.fetchDepartments() // W-G4A : options de filtre du calendrier
   await Promise.all([
     fetchWeekData(),
     store.fetchTemplates({ all: true }),
@@ -824,9 +850,16 @@ watch(activeTab, tab => {
       v-model="activeTab"
       class="v-tabs-pill mb-6"
     >
+      <VTab value="calendar">
+        <VIcon
+          icon="tabler-calendar-week"
+          class="me-2"
+        />
+        {{ $t('planning.tabs.calendar') }}
+      </VTab>
       <VTab value="planning">
         <VIcon
-          icon="tabler-calendar-event"
+          icon="tabler-layout-grid"
           class="me-2"
         />
         {{ $t('planning.tabs.planning') }}
@@ -848,6 +881,114 @@ watch(activeTab, tab => {
     </VTabs>
 
     <VWindow v-model="activeTab">
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- TAB: CALENDRIER (W-G4A : shifts + absences + conflits) -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <VWindowItem value="calendar">
+        <VCard>
+          <VCardText>
+            <VRow>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="calDepartment"
+                  :items="calDepartmentOptions"
+                  :placeholder="$t('employees.filters.department')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="4">
+                <EmployeePicker
+                  v-model="calEmployee"
+                  :label="$t('leaves.columns.employee')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="calStatus"
+                  :items="calStatusOptions"
+                  :placeholder="$t('planning.fields.status')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+            </VRow>
+            <!-- Légende -->
+            <div class="d-flex gap-4 flex-wrap mt-1 text-caption align-center">
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#7367f0" />{{ $t('workforce.statuses.shift.published', 'Publié') }}</span>
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#a8aaae" />{{ $t('workforce.statuses.shift.draft', 'Brouillon') }}</span>
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="background:#82868b" />🌴 {{ $t('planning.calendar.absence') }}</span>
+              <span class="d-flex align-center gap-1"><span class="legend-dot" style="border:2px solid #ea5455;background:transparent" />{{ $t('planning.calendar.conflict') }}</span>
+            </div>
+          </VCardText>
+
+          <VAlert
+            v-if="calConflicts.length"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mx-4 mb-2"
+          >
+            {{ $t('planning.calendar.conflictsBanner', { count: calConflicts.length }) }}
+          </VAlert>
+
+          <VDivider />
+          <VCardText>
+            <PlanningCalendar
+              ref="calRef"
+              :filters="calFilters"
+              @select="onSelectEvent"
+              @conflicts="calConflicts = $event"
+            />
+          </VCardText>
+        </VCard>
+
+        <!-- Détail shift / absence (lecture seule) -->
+        <VDialog
+          v-model="calDetailOpen"
+          max-width="440"
+        >
+          <VCard v-if="calSelected">
+            <VCardItem>
+              <VCardTitle>{{ calSelected.employee_name }}</VCardTitle>
+              <VCardSubtitle>
+                {{ calSelected.kind === 'shift' ? $t('planning.calendar.shift') : calSelected.leave_type }}
+              </VCardSubtitle>
+              <template #append>
+                <VChip
+                  size="small"
+                  variant="tonal"
+                  :color="calSelected.has_conflict ? 'error' : (calSelected.is_published === false ? 'secondary' : 'primary')"
+                >
+                  {{ calSelected.kind === 'shift' ? $t('workforce.statuses.shift.' + calSelected.status, calSelected.status) : $t('workforce.statuses.leave.' + calSelected.status, calSelected.status) }}
+                </VChip>
+              </template>
+            </VCardItem>
+            <VCardText>
+              <template v-if="calSelected.kind === 'shift'">
+                <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.start') }}</span><span>{{ fmtDateTime(calSelected.start) }}</span></div>
+                <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.end') }}</span><span>{{ fmtDateTime(calSelected.end) }}</span></div>
+                <div v-if="calSelected.location" class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.location') }}</span><span>{{ calSelected.location }}</span></div>
+                <div class="d-flex justify-space-between"><span class="text-medium-emphasis">{{ $t('planning.calendar.plannedMinutes') }}</span><span>{{ calSelected.planned_minutes }} min</span></div>
+                <VAlert v-if="calSelected.has_conflict" type="error" variant="tonal" density="compact" class="mt-3">
+                  {{ $t('planning.calendar.conflictDetail') }}
+                </VAlert>
+              </template>
+              <template v-else>
+                <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('leaves.calendar.period') }}</span><span>{{ fmtTime(calSelected.start) ? calSelected.start : '' }} {{ calSelected.start }} → {{ calSelected.end }}</span></div>
+              </template>
+            </VCardText>
+            <VCardText class="d-flex justify-end pt-0">
+              <VBtn variant="outlined" color="secondary" @click="calDetailOpen = false">
+                {{ $t('common.close') }}
+              </VBtn>
+            </VCardText>
+          </VCard>
+        </VDialog>
+      </VWindowItem>
+
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- TAB: PLANNING (Weekly Grid)                            -->
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -2046,6 +2187,13 @@ watch(activeTab, tab => {
 </template>
 
 <style lang="scss" scoped>
+.legend-dot {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+}
+
 .planning-grid {
   .planning-cell {
     cursor: pointer;

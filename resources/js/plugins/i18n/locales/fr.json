@@ -7078,7 +7078,8 @@
     "tabs": {
       "planning": "Planning",
       "templates": "Modèles",
-      "locations": "Lieux"
+      "locations": "Lieux",
+      "calendar": "Calendrier"
     },
     "stats": {
       "totalShifts": "Shifts au total",
@@ -7100,7 +7101,10 @@
       "location": "Lieu",
       "notes": "Notes",
       "template": "Modèle",
-      "templateHint": "Sélectionnez un modèle pour pré-remplir les horaires et la pause."
+      "templateHint": "Sélectionnez un modèle pour pré-remplir les horaires et la pause.",
+      "status": "Statut",
+      "start": "Début",
+      "end": "Fin"
     },
     "emptyGrid": {
       "title": "Aucun shift planifié",
@@ -7175,6 +7179,14 @@
         "mobile": "Mobile",
         "remote": "Télétravail"
       }
+    },
+    "calendar": {
+      "absence": "Absence",
+      "conflict": "Chevauchement",
+      "shift": "Shift",
+      "plannedMinutes": "Durée prévue",
+      "conflictDetail": "Ce shift chevauche une absence approuvée — vérification requise.",
+      "conflictsBanner": "{count} shift(s) en chevauchement avec une absence approuvée."
     }
   },
   "leaves": {

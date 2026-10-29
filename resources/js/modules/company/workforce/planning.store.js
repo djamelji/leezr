@@ -45,6 +45,25 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       }
     },
 
+    // W-G4A : tableau Planning (shifts + absences + conflits), scope + filtres serveur, bornes de dates.
+    async fetchBoard({ from, to, departmentId, employeeId, locationId, status } = {}) {
+      const params = new URLSearchParams({ from, to })
+      if (departmentId) params.set('department_id', departmentId)
+      if (employeeId) params.set('employee_id', employeeId)
+      if (locationId) params.set('location_id', locationId)
+      if (status) params.set('status', status)
+
+      return await $api(`/workforce/planning/shifts/board?${params.toString()}`)
+    },
+
+    // W-G4A : comparaison prévu / réalisé (shifts vs pointages).
+    async fetchComparison({ from, to, employeeId } = {}) {
+      const params = new URLSearchParams({ from, to })
+      if (employeeId) params.set('employee_id', employeeId)
+
+      return await $api(`/workforce/planning/shifts/comparison?${params.toString()}`)
+    },
+
     async fetchWeekShifts(date) {
       this._loading = true
       try {

@@ -4,7 +4,9 @@ namespace App\Modules\Workforce\Planning\Http;
 
 use App\Core\Workforce\Shift;
 use App\Http\Controllers\Controller;
+use App\Modules\Workforce\ReadModels\PlanningBoardReadModel;
 use App\Modules\Workforce\ReadModels\ShiftReadModel;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\BulkCreateShiftsUseCase;
 use App\Modules\Workforce\UseCases\CancelShiftUseCase;
 use App\Modules\Workforce\UseCases\CreateShiftUseCase;
@@ -59,6 +61,64 @@ class ShiftController extends Controller
             from: Carbon::parse($request->query('from')),
             to: Carbon::parse($request->query('to')),
         ));
+    }
+
+    /**
+     * W-G4A — tableau Planning : shifts + absences (W-G3) + chevauchements, scopé + filtré serveur.
+     */
+    public function board(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+            'department_id' => 'sometimes|integer',
+            'employee_id' => 'sometimes|integer',
+            'location_id' => 'sometimes|integer',
+            'status' => 'sometimes|string',
+        ]);
+
+        return response()->json(PlanningBoardReadModel::board(
+            companyId: $request->attributes->get('company_id'),
+            from: Carbon::parse($request->query('from')),
+            to: Carbon::parse($request->query('to')),
+            visibleIds: $this->planningScope($request),
+            filters: [
+                'department_id' => $request->query('department_id'),
+                'employee_id' => $request->query('employee_id'),
+                'location_id' => $request->query('location_id'),
+                'status' => $request->query('status'),
+            ],
+        ));
+    }
+
+    /**
+     * W-G4A — comparaison prévu (shifts) / réalisé (pointages), bornée + scopée. Informatif.
+     */
+    public function comparison(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+            'employee_id' => 'sometimes|integer',
+        ]);
+
+        return response()->json(PlanningBoardReadModel::comparison(
+            companyId: $request->attributes->get('company_id'),
+            from: Carbon::parse($request->query('from')),
+            to: Carbon::parse($request->query('to')),
+            visibleIds: $this->planningScope($request),
+            employeeId: $request->filled('employee_id') ? (int) $request->query('employee_id') : null,
+        ));
+    }
+
+    /** Scope planning : vue globale si gestion/publication ou RH (view+manage) ; sinon soi + rapports. */
+    private function planningScope(Request $request): ?array
+    {
+        $viewAll = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_manage')
+            || $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish')
+            || WorkforceAccess::hasViewAll($request, 'employee');
+
+        return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
     }
 
     public function statistics(Request $request): JsonResponse

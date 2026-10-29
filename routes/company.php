@@ -555,6 +555,9 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     // Shifts
     Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar'])->middleware($perm('workforce.planning_view'));
+    // W-G4A : tableau Planning (shifts + absences + conflits) + comparaison prévu/réalisé.
+    Route::get('shifts/board', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'board'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/comparison', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'comparison'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));

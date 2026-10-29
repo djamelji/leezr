@@ -22966,3 +22966,26 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `LeaveRequestReadModel::calendar` ; `LeaveController` (calendar scope+filtres, show gating motif, approve/reject garde scope) ; `EmployeeImportService` (réserve sans clé) ; `leaves.store.fetchCalendar` ; `leave/index.vue` (onglet Calendrier refondu + deep-link) + `_LeaveCalendar.vue` + `_LeaveRequestDetailDialog.vue` ; `_EmployeeLeaveSection.vue` (lien calendrier) ; i18n fr/en ; `WorkforceLeaveCalendarTest` + 1 test import ; e2e W-G3 + bulk ; cet ADR.
 
 ---
+### ADR-644 — Workforce 2.0 / lot W-G4A : refonte UI/UX Planning & Pointage (socle visuel) (2026-10-29)
+
+**Contexte** : la grille planning et le pointage restaient peu lisibles à grande échelle. Objectif W-G4A : un **socle visuel** de pilotage (qui travaille, qui est absent, brouillon/publié, chevauchements, prévu/réalisé), performant à plusieurs centaines de collaborateurs. Stabilisation (ADR-561, sous-lot W-G4A) : **visualisation/navigation/filtres/performance/cohérence** uniquement — aucune réaffectation, drag-and-drop, réorganisation auto ni modification de planning publié (→ W-G4B).
+
+**Décision** :
+1. **Tableau Planning visuel** (FullCalendar 6 déjà présent, 0 dépendance ajoutée) : vues **semaine / jour / liste**, navigation (préc./suiv./aujourd'hui), **timezone Company** respecté, premier jour de semaine **déduit de la locale** (jamais lundi en dur), `nowIndicator`, shifts à cheval sur minuit préservés. `_PlanningCalendar.vue`.
+2. **Read model `PlanningBoardReadModel::board`** (nouveau endpoint `GET /workforce/planning/shifts/board`) : fusionne **shifts** (brouillon/publié/complété) + **absences W-G3** (en attente/approuvé) sur une plage **bornée**, **scopé** (manager = soi+rapports ; vue globale si planning_manage/publish ou RH) + **filtré serveur** (département/employé/statut/lieu). Distinction **brouillon vs publié** (couleur + rayures). **Jamais de filtrage Vue pour la sécurité.**
+3. **Détection de chevauchements** : un shift dont la date tombe dans une **absence approuvée** du même salarié est signalé (bord rouge + bandeau + détail). Une demande **en attente n'est pas un conflit**. **Aide à la décision uniquement** — aucune suppression/réaffectation/modification auto ; traitement opérationnel reporté en W-G4B.
+4. **Comparaison prévu / réalisé** (`PlanningBoardReadModel::comparison`, endpoint `shifts/comparison`) : par collaborateur, minutes **planifiées** (shifts) vs **réalisées** (pointages complétés), écart, pauses, **manquant** (planifié sans pointage). **Informatif** — aucun recalcul d'heures sup/paie dans Vue ; distingue prévu/constaté/manquant.
+5. **Lecture seule** : le détail shift/absence n'expose aucune action de modification (création/publication conservées dans l'onglet grille existant, **non dégradé**).
+6. **Responsive** : vues semaine/jour/liste adaptées mobile (390 px) + tablette ; dark mode.
+
+**Performance (mesurée, non inventée)** : `WorkforcePlanningPerformanceTest` — board sur 1 semaine, **eager-load** → nombre de requêtes **CONSTANT (3)** quel que soit le volume (pas de N+1). **100 collaborateurs × 5 shifts (500) = 24,7 ms ; 500 × 5 (2500) = 112,1 ms** (SQLite in-memory CI). Requêtes bornées par dates, pas de chargement historique.
+
+**Réserve W-G3 (§0.3) complétée** : e2e du cycle d'approbation congé **jusqu'à persistance après rechargement** (reload → onglet Demandes → statut Approuvé).
+
+**Tests** : `WorkforcePlanningBoardTest` (11 — shifts+absences, scope manager, conflit approuvé vs pending, filtres, bornes dates, brouillon/publié, **minuit**, comparaison prévu/réalisé, tenant, RBAC) + `WorkforcePlanningPerformanceTest` (2, N+1/temps). Régression Planning/Workforce/Leave/Employee/Timesheet **308 verts**. `pnpm build` propre. e2e `workforce-wg4a-planning` (5) + non-régression W-G3 (4, persistance).
+
+**Limites (W-G4B)** : traitement opérationnel des conflits (réaffectation), drag-and-drop d'édition, réorganisation auto, modification massive des pointages, nouveau moteur de publication — **non livrés** (socle visuel d'abord). Établissements/équipes (W-Q) non modélisés — architecture compatible (filtre département). Comparaison prévu/réalisé = agrégat période (pas encore ligne-à-ligne par shift). Refonte profonde de l'écran Pointage reportée (board planning prioritaire) — les endpoints temps réel/anomalies existants restent exploités.
+
+**Fichiers** : `PlanningBoardReadModel` (board + comparison) ; `ShiftController` (board, comparison, planningScope) ; routes ; `planning.store` (fetchBoard/fetchComparison) ; `planning/index.vue` (onglet Calendrier + détail lecture seule) + `_PlanningCalendar.vue` ; i18n fr/en ; `WorkforcePlanningBoardTest` + `WorkforcePlanningPerformanceTest` ; e2e W-G4A + complément W-G3 ; cet ADR.
+
+---

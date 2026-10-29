@@ -101,6 +101,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-payroll': RouteRecordInfo<'company-workforce-payroll', '/company/workforce/payroll', Record<never, never>, Record<never, never>>,
     'company-workforce-payroll-id': RouteRecordInfo<'company-workforce-payroll-id', '/company/workforce/payroll/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-planning': RouteRecordInfo<'company-workforce-planning', '/company/workforce/planning', Record<never, never>, Record<never, never>>,
+    'company-workforce-planning-planning-calendar': RouteRecordInfo<'company-workforce-planning-planning-calendar', '/company/workforce/planning/_PlanningCalendar', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-workforce-rules-section': RouteRecordInfo<'company-workforce-settings-workforce-rules-section', '/company/workforce/settings/_WorkforceRulesSection', Record<never, never>, Record<never, never>>,
     'company-workforce-settings-tab': RouteRecordInfo<'company-workforce-settings-tab', '/company/workforce/settings/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-workforce-time': RouteRecordInfo<'company-workforce-time', '/company/workforce/time', Record<never, never>, Record<never, never>>,

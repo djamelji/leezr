@@ -7078,7 +7078,8 @@
     "tabs": {
       "planning": "Planning",
       "templates": "Templates",
-      "locations": "Locations"
+      "locations": "Locations",
+      "calendar": "Calendar"
     },
     "stats": {
       "totalShifts": "Total shifts",
@@ -7100,7 +7101,10 @@
       "location": "Location",
       "notes": "Notes",
       "template": "Template",
-      "templateHint": "Pick a template to pre-fill working hours and break duration."
+      "templateHint": "Pick a template to pre-fill working hours and break duration.",
+      "status": "Status",
+      "start": "Start",
+      "end": "End"
     },
     "emptyGrid": {
       "title": "No shifts scheduled",
@@ -7175,6 +7179,14 @@
         "mobile": "Mobile",
         "remote": "Remote"
       }
+    },
+    "calendar": {
+      "absence": "Absence",
+      "conflict": "Overlap",
+      "shift": "Shift",
+      "plannedMinutes": "Planned duration",
+      "conflictDetail": "This shift overlaps an approved absence — review required.",
+      "conflictsBanner": "{count} shift(s) overlapping an approved absence."
     }
   },
   "leaves": {

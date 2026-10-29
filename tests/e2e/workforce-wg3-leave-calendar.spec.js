@@ -60,7 +60,16 @@ test('clicking an event opens its detail (period, status, simultaneous)', async 
     if (await approveBtn.isVisible().catch(() => false)) {
       await approveBtn.click()
       // Action câblée : le dialogue se ferme et un retour utilisateur apparaît.
-      await expect(page.locator('.v-snackbar, [role="alert"]').first()).toBeVisible({ timeout: 8000 })
+      const snack = page.locator('.v-snackbar, [role="alert"]').first()
+      await expect(snack).toBeVisible({ timeout: 8000 })
+      const snackText = await snack.innerText().catch(() => '')
+
+      // §0.3 — persistance après RECHARGEMENT : si l'approbation a réussi, elle survit au reload.
+      if (/approuvé|approved/i.test(snackText)) {
+        await page.reload({ waitUntil: 'networkidle' })
+        await page.getByRole('tab', { name: /Demandes|Requests/ }).click()
+        await expect(page.getByText(/Approuvé|Approved/).first()).toBeVisible({ timeout: 8000 })
+      }
     } else {
       await dialog.getByRole('button', { name: /Fermer|Close/ }).click()
     }
