@@ -51,30 +51,77 @@ class FinalizeSignatureRequestUseCase
             'payload' => ['certified' => $adapter->isCertified()],
         ]);
 
-        // 3. Document final : fourni par le prestataire, sinon copie du source (interne non certifié).
-        $finalBytes = $adapter->fetchFinalDocument($request) ?? $this->documents->sourceBytes($document);
-        if ($finalBytes === null) {
+        // 3. Octets du document final (fourni par le prestataire, sinon copie du source interne).
+        $sourceFinalBytes = $adapter->fetchFinalDocument($request) ?? $this->documents->sourceBytes($document);
+        if ($sourceFinalBytes === null) {
             return $this->fail($request, 'final_document_unavailable');
         }
-        $archive = $this->documents->archiveSignedArtifact($request, $finalBytes);
 
-        // 3bis. Cachet cryptographique RÉEL (CMS/PKCS#7 + X.509) sur le document final — best-effort :
-        // un échec de cachet ne casse jamais la finalisation. Cachet SERVEUR (organisationnel),
-        // NON signataire-contrôlé, NON eIDAS. Appliqué uniquement aux NOUVELLES finalisations.
+        // 3bis. ARTEFACT CRYPTOGRAPHIQUE — P0 (ADR-655) : PAS de « completed » sans artefact produit,
+        // VÉRIFIÉ et archivé. Primaire = signature PAdES EMBARQUÉE dans le PDF (vérifiée par pdfsig).
+        // Repli = cachet CMS détaché (vérifié par openssl). Si AUCUN artefact vérifié → on NE complète PAS.
+        $pades = app(\App\Core\Crypto\NativePadesSignatureService::class);
+        $sealSvc = app(\App\Core\Crypto\CryptographicSealService::class);
+        $cryptoFormat = null;
+        $padesReport = null;
         $seal = null;
+        $artifactBytes = $sourceFinalBytes;
+
         try {
-            $seal = app(\App\Core\Crypto\CryptographicSealService::class)->seal($finalBytes);
+            if ($pades->isAvailable() && $pades->pdfsigAvailable()) {
+                $signedPdf = $pades->signPdf($sourceFinalBytes);
+                $report = $pades->verifyPdf($signedPdf);
+                if (! empty($report['all_signatures_valid'])) {
+                    $artifactBytes = $signedPdf;
+                    $cryptoFormat = 'pades_embedded';
+                    $padesReport = $report;
+                }
+            }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Signature seal failed: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('PAdES signing failed: '.$e->getMessage());
         }
 
-        // 4. Transition completed + artefact.
+        if ($cryptoFormat === null) {
+            try {
+                $seal = $sealSvc->seal($artifactBytes);
+                $v = $sealSvc->verify($artifactBytes, $seal['cms_b64']);
+                if (! empty($v['valid'])) {
+                    $cryptoFormat = 'cms_detached';
+                } else {
+                    $seal = null;
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('CMS seal failed: '.$e->getMessage());
+            }
+        }
+
+        // P0 : aucun artefact cryptographique vérifié → échec, demande NON complétée (reprise par nouvelle procédure).
+        if ($cryptoFormat === null) {
+            return $this->fail($request, 'crypto_artifact_unverified');
+        }
+
+        // Archive l'artefact RÉELLEMENT produit (PDF signé PAdES, ou copie source pour le cachet CMS).
+        $archive = $this->documents->archiveSignedArtifact($request, $artifactBytes);
+
+        // 4. Transition completed + artefact + format cryptographique réellement utilisé.
         $request->transitionTo(SignatureRequest::STATUS_COMPLETED);
         $request->completed_at = now();
         $request->signed_document_path = $archive['path'];
         $request->signed_document_sha256 = $archive['sha256'];
+        $meta = ['signature_format' => $cryptoFormat];
+        if ($cryptoFormat === 'pades_embedded') {
+            $meta['pades'] = [
+                'type' => $padesReport['signatures'][0]['type'] ?? null,
+                'hash_algorithm' => $padesReport['signatures'][0]['hash_algorithm'] ?? null,
+                'signer_cn' => $padesReport['signatures'][0]['signer_cn'] ?? null,
+                'verified_by' => 'pdfsig',
+                'trusted_chain' => $padesReport['any_trusted_chain'] ?? false,
+                'seal_type' => 'organizational_server_seal',
+                'certified' => false,
+            ];
+        }
         if ($seal) {
-            $request->metadata = array_merge($request->metadata ?? [], ['crypto_seal' => [
+            $meta['crypto_seal'] = [
                 'cms_b64' => $seal['cms_b64'],
                 'document_sha256' => $seal['document_sha256'],
                 'algorithm' => $seal['algorithm'],
@@ -82,8 +129,9 @@ class FinalizeSignatureRequestUseCase
                 'sealed_at' => $seal['sealed_at'],
                 'seal_type' => 'organizational_server_seal',
                 'certified' => false,
-            ]]);
+            ];
         }
+        $request->metadata = array_merge($request->metadata ?? [], $meta);
         $request->save();
 
         // 5. Projection document source → signed.
@@ -94,24 +142,23 @@ class FinalizeSignatureRequestUseCase
             $document->signature_metadata = [
                 'signature_request_id' => $request->id,
                 'signed_document_sha256' => $archive['sha256'],
-                'certified' => $adapter->isCertified(),
+                'signature_format' => $cryptoFormat,
+                'certified' => false,
                 'provider' => $request->provider,
             ];
             $document->save();
         }
 
-        if ($seal) {
-            $this->events->record($request, SignatureEvent::TYPE_VERIFICATION_PASSED, [
-                'actorType' => SignatureEvent::ACTOR_SYSTEM,
-                'verification' => 'passed',
-                'documentSha256' => $seal['document_sha256'],
-                'payload' => ['cryptographic_seal' => true, 'algorithm' => $seal['algorithm'], 'cert_fingerprint' => $seal['cert_fingerprint'], 'seal_type' => 'organizational_server_seal', 'certified' => false],
-            ]);
-        }
+        $this->events->record($request, SignatureEvent::TYPE_VERIFICATION_PASSED, [
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'verification' => 'passed',
+            'documentSha256' => $archive['sha256'],
+            'payload' => ['signature_format' => $cryptoFormat, 'verified_by' => $cryptoFormat === 'pades_embedded' ? 'pdfsig' : 'openssl', 'seal_type' => 'organizational_server_seal', 'certified' => false],
+        ]);
 
         $this->events->record($request, SignatureEvent::TYPE_COMPLETED, [
             'actorType' => SignatureEvent::ACTOR_SYSTEM,
-            'payload' => ['signed_sha256' => $archive['sha256'], 'certified' => $adapter->isCertified(), 'cryptographically_sealed' => $seal !== null],
+            'payload' => ['signed_sha256' => $archive['sha256'], 'signature_format' => $cryptoFormat, 'certified' => false],
         ]);
 
         app(\App\Core\Audit\AuditLogger::class)->logCompany(

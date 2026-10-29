@@ -189,12 +189,12 @@ class SignatureController extends Controller
     public function verify(Request $request, int $id): JsonResponse
     {
         $req = $this->findScoped($request, $id);
-        $seal = $req->metadata['crypto_seal'] ?? null;
+        $format = $req->metadata['signature_format'] ?? ($req->metadata['crypto_seal'] ?? null ? 'cms_detached' : null);
 
-        if (! $seal || ! $req->signed_document_path) {
+        if (! $format || ! $req->signed_document_path) {
             return response()->json([
                 'has_seal' => false,
-                'message' => 'Aucun cachet cryptographique (document antérieur au cachet natif ou non finalisé).',
+                'message' => 'Aucun artefact cryptographique (document antérieur à la signature native ou non finalisé).',
             ]);
         }
 
@@ -202,37 +202,64 @@ class SignatureController extends Controller
         if (! Storage::disk($disk)->exists($req->signed_document_path)) {
             return response()->json(['has_seal' => true, 'document_available' => false, 'message' => 'Document final introuvable.'], 404);
         }
-
         $bytes = Storage::disk($disk)->get($req->signed_document_path);
+
+        // Bloc confiance commun (honnête, identique quel que soit le format).
+        $trust = [
+            'seal_type' => 'organizational_server_seal',
+            'signer_identity_cryptographically_bound' => false,
+            'eidas_advanced' => 'not_demonstrated',
+            'eidas_qualified' => 'not_demonstrated',
+            'note' => 'Signature/cachet cryptographique organisationnel (clé SERVEUR Leezr), vérifiable. L\'attribution au signataire repose sur le dossier de preuves (consentement + identification), pas sur une clé contrôlée par le signataire.',
+        ];
+
+        if ($format === 'pades_embedded') {
+            // Vérification INDÉPENDANTE par pdfsig (signature EMBARQUÉE dans le PDF).
+            $report = app(\App\Core\Crypto\NativePadesSignatureService::class)->verifyPdf($bytes);
+            if (empty($report['available'])) {
+                return response()->json(['has_seal' => true, 'format' => $format, 'verifier_available' => false, 'message' => 'Vérificateur pdfsig indisponible.', 'trust' => $trust]);
+            }
+
+            return response()->json([
+                'has_seal' => true,
+                'format' => 'pades_embedded',
+                'embedded_signature' => true,
+                'verified_by' => 'pdfsig',
+                'signature_count' => $report['signature_count'],
+                'all_signatures_valid' => $report['all_signatures_valid'],
+                'document_intact' => $report['all_signatures_valid'],   // signature embarquée valide ⇒ PDF non modifié
+                'overall_valid' => $report['all_signatures_valid'],
+                'signatures' => $report['signatures'],
+                'certificate' => [
+                    'identified' => true,
+                    'recognized_trust_chain' => $report['any_trusted_chain'] ?? false,
+                ],
+                'trust' => $trust,
+            ]);
+        }
+
+        // CMS détaché (repli / historique récent).
+        $seal = $req->metadata['crypto_seal'] ?? null;
         $svc = app(\App\Core\Crypto\CryptographicSealService::class);
-        $result = $svc->verify($bytes, $seal['cms_b64']);
+        $result = $svc->verify($bytes, $seal['cms_b64'] ?? '');
         $certInfo = $svc->certificateInfo();
 
         return response()->json([
             'has_seal' => true,
-            'document_available' => true,
-            // Faits cryptographiques vérifiés.
-            'document_intact' => $result['document_intact'],              // le PDF n'a pas été modifié depuis le cachet
-            'signature_valid' => $result['signature_valid'],              // signature CMS cryptographiquement valide
+            'format' => 'cms_detached',
+            'embedded_signature' => false,
+            'verified_by' => 'openssl',
+            'document_intact' => $result['document_intact'],
+            'signature_valid' => $result['signature_valid'],
             'overall_valid' => $result['valid'],
-            'algorithm' => $seal['algorithm'],
-            'sealed_at' => $seal['sealed_at'],
-            // Certificat : identifié mais auto-signé (pas de chaîne de confiance reconnue).
+            'algorithm' => $seal['algorithm'] ?? null,
             'certificate' => [
                 'identified' => true,
                 'recognized_trust_chain' => false,
                 'self_signed' => $certInfo['self_signed'] ?? true,
-                'subject' => $certInfo['subject'] ?? [],
                 'sha256_fingerprint' => $certInfo['sha256_fingerprint'] ?? null,
             ],
-            // Limites explicites (ne pas afficher un simple badge « Certifié »).
-            'trust' => [
-                'seal_type' => 'organizational_server_seal',             // cachet SERVEUR Leezr, non signataire-contrôlé
-                'signer_identity_cryptographically_bound' => false,       // l'identité est dans le dossier de preuves, pas dans la clé
-                'eidas_advanced' => 'not_demonstrated',
-                'eidas_qualified' => 'not_demonstrated',
-                'note' => 'Cachet cryptographique organisationnel vérifiable. L\'attribution au signataire repose sur le dossier de preuves (consentement + identification), pas sur une clé contrôlée par le signataire.',
-            ],
+            'trust' => $trust,
         ]);
     }
 

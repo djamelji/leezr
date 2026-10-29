@@ -23235,3 +23235,35 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Limites restantes / prochaines étapes** : (1) **PAdES embarqué** dans le PDF (FPDI import + signeur ; attention : re-wrap invalide les signatures antérieures → multi-signatures incrémentales = problème ouvert, lib libre insuffisante) ; (2) **clé signataire-contrôlée** (WebCrypto/HSM) pour viser l'avancée ; (3) **horodatage qualifié** (TSA RFC 3161) ; (4) export du dossier de preuves en paquet signé. **⚠️ Sécurité : mot de passe SSH DEV exposé en session → À RENOUVELER côté infra.**
 
 ---
+
+### ADR-655 — W-SIGNATURE-3 : signature PAdES native embarquée, finalisation P0, vérification indépendante (2026-10-30)
+
+**Contexte** : passer du cachet CMS détaché (W-SIGNATURE-2) à une **signature cryptographique EMBARQUÉE dans le PDF**, vérifiable indépendamment de Leezr, sans prestataire commercial, sans revendiquer de qualification eIDAS. DEV only ; interdits inchangés (main/PROD/Billing/activation commerciale/achat prestataire/qualification fictive/finalisation trompeuse/suppression données recette).
+
+**Sécurité (§1)** : le secret exposé était le **mot de passe SSH manuel** (le CI utilise déjà une clé `VPS_SSH_KEY`). Clé SSH dédiée **préparée et ajoutée** (additive, non destructive) à `authorized_keys` DEV ; mais sshd (ISPConfig) la **rejette** (vraisemblablement `StrictModes` sur un répertoire parent — nécessite root). Mot de passe **NON tourné** par prudence (risque de lockout) → **à renouveler côté infra** + rotation du secret CI recommandée.
+
+**Architecture PAdES retenue (§2) + justification** : **FPDI** (`setasign/fpdi` ^2.6, déjà présent, import du PDF source) + **TCPDF classique** (`tecnickcom/tcpdf` ^6.11, `setSignature()` via OpenSSL) — **100% PHP in-stack**, pas de microservice. **EU DSS écarté pour ce lot** (Java → service séparé = infra disproportionnée en DEV ; documenté comme voie pour l'avancé/qualifié). Attention version : `tecnickcom/tcpdf ^7` = réécriture `tc-lib-pdf` incompatible FPDI → **épinglé ^6.x**.
+
+**Format de signature embarquée (§4)** : signature **PKCS#7 `adbe.pkcs7.detached`, SHA-256**, intégrée dans le dictionnaire de signature du PDF (`/Type /Sig`, ByteRange couvrant tout le document). **La signature est DANS le fichier PDF**, pas seulement en métadonnées Leezr.
+
+**Vérification indépendante (§3, §9)** : outil tiers **`pdfsig` (poppler-utils)** — présent en local ET **sur le serveur DEV** (`/usr/bin/pdfsig`, poppler 25.03). Prototype prouvé : PDF signé → « **Signature is Valid** » (adbe.pkcs7.detached, SHA-256, « Total document signed ») ; PDF altéré d'1 octet → « **Digest Mismatch** ». `NativePadesSignatureService::verifyPdf` parse pdfsig → rapport structuré (nb signatures, validité, intégrité, algo, certificat, chaîne de confiance). Endpoint `/verify` + UI distinguent **PAdES embarquée (pdfsig)** vs **CMS détaché (openssl)**.
+
+**Finalisation fiable — P0 (§5)** : **PAS de statut `completed` sans artefact cryptographique produit, VÉRIFIÉ et archivé.** Ordre : (1) PAdES embarqué (signPdf → verifyPdf pdfsig) ; (2) repli cachet CMS détaché (seal → verify openssl) ; (3) **si aucun artefact vérifié → échec, demande NON complétée** (`crypto_artifact_unverified`), consentements conservés, événement d'erreur, reprise par nouvelle procédure. Le **format réellement utilisé** est enregistré (`signature_format` = `pades_embedded` | `cms_detached`) sur la demande ET le document. Nota transactionnel : l'artefact est vérifié AVANT la transition `completed` ; l'écriture fichier précède le commit SQL (un rollback laisse un fichier orphelin sans incohérence DB).
+
+**Signatures multiples (§6)** : **NON fournies en PAdES incrémental.** FPDI re-emballe le PDF à chaque signature → une seconde signature embarquée invaliderait la première. **Limite documentée, non masquée** : le workflow métier multi-signataires (séquentiel/parallèle + consentements + preuves) est conservé, mais **une seule signature cryptographique embarquée** (cachet organisationnel sur le document final). Le multi-signature PAdES vrai nécessite un signeur à mise à jour incrémentale (SetaPDF-Signer commercial, ou DSS).
+
+**Modèle de confiance (§7)** : distingue cachet serveur / signature signataire / signature vérifiée crypto / auto-signé / reconnu AC / avancée / qualifiée. **Le cachet actuel reste un cachet organisationnel SERVEUR NON certifié** (`seal_type=organizational_server_seal`, `certified=false`, `recognized_trust_chain=false`, `signer_identity_cryptographically_bound=false`, `eidas_*=not_demonstrated`) — visible API + preuves + UI. **La signature est faite avec la clé privée du SERVEUR, jamais attribuée crypto­graphiquement au collaborateur.**
+
+**Gestion des clés (§8)** : accès CENTRALISÉ `CryptographicSealService::usingSigningMaterial()` (cert + clé déchiffrée, **clé essuyée en mémoire après usage**) ; clé privée chiffrée au repos (Crypt), jamais en base métier/frontend/logs/API. Cycle de vie (rotation/sauvegarde/révocation/audit/permissions) + interfaces pour une future **clé contrôlée par le signataire** : documentés, pas encore implémentés. Pas de délivrance de certificats qualifiés.
+
+**Compatibilité documents historiques** : les demandes antérieures (cachet CMS ou non scellées) **ne sont pas converties** ; `/verify` gère les deux formats ; aucune altération rétroactive.
+
+**Tests** : `NativePadesSignatureTest` **3/3** (signature embarquée vérifiée pdfsig, altération détectée, honnêteté auto-signé) ; `WorkforceSignatureTest` **+1** (vrai PDF → `pades_embedded` + `/verify` pdfsig) ; CMS/persistance/gouvernance/contract/documents **76 verts**. Build propre.
+
+**Limites techniques & juridiques (§14)** : (1) **une seule** signature embarquée (pas de multi-sig PAdES incrémental) ; (2) certificat **auto-signé** → non reconnu par une AC → Adobe affichera « identité du signataire inconnue » ; (3) **clé serveur** → pas d'attribution au signataire → **PAS une signature avancée eIDAS** ; (4) **horodatage applicatif**, pas qualifié (pas de TSA) ; (5) la qualification eIDAS exige QTSP + QSCD + horodatage qualifié, hors logiciel seul.
+
+**Prochaines étapes pour des signatures RÉELLEMENT contrôlées par le signataire (§15)** : clé générée **côté signataire** (WebCrypto non-extractible) ou carte/HSM ; lien univoque clé↔identité vérifiée ; CSR signataire + AC Leezr ou QTSP ; multi-signature incrémentale (DSS/SetaPDF) ; **TSA RFC 3161** ; rotation/révocation/CRL/OCSP ; export du dossier de preuves en paquet signé.
+
+**Fichiers** : `composer.json/lock` (tcpdf ^6) ; `App\Core\Crypto\{NativePadesSignatureService, CryptographicSealService::usingSigningMaterial}` ; `FinalizeSignatureRequestUseCase` (P0 PAdES→CMS→fail + format) ; `SignatureController::verify` (PAdES/CMS) ; `_SignatureDetailDrawer.vue` + i18n ; tests `NativePadesSignatureTest`, `WorkforceSignatureTest` (+PAdES).
+
+---

@@ -220,6 +220,20 @@ const doRemind = async () => {
           </div>
           <template v-if="verifyResult.has_seal">
             <div class="d-flex flex-column gap-1">
+              <VChip size="small" color="primary" variant="tonal" label>
+                <VIcon :icon="verifyResult.embedded_signature ? 'tabler-file-certificate' : 'tabler-certificate'" start size="14" />
+                {{ verifyResult.embedded_signature ? t('signature.verify.padesEmbedded') : t('signature.verify.cmsDetached') }}
+                <template v-if="verifyResult.verified_by"> · {{ verifyResult.verified_by }}</template>
+              </VChip>
+              <VChip
+                size="small"
+                :color="verifyResult.overall_valid ? 'success' : 'error'"
+                variant="tonal"
+                label
+              >
+                <VIcon :icon="verifyResult.overall_valid ? 'tabler-check' : 'tabler-x'" start size="14" />
+                {{ verifyResult.overall_valid ? t('signature.verify.cryptoValid') : t('signature.verify.cryptoInvalid') }}
+              </VChip>
               <VChip
                 size="small"
                 :color="verifyResult.document_intact ? 'success' : 'error'"
@@ -231,16 +245,12 @@ const doRemind = async () => {
               </VChip>
               <VChip
                 size="small"
-                :color="verifyResult.signature_valid ? 'success' : 'error'"
+                :color="verifyResult.certificate?.recognized_trust_chain ? 'success' : 'warning'"
                 variant="tonal"
                 label
               >
-                <VIcon :icon="verifyResult.signature_valid ? 'tabler-check' : 'tabler-x'" start size="14" />
-                {{ verifyResult.signature_valid ? t('signature.verify.cryptoValid') : t('signature.verify.cryptoInvalid') }}
-              </VChip>
-              <VChip size="small" color="warning" variant="tonal" label>
                 <VIcon icon="tabler-certificate-off" start size="14" />
-                {{ t('signature.verify.certNotRecognized') }}
+                {{ verifyResult.certificate?.recognized_trust_chain ? t('signature.verify.certRecognized') : t('signature.verify.certNotRecognized') }}
               </VChip>
             </div>
             <VAlert type="info" variant="tonal" density="compact" class="mt-2">

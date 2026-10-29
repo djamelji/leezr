@@ -49,6 +49,24 @@ class CryptographicSealService
         Storage::disk(self::DISK)->put(self::KEY_ENC_PATH, Crypt::encryptString($keyPem));
     }
 
+    /**
+     * Exécute $fn avec le matériel de signature (cert PEM + clé privée PEM déchiffrée), puis efface
+     * la copie mémoire de la clé. Point d'accès CENTRAL au matériel sensible (ne jamais le retourner
+     * ni l'exposer ailleurs).
+     */
+    public function usingSigningMaterial(callable $fn)
+    {
+        $this->ensureSeal();
+        $certPem = $this->certificatePem();
+        $keyPem = Crypt::decryptString(Storage::disk(self::DISK)->get(self::KEY_ENC_PATH));
+        try {
+            return $fn($certPem, $keyPem);
+        } finally {
+            $keyPem = str_repeat("\0", strlen($keyPem));
+            unset($keyPem);
+        }
+    }
+
     /** Certificat public (PEM) du cachet. */
     public function certificatePem(): string
     {

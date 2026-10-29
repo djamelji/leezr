@@ -369,6 +369,40 @@ class WorkforceSignatureTest extends TestCase
         Notification::assertSentOnDemand(\App\Notifications\Signature\SignedCopyNotification::class);
     }
 
+    // ── W-SIGNATURE-3 : vrai PDF → signature PAdES EMBARQUÉE + vérification indépendante pdfsig ──
+    public function test_real_pdf_finalization_produces_embedded_pades(): void
+    {
+        if (! app(\App\Core\Crypto\NativePadesSignatureService::class)->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        // Document source = vrai PDF dompdf (FPDI peut l'importer, contrairement aux fixtures factices).
+        $realPdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<h1>Contrat réel</h1><p>Test PAdES.</p>')->output();
+        $doc = $this->emittedDoc();
+        Storage::disk('local')->put($doc->file_path, $realPdf);
+
+        $req = app(CreateSignatureRequestUseCase::class)->execute($this->company->id, $this->actorId, $doc->id, [['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]], null, 'sequential', null);
+        app(SendSignatureRequestUseCase::class)->execute($this->company->id, $this->actorId, $req->id);
+        $raw = $this->issueToken($req->signers()->first(), $req);
+        $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
+
+        $req->refresh();
+        $this->assertSame(SignatureRequest::STATUS_COMPLETED, $req->status);
+        $this->assertSame('pades_embedded', $req->metadata['signature_format'] ?? null, 'format PAdES embarqué');
+
+        // Le fichier archivé est un PDF avec signature embarquée.
+        $signedBytes = Storage::disk('local')->get($req->signed_document_path);
+        $this->assertStringStartsWith('%PDF', $signedBytes);
+
+        // Endpoint verify : signature embarquée vérifiée indépendamment par pdfsig.
+        $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/verify')->assertOk();
+        $res->assertJsonPath('format', 'pades_embedded')
+            ->assertJsonPath('embedded_signature', true)
+            ->assertJsonPath('verified_by', 'pdfsig')
+            ->assertJsonPath('all_signatures_valid', true)
+            ->assertJsonPath('certificate.recognized_trust_chain', false) // auto-signé, honnête
+            ->assertJsonPath('trust.eidas_advanced', 'not_demonstrated');
+    }
+
     // ── W-SIGNATURE-2 : cachet cryptographique réel + vérification indépendante honnête ──
     public function test_completed_request_has_cryptographic_seal_and_verifies(): void
     {
