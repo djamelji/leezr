@@ -210,6 +210,34 @@ class ContractTemplateService
         });
     }
 
+    /** Définit un modèle Company PUBLIÉ comme défaut pour son type de contrat (un seul par type). */
+    public static function setDefault(Company $company, int $templateId, int $actorId): DocumentTemplate
+    {
+        $t = self::ownTemplate($company, $templateId);
+        if (self::attrs($t)['status'] !== self::STATUS_PUBLISHED) {
+            throw new \DomainException('Seul un modèle publié peut être défini par défaut.');
+        }
+        $contractType = self::attrs($t)['contract_type'];
+
+        return DB::transaction(function () use ($company, $t, $contractType, $actorId) {
+            // Retire le défaut des autres modèles Company du même type de contrat.
+            DocumentTemplate::where('company_id', $company->id)->where('subject_type', self::SUBJECT)
+                ->where('id', '!=', $t->id)->get()
+                ->each(function ($other) use ($contractType) {
+                    if ((self::attrs($other)['contract_type'] ?? null) === $contractType && self::attrs($other)['is_default']) {
+                        $other->metadata = array_merge($other->metadata ?? [], ['is_default' => false]);
+                        $other->save();
+                    }
+                });
+
+            $t->metadata = array_merge($t->metadata ?? [], ['is_default' => true]);
+            $t->save();
+            self::audit($company->id, $actorId, 'contract_template.set_default', $t->id, "Modèle « {$t->name} » défini par défaut ({$contractType})");
+
+            return $t;
+        });
+    }
+
     public static function archive(Company $company, int $templateId, int $actorId): DocumentTemplate
     {
         $t = self::ownTemplate($company, $templateId);

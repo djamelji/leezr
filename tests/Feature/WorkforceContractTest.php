@@ -17,6 +17,7 @@ use App\Core\Modules\PlatformModule;
 use App\Core\Workforce\CompensationPlan;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
+use App\Modules\Workforce\Contract\Services\ContractTemplateService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -203,6 +204,43 @@ class WorkforceContractTest extends TestCase
         $this->assertStringNotContainsString('javascript:', $saved);
         $this->assertStringNotContainsString('tracker.example', $saved, 'ressource externe retirée');
         $this->assertStringContainsString('{{ employee.full_name }}', $saved, 'variables préservées');
+    }
+
+    public function test_set_default_one_per_contract_type(): void
+    {
+        // Deux modèles Platform DISTINCTS de type cdi (codes différents) → dupliqués + publiés.
+        $plat2 = $this->tpl(null, 'contract_cdi_fr_v2', 'CDI FR 2', ['market_key' => 'FR', 'contract_type' => 'cdi']);
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.manage_templates']);
+        $a = $this->api($u, 'POST', "/templates/{$this->platformTplId}/duplicate")->json();
+        $this->api($u, 'POST', "/templates/{$a['id']}/publish")->assertOk();
+        $b = $this->api($u, 'POST', "/templates/{$plat2->id}/duplicate")->json();
+        $this->api($u, 'POST', "/templates/{$b['id']}/publish")->assertOk();
+
+        $this->api($u, 'POST', "/templates/{$a['id']}/default")->assertOk()->assertJsonFragment(['is_default' => true]);
+        $this->api($u, 'POST', "/templates/{$b['id']}/default")->assertOk()->assertJsonFragment(['is_default' => true]);
+        // b devient défaut → a ne l'est plus (un seul défaut par type de contrat).
+        $this->assertFalse(ContractTemplateService::present(DocumentTemplate::find($a['id']))['is_default']);
+    }
+
+    public function test_set_default_requires_published(): void
+    {
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.manage_templates']);
+        $draft = $this->api($u, 'POST', "/templates/{$this->platformTplId}/duplicate")->json();
+        $this->api($u, 'POST', "/templates/{$draft['id']}/default")->assertStatus(422);
+    }
+
+    public function test_preview_pdf_of_unsaved_content_goes_through_pipeline(): void
+    {
+        $u = $this->user(['workforce_contract.view', 'workforce_contract.generate', 'workforce.view', 'workforce.manage']);
+        // Contenu NON ENREGISTRÉ avec script → doit passer par la sanitation + rendu, sans crash.
+        $res = $this->api($u, 'POST', '/preview-pdf', [
+            'template_id' => $this->platformTplId,
+            'employee_id' => $this->employee->id,
+            'body_html' => '<p>Édition en cours {{ employee.full_name }}</p><script>alert(1)</script>',
+        ])->assertOk();
+        $this->assertStringStartsWith('%PDF', $res->getContent());
+        // Le modèle stocké n'est PAS modifié (aperçu = aucune mutation).
+        $this->assertStringNotContainsString('Édition en cours', DocumentTemplate::find($this->platformTplId)->body_html);
     }
 
     public function test_generate_requires_generate_permission(): void

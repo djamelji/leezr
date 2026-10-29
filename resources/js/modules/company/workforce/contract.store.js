@@ -45,9 +45,16 @@ export const useContractStore = defineStore('workforceContract', {
     async preview({ templateId, employeeId }) {
       return await $api('/workforce/contract/preview', { method: 'POST', body: { template_id: templateId, employee_id: employeeId } })
     },
-    // W-CONTRACT-2 : aperçu PDF FIDÈLE (même pipeline, sans émission) → blob.
-    async previewPdf({ templateId, employeeId }) {
-      return await $api('/workforce/contract/preview-pdf', { method: 'POST', body: { template_id: templateId, employee_id: employeeId }, responseType: 'blob' })
+    // W-CONTRACT-2/3 : aperçu PDF FIDÈLE (même pipeline, sans émission) → blob. bodyHtml = contenu non enregistré.
+    async previewPdf({ templateId, employeeId, bodyHtml }) {
+      const body = { template_id: templateId }
+      if (employeeId) body.employee_id = employeeId
+      if (bodyHtml !== undefined) body.body_html = bodyHtml
+
+      return await $api('/workforce/contract/preview-pdf', { method: 'POST', body, responseType: 'blob' })
+    },
+    async setDefault(id) {
+      return await $api(`/workforce/contract/templates/${id}/default`, { method: 'POST' })
     },
     async generate({ templateCode, employeeId }) {
       return await $api('/workforce/contract/generate', { method: 'POST', body: { template_code: templateCode, employee_id: employeeId } })

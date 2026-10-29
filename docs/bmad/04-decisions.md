@@ -23084,3 +23084,27 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `DocumentPdfGenerator::renderPdf` (+ refactor generate) ; `HtmlSanitizer` ; `ContractController::previewPdf` + sanitation dans `ContractTemplateService::update` ; routes `preview-pdf` ; `contract.store` (previewPdf) ; `contract/templates.vue` (Tiptap + palette catégorisée + aperçu PDF) ; `_GenerateContractDialog.vue` (aperçu PDF iframe) ; `ContractTemplateSeeder` (clés corrigées) ; i18n. Tests + e2e.
 
 ---
+### ADR-649 — Workforce Contract (W-CONTRACT-3) : insertion au curseur, aperçu non enregistré, modèle par défaut + W-HYGIENE-GOV (2026-10-29)
+
+**Contexte** : finaliser l'expérience Company de Workforce Contract (les exigences différées de W-CONTRACT-2) + corriger les 4 tests de gouvernance (commit séparé). Réutilise Tiptap, `DocumentPdfGenerator`, `HtmlSanitizer`, `ContractTemplateService`.
+
+**Décision (W-CONTRACT-3)** :
+1. **Insertion de variable AU CURSEUR (§3)** : `@core/TiptapEditor` n'expose pas son instance → composant local `_ContractEditor.vue` (MÊME moteur Tiptap + StarterKit, pas une autre technologie) qui **expose `insertAtCursor`** → la variable s'insère à la position du curseur (ou remplace la sélection), plus en fin de contenu. Toolbar bold/italic/titres/listes.
+2. **Aperçu du contenu NON ENREGISTRÉ (§3)** : `previewPdf` accepte `body_html`/`header_html`/`footer_html` → **sanitation SERVEUR** (`HtmlSanitizer`) + copie EN MÉMOIRE (`replicate()`, jamais sauvegardée) + `renderPdf` (même pipeline). L'éditeur « Aperçu PDF » affiche le PDF du brouillon en cours **sans enregistrer ni publier**. Un contenu non enregistré **ne contourne ni la sanitation ni les permissions** (gating `generate` + scope maintenus). Prouvé : le modèle stocké n'est pas modifié par l'aperçu.
+3. **Modèle par DÉFAUT Company par type de contrat (§4)** : `ContractTemplateService::setDefault` (un seul défaut par `contract_type`, uniquement un modèle PUBLIÉ, transactionnel, audité) ; endpoint `POST /templates/{id}/default` ; bouton + badge dans la bibliothèque ; **le dialogue de génération présélectionne le modèle par défaut** (le responsable génère sans manipuler de sélecteur).
+
+**W-HYGIENE-GOV (commit séparé `a9e16eb`)** — 4 tests de gouvernance corrigés **sans affaiblir la sécurité** (route réellement non gatée toujours détectée) :
+- `CompanyModuleRoutesAreGated` / `GlobalModuleRouteCoverage` : l'heuristique contrôleur→module par répertoire ne distinguait pas les modules partageant `app/Modules/{Vertical}/` (Planning, Leave). Désormais : chaque route de contrôleur-module doit porter **UN** gate d'activation de module **valide** (clé réelle du registre), sans deviner la clé exacte.
+- `CompanyPermissionTest::admin_permissions` : liste figée → **dérivée du catalogue** (`CompanyPermissionCatalog::all()`, manifestes = source de vérité) ; vérifie la cohérence sync DB↔manifestes, auto-maintenue.
+- `PageModuleAlignmentTest` : ajout des overrides de conversion routeName→page pour les noms composés `organization-presets` (pages ADR-638 présentes).
+**Non contournés, non désactivés. 50 tests de gouvernance verts.**
+
+**Correctif technique** : `_ContractEditor` importe `@tiptap/vue-3` (le package installé, pas `@tiptap/vue3`).
+
+**Tests** : `WorkforceContractTest` **19/19** (+ modèle par défaut un-par-type, défaut exige publié, aperçu de contenu non enregistré via le pipeline sans mutation). Régression gouvernance+contract+documents+payslip+employeeFile **316 verts**. `pnpm build` propre. e2e `workforce-contract` **3/3** : (1) bibliothèque dupliquer → **édition Tiptap + insertion variable AU CURSEUR** + **aperçu PDF du contenu non enregistré (vrai PDF nouvel onglet)** → publier ; (2) **génération complète réelle** (modèle par défaut présélectionné → Générer → réponse serveur → **téléchargement d'un contrat = PDF valide %PDF via la route sécurisée**) ; (3) responsive/dark. **Le parcours navigateur de génération est désormais opérationnel** (sélecteur Vuetify contourné par la présélection du défaut) — plus un simple substitut PHPUnit.
+
+**Limites restantes (W-CONTRACT-3B)** : **administration catalogue Platform VISUELLE + éditeur Platform** (§2) non livrée — aujourd'hui les modèles Platform sont gérés via seeder/API horizontale ; c'est l'unique pièce restante de Workforce Contract (chaîne Company complète : personnaliser → défaut → générer → PDF → dossier). Workflow de **validation juridique** (publication ≠ validation — champ `legal_status` distinct, UI de transition de statut à faire). Identité documentaire employeur (logo/coordonnées) dans l'aperçu : le pipeline supporte header/footer, l'UI de configuration reste à brancher. Section Contrat dans Paramètres RH (lien bibliothèque).
+
+**Fichiers** : `_ContractEditor.vue` ; `ContractController::previewPdf` (contenu non enregistré) + `setDefault` ; `ContractTemplateService::setDefault` ; routes ; `contract.store` ; `contract/templates.vue` (éditeur local + curseur + défaut + aperçu non enregistré) ; `_GenerateContractDialog.vue` (présélection défaut) ; i18n. 4 tests de gouvernance (commit séparé). Tests + e2e.
+
+---

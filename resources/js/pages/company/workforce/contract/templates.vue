@@ -5,7 +5,7 @@
 import { useContractStore } from '@/modules/company/workforce/contract.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
-import TiptapEditor from '@core/components/TiptapEditor.vue'
+import ContractEditor from './_ContractEditor.vue'
 
 definePage({ meta: { module: 'workforce_contract', permission: 'workforce_contract.view' } })
 
@@ -50,7 +50,10 @@ const openEdit = async tpl => {
   editForm.value = { name: full.name, body_html: full.body_html || '', contract_type: full.contract_type || '' }
   editOpen.value = true
 }
-const insertVar = key => { editForm.value.body_html += ` {{ ${key} }}` }
+const editorRef = ref()
+// W-CONTRACT-3 : insertion AU CURSEUR (pas en fin) via l'éditeur exposé.
+const insertVar = key => { editorRef.value?.insertAtCursor(`{{ ${key} }}`) }
+const onSetDefault = tpl => act(() => store.setDefault(tpl.id), tpl.id, t('contractTpl.defaultSet'))
 
 // Palette catégorisée (par préfixe de variable : employee/contract/company/compensation…).
 const variablesByCategory = computed(() => {
@@ -63,13 +66,12 @@ const variablesByCategory = computed(() => {
   return groups
 })
 
-// Aperçu PDF FIDÈLE : on enregistre le brouillon puis on ouvre le PDF (même pipeline, échantillon).
+// Aperçu PDF FIDÈLE du contenu EN COURS D'ÉDITION (non enregistré) — même pipeline sécurisé.
 const previewing = ref(false)
 const previewPdf = async () => {
   previewing.value = true
   try {
-    await store.updateTemplate(editTpl.value.id, editForm.value) // persiste le brouillon avant aperçu
-    const blob = await store.previewPdf({ templateId: editTpl.value.id })
+    const blob = await store.previewPdf({ templateId: editTpl.value.id, bodyHtml: editForm.value.body_html })
     const url = URL.createObjectURL(blob)
 
     window.open(url, '_blank')
@@ -192,6 +194,26 @@ const saveEdit = async () => {
                       {{ t('contractTpl.newVersion') }}
                     </VBtn>
                     <VBtn
+                      v-if="tpl.status === 'published' && !tpl.is_default"
+                      size="x-small"
+                      variant="tonal"
+                      color="primary"
+                      prepend-icon="tabler-star"
+                      :loading="busyId === tpl.id"
+                      @click="onSetDefault(tpl)"
+                    >
+                      {{ t('contractTpl.setDefault') }}
+                    </VBtn>
+                    <VChip
+                      v-if="tpl.is_default"
+                      size="x-small"
+                      color="primary"
+                      variant="tonal"
+                      prepend-icon="tabler-star-filled"
+                    >
+                      {{ t('contractTpl.default') }}
+                    </VChip>
+                    <VBtn
                       v-if="tpl.status !== 'archived'"
                       size="x-small"
                       variant="text"
@@ -255,14 +277,15 @@ const saveEdit = async () => {
           </div>
         </div>
 
-        <!-- Éditeur WYSIWYG (Tiptap) — aucun HTML à écrire -->
+        <!-- Éditeur WYSIWYG (Tiptap) — aucun HTML à écrire ; variables insérées au curseur -->
         <div class="text-caption text-medium-emphasis mb-1">
           {{ t('contractTpl.body') }}
         </div>
-        <TiptapEditor
+        <ContractEditor
+          ref="editorRef"
           v-model="editForm.body_html"
           :placeholder="t('contractTpl.body')"
-          class="mb-3 contract-tiptap"
+          class="mb-3"
         />
 
         <VBtn

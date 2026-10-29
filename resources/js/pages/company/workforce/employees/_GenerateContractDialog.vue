@@ -34,7 +34,11 @@ watch(isOpen, async v => {
     revokePreview()
     templateId.value = null
     loading.value = true
-    try { templates.value = await store.fetchTemplates() } finally { loading.value = false }
+    try {
+      templates.value = await store.fetchTemplates()
+      // W-CONTRACT-3 : présélection du modèle par DÉFAUT Company (publié), sinon rien.
+      templateId.value = templates.value.find(t => t.is_default && t.status === 'published')?.id ?? null
+    } finally { loading.value = false }
   } else { revokePreview() }
 })
 

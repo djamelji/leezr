@@ -20,15 +20,17 @@ test('library: duplicate → WYSIWYG edit → faithful PDF preview → publish (
   await expect(page.locator('.v-snackbar, [role="alert"]').first()).toBeVisible({ timeout: 8000 })
   await page.waitForTimeout(600)
 
-  // Éditer : WYSIWYG Tiptap + palette de variables.
+  // Éditer : WYSIWYG Tiptap + insertion de variable AU CURSEUR.
   await page.getByRole('button', { name: /^Modifier$|^Edit$/ }).first().click()
   const drawer = page.locator('.v-navigation-drawer--active').first()
   await drawer.locator('input').first().fill('CDI WYSIWYG E2E')
   const editor = drawer.locator('.ProseMirror').first()
   await expect(editor).toBeVisible({ timeout: 6000 })
   await editor.click()
-  await page.keyboard.type('Clause ajoutée via l\'éditeur visuel. ')
-  await drawer.getByText(/^Collaborateur$/).first().isVisible().catch(() => {})
+  await page.keyboard.type('Clause ajoutee. ')
+  // Insertion au curseur via la palette → la variable apparaît dans l'éditeur.
+  await drawer.locator('.v-chip').first().click()
+  await expect(editor).toContainText('{{', { timeout: 4000 })
   await page.screenshot({ path: `${SCRATCH}/contract-editor.png`, fullPage: false })
 
   // Aperçu PDF FIDÈLE : ouvre un nouvel onglet avec le PDF (même pipeline de rendu).
@@ -55,38 +57,43 @@ test('library: duplicate → WYSIWYG edit → faithful PDF preview → publish (
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
-test('generate dialog wiring + archived contract PDF download is valid (real file)', async ({ page }) => {
+test('full generation from the employee file: default pre-selected → faithful PDF preview → real generate → download valid PDF', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+
   await loginCompany(page, 'owner@leezr.test')
   await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
   await page.locator('.v-data-table tbody tr').first().click()
   await expect(page).toHaveURL(/\/company\/workforce\/employees\/\d+/, { timeout: 8000 })
 
-  // Point d'intégration fiche → dialogue de génération (sélecteur de modèle + bouton Générer).
-  // (La génération réelle — GeneratedDocument + snapshot + idempotence — est prouvée par
-  // WorkforceContractTest ; le sélecteur Vuetify async est instable en headless.)
   await page.locator('[data-test="generate-contract"]').click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByText(/Modèle de contrat|Contract template/)).toBeVisible({ timeout: 6000 })
-  await expect(dialog.getByRole('button', { name: /^Générer$|^Generate$/ })).toBeVisible()
-  await page.screenshot({ path: `${SCRATCH}/contract-generate.png`, fullPage: false })
-})
+  await expect(dialog.getByText(/Générer un contrat|Generate a contract/)).toBeVisible({ timeout: 6000 })
 
-test('archived contract PDF downloads via the secure route and is a valid PDF (real file)', async ({ page }) => {
-  // §11 — un contrat réellement généré (fixture) se télécharge via la route authentifiée W-D et le
-  // fichier est un PDF valide. (La génération elle-même est prouvée par WorkforceContractTest.)
-  await loginCompany(page, 'owner@leezr.test')
+  // Le modèle PAR DÉFAUT est présélectionné → pas d'interaction select ; Générer est actif.
+  await page.waitForTimeout(1500)
+  const genBtn = dialog.getByRole('button', { name: /^Générer$|^Generate$/ })
+  await expect(genBtn).toBeEnabled({ timeout: 8000 })
+  await page.screenshot({ path: `${SCRATCH}/contract-generate.png`, fullPage: false })
+
+  // Génération réelle (PDF + archivage) → réponse serveur (toast). (L'aperçu PDF fidèle est exercé
+  // dans le test « library » via l'ouverture d'un vrai PDF.)
+  await genBtn.click()
+  await expect(page.locator('.v-snackbar, [role="alert"]').first()).toBeVisible({ timeout: 15000 })
+
+  // Téléchargement d'un contrat via la route sécurisée → PDF VALIDE (fichier réel).
   await page.goto('/company/workforce/documents', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1000)
   const dlBtn = page.locator('.v-data-table tbody .tabler-download, .v-data-table tbody [title*="élécharg"], .v-data-table tbody [title*="ownload"]').first()
-  if (await dlBtn.isVisible().catch(() => false)) {
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 12000 }),
-      dlBtn.click(),
-    ])
-    const path = `${SCRATCH}/contract-downloaded.pdf`
-    await download.saveAs(path)
-    expect(fs.readFileSync(path).subarray(0, 4).toString()).toBe('%PDF')
-  }
+  await expect(dlBtn).toBeVisible({ timeout: 8000 })
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 12000 }),
+    dlBtn.click(),
+  ])
+  const path = `${SCRATCH}/contract-downloaded.pdf`
+  await download.saveAs(path)
+  expect(fs.readFileSync(path).subarray(0, 4).toString()).toBe('%PDF')
+  expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
 test('contract library responsive and dark-mode clean', async ({ page }) => {

@@ -76,6 +76,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-workforce-action-card': RouteRecordInfo<'company-workforce-workforce-action-card', '/company/workforce/_WorkforceActionCard', Record<never, never>, Record<never, never>>,
     'company-workforce-workforce-module-card': RouteRecordInfo<'company-workforce-workforce-module-card', '/company/workforce/_WorkforceModuleCard', Record<never, never>, Record<never, never>>,
     'company-workforce-configuration': RouteRecordInfo<'company-workforce-configuration', '/company/workforce/configuration', Record<never, never>, Record<never, never>>,
+    'company-workforce-contract-contract-editor': RouteRecordInfo<'company-workforce-contract-contract-editor', '/company/workforce/contract/_ContractEditor', Record<never, never>, Record<never, never>>,
     'company-workforce-contract-templates': RouteRecordInfo<'company-workforce-contract-templates', '/company/workforce/contract/templates', Record<never, never>, Record<never, never>>,
     'company-workforce-documents': RouteRecordInfo<'company-workforce-documents', '/company/workforce/documents', Record<never, never>, Record<never, never>>,
     'company-workforce-documents-generate-document-drawer': RouteRecordInfo<'company-workforce-documents-generate-document-drawer', '/company/workforce/documents/_GenerateDocumentDrawer', Record<never, never>, Record<never, never>>,

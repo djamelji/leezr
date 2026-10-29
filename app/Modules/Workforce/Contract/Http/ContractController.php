@@ -107,6 +107,17 @@ class ContractController extends Controller
         return response()->json(ContractTemplateService::present($t));
     }
 
+    public function setDefault(Request $request, int $id): JsonResponse
+    {
+        try {
+            $t = ContractTemplateService::setDefault($this->company($request), $id, $request->user()->id);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(ContractTemplateService::present($t));
+    }
+
     // ── Prévisualisation (SANS émission) ─────────────────────────────
     public function preview(Request $request): JsonResponse
     {
@@ -158,12 +169,33 @@ class ContractController extends Controller
         $validated = $request->validate([
             'template_id' => 'required|integer',
             'employee_id' => 'sometimes|integer',
+            // W-CONTRACT-3 : aperçu du contenu NON ENREGISTRÉ (édition en cours) — passe par la MÊME
+            // sanitation + résolution + génération. Aucune mutation persistante.
+            'body_html' => 'sometimes|string',
+            'header_html' => 'sometimes|nullable|string',
+            'footer_html' => 'sometimes|nullable|string',
         ]);
         $companyId = $request->attributes->get('company_id');
 
         $template = DocumentTemplate::where('subject_type', ContractTemplateService::SUBJECT)
             ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId))
             ->findOrFail($validated['template_id']);
+
+        // Contenu non enregistré : on applique la sanitation SERVEUR et on travaille sur une copie
+        // EN MÉMOIRE (jamais sauvegardée). L'édition d'un contenu non enregistré ne contourne donc
+        // ni la sanitation ni les permissions (le gating `generate` + scope restent appliqués).
+        if ($request->filled('body_html') || $request->has('header_html') || $request->has('footer_html')) {
+            $template = $template->replicate();
+            if ($request->filled('body_html')) {
+                $template->body_html = \App\Core\Documents\Services\HtmlSanitizer::sanitize($validated['body_html']);
+            }
+            if ($request->has('header_html')) {
+                $template->header_html = \App\Core\Documents\Services\HtmlSanitizer::sanitize($validated['header_html'] ?? '');
+            }
+            if ($request->has('footer_html')) {
+                $template->footer_html = \App\Core\Documents\Services\HtmlSanitizer::sanitize($validated['footer_html'] ?? '');
+            }
+        }
 
         if ($request->filled('employee_id')) {
             abort_unless(WorkforceAccess::canViewEmployeeData($request, (int) $validated['employee_id'], 'employee'), 403);

@@ -7608,7 +7608,10 @@
       "validated": "Validé",
       "example_unvalidated": "Exemple non validé"
     },
-    "previewPdf": "Aperçu PDF"
+    "previewPdf": "Aperçu PDF",
+    "setDefault": "Par défaut",
+    "default": "Défaut",
+    "defaultSet": "Modèle défini par défaut"
   },
   "generateContract": {
     "action": "Générer un contrat",

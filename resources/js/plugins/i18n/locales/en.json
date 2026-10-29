@@ -7608,7 +7608,10 @@
       "validated": "Validated",
       "example_unvalidated": "Unvalidated example"
     },
-    "previewPdf": "PDF preview"
+    "previewPdf": "PDF preview",
+    "setDefault": "Set default",
+    "default": "Default",
+    "defaultSet": "Default template set"
   },
   "generateContract": {
     "action": "Generate contract",
