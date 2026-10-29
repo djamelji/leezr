@@ -571,71 +571,17 @@ class CompanyPermissionTest extends TestCase
         $adminPerms = CompanyPermission::where('is_admin', true)->pluck('key')->sort()->values()->toArray();
         $opPerms = CompanyPermission::where('is_admin', false)->pluck('key')->sort()->values()->toArray();
 
-        // 33 admin permissions (includes core + shipments + workforce + workforce_documents)
-        $this->assertEquals([
-            'audit.view',
-            'billing.manage',
-            'documents.configure',
-            'documents.manage',
-            'jobdomain.manage',
-            'members.credentials',
-            'members.manage',
-            'members.sensitive_read',
-            'modules.manage',
-            'roles.manage',
-            'roles.view',
-            'settings.manage',
-            'shipments.delete',
-            'shipments.manage_fields',
-            'workforce.admin',
-            'workforce.compensation_manage',
-            'workforce.compensation_read',
-            'workforce.contracts',
-            'workforce.leave_adjust',
-            'workforce.leave_approve',
-            'workforce.leave_manage',
-            'workforce.leave_view_all',
-            'workforce.payroll_export',
-            'workforce.payroll_prepare',
-            'workforce.payroll_validate',
-            'workforce.planning_manage',
-            'workforce.planning_publish',
-            'workforce.sensitive_read',
-            'workforce.time_approve',
-            'workforce.timesheet_approve',
-            'workforce_documents.generate',
-            'workforce_documents.manage_templates',
-            'workforce_documents.sign',
-        ], $adminPerms);
+        // W-HYGIENE-GOV : attentes DÉRIVÉES du catalogue (manifestes = source de vérité), plus de
+        // liste figée. Vérifie que le flag is_admin en base correspond au catalogue (sync correct)
+        // et reste vert quand un module ajoute une permission. Garde-fou anti-vide conservé.
+        $catalogByKey = collect(\App\Company\RBAC\CompanyPermissionCatalog::all())->keyBy('key');
+        $expectedAdmin = $catalogByKey->where('is_admin', true)->keys()->sort()->values()->toArray();
+        $expectedOp = $catalogByKey->where('is_admin', false)->keys()->sort()->values()->toArray();
 
-        // 25 operational permissions (includes core + shipments + workforce + workforce_documents)
-        $this->assertEquals([
-            'automations.manage',
-            'automations.view',
-            'documentation.view',
-            'documents.view',
-            'jobdomain.view',
-            'members.invite',
-            'members.view',
-            'settings.view',
-            'shipments.assign',
-            'shipments.create',
-            'shipments.manage_status',
-            'shipments.view',
-            'shipments.view_own',
-            'support.create',
-            'support.view',
-            'theme.manage',
-            'theme.view',
-            'workforce.leave_request',
-            'workforce.manage',
-            'workforce.planning_view',
-            'workforce.time_manage',
-            'workforce.timesheet_submit',
-            'workforce.timesheet_view',
-            'workforce.view',
-            'workforce_documents.view',
-        ], $opPerms);
+        $this->assertNotEmpty($expectedAdmin, 'le catalogue doit contenir des permissions admin');
+        $this->assertNotEmpty($expectedOp, 'le catalogue doit contenir des permissions opérationnelles');
+        $this->assertEquals($expectedAdmin, $adminPerms, 'is_admin en base doit refléter le catalogue (manifestes)');
+        $this->assertEquals($expectedOp, $opPerms, 'is_admin=false en base doit refléter le catalogue');
     }
 
     // ═══════════════════════════════════════════════════════

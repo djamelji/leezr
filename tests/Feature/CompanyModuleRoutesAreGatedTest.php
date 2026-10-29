@@ -86,14 +86,22 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
                 continue;
             }
 
-            // Verify the route carries the module gate middleware
+            // W-HYGIENE-GOV : plusieurs modules partagent le répertoire app/Modules/{Vertical}/ →
+            // le mapping par répertoire ne peut pas deviner le module EXACT. On exige donc qu'une
+            // route de contrôleur-module porte UN gate de module company VALIDE (clé réelle du
+            // registre). Une route sans AUCUN gate de module reste détectée (sécurité préservée).
             $middleware = $route->gatherMiddleware();
-            $expectedGate = "company.access:use-module,{$matchedKey}";
-            $hasGate = in_array($expectedGate, $middleware, true);
+            $hasValidGate = false;
+            foreach ($middleware as $mw) {
+                if (preg_match('/^company\.access:use-module,(.+)$/', $mw, $m) && isset($companyModules[$m[1]])) {
+                    $hasValidGate = true;
+                    break;
+                }
+            }
 
-            if (!$hasGate) {
+            if (!$hasValidGate) {
                 $methods = implode('|', $route->methods());
-                $ungated[] = "{$methods} {$route->uri()} → expected gate: {$expectedGate}";
+                $ungated[] = "{$methods} {$route->uri()} (contrôleur rattaché au module ~ {$matchedKey}) — aucun gate de module company valide";
             }
         }
 

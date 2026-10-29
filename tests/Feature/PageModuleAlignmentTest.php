@@ -211,6 +211,9 @@ class PageModuleAlignmentTest extends TestCase
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
             'platform-companies-id' => $base . '/platform/companies/[id].vue',
             'platform-jobdomains-id' => $base . '/platform/jobdomains/[id].vue',
+            // W-HYGIENE-GOV : noms composés (répertoire `organization-presets`) — pages réelles présentes (ADR-638 W-E2).
+            'platform-organization-presets' => $base . '/platform/organization-presets/index.vue',
+            'platform-organization-presets-id' => $base . '/platform/organization-presets/[id].vue',
             'platform-documents-id' => $base . '/platform/documents/[id].vue',
             'platform-users-id' => $base . '/platform/users/[id].vue',
             'company-shipments' => $base . '/company/shipments/index.vue',

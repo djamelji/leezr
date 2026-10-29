@@ -98,15 +98,23 @@ class GlobalModuleRouteCoverageTest extends TestCase
                 continue; // Controller not matched to any module
             }
 
+            // W-HYGIENE-GOV : mapping par répertoire ambigu (modules partageant app/Modules/{Vertical}/)
+            // → on exige UN gate d'activation de module VALIDE du bon scope (clé réelle du registre),
+            // sans deviner la clé exacte. Une route sans aucun gate reste détectée.
             $middleware = $route->gatherMiddleware();
             $key = $matchedInfo['key'];
             $scope = $matchedInfo['scope'];
             $hasGate = false;
 
-            if ($scope === 'admin') {
-                $hasGate = in_array("module.active:{$key}", $middleware, true);
-            } elseif ($scope === 'company') {
-                $hasGate = in_array("company.access:use-module,{$key}", $middleware, true);
+            foreach ($middleware as $mw) {
+                if ($scope === 'admin' && preg_match('/^module\.active:(.+)$/', $mw, $m) && isset($allModules[$m[1]])) {
+                    $hasGate = true;
+                    break;
+                }
+                if ($scope === 'company' && preg_match('/^company\.access:use-module,(.+)$/', $mw, $m) && isset($allModules[$m[1]])) {
+                    $hasGate = true;
+                    break;
+                }
             }
 
             if (!$hasGate) {
