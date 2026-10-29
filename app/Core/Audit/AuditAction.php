@@ -131,4 +131,15 @@ final class AuditAction
     public const AUTOMATION_RUN_MANUAL = 'automation.run_manual';
     public const AUTOMATION_TASK_ENABLED = 'automation.task_enabled';
     public const AUTOMATION_TASK_DISABLED = 'automation.task_disabled';
+
+    // ─── Workforce Signature (W-SIGNATURE-1, ADR-651) ─────
+    public const SIGNATURE_REQUESTED = 'signature.requested';
+    public const SIGNATURE_SENT = 'signature.sent';
+    public const SIGNATURE_SIGNED = 'signature.signed';
+    public const SIGNATURE_DECLINED = 'signature.declined';
+    public const SIGNATURE_CANCELLED = 'signature.cancelled';
+    public const SIGNATURE_EXPIRED = 'signature.expired';
+    public const SIGNATURE_COMPLETED = 'signature.completed';
+    public const SIGNATURE_FAILED = 'signature.failed';
+    public const WEBHOOK_SIGNATURE_SYNCED = 'webhook.signature_synced';
 }

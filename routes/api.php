@@ -78,6 +78,18 @@ Route::post('/webhooks/billing', WebhookController::class)->middleware('throttle
 Route::post('/webhooks/payments/{providerKey}', \App\Modules\Infrastructure\Webhooks\Http\PaymentWebhookController::class)
     ->middleware('throttle:120,1');
 
+// W-SIGNATURE-1 (ADR-651) — webhooks prestataire de signature (vérifiés + idempotents).
+Route::post('/webhooks/signatures/{provider}', \App\Modules\Workforce\Signature\Http\SignatureWebhookController::class)
+    ->middleware('throttle:120,1');
+
+// W-SIGNATURE-1 (ADR-651) — parcours PUBLIC du signataire (token opaque, sans auth ni contexte tenant).
+Route::prefix('public/signature')->middleware('throttle:30,1')->group(function () {
+    Route::get('/{token}', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'show']);
+    Route::get('/{token}/document', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'document']);
+    Route::post('/{token}/sign', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'sign'])->middleware('throttle:10,1');
+    Route::post('/{token}/decline', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'decline'])->middleware('throttle:10,1');
+});
+
 // Runtime error reporting — public (no auth, frontend → backend)
 Route::post('/runtime-error', RuntimeErrorController::class)->middleware('throttle:10,1');
 

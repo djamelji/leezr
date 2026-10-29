@@ -648,4 +648,21 @@ Route::prefix('workforce/contract')->middleware('company.access:use-module,workf
     Route::post('generate', [$c, 'generate'])->middleware($perm('workforce_contract.generate'));
 });
 
+// ── Workforce Signature (ADR-651, W-SIGNATURE-1) — module INDÉPENDANT, signe tout doc RH émis ──
+Route::prefix('workforce/signature')->middleware('company.access:use-module,workforce_signature')->group(function () {
+    $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+    $s = \App\Modules\Workforce\Signature\Http\SignatureController::class;
+    // Routes littérales AVANT {id} pour éviter la capture.
+    Route::get('options', [$s, 'options'])->middleware($perm('workforce_signature.view'));
+    Route::get('settings', [$s, 'getSettings'])->middleware($perm('workforce_signature.admin'));
+    Route::put('settings', [$s, 'updateSettings'])->middleware($perm('workforce_signature.admin'));
+    Route::get('/', [$s, 'index'])->middleware($perm('workforce_signature.view'));
+    Route::post('/', [$s, 'store'])->middleware($perm('workforce_signature.request'));
+    Route::get('{id}', [$s, 'show'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
+    Route::get('{id}/evidence', [$s, 'evidence'])->whereNumber('id')->middleware($perm('workforce_signature.view_evidence'));
+    Route::get('{id}/download', [$s, 'downloadSigned'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
+    Route::post('{id}/cancel', [$s, 'cancel'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
+    Route::post('{id}/remind', [$s, 'remind'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
+});
+
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

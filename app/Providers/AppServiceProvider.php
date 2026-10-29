@@ -37,6 +37,9 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(PaymentGatewayManager::class);
 
+        // W-SIGNATURE-1 (ADR-651): Signature Provider Manager singleton (extensions prestataires).
+        $this->app->singleton(\App\Modules\Workforce\Signature\Providers\SignatureProviderManager::class);
+
         // ADR-411: AI Gateway Manager singleton
         $this->app->singleton(AiGatewayManager::class);
 

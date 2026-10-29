@@ -26,6 +26,17 @@ class GlobalModuleRouteCoverageTest extends TestCase
         'platform.notifications',
     ];
 
+    // W-SIGNATURE-1 (ADR-651): routes PUBLIQUES par conception (authentifiées par token opaque /
+    // signature HMAC, AVANT auth Sanctum et contexte tenant) — un gate company.access y est impossible.
+    // Allowlist étroite et explicite : toute AUTRE route de module reste exigée gatée.
+    private const INTENTIONALLY_PUBLIC_URIS = [
+        'api/webhooks/signatures/{provider}',
+        'api/public/signature/{token}',
+        'api/public/signature/{token}/document',
+        'api/public/signature/{token}/sign',
+        'api/public/signature/{token}/decline',
+    ];
+
     public function test_all_module_routes_have_activation_middleware(): void
     {
         $allModules = ModuleRegistry::definitions();
@@ -58,6 +69,11 @@ class GlobalModuleRouteCoverageTest extends TestCase
             $controller = $action['controller'] ?? null;
 
             if (!$controller || !is_string($controller)) {
+                continue;
+            }
+
+            // Routes intentionnellement publiques (token/HMAC) — exemptées explicitement.
+            if (in_array($route->uri(), self::INTENTIONALLY_PUBLIC_URIS, true)) {
                 continue;
             }
 

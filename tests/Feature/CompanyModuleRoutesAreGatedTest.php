@@ -21,6 +21,16 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
         'core.notifications',
     ];
 
+    // W-SIGNATURE-1 (ADR-651): routes PUBLIQUES par conception (token opaque / signature HMAC,
+    // avant auth Sanctum et contexte tenant) — gate company.access impossible. Allowlist étroite.
+    private const INTENTIONALLY_PUBLIC_URIS = [
+        'api/webhooks/signatures/{provider}',
+        'api/public/signature/{token}',
+        'api/public/signature/{token}/document',
+        'api/public/signature/{token}/sign',
+        'api/public/signature/{token}/decline',
+    ];
+
     public function test_all_company_module_routes_have_module_gate(): void
     {
         $companyModules = ModuleRegistry::forScope('company');
@@ -50,6 +60,11 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
             $controller = $action['controller'] ?? null;
 
             if (!$controller || !is_string($controller)) {
+                continue;
+            }
+
+            // Routes intentionnellement publiques (token/HMAC) — exemptées explicitement.
+            if (in_array($route->uri(), self::INTENTIONALLY_PUBLIC_URIS, true)) {
                 continue;
             }
 
