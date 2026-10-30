@@ -26,9 +26,31 @@ class NativePadesSignatureService
 
     public function pdfsigAvailable(): bool
     {
-        $path = trim((string) @shell_exec('command -v pdfsig 2>/dev/null'));
+        return $this->pdfsigBinary() !== null;
+    }
 
-        return $path !== '';
+    /**
+     * Résout le binaire `pdfsig` de façon robuste, indépendamment du PATH du process (le PATH de
+     * php-fpm/Valet n'inclut pas toujours /opt/homebrew/bin ou /usr/local/bin). Ordre : config explicite
+     * → PATH → emplacements connus (Homebrew macOS, Linux). Renvoie le chemin absolu, ou null si absent.
+     */
+    private function pdfsigBinary(): ?string
+    {
+        $configured = config('signature.pdfsig_path');
+        if (is_string($configured) && $configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+        $fromPath = trim((string) @shell_exec('command -v pdfsig 2>/dev/null'));
+        if ($fromPath !== '' && is_executable($fromPath)) {
+            return $fromPath;
+        }
+        foreach (['/opt/homebrew/bin/pdfsig', '/usr/local/bin/pdfsig', '/usr/bin/pdfsig'] as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -84,14 +106,15 @@ class NativePadesSignatureService
      */
     public function verifyPdf(string $pdfBytes): array
     {
-        if (! $this->pdfsigAvailable()) {
+        $bin = $this->pdfsigBinary();
+        if ($bin === null) {
             return ['tool' => null, 'available' => false, 'detail' => 'pdfsig_unavailable'];
         }
 
         $file = tempnam(sys_get_temp_dir(), 'pades_ver_');
         file_put_contents($file, $pdfBytes);
         try {
-            $output = (string) @shell_exec('pdfsig ' . escapeshellarg($file) . ' 2>&1');
+            $output = (string) @shell_exec(escapeshellarg($bin) . ' ' . escapeshellarg($file) . ' 2>&1');
 
             return $this->parsePdfsig($output);
         } finally {

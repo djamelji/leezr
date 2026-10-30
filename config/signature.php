@@ -25,4 +25,8 @@ return [
         // Durée de vie d'une préparation de signature (to_sign) avant péremption (secondes).
         'prep_ttl_seconds' => (int) env('SIGNATURE_PREP_TTL', 900),
     ],
+
+    // Chemin absolu optionnel du binaire `pdfsig` (poppler). Si vide, résolution via PATH puis
+    // emplacements connus — utile quand le PATH de php-fpm/Valet n'inclut pas Homebrew.
+    'pdfsig_path' => env('SIGNATURE_PDFSIG_PATH', ''),
 ];
