@@ -468,6 +468,89 @@ class SignatureController extends Controller
         return Storage::disk($disk)->download($req->signed_document_path, 'signed-' . $id . '.pdf');
     }
 
+    /**
+     * W-SIGNATURE-12 (§4) — supervision OPÉRATIONNELLE (company-scoped, agrégée). Métriques non sensibles
+     * pour piloter l'exploitation : demandes en attente/expirées, échecs, préparations expirées, éléments
+     * à réconcilier. Aucun contenu documentaire ni token exposé. Gated par la permission de supervision.
+     */
+    public function supervision(Request $request): JsonResponse
+    {
+        $cid = $this->companyId($request);
+        $now = now();
+        $base = fn () => SignatureRequest::withoutGlobalScopes()->where('company_id', $cid);
+        $evt = fn (string $type) => \App\Modules\Workforce\Signature\Models\SignatureEvent::withoutGlobalScopes()
+            ->where('company_id', $cid)->where('type', $type)->where('occurred_at', '>=', $now->copy()->subDays(30))->count();
+
+        $pending = (clone $base())->whereIn('status', [SignatureRequest::STATUS_PENDING, SignatureRequest::STATUS_PARTIALLY_SIGNED])->count();
+        // À réconcilier : actives dont l'échéance est dépassée mais pas encore marquées expirées ; ou terminées sans artefact.
+        $staleActive = (clone $base())->whereIn('status', [SignatureRequest::STATUS_PENDING, SignatureRequest::STATUS_PARTIALLY_SIGNED])
+            ->whereNotNull('expires_at')->where('expires_at', '<', $now)->count();
+        $completedNoArtifact = (clone $base())->where('status', SignatureRequest::STATUS_COMPLETED)->whereNull('signed_document_path')->count();
+        $expiredPreps = \App\Modules\Workforce\Signature\Models\SignatureSigner::withoutGlobalScopes()
+            ->where('company_id', $cid)->whereNotNull('signing_prep')->whereNotNull('signing_prep_expires_at')
+            ->where('signing_prep_expires_at', '<', $now)->count();
+
+        return response()->json([
+            'as_of' => $now->toIso8601String(),
+            'requests' => [
+                'pending' => $pending,
+                'expired' => (clone $base())->where('status', SignatureRequest::STATUS_EXPIRED)->count(),
+                'failed' => (clone $base())->where('status', SignatureRequest::STATUS_FAILED)->count(),
+                'completed' => (clone $base())->where('status', SignatureRequest::STATUS_COMPLETED)->count(),
+                'declined' => (clone $base())->where('status', SignatureRequest::STATUS_DECLINED)->count(),
+                'cancelled' => (clone $base())->where('status', SignatureRequest::STATUS_CANCELLED)->count(),
+            ],
+            'failures_30d' => [
+                'verification_failed' => $evt(\App\Modules\Workforce\Signature\Models\SignatureEvent::TYPE_VERIFICATION_FAILED),
+                'request_failed' => $evt(\App\Modules\Workforce\Signature\Models\SignatureEvent::TYPE_FAILED),
+                'certificate_revoked' => $evt(\App\Modules\Workforce\Signature\Models\SignatureEvent::TYPE_CERTIFICATE_REVOKED),
+            ],
+            'operational' => [
+                'expired_preparations' => $expiredPreps,
+                'needs_reconciliation' => $staleActive + $completedNoArtifact,
+                'stale_active_past_expiry' => $staleActive,
+                'completed_without_artifact' => $completedNoArtifact,
+            ],
+            'certificates' => [
+                'issued' => \App\Modules\Workforce\Signature\Models\SignatureCertificate::withoutGlobalScopes()->where('company_id', $cid)->where('status', 'issued')->count(),
+                'revoked' => \App\Modules\Workforce\Signature\Models\SignatureCertificate::withoutGlobalScopes()->where('company_id', $cid)->where('status', 'revoked')->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * W-SIGNATURE-12 (§6) — registre des certificats de signature (company-scoped). Aucune clé privée
+     * (les certs n'en contiennent pas) ; AUCUNE action de signature. Lecture seule, gated.
+     */
+    public function certificates(Request $request): JsonResponse
+    {
+        $cid = $this->companyId($request);
+        $rows = \App\Modules\Workforce\Signature\Models\SignatureCertificate::withoutGlobalScopes()
+            ->where('company_id', $cid)->with('signer:id,name,role,identity_assurance,reenrollment_count')
+            ->orderByDesc('id')->limit(200)->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'signer_name' => $c->signer?->name ?? $c->subject_cn,
+                'role' => $c->signer?->role,
+                'serial' => $c->serial,
+                'fingerprint_sha256' => $c->fingerprint_sha256,
+                'public_key_id' => $c->public_key_id,
+                'issuer' => $c->issuer_dn,
+                'not_before' => $c->not_before?->toIso8601String(),
+                'not_after' => $c->not_after?->toIso8601String(),
+                'status' => $c->status,
+                'revoked_at' => $c->revoked_at?->toIso8601String(),
+                'revoked_reason' => $c->revoked_reason,
+                'auth_method' => $c->auth_method,
+                'identity_assurance' => $c->identity_verification,
+                'reenrollment_count' => $c->signer?->reenrollment_count ?? 0,
+                'ca_recognized' => false,
+                'eidas' => 'not_demonstrated',
+            ]);
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function getSettings(Request $request): JsonResponse
     {
         $companyId = $this->companyId($request);

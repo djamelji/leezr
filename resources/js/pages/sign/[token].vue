@@ -21,6 +21,8 @@ const declineMode = ref(false)
 const declineReason = ref('')
 const consent = ref(false) // §4 — consentement explicite requis avant de signer
 const documentViewed = ref(false)
+const otp = ref('') // W-SIGNATURE-12 — step-up 2FA quand la politique l'exige
+const auth = computed(() => data.value?.authentication || {})
 
 const load = async () => {
   loading.value = true
@@ -52,7 +54,7 @@ const sign = async () => {
         const { publicKeySpki, signatureP1363 } = await signPersonal(data.value.personal_signing)
         prep = await $api(`/public/signature/${token.value}/prepare`, {
           method: 'POST',
-          body: { public_key_spki: publicKeySpki, signature_p1363: signatureP1363 },
+          body: { public_key_spki: publicKeySpki, signature_p1363: signatureP1363, otp: otp.value || undefined },
         })
       } catch (e) {
         error.value = e.response?._data?.message || t('signaturePublic.webcryptoError')
@@ -172,6 +174,29 @@ const decline = async () => {
                 <VIcon icon="tabler-shield-lock" start size="16" />
                 {{ t('signaturePublic.personalNote') }}
               </VAlert>
+
+              <!-- W-SIGNATURE-12 — authentification de compte requise (signataire interne) -->
+              <VAlert
+                v-if="auth.needs_account_auth"
+                type="warning"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+              >
+                <VIcon icon="tabler-user-shield" start size="16" />
+                {{ t('signaturePublic.authRequired') }}
+              </VAlert>
+
+              <!-- Step-up 2FA : code requis quand la politique Market l'exige -->
+              <AppTextField
+                v-if="auth.needs_mfa_step_up"
+                v-model="otp"
+                :label="t('signaturePublic.otpLabel')"
+                :hint="t('signaturePublic.otpHint')"
+                persistent-hint
+                maxlength="12"
+                class="mb-3"
+              />
 
               <!-- §4 — consentement explicite requis avant de signer -->
               <VCheckbox

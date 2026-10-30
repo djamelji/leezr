@@ -67,6 +67,15 @@ const openDetail = id => { detailId.value = id; detailOpen.value = true }
 // Assistant
 const wizardOpen = ref(false)
 const onCreated = () => { wizardOpen.value = false; toast(t('signature.toasts.created'), 'success'); load() }
+
+// W-SIGNATURE-12 — supervision opérationnelle (métriques agrégées, lecture seule, gated view_evidence)
+const supervision = ref(null)
+const canSupervise = computed(() => can('workforce_signature.view_evidence'))
+onMounted(async () => {
+  if (canSupervise.value) {
+    try { supervision.value = await store.fetchSupervision() } catch { /* non bloquant */ }
+  }
+})
 </script>
 
 <template>
@@ -88,6 +97,36 @@ const onCreated = () => { wizardOpen.value = false; toast(t('signature.toasts.cr
         {{ t('signature.actions.new') }}
       </VBtn>
     </div>
+
+    <!-- W-SIGNATURE-12 — supervision opérationnelle (agrégée, non sensible) -->
+    <VCard v-if="canSupervise && supervision" class="mb-4">
+      <VCardText class="d-flex flex-wrap align-center gap-2">
+        <span class="text-caption font-weight-medium me-2">{{ t('signature.supervision.title') }}</span>
+        <VChip size="small" color="warning" variant="tonal" label>
+          {{ t('signature.supervision.pending') }}: {{ supervision.requests.pending }}
+        </VChip>
+        <VChip size="small" color="secondary" variant="tonal" label>
+          {{ t('signature.supervision.expired') }}: {{ supervision.requests.expired }}
+        </VChip>
+        <VChip size="small" color="error" variant="tonal" label>
+          {{ t('signature.supervision.failed') }}: {{ supervision.requests.failed }}
+        </VChip>
+        <VChip
+          size="small"
+          :color="supervision.operational.needs_reconciliation ? 'error' : 'success'"
+          variant="tonal"
+          label
+        >
+          {{ t('signature.supervision.reconcile') }}: {{ supervision.operational.needs_reconciliation }}
+        </VChip>
+        <VChip size="small" color="secondary" variant="tonal" label>
+          {{ t('signature.supervision.expiredPreps') }}: {{ supervision.operational.expired_preparations }}
+        </VChip>
+        <VChip size="small" color="info" variant="tonal" label>
+          {{ t('signature.supervision.certs') }}: {{ supervision.certificates.issued }} / {{ supervision.certificates.revoked }}
+        </VChip>
+      </VCardText>
+    </VCard>
 
     <VCard>
       <VTabs

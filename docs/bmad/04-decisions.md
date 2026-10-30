@@ -23593,3 +23593,57 @@ Notifications idempotentes ; **aucun token en clair dans les logs** (vérifié) 
 **Fichiers** : caviardage docs ; tests `ExternalPadesFlowTest` (step-up MFA) ; e2e `wsig11-company-journey`.
 
 ---
+
+## ADR-664 — W-SIGNATURE-12 : recette interne, exploitation et dossier de pré-audit
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). Aucune nouvelle technologie cryptographique. **NON prêt PROD** ; **incident SSH NON clos** (rotation du mot de passe compromis par un administrateur root toujours requise).
+
+### §1 — Runbook SSH (opérationnel, sans secret)
+> Le mot de passe DEV exposé est **toujours valide** (non rotaté — nécessite root). ⚠️ La réussite du déploiement CI (clé) ne prouve PAS qu'un administrateur dispose d'une connexion SSH **interactive** fonctionnelle : à vérifier explicitement.
+1. **Compte concerné** : compte système `web3` (login `jliouidevleezr`), serveur DEV.
+2. **Accès par clé réellement vérifié** : le CI (`secrets.VPS_SSH_KEY`) se connecte par clé (déploiements réussis). ⚠️ **Vérifier séparément** qu'un administrateur a une **session interactive par clé** (p.ex. `ssh -i <clé_admin> web3@<hôte>` renvoie un shell) AVANT toute modification.
+3. **Méthode de secours** : conserver ≥1 accès clé fonctionnel (clé admin + clé CI) ; ne jamais retirer le dernier accès.
+4. **Rotation** : `passwd` pour `web3` → nouveau mot de passe fort (hors de toute conversation/log).
+5. **Désactivation du mot de passe** : SEULEMENT après validation de l'accès par clé → drop-in `/etc/ssh/sshd_config.d/10-hardening.conf` : `PasswordAuthentication no` (+ `KbdInteractiveAuthentication no`). `StrictModes` CONSERVÉ (jamais désactivé).
+6. **Validation config** : `sshd -t` (ou `sshd -T` pour l'effectif) DOIT réussir avant reload.
+7. **Reload** : `systemctl reload sshd` (reload, pas restart, pour ne pas couper les sessions actives).
+8. **Vérifications post-intervention** : nouvelle session par clé OK ; tentative par mot de passe REFUSÉE ; CI de déploiement toujours vert.
+9. **Traces à surveiller** : `/var/log/auth.log` (échecs/réussites d'auth), tentatives par mot de passe résiduelles, connexions inattendues.
+10. **Secret CI** : roter `VPS_SSH_KEY` si une exposition est soupçonnée (indépendant du mot de passe).
+11. **Historique git** : le secret figure dans l'historique git (purge `filter-repo` coordonnée, hors périmètre, force-push risqué) → **traiter le secret comme compromis jusqu'à rotation**.
+> **Aucun secret n'est affiché ici. L'incident n'est PAS clos tant que la rotation (étape 4, idéalement 5) n'est pas confirmée par l'administrateur.**
+
+### §4 — Supervision opérationnelle
+Endpoint company-scoped `GET /workforce/signature/supervision` (gated `view_evidence`) : métriques AGRÉGÉES non sensibles — demandes pending/expired/failed/completed/declined/cancelled, échecs 30j (vérification/finalisation/révocation), préparations expirées, éléments à réconcilier (actives dépassant l'échéance, completed sans artefact), compteurs de certificats. **Aucun contenu documentaire ni token**. Pas d'accès cross-tenant (scope company). Reprise : les commandes existantes (`ExpireSignatureRequestsUseCase`) traitent les expirations ; la réconciliation reste signalétique (pas d'action destructive automatique).
+
+### §6 — Registre des certificats
+Endpoint `GET /workforce/signature/certificates` (gated `view_evidence`) : signataire, série, empreinte, public_key_id, émetteur, validité, statut/révocation, méthode d'auth, niveau d'assurance, nb de re-enrôlements. **Aucune clé privée** (les certs n'en contiennent pas) ; **AUCUNE action de signature ni de récupération de clé**. AC interne strictement DEV.
+
+### §9 — Dossier de pré-audit externe
+| Domaine | Démontré par tests (DEV) | À valider par audit indépendant |
+|---|---|---|
+| Architecture (modules, flux 2 phases) | Flux prepare/sign, incrémental | Revue d'architecture globale |
+| Modèle de menace | Vol de lien, substitution, rejeu, altération (tests) | Modélisation complète (STRIDE) |
+| Gestion des clés | Clés privées jamais transmises/recréées (tests) | Revue cryptographique formelle |
+| AC interne | Émission, chaîne interne (verifyChain), révocation DB | Conformité RFC 5280 complète, profils |
+| Authentification | 1er enrôlement interne authentifié (tests + E2E) | Robustesse session/Sanctum |
+| MFA | Step-up TOTP réutilisé (3 tests) | Couverture récupération/anti-bypass |
+| Émission des certificats | Lié à la clé réelle, assurance (tests) | DER manuel (audité W-SIG-8, B1/B5 résiduels) |
+| Consentement | Explicite, gating bouton (E2E) | — |
+| CMS/PAdES | Assemblage + injection (tests) | Interop lecteurs tiers (Adobe…) |
+| Vérification indépendante | pdfsig dans la recette (E2E) | Multi-vérifieurs |
+| Révocation | Statut DB bloquant (tests) | CRL/OCSP (non livré) |
+| Protection des données | Isolation tenant, scope (tests) | RGPD/DPIA |
+| Sauvegarde/restauration | Clés AC chiffrées + perms | Procédure testée (non faite) |
+| Journaux/supervision | Événements append-only, supervision agrégée | SIEM/alerting |
+| Incident SSH | Audit d'exposition, caviardage | **Rotation (root) — BLOQUANT** |
+
+**Résultats DÉMONTRÉS par tests ≠ affirmations nécessitant un audit indépendant.** Aucune revendication de certification juridique (ni eIDAS avancé ni qualifié).
+
+### Conditions avant PROD (inchangées, bloquantes)
+Rotation SSH (root) · protection AC HSM/hors ligne · vérification d'identité réglementaire · reconnaissance juridique · audit externe · CRL/OCSP · délivrabilité e-mail · procédure de sauvegarde/restauration testée.
+
+**Fichiers** : `SignatureController` (supervision + certificates) ; routes ; `sign/[token].vue` (alerte auth + champ OTP) ; tests `WorkforceSignatureTest` (supervision/registre), `wsig12-internal-journey` (E2E interne).
+
+---

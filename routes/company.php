@@ -661,6 +661,9 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     Route::get('/', [$s, 'index'])->middleware($perm('workforce_signature.view'));
     Route::post('/', [$s, 'store'])->middleware($perm('workforce_signature.request'));
     Route::get('{id}', [$s, 'show'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
+    // W-SIGNATURE-12 — supervision opérationnelle + registre des certificats (lecture seule, agrégé/non sensible).
+    Route::get('supervision', [$s, 'supervision'])->middleware($perm('workforce_signature.view_evidence'));
+    Route::get('certificates', [$s, 'certificates'])->middleware($perm('workforce_signature.view_evidence'));
     Route::get('{id}/evidence', [$s, 'evidence'])->whereNumber('id')->middleware($perm('workforce_signature.view_evidence'));
     Route::get('{id}/download', [$s, 'downloadSigned'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
     Route::get('{id}/verify', [$s, 'verify'])->whereNumber('id')->middleware($perm('workforce_signature.view'));

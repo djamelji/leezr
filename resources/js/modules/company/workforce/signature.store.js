@@ -62,5 +62,12 @@ export const useSignatureStore = defineStore('workforceSignature', {
     async downloadSigned(id) {
       return await $api(`/workforce/signature/${id}/download`, { responseType: 'blob' })
     },
+    // W-SIGNATURE-12 — supervision opérationnelle + registre des certificats (lecture seule, gated).
+    async fetchSupervision() {
+      return await $api('/workforce/signature/supervision')
+    },
+    async fetchCertificates() {
+      return await $api('/workforce/signature/certificates')
+    },
   },
 })

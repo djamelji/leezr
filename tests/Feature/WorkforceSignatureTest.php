@@ -598,4 +598,26 @@ class WorkforceSignatureTest extends TestCase
             ->assertJsonPath('send_signed_copy_to_employee', false)
             ->assertJsonPath('validity_days', 10);
     }
+
+    // ── W-SIGNATURE-12 : supervision + registre certificats (gated, scoped, non sensibles) ──
+    public function test_supervision_metrics_gated_and_scoped(): void
+    {
+        $admin = $this->adminUser(); // possède view_evidence
+        $this->api($admin, 'GET', '/supervision')->assertOk()
+            ->assertJsonStructure(['requests' => ['pending', 'expired', 'failed', 'completed'], 'operational' => ['needs_reconciliation', 'expired_preparations'], 'certificates']);
+
+        // Un simple lecteur (sans view_evidence) ne peut PAS accéder à la supervision.
+        $viewer = $this->user(['workforce.view', 'workforce_signature.view']);
+        $this->api($viewer, 'GET', '/supervision')->assertForbidden();
+    }
+
+    public function test_certificates_registry_never_exposes_private_key(): void
+    {
+        $admin = $this->adminUser();
+        $resp = $this->api($admin, 'GET', '/certificates')->assertOk()->assertJsonStructure(['data']);
+        $this->assertStringNotContainsString('PRIVATE KEY', $resp->getContent());
+
+        $viewer = $this->user(['workforce.view', 'workforce_signature.view']);
+        $this->api($viewer, 'GET', '/certificates')->assertForbidden();
+    }
 }
