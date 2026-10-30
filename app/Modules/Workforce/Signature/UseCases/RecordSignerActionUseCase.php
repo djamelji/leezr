@@ -184,7 +184,7 @@ class RecordSignerActionUseCase
             // Vérifie la preuve de possession + émet/charge le certificat individuel. Transmet l'identité
             // RÉELLEMENT authentifiée (si présente) : requise pour tout re-enrôlement de signataire interne.
             app(\App\Modules\Workforce\Signature\Services\SignerEnrollmentService::class)
-                ->enrollAndIssue($request, $signer, $spki, $pop, $context['authUserId'] ?? null, $context['ip'] ?? null);
+                ->enrollAndIssue($request, $signer, $spki, $pop, $context['authUserId'] ?? null, $context['ip'] ?? null, $context['otp'] ?? null);
             $signer->refresh();
 
             // Prépare les octets exacts à signer sur la révision courante.

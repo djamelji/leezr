@@ -34,4 +34,23 @@ return [
     // Chemin absolu optionnel du binaire `pdfsig` (poppler). Si vide, résolution via PATH puis
     // emplacements connus — utile quand le PATH de php-fpm/Valet n'inclut pas Homebrew.
     'pdfsig_path' => env('SIGNATURE_PDFSIG_PATH', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Politique Platform par Market (W-SIGNATURE-10)
+    |--------------------------------------------------------------------------
+    | Pilote les capacités autorisées + l'assurance d'AUTHENTIFICATION minimale exigée pour signer, par
+    | Market. Le défaut (sans entrée) : interne → account_authenticated, externe → declared. Une entrée ne
+    | peut que RENFORCER. Un réglage n'attribue JAMAIS un niveau eIDAS avancé/qualifié.
+    |
+    | Valeurs d'assurance : declared < link_only < account_authenticated < account_mfa.
+    | Exemple (non actif par défaut) :
+    |   'markets' => ['FR' => [
+    |       'formats' => ['personal_digital', 'demonstration'],
+    |       'min_assurance' => ['internal' => 'account_authenticated', 'external' => 'declared'],
+    |   ]],
+    */
+    'platform' => [
+        'markets' => [],
+    ],
 ];

@@ -41,10 +41,11 @@ class SignerEnrollmentService
      *
      * @throws ValidationException si la preuve de possession est invalide / le challenge inutilisable
      */
-    public function enrollAndIssue(SignatureRequest $request, SignatureSigner $signer, string $spkiB64, string $popSignatureP1363, ?int $authUserId = null, ?string $ip = null): SignatureCertificate
+    public function enrollAndIssue(SignatureRequest $request, SignatureSigner $signer, string $spkiB64, string $popSignatureP1363, ?int $authUserId = null, ?string $ip = null, ?string $otp = null): SignatureCertificate
     {
         $personal = app(PersonalSignatureService::class);
         $identity = app(SignerIdentityResolver::class);
+        $policy = app(SignatureAuthPolicy::class);
 
         // 1) Challenge à usage unique : présent, non expiré, non consommé.
         if (! $signer->challenge || ! $signer->challenge_expires_at || $signer->challenge_expires_at->isPast() || $signer->challenge_used_at) {
@@ -96,6 +97,24 @@ class SignerEnrollmentService
 
         // Niveau d'assurance RÉELLEMENT obtenu (honnête) pour cette association de clé.
         $assurance = $identity->assuranceFor($signer, $authUserId);
+
+        // P0 (§2/§6) — le PREMIER enrôlement aussi doit respecter l'authentification exigée par la politique
+        // Market/document. Pour un signataire INTERNE, le lien seul NE SUFFIT PAS : le compte attendu doit
+        // être authentifié. Si la politique exige l'auth RENFORCÉE (account_mfa), une confirmation OTP
+        // FRAÎCHE (step-up) est requise — réutilise le 2FA existant de Leezr, pas de MFA parallèle.
+        $company = Company::withoutGlobalScopes()->find($request->company_id);
+        $required = $policy->requiredAssurance($request, $signer, $company);
+        if ($required === SignerIdentityResolver::ASSURANCE_MFA) {
+            $user = $authUserId ? \App\Core\Models\User::find($authUserId) : null;
+            $stepUpOk = $user && $otp && app(\App\Core\Auth\TwoFactorService::class)->verify($user, $otp);
+            if (! $identity->authenticatedMatches($signer, $authUserId) || ! $identity->userHasMfa($authUserId) || ! $stepUpOk) {
+                throw ValidationException::withMessages(['authentication' => $policy->requirementMessage($required)]);
+            }
+            $assurance = SignerIdentityResolver::ASSURANCE_MFA;
+        }
+        if (! $policy->meets($assurance, $required)) {
+            throw ValidationException::withMessages(['authentication' => $policy->requirementMessage($required)]);
+        }
 
         // 5) Enregistre la clé publique + consomme le challenge + preuve personnelle + IDENTITÉ.
         $signer->public_key_spki = $spkiB64;

@@ -116,14 +116,16 @@ class SignerController extends Controller
         $data = $request->validate([
             'public_key_spki' => 'required|string|max:4000',
             'signature_p1363' => 'required|string|max:512', // preuve de possession (sur la charge canonique)
+            'otp' => 'nullable|string|max:12',              // step-up 2FA (si la politique l'exige)
         ]);
 
         $prep = app(RecordSignerActionUseCase::class)->prepareExternal($token, [
             'publicKey' => $data['public_key_spki'],
             'pop' => $data['signature_p1363'],
-            // Identité RÉELLEMENT authentifiée (Sanctum SPA, optionnelle sur route publique) + IP.
+            // Identité RÉELLEMENT authentifiée (Sanctum SPA, optionnelle sur route publique) + IP + step-up.
             'authUserId' => $request->user()?->id,
             'ip' => $request->ip(),
+            'otp' => $data['otp'] ?? null,
         ]);
 
         return response()->json([
@@ -170,22 +172,31 @@ class SignerController extends Controller
     private function authenticationState(Request $request, SignatureSigner $signer): array
     {
         $resolver = app(\App\Modules\Workforce\Signature\Services\SignerIdentityResolver::class);
+        $policy = app(\App\Modules\Workforce\Signature\Services\SignatureAuthPolicy::class);
         $authUserId = $request->user()?->id;
         $isInternal = $resolver->isInternal($signer);
         $matches = $resolver->authenticatedMatches($signer, $authUserId);
         $hasKey = $signer->public_key_id !== null;
+        $obtained = $resolver->assuranceFor($signer, $authUserId);
+        $company = \App\Core\Models\Company::withoutGlobalScopes()->find($signer->company_id);
+        $required = $policy->requiredAssurance($signer->request, $signer, $company);
+        $meets = $policy->meets($obtained, $required);
 
         return [
             'account_linked' => $isInternal,                 // signataire rattaché à un compte Leezr
             'authenticated' => $authUserId !== null,         // une session est active
             'authenticated_matches_signer' => $matches,      // la session correspond au signataire attendu
-            'assurance' => $resolver->assuranceFor($signer, $authUserId),
-            // Un re-enrôlement (le signataire a déjà une clé) exige l'authentification du compte (interne)
-            // ou une réinitialisation par l'émetteur (externe). La 1re inscription reste possible via le lien.
+            'assurance' => $obtained,
+            'required_assurance' => $required,               // exigée par la politique Market/document
+            'meets_requirement' => $meets,                   // peut-il signer en l'état ?
+            'needs_account_auth' => ! $meets && $isInternal, // doit se connecter à SON compte Leezr
+            'needs_mfa_step_up' => $required === \App\Modules\Workforce\Signature\Services\SignerIdentityResolver::ASSURANCE_MFA,
+            'mfa_available' => $resolver->userHasMfa($authUserId),
+            // Re-enrôlement (clé déjà présente) : auth du compte (interne) ou reset émetteur (externe).
             'reenrollment_requires_auth' => $hasKey && $isInternal,
             'reenrollment_self_service_blocked' => $hasKey && ! $isInternal,
             'identity_note' => $isInternal
-                ? 'Signataire rattaché à un compte Leezr. L\'authentification du compte renforce l\'attribution.'
+                ? 'Signataire rattaché à un compte Leezr. L\'authentification du compte est requise pour l\'attribution.'
                 : 'Signataire externe : identité déclarée par e-mail, non authentifiée.',
         ];
     }

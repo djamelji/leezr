@@ -19,9 +19,23 @@ use App\Modules\Workforce\Signature\Models\SignatureSigner;
  */
 class SignerIdentityResolver
 {
+    public const ASSURANCE_MFA = 'account_mfa';            // compte authentifié + 2FA (auth renforcée)
     public const ASSURANCE_ACCOUNT = 'account_authenticated';
     public const ASSURANCE_LINK = 'link_only';
     public const ASSURANCE_DECLARED = 'declared';
+
+    /** Ordre croissant de garantie — pour comparer « obtenu » vs « exigé ». */
+    public const ASSURANCE_RANK = [
+        self::ASSURANCE_DECLARED => 0,
+        self::ASSURANCE_LINK => 1,
+        self::ASSURANCE_ACCOUNT => 2,
+        self::ASSURANCE_MFA => 3,
+    ];
+
+    public static function rank(string $assurance): int
+    {
+        return self::ASSURANCE_RANK[$assurance] ?? 0;
+    }
 
     /** Compte utilisateur ATTENDU pour ce signataire, ou null s'il est externe (sans compte). */
     public function expectedUserId(SignatureSigner $signer): ?int
@@ -52,16 +66,30 @@ class SignerIdentityResolver
         return $expected !== null && $authUserId !== null && $authUserId === $expected;
     }
 
-    /** Niveau d'assurance réellement obtenu pour (signataire, utilisateur authentifié). */
+    /**
+     * Niveau d'assurance réellement obtenu pour (signataire, utilisateur authentifié).
+     * Réutilise le 2FA existant de Leezr : un compte authentifié AVEC 2FA confirmé → assurance renforcée.
+     */
     public function assuranceFor(SignatureSigner $signer, ?int $authUserId): string
     {
         if ($this->authenticatedMatches($signer, $authUserId)) {
-            return self::ASSURANCE_ACCOUNT;
+            return $this->userHasMfa($authUserId) ? self::ASSURANCE_MFA : self::ASSURANCE_ACCOUNT;
         }
         if ($this->expectedUserId($signer) === null) {
             return self::ASSURANCE_DECLARED; // externe : identité déclarée (email)
         }
 
         return self::ASSURANCE_LINK;         // interne non authentifié : possession du lien seule
+    }
+
+    /** L'utilisateur a-t-il un 2FA confirmé (auth renforcée réellement disponible, pas une certification civile) ? */
+    public function userHasMfa(?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+        $user = \App\Core\Models\User::find($userId);
+
+        return $user ? app(\App\Core\Auth\TwoFactorService::class)->isEnabled($user) : false;
     }
 }

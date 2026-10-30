@@ -323,6 +323,47 @@ class ExternalPadesFlowTest extends TestCase
         $this->assertSame(1, (int) $this->pdfsig()->verifyPdf(Storage::disk('local')->get($req->signed_document_path))['signature_count']);
     }
 
+    public function test_first_enrollment_internal_requires_authentication(): void
+    {
+        // §2/§4 — vol de lien : un tiers NON connecté possède le lien d'un collaborateur interne et tente
+        // le PREMIER enrôlement de SA propre clé → REFUSÉ (le lien seul ne suffit pas pour un interne).
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $this->makeInternal($signer);
+        $token = $this->issueToken($signer, $req);
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair()); // pas d'authUserId
+    }
+
+    public function test_first_enrollment_wrong_account_blocked(): void
+    {
+        // §4 — vol de lien : le tiers est connecté à un AUTRE compte → ne correspond pas au signataire attendu → REFUSÉ.
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $this->makeInternal($signer); // compte attendu = user A
+        $token = $this->issueToken($signer, $req);
+        $intruder = \App\Core\Models\User::factory()->create(); // user B (le voleur)
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair(), $intruder->id);
+    }
+
+    public function test_first_enrollment_internal_with_correct_account_ok(): void
+    {
+        if (! $this->pdfsig()->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
+        $token = $this->issueToken($signer, $req);
+
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair(), $uid); // compte attendu authentifié
+        $this->assertSame('account_authenticated', $signer->fresh()->identity_assurance);
+        $this->assertNotNull($signer->fresh()->public_key_id);
+    }
+
     public function test_internal_reenrollment_without_auth_blocked(): void
     {
         $req = $this->makeExternalRequest();
