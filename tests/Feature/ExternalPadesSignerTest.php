@@ -90,6 +90,29 @@ class ExternalPadesSignerTest extends TestCase
         (new ExternalPadesSigner())->preparePlaceholderPdf('this is not a pdf at all, just junk bytes here .....');
     }
 
+    public function test_ambiguous_byterange_not_in_sig_dict_rejected(): void
+    {
+        // Un "PDF" contenant une chaîne /ByteRange forgée (couverture totale) MAIS hors dict de signature
+        // doit être rejeté par prepareDataToSign (invariant « dans un dictionnaire de signature »).
+        $svc = new ExternalPadesSigner();
+        $head = "%PDF-1.7\n% forged stream /Contents <";
+        $gap = str_repeat('0', 20);
+        // Construit un fichier où /ByteRange couvre tout sauf le gap, sans /Type /Sig /SubFilter.
+        $prefix = $head;
+        $a = 0;
+        $b = strlen($prefix);
+        $contentLen = strlen($gap) + 2; // '<' ... '>'
+        $c = $b + $contentLen;
+        $tail = ">\n/ByteRange [0 {$b} {$c} 0]\n%%EOF";
+        $pdf = $prefix . $gap . $tail;
+        // Ajuste d : total - c
+        $d = strlen($pdf) - $c;
+        $pdf = $prefix . $gap . ">\n/ByteRange [0 {$b} {$c} {$d}]\n%%EOF";
+        $cert = $this->ecSigner('X')['cert'];
+        $this->expectException(\RuntimeException::class);
+        $svc->prepareDataToSign($pdf, $cert);
+    }
+
     public function test_certificate_substitution_rejected(): void
     {
         if (! $this->pdfsigAvailable()) {

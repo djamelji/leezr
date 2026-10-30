@@ -666,6 +666,8 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     Route::get('{id}/verify', [$s, 'verify'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
     Route::post('{id}/cancel', [$s, 'cancel'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
     Route::post('{id}/remind', [$s, 'remind'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
+    // W-SIGNATURE-9 (§3) — réinitialisation de la clé d'un signataire (révoque + ré-invite). L'émetteur ne signe jamais.
+    Route::post('{id}/signers/{signerId}/reset-key', [$s, 'resetSignerKey'])->whereNumber('id')->whereNumber('signerId')->middleware($perm('workforce_signature.manage'));
 });
 
 // ── Documentation (ADR-356: routes moved to /api/help-center/* unified API) ──

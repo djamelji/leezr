@@ -188,6 +188,46 @@ class SignatureController extends Controller
     }
 
     /**
+     * W-SIGNATURE-9 (§3) — réinitialisation de la clé d'un signataire par l'émetteur (clé perdue, externe
+     * bloqué). Révoque la clé actuelle et renvoie une invitation pour que le signataire ré-enrôle SA propre
+     * nouvelle clé. L'émetteur ne signe JAMAIS à la place du signataire. Gated par workforce_signature.manage.
+     */
+    public function resetSignerKey(Request $request, int $id, int $signerId): JsonResponse
+    {
+        $req = $this->findScoped($request, $id);
+        $signer = \App\Modules\Workforce\Signature\Models\SignatureSigner::withoutGlobalScopes()
+            ->where('signature_request_id', $req->id)->where('id', $signerId)->firstOrFail();
+
+        app(\App\Modules\Workforce\Signature\Services\SignerEnrollmentService::class)
+            ->adminResetKey($req, $signer, (int) $request->user()->id);
+
+        // Renvoie une invitation (nouveau lien à usage unique) si la demande est encore active.
+        if ($req->isActive() && ! $signer->isActed()) {
+            $token = \App\Modules\Workforce\Signature\Services\SignatureTokenService::generate();
+            $signer->token_hash = $token['hash'];
+            $signer->token_expires_at = $req->expires_at;
+            $signer->token_revoked_at = null;
+            $signer->status = \App\Modules\Workforce\Signature\Models\SignatureSigner::STATUS_INVITED;
+            $signer->invited_at = now();
+            $signer->save();
+
+            $company = \App\Core\Models\Company::withoutGlobalScopes()->find($req->company_id);
+            app(\App\Modules\Workforce\Signature\Services\SignatureNotifier::class)->sendInvitation(
+                $signer->email,
+                new \App\Notifications\Signature\SignatureInvitationNotification(
+                    signerName: $signer->name,
+                    documentLabel: $req->document?->template?->name ?? 'Document RH',
+                    signUrl: \App\Modules\Workforce\Signature\Services\SignatureTokenService::signerUrl($token['raw']),
+                    companyName: $company?->name,
+                    expiresAt: $req->expires_at?->format('d/m/Y'),
+                ),
+            );
+        }
+
+        return response()->json(['reset' => true]);
+    }
+
+    /**
      * Vérification cryptographique INDÉPENDANTE du document final (§7). Rapport honnête : la validité
      * cryptographique du cachet N'IMPLIQUE PAS l'identité du signataire ni une reconnaissance eIDAS.
      */
@@ -337,8 +377,12 @@ class SignatureController extends Controller
                 'revoked' => $s->signer_cert_revoked_at !== null,
                 'usable' => $s->hasUsableCertificate($now),
                 'internal_chain_valid' => $chainValid,       // cohérence interne (PAS une confiance reconnue)
-                'identity_verification' => 'declared',        // identité DÉCLARÉE, pas vérifiée réglementairement
-                'auth_method' => $s->auth_method ?? 'token_link',
+                // IDENTITÉ (honnête) : niveau d'assurance RÉELLEMENT obtenu, distinct de la validité crypto.
+                'identity_assurance' => $s->identity_assurance ?? 'link_only',
+                'account_authenticated' => $s->authenticated_user_id !== null,
+                'auth_method' => $s->auth_method ?? ($s->authenticated_user_id ? 'authenticated_account' : 'token_link'),
+                'reenrollment_count' => (int) ($s->reenrollment_count ?? 0),
+                'identity_regulatory_verified' => false,      // jamais une vérification d'identité réglementaire
                 'ca_recognized' => false,
             ];
         }

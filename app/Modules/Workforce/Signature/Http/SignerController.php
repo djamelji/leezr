@@ -68,6 +68,9 @@ class SignerController extends Controller
                 'document_label' => $req->document?->template?->name ?? 'Document',
             ],
             'can_act' => $canAct,
+            // W-SIGNATURE-9 — SÉPARATION possession du lien ↔ authentification ↔ identité. Indique si le
+            // signataire est rattaché à un compte Leezr (interne) et si ce compte est RÉELLEMENT authentifié.
+            'authentication' => $this->authenticationState($request, $signer),
             // Données pour la signature PERSONNELLE côté navigateur (WebCrypto). Le client signe la
             // représentation canonique de ces claims avec sa clé privée NON extractible.
             'personal_signing' => $canAct ? [
@@ -118,6 +121,9 @@ class SignerController extends Controller
         $prep = app(RecordSignerActionUseCase::class)->prepareExternal($token, [
             'publicKey' => $data['public_key_spki'],
             'pop' => $data['signature_p1363'],
+            // Identité RÉELLEMENT authentifiée (Sanctum SPA, optionnelle sur route publique) + IP.
+            'authUserId' => $request->user()?->id,
+            'ip' => $request->ip(),
         ]);
 
         return response()->json([
@@ -154,6 +160,34 @@ class SignerController extends Controller
         $req = app(RecordSignerActionUseCase::class)->decline($token, $reason, ['ip' => $request->ip()]);
 
         return response()->json(['status' => $req->status, 'message' => 'declined']);
+    }
+
+    /**
+     * État d'authentification/identité du signataire (honnête) : rattachement à un compte Leezr,
+     * authentification réelle du compte attendu, niveau d'assurance, et si une ré-authentification est
+     * exigée pour un re-enrôlement (changement de clé) sensible.
+     */
+    private function authenticationState(Request $request, SignatureSigner $signer): array
+    {
+        $resolver = app(\App\Modules\Workforce\Signature\Services\SignerIdentityResolver::class);
+        $authUserId = $request->user()?->id;
+        $isInternal = $resolver->isInternal($signer);
+        $matches = $resolver->authenticatedMatches($signer, $authUserId);
+        $hasKey = $signer->public_key_id !== null;
+
+        return [
+            'account_linked' => $isInternal,                 // signataire rattaché à un compte Leezr
+            'authenticated' => $authUserId !== null,         // une session est active
+            'authenticated_matches_signer' => $matches,      // la session correspond au signataire attendu
+            'assurance' => $resolver->assuranceFor($signer, $authUserId),
+            // Un re-enrôlement (le signataire a déjà une clé) exige l'authentification du compte (interne)
+            // ou une réinitialisation par l'émetteur (externe). La 1re inscription reste possible via le lien.
+            'reenrollment_requires_auth' => $hasKey && $isInternal,
+            'reenrollment_self_service_blocked' => $hasKey && ! $isInternal,
+            'identity_note' => $isInternal
+                ? 'Signataire rattaché à un compte Leezr. L\'authentification du compte renforce l\'attribution.'
+                : 'Signataire externe : identité déclarée par e-mail, non authentifiée.',
+        ];
     }
 
     /** Résout un signataire par token ; 404 générique si introuvable/inutilisable (anti-énumération). */

@@ -174,11 +174,26 @@ class ExternalPadesSigner
         if ($byteRange[2] + $byteRange[3] !== $total) {
             throw new \RuntimeException('Rejected: ByteRange does not cover the whole document ("Not total document").');
         }
+        // Invariant 2bis (W-SIGNATURE-9 §5) — le ByteRange retenu DOIT appartenir à un VRAI dictionnaire de
+        // signature, pas à une chaîne "/ByteRange […]" injectée dans un flux de contenu. On exige la présence
+        // des marqueurs de dict de signature (/Type /Sig + /SubFilter) dans la fenêtre précédant le ByteRange,
+        // et le mot-clé /Contents immédiatement avant le gap. Couplé à la couverture totale (inv. 2), cela
+        // identifie structurellement la signature la plus récente et rejette les PDF/ByteRange ambigus.
+        $brPos = (int) strrpos($pdf, $m[0]);
+        $window = substr($pdf, max(0, $brPos - 400), 400 + strlen($m[0]));
+        if (! str_contains($window, '/Type') || ! str_contains($window, '/Sig') || ! str_contains($window, '/SubFilter')) {
+            throw new \RuntimeException('Rejected: ByteRange is not inside a signature dictionary.');
+        }
+
         // Invariant 3 : le gap /Contents est encadré exactement par le ByteRange.
         $ltPos = $byteRange[0] + $byteRange[1]; // doit pointer sur '<'
         $gtPos = $byteRange[2] - 1;             // doit pointer sur '>'
         if (($pdf[$ltPos] ?? '') !== '<' || ($pdf[$gtPos] ?? '') !== '>') {
             throw new \RuntimeException('Rejected: /Contents gap not framed by the ByteRange.');
+        }
+        // Le gap doit être la valeur d'une entrée /Contents (mot-clé juste avant le '<').
+        if (! str_contains(substr($pdf, max(0, $ltPos - 20), 20), 'Contents')) {
+            throw new \RuntimeException('Rejected: signature gap is not a /Contents value.');
         }
         $hexStart = $ltPos + 1;
         $hexLen = $gtPos - $hexStart;

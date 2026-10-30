@@ -7,6 +7,7 @@ use App\Core\Crypto\PersonalSignatureService;
 use App\Core\Documents\GeneratedDocument;
 use App\Core\Models\Company;
 use App\Modules\Workforce\Signature\Models\SignatureCertificate;
+use App\Modules\Workforce\Signature\Models\SignatureEnrollment;
 use App\Modules\Workforce\Signature\Models\SignatureEvent;
 use App\Modules\Workforce\Signature\Models\SignatureRequest;
 use App\Modules\Workforce\Signature\Models\SignatureSigner;
@@ -40,9 +41,10 @@ class SignerEnrollmentService
      *
      * @throws ValidationException si la preuve de possession est invalide / le challenge inutilisable
      */
-    public function enrollAndIssue(SignatureRequest $request, SignatureSigner $signer, string $spkiB64, string $popSignatureP1363): SignatureCertificate
+    public function enrollAndIssue(SignatureRequest $request, SignatureSigner $signer, string $spkiB64, string $popSignatureP1363, ?int $authUserId = null, ?string $ip = null): SignatureCertificate
     {
         $personal = app(PersonalSignatureService::class);
+        $identity = app(SignerIdentityResolver::class);
 
         // 1) Challenge à usage unique : présent, non expiré, non consommé.
         if (! $signer->challenge || ! $signer->challenge_expires_at || $signer->challenge_expires_at->isPast() || $signer->challenge_used_at) {
@@ -69,26 +71,41 @@ class SignerEnrollmentService
             throw ValidationException::withMessages(['signature' => 'Preuve de possession invalide.']);
         }
 
-        // 4) Clé différente de celle enregistrée : RE-ENRÔLEMENT (§5 — nouvel appareil, IndexedDB effacée,
-        //    clé perdue). Autorisé UNIQUEMENT tant que le signataire n'a pas signé. Le token (usage unique)
-        //    est révoqué dès la signature → un signataire ayant signé ne peut plus re-enrôler. On ne restaure
-        //    JAMAIS de clé privée ; on RÉVOQUE l'ancien certificat et on en émet un nouveau lié à la NOUVELLE
-        //    clé. Un administrateur, qui ne détient pas le token, ne peut pas déclencher de substitution.
+        // 4) P0 (§1/§3) — SÉPARER possession du lien ↔ AUTHENTIFICATION. Le RE-ENRÔLEMENT (changement de la
+        //    clé déjà enregistrée : nouvel appareil, IndexedDB effacée, clé perdue) est une opération SENSIBLE :
+        //    la seule possession du lien NE SUFFIT PAS. Un signataire INTERNE doit être AUTHENTIFIÉ avec SON
+        //    compte ; un signataire EXTERNE ne peut pas changer de clé en libre-service (réinitialisation par
+        //    l'émetteur requise). On ne restaure JAMAIS de clé privée ; l'ancien certificat est RÉVOQUÉ.
         $keyId = $personal->keyId($spkiB64);
-        if ($signer->public_key_id && ! hash_equals($signer->public_key_id, $keyId)) {
+        $isReEnrollment = $signer->public_key_id && ! hash_equals($signer->public_key_id, $keyId);
+        if ($isReEnrollment) {
             if ($signer->isActed()) {
                 throw ValidationException::withMessages(['signature' => 'Clé figée après signature — re-enrôlement impossible.']);
             }
-            $this->revokePreviousCertificates($request, $signer, 'device_change_reenrollment');
+            if ($identity->isInternal($signer)) {
+                if (! $identity->authenticatedMatches($signer, $authUserId)) {
+                    throw ValidationException::withMessages(['authentication' => 'Authentification de votre compte Leezr requise pour enregistrer une nouvelle clé (changement d\'appareil).']);
+                }
+            } else {
+                // Externe : pas d'auto-substitution de clé via le lien seul (anti-substitution de signataire).
+                throw ValidationException::withMessages(['authentication' => 'Le changement de clé n\'est pas autorisé en libre-service. Demandez une réinitialisation à l\'émetteur du document.']);
+            }
+            $this->revokePreviousCertificates($request, $signer, SignatureEnrollment::REASON_DEVICE_CHANGE);
+            $signer->reenrollment_count = (int) $signer->reenrollment_count + 1;
         }
 
-        // 5) Enregistre la clé publique + consomme le challenge + preuve personnelle (comme W-SIGNATURE-4).
+        // Niveau d'assurance RÉELLEMENT obtenu (honnête) pour cette association de clé.
+        $assurance = $identity->assuranceFor($signer, $authUserId);
+
+        // 5) Enregistre la clé publique + consomme le challenge + preuve personnelle + IDENTITÉ.
         $signer->public_key_spki = $spkiB64;
         $signer->public_key_id = $keyId;
         $signer->personal_signature_alg = PersonalSignatureService::ALGORITHM;
         $signer->personal_signature = $popSignatureP1363;
         $signer->personal_signed_sha256 = hash('sha256', $payload);
         $signer->challenge_used_at = now();
+        $signer->authenticated_user_id = $identity->authenticatedMatches($signer, $authUserId) ? $authUserId : null;
+        $signer->identity_assurance = $assurance;
         $signer->save();
 
         // 6) Idempotence : certificat utilisable déjà lié à cette clé → réutiliser.
@@ -141,10 +158,21 @@ class SignerEnrollmentService
             'not_before' => date('Y-m-d H:i:s', $issued['not_before']),
             'not_after' => date('Y-m-d H:i:s', $issued['not_after']),
             'status' => SignatureCertificate::STATUS_ISSUED,
-            'auth_method' => 'token_link',
-            'identity_verification' => 'declared', // compte + lien email ≠ vérification réglementaire
+            'auth_method' => $assurance === SignerIdentityResolver::ASSURANCE_ACCOUNT ? 'authenticated_account' : 'token_link',
+            'identity_verification' => $assurance, // account_authenticated | link_only | declared (jamais réglementaire)
             'certificate_pem' => $issued['cert_pem'],
-            'metadata' => ['ca' => 'leezr-dev-internal', 'recognized_trust_chain' => false, 'eidas' => 'not_demonstrated'],
+            'metadata' => ['ca' => 'leezr-dev-internal', 'recognized_trust_chain' => false, 'eidas' => 'not_demonstrated', 'assurance' => $assurance],
+        ]);
+
+        // Historique d'enrôlement (§3) : association de clé + assurance réellement obtenue.
+        SignatureEnrollment::create([
+            'company_id' => $request->company_id,
+            'signature_signer_id' => $signer->id,
+            'public_key_id' => $keyId,
+            'assurance' => $assurance,
+            'authenticated_user_id' => $signer->authenticated_user_id,
+            'reason' => $isReEnrollment ? SignatureEnrollment::REASON_DEVICE_CHANGE : SignatureEnrollment::REASON_INITIAL,
+            'ip' => $ip,
         ]);
 
         $this->events->record($request, SignatureEvent::TYPE_CERTIFICATE_ISSUED, [
@@ -161,6 +189,39 @@ class SignerEnrollmentService
         ]);
 
         return $certificate;
+    }
+
+    /**
+     * §3 — Réinitialisation de clé par l'ÉMETTEUR (admin autorisé) : révoque la clé/cert du signataire pour
+     * qu'il ré-enrôle une nouvelle clé (clé perdue, signataire externe bloqué). L'admin NE SIGNE JAMAIS à la
+     * place du signataire : il libère seulement l'enrôlement. Interdit après signature.
+     */
+    public function adminResetKey(SignatureRequest $request, SignatureSigner $signer, int $actorId): void
+    {
+        if ($signer->isActed()) {
+            throw ValidationException::withMessages(['signer' => 'Impossible de réinitialiser la clé : le signataire a déjà agi.']);
+        }
+        $this->revokePreviousCertificates($request, $signer, SignatureEnrollment::REASON_ADMIN_RESET);
+
+        // Libère complètement l'enrôlement : le signataire posera sa PROPRE nouvelle clé au prochain parcours.
+        $signer->public_key_spki = null;
+        $signer->public_key_id = null;
+        $signer->personal_signature = null;
+        $signer->personal_signature_alg = null;
+        $signer->personal_signed_sha256 = null;
+        $signer->signer_certificate_pem = null;
+        $signer->signer_cert_serial = null;
+        $signer->signer_cert_fingerprint = null;
+        $signer->authenticated_user_id = null;
+        $signer->identity_assurance = 'link_only';
+        $signer->reenrollment_count = (int) $signer->reenrollment_count + 1;
+        $signer->save();
+
+        app(\App\Core\Audit\AuditLogger::class)->logCompany(
+            $request->company_id, \App\Core\Audit\AuditAction::SIGNATURE_REQUESTED,
+            'signature_signer', (string) $signer->id,
+            ['actorId' => $actorId, 'actorType' => 'user', 'severity' => 'warning', 'metadata' => ['action' => 'admin_key_reset']],
+        );
     }
 
     /**
@@ -181,6 +242,12 @@ class SignerEnrollmentService
             $cert->save();
             $ca->recordRevocation($cert->serial, $cert->fingerprint_sha256, $reason);
         }
+
+        // Marque l'historique d'enrôlement précédent comme révoqué (traçabilité des changements de clé, §3).
+        SignatureEnrollment::withoutGlobalScopes()
+            ->where('signature_signer_id', $signer->id)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
 
         $this->events->record($request, SignatureEvent::TYPE_CERTIFICATE_REVOKED, [
             'signer' => $signer,

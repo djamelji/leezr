@@ -277,42 +277,118 @@ class ExternalPadesFlowTest extends TestCase
         $this->assertNull($signer->token_revoked_at, 'token préservé');
     }
 
-    public function test_device_change_reenrollment_allowed_before_signing(): void
+    /** Rend un signataire INTERNE (rattaché à un compte Leezr) et renvoie l'id du user attendu. */
+    private function makeInternal(SignatureSigner $signer): int
+    {
+        $u = \App\Core\Models\User::factory()->create();
+        $signer->party_type = 'user';
+        $signer->party_id = $u->id;
+        $signer->save();
+
+        return $u->id;
+    }
+
+    public function test_device_change_reenrollment_allowed_for_authenticated_internal_signer(): void
     {
         if (! $this->pdfsig()->pdfsigAvailable()) {
             $this->markTestSkipped('pdfsig absent');
         }
         $req = $this->makeExternalRequest();
         $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
         $token = $this->issueToken($signer, $req);
         $uc = app(RecordSignerActionUseCase::class);
 
-        // Appareil A : enrôlement (prepare) — un certificat est émis pour la clé A.
-        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair());
+        // Appareil A : enrôlement AUTHENTIFIÉ (compte Leezr du signataire).
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair(), $uid);
         $signer->refresh();
         $kidA = $signer->public_key_id;
-        $this->assertSame(1, SignatureCertificate::where('signature_signer_id', $signer->id)->where('status', 'issued')->count());
+        $this->assertSame('account_authenticated', $signer->identity_assurance);
 
-        // Appareil B (clé perdue / IndexedDB effacée) : nouvel enrôlement + signature AVANT toute signature
-        // antérieure → autorisé. Le changement de clé déclenche la révocation du cert A et l'émission de B.
+        // Appareil B (clé perdue) : re-enrôlement AUTHENTIFIÉ → autorisé (ancien cert révoqué, nouveau émis).
         $kpB = $this->ecKeyPair();
         $sB = SignatureSigner::withoutGlobalScopes()->find($signer->id);
         $sB->challenge = bin2hex(random_bytes(24));
         $sB->challenge_expires_at = now()->addMinutes(15);
         $sB->challenge_used_at = null;
         $sB->save();
-        $prep = $uc->prepareExternal($token, ['publicKey' => $kpB['spki_b64'], 'pop' => $this->popFor($req, $sB, $kpB)]);
+        $prep = $uc->prepareExternal($token, ['publicKey' => $kpB['spki_b64'], 'pop' => $this->popFor($req, $sB, $kpB), 'authUserId' => $uid]);
         $signer->refresh();
         $this->assertNotSame($kidA, $signer->public_key_id, 'nouvelle clé enregistrée');
-        // L'ancien certificat est RÉVOQUÉ (jamais effacé), le nouveau est émis.
         $this->assertSame(1, SignatureCertificate::where('signature_signer_id', $signer->id)->where('status', 'revoked')->count());
         $this->assertSame(1, SignatureCertificate::where('signature_signer_id', $signer->id)->where('status', 'issued')->count());
 
-        // Signature avec la clé B → PDF valide (1 signature).
         $uc->sign($token, ['padesSignature' => $this->browserSign(base64_decode($prep['to_sign_b64']), $kpB['key'])]);
         $req->refresh();
-        $final = Storage::disk('local')->get($req->signed_document_path);
-        $this->assertSame(1, (int) $this->pdfsig()->verifyPdf($final)['signature_count']);
+        $this->assertSame(1, (int) $this->pdfsig()->verifyPdf(Storage::disk('local')->get($req->signed_document_path))['signature_count']);
+    }
+
+    public function test_internal_reenrollment_without_auth_blocked(): void
+    {
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
+        $token = $this->issueToken($signer, $req);
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair(), $uid); // clé A (authentifié)
+
+        $sB = SignatureSigner::withoutGlobalScopes()->find($signer->id);
+        $sB->challenge = bin2hex(random_bytes(24));
+        $sB->challenge_expires_at = now()->addMinutes(15);
+        $sB->challenge_used_at = null;
+        $sB->save();
+        $kpB = $this->ecKeyPair();
+        // Re-enrôlement SANS authentification (simple possession du lien) → REFUSÉ pour un interne.
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(RecordSignerActionUseCase::class)->prepareExternal($token, ['publicKey' => $kpB['spki_b64'], 'pop' => $this->popFor($req, $sB, $kpB)]);
+    }
+
+    public function test_external_reenrollment_blocked_self_service(): void
+    {
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0]; // externe (pas de party)
+        $token = $this->issueToken($signer, $req);
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair()); // clé A (declared)
+
+        $sB = SignatureSigner::withoutGlobalScopes()->find($signer->id);
+        $sB->challenge = bin2hex(random_bytes(24));
+        $sB->challenge_expires_at = now()->addMinutes(15);
+        $sB->challenge_used_at = null;
+        $sB->save();
+        $kpB = $this->ecKeyPair();
+        // Un tiers possédant le lien NE PEUT PAS substituer la clé d'un signataire externe en libre-service.
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(RecordSignerActionUseCase::class)->prepareExternal($token, ['publicKey' => $kpB['spki_b64'], 'pop' => $this->popFor($req, $sB, $kpB)]);
+    }
+
+    public function test_admin_reset_key_unblocks_then_signer_reenrolls(): void
+    {
+        if (! $this->pdfsig()->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0]; // externe
+        $token = $this->issueToken($signer, $req);
+        $this->enrollOnly($req, $signer, $token, $this->ecKeyPair()); // clé A
+        $this->assertNotNull($signer->fresh()->public_key_id);
+
+        // L'émetteur réinitialise la clé (révoque + libère l'enrôlement) — il ne signe JAMAIS.
+        app(\App\Modules\Workforce\Signature\Services\SignerEnrollmentService::class)
+            ->adminResetKey($req->fresh(), $signer->fresh(), $this->actorId);
+        $this->assertNull($signer->fresh()->public_key_id, 'clé libérée');
+        $this->assertSame(1, SignatureCertificate::where('signature_signer_id', $signer->id)->where('status', 'revoked')->count());
+
+        // Le signataire ré-enrôle SA propre nouvelle clé (1re inscription à nouveau) et signe.
+        $sB = SignatureSigner::withoutGlobalScopes()->find($signer->id);
+        $sB->challenge = bin2hex(random_bytes(24));
+        $sB->challenge_expires_at = now()->addMinutes(15);
+        $sB->challenge_used_at = null;
+        $sB->save();
+        $kpB = $this->ecKeyPair();
+        $uc = app(RecordSignerActionUseCase::class);
+        $prep = $uc->prepareExternal($token, ['publicKey' => $kpB['spki_b64'], 'pop' => $this->popFor($req, $sB, $kpB)]);
+        $uc->sign($token, ['padesSignature' => $this->browserSign(base64_decode($prep['to_sign_b64']), $kpB['key'])]);
+        $req->refresh();
+        $this->assertSame(1, (int) $this->pdfsig()->verifyPdf(Storage::disk('local')->get($req->signed_document_path))['signature_count']);
     }
 
     public function test_non_p256_curve_rejected(): void
@@ -325,14 +401,14 @@ class ExternalPadesFlowTest extends TestCase
     }
 
     /** Enrôle (prepare) un signataire sans signer (pour les scénarios appareil/clé). */
-    private function enrollOnly(SignatureRequest $req, SignatureSigner $signer, string $token, array $kp): void
+    private function enrollOnly(SignatureRequest $req, SignatureSigner $signer, string $token, array $kp, ?int $authUserId = null): void
     {
         $s = SignatureSigner::withoutGlobalScopes()->findOrFail($signer->id);
         $s->challenge = bin2hex(random_bytes(24));
         $s->challenge_expires_at = now()->addMinutes(15);
         $s->challenge_used_at = null;
         $s->save();
-        app(RecordSignerActionUseCase::class)->prepareExternal($token, ['publicKey' => $kp['spki_b64'], 'pop' => $this->popFor($req, $s, $kp)]);
+        app(RecordSignerActionUseCase::class)->prepareExternal($token, ['publicKey' => $kp['spki_b64'], 'pop' => $this->popFor($req, $s, $kp), 'authUserId' => $authUserId]);
     }
 
     private function popFor(SignatureRequest $req, SignatureSigner $signer, array $kp): string

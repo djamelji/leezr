@@ -28,6 +28,7 @@ class SignatureSigner extends Model
         'signer_certificate_pem', 'signer_cert_serial', 'signer_cert_fingerprint', 'signer_cert_issuer',
         'signer_cert_not_before', 'signer_cert_not_after', 'signer_cert_revoked_at',
         'signing_prep', 'signing_base_sha256', 'signing_prep_expires_at',
+        'authenticated_user_id', 'identity_assurance', 'reenrollment_count',
     ];
 
     protected $casts = [
@@ -44,6 +45,8 @@ class SignatureSigner extends Model
         'signer_cert_revoked_at' => 'datetime',
         'signing_prep' => 'array',
         'signing_prep_expires_at' => 'datetime',
+        'authenticated_user_id' => 'integer',
+        'reenrollment_count' => 'integer',
         'metadata' => 'array',
     ];
 
