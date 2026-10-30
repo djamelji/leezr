@@ -1661,12 +1661,29 @@
     "intro": "Configure the provider, default level, validity, reminders and signed-copy delivery.",
     "devOnlyNotice": "TEST provider active (development environment): signatures are not legally certified.",
     "defaultLevel": "Default level", "defaultOrder": "Default order",
+    "defaultFormat": "Signature mode",
     "validityDays": "Validity (days)", "reminderDays": "Remind after (days)",
     "reminderHint": "Leave empty to disable automatic reminders.",
     "notifyEnabled": "Enable email notifications",
     "sendSignedCopy": "Send a signed copy to the employee",
     "signedCopyNotice": "Without removing access to the document where the law requires its delivery or availability.",
     "saved": "Signature settings saved"
+  },
+  "signatureFormat": {
+    "personal_digital": {
+      "label": "Personal digital signature",
+      "desc": "Each signer signs the PDF with their own key (never transmitted), via an internal, publicly non-recognized certificate. Two personal signatures embedded in the document."
+    },
+    "demonstration": {
+      "label": "Demonstration signature",
+      "desc": "Test mode: the server seal is applied to the document, without the employee's personal signature inside the PDF."
+    },
+    "trustNotice": "Internal certificates are not recognized by a public authority and do not constitute an eIDAS advanced or qualified signature. The displayed identity is self-declared.",
+    "reason": {
+      "not_allowed_by_platform": "not allowed on this market",
+      "pdfsig_unavailable": "verifier unavailable",
+      "certificate_authority_unavailable": "certificate authority unavailable"
+    }
   },
   "employeeFile": {
     "days": "days",

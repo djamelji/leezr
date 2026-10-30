@@ -23,6 +23,7 @@ const form = ref({
   generated_document_id: null,
   signing_order: 'sequential',
   signature_level: null,
+  format: null,
   signers: [
     { role: 'employee', name: '', email: '' },
     { role: 'company_representative', name: '', email: '' },
@@ -35,6 +36,7 @@ const reset = () => {
     generated_document_id: null,
     signing_order: options.value?.default_order ?? 'sequential',
     signature_level: options.value?.default_level ?? null,
+    format: options.value?.default_format ?? null,
     signers: [
       { role: 'employee', name: '', email: '' },
       { role: 'company_representative', name: '', email: '' },
@@ -61,6 +63,12 @@ const levelItems = computed(() => (options.value?.levels ?? []).map(l => ({
 })))
 const roleItems = computed(() => ['employee', 'company_representative', 'external'].map(r => ({ title: t(`signature.role.${r}`), value: r })))
 const orderItems = computed(() => ['sequential', 'parallel'].map(o => ({ title: t(`signature.order.${o}`), value: o })))
+const modeItems = computed(() => (options.value?.formats ?? []).map(m => ({
+  title: t(`signatureFormat.${m.mode}.label`) + (m.available ? '' : ' · ' + t(`signatureFormat.reason.${m.reason}`)),
+  value: m.mode,
+  props: { disabled: !m.available, subtitle: t(`signatureFormat.${m.mode}.desc`) },
+})))
+const selectedMode = computed(() => (options.value?.formats ?? []).find(m => m.mode === form.value.format))
 
 const addSigner = () => form.value.signers.push({ role: 'external', name: '', email: '' })
 const removeSigner = i => form.value.signers.splice(i, 1)
@@ -85,6 +93,7 @@ const submit = async () => {
       generated_document_id: form.value.generated_document_id,
       signing_order: form.value.signing_order,
       signature_level: form.value.signature_level,
+      format: form.value.format,
       signers: form.value.signers.map((s, i) => ({ ...s, order: i + 1 })),
     }
     await store.create(payload)
@@ -229,6 +238,26 @@ const submit = async () => {
             <template v-else-if="!providerCertified"> — {{ t('signature.wizard.uncertifiedWarning') }}</template>
           </VAlert>
           <AppSelect
+            v-model="form.format"
+            :items="modeItems"
+            :label="t('signatureSettings.defaultFormat')"
+            class="mb-2"
+          />
+          <VAlert
+            v-if="selectedMode"
+            :type="selectedMode.mode === 'personal_digital' ? 'success' : 'info'"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <div class="text-body-2">
+              {{ t(`signatureFormat.${selectedMode.mode}.desc`) }}
+            </div>
+            <div class="text-caption mt-1">
+              {{ t('signatureFormat.trustNotice') }}
+            </div>
+          </VAlert>
+          <AppSelect
             v-model="form.signature_level"
             :items="levelItems"
             :label="t('signature.wizard.level')"
@@ -241,6 +270,7 @@ const submit = async () => {
           <VList lines="two" class="py-0">
             <VListItem :title="selectedDocLabel" :subtitle="t('signature.wizard.document')" />
             <VListItem :title="t(`signature.order.${form.signing_order}`)" :subtitle="t('signature.wizard.order')" />
+            <VListItem v-if="form.format" :title="t(`signatureFormat.${form.format}.label`)" :subtitle="t('signatureSettings.defaultFormat')" />
             <VListItem :title="form.signature_level ? t(`signature.level.${form.signature_level}`) : '—'" :subtitle="t('signature.wizard.level')" />
             <VListItem :subtitle="t('signature.wizard.signers')">
               <template #title>

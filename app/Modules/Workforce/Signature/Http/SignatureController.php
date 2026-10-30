@@ -69,6 +69,9 @@ class SignatureController extends Controller
             'orders' => SignatureRequest::ORDERS,
             'default_level' => $cfg['default_level'],
             'default_order' => $cfg['default_order'],
+            // W-SIGNATURE-8 — modes de signature (vocabulaire métier) réellement disponibles.
+            'formats' => $company ? \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::describe($company) : [],
+            'default_format' => $cfg['default_format'],
         ]);
     }
 
@@ -138,6 +141,7 @@ class SignatureController extends Controller
             'signature_level' => 'nullable|in:' . implode(',', SignatureRequest::LEVELS),
             'signing_order' => 'nullable|in:' . implode(',', SignatureRequest::ORDERS),
             'provider' => 'nullable|string|max:50',
+            'format' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::MODES),
         ]);
 
         // Vérifie l'accès au document source (scope collaborateur) AVANT création.
@@ -154,6 +158,7 @@ class SignatureController extends Controller
             level: $data['signature_level'] ?? null,
             signingOrder: $data['signing_order'] ?? null,
             provider: $data['provider'] ?? null,
+            format: $data['format'] ?? null,
         );
 
         // Confirmer = créer puis envoyer (invitations).
@@ -379,7 +384,14 @@ class SignatureController extends Controller
 
     public function getSettings(Request $request): JsonResponse
     {
-        return response()->json(app(SignatureSettingsService::class)->resolve($this->companyId($request)));
+        $companyId = $this->companyId($request);
+        $company = $request->attributes->get('company') ?? \App\Core\Models\Company::withoutGlobalScopes()->find($companyId);
+
+        return response()->json(array_merge(
+            app(SignatureSettingsService::class)->resolve($companyId),
+            // Modes disponibles (+ motif d'indisponibilité) pour l'écran Paramètres RH → Signature.
+            ['available_formats' => $company ? \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::describe($company) : []],
+        ));
     }
 
     public function updateSettings(Request $request): JsonResponse
@@ -387,6 +399,7 @@ class SignatureController extends Controller
         $data = $request->validate([
             'provider' => 'nullable|string|max:50',
             'default_level' => 'nullable|in:' . implode(',', SignatureRequest::LEVELS),
+            'default_format' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::MODES),
             'validity_days' => 'nullable|integer|min:1|max:365',
             'reminder_days' => 'nullable|integer|min:1|max:365',
             'default_order' => 'nullable|in:' . implode(',', SignatureRequest::ORDERS),

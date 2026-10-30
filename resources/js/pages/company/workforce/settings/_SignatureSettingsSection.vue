@@ -27,6 +27,15 @@ const levelItems = computed(() => (options.value?.levels ?? []).map(l => ({
 })))
 const orderItems = computed(() => ['sequential', 'parallel'].map(o => ({ title: t(`signature.order.${o}`), value: o })))
 
+// W-SIGNATURE-8 — mode de signature (vocabulaire métier). Les modes indisponibles sont désactivés
+// avec leur motif ; la Company ne peut pas sélectionner un mode non autorisé par Platform/capacités.
+const modeItems = computed(() => (form.value?.available_formats ?? []).map(m => ({
+  title: t(`signatureFormat.${m.mode}.label`) + (m.available ? '' : ' · ' + t(`signatureFormat.reason.${m.reason}`)),
+  value: m.mode,
+  props: { disabled: !m.available, subtitle: t(`signatureFormat.${m.mode}.desc`) },
+})))
+const selectedMode = computed(() => (form.value?.available_formats ?? []).find(m => m.mode === form.value?.default_format))
+
 const save = async () => {
   saving.value = true
   try {
@@ -56,6 +65,28 @@ const save = async () => {
       </VAlert>
 
       <VRow>
+        <VCol cols="12">
+          <AppSelect
+            v-model="form.default_format"
+            :items="modeItems"
+            :label="t('signatureSettings.defaultFormat')"
+            :disabled="!can('workforce_signature.admin')"
+          />
+          <VAlert
+            v-if="selectedMode"
+            :type="selectedMode.mode === 'personal_digital' ? 'success' : 'info'"
+            variant="tonal"
+            density="compact"
+            class="mt-1 mb-2"
+          >
+            <div class="text-body-2">
+              {{ t(`signatureFormat.${selectedMode.mode}.desc`) }}
+            </div>
+            <div class="text-caption mt-1">
+              {{ t('signatureFormat.trustNotice') }}
+            </div>
+          </VAlert>
+        </VCol>
         <VCol cols="12" md="6">
           <AppSelect
             v-model="form.default_level"

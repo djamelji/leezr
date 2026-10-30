@@ -49,6 +49,7 @@ class CreateSignatureRequestUseCase
         ?string $level = null,
         ?string $signingOrder = null,
         ?string $provider = null,
+        ?string $format = null,
     ): SignatureRequest {
         $company = Company::withoutGlobalScopes()->findOrFail($companyId);
 
@@ -105,7 +106,15 @@ class CreateSignatureRequestUseCase
         $requiredAuth = self::REQUIRED_AUTH[$level] ?? 'email';
         $validityDays = max(1, (int) $cfg['validity_days']);
 
-        return DB::transaction(function () use ($companyId, $actorId, $document, $signers, $level, $signingOrder, $providerKey, $fingerprint, $requiredAuth, $validityDays) {
+        // Mode de signature (vocabulaire métier) → format technique. Borné par les capacités réellement
+        // disponibles (environnement + pdfsig + AC + autorisation Platform/Market).
+        $mode = $format ?: $cfg['default_format'];
+        if (! \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::isAvailable($company, $mode)) {
+            $mode = \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::defaultMode($company);
+        }
+        $requiredFormat = \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::requiredFormatFor($mode);
+
+        return DB::transaction(function () use ($companyId, $actorId, $document, $signers, $level, $signingOrder, $providerKey, $fingerprint, $requiredAuth, $validityDays, $mode, $requiredFormat) {
             $request = SignatureRequest::create([
                 'company_id' => $companyId,
                 'generated_document_id' => $document->id,
@@ -119,7 +128,7 @@ class CreateSignatureRequestUseCase
                 'signing_order' => $signingOrder,
                 'status' => SignatureRequest::STATUS_DRAFT,
                 'expires_at' => now()->addDays($validityDays),
-                'metadata' => ['required_auth_method' => $requiredAuth],
+                'metadata' => ['required_auth_method' => $requiredAuth, 'signature_mode' => $mode, 'required_format' => $requiredFormat],
             ]);
 
             $position = 1;

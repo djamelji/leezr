@@ -15,7 +15,7 @@ class SignatureSetting extends Model
     protected $table = 'workforce_signature_settings';
 
     protected $fillable = [
-        'company_id', 'provider', 'default_level', 'validity_days', 'reminder_days',
+        'company_id', 'provider', 'default_level', 'default_format', 'validity_days', 'reminder_days',
         'default_order', 'notify_enabled', 'send_signed_copy_to_employee', 'metadata',
     ];
 
@@ -32,6 +32,7 @@ class SignatureSetting extends Model
         return [
             'provider' => null,
             'default_level' => SignatureRequest::LEVEL_SIMPLE,
+            'default_format' => null, // résolu dynamiquement par SignatureFormatCatalog::defaultMode()
             'validity_days' => 30,
             'reminder_days' => null,
             'default_order' => SignatureRequest::ORDER_SEQUENTIAL,

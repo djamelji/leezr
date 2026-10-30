@@ -1660,12 +1660,29 @@
     "intro": "Configurez le prestataire, le niveau par défaut, la validité, les relances et la remise de la copie signée.",
     "devOnlyNotice": "Prestataire de TEST actif (environnement de développement) : les signatures ne sont pas certifiées juridiquement.",
     "defaultLevel": "Niveau par défaut", "defaultOrder": "Ordre par défaut",
+    "defaultFormat": "Mode de signature",
     "validityDays": "Validité (jours)", "reminderDays": "Relance après (jours)",
     "reminderHint": "Laisser vide pour désactiver les relances automatiques.",
     "notifyEnabled": "Activer les notifications e-mail",
     "sendSignedCopy": "Envoyer une copie signée au collaborateur",
     "signedCopyNotice": "Sans supprimer l'accès au document lorsque la loi impose sa remise ou sa mise à disposition.",
     "saved": "Paramètres de signature enregistrés"
+  },
+  "signatureFormat": {
+    "personal_digital": {
+      "label": "Signature personnelle numérique",
+      "desc": "Chaque signataire signe le PDF avec sa propre clé (jamais transmise), via un certificat interne non reconnu publiquement. Deux signatures personnelles intégrées au document."
+    },
+    "demonstration": {
+      "label": "Signature de démonstration",
+      "desc": "Mode de test : cachet du serveur apposé au document, sans signature personnelle du collaborateur dans le PDF."
+    },
+    "trustNotice": "Les certificats internes ne sont pas reconnus par une autorité publique et ne constituent pas une signature avancée ou qualifiée eIDAS. L'identité affichée est déclarée.",
+    "reason": {
+      "not_allowed_by_platform": "non autorisé sur ce marché",
+      "pdfsig_unavailable": "vérificateur indisponible",
+      "certificate_authority_unavailable": "autorité de certification indisponible"
+    }
   },
   "employeeFile": {
     "days": "jours",
