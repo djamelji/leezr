@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3bcab964566b082509467e3f84f59fe2",
+    "content-hash": "6343d7fd14b2d176b80e4e092898f651",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -211,6 +211,59 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "ddn/sapp",
+            "version": "1.5.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dealfonso/sapp.git",
+                "reference": "2e02c7a6548d426e235395742ad0397f075668b3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dealfonso/sapp/zipball/2e02c7a6548d426e235395742ad0397f075668b3",
+                "reference": "2e02c7a6548d426e235395742ad0397f075668b3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "ddn\\sapp\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-3.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "Carlos A.",
+                    "email": "caralla@upv.es"
+                }
+            ],
+            "description": "Simple and Agnostic PDF Parser (SAPP): Edit, manipulate and sign PDF documents usign PHP",
+            "keywords": [
+                "electronic signature",
+                "pdf",
+                "php",
+                "sign",
+                "signature"
+            ],
+            "support": {
+                "issues": "https://github.com/dealfonso/sapp/issues",
+                "source": "https://github.com/dealfonso/sapp/tree/1.5.9"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/caralla",
+                    "type": "custom"
+                }
+            ],
+            "time": "2026-09-16T10:37:55+00:00"
         },
         {
             "name": "dflydev/dot-access-data",

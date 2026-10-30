@@ -23299,3 +23299,31 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `App\Core\Crypto\PersonalSignatureService` ; migration `add_personal_signature_to_signers` ; `SignatureSigner` (colonnes) ; `SignerController` (challenge + claims + personal sig) ; `RecordSignerActionUseCase` (vérif + preuve + anti-rejeu) ; `FinalizeSignatureRequestUseCase` (§8 format requis) ; `SignatureController::verify` (personal_signatures) ; `utils/webcryptoSigner.js`, `sign/[token].vue` + i18n ; tests.
 
 ---
+
+### ADR-657 — W-SIGNATURE-5 : moteur multi-PAdES incrémental (prototype prouvé) + distinction honnête clé serveur / clé signataire (2026-10-30)
+
+**Contexte** : obtenir un PDF à **plusieurs signatures PAdES embarquées distinctes** sans invalider les précédentes. **Règle absolue respectée** : aucune intégration métier ni revendication multi-PAdES avant une **validation indépendante du prototype**. DEV only ; aucun prestataire/licence commercial ; interdits inchangés (main/PROD/Billing/signatures historiques/reset DEV/finaliser sans signatures requises/qualification eIDAS fictive/signer avec la clé d'un utilisateur).
+
+**§2 Étude — bibliothèque retenue** : **`ddn/sapp` 1.5.9 (SAPP, LGPL-3.0, OSI, libre)** — signature PDF par **mise à jour incrémentale + signatures multiples**. Alternatives écartées : **SetaPDF-Signer** (commercial/payant → interdit) ; **EU DSS** (Java → microservice self-hosted ; pas de Java/root sur DEV → disproportionné) ; FPDI/TCPDF (ré-écrit le PDF → invalide les signatures antérieures) ; autres libs PHP (`tc-lib-pdf-sign`, `signerphp/pdf-signer`… non retenues : maturité/incrémental). Aucune licence payante acquise.
+
+**§3 Prototype — PROUVÉ et VALIDÉ INDÉPENDAMMENT (pdfsig)** : PDF dompdf → signature A (cert « Alex Martin (Collaborateur) ») → signature B **incrémentale** (cert « Rep Leezr (Representant) »). `pdfsig` : **Signature #1 Valid** (Signed Ranges [0-1945]…, « Not total document signed »), **Signature #2 Valid** (« Total document signed », [0-6085]…), **2 certificats distincts, A PRÉSERVÉE après B**. PDF altéré → **les DEUX en « Digest Mismatch »**. Tests `MultiPadesSignatureTest` **3/3** (2 sig valides + altération + chaîne non reconnue).
+
+**§4/§5 — LIMITE CRUCIALE (honnête, non masquée)** : SAPP signe avec une clé **fournie au SERVEUR**. Pour une signature réellement **contrôlée par le signataire** (clé privée WebCrypto non-extractible, **jamais transmise**), il faut un **protocole de SIGNATURE EXTERNE** : préparer un placeholder PAdES (ByteRange réservé) → construire les attributs signés CMS → envoyer le CONDENSÉ au navigateur → le navigateur signe avec SA clé → assembler le CMS (signature externe + **certificat du signataire**) → injecter sans altérer les octets couverts. **Ce protocole externe n'est PAS livré.** De plus, une signature PAdES exige un **certificat X.509** par signataire : nécessiterait une **AC interne Leezr** (émission d'un cert liant la clé publique WebCrypto du signataire à une identité déclarée). **Une AC interne Leezr n'est PAS une autorité reconnue** et ses certificats **ne sont pas qualifiés**.
+
+**Décision d'intégration (respect de la règle « ne pas signer avec la clé d'un utilisateur »)** : comme l'embarquement signataire-contrôlé exige la signature externe (non livrée), **l'intégration métier du multi-PAdES n'est PAS faite** — intégrer SAPP en signant côté serveur reviendrait à **Leezr signant à la place du signataire** (INTERDIT) et serait trompeur. La **production conserve W-SIGNATURE-4** : cachet organisationnel PAdES Leezr (serveur, embarqué) + **preuves personnelles détachées réellement contrôlées par le signataire** (WebCrypto, vérifiées openssl). Le moteur multi-PAdES est livré comme **capacité prouvée** (service `MultiPadesSignatureService`, testé), prêt à être branché une fois la signature externe + AC interne réalisées.
+
+**§7 Cachet Leezr / §9 Vérification** : la vérification (`pdfsig` via `NativePadesSignatureService`) distingue déjà chaque signature embarquée (CN, ByteRange, algo, validité, « Total document signed », chaîne de confiance) et les preuves personnelles détachées (openssl). Jamais réduit à « Document signé ».
+
+**§8 Finalisation** : inchangée (P0 W-SIGNATURE-4/655) — pas de `completed` sans artefact vérifié ; **pas de repli silencieux**. Le multi-PAdES embarqué ne finalisera que lorsque la signature externe sera intégrée (et alors : aucune transition tant que toutes les signatures requises ne sont pas produites+intégrées+vérifiées+archivées).
+
+**§13 Infra** : déploiement DEV non destructif conservé (données Leezr Logistics préservées) ; remédiation SSH (StrictModes/rotation mot de passe/secret CI) **toujours à réaliser par l'infra root** — non exécutée (risque lockout ; ne pas désactiver StrictModes globalement).
+
+**Modèle de confiance (distinctions honnêtes)** : clé publique enregistrée ≠ cert auto-signé ≠ cert AC interne Leezr ≠ cert AC reconnue ≠ qualifié. Identité **déclarée** vs **vérifiée** vs **certificat reconnu** : distinguées dans le rapport. **Aucune revendication eIDAS.**
+
+**Dépendances** : `ddn/sapp ^1.5` (LGPL), `tecnickcom/tcpdf ^6` (W-SIG-3). Vérif indépendante : `pdfsig` (local + DEV). Tests `MultiPadesSignatureTest` 3/3 + non-régression Signature/Contract **79 verts**. Build propre.
+
+**Limites techniques (§16)** : signature externe WebCrypto↔CMS PAdES et AC interne = non livrées ; sans elles, l'embarquement serait serveur-contrôlé (donc non intégré). **Limites juridiques (§17)** : certificats internes **non reconnus/non qualifiés** ; pas d'identité forte ⇒ **PAS avancé/qualifié eIDAS**. **Risques (§18)** : AC interne (protection clé racine), identité déclarée non vérifiée, SAPP (maintenance LGPL à suivre). **Prochaines étapes (§19)** : (1) protocole de **signature externe** (placeholder SAPP + attributs CMS + condensé → WebCrypto → assemblage CMS → injection) ; (2) **AC interne Leezr** (CSR depuis clé publique signataire, politique d'émission/révocation) ; (3) intégration finalisation multi-PAdES embarquée + rapport 2 signataires ; (4) TSA RFC 3161.
+
+**Fichiers** : `composer` (`ddn/sapp`) ; `App\Core\Crypto\MultiPadesSignatureService` ; `MultiPadesSignatureTest`. Production inchangée (W-SIGNATURE-4).
+
+---
