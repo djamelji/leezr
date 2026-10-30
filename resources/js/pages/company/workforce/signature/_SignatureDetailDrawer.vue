@@ -92,6 +92,23 @@ const triggerDownload = async () => {
   } finally { downloading.value = false }
 }
 
+// W-SIGNATURE-13 — export du dossier de preuves (JSON vérifiable, sans secret).
+const exporting = ref(false)
+const exportEvidence = async () => {
+  exporting.value = true
+  try {
+    const pkg = await store.fetchEvidencePackage(props.requestId)
+    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `dossier-preuves-${props.requestId}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch (e) {
+    toast(e.response?._data?.message || e?.message || t('common.error'), 'error')
+  } finally { exporting.value = false }
+}
+
 const doRemind = async () => {
   acting.value = true
   try {
@@ -331,6 +348,17 @@ const doRemind = async () => {
             @click="triggerDownload"
           >
             {{ t('signature.detail.download') }}
+          </VBtn>
+          <VBtn
+            v-if="can('workforce_signature.view_evidence')"
+            variant="tonal"
+            size="small"
+            color="secondary"
+            prepend-icon="tabler-file-zip"
+            :loading="exporting"
+            @click="exportEvidence"
+          >
+            {{ t('signature.detail.exportEvidence') }}
           </VBtn>
           <VBtn
             variant="tonal"

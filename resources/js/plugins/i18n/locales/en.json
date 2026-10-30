@@ -1659,7 +1659,10 @@
       "failed": "Failed",
       "webhook_received": "Provider event",
       "verification_passed": "Verification passed",
-      "verification_failed": "Verification failed"
+      "verification_failed": "Verification failed",
+      "certificate_issued": "Certificate issued",
+      "certificate_revoked": "Certificate revoked",
+      "pades_embedded": "PAdES signature embedded"
     },
     "toasts": {
       "created": "Signature request sent",
@@ -1701,7 +1704,8 @@
       "view": "View",
       "download": "Download signed document",
       "remind": "Remind",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "exportEvidence": "Export evidence package"
     },
     "verify": {
       "action": "Verify",

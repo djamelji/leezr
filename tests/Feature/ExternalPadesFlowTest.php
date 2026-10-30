@@ -214,6 +214,76 @@ class ExternalPadesFlowTest extends TestCase
         $this->assertStringNotContainsString('PRIVATE KEY', json_encode($s0->getAttributes()));
     }
 
+    /** Produit une demande à 2 signataires externes, complétée (2 PAdES valides). */
+    private function completeTwoSignerRequest(): SignatureRequest
+    {
+        $req = $this->makeExternalRequest();
+        $signers = $req->signers->sortBy('order')->values();
+        $this->signAsBrowser($req, $signers[0], $this->ecKeyPair());
+        $this->signAsBrowser($req->fresh('signers'), $signers[1], $this->ecKeyPair());
+
+        return $req->fresh('signers');
+    }
+
+    public function test_evidence_package_integrity_and_isolated_restore(): void
+    {
+        if (! $this->pdfsig()->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $req = $this->completeTwoSignerRequest();
+        $this->assertSame(SignatureRequest::STATUS_COMPLETED, $req->status);
+
+        $svc = app(\App\Modules\Workforce\Signature\Services\EvidencePackageService::class);
+        $pkg = $svc->build($req->load(['signers', 'events', 'document.template']));
+
+        // Manifeste d'intégrité + document recalculables indépendamment.
+        $v = $svc->verifyManifest($pkg);
+        $this->assertTrue($v['manifest_ok'], 'manifeste d\'intégrité valide');
+        $this->assertTrue($v['document_ok'], 'document.sha256 cohérent avec le PDF embarqué');
+        $this->assertSame(2, $pkg['verification']['signature_count']);
+        $this->assertTrue($pkg['verification']['all_signatures_valid']);
+        $this->assertFalse($pkg['trust']['public_trust_established']);
+        $this->assertSame('not_demonstrated', $pkg['trust']['eidas_qualified_or_advanced']);
+
+        // AUCUN secret : pas de clé privée, pas de token, pas d'OTP dans le dossier.
+        $json = json_encode($pkg);
+        $this->assertStringNotContainsString('PRIVATE KEY', $json);
+        $this->assertStringNotContainsString('token', strtolower($json));
+        $this->assertStringNotContainsString('otp', strtolower($json));
+
+        // RESTAURATION EN ENVIRONNEMENT ISOLÉ : on ne garde QUE le dossier exporté (base64), on écrit le PDF
+        // hors du stockage applicatif, et on re-vérifie avec pdfsig → les deux signatures restent valides.
+        $isolated = sys_get_temp_dir() . '/leezr_restore_' . uniqid();
+        @mkdir($isolated, 0700, true);
+        $restoredPdf = $isolated . '/restored.pdf';
+        file_put_contents($restoredPdf, base64_decode($pkg['document']['base64']));
+        $out = (string) shell_exec('pdfsig ' . escapeshellarg($restoredPdf) . ' 2>&1');
+        @unlink($restoredPdf);
+        @rmdir($isolated);
+        $this->assertSame(2, substr_count($out, 'Signature is Valid'), 'deux signatures valides après restauration isolée');
+    }
+
+    public function test_evidence_distinguishes_revocation_from_crypto_validity(): void
+    {
+        if (! $this->pdfsig()->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $req = $this->completeTwoSignerRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+
+        // Révocation du certificat APRÈS signature : la confiance ACTUELLE change, la validité crypto non.
+        SignatureCertificate::where('signature_signer_id', $signer->id)->update(['status' => 'revoked', 'revoked_at' => now()]);
+        $signer->update(['signer_cert_revoked_at' => now()]);
+
+        $pkg = app(\App\Modules\Workforce\Signature\Services\EvidencePackageService::class)
+            ->build($req->fresh(['signers', 'events', 'document.template']));
+
+        $statuses = array_map(fn ($s) => $s['certificate']['status_now'] ?? null, $pkg['signers']);
+        $this->assertContains('revoked', $statuses, 'statut de confiance actuel = révoqué');
+        // La validité cryptographique des octets du PDF reste vraie (signatures embarquées intactes).
+        $this->assertTrue($pkg['verification']['all_signatures_valid'], 'validité crypto préservée malgré la révocation');
+    }
+
     public function test_tampered_final_detected_by_pdfsig(): void
     {
         if (! $this->pdfsig()->pdfsigAvailable()) {

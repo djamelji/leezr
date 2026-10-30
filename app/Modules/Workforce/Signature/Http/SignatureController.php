@@ -43,6 +43,59 @@ class SignatureController extends Controller
         return response()->json(SignatureReadModel::present($req));
     }
 
+    /**
+     * W-SIGNATURE-13 (§3) — export du DOSSIER DE PREUVES vérifiable (document signé + manifeste + intégrité).
+     * Jamais de clé privée/token/OTP/session. Gated view_evidence, company-scoped.
+     */
+    public function evidencePackage(Request $request, int $id): JsonResponse
+    {
+        $req = $this->findScoped($request, $id);
+        $req->load(['signers', 'events', 'document.template']);
+        $package = app(\App\Modules\Workforce\Signature\Services\EvidencePackageService::class)->build($req);
+
+        return response()->json($package)
+            ->header('Content-Disposition', 'attachment; filename="evidence-' . $req->id . '.json"');
+    }
+
+    /**
+     * W-SIGNATURE-13 (§5) — diagnostics de RÉCONCILIATION (non destructifs, lecture seule). Listes bornées
+     * et non sensibles d'anomalies d'exploitation. Gated view_evidence, company-scoped.
+     */
+    public function reconciliation(Request $request): JsonResponse
+    {
+        $cid = $this->companyId($request);
+        $now = now();
+        $disk = config('documents.generated_disk', 'local');
+
+        // Demandes completed sans artefact vérifiable (fichier manquant).
+        $completedNoArtifact = [];
+        $completed = SignatureRequest::withoutGlobalScopes()->where('company_id', $cid)
+            ->where('status', SignatureRequest::STATUS_COMPLETED)->get(['id', 'signed_document_path']);
+        foreach ($completed as $r) {
+            if (! $r->signed_document_path || ! Storage::disk($disk)->exists($r->signed_document_path)) {
+                $completedNoArtifact[] = $r->id;
+            }
+        }
+
+        // Certificats expirant sous 30 jours (actifs, non révoqués).
+        $expiringSoon = \App\Modules\Workforce\Signature\Models\SignatureCertificate::withoutGlobalScopes()
+            ->where('company_id', $cid)->where('status', 'issued')
+            ->whereBetween('not_after', [$now, $now->copy()->addDays(30)])->count();
+
+        // Préparations abandonnées (expirées, jamais consommées).
+        $abandonedPreps = \App\Modules\Workforce\Signature\Models\SignatureSigner::withoutGlobalScopes()
+            ->where('company_id', $cid)->whereNotNull('signing_prep')
+            ->whereNotNull('signing_prep_expires_at')->where('signing_prep_expires_at', '<', $now)->count();
+
+        return response()->json([
+            'as_of' => $now->toIso8601String(),
+            'completed_without_artifact' => ['count' => count($completedNoArtifact), 'ids' => array_slice($completedNoArtifact, 0, 100)],
+            'certificates_expiring_30d' => $expiringSoon,
+            'abandoned_preparations' => $abandonedPreps,
+            'note' => 'Diagnostics lecture seule, non destructifs. Toute réparation doit être une action explicite, autorisée, tracée et idempotente.',
+        ]);
+    }
+
     /** Preuves / journal d'audit — endpoint gated par workforce_signature.view_evidence. */
     public function evidence(Request $request, int $id): JsonResponse
     {

@@ -620,4 +620,35 @@ class WorkforceSignatureTest extends TestCase
         $viewer = $this->user(['workforce.view', 'workforce_signature.view']);
         $this->api($viewer, 'GET', '/certificates')->assertForbidden();
     }
+
+    // ── W-SIGNATURE-13 : réconciliation + export de preuves (gated, scoped, sans secret) ──
+    public function test_reconciliation_and_evidence_package_gated_scoped(): void
+    {
+        $admin = $this->adminUser();
+        $viewer = $this->user(['workforce.view', 'workforce_signature.view']);
+
+        $this->api($viewer, 'GET', '/reconciliation')->assertForbidden();
+        $this->api($admin, 'GET', '/reconciliation')->assertOk()
+            ->assertJsonStructure(['completed_without_artifact', 'certificates_expiring_30d', 'abandoned_preparations']);
+
+        $req = $this->createAndSend($this->twoSigners());
+        $this->api($viewer, 'GET', '/' . $req->id . '/evidence-package')->assertForbidden();
+        $resp = $this->api($admin, 'GET', '/' . $req->id . '/evidence-package')->assertOk()
+            ->assertJsonStructure(['manifest_version', 'request', 'document', 'signers', 'timeline', 'verification', 'trust', 'integrity']);
+        $content = $resp->getContent();
+        $this->assertStringNotContainsString('PRIVATE KEY', $content);
+        $this->assertStringNotContainsString('token_hash', $content);
+        $resp->assertJsonPath('trust.public_trust_established', false)
+            ->assertJsonPath('trust.eidas_qualified_or_advanced', 'not_demonstrated');
+
+        // Cross-tenant : une demande d'une AUTRE company n'est pas accessible.
+        $other = Company::create(['name' => 'Other', 'slug' => 'other-' . uniqid(), 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
+        $otherDoc = $this->emittedDoc(company: $other);
+        $otherReq = \App\Modules\Workforce\Signature\Models\SignatureRequest::create([
+            'company_id' => $other->id, 'generated_document_id' => $otherDoc->id, 'subject_type' => 'employee', 'subject_id' => 1,
+            'document_sha256' => str_repeat('a', 64), 'initiator_id' => $this->actorId, 'provider' => 'fake',
+            'signature_level' => 'simple', 'signing_order' => 'sequential', 'status' => 'pending', 'expires_at' => now()->addDays(5),
+        ]);
+        $this->api($admin, 'GET', '/' . $otherReq->id . '/evidence-package')->assertNotFound();
+    }
 }

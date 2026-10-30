@@ -1658,7 +1658,10 @@
       "failed": "Échec",
       "webhook_received": "Événement prestataire",
       "verification_passed": "Vérification réussie",
-      "verification_failed": "Vérification échouée"
+      "verification_failed": "Vérification échouée",
+      "certificate_issued": "Certificat émis",
+      "certificate_revoked": "Certificat révoqué",
+      "pades_embedded": "Signature PAdES intégrée"
     },
     "toasts": {
       "created": "Demande de signature envoyée",
@@ -1700,7 +1703,8 @@
       "view": "Visualiser",
       "download": "Télécharger le document signé",
       "remind": "Relancer",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "exportEvidence": "Exporter le dossier de preuves"
     },
     "verify": {
       "action": "Vérifier",

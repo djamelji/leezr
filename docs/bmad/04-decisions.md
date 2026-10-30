@@ -23647,3 +23647,55 @@ Rotation SSH (root) · protection AC HSM/hors ligne · vérification d'identité
 **Fichiers** : `SignatureController` (supervision + certificates) ; routes ; `sign/[token].vue` (alerte auth + champ OTP) ; tests `WorkforceSignatureTest` (supervision/registre), `wsig12-internal-journey` (E2E interne).
 
 ---
+
+## ADR-665 — W-SIGNATURE-13 : continuité d'exploitation et CLÔTURE TECHNIQUE (synthèse W-SIG-1→13)
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). Clôture technique du chantier Signature native. **NON prêt PROD** ; **incident SSH NON clos** (rotation root toujours requise). Aucune nouvelle technologie cryptographique.
+
+### Architecture finale
+Moteur multi-PAdES PERSONNEL : `ExternalPadesSigner` (placeholder SAPP → attributs CMS → `to_sign` navigateur → injection, incrémental) ; `DevCertificateAuthority` (AC interne DEV, racine→émettrice→feuille, clés chiffrées au repos, verifyChain) ; `PersonalSignatureService` (WebCrypto ECDSA P-256, clé privée NON extractible en IndexedDB). Services métier : `SignerIdentityResolver` + `SignatureAuthPolicy` (assurance declared<link_only<account_authenticated<account_mfa, politique Market) ; `SignerEnrollmentService` (preuve de possession + émission cert + gating auth + re-enrôlement) ; `ExternalPadesCoordinator` (prepare/apply, sérialisé, vérif pdfsig par révision) ; `SignatureFormatCatalog` ; `EvidencePackageService`. Vérification indépendante : `NativePadesSignatureService` → `pdfsig` (poppler). Cachet serveur distinct : `CryptographicSealService`.
+
+### §1 — Inventaire de conservation + dépendances de vérification
+| Élément | Stockage | Dépendance critique |
+|---|---|---|
+| PDF source / signé / révisions | disque privé (`documents/...`, `signed/...`) | chemin + disque ; SHA-256 figés en DB |
+| Certificats signataires (publics) | DB `workforce_signature_certificates` + `signer_certificate_pem` + EMBARQUÉS dans le PDF | autonomes dans le PDF (pdfsig n'a besoin que du PDF) |
+| Certificats AC | `storage/app/private/dev-ca` (clés CHIFFRÉES) | APP_KEY ou `SIGNATURE_DEV_CA_KEY` |
+| Événements / consentements / preuves auth | DB (append-only) | restauration SQL cohérente |
+| Statuts de révocation | DB `status`/`revoked_at` | **doit survivre à la restauration** (ne pas réactiver un cert révoqué) |
+| Empreintes | DB (document_sha256, fingerprints) | — |
+**Points de rupture identifiés** : la **vérification cryptographique pdfsig d'un PDF signé est AUTONOME** (certs embarqués) → survit à migration serveur / changement de domaine / rotation APP_KEY / disparition d'un compte. En revanche : (a) l'ÉMISSION de nouveaux certs dépend de la clé AC (APP_KEY/secret dédié) ; (b) le statut de confiance ACTUEL (révocation) dépend de la DB ; (c) **les clés privées personnelles (navigateur, non extractibles) sont IRRÉCUPÉRABLES** par conception → une signature ne peut jamais être refaite, seulement vérifiée.
+
+### §2 — Sauvegarde/restauration (procédure + test RÉEL)
+Sauvegarde COHÉRENTE = DB MySQL (demandes/signataires/certs/événements/révocations) **+** stockage privé (PDF signés) **+** matériel AC (`storage/app/private/dev-ca`). Exigences : chiffrées, clé de sauvegarde séparée, contrôle d'intégrité (SHA-256), accès restreint, rétention configurable, rotation. **Test de restauration isolé EXÉCUTÉ** (`ExternalPadesFlowTest::test_evidence_package_integrity_and_isolated_restore`) : un PDF à deux signatures est exporté dans un dossier de preuves, décodé et réécrit **hors du stockage applicatif**, puis **pdfsig confirme les deux signatures valides** → la vérifiabilité survit à la restauration. La **révocation est préservée** après restauration (statut DB, test dédié). **RPO/RTO** : non garantis (pas d'infra de sauvegarde automatisée en DEV) — à définir par l'exploitation ; aucune garantie de disponibilité inventée.
+
+### §3 — Dossier de preuves exportable
+`GET /workforce/signature/{id}/evidence-package` (gated) : document signé (base64) + manifeste (demande, signataires, certs PUBLICS, empreintes, chronologie sans tokens, consentements, méthodes d'auth, résultats pdfsig, confiance) + **manifeste d'intégrité SHA-256 recalculable**. `verifyManifest()` prouve la cohérence indépendamment. **Jamais** de clé privée/token/OTP/session (testé). Minimisation des données personnelles. Un manifeste Leezr ne confère **aucune** qualification juridique.
+
+### §4 — Vérification après expiration/révocation
+Distinction stricte, testée : **validité cryptographique** (octets du PDF intacts, pdfsig) ≠ **confiance ACTUELLE** (`certificate.status_now` = valid/expired/revoked à l'instant T) ≠ **état au moment de la signature** (horodatage APPLICATIF `timestamp_type=application_only`, `qualified_timestamp=false`). On n'affirme jamais une validité historique sans preuve temporelle ; aucun horodatage qualifié revendiqué.
+
+### §5 — Réconciliation (non destructive)
+`GET /workforce/signature/reconciliation` (gated) : completed sans artefact (fichier manquant), certs expirant ≤30j, préparations abandonnées. Lecture seule ; toute réparation = action explicite, autorisée, tracée, idempotente. Supervision (`/supervision`) + panneau hub. Aucune modification silencieuse des signatures/preuves historiques.
+
+### §6 — Sécurité clés/données
+Stockage privé hors web-root ; clés AC chiffrées (secret dédié possible) + perms 0600 ; isolation Company (`CompanyScope` + scope borné aux IDs dérivés du token) ; clé privée personnelle jamais transmise/recréée/stockée. **Une sauvegarde DB seule ≠ sauvegarde complète** (il faut aussi stockage privé + matériel AC). **Irréstaurable** : clés privées personnelles navigateur (non extractibles) — par conception.
+
+### §7 — Incident SSH (P0, inchangé)
+Le mot de passe exposé reste **compromis jusqu'à rotation** (non exécutée — root requis). Jamais réutilisé ni affiché ce lot. Procédure root : ADR-664 §1 / ADR-663 §SSH. Pas de réécriture d'historique Git sans accord + plan de coordination. Le caviardage des traces N'ÉQUIVAUT PAS à la rotation.
+
+### Tests (démontré par la recette DEV)
+`ExternalPadesFlowTest` 18 (dont export/manifeste/restauration isolée/pdfsig, révocation≠crypto, step-up MFA, vol de lien, re-enrôlement) ; `ExternalPadesSignerTest` 7 ; `WorkforceSignatureTest` (supervision/registre/réconciliation/export gated+scopés+sans secret) ; **73 tests signature verts**. E2E : parcours Company complet, collaborateur interne authentifié (refus sans session/mauvais compte), 2 navigateurs — tous verts, pdfsig indépendant.
+
+### Classement des points restants
+**P0 — Sécurité immédiate** : rotation du mot de passe SSH compromis (root) ; désactivation `PasswordAuthentication` après validation accès clé.
+**P1 — Bloquants PROD** : protection clés AC (HSM/hors ligne) ; vérification d'identité réglementaire ; reconnaissance juridique (ni eIDAS avancé ni qualifié — non démontré) ; CRL/OCSP (révocation vérifiable aval) ; horodatage qualifié ; délivrabilité e-mail fiable ; infra de sauvegarde/restauration automatisée + RPO/RTO ; **audit de sécurité EXTERNE** (un audit interne ≠ certification).
+**P2 — Améliorations futures** : généralisation MFA ; webhooks de livraison ; DER feuille via bibliothèque éprouvée (B1/B5 résiduels) ; purge coordonnée de l'historique Git du secret ; supervision Platform agrégée ; horodatage RFC 3161.
+
+### Limites de conformité
+Aucune revendication eIDAS avancée/qualifiée. Un audit interne n'équivaut PAS à une certification externe. Résultats DÉMONTRÉS par tests ≠ affirmations nécessitant un audit indépendant.
+
+**Fichiers** : `EvidencePackageService` ; `SignatureController` (evidencePackage, reconciliation) ; routes ; store + `_SignatureDetailDrawer` (export) ; tests `ExternalPadesFlowTest`, `WorkforceSignatureTest`.
+
+---
