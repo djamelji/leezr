@@ -23529,3 +23529,67 @@ Authentification forte généralisée + vérification d'identité réglementaire
 **Fichiers** : `SignatureAuthPolicy`, `SignerIdentityResolver` (account_mfa + rank + 2FA) ; `SignerEnrollmentService` (enforcement 1er enrôlement + step-up OTP) ; `RecordSignerActionUseCase`/`SignerController` (otp + bloc authentication étendu) ; `SignatureController::verify` (preuves 4 axes) ; `config/signature.php` (platform.markets) ; tests `ExternalPadesFlowTest`.
 
 ---
+
+## ADR-663 — W-SIGNATURE-11 : remédiation sécurité (incident SSH) et recette complète
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). **Incident SSH NON clôturé** (le secret compromis reste utilisable jusqu'à rotation par un administrateur root). **NON prêt PROD** (cf. matrice).
+
+### §1/§2 — Incident SSH (P0) : secret compromis
+
+**Cause** : lors des lots précédents, l'agent a utilisé de façon répétée `sshpass` avec un mot de passe DEV compromis, l'exposant dans des commandes shell (donc dans le transcript). **Arrêt immédiat** : plus aucun usage de `sshpass`/mot de passe dans les commandes, variables, scripts ou rapports ; plus de `StrictHostKeyChecking=no`.
+
+**Surface d'exposition auditée (valeur jamais affichée)** :
+| Surface | Type | État |
+|---|---|---|
+| 6 fichiers de docs **versionnés** (`docs/audit-2026-10/*`, `docs/bmad/04-decisions.md`) | mot de passe en clair | **Caviardé dans HEAD** ; présent dans l'historique git + copies poussées → compromis |
+| `.claude/settings.local.json` (gitignoré, local) | mot de passe dans le log de commandes | Caviardé (local) |
+| Transcript de session Claude Code | mot de passe dans d'anciennes commandes | Diffusé → compromis |
+| Historique shell `~/.zsh_history` | — | **0 occurrence** |
+| Secrets GitHub Actions | — | **Aucun mot de passe** (seuls `VPS_HOST/PORT/USER/SSH_KEY`) |
+| Scripts de déploiement / clés privées dans le repo | — | **Aucune** |
+
+**Accès par clé** : le **CI déploie par clé** (`secrets.VPS_SSH_KEY`), prouvé par les déploiements réussis → l'accès par clé fonctionne et constitue l'accès de secours. ⚠️ **Ce Mac n'a AUCUNE clé privée** (`~/.ssh` ne contient que `known_hosts`) → l'agent ne peut pas s'authentifier par clé depuis ce poste ni vérifier DEV par SSH. **Vérification DEV désormais SANS SSH** via le header `X-Build-Version` (SHA servi).
+
+**Rotation (NON exécutée — nécessite root/console ; l'agent n'a pas root ; ne jamais provoquer de perte d'accès)** — procédure pour l'administrateur habilité :
+1. Confirmer un accès par clé fonctionnel (CI/clé admin) **avant** toute modification.
+2. `passwd` pour le compte `web3`/`jliouidevleezr` → nouveau mot de passe fort (hors transcript).
+3. Root : drop-in `/etc/ssh/sshd_config.d/10-hardening.conf` → `PasswordAuthentication no` (sûr : le CI et l'admin utilisent des clés) ; `sshd -t` ; `systemctl reload sshd`. **Ne jamais désactiver la dernière méthode d'accès ; StrictModes conservé.**
+4. Roter le secret CI `VPS_SSH_KEY` si l'on soupçonne une exposition (indépendant du mot de passe).
+5. L'historique git contenant le secret : envisager une purge (`git filter-repo`) coordonnée — **non faite ici** (réécriture d'historique risquée, hors périmètre, nécessite force-push coordonné).
+
+> **L'incident n'est PAS déclaré clos** : le mot de passe reste valide tant que l'étape 2 (et idéalement 3) n'a pas été exécutée par l'administrateur. Le caviardage des fichiers ne supprime pas les copies déjà diffusées.
+
+### §3/§4 — Authentification cohérente + step-up MFA
+Le gating d'identité (W-SIG-10) est appliqué AVANT chaque signature : la clé/cert n'est émise qu'après vérification de l'assurance exigée (`SignatureAuthPolicy`), donc la préparation et la signature sont implicitement gated (pas de cert → pas de prepare → pas de sign). **Step-up MFA** (réutilise le 2FA TOTP existant) : quand la politique Market exige `account_mfa`, une confirmation OTP FRAÎCHE est vérifiée côté backend (`TwoFactorService::verify`). Opt-in par Market (ne bloque pas les comptes sans 2FA par défaut). **Externes** : niveau `declared` affiché, re-enrôlement libre-service bloqué, émetteur ne signe jamais ; le problème d'identification externe N'EST PAS résolu (aucun mécanisme de vérification supplémentaire) — documenté.
+
+### §5 — Parcours Company complet (Playwright réel)
+E2E navigateur : RH se connecte → hub → assistant (document émis présélectionnable, 2 signataires, mode personnel) → création+envoi via l'API réelle → 2 navigateurs isolés signent (consentement) → **pdfsig valide les deux** → la demande apparaît dans le hub. Signataires EXTERNES (assurance `declared`) — non présentés comme internes authentifiés. Le gating interne / « lien volé / mauvais compte » est couvert par PHPUnit.
+
+### §7/§8 — Notifications & résilience
+Notifications idempotentes ; **aucun token en clair dans les logs** (vérifié) ; pas de webhook SMTP → aucun statut « reçu » annoncé ; accès au document garanti même si l'e-mail échoue. Moteur inchangé : 2 certs, 2 clés, 2 PAdES incrémentales, chacune vérifiée, 1re préservée, pas de completed sans signatures, pas de conversion silencieuse vers le cachet serveur, pas de modification d'historique.
+
+### §10 — Matrice de préparation PROD
+| Domaine | État | Bloquant PROD |
+|---|---|---|
+| Infrastructure SSH (rotation secret compromis) | **Non livré** (root requis) | **OUI** |
+| Clés signataires (jamais transmises/recréées) | Livré & vérifié | Non |
+| AC interne (émission, chaîne interne, révocation DB) | Livré DEV | — |
+| Protection de l'AC (HSM/hors ligne) | **Non livré** (clé chiffrée sur serveur) | **OUI** |
+| Authentification compte (1er enrôlement interne) | Livré & vérifié | Non |
+| MFA step-up (réutilise 2FA) | Livré (opt-in Market) | Non (à généraliser) |
+| Vérification d'identité réglementaire | **Non livré** | **OUI** |
+| Révocation vérifiable aval (CRL/OCSP) | Non livré | Partiel |
+| Chaîne de confiance publique / eIDAS | **Non démontré** | **OUI** |
+| Délivrabilité e-mail (webhooks bounce) | Non livré | Partiel |
+| Sauvegarde/restauration secrets AC | Partiel (chiffré + perms ; pas de procédure testée) | Partiel |
+| Audit de sécurité externe | **Non livré** | **OUI** |
+| Supervision/exploitation | Partiel | Partiel |
+| Sécurité PDF / vérification pdfsig indépendante | Livré & vérifié | Non |
+| Isolation tenant / RBAC / module | Livré & vérifié | Non |
+
+> **Aucune signature avancée/qualifiée eIDAS n'est revendiquée** : non démontrée, non validée.
+
+**Fichiers** : caviardage docs ; tests `ExternalPadesFlowTest` (step-up MFA) ; e2e `wsig11-company-journey`.
+
+---

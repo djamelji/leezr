@@ -364,6 +364,74 @@ class ExternalPadesFlowTest extends TestCase
         $this->assertNotNull($signer->fresh()->public_key_id);
     }
 
+    /** Active un 2FA confirmé pour un user et retourne son secret TOTP. */
+    private function enableMfa(int $userId): string
+    {
+        $user = \App\Core\Models\User::find($userId);
+        $svc = app(\App\Core\Auth\TwoFactorService::class);
+        $secret = $svc->enable($user)['secret'];
+        $svc->confirm($user, (new \PragmaRX\Google2FA\Google2FA())->getCurrentOtp($secret));
+
+        return $secret;
+    }
+
+    private function prepareInternal(SignatureRequest $req, SignatureSigner $signer, string $token, array $kp, int $uid, ?string $otp = null): void
+    {
+        $s = SignatureSigner::withoutGlobalScopes()->findOrFail($signer->id);
+        $s->challenge = bin2hex(random_bytes(24));
+        $s->challenge_expires_at = now()->addMinutes(15);
+        $s->challenge_used_at = null;
+        $s->save();
+        app(RecordSignerActionUseCase::class)->prepareExternal($token, [
+            'publicKey' => $kp['spki_b64'], 'pop' => $this->popFor($req, $s, $kp), 'authUserId' => $uid, 'otp' => $otp,
+        ]);
+    }
+
+    public function test_mfa_required_but_user_has_no_2fa_blocked(): void
+    {
+        config(['signature.platform.markets.FR.min_assurance.internal' => 'account_mfa']);
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
+        $token = $this->issueToken($signer, $req);
+
+        // Compte authentifié mais SANS 2FA, alors que la politique exige account_mfa → REFUSÉ.
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->prepareInternal($req, $signer, $token, $this->ecKeyPair(), $uid);
+    }
+
+    public function test_mfa_required_without_otp_blocked(): void
+    {
+        config(['signature.platform.markets.FR.min_assurance.internal' => 'account_mfa']);
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
+        $this->enableMfa($uid);
+        $token = $this->issueToken($signer, $req);
+
+        // 2FA activé + compte authentifié, mais AUCUN code OTP de step-up fourni → REFUSÉ.
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->prepareInternal($req, $signer, $token, $this->ecKeyPair(), $uid, null);
+    }
+
+    public function test_mfa_required_with_valid_otp_allowed(): void
+    {
+        if (! $this->pdfsig()->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        config(['signature.platform.markets.FR.min_assurance.internal' => 'account_mfa']);
+        $req = $this->makeExternalRequest();
+        $signer = $req->signers->sortBy('order')->values()[0];
+        $uid = $this->makeInternal($signer);
+        $secret = $this->enableMfa($uid);
+        $token = $this->issueToken($signer, $req);
+
+        // 2FA activé + compte authentifié + OTP FRAIS valide → autorisé, assurance account_mfa.
+        $otp = (new \PragmaRX\Google2FA\Google2FA())->getCurrentOtp($secret);
+        $this->prepareInternal($req, $signer, $token, $this->ecKeyPair(), $uid, $otp);
+        $this->assertSame('account_mfa', $signer->fresh()->identity_assurance);
+    }
+
     public function test_internal_reenrollment_without_auth_blocked(): void
     {
         $req = $this->makeExternalRequest();
