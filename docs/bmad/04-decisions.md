@@ -23755,3 +23755,57 @@ Non-régression Workforce + Signature : **390 tests verts**. E2E : point d'entr�
 **Fichiers** : `EmployeeFileReadModel` (bloc onboarding) ; `employees/index.vue` (redirection) ; `employees/[id].vue` (checklist) ; `_EmployeeContract.vue` (préremplissage date) ; i18n `onboarding.*` ; e2e `hrux-after`.
 
 ---
+
+## ADR-667 — W-HR-UX-2 : audit ergonomique total de l'onboarding RH (vrai DEV)
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV uniquement). Audit conduit en NAVIGATEUR sur le **vrai site DEV** (`dev.leezr.com`, build `06ab34b`), collaborateur fictif réellement créé via l'UI. Correctifs ergonomiques livrés + lacunes structurelles documentées honnêtement.
+
+### Preuve de navigation sur le vrai DEV
+Login RH (owner@leezr.test) → 200 → /dashboard. Création d'un collaborateur fictif **via l'UI** (drawer « Ajouter un employé ») → **201** → redirection fiche `/company/workforce/employees/4` → checklist « Intégration du collaborateur 1/4 ». Portail salarié observé en se connectant comme un collaborateur régulier (bob@leezr.test).
+
+### Friction A — Date d'embauche (AVANT, observé sur DEV)
+Ajouter un collaborateur avec le nom seul → **422 silencieux** + toast GÉNÉRIQUE anxiogène « Une erreur est survenue », alors que `hire_date` est requis **sans marqueur** (le champ ne devient rouge qu'après soumission).
+**Corrigé** : (1) `hire_date` **préremplie à aujourd'hui** → l'ajout rapide réussit avec le nom seul (201) ; (2) champs requis marqués d'un `*` (prénom, nom, date) ; (3) date-picker en affichage `dd/mm/yyyy` ; (4) **suppression du toast générique sur les 422** (les messages inline par champ suffisent). Vérifié sur DEV : nom seul → 201 → fiche.
+
+### Friction D — Checklist (états = vérité métier)
+Vérifié sur DEV : un collaborateur neuf affiche **1/4** (Informations ✅ ; Contrat / Signature / Accès = « Faire »). **Aucun état « fait » artificiel** (basé sur `onboarding` du read model : contrat présent, document signé existant, compte lié). Actions cliquables (contrat → dialog, signature → onglet Documents, accès → Profil).
+
+### Friction B — Accès/invitation collaborateur (LACUNE DOCUMENTÉE, non corrigée ce lot)
+La gestion de l'accès à l'espace salarié passe par un écran **Members séparé** (`core.members`, `members.invite`), **non intégré à la fiche collaborateur**. Le lien Employee↔User n'est pas exposé depuis la fiche. L'étape « Accès à l'espace collaborateur » de la checklist renvoie au Profil mais **ne déclenche pas d'invitation directe**. Les trois états (invité / activé / connecté) ne sont pas distingués dans l'UI. → **Backlog P1** (ne pas inventer ; nécessite une action d'invitation contextuelle depuis la fiche + distinction des états).
+
+### Friction C — Poste / Manager / Site
+Poste/manager sont saisissables via le Profil/Contrat ; l'entité **Établissement/Site n'est PAS livrée** (`position.establishment = null`, déjà noté W-Q). → multisite = **lacune documentée**, non fabriquée.
+
+### Portail salarié (1re connexion) — observé
+Menu ÉPURÉ (Mon espace, Paramètres du compte, + opérations jobdomain) — **aucun menu admin**. « Mon espace » : action principale « **Commencer La Journée** » (pointage), cartes Mon contrat (CDI/35h/date/service), Solde congés + « **Demander Un Congé** », bulletins de paie, derniers documents. **Clair et actionnable** : un salarié comprend son espace sans formation. (NB : soldes de congés = données de test, non représentatives.)
+
+### Mesures (observées en navigateur — navigation automatisée, pas humaine)
+| Indicateur | Avant | Après |
+|---|---|---|
+| Ajout « nom seul » | **422 bloquant** + toast générique | **201 réussi** (date auto) |
+| Champs requis marqués | 0 | 3 (`*`) |
+| Toast anxiogène sur validation | oui | **non** |
+| Checklist après création | (W-HR-UX-1) | **1/4 exact**, 3 actions « Faire » |
+> Temps humain non mesuré (je ne fabrique pas de métrique) ; comparaison sur indicateurs reproductibles.
+
+### Notes de facilité
+- **RH débutante** : ~**7/10**. L'ajout rapide est désormais sans friction et la checklist guide ; restent fragmentés la saisie contrat multi-champs et surtout **l'activation de l'accès collaborateur** (écran séparé).
+- **Salarié débutant** : ~**8/10**. Portail clair, actions évidentes, pas de menus parasites.
+
+### Verdict sur le critère de réussite (honnête)
+« Une RH peut intégrer un salarié de A à Z sans comprendre l'architecture, et le salarié peut utiliser son espace sans formation. »
+- **Salarié** : ✅ atteint (portail self-service clair).
+- **RH** : ✅ pour créer → contrat → signature (guidé) ; ❌ **PAS ENCORE** pour l'**accès collaborateur** — l'activation de l'espace salarié exige de passer par l'écran Members séparé et de comprendre implicitement la notion de compte. **C'est le dernier obstacle** à un A→Z « sans comprendre l'architecture ».
+
+### Backlog priorisé
+- **P0** : aucun bloqueur dur (l'embauche + le portail fonctionnent).
+- **P1** : (B) action d'**invitation à l'espace collaborateur directement depuis la checklist/fiche** + distinction invité/activé/connecté ; **assistant d'intégration unifié** (rapide/complet) ; saisie poste/manager dans le parcours ; marquage requis étendu aux autres formulaires.
+- **P2** : entité Site/établissement ; brouillon/reprise d'intégration ; préremplissages additionnels ; audit approfondi planning/pointage/congés côté RH.
+
+### Tests
+Non-régression Workforce/Contrat/Signature : **473 tests verts**. E2E : passage DEV réel (création + fiche + checklist), ajout rapide (201), portail salarié. Build propre.
+
+**Fichiers** : `employees/index.vue` (date par défaut + requis + no-toast-422) ; e2e `hrux2-dev-pass2`, `hrux2-portal`, `hrux-after`.
+
+---
