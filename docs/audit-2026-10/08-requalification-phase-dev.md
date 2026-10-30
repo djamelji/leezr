@@ -16,7 +16,7 @@ Légende exposition : **🟥 réellement exploitable maintenant** · **🟧 bloq
 
 | Finding | Classif. initiale | Exposition réelle | Requalifié |
 |---|---|---|---|
-| **SEC-02** secrets prod `@Crinshow31` committés | P0 | 🟥 Un secret réel dans l'historique git est exploitable quel que soit l'env | **RESTE P0 — urgence A** |
+| **SEC-02** secrets prod `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` committés | P0 | 🟥 Un secret réel dans l'historique git est exploitable quel que soit l'env | **RESTE P0 — urgence A** |
 | **SEC-01** admin `admin@leezr.com`/`password` | P0 | 🟥 **sur domaine public** (dev.leezr.com, prod si déployé) un super-admin à mot de passe connu est exploitable ; ⬜ en local/test c'est normal | **P0 pour les env PUBLICS (A)** ; ⬜ local/test OK. Fix = séparation d'env, **pas** suppression du seeder |
 | **SEC-03** `migrate:fresh --seed` sur tous les env | P1 | 🟦 intentionnel/temporaire, « no real clients » → aucune perte **aujourd'hui** ; 🟥 catastrophique dès qu'il y a des données réelles (dev public ou prod) | **A (garde-fou) sans urgence de perte** : bloquer sur bases sensibles (prod + dev public à données), garder en local/test |
 | **SEC-04** `CompanyScope` no-op hors HTTP | P1 | 🟦 fuite inter-tenant réelle **dès** qu'il y a plusieurs tenants + un job non scopé ; peu exposé en dev mono-tenant | **P1 — B** (durcir avant données multi-tenant réelles) |
@@ -35,7 +35,7 @@ Légende exposition : **🟥 réellement exploitable maintenant** · **🟧 bloq
 ## 2. Ce qui RESTE réellement critique maintenant (malgré la phase dev)
 
 Par ton propre critère (« secret prod committé, faille inter-tenant, compte admin public à mot de passe connu restent critiques même en dev ») :
-1. **SEC-02** — rotation + purge du secret `@Crinshow31` (email + vérifier qu'il ne protège pas aussi SSH/ISPConfig).
+1. **SEC-02** — rotation + purge du secret `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` (email + vérifier qu'il ne protège pas aussi SSH/ISPConfig).
 2. **SEC-01 sur env publics** — l'admin `password` est joignable sur `dev.leezr.com` (domaine public). À protéger : mot de passe non prédéfini hors local/test + 2FA.
 3. **SSL dev** — ré-émettre le certificat.
 
@@ -55,7 +55,7 @@ Tout le reste n'est **pas** une urgence de phase dev.
 ## 4. Roadmap requalifiée A / B / C
 
 ### A — Urgences réelles à corriger maintenant (sécurité exposée, SSL, perte de données)
-- **A1** Rotation du secret `@Crinshow31` + retrait du code + purge historique git (SEC-02). *Toi : rotation ; moi : code/env.*
+- **A1** Rotation du secret `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` + retrait du code + purge historique git (SEC-02). *Toi : rotation ; moi : code/env.*
 - **A2** Protéger l'admin sur env publics : mdp non prédéfini hors local/test + 2FA super-admin (SEC-01).
 - **A3** Garde-fou `migrate:fresh`/reset destructif : interdit en production et sur dev public à données (SEC-03) — **tout en le gardant disponible en local/test**.
 - **A4** Ré-émettre le certificat SSL dev (SSL-01, runbook existant).

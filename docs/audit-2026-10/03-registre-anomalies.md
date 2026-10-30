@@ -16,7 +16,7 @@
 
 ### SEC-02 — Credentials email/serveur de production committés
 - **Env** : prod · **Module** : PlatformSeeder (email hub)
-- **Fichier** : `database/seeders/PlatformSeeder.php:122,127` → `@Crinshow31` (SMTP+IMAP, `admin@leezr.com`, `213.32.20.37`)
+- **Fichier** : `database/seeders/PlatformSeeder.php:122,127` → `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` (SMTP+IMAP, `admin@leezr.com`, `213.32.20.37`)
 - **Attendu** : secrets via `env()`, jamais dans le VCS.
 - **Constaté** : mot de passe prod en clair, suivi par git ; même famille que l'accès SSH/ISPConfig.
 - **Correctif** : **rotation immédiate** du mot de passe, purge de l'historique git, bascule `env()`.

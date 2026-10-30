@@ -124,7 +124,7 @@ Faisabilité : **OK** (Chrome système → `channel:'chrome'`, aucun download ; 
 - **billing.tax_exemption.\*** : clés i18n **dynamiques** (préfixe + variable) → nécessite l'énumération métier des motifs d'exonération (donnée produit).
 - **AR i18n ~96 % manquant** : effort de **traduction** dédié (fallback EN fonctionnel).
 - **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : **décisions produit / refactors structurels** hors périmètre « harmonisation de l'existant ».
-- **Rotation secret `@Crinshow31`, ré-émission SSL dev, backups/monitoring** : **opérations externes** (root/panneau ISPConfig/fournisseur) — impossibles avec les accès actuels.
+- **Rotation secret `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663`, ré-émission SSL dev, backups/monitoring** : **opérations externes** (root/panneau ISPConfig/fournisseur) — impossibles avec les accès actuels.
 - **Endpoints jobdomains inline (createField/deleteField/createDocumentType)** : appelés par `platform/jobdomains/[id].vue` mais pointent vers des routes 404/405 → **feature cassée au runtime** (pas du code mort). Fix = corriger les routes/endpoints backend + test manuel de la page (navigateur indisponible). Risque de régression si corrigé à l'aveugle → différé, à faire avec vérification end-to-end.
 - **Bandeau conformité mort** (`company/workforce/index.vue:225`) : `complianceWarnings` jamais peuplé → bannière jamais affichée. Retrait cosmétique différé (aucun impact visuel actuel).
 - **Centimes→euros, self-service congé, frontière Core (ADR-562), Workforce async** : refactors à risque/décision produit — lots dédiés ultérieurs.

@@ -20,7 +20,7 @@ LOT-4 Intégrité catalogue ──► LOT-5 Isolation tenant ──► LOT-6 Wor
 
 ### 🔴 LOT-0 — Sécurité d'urgence (bloquant absolu)
 - Retirer la création d'admin du seeder prod (SEC-01) ; mot de passe aléatoire + reset obligatoire ; **2FA obligatoire super_admin**.
-- Retirer les credentials email du code (SEC-02), bascule `env()`, **rotation immédiate** du mot de passe `@Crinshow31`, purge historique git.
+- Retirer les credentials email du code (SEC-02), bascule `env()`, **rotation immédiate** du mot de passe `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663`, purge historique git.
 - ADR dédié. **Effort : S. Priorité : immédiate.**
 
 ### 🔴 LOT-1 — Déploiement & SSL sûrs

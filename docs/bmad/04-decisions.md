@@ -16111,7 +16111,7 @@ Le Hub Email avait aussi sa page inbox en tant que page séparée (`inbox/index.
 **Contexte** : Après chaque déploiement, la config SMTP/IMAP dans `PlatformSetting.email` était perdue car non seedée. Résultat : inbox vide (IMAP "not configured"), 422 sur test SMTP, emails non envoyés.
 
 **Décisions** :
-1. **Seeder email dans PlatformSeeder** — credentials `admin@leezr.com` / `@Crinshow31` seedés de façon idempotente (seulement si `smtp_host` est vide)
+1. **Seeder email dans PlatformSeeder** — credentials `admin@leezr.com` / `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` seedés de façon idempotente (seulement si `smtp_host` est vide)
 2. **Config manuelle appliquée** — prod et staging seedés via tinker immédiatement
 3. **IMAP fetch vérifié** — 1 email récupéré sur chaque serveur après config
 

@@ -12,7 +12,7 @@
 - Confiance : **CONFIRMÉ**.
 
 **SEC-02 — Credentials email de production en dur dans le dépôt git.**
-- Preuve : `database/seeders/PlatformSeeder.php:122,127` → `smtp_password`/`imap_password` = `@Crinshow31` pour `admin@leezr.com` sur `213.32.20.37`. Fichier suivi par git.
+- Preuve : `database/seeders/PlatformSeeder.php:122,127` → `smtp_password`/`imap_password` = `@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663` pour `admin@leezr.com` sur `213.32.20.37`. Fichier suivi par git.
 - Aggravation : cette valeur appartient à la **même famille de credentials** que l'accès SSH/ISPConfig du serveur (cf. mémoire ops) → la fuite dépasse l'email (potentiellement serveur + panneau).
 - Impact : lecture de la boîte admin, envoi de mails usurpant Leezr, pivot infra possible.
 - Confiance : **CONFIRMÉ**. Action : rotation immédiate + purge historique git + bascule `env()`.
@@ -64,7 +64,7 @@
 
 ## C. Top 5 risques sécurité P0/P1
 1. **SEC-01** super-admin `password` re-seedé à chaque déploiement (+ 2FA optionnel).
-2. **SEC-02** credentials email/serveur prod committés (`@Crinshow31`).
+2. **SEC-02** credentials email/serveur prod committés (`@REDACTED_COMPROMISED_PASSWORD_ROTATE_ADR663`).
 3. **SEC-03** `migrate:fresh --force` dans un script de déploiement.
 4. **SEC-04** scope tenant no-op hors HTTP (fuite cross-tenant via jobs).
 5. **HTTPS dev expiré** depuis 5 mois (indispo + mauvais signal).
