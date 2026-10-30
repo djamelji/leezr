@@ -145,9 +145,9 @@ const onBulkDone = () => { selected.value = []; fetchData() }
 
 // ── Create drawer ────────────────────────────────────────────
 const isDrawerOpen = ref(false)
-const formData = ref({ first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: '' })
+const formData = ref({ first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: new Date().toISOString().slice(0, 10) })
 const formLoading = ref(false)
-const resetForm = () => { formData.value = { first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: '' } }
+const resetForm = () => { formData.value = { first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: new Date().toISOString().slice(0, 10) } }
 
 const submitEmployee = async () => {
   formLoading.value = true
@@ -162,7 +162,9 @@ const submitEmployee = async () => {
     if (createdEmp?.id) goToEmployee(createdEmp.id)
     else fetchData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    // 422 = erreur de validation : les messages inline par champ suffisent, pas de toast générique anxiogène.
+    if (error.response?.status !== 422)
+      toast(error.response?.data?.message || t('common.error'), 'error')
   } finally {
     formLoading.value = false
   }
@@ -427,10 +429,10 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         <VForm @submit.prevent="submitEmployee">
           <VRow>
             <VCol cols="12">
-              <AppTextField v-model="formData.first_name" data-test="emp-first-name" :label="$t('employees.fields.firstName')" :rules="[v => !!v || $t('validation.required')]" />
+              <AppTextField v-model="formData.first_name" data-test="emp-first-name" :label="$t('employees.fields.firstName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
             </VCol>
             <VCol cols="12">
-              <AppTextField v-model="formData.last_name" data-test="emp-last-name" :label="$t('employees.fields.lastName')" :rules="[v => !!v || $t('validation.required')]" />
+              <AppTextField v-model="formData.last_name" data-test="emp-last-name" :label="$t('employees.fields.lastName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
             </VCol>
             <VCol cols="12">
               <AppTextField v-model="formData.email" :label="$t('employees.fields.email')" type="email" />
@@ -442,7 +444,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
               <AppTextField v-model="formData.employee_number" :label="$t('employees.fields.employeeNumber')" />
             </VCol>
             <VCol cols="12">
-              <AppDateTimePicker v-model="formData.hire_date" data-test="emp-hire-date" :label="$t('employees.fields.hireDate')" :config="{ dateFormat: 'Y-m-d' }" :rules="[v => !!v || $t('validation.required')]" />
+              <AppDateTimePicker v-model="formData.hire_date" data-test="emp-hire-date" :label="$t('employees.fields.hireDate') + ' *'" :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y' }" :rules="[v => !!v || $t('validation.required')]" />
             </VCol>
             <VCol cols="12">
               <div class="d-flex gap-3 justify-end">
