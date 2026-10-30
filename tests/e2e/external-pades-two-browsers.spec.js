@@ -66,7 +66,12 @@ async function signInBrowser(context, token) {
   await page.waitForTimeout(1200)
   // Avertissement non certifié présent (pas de confusion avec une signature qualifiée/eIDAS).
   await expect(page.locator('body')).toContainText(/non certifiée/i)
-  await page.getByRole('button', { name: /Signer le document/i }).click()
+  // §4 — le bouton Signer est DÉSACTIVÉ tant que le consentement n'est pas coché.
+  const signBtn = page.getByRole('button', { name: /Signer le document/i })
+  await expect(signBtn).toBeDisabled()
+  await page.getByText(/je consens à le signer/i).click()
+  await expect(signBtn).toBeEnabled()
+  await signBtn.click()
   // Succès réel piloté par le backend (prepare → WebCrypto → inject → vérif pdfsig → completed).
   await expect(page.getByText(/Document signé/i)).toBeVisible({ timeout: 45_000 })
 }

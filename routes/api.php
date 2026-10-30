@@ -86,9 +86,12 @@ Route::post('/webhooks/signatures/{provider}', \App\Modules\Workforce\Signature\
 Route::prefix('public/signature')->middleware('throttle:30,1')->group(function () {
     Route::get('/{token}', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'show']);
     Route::get('/{token}/document', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'document']);
-    // W-SIGNATURE-7 — phase 1 PAdES externe (preuve de possession → émission cert → octets to_sign).
-    Route::post('/{token}/prepare', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'prepare'])->middleware('throttle:10,1');
-    Route::post('/{token}/sign', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'sign'])->middleware('throttle:10,1');
+    // W-SIGNATURE-7/8 — phase 1 PAdES externe (preuve de possession → émission cert → octets to_sign).
+    // 30/min : un parcours légitime enchaîne show→prepare→sign et peut re-enrôler (changement d'appareil) ;
+    // sous NAT d'entreprise plusieurs collaborateurs partagent une IP. La garde principale reste le token
+    // opaque à usage unique (404 à la moindre erreur). Reste protecteur contre l'abus.
+    Route::post('/{token}/prepare', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'prepare'])->middleware('throttle:30,1');
+    Route::post('/{token}/sign', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'sign'])->middleware('throttle:30,1');
     Route::post('/{token}/decline', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'decline'])->middleware('throttle:10,1');
 });
 

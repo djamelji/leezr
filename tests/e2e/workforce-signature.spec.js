@@ -57,6 +57,8 @@ test('full browser signing journey — no false success', async ({ page }) => {
   await expect(signer.locator('body')).toContainText('E2E Signer')
   // Avertissement non certifié présent (pas de confusion avec une signature qualifiée).
   await expect(signer.locator('body')).toContainText(/non certifiée/i)
+  // §4 — consentement explicite requis avant de signer.
+  await signer.getByText(/je consens à le signer/i).click()
   await signer.getByRole('button', { name: /Signer le document/i }).click()
   // Finalisation réelle pilotée par l'action du signataire (empreinte + preuves vérifiées serveur).
   await expect(signer.locator('body')).toContainText(/Document signé/i, { timeout: 15000 })
