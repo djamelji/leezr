@@ -27,6 +27,26 @@ class SignerController extends Controller
     {
         $signer = $this->resolveUsable($token);
         $req = $signer->request;
+        $canAct = $signer->tokenIsUsable(now()) && $req->isActive();
+
+        // Empreinte du document EXACT présenté au signataire.
+        $docSha = null;
+        if ($doc = GeneratedDocument::withoutGlobalScopes()->find($req->generated_document_id)) {
+            $disk = config('documents.generated_disk', 'local');
+            if ($doc->file_path && Storage::disk($disk)->exists($doc->file_path)) {
+                $docSha = hash('sha256', Storage::disk($disk)->get($doc->file_path));
+            }
+        }
+
+        // Émet un challenge à usage unique (anti-rejeu) lié à ce signataire, si l'action est possible.
+        $challenge = null;
+        if ($canAct) {
+            $challenge = bin2hex(random_bytes(24));
+            $signer->challenge = $challenge;
+            $signer->challenge_expires_at = now()->addMinutes(15);
+            $signer->challenge_used_at = null;
+            $signer->save();
+        }
 
         return response()->json([
             'signer' => [
@@ -35,6 +55,7 @@ class SignerController extends Controller
                 'order' => $signer->order,
                 'status' => $signer->status,
                 'required_auth_method' => $signer->required_auth_method,
+                'has_registered_key' => $signer->public_key_id !== null,
             ],
             'request' => [
                 'status' => $req->status,
@@ -45,8 +66,21 @@ class SignerController extends Controller
                 'expires_at' => $req->expires_at?->toIso8601String(),
                 'document_label' => $req->document?->template?->name ?? 'Document',
             ],
-            // Le token holder peut consulter le document source via la route document.
-            'can_act' => $signer->tokenIsUsable(now()) && $req->isActive(),
+            'can_act' => $canAct,
+            // Données pour la signature PERSONNELLE côté navigateur (WebCrypto). Le client signe la
+            // représentation canonique de ces claims avec sa clé privée NON extractible.
+            'personal_signing' => $canAct ? [
+                'domain' => \App\Core\Crypto\PersonalSignatureService::DOMAIN,
+                'algorithm' => \App\Core\Crypto\PersonalSignatureService::ALGORITHM,
+                'claims' => [
+                    'company_id' => (int) $req->company_id,
+                    'request_id' => (int) $req->id,
+                    'signer_id' => (int) $signer->id,
+                    'signer_email' => (string) $signer->email,
+                    'document_sha256' => $docSha,
+                    'challenge' => $challenge,
+                ],
+            ] : null,
         ]);
     }
 
@@ -71,9 +105,15 @@ class SignerController extends Controller
     {
         // Confirme que le token est utilisable (404 générique sinon).
         $this->resolveUsable($token);
+        $data = $request->validate([
+            'public_key_spki' => 'nullable|string|max:4000',
+            'signature_p1363' => 'nullable|string|max:512',
+        ]);
+
         $req = app(RecordSignerActionUseCase::class)->sign($token, [
-            'authMethod' => 'email_link',
             'ip' => $request->ip(),
+            'personalPublicKey' => $data['public_key_spki'] ?? null,
+            'personalSignature' => $data['signature_p1363'] ?? null,
         ]);
 
         return response()->json(['status' => $req->status, 'message' => 'signed']);

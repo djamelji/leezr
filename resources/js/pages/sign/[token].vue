@@ -2,6 +2,7 @@
 // W-SIGNATURE-1 (ADR-651) — parcours PUBLIC du signataire (lien sécurisé par token).
 import { $api } from '@/utils/api'
 import { refreshCsrf } from '@/utils/csrf'
+import { webcryptoSupported, signPersonal } from '@/utils/webcryptoSigner'
 
 definePage({
   meta: { layout: 'blank', public: true },
@@ -36,8 +37,21 @@ const documentUrl = computed(() => `/api/public/signature/${token.value}/documen
 
 const sign = async () => {
   acting.value = true
+  error.value = null
   try {
-    const r = await $api(`/public/signature/${token.value}/sign`, { method: 'POST' })
+    let body = {}
+    // Signature PERSONNELLE : le navigateur signe avec la clé privée NON extractible du signataire.
+    if (webcryptoSupported() && data.value?.personal_signing) {
+      try {
+        const { publicKeySpki, signatureP1363 } = await signPersonal(data.value.personal_signing)
+        body = { public_key_spki: publicKeySpki, signature_p1363: signatureP1363 }
+      } catch (e) {
+        error.value = t('signaturePublic.webcryptoError')
+
+        return
+      }
+    }
+    const r = await $api(`/public/signature/${token.value}/sign`, { method: 'POST', body })
     done.value = 'signed'
     data.value.request.status = r.status
   } catch (e) { error.value = e.response?._data?.message || t('common.error') } finally { acting.value = false }
@@ -119,6 +133,16 @@ const decline = async () => {
 
           <template v-if="data.can_act">
             <template v-if="!declineMode">
+              <VAlert
+                v-if="data.personal_signing"
+                type="success"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+              >
+                <VIcon icon="tabler-shield-lock" start size="16" />
+                {{ t('signaturePublic.personalNote') }}
+              </VAlert>
               <VBtn
                 block
                 color="success"

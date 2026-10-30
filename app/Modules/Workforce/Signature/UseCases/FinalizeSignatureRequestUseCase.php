@@ -57,9 +57,12 @@ class FinalizeSignatureRequestUseCase
             return $this->fail($request, 'final_document_unavailable');
         }
 
-        // 3bis. ARTEFACT CRYPTOGRAPHIQUE — P0 (ADR-655) : PAS de « completed » sans artefact produit,
-        // VÉRIFIÉ et archivé. Primaire = signature PAdES EMBARQUÉE dans le PDF (vérifiée par pdfsig).
-        // Repli = cachet CMS détaché (vérifié par openssl). Si AUCUN artefact vérifié → on NE complète PAS.
+        // 3bis. ARTEFACT CRYPTOGRAPHIQUE — P0 (ADR-655/656) : PAS de « completed » sans artefact produit,
+        // VÉRIFIÉ et archivé, DANS LE FORMAT REQUIS. Le format requis par défaut est `pades_embedded`
+        // (cachet PAdES organisationnel embarqué, vérifié par pdfsig). §8 : PAS de repli CMS SILENCIEUX —
+        // si le format requis est PAdES et qu'il échoue, on NE finalise PAS en CMS (échec contrôlé).
+        // `cms_detached` n'est utilisé que pour les demandes EXPLICITEMENT marquées compatibles (historique).
+        $requiredFormat = $request->metadata['required_format'] ?? 'pades_embedded';
         $pades = app(\App\Core\Crypto\NativePadesSignatureService::class);
         $sealSvc = app(\App\Core\Crypto\CryptographicSealService::class);
         $cryptoFormat = null;
@@ -67,21 +70,26 @@ class FinalizeSignatureRequestUseCase
         $seal = null;
         $artifactBytes = $sourceFinalBytes;
 
-        try {
-            if ($pades->isAvailable() && $pades->pdfsigAvailable()) {
-                $signedPdf = $pades->signPdf($sourceFinalBytes);
-                $report = $pades->verifyPdf($signedPdf);
-                if (! empty($report['all_signatures_valid'])) {
-                    $artifactBytes = $signedPdf;
-                    $cryptoFormat = 'pades_embedded';
-                    $padesReport = $report;
+        if ($requiredFormat === 'pades_embedded') {
+            try {
+                if ($pades->isAvailable() && $pades->pdfsigAvailable()) {
+                    $signedPdf = $pades->signPdf($sourceFinalBytes);
+                    $report = $pades->verifyPdf($signedPdf);
+                    if (! empty($report['all_signatures_valid'])) {
+                        $artifactBytes = $signedPdf;
+                        $cryptoFormat = 'pades_embedded';
+                        $padesReport = $report;
+                    }
                 }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('PAdES signing failed: '.$e->getMessage());
             }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('PAdES signing failed: '.$e->getMessage());
-        }
-
-        if ($cryptoFormat === null) {
+            // §8 : format PAdES requis mais non obtenu/vérifié → échec contrôlé, PAS de repli CMS.
+            if ($cryptoFormat === null) {
+                return $this->fail($request, 'pades_signature_required_but_failed');
+            }
+        } else {
+            // Workflow explicitement compatible CMS détaché.
             try {
                 $seal = $sealSvc->seal($artifactBytes);
                 $v = $sealSvc->verify($artifactBytes, $seal['cms_b64']);
@@ -93,11 +101,9 @@ class FinalizeSignatureRequestUseCase
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('CMS seal failed: '.$e->getMessage());
             }
-        }
-
-        // P0 : aucun artefact cryptographique vérifié → échec, demande NON complétée (reprise par nouvelle procédure).
-        if ($cryptoFormat === null) {
-            return $this->fail($request, 'crypto_artifact_unverified');
+            if ($cryptoFormat === null) {
+                return $this->fail($request, 'cms_seal_required_but_failed');
+            }
         }
 
         // Archive l'artefact RÉELLEMENT produit (PDF signé PAdES, ou copie source pour le cachet CMS).

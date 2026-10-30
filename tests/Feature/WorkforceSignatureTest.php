@@ -107,7 +107,9 @@ class WorkforceSignatureTest extends TestCase
             'variables_schema' => [], 'version' => 1, 'is_active' => true,
         ]);
         $path = 'documents/generated/' . $company->id . '/2026/10/' . uniqid() . '.pdf';
-        Storage::disk('local')->put($path, '%PDF-FAKE-' . uniqid());
+        // Vrai PDF dompdf (FPDI/PAdES peut l'importer) — la finalisation exige pades_embedded par défaut.
+        $realPdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<h1>Document</h1><p>' . uniqid() . '</p>')->output();
+        Storage::disk('local')->put($path, $realPdf);
 
         return GeneratedDocument::create([
             'company_id' => $company->id, 'document_template_id' => $tpl->id, 'template_version' => 1,
@@ -403,22 +405,95 @@ class WorkforceSignatureTest extends TestCase
             ->assertJsonPath('trust.eidas_advanced', 'not_demonstrated');
     }
 
-    // ── W-SIGNATURE-2 : cachet cryptographique réel + vérification indépendante honnête ──
-    public function test_completed_request_has_cryptographic_seal_and_verifies(): void
+    // ── W-SIGNATURE-4 : signature PERSONNELLE contrôlée par le signataire (WebCrypto ECDSA) ──
+    private function ecKeypair(): array
+    {
+        $pkey = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+        $pub = openssl_pkey_get_details($pkey)['key'];
+        $der = base64_decode(preg_replace('/-----[^-]+-----|\s+/', '', $pub));
+
+        return [base64_encode($der), $pkey];
+    }
+
+    private function signP1363(string $payload, $priv): string
+    {
+        openssl_sign($payload, $der, $priv, OPENSSL_ALGO_SHA256);
+        $off = 2;
+        $rLen = ord($der[$off + 1]);
+        $r = substr($der, $off + 2, $rLen);
+        $sStart = $off + 2 + $rLen;
+        $sLen = ord($der[$sStart + 1]);
+        $s = substr($der, $sStart + 2, $sLen);
+        $r = str_pad(ltrim($r, "\x00"), 32, "\x00", STR_PAD_LEFT);
+        $s = str_pad(ltrim($s, "\x00"), 32, "\x00", STR_PAD_LEFT);
+
+        return base64_encode($r . $s);
+    }
+
+    public function test_personal_signature_verified_and_recorded(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $signer = $req->signers()->first();
+        $raw = $this->issueToken($signer, $req);
+
+        // 1. Le signataire ouvre le parcours → challenge + claims canoniques émis.
+        $show = $this->getJson('/api/public/signature/' . $raw)->assertOk();
+        $claims = $show->json('personal_signing.claims');
+        $this->assertNotEmpty($claims['challenge']);
+        $this->assertNotEmpty($claims['document_sha256']);
+
+        // 2. Signature PERSONNELLE côté "navigateur" (clé du signataire).
+        [$spki, $priv] = $this->ecKeypair();
+        $payload = app(\App\Core\Crypto\PersonalSignatureService::class)->canonicalPayload($claims);
+        $sig = $this->signP1363($payload, $priv);
+
+        // 3. Soumission → vérification serveur + preuve stockée.
+        $this->postJson('/api/public/signature/' . $raw . '/sign', ['public_key_spki' => $spki, 'signature_p1363' => $sig])->assertOk();
+
+        $signer->refresh();
+        $this->assertSame(SignatureSigner::STATUS_SIGNED, $signer->status);
+        $this->assertSame('webcrypto_ecdsa_p256', $signer->auth_method, 'méthode = signature personnelle');
+        $this->assertNotNull($signer->public_key_id, 'clé publique enregistrée');
+        $this->assertNotNull($signer->personal_signature, 'preuve individuelle conservée');
+        $this->assertNotNull($signer->challenge_used_at, 'challenge consommé (anti-rejeu)');
+
+        // L'endpoint /verify re-vérifie INDÉPENDAMMENT la signature personnelle (distincte du cachet serveur).
+        $req->refresh();
+        $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/verify')->assertOk();
+        $res->assertJsonPath('personal_signatures.0.verified', true)
+            ->assertJsonPath('personal_signatures.0.signer_controlled_key', true)
+            ->assertJsonPath('personal_signatures.0.algorithm', \App\Core\Crypto\PersonalSignatureService::ALGORITHM);
+    }
+
+    public function test_invalid_personal_signature_rejected_no_transition(): void
+    {
+        $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
+        $signer = $req->signers()->first();
+        $raw = $this->issueToken($signer, $req);
+        $this->getJson('/api/public/signature/' . $raw)->assertOk();
+
+        [$spki] = $this->ecKeypair();
+        // Signature bidon → rejet, aucune transition réussie.
+        $this->postJson('/api/public/signature/' . $raw . '/sign', ['public_key_spki' => $spki, 'signature_p1363' => base64_encode(str_repeat("\x01", 64))])->assertStatus(422);
+
+        $this->assertSame(SignatureSigner::STATUS_INVITED, $signer->fresh()->status, 'signataire NON signé');
+        $this->assertSame(SignatureRequest::STATUS_PENDING, $req->fresh()->status);
+    }
+
+    // ── Finalisation : artefact cryptographique vérifié + rapport honnête (défaut = PAdES embarqué) ──
+    public function test_completed_request_has_verified_crypto_artifact_and_honest_report(): void
     {
         $req = $this->createAndSend([['role' => 'employee', 'name' => 'Emp', 'email' => 'emp@x.test', 'order' => 1]]);
         $raw = $this->issueToken($req->signers()->first(), $req);
         $this->postJson('/api/public/signature/' . $raw . '/sign')->assertOk();
         $req->refresh();
         $this->assertSame(SignatureRequest::STATUS_COMPLETED, $req->status);
-        $this->assertArrayHasKey('crypto_seal', $req->metadata ?? [], 'cachet cryptographique présent');
-        $this->assertFalse($req->metadata['crypto_seal']['certified'], 'jamais présenté comme certifié');
+        $this->assertSame('pades_embedded', $req->metadata['signature_format'] ?? null);
 
         $res = $this->api($this->adminUser(), 'GET', '/' . $req->id . '/verify')->assertOk();
         $res->assertJsonPath('overall_valid', true)
             ->assertJsonPath('document_intact', true)
-            ->assertJsonPath('signature_valid', true)
-            // Honnêteté : certificat identifié mais NON reconnu, cachet serveur, eIDAS non démontré.
+            // Honnêteté : certificat NON reconnu, cachet serveur, identité non liée crypto, eIDAS non démontré.
             ->assertJsonPath('certificate.recognized_trust_chain', false)
             ->assertJsonPath('trust.seal_type', 'organizational_server_seal')
             ->assertJsonPath('trust.signer_identity_cryptographically_bound', false)

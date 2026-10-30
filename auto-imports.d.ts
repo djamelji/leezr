@@ -20,6 +20,7 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('@core/utils/formatters')['avatarText']
   const betweenValidator: typeof import('@core/utils/validators')['betweenValidator']
+  const canonicalPayload: typeof import('./resources/js/utils/webcryptoSigner.js')['canonicalPayload']
   const centsToInput: typeof import('./resources/js/utils/money.js')['centsToInput']
   const checkVersionOnMount: typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']
   const clearVersionState: typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']
@@ -68,6 +69,7 @@ declare global {
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getXsrfToken: typeof import('./resources/js/utils/csrf.js')['getXsrfToken']
   const h: typeof import('vue')['h']
+  const hasKey: typeof import('./resources/js/utils/webcryptoSigner.js')['hasKey']
   const hexToRgb: typeof import('./resources/js/@core/utils/colorConverter.js')['hexToRgb']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
@@ -158,6 +160,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const signPersonal: typeof import('./resources/js/utils/webcryptoSigner.js')['signPersonal']
   const startVersionPolling: typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']
   const storeToRefs: typeof import('pinia')['storeToRefs']
   const subscriptionStatusColor: typeof import('./resources/js/utils/billing.js')['subscriptionStatusColor']
@@ -405,6 +408,7 @@ declare global {
   const watchThrottled: typeof import('@vueuse/core')['watchThrottled']
   const watchTriggerable: typeof import('@vueuse/core')['watchTriggerable']
   const watchWithFilter: typeof import('@vueuse/core')['watchWithFilter']
+  const webcryptoSupported: typeof import('./resources/js/utils/webcryptoSigner.js')['webcryptoSupported']
   const whenever: typeof import('@vueuse/core')['whenever']
 }
 // for type re-export
@@ -433,6 +437,7 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('@core/utils/formatters')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('@core/utils/validators')['betweenValidator']>
+    readonly canonicalPayload: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['canonicalPayload']>
     readonly centsToInput: UnwrapRef<typeof import('./resources/js/utils/money.js')['centsToInput']>
     readonly checkVersionOnMount: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['checkVersionOnMount']>
     readonly clearVersionState: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['clearVersionState']>
@@ -481,6 +486,7 @@ declare module 'vue' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getXsrfToken: UnwrapRef<typeof import('./resources/js/utils/csrf.js')['getXsrfToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly hasKey: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['hasKey']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
@@ -563,6 +569,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly signPersonal: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['signPersonal']>
     readonly startVersionPolling: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly subscriptionStatusColor: UnwrapRef<typeof import('./resources/js/utils/billing.js')['subscriptionStatusColor']>
@@ -810,6 +817,7 @@ declare module 'vue' {
     readonly watchThrottled: UnwrapRef<typeof import('@vueuse/core')['watchThrottled']>
     readonly watchTriggerable: UnwrapRef<typeof import('@vueuse/core')['watchTriggerable']>
     readonly watchWithFilter: UnwrapRef<typeof import('@vueuse/core')['watchWithFilter']>
+    readonly webcryptoSupported: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['webcryptoSupported']>
     readonly whenever: UnwrapRef<typeof import('@vueuse/core')['whenever']>
   }
 }

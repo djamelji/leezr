@@ -1647,6 +1647,8 @@
     "document": "Document", "signer": "Signataire",
     "certifiedNotice": "Signature électronique certifiée.",
     "uncertifiedNotice": "Ceci est une signature de démonstration non certifiée juridiquement.",
+    "personalNote": "Votre navigateur signera avec votre clé personnelle (jamais transmise à Leezr).",
+    "webcryptoError": "Impossible de signer avec votre clé personnelle sur ce navigateur.",
     "viewDocument": "Consulter le document",
     "sign": "Signer le document", "decline": "Refuser de signer",
     "declineReason": "Motif du refus (facultatif)", "confirmDecline": "Confirmer le refus",

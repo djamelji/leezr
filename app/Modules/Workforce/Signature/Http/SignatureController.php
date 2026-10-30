@@ -204,6 +204,10 @@ class SignatureController extends Controller
         }
         $bytes = Storage::disk($disk)->get($req->signed_document_path);
 
+        // Signatures PERSONNELLES (clé du signataire) — re-vérifiées INDÉPENDAMMENT, distinctes du
+        // cachet organisationnel serveur. Preuve individuelle par signataire (§5, §11).
+        $personalSignatures = $this->verifyPersonalSignatures($req);
+
         // Bloc confiance commun (honnête, identique quel que soit le format).
         $trust = [
             'seal_type' => 'organizational_server_seal',
@@ -234,6 +238,7 @@ class SignatureController extends Controller
                     'identified' => true,
                     'recognized_trust_chain' => $report['any_trusted_chain'] ?? false,
                 ],
+                'personal_signatures' => $personalSignatures,
                 'trust' => $trust,
             ]);
         }
@@ -259,8 +264,45 @@ class SignatureController extends Controller
                 'self_signed' => $certInfo['self_signed'] ?? true,
                 'sha256_fingerprint' => $certInfo['sha256_fingerprint'] ?? null,
             ],
+            'personal_signatures' => $personalSignatures,
             'trust' => $trust,
         ]);
+    }
+
+    /** Re-vérifie INDÉPENDAMMENT les signatures personnelles stockées (preuve individuelle par signataire). */
+    private function verifyPersonalSignatures(SignatureRequest $req): array
+    {
+        $doc = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()->find($req->generated_document_id);
+        $docSha = $doc ? app(\App\Modules\Workforce\Signature\Services\SignatureDocumentService::class)->fingerprint($doc) : null;
+        $svc = app(\App\Core\Crypto\PersonalSignatureService::class);
+        $out = [];
+
+        foreach ($req->signers()->whereNotNull('personal_signature')->get() as $s) {
+            $valid = false;
+            if ($docSha && $s->challenge && $s->public_key_spki) {
+                $payload = $svc->canonicalPayload([
+                    'company_id' => (int) $req->company_id,
+                    'request_id' => (int) $req->id,
+                    'signer_id' => (int) $s->id,
+                    'signer_email' => (string) $s->email,
+                    'document_sha256' => $docSha,
+                    'challenge' => $s->challenge,
+                ]);
+                $valid = $svc->verify($s->public_key_spki, $payload, $s->personal_signature)
+                    && hash_equals((string) $s->personal_signed_sha256, hash('sha256', $payload));
+            }
+            $out[] = [
+                'signer_name' => $s->name,
+                'role' => $s->role,
+                'algorithm' => $s->personal_signature_alg,
+                'public_key_id' => $s->public_key_id,
+                'signer_controlled_key' => true,
+                'verified' => $valid,
+                'verified_by' => 'openssl',
+            ];
+        }
+
+        return $out;
     }
 
     public function downloadSigned(Request $request, int $id): StreamedResponse

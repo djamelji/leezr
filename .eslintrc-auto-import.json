@@ -413,6 +413,10 @@
     "createViewerUrl": true,
     "downloadBlob": true,
     "fetchPdfBlob": true,
-    "revokeObjectUrl": true
+    "revokeObjectUrl": true,
+    "canonicalPayload": true,
+    "hasKey": true,
+    "signPersonal": true,
+    "webcryptoSupported": true
   }
 }

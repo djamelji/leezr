@@ -23,6 +23,8 @@ class SignatureSigner extends Model
         'name', 'email', 'required_auth_method', 'auth_method', 'status',
         'token_hash', 'token_expires_at', 'token_revoked_at', 'invited_at', 'acted_at',
         'evidence_reference', 'decline_reason', 'metadata',
+        'public_key_spki', 'public_key_id', 'personal_signature_alg', 'personal_signature',
+        'personal_signed_sha256', 'challenge', 'challenge_expires_at', 'challenge_used_at',
     ];
 
     protected $casts = [
@@ -32,6 +34,8 @@ class SignatureSigner extends Model
         'token_revoked_at' => 'datetime',
         'invited_at' => 'datetime',
         'acted_at' => 'datetime',
+        'challenge_expires_at' => 'datetime',
+        'challenge_used_at' => 'datetime',
         'metadata' => 'array',
     ];
 

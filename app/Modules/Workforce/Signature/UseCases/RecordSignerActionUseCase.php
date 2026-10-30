@@ -105,6 +105,13 @@ class RecordSignerActionUseCase
                 return $this->applyDecline($request, $signer, $context['reason'] ?? null, $authMethod);
             }
 
+            // Signature PERSONNELLE (clé du signataire) : vérifiée + preuve stockée AVANT la transition.
+            // Si fournie et INVALIDE → rejet (pas de transition réussie). Si absente → lien sécurisé seul.
+            $personalMethod = $this->verifyAndStorePersonalSignature($request, $signer, $context);
+            if ($personalMethod !== null) {
+                $authMethod = $personalMethod;
+            }
+
             return $this->applySign($request, $signer, $authMethod);
         });
     }
@@ -137,6 +144,76 @@ class RecordSignerActionUseCase
 
             return $this->applyDecline($request, $signer, $reason, $authMethod);
         });
+    }
+
+    /**
+     * Vérifie la signature PERSONNELLE du signataire (ECDSA P-256 WebCrypto) et stocke la preuve.
+     * @return ?string la méthode d'auth si une signature personnelle valide a été fournie ; null sinon.
+     * @throws ValidationException si une signature personnelle est fournie mais invalide.
+     */
+    private function verifyAndStorePersonalSignature(SignatureRequest $request, SignatureSigner $signer, array $context): ?string
+    {
+        $pub = $context['personalPublicKey'] ?? null;
+        $sig = $context['personalSignature'] ?? null;
+        if (! $pub || ! $sig) {
+            return null;
+        }
+
+        // Challenge à usage unique : présent, non expiré, non consommé.
+        if (! $signer->challenge || ! $signer->challenge_expires_at || $signer->challenge_expires_at->isPast() || $signer->challenge_used_at) {
+            throw ValidationException::withMessages(['signature' => 'Challenge invalide, expiré ou déjà utilisé.']);
+        }
+
+        // Empreinte du document EXACT (recalculée serveur) — lie la signature au document précis.
+        $doc = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()->find($request->generated_document_id);
+        $docSha = $doc ? app(\App\Modules\Workforce\Signature\Services\SignatureDocumentService::class)->fingerprint($doc) : null;
+        if (! $docSha) {
+            throw ValidationException::withMessages(['signature' => 'Document source introuvable.']);
+        }
+
+        $svc = app(\App\Core\Crypto\PersonalSignatureService::class);
+        $payload = $svc->canonicalPayload([
+            'company_id' => (int) $request->company_id,
+            'request_id' => (int) $request->id,
+            'signer_id' => (int) $signer->id,
+            'signer_email' => (string) $signer->email,
+            'document_sha256' => $docSha,
+            'challenge' => $signer->challenge,
+        ]);
+
+        if (! $svc->verify($pub, $payload, $sig)) {
+            throw ValidationException::withMessages(['signature' => 'Signature personnelle invalide.']);
+        }
+
+        // Si une clé était déjà enregistrée pour ce signataire, elle DOIT correspondre (pas de substitution).
+        $keyId = $svc->keyId($pub);
+        if ($signer->public_key_id && ! hash_equals($signer->public_key_id, $keyId)) {
+            throw ValidationException::withMessages(['signature' => 'Clé de signature différente de la clé enregistrée.']);
+        }
+
+        $signer->public_key_spki = $pub;
+        $signer->public_key_id = $keyId;
+        $signer->personal_signature_alg = \App\Core\Crypto\PersonalSignatureService::ALGORITHM;
+        $signer->personal_signature = $sig;
+        $signer->personal_signed_sha256 = hash('sha256', $payload);
+        $signer->challenge_used_at = now();
+        $signer->save();
+
+        $this->events->record($request, SignatureEvent::TYPE_SIGNED, [
+            'signer' => $signer,
+            'actorType' => SignatureEvent::ACTOR_SIGNER,
+            'actorId' => $signer->id,
+            'payload' => [
+                'personal_signature' => true,
+                'algorithm' => \App\Core\Crypto\PersonalSignatureService::ALGORITHM,
+                'public_key_id' => $keyId,
+                'document_sha256' => $docSha,
+                'verified_by' => 'openssl',
+                'signature_type' => 'signer_controlled_key',
+            ],
+        ]);
+
+        return 'webcrypto_ecdsa_p256';
     }
 
     private function applySign(SignatureRequest $request, SignatureSigner $signer, string $authMethod): SignatureRequest

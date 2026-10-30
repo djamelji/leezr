@@ -1648,6 +1648,8 @@
     "document": "Document", "signer": "Signer",
     "certifiedNotice": "Certified electronic signature.",
     "uncertifiedNotice": "This is a legally uncertified demonstration signature.",
+    "personalNote": "Your browser will sign with your personal key (never sent to Leezr).",
+    "webcryptoError": "Unable to sign with your personal key on this browser.",
     "viewDocument": "View the document",
     "sign": "Sign the document", "decline": "Decline to sign",
     "declineReason": "Decline reason (optional)", "confirmDecline": "Confirm decline",
