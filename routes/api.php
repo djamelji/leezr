@@ -86,6 +86,8 @@ Route::post('/webhooks/signatures/{provider}', \App\Modules\Workforce\Signature\
 Route::prefix('public/signature')->middleware('throttle:30,1')->group(function () {
     Route::get('/{token}', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'show']);
     Route::get('/{token}/document', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'document']);
+    // W-SIGNATURE-7 — phase 1 PAdES externe (preuve de possession → émission cert → octets to_sign).
+    Route::post('/{token}/prepare', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'prepare'])->middleware('throttle:10,1');
     Route::post('/{token}/sign', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'sign'])->middleware('throttle:10,1');
     Route::post('/{token}/decline', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'decline'])->middleware('throttle:10,1');
 });

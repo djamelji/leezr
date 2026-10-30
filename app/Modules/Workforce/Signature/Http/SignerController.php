@@ -63,6 +63,7 @@ class SignerController extends Controller
                 'signature_level' => $req->signature_level,
                 'provider' => $req->provider,
                 'certified' => (bool) ($req->metadata['certified'] ?? false),
+                'required_format' => $req->metadata['required_format'] ?? 'pades_embedded',
                 'expires_at' => $req->expires_at?->toIso8601String(),
                 'document_label' => $req->document?->template?->name ?? 'Document',
             ],
@@ -101,6 +102,30 @@ class SignerController extends Controller
         return Storage::disk($disk)->download($doc->file_path, 'document.pdf');
     }
 
+    /**
+     * W-SIGNATURE-7 — Phase 1 du PAdES externe : le navigateur prouve la possession de sa clé (signature
+     * canonique challenge-liée), le serveur émet le certificat individuel et renvoie les octets `to_sign`
+     * (SET d'attributs CMS) que le navigateur signera ensuite. Aucune clé privée n'est transmise.
+     */
+    public function prepare(Request $request, string $token): JsonResponse
+    {
+        $this->resolveUsable($token);
+        $data = $request->validate([
+            'public_key_spki' => 'required|string|max:4000',
+            'signature_p1363' => 'required|string|max:512', // preuve de possession (sur la charge canonique)
+        ]);
+
+        $prep = app(RecordSignerActionUseCase::class)->prepareExternal($token, [
+            'publicKey' => $data['public_key_spki'],
+            'pop' => $data['signature_p1363'],
+        ]);
+
+        return response()->json([
+            'to_sign_b64' => $prep['to_sign_b64'],
+            'prep_expires_at' => $prep['prep_expires_at'],
+        ]);
+    }
+
     public function sign(Request $request, string $token): JsonResponse
     {
         // Confirme que le token est utilisable (404 générique sinon).
@@ -108,12 +133,15 @@ class SignerController extends Controller
         $data = $request->validate([
             'public_key_spki' => 'nullable|string|max:4000',
             'signature_p1363' => 'nullable|string|max:512',
+            // PAdES externe : signature (P1363) des octets `to_sign` renvoyés par prepare().
+            'pades_signature_p1363' => 'nullable|string|max:512',
         ]);
 
         $req = app(RecordSignerActionUseCase::class)->sign($token, [
             'ip' => $request->ip(),
             'personalPublicKey' => $data['public_key_spki'] ?? null,
             'personalSignature' => $data['signature_p1363'] ?? null,
+            'padesSignature' => $data['pades_signature_p1363'] ?? null,
         ]);
 
         return response()->json(['status' => $req->status, 'message' => 'signed']);

@@ -2,7 +2,7 @@
 // W-SIGNATURE-1 (ADR-651) — parcours PUBLIC du signataire (lien sécurisé par token).
 import { $api } from '@/utils/api'
 import { refreshCsrf } from '@/utils/csrf'
-import { webcryptoSupported, signPersonal } from '@/utils/webcryptoSigner'
+import { webcryptoSupported, signPersonal, signRawBase64 } from '@/utils/webcryptoSigner'
 
 definePage({
   meta: { layout: 'blank', public: true },
@@ -35,12 +35,38 @@ onMounted(load)
 
 const documentUrl = computed(() => `/api/public/signature/${token.value}/document`)
 
+const isExternalPades = computed(() => data.value?.request?.required_format === 'pades_external')
+
 const sign = async () => {
   acting.value = true
   error.value = null
   try {
+    // W-SIGNATURE-7 — PAdES EXTERNE : flux 2 phases. Le navigateur (1) prouve la possession de sa clé,
+    // le serveur émet le certificat + renvoie les octets `to_sign`, puis le navigateur (2) signe ces
+    // octets avec la MÊME clé privée NON extractible. Aucune clé privée n'est transmise.
+    if (isExternalPades.value && webcryptoSupported() && data.value?.personal_signing) {
+      let prep
+      try {
+        const { publicKeySpki, signatureP1363 } = await signPersonal(data.value.personal_signing)
+        prep = await $api(`/public/signature/${token.value}/prepare`, {
+          method: 'POST',
+          body: { public_key_spki: publicKeySpki, signature_p1363: signatureP1363 },
+        })
+      } catch (e) {
+        error.value = e.response?._data?.message || t('signaturePublic.webcryptoError')
+
+        return
+      }
+      const padesSig = await signRawBase64(prep.to_sign_b64)
+      const r = await $api(`/public/signature/${token.value}/sign`, { method: 'POST', body: { pades_signature_p1363: padesSig } })
+      done.value = 'signed'
+      data.value.request.status = r.status
+
+      return
+    }
+
     let body = {}
-    // Signature PERSONNELLE : le navigateur signe avec la clé privée NON extractible du signataire.
+    // Signature PERSONNELLE (W-SIGNATURE-4) : le navigateur signe avec la clé privée NON extractible.
     if (webcryptoSupported() && data.value?.personal_signing) {
       try {
         const { publicKeySpki, signatureP1363 } = await signPersonal(data.value.personal_signing)

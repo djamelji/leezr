@@ -84,6 +84,48 @@ class ExternalPadesSignerTest extends TestCase
         $this->assertContains('Rep Leezr', $cns);
     }
 
+    public function test_malformed_pdf_rejected(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        (new ExternalPadesSigner())->preparePlaceholderPdf('this is not a pdf at all, just junk bytes here .....');
+    }
+
+    public function test_certificate_substitution_rejected(): void
+    {
+        if (! $this->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $svc = new ExternalPadesSigner();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<h1>Doc</h1>')->output();
+        $alex = $this->ecSigner('Alex');
+        $placeholder = $svc->preparePlaceholderPdf($pdf);
+        $prepared = $svc->prepareDataToSign($placeholder, $alex['cert']);
+        $p1363 = $this->browserSign(base64_decode($prepared['to_sign_b64']), $alex['pkey']);
+
+        // Injection avec un AUTRE certificat que celui préparé → rejet (liaison préparation↔cert).
+        $other = $this->ecSigner('Intrus');
+        $this->expectException(\RuntimeException::class);
+        $svc->injectSignature($placeholder, $prepared, $other['cert'], $p1363);
+    }
+
+    public function test_signature_not_matching_certificate_rejected(): void
+    {
+        if (! $this->pdfsigAvailable()) {
+            $this->markTestSkipped('pdfsig absent');
+        }
+        $svc = new ExternalPadesSigner();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<h1>Doc</h1>')->output();
+        $alex = $this->ecSigner('Alex');
+        $placeholder = $svc->preparePlaceholderPdf($pdf);
+        $prepared = $svc->prepareDataToSign($placeholder, $alex['cert']);
+
+        // Signature calculée avec la clé d'un AUTRE signataire → ne vérifie pas contre le cert d'Alex.
+        $intrus = $this->ecSigner('Intrus');
+        $badSig = $this->browserSign(base64_decode($prepared['to_sign_b64']), $intrus['pkey']);
+        $this->expectException(\RuntimeException::class);
+        $svc->injectSignature($placeholder, $prepared, $alex['cert'], $badSig);
+    }
+
     public function test_tampering_detected(): void
     {
         if (! $this->pdfsigAvailable()) {

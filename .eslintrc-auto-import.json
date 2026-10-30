@@ -417,6 +417,7 @@
     "canonicalPayload": true,
     "hasKey": true,
     "signPersonal": true,
-    "webcryptoSupported": true
+    "webcryptoSupported": true,
+    "signRawBase64": true
   }
 }

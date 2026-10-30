@@ -25,6 +25,9 @@ class SignatureSigner extends Model
         'evidence_reference', 'decline_reason', 'metadata',
         'public_key_spki', 'public_key_id', 'personal_signature_alg', 'personal_signature',
         'personal_signed_sha256', 'challenge', 'challenge_expires_at', 'challenge_used_at',
+        'signer_certificate_pem', 'signer_cert_serial', 'signer_cert_fingerprint', 'signer_cert_issuer',
+        'signer_cert_not_before', 'signer_cert_not_after', 'signer_cert_revoked_at',
+        'signing_prep', 'signing_base_sha256', 'signing_prep_expires_at',
     ];
 
     protected $casts = [
@@ -36,8 +39,29 @@ class SignatureSigner extends Model
         'acted_at' => 'datetime',
         'challenge_expires_at' => 'datetime',
         'challenge_used_at' => 'datetime',
+        'signer_cert_not_before' => 'datetime',
+        'signer_cert_not_after' => 'datetime',
+        'signer_cert_revoked_at' => 'datetime',
+        'signing_prep' => 'array',
+        'signing_prep_expires_at' => 'datetime',
         'metadata' => 'array',
     ];
+
+    /** Le signataire possède-t-il un certificat ACTIF (émis, non révoqué, dans sa période de validité) ? */
+    public function hasUsableCertificate(\DateTimeInterface $now): bool
+    {
+        if (empty($this->signer_certificate_pem) || $this->signer_cert_revoked_at !== null) {
+            return false;
+        }
+        if ($this->signer_cert_not_before !== null && $this->signer_cert_not_before->greaterThan($now)) {
+            return false;
+        }
+        if ($this->signer_cert_not_after !== null && $this->signer_cert_not_after->lessThan($now)) {
+            return false;
+        }
+
+        return true;
+    }
 
     public const STATUS_PENDING = 'pending';
     public const STATUS_INVITED = 'invited';

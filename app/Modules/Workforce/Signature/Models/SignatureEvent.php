@@ -43,6 +43,9 @@ class SignatureEvent extends Model
     public const TYPE_WEBHOOK_RECEIVED = 'webhook_received';
     public const TYPE_VERIFICATION_PASSED = 'verification_passed';
     public const TYPE_VERIFICATION_FAILED = 'verification_failed';
+    public const TYPE_CERTIFICATE_ISSUED = 'certificate_issued';   // W-SIGNATURE-7 : AC interne DEV
+    public const TYPE_CERTIFICATE_REVOKED = 'certificate_revoked';
+    public const TYPE_PADES_EMBEDDED = 'pades_embedded';           // signature PAdES externe injectée
 
     public const ACTOR_USER = 'user';
     public const ACTOR_SIGNER = 'signer';

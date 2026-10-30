@@ -92,3 +92,23 @@ export async function signPersonal(personalSigning) {
 
   return { publicKeySpki: b64(spki), signatureP1363: b64(sig) }
 }
+
+function fromB64(s) {
+  const bin = atob(s)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+
+  return bytes
+}
+
+/**
+ * W-SIGNATURE-7 — signe des octets BRUTS (le SET d'attributs CMS `to_sign` renvoyé par /prepare)
+ * avec la MÊME clé privée non extractible. Utilisé pour la signature PAdES externe (phase 2).
+ * @returns {Promise<string>} signature ECDSA P1363 (r||s) en base64
+ */
+export async function signRawBase64(toSignB64) {
+  const pair = await getOrCreateKeyPair()
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pair.privateKey, fromB64(toSignB64))
+
+  return b64(sig)
+}

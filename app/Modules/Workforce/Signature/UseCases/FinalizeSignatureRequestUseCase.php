@@ -51,6 +51,14 @@ class FinalizeSignatureRequestUseCase
             'payload' => ['certified' => $adapter->isCertified()],
         ]);
 
+        // W-SIGNATURE-7 — PAdES EXTERNE : le document final est DÉJÀ assemblé incrémentalement (une
+        // signature PERSONNELLE par signataire, chacune signée par la clé navigateur du signataire). On
+        // NE re-cachette PAS avec une clé serveur : on vérifie INDÉPENDAMMENT (pdfsig) que toutes les
+        // signatures requises sont présentes et valides, puis on finalise. §8 respecté.
+        if (($request->metadata['required_format'] ?? null) === 'pades_external') {
+            return $this->finalizeExternalPades($request, $document, $adapter->isCertified());
+        }
+
         // 3. Octets du document final (fourni par le prestataire, sinon copie du source interne).
         $sourceFinalBytes = $adapter->fetchFinalDocument($request) ?? $this->documents->sourceBytes($document);
         if ($sourceFinalBytes === null) {
@@ -171,6 +179,87 @@ class FinalizeSignatureRequestUseCase
             $request->company_id, \App\Core\Audit\AuditAction::SIGNATURE_COMPLETED,
             'signature_request', (string) $request->id,
             ['actorType' => 'system', 'metadata' => ['certified' => $adapter->isCertified()]],
+        );
+
+        $this->maybeSendSignedCopy($request);
+
+        return $request->fresh('signers');
+    }
+
+    /**
+     * W-SIGNATURE-7 — finalisation du PAdES externe : vérifie que l'artefact incrémental porte autant de
+     * signatures personnelles valides que de signataires requis, sans re-cacheter côté serveur.
+     */
+    private function finalizeExternalPades(SignatureRequest $request, GeneratedDocument $document, bool $certified): SignatureRequest
+    {
+        $disk = config('documents.generated_disk', 'local');
+        if (! $request->signed_document_path || ! \Illuminate\Support\Facades\Storage::disk($disk)->exists($request->signed_document_path)) {
+            return $this->fail($request, 'pades_external_artifact_missing');
+        }
+        $bytes = \Illuminate\Support\Facades\Storage::disk($disk)->get($request->signed_document_path);
+
+        $pades = app(\App\Core\Crypto\NativePadesSignatureService::class);
+        if (! $pades->pdfsigAvailable()) {
+            return $this->fail($request, 'pdfsig_unavailable');
+        }
+        $report = $pades->verifyPdf($bytes);
+        $count = (int) ($report['signature_count'] ?? 0);
+        $requiredSigners = (int) $request->signers()->count();
+        if (empty($report['all_signatures_valid']) || $count < $requiredSigners) {
+            return $this->fail($request, 'pades_external_incomplete_or_invalid');
+        }
+
+        $sha = hash('sha256', $bytes);
+        $request->transitionTo(SignatureRequest::STATUS_COMPLETED);
+        $request->completed_at = now();
+        $request->signed_document_sha256 = $sha;
+        $request->metadata = array_merge($request->metadata ?? [], [
+            'signature_format' => 'pades_external',
+            'pades_external' => [
+                'signature_count' => $count,
+                'all_signatures_valid' => true,
+                'verified_by' => 'pdfsig',
+                'seal_type' => 'signer_controlled_personal_signatures',
+                'ca' => 'leezr-dev-internal',
+                'recognized_trust_chain' => $report['any_trusted_chain'] ?? false,
+                'eidas' => 'not_demonstrated',
+                'certified' => false,
+                'signers' => array_map(fn ($s) => [
+                    'signer_cn' => $s['signer_cn'] ?? null,
+                    'valid' => $s['valid'] ?? null,
+                ], $report['signatures'] ?? []),
+            ],
+        ]);
+        $request->save();
+
+        if ($document->canTransitionSignatureTo(GeneratedDocument::SIGNATURE_SIGNED)) {
+            $document->transitionSignatureTo(GeneratedDocument::SIGNATURE_SIGNED);
+            $document->signed_at = now();
+            $document->signature_provider = $request->provider;
+            $document->signature_metadata = [
+                'signature_request_id' => $request->id,
+                'signed_document_sha256' => $sha,
+                'signature_format' => 'pades_external',
+                'signature_count' => $count,
+                'certified' => false,
+            ];
+            $document->save();
+        }
+
+        $this->events->record($request, SignatureEvent::TYPE_VERIFICATION_PASSED, [
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'verification' => 'passed',
+            'documentSha256' => $sha,
+            'payload' => ['signature_format' => 'pades_external', 'signature_count' => $count, 'verified_by' => 'pdfsig', 'certified' => false],
+        ]);
+        $this->events->record($request, SignatureEvent::TYPE_COMPLETED, [
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'payload' => ['signed_sha256' => $sha, 'signature_format' => 'pades_external', 'signature_count' => $count, 'certified' => false],
+        ]);
+        app(\App\Core\Audit\AuditLogger::class)->logCompany(
+            $request->company_id, \App\Core\Audit\AuditAction::SIGNATURE_COMPLETED,
+            'signature_request', (string) $request->id,
+            ['actorType' => 'system', 'metadata' => ['certified' => $certified, 'signature_format' => 'pades_external']],
         );
 
         $this->maybeSendSignedCopy($request);

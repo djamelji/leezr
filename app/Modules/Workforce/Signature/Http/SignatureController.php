@@ -217,6 +217,42 @@ class SignatureController extends Controller
             'note' => 'Signature/cachet cryptographique organisationnel (clé SERVEUR Leezr), vérifiable. L\'attribution au signataire repose sur le dossier de preuves (consentement + identification), pas sur une clé contrôlée par le signataire.',
         ];
 
+        if ($format === 'pades_external') {
+            // Multi-PAdES PERSONNEL : signatures EMBARQUÉES signées par la clé NAVIGATEUR de chaque
+            // signataire (clé privée jamais transmise), certificats émis par l'AC interne DEV (NON reconnue).
+            $report = app(\App\Core\Crypto\NativePadesSignatureService::class)->verifyPdf($bytes);
+            if (empty($report['available'])) {
+                return response()->json(['has_seal' => true, 'format' => $format, 'verifier_available' => false, 'message' => 'Vérificateur pdfsig indisponible.']);
+            }
+
+            $externalTrust = [
+                'seal_type' => 'signer_controlled_personal_signatures',
+                'signer_identity_cryptographically_bound' => true, // liée à la CLÉ du signataire via son cert
+                'identity_verification' => 'declared',             // identité DÉCLARÉE, pas vérifiée réglementairement
+                'certificate_authority' => 'leezr-dev-internal',
+                'ca_recognized' => false,                          // AC DEV NON reconnue publiquement
+                'recognized_trust_chain' => $report['any_trusted_chain'] ?? false,
+                'eidas_advanced' => 'not_demonstrated',
+                'eidas_qualified' => 'not_demonstrated',
+                'note' => 'Signatures PERSONNELLES embarquées, chacune signée par la clé privée non extractible du signataire (jamais transmise à Leezr). Certificats émis par une AC interne DEV NON reconnue : l\'identité est DÉCLARÉE, pas certifiée par une autorité de confiance publique. Non eIDAS avancé/qualifié.',
+            ];
+
+            return response()->json([
+                'has_seal' => true,
+                'format' => 'pades_external',
+                'embedded_signature' => true,
+                'verified_by' => 'pdfsig',
+                'signature_count' => $report['signature_count'],
+                'all_signatures_valid' => $report['all_signatures_valid'],
+                'document_intact' => $report['all_signatures_valid'],
+                'overall_valid' => $report['all_signatures_valid'],
+                'signatures' => $report['signatures'],
+                'signer_certificates' => $this->signerCertificates($req),
+                'personal_signatures' => $personalSignatures,
+                'trust' => $externalTrust,
+            ]);
+        }
+
         if ($format === 'pades_embedded') {
             // Vérification INDÉPENDANTE par pdfsig (signature EMBARQUÉE dans le PDF).
             $report = app(\App\Core\Crypto\NativePadesSignatureService::class)->verifyPdf($bytes);
@@ -267,6 +303,32 @@ class SignatureController extends Controller
             'personal_signatures' => $personalSignatures,
             'trust' => $trust,
         ]);
+    }
+
+    /** Certificats individuels des signataires (AC interne DEV) — détail de preuve, honnête sur la confiance. */
+    private function signerCertificates(SignatureRequest $req): array
+    {
+        $now = now();
+        $out = [];
+        foreach ($req->signers()->whereNotNull('signer_certificate_pem')->get() as $s) {
+            $out[] = [
+                'signer_name' => $s->name,
+                'role' => $s->role,
+                'subject_cn' => $s->name,
+                'issuer' => $s->signer_cert_issuer,
+                'serial' => $s->signer_cert_serial,
+                'fingerprint_sha256' => $s->signer_cert_fingerprint,
+                'public_key_id' => $s->public_key_id,
+                'not_before' => $s->signer_cert_not_before?->toIso8601String(),
+                'not_after' => $s->signer_cert_not_after?->toIso8601String(),
+                'revoked' => $s->signer_cert_revoked_at !== null,
+                'usable' => $s->hasUsableCertificate($now),
+                'identity_verification' => 'declared',
+                'ca_recognized' => false,
+            ];
+        }
+
+        return $out;
     }
 
     /** Re-vérifie INDÉPENDAMMENT les signatures personnelles stockées (preuve individuelle par signataire). */

@@ -23362,3 +23362,39 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `App\Core\Crypto\ExternalPadesSigner` ; `PersonalSignatureService::p1363ToDerPublic` ; `ExternalPadesSignerTest`. Production inchangée (W-SIGNATURE-4).
 
 ---
+
+## ADR-659 — W-SIGNATURE-7 : AC interne DEV + multi-PAdES personnel de bout en bout
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement — prototype fonctionnel branché, NON déclaré « terminé » tant qu'un PDF produit par **deux navigateurs réels distincts** n'est pas vérifié indépendamment ; voir « Limites »).
+**Contexte** : W-SIGNATURE-6 (ADR-658) avait prouvé la faisabilité cryptographique (2 signatures PAdES incrémentales via `ExternalPadesSigner`, certs autosignés, hors métier). W-SIGNATURE-7 rend le multi-PAdES **personnel** réellement testable depuis Leezr Logistics : certificats individuels émis par une AC interne, intégration au workflow Workforce Signature, parcours signataire 2 phases.
+
+### Décision
+
+**1. Sécurisation du protocole (`ExternalPadesSigner`)** — `locateSignature` valide désormais STRUCTURELLEMENT le ByteRange (commence à 0, encadre exactement le gap `/Contents`, couverture totale sans trou, gap hexadécimal) : un PDF au ByteRange **ambigu/malformé est REJETÉ** plutôt que signé. La préparation est liée au placeholder (sha256) et au certificat (sha256). `injectSignature` **vérifie cryptographiquement la signature externe contre la clé publique du certificat** AVANT injection (anti-substitution de cert, anti-injection arbitraire) et garantit que **les octets couverts ne changent pas** (contrôle a posteriori). La sélection du dernier ByteRange n'est plus une simple heuristique texte mais une validation d'invariants.
+
+**2. AC interne DEV (`App\Core\Crypto\DevCertificateAuthority`)** — autorité STRICTEMENT DEV/test, **distincte du cachet organisationnel serveur**, **non reconnue, non qualifiée, non eIDAS**. Hiérarchie racine auto-signée (conceptuellement hors ligne) → AC émettrice (pathlen:0) → certificats FEUILLE des signataires. Clés d'AC **chiffrées au repos** (Crypt/APP_KEY), hors web-root (`storage/app/private/dev-ca`, perms 0600), **jamais exposées au frontend ni à un contrôleur HTTP**. Journal d'émission/révocation append-only. Le certificat feuille est construit en **DER à la main** et embarque EXACTEMENT le `SubjectPublicKeyInfo` exporté par WebCrypto → liaison au **vrai** matériel de clé du signataire (on ne détient jamais la clé privée). **Garde-fou** : émission désactivée en PROD ou sans protection de clé (`issuanceEnabled()`).
+
+**3. Cycle de vie des certificats** — modèle `SignatureCertificate` (table `workforce_signature_certificates`, additive) : émission, validité, expiration, **révocation** (changement de statut, jamais d'effacement — nécessaire pour vérifier d'anciens documents), historique, traçabilité. La révocation **bloque toute nouvelle signature** (`hasUsableCertificate()`). Colonnes certificat ajoutées sur `workforce_signature_signers`.
+
+**4. Enrôlement + preuve de possession (`SignerEnrollmentService`)** — le signataire PROUVE la possession de sa clé privée WebCrypto non extractible en signant une charge CANONIQUE liée au document + à la demande + à un **challenge à usage unique**. Après vérification (openssl), l'AC émet un certificat individuel liant la clé publique réelle à l'identité DÉCLARÉE (CN/role/organisation **côté serveur**, jamais le frontend). Anti-substitution (clé déjà enregistrée doit correspondre), challenge consommé, idempotence.
+
+**5. Intégration Workforce (`ExternalPadesCoordinator` + use cases)** — protocole 2 phases : `POST /public/signature/{token}/prepare` (preuve de possession → émission cert → octets `to_sign` sur la révision COURANTE) puis `POST .../sign` avec `pades_signature_p1363`. Injection **incrémentale** (signataire B signe par-dessus la révision signée par A), **sérialisée** par le verrou de ligne de la demande (§9), **préparation expirante** et liée à la révision de base — une préparation **obsolète** (révision changée) est REJETÉE, jamais de réutilisation silencieuse d'une signature calculée sur d'autres octets. Chaque injection est **vérifiée indépendamment par pdfsig** (nouvelle signature valide ET précédentes préservées) avant archivage. Format `required_format = 'pades_external'` ; `FinalizeSignatureRequestUseCase` ne re-cachette PAS (document assemblé incrémentalement) : il vérifie que l'artefact porte autant de signatures valides que de signataires requis avant `completed` (§8 respecté, pas de completed sans preuve).
+
+**6. Modèle de confiance (honnête)** — signatures PERSONNELLES embarquées (clé navigateur, jamais transmise) ≠ cachet serveur organisationnel ≠ chaîne de confiance reconnue ≠ eIDAS. L'identité est **DÉCLARÉE** (`identity_verification='declared'`), l'AC DEV **non reconnue** (`ca_recognized=false`). Rapport de vérification (`verify`, format `pades_external`) : certificats individuels, résultat pdfsig par signataire, mentions explicites « AC DEV non reconnue », aucun badge eIDAS.
+
+**7. Front** — `webcryptoSigner.js::signRawBase64` (signe les octets `to_sign` avec la même clé non extractible) ; `sign/[token].vue` exécute le flux 2 phases quand `required_format === 'pades_external'`.
+
+### Conséquences
+- **Prouvé (PHPUnit + pdfsig)** : `ExternalPadesFlowTest` (4) + `ExternalPadesSignerTest` (6) → AC émet un cert lié à la clé réelle ; preuve de possession ; **deux signatures personnelles incrémentales (clés distinctes) toutes deux valides, A préservée après B** ; altération détectée ; challenge rejoué rejeté ; **certificat révoqué bloquant** ; substitution de cert rejetée ; PDF/ByteRange malformé rejeté ; **aucune clé privée stockée** ; pas de completed sans signatures valides. Non-régression signature **51 verts**, build propre.
+- **Sécurité** : clés d'AC chiffrées au repos + perms strictes + jamais exposées HTTP ; émission désactivée hors DEV.
+
+### Limites (NON « terminé »)
+- Les certificats internes NE sont PAS reconnus/qualifiés ; identité DÉCLARÉE, pas de vérification réglementaire → **ni eIDAS avancé ni qualifié**.
+- La validation « deux NAVIGATEURS réels distincts » (Playwright, 2 contextes/IndexedDB/clés) est le critère de réussite final : voir rapport de session. Tant qu'elle n'est pas verte sur DEV, le multi-PAdES personnel n'est pas déclaré « terminé ».
+- Protection de clé d'AC adaptée à un DEV mono-machine (chiffrement au repos), PAS une vraie racine hors ligne / HSM.
+- §17 infra SSH (StrictModes, rotation secrets) : action root autorisée, hors périmètre code.
+
+**Fichiers** : `App\Core\Crypto\{ExternalPadesSigner, DevCertificateAuthority}` ; `config/signature.php` ; migrations `…_add_signer_certificate_to_signers`, `…_create_workforce_signature_certificates_table` ; `SignatureCertificate` ; `Services\{SignerEnrollmentService, ExternalPadesCoordinator}` ; `RecordSignerActionUseCase::prepareExternal` + branche externe ; `FinalizeSignatureRequestUseCase::finalizeExternalPades` ; `SignerController::prepare` + route ; `SignatureController::verify` (format `pades_external`) ; `webcryptoSigner.js::signRawBase64` ; `sign/[token].vue` ; tests `ExternalPadesFlowTest`, `ExternalPadesSignerTest`.
+
+---

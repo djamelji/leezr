@@ -105,6 +105,18 @@ class RecordSignerActionUseCase
                 return $this->applyDecline($request, $signer, $context['reason'] ?? null, $authMethod);
             }
 
+            // W-SIGNATURE-7 — PAdES externe : injection incrémentale de la signature du navigateur dans la
+            // révision courante (préparation faite en amont via prepareExternal). La preuve de possession
+            // a été vérifiée à la préparation ; la signature PAdES est re-vérifiée contre la clé du cert
+            // à l'injection. Injection sérialisée par le verrou de ligne ci-dessus (§9).
+            $requiredFormat = $request->metadata['required_format'] ?? 'pades_embedded';
+            if ($requiredFormat === 'pades_external' && ($context['padesSignature'] ?? null)) {
+                app(\App\Modules\Workforce\Signature\Services\ExternalPadesCoordinator::class)
+                    ->apply($request, $signer, $context['padesSignature']);
+
+                return $this->applySign($request, $signer, 'webcrypto_pades_external');
+            }
+
             // Signature PERSONNELLE (clé du signataire) : vérifiée + preuve stockée AVANT la transition.
             // Si fournie et INVALIDE → rejet (pas de transition réussie). Si absente → lien sécurisé seul.
             $personalMethod = $this->verifyAndStorePersonalSignature($request, $signer, $context);
@@ -113,6 +125,64 @@ class RecordSignerActionUseCase
             }
 
             return $this->applySign($request, $signer, $authMethod);
+        });
+    }
+
+    /**
+     * W-SIGNATURE-7 — Phase 1 du PAdES externe : vérifie la preuve de possession, émet le certificat
+     * individuel du signataire (AC interne DEV) et prépare les octets `to_sign` sur la révision courante.
+     * Sérialisée/verrouillée comme une action normale. Ne modifie pas le statut du signataire.
+     *
+     * @param  array{publicKey?:string, pop?:string}  $context
+     * @return array{to_sign_b64:string, prep_expires_at:string, base_sha256:string}
+     */
+    public function prepareExternal(string $rawToken, array $context): array
+    {
+        return DB::transaction(function () use ($rawToken, $context) {
+            $signer = $this->resolveSigner($rawToken);
+            if (! $signer) {
+                throw ValidationException::withMessages(['token' => 'Invalid signature link.']);
+            }
+            $request = SignatureRequest::withoutGlobalScopes()->where('id', $signer->signature_request_id)->lockForUpdate()->firstOrFail();
+            $signer = SignatureSigner::withoutGlobalScopes()->where('id', $signer->id)->lockForUpdate()->firstOrFail();
+
+            if (! $request->isActive()) {
+                throw ValidationException::withMessages(['token' => 'This signature request is no longer open.']);
+            }
+            if (! $signer->tokenIsUsable(now())) {
+                throw ValidationException::withMessages(['token' => 'This signature link is no longer usable.']);
+            }
+            if ($signer->isActed()) {
+                throw ValidationException::withMessages(['token' => 'This signer has already acted.']);
+            }
+            if (($request->metadata['required_format'] ?? null) !== 'pades_external') {
+                throw ValidationException::withMessages(['token' => 'This request does not use external PAdES signing.']);
+            }
+            // Séquence : aucun signataire d'ordre inférieur non agi (mode séquentiel).
+            if ($request->signing_order === SignatureRequest::ORDER_SEQUENTIAL) {
+                $earlierPending = $request->signers()
+                    ->where('order', '<', $signer->order)
+                    ->whereNotIn('status', [SignatureSigner::STATUS_SIGNED])
+                    ->exists();
+                if ($earlierPending) {
+                    throw ValidationException::withMessages(['token' => 'It is not yet this signer\'s turn.']);
+                }
+            }
+
+            $spki = $context['publicKey'] ?? null;
+            $pop = $context['pop'] ?? null;
+            if (! $spki || ! $pop) {
+                throw ValidationException::withMessages(['signature' => 'Preuve de possession requise.']);
+            }
+
+            // Vérifie la preuve de possession + émet/charge le certificat individuel.
+            app(\App\Modules\Workforce\Signature\Services\SignerEnrollmentService::class)
+                ->enrollAndIssue($request, $signer, $spki, $pop);
+            $signer->refresh();
+
+            // Prépare les octets exacts à signer sur la révision courante.
+            return app(\App\Modules\Workforce\Signature\Services\ExternalPadesCoordinator::class)
+                ->prepare($request, $signer);
         });
     }
 
