@@ -314,8 +314,16 @@ class SignatureController extends Controller
     private function signerCertificates(SignatureRequest $req): array
     {
         $now = now();
+        $ca = app(\App\Core\Crypto\DevCertificateAuthority::class);
         $out = [];
         foreach ($req->signers()->whereNotNull('signer_certificate_pem')->get() as $s) {
+            // Validation de la CHAÎNE INTERNE (cohérence feuille→émettrice→racine) — non reconnue publiquement.
+            $chainValid = null;
+            try {
+                $chainValid = $ca->verifyChain($s->signer_certificate_pem)['valid'] ?? null;
+            } catch (\Throwable $e) {
+                $chainValid = null;
+            }
             $out[] = [
                 'signer_name' => $s->name,
                 'role' => $s->role,
@@ -328,7 +336,9 @@ class SignatureController extends Controller
                 'not_after' => $s->signer_cert_not_after?->toIso8601String(),
                 'revoked' => $s->signer_cert_revoked_at !== null,
                 'usable' => $s->hasUsableCertificate($now),
-                'identity_verification' => 'declared',
+                'internal_chain_valid' => $chainValid,       // cohérence interne (PAS une confiance reconnue)
+                'identity_verification' => 'declared',        // identité DÉCLARÉE, pas vérifiée réglementairement
+                'auth_method' => $s->auth_method ?? 'token_link',
                 'ca_recognized' => false,
             ];
         }

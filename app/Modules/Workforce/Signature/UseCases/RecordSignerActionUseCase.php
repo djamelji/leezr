@@ -109,8 +109,14 @@ class RecordSignerActionUseCase
             // révision courante (préparation faite en amont via prepareExternal). La preuve de possession
             // a été vérifiée à la préparation ; la signature PAdES est re-vérifiée contre la clé du cert
             // à l'injection. Injection sérialisée par le verrou de ligne ci-dessus (§9).
+            // H1 (ADR-660) : une demande pades_external EXIGE une signature PAdES. Sans elle, on NE tombe
+            // PAS dans le lien-seul (qui brûlerait le token + journaliserait un « signé » mensonger +
+            // rendrait la demande incomplétable). Échec contrôlé, token préservé.
             $requiredFormat = $request->metadata['required_format'] ?? 'pades_embedded';
-            if ($requiredFormat === 'pades_external' && ($context['padesSignature'] ?? null)) {
+            if ($requiredFormat === 'pades_external') {
+                if (empty($context['padesSignature'])) {
+                    throw ValidationException::withMessages(['signature' => 'Signature PAdES requise pour cette demande.']);
+                }
                 app(\App\Modules\Workforce\Signature\Services\ExternalPadesCoordinator::class)
                     ->apply($request, $signer, $context['padesSignature']);
 

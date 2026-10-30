@@ -2,10 +2,10 @@
 
 namespace App\Core\Crypto;
 
-use Illuminate\Support\Facades\Crypt;
+use Illuminate\Encryption\Encrypter;
 
 /**
- * W-SIGNATURE-7 (ADR-659) — Autorité de Certification INTERNE, STRICTEMENT DÉDIÉE À DEV/TEST.
+ * W-SIGNATURE-7/8 (ADR-659/660) — Autorité de Certification INTERNE, STRICTEMENT DÉDIÉE À DEV/TEST.
  *
  * ⚠️ LIMITES DE CONFIANCE (non négociables, reflétées honnêtement dans tous les rapports) :
  *   - Cette AC N'EST PAS une autorité de confiance publique, N'EST PAS reconnue, N'EST PAS qualifiée eIDAS.
@@ -14,11 +14,16 @@ use Illuminate\Support\Facades\Crypt;
  *     vérification d'identité réglementaire. Les rapports doivent l'afficher explicitement.
  *
  * ARCHITECTURE (adaptée à un serveur DEV mono-machine) :
- *   - Racine auto-signée (conceptuellement « hors ligne ») → signe l'AC émettrice (pathlen:0).
- *   - L'AC émettrice signe les certificats FEUILLE des signataires.
- *   - Les clés privées d'AC sont CHIFFRÉES AU REPOS (Crypt/APP_KEY), stockées hors web-root
- *     (storage/app/private/dev-ca, perms 0600), JAMAIS exposées au frontend ni à un contrôleur HTTP.
+ *   - Racine auto-signée → signe l'AC émettrice (pathlen:0) → l'émettrice signe les certificats FEUILLE.
+ *   - ⚠️ La clé racine est conservée CHIFFRÉE SUR LE MÊME SERVEUR applicatif. Ce N'EST PAS une racine
+ *     « hors ligne » au sens strict (pas de HSM, pas d'air-gap) : c'est une limite assumée de l'AC DEV,
+ *     bloquante pour toute prétention de confiance renforcée (cf. ADR-660 §6, conditions PROD).
+ *   - Les clés privées d'AC sont CHIFFRÉES AU REPOS (secret DÉDIÉ `signature.dev_ca.key` si fourni,
+ *     sinon repli APP_KEY), stockées hors web-root (storage/app/private/dev-ca, perms 0600), JAMAIS
+ *     exposées au frontend ni à un contrôleur HTTP.
  *   - Journal d'émission/révocation append-only (issued.log) en complément de la traçabilité DB.
+ *   - Validation de chaîne interne vérifiable (verifyChain) : leaf → émettrice → racine + fenêtres de
+ *     validité. La chaîne reste NON reconnue publiquement (recognized_trust_chain=false).
  *
  * LIAISON À LA CLÉ RÉELLE : on ne détient JAMAIS la clé privée du signataire. Le certificat feuille
  * embarque EXACTEMENT le SubjectPublicKeyInfo (SPKI DER) exporté par WebCrypto — c'est ce qui lie le
@@ -81,7 +86,7 @@ class DevCertificateAuthority
 
         $meta = $this->meta();
         $issuerDer = hex2bin($meta['issuing_subject_hex']);
-        $issuingKey = openssl_pkey_get_private(Crypt::decryptString(file_get_contents($this->path('issuing.key.enc'))));
+        $issuingKey = openssl_pkey_get_private($this->encrypter()->decryptString(file_get_contents($this->path('issuing.key.enc'))));
         if ($issuingKey === false) {
             throw new \RuntimeException('Unable to load issuing CA private key.');
         }
@@ -97,17 +102,23 @@ class DevCertificateAuthority
             'c' => $identity['c'] ?? 'FR',
         ]));
 
-        $ski = substr(hash('sha256', $spki, true), 0, 20);
+        // SKI = RFC 5280 méthode (1) : SHA-1 des octets de la clé publique (cohérent avec l'AC).
+        $ski = $this->keyIdentifier($spki);
+        $akiKeyId = hex2bin($meta['issuing_ski_hex']);
 
         $extensions = $this->expl(3, $this->seq(
             // basicConstraints critical : cA = FALSE (SEQUENCE vide)
             $this->seq($this->oid('55:1D:13') . $this->bool(true) . $this->octet($this->seq(''))) .
             // keyUsage critical : digitalSignature + nonRepudiation (contentCommitment)
             $this->seq($this->oid('55:1D:0F') . $this->bool(true) . $this->octet("\x03\x02\x06\xC0")) .
+            // extendedKeyUsage (non critique) : id-kp-emailProtection (1.3.6.1.5.5.7.3.4) — EKU de signature
+            // largement reconnue (S/MIME / signature de document). NB : id-kp-documentSigning (…3.36, RFC 9336)
+            // est rejeté « corrupted » par le NSS de poppler → on retient emailProtection, interopérable.
+            $this->seq($this->oid('55:1D:25') . $this->octet($this->seq("\x06\x08\x2B\x06\x01\x05\x05\x07\x03\x04"))) .
             // subjectKeyIdentifier
             $this->seq($this->oid('55:1D:0E') . $this->octet($this->octet($ski))) .
-            // authorityKeyIdentifier (keyIdentifier [0])
-            $this->seq($this->oid('55:1D:23') . $this->octet($this->seq("\x80" . $this->len(20) . hex2bin($meta['issuing_ski_hex']))))
+            // authorityKeyIdentifier (keyIdentifier [0] = SKI RÉEL de l'AC émettrice)
+            $this->seq($this->oid('55:1D:23') . $this->octet($this->seq("\x80" . $this->len(strlen($akiKeyId)) . $akiKeyId)))
         ));
 
         $tbs = $this->seq(
@@ -115,7 +126,7 @@ class DevCertificateAuthority
             $this->intFromBin($serial) .                      // serialNumber
             $this->seq(self::ECDSA_SHA256_OID) .              // signatureAlgorithm (tbs)
             $issuerDer .                                      // issuer = sujet de l'AC émettrice
-            $this->seq($this->utcTime($notBefore) . $this->utcTime($notAfter)) .
+            $this->seq($this->validityTime($notBefore) . $this->validityTime($notAfter)) .
             $subjectDer .                                     // subject = identité déclarée
             $spki .                                           // SubjectPublicKeyInfo = clé WebCrypto RÉELLE
             $extensions
@@ -164,6 +175,70 @@ class DevCertificateAuthority
         return file_get_contents($this->path('issuing.crt')) . file_get_contents($this->path('root.crt'));
     }
 
+    /** Chiffreur des clés d'AC : secret DÉDIÉ si fourni (découplé d'APP_KEY), sinon repli APP_KEY. */
+    private function encrypter(): \Illuminate\Contracts\Encryption\Encrypter
+    {
+        $key = (string) config('signature.dev_ca.key', '');
+        if ($key !== '') {
+            $raw = str_starts_with($key, 'base64:') ? base64_decode(substr($key, 7)) : $key;
+
+            return new Encrypter($raw, config('app.cipher', 'AES-256-CBC'));
+        }
+
+        return app('encrypter'); // repli APP_KEY (dépendance documentée — à séparer, ADR-660 §6)
+    }
+
+    /**
+     * Validation de la CHAÎNE INTERNE (feuille → émettrice → racine) : signatures + fenêtres de validité.
+     * La chaîne reste NON reconnue publiquement — c'est une vérification de cohérence interne, pas un
+     * ancrage de confiance.
+     *
+     * @return array{valid:bool, checks:array<string,bool>, recognized_trust_chain:false}
+     */
+    public function verifyChain(string $leafPem): array
+    {
+        $this->ensureInitialized();
+        $issuingPem = file_get_contents($this->path('issuing.crt'));
+        $rootPem = file_get_contents($this->path('root.crt'));
+        $now = time();
+
+        $checks = [
+            'leaf_signed_by_issuing' => @openssl_x509_verify($leafPem, openssl_pkey_get_public($issuingPem)) === 1,
+            'issuing_signed_by_root' => @openssl_x509_verify($issuingPem, openssl_pkey_get_public($rootPem)) === 1,
+            'root_self_signed' => @openssl_x509_verify($rootPem, openssl_pkey_get_public($rootPem)) === 1,
+            'leaf_time_valid' => $this->withinValidity($leafPem, $now),
+            'issuing_time_valid' => $this->withinValidity($issuingPem, $now),
+            'root_time_valid' => $this->withinValidity($rootPem, $now),
+        ];
+
+        return ['valid' => ! in_array(false, $checks, true), 'checks' => $checks, 'recognized_trust_chain' => false];
+    }
+
+    /** État de l'AC (dates d'expiration racine/émettrice) — pour surveiller l'expiration de l'AC (§6). */
+    public function caStatus(): array
+    {
+        $this->ensureInitialized();
+        $root = openssl_x509_parse(file_get_contents($this->path('root.crt')));
+        $iss = openssl_x509_parse(file_get_contents($this->path('issuing.crt')));
+
+        return [
+            'initialized' => true,
+            'root_not_after' => $root['validTo_time_t'] ?? null,
+            'issuing_not_after' => $iss['validTo_time_t'] ?? null,
+            'issuance_enabled' => $this->issuanceEnabled(),
+            'dedicated_encryption_key' => config('signature.dev_ca.key', '') !== '',
+            'recognized_trust_chain' => false,
+            'offline_root' => false, // honnête : racine chiffrée sur le serveur, PAS hors ligne
+        ];
+    }
+
+    private function withinValidity(string $pem, int $now): bool
+    {
+        $p = openssl_x509_parse($pem);
+
+        return $p && $now >= ($p['validFrom_time_t'] ?? PHP_INT_MAX) && $now <= ($p['validTo_time_t'] ?? 0);
+    }
+
     public function isInitialized(): bool
     {
         return is_file($this->path('issuing.key.enc')) && is_file($this->path('issuing.crt')) && is_file($this->path('meta.json'));
@@ -199,15 +274,16 @@ class DevCertificateAuthority
             @unlink($cnf);
         }
 
-        // Sujet DER + SKI de l'AC émettrice (pour issuer/AKI des feuilles).
-        $issuingSubjectHex = $this->subjectDerHexOf($issPem);
+        // Sujet DER RÉEL de l'AC émettrice (byte-identique → issuer des feuilles) + SKI RÉEL (RFC méthode 1,
+        // SHA-1 de la clé publique — identique à `subjectKeyIdentifier=hash` d'OpenSSL → AKI cohérent).
+        $issuingSubjectHex = bin2hex($this->extractSubjectDer($this->pemToDer($issPem)));
         $issuingSpki = $this->spkiDerOf($issKeyPem);
-        $issuingSkiHex = bin2hex(substr(hash('sha256', $issuingSpki, true), 0, 20));
+        $issuingSkiHex = bin2hex($this->keyIdentifier($issuingSpki));
 
         // Écriture : clés CHIFFRÉES au repos, certs en clair, perms strictes.
-        $this->put('root.key.enc', Crypt::encryptString($rootKeyPem), 0600);
+        $this->put('root.key.enc', $this->encrypter()->encryptString($rootKeyPem), 0600);
         $this->put('root.crt', $rootPem, 0600);
-        $this->put('issuing.key.enc', Crypt::encryptString($issKeyPem), 0600);
+        $this->put('issuing.key.enc', $this->encrypter()->encryptString($issKeyPem), 0600);
         $this->put('issuing.crt', $issPem, 0600);
         $this->put('meta.json', json_encode([
             'created_at' => gmdate('c'),
@@ -234,13 +310,62 @@ class DevCertificateAuthority
         }
         $d = openssl_pkey_get_details($pub);
 
-        return ($d['type'] ?? null) === OPENSSL_KEYTYPE_EC && (($d['ec']['curve_name'] ?? '') === 'prime256v1' || ($d['bits'] ?? 0) === 256);
+        // B3 : exiger STRICTEMENT prime256v1 (NIST P-256). Une autre courbe de 256 bits (secp256k1,
+        // brainpoolP256) est refusée, car l'algorithme signé annonce ecdsa-with-SHA256 sur P-256.
+        return ($d['type'] ?? null) === OPENSSL_KEYTYPE_EC && ($d['ec']['curve_name'] ?? '') === 'prime256v1';
     }
 
-    private function subjectDerHexOf(string $certPem): string
+    // ── lecture ASN.1 (extraction de champs réels depuis un cert/SPKI DER) ──
+
+    /** Lit un TLV à l'offset donné : [tag, content_off, len, total]. */
+    private function readTlv(string $der, int $off): array
     {
-        // Reconstruit le Name de l'AC émettrice (on contrôle ses composants) pour un issuer feuille stable.
-        return bin2hex($this->name(['cn' => 'Leezr DEV Issuing CA (non-trusted test)', 'o' => 'Leezr DEV', 'c' => 'FR']));
+        $tag = ord($der[$off]);
+        $i = $off + 1;
+        $len = ord($der[$i]);
+        $i++;
+        if ($len & 0x80) {
+            $n = $len & 0x7F;
+            $len = 0;
+            for ($k = 0; $k < $n; $k++) {
+                $len = ($len << 8) | ord($der[$i]);
+                $i++;
+            }
+        }
+
+        return ['tag' => $tag, 'content_off' => $i, 'len' => $len, 'total' => ($i - $off) + $len];
+    }
+
+    /** Extrait le DER BRUT du champ `subject` (Name) d'un certificat — byte-identique (B4). */
+    private function extractSubjectDer(string $certDer): string
+    {
+        $outer = $this->readTlv($certDer, 0);                 // Certificate SEQUENCE
+        $tbs = $this->readTlv($certDer, $outer['content_off']); // TBSCertificate SEQUENCE
+        $off = $tbs['content_off'];
+        $end = $tbs['content_off'] + $tbs['len'];
+        $fields = [];
+        while ($off < $end) {
+            $t = $this->readTlv($certDer, $off);
+            $fields[] = ['off' => $off, 'total' => $t['total'], 'tag' => $t['tag']];
+            $off += $t['total'];
+        }
+        // [ [0]version? , serial , sigAlg , issuer , validity , subject , spki , ... ]
+        $idx = ($fields[0]['tag'] === 0xA0) ? 5 : 4;
+        $f = $fields[$idx];
+
+        return substr($certDer, $f['off'], $f['total']);
+    }
+
+    /** SKI RFC 5280 méthode (1) : SHA-1 des octets de la clé publique (subjectPublicKey du SPKI). */
+    private function keyIdentifier(string $spkiDer): string
+    {
+        $seq = $this->readTlv($spkiDer, 0);                       // SPKI SEQUENCE
+        $alg = $this->readTlv($spkiDer, $seq['content_off']);     // AlgorithmIdentifier SEQUENCE
+        $bit = $this->readTlv($spkiDer, $seq['content_off'] + $alg['total']); // BIT STRING
+        // 1er octet du BIT STRING = unused-bits (0) ; le reste = clé publique brute.
+        $pub = substr($spkiDer, $bit['content_off'] + 1, $bit['len'] - 1);
+
+        return sha1($pub, true); // 20 octets
     }
 
     private function spkiDerOf(string $privPem): string
@@ -318,6 +443,17 @@ class DevCertificateAuthority
     private function utcTime(int $t): string
     {
         return $this->tlv(0x17, gmdate('ymdHis', $t) . 'Z');
+    }
+
+    /** M2 : UTCTime (tag 0x17, année 2 chiffres) < 2050, sinon GeneralizedTime (tag 0x18, année 4 chiffres). */
+    private function validityTime(int $t): string
+    {
+        $year = (int) gmdate('Y', $t);
+        if ($year < 2050) {
+            return $this->tlv(0x17, gmdate('ymdHis', $t) . 'Z');
+        }
+
+        return $this->tlv(0x18, gmdate('YmdHis', $t) . 'Z');
     }
 
     private function bitString(string $der): string

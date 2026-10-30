@@ -14,6 +14,11 @@ return [
 
         // Durée de validité par défaut des certificats signataires (jours).
         'validity_days' => (int) env('SIGNATURE_DEV_CA_VALIDITY_DAYS', 365),
+
+        // Secret de chiffrement DÉDIÉ des clés d'AC, SÉPARÉ d'APP_KEY (évite qu'une rotation d'APP_KEY
+        // rende les clés d'AC illisibles). Format : "base64:<32 octets>" ou 32 octets bruts. Si vide,
+        // repli sur APP_KEY (dépendance documentée, à séparer avant toute pérennité — cf. ADR-660 §6).
+        'key' => env('SIGNATURE_DEV_CA_KEY', ''),
     ],
 
     /*

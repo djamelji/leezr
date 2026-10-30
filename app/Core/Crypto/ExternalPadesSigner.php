@@ -221,17 +221,15 @@ class ExternalPadesSigner
 
     private function assembleCms(string $authAttrsHex, string $sigDer, string $signerCertPem): string
     {
-        // Le parseur x509 de SAPP émet des warnings sur les certificats EC (bug connu) ; la signature
-        // reste valide (pdfsig résout le certificat via signingCertV2/certHash). On neutralise ces
-        // warnings non fatals sans masquer d'erreur réelle.
-        $certParse = $this->withSuppressedWarnings(fn () => x509::readcert($signerCertPem));
-        $issuerName = $certParse['tbsCertificate']['issuer']['hexdump'] ?? '';
-        $serialNumber = $certParse['tbsCertificate']['serialNumber'] ?? '01';
-        $embedCert = bin2hex($this->certDer($signerCertPem));
+        $certDer = $this->certDer($signerCertPem);
+        // B8 (ADR-660) : IssuerAndSerialNumber extrait de façon FIABLE du certificat réel (ASN.1), pas
+        // via le parseur x509 de SAPP (flaky sur EC) ni un fallback silencieux issuer=''/serial='01'.
+        $issuerAndSerialHex = $this->issuerAndSerialHex($certDer);
+        $embedCert = bin2hex($certDer);
 
         $signerInfo = asn1::seq(
             asn1::int('1') .
-            asn1::seq($issuerName . asn1::int($serialNumber)) .
+            $issuerAndSerialHex .                               // SID = IssuerAndSerialNumber (réel)
             asn1::seq(self::SHA256_OID . '0500') .              // digestAlgorithm
             asn1::expl(0, $authAttrsHex) .                      // signedAttrs [0]
             asn1::seq(self::ECDSA_SHA256_OID) .                 // signatureAlgorithm = ecdsa-with-SHA256
@@ -247,6 +245,51 @@ class ExternalPadesSigner
         );
 
         return asn1::seq('06092A864886F70D010702' . asn1::expl(0, $signedData)); // ContentInfo signedData
+    }
+
+    /** IssuerAndSerialNumber (hex) = SEQUENCE { issuer Name, serialNumber INTEGER } extrait du cert DER. */
+    private function issuerAndSerialHex(string $certDer): string
+    {
+        $outer = $this->readTlv($certDer, 0);                   // Certificate SEQUENCE
+        $tbs = $this->readTlv($certDer, $outer['content_off']); // TBSCertificate SEQUENCE
+        $off = $tbs['content_off'];
+        $end = $tbs['content_off'] + $tbs['len'];
+        $fields = [];
+        while ($off < $end && count($fields) < 7) {
+            $t = $this->readTlv($certDer, $off);
+            $fields[] = ['off' => $off, 'total' => $t['total'], 'tag' => $t['tag']];
+            $off += $t['total'];
+        }
+        $hasVersion = ($fields[0]['tag'] ?? 0) === 0xA0;
+        $serialIdx = $hasVersion ? 1 : 0;
+        $issuerIdx = $hasVersion ? 3 : 2;
+        if (! isset($fields[$serialIdx], $fields[$issuerIdx])
+            || $fields[$serialIdx]['tag'] !== 0x02 || $fields[$issuerIdx]['tag'] !== 0x30) {
+            throw new \RuntimeException('Unable to extract issuer/serial from signer certificate.');
+        }
+        $serialTlv = substr($certDer, $fields[$serialIdx]['off'], $fields[$serialIdx]['total']);
+        $issuerTlv = substr($certDer, $fields[$issuerIdx]['off'], $fields[$issuerIdx]['total']);
+
+        return asn1::seq(bin2hex($issuerTlv) . bin2hex($serialTlv));
+    }
+
+    /** Lit un TLV à l'offset donné : [tag, content_off, len, total]. */
+    private function readTlv(string $der, int $off): array
+    {
+        $tag = ord($der[$off]);
+        $i = $off + 1;
+        $len = ord($der[$i]);
+        $i++;
+        if ($len & 0x80) {
+            $n = $len & 0x7F;
+            $len = 0;
+            for ($k = 0; $k < $n; $k++) {
+                $len = ($len << 8) | ord($der[$i]);
+                $i++;
+            }
+        }
+
+        return ['tag' => $tag, 'content_off' => $i, 'len' => $len, 'total' => ($i - $off) + $len];
     }
 
     /** DER d'un certificat PEM (via SAPP, warnings EC neutralisés). */
