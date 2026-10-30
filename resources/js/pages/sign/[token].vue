@@ -19,6 +19,8 @@ const acting = ref(false)
 const done = ref(null) // 'signed' | 'declined'
 const declineMode = ref(false)
 const declineReason = ref('')
+const consent = ref(false) // §4 — consentement explicite requis avant de signer
+const documentViewed = ref(false)
 
 const load = async () => {
   loading.value = true
@@ -153,6 +155,7 @@ const decline = async () => {
             :href="documentUrl"
             target="_blank"
             class="mb-4"
+            @click="documentViewed = true"
           >
             {{ t('signaturePublic.viewDocument') }}
           </VBtn>
@@ -169,11 +172,41 @@ const decline = async () => {
                 <VIcon icon="tabler-shield-lock" start size="16" />
                 {{ t('signaturePublic.personalNote') }}
               </VAlert>
+
+              <!-- §4 — consentement explicite requis avant de signer -->
+              <VCheckbox
+                v-model="consent"
+                density="compact"
+                class="mb-1"
+              >
+                <template #label>
+                  <span class="text-body-2">{{ t('signaturePublic.consent') }}</span>
+                </template>
+              </VCheckbox>
+
+              <!-- §4 — détails techniques/vérification repliés (jargon masqué par défaut) -->
+              <VExpansionPanels variant="accordion" class="mb-3">
+                <VExpansionPanel>
+                  <VExpansionPanelTitle class="text-caption">
+                    {{ t('signaturePublic.advancedTitle') }}
+                  </VExpansionPanelTitle>
+                  <VExpansionPanelText>
+                    <div class="text-caption text-medium-emphasis">
+                      <div>{{ t('signaturePublic.advancedTrust') }}</div>
+                      <div v-if="data.personal_signing" class="mt-1">
+                        {{ t('signaturePublic.advancedAlg') }} : {{ data.personal_signing.algorithm }}
+                      </div>
+                    </div>
+                  </VExpansionPanelText>
+                </VExpansionPanel>
+              </VExpansionPanels>
+
               <VBtn
                 block
                 color="success"
                 prepend-icon="tabler-writing-sign"
                 :loading="acting"
+                :disabled="!consent"
                 class="mb-2"
                 @click="sign"
               >

@@ -69,10 +69,17 @@ class SignerEnrollmentService
             throw ValidationException::withMessages(['signature' => 'Preuve de possession invalide.']);
         }
 
-        // 4) Anti-substitution : une clé déjà enregistrée doit correspondre.
+        // 4) Clé différente de celle enregistrée : RE-ENRÔLEMENT (§5 — nouvel appareil, IndexedDB effacée,
+        //    clé perdue). Autorisé UNIQUEMENT tant que le signataire n'a pas signé. Le token (usage unique)
+        //    est révoqué dès la signature → un signataire ayant signé ne peut plus re-enrôler. On ne restaure
+        //    JAMAIS de clé privée ; on RÉVOQUE l'ancien certificat et on en émet un nouveau lié à la NOUVELLE
+        //    clé. Un administrateur, qui ne détient pas le token, ne peut pas déclencher de substitution.
         $keyId = $personal->keyId($spkiB64);
         if ($signer->public_key_id && ! hash_equals($signer->public_key_id, $keyId)) {
-            throw ValidationException::withMessages(['signature' => 'Clé de signature différente de la clé enregistrée.']);
+            if ($signer->isActed()) {
+                throw ValidationException::withMessages(['signature' => 'Clé figée après signature — re-enrôlement impossible.']);
+            }
+            $this->revokePreviousCertificates($request, $signer, 'device_change_reenrollment');
         }
 
         // 5) Enregistre la clé publique + consomme le challenge + preuve personnelle (comme W-SIGNATURE-4).
@@ -154,6 +161,37 @@ class SignerEnrollmentService
         ]);
 
         return $certificate;
+    }
+
+    /**
+     * §5 — révoque les certificats précédents du signataire (re-enrôlement sur nouvel appareil).
+     * Révocation = changement de statut (jamais d'effacement ; les anciens certs restent vérifiables).
+     */
+    private function revokePreviousCertificates(SignatureRequest $request, SignatureSigner $signer, string $reason): void
+    {
+        $ca = app(DevCertificateAuthority::class);
+        $certs = SignatureCertificate::withoutGlobalScopes()
+            ->where('signature_signer_id', $signer->id)
+            ->where('status', SignatureCertificate::STATUS_ISSUED)->get();
+
+        foreach ($certs as $cert) {
+            $cert->status = SignatureCertificate::STATUS_REVOKED;
+            $cert->revoked_at = now();
+            $cert->revoked_reason = $reason;
+            $cert->save();
+            $ca->recordRevocation($cert->serial, $cert->fingerprint_sha256, $reason);
+        }
+
+        $this->events->record($request, SignatureEvent::TYPE_CERTIFICATE_REVOKED, [
+            'signer' => $signer,
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'payload' => ['reason' => $reason, 'revoked_count' => $certs->count(), 'previous_public_key_id' => $signer->public_key_id],
+        ]);
+
+        // Libère l'ancienne clé/cert sur le signataire (la NOUVELLE sera posée par enrollAndIssue).
+        $signer->signer_cert_revoked_at = now();
+        $signer->public_key_id = null;
+        $signer->save();
     }
 
     private function roleLabel(string $role): string

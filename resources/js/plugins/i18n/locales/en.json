@@ -1637,6 +1637,10 @@
       "certRecognized": "Certificate recognized by a trusted authority",
       "certNotRecognized": "Self-signed Leezr certificate (trust chain not recognized)",
       "trustNote": "Verifiable organizational (server) cryptographic seal. Attribution to the signer relies on the evidence trail, not on a signer-controlled key. Not eIDAS.",
+      "signatureCount": "Embedded signatures", "signersTitle": "Signers and certificates",
+      "chainOk": "Internal chain consistent", "chainUnknown": "Chain not verified",
+      "revoked": "Revoked", "identityDeclared": "Declared identity",
+      "serial": "Serial", "validity": "Validity",
       "noSeal": "No cryptographic seal (document predates native sealing).",
       "toastValid": "Cryptographic seal valid — document intact",
       "toastInvalid": "Verification failed — document modified or signature invalid"
@@ -1655,7 +1659,11 @@
     "declineReason": "Decline reason (optional)", "confirmDecline": "Confirm decline",
     "signedTitle": "Document signed", "declinedTitle": "Signature declined",
     "closeHint": "You may close this page.",
-    "notActionable": "This request no longer awaits action from you."
+    "notActionable": "This request no longer awaits action from you.",
+    "consent": "I have read the document and consent to signing it.",
+    "advancedTitle": "Technical details and verification",
+    "advancedTrust": "Demonstration signature: internal certificate not recognized by a public authority, self-declared identity. This is not an eIDAS advanced or qualified signature.",
+    "advancedAlg": "Algorithm"
   },
   "signatureSettings": {
     "intro": "Configure the provider, default level, validity, reminders and signed-copy delivery.",

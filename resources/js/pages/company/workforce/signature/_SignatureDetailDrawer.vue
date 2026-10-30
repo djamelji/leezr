@@ -253,6 +253,52 @@ const doRemind = async () => {
                 {{ verifyResult.certificate?.recognized_trust_chain ? t('signature.verify.certRecognized') : t('signature.verify.certNotRecognized') }}
               </VChip>
             </div>
+
+            <!-- §8 — nombre de signatures / révisions -->
+            <div v-if="verifyResult.signature_count" class="text-caption text-medium-emphasis mt-2">
+              {{ t('signature.verify.signatureCount') }} : {{ verifyResult.signature_count }}
+            </div>
+
+            <!-- §8 — rapport PAR SIGNATAIRE (certificats individuels, identité DÉCLARÉE) -->
+            <div v-if="verifyResult.signer_certificates?.length" class="mt-3">
+              <div class="text-caption font-weight-medium mb-1">
+                {{ t('signature.verify.signersTitle') }}
+              </div>
+              <VCard
+                v-for="(c, i) in verifyResult.signer_certificates"
+                :key="i"
+                variant="outlined"
+                class="mb-2"
+              >
+                <VCardText class="py-2 px-3">
+                  <div class="d-flex align-center justify-space-between flex-wrap gap-1">
+                    <div class="text-body-2 font-weight-medium">
+                      {{ c.signer_name }}
+                      <span class="text-caption text-medium-emphasis">· {{ t(`signature.role.${c.role}`) }}</span>
+                    </div>
+                    <div class="d-flex gap-1 flex-wrap">
+                      <VChip size="x-small" :color="c.internal_chain_valid ? 'success' : 'warning'" variant="tonal" label>
+                        {{ c.internal_chain_valid ? t('signature.verify.chainOk') : t('signature.verify.chainUnknown') }}
+                      </VChip>
+                      <VChip v-if="c.revoked" size="x-small" color="error" variant="tonal" label>
+                        {{ t('signature.verify.revoked') }}
+                      </VChip>
+                      <VChip size="x-small" color="warning" variant="tonal" label>
+                        {{ t('signature.verify.identityDeclared') }}
+                      </VChip>
+                    </div>
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    {{ t('signature.verify.serial') }}: {{ (c.serial || '').slice(0, 16) }}… ·
+                    SHA-256: {{ (c.fingerprint_sha256 || '').slice(0, 16) }}…
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ t('signature.verify.validity') }}: {{ c.not_before?.slice(0, 10) }} → {{ c.not_after?.slice(0, 10) }}
+                  </div>
+                </VCardText>
+              </VCard>
+            </div>
+
             <VAlert type="info" variant="tonal" density="compact" class="mt-2">
               {{ t('signature.verify.trustNote') }}
             </VAlert>
