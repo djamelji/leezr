@@ -23699,3 +23699,59 @@ Aucune revendication eIDAS avancée/qualifiée. Un audit interne n'équivaut PAS
 **Fichiers** : `EvidencePackageService` ; `SignatureController` (evidencePackage, reconciliation) ; routes ; store + `_SignatureDetailDrawer` (export) ; tests `ExternalPadesFlowTest`, `WorkforceSignatureTest`.
 
 ---
+
+## ADR-666 — W-HR-UX-1 : audit ergonomique terrain RH & onboarding collaborateur
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). Audit UX du parcours d'embauche (persona Sophie Martin, RH non-technique) + corrections ergonomiques ciblées. Parcours conduit en navigateur réel (Playwright) sur le full-stack servant le build DEV `540a488` (écrans identiques à DEV). Aucun collaborateur créé en base directement pour le parcours métier.
+
+### Parcours initial observé (passage 1)
+1. **Point d'entrée** : liste Employés → bouton primaire **« Ajouter Un Employé »** (+ Importer CSV, Exporter). CLAIR. Note : 8/10.
+2. **Formulaire d'ajout** : drawer à 6 champs (Prénom, Nom, Email, Téléphone, Matricule, **Date d'embauche**). Minimal — bon — MAIS `hire_date` est **requis côté serveur sans être clairement marqué requis** dans l'UI → une RH remplissant nom+email obtient une **erreur 422 silencieuse** (friction observée). Note : 6/10.
+3. **Après création (AVANT)** : retour sur la LISTE, **aucune guidance** sur la suite (contrat → signature → accès). La RH doit deviner. Note : 3/10.
+4. **Contrat** : onglet Contrat de la fiche = contrat structuré (type, modèle, heures, **date de début**, convention, salaire). La génération du PDF (choix d'un modèle → aperçu → générer) **ne redemande pas** nom/fonction/dates. Mais **ressaisie** : date de début ressaisie alors que la date d'embauche est déjà connue.
+5. **Fragmentation** : embauche complète = ~5 surfaces (ajout → fiche → onglet Contrat → dialog génération → assistant signature → accès), sans fil conducteur.
+6. **Jargon** : notions Employee/User/Membership potentiellement exposées pour l'« accès ».
+
+### Frictions & causes
+| Friction | Cause | Gravité |
+|---|---|---|
+| Aucune guidance après création | redirection vers la liste, pas d'état d'intégration | **P1 (ralentit fortement)** |
+| `hire_date` requis non marqué → 422 | validation serveur requise, UI sans indicateur | **P1** |
+| Ressaisie date de début de contrat | pas de préremplissage depuis la date d'embauche | P2 |
+| Parcours fragmenté (5 surfaces) | absence d'assistant/checklist unifié | **P1** |
+| Fonction/poste/site non saisissables à l'ajout | formulaire minimal ; établissement « non encore livré » | P2 |
+
+### Corrections implémentées (observations → fixes)
+1. **Redirection guidée après création** : `submitEmployee` redirige vers la FICHE du collaborateur (au lieu de la liste), là où vivent contrat/signature/accès.
+2. **Checklist d'intégration** sur la vue d'ensemble de la fiche : bloc **« Intégration du collaborateur N/4 »** — Informations / Contrat de travail / Signature du contrat (si module actif) / Accès à l'espace collaborateur — avec statut (Fait/Faire) + bouton d'action direct. Source de vérité serveur : bloc `onboarding` ajouté à `EmployeeFileReadModel` (contrat présent, document signé existant, compte lié, modules actifs). La RH voit la prochaine étape sans deviner.
+3. **Anti-ressaisie** : la date de début du contrat est **préremplie** avec la date d'embauche déjà saisie.
+
+### Avant / après (mesuré en navigateur)
+| Indicateur | Avant | Après |
+|---|---|---|
+| Guidance après création | aucune (liste) | redirection fiche + checklist |
+| Étapes d'intégration visibles d'un coup d'œil | 0 | **4** (statut + action) |
+| Clics pour identifier la prochaine étape | exploration libre | **0** (affiché) |
+| Ressaisie date début contrat | oui | **non** (préremplie) |
+> Preuve : la fiche affiche « Intégration du collaborateur 3/4 » (Informations ✓, Contrat ✓, Signature ⟲ à faire, Accès ✓) — capture vérifiée. Note parcours guidé : **8/10** (vs 3/10 avant).
+
+### Notes de facilité (observées)
+- RH débutante : avant 4/10 → après 7/10 (reste : saisie contrat multi-champs, pas d'assistant unifié).
+- RH expérimentée : 7→8. Dirigeant TPE occasionnel : 4→7. Collaborateur 1re connexion : non audité ce lot (reporté).
+
+### Décisions UX / limites
+- La checklist réutilise les composants Workforce existants (pas de système parallèle) ; RBAC/contrats/signature/compteurs inchangés ; moteur crypto Signature non touché.
+- **Fonctions non livrées / observées** : entité Établissement/site (`position.establishment = null`, « non encore livrée ») ; action « Inviter à l'espace collaborateur » non directement actionnable depuis la checklist (lien vers Profil) ; assistant unifié « mode rapide / mode complet » non construit (proposé).
+
+### Backlog priorisé
+**P0 — bloque l'embauche** : aucun bloqueur dur constaté (l'embauche est réalisable). À surveiller : le date-picker de la date d'embauche (saisie parfois laborieuse) + marquage « requis ».
+**P1 — ralentit fortement** : marquer `hire_date` requis + message clair ; assistant d'intégration unifié (mode rapide : nom+date ; mode complet : +contrat/accès) ; action d'invitation à l'espace collaborateur directement depuis la checklist ; saisie poste/manager/site à l'ajout.
+**P2 — confort** : préremplissages additionnels (fonction, convention par défaut Market) ; établissement/site ; valeurs par défaut intelligentes ; brouillon/reprise d'intégration ; audit du parcours salarié (1re connexion) et des étapes F→J (planning/pointage/congés).
+
+### Tests
+Non-régression Workforce + Signature : **390 tests verts**. E2E : point d'entrée + formulaire capturés ; checklist d'intégration vérifiée en navigateur (4 étapes, statut, action). Build propre.
+
+**Fichiers** : `EmployeeFileReadModel` (bloc onboarding) ; `employees/index.vue` (redirection) ; `employees/[id].vue` (checklist) ; `_EmployeeContract.vue` (préremplissage date) ; i18n `onboarding.*` ; e2e `hrux-after`.
+
+---

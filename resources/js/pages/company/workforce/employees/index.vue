@@ -152,11 +152,15 @@ const resetForm = () => { formData.value = { first_name: '', last_name: '', emai
 const submitEmployee = async () => {
   formLoading.value = true
   try {
-    await store.createEmployee(formData.value)
+    // W-HR-UX-1 — après création, on GUIDE la RH vers la fiche du collaborateur (où vivent contrat,
+    // signature et accès) via la checklist d'intégration, au lieu de la laisser sur la liste sans suite.
+    const created = await store.createEmployee(formData.value)
+    const createdEmp = created?.data ?? created
     isDrawerOpen.value = false
     resetForm()
-    fetchData()
     toast(t('employees.created'), 'success')
+    if (createdEmp?.id) goToEmployee(createdEmp.id)
+    else fetchData()
   } catch (error) {
     toast(error.response?.data?.message || t('common.error'), 'error')
   } finally {

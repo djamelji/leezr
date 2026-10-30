@@ -32,6 +32,12 @@ const formData = ref({
   daily_rate_cents: null,
 })
 
+// W-HR-UX-1 — anti-ressaisie : préremplir la date de début du contrat avec la date d'embauche déjà saisie.
+watch(isDrawerOpen, v => {
+  if (v && !formData.value.start_date && props.employee?.hire_date)
+    formData.value.start_date = props.employee.hire_date
+})
+
 const compensationTypes = [
   { title: t('employees.compensationTypes.monthly'), value: 'monthly' },
   { title: t('employees.compensationTypes.hourly'), value: 'hourly' },

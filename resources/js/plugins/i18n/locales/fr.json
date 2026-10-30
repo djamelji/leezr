@@ -4496,33 +4496,14 @@
     }
   },
   "onboarding": {
-    "welcome": "Bienvenue {name} !",
-    "setupPrompt": "Configurez votre espace en quelques minutes",
-    "allDone": "Votre espace est prêt !",
-    "gettingStarted": "Pour bien démarrer",
-    "dismiss": "Masquer le guide de démarrage",
-    "resumeSetup": "Reprendre la configuration",
-    "resumeHint": "Vous n'avez pas terminé la mise en route de votre entreprise.",
-    "reopening": "Réouverture...",
+    "title": "Intégration du collaborateur",
+    "do": "Faire",
+    "ok": "Fait",
     "steps": {
-      "accountCreated": {
-        "label": "Créer votre compte"
-      },
-      "companyProfile": {
-        "label": "Compléter le profil entreprise"
-      },
-      "paymentMethod": {
-        "label": "Ajouter un moyen de paiement"
-      },
-      "inviteMember": {
-        "label": "Inviter un collaborateur"
-      },
-      "activateModule": {
-        "label": "Activer un module métier"
-      },
-      "firstDocument": {
-        "label": "Déposer un premier document"
-      }
+      "info": "Informations du collaborateur",
+      "contract": "Contrat de travail",
+      "signature": "Signature du contrat",
+      "account": "Accès à l'espace collaborateur"
     }
   },
   "landing": {

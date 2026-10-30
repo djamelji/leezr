@@ -66,6 +66,23 @@ const visibleTabs = computed(() => {
 const ident = computed(() => file.value?.identity || {})
 const pos = computed(() => file.value?.position || {})
 const contract = computed(() => file.value?.contract)
+
+// W-HR-UX-1 — checklist d'INTÉGRATION guidée (transforme un parcours fragmenté en étapes claires).
+const onboarding = computed(() => file.value?.onboarding || {})
+const onboardingSteps = computed(() => {
+  const o = onboarding.value
+  const steps = [
+    { key: 'info', done: !!o.info, action: () => { currentTab.value = 'profile' } },
+    { key: 'contract', done: !!o.contract, can: can('workforce_contract.generate'), action: () => { contractDialogOpen.value = true } },
+  ]
+  if (o.signature_module)
+    steps.push({ key: 'signature', done: !!o.signed_contract, can: can('workforce_signature.request'), action: () => { currentTab.value = 'documents' } })
+  steps.push({ key: 'account', done: !!o.account, action: () => { currentTab.value = 'profile' } })
+
+  return steps
+})
+const onboardingDone = computed(() => onboardingSteps.value.filter(s => s.done).length)
+const onboardingComplete = computed(() => onboardingDone.value === onboardingSteps.value.length)
 const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.currency || 'EUR' })
 </script>
 
@@ -196,6 +213,55 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               >
                 {{ t('employeeFile.alerts.' + a.key, { count: a.count || 0 }) }}
               </VAlert>
+
+              <!-- W-HR-UX-1 — Checklist d'intégration : la RH voit la prochaine étape sans deviner -->
+              <VCard
+                v-if="!onboardingComplete"
+                variant="tonal"
+                color="primary"
+                class="mb-4"
+              >
+                <VCardText>
+                  <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-3">
+                    <div class="text-subtitle-1 font-weight-medium">
+                      <VIcon icon="tabler-checklist" start size="20" />
+                      {{ t('onboarding.title') }}
+                    </div>
+                    <span class="text-caption">{{ onboardingDone }} / {{ onboardingSteps.length }}</span>
+                  </div>
+                  <VList class="bg-transparent py-0">
+                    <VListItem
+                      v-for="(step, i) in onboardingSteps"
+                      :key="i"
+                      class="px-0"
+                    >
+                      <template #prepend>
+                        <VIcon
+                          :icon="step.done ? 'tabler-circle-check-filled' : 'tabler-circle'"
+                          :color="step.done ? 'success' : 'disabled'"
+                          class="me-3"
+                        />
+                      </template>
+                      <VListItemTitle :class="step.done ? 'text-medium-emphasis' : 'font-weight-medium'">
+                        {{ t('onboarding.steps.' + step.key) }}
+                      </VListItemTitle>
+                      <template #append>
+                        <VBtn
+                          v-if="!step.done && step.can !== false"
+                          size="small"
+                          variant="tonal"
+                          @click="step.action"
+                        >
+                          {{ t('onboarding.do') }}
+                        </VBtn>
+                        <VChip v-else-if="step.done" size="small" color="success" variant="tonal" label>
+                          {{ t('onboarding.ok') }}
+                        </VChip>
+                      </template>
+                    </VListItem>
+                  </VList>
+                </VCardText>
+              </VCard>
 
               <VRow class="mt-2">
                 <VCol

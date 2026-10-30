@@ -4496,33 +4496,14 @@
     }
   },
   "onboarding": {
-    "welcome": "Welcome {name}!",
-    "setupPrompt": "Set up your workspace in a few minutes",
-    "allDone": "Your workspace is ready!",
-    "gettingStarted": "Getting started",
-    "dismiss": "Hide getting started guide",
-    "resumeSetup": "Resume setup",
-    "resumeHint": "You haven't finished setting up your company.",
-    "reopening": "Reopening...",
+    "title": "Employee onboarding",
+    "do": "Do",
+    "ok": "Done",
     "steps": {
-      "accountCreated": {
-        "label": "Create your account"
-      },
-      "companyProfile": {
-        "label": "Complete company profile"
-      },
-      "paymentMethod": {
-        "label": "Add a payment method"
-      },
-      "inviteMember": {
-        "label": "Invite a team member"
-      },
-      "activateModule": {
-        "label": "Activate a business module"
-      },
-      "firstDocument": {
-        "label": "Upload a first document"
-      }
+      "info": "Employee information",
+      "contract": "Employment contract",
+      "signature": "Contract signature",
+      "account": "Employee portal access"
     }
   },
   "landing": {

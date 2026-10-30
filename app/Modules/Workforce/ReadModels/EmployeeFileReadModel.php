@@ -51,6 +51,18 @@ class EmployeeFileReadModel
             'time' => $hasWorkforce ? static::lastClock($company, $employee) : null,
             'leave' => $hasLeave ? static::leaveSummary($company, $employee) : null,
             'documents' => $hasDocuments ? ['count' => GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)->where('subject_type', 'employee')->where('subject_id', $employee->id)->count()] : null,
+            // W-HR-UX-1 — état d'INTÉGRATION du collaborateur (checklist guidée sur la fiche). Source unique
+            // de vérité : évite à la RH de deviner « quelle est la prochaine étape ».
+            'onboarding' => [
+                'info' => true,
+                'contract' => static::contractSummary($company, $employee, false) !== null,
+                'signed_contract' => GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)
+                    ->where('subject_type', 'employee')->where('subject_id', $employee->id)
+                    ->where('signature_status', GeneratedDocument::SIGNATURE_SIGNED)->exists(),
+                'account' => $employee->user_id !== null,
+                'documents_module' => $hasDocuments,
+                'signature_module' => \App\Core\Modules\ModuleGate::isActive($company, 'workforce_signature'),
+            ],
             'alerts' => static::alerts($company, $employee, $hasLeave),
             'available_sections' => array_values(array_filter([
                 'profile', 'position', 'contract',
