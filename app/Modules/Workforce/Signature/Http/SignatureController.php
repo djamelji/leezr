@@ -282,6 +282,8 @@ class SignatureController extends Controller
                 'note' => 'Signatures PERSONNELLES embarquées, chacune signée par la clé privée non extractible du signataire (jamais transmise à Leezr). Certificats émis par une AC interne DEV NON reconnue : l\'identité est DÉCLARÉE, pas certifiée par une autorité de confiance publique. Non eIDAS avancé/qualifié.',
             ];
 
+            $signerCerts = $this->signerCertificates($req);
+
             return response()->json([
                 'has_seal' => true,
                 'format' => 'pades_external',
@@ -292,9 +294,39 @@ class SignatureController extends Controller
                 'document_intact' => $report['all_signatures_valid'],
                 'overall_valid' => $report['all_signatures_valid'],
                 'signatures' => $report['signatures'],
-                'signer_certificates' => $this->signerCertificates($req),
+                'signer_certificates' => $signerCerts,
                 'personal_signatures' => $personalSignatures,
                 'trust' => $externalTrust,
+                // §10 — dossier de preuves à 4 AXES (ne jamais transformer « crypto valide » en « identité certifiée »).
+                'evidence' => [
+                    'identity' => array_map(fn ($c) => [
+                        'signer' => $c['signer_name'],
+                        'assurance' => $c['identity_assurance'],          // declared|link_only|account_authenticated|account_mfa
+                        'account_authenticated' => $c['account_authenticated'],
+                        'auth_method' => $c['auth_method'],
+                        'regulatory_identity_verified' => false,          // jamais une vérification d'identité réglementaire
+                    ], $signerCerts),
+                    'signature' => [
+                        'personal_key' => true,
+                        'proof_of_possession' => true,
+                        'consent_required' => true,
+                        'cryptographically_valid' => (bool) $report['all_signatures_valid'],
+                        'verified_by' => 'pdfsig',
+                    ],
+                    'document' => [
+                        'sha256' => $req->signed_document_sha256,
+                        'revisions' => count($req->metadata['revisions'] ?? []),
+                        'signature_count' => $report['signature_count'],
+                        'intact' => (bool) $report['all_signatures_valid'],
+                        'archived' => (bool) $req->signed_document_path,
+                    ],
+                    'trust' => [
+                        'authority' => 'leezr-dev-internal',
+                        'internal_chain_valid' => collect($signerCerts)->every(fn ($c) => $c['internal_chain_valid'] !== false),
+                        'public_trust_established' => false,
+                        'eidas_qualified_or_advanced' => 'not_demonstrated',
+                    ],
+                ],
             ]);
         }
 

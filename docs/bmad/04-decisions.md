@@ -23484,3 +23484,48 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : migration `…add_signer_identity…` ; `SignatureEnrollment`, `SignerIdentityResolver` ; `SignerEnrollmentService` (gate re-enrôlement + assurance + historique + adminResetKey) ; `RecordSignerActionUseCase` (authUserId) ; `SignerController` (auth optionnelle + bloc authentication) ; `SignatureController` (resetSignerKey + rapport identité) ; `ExternalPadesSigner` (durcissement ByteRange) ; `routes/company.php` (reset-key) ; tests `ExternalPadesFlowTest`, `ExternalPadesSignerTest`.
 
 ---
+
+## ADR-662 — W-SIGNATURE-10 : authentification forte, enrôlement sécurisé, recette produit
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). Le PREMIER enrôlement d'un collaborateur interne exige l'authentification de son compte. **NON prêt PROD** (cf. préconditions).
+**Contexte** : W-SIGNATURE-9 (ADR-661) gatait le re-enrôlement mais laissait le premier enrôlement possible sur la seule possession du lien.
+
+### Décisions
+
+**§2/§6 — Premier enrôlement sécurisé + politique Market.** `SignatureAuthPolicy` (piloté par configuration Market, aucun `if('FR')` dispersé) détermine le NIVEAU D'ASSURANCE minimal exigé AVANT la première émission de certificat ET la signature :
+- signataire **INTERNE** (compte Leezr attendu, via party user ou employé→user) → `account_authenticated` par défaut : **le lien d'invitation seul ne suffit pas** ;
+- signataire **EXTERNE** (sans compte) → `declared` (identité e-mail, usages limités, jamais présentée comme fortement authentifiée).
+Le Market (et la metadata document `required_assurance`) peut RENFORCER, jamais affaiblir sous le défaut. Un réglage n'attribue JAMAIS un niveau eIDAS avancé/qualifié. Ordre : `declared < link_only < account_authenticated < account_mfa`. Enforcé dans `SignerEnrollmentService::enrollAndIssue` (premier enrôlement ET re-enrôlement).
+
+**§3 — Authentification renforcée réutilisant l'existant.** Pas de MFA parallèle : réutilise `TwoFactorService` (TOTP) déjà présent dans Leezr. `SignerIdentityResolver::assuranceFor` promeut un compte authentifié AVEC 2FA confirmé en `account_mfa`. Quand la politique exige `account_mfa`, une confirmation OTP FRAÎCHE (step-up d'opération, `verify()`) est requise. Distinctions explicites : **authentification du compte** (session) ≠ **auth renforcée de l'opération** (2FA/step-up) ≠ **vérification réglementaire d'identité** (NON disponible). Une passkey/OTP n'est pas une certification d'identité civile.
+
+**§4/§12 — Protection contre le vol de lien (prouvée).** Tests adversariaux : tiers NON connecté possédant le lien → premier enrôlement interne **refusé** ; tiers connecté à un AUTRE compte → **refusé** ; compte attendu authentifié → autorisé. + token expiré/révoqué/déjà utilisé, session absente, challenge rejoué, demande terminée.
+
+**§5 — Récupération inchangée (W-SIG-9) consolidée** : perte d'appareil/clé → re-enrôlement authentifié (interne) ; externe → reset par l'émetteur (révoque + ré-invite, l'émetteur ne signe jamais) ; historique d'enrôlement + motif + auteur + révocation.
+
+**§7 — Audit des autorisations serveur.** Constats : les opérations produisant une signature personnelle (enrôlement, préparation, injection) passent EXCLUSIVEMENT par le flux public token + preuve de possession + (interne) authentification du compte attendu. Aucune route Company ne permet de produire une signature personnelle pour un autre utilisateur ; `adminResetKey` (permission `manage`) révoque/ré-invite mais NE SIGNE JAMAIS. Gating vérifié : tenant (`withoutGlobalScopes` borné aux IDs dérivés du token), module (`company.access:use-module`), RBAC (`view`/`manage`/`view_evidence`), signataire attendu, compte authentifié attendu, challenge à usage unique, expiration, révision courante, certificat usable, intégrité documentaire (empreinte figée + re-vérifiée). Une permission RH générale ne produit pas une signature personnelle d'autrui.
+
+**§9 — Notifications & délivrabilité.** Événements append-only (créée/invitée/relancée/annulée/expirée/finalisée) ; **aucun token en clair dans les logs** (vérifié). L'infrastructure e-mail actuelle n'expose pas de webhook de livraison/bounce → **aucun statut « reçu » n'est inventé** ; une notification émise ≠ preuve de lecture. Intégration de webhooks de livraison idempotents = incrément futur documenté.
+
+**§10 — Rapport de preuves à 4 axes.** Réponse `verify` (format `pades_external`) structurée en **Identité** (assurance réellement obtenue, compte authentifié, méthode, `regulatory_identity_verified=false`), **Signature** (clé personnelle, preuve de possession, consentement, validité crypto, pdfsig), **Document** (empreinte, révisions, nb signatures, intégrité, archivage), **Confiance** (AC interne DEV, chaîne interne valide/non, `public_trust_established=false`, eIDAS `not_demonstrated`). L'UI ne transforme jamais « cryptographiquement valide » en « identité certifiée ».
+
+### Conséquences
+- **Tests** : `ExternalPadesFlowTest` 13 (premier enrôlement interne sans auth refusé, mauvais compte refusé, compte correct OK, re-enrôlement gated, reset admin, révocation, ByteRange ambigu, corps vide) ; **55+ tests signature verts** ; build propre ; **pdfsig** obligatoire dans la recette (deux signatures valides, A préservée) — revérifié DEV.
+
+### §13 — État de la remédiation SSH (P0, sans secret)
+Inchangé depuis W-SIG-9 et NON clôturé. Constats : home `750` / `.ssh` `700` / `authorized_keys` `600` (**conforme StrictModes**), **2 clés publiques** configurées (accès par clé disponible = secours). `PasswordAuthentication` reste activé + mot de passe exposé = risque P0. **Vérification faite** : permissions conformes, accès par clé présent. **Actions root (NON exécutées — pas d'accès root ; ne jamais provoquer de perte d'accès)** : (1) confirmer l'accès par clé d'un compte de secours ; (2) `passwd` (rotation du mot de passe exposé) ; (3) root : `PasswordAuthentication no` en drop-in `/etc/ssh/sshd_config.d/`, `sshd -t`, reload — après validation de l'accès clé ; (4) rotation du secret CI. **Aucun secret affiché. StrictModes NON désactivé.**
+
+### §14 — Checklist pré-audit externe (constats classés)
+- **BLOQUANTS (PROD)** : (a) clé racine d'AC chiffrée sur le serveur, pas HSM/hors ligne ; (b) identité réglementaire non vérifiée (internes = compte ; externes = e-mail déclaré) ; (c) AC non reconnue publiquement → ni eIDAS avancé ni qualifié ; (d) mot de passe SSH exposé non encore rotaté (root requis).
+- **MAJEURS** : (e) pas de CRL/OCSP (révocation « soft » DB) ; (f) pas de webhook de délivrabilité e-mail ; (g) step-up MFA disponible mais non exigé par défaut ; (h) construction DER manuelle du cert feuille (auditée, correcte sur l'essentiel, B1/B5 résiduels).
+- **MINEURS** : (i) ESSCertIDv2 encode SHA-256 explicitement (DEFAULT non omise) ; (j) malléabilité ECDSA (non exploitable, anti-rejeu par challenge/binding/verrou) ; (k) throttle 30/min sur prepare/sign.
+- **Domaines couverts & OK (DEV)** : gestion des clés (jamais transmises/recréées), consentement explicite, isolation tenant, preuve de possession, vérification pdfsig indépendante, sécurité PDF (ByteRange lié au dict de signature), rapport de preuves honnête.
+> Aucun niveau de conformité juridique n'est annoncé sur la base de cet audit interne.
+
+### Préconditions PROD (NON remplies)
+Authentification forte généralisée + vérification d'identité réglementaire + clés d'AC HSM/hors ligne + reconnaissance juridique + audit externe + remédiation SSH + journal de délivrabilité.
+
+**Fichiers** : `SignatureAuthPolicy`, `SignerIdentityResolver` (account_mfa + rank + 2FA) ; `SignerEnrollmentService` (enforcement 1er enrôlement + step-up OTP) ; `RecordSignerActionUseCase`/`SignerController` (otp + bloc authentication étendu) ; `SignatureController::verify` (preuves 4 axes) ; `config/signature.php` (platform.markets) ; tests `ExternalPadesFlowTest`.
+
+---
