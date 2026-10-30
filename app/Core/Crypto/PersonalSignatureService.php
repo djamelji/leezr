@@ -80,6 +80,12 @@ class PersonalSignatureService
         return $ok === 1;
     }
 
+    /** Accès public à la conversion P1363→DER (utilisé par le signeur PAdES externe). */
+    public function p1363ToDerPublic(string $raw): string
+    {
+        return $this->p1363ToDer($raw);
+    }
+
     /** Conversion P1363 (r‖s, 64 octets) → ECDSA-Sig-Value DER. */
     private function p1363ToDer(string $raw): string
     {

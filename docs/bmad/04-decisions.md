@@ -23327,3 +23327,38 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `composer` (`ddn/sapp`) ; `App\Core\Crypto\MultiPadesSignatureService` ; `MultiPadesSignatureTest`. Production inchangée (W-SIGNATURE-4).
 
 ---
+
+### ADR-658 — W-SIGNATURE-6 : signature PAdES EXTERNE WebCrypto (prototype prouvé) — 2 signatures personnelles embarquées (2026-10-30)
+
+**Contexte** : connecter WebCrypto (clé signataire non-extractible, navigateur) et SAPP (PAdES incrémental) pour embarquer DANS le PDF la signature **personnelle** de chaque signataire, sans que la clé privée ne touche le serveur. **Règle absolue respectée** : prototype validé indépendamment AVANT toute intégration métier ; **ne pas déclarer le multi-PAdES personnel terminé** tant que deux NAVIGATEURS réels distincts n'ont pas produit un PDF validé indépendamment. DEV only ; aucun prestataire/licence ; interdits inchangés (main/PROD/Billing/signer pour l'utilisateur/signatures historiques/reset DEV/qualification eIDAS fictive).
+
+**Protocole de signature externe (§2, PROUVÉ)** — `App\Core\Crypto\ExternalPadesSigner` :
+1. **Préparer** : SAPP produit la révision PDF (incrémentale) avec champ de signature + ByteRange + placeholder `/Contents` (signé avec un cert JETABLE dont le CMS sera intégralement remplacé).
+2. **Localiser** le DERNIER `/ByteRange` + gap `/Contents` (crucial en incrémental : on signe le nouveau champ, jamais une signature antérieure).
+3. **Construire les attributs signés CMS** (mirror fidèle de SAPP : contentType, signingTime, **messageDigest = SHA-256 du contenu ByteRange**, signingCertV2/ESS). `to_sign` = `hex2bin(SET(signedAttrs))`.
+4. **Envoyer uniquement `to_sign`** au navigateur. **WebCrypto** signe (ECDSA P-256/SHA-256) → **P1363 (r‖s)**. La clé privée ne quitte jamais l'appareil.
+5. **Assembler le CMS** côté serveur : conversion **P1363→DER** (ASN.1), SignerInfo ECDSA (**OID ecdsa-with-SHA256**, pas de chiffrement RSA), certificat du signataire embarqué.
+6. **Injecter** le CMS (hex) dans le gap `/Contents` **sans altérer les octets couverts** (hors ByteRange) → les signatures précédentes restent valides.
+7. **Vérifier** indépendamment par `pdfsig`.
+
+**§3/§4 Résultat du prototype — VALIDÉ INDÉPENDAMMENT (pdfsig)** : (A) 1 signature externe → « Signature is Valid », cert du signataire, adbe.pkcs7.detached, SHA-256. (C) **2 signatures externes personnelles** (clés EC distinctes) en révisions incrémentales → **#1 « Alex (Collaborateur) » Valid (préservée, Not total document signed)**, **#2 « Rep Leezr » Valid (Total document signed)**, **2 certificats distincts**. (D) PDF altéré → les DEUX en « Digest Mismatch ». Tests `ExternalPadesSignerTest` **3/3**.
+
+**§5 Certificats individuels** : le prototype utilise des certs **auto-signés liés à la clé EC du signataire**. Pour la liaison clé↔identité en production : une **AC interne Leezr** (DEV/test) émettrait un cert liant la clé publique WebCrypto réelle (preuve de possession via la signature du challenge) — **non livrée** (émission d'un cert pour une clé publique externe = construction manuelle de TBSCertificate + signature AC, à faire). **Une AC interne n'est pas reconnue/qualifiée.**
+
+**Liaison WebCrypto↔CMS (§4)** : WebCrypto produit **P1363**, le CMS attend **DER** → conversion contrôlée (ASN.1). Le navigateur signe `to_sign` (= DER des attributs signés) ; WebCrypto applique SHA-256 puis ECDSA — identique à ce que SAPP/openssl hache. Vérifié : pdfsig valide.
+
+**Limite SAPP (documentée)** : `x509::readcert` émet des warnings sur les certificats EC (bug SAPP) — neutralisés (non fatals) ; pdfsig résout le certificat via `signingCertV2/certHash`, la validité est confirmée. À suivre : contribuer un correctif amont ou extraire issuer/serial sans readcert.
+
+**DÉCISION — pas d'intégration métier ni de revendication « terminé » ce lot (§10, §14, règle absolue)** : le prototype crypto (A+C+D) est **prouvé**, mais le multi-PAdES personnel ne sera **déclaré terminé** qu'après **deux NAVIGATEURS réels distincts** signant sur DEV + validation pdfsig indépendante (Playwright 2 contextes). L'intégration Workforce (remplacer le flux signataire W-SIGNATURE-4 par : préparer placeholder → envoyer `to_sign` → WebCrypto signe `to_sign` → injecter → finaliser quand toutes les signatures sont embarquées+vérifiées+archivées) + l'AC interne + le e2e 2 navigateurs sont l'**incrément suivant**. **La production reste W-SIGNATURE-4** (cachet PAdES serveur embarqué + preuves personnelles détachées WebCrypto). Aucun repli trompeur ; aucun document historique modifié.
+
+**§7 Cachet Leezr** : restera une révision distincte clairement attribuée à Leezr, ajoutée en dernier SI elle n'invalide aucune signature personnelle (SAPP incrémental le permet) ; sinon omis. Priorité : A et B valides.
+
+**§12 Sécurité** : clé privée jamais transmise/journalisée/en base/en réponse API (le serveur ne reçoit que `to_sign` et la signature). À couvrir en intégration : substitution de clé/cert, mauvais signataire/document/Company/révision, challenge rejoué/expiré, double signature, hors-séquence, révocation, XSS, émission AC non autorisée, cross-tenant. **§13 infra** : déploiement DEV non destructif conservé ; remédiation SSH (StrictModes/rotation) toujours à faire par l'infra root (non exécutée, risque lockout).
+
+**§17/§18 Limites juridiques & risques** : certs internes **non reconnus/non qualifiés** → **PAS avancé/qualifié eIDAS** ; identité **déclarée** (vérification forte non livrée) ; protection de la clé racine de l'AC interne ; maintenance SAPP (LGPL). **§19 Actions restantes** : AC interne (TBSCert manuel) ; intégration flux signataire externe + finalisation incrémentale ; e2e **2 navigateurs distincts** sur DEV ; UI rapport 2 signatures ; (option) cachet Leezr dernière révision ; TSA.
+
+**Dépendances** : `ddn/sapp ^1.5`, `tecnickcom/tcpdf ^6`, OpenSSL, `pdfsig`. Tests `ExternalPadesSignerTest` 3/3 + non-régression **48 verts**. Build propre.
+
+**Fichiers** : `App\Core\Crypto\ExternalPadesSigner` ; `PersonalSignatureService::p1363ToDerPublic` ; `ExternalPadesSignerTest`. Production inchangée (W-SIGNATURE-4).
+
+---
