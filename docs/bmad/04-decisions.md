@@ -23398,3 +23398,49 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `App\Core\Crypto\{ExternalPadesSigner, DevCertificateAuthority}` ; `config/signature.php` ; migrations `…_add_signer_certificate_to_signers`, `…_create_workforce_signature_certificates_table` ; `SignatureCertificate` ; `Services\{SignerEnrollmentService, ExternalPadesCoordinator}` ; `RecordSignerActionUseCase::prepareExternal` + branche externe ; `FinalizeSignatureRequestUseCase::finalizeExternalPades` ; `SignerController::prepare` + route ; `SignatureController::verify` (format `pades_external`) ; `webcryptoSigner.js::signRawBase64` ; `sign/[token].vue` ; tests `ExternalPadesFlowTest`, `ExternalPadesSignerTest`.
 
 ---
+
+## ADR-660 — W-SIGNATURE-8 : industrialisation du multi-PAdES personnel natif
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). Système natif de signature personnelle CONSOLIDÉ, administrable et compréhensible. **NON prêt PROD** tant que les conditions du §19 (sécurité des clés d'AC, politique d'identité, reconnaissance juridique) ne sont pas remplies.
+**Contexte** : W-SIGNATURE-7 (ADR-659) avait prouvé fonctionnellement le multi-PAdES personnel (2 navigateurs, 2 clés, 2 certs, 2 signatures validées pdfsig). W-SIGNATURE-8 le rend fiable (audit crypto indépendant + correctifs), administrable (config Company/Platform) et simple (parcours signataire), sans prestataire commercial.
+
+### Décisions
+
+**§1 — Audit cryptographique indépendant + correctifs.** Audit adversarial dédié (sous-agent, distinct des tests fonctionnels). **Verdict : aucune forge de signature, substitution de certificat ou complétion frauduleuse possible** ; la garantie centrale (pas de `completed` sans N signatures pdfsig valides) tient. Correctifs appliqués :
+- **H1 (haute)** : une demande `pades_external` EXIGE une signature PAdES. Un POST `/sign` vide ne retombe plus dans le « lien seul » (qui brûlait le token, journalisait un faux « signé » et rendait la demande incomplétable = DoS). Échec contrôlé, token préservé.
+- **M1** : SKI/AKI du certificat feuille en RFC 5280 méthode (1) (SHA-1 de la clé publique) ; AKI = SKI RÉEL de l'AC émettrice (cohérence de chaîne).
+- **M2** : GeneralizedTime pour les dates de validité ≥ 2050 (UTCTime en deçà).
+- **B2** : extendedKeyUsage `id-kp-emailProtection` (EKU de signature reconnue ; `id-kp-documentSigning`/RFC 9336 est rejeté « corrupted » par le NSS de poppler → emailProtection retenu, interopérable).
+- **B3** : courbe stricte `prime256v1` (rejet des autres courbes 256 bits).
+- **B4** : issuer DN extrait byte-identique du certificat émetteur réel (ASN.1), plus reconstruit.
+- **B8** : `IssuerAndSerialNumber` du SignerInfo CMS extrait de façon fiable du certificat (échec dur), plus de fallback silencieux `issuer=''/serial='01'`.
+- **Risques résiduels DOCUMENTÉS et acceptés pour une AC DEV** : B1 (ESSCertIDv2 encode SHA-256 explicitement — DEFAULT non omise, toléré) ; B5 (malléabilité ECDSA s/n−s — non exploitable, anti-rejeu par challenge/binding/verrou) ; B6 (révocation « soft » DB, pas de CRL/OCSP dans la feuille — assumé, `recognized_trust_chain=false`) ; B7 (`locateSignature` localise le dernier `/ByteRange` par regex + invariants structurels — durcissement « parser xref » reporté ; entrée non adversariale en pratique).
+
+**§6 — Durcissement de l'AC interne DEV.** Secret de chiffrement DÉDIÉ `signature.dev_ca.key` (découplé d'APP_KEY → une rotation d'APP_KEY ne rend plus les clés d'AC illisibles ; repli APP_KEY documenté). `verifyChain()` : validation de la chaîne interne feuille→émettrice→racine (signatures + fenêtres de validité) — cohérence interne, PAS une confiance reconnue. `caStatus()` : expiration racine/émettrice, état d'émission. **Formulation honnête** : la racine est conservée CHIFFRÉE SUR LE SERVEUR applicatif — ce N'EST PAS une racine hors ligne (pas de HSM/air-gap) ; limite assumée, bloquante pour la PROD.
+
+**§2/§3 — Configuration par Company et capacités Platform/Market.** `SignatureFormatCatalog` : modes MÉTIER (« Signature personnelle numérique » → `pades_external` ; « Signature de démonstration » → `pades_embedded`) ↔ format technique, jamais exposé en vocabulaire métier. Disponibilité bornée par : environnement, pdfsig, AC interne, **autorisation Platform par Market** (`signature.platform.markets.{market}.formats`). La Company ne peut pas sélectionner un mode non autorisé/indisponible (validé côté service + API). Écran **Paramètres RH → Signature électronique** (sélecteur de mode, options indisponibles désactivées + motif) + choix du mode dans l'assistant. Défaut = démonstration (rétro-compatible) ; le mode personnel est un choix EXPLICITE.
+
+**§4 — Parcours signataire simplifié.** Consentement EXPLICITE requis (case à cocher qui active le bouton Signer) ; jargon crypto (WebCrypto/CMS/X.509/PAdES/ByteRange) masqué dans un panneau « Détails techniques et vérification » replié ; mention claire des limites de certification.
+
+**§5 — Gestion des appareils et clés perdues.** Re-enrôlement autorisé sur nouvel appareil / IndexedDB effacée / clé perdue **tant que le signataire n'a pas signé** (token à usage unique = autorisation ; révoqué dès la signature). L'ancien certificat est RÉVOQUÉ (jamais effacé), un nouveau est émis pour la nouvelle clé. **Jamais** de recréation de clé privée ; un administrateur (sans token) ne peut pas substituer de clé.
+
+**§7/§8 — Cohérence documentaire + rapport de vérification.** Parcours incrémental complet vérifié (émission→rev1→rev2→finalisation→archivage→fiche). Rapport enrichi (API + UI) : par signataire — identité DÉCLARÉE, rôle, certificat (série, empreinte, validité), **validité de chaîne interne**, révocation, méthode d'identification ; document — nombre de signatures/révisions, intégrité, résultat pdfsig. **Jamais** « Certifié / Avancé eIDAS / Qualifié ». Distinction technique-vérifié vs identité-déclarative explicite.
+
+**§9 — Notifications & remise.** Infrastructure pré-existante (W-SIG-1) vérifiée : invitations, relances contrôlées, notification de finalisation, copie signée facultative (sans retirer l'accès légal), événements append-only. L'accès au document reste garanti via l'endpoint de téléchargement même si une notification échoue. **Limite documentée** : pas de journal de délivrabilité/bounce (preuve d'acheminement SMTP) — prochain incrément.
+
+### Conséquences
+- **Tests** : `ExternalPadesFlowTest` 7 (dont H1 corps vide rejeté sans brûler le token, re-enrôlement appareil §5, courbe non-P256 rejetée), `ExternalPadesSignerTest` 6, +49 autres → **55+ tests signature verts**. Build propre.
+- **Playwright (DEV local, app réelle)** : 2 contextes navigateurs isolés (IndexedDB + clés distinctes), **consentement gating vérifié**, A+B signent, **pdfsig valide les DEUX signatures** (A préservée). Capture visuelle signataire desktop/mobile/dark propre. Vérification bout-en-bout rejouée **sur le serveur DEV** (code déployé).
+- **Sécurité** : clés d'AC chiffrées (secret dédié possible) + perms 0600 + jamais exposées HTTP + émission désactivée hors DEV ; throttle prepare/sign 30/min (garde principale = token opaque à usage unique).
+
+### §19 — Conditions préalables à une éventuelle PROD (NON remplies)
+1. **Protection des clés d'AC** : HSM ou racine réellement hors ligne (actuellement clé chiffrée sur le serveur = insuffisant).
+2. **Politique d'identité** : vérification d'identité réelle (l'identité est aujourd'hui DÉCLARÉE ; compte + lien email ≠ vérification réglementaire).
+3. **Reconnaissance juridique** : les certificats internes ne sont ni reconnus ni qualifiés → **ni eIDAS avancé ni qualifié**. Aucune revendication de certification.
+4. **Révocation vérifiable en aval** (CRL/OCSP) si une confiance tierce est visée.
+5. **Audit de sécurité externe** avant tout usage non-DEV.
+
+**Fichiers** : `DevCertificateAuthority` (SKI/AKI/EKU/GeneralizedTime/issuer réel/encrypter/verifyChain/caStatus) ; `ExternalPadesSigner` (B8, readTlv) ; `RecordSignerActionUseCase` (H1) ; `SignerEnrollmentService` (re-enrôlement §5) ; `SignatureFormatCatalog` + `SignatureSettingsService`/`CreateSignatureRequestUseCase`/`SignatureController` (modes) ; `config/signature.php` ; migration `…add_default_format…` ; front `_SignatureSettingsSection`/`_SignatureWizard`/`sign/[token].vue`/`_SignatureDetailDrawer` + i18n ; `routes/api.php` ; tests `ExternalPadesFlowTest`, e2e `external-pades-two-browsers`.
+
+---
