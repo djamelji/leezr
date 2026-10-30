@@ -196,6 +196,9 @@ const decline = async () => {
                       <div v-if="data.personal_signing" class="mt-1">
                         {{ t('signaturePublic.advancedAlg') }} : {{ data.personal_signing.algorithm }}
                       </div>
+                      <div v-if="data.authentication" class="mt-1">
+                        {{ t('signaturePublic.advancedIdentity') }} : {{ t(`signaturePublic.assurance.${data.authentication.assurance}`) }}
+                      </div>
                     </div>
                   </VExpansionPanelText>
                 </VExpansionPanel>

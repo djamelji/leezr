@@ -1662,7 +1662,9 @@
     "consent": "J'ai lu le document et je consens à le signer.",
     "advancedTitle": "Détails techniques et vérification",
     "advancedTrust": "Signature de démonstration : certificat interne non reconnu par une autorité publique, identité déclarée. Ce n'est pas une signature avancée ou qualifiée eIDAS.",
-    "advancedAlg": "Algorithme"
+    "advancedAlg": "Algorithme",
+    "advancedIdentity": "Niveau d'attribution",
+    "assurance": { "account_authenticated": "Compte Leezr authentifié", "link_only": "Lien d'invitation (compte non authentifié)", "declared": "Identité déclarée (e-mail)" }
   },
   "signatureSettings": {
     "intro": "Configurez le prestataire, le niveau par défaut, la validité, les relances et la remise de la copie signée.",

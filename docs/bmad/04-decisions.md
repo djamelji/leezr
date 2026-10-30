@@ -23444,3 +23444,43 @@ Accents FR + € : couverts (Poppins complet ; fallback DejaVu sinon).
 **Fichiers** : `DevCertificateAuthority` (SKI/AKI/EKU/GeneralizedTime/issuer réel/encrypter/verifyChain/caStatus) ; `ExternalPadesSigner` (B8, readTlv) ; `RecordSignerActionUseCase` (H1) ; `SignerEnrollmentService` (re-enrôlement §5) ; `SignatureFormatCatalog` + `SignatureSettingsService`/`CreateSignatureRequestUseCase`/`SignatureController` (modes) ; `config/signature.php` ; migration `…add_default_format…` ; front `_SignatureSettingsSection`/`_SignatureWizard`/`sign/[token].vue`/`_SignatureDetailDrawer` + i18n ; `routes/api.php` ; tests `ExternalPadesFlowTest`, e2e `external-pades-two-browsers`.
 
 ---
+
+## ADR-661 — W-SIGNATURE-9 : sécurisation de l'identité et finalisation produit
+
+**Date** : 2026-10-30
+**Statut** : Accepté (DEV uniquement). P0 : l'attribution d'une signature ne repose plus sur la seule possession du lien. **NON prêt PROD** (cf. §19).
+**Contexte** : W-SIGNATURE-8 (ADR-660) a industrialisé le moteur multi-PAdES personnel, mais autorisait le re-enrôlement sur la seule possession du token — insuffisant pour des documents RH sensibles.
+
+### Décisions
+
+**§1-§3 — Politique d'authentification et d'enrôlement (P0).** Séparation stricte : possession du lien ≠ authentification ≠ identité ≠ enrôlement ≠ consentement ≠ signature.
+- **Résolution d'identité** (`SignerIdentityResolver`) : un signataire INTERNE est rattaché à un compte Leezr (party_type `user`, ou employé → son `user_id`) ; un signataire EXTERNE n'a pas de compte (identité DÉCLARÉE par e-mail). L'authentification réelle est résolue de façon OPTIONNELLE sur les routes publiques (Sanctum SPA `statefulApi`).
+- **Niveaux d'assurance honnêtes** : `account_authenticated` (compte attendu authentifié et correspondant), `link_only` (interne non authentifié — possession du lien seule), `declared` (externe, e-mail non authentifié). Jamais une vérification d'identité réglementaire.
+- **Re-enrôlement = opération SENSIBLE** : changer une clé déjà enregistrée exige une authentification — un INTERNE doit authentifier SON compte Leezr ; un EXTERNE ne peut PAS changer de clé en libre-service (anti-substitution de signataire). La PREMIÈRE inscription reste possible via le lien. On ne restaure/recrée JAMAIS de clé privée ; l'ancien certificat est RÉVOQUÉ (jamais effacé).
+- **Réinitialisation par l'émetteur** (`SignerEnrollmentService::adminResetKey`, endpoint gated `workforce_signature.manage`) : révoque la clé + ré-invite pour que le signataire ré-enrôle SA propre nouvelle clé. **L'émetteur/admin ne signe JAMAIS** à la place du signataire et ne peut pas substituer sa clé.
+- **Historique d'enrôlement** (`SignatureEnrollment` + table) : chaque association de clé (initiale / changement d'appareil / reset admin) avec son assurance, IP, et statut de révocation. Une nouvelle clé ne peut pas falsifier une signature historique (signatures déjà embarquées, immuables).
+
+**§4 — Consentement et contrôle réel.** PDF exact affiché + empreinte serveur recalculée ; consentement EXPLICITE (case qui active le bouton) ; méthode d'authentification réellement utilisée exposée ; WebCrypto déclenché pour CETTE opération uniquement ; tout vérifié côté serveur. Une session active n'est PAS une autorisation permanente de signer. Anti-rejeu (challenge expirant à usage unique), révocation, verrou concurrent conservés.
+
+**§5 — Sécurité du moteur PDF.** La localisation du ByteRange est désormais liée à un VRAI dictionnaire de signature : exigence des marqueurs `/Type /Sig` + `/SubFilter` dans la fenêtre précédant le ByteRange ET du mot-clé `/Contents` immédiatement avant le gap, couplée à la couverture totale (inv. 2). Un PDF contenant une chaîne `/ByteRange […]` forgée dans un flux de contenu est REJETÉ. Non-reconstruction d'un parseur PDF maison. Risque B7 fermé pour ce chemin ; une signature crypto valide ne masque pas une modification ambiguë.
+
+**§6 — Certificats & AC.** AC interne exclusivement DEV. `verifyChain()` (chaîne interne) + révocation DB + historique d'émission conservés ; la chaîne interne n'est JAMAIS présentée comme reconnue publiquement. La construction DER manuelle du certificat feuille reste un risque documenté (audité W-SIG-8, correct sur l'essentiel ; résiduels B1/B5 acceptés DEV).
+
+**§9 — Preuves à trois axes.** Le rapport distingue : **Identité** (déclarée/authentifiée, méthode, niveau d'assurance, jamais réglementaire) ; **Cryptographie** (signature valide, cert valide au regard de la chaîne INTERNE, reconnu ou non, intégrité, révisions) ; **Juridique** (niveau réellement démontré, aucune qualification eIDAS présumée). L'UI ne transforme jamais « cryptographiquement valide » en « identité certifiée ».
+
+### Conséquences
+- **Tests** : `ExternalPadesFlowTest` 10 (re-enrôlement interne authentifié autorisé ; **interne sans auth BLOQUÉ** ; **externe libre-service BLOQUÉ** ; reset admin → ré-enrôlement ; révocation ; rejeu ; corps vide) + `ExternalPadesSignerTest` 7 (**ByteRange ambigu/hors dict rejeté**). **62 tests signature verts**, build propre.
+- **Playwright** : parcours 2 navigateurs (consentement + 2 PAdES valides pdfsig) vert, revérifié DEV.
+
+### §13 — État de la remédiation SSH (sans secret)
+- Accès : compte système `web3` (login `jliouidevleezr`). **Risque** = `PasswordAuthentication` activé + mot de passe exposé précédemment.
+- Clés : `~/.ssh` `700`, `authorized_keys` `600`, home `750` → **conforme StrictModes** ; **2 clés publiques** présentes → accès par clé disponible (secours préservé).
+- StrictModes : aucun blocage de permissions constaté ; **à NE PAS désactiver**.
+- Procédure de remédiation (requiert root, NON exécutée ici — pas d'accès root, modification de credential) : (1) vérifier que l'accès par clé fonctionne pour un compte de secours ; (2) `passwd` pour rotation du mot de passe exposé ; (3) root : `PasswordAuthentication no` dans un drop-in `/etc/ssh/sshd_config.d/`, puis `sshd -t` et reload — JAMAIS sans avoir validé l'accès par clé ; (4) rotation du secret CI exposé. Aucun secret affiché.
+
+### §19 — Conditions avant PROD (NON remplies)
+1. **Authentification forte** réellement généralisée (aujourd'hui : compte Leezr pour les internes = renforcement, mais pas de MFA ; externes = e-mail déclaré). 2. **Vérification d'identité** réglementaire (service d'identité externe) — NON disponible, documenté. 3. **Clés d'AC** HSM/hors ligne. 4. **Reconnaissance juridique** (ni eIDAS avancé ni qualifié). 5. **Audit de sécurité externe**. 6. Remédiation SSH (root). 7. Journal de délivrabilité e-mail.
+
+**Fichiers** : migration `…add_signer_identity…` ; `SignatureEnrollment`, `SignerIdentityResolver` ; `SignerEnrollmentService` (gate re-enrôlement + assurance + historique + adminResetKey) ; `RecordSignerActionUseCase` (authUserId) ; `SignerController` (auth optionnelle + bloc authentication) ; `SignatureController` (resetSignerKey + rapport identité) ; `ExternalPadesSigner` (durcissement ByteRange) ; `routes/company.php` (reset-key) ; tests `ExternalPadesFlowTest`, `ExternalPadesSignerTest`.
+
+---

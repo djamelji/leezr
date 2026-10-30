@@ -1663,7 +1663,9 @@
     "consent": "I have read the document and consent to signing it.",
     "advancedTitle": "Technical details and verification",
     "advancedTrust": "Demonstration signature: internal certificate not recognized by a public authority, self-declared identity. This is not an eIDAS advanced or qualified signature.",
-    "advancedAlg": "Algorithm"
+    "advancedAlg": "Algorithm",
+    "advancedIdentity": "Attribution level",
+    "assurance": { "account_authenticated": "Authenticated Leezr account", "link_only": "Invitation link (account not authenticated)", "declared": "Declared identity (email)" }
   },
   "signatureSettings": {
     "intro": "Configure the provider, default level, validity, reminders and signed-copy delivery.",
