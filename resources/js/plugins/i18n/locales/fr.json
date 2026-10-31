@@ -6502,7 +6502,9 @@
       "noResult": "Aucun modèle disponible",
       "companyTemplate": "Modèle entreprise",
       "platformTemplate": "Modèle standard"
-    }
+    },
+    "payslipMovedHint": "Les bulletins de paie se génèrent désormais depuis le cycle de paie. Cette page recense les documents générés.",
+    "goToPayroll": "Aller à la paie"
   },
   "payslipDraft": {
     "title": "Fiche de paie — BROUILLON",

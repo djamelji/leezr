@@ -6502,7 +6502,9 @@
       "noResult": "No template available",
       "companyTemplate": "Company template",
       "platformTemplate": "Standard template"
-    }
+    },
+    "payslipMovedHint": "Payslips are now generated from the payroll run. This page lists generated documents.",
+    "goToPayroll": "Go to payroll"
   },
   "payslipDraft": {
     "title": "Payslip — DRAFT",

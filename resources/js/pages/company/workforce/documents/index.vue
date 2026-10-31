@@ -2,7 +2,6 @@
 import { useAppToast } from '@/composables/useAppToast'
 import { useWorkforceDocumentsStore } from '@/modules/company/workforce/workforce-documents.store'
 import { useCan } from '@/composables/useCan'
-import PayslipActionCards from './_PayslipActionCards.vue'
 import GenerateDocumentDrawer from './_GenerateDocumentDrawer.vue'
 import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizard.vue'
 
@@ -148,16 +147,6 @@ const onDocumentGenerated = () => {
   refreshAll()
 }
 
-const onDraftsGenerated = () => {
-  toast(t('workforceDocuments.success.draftsGenerated'), 'success')
-  refreshAll()
-}
-
-const onOfficialGenerated = () => {
-  toast(t('workforceDocuments.success.officialGenerated'), 'success')
-  refreshAll()
-}
-
 watchDebounced([subjectTypeFilter, signatureStatusFilter, templateCodeFilter], () => {
   options.value.page = 1
   fetchData()
@@ -198,12 +187,27 @@ const isDrawerOpen = ref(false)
       </VBtn>
     </div>
 
-    <!-- Payslip Action Cards -->
-    <PayslipActionCards
-      :store="store"
-      @drafts-generated="onDraftsGenerated"
-      @official-generated="onOfficialGenerated"
-    />
+    <!-- PRODUCT-UX-AUDIT-1 (P0, dédoublonnage C) : la génération de bulletins n'existe plus ici —
+         elle appartient au cycle de paie (évite la même action sur 2 pages). Documents RH = registre. -->
+    <VAlert
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-6"
+      data-test="payslip-generation-moved"
+    >
+      <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+        <span>{{ $t('workforceDocuments.payslipMovedHint') }}</span>
+        <VBtn
+          size="small"
+          variant="tonal"
+          append-icon="tabler-arrow-right"
+          :to="{ name: 'company-workforce-payroll' }"
+        >
+          {{ $t('workforceDocuments.goToPayroll') }}
+        </VBtn>
+      </div>
+    </VAlert>
 
     <!-- Stats Cards -->
     <VRow
