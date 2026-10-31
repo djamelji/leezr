@@ -125,6 +125,32 @@ class LeaveLifecycleTest extends TestCase
         $this->assertGreaterThan(0, (int) $bal['accrued'], 'le salarié dispose d\'un solde dès l\'activation du contrat');
     }
 
+    public function test_hire_mid_month_accrual_is_prorated(): void
+    {
+        $this->annualLeaveType(); // CP annuel 2500 → part mensuelle floor(2500/12)=208
+        // Embauche le 16 juillet (31 j) → couverture 16→31 = 16 jours → facteur 16/31.
+        $emp = Employee::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'first_name' => 'Mid', 'last_name' => 'Month', 'status' => Employee::STATUS_ACTIVE, 'hire_date' => '2026-07-16', 'employee_number' => 'E-'.uniqid()]);
+        $type = LeaveType::withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'annual_leave')->firstOrFail();
+
+        app(AccrueLeaveUseCase::class)->executeForEmployee($this->company->id, $emp->id, '2026-07');
+
+        $expected = (int) round(208 * 16 / 31); // 107
+        $accrued = (int) LeaveLedger::computeBalance($this->company->id, $emp->id, $type->id)['accrued'];
+        $this->assertSame($expected, $accrued, 'la part du mois d\'embauche est proratisée');
+        $this->assertLessThan(208, $accrued, 'strictement inférieure à un mois complet');
+    }
+
+    public function test_hire_first_of_month_accrual_is_full(): void
+    {
+        $this->annualLeaveType();
+        $emp = Employee::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'first_name' => 'First', 'last_name' => 'Day', 'status' => Employee::STATUS_ACTIVE, 'hire_date' => '2026-07-01', 'employee_number' => 'E-'.uniqid()]);
+        $type = LeaveType::withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'annual_leave')->firstOrFail();
+
+        app(AccrueLeaveUseCase::class)->executeForEmployee($this->company->id, $emp->id, '2026-07');
+
+        $this->assertSame(208, (int) LeaveLedger::computeBalance($this->company->id, $emp->id, $type->id)['accrued'], 'embauche le 1er = mois complet');
+    }
+
     public function test_consume_due_consumes_approved_past_request_once(): void
     {
         $type = $this->annualLeaveType();

@@ -152,23 +152,9 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               >
                 {{ $t('common.edit') }}
               </VBtn>
-              <VBtn
-                v-if="(file.available_sections || []).includes('leave')"
-                variant="tonal"
-                prepend-icon="tabler-beach"
-                @click="router.push('/company/workforce/leave')"
-              >
-                {{ t('employeeFile.actions.leave') }}
-              </VBtn>
-              <VBtn
-                v-if="(file.available_sections || []).includes('time')"
-                v-can="'workforce.time_manage'"
-                variant="tonal"
-                prepend-icon="tabler-clock"
-                @click="router.push('/company/workforce/time')"
-              >
-                {{ t('employeeFile.actions.time') }}
-              </VBtn>
+              <!-- W-HR-UX-6 (P3) : boutons "Congés"/"Pointages" retirés de l'en-tête — ils doublonnaient
+                   les onglets de la fiche ET renvoyaient vers les pages GLOBALES (perte du contexte du
+                   collaborateur). L'accès par salarié se fait via les onglets Congés/Pointages. -->
               <!-- W-CONTRACT-1 : générer un contrat (si module actif + permission) -->
               <VBtn
                 v-can="'workforce_contract.generate'"

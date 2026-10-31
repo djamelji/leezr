@@ -115,15 +115,29 @@ class AccrueLeaveUseCase
             return false;
         }
 
-        return $this->accrueEmployee($companyId, $employeeId, $leaveTypes, $periodKey, $month);
+        // Prorata temporis du MOIS D'EMBAUCHE : un salarié arrivé en cours de mois n'acquiert que la
+        // fraction du mois réellement couverte (jours calendaires de la date d'embauche à la fin du
+        // mois / jours du mois). Évite de sur-créditer une part mensuelle pleine à un dernier-jour.
+        // Règle explicite (pro-rata temporis), jamais un droit légal inventé ; ≤ la part mensuelle.
+        $factor = 1.0;
+        $employee = Employee::withoutCompanyScope()->find($employeeId);
+        $hire = $employee?->hire_date;
+        if ($hire && $hire->format('Y-m') === $periodKey) {
+            $daysInMonth = (int) $hire->daysInMonth;
+            $daysWorked = $daysInMonth - (int) $hire->day + 1;
+            $factor = $daysWorked / $daysInMonth;
+        }
+
+        return $this->accrueEmployee($companyId, $employeeId, $leaveTypes, $periodKey, $month, $factor);
     }
 
     /**
      * Crédite la part mensuelle de chaque type d'accrual mensuel pour un salarié donné. Idempotent.
      *
      * @param  \Illuminate\Support\Collection<int,LeaveType>  $leaveTypes
+     * @param  float  $prorationFactor  1.0 = mois complet (batch) ; < 1.0 = prorata du mois d'embauche.
      */
-    private function accrueEmployee(int $companyId, int $employeeId, $leaveTypes, string $periodKey, int $month): bool
+    private function accrueEmployee(int $companyId, int $employeeId, $leaveTypes, string $periodKey, int $month, float $prorationFactor = 1.0): bool
     {
         $accrued = false;
 
@@ -132,12 +146,14 @@ class AccrueLeaveUseCase
 
             $annual = $leaveType->annual_entitlement_hundredths;
             $monthly = (int) floor($annual / 12);
-            $amount = $month === 12 ? $annual - (11 * $monthly) : $monthly;
+            $base = $month === 12 ? $annual - (11 * $monthly) : $monthly;
+            $amount = (int) round($base * $prorationFactor);
 
             if ($amount <= 0) {
                 continue;
             }
 
+            $prorated = $prorationFactor < 1.0;
             LeaveLedger::credit(
                 companyId: $companyId,
                 employeeId: $employeeId,
@@ -147,7 +163,7 @@ class AccrueLeaveUseCase
                 periodKey: $periodKey,
                 correlationId: (string) Str::uuid(),
                 idempotencyKey: $idempotencyKey,
-                description: "Monthly accrual for {$leaveType->code} — period {$periodKey}",
+                description: ($prorated ? 'Pro-rata hire-month accrual' : 'Monthly accrual')." for {$leaveType->code} — period {$periodKey}",
                 actorType: 'system',
                 auditCategory: 'workforce.leave.accrual',
             );
