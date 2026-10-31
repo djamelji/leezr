@@ -15,12 +15,14 @@ const loading = ref(true)
 const documents = ref([])
 const documentsLoading = ref(false)
 const clockActionLoading = ref(false)
+const shifts = ref([])
+const shiftsLoading = ref(false)
 
 // ── Data fetching ───────────────────────────────────────────
 onMounted(async () => {
   try {
     await clockStore.fetchProfile()
-    await fetchDocuments()
+    await Promise.all([fetchDocuments(), fetchShifts()])
   }
   catch {
     toast(t('workforceMe.loadError'), 'error')
@@ -29,6 +31,22 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// W-HR-UX-4 §6 — le salarié consulte son planning PUBLIÉ (créneaux à venir, lecture seule).
+async function fetchShifts() {
+  shiftsLoading.value = true
+  try {
+    const data = await $api('/workforce/me/shifts')
+
+    shifts.value = data.shifts || []
+  }
+  catch {
+    // Silently fail — planning is secondary to the clock actions
+  }
+  finally {
+    shiftsLoading.value = false
+  }
+}
 
 async function fetchDocuments() {
   documentsLoading.value = true
@@ -43,6 +61,16 @@ async function fetchDocuments() {
   finally {
     documentsLoading.value = false
   }
+}
+
+// Planning formatting (locale-aware, read-only).
+function shiftDay(s) {
+  return new Date(s.date).toLocaleDateString(locale.value, { weekday: 'short', day: '2-digit', month: 'short' })
+}
+function shiftRange(s) {
+  const opts = { hour: '2-digit', minute: '2-digit' }
+
+  return `${new Date(s.start_at).toLocaleTimeString(locale.value, opts)} – ${new Date(s.end_at).toLocaleTimeString(locale.value, opts)}`
 }
 
 // ── Reactive computed ───────────────────────────────────────
@@ -478,6 +506,47 @@ function signatureChipProps(status) {
                 {{ t('workforceClock.breakMinBlocked', { min: Math.round((clockStore.breakMinSeconds || 0) / 60) }) }}
               </VAlert>
             </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+
+      <!-- My planning (published upcoming shifts, read-only) — W-HR-UX-4 §6 -->
+      <VRow>
+        <VCol cols="12">
+          <VCard data-test="me-planning">
+            <VCardItem>
+              <template #prepend>
+                <VAvatar color="primary" variant="tonal" rounded size="40">
+                  <VIcon icon="tabler-calendar-event" />
+                </VAvatar>
+              </template>
+              <VCardTitle>{{ t('workforceMe.myPlanning') }}</VCardTitle>
+            </VCardItem>
+            <VCardText v-if="shiftsLoading" class="text-center py-4">
+              <VProgressCircular indeterminate color="primary" size="28" />
+            </VCardText>
+            <VCardText v-else-if="!shifts.length">
+              <VAlert type="info" variant="tonal" density="compact">
+                {{ t('workforceMe.noShifts') }}
+              </VAlert>
+            </VCardText>
+            <VList v-else density="compact">
+              <VListItem
+                v-for="s in shifts"
+                :key="s.id"
+                :title="shiftDay(s)"
+                :subtitle="shiftRange(s)"
+              >
+                <template #prepend>
+                  <VIcon icon="tabler-clock-hour-4" size="20" color="primary" class="me-2" />
+                </template>
+                <template #append>
+                  <VChip size="small" color="success" variant="tonal">
+                    {{ t('workforceMe.shiftPublished') }}
+                  </VChip>
+                </template>
+              </VListItem>
+            </VList>
           </VCard>
         </VCol>
       </VRow>

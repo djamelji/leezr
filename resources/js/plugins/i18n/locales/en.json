@@ -6746,7 +6746,10 @@
       "onBreak": "On break",
       "completed": "Completed",
       "notStarted": "Not started"
-    }
+    },
+    "myPlanning": "My schedule",
+    "noShifts": "No upcoming published shift. Your schedule will appear here once your manager publishes it.",
+    "shiftPublished": "Published"
   },
   "employees": {
     "title": "Employees",

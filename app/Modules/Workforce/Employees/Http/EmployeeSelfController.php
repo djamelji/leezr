@@ -216,6 +216,43 @@ class EmployeeSelfController
         return response()->json($break);
     }
 
+    /**
+     * GET /workforce/me/shifts — créneaux de planning du salarié sur une fenêtre glissante.
+     *
+     * W-HR-UX-4 §6 : le salarié doit pouvoir CONSULTER son propre planning sans menu obscur.
+     * Ne renvoie QUE les créneaux PUBLIÉS (jamais les brouillons RH) : l'employé ne voit pas un
+     * planning tant que la RH ne l'a pas publié. Lecture seule, tenant-scoped sur l'employé résolu.
+     */
+    public function shifts(Request $request): JsonResponse
+    {
+        $employee = $this->resolveEmployee($request);
+        $companyId = $request->attributes->get('company_id');
+
+        $from = Carbon::today();
+        $to = (clone $from)->addDays((int) $request->integer('days', 14));
+
+        $shifts = \App\Core\Workforce\Shift::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('employee_id', $employee->id)
+            ->where('status', \App\Core\Workforce\Shift::STATUS_PUBLISHED)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('start_at')
+            ->get(['id', 'date', 'start_at', 'end_at', 'status', 'notes']);
+
+        return response()->json([
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'date' => $s->date?->toDateString(),
+                'start_at' => $s->start_at?->toIso8601String(),
+                'end_at' => $s->end_at?->toIso8601String(),
+                'status' => $s->status,
+                'notes' => $s->notes,
+            ])->all(),
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+        ]);
+    }
+
     /** GET /workforce/me/leaves */
     public function leaves(Request $request): JsonResponse
     {

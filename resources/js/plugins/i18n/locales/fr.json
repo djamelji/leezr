@@ -6746,7 +6746,10 @@
       "onBreak": "En pause",
       "completed": "Terminé",
       "notStarted": "Non démarré"
-    }
+    },
+    "myPlanning": "Mon planning",
+    "noShifts": "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'aura publié.",
+    "shiftPublished": "Publié"
   },
   "employees": {
     "title": "Employés",

@@ -409,6 +409,7 @@ Route::middleware('company.access:use-module,core.workflows')->group(function ()
 Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')->group(function () {
     Route::get('/', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'profile']);
     Route::get('/today', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'today']);
+    Route::get('/shifts', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'shifts']);
     Route::post('/clock-in', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'clockIn']);
     Route::post('/clock-out', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'clockOut']);
     Route::post('/break/start', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'startBreak']);
