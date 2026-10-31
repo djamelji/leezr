@@ -24110,3 +24110,43 @@ DEV uniquement ; **aucune fusion de module backend** ; permissions/ModuleGate/Ma
 `docs/bmad/product-ux-audit-1.md` (dossier) ; `documents/index.vue` + i18n (P0 dédup) ; captures `scratchpad/audit/` ; artifact proposition.
 
 ---
+
+## ADR-674 — PRODUCT-UX-2 LOT A1 : espace Documents unifié (registre + modèles + signatures)
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV, livré + vérifié). Premier incrément de la transformation P1 (ADR-673). **Exécution, pas refonte** : les 3 pages historiques Documents RH / Contrats de travail / Signatures sont réunies en **un seul espace « Documents »** à onglets, sans fusionner les modules backend ni réimplémenter leur logique.
+
+### Problème traité (audit PRODUCT-UX-AUDIT-1, A/G)
+« Faire signer et retrouver un contrat » = 4 pages traversées, 3 modules, le document signé exposé à 3 endroits. La RH devait connaître le découpage interne (modèle → génération → PDF → signature) pour une seule activité.
+
+### Réalisation
+- **Espace « Documents »** (`documents/index.vue`) devient un conteneur à **3 onglets** : **Documents générés** (le registre existant) · **Modèles** (page contrats) · **Signatures** (page signatures). En-tête unique « Documents · Documents générés, modèles de contrat et signatures — au même endroit ».
+- **Réutilisation 100 %** : les onglets Modèles/Signatures montent les **pages existantes** via une prop `embedded` qui masque uniquement leur en-tête de page — aucune réimplémentation, aucun risque de dérive, store/logique/permissions inchangés. Rendu paresseux (`v-if` sur l'onglet actif).
+- **Gating conservé** : l'onglet Modèles n'apparaît qu'avec `workforce_contract.view`, l'onglet Signatures qu'avec `workforce_signature.view` (même règle que les anciennes entrées de nav). Registre gated `workforce_documents.view`.
+- **Nav 3→1** (manifest-driven) : les `navItems` de `WorkforceContractModule` et `WorkforceSignatureModule` sont vidés ; l'entrée « Documents » (renommée depuis « Documents RH ») couvre l'espace. **Routes historiques conservées** (`/company/workforce/signature`, `/company/workforce/contract-templates` répondent 200 en standalone) + deep-link `?tab=signatures|templates`. Le wizard de signature de la fiche collaborateur est inchangé.
+- **Cycle de vie joignable dans l'espace** : registre = aperçu/téléchargement/demande de signature par ligne ; onglet Signatures = statuts (toutes/en attente/en cours/terminées/refusées/expirées), supervision, détail (signataires, relance, document signé, preuves selon `view_evidence`). La **génération** reste sur la fiche collaborateur (pivot voulu, GO §10) et via « Générer un document ».
+
+### Vérifié sur DEV réel (SHA `18863b2`)
+- Espace à 3 onglets rendu ; onglet Signatures embarqué **sans double titre** ; 0 erreur JS.
+- **Nav** : entrées autonomes « Contrats de travail » et « Signatures » **retirées** ; « Documents » présent.
+- **Routes historiques** : `/company/workforce/signature` → 200 (standalone préservé).
+- **Sécurité serveur** : bob (limité) → **403** sur `/api/workforce/documents`, 404 sur signatures (aucune exposition).
+- **Tests** : non-régression Nav/Signature/Contract/Document/Workforce/Permission **859 passés, 0 échec** ; `WorkforceNavHrGroupTest` mis à jour (contract/signature sans navItem). Les 3 échecs `ControllerSize` préexistants subsistent (inchangés, moteur Signature non modifié).
+
+### Mesure (fragmentation « faire signer »)
+- **Entrées de nav documentaires** : **3 → 1**.
+- **Activité « faire signer et retrouver un contrat »** : toutes les vues (registre, modèles, signatures, suivi, signé, preuves) dans **un seul espace** au lieu de 3 pages de nav + la fiche. Aucun gain humain inventé ; la trouvabilité et le nombre de pages de nav baissent, la génération reste contextuelle à la personne.
+
+### Limites / suite (honnête)
+- **Filtre collaborateur transverse** sur le registre : non livré — nécessite une résolution document→employé across subject types (`employee`/`contract`/`payroll_line`/`leave_request`) = chantier backend additif. **Reporté** (A2).
+- **Drawer détail unifié** du registre (A2) : le cycle de vie est aujourd'hui réparti entre les actions de ligne du registre et le détail de l'onglet Signatures ; un panneau détail unique par document reste un raffinement (A2).
+- Les anciennes pages standalone restent accessibles (compat) — un redirect doux vers l'espace pourra être ajouté ultérieurement sans perte d'action.
+- LOT B (Temps de travail) et LOT C (Paie & déclarations) : planifiés (ADR-673), non démarrés — un seul incrément à la fois comme demandé.
+
+### Garde-fous
+DEV uniquement ; **aucune fusion backend** ; permissions/ModuleGate/Market/tenant/ledger/**moteur de signature** inchangés ; routes historiques préservées ; pas de Billing/main/PROD/reset ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`documents/index.vue` (espace à onglets) ; `signature/index.vue` + `contract/templates.vue` (prop `embedded`) ; `WorkforceContractModule`/`WorkforceSignatureModule` (navItems vidés) ; i18n (`workforceDocuments.spaceTitle/spaceSubtitle/tabs`, `nav.company.workforce-documents`) ; test `WorkforceNavHrGroupTest`.
+
+---
