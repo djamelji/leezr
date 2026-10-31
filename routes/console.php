@@ -187,3 +187,12 @@ Schedule::command('registration:detect-abandoned')->dailyAt('08:00')->withoutOve
     ->before(SI::before('registration:detect-abandoned'))
     ->onSuccess(SI::onSuccess('registration:detect-abandoned'))
     ->onFailure(SI::onFailure('registration:detect-abandoned'));
+
+// ── Workforce leave lifecycle (W-HR-UX-5 P3) ───────────
+// Monthly accrual — 1st of the month at 02:00. Idempotent per (employee,type,month).
+Schedule::command('leave:accrue')->monthlyOn(1, '02:00')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/leave-accrue.log'));
+
+// Consume approved leaves whose start date has arrived — daily at 01:00. Idempotent per request.
+Schedule::command('leave:consume-due')->dailyAt('01:00')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/leave-consume-due.log'));

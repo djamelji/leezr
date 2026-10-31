@@ -61,46 +61,7 @@ class AccrueLeaveUseCase
         $processedCount = 0;
 
         foreach ($employees as $employee) {
-            $accrued = false;
-
-            foreach ($leaveTypes as $leaveType) {
-                $idempotencyKey = "accrual:{$employee->id}:{$leaveType->id}:{$periodKey}";
-
-                // Compute monthly amount
-                $annual = $leaveType->annual_entitlement_hundredths;
-                $monthly = (int) floor($annual / 12);
-
-                // Month 12 adjusts for remainder
-                if ($month === 12) {
-                    $amount = $annual - (11 * $monthly);
-                } else {
-                    $amount = $monthly;
-                }
-
-                if ($amount <= 0) {
-                    continue;
-                }
-
-                $correlationId = (string) Str::uuid();
-
-                LeaveLedger::credit(
-                    companyId: $companyId,
-                    employeeId: $employee->id,
-                    leaveTypeId: $leaveType->id,
-                    amount: $amount,
-                    entryType: LeaveLedgerEntry::TYPE_ACCRUAL,
-                    periodKey: $periodKey,
-                    correlationId: $correlationId,
-                    idempotencyKey: $idempotencyKey,
-                    description: "Monthly accrual for {$leaveType->code} — period {$periodKey}",
-                    actorType: 'system',
-                    auditCategory: 'workforce.leave.accrual',
-                );
-
-                $accrued = true;
-            }
-
-            if ($accrued) {
+            if ($this->accrueEmployee($companyId, $employee->id, $leaveTypes, $periodKey, $month)) {
                 $processedCount++;
             }
         }
@@ -121,5 +82,79 @@ class AccrueLeaveUseCase
         );
 
         return $processedCount;
+    }
+
+    /**
+     * W-HR-UX-5 (P3) — accrual pour UN salarié (déclenché à l'embauche = activation du 1er contrat),
+     * afin qu'il dispose immédiatement de la part du mois courant sans attendre le batch mensuel.
+     *
+     * Réutilise EXACTEMENT la même idempotency_key que le batch (`accrual:{emp}:{type}:{period}`) :
+     * quand le batch mensuel passera, il ne re-créditera pas ce salarié pour ce mois → aucun double.
+     * Ne crédite QUE les types avec une règle d'accrual configurée (accrual_mode=monthly, entitlement>0).
+     *
+     * @return bool true si au moins un crédit a été posé
+     */
+    public function executeForEmployee(int $companyId, int $employeeId, string $periodKey): bool
+    {
+        $parts = explode('-', $periodKey);
+        if (count($parts) !== 2) {
+            throw new \DomainException("Invalid period_key format: '{$periodKey}'. Expected 'YYYY-MM'.");
+        }
+        $month = (int) $parts[1];
+        if ($month < 1 || $month > 12) {
+            throw new \DomainException("Invalid month in period_key: {$month}");
+        }
+
+        $leaveTypes = LeaveType::withoutCompanyScope()
+            ->where('company_id', $companyId)
+            ->enabled()
+            ->where('accrual_mode', LeaveType::ACCRUAL_MONTHLY)
+            ->get();
+
+        if ($leaveTypes->isEmpty()) {
+            return false;
+        }
+
+        return $this->accrueEmployee($companyId, $employeeId, $leaveTypes, $periodKey, $month);
+    }
+
+    /**
+     * Crédite la part mensuelle de chaque type d'accrual mensuel pour un salarié donné. Idempotent.
+     *
+     * @param  \Illuminate\Support\Collection<int,LeaveType>  $leaveTypes
+     */
+    private function accrueEmployee(int $companyId, int $employeeId, $leaveTypes, string $periodKey, int $month): bool
+    {
+        $accrued = false;
+
+        foreach ($leaveTypes as $leaveType) {
+            $idempotencyKey = "accrual:{$employeeId}:{$leaveType->id}:{$periodKey}";
+
+            $annual = $leaveType->annual_entitlement_hundredths;
+            $monthly = (int) floor($annual / 12);
+            $amount = $month === 12 ? $annual - (11 * $monthly) : $monthly;
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            LeaveLedger::credit(
+                companyId: $companyId,
+                employeeId: $employeeId,
+                leaveTypeId: $leaveType->id,
+                amount: $amount,
+                entryType: LeaveLedgerEntry::TYPE_ACCRUAL,
+                periodKey: $periodKey,
+                correlationId: (string) Str::uuid(),
+                idempotencyKey: $idempotencyKey,
+                description: "Monthly accrual for {$leaveType->code} — period {$periodKey}",
+                actorType: 'system',
+                auditCategory: 'workforce.leave.accrual',
+            );
+
+            $accrued = true;
+        }
+
+        return $accrued;
     }
 }

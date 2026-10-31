@@ -1854,7 +1854,12 @@
       "contract_to_activate": "Un contrat en brouillon est à activer.",
       "pending_leave": "{count} demande(s) de congé en attente."
     },
-    "openCalendar": "Calendrier"
+    "openCalendar": "Calendrier",
+    "scheduleShift": "Programmer un créneau",
+    "shiftCreated": "Créneau programmé",
+    "start": "Début",
+    "end": "Fin",
+    "publishNow": "Publier immédiatement (visible par le salarié)"
   },
   "companyBilling": {
     "title": "Facturation",
@@ -5721,7 +5726,9 @@
       "registrationDetectAbandoned": "Détecter les inscriptions abandonnées",
       "emailFetchInbox": "Récupérer les emails entrants",
       "usageCollectSnapshots": "Collecter les snapshots d'utilisation",
-      "workflowResetCounters": "Réinitialiser les compteurs quotidiens"
+      "workflowResetCounters": "Réinitialiser les compteurs quotidiens",
+      "leaveAccrue": "Acquisition mensuelle des congés",
+      "leaveConsumeDue": "Consommation des congés à échéance"
     },
     "categories": {
       "documents": "Documents",

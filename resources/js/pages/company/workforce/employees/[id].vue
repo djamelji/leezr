@@ -349,6 +349,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               <EmployeePlanningSection
                 v-if="currentTab === 'planning'"
                 :employee-id="empId"
+                :can-manage="can('workforce.planning_manage')"
               />
             </VWindowItem>
             <VWindowItem value="time">

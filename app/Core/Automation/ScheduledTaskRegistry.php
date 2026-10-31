@@ -193,6 +193,23 @@ class ScheduledTaskRegistry
             'cron' => '55 23 * * *',
             'expected_interval_minutes' => 1440,
         ],
+        // W-HR-UX-5 (P3) — cycle de vie des congés
+        'leave:accrue' => [
+            'command' => 'leave:accrue',
+            'description' => 'automations.tasks.leaveAccrue',
+            'category' => 'workforce',
+            'frequency' => 'monthly',
+            'cron' => '0 2 1 * *',
+            'expected_interval_minutes' => 43200,
+        ],
+        'leave:consume-due' => [
+            'command' => 'leave:consume-due',
+            'description' => 'automations.tasks.leaveConsumeDue',
+            'category' => 'workforce',
+            'frequency' => 'daily',
+            'cron' => '0 1 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

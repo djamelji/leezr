@@ -153,6 +153,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Core\Events\ModuleEnabled::class,
             \App\Core\Billing\Listeners\AddonBillingListener::class,
         );
+
+        // W-HR-UX-5 (P3): seed les types de congés quand le module workforce_leave est activé.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Core\Events\ModuleEnabled::class,
+            \App\Modules\Workforce\Listeners\SeedLeaveTypesOnModuleEnabled::class,
+        );
         \Illuminate\Support\Facades\Event::listen(
             \App\Core\Events\ModuleDisabled::class,
             \App\Core\Billing\Listeners\AddonCreditListener::class,

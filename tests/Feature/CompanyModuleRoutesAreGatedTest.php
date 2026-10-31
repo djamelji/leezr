@@ -27,6 +27,7 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
         'api/webhooks/signatures/{provider}',
         'api/public/signature/{token}',
         'api/public/signature/{token}/document',
+        'api/public/signature/{token}/prepare',
         'api/public/signature/{token}/sign',
         'api/public/signature/{token}/decline',
     ];

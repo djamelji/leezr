@@ -24,7 +24,7 @@ class ActivateContractUseCase
             throw new \DomainException('Cannot activate contract in its current status.');
         }
 
-        return DB::transaction(function () use ($contract) {
+        $activated = DB::transaction(function () use ($contract) {
             // Supersede any other active contract (invariant: at most one active per employee).
             $superseded = EmploymentContract::where('employee_id', $contract->employee_id)
                 ->where('id', '!=', $contract->id)
@@ -70,5 +70,22 @@ class ActivateContractUseCase
 
             return $contract->fresh();
         });
+
+        // W-HR-UX-5 (P3) — accrual à l'embauche : le salarié a désormais un contrat actif, condition
+        // exacte du moteur d'acquisition. On lui crédite la part du MOIS COURANT pour chaque type dont
+        // une règle d'accrual mensuel est configurée (no-op si aucune → module congés inactif/non seedé).
+        // Hors transaction + non bloquant : un échec d'accrual ne doit JAMAIS annuler l'activation.
+        // Idempotent (clé accrual:{emp}:{type}:{YYYY-MM}) → aucun double avec le batch mensuel.
+        try {
+            app(AccrueLeaveUseCase::class)->executeForEmployee(
+                $activated->company_id,
+                $activated->employee_id,
+                now()->format('Y-m'),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $activated;
     }
 }

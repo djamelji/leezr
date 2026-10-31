@@ -1855,7 +1855,12 @@
       "contract_to_activate": "A draft contract needs activation.",
       "pending_leave": "{count} pending leave request(s)."
     },
-    "openCalendar": "Calendar"
+    "openCalendar": "Calendar",
+    "scheduleShift": "Schedule a shift",
+    "shiftCreated": "Shift scheduled",
+    "start": "Start",
+    "end": "End",
+    "publishNow": "Publish now (visible to the employee)"
   },
   "companyBilling": {
     "title": "Billing",
@@ -5721,7 +5726,9 @@
       "registrationDetectAbandoned": "Detect abandoned registrations",
       "emailFetchInbox": "Fetch incoming emails",
       "usageCollectSnapshots": "Collect usage snapshots",
-      "workflowResetCounters": "Reset workflow daily counters"
+      "workflowResetCounters": "Reset workflow daily counters",
+      "leaveAccrue": "Monthly leave accrual",
+      "leaveConsumeDue": "Consume due leaves"
     },
     "categories": {
       "documents": "Documents",
