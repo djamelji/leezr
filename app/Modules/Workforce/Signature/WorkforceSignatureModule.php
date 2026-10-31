@@ -25,9 +25,9 @@ class WorkforceSignatureModule implements ModuleDefinition
             surface: 'hr',
             sortOrder: 260,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'workforce-signature', 'title' => 'Signatures', 'to' => ['name' => 'company-workforce-signature'], 'icon' => 'tabler-signature', 'permission' => 'workforce_signature.view', 'surface' => 'hr', 'group' => 'hr_documents', 'sort' => 75],
-                ],
+                // PRODUCT-UX-2 (LOT A) — entrée de nav retirée : les signatures vivent dans l'espace
+                // « Documents » unifié (onglet Signatures). Route active (deep-link + onglet).
+                navItems: [],
                 routeNames: [],
                 middlewareKey: 'workforce_signature',
             ),

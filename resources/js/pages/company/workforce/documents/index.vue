@@ -4,6 +4,11 @@ import { useWorkforceDocumentsStore } from '@/modules/company/workforce/workforc
 import { useCan } from '@/composables/useCan'
 import GenerateDocumentDrawer from './_GenerateDocumentDrawer.vue'
 import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizard.vue'
+// PRODUCT-UX-2 (LOT A) — espace Documents UNIFIÉ : le registre (ce fichier) + la bibliothèque de
+// modèles + les signatures, montés en onglets. Chaque vue réutilise sa page existante (logique,
+// store, permissions intacts) via la prop `embedded`. Gating par permission, comme la nav d'origine.
+import ContractTemplates from '@/pages/company/workforce/contract/templates.vue'
+import SignaturePage from '@/pages/company/workforce/signature/index.vue'
 
 definePage({ meta: { module: 'workforce_documents', permission: 'workforce_documents.view' } })
 
@@ -163,22 +168,35 @@ const stats = computed(() => store.statistics)
 
 // ── Drawer ───────────────────────────────────────────────────
 const isDrawerOpen = ref(false)
+
+// ── Onglets de l'espace Documents (deep-link ?tab=) ──────────
+const route = useRoute()
+const router = useRouter()
+const canTemplates = computed(() => can('workforce_contract.view'))
+const canSignatures = computed(() => can('workforce_signature.view'))
+const activeTab = ref(['templates', 'signatures'].includes(route.query.tab) ? route.query.tab : 'documents')
+watch(activeTab, v => {
+  const q = { ...route.query }
+  if (v === 'documents') delete q.tab
+  else q.tab = v
+  router.replace({ query: q })
+})
 </script>
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <!-- Header de l'espace Documents unifié -->
+    <div class="d-flex align-center justify-space-between mb-4">
       <div>
         <h4 class="text-h4 font-weight-bold">
-          {{ $t('workforceDocuments.title') }}
+          {{ $t('workforceDocuments.spaceTitle') }}
         </h4>
         <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('workforceDocuments.subtitleFull') }}
+          {{ $t('workforceDocuments.spaceSubtitle') }}
         </p>
       </div>
       <VBtn
-        v-can="'workforce_documents.generate'"
+        v-if="activeTab === 'documents' && can('workforce_documents.generate')"
         color="primary"
         prepend-icon="tabler-file-plus"
         @click="isDrawerOpen = true"
@@ -186,6 +204,22 @@ const isDrawerOpen = ref(false)
         {{ $t('workforceDocuments.generateDocument') }}
       </VBtn>
     </div>
+
+    <!-- Onglets : Registre · Modèles · Signatures (chaque onglet gated par permission) -->
+    <VTabs v-model="activeTab" class="mb-5">
+      <VTab value="documents" prepend-icon="tabler-files" data-test="doc-tab-documents">
+        {{ $t('workforceDocuments.tabs.documents') }}
+      </VTab>
+      <VTab v-if="canTemplates" value="templates" prepend-icon="tabler-file-text" data-test="doc-tab-templates">
+        {{ $t('workforceDocuments.tabs.templates') }}
+      </VTab>
+      <VTab v-if="canSignatures" value="signatures" prepend-icon="tabler-signature" data-test="doc-tab-signatures">
+        {{ $t('workforceDocuments.tabs.signatures') }}
+      </VTab>
+    </VTabs>
+
+    <VWindow v-model="activeTab" :touch="false">
+      <VWindowItem value="documents">
 
     <!-- PRODUCT-UX-AUDIT-1 (P0, dédoublonnage C) : la génération de bulletins n'existe plus ici —
          elle appartient au cycle de paie (évite la même action sur 2 pages). Documents RH = registre. -->
@@ -448,6 +482,18 @@ const isDrawerOpen = ref(false)
         </template>
       </VDataTableServer>
     </VCard>
+      </VWindowItem>
+
+      <!-- Modèles de contrat (réutilise la page existante, en-tête masqué) -->
+      <VWindowItem v-if="canTemplates" value="templates">
+        <ContractTemplates v-if="activeTab === 'templates'" embedded />
+      </VWindowItem>
+
+      <!-- Signatures (réutilise la page existante, en-tête masqué) -->
+      <VWindowItem v-if="canSignatures" value="signatures">
+        <SignaturePage v-if="activeTab === 'signatures'" embedded />
+      </VWindowItem>
+    </VWindow>
 
     <!-- Generate Document Drawer -->
     <GenerateDocumentDrawer

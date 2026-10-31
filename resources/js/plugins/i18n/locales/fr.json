@@ -184,7 +184,7 @@
       "workforce-leave": "Congés",
       "workforce-planning": "Planning",
       "workforce-payroll": "Paie",
-      "workforce-documents": "Documents RH",
+      "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
@@ -6504,7 +6504,14 @@
       "platformTemplate": "Modèle standard"
     },
     "payslipMovedHint": "Les bulletins de paie se génèrent désormais depuis le cycle de paie. Cette page recense les documents générés.",
-    "goToPayroll": "Aller à la paie"
+    "goToPayroll": "Aller à la paie",
+    "spaceTitle": "Documents",
+    "spaceSubtitle": "Documents générés, modèles de contrat et signatures — au même endroit.",
+    "tabs": {
+      "documents": "Documents générés",
+      "templates": "Modèles",
+      "signatures": "Signatures"
+    }
   },
   "payslipDraft": {
     "title": "Fiche de paie — BROUILLON",

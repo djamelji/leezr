@@ -10,6 +10,10 @@ import { useCan } from '@/composables/useCan'
 import SignatureWizard from './_SignatureWizard.vue'
 import SignatureDetailDrawer from './_SignatureDetailDrawer.vue'
 
+// PRODUCT-UX-2 (LOT A) — `embedded` : masque l'en-tête de page quand la vue est montée comme
+// onglet de l'espace Documents unifié (évite les doublons de titre). Logique 100 % réutilisée.
+defineProps({ embedded: { type: Boolean, default: false } })
+
 const { t } = useI18n()
 const store = useSignatureStore()
 const { toast } = useAppToast()
@@ -81,7 +85,7 @@ onMounted(async () => {
 <template>
   <div>
     <div class="d-flex flex-wrap justify-space-between align-center gap-4 mb-6">
-      <div>
+      <div v-if="!embedded">
         <h4 class="text-h4 font-weight-bold">
           {{ t('signature.title') }}
         </h4>
@@ -89,6 +93,7 @@ onMounted(async () => {
           {{ t('signature.subtitle') }}
         </p>
       </div>
+      <VSpacer v-else />
       <VBtn
         v-if="can('workforce_signature.request')"
         prepend-icon="tabler-plus"

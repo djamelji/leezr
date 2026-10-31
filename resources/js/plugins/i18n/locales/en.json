@@ -184,7 +184,7 @@
       "workforce-leave": "Leave",
       "workforce-planning": "Planning",
       "workforce-payroll": "Payroll",
-      "workforce-documents": "HR Documents",
+      "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
@@ -6504,7 +6504,14 @@
       "platformTemplate": "Standard template"
     },
     "payslipMovedHint": "Payslips are now generated from the payroll run. This page lists generated documents.",
-    "goToPayroll": "Go to payroll"
+    "goToPayroll": "Go to payroll",
+    "spaceTitle": "Documents",
+    "spaceSubtitle": "Generated documents, contract templates and signatures — all in one place.",
+    "tabs": {
+      "documents": "Generated",
+      "templates": "Templates",
+      "signatures": "Signatures"
+    }
   },
   "payslipDraft": {
     "title": "Payslip — DRAFT",

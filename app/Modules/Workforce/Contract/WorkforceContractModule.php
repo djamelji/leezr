@@ -24,9 +24,10 @@ class WorkforceContractModule implements ModuleDefinition
             surface: 'hr',
             sortOrder: 250,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'workforce-contract-templates', 'title' => 'Contrats de travail', 'to' => ['name' => 'company-workforce-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'workforce_contract.view', 'surface' => 'hr', 'group' => 'hr_documents', 'sort' => 70],
-                ],
+                // PRODUCT-UX-2 (LOT A) — l'entrée de nav dédiée est retirée : les modèles de contrat
+                // vivent dans l'espace « Documents » unifié (onglet Modèles). La route reste active
+                // (deep-link + onglet). Permission workforce_contract.view inchangée.
+                navItems: [],
                 routeNames: [],
                 middlewareKey: 'workforce_contract',
             ),

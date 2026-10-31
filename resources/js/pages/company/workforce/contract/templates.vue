@@ -9,6 +9,10 @@ import ContractEditor from './_ContractEditor.vue'
 
 definePage({ meta: { module: 'workforce_contract', permission: 'workforce_contract.view' } })
 
+// PRODUCT-UX-2 (LOT A) — `embedded` : masque l'en-tête de page quand monté comme onglet « Modèles »
+// de l'espace Documents. Logique 100 % réutilisée.
+defineProps({ embedded: { type: Boolean, default: false } })
+
 const { t } = useI18n()
 const { toast } = useAppToast()
 const { can } = useCan()
@@ -93,7 +97,7 @@ const saveEdit = async () => {
 
 <template>
   <div>
-    <div class="mb-6">
+    <div v-if="!embedded" class="mb-6">
       <h4 class="text-h4 font-weight-bold">
         {{ t('contractTpl.title') }}
       </h4>

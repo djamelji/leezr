@@ -32,8 +32,8 @@ class WorkforceNavHrGroupTest extends TestCase
         'workforce-payroll' => 'hr_payroll',
         'workforce-dsn' => 'hr_payroll',
         'workforce-documents' => 'hr_documents',
-        'workforce-contract-templates' => 'hr_documents',
-        'workforce-signature' => 'hr_documents',
+        // PRODUCT-UX-2 (LOT A) : contract-templates + signature n'ont plus d'entrée de nav propre
+        // (fusionnées dans l'espace Documents, onglets). Leurs routes restent actives.
         'workforce-organization' => 'hr_settings',
         'workforce-settings' => 'hr_settings',
         'workforce-me' => 'account',
@@ -152,7 +152,7 @@ class WorkforceNavHrGroupTest extends TestCase
             'workforce-leave' => 'company-workforce-leave',
             'workforce-planning' => 'company-workforce-planning',
             'workforce-dsn' => 'company-workforce-dsn',
-            'workforce-signature' => 'company-workforce-signature',
+            'workforce-documents' => 'company-workforce-documents',
         ];
         foreach ($expectedRoutes as $itemKey => $route) {
             $g = $this->group($groups, self::EXPECTED_GROUP[$itemKey]);
