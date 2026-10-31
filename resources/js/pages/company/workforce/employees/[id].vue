@@ -80,6 +80,10 @@ const onboardingSteps = computed(() => {
   if (o.signature_module)
     steps.push({ key: 'signature', done: !!o.signed_contract, can: can('workforce_signature.request'), action: () => { currentTab.value = 'documents' } })
   steps.push({ key: 'account', done: !!o.account, state: o.account_state, action: () => { accessDialogOpen.value = true } })
+  // §8 — jalon one-time "premier créneau programmé" (préparation du 1er jour). Pointage/congés
+  // sont des activités RÉCURRENTES et restent volontairement HORS de cette checklist.
+  if (o.planning_module)
+    steps.push({ key: 'planning', done: !!o.planning_scheduled, action: () => { currentTab.value = 'planning' } })
 
   return steps
 })

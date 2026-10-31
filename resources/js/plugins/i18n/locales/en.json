@@ -4503,7 +4503,8 @@
       "info": "Employee information",
       "contract": "Employment contract",
       "signature": "Contract signature",
-      "account": "Employee portal access"
+      "account": "Employee portal access",
+      "planning": "Schedule the first shift"
     }
   },
   "landing": {

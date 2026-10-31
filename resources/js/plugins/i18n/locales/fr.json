@@ -4503,7 +4503,8 @@
       "info": "Informations du collaborateur",
       "contract": "Contrat de travail",
       "signature": "Signature du contrat",
-      "account": "Accès à l'espace collaborateur"
+      "account": "Accès à l'espace collaborateur",
+      "planning": "Programmer le premier créneau"
     }
   },
   "landing": {

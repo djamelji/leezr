@@ -88,12 +88,20 @@ class EmployeeFileReadModel
             ->where('subject_type', 'employee')->where('subject_id', $employee->id)
             ->where('signature_status', GeneratedDocument::SIGNATURE_SIGNED)->exists();
 
+        // W-HR-UX-4 §8 — jalon d'intégration « planning » : le premier créneau a-t-il été programmé ?
+        // C'est un jalon ONE-TIME de préparation du premier jour (pas une activité récurrente : le
+        // pointage et les congés restent HORS checklist). Conditionné au module planning actif.
+        $hasPlanning = ModuleGate::isActive($company, 'workforce_planning');
+        $planningScheduled = $hasPlanning && static::nextShift($company, $employee) !== null;
+
         return [
             'info' => true,
             'contract' => static::contractSummary($company, $employee, false) !== null,
             'signed_contract' => $signedContract,               // SIGNÉ (pas seulement généré)
             'account' => in_array($accountState, ['active', 'connected'], true), // ACTIVÉ (pas seulement invité)
             'account_state' => $accountState,                    // none | invited | active | connected
+            'planning_scheduled' => $planningScheduled,          // 1er créneau programmé (jalon one-time)
+            'planning_module' => $hasPlanning,
             'documents_module' => $hasDocuments,
             'signature_module' => ModuleGate::isActive($company, 'workforce_signature'),
         ];
