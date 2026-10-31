@@ -24069,3 +24069,44 @@ Le bouton « Modifier » de l'en-tête ouvre désormais DIRECTEMENT le formulair
 La RH passe d'un mur de 11 entrées plates à 6 sections par tâche (items visibles, 1 clic), « Mon espace » renvoyé au personnel, et « Modifier » ouvre le formulaire d'un clic. Trouvabilité nettement améliorée, sécurité serveur intacte, zéro clic ajouté.
 
 ---
+
+## ADR-673 — PRODUCT-UX-AUDIT-1 : audit transversal de l'espace Company (fragmentation produit)
+
+**Date** : 2026-10-31
+**Statut** : Accepté (audit + P0 livré ; P1-P3 planifiés). Audit produit/architectural/ergonomique complet de l'espace Company, mené sur le DEV réellement servi, 6 points de vue (dirigeant/RH/manager/salarié/product designer/architecte). **Dossier complet : `docs/bmad/product-ux-audit-1.md`. Maquette : artifact « Proposition d'architecture produit ».**
+
+### Constat central
+Leezr projette ses **modules techniques 1:1 en pages frontend**. L'entreprise doit connaître notre découpage interne (Workforce/Planning/Pointage/Documents/Contract/Signature/Payroll/DSN) pour accomplir une activité métier. Le découplage backend est sain ; sa projection en UI est la cause première de la charge cognitive. ~45 pages Company, ~26 modules, **11 chevauchements fonctionnels** (A→K du dossier).
+
+### Fragmentations majeures (observées)
+- **C** : génération de bulletins DUPLIQUÉE (Paie **et** Documents RH). **[OBS]**
+- **A/G** : « contrat signé » exposé à 3+ endroits (Documents, Signatures, fiche). Activité « faire signer » = **4 pages, 3 modules**.
+- **E** : prévu (planning) vs réel (pointage) réconciliés à **un seul** endroit (cockpit) ; ailleurs déconnectés.
+- **J** : **2 tableaux de bord** (`/dashboard` core + `/company/workforce` hub cartes-modules — présente le produit comme une collection de modules). **[OBS]**
+- **K** : identité éclatée User/Membership/Employee sur 4 pages, sans vue unifiée (homonymie « Rôles » RBAC vs JobRole déjà atténuée au libellé : « Postes »/« Job Roles »).
+- **I** : « Paramètres RH » partiellement un **lanceur** (onglets = renvois) ; `rules` duplique `worktime`.
+- **H** : lieux (locations) rangés dans Planning au lieu d'Organisation.
+
+### Hypothèses de fusion — verdicts
+- **H1 Temps de travail (Planning+Pointage)** : FUSION recommandée (P1). Gain : prévu/réel réunis. Risque moyen-élevé (pages lourdes) → migration progressive par onglets.
+- **H2 Documents (Documents+Contrats+Signatures)** : FUSION recommandée (P1, **meilleur ratio gain/fréquence/risque/effort** → flagship). Gain : « faire signer » 4→1 page.
+- **H3 Absences** : **déjà unifié** (Demandes/Calendrier/Soldes/Config) — modèle de référence, rien à faire.
+- **H4 Collaborateurs+Organisation+Accès** : la **fiche est déjà le pivot** ; reléguer la config (organisation, RBAC) en paramètres avancés ; vue « Personne » unifiée en P3.
+- **H5 Paie+DSN** : FUSION recommandée (P1) en « Paie & déclarations ». Ne jamais présenter la DSN (gateway sandbox/file/null commutable) comme une déclaration URSSAF légalement validée.
+
+### Architecture cible (orientée activité, modules backend INCHANGÉS)
+Accueil unique · Collaborateurs (fiche pivot) · **Temps de travail** · Absences · **Documents** · **Paie & déclarations** · Organisation & accès (avancé) · Mon espace. Pages de composition consommant plusieurs modules via leurs interfaces publiques ; chaque vue gated par module+permission ; routes historiques préservées par redirect.
+
+### Décisions / livré ce lot
+- **P0 (livré, déployé DEV)** : génération de bulletins **retirée de Documents RH** (dédoublonnage C) → reste dans Paie ; Documents RH devient un **registre** avec renvoi explicite vers Paie. Frontend seul, aucune perte de fonctionnalité, aucun changement backend/permission.
+- **Dossier d'audit** `docs/bmad/product-ux-audit-1.md` (diagnostic, audit page-par-page, matrices A→K + fragmentation par scénario, archi cible, parcours, plan P0-P3).
+- **Maquette** de l'espace Documents unifié + avant/après (artifact).
+- **P1-P3 planifiés** (non implémentés) : pages de composition (Documents, Temps de travail, Paie&déclarations), rationalisation du hub/paramètres/lieux, vue Personne unifiée.
+
+### Garde-fous respectés
+DEV uniquement ; **aucune fusion de module backend** ; permissions/ModuleGate/Market/tenant/manager-scope/confidentialité salariale/ledger congés/**moteur de signature** inchangés ; routes historiques préservées ; pas de Billing/main/PROD/reset ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`docs/bmad/product-ux-audit-1.md` (dossier) ; `documents/index.vue` + i18n (P0 dédup) ; captures `scratchpad/audit/` ; artifact proposition.
+
+---
