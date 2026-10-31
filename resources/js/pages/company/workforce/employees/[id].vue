@@ -11,6 +11,7 @@ import EmployeePlanningSection from './_EmployeePlanningSection.vue'
 import EmployeeDocumentsSection from './_EmployeeDocumentsSection.vue'
 import EmployeeSignaturesSection from './_EmployeeSignaturesSection.vue'
 import GenerateContractDialog from './_GenerateContractDialog.vue'
+import EmployeeAccessDialog from './_EmployeeAccessDialog.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
@@ -31,6 +32,7 @@ const loading = ref(true)
 const file = ref(null)
 const currentTab = ref('overview')
 const contractDialogOpen = ref(false) // W-CONTRACT-1
+const accessDialogOpen = ref(false) // W-HR-UX-3 — accès collaborateur
 
 const employee = computed(() => store.currentEmployee)
 const empId = computed(() => route.params.id)
@@ -77,7 +79,7 @@ const onboardingSteps = computed(() => {
   ]
   if (o.signature_module)
     steps.push({ key: 'signature', done: !!o.signed_contract, can: can('workforce_signature.request'), action: () => { currentTab.value = 'documents' } })
-  steps.push({ key: 'account', done: !!o.account, action: () => { currentTab.value = 'profile' } })
+  steps.push({ key: 'account', done: !!o.account, state: o.account_state, action: () => { accessDialogOpen.value = true } })
 
   return steps
 })
@@ -383,6 +385,14 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
         v-model="contractDialogOpen"
         :employee-id="empId"
         @generated="load"
+      />
+
+      <!-- W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche -->
+      <EmployeeAccessDialog
+        v-model="accessDialogOpen"
+        :employee-id="empId"
+        :employee-email="ident.email || ''"
+        @granted="load"
       />
     </template>
   </div>

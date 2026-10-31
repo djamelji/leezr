@@ -53,16 +53,7 @@ class EmployeeFileReadModel
             'documents' => $hasDocuments ? ['count' => GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)->where('subject_type', 'employee')->where('subject_id', $employee->id)->count()] : null,
             // W-HR-UX-1 — état d'INTÉGRATION du collaborateur (checklist guidée sur la fiche). Source unique
             // de vérité : évite à la RH de deviner « quelle est la prochaine étape ».
-            'onboarding' => [
-                'info' => true,
-                'contract' => static::contractSummary($company, $employee, false) !== null,
-                'signed_contract' => GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)
-                    ->where('subject_type', 'employee')->where('subject_id', $employee->id)
-                    ->where('signature_status', GeneratedDocument::SIGNATURE_SIGNED)->exists(),
-                'account' => $employee->user_id !== null,
-                'documents_module' => $hasDocuments,
-                'signature_module' => \App\Core\Modules\ModuleGate::isActive($company, 'workforce_signature'),
-            ],
+            'onboarding' => static::onboardingState($company, $employee, $hasDocuments),
             'alerts' => static::alerts($company, $employee, $hasLeave),
             'available_sections' => array_values(array_filter([
                 'profile', 'position', 'contract',
@@ -73,6 +64,34 @@ class EmployeeFileReadModel
                 $hasLeave ? 'requests' : null,
                 'history',
             ])),
+        ];
+    }
+
+    /**
+     * W-HR-UX-3 — états d'intégration FIABLES (vérité métier). L'accès n'est « fait » que si le compte
+     * est ACTIVÉ (mot de passe défini), jamais sur une simple invitation. La signature n'est « faite »
+     * que sur un document réellement SIGNÉ, jamais sur un simple document généré.
+     */
+    private static function onboardingState(Company $company, Employee $employee, bool $hasDocuments): array
+    {
+        $user = $employee->user_id ? \App\Core\Models\User::find($employee->user_id) : null;
+        $accountState = 'none';
+        if ($user) {
+            $accountState = $user->password_set_at ? 'active' : 'invited';
+        }
+
+        $signedContract = GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)
+            ->where('subject_type', 'employee')->where('subject_id', $employee->id)
+            ->where('signature_status', GeneratedDocument::SIGNATURE_SIGNED)->exists();
+
+        return [
+            'info' => true,
+            'contract' => static::contractSummary($company, $employee, false) !== null,
+            'signed_contract' => $signedContract,               // SIGNÉ (pas seulement généré)
+            'account' => $accountState === 'active',             // ACTIVÉ (pas seulement invité)
+            'account_state' => $accountState,                    // none | invited | active
+            'documents_module' => $hasDocuments,
+            'signature_module' => ModuleGate::isActive($company, 'workforce_signature'),
         ];
     }
 

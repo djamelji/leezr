@@ -490,6 +490,10 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware($perm('workforce.view'));
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));
+    // W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche (réutilise l'invitation Members, gated members.invite).
+    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware($perm('workforce.view'));
+    Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
+    Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
 
     // Contracts — view to read, contracts to create/activate
     Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware($perm('workforce.view'));

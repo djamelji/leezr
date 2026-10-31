@@ -9,6 +9,8 @@ use App\Modules\Workforce\UseCases\CreateEmployeeUseCase;
 use App\Modules\Workforce\UseCases\TerminateEmployeeUseCase;
 use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Core\Workforce\Employee;
+use App\Core\Models\Company;
+use App\Modules\Workforce\Employees\Services\EmployeeAccessService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -223,6 +225,40 @@ class EmployeeController extends Controller
         $employee = app(CreateEmployeeUseCase::class)->execute($data);
 
         return response()->json($employee, 201);
+    }
+
+    // ── W-HR-UX-3 : accès à l'espace collaborateur DEPUIS la fiche (réutilise le mécanisme Members) ──
+
+    public function accessStatus(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+
+        return response()->json(app(EmployeeAccessService::class)->status($company, $employee));
+    }
+
+    public function grantAccess(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+        $data = $request->validate([
+            'email' => 'required|email|max:255',
+            'company_role_id' => 'nullable|integer',
+        ]);
+
+        $status = app(EmployeeAccessService::class)->grant(
+            $company, $employee, $data['email'], $data['company_role_id'] ?? null, (int) $request->user()->id,
+        );
+
+        return response()->json($status);
+    }
+
+    public function resendAccess(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+
+        return response()->json(app(EmployeeAccessService::class)->resendInvitation($company, $employee));
     }
 
     public function update(Request $request, int $id): JsonResponse

@@ -7877,5 +7877,20 @@
       "validated": "Legally validated",
       "obsolete": "Obsolete"
     }
+  },
+  "employeeAccess": {
+    "title": "Employee portal access",
+    "hint": "Give the employee access to their Leezr space.",
+    "active": "Account active: the employee set their password and can sign in.",
+    "invited": "Invitation sent: waiting for the employee to set their password.",
+    "resend": "Resend invitation",
+    "noneHint": "No access yet. Invite the employee to create their space.",
+    "email": "Employee email",
+    "role": "Role",
+    "roleHint": "Non-administrative role assigned to the portal access.",
+    "grant": "Grant access",
+    "granted": "Invitation sent to the employee.",
+    "resent": "Invitation resent.",
+    "statesNote": "Three distinct states: invited (email sent) · active (password set) · connected (after first login)."
   }
 }

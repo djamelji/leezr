@@ -284,6 +284,17 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
       this._jobRoles = this._jobRoles.filter(r => r.id !== id)
     },
 
+    // ── W-HR-UX-3 : accès à l'espace collaborateur depuis la fiche ──
+    async fetchEmployeeAccess(id) {
+      return await $api(`/workforce/employees/${id}/access`)
+    },
+    async grantEmployeeAccess(id, payload) {
+      return await $api(`/workforce/employees/${id}/access`, { method: 'POST', body: payload })
+    },
+    async resendEmployeeAccess(id) {
+      return await $api(`/workforce/employees/${id}/access/resend`, { method: 'POST' })
+    },
+
     // ── Reset ──────────────────────────────────────────────
     clearCurrentEmployee() {
       this._currentEmployee = null

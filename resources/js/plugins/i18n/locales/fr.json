@@ -7877,5 +7877,20 @@
       "validated": "Validé juridiquement",
       "obsolete": "Obsolète"
     }
+  },
+  "employeeAccess": {
+    "title": "Accès à l'espace collaborateur",
+    "hint": "Donnez au collaborateur l'accès à son espace Leezr.",
+    "active": "Compte activé : le collaborateur a défini son mot de passe et peut se connecter.",
+    "invited": "Invitation envoyée : en attente de définition du mot de passe par le collaborateur.",
+    "resend": "Relancer l'invitation",
+    "noneHint": "Aucun accès pour l'instant. Invitez le collaborateur à créer son espace.",
+    "email": "E-mail du collaborateur",
+    "role": "Rôle",
+    "roleHint": "Rôle non administratif attribué à l'espace collaborateur.",
+    "grant": "Donner accès",
+    "granted": "Invitation envoyée au collaborateur.",
+    "resent": "Invitation renvoyée.",
+    "statesNote": "Trois états distincts : invité (e-mail envoyé) · activé (mot de passe défini) · connecté (après sa 1re connexion)."
   }
 }
