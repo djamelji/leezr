@@ -22,17 +22,21 @@ const access = ref(null)
 const email = ref('')
 const roleId = ref(null)
 
+// Certaines réponses API sont enveloppées dans { data: ... } — on déballe systématiquement.
+const unwrap = r => (r && typeof r === 'object' && 'state' in r ? r : (r?.data ?? r))
+
 const load = async () => {
   loading.value = true
   try {
-    access.value = await store.fetchEmployeeAccess(props.employeeId)
+    access.value = unwrap(await store.fetchEmployeeAccess(props.employeeId))
     email.value = access.value.email || props.employeeEmail || ''
     roleId.value = access.value.assignable_roles?.[0]?.id ?? null
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
   finally { loading.value = false }
 }
 
-watch(isOpen, v => { if (v) load() })
+// immediate: couvre le cas où le composant est re-monté alors qu'il est déjà ouvert (après refresh de la fiche).
+watch(isOpen, v => { if (v) load() }, { immediate: true })
 
 const roleItems = computed(() => (access.value?.assignable_roles || []).map(r => ({ title: r.name, value: r.id })))
 const state = computed(() => access.value?.state || 'none')
@@ -40,7 +44,8 @@ const state = computed(() => access.value?.state || 'none')
 const grant = async () => {
   acting.value = true
   try {
-    access.value = await store.grantEmployeeAccess(props.employeeId, { email: email.value, company_role_id: roleId.value })
+    await store.grantEmployeeAccess(props.employeeId, { email: email.value, company_role_id: roleId.value })
+    await load() // relit l'état autoritatif (none → invited/active)
     toast(t('employeeAccess.granted'), 'success')
     emit('granted')
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
@@ -50,7 +55,8 @@ const grant = async () => {
 const resend = async () => {
   acting.value = true
   try {
-    access.value = await store.resendEmployeeAccess(props.employeeId)
+    await store.resendEmployeeAccess(props.employeeId)
+    await load()
     toast(t('employeeAccess.resent'), 'success')
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
   finally { acting.value = false }
