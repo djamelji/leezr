@@ -23809,3 +23809,42 @@ Non-régression Workforce/Contrat/Signature : **473 tests verts**. E2E : passage
 **Fichiers** : `employees/index.vue` (date par défaut + requis + no-toast-422) ; e2e `hrux2-dev-pass2`, `hrux2-portal`, `hrux-after`.
 
 ---
+
+## ADR-668 — W-HR-UX-3 : intégration RH unifiée (accès collaborateur depuis la fiche)
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV uniquement). Le dernier obstacle de W-HR-UX-2 (l'accès salarié obligeait à quitter la fiche pour l'écran Members) est **corrigé à la racine**. Audit + implémentation sur le vrai DEV.
+
+### Audit de l'interface initiale (rappel W-HR-UX-2)
+La fiche était déjà le centre de l'intégration (checklist 4 étapes), mais l'étape « Accès à l'espace collaborateur » renvoyait vers le Profil sans action, et la gestion réelle des comptes vivait dans **Members** (séparé). La RH devait comprendre User/Membership.
+
+### P0 — Donner accès DEPUIS la fiche collaborateur (livré)
+`EmployeeAccessService` **réutilise strictement** le mécanisme d'invitation existant (pas de 2ᵉ système de comptes) : `User` sans mot de passe → notification de définition de mot de passe (Password broker) ; `Membership` avec un **rôle non-administratif** ; lien `employee.user_id`. Endpoints `GET/POST /workforce/employees/{id}/access(+/resend)` (gated `members.invite`/`workforce.view`, scope tenant). **Dialog « Accès à l'espace collaborateur »** ouvert depuis la checklist : e-mail prérempli (modifiable), sélection d'un rôle **non-admin**, bouton « Donner accès » ; états invité → relance possible, activé → confirmation.
+Garde-fous : **idempotent** (pas de doublon User/Membership) ; **jamais de privilège administratif** auto (rôles administratifs refusés) ; **anti-réattribution** d'un compte déjà lié à un autre collaborateur ; respect des **entitlements** (limite de membres) ; pas de divulgation cross-tenant.
+
+### États d'intégration FIABLES (vérité métier)
+- **Accès** : `none` (aucun compte) · `invited` (compte créé, mot de passe JAMAIS défini) · `active` (mot de passe défini). **L'étape « Accès » de la checklist n'est « faite » que si le compte est ACTIVÉ**, jamais sur une simple invitation. `account_state` exposé par le read model.
+- **Signature** : l'étape n'est « faite » que sur un document **réellement SIGNÉ** (pas seulement généré).
+- **Première connexion / suspension** : **non suivies** par le modèle actuel (pas de last-login ni de flag suspension first-class) → **non revendiquées**, documentées comme limite. Le dialog distingue néanmoins explicitement invité / activé / connecté dans son libellé.
+
+### Correction technique notable
+Après l'octroi de l'accès, le rafraîchissement de la fiche re-montait le dialog (isOpen restant vrai) sans redéclencher le chargement → dialog vide. Corrigé par `watch(isOpen, …, { immediate: true })` + relecture autoritative de l'état après grant/resend.
+
+### Poste / manager / établissement
+Poste et manager restent saisissables via Profil/Contrat ; amélioration prioritaire = les proposer plus tôt (backlog P1). **Entité Établissement/Site : toujours NON livrée** — aucune colonne texte factice créée. Le multi-site nécessite une conception d'entité dédiée avant toute implémentation structurelle → **limite documentée**.
+
+### Mode rapide vs intégration complète
+Choix retenu : **pas de gros wizard**. La fiche + la checklist contextuelle offrent l'expérience la moins coûteuse en navigation : création rapide (nom + date, préremplie et VISIBLE) puis progression guidée reprenable depuis la fiche (contrat → signature → accès). La date préremplie reste **affichée et modifiable** (non imposée à l'insu de la RH).
+
+### Tests
+`EmployeeAccessTest` 6 (invitation/lien/idempotence/activation/refus rôle admin/anti-réattribution/relance) ; **567 tests workforce verts** (1 flake isolé paie-vault, passe seul) ; build propre. E2E : octroi d'accès depuis la fiche vérifié (état « invité » affiché) ; création + fiche + checklist sur le **vrai DEV**.
+
+### Limites restantes / prochaines améliorations
+- États « première connexion » et « suspendu » à modéliser (last-login, flag suspension) pour une checklist complète.
+- Entité Site/établissement (multi-site) à concevoir+livrer.
+- Saisie poste/manager plus tôt dans le parcours.
+- Parcours A→Z complet (planning/pointage/congés) : audité partiellement, à poursuivre.
+
+**Fichiers** : `EmployeeAccessService` ; `EmployeeController` (access/grant/resend) ; routes ; `EmployeeFileReadModel` (onboardingState) ; `_EmployeeAccessDialog.vue` + `[id].vue` + store + i18n ; tests `EmployeeAccessTest`, e2e `hrux3-dev-access`.
+
+---
