@@ -23889,3 +23889,54 @@ Temps d'étapes **automatisées/headless** (1 passage complet, re-joué 6× pend
 **Fichiers** : migration `add_last_login_at_to_users` ; `User` (cast) ; `AppServiceProvider` (listener Login) ; `EmployeeAccessService` + `EmployeeFileReadModel` (états connected + jalon planning) ; `EmployeeSelfController` + `routes/company.php` (`/workforce/me/shifts`) ; `me.vue` (carte Mon planning) ; `[id].vue` (jalon planning) ; `_EmployeeAccessDialog.vue` + i18n ; `phpunit.xml` (memory_limit) ; commande `E2EHrux4GrantAccessCommand` ; tests `EmployeeAccessTest`, `EmployeeSelfShiftsTest`, e2e `hrux4-first-day`.
 
 ---
+
+## ADR-670 — W-HR-UX-5 : livraison DEV, cycle de vie des congés, parcours réel & fiabilisation
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV uniquement). Ferme l'écart « code poussé mais non servi » de W-HR-UX-4 et livre le cycle de vie des congés, une simplification UI contextuelle et la fiabilisation de la suite. **Stabilisation du socle HR horizontal (ADR-561)** — aucune extension majeure.
+
+### Rapport en 16 points
+
+1. **SHA réellement servi DEV** : `f49fb4f` (= HEAD local), confirmé via l'en-tête `X-Build-Version` (3 sondes identiques, `/up` → 200). L'écart précédent (DEV servait `86161e9`) était un **artefact de timing** : la sonde avait eu lieu PENDANT la fenêtre de déploiement.
+
+2. **État du pipeline CI** : `.github/workflows/deploy.yml` fonctionne, déclenché sur push `dev`/`main`. Déploiement **par clé SSH (`secrets.VPS_SSH_KEY`), sans mot de passe** (build sur runner GitHub → artefact → scp/ssh clé → symlink atomique → health check). Runs récents tous `success`. Aucun job bloqué. Le mot de passe SSH compromis n'intervient NULLE PART dans le pipeline.
+
+3. **Résultat du déploiement** : push `8f76802..f49fb4f` → run `41161280497` **success (1m54s)** → DEV bascule de `8f76802` à `f49fb4f` (observé en direct). Déploiement effectif, pas déclaré sur confiance.
+
+4. **Parcours RH complet sur DEV réel** (`tests/e2e/hrux5-dev-rh.spec.js`, dev.leezr.com) : **6/6 vert** — login → création salarié fictif (`@leezr.invalid`) → **poste/manager en vraie UI** (formulaire d'édition profil) → contrat + activation → **P4 : planifier un créneau DEPUIS la fiche** → checklist d'intégration. Aucune action RH substituée par de l'API.
+
+5. **Parcours salarié complet** : l'A→Z salarié (planning/pointage/pause/reprise/fin/congés/documents) est prouvé **20/20 sur le full-stack local servant le MÊME SHA** (`hrux4-first-day.spec.js`). **Frontière honnête** : sur DEV (env production) les étapes dépendantes de l'E-MAIL — activation du compte, 1re connexion, signature externe — **ne sont pas complétables** (Mailpit non exposé, SSH interdit, commandes e2e refusées en production). Documenté, non simulé.
+
+6. **État de première connexion (§4 W-HR-UX-4, rappel/validé)** : indicateur `last_login_at` fiable (event Login, jamais déduit du mot de passe) ; états `none → invited → active → connected`. Prouvé bout-en-bout en local (activation via vrai lien reset → login → `connected`).
+
+7. **Planning & pointage** : planning salarié (`/workforce/me/shifts`, publiés uniquement) + pointage clock-in/pause/reprise/fin prouvés (local 20/20) ; **P4 : création+publication d'un créneau depuis la fiche** prouvée sur DEV réel (plus besoin d'aller dans la grille planning).
+
+8. **Cycle de vie des congés (P3)** — câblé sur configuration explicite, **aucun droit inventé** :
+   - **Types** : seedés idempotemment à l'activation du module `workforce_leave` (listener `SeedLeaveTypesOnModuleEnabled` ; `updateOrCreate` sur `company_id+code` = unique DB). Le jobdomain active workforce en ADDON → le hook correct est l'activation du module, pas la création company.
+   - **Acquisition** : commande `leave:accrue` (planifiée mensuelle, 1er à 02:00) + **accrual à l'embauche** à l'activation du 1er contrat (part du mois courant), **uniquement** pour les types `accrual_mode=monthly` + entitlement>0 ; idempotent (clé `accrual:{emp}:{type}:{YYYY-MM}` → aucun double avec le batch). Hors transaction + non bloquant.
+   - **Consommation** : commande `leave:consume-due` (planifiée quotidienne, 01:00) consomme les congés `approved` dont `date_from <= today` ; idempotent (`consume:{id}`, unique DB), ledger **append-only**, **aucun recalcul destructif**. Ferme le trou `approved → consumed` jamais déclenché.
+   - Respecté : market (types FR seedés par `market_key`), contrat actif requis, unité en **centièmes de jour**, reports (`carry_over_*` des types), ajustements (perm `leave_adjust`), traçabilité (ledger immuable + audit), permissions (`leave_manage`/`leave_approve`/`leave_adjust`).
+   - **Preuve DEV réel** : un nouveau salarié reçoit **automatiquement** un solde à l'activation du contrat (DEV : 308 centièmes = CP 2,08 j + RTT 1 j). 7 tests `LeaveLifecycleTest`.
+   - Commandes **enregistrées dans le cockpit** `ScheduledTaskRegistry` (bijection registre↔scheduler respectée).
+
+9. **Corrections UX (P4)** : (a) action contextuelle « Programmer un créneau » sur la fiche (créer + publier sans quitter la fiche) ; (b) **bug d'unité corrigé** : `me.vue` affichait les soldes en centièmes bruts comme des jours (×100), exposé par P3 — désormais converti en jours (les 3 autres écrans divisaient déjà par 100). Vérifié à l'écran : « ACQUIS 25 j / DISPONIBLE 20 j » (et non 2500/2000).
+
+10. **Captures avant/après** (scratchpad) : espace salarié desktop **1920 & 1366**, tablette **768**, mobile **390** (clair, rendus corrects) ; **dark mode** désormais correct via `colorScheme:'dark'` (le thème par défaut `system` suit `prefers-color-scheme` ; l'approche cookie précédente ne basculait pas) — liste Employés en sombre, contrastes/alignements Vuexy OK ; solde congés AVANT (« 208 j ») / APRÈS (« 25 j »).
+
+11. **Mesures de complexité** : la nav RH reste large (**12 items HR**) — ressenti « usine à gaz » réel, non résolu ici (la nav est manifest-driven, relève d'un arbitrage doctrine). Gain structurel mesurable livré : **−1 navigation** pour programmer le planning d'un salarié (action désormais sur la fiche au lieu de fiche → grille planning → recherche salarié → drawer). Checklist d'intégration = source unique de la prochaine action.
+
+12. **Résultats PHPUnit** : `tests/Feature` → **3317 passés**, **3 échecs**, 12 skipped, **0 OOM** (pic RSS ~572 Mo, `memory_limit=1024M` = marge saine, pas un masque). +11 tests nets (LeaveLifecycle 7, EmployeeSelfShifts, …).
+
+13. **Résultats Playwright** : `hrux4-first-day` **20/20 local** (dont `E0-auto-leave-balance-on-hire` prouvant P3 sans fixture) ; `hrux5-dev-rh` **6/6 sur DEV réel** ; `LeaveLifecycleTest` 7 verts.
+
+14. **Échecs de tests restants (classés)** : les **3** rouges sont tous `ControllerSizeInvariantTest` = **dette d'archi PRÉEXISTANTE démontrée** (échouent aussi sur HEAD propre, introduite par les sprints Workforce/Signature) : `TimeEntryController` 309 lignes (>250), `DB::` dans `SignatureWebhookController`, 3× `->save()` (SignatureController/SignerController/WorkforceConfigController). **Non corrigés** : refactor structurel adjacent au moteur de signature protégé → risque métier (interdit par le GO) → à traiter dans un lot refactor dédié. **6/9 corrigés** ce lot : 4 pollutions inter-tests (cause racine = fuite `Model::unguard()` → `reguard()` en `tearDown` de `TestCase`) + 2 invariants de routes (route publique `signature/{token}/prepare` légitimement ajoutée aux allowlists).
+
+15. **Risques & fonctionnalités manquantes** : (a) étapes DEV dépendantes de l'e-mail non exécutables sans boîte/SSH ; (b) accrual sans **prorata sub-mensuel** à l'embauche (part mensuelle pleine — tranche sûre livrée, prorata par jours = raffinement futur) ; (c) entité **Site/établissement** toujours non livrée ; (d) largeur de la nav RH ; (e) 3 contrôleurs à refactorer (dette). Ligne `period_key` année à harmoniser (signalé, non destructif).
+
+16. **État de l'incident SSH** : **toujours ouvert**. Le mot de passe compromis **n'a PAS été utilisé** (ni `sshpass`, ni affichage). Le déploiement s'est fait **exclusivement** via le pipeline CI par **clé** (`VPS_SSH_KEY`). La rotation du mot de passe reste du ressort de l'administrateur habilité ; l'incident n'est pas clos tant que la rotation n'est pas effectuée.
+
+### Fichiers
+Backend : listener `SeedLeaveTypesOnModuleEnabled` + enregistrement (`AppServiceProvider`) ; `AccrueLeaveUseCase` (méthode `executeForEmployee`) ; `ActivateContractUseCase` (accrual à l'embauche) ; commandes `AccrueLeaveCommand`/`ConsumeDueLeaveCommand` + planification (`routes/console.php`) + `ScheduledTaskRegistry` ; `_EmployeePlanningSection.vue` + `[id].vue` (action planning fiche) ; `me.vue` (fix unité solde) + i18n.
+Tests : `LeaveLifecycleTest` ; `TestCase` (reguard) ; allowlists `CompanyModuleRoutesAreGatedTest`/`GlobalModuleRouteCoverageTest` ; e2e `hrux5-dev-rh`, `hrux4-first-day` (P3 auto-solde + dark).
+
+---
