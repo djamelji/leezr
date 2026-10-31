@@ -18,6 +18,12 @@
         </include>
     </source>
     <php>
+        <!-- W-HR-UX-4 §11 : la suite Feature complète (RefreshDatabase + ré-enregistrement du
+             volumineux routes/company.php à chaque boot) dépasse le défaut CLI de 512M en cours de
+             lot, ce qui déclenche un OOM au bootstrap et des échecs en cascade non déterministes
+             (faux « flake » paie/vault). On alloue au runner la mémoire réellement nécessaire :
+             cause racine = pression mémoire, pas un bug métier. -->
+        <ini name="memory_limit" value="1024M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
