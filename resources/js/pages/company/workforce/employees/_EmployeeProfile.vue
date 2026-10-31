@@ -61,7 +61,9 @@ const cancelEdit = () => {
 }
 
 // Ouverture directe du formulaire quand l'en-tête déclenche « Modifier » (si autorisé).
-watch(() => props.editSignal, v => { if (v && canManage.value) startEdit() })
+// immediate: le VWindowItem est rendu paresseusement → le composant monte APRÈS l'incrément du
+// signal (déclenché avant le changement d'onglet) ; immediate rejoue la valeur courante au montage.
+watch(() => props.editSignal, v => { if (v && canManage.value) startEdit() }, { immediate: true })
 
 const saveProfile = async () => {
   formLoading.value = true
