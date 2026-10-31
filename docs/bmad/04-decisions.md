@@ -23940,3 +23940,52 @@ Backend : listener `SeedLeaveTypesOnModuleEnabled` + enregistrement (`AppService
 Tests : `LeaveLifecycleTest` ; `TestCase` (reguard) ; allowlists `CompanyModuleRoutesAreGatedTest`/`GlobalModuleRouteCoverageTest` ; e2e `hrux5-dev-rh`, `hrux4-first-day` (P3 auto-solde + dark).
 
 ---
+
+## ADR-671 — W-HR-UX-6 : recette finale, vérification chiffrée des congés, simplification contextuelle
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV uniquement). Lot de **recette** : vérifier la qualité réelle, corriger les frictions démontrées, sans nouveau module ni refonte. Audit mené sur le **DEV réellement servi** (dev.leezr.com) comme une RH débutante.
+
+### 1. Vérification des congés — démonstration chiffrée (config FR réellement appliquée)
+- **Politique / types** : seules sources de droits = les `LeaveType` à accrual mensuel configuré. FR seedé : **Congés payés** (`annual_leave`, 2500/an, max 3000, report 500 jusqu'au mois 3) et **RTT** (1200/an, max 1200, sans report). `sick_leave`/`maternity`/`paternity`/`unpaid` = `accrual_mode=none` → **0 droit** (jamais crédités). Aucun droit légal inventé : la « politique » = les colonnes du type (pas de couche LeavePolicy séparée).
+- **Unité** : centièmes de jour (1 j = 100). **Période de référence** : `period_key` `YYYY-MM` (mois d'embauche à l'embauche ; mois courant au batch).
+- **Déclenchement** : (a) à l'embauche = activation du 1er contrat ; (b) batch mensuel `leave:accrue` (1er du mois) ; (c) consommation `leave:consume-due` (quotidien).
+- **Prorata (corrigé)** : le crédit observé **308 centièmes** (= CP 208 + RTT 100) correspondait à un **mois PLEIN** pour une embauche **le jour même** → **sur-crédit** pour toute embauche en cours de mois. Correctif W-HR-UX-6 : **pro-rata temporis du mois d'embauche** par jours calendaires `(joursInMois − jourEmbauche + 1)/joursInMois`. Démonstration (juillet, 31 j) :
+  - embauche **01/07** → facteur 1.0000 → CP 208 + RTT 100 = **308 c. (3,08 j)** — mois complet.
+  - embauche **16/07** → facteur 0.5161 → CP 107 + RTT 52 = **159 c. (1,59 j)**.
+  - embauche **31/07** → facteur 0.0323 → CP 7 + RTT 3 = **10 c. (0,10 j)**.
+  Le prorata est **toujours ≤ la part mensuelle** (règle explicite, pas un droit inventé). Le batch mensuel reste en mois pleins pour les salariés en place.
+- **Prévention des doubles crédits** : `idempotency_key` `accrual:{emp}:{type}:{YYYY-MM}` unique en DB → un même mois n'est jamais crédité deux fois (le batch ne « complète » pas un mois d'embauche proratisé, ce qui est correct).
+- **Consommation après congé pris** : à l'approbation = **réservation** (debit −100 pour 1 j) ; à la date du congé (`leave:consume-due`) = **release +100** puis **consumption −100** → `available` réduit définitivement de 100. Idempotent (`consume:{id}` unique), ledger **append-only**, aucun recalcul destructif.
+- **Tests** : `LeaveLifecycleTest` **9 verts** (seed idempotent, mois plein, prorata 16/07=107, 1er=plein, skip accrual_none, embauche, consommation unique, congé futur non consommé).
+- **Correction affichage (rappel W-HR-UX-5)** : solde montré en **jours** (était en centièmes ×100).
+
+### 2. E2E email sur DEV — blocage documenté (E2E DEV NON déclaré complet)
+Caractérisation (sans SSH) : `/api/forgot-password` sur DEV répond « If an account exists… » (200, non-révélateur — bon) → **mail câblé** ; `.env.example` = `MAIL_MAILER=log` → les e-mails DEV sont écrits dans `storage/logs/laravel.log`, **récupérables uniquement par SSH** ; **Mailpit non exposé** ; toutes les commandes `e2e:*` sont gardées `environment('local','testing')` → **refusent en production** (garde à préserver).
+**Impossibilité démontrée** : récupérer le jeton d'invitation sur DEV nécessiterait soit la clé SSH (absente du poste — c'est un secret CI), soit une surface token en production. **Approche sécurisée recommandée** (pour l'administrateur habilité, non implémentée ici par prudence sécurité) : un `workflow_dispatch` GitHub Actions utilisant **`VPS_SSH_KEY` (clé, jamais mot de passe)** exécutant une commande **recette strictement bornée** (emails `@leezr.invalid` uniquement + flag d'env activé par l'admin), sans jamais exposer Mailpit. **Non exécuté** : je n'ajoute pas de récupérateur de jeton atteignable en prod sans arbitrage de l'admin. **Le parcours complet dépendant de l'e-mail (invitation → activation → 1re connexion → signature → retour fiche) reste prouvé 20/20 sur le full-stack local servant le MÊME SHA.**
+
+### 3. Audit visuel final (DEV, RH débutante) — friction structurelle corrigée
+Écrans inspectés : liste collaborateurs, ajout rapide, fiche (overview/checklist/contrat/planning/congés), page Congés, portail.
+- **Bien structuré** (aucune correction) : **ajout rapide** minimal (2 champs requis + date préremplie, email/tél/matricule optionnels) ; **checklist d'intégration** 5 étapes claires avec « Faire » contextuel (dont « Programmer le premier créneau ») ; **onglet Planning fiche** avec l'action **« Programmer un créneau »** (P4) contextuelle ; **page Congés** (onglets Demandes/Calendrier/Soldes/Types, stats, empty-state avec CTA).
+- **Friction démontrable CORRIGÉE** : l'en-tête de la fiche portait des boutons **« Congés »** et **« Pointages »** qui (a) **doublonnaient les onglets** du même nom et (b) faisaient `router.push` vers les pages **globales** de l'entreprise → **perte du contexte du collaborateur** (piège pour une RH débutante : elle attend le congé de CE salarié, atterrit sur la liste de toute l'entreprise). **Retirés** ; l'accès par salarié passe par les onglets. Boutons conservés : « Modifier » et « Générer un contrat » (actions réelles).
+- **Observation non corrigée (structurelle, hors périmètre lot)** : la nav RH compte **12 items** (densité élevée) ; son remaniement est manifest-driven et relève de la doctrine, pas d'un correctif de friction. Le bouton d'en-tête « Modifier » navigue vers l'onglet Profil (mode lecture) puis exige un 2ᵉ « Modifier » dans l'onglet — micro-friction signalée, non corrigée (coordination composant enfant).
+
+### 4. Tests & dette — liste exacte des 3 échecs restants (non masqués)
+Suite complète : **3319 passés / 3 échecs / 12 skipped**, **0 OOM**. Non-régression **Signature/Workforce/Permissions : 572 verts**. Les **3** rouges (tous `ControllerSizeInvariantTest`, dette d'archi **préexistante**, aucun comportement métier modifié pour verdir) :
+1. **`no controller exceeds 250 lines`** (8 contrôleurs) : `CompanyBillingController` 261, `EmailInboxController` 327, `ContractController` 291, `SignatureController` **686**, `ShiftController` 310, `EmployeeController` 312, `EmployeeSelfController` 322, `TimeEntryController` 309. *(EmployeeSelfController était déjà >250 — 285 — avant l'endpoint self-planning W-HR-UX-4 ; les 7 autres préexistent.)*
+2. **`no controller uses db facade`** : `SignatureWebhookController:62`.
+3. **`no controller calls save on models`** : `SignatureController:265`, `SignerController:48`, `WorkforceConfigController:42`.
+→ Correction = **refactor dédié** (extraction use-cases/services) ; 2 des 3 touchent le **module Signature adjacent au moteur cryptographique protégé** → **non traité ici** (risque métier, interdit par le GO). Lot refactor à ouvrir.
+
+### 5. Livraison
+DEV uniquement ; aucun Billing/main/PROD ; aucun moteur cryptographique modifié ; aucun reset destructif ; **mot de passe SSH compromis non utilisé** (incident toujours ouvert) ; déploiement via CI par clé.
+
+### Fichiers
+`AccrueLeaveUseCase` (prorata mois d'embauche) ; `LeaveLifecycleTest` (+2 tests prorata) ; `[id].vue` (retrait boutons en-tête redondants).
+
+### Synthèse (ce qu'une RH trouve encore compliqué / corrigé / impossible)
+- **Encore compliqué** : la nav RH reste dense (12 items) ; « Modifier » de l'en-tête demande un 2ᵉ clic.
+- **Corrigé ce lot** : sur-crédit de congés à l'embauche (prorata) ; boutons d'en-tête trompeurs qui sortaient de la fiche ; (rappels récents) solde en jours, planning visible, création de créneau depuis la fiche, soldes auto-crédités à l'embauche.
+- **Impossible simplement (à ce jour)** : rejouer le parcours e-mail (activation/signature) **sur DEV public** sans accès boîte/SSH — prouvé en local même build ; multi-site (entité Établissement non livrée) ; refactor des 3 contrôleurs (dette, dont module Signature protégé).
+
+---
