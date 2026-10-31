@@ -77,6 +77,8 @@ function shiftRange(s) {
 const employee = computed(() => clockStore.employee)
 const todayClock = computed(() => clockStore.todayClock)
 const leaveBalances = computed(() => clockStore.leaveBalances)
+// Soldes stockés en CENTIÈMES de jour (1 j = 100) — conversion en jours pour l'affichage.
+const toDays = v => (Number(v) || 0) / 100
 
 const employeeName = computed(() => {
   if (!employee.value) return ''
@@ -750,14 +752,14 @@ function signatureChipProps(status) {
                         size="small"
                         label
                       >
-                        {{ t('workforceMe.daysUnit', { count: balance.available }) }}
+                        {{ t('workforceMe.daysUnit', { count: toDays(balance.available) }) }}
                       </VChip>
                     </td>
                     <td class="text-end text-medium-emphasis">
-                      {{ t('workforceMe.daysUnit', { count: balance.consumed }) }}
+                      {{ t('workforceMe.daysUnit', { count: toDays(balance.consumed) }) }}
                     </td>
                     <td class="text-end text-medium-emphasis">
-                      {{ t('workforceMe.daysUnit', { count: balance.accrued }) }}
+                      {{ t('workforceMe.daysUnit', { count: toDays(balance.accrued) }) }}
                     </td>
                   </tr>
                 </tbody>

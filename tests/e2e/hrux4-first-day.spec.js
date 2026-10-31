@@ -266,10 +266,15 @@ test('W-HR-UX-4 — premier jour du salarié, A→Z (RH + salarié + manager)', 
   })
 
   // ──────────────────── PART E — Congés : demande salarié → approbation RH → solde ────────────────────
-  await step(rh, 'E0-seed-leave-balance', async () => {
-    // Octroi d'un solde via le VRAI LeaveLedger (accrual). Documenté : il manque une UI/automatisation
-    // RH d'octroi des droits à l'embauche (gap structurel §7).
-    php(['e2e:prepare-leave-fixture', `--employee=${employeeId}`, '--leave-type=1', '--days=25'])
+  await step(rh, 'E0-auto-leave-balance-on-hire', async () => {
+    // W-HR-UX-5 (P3) : plus de fixture. L'activation du contrat (A4) a déclenché l'accrual à
+    // l'embauche → le salarié dispose AUTOMATIQUEMENT d'un solde (part du mois courant).
+    const bal = await apiRequest(rh, { path: `/api/workforce/employees/${employeeId}/leave-balances` })
+    expect(bal.status, 'balances readable').toBeLessThan(400)
+    const rows = bal.json?.balances || bal.json?.data || bal.json || []
+    const total = (Array.isArray(rows) ? rows : []).reduce(
+      (s, b) => s + Number(b.available_hundredths ?? b.cached_available ?? b.available ?? 0), 0)
+    expect(total, 'solde auto-crédité à l\'embauche (> 0)').toBeGreaterThan(0)
   })
 
   await step(emp, 'E1-employee-requests-leave', async () => {
@@ -337,11 +342,17 @@ test('W-HR-UX-4 — premier jour du salarié, A→Z (RH + salarié + manager)', 
       }
       catch { /* une capture responsive ratée ne doit pas invalider le parcours */ }
     }
-    // Dark mode via cookie theme + reload.
+    // Dark mode : cookie 'theme' posé au niveau CONTEXTE (lu au boot par cookieRef) + attente d'un
+    // élément stable rendu avant la capture (le bug précédent capturait pendant le rechargement).
     await emp.setViewportSize({ width: 1366, height: 900 })
-    await emp.evaluate(() => { document.cookie = 'theme=dark; path=/' })
+    const origin = new URL(emp.url()).origin
+    await emp.context().addCookies([{ name: 'theme', value: 'dark', url: origin }])
     await emp.goto('/company/workforce/me', { waitUntil: 'domcontentloaded', timeout: 40000 })
-    await emp.waitForTimeout(1200)
+    await emp.waitForSelector('[data-test="me-planning"]', { timeout: 15000 }).catch(() => {})
+    // Confirme que le thème sombre est réellement appliqué (classe Vuetify) avant de capturer.
+    await emp.waitForFunction(() => document.documentElement.classList.contains('v-theme--dark')
+      || !!document.querySelector('.v-theme--dark'), { timeout: 8000 }).catch(() => {})
+    await emp.waitForTimeout(800)
     await shot(emp, 'G1-me-dark')
   })
 
