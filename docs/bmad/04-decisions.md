@@ -23989,3 +23989,83 @@ DEV uniquement ; aucun Billing/main/PROD ; aucun moteur cryptographique modifié
 - **Impossible simplement (à ce jour)** : rejouer le parcours e-mail (activation/signature) **sur DEV public** sans accès boîte/SSH — prouvé en local même build ; multi-site (entité Établissement non livrée) ; refactor des 3 contrôleurs (dette, dont module Signature protégé).
 
 ---
+
+## ADR-672 — W-HR-UX-7 : simplification de la navigation RH (regroupement par tâche, manifest-driven)
+
+**Date** : 2026-10-31
+**Statut** : Accepté (DEV uniquement). Objectif : qu'une RH trouve immédiatement les opérations sans parcourir 12 menus plats. **Aucun nouveau module, aucune refonte.** Audit sur le DEV réellement servi.
+
+### 1. SHA servi DEV
+`9525aea` (= HEAD), vérifié via `X-Build-Version` ; déploiement CI par **clé** (`VPS_SSH_KEY`), run success.
+
+### 2. Inventaire initial des 12 entrées (avant)
+Toutes à plat sous un unique bandeau « Ressources humaines » (surface:'hr', 100 % manifest-driven) :
+
+| Entrée | key | module | permission | usage | → nouveau groupe |
+|---|---|---|---|---|---|
+| Mon espace | workforce-me | WorkforceModule | aucune | perso (tous) | **Compte** |
+| Employés | workforce-employees | WorkforceModule | workforce.view | RH quotidien | **Collaborateurs** |
+| Pointage | workforce-time | WorkforceModule | workforce.view | RH/manager quotidien | **Temps & planning** |
+| Planning | workforce-planning | WorkforcePlanningModule | workforce.planning_view | RH/manager quotidien | **Temps & planning** |
+| Congés | workforce-leave | WorkforceLeaveModule | workforce.leave_request | RH/manager/salarié | **Absences** |
+| Paie | workforce-payroll | WorkforcePayrollModule | workforce.payroll_prepare | RH admin périodique | **Paie & déclarations** |
+| DSN | workforce-dsn | WorkforcePayrollModule | workforce.payroll_export | RH admin périodique | **Paie & déclarations** |
+| Documents RH | workforce-documents | WorkforceDocumentsModule | workforce_documents.view | RH | **Documents RH** |
+| Contrats de travail | workforce-contract-templates | WorkforceContractModule | workforce_contract.view | RH admin | **Documents RH** |
+| Signatures | workforce-signature | WorkforceSignatureModule | workforce_signature.view | RH | **Documents RH** |
+| Organisation | workforce-organization | WorkforceModule | workforce.admin | RH admin | **Paramètres RH** |
+| Paramètres RH | workforce-settings | WorkforceModule | workforce.view | RH admin | **Paramètres RH** |
+
+### 3. Nouvelle organisation (après)
+6 **sections VISIBLES par tâche** (headings, pas de sous-menus repliables → zéro clic supplémentaire) :
+- **Collaborateurs** : Employés
+- **Temps & planning** : Pointage, Planning
+- **Absences** : Congés
+- **Paie & déclarations** : Paie, DSN
+- **Documents RH** : Documents RH, Contrats de travail, Signatures
+- **Paramètres RH** : Organisation, Paramètres RH
+- **Compte** (existant) : **Mon espace** (self-service) y est déplacé — séparé du RH management (ne pas mêler Company/Employee).
+
+### 4. Justification UX & architecture
+- **Manifest-driven, aucun hardcoding Vue** : ajout d'un champ `group` sur chaque navItem des manifests de modules ; ordres + i18n dans `NavGroupRegistry::GROUPS['company']` (hr_team:50 … hr_settings:55) ; libellés `nav.groups.*` (fr/en/ar). Le moteur `NavBuilder`, l'endpoint `/api/nav` et les composants Vuexy (`VerticalNavSectionTitle`) sont **inchangés** — ils consommaient déjà des groupes.
+- **Sections visibles, pas de repli** : choix délibéré (avertissement du GO « menu court ≠ simple si plus de sous-menus »). Les items restent tous cliquables en 1 clic ; on réduit le SCANNING, pas le nombre de clics vers une page.
+- **RBAC / modules / market inchangés** : le filtrage reste côté serveur (NavBuilder) ; un groupe vide est élagué ; le fallback `hr` subsiste pour tout item surface:'hr' sans `group`.
+
+### 5. Captures avant/après
+Scratchpad `nav/` : `before-open.png` (11 items plats sous « Ressources humaines ») vs `after-open.png` (6 sections par tâche) ; `after-dark.png` (dark OK, sections lisibles, pas d'overflow) ; `after-mobile.png` (390) ; `after-modifier-direct.png`.
+
+### 6. Nombre de clics avant/après (mesuré, aucun gain inventé)
+- **Densité de scan** : items sous un seul bandeau **11 → ≤ 3** par section (6 sections). Pour trouver une fonction, la RH balaie ≤ 3 items du groupe pertinent au lieu de 11.
+- **Clics pour accomplir la tâche** (depuis une page quelconque) :
+  - Trouver un collaborateur : **2 → 2** (Employés + ligne) — clics identiques, trouvabilité améliorée (seul item sous « Collaborateurs »).
+  - **Modifier une fiche : 4 → 3** (Employés → ligne → « Modifier » qui ouvre DIRECTEMENT le formulaire). **Seule réduction de clic réelle de ce lot.**
+  - Programmer un créneau : **4 → 4** (Employés → ligne → onglet Planning → « Programmer un créneau » ; chemin fiche livré en W-HR-UX-5, inchangé ici).
+  - Trouver une demande de congé : **1 → 1** (« Congés ») — désormais sous « Absences » (trouvabilité).
+  - Trouver un contrat signé : **1 → 1** (« Documents RH »/« Contrats de travail ») — désormais sous « Documents RH » (trouvabilité).
+
+### 7. Modification directe de la fiche (P3)
+Le bouton « Modifier » de l'en-tête ouvre désormais DIRECTEMENT le formulaire d'édition (signal `editSignal` → `_EmployeeProfile.startEdit`, `watch` en `immediate` car le VWindowItem est monté paresseusement). Vérifié sur **DEV réel** : `DEV_MODIFIER_DIRECT: true`. Élimine le détour « Modifier → onglet Profil (lecture) → 2ᵉ Modifier ».
+
+### 8. Résultats par rôle (visibilité, enforcement SERVEUR)
+- **Responsable RH (owner, bypass)** : voit les 6 sections par tâche + Compte.
+- **Collaborateur limité (bob)** : `/api/nav` ne renvoie que `account:workforce-me`, `account:account-settings`, `operations:my-deliveries`, `company:dashboard` — **aucun item RH management**. Et sur **DEV réel**, bob reçoit **403** sur `/api/workforce/employees`, `/api/workforce/leaves`, `/api/workforce/payroll/runs` → **restriction serveur, pas simple masquage de menu**. Le regroupement n'expose aucune page/rému/action non autorisée.
+- Manager / user intermédiaire : filtrage identique par permissions (couvert par `CompanyNavPermissionTest`, `test_permissions_filter_hr_entries`).
+
+### 9. Tests
+- **PHPUnit** : suite Feature **3319 passés / 3 échecs / 0 OOM**. Nav/manifests/groupes/permissions : `WorkforceNavHrGroupTest` (8, réécrit pour le regroupement par tâche), `NavGroupRegistryContractTest`, `NavBuilderTest`, `NavItemTest`, `CompanyNavPermissionTest`, `CompanyNavInvariantTest`, `NavEndpointTest` — tous verts.
+- **Playwright** : `workforce-hr-nav-group.spec.js` (headings par tâche, routage, dark, pas d'overflow, 0 erreur JS) ; Modifier-direct + rôles vérifiés sur DEV réel.
+- **Les 3 échecs `ControllerSize` sont CONSERVÉS (trace)** et **non masqués** : `no controller exceeds 250 lines` (8 contrôleurs dont SignatureController 686, EmployeeSelfController 322…), `no controller uses db facade` (SignatureWebhookController:62), `no controller calls save on models` (SignatureController:265, SignerController:48, WorkforceConfigController:42). **Moteur Signature non modifié.**
+
+### 10. Risques & limites restantes
+- Le repli « mini » de la sidebar (icônes au survol) est un comportement natif Vuexy non modifié ; en mode mini les titres de section deviennent de simples séparateurs (rendu design-system standard).
+- La trouvabilité progresse plus que le nombre de clics : seul « Modifier » baisse (4→3) ; les autres parcours gardent le même nombre de clics (aucun gain inventé).
+- Dette `ControllerSize` (3 tests) toujours ouverte → lot refactor dédié (dont module Signature protégé).
+- E2E e-mail sur DEV public toujours bloqué (rappel W-HR-UX-6).
+
+### Fichiers
+`NavGroupRegistry.php` (6 groupes par tâche) ; 7 `*Module.php` Workforce (champ `group`) ; `locales/{fr,en,ar}.json` (`nav.groups.*`) ; `[id].vue` + `_EmployeeProfile.vue` (Modifier-direct) ; tests `WorkforceNavHrGroupTest`, e2e `workforce-hr-nav-group`.
+
+### Synthèse
+La RH passe d'un mur de 11 entrées plates à 6 sections par tâche (items visibles, 1 clic), « Mon espace » renvoyé au personnel, et « Modifier » ouvre le formulaire d'un clic. Trouvabilité nettement améliorée, sécurité serveur intacte, zéro clic ajouté.
+
+---
