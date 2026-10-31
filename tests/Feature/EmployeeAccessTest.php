@@ -86,6 +86,23 @@ class EmployeeAccessTest extends TestCase
         $this->assertSame('active', $svc->status($this->company, $emp->fresh())['state']);
     }
 
+    public function test_connected_state_only_after_actual_login(): void
+    {
+        $emp = $this->employee();
+        $svc = app(EmployeeAccessService::class);
+        $svc->grant($this->company, $emp, 'thomas@test.invalid', null, 1);
+        $user = User::where('email', 'thomas@test.invalid')->first();
+
+        // Mot de passe défini mais JAMAIS connecté → 'active' (pas 'connected').
+        $user->update(['password' => bcrypt('x'), 'password_set_at' => now()]);
+        $this->assertSame('active', $svc->status($this->company, $emp->fresh())['state']);
+
+        // Connexion EFFECTIVE (événement Login) → last_login_at renseigné → 'connected'.
+        event(new \Illuminate\Auth\Events\Login('web', $user->fresh(), false));
+        $this->assertNotNull($user->fresh()->last_login_at);
+        $this->assertSame('connected', $svc->status($this->company, $emp->fresh())['state']);
+    }
+
     public function test_cannot_assign_administrative_role(): void
     {
         $emp = $this->employee();

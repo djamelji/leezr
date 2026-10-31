@@ -77,7 +77,11 @@ class EmployeeFileReadModel
         $user = $employee->user_id ? \App\Core\Models\User::find($employee->user_id) : null;
         $accountState = 'none';
         if ($user) {
-            $accountState = $user->password_set_at ? 'active' : 'invited';
+            if (! $user->password_set_at) {
+                $accountState = 'invited';
+            } else {
+                $accountState = $user->last_login_at ? 'connected' : 'active';
+            }
         }
 
         $signedContract = GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)
@@ -88,8 +92,8 @@ class EmployeeFileReadModel
             'info' => true,
             'contract' => static::contractSummary($company, $employee, false) !== null,
             'signed_contract' => $signedContract,               // SIGNÉ (pas seulement généré)
-            'account' => $accountState === 'active',             // ACTIVÉ (pas seulement invité)
-            'account_state' => $accountState,                    // none | invited | active
+            'account' => in_array($accountState, ['active', 'connected'], true), // ACTIVÉ (pas seulement invité)
+            'account_state' => $accountState,                    // none | invited | active | connected
             'documents_module' => $hasDocuments,
             'signature_module' => ModuleGate::isActive($company, 'workforce_signature'),
         ];

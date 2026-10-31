@@ -77,8 +77,14 @@ const resend = async () => {
         </div>
 
         <template v-else-if="access">
-          <!-- Compte ACTIVÉ -->
-          <VAlert v-if="state === 'active'" type="success" variant="tonal" density="compact">
+          <!-- Compte CONNECTÉ (1re connexion effectuée) -->
+          <VAlert v-if="state === 'connected'" type="success" variant="tonal" density="compact">
+            <VIcon icon="tabler-circle-check" start size="16" />
+            {{ t('employeeAccess.connected') }}
+          </VAlert>
+
+          <!-- Compte ACTIVÉ (mot de passe défini, pas encore connecté) -->
+          <VAlert v-else-if="state === 'active'" type="success" variant="tonal" density="compact">
             <VIcon icon="tabler-circle-check" start size="16" />
             {{ t('employeeAccess.active') }}
           </VAlert>

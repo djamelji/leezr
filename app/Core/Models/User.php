@@ -48,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'password_set_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'email_identity' => 'array',
         ];
     }

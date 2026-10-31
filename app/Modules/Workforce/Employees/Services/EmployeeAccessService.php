@@ -20,11 +20,12 @@ use Illuminate\Validation\ValidationException;
  * privilège administratif automatique, respect tenant/RBAC/entitlements.
  *
  * États d'accès réels (pas de confusion invitation ≠ activation) :
- *   - none    : le collaborateur n'a aucun compte lié.
- *   - invited : compte créé, mot de passe JAMAIS défini (invitation en attente).
- *   - active  : mot de passe défini (compte activé).
- * (La « première connexion effectuée » et la « suspension » ne sont pas des états first-class du modèle
- *  actuel → non revendiqués ; documentés comme limite.)
+ *   - none      : le collaborateur n'a aucun compte lié.
+ *   - invited   : compte créé, mot de passe JAMAIS défini (invitation en attente).
+ *   - active    : mot de passe défini (compte activé) mais AUCUNE connexion encore enregistrée.
+ *   - connected : première connexion effectuée (W-HR-UX-4 §4 — last_login_at, posé par l'event Login,
+ *                 jamais déduit du seul mot de passe défini).
+ * (La « suspension » n'est pas un état first-class du modèle actuel → non revendiquée ; documentée comme limite.)
  */
 class EmployeeAccessService
 {
@@ -36,7 +37,12 @@ class EmployeeAccessService
 
         $state = 'none';
         if ($user && $membership) {
-            $state = $user->password_set_at ? 'active' : 'invited';
+            // none → invited (mot de passe non défini) → active (défini) → connected (1re connexion effectuée).
+            if (! $user->password_set_at) {
+                $state = 'invited';
+            } else {
+                $state = $user->last_login_at ? 'connected' : 'active';
+            }
         } elseif ($user && ! $membership) {
             // Compte lié mais sans membership dans CETTE company (rare) → à ré-associer.
             $state = 'account_without_membership';

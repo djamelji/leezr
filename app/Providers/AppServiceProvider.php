@@ -131,6 +131,17 @@ class AppServiceProvider extends ServiceProvider
         // ADR-149: Boot dashboard widget registry (convention-based discovery)
         \App\Modules\Dashboard\DashboardWidgetRegistry::boot();
 
+        // W-HR-UX-4 — enregistre la 1re/dernière connexion (indicateur fiable, distinct du mot de passe défini).
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            function (\Illuminate\Auth\Events\Login $event): void {
+                if ($event->user instanceof \App\Core\Models\User && $event->user->last_login_at === null) {
+                    // 1re connexion : écriture silencieuse (pas d'événements métier), uniquement si jamais connecté.
+                    $event->user->forceFill(['last_login_at' => now()])->saveQuietly();
+                }
+            },
+        );
+
         // ADR-149: Auto-inject widgets when module enabled for company
         \Illuminate\Support\Facades\Event::listen(
             \App\Core\Events\ModuleEnabled::class,
