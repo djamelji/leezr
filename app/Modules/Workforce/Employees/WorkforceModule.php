@@ -18,13 +18,15 @@ class WorkforceModule implements ModuleDefinition
             sortOrder: 200,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-me', 'title' => 'My Space', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-user-circle', 'surface' => 'hr', 'sort' => 5],
-                    ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'sort' => 10],
-                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.view', 'surface' => 'hr', 'sort' => 20],
-                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.admin', 'surface' => 'hr', 'sort' => 80],
+                    // W-HR-UX-7 : « Mon espace » (self-service du membre connecté) rejoint le groupe
+                    // personnel « Compte » — séparé du RH management (ne pas mélanger Company/Employee).
+                    ['key' => 'workforce-me', 'title' => 'My Space', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-user-circle', 'surface' => 'hr', 'group' => 'account', 'sort' => 5],
+                    ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'hr_team', 'sort' => 10],
+                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'hr_time', 'sort' => 20],
+                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.admin', 'surface' => 'hr', 'group' => 'hr_settings', 'sort' => 80],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).
-                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'hr', 'sort' => 90],
+                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'hr_settings', 'sort' => 90],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce',

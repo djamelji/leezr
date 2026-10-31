@@ -98,7 +98,13 @@
       "contact": "Contact",
       "dispatch": "Exploitation",
       "driving": "Conduite",
-      "hr": "Ressources humaines"
+      "hr": "Ressources humaines",
+      "hr_team": "Collaborateurs",
+      "hr_time": "Temps & planning",
+      "hr_absences": "Absences",
+      "hr_payroll": "Paie & déclarations",
+      "hr_documents": "Documents RH",
+      "hr_settings": "Paramètres RH"
     },
     "platform": {
       "dashboard": "Tableau de bord",

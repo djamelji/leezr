@@ -12,16 +12,32 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ADR-635 (Workforce 2.0 / W-A) — les entrées Workforce (surface:'hr') sont regroupées sous le groupe
- * « Ressources humaines » (clé `hr`), de façon 100 % manifest-driven : respect des permissions, des
- * modules actifs, pas de doublon, groupe caché si vide, routes inchangées, et aucun déplacement des
- * fonctionnalités non-RH.
+ * ADR-635 → W-HR-UX-7 : les entrées Workforce sont regroupées par TÂCHE (sections visibles, pas de
+ * sous-menus repliables), de façon 100 % manifest-driven : `group` déclaré dans les manifests,
+ * ordre/i18n dans NavGroupRegistry. Respect des permissions, des modules actifs, pas de doublon,
+ * groupes élagués si vides, routes inchangées. « Mon espace » rejoint le groupe personnel `account`.
  */
 class WorkforceNavHrGroupTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const WORKFORCE_MODULES = ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'];
+    private const WORKFORCE_MODULES = ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_contract', 'workforce_signature'];
+
+    /** Mapping attendu item → groupe par tâche. */
+    private const EXPECTED_GROUP = [
+        'workforce-employees' => 'hr_team',
+        'workforce-time' => 'hr_time',
+        'workforce-planning' => 'hr_time',
+        'workforce-leave' => 'hr_absences',
+        'workforce-payroll' => 'hr_payroll',
+        'workforce-dsn' => 'hr_payroll',
+        'workforce-documents' => 'hr_documents',
+        'workforce-contract-templates' => 'hr_documents',
+        'workforce-signature' => 'hr_documents',
+        'workforce-organization' => 'hr_settings',
+        'workforce-settings' => 'hr_settings',
+        'workforce-me' => 'account',
+    ];
 
     protected function setUp(): void
     {
@@ -29,7 +45,6 @@ class WorkforceNavHrGroupTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
     }
 
-    /** Company dont le jobdomain rend les modules RH éligibles, avec activation des modules voulus. */
     private function companyWith(array $activeModules): Company
     {
         Jobdomain::updateOrCreate(['key' => 'hrtest'], ['label' => 'HR Test', 'default_modules' => array_values(array_unique(array_merge(['workforce'], $activeModules)))]);
@@ -49,99 +64,121 @@ class WorkforceNavHrGroupTest extends TestCase
         return collect($groups)->firstWhere('key', $key);
     }
 
-    private function itemKeys(?array $group): array
+    private function itemKeys(array $groups, string $groupKey): array
     {
-        return $group ? array_column($group['items'], 'key') : [];
+        $g = $this->group($groups, $groupKey);
+
+        return $g ? array_column($g['items'], 'key') : [];
     }
 
-    public function test_workforce_items_land_in_hr_group(): void
+    /** Résout le groupe contenant un item donné (ou null). */
+    private function groupOf(array $groups, string $itemKey): ?string
     {
-        $company = $this->companyWith(self::WORKFORCE_MODULES);
-        $groups = NavBuilder::forCompany($company, null, 'management');
-
-        $hr = $this->group($groups, 'hr');
-        $this->assertNotNull($hr, 'le groupe RH existe');
-        $this->assertSame('nav.groups.hr', $hr['titleKey'], 'titleKey i18n, pas une chaîne en dur');
-
-        $keys = $this->itemKeys($hr);
-        $this->assertContains('workforce-employees', $keys);
-        $this->assertContains('workforce-leave', $keys);
-        $this->assertContains('workforce-planning', $keys);
-    }
-
-    public function test_non_hr_items_not_moved_to_hr(): void
-    {
-        $company = $this->companyWith(self::WORKFORCE_MODULES);
-        $groups = NavBuilder::forCompany($company, null, 'management');
-
-        // Les items RH ne sont PAS dans le groupe générique « company » / « account ».
-        foreach (['company', 'account', 'operations'] as $g) {
-            $this->assertNotContains('workforce-employees', $this->itemKeys($this->group($groups, $g)), "workforce-employees absent de $g");
+        foreach ($groups as $g) {
+            if (in_array($itemKey, array_column($g['items'], 'key'), true)) {
+                return $g['key'];
+            }
         }
-        // Un item non-RH (paramètres Core) reste hors du groupe hr.
-        $this->assertNotContains('settings', $this->itemKeys($this->group($groups, 'hr')));
+
+        return null;
+    }
+
+    public function test_workforce_items_land_in_their_task_group(): void
+    {
+        $company = $this->companyWith(self::WORKFORCE_MODULES);
+        $groups = NavBuilder::forCompany($company, null, 'management');
+
+        foreach (self::EXPECTED_GROUP as $item => $expectedGroup) {
+            $this->assertSame($expectedGroup, $this->groupOf($groups, $item), "{$item} doit être dans {$expectedGroup}");
+        }
+
+        // Les titres de section sont des clés i18n (pas des chaînes en dur).
+        foreach (['hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings'] as $gk) {
+            $this->assertSame("nav.groups.{$gk}", $this->group($groups, $gk)['titleKey']);
+        }
+
+        // Plus aucune entrée RH ne tombe dans le fallback historique `hr`.
+        $this->assertNull($this->group($groups, 'hr'), 'le fallback hr est élagué (plus aucun item)');
+    }
+
+    public function test_my_space_is_in_personal_account_group(): void
+    {
+        $company = $this->companyWith(self::WORKFORCE_MODULES);
+        $groups = NavBuilder::forCompany($company, null, 'management');
+
+        $this->assertSame('account', $this->groupOf($groups, 'workforce-me'), 'Mon espace = groupe personnel');
+        $this->assertNotContains('workforce-me', $this->itemKeys($groups, 'hr_team'), 'Mon espace n\'est pas mêlé au RH management');
     }
 
     public function test_inactive_module_does_not_contribute(): void
     {
-        // Planning NON activé → son entrée n'apparaît pas.
+        // Planning NON activé → son entrée n'apparaît pas dans hr_time (seul le pointage y reste).
         $company = $this->companyWith(['workforce', 'workforce_leave']);
         $groups = NavBuilder::forCompany($company, null, 'management');
-        $keys = $this->itemKeys($this->group($groups, 'hr'));
 
-        $this->assertContains('workforce-leave', $keys);
-        $this->assertNotContains('workforce-planning', $keys, 'module planning inactif → pas d\'entrée');
+        $this->assertSame('hr_absences', $this->groupOf($groups, 'workforce-leave'));
+        $this->assertNull($this->groupOf($groups, 'workforce-planning'), 'module planning inactif → pas d\'entrée');
     }
 
     public function test_permissions_filter_hr_entries(): void
     {
         $company = $this->companyWith(self::WORKFORCE_MODULES);
-        // Utilisateur non-bypass avec uniquement leave_request : voit congés + "me" (sans permission), pas employés.
+        // Non-bypass avec uniquement leave_request : voit congés + "me" (sans permission), pas employés.
         $groups = NavBuilder::forCompany($company, ['workforce.leave_request'], 'management');
-        $keys = $this->itemKeys($this->group($groups, 'hr'));
 
-        $this->assertContains('workforce-leave', $keys);
-        $this->assertContains('workforce-me', $keys, 'entrée sans permission visible');
-        $this->assertNotContains('workforce-employees', $keys, 'employés nécessite workforce.view');
+        $this->assertSame('hr_absences', $this->groupOf($groups, 'workforce-leave'));
+        $this->assertSame('account', $this->groupOf($groups, 'workforce-me'), 'entrée sans permission visible');
+        $this->assertNull($this->groupOf($groups, 'workforce-employees'), 'employés nécessite workforce.view');
     }
 
-    public function test_hr_group_disappears_when_empty(): void
+    public function test_task_groups_disappear_when_empty(): void
     {
-        // Aucun module RH actif → pas de groupe hr.
+        // Aucun module RH actif → aucun groupe par tâche.
         $company = Company::create(['name' => 'No HR Co', 'slug' => 'nohr-'.uniqid(), 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        $this->assertNull($this->group($groups, 'hr'), 'groupe RH absent si aucune entrée');
+        foreach (['hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings', 'hr'] as $gk) {
+            $this->assertNull($this->group($groups, $gk), "groupe {$gk} absent si aucune entrée");
+        }
     }
 
     public function test_routes_unchanged(): void
     {
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
-        $hr = $this->group($groups, 'hr');
 
-        $employees = collect($hr['items'])->firstWhere('key', 'workforce-employees');
-        $this->assertNotNull($employees);
-        // La route de l'entrée est préservée (nom de route inchangé).
-        $to = $employees['to'];
-        $name = is_array($to) ? ($to['name'] ?? null) : $to;
-        $this->assertSame('company-workforce-employees', $name);
+        $expectedRoutes = [
+            'workforce-employees' => 'company-workforce-employees',
+            'workforce-leave' => 'company-workforce-leave',
+            'workforce-planning' => 'company-workforce-planning',
+            'workforce-dsn' => 'company-workforce-dsn',
+            'workforce-signature' => 'company-workforce-signature',
+        ];
+        foreach ($expectedRoutes as $itemKey => $route) {
+            $g = $this->group($groups, self::EXPECTED_GROUP[$itemKey]);
+            $item = collect($g['items'])->firstWhere('key', $itemKey);
+            $this->assertNotNull($item, "{$itemKey} présent");
+            $to = $item['to'];
+            $this->assertSame($route, is_array($to) ? ($to['name'] ?? null) : $to);
+        }
     }
 
     public function test_no_duplicate_entries(): void
     {
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
-        $keys = $this->itemKeys($this->group($groups, 'hr'));
 
-        $this->assertSame(count($keys), count(array_unique($keys)), 'aucun doublon dans le groupe RH');
+        $allKeys = collect($groups)->flatMap(fn ($g) => array_column($g['items'], 'key'))->all();
+        $this->assertSame(count($allKeys), count(array_unique($allKeys)), 'aucun doublon de clé de nav');
     }
 
-    public function test_hr_label_exists_in_all_locales(): void
+    public function test_task_group_labels_exist_in_all_locales(): void
     {
         foreach (['fr', 'en', 'ar'] as $locale) {
             $json = json_decode(file_get_contents(base_path("resources/js/plugins/i18n/locales/{$locale}.json")), true);
-            $this->assertNotEmpty($json['nav']['groups']['hr'] ?? null, "label nav.groups.hr présent en {$locale}");
+            foreach (['hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings'] as $gk) {
+                $this->assertNotEmpty($json['nav']['groups'][$gk] ?? null, "label nav.groups.{$gk} présent en {$locale}");
+            }
         }
     }
 }

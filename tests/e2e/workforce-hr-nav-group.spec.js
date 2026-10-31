@@ -1,12 +1,13 @@
 // @ts-check
-// ADR-635 (W-A) — the company sidebar shows a "Ressources humaines" group containing the Workforce
-// entries (manifest-driven), entries route correctly, and the group renders in dark mode.
+// ADR-635 → W-HR-UX-7 — the company sidebar groups Workforce entries by TASK (visible section
+// headings, manifest-driven): "Collaborateurs", "Temps & planning", "Absences", "Documents RH",
+// "Paramètres RH". Entries route correctly and render in dark mode without overflow.
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers'
 
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
 
-test('HR nav group renders with workforce entries and routes correctly', async ({ page }) => {
+test('HR nav task groups render with workforce entries and route correctly', async ({ page }) => {
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
 
@@ -15,8 +16,10 @@ test('HR nav group renders with workforce entries and routes correctly', async (
 
   const nav = page.locator('.layout-vertical-nav')
 
-  // The "Ressources humaines" group heading is present (renamed from generic "Entreprise").
-  await expect(nav.getByText('Ressources humaines', { exact: false }).first()).toBeVisible({ timeout: 10000 })
+  // Task-based section headings are present (no more single "Ressources humaines" wall).
+  for (const heading of ['Collaborateurs', 'Temps & planning', 'Absences']) {
+    await expect(nav.getByText(heading, { exact: false }).first(), `heading "${heading}"`).toBeVisible({ timeout: 10000 })
+  }
 
   // A Workforce entry lives in the sidebar and routes to its workforce page.
   const employeesLink = nav.locator('a[href*="/company/workforce/employees"]').first()
@@ -26,9 +29,9 @@ test('HR nav group renders with workforce entries and routes correctly', async (
 
   await page.screenshot({ path: `${SCRATCH}/hr-nav.png`, fullPage: false })
 
-  // Dark mode: group still renders, no horizontal overflow.
+  // Dark mode: headings still render, no horizontal overflow.
   await page.evaluate(() => document.documentElement.classList.add('v-theme--dark'))
-  await expect(nav.getByText('Ressources humaines', { exact: false }).first()).toBeVisible()
+  await expect(nav.getByText('Collaborateurs', { exact: false }).first()).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
   expect(overflow, 'no horizontal overflow').toBeFalsy()
 

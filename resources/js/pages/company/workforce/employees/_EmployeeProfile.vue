@@ -4,6 +4,9 @@ import { useCan } from '@/composables/useCan'
 
 const props = defineProps({
   employee: { type: Object, required: true },
+  // W-HR-UX-7 (P3) — compteur-signal : chaque incrément (depuis « Modifier » de l'en-tête) ouvre
+  // directement le formulaire d'édition, sans exiger un 2ᵉ clic « Modifier » dans l'onglet.
+  editSignal: { type: Number, default: 0 },
 })
 
 // Load departments/roles/employees for edit dropdowns
@@ -56,6 +59,9 @@ const startEdit = () => {
 const cancelEdit = () => {
   isEditing.value = false
 }
+
+// Ouverture directe du formulaire quand l'en-tête déclenche « Modifier » (si autorisé).
+watch(() => props.editSignal, v => { if (v && canManage.value) startEdit() })
 
 const saveProfile = async () => {
   formLoading.value = true

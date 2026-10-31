@@ -37,7 +37,15 @@ class NavGroupRegistry
             'contact' => 20,
             'dispatch' => 30,
             'driving' => 40,
-            'hr' => 50,
+            // W-HR-UX-7 : RH regroupée par TÂCHE (sections visibles, sans sous-menus repliables →
+            // zéro clic supplémentaire). Remplace l'unique bloc « Ressources humaines » de 11 items.
+            'hr_team' => 50,       // Collaborateurs
+            'hr_time' => 51,       // Temps & planning
+            'hr_absences' => 52,   // Absences
+            'hr_payroll' => 53,    // Paie & déclarations
+            'hr_documents' => 54,  // Documents RH
+            'hr_settings' => 55,   // Paramètres RH
+            'hr' => 56,            // fallback historique (surface:'hr' sans group explicite) — élagué si vide
             'account' => 60,
             'operations' => 70,
             'company' => 900, // default bucket for company items without an explicit group

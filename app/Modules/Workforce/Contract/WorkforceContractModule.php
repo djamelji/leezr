@@ -25,7 +25,7 @@ class WorkforceContractModule implements ModuleDefinition
             sortOrder: 250,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-contract-templates', 'title' => 'Contrats de travail', 'to' => ['name' => 'company-workforce-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'workforce_contract.view', 'surface' => 'hr', 'sort' => 70],
+                    ['key' => 'workforce-contract-templates', 'title' => 'Contrats de travail', 'to' => ['name' => 'company-workforce-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'workforce_contract.view', 'surface' => 'hr', 'group' => 'hr_documents', 'sort' => 70],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_contract',

@@ -18,7 +18,7 @@ class WorkforceDocumentsModule implements ModuleDefinition
             sortOrder: 240,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-documents', 'title' => 'Documents RH', 'to' => ['name' => 'company-workforce-documents'], 'icon' => 'tabler-file-certificate', 'permission' => 'workforce_documents.view', 'surface' => 'hr', 'sort' => 60],
+                    ['key' => 'workforce-documents', 'title' => 'Documents RH', 'to' => ['name' => 'company-workforce-documents'], 'icon' => 'tabler-file-certificate', 'permission' => 'workforce_documents.view', 'surface' => 'hr', 'group' => 'hr_documents', 'sort' => 60],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_documents',

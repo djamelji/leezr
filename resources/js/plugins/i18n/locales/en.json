@@ -98,7 +98,13 @@
       "contact": "Contact",
       "dispatch": "Dispatching",
       "driving": "Driving",
-      "hr": "Human Resources"
+      "hr": "Human Resources",
+      "hr_team": "Team",
+      "hr_time": "Time & scheduling",
+      "hr_absences": "Absences",
+      "hr_payroll": "Payroll & filings",
+      "hr_documents": "HR documents",
+      "hr_settings": "HR settings"
     },
     "platform": {
       "dashboard": "Dashboard",

@@ -267,5 +267,15 @@
   "billing.tax_exemption.export_extra_eu": "إعفاء من ضريبة القيمة المضافة — تصدير خارج الاتحاد الأوروبي",
   "billing.tax_exemption.reverse_charge_short": "الاحتساب العكسي",
   "billing.tax_exemption.export_short": "تصدير (خارج الاتحاد الأوروبي)",
-  "nav": { "groups": { "hr": "الموارد البشرية" } }
+  "nav": {
+    "groups": {
+      "hr": "الموارد البشرية",
+      "hr_team": "الموظفون",
+      "hr_time": "الوقت والجدولة",
+      "hr_absences": "الغيابات",
+      "hr_payroll": "الرواتب والتصاريح",
+      "hr_documents": "مستندات الموارد البشرية",
+      "hr_settings": "إعدادات الموارد البشرية"
+    }
+  }
 }

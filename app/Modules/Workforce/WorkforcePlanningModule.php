@@ -18,7 +18,7 @@ class WorkforcePlanningModule implements ModuleDefinition
             sortOrder: 210,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-planning', 'title' => 'Planning', 'to' => ['name' => 'company-workforce-planning'], 'icon' => 'tabler-calendar', 'permission' => 'workforce.planning_view', 'surface' => 'hr', 'sort' => 30],
+                    ['key' => 'workforce-planning', 'title' => 'Planning', 'to' => ['name' => 'company-workforce-planning'], 'icon' => 'tabler-calendar', 'permission' => 'workforce.planning_view', 'surface' => 'hr', 'group' => 'hr_time', 'sort' => 30],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_planning',

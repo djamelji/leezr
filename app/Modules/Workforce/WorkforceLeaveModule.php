@@ -18,7 +18,7 @@ class WorkforceLeaveModule implements ModuleDefinition
             sortOrder: 220,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-leave', 'title' => 'Leave', 'to' => ['name' => 'company-workforce-leave'], 'icon' => 'tabler-beach', 'permission' => 'workforce.leave_request', 'surface' => 'hr', 'sort' => 40],
+                    ['key' => 'workforce-leave', 'title' => 'Leave', 'to' => ['name' => 'company-workforce-leave'], 'icon' => 'tabler-beach', 'permission' => 'workforce.leave_request', 'surface' => 'hr', 'group' => 'hr_absences', 'sort' => 40],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_leave',

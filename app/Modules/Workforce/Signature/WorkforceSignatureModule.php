@@ -26,7 +26,7 @@ class WorkforceSignatureModule implements ModuleDefinition
             sortOrder: 260,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-signature', 'title' => 'Signatures', 'to' => ['name' => 'company-workforce-signature'], 'icon' => 'tabler-signature', 'permission' => 'workforce_signature.view', 'surface' => 'hr', 'sort' => 75],
+                    ['key' => 'workforce-signature', 'title' => 'Signatures', 'to' => ['name' => 'company-workforce-signature'], 'icon' => 'tabler-signature', 'permission' => 'workforce_signature.view', 'surface' => 'hr', 'group' => 'hr_documents', 'sort' => 75],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_signature',

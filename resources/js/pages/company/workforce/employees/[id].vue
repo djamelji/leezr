@@ -33,6 +33,10 @@ const file = ref(null)
 const currentTab = ref('overview')
 const contractDialogOpen = ref(false) // W-CONTRACT-1
 const accessDialogOpen = ref(false) // W-HR-UX-3 — accès collaborateur
+// W-HR-UX-7 (P3) — « Modifier » mène DIRECTEMENT au formulaire : va sur l'onglet Profil ET déclenche
+// le mode édition (compteur-signal observé par _EmployeeProfile), sans 2ᵉ clic « Modifier ».
+const profileEditSignal = ref(0)
+const editProfile = () => { currentTab.value = 'profile'; profileEditSignal.value++ }
 
 const employee = computed(() => store.currentEmployee)
 const empId = computed(() => route.params.id)
@@ -148,7 +152,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                 v-can="'workforce.manage'"
                 variant="outlined"
                 prepend-icon="tabler-edit"
-                @click="currentTab = 'profile'"
+                @click="editProfile"
               >
                 {{ $t('common.edit') }}
               </VBtn>
@@ -321,6 +325,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               <EmployeeProfile
                 v-if="employee"
                 :employee="employee"
+                :edit-signal="profileEditSignal"
                 @updated="load().then(() => toast(t('employees.updated'), 'success'))"
               />
             </VWindowItem>
