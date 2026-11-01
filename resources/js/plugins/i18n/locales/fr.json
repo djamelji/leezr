@@ -180,7 +180,7 @@
       "workflows": "Workflows",
       "workforce-me": "Mon espace",
       "workforce-employees": "Employés",
-      "workforce-time": "Pointage",
+      "workforce-time": "Temps de travail",
       "workforce-leave": "Congés",
       "workforce-planning": "Planning",
       "workforce-payroll": "Paie",
@@ -7932,5 +7932,14 @@
     "resent": "Invitation renvoyée.",
     "statesNote": "Trois états distincts : invité (e-mail envoyé) · activé (mot de passe défini) · connecté (après sa 1re connexion).",
     "connected": "Compte activé et connecté : le collaborateur utilise son espace."
+  },
+  "timeWork": {
+    "spaceTitle": "Temps de travail",
+    "spaceSubtitle": "Prévu, réel et écarts — le travail de l'équipe au même endroit.",
+    "tabs": {
+      "today": "Aujourd'hui",
+      "planning": "Planning",
+      "presence": "Présences"
+    }
   }
 }

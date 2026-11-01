@@ -8,6 +8,10 @@ import PlanningCalendar from './_PlanningCalendar.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
 
+// PRODUCT-UX-2 (LOT B1) — `embedded` : masque l'en-tête de page quand monté comme onglet « Planning »
+// de l'espace « Temps de travail » (évite le doublon de titre). Logique 100 % réutilisée.
+defineProps({ embedded: { type: Boolean, default: false } })
+
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const store = usePlanningStore()
@@ -857,7 +861,7 @@ watch(activeTab, tab => {
   <div>
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-6">
-      <div>
+      <div v-if="!embedded">
         <h4 class="text-h4 font-weight-bold">
           {{ $t('planning.title') }}
         </h4>
@@ -865,6 +869,7 @@ watch(activeTab, tab => {
           {{ $t('planning.subtitle') }}
         </p>
       </div>
+      <VSpacer v-else />
       <div class="d-flex gap-2">
         <VBtn
           v-if="activeTab === 'planning' && selectedDraftIds.length > 0"

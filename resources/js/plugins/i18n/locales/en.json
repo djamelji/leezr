@@ -180,7 +180,7 @@
       "workflows": "Workflows",
       "workforce-me": "My Space",
       "workforce-employees": "Employees",
-      "workforce-time": "Time Tracking",
+      "workforce-time": "Working time",
       "workforce-leave": "Leave",
       "workforce-planning": "Planning",
       "workforce-payroll": "Payroll",
@@ -7932,5 +7932,14 @@
     "resent": "Invitation resent.",
     "statesNote": "Three distinct states: invited (email sent) · active (password set) · connected (after first login).",
     "connected": "Account active and connected: the employee is using their space."
+  },
+  "timeWork": {
+    "spaceTitle": "Working time",
+    "spaceSubtitle": "Planned, actual and gaps — your team's work in one place.",
+    "tabs": {
+      "today": "Today",
+      "planning": "Planning",
+      "presence": "Presence"
+    }
   }
 }

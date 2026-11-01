@@ -27,7 +27,6 @@ class WorkforceNavHrGroupTest extends TestCase
     private const EXPECTED_GROUP = [
         'workforce-employees' => 'hr_team',
         'workforce-time' => 'hr_time',
-        'workforce-planning' => 'hr_time',
         'workforce-leave' => 'hr_absences',
         'workforce-payroll' => 'hr_payroll',
         'workforce-dsn' => 'hr_payroll',
@@ -150,7 +149,7 @@ class WorkforceNavHrGroupTest extends TestCase
         $expectedRoutes = [
             'workforce-employees' => 'company-workforce-employees',
             'workforce-leave' => 'company-workforce-leave',
-            'workforce-planning' => 'company-workforce-planning',
+            'workforce-time' => 'company-workforce-time',
             'workforce-dsn' => 'company-workforce-dsn',
             'workforce-documents' => 'company-workforce-documents',
         ];

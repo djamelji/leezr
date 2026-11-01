@@ -306,5 +306,14 @@
       "dateFrom": "من",
       "dateTo": "إلى"
     }
+  },
+  "timeWork": {
+    "spaceTitle": "وقت العمل",
+    "spaceSubtitle": "المخطط والفعلي والفروقات — عمل الفريق في مكان واحد.",
+    "tabs": {
+      "today": "اليوم",
+      "planning": "التخطيط",
+      "presence": "الحضور"
+    }
   }
 }

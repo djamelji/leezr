@@ -4,17 +4,32 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
 import TimeCockpit from './_TimeCockpit.vue'
+// PRODUCT-UX-2 (LOT B1) — espace « Temps de travail » UNIFIÉ : Aujourd'hui (cockpit prévu/réel) +
+// Planning + Présences + Feuilles de temps, montés en onglets. Le planning réutilise sa page
+// existante (store/logique/permissions intacts) via `embedded`. Pas de 2ᵉ moteur planning/pointage.
+import PlanningPage from '@/pages/company/workforce/planning/index.vue'
+import { useCan } from '@/composables/useCan'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const route = useRoute()
 const router = useRouter()
 const store = useTimesheetsStore()
 const employeesStore = useEmployeesStore()
+const { can } = useCan()
+const canPlanning = computed(() => can('workforce.planning_view'))
 
-// ── Tab navigation ───────────────────────────────────────────
-const activeTab = ref('cockpit')
+// ── Tab navigation (deep-link ?tab=) ─────────────────────────
+const TABS = ['cockpit', 'planning', 'entries', 'timesheets']
+const activeTab = ref(TABS.includes(route.query.tab) ? route.query.tab : 'cockpit')
+watch(activeTab, v => {
+  const q = { ...route.query }
+  if (v === 'cockpit') delete q.tab
+  else q.tab = v
+  router.replace({ query: q })
+})
 
 // ══════════════════════════════════════════════════════════════
 // TAB 1 — POINTAGES (Time Entries)
@@ -418,48 +433,48 @@ onMounted(() => {
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
         <h4 class="text-h4 font-weight-bold">
-          {{ $t('workforce.modules.time.title') }}
+          {{ $t('timeWork.spaceTitle') }}
         </h4>
         <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('workforce.modules.time.description') }}
+          {{ $t('timeWork.spaceSubtitle') }}
         </p>
       </div>
     </div>
 
-    <!-- Tabs -->
+    <!-- Tabs : Aujourd'hui (prévu/réel) · Planning · Présences · Feuilles de temps -->
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill mb-6"
     >
-      <VTab value="cockpit">
-        <VIcon
-          icon="tabler-dashboard"
-          class="me-2"
-        />
-        {{ $t('timeCockpit.tab') }}
+      <VTab value="cockpit" data-test="tw-tab-today">
+        <VIcon icon="tabler-dashboard" class="me-2" />
+        {{ $t('timeWork.tabs.today') }}
       </VTab>
-      <VTab value="entries">
-        <VIcon
-          icon="tabler-clock-record"
-          class="me-2"
-        />
-        {{ $t('timeTracking.tabs.entries') }}
+      <VTab v-if="canPlanning" value="planning" data-test="tw-tab-planning">
+        <VIcon icon="tabler-calendar" class="me-2" />
+        {{ $t('timeWork.tabs.planning') }}
       </VTab>
-      <VTab value="timesheets">
-        <VIcon
-          icon="tabler-file-analytics"
-          class="me-2"
-        />
+      <VTab value="entries" data-test="tw-tab-entries">
+        <VIcon icon="tabler-clock-record" class="me-2" />
+        {{ $t('timeWork.tabs.presence') }}
+      </VTab>
+      <VTab value="timesheets" data-test="tw-tab-timesheets">
+        <VIcon icon="tabler-file-analytics" class="me-2" />
         {{ $t('timeTracking.tabs.timesheets') }}
       </VTab>
     </VTabs>
 
-    <VWindow v-model="activeTab">
+    <VWindow v-model="activeTab" :touch="false">
       <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- TAB: COCKPIT (W-G5)                                    -->
+      <!-- TAB: AUJOURD'HUI — cockpit prévu/réel (W-G5)           -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="cockpit">
         <TimeCockpit v-if="activeTab === 'cockpit'" />
+      </VWindowItem>
+
+      <!-- TAB: PLANNING (réutilise la page existante, en-tête masqué) -->
+      <VWindowItem v-if="canPlanning" value="planning">
+        <PlanningPage v-if="activeTab === 'planning'" embedded />
       </VWindowItem>
 
       <!-- ═══════════════════════════════════════════════════════ -->
