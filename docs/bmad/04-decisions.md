@@ -24395,3 +24395,53 @@ DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature intact ; aucu
 `PayrollConfidentiality.php` (nouveau) ; `PayrollRunController.php` + `DsnDeclarationController.php` (scrub sur toutes les sorties) ; `PayrollCompensationConfidentialityTest.php` (nouveau) ; `_EmployeePreparationPanel.vue` (nouveau) ; `payroll/[id].vue` (panneau, actions contextuelles, deep-link, tooltips, fix nom) ; `time/index.vue` (bannière retour) ; i18n fr/en (`payroll.prep.*`, `payroll.prov.*`, `payroll.actions.exportHint/generateOfficialHint`, `timeWork.returnToPayroll/backToPayroll`) ; recette `tests/e2e/payroll-c2-recette.spec.js`.
 
 ---
+
+## ADR-681 — PRODUCT-UX-2 LOT C3 : finalisation « Paie & déclarations » (confidentialité durcie, consolidation DSN, honnêteté)
+
+**Date** : 2026-11-01
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-2 / LOT C3 — faire de « Paie & déclarations » un espace métier cohérent, sécurisé et **honnête sur ses capacités réglementaires réelles**, sans refondre le moteur de paie.
+
+### 1. P0 — Durcissement de la confidentialité salariale
+C2 reposait sur une **denylist** fragile (strip-after de clés connues). C3 ajoute une **détection par motif** (future-proof) dans `PayrollConfidentiality` : toute clé en `_cents`/`_bps`/`_lines`/`_breakdown`/`_snapshot`/`_payload` est confidentielle **par forme** (sauf `timesheet_snapshot`, safe-listée = données de temps). Un **nouveau champ monétaire** ajouté au modèle est donc masqué automatiquement — la denylist n'est plus un point de défaillance unique. Les listes explicites restent en défense secondaire.
+
+**Contournement fermé** : le **téléchargement d'un bulletin** (document `payroll_line`/`payroll_run`, qui contient le salaire) exigeait seulement `workforce_documents.view`. Il exige désormais **aussi `compensation_read`**. La **liste des documents d'un run** (`forPayrollRun`) est scrubée (masque `generation_snapshot`).
+
+**Matrice d'autorisation** (inchangée C2, étendue aux documents) : états de préparation = `payroll_prepare` · montants = `compensation_read` · validation = `payroll_validate` · export/DSN = `payroll_export` · **téléchargement bulletin = `compensation_read`** · consultation doc = `workforce_documents.view` · owner = bypass.
+
+**Preuves** : `PayrollCompensationConfidentialityTest` étendu — **13 tests / ~216 assertions** : multi-tenant, RH sans salaire, manager temps, gestionnaire paie, salarié, user sans paie, accès direct par ID, pagination (index/lines), **nouveau champ monétaire (motif)**, **téléchargement bulletin gaté**, **masquage generation_snapshot**, **DSN payload_snapshot**, **capability DSN**. Tests négatifs : absence effective des champs ET valeurs. ~710 tests payroll/dsn/doc verts, 0 régression. **Live DEV** : chemin owner intact (voit les montants, pas de `compensation_hidden`).
+
+### 2. Consolidation Paie + DSN (cycle période-centré)
+Entrée de nav **unique** « Paie & déclarations » (item DSN retiré du manifeste, **route conservée**). L'espace paie (`payroll/index.vue`) a 2 onglets : **Périodes** (préparation, objet central) et **Déclarations (DSN)** (page DSN embarquée, `embedded` prop, gated `payroll_export`). La DSN reste liée à la période (period_month + payroll_run_id + export depuis un run validé). Permissions par capacité **préservées** malgré l'entrée unifiée (un utilisateur n'ayant que `payroll_prepare` ne voit pas l'onglet Déclarations ; `payroll_export` ne donne pas accès aux montants).
+
+### 3. États DSN — zéro ambiguïté
+Audit confirmé (C1) : passerelle par défaut `null` + kill-switch `submit_enabled=false` → submit **simulé** (auto-succès `NULL-…`), poll auto-accepte, client Net-Entreprises réel verrouillé et pointé sandbox.
+Nouveau endpoint **`GET workforce/dsn/capability`** expose le **mode honnête** (`disabled|simulation|file|sandbox|production`, `real_transmission`). UI : **bannière de capacité** proéminente (liste + détail) ; statuts « Transmis »/« Accepté » **suffixés « (simulation) »** tant que `real_transmission=false` ; toast de submit = « SIMULATION — aucune transmission réelle » hors production. Les **états stockés ne sont pas falsifiés** ; on ne présente jamais un envoi simulé comme réel. Aucune déclaration réelle dans ce lot.
+
+### 4. Paie indicative & exports — honnêteté (déjà C1/C2, vérifié C3)
+Disclaimer permanent sur toutes les surfaces paie ; tooltips Export (« marquage d'état, aucun fichier ») et Bulletin officiel (« montants indicatifs, pas une paie certifiée »). Risque « finaliser un indicatif comme réglementaire » = couvert par libellés explicites + disclaimer (sans bloquer l'existant). **Barèmes/moteur de cotisations non modifiés.** Conditions d'un usage réglementaire réel documentées (barème exhaustif certifié, passerelle production activée, validation expert-comptable).
+
+### 5. Correctif annexe
+Cartes de stats paie (Brouillons/Calculés/Validés) affichaient l'objet brut `{count,…}` (masqué en C1 car 0 run) → lisent désormais `.count`.
+
+### Recette & mesures
+- **DEV réel** (SHA servie, X-Build-Version vérifié) : espace unifié, onglet Déclarations + **bannière honnête** (« Transmission désactivée (kill-switch)… statuts simulés »), **0 entrée DSN autonome** dans la sidebar, responsive 1920/1366/768/390 + dark.
+- **Full-stack local (même SHA)** : parcours RH de bout en bout sur fixture isolée (réutilise C2) — période → collaborateurs → anomalie → panneau → source (Temps) → retour période → recalcul ; masquage salarial (RH sans salaire vs avec).
+- **Mesures (cycle préparation→contrôle→déclaration)** : avant C (Paie et DSN = 2 entrées séparées, montants exposés API, états DSN ambigus) → après C3 (1 entrée période-centrée, montants masqués serveur, état DSN explicite). Clics pour atteindre la DSN depuis la paie : 2 (changer de menu) → 1 (onglet). Changements de contexte pour traiter une anomalie : sortie manuelle → navigation contextuelle + retour (C2). Ressaisies : 0 (tout dérivé).
+
+### Run de recette C1 (dette)
+Run id=1 (sept. 2026, computed, 0 collaborateur) toujours sur DEV : **pas de procédure métier d'annulation** d'un run computed (immutabilité volontaire draft-only). Suppression **uniquement** par admin habilité via accès DB/clé — **pas de SQL destructif improvisé, pas d'endpoint de suppression DEV public, pas de mot de passe SSH compromis**. Ne perturbe pas les agrégations (0 collaborateur, 0 €). Cf. [[payroll-recette-dev-lesson]].
+
+### Limites réglementaires restantes (assumées, visibles pour l'utilisateur)
+Barème indicatif non exhaustif (AT/MP forfaitaire, AGS, régimes spéciaux) ; export = marquage d'état sans fichier bancaire/comptable ; DSN = génération/validation/contrôle internes + transmission **simulée** (non officielle) ; variables de paie (primes/acomptes/saisies) **absentes**. Toutes signalées en UI (disclaimer, bannières, tooltips, notices).
+
+### Garde-fous
+DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature + barèmes intacts ; aucune déclaration externe ; mot de passe SSH compromis non utilisé (incident ouvert) ; 3 échecs ControllerSize préexistants préservés.
+
+### Fichiers
+`PayrollConfidentiality.php` (motif) ; `WorkforceDocumentController.php` (gate téléchargement bulletin + scrub forPayrollRun) ; `DsnDeclarationController.php` + `routes/company.php` (endpoint capability) ; `dsn/index.vue` + `dsn/[id].vue` (embedded, bannière, statuts/toast honnêtes) ; `dsn.store.js` (fetchCapability) ; `payroll/index.vue` (onglets Périodes/Déclarations, fix stats) ; `WorkforcePayrollModule.php` (nav unifiée) ; `WorkforceNavHrGroupTest.php` + `PayrollCompensationConfidentialityTest.php` ; i18n fr/en (`dsn.capability.*`, `payroll.tabs.*`) ; recette `tests/e2e/payroll-c3-dev.spec.js`.
+
+### Clôture LOT C
+Une entreprise prépare et contrôle une période dans un espace cohérent, sait précisément ce qui est calculé (indicatif), validé (interne), exporté (marquage) ou simulé (DSN), **sans exposition non autorisée des rémunérations** (serveur) **ni promesse trompeuse de conformité**. LOT C (C1+C2+C3) clôturé.
+
+---
