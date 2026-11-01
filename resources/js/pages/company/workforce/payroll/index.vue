@@ -278,7 +278,7 @@ const goToRun = id => {
                 {{ $t('payroll.stats.draft') }}
               </div>
               <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.draft ?? 0 }}
+                {{ stats.by_status?.draft?.count ?? 0 }}
               </div>
             </div>
           </VCardText>
@@ -306,7 +306,7 @@ const goToRun = id => {
                 {{ $t('payroll.stats.computed') }}
               </div>
               <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.computed ?? 0 }}
+                {{ stats.by_status?.computed?.count ?? 0 }}
               </div>
             </div>
           </VCardText>
@@ -334,7 +334,7 @@ const goToRun = id => {
                 {{ $t('payroll.stats.validated') }}
               </div>
               <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.validated ?? 0 }}
+                {{ stats.by_status?.validated?.count ?? 0 }}
               </div>
             </div>
           </VCardText>
