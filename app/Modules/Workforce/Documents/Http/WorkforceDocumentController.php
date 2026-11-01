@@ -8,6 +8,7 @@ use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\PayrollRun;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
+use App\Modules\Workforce\Security\PayrollConfidentiality;
 use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\GenerateDocumentUseCase;
 use App\Modules\Workforce\UseCases\GenerateOfficialPayslipsUseCase;
@@ -144,8 +145,17 @@ class WorkforceDocumentController extends Controller
                     'Not authorized to download this contract.'
                 );
             }
+        } elseif (in_array($document->subject_type, ['payroll_line', 'payroll_run'], true)) {
+            // C3 (ADR-681): payslips embed salary — downloading one must not bypass
+            // compensation_read via the documents surface. Require it on top of
+            // workforce_documents.view (route middleware).
+            abort_unless(
+                WorkforceAccess::canReadCompensation($request),
+                403,
+                'Not authorized to download payroll documents without compensation access.'
+            );
         }
-        // payroll_run / payroll_line / leave_request : gérés par la permission workforce_documents.view.
+        // leave_request : géré par la permission workforce_documents.view.
     }
 
     // ── Statistics ───────────────────────────────────────────────────
@@ -240,6 +250,10 @@ class WorkforceDocumentController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($runId);
 
-        return response()->json(GeneratedDocumentReadModel::forPayrollRun($runId, $companyId));
+        // Payslip documents embed salary in generation_snapshot → scrub for non-comp.
+        return response()->json(PayrollConfidentiality::scrub(
+            GeneratedDocumentReadModel::forPayrollRun($runId, $companyId),
+            PayrollConfidentiality::canRead($request),
+        ));
     }
 }

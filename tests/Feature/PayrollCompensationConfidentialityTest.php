@@ -53,14 +53,16 @@ class PayrollCompensationConfidentialityTest extends TestCase
         parent::setUp();
         Model::unguard();
 
-        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_payroll']]);
+        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_payroll', 'workforce_documents']]);
         Market::create(['key' => 'FR', 'name' => 'France', 'currency' => 'EUR', 'locale' => 'fr-FR', 'timezone' => 'Europe/Paris', 'vat_rate_bps' => 2000, 'dial_code' => '+33', 'flag_code' => 'fr', 'flag_svg' => '']);
         PlatformModule::create(['key' => 'workforce', 'name' => 'Workforce', 'is_enabled_globally' => true]);
         PlatformModule::create(['key' => 'workforce_payroll', 'name' => 'Payroll', 'is_enabled_globally' => true]);
+        PlatformModule::create(['key' => 'workforce_documents', 'name' => 'Documents', 'is_enabled_globally' => true]);
         CompanyPermissionCatalog::sync();
 
         $this->company = $this->makeCompany('conf-co');
         $this->otherCompany = $this->makeCompany('other-co');
+        \App\Core\Modules\ModuleRegistry::clearCache();
 
         $this->employee = Employee::withoutGlobalScopes()->create([
             'company_id' => $this->company->id, 'first_name' => 'Marie', 'last_name' => 'Curie',
@@ -105,7 +107,7 @@ class PayrollCompensationConfidentialityTest extends TestCase
     private function makeCompany(string $slug): Company
     {
         $c = Company::create(['name' => $slug, 'slug' => $slug, 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
-        foreach (['workforce', 'workforce_payroll'] as $m) {
+        foreach (['workforce', 'workforce_payroll', 'workforce_documents'] as $m) {
             CompanyModuleActivationReason::create(['company_id' => $c->id, 'module_key' => $m, 'reason' => CompanyModuleActivationReason::REASON_DIRECT]);
         }
 
@@ -229,6 +231,90 @@ class PayrollCompensationConfidentialityTest extends TestCase
         $res = $this->apiGet($prep, "/workforce/payroll/{$this->run->id}/lines/{$this->line->id}");
         $res->assertOk();
         $this->assertNoConfidential($res);
+    }
+
+    /**
+     * C3 hardening : un champ monétaire AJOUTÉ (hors denylist) est quand même retiré
+     * grâce à la détection par motif (_cents/_bps/_lines/_breakdown/_snapshot/_payload),
+     * alors qu'une nouvelle clé NON monétaire est préservée.
+     */
+    public function test_newly_added_monetary_field_is_stripped_by_pattern(): void
+    {
+        $payload = [
+            'id' => 7,
+            'status' => 'computed',
+            'worked_minutes' => 9000,            // preparation data → kept
+            'employee' => ['id' => 3, 'first_name' => 'X'],
+            'surprise_bonus_cents' => 99999,     // NEW amount, not in denylist → stripped
+            'custom_rate_bps' => 1234,           // NEW rate → stripped
+            'mystery_lines' => [['amount' => 1]],// NEW amount collection → stripped
+            'future_snapshot' => ['salary' => 1],// NEW snapshot → stripped
+            'new_safe_label' => 'visible',       // NEW non-monetary key → kept
+            'timesheet_snapshot' => ['m' => 1],  // time data → kept (safe-listed)
+        ];
+
+        $masked = \App\Modules\Workforce\Security\PayrollConfidentiality::scrub($payload, false);
+        $json = json_encode($masked);
+
+        foreach (['surprise_bonus_cents', '99999', 'custom_rate_bps', '1234', 'mystery_lines', 'future_snapshot'] as $leak) {
+            $this->assertStringNotContainsString((string) $leak, $json, "pattern strip failed for {$leak}");
+        }
+        $this->assertStringContainsString('new_safe_label', $json);
+        $this->assertStringContainsString('worked_minutes', $json);
+        $this->assertStringContainsString('timesheet_snapshot', $json);
+        $this->assertTrue($masked['compensation_hidden']);
+
+        // Authorized viewer: nothing stripped.
+        $full = \App\Modules\Workforce\Security\PayrollConfidentiality::scrub($payload, true);
+        $this->assertSame($payload, $full);
+    }
+
+    /**
+     * C3 : un bulletin (document payslip, subject payroll_line) contient le salaire —
+     * son téléchargement NE DOIT PAS contourner compensation_read via l'espace documents.
+     */
+    public function test_payslip_download_requires_compensation_read(): void
+    {
+        $doc = $this->makePayslipDoc();
+
+        $noComp = $this->userWith(['workforce.payroll_prepare', 'workforce_documents.view']);
+        $this->apiGet($noComp, "/workforce/documents/{$doc->id}/download")->assertForbidden();
+
+        // Comp user passes the compensation gate (404 car pas de fichier réel, mais PAS 403).
+        $comp = $this->userWith(['workforce.payroll_prepare', 'workforce.compensation_read', 'workforce_documents.view']);
+        $this->assertNotSame(403, $this->apiGet($comp, "/workforce/documents/{$doc->id}/download")->status());
+    }
+
+    /** C3 : la liste des documents d'un run masque generation_snapshot (montants) sans compensation_read. */
+    public function test_payroll_run_documents_mask_snapshot_without_comp(): void
+    {
+        $this->makePayslipDoc();
+
+        $noComp = $this->userWith(['workforce.payroll_prepare', 'workforce_documents.view']);
+        $res = $this->apiGet($noComp, "/workforce/documents/payroll-run/{$this->run->id}");
+        $res->assertOk();
+        $this->assertStringNotContainsString('generation_snapshot', $res->getContent());
+        $this->assertStringNotContainsString('777777', $res->getContent());
+    }
+
+    private function makePayslipDoc(): \App\Core\Documents\GeneratedDocument
+    {
+        Model::unguard();
+        $tpl = \App\Core\Documents\DocumentTemplate::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'code' => 'payslip_draft_fr', 'name' => 'Bulletin',
+            'subject_type' => 'payroll_line', 'body_html' => '<p>{{net}}</p>', 'variables_schema' => [],
+            'version' => 1, 'is_active' => true,
+        ]);
+        $doc = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'document_template_id' => $tpl->id, 'template_version' => 1,
+            'subject_type' => 'payroll_line', 'subject_id' => $this->line->id, 'generated_by' => $this->owner()->id,
+            'generated_at' => now(), 'file_path' => 'payslips/test-c3.pdf', 'file_size_bytes' => 10,
+            'generation_snapshot' => ['net_payable_cents' => 777777, 'base_salary_cents' => 500000],
+            'signature_status' => 'none',
+        ]);
+        Model::reguard();
+
+        return $doc;
     }
 
     /** DSN : payload_snapshot (salaires) masqué sans compensation_read ; visible avec. */

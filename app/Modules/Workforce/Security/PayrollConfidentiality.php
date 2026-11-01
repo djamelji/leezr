@@ -100,8 +100,42 @@ class PayrollConfidentiality
         return $out;
     }
 
+    /**
+     * Keys that LOOK like money/rate structures but are NOT confidential salary —
+     * they carry preparation/time data a non-comp user legitimately needs.
+     */
+    private const SAFE_KEYS = [
+        'timesheet_snapshot', // source time data (minutes), no salary
+    ];
+
+    /**
+     * C3 hardening: pattern-based detection on top of the explicit lists so a
+     * NEWLY-added monetary field (e.g. `bonus_cents`, `advance_bps`, `foo_lines`)
+     * is stripped automatically — the denylist is no longer the single point of
+     * failure. Any key ending in a monetary suffix, or an amount-bearing snapshot/
+     * payload, is confidential unless explicitly whitelisted as safe.
+     */
     private static function isConfidential(string $key): bool
     {
-        return in_array($key, self::AMOUNT_KEYS, true) || in_array($key, self::DETAIL_KEYS, true);
+        if (in_array($key, self::SAFE_KEYS, true)) {
+            return false;
+        }
+        // Explicit lists (kept as defense in depth).
+        if (in_array($key, self::AMOUNT_KEYS, true) || in_array($key, self::DETAIL_KEYS, true)) {
+            return true;
+        }
+        // Pattern rule: monetary amounts (_cents), rates (_bps), and amount
+        // collections (_breakdown / _lines) are confidential by shape.
+        foreach (['_cents', '_bps', '_breakdown', '_lines'] as $suffix) {
+            if (str_ends_with($key, $suffix)) {
+                return true;
+            }
+        }
+        // Amount-bearing snapshots / payloads (but not timesheet_snapshot, above).
+        if (str_ends_with($key, '_snapshot') || str_ends_with($key, '_payload')) {
+            return true;
+        }
+
+        return false;
     }
 }
