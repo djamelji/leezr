@@ -9,6 +9,8 @@ import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizar
 // store, permissions intacts) via la prop `embedded`. Gating par permission, comme la nav d'origine.
 import ContractTemplates from '@/pages/company/workforce/contract/templates.vue'
 import SignaturePage from '@/pages/company/workforce/signature/index.vue'
+import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
+import DocumentDetailDrawer from './_DocumentDetailDrawer.vue'
 
 definePage({ meta: { module: 'workforce_documents', permission: 'workforce_documents.view' } })
 
@@ -50,6 +52,15 @@ const loading = ref(false)
 const subjectTypeFilter = ref(null)
 const signatureStatusFilter = ref(null)
 const templateCodeFilter = ref('')
+// PRODUCT-UX-2 (LOT A2) — registre transversal.
+const employeeFilter = ref(null)
+const searchFilter = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
+
+// Liste légère des collaborateurs pour l'autocomplete (réutilise le store Employees existant).
+const employeesStore = useEmployeesStore()
+const employeeOptions = computed(() => (employeesStore.employees || []).map(e => ({ title: `${e.first_name} ${e.last_name}`, value: e.id })))
 
 const subjectTypeOptions = [
   { title: t('workforceDocuments.subjects.payrollLine'), value: 'payroll_line' },
@@ -69,6 +80,7 @@ const signatureStatusOptions = [
 // ── Table headers ────────────────────────────────────────────
 const headers = computed(() => [
   { title: t('workforceDocuments.columns.templateCode'), key: 'template_code', sortable: false },
+  { title: t('workforceDocuments.columns.collaborator'), key: 'collaborator', sortable: false },
   { title: t('workforceDocuments.columns.subject'), key: 'subject', sortable: false },
   { title: t('workforceDocuments.columns.signatureStatus'), key: 'signature_status', sortable: false, width: 140 },
   { title: t('workforceDocuments.columns.generatedAt'), key: 'generated_at', sortable: false, width: 160 },
@@ -126,6 +138,10 @@ const fetchData = async () => {
       subjectType: subjectTypeFilter.value || undefined,
       signatureStatus: signatureStatusFilter.value || undefined,
       templateCode: templateCodeFilter.value || undefined,
+      employeeId: employeeFilter.value || undefined,
+      search: searchFilter.value || undefined,
+      dateFrom: dateFrom.value || undefined,
+      dateTo: dateTo.value || undefined,
       perPage: options.value.itemsPerPage,
       page: options.value.page,
     })
@@ -152,19 +168,28 @@ const onDocumentGenerated = () => {
   refreshAll()
 }
 
-watchDebounced([subjectTypeFilter, signatureStatusFilter, templateCodeFilter], () => {
+watchDebounced([subjectTypeFilter, signatureStatusFilter, templateCodeFilter, employeeFilter, searchFilter, dateFrom, dateTo], () => {
   options.value.page = 1
   fetchData()
-}, { debounce: 300 })
+}, { debounce: 350 })
 
 watch(options, fetchData, { deep: true })
 
 onMounted(() => {
   fetchData()
   fetchStats()
+  employeesStore.fetchEmployees({ perPage: 200 }).catch(() => {})
 })
 
 const stats = computed(() => store.statistics)
+
+// ── Panneau documentaire unifié (cycle de vie dans un seul contexte) ──
+const detailDoc = ref(null)
+const detailOpen = ref(false)
+const openDetail = row => { detailDoc.value = row; detailOpen.value = true }
+// Depuis le panneau : suivre la signature = basculer sur l'onglet Signatures (reste dans l'espace).
+const goToSignatures = () => { detailOpen.value = false; activeTab.value = 'signatures' }
+const requestSignatureFor = row => { detailOpen.value = false; requestSignature(row) }
 
 // ── Drawer ───────────────────────────────────────────────────
 const isDrawerOpen = ref(false)
@@ -375,6 +400,37 @@ watch(activeTab, v => {
             />
           </VCol>
         </VRow>
+
+        <!-- PRODUCT-UX-2 (LOT A2) — registre transversal : collaborateur / recherche / période -->
+        <VRow>
+          <VCol cols="12" md="4">
+            <AppAutocomplete
+              v-model="employeeFilter"
+              :items="employeeOptions"
+              :placeholder="$t('workforceDocuments.filters.employee')"
+              clearable
+              density="compact"
+              prepend-inner-icon="tabler-user"
+              data-test="doc-filter-employee"
+            />
+          </VCol>
+          <VCol cols="12" md="4">
+            <AppTextField
+              v-model="searchFilter"
+              :placeholder="$t('workforceDocuments.filters.search')"
+              clearable
+              density="compact"
+              prepend-inner-icon="tabler-search"
+              data-test="doc-filter-search"
+            />
+          </VCol>
+          <VCol cols="6" md="2">
+            <AppTextField v-model="dateFrom" type="date" :label="$t('workforceDocuments.filters.dateFrom')" density="compact" clearable />
+          </VCol>
+          <VCol cols="6" md="2">
+            <AppTextField v-model="dateTo" type="date" :label="$t('workforceDocuments.filters.dateTo')" density="compact" clearable />
+          </VCol>
+        </VRow>
       </VCardText>
 
       <!-- Table -->
@@ -384,13 +440,23 @@ watch(activeTab, v => {
         :items="store.documents"
         :items-length="store.totalDocuments"
         :loading="loading"
-        class="text-no-wrap"
+        class="text-no-wrap cursor-pointer"
+        hover
+        @click:row="(_, { item }) => openDetail(item)"
       >
         <!-- Template code -->
         <template #item.template_code="{ item }">
           <span class="font-weight-medium">
             {{ item.template_code }}
           </span>
+        </template>
+
+        <!-- Collaborateur (résolu transversalement) -->
+        <template #item.collaborator="{ item }">
+          <span v-if="item.employee_name" class="d-flex align-center gap-2">
+            <VIcon icon="tabler-user" size="16" class="text-medium-emphasis" />{{ item.employee_name }}
+          </span>
+          <span v-else class="text-disabled">—</span>
         </template>
 
         <!-- Subject -->
@@ -427,7 +493,7 @@ watch(activeTab, v => {
               variant="text"
               size="small"
               :title="$t('workforceDocuments.preview')"
-              @click="downloadDocument(item, { save: false })"
+              @click.stop="downloadDocument(item, { save: false })"
             >
               <VIcon icon="tabler-eye" />
             </VBtn>
@@ -437,7 +503,7 @@ watch(activeTab, v => {
               variant="text"
               size="small"
               :title="$t('workforceDocuments.download')"
-              @click="downloadDocument(item, { save: true })"
+              @click.stop="downloadDocument(item, { save: true })"
             >
               <VIcon icon="tabler-download" />
             </VBtn>
@@ -448,7 +514,7 @@ watch(activeTab, v => {
               size="small"
               color="primary"
               :title="$t('signature.actions.new')"
-              @click="requestSignature(item)"
+              @click.stop="requestSignature(item)"
             >
               <VIcon icon="tabler-signature" />
             </VBtn>
@@ -507,6 +573,18 @@ watch(activeTab, v => {
       v-model:is-dialog-visible="sigWizardOpen"
       :preselected-document-id="sigDocId"
       @created="() => { sigWizardOpen = false; toast(t('signature.toasts.created'), 'success'); refreshAll() }"
+    />
+
+    <!-- PRODUCT-UX-2 (LOT A2) : panneau documentaire unifié (cycle de vie dans un seul contexte) -->
+    <DocumentDetailDrawer
+      v-model="detailOpen"
+      :document="detailDoc"
+      :can-request="can('workforce_signature.request')"
+      @preview="d => downloadDocument(d, { save: false })"
+      @download="d => downloadDocument(d, { save: true })"
+      @request-signature="requestSignatureFor"
+      @go-signatures="goToSignatures"
+      @open-fiche="d => router.push(`/company/workforce/employees/${d.employee_id}`)"
     />
   </div>
 </template>

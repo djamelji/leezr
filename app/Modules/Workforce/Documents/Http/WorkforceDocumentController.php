@@ -32,6 +32,11 @@ class WorkforceDocumentController extends Controller
                 'subject_id' => $request->input('subject_id'),
                 'template_code' => $request->input('template_code'),
                 'signature_status' => $request->input('signature_status'),
+                // PRODUCT-UX-2 (LOT A2) — registre transversal.
+                'employee_id' => $request->input('employee_id'),
+                'search' => $request->input('search'),
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
             ],
             perPage: (int) $request->input('per_page', 15),
         );

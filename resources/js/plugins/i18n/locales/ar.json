@@ -288,6 +288,23 @@
       "documents": "المُنشأة",
       "templates": "القوالب",
       "signatures": "التوقيعات"
+    },
+    "detail": {
+      "document": "المستند",
+      "signature": "التوقيع",
+      "requestSignature": "طلب توقيع",
+      "trackSignature": "تتبع التوقيع",
+      "openFiche": "فتح ملف الموظف",
+      "noSignatureYet": "لا يتطلب هذا المستند توقيعًا."
+    },
+    "columns": {
+      "collaborator": "الموظف"
+    },
+    "filters": {
+      "employee": "الموظف",
+      "search": "بحث",
+      "dateFrom": "من",
+      "dateTo": "إلى"
     }
   }
 }

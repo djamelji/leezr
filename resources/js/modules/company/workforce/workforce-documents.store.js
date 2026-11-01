@@ -22,7 +22,7 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
 
   actions: {
     // ── Documents ────────────────────────────────────────────
-    async fetchDocuments({ subjectType, templateCode, signatureStatus, perPage, page } = {}) {
+    async fetchDocuments({ subjectType, templateCode, signatureStatus, employeeId, search, dateFrom, dateTo, perPage, page } = {}) {
       this._loading = true
       try {
         const params = new URLSearchParams()
@@ -30,6 +30,11 @@ export const useWorkforceDocumentsStore = defineStore('workforceDocuments', {
         if (subjectType) params.set('subject_type', subjectType)
         if (templateCode) params.set('template_code', templateCode)
         if (signatureStatus) params.set('signature_status', signatureStatus)
+        // PRODUCT-UX-2 (LOT A2) — registre transversal.
+        if (employeeId) params.set('employee_id', employeeId)
+        if (search) params.set('search', search)
+        if (dateFrom) params.set('date_from', dateFrom)
+        if (dateTo) params.set('date_to', dateTo)
         if (perPage) params.set('per_page', perPage)
         if (page) params.set('page', page)
 
