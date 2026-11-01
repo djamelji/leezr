@@ -1,16 +1,22 @@
 <script setup>
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { usePayrollStore } from '@/modules/company/workforce/payroll.store'
 import { useI18n } from 'vue-i18n'
+import PayrollDisclaimer from './_PayrollDisclaimer.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const { can } = useCan()
 const route = useRoute()
 const router = useRouter()
 const store = usePayrollStore()
+
+// RBAC: amounts only for compensation_read holders (UI masking — see C1 ADR).
+const canReadComp = computed(() => can('workforce.compensation_read'))
 
 // ── Reactive state ───────────────────────────────────────────────
 const showValidateDialog = ref(false)
@@ -37,16 +43,50 @@ const workflowSteps = computed(() => {
   ].map((s, i) => ({ ...s, reached: i <= idx, active: i === idx }))
 })
 
+// ── Preparation guidance (honest, derived from status + calculations) ────────
+const errorAnomalies = computed(() => (run.value?.anomalies ?? []).filter(a => a.severity === 'error'))
+const preparation = computed(() => {
+  const status = run.value?.status
+  if (status === 'draft')
+    return { step: t('payroll.prep.draft'), hint: t('payroll.prep.draftHint'), color: 'info', icon: 'tabler-calculator' }
+  if (status === 'computed' && !hasCalculations.value)
+    return { step: t('payroll.prep.computed'), hint: t('payroll.prep.computedHint'), color: 'info', icon: 'tabler-math-function' }
+  if (status === 'computed')
+    return errorAnomalies.value.length
+      ? { step: t('payroll.prep.blocked'), hint: t('payroll.prep.blockedHint'), color: 'error', icon: 'tabler-alert-circle' }
+      : { step: t('payroll.prep.readyToValidate'), hint: t('payroll.prep.readyToValidateHint'), color: 'warning', icon: 'tabler-checks' }
+  if (status === 'validated')
+    return { step: t('payroll.prep.validated'), hint: t('payroll.prep.validatedHint'), color: 'success', icon: 'tabler-file-certificate' }
+  if (status === 'exported')
+    return { step: t('payroll.prep.exported'), hint: t('payroll.prep.exportedHint'), color: 'success', icon: 'tabler-lock-check' }
+  return { step: '—', hint: '', color: 'secondary', icon: 'tabler-help' }
+})
+
+// Per-employee preparation state (derived from line anomalies + run status).
+function lineReadiness(line) {
+  const anomalies = line.anomalies ?? []
+  if (anomalies.some(a => a.severity === 'error'))
+    return { label: t('payroll.lineStatus.toFix'), color: 'error', icon: 'tabler-alert-circle' }
+  if (anomalies.length)
+    return { label: t('payroll.lineStatus.warning'), color: 'warning', icon: 'tabler-alert-triangle' }
+  if (run.value?.status === 'draft')
+    return { label: t('payroll.lineStatus.toCompute'), color: 'info', icon: 'tabler-calculator' }
+  return { label: t('payroll.lineStatus.ready'), color: 'success', icon: 'tabler-check' }
+}
+
 // ── Table headers ────────────────────────────────────────────────
-const lineHeaders = [
+const lineHeaders = computed(() => [
   { title: t('payroll.lines.employee'), key: 'employee', sortable: false },
   { title: t('payroll.lines.worked'), key: 'worked_minutes', sortable: false, width: 100 },
   { title: t('payroll.lines.overtime'), key: 'total_overtime_minutes', sortable: false, width: 100 },
-  { title: t('payroll.lines.grossBasis'), key: 'gross_basis_cents', sortable: false, width: 130 },
-  { title: t('payroll.lines.netPayable'), key: 'net_payable', sortable: false, width: 130 },
-  { title: t('payroll.lines.employerCost'), key: 'employer_cost', sortable: false, width: 130 },
+  ...(canReadComp.value ? [
+    { title: t('payroll.lines.grossBasis'), key: 'gross_basis_cents', sortable: false, width: 130 },
+    { title: t('payroll.lines.netPayable'), key: 'net_payable', sortable: false, width: 130 },
+    { title: t('payroll.lines.employerCost'), key: 'employer_cost', sortable: false, width: 130 },
+  ] : []),
+  { title: t('payroll.lines.preparation'), key: 'preparation', sortable: false, width: 130 },
   { title: t('payroll.lines.anomalies'), key: 'anomalies', sortable: false, width: 100 },
-]
+])
 
 const contribHeaders = [
   { title: t('payroll.lineDetail.contributions.label'), key: 'label' },
@@ -162,6 +202,9 @@ onBeforeUnmount(() => store.clearCurrentRun())
       {{ $t('payroll.backToList') }}
     </VBtn>
 
+    <!-- Honest capability disclaimer -->
+    <PayrollDisclaimer />
+
     <!-- B. Header card -->
     <VCard class="mb-6">
       <VCardText>
@@ -221,9 +264,20 @@ onBeforeUnmount(() => store.clearCurrentRun())
       </VCardText>
     </VCard>
 
+    <!-- C-bis. Preparation guidance (explicit next action) -->
+    <VAlert :color="preparation.color" variant="tonal" class="mb-6" border="start">
+      <div class="d-flex align-center gap-3">
+        <VIcon :icon="preparation.icon" size="24" />
+        <div>
+          <div class="font-weight-bold">{{ $t('payroll.prep.label') }}: {{ preparation.step }}</div>
+          <div class="text-body-2">{{ preparation.hint }}</div>
+        </div>
+      </div>
+    </VAlert>
+
     <!-- D. Totals cards row -->
     <VRow class="mb-6">
-      <VCol cols="12" sm="6" md="3">
+      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
         <VCard>
           <VCardText class="text-center">
             <VIcon icon="tabler-report-money" size="32" color="primary" class="mb-2" />
@@ -232,7 +286,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
           </VCardText>
         </VCard>
       </VCol>
-      <VCol cols="12" sm="6" md="3">
+      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
         <VCard>
           <VCardText class="text-center">
             <VIcon icon="tabler-wallet" size="32" color="success" class="mb-2" />
@@ -241,7 +295,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
           </VCardText>
         </VCard>
       </VCol>
-      <VCol cols="12" sm="6" md="3">
+      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
         <VCard>
           <VCardText class="text-center">
             <VIcon icon="tabler-building-bank" size="32" color="warning" class="mb-2" />
@@ -250,7 +304,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
           </VCardText>
         </VCard>
       </VCol>
-      <VCol cols="12" sm="6" md="3">
+      <VCol cols="12" :sm="canReadComp ? 6 : 12" :md="canReadComp ? 3 : 12">
         <VCard>
           <VCardText class="text-center">
             <VIcon icon="tabler-alert-triangle" size="32" :color="run.anomaly_count > 0 ? 'error' : 'grey'" class="mb-2" />
@@ -295,6 +349,12 @@ onBeforeUnmount(() => store.clearCurrentRun())
         <template #item.gross_basis_cents="{ item }">{{ formatCents(item.gross_basis_cents) }}</template>
         <template #item.net_payable="{ item }">{{ formatCents(item.net_payable_cents) }}</template>
         <template #item.employer_cost="{ item }">{{ formatCents(item.employer_cost_cents) }}</template>
+        <template #item.preparation="{ item }">
+          <VChip size="small" :color="lineReadiness(item).color" variant="tonal">
+            <VIcon :icon="lineReadiness(item).icon" size="14" class="me-1" />
+            {{ lineReadiness(item).label }}
+          </VChip>
+        </template>
         <template #item.anomalies="{ item }">
           <VIcon v-if="item.has_anomalies" icon="tabler-alert-triangle" color="warning" size="20" />
           <span v-else class="text-medium-emphasis">&mdash;</span>

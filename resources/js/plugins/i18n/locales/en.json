@@ -7042,7 +7042,8 @@
       "employees": "Employees",
       "grossTotal": "Gross Total",
       "anomalies": "Anomalies",
-      "actions": "Actions"
+      "actions": "Actions",
+      "nextAction": "Next action"
     },
     "statuses": {
       "draft": "Draft",
@@ -7110,7 +7111,8 @@
       "grossBasis": "Gross Basis",
       "netPayable": "Net Payable",
       "employerCost": "Employer Cost",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "preparation": "Preparation"
     },
     "lineDetail": {
       "title": "Payslip Details",
@@ -7181,6 +7183,40 @@
     "confirm": {
       "deleteTitle": "Delete Draft",
       "deleteText": "Are you sure you want to delete this draft? This action is irreversible."
+    },
+    "spaceTitle": "Payroll & filings",
+    "spaceSubtitle": "Prepare payroll period by period: collect, check, validate.",
+    "newPeriod": "New period",
+    "nextAction": {
+      "compute": "Compute",
+      "validate": "Review & validate",
+      "export": "Export / payslips",
+      "closed": "Closed"
+    },
+    "disclaimer": {
+      "title": "Payroll preparation workspace",
+      "body": "Amounts are indicative estimates (non-exhaustive scales) to be validated by a chartered accountant. Leezr files no declaration with any authority."
+    },
+    "prep": {
+      "label": "Next action",
+      "draft": "Collect & compute",
+      "draftHint": "Run the computation to aggregate validated time and estimate each employee gross.",
+      "computed": "Compute gross → net",
+      "computedHint": "Time is aggregated. Compute contributions and estimated net before validation.",
+      "blocked": "Blocking anomalies",
+      "blockedHint": "Blocking anomalies prevent validation. Fix them at the source (time, contract, compensation).",
+      "readyToValidate": "Ready to validate",
+      "readyToValidateHint": "No blocking anomaly. Review then validate the period to freeze amounts.",
+      "validated": "Validated",
+      "validatedHint": "Period frozen. Generate payslips (draft or official) and prepare the export.",
+      "exported": "Closed",
+      "exportedHint": "Period exported and closed. Amounts and payslips are frozen."
+    },
+    "lineStatus": {
+      "toFix": "To fix",
+      "warning": "Review",
+      "toCompute": "To compute",
+      "ready": "Ready"
     }
   },
   "timeTracking": {

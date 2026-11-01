@@ -7042,7 +7042,8 @@
       "employees": "Employés",
       "grossTotal": "Brut total",
       "anomalies": "Anomalies",
-      "actions": "Actions"
+      "actions": "Actions",
+      "nextAction": "Prochaine action"
     },
     "statuses": {
       "draft": "Brouillon",
@@ -7110,7 +7111,8 @@
       "grossBasis": "Brut base",
       "netPayable": "Net à payer",
       "employerCost": "Coût employeur",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "preparation": "Préparation"
     },
     "lineDetail": {
       "title": "Détail du bulletin",
@@ -7181,6 +7183,40 @@
     "confirm": {
       "deleteTitle": "Supprimer le brouillon",
       "deleteText": "Êtes-vous sûr de vouloir supprimer ce brouillon ? Cette action est irréversible."
+    },
+    "spaceTitle": "Paie & déclarations",
+    "spaceSubtitle": "Préparez la paie période par période : collectez, contrôlez, validez.",
+    "newPeriod": "Nouvelle période",
+    "nextAction": {
+      "compute": "Calculer",
+      "validate": "Vérifier & valider",
+      "export": "Exporter / bulletins",
+      "closed": "Clôturée"
+    },
+    "disclaimer": {
+      "title": "Espace de préparation de la paie",
+      "body": "Les montants sont des estimations indicatives (barèmes non exhaustifs), à faire valider par un expert-comptable. Leezr ne transmet aucune déclaration aux organismes sociaux."
+    },
+    "prep": {
+      "label": "Prochaine action",
+      "draft": "Collecter & calculer",
+      "draftHint": "Lancez le calcul pour agréger le temps validé et estimer le brut de chaque collaborateur.",
+      "computed": "Calculer le brut → net",
+      "computedHint": "Le temps est agrégé. Calculez les cotisations et le net estimé avant validation.",
+      "blocked": "Anomalies bloquantes",
+      "blockedHint": "Des anomalies bloquantes empêchent la validation. Corrigez-les à la source (temps, contrat, rémunération).",
+      "readyToValidate": "Prêt à valider",
+      "readyToValidateHint": "Aucune anomalie bloquante. Vérifiez puis validez la période pour figer les montants.",
+      "validated": "Validée",
+      "validatedHint": "Période figée. Générez les bulletins (brouillon ou officiel) et préparez l'export.",
+      "exported": "Clôturée",
+      "exportedHint": "Période exportée et clôturée. Les montants et bulletins sont figés."
+    },
+    "lineStatus": {
+      "toFix": "À corriger",
+      "warning": "À vérifier",
+      "toCompute": "À calculer",
+      "ready": "Prêt"
     }
   },
   "timeTracking": {

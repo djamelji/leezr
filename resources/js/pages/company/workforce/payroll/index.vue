@@ -1,14 +1,31 @@
 <script setup>
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import { usePayrollStore } from '@/modules/company/workforce/payroll.store'
 import StatusChip from '@/core/components/StatusChip.vue'
+import PayrollDisclaimer from './_PayrollDisclaimer.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const { can } = useCan()
 const router = useRouter()
 const store = usePayrollStore()
+
+// RBAC: amounts (gross/net) only for users with compensation_read (ADR C1).
+// NB: the API still returns amounts to any payroll_prepare holder — this is a
+// UI-level masking; full server-side masking is a documented follow-up (C2).
+const canReadComp = computed(() => can('workforce.compensation_read'))
+
+// Period-centric guidance: next operational step derived from the run status.
+// Honest at list level (status only) — the run detail refines it.
+const nextAction = status => ({
+  draft: { label: t('payroll.nextAction.compute'), icon: 'tabler-calculator', color: 'info' },
+  computed: { label: t('payroll.nextAction.validate'), icon: 'tabler-checks', color: 'warning' },
+  validated: { label: t('payroll.nextAction.export'), icon: 'tabler-download', color: 'primary' },
+  exported: { label: t('payroll.nextAction.closed'), icon: 'tabler-lock-check', color: 'success', done: true },
+}[status] ?? { label: '—', icon: 'tabler-help', color: 'secondary' })
 
 // ── Table state ──────────────────────────────────────────────
 const statusFilter = ref(null)
@@ -27,10 +44,11 @@ const statusOptions = [
 const headers = computed(() => [
   { title: t('payroll.columns.period'), key: 'period', sortable: false },
   { title: t('payroll.columns.status'), key: 'status', sortable: false, width: 120 },
-  { title: t('payroll.columns.employees'), key: 'employee_count', sortable: false, width: 120 },
-  { title: t('payroll.columns.grossTotal'), key: 'total_gross_cents', sortable: false, width: 150 },
-  { title: t('payroll.columns.anomalies'), key: 'anomaly_count', sortable: false, width: 120 },
-  { title: t('payroll.columns.actions'), key: 'actions', sortable: false, width: 100 },
+  { title: t('payroll.columns.employees'), key: 'employee_count', sortable: false, width: 110 },
+  ...(canReadComp.value ? [{ title: t('payroll.columns.grossTotal'), key: 'total_gross_cents', sortable: false, width: 140 }] : []),
+  { title: t('payroll.columns.anomalies'), key: 'anomaly_count', sortable: false, width: 110 },
+  { title: t('payroll.columns.nextAction'), key: 'next_action', sortable: false, width: 180 },
+  { title: t('payroll.columns.actions'), key: 'actions', sortable: false, width: 90 },
 ])
 
 // ── Data fetching ────────────────────────────────────────────
@@ -154,22 +172,25 @@ const goToRun = id => {
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
         <h4 class="text-h4 font-weight-bold">
-          {{ $t('payroll.title') }}
+          {{ $t('payroll.spaceTitle') }}
         </h4>
         <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('payroll.subtitle') }}
+          {{ $t('payroll.spaceSubtitle') }}
         </p>
       </div>
       <VBtn
         v-can="'workforce.payroll_prepare'"
         color="primary"
         data-test="pr-create-open"
-        prepend-icon="tabler-receipt-2"
+        prepend-icon="tabler-calendar-plus"
         @click="isDrawerOpen = true"
       >
-        {{ $t('payroll.createRun') }}
+        {{ $t('payroll.newPeriod') }}
       </VBtn>
     </div>
+
+    <!-- Honest capability disclaimer (preparation, not certified payroll / no filing) -->
+    <PayrollDisclaimer />
 
     <!-- Stats Cards -->
     <VRow
@@ -394,6 +415,23 @@ const goToRun = id => {
             v-else
             class="text-medium-emphasis"
           >0</span>
+        </template>
+
+        <!-- Next action (period-centric guidance) -->
+        <template #item.next_action="{ item }">
+          <VChip
+            size="small"
+            :color="nextAction(item.status).color"
+            :variant="nextAction(item.status).done ? 'tonal' : 'elevated'"
+            @click.stop="goToRun(item.id)"
+          >
+            <VIcon
+              :icon="nextAction(item.status).icon"
+              size="14"
+              class="me-1"
+            />
+            {{ nextAction(item.status).label }}
+          </VChip>
         </template>
 
         <!-- Actions -->

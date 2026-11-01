@@ -24308,3 +24308,45 @@ Un manager **planifie** (éditer un créneau brouillon depuis le contexte), **su
 `_DayDetailPanel.vue` (édition créneau brouillon inline) ; `_TimeCockpit.vue` (prop `can-planning-manage`) ; i18n (`dayPanel.editShift/shiftImmutable/shiftSaved`).
 
 ---
+
+## ADR-679 — PRODUCT-UX-2 LOT C1 : audit capacités Paie/DSN + vue période de préparation
+
+**Date** : 2026-11-01
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-2 / LOT C — refonte métier « Paie & déclarations ». C1 = auditer l'état RÉEL de Payroll + DSN (classer chaque capacité : fonctionnel+testé / partiel / simulé / UI-only / absent), puis concevoir et livrer une **vue période de préparation** centrée sur les collaborateurs concernés, **sans inventer de calcul** et **sans promesse trompeuse** (ni paie certifiée, ni déclaration transmise).
+
+### Audit des capacités (Phase A) — verdicts
+Échelle : (1) fonctionnel+testé · (2) partiel · (3) simulé · (4) UI-only · (5) absent.
+
+**Payroll** :
+- Cycle de vie du run `draft→computed→validated→exported` (machine à états, garde-fous création/compute/validate) — **(1)**.
+- Agrégation du temps par employé depuis **TimesheetPeriod LOCKÉ** (heures, HS ventilées 25/50/structurelles, congés payés/non payés) — **(1)**.
+- Calcul **brut→net** (cotisations URSSAF/Agirc-Arrco 2026, PAS, net social arrêté 2023/2024, cumuls YTD, réduction générale RGDU, résolution Marché→CC→override) — **(1) mécanique testée, mais barème explicitement « INDICATIF — NON EXHAUSTIF »** (pas d'AT/MP réel, AGS sans plafond, pas de régimes spéciaux).
+- Anomalies de préparation sur **3 niveaux** (run/ligne/calcul) — **(1)**, mais **à agréger côté UI** (pas d'endpoint readiness dédié).
+- Bulletins PDF (brouillon + officiel, dompdf, garde-fous SIRET/NAF) rangés dans l'espace **Documents** (LOT A) — **(1)**.
+- Export paie (`ExportPayrollUseCase`) = **marquage d'état + snapshot JSON, AUCUN fichier écrit** (ni CSV ni SEPA) — **(2)**.
+- **Variables de paie** (primes, acomptes, saisies-arrêts, avances) — **(5) ABSENT** ; `DeductionCalculator` = stub vide ; benefits non saisissables par run.
+
+**DSN** :
+- Modèle `DsnDeclaration` + génération fichier `.dsn` (format NEODES Phase 3, blocs 06/22/30/40/50/51/78/81, SHA-256) + validation (SIRET Luhn, NIR mod-97, CTP, cohérence totaux, ISO-8859-1) — **(2) réel mais partiel** (blocs envelope S10/S20/S90 absents, constantes en dur) → « contrôle interne », pas « DSN conforme certifiée ».
+- **Transmission** (`submit`/`poll`) — **(3) SIMULÉE par défaut** : `DSN_GATEWAY_DRIVER=null` + kill-switch `submit_enabled=false` → `NullDsnGateway` retourne un succès factice `NULL-…`, poll auto-accepte. Client HTTP Net-Entreprises réel existant mais **verrouillé** (double verrou) et pointé sandbox. Commande `dsn:poll-pending` **non planifiée**.
+
+**Permissions** : `payroll_prepare` / `payroll_validate` / `payroll_export` (= DSN) ; `compensation_read` (voir salaires), `sensitive_read` (NIR/IBAN). **Limite constatée** : à l'intérieur de l'espace paie, les montants ne sont **pas masqués côté serveur** par `compensation_read` (tout détenteur de `payroll_prepare` les reçoit).
+
+### Décision (Phase B — livré)
+Recadrer les écrans paie autour de la **période comme objet central de préparation**, honnêtement :
+- **Landing** (`payroll/index.vue`) : titre « Paie & déclarations » / « Préparez la paie période par période », **disclaimer honnête** permanent (`_PayrollDisclaimer.vue`), colonne **« Prochaine action »** par période (dérivée du statut : Calculer → Vérifier & valider → Exporter/bulletins → Clôturée), bouton « Nouvelle période ».
+- **Détail période** (`payroll/[id].vue`) : disclaimer ; **bandeau « prochaine action »** en langage clair (collecter/calculer, brut→net, anomalies bloquantes, prêt à valider, validée, clôturée — dérivé de `status` + présence de calculs + anomalies `error`) ; **statut de préparation par collaborateur** (À corriger / À vérifier / À calculer / Prêt, dérivé des anomalies de ligne + statut run) ; réutilise la table de lignes existante (temps, HS, montants, anomalies).
+- **RBAC montants** : masquage **UI** des colonnes/KPI brut/net/coût employeur derrière `workforce.compensation_read`. Documenté comme masquage front ; le masquage **serveur** reste un suivi (C2).
+- **Aucune invention** : zéro nouveau calcul, zéro nouvel endpoint ; réutilise `GET /workforce/payroll/` + `/{id}` + `/{id}/lines`.
+
+### Ce qui n'est PAS fait (assumé)
+Aucune transmission DSN réelle ; aucun écran de saisie de variables (absent côté moteur) ; aucun export fichier bancaire/comptable ; aucune promesse « paie certifiée » ni « déclaration effectuée ». La consolidation DSN dans l'espace (onglet/étape de déclaration) et la recette UX sont **reportées en C3** ; le panneau collaborateur détaillé (contrat/temps/absences/variables avec provenance) et le masquage serveur en **C2**.
+
+### Garde-fous
+DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature non touché ; mot de passe SSH compromis non utilisé (incident ouvert) ; 3 échecs ControllerSize préexistants préservés.
+
+### Fichiers
+`_PayrollDisclaimer.vue` (nouveau, disclaimer honnête) ; `payroll/index.vue` (titre, disclaimer, colonne prochaine action, gating `compensation_read`) ; `payroll/[id].vue` (disclaimer, bandeau prochaine action, statut préparation/collaborateur, gating montants) ; i18n fr/en (`payroll.spaceTitle/spaceSubtitle/newPeriod/columns.nextAction/nextAction/disclaimer/prep/lineStatus/lines.preparation`).
+
+---
