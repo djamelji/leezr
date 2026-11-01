@@ -7067,8 +7067,8 @@
       "periodEnd": "Period End"
     },
     "emptyState": {
-      "title": "No Payroll Runs",
-      "description": "Create your first payroll run to get started."
+      "title": "No payroll period",
+      "description": "Create a period to start preparing payroll."
     },
     "actions": {
       "compute": "Compute",

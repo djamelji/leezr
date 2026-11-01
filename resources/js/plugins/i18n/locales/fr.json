@@ -7067,8 +7067,8 @@
       "periodEnd": "Fin de période"
     },
     "emptyState": {
-      "title": "Aucun bulletin de paie",
-      "description": "Créez votre premier bulletin de paie pour commencer."
+      "title": "Aucune période de paie",
+      "description": "Créez une période pour commencer à préparer la paie."
     },
     "actions": {
       "compute": "Calculer",

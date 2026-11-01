@@ -485,7 +485,7 @@ const goToRun = id => {
               prepend-icon="tabler-receipt-2"
               @click="isDrawerOpen = true"
             >
-              {{ $t('payroll.createRun') }}
+              {{ $t('payroll.newPeriod') }}
             </VBtn>
           </div>
         </template>
@@ -501,7 +501,7 @@ const goToRun = id => {
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
-          {{ $t('payroll.createRun') }}
+          {{ $t('payroll.newPeriod') }}
         </h5>
         <VBtn
           icon
