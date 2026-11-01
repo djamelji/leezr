@@ -24268,3 +24268,43 @@ DEV uniquement ; **aucun 2ᵉ moteur**, aucune fusion backend ; **aucune modific
 `_DayDetailPanel.vue` (nouveau) ; `_TimeCockpit.vue` (clic ligne → panneau, emit navigate) ; `time/index.vue` (@navigate → bascule onglet) ; i18n (`dayPanel.*`).
 
 ---
+
+## ADR-678 — PRODUCT-UX-2 LOT B3 : finalisation Temps de travail (édition contextuelle + recette)
+
+**Date** : 2026-11-01
+**Statut** : Accepté (DEV, livré + vérifié). Clôt les points ouverts de B2 : édition de créneau depuis le panneau, parcours complet de correction démontré, recette UX/visuelle.
+
+### P0 — Édition du planning depuis le panneau Journée
+Depuis le panneau « Journée collaborateur », un manager `planning_manage` édite un créneau **BROUILLON** inline (horaires) — **réutilise `updateShift`/`UpdateShiftUseCase`** (règles légales, concurrence optimiste, conflits congés/chevauchement appliqués). Un créneau **PUBLIÉ affiche un cadenas** + l'explication d'immutabilité **I9** (modification via le workflow de dépublication du Planning). Aucun second formulaire métier.
+
+### P0 — Parcours complet de correction (démontré, tracé)
+Démonstration bout-en-bout sur le **full-stack local (même SHA que DEV)**, sur un collaborateur **fictif** (aucun pointage réel altéré — impossible sur DEV en prod sans fixture) :
+1. Anomalie (sortie anticipée 15:00 vs prévu 17:00, écart). 2. Clic ligne → panneau. 3. « Corriger le pointage ». 4. **Motif obligatoire** saisi. 5. Enregistré → **PUT 200**. 6. Résultat actualisé (clock_out 15:00→17:00, travaillé 355→475 min, écart résorbé). 7. **Trace d'audit** : `CompanyAuditLog` action `time_entry.updated`, reason « Correction sortie… », old=15:00 / new=17:00. 8. Rapprochement prévu/réel recalculé.
+**Règles métier respectées** : seules les entrées `completed`/`idle` sont corrigeables (une entrée `working` se ferme par clock-out, pas par correction) ; créneaux publiés immuables. **Aucune correction silencieuse.**
+
+### P1 — Vues & cohérence
+- Les 4 vues restent justifiées par des activités distinctes (Aujourd'hui = pilotage ; Planning = organisation future ; Présences = historique/contrôle ; Feuilles de temps = validation périodique). Aucune duplication de tableau/calcul : chaque vue réutilise son moteur. La vue semaine/équipe est fournie par le Planning existant (embarqué), non réinventée.
+- Cohérence des états vérifiée : shift publié sans pointage (« Non pointé »), pointage sans shift (« Hors planning »), ambigu (« À vérifier »), journée non clôturée, écart — libellés **précis**, jamais « absent »/« retard » automatiques. Données issues des vrais moteurs (cockpit board).
+
+### Vérifié sur DEV réel (SHA `232786b`)
+- Espace rendu en **1920 / 1366 / 768 / 390 / dark** ; panneau Journée utilisable sur mobile. Créneau publié → **cadenas** (immutabilité) affiché. 0 erreur JS.
+- **Tests** : non-régression Workforce/Time/Planning/Timesheet/Permission/Shift/Clock/Break/Nav **704 passés, 0 échec**. 3 `ControllerSize` préexistants inchangés ; moteur Signature non modifié.
+
+### Mesures UX — 6 activités (reconstruites sur les routes historiques, aucune mesure inventée)
+Le gain n'est **pas** un nombre de clics artificiellement réduit mais la **disparition des changements de contexte inter-modules** : vérifier une présence, retrouver un non-pointé, comparer prévu/réel, modifier un créneau, préparer une semaine, contrôler les heures — tout se fait **dans l'espace Temps de travail** (B1 unifié + B2 panneau + B3 édition/correction inline), là où il fallait auparavant naviguer entre Planning, Pointage et Feuilles. Entrées de nav opérationnelles **2 → 1** ; changements de module pour le cycle « constatation → action » : **plusieurs → 0** (reste dans l'espace). Clics par tâche : comparables à légèrement moindres ; gain principal = cohérence.
+
+### Limites restantes
+- Réaffectation (changement de collaborateur) depuis le panneau non exposée (le backend l'accepte pour un brouillon) — possible en suivi.
+- Établissement administratif (Site) toujours non livré (≠ lieu d'exécution Location, existant) — documenté, non bloquant.
+- Travail de nuit/fuseaux : gérés par les moteurs existants (TimeEntry/Shift stockent tz) ; l'affichage du panneau utilise les heures stockées.
+
+### Garde-fous
+DEV uniquement ; **aucun 2ᵉ moteur**, aucune fusion backend ; réutilise `updateShift`/`correctTimeEntry`/cockpit board/réconciliation ; **aucun pointage réel altéré** (démo sur fixture locale fictive) ; **aucune correction silencieuse** (motif + audit) ; routes historiques préservées ; pas de Billing/main/PROD/reset ; moteur Signature non touché ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Clôture LOT B
+Un manager **planifie** (éditer un créneau brouillon depuis le contexte), **supervise** (Aujourd'hui prévu/réel), **comprend les écarts** (panneau + réconciliation), **corrige** (workflow tracé) et **contrôle les heures** — **depuis un seul espace métier cohérent**, démontré réellement en navigateur. LOT B (B1+B2+B3) clôturé.
+
+### Fichiers
+`_DayDetailPanel.vue` (édition créneau brouillon inline) ; `_TimeCockpit.vue` (prop `can-planning-manage`) ; i18n (`dayPanel.editShift/shiftImmutable/shiftSaved`).
+
+---
