@@ -29,7 +29,8 @@ class WorkforceNavHrGroupTest extends TestCase
         'workforce-time' => 'hr_time',
         'workforce-leave' => 'hr_absences',
         'workforce-payroll' => 'hr_payroll',
-        'workforce-dsn' => 'hr_payroll',
+        // PRODUCT-UX-2 (LOT C3) : la DSN n'a plus d'entrée de nav propre (onglet
+        // « Déclarations » de l'espace Paie). Sa route reste active.
         'workforce-documents' => 'hr_documents',
         // PRODUCT-UX-2 (LOT A) : contract-templates + signature n'ont plus d'entrée de nav propre
         // (fusionnées dans l'espace Documents, onglets). Leurs routes restent actives.
@@ -150,7 +151,6 @@ class WorkforceNavHrGroupTest extends TestCase
             'workforce-employees' => 'company-workforce-employees',
             'workforce-leave' => 'company-workforce-leave',
             'workforce-time' => 'company-workforce-time',
-            'workforce-dsn' => 'company-workforce-dsn',
             'workforce-documents' => 'company-workforce-documents',
         ];
         foreach ($expectedRoutes as $itemKey => $route) {

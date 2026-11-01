@@ -9,6 +9,7 @@ export const useDsnStore = defineStore('workforceDsn', {
     _currentValidation: null,
     _currentHistory: [],
     _statistics: null,
+    _capability: null,
     _loading: false,
   }),
 
@@ -19,10 +20,20 @@ export const useDsnStore = defineStore('workforceDsn', {
     currentValidation: state => state._currentValidation,
     currentHistory: state => state._currentHistory,
     statistics: state => state._statistics,
+    capability: state => state._capability,
     loading: state => state._loading,
   },
 
   actions: {
+    // Honest gateway capability (ADR-681) — mode: disabled|simulation|file|sandbox|production.
+    async fetchCapability() {
+      try {
+        this._capability = await $api('/workforce/dsn/capability')
+      } catch {
+        this._capability = { mode: 'disabled', real_transmission: false }
+      }
+    },
+
     // ── Declarations ─────────────────────────────────────────
     async fetchDeclarations({ status, periodMonth, perPage, page } = {}) {
       this._loading = true

@@ -7245,6 +7245,10 @@
       "derived": "Derived (not re-entered)",
       "contractPlan": "Compensation: contract",
       "snapshotAtCompute": "Frozen at compute"
+    },
+    "tabs": {
+      "periods": "Periods",
+      "declarations": "Declarations (DSN)"
     }
   },
   "timeTracking": {
@@ -7762,7 +7766,17 @@
     },
     "exported": "DSN declaration exported",
     "submitted": "DSN declaration submitted",
-    "polled": "DSN status updated"
+    "polled": "DSN status updated",
+    "capability": {
+      "title": "DSN transmission mode",
+      "disabled": "Transmission disabled (kill-switch) — nothing is sent. \"Submitted\"/\"Accepted\" states are simulated.",
+      "simulation": "Gateway in simulation — no real transmission. \"Submitted\"/\"Accepted\" returns are fake.",
+      "file": "Local file mode — the DSN file is copied locally, no transmission to Net-Entreprises.",
+      "sandbox": "Net-Entreprises sandbox (test) — not an official production filing.",
+      "production": "Real transmission enabled (production).",
+      "simulatedSuffix": "(simulated)"
+    },
+    "submittedSimulated": "Declaration recorded in SIMULATION — no real transmission to authorities."
   },
   "workforceClock": {
     "title": "Clock",

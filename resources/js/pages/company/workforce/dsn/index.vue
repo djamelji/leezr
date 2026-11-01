@@ -6,10 +6,37 @@ import PayrollRunPicker from '@/components/workforce/PayrollRunPicker.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
+// Embeddable in the "Paie & déclarations" space (hides its own page header).
+defineProps({ embedded: { type: Boolean, default: false } })
+
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const router = useRouter()
 const store = useDsnStore()
+
+// Honest gateway capability — the UI must never present a simulated submit/accept
+// as an official filing (ADR-681).
+const capability = computed(() => store.capability)
+const realTransmission = computed(() => capability.value?.real_transmission === true)
+const capabilityBanner = computed(() => {
+  const mode = capability.value?.mode
+  const map = {
+    disabled: { type: 'warning', text: t('dsn.capability.disabled') },
+    simulation: { type: 'warning', text: t('dsn.capability.simulation') },
+    file: { type: 'info', text: t('dsn.capability.file') },
+    sandbox: { type: 'info', text: t('dsn.capability.sandbox') },
+    production: { type: 'success', text: t('dsn.capability.production') },
+  }
+  return map[mode] ?? map.disabled
+})
+// Suffix transmission-related statuses with "(simulation)" unless truly transmitted.
+const statusLabel = status => {
+  const base = t(`dsn.statuses.${status}`)
+  if (!realTransmission.value && ['submitted', 'accepted'].includes(status)) {
+    return `${base} ${t('dsn.capability.simulatedSuffix')}`
+  }
+  return base
+}
 
 // ── Table state ──────────────────────────────────────────────
 const statusFilter = ref(null)
@@ -69,6 +96,7 @@ watch(options, fetchData, { deep: true })
 onMounted(() => {
   fetchData()
   fetchStats()
+  store.fetchCapability()
 })
 
 // ── Stats ────────────────────────────────────────────────────
@@ -121,7 +149,10 @@ function goToDeclaration(id) {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <div
+      v-if="!embedded"
+      class="d-flex align-center justify-space-between mb-6"
+    >
       <div>
         <h4 class="text-h4 font-weight-bold">
           {{ $t('dsn.title') }}
@@ -130,6 +161,38 @@ function goToDeclaration(id) {
           {{ $t('dsn.subtitle') }}
         </p>
       </div>
+      <VBtn
+        v-can="'workforce.payroll_export'"
+        color="primary"
+        prepend-icon="tabler-file-export"
+        @click="isDrawerOpen = true"
+      >
+        {{ $t('dsn.exportDsn') }}
+      </VBtn>
+    </div>
+
+    <!-- Honest gateway capability banner (zero ambiguity on transmission) -->
+    <VAlert
+      v-if="capability"
+      :type="capabilityBanner.type"
+      variant="tonal"
+      density="comfortable"
+      class="mb-6"
+      border="start"
+    >
+      <template #prepend>
+        <VIcon :icon="realTransmission ? 'tabler-cloud-check' : 'tabler-cloud-off'" />
+      </template>
+      <div class="text-body-2">
+        <strong>{{ $t('dsn.capability.title') }}</strong> — {{ capabilityBanner.text }}
+      </div>
+    </VAlert>
+
+    <!-- Export action in embedded mode (header is hidden) -->
+    <div
+      v-if="embedded"
+      class="d-flex justify-end mb-4"
+    >
       <VBtn
         v-can="'workforce.payroll_export'"
         color="primary"
@@ -312,7 +375,7 @@ function goToDeclaration(id) {
             :status="item.status"
             domain="dsn"
           >
-            {{ $t(`dsn.statuses.${item.status}`) }}
+            {{ statusLabel(item.status) }}
           </StatusChip>
         </template>
 

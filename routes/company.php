@@ -611,6 +611,8 @@ Route::prefix('workforce/dsn')->middleware('company.access:use-module,workforce_
     // ANO-014: DSN is a social declaration to authorities — gate on payroll_export (its nav gate).
     $perm = fn (string $key) => 'company.access:use-permission,'.$key;
     Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'statistics'])->middleware($perm('workforce.payroll_export'));
+    // Capability is informational (honest gateway mode) — readable by preparers.
+    Route::get('capability', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'capability'])->middleware($perm('workforce.payroll_prepare'));
     Route::get('/', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'index'])->middleware($perm('workforce.payroll_export'));
     Route::post('export', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'export'])->middleware($perm('workforce.payroll_export'));
     Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\DsnDeclarationController::class, 'show'])->middleware($perm('workforce.payroll_export'));

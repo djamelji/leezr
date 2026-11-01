@@ -16,6 +16,20 @@ const declaration = computed(() => store.currentDeclaration)
 const validation = computed(() => store.currentValidation)
 const history = computed(() => store.currentHistory)
 
+// Honest gateway capability (ADR-681) — never present a simulated submit as real.
+const capability = computed(() => store.capability)
+const realTransmission = computed(() => capability.value?.real_transmission === true)
+const capabilityBanner = computed(() => {
+  const map = {
+    disabled: { type: 'warning', text: t('dsn.capability.disabled') },
+    simulation: { type: 'warning', text: t('dsn.capability.simulation') },
+    file: { type: 'info', text: t('dsn.capability.file') },
+    sandbox: { type: 'info', text: t('dsn.capability.sandbox') },
+    production: { type: 'success', text: t('dsn.capability.production') },
+  }
+  return map[capability.value?.mode] ?? map.disabled
+})
+
 // ── Workflow steps ───────────────────────────────────────────
 const workflowSteps = computed(() => {
   if (!declaration.value) return []
@@ -62,13 +76,15 @@ async function reload() {
   await Promise.all([
     store.fetchValidation(route.params.id).catch(() => {}),
     store.fetchHistory(route.params.id).catch(() => {}),
+    store.fetchCapability(),
   ])
 }
 
 async function handleSubmit() {
   try {
     await store.submitDeclaration(route.params.id)
-    toast(t('dsn.submitted'), 'success')
+    // Honest confirmation: simulated submit must not read as a real filing.
+    toast(realTransmission.value ? t('dsn.submitted') : t('dsn.submittedSimulated'), realTransmission.value ? 'success' : 'warning')
     await reload()
   } catch (e) {
     toast(e?.response?.data?.message || e.message, 'error')
@@ -101,6 +117,23 @@ onBeforeUnmount(() => store.clearCurrentDeclaration())
     >
       {{ $t('dsn.backToList') }}
     </VBtn>
+
+    <!-- Honest gateway capability banner -->
+    <VAlert
+      v-if="capability"
+      :type="capabilityBanner.type"
+      variant="tonal"
+      density="comfortable"
+      class="mb-4"
+      border="start"
+    >
+      <template #prepend>
+        <VIcon :icon="realTransmission ? 'tabler-cloud-check' : 'tabler-cloud-off'" />
+      </template>
+      <div class="text-body-2">
+        <strong>{{ $t('dsn.capability.title') }}</strong> — {{ capabilityBanner.text }}
+      </div>
+    </VAlert>
 
     <!-- B. Header card -->
     <VCard class="mb-6">

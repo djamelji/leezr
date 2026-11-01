@@ -297,6 +297,15 @@ class PayrollCompensationConfidentialityTest extends TestCase
         $this->assertStringNotContainsString('777777', $res->getContent());
     }
 
+    /** C3 : l'endpoint capability DSN expose un mode honnête (pas de transmission réelle par défaut). */
+    public function test_dsn_capability_reports_no_real_transmission_by_default(): void
+    {
+        $prep = $this->userWith(['workforce.payroll_prepare']);
+        $res = $this->apiGet($prep, '/workforce/dsn/capability');
+        $res->assertOk();
+        $res->assertJson(['real_transmission' => false, 'mode' => 'disabled']);
+    }
+
     private function makePayslipDoc(): \App\Core\Documents\GeneratedDocument
     {
         Model::unguard();

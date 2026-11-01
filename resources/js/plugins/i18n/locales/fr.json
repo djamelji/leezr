@@ -7245,6 +7245,10 @@
       "derived": "Dérivé (non ressaisi)",
       "contractPlan": "Rémunération : contrat",
       "snapshotAtCompute": "Figé au calcul"
+    },
+    "tabs": {
+      "periods": "Périodes",
+      "declarations": "Déclarations (DSN)"
     }
   },
   "timeTracking": {
@@ -7762,7 +7766,17 @@
     },
     "exported": "Déclaration DSN exportée",
     "submitted": "Déclaration DSN soumise",
-    "polled": "Statut DSN actualisé"
+    "polled": "Statut DSN actualisé",
+    "capability": {
+      "title": "Mode de transmission DSN",
+      "disabled": "Transmission désactivée (kill-switch) — aucune déclaration n'est envoyée. Les statuts « Transmis »/« Accepté » sont simulés.",
+      "simulation": "Passerelle en simulation — aucune transmission réelle aux organismes. Les retours « Transmis »/« Accepté » sont factices.",
+      "file": "Mode fichier local — le fichier DSN est copié localement, sans transmission à Net-Entreprises.",
+      "sandbox": "Environnement bac à sable Net-Entreprises (test) — pas une déclaration officielle de production.",
+      "production": "Transmission réelle activée (production).",
+      "simulatedSuffix": "(simulation)"
+    },
+    "submittedSimulated": "Déclaration enregistrée en SIMULATION — aucune transmission réelle aux organismes."
   },
   "workforceClock": {
     "title": "Pointage",

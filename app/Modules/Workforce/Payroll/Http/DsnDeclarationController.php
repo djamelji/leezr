@@ -58,6 +58,35 @@ class DsnDeclarationController extends Controller
         return response()->json(DsnDeclarationReadModel::statistics($companyId));
     }
 
+    // ── Gateway capability (honest mode) ─────────────────────────────
+    // C3 (ADR-681): exposes the REAL transmission capability so the UI never
+    // presents a simulated submit/accept as an official filing.
+    public function capability(Request $request): JsonResponse
+    {
+        $driver = (string) config('workforce.dsn.gateway', 'null');
+        $submitEnabled = (bool) config('workforce.dsn.submit_enabled', false);
+        $environment = (string) config('workforce.dsn.ne_environment', 'sandbox');
+
+        // Real transmission requires: kill-switch ON + the real gateway + production env.
+        $realTransmission = $submitEnabled && $driver === 'net-entreprises' && $environment === 'production';
+
+        $mode = match (true) {
+            ! $submitEnabled => 'disabled',       // kill-switch off → NullDsnGateway forced
+            $driver === 'null' => 'simulation',   // auto-success, no transmission
+            $driver === 'file' => 'file',         // local file copy, no transmission
+            $environment !== 'production' => 'sandbox', // net-entreprises test endpoints
+            default => 'production',
+        };
+
+        return response()->json([
+            'driver' => $driver,
+            'submit_enabled' => $submitEnabled,
+            'environment' => $environment,
+            'mode' => $mode,
+            'real_transmission' => $realTransmission,
+        ]);
+    }
+
     // ── Export DSN from payroll run ──────────────────────────────────
     public function export(Request $request): JsonResponse
     {

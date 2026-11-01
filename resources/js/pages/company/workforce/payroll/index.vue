@@ -4,14 +4,27 @@ import { useCan } from '@/composables/useCan'
 import { usePayrollStore } from '@/modules/company/workforce/payroll.store'
 import StatusChip from '@/core/components/StatusChip.vue'
 import PayrollDisclaimer from './_PayrollDisclaimer.vue'
+import DsnPage from '../dsn/index.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const { can } = useCan()
+const route = useRoute()
 const router = useRouter()
 const store = usePayrollStore()
+
+// PRODUCT-UX-2 / LOT C3 — unified "Paie & déclarations" space: periods are the
+// central object; DSN declarations (period-linked) live in a dedicated tab.
+const canDeclare = computed(() => can('workforce.payroll_export'))
+const activeTab = ref(route.query.tab === 'declarations' && canDeclare.value ? 'declarations' : 'periods')
+watch(activeTab, v => {
+  const q = { ...route.query }
+  if (v === 'periods') delete q.tab
+  else q.tab = v
+  router.replace({ query: q })
+})
 
 // RBAC: amounts (gross/net) only for users with compensation_read (ADR C1).
 // NB: the API still returns amounts to any payroll_prepare holder — this is a
@@ -191,6 +204,24 @@ const goToRun = id => {
 
     <!-- Honest capability disclaimer (preparation, not certified payroll / no filing) -->
     <PayrollDisclaimer />
+
+    <!-- Period-centric cycle: Périodes (préparation) + Déclarations (DSN) -->
+    <VTabs
+      v-model="activeTab"
+      class="v-tabs-pill mb-6"
+    >
+      <VTab value="periods" data-test="pd-tab-periods">
+        <VIcon icon="tabler-calendar-stats" class="me-2" />
+        {{ $t('payroll.tabs.periods') }}
+      </VTab>
+      <VTab v-if="canDeclare" value="declarations" data-test="pd-tab-declarations">
+        <VIcon icon="tabler-file-certificate" class="me-2" />
+        {{ $t('payroll.tabs.declarations') }}
+      </VTab>
+    </VTabs>
+
+    <VWindow v-model="activeTab" :touch="false">
+      <VWindowItem value="periods">
 
     <!-- Stats Cards -->
     <VRow
@@ -491,6 +522,14 @@ const goToRun = id => {
         </template>
       </VDataTableServer>
     </VCard>
+
+      </VWindowItem>
+
+      <VWindowItem v-if="canDeclare" value="declarations">
+        <DsnPage embedded />
+      </VWindowItem>
+    </VWindow>
+
 
     <!-- Create Payroll Run Drawer -->
     <VNavigationDrawer
