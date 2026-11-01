@@ -373,8 +373,8 @@ onBeforeUnmount(() => store.clearCurrentRun())
       >
         <template #item.employee="{ item }">
           <div>
-            <div class="font-weight-medium">{{ item.employee_name }}</div>
-            <div v-if="item.employee_number" class="text-body-2 text-medium-emphasis">{{ item.employee_number }}</div>
+            <div class="font-weight-medium">{{ item.employee ? `${item.employee.first_name} ${item.employee.last_name}` : (item.employee_name || '—') }}</div>
+            <div v-if="item.employee?.employee_number || item.employee_number" class="text-body-2 text-medium-emphasis">{{ item.employee?.employee_number || item.employee_number }}</div>
           </div>
         </template>
         <template #item.worked_minutes="{ item }">{{ formatHours(item.worked_minutes) }}</template>

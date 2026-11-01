@@ -24350,3 +24350,48 @@ DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature non touché ;
 `_PayrollDisclaimer.vue` (nouveau, disclaimer honnête) ; `payroll/index.vue` (titre, disclaimer, colonne prochaine action, gating `compensation_read`) ; `payroll/[id].vue` (disclaimer, bandeau prochaine action, statut préparation/collaborateur, gating montants) ; i18n fr/en (`payroll.spaceTitle/spaceSubtitle/newPeriod/columns.nextAction/nextAction/disclaimer/prep/lineStatus/lines.preparation`).
 
 ---
+
+## ADR-680 — PRODUCT-UX-2 LOT C2 : confidentialité salariale serveur + préparation collaborateur + corrections contextuelles
+
+**Date** : 2026-11-01
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-2 / LOT C2. Priorité absolue imposée : **sécuriser les données salariales CÔTÉ SERVEUR** (C1 ne masquait qu'en Vue). Puis : panneau de préparation par collaborateur, corrections contextuelles avec conservation du contexte, provenance des données, libellés honnêtes (indicatif vs réglementaire), états d'export fidèles.
+
+### 1. Gate sécurité — confidentialité salariale serveur
+**Constat (audit)** : aucun endpoint `workforce/payroll/*` ni `workforce/dsn/*` ne vérifiait `compensation_read` ; les modèles sérialisaient en `toArray` brut (aucun `$hidden`). Tout détenteur de `payroll_prepare` (ou `payroll_export` pour la DSN) recevait **tous** les montants (`total_gross_cents`, `base_salary_cents`, bloc calcul net/cotisations/coût employeur, `gross_breakdown`, `compensation_snapshot`, `contribution_lines`, `tax_breakdown`, et le `payload_snapshot` DSN).
+
+**Décision** : service central **`PayrollConfidentiality`** (`app/Modules/Workforce/Security/`) qui **supprime récursivement** (à toute profondeur, y compris modèles Eloquent imbriqués et paginators) les champs monétaires confidentiels de **chaque** réponse JSON Payroll + DSN quand le viewer n'a pas `workforce.compensation_read` (owner bypass via `WorkforceAccess`). Suppression **effective des clés** (pas nullage) + flag `compensation_hidden: true` pour que le client affiche « masqué », pas « 0 ». Les données de **préparation non confidentielles** (temps, HS, congés, anomalies, statuts, périodes, identité) sont préservées.
+
+**Matrice d'accès** (par donnée) :
+| Droit | Permission | Effet |
+|---|---|---|
+| Atteindre l'espace paie / préparer / calculer | `payroll_prepare` | voit temps, anomalies, statuts, **pas les montants** |
+| Consulter les montants (brut/net/cotis/coût) | `compensation_read` (en plus) | montants visibles |
+| Valider | `payroll_validate` | action ; montants selon `compensation_read` |
+| Exporter / DSN | `payroll_export` | action ; `payload_snapshot`/montants selon `compensation_read` |
+| Modifier variables | — | **absent** (non modélisé, cf. C1) |
+| Administrer | owner/admin | bypass |
+
+**Preuve (tests négatifs)** : `PayrollCompensationConfidentialityTest` — 7 personas (owner, RH préparateur sans salaire, gestionnaire paie, manager temps, salarié, user sans paie, autre company) + accès direct à un id de ligne + DSN. On vérifie l'**absence effective des champs ET des valeurs** dans le corps JSON, pas seulement le statut. **9 tests / 197 assertions verts** ; 495 tests Payroll/DSN/Security verts (aucune régression). Masquage UI vérifié live (même SHA) : RH sans salaire → aucune KPI/colonne de montant ; RH avec salaire → Brut/Net/Coût visibles.
+
+**Limite assumée** : le masquage par **non-eager-loading** côté Employés/Contrats reste tel quel (déjà couvert par `WorkforceSecurityWDTest`) ; le scrubber Payroll est par **denylist** de clés — toute nouvelle clé monétaire doit y être ajoutée (documenté dans le service).
+
+### 2. Panneau « Préparation collaborateur » (`_EmployeePreparationPanel.vue`)
+Drawer ouvert depuis une ligne : identité/situation, temps de travail, absences, rémunération **gatée** (notice « montants masqués » si non autorisé ; note « estimation indicative »), **variables de paie honnêtement absentes**, **provenance** (heures/absences = feuille de temps verrouillée requise/dérivé ; rémunération = contrat figé au calcul), anomalies, et **actions contextuelles** (voir feuille de temps / traiter à la source, consulter contrat, vérifier absences, ouvrir dossier, recalculer en place). Aucun bouton « Corriger » sans effet.
+
+### 3. Corrections contextuelles + conservation du contexte
+Deep-link `?line=` sur le détail période (le panneau survit au retour arrière) ; « Traiter à la source » → espace **Temps de travail** (onglet Feuilles) avec `?return=<période>` → **bannière de retour** « Retour à la préparation » ramenant à la **même période** ; « Recalculer » en place rafraîchit le panneau. Réutilise LOT B (aucun 2ᵉ moteur, aucune correction silencieuse).
+
+### 4. Libellés honnêtes (indicatif vs réglementaire) + exports
+Tooltips : **Export** = « marque la période comme exportée (snapshot interne) — aucun fichier bancaire/comptable généré » ; **Bulletin officiel** = « format officiel, montants indicatifs, pas une paie réglementaire certifiée ». Disclaimer C1 conservé. **Risque documenté** : le workflow permet de générer un bulletin « officiel » sur des montants indicatifs — mesure de sécurité produit = libellés explicites + disclaimer permanent (pas de blocage des traitements historiques, compatible existant). Correctif annexe : la colonne EMPLOYÉ de la table des lignes utilisait `employee_name` inexistant → corrigée vers l'objet `employee`.
+
+### 5. Run de test DEV (dette C1)
+Le run id=1 (sept. 2026, computed, 0 collaborateur) reste sur DEV : non supprimable (règle draft-only), **mot de passe SSH compromis interdit**, pas de clé locale. Procédure sûre documentée (mémoire [[payroll-recette-dev-lesson]]) : purge par un **admin habilité** (accès DB/clé) ; ne perturbe pas les agrégations (0 collaborateur). Recette C2 jouée sur **fixture isolée locale** (même SHA), pas sur DEV public.
+
+### Garde-fous
+DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature intact ; aucune déclaration réelle ; aucun calcul réglementaire improvisé ; 3 échecs ControllerSize préexistants préservés ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`PayrollConfidentiality.php` (nouveau) ; `PayrollRunController.php` + `DsnDeclarationController.php` (scrub sur toutes les sorties) ; `PayrollCompensationConfidentialityTest.php` (nouveau) ; `_EmployeePreparationPanel.vue` (nouveau) ; `payroll/[id].vue` (panneau, actions contextuelles, deep-link, tooltips, fix nom) ; `time/index.vue` (bannière retour) ; i18n fr/en (`payroll.prep.*`, `payroll.prov.*`, `payroll.actions.exportHint/generateOfficialHint`, `timeWork.returnToPayroll/backToPayroll`) ; recette `tests/e2e/payroll-c2-recette.spec.js`.
+
+---
