@@ -53,24 +53,30 @@ test('C1 — période de préparation paie (DEV réel)', async ({ page }) => {
   await page.waitForTimeout(2500)
   await shot(page, '02-landing-with-period')
 
-  // 3 + 4. Détail période : draft puis calcul -------------------------------
+  // 3. Détail période (brouillon) -------------------------------------------
   if (createdRunId) {
     await page.goto(`/company/workforce/payroll/${createdRunId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2500)
     await expect(page.getByText(/prochaine action/i).first()).toBeVisible()
     await shot(page, '03-detail-draft')
 
-    // Calcul — fait remonter les éléments manquants réels.
-    await apiRequest(page, { method: 'POST', path: `/api/workforce/payroll/${createdRunId}/compute` }).catch(e => console.log('compute err', String(e).slice(0, 120)))
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(3000)
-    await shot(page, '04-detail-computed-readiness')
+    // 4. (OPTIONNEL) calcul — fait remonter les éléments manquants réels.
+    //    ⚠️ IRRÉVERSIBLE SUR DEV : un run CALCULÉ n'est plus supprimable
+    //    (règle métier draft-only). Désactivé par défaut pour garder DEV propre ;
+    //    la preuve « readiness/anomalies » est déjà capturée (04-...png).
+    //    Activer sciemment via C1_COMPUTE=1 uniquement sur un full-stack local.
+    if (process.env.C1_COMPUTE === '1') {
+      await apiRequest(page, { method: 'POST', path: `/api/workforce/payroll/${createdRunId}/compute` }).catch(e => console.log('compute err', String(e).slice(0, 120)))
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(3000)
+      await shot(page, '04-detail-computed-readiness')
+    }
   }
 
-  // 5. Nettoyage ------------------------------------------------------------
+  // 5. Nettoyage (vérifié) --------------------------------------------------
   if (createdRunId) {
     const del = await apiRequest(page, { method: 'DELETE', path: `/api/workforce/payroll/${createdRunId}` })
-      .then(() => 'deleted').catch(e => 'KEEP (' + String(e).slice(0, 80) + ')')
-    console.log('cleanup:', del)
+    console.log('cleanup DELETE status:', del.status, del.status === 204 || del.status === 200 ? 'OK' : JSON.stringify(del.json))
+    // Un run calculé renverra 422 (draft-only) — à retirer par un admin autorisé.
   }
 })
