@@ -116,6 +116,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-signature-signature-detail-drawer': RouteRecordInfo<'company-workforce-signature-signature-detail-drawer', '/company/workforce/signature/_SignatureDetailDrawer', Record<never, never>, Record<never, never>>,
     'company-workforce-signature-signature-wizard': RouteRecordInfo<'company-workforce-signature-signature-wizard', '/company/workforce/signature/_SignatureWizard', Record<never, never>, Record<never, never>>,
     'company-workforce-time': RouteRecordInfo<'company-workforce-time', '/company/workforce/time', Record<never, never>, Record<never, never>>,
+    'company-workforce-time-day-detail-panel': RouteRecordInfo<'company-workforce-time-day-detail-panel', '/company/workforce/time/_DayDetailPanel', Record<never, never>, Record<never, never>>,
     'company-workforce-time-time-cockpit': RouteRecordInfo<'company-workforce-time-time-cockpit', '/company/workforce/time/_TimeCockpit', Record<never, never>, Record<never, never>>,
     'company-workforce-time-id': RouteRecordInfo<'company-workforce-time-id', '/company/workforce/time/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'dashboard': RouteRecordInfo<'dashboard', '/dashboard', Record<never, never>, Record<never, never>>,

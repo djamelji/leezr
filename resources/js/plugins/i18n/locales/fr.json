@@ -7941,5 +7941,24 @@
       "planning": "Planning",
       "presence": "Présences"
     }
+  },
+  "dayPanel": {
+    "plannedDuration": "Durée prévue",
+    "notClocked": "Non pointé",
+    "worked": "Travaillé",
+    "breaks": "Pauses",
+    "analysis": "Analyse",
+    "noShift": "Aucun créneau ce jour",
+    "noEntry": "Aucun pointage ce jour",
+    "correct": "Corriger le pointage",
+    "findings": {
+      "onLeave": "En congé approuvé",
+      "notClocked": "Programmé mais pas de pointage",
+      "noShift": "Pointage sans créneau planifié",
+      "ambiguous": "Plusieurs créneaux/pointages — rattachement à vérifier",
+      "incomplete": "Journée non clôturée (pas de pointage de fin)",
+      "gap": "Écart prévu/réel de {min} min",
+      "ok": "Prévu et réel cohérents"
+    }
   }
 }

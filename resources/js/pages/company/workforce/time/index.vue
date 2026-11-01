@@ -469,7 +469,7 @@ onMounted(() => {
       <!-- TAB: AUJOURD'HUI — cockpit prévu/réel (W-G5)           -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="cockpit">
-        <TimeCockpit v-if="activeTab === 'cockpit'" />
+        <TimeCockpit v-if="activeTab === 'cockpit'" @navigate="p => { activeTab = p.tab }" />
       </VWindowItem>
 
       <!-- TAB: PLANNING (réutilise la page existante, en-tête masqué) -->

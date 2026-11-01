@@ -7941,5 +7941,24 @@
       "planning": "Planning",
       "presence": "Presence"
     }
+  },
+  "dayPanel": {
+    "plannedDuration": "Planned duration",
+    "notClocked": "Not clocked",
+    "worked": "Worked",
+    "breaks": "Breaks",
+    "analysis": "Analysis",
+    "noShift": "No shift that day",
+    "noEntry": "No clocking that day",
+    "correct": "Correct the clocking",
+    "findings": {
+      "onLeave": "On approved leave",
+      "notClocked": "Scheduled but not clocked",
+      "noShift": "Clocking without a planned shift",
+      "ambiguous": "Multiple shifts/clockings — reconciliation to verify",
+      "incomplete": "Day not closed (no clock-out)",
+      "gap": "Planned/actual gap of {min} min",
+      "ok": "Planned and actual are consistent"
+    }
   }
 }

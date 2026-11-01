@@ -6,12 +6,21 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
+// PRODUCT-UX-2 (LOT B2) — panneau « Journée collaborateur » (constatation → action, dans le contexte).
+import DayDetailPanel from './_DayDetailPanel.vue'
 
+const emit = defineEmits(['navigate']) // { tab, employeeId } — demande à l'espace de basculer d'onglet
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const { can } = useCan()
+const router = useRouter()
 const store = useTimesheetsStore()
 const employeesStore = useEmployeesStore()
+
+// ── Panneau Journée collaborateur ──
+const dayPanelOpen = ref(false)
+const dayPanelRow = ref(null)
+const openDay = row => { dayPanelRow.value = row; dayPanelOpen.value = true }
 
 const today = new Date().toISOString().slice(0, 10)
 const date = ref(today)
@@ -196,7 +205,7 @@ const submitCorrect = async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in board" :key="r.employee_id">
+            <tr v-for="r in board" :key="r.employee_id" class="cursor-pointer" @click="openDay(r)">
               <td class="font-weight-medium">
                 {{ r.employee_name }}
               </td>
@@ -228,7 +237,7 @@ const submitCorrect = async () => {
                   size="x-small"
                   variant="tonal"
                   prepend-icon="tabler-edit"
-                  @click="openCorrect(r)"
+                  @click.stop="openCorrect(r)"
                 >
                   {{ t('timeCockpit.correct') }}
                 </VBtn>
@@ -305,5 +314,17 @@ const submitCorrect = async () => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <!-- PRODUCT-UX-2 (LOT B2) : panneau Journée collaborateur (constatation → action) -->
+    <DayDetailPanel
+      v-model="dayPanelOpen"
+      :row="dayPanelRow"
+      :date="date"
+      :can-manage="canCorrect"
+      @corrected="load"
+      @open-fiche="r => router.push(`/company/workforce/employees/${r.employee_id}`)"
+      @go-planning="r => { dayPanelOpen = false; emit('navigate', { tab: 'planning', employeeId: r.employee_id }) }"
+      @go-presence="r => { dayPanelOpen = false; emit('navigate', { tab: 'entries', employeeId: r.employee_id }) }"
+    />
   </div>
 </template>
