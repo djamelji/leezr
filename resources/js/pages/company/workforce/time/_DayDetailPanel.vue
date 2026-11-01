@@ -5,6 +5,7 @@
 // services existants (cockpit board + correctTimeEntry + endpoints de lecture). Aucun 2ᵉ moteur.
 import { $api } from '@/utils/api'
 import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store'
+import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
@@ -12,12 +13,14 @@ const props = defineProps({
   row: { type: Object, default: null },
   date: { type: String, default: '' },
   canManage: { type: Boolean, default: false },
+  canPlanningManage: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'corrected', 'open-fiche', 'go-planning', 'go-presence'])
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const store = useTimesheetsStore()
+const planningStore = usePlanningStore()
 
 const isOpen = computed({ get: () => props.modelValue, set: v => emit('update:modelValue', v) })
 const r = computed(() => props.row || {})
@@ -67,6 +70,34 @@ const findings = computed(() => {
 
   return f
 })
+
+// ── Édition de créneau DEPUIS le panneau (réutilise updateShift ; brouillon only — I9 immutabilité) ──
+const editingShift = ref(null)
+const shiftForm = ref({ start: '', end: '' })
+const savingShift = ref(false)
+const toHM = iso => { const m = String(iso || '').match(/[T\s](\d{2}:\d{2})/); return m ? m[1] : '' }
+const openShiftEdit = s => {
+  if (!props.canPlanningManage) return
+  if (s.status !== 'draft') { toast(t('dayPanel.shiftImmutable'), 'info'); return }
+  editingShift.value = s
+  shiftForm.value = { start: toHM(s.start_at), end: toHM(s.end_at) }
+}
+const saveShift = async () => {
+  savingShift.value = true
+  try {
+    await planningStore.updateShift(editingShift.value.id, {
+      start_at: `${props.date}T${shiftForm.value.start}:00`,
+      end_at: `${props.date}T${shiftForm.value.end}:00`,
+      expected_updated_at: editingShift.value.updated_at,
+    })
+    toast(t('dayPanel.shiftSaved'), 'success')
+    editingShift.value = null
+    await loadDetail()
+    emit('corrected') // rafraîchit aussi le board prévu/réel
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  } finally { savingShift.value = false }
+}
 
 // ── Correction (workflow tracé existant) ──
 const correctOpen = ref(false)
@@ -159,9 +190,36 @@ const submitCorrect = async () => {
         <div v-if="loadingDetail" class="text-center py-3"><VProgressCircular indeterminate size="22" color="primary" /></div>
         <template v-else>
           <div v-if="dayShifts.length" class="mb-3">
-            <VChip v-for="s in dayShifts" :key="s.id" class="me-1 mb-1" size="small" variant="outlined" :color="s.status === 'published' ? 'success' : 'secondary'">
+            <VChip
+              v-for="s in dayShifts"
+              :key="s.id"
+              class="me-1 mb-1"
+              size="small"
+              variant="outlined"
+              :color="s.status === 'published' ? 'success' : 'secondary'"
+              :append-icon="canPlanningManage ? (s.status === 'draft' ? 'tabler-edit' : 'tabler-lock') : undefined"
+              :style="canPlanningManage && s.status === 'draft' ? 'cursor:pointer' : ''"
+              data-test="day-shift-chip"
+              @click="openShiftEdit(s)"
+            >
               {{ fmtTime(s.start_at) }}–{{ fmtTime(s.end_at) }} · {{ shiftStatusLabel(s.status) }}
             </VChip>
+            <!-- Édition inline d'un créneau brouillon (réutilise le service updateShift) -->
+            <VExpandTransition>
+              <VCard v-if="editingShift" variant="tonal" class="mt-2">
+                <VCardText class="py-3">
+                  <div class="text-caption text-medium-emphasis mb-2">{{ t('dayPanel.editShift') }}</div>
+                  <div class="d-flex gap-2">
+                    <AppTextField v-model="shiftForm.start" type="time" :label="t('employeeFile.start')" density="compact" data-test="day-shift-start" />
+                    <AppTextField v-model="shiftForm.end" type="time" :label="t('employeeFile.end')" density="compact" data-test="day-shift-end" />
+                  </div>
+                  <div class="d-flex gap-2 justify-end mt-2">
+                    <VBtn variant="outlined" size="small" @click="editingShift = null">{{ t('common.cancel') }}</VBtn>
+                    <VBtn color="primary" size="small" :loading="savingShift" :disabled="!shiftForm.start || !shiftForm.end" data-test="day-shift-save" @click="saveShift">{{ t('common.save') }}</VBtn>
+                  </div>
+                </VCardText>
+              </VCard>
+            </VExpandTransition>
           </div>
           <div v-else class="text-caption text-disabled mb-3">{{ t('dayPanel.noShift') }}</div>
 

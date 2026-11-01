@@ -321,6 +321,7 @@ const submitCorrect = async () => {
       :row="dayPanelRow"
       :date="date"
       :can-manage="canCorrect"
+      :can-planning-manage="can('workforce.planning_manage')"
       @corrected="load"
       @open-fiche="r => router.push(`/company/workforce/employees/${r.employee_id}`)"
       @go-planning="r => { dayPanelOpen = false; emit('navigate', { tab: 'planning', employeeId: r.employee_id }) }"

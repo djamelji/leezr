@@ -7959,6 +7959,9 @@
       "incomplete": "Journée non clôturée (pas de pointage de fin)",
       "gap": "Écart prévu/réel de {min} min",
       "ok": "Prévu et réel cohérents"
-    }
+    },
+    "editShift": "Modifier le créneau",
+    "shiftImmutable": "Un créneau publié est immuable (I9). Modifiez-le depuis le Planning via le workflow de dépublication.",
+    "shiftSaved": "Créneau mis à jour"
   }
 }
