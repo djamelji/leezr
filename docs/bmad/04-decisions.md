@@ -24189,3 +24189,41 @@ DEV uniquement ; projection de lecture **additive** (aucun changement du modèle
 `GeneratedDocumentReadModel` (filtre employé transversal + enrichissement) ; `WorkforceDocumentController@index` (filtres) ; `workforce-documents.store.js` ; `documents/index.vue` (filtres + colonne + clic ligne + drawer) ; `_DocumentDetailDrawer.vue` (nouveau) ; i18n ; test `DocumentRegistryEmployeeFilterTest`.
 
 ---
+
+## ADR-676 — PRODUCT-UX-2 LOT B1 : espace « Temps de travail » opérationnel unifié
+
+**Date** : 2026-11-01
+**Statut** : Accepté (DEV, livré + vérifié). Premier incrément du LOT B (ADR-673). Construit un espace opérationnel « Temps de travail » autour du travail quotidien, **pas** une juxtaposition de deux pages.
+
+### Constat (audit) & réutilisation
+L'audit (E) montrait que prévu (Planning) et réel (Pointage) ne sont réconciliés qu'à **un seul** endroit : le **cockpit** (`_TimeCockpit`), déjà alimenté par un **endpoint agrégé** (`/workforce/time-entries/cockpit/board`) qui calcule par employé : **prévu** (shift) · **réel** (pointage) · **travaillé** · **écart** · **réconciliation** (matched/ambiguous/not_clocked/no_shift) + KPIs (en travail/en pause/terminés/non pointés/incomplets/anomalies/feuilles à valider). **Aucun 2ᵉ moteur** planning/pointage créé : le cockpit existant devient le cœur.
+
+### Réalisation (B1)
+- **Espace « Temps de travail »** (`time/index.vue`) : 4 onglets — **Aujourd'hui** (cockpit prévu/réel, **point d'entrée opérationnel**) · **Planning** · **Présences** · **Feuilles de temps**. En-tête « Prévu, réel et écarts — le travail de l'équipe au même endroit ».
+- **Planning intégré** : onglet montant la page planning existante à 100 % (calendrier/semaine/modèles/lieux, store/logique/permissions intacts) via la prop `embedded` (en-tête masqué). Gated `workforce.planning_view`.
+- **États précis (pas de faux temps réel)** : un salarié programmé non pointé est affiché « Non pointé » (réconciliation), **jamais** auto-qualifié absent/retard. Le cockpit porte déjà la correction tracée (motif obligatoire).
+- **Nav 2→1** (manifest-driven) : `WorkforcePlanningModule` navItems vidé ; l'entrée « Pointage » renommée **« Temps de travail »** couvre l'espace. Routes historiques conservées (`/company/workforce/planning` → 200 standalone) + deep-link `?tab=planning|entries|timesheets`.
+
+### Vérifié sur DEV réel (SHA `2bb2fa6`)
+- Espace à 4 onglets rendu ; vue Aujourd'hui = board de réconciliation (PRÉVU 09:00–17:00 / RÉALISÉ / TRAVAILLÉ / ÉCART / RATTACHEMENT) + KPIs (Non pointés = 3) ; onglet Planning embarqué **sans double titre** ; 0 erreur JS.
+- **Nav** : entrées autonomes « Planning » et « Pointage » **retirées** ; « Temps de travail » présente (1).
+- **Routes historiques** : `/company/workforce/planning` → 200.
+- **Permissions serveur** : cockpit board owner → **200** (4 lignes) ; **bob → 403** (non exposé).
+- **Tests** : non-régression Nav/Workforce/Time/Planning/Timesheet/Permission/Shift/Clock/Break **704 passés, 0 échec** ; `WorkforceNavHrGroupTest` mis à jour. 3 `ControllerSize` préexistants inchangés ; moteur Signature non modifié.
+
+### Mesure
+- **Entrées de nav opérationnelles** : **2 → 1**. Pour « superviser le travail du jour », le manager ouvre **Temps de travail → Aujourd'hui** et voit immédiatement prévu/réel/écarts/non-pointés — là où il fallait auparavant jongler entre Planning et Pointage. Aucun temps humain inventé.
+
+### Limites / suite (incréments B2-B3, non démarrés)
+- **B2** : actions de planification et corrections **depuis** l'espace (création/édition shift, corrections de pointage, validation d'anomalies, vue semaine/équipe), panneau détail **collaborateur-journée** (prévu+réel+anomalies sur la période).
+- **B3** : mesures avant/après des 6 parcours, responsive 1920/1366/768/390 + dark, optimisations, réduction des changements de contexte.
+- **Dépendance future documentée** : distinction **lieu d'exécution d'un shift** (Location, existe) vs **établissement administratif** (Site/Établissement, **non livré**) — la refonte opérationnelle n'est pas bloquée ; le multisite administratif reste à concevoir.
+- LOT C (Paie & déclarations) : planifié, non démarré.
+
+### Garde-fous
+DEV uniquement ; **aucun 2ᵉ moteur** planning/pointage, aucune fusion backend ; EmploymentContract/work models/TimeEntry/Break/Timesheet/règles Market/manager-scope/tenant/permissions inchangés ; **aucune modification auto des pointages** ; routes historiques préservées ; pas de Billing/main/PROD/reset ; moteur Signature non touché ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`time/index.vue` (espace à onglets + Aujourd'hui/Planning) ; `planning/index.vue` (prop `embedded`) ; `WorkforcePlanningModule` (navItems vidé) ; i18n (`timeWork.*`, `nav.company.workforce-time`) ; test `WorkforceNavHrGroupTest`.
+
+---
