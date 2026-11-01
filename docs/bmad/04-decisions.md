@@ -24150,3 +24150,42 @@ DEV uniquement ; **aucune fusion backend** ; permissions/ModuleGate/Market/tenan
 `documents/index.vue` (espace à onglets) ; `signature/index.vue` + `contract/templates.vue` (prop `embedded`) ; `WorkforceContractModule`/`WorkforceSignatureModule` (navItems vidés) ; i18n (`workforceDocuments.spaceTitle/spaceSubtitle/tabs`, `nav.company.workforce-documents`) ; test `WorkforceNavHrGroupTest`.
 
 ---
+
+## ADR-675 — PRODUCT-UX-2 LOT A2 : registre documentaire transversal + panneau unifié
+
+**Date** : 2026-11-01
+**Statut** : Accepté (DEV, livré + vérifié). Finalise l'espace Documents (suite ADR-674) : le registre devient le point d'entrée unique pour **retrouver, comprendre et traiter** un document dans un seul contexte, sans parcourir les anciens écrans.
+
+### Registre transversal (backend additif, aucun changement du modèle documentaire)
+- **Filtre collaborateur** résolvant document→employé **quel que soit le type de sujet** (`employee` direct · `contract`→employee_id · `leave_request`→employee_id · `payroll_line`→employee_id) — ajouté à `GeneratedDocumentReadModel::forCompany` comme contrainte croisée. **Recherche** texte (nom/code de modèle, chemin de fichier — colonnes réelles uniquement) et **période** (date de génération).
+- **Enrichissement par ligne** : chaque document de la page est enrichi du collaborateur résolu (id + nom), en **lot** (pas de N+1), via `setAttribute` (sérialisé au front). Nouvelle colonne « Collaborateur » dans le registre.
+- **Sécurité** : le filtrage reste **borné à la company** (tenant) ; l'accès fin par document reste contrôlé au téléchargement (`WorkforceAccess`). **Vérifié sur DEV** : un rôle limité (bob) reçoit **403** même en passant `employee_id` → aucune fuite via le nouveau filtre transversal.
+
+### Panneau documentaire unifié (cycle de vie dans un seul contexte)
+Clic sur une ligne → drawer `_DocumentDetailDrawer` :
+- **Identité** : nom/type du document, collaborateur résolu, date, statut de signature.
+- **Document** : aperçu sécurisé + téléchargement (réutilise `downloadDocument`).
+- **Signature — actions selon l'ÉTAT RÉEL** : « Demander une signature » **uniquement** si `status=none` + permission ; « Suivre la signature » si une demande existe (bascule sur l'onglet Signatures, **reste dans l'espace**). Jamais d'action indisponible affichée comme opérationnelle.
+- **Contexte** : « Ouvrir la fiche du collaborateur ».
+Réutilise les services existants (wizard de signature, téléchargement) via des événements — aucune réimplémentation, moteur de signature non touché.
+
+### Vérifié sur DEV réel (SHA `56bc038`)
+- Registre enrichi (colonne Collaborateur résolue : Djamel, Collab Interne…) + filtres collaborateur/recherche/période ; panneau détail ouvert sur clic ligne ; actions suivant l'état (doc signé → « Suivre » et non « Demander ») ; 0 erreur JS.
+- Filtre collaborateur via l'API owner → 200 + `employee_name` résolu ; **bob → 403** (pas de fuite).
+- **Tests** : `DocumentRegistryEmployeeFilterTest` (résolution transversale, enrichissement, isolation tenant, recherche) ; non-régression Nav/Signature/Contract/Document/Workforce/Permission **874 passés, 0 échec**. Les 3 `ControllerSize` préexistants inchangés ; moteur Signature non modifié.
+
+### Mesure A1 → A2
+- A1 : espace à onglets (nav 3→1). A2 : **la découverte et le traitement d'un document se font dans UN contexte** — filtrer par collaborateur, ouvrir le document, comprendre son état, agir (aperçu/téléchargement/demande/suivi), ouvrir la fiche — sans changer de page. Le changement de contexte du cycle documentaire courant disparaît (critère du GO). Aucun temps humain inventé.
+
+### Limites restantes / suite
+- Le « suivi de signature » détaillé (signataires, relance, preuves) vit dans l'onglet Signatures (réutilisé) ; un futur incrément pourrait inliner le détail de la demande liée dans le panneau.
+- Redirect doux des anciennes routes standalone vers l'espace : optionnel (compat déjà assurée).
+- **LOT B — Temps de travail** et **LOT C — Paie & déclarations** : planifiés, non démarrés (un incrément à la fois).
+
+### Garde-fous
+DEV uniquement ; projection de lecture **additive** (aucun changement du modèle/table documentaire) ; permissions/ModuleGate/Market/tenant/**moteur de signature**/preuves inchangés ; routes historiques préservées ; pas de Billing/main/PROD/reset ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`GeneratedDocumentReadModel` (filtre employé transversal + enrichissement) ; `WorkforceDocumentController@index` (filtres) ; `workforce-documents.store.js` ; `documents/index.vue` (filtres + colonne + clic ligne + drawer) ; `_DocumentDetailDrawer.vue` (nouveau) ; i18n ; test `DocumentRegistryEmployeeFilterTest`.
+
+---
