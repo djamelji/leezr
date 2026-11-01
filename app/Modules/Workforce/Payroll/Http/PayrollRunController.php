@@ -9,6 +9,7 @@ use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
 use App\Modules\Workforce\ReadModels\PayrollCalculationReadModel;
 use App\Modules\Workforce\ReadModels\PayrollLineReadModel;
 use App\Modules\Workforce\ReadModels\PayrollRunReadModel;
+use App\Modules\Workforce\Security\PayrollConfidentiality;
 use App\Modules\Workforce\UseCases\ComputePayrollCalculationsUseCase;
 use App\Modules\Workforce\UseCases\ComputePayrollUseCase;
 use App\Modules\Workforce\UseCases\CreatePayrollRunUseCase;
@@ -38,7 +39,7 @@ class PayrollRunController extends Controller
             perPage: (int) $request->input('per_page', 15),
         );
 
-        return response()->json($runs);
+        return response()->json(PayrollConfidentiality::scrub($runs, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Detail ───────────────────────────────────────────────────────
@@ -50,11 +51,11 @@ class PayrollRunController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($id);
 
-        return response()->json([
+        return response()->json(PayrollConfidentiality::scrub([
             'run' => $run,
             'lines_summary' => PayrollLineReadModel::summary($run->id),
             'calculation_totals' => PayrollCalculationReadModel::runTotals($run->id),
-        ]);
+        ], PayrollConfidentiality::canRead($request)));
     }
 
     // ── Create ───────────────────────────────────────────────────────
@@ -79,7 +80,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run, 201);
+        return response()->json(PayrollConfidentiality::scrub($run, PayrollConfidentiality::canRead($request)), 201);
     }
 
     // ── Compute lines ────────────────────────────────────────────────
@@ -95,7 +96,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run->fresh());
+        return response()->json(PayrollConfidentiality::scrub($run->fresh(), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Compute calculations (brut→net) ──────────────────────────────
@@ -111,7 +112,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run->fresh());
+        return response()->json(PayrollConfidentiality::scrub($run->fresh(), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Validate ─────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run->fresh());
+        return response()->json(PayrollConfidentiality::scrub($run->fresh(), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Export ────────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run->fresh());
+        return response()->json(PayrollConfidentiality::scrub($run->fresh(), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Recompute ────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ class PayrollRunController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($run->fresh());
+        return response()->json(PayrollConfidentiality::scrub($run->fresh(), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Delete ───────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ class PayrollRunController extends Controller
             perPage: (int) $request->input('per_page', 50),
         );
 
-        return response()->json($lines);
+        return response()->json(PayrollConfidentiality::scrub($lines, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Line Detail ─────────────────────────────────────────────────
@@ -213,7 +214,7 @@ class PayrollRunController extends Controller
             abort(404);
         }
 
-        return response()->json($detail);
+        return response()->json(PayrollConfidentiality::scrub($detail, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Calculations ─────────────────────────────────────────────────
@@ -222,10 +223,10 @@ class PayrollRunController extends Controller
         $companyId = $request->attributes->get('company_id');
         PayrollRun::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
 
-        return response()->json([
+        return response()->json(PayrollConfidentiality::scrub([
             'calculations' => PayrollCalculationReadModel::forRun($id),
             'totals' => PayrollCalculationReadModel::runTotals($id),
-        ]);
+        ], PayrollConfidentiality::canRead($request)));
     }
 
     // ── Run Documents ─────────────────────────────────────────────────
@@ -234,7 +235,7 @@ class PayrollRunController extends Controller
         $companyId = $request->attributes->get('company_id');
         PayrollRun::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
 
-        return response()->json(GeneratedDocumentReadModel::forPayrollRun($id, $companyId));
+        return response()->json(PayrollConfidentiality::scrub(GeneratedDocumentReadModel::forPayrollRun($id, $companyId), PayrollConfidentiality::canRead($request)));
     }
 
     // ── Statistics ───────────────────────────────────────────────────
@@ -242,6 +243,6 @@ class PayrollRunController extends Controller
     {
         $companyId = $request->attributes->get('company_id');
 
-        return response()->json(PayrollRunReadModel::statistics($companyId));
+        return response()->json(PayrollConfidentiality::scrub(PayrollRunReadModel::statistics($companyId), PayrollConfidentiality::canRead($request)));
     }
 }

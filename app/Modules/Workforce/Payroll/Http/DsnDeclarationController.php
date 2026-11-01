@@ -7,6 +7,7 @@ use App\Core\Workforce\PayrollRun;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\DsnAuditReadModel;
 use App\Modules\Workforce\ReadModels\DsnDeclarationReadModel;
+use App\Modules\Workforce\Security\PayrollConfidentiality;
 use App\Modules\Workforce\UseCases\ExportPayrollDsnUseCase;
 use App\Modules\Workforce\UseCases\PollDsnDeclarationUseCase;
 use App\Modules\Workforce\UseCases\SubmitDsnDeclarationUseCase;
@@ -30,7 +31,7 @@ class DsnDeclarationController extends Controller
             perPage: (int) $request->input('per_page', 15),
         );
 
-        return response()->json($declarations);
+        return response()->json(PayrollConfidentiality::scrub($declarations, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Detail ───────────────────────────────────────────────────────
@@ -42,11 +43,11 @@ class DsnDeclarationController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($id);
 
-        return response()->json([
+        return response()->json(PayrollConfidentiality::scrub([
             'declaration' => DsnDeclarationReadModel::detail($declaration->id),
             'validation_summary' => DsnDeclarationReadModel::validationSummary($declaration->id),
             'audit_history' => DsnAuditReadModel::historyForDeclaration($declaration->id),
-        ]);
+        ], PayrollConfidentiality::canRead($request)));
     }
 
     // ── Statistics ───────────────────────────────────────────────────
@@ -77,7 +78,7 @@ class DsnDeclarationController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($declaration, 201);
+        return response()->json(PayrollConfidentiality::scrub($declaration, PayrollConfidentiality::canRead($request)), 201);
     }
 
     // ── Submit to gateway ───────────────────────────────────────────
@@ -96,7 +97,7 @@ class DsnDeclarationController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($declaration);
+        return response()->json(PayrollConfidentiality::scrub($declaration, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Poll gateway status ─────────────────────────────────────────
@@ -115,11 +116,11 @@ class DsnDeclarationController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json([
+        return response()->json(PayrollConfidentiality::scrub([
             'declaration' => $result['declaration'],
             'result' => $result['result'],
             'gateway_status' => $result['gateway_status'],
-        ]);
+        ], PayrollConfidentiality::canRead($request)));
     }
 
     // ── Validation errors ───────────────────────────────────────────
