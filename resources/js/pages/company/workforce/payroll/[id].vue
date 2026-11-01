@@ -5,6 +5,7 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import { usePayrollStore } from '@/modules/company/workforce/payroll.store'
 import { useI18n } from 'vue-i18n'
 import PayrollDisclaimer from './_PayrollDisclaimer.vue'
+import EmployeePreparationPanel from './_EmployeePreparationPanel.vue'
 
 definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
@@ -88,14 +89,6 @@ const lineHeaders = computed(() => [
   { title: t('payroll.lines.anomalies'), key: 'anomalies', sortable: false, width: 100 },
 ])
 
-const contribHeaders = [
-  { title: t('payroll.lineDetail.contributions.label'), key: 'label' },
-  { title: t('payroll.lineDetail.contributions.base'), key: 'base_cents', align: 'end' },
-  { title: t('payroll.lineDetail.contributions.rate'), key: 'rate_bps', align: 'end' },
-  { title: t('payroll.lineDetail.contributions.employee'), key: 'employee_cents', align: 'end' },
-  { title: t('payroll.lineDetail.contributions.employer'), key: 'employer_cents', align: 'end' },
-]
-
 // ── Helpers ──────────────────────────────────────────────────────
 function formatCents(cents) {
   if (cents == null) return '\u2014'
@@ -109,10 +102,6 @@ function formatPeriod(r) {
   if (!r) return ''
   const opts = { day: '2-digit', month: 'short', year: 'numeric' }
   return `${new Date(r.period_start).toLocaleDateString(locale.value, opts)} \u2014 ${new Date(r.period_end).toLocaleDateString(locale.value, opts)}`
-}
-function formatRate(bps) {
-  if (bps == null) return '\u2014'
-  return `${(bps / 100).toFixed(2)} %`
 }
 function formatDate(d) {
   if (!d) return '\u2014'
@@ -177,21 +166,67 @@ async function handleGenerateOfficial() {
   catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
 }
 
-// ── Line detail ──────────────────────────────────────────────────
+// ── Employee preparation panel ───────────────────────────────────
+const openLineId = ref(null)
+const canRecompute = computed(() => run.value?.status === 'computed' && can('workforce.payroll_prepare'))
+const panelEmployeeId = computed(() => lineDetail.value?.employee?.id ?? null)
+
 async function openLineDetail(item) {
+  openLineId.value = item.id
   lineDetailLoading.value = true
   showLineDetailDialog.value = true
+  // Deep-link the opened collaborator so the panel survives back-navigation.
+  if (route.query.line !== String(item.id)) router.replace({ query: { ...route.query, line: item.id } })
   try { await store.fetchLineDetail(route.params.id, item.id) }
   catch (e) { toast(e?.response?.data?.message || e.message, 'error'); showLineDetailDialog.value = false }
   finally { lineDetailLoading.value = false }
 }
 function closeLineDetail() {
   showLineDetailDialog.value = false
+  openLineId.value = null
   store.clearLineDetail()
+  if (route.query.line) {
+    const q = { ...route.query }; delete q.line
+    router.replace({ query: q })
+  }
+}
+
+// Current period URL (with the selected collaborator) — used to return here.
+const returnUrl = computed(() => `/company/workforce/payroll/${route.params.id}${openLineId.value ? `?line=${openLineId.value}` : ''}`)
+
+// Contextual navigation to the SOURCE, carrying a return path to this period.
+function goTimesheet() {
+  if (!panelEmployeeId.value) return
+  router.push({ name: 'company-workforce-time', query: { tab: 'timesheets', employee_id: panelEmployeeId.value, return: returnUrl.value } })
+}
+function goContract() {
+  if (!panelEmployeeId.value) return
+  router.push({ name: 'company-workforce-employees-id', params: { id: panelEmployeeId.value }, query: { tab: 'contract' } })
+}
+function goFiche() {
+  if (!panelEmployeeId.value) return
+  router.push({ name: 'company-workforce-employees-id', params: { id: panelEmployeeId.value } })
+}
+function goLeave() {
+  if (!panelEmployeeId.value) return
+  router.push({ name: 'company-workforce-leave', query: { employee_id: panelEmployeeId.value, return: returnUrl.value } })
+}
+async function handlePanelRecompute() {
+  if (!run.value) return
+  await withToast(() => store.recomputeRun(run.value.id), 'payroll.recomputed')
+  if (openLineId.value) await store.fetchLineDetail(route.params.id, openLineId.value)
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────
-onMounted(() => reload())
+onMounted(async () => {
+  await reload()
+  // Re-open the collaborator panel when returning via a deep-link (?line=).
+  const lineParam = route.query.line
+  if (lineParam) {
+    const item = store.currentRunLines.find(l => String(l.id) === String(lineParam))
+    if (item) openLineDetail(item)
+  }
+})
 onBeforeUnmount(() => store.clearCurrentRun())
 </script>
 
@@ -230,10 +265,10 @@ onBeforeUnmount(() => store.clearCurrentRun())
             <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" variant="outlined" :loading="store.loading" @click="handleGenerateDrafts">
               <VIcon start icon="tabler-file-text" />{{ $t('payroll.actions.generateDrafts') }}
             </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" color="success" :loading="store.loading" @click="handleGenerateOfficial">
+            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" color="success" :loading="store.loading" :title="$t('payroll.actions.generateOfficialHint')" @click="handleGenerateOfficial">
               <VIcon start icon="tabler-file-certificate" />{{ $t('payroll.actions.generateOfficial') }}
             </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" data-test="pr-export" @click="handleExport">
+            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" data-test="pr-export" :title="$t('payroll.actions.exportHint')" @click="handleExport">
               <VIcon start icon="tabler-download" />{{ $t('payroll.actions.export') }}
             </VBtn>
             <VBtn v-if="run.status === 'computed'" v-can="'workforce.payroll_prepare'" color="warning" variant="outlined" :loading="store.loading" @click="handleRecompute">
@@ -392,139 +427,21 @@ onBeforeUnmount(() => store.clearCurrentRun())
       </VList>
     </VCard>
 
-    <!-- H. Line detail dialog -->
-    <VDialog v-model="showLineDetailDialog" max-width="700" @after-leave="closeLineDetail">
-      <VCard>
-        <VCardTitle class="d-flex align-center justify-space-between">
-          <span>{{ $t('payroll.lineDetail.title') }}</span>
-          <VBtn icon variant="text" size="small" @click="closeLineDetail"><VIcon icon="tabler-x" /></VBtn>
-        </VCardTitle>
-        <VCardText v-if="lineDetailLoading">
-          <div class="d-flex justify-center py-8"><VProgressCircular indeterminate size="40" color="primary" /></div>
-        </VCardText>
-        <VCardText v-else-if="lineDetail">
-          <!-- Employee & period -->
-          <div class="mb-4">
-            <h6 class="text-h6 font-weight-bold">{{ lineDetail.employee_name }}</h6>
-            <div class="text-body-2 text-medium-emphasis">{{ formatPeriod(run) }}</div>
-          </div>
-          <VDivider class="mb-4" />
-
-          <!-- Time section -->
-          <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('payroll.lineDetail.time.title') }}</h6>
-          <VRow class="mb-4">
-            <VCol cols="6" sm="3">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.time.worked') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.worked_minutes) }}</div>
-            </VCol>
-            <VCol cols="6" sm="3">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.time.overtime') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.total_overtime_minutes) }}</div>
-            </VCol>
-            <VCol cols="6" sm="3">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.time.breaks') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.total_break_minutes) }}</div>
-            </VCol>
-            <VCol cols="6" sm="3">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.time.planned') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.planned_minutes) }}</div>
-            </VCol>
-          </VRow>
-          <VDivider class="mb-4" />
-
-          <!-- Leave section -->
-          <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('payroll.lineDetail.leave.title') }}</h6>
-          <VRow class="mb-4">
-            <VCol cols="6" sm="4">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.leave.paid') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.paid_leave_minutes) }}</div>
-            </VCol>
-            <VCol cols="6" sm="4">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.leave.unpaid') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.unpaid_leave_minutes) }}</div>
-            </VCol>
-            <VCol cols="6" sm="4">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.leave.total') }}</div>
-              <div class="font-weight-medium">{{ formatHours(lineDetail.total_leave_minutes) }}</div>
-            </VCol>
-          </VRow>
-          <VDivider class="mb-4" />
-
-          <!-- Compensation section -->
-          <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('payroll.lineDetail.compensation.title') }}</h6>
-          <VRow class="mb-4">
-            <VCol cols="6">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.compensation.baseSalary') }}</div>
-              <div class="font-weight-medium">{{ formatCents(lineDetail.base_salary_cents) }}</div>
-            </VCol>
-            <VCol cols="6">
-              <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.compensation.grossBasis') }}</div>
-              <div class="font-weight-medium">{{ formatCents(lineDetail.gross_basis_cents) }}</div>
-            </VCol>
-          </VRow>
-
-          <!-- Calculation section -->
-          <template v-if="lineDetail.calculation">
-            <VDivider class="mb-4" />
-            <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('payroll.lineDetail.calculation.title') }}</h6>
-            <VRow class="mb-2">
-              <VCol cols="6" sm="4">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.grossTotal') }}</div>
-                <div class="font-weight-medium">{{ formatCents(lineDetail.calculation.gross_total_cents) }}</div>
-              </VCol>
-              <VCol cols="6" sm="4">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.contributionsEmployee') }}</div>
-                <div class="font-weight-medium">{{ formatCents(lineDetail.calculation.contributions_employee_cents) }}</div>
-              </VCol>
-              <VCol cols="6" sm="4">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.contributionsEmployer') }}</div>
-                <div class="font-weight-medium">{{ formatCents(lineDetail.calculation.contributions_employer_cents) }}</div>
-              </VCol>
-            </VRow>
-            <VRow class="mb-4">
-              <VCol cols="6" sm="3">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.tax') }}</div>
-                <div class="font-weight-medium">{{ formatCents(lineDetail.calculation.tax_cents) }}</div>
-              </VCol>
-              <VCol cols="6" sm="3">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.netBeforeTax') }}</div>
-                <div class="font-weight-medium">{{ formatCents(lineDetail.calculation.net_before_tax_cents) }}</div>
-              </VCol>
-              <VCol cols="6" sm="3">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.netPayable') }}</div>
-                <div class="font-weight-medium text-success">{{ formatCents(lineDetail.calculation.net_payable_cents) }}</div>
-              </VCol>
-              <VCol cols="6" sm="3">
-                <div class="text-body-2 text-medium-emphasis">{{ $t('payroll.lineDetail.calculation.totalEmployerCost') }}</div>
-                <div class="font-weight-medium text-warning">{{ formatCents(lineDetail.calculation.total_cost_employer_cents) }}</div>
-              </VCol>
-            </VRow>
-
-            <!-- Contribution lines table -->
-            <template v-if="lineDetail.calculation.contribution_lines?.length">
-              <VDivider class="mb-4" />
-              <h6 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('payroll.lineDetail.contributions.title') }}</h6>
-              <VTable density="compact">
-                <thead>
-                  <tr>
-                    <th v-for="h in contribHeaders" :key="h.key" :class="h.align === 'end' ? 'text-end' : ''">{{ h.title }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(cl, idx) in lineDetail.calculation.contribution_lines" :key="idx">
-                    <td>{{ cl.label }}</td>
-                    <td class="text-end">{{ formatCents(cl.base_cents) }}</td>
-                    <td class="text-end">{{ formatRate(cl.rate_bps) }}</td>
-                    <td class="text-end">{{ formatCents(cl.employee_cents) }}</td>
-                    <td class="text-end">{{ formatCents(cl.employer_cents) }}</td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </template>
-          </template>
-        </VCardText>
-      </VCard>
-    </VDialog>
+    <!-- H. Employee preparation panel (C2) -->
+    <EmployeePreparationPanel
+      v-model="showLineDetailDialog"
+      :detail="lineDetail"
+      :run="run"
+      :loading="lineDetailLoading"
+      :can-read-comp="canReadComp"
+      :can-recompute="canRecompute"
+      @update:model-value="v => { if (!v) closeLineDetail() }"
+      @go-timesheet="goTimesheet"
+      @go-contract="goContract"
+      @go-leave="goLeave"
+      @go-fiche="goFiche"
+      @recompute="handlePanelRecompute"
+    />
 
     <!-- I. Validate dialog -->
     <VDialog v-model="showValidateDialog" max-width="500">

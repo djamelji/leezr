@@ -7079,7 +7079,9 @@
       "delete": "Supprimer",
       "view": "Voir le détail",
       "generateDrafts": "Générer les brouillons de bulletins",
-      "generateOfficial": "Générer les bulletins officiels"
+      "generateOfficial": "Générer les bulletins officiels",
+      "exportHint": "Marque la période comme exportée (snapshot interne) — aucun fichier bancaire/comptable n'est généré.",
+      "generateOfficialHint": "Bulletin au format officiel — montants indicatifs, à valider par un expert-comptable ; pas une paie réglementaire certifiée."
     },
     "workflow": {
       "draft": "Brouillon",
@@ -7210,13 +7212,39 @@
       "validated": "Validée",
       "validatedHint": "Période figée. Générez les bulletins (brouillon ou officiel) et préparez l'export.",
       "exported": "Clôturée",
-      "exportedHint": "Période exportée et clôturée. Les montants et bulletins sont figés."
+      "exportedHint": "Période exportée et clôturée. Les montants et bulletins sont figés.",
+      "panelTitle": "Préparation du collaborateur",
+      "anomaliesTitle": "Points à traiter",
+      "noAnomaly": "Aucune anomalie pour ce collaborateur.",
+      "sectionTime": "Temps de travail",
+      "sectionLeave": "Absences",
+      "sectionComp": "Rémunération",
+      "compHidden": "Montants masqués — nécessite la permission de lecture des salaires.",
+      "estimateNote": "Estimation indicative — validation expert-comptable requise.",
+      "sectionVariables": "Variables de paie",
+      "variablesAbsent": "Aucune variable (primes, acomptes, saisies) : non modélisées dans le moteur actuel.",
+      "sectionProvenance": "Provenance des éléments",
+      "sectionActions": "Actions",
+      "actFixSource": "Traiter à la source (feuille de temps)",
+      "actSeeTimesheet": "Voir la feuille de temps",
+      "actContract": "Consulter le contrat",
+      "actLeave": "Vérifier les absences",
+      "actFiche": "Ouvrir le dossier du salarié",
+      "actRecompute": "Recalculer la période"
     },
     "lineStatus": {
       "toFix": "À corriger",
       "warning": "À vérifier",
       "toCompute": "À calculer",
       "ready": "Prêt"
+    },
+    "prov": {
+      "timesheet": "Heures : feuille de temps",
+      "lockedRequired": "Feuille verrouillée requise",
+      "leaveFromTimesheet": "Absences : feuille de temps",
+      "derived": "Dérivé (non ressaisi)",
+      "contractPlan": "Rémunération : contrat",
+      "snapshotAtCompute": "Figé au calcul"
     }
   },
   "timeTracking": {
@@ -7976,7 +8004,9 @@
       "today": "Aujourd'hui",
       "planning": "Planning",
       "presence": "Présences"
-    }
+    },
+    "returnToPayroll": "Vous préparez la paie — traitez la feuille de temps puis revenez à la période.",
+    "backToPayroll": "Retour à la préparation"
   },
   "dayPanel": {
     "plannedDuration": "Durée prévue",

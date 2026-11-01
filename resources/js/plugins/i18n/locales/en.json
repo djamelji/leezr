@@ -7079,7 +7079,9 @@
       "delete": "Delete",
       "view": "View details",
       "generateDrafts": "Generate draft payslips",
-      "generateOfficial": "Generate official payslips"
+      "generateOfficial": "Generate official payslips",
+      "exportHint": "Marks the period as exported (internal snapshot) — no bank/accounting file is generated.",
+      "generateOfficialHint": "Official-format payslip — indicative amounts, to be validated by a chartered accountant; not certified regulatory payroll."
     },
     "workflow": {
       "draft": "Draft",
@@ -7210,13 +7212,39 @@
       "validated": "Validated",
       "validatedHint": "Period frozen. Generate payslips (draft or official) and prepare the export.",
       "exported": "Closed",
-      "exportedHint": "Period exported and closed. Amounts and payslips are frozen."
+      "exportedHint": "Period exported and closed. Amounts and payslips are frozen.",
+      "panelTitle": "Employee preparation",
+      "anomaliesTitle": "To address",
+      "noAnomaly": "No anomaly for this employee.",
+      "sectionTime": "Work time",
+      "sectionLeave": "Absences",
+      "sectionComp": "Compensation",
+      "compHidden": "Amounts hidden — requires salary-read permission.",
+      "estimateNote": "Indicative estimate — chartered-accountant validation required.",
+      "sectionVariables": "Payroll variables",
+      "variablesAbsent": "No variables (bonuses, advances, garnishments): not modelled in the current engine.",
+      "sectionProvenance": "Data provenance",
+      "sectionActions": "Actions",
+      "actFixSource": "Fix at source (timesheet)",
+      "actSeeTimesheet": "View timesheet",
+      "actContract": "View contract",
+      "actLeave": "Check absences",
+      "actFiche": "Open employee file",
+      "actRecompute": "Recompute period"
     },
     "lineStatus": {
       "toFix": "To fix",
       "warning": "Review",
       "toCompute": "To compute",
       "ready": "Ready"
+    },
+    "prov": {
+      "timesheet": "Hours: timesheet",
+      "lockedRequired": "Locked sheet required",
+      "leaveFromTimesheet": "Absences: timesheet",
+      "derived": "Derived (not re-entered)",
+      "contractPlan": "Compensation: contract",
+      "snapshotAtCompute": "Frozen at compute"
     }
   },
   "timeTracking": {
@@ -7976,7 +8004,9 @@
       "today": "Today",
       "planning": "Planning",
       "presence": "Presence"
-    }
+    },
+    "returnToPayroll": "You are preparing payroll — fix the timesheet then return to the period.",
+    "backToPayroll": "Back to preparation"
   },
   "dayPanel": {
     "plannedDuration": "Planned duration",

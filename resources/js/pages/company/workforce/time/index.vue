@@ -21,6 +21,11 @@ const employeesStore = useEmployeesStore()
 const { can } = useCan()
 const canPlanning = computed(() => can('workforce.planning_view'))
 
+// PRODUCT-UX-2 / LOT C2 — context preservation : when reached from the payroll
+// preparation panel (?return=…), offer a one-click way back to the SAME period.
+const returnTo = computed(() => (typeof route.query.return === 'string' ? route.query.return : null))
+const goBackToPayroll = () => { if (returnTo.value) router.push(returnTo.value) }
+
 // ── Tab navigation (deep-link ?tab=) ─────────────────────────
 const TABS = ['cockpit', 'planning', 'entries', 'timesheets']
 const activeTab = ref(TABS.includes(route.query.tab) ? route.query.tab : 'cockpit')
@@ -429,6 +434,23 @@ onMounted(() => {
 
 <template>
   <div>
+    <!-- Return to payroll preparation (context preservation, C2) -->
+    <VAlert
+      v-if="returnTo"
+      type="info"
+      variant="tonal"
+      density="comfortable"
+      class="mb-4"
+      border="start"
+    >
+      <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+        <span>{{ $t('timeWork.returnToPayroll') }}</span>
+        <VBtn size="small" color="primary" prepend-icon="tabler-arrow-back-up" @click="goBackToPayroll">
+          {{ $t('timeWork.backToPayroll') }}
+        </VBtn>
+      </div>
+    </VAlert>
+
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-6">
       <div>

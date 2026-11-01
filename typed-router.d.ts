@@ -105,6 +105,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-organization-organization-preset-card': RouteRecordInfo<'company-workforce-organization-organization-preset-card', '/company/workforce/organization/_OrganizationPresetCard', Record<never, never>, Record<never, never>>,
     'company-workforce-organization-tab': RouteRecordInfo<'company-workforce-organization-tab', '/company/workforce/organization/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-workforce-payroll': RouteRecordInfo<'company-workforce-payroll', '/company/workforce/payroll', Record<never, never>, Record<never, never>>,
+    'company-workforce-payroll-employee-preparation-panel': RouteRecordInfo<'company-workforce-payroll-employee-preparation-panel', '/company/workforce/payroll/_EmployeePreparationPanel', Record<never, never>, Record<never, never>>,
     'company-workforce-payroll-payroll-disclaimer': RouteRecordInfo<'company-workforce-payroll-payroll-disclaimer', '/company/workforce/payroll/_PayrollDisclaimer', Record<never, never>, Record<never, never>>,
     'company-workforce-payroll-id': RouteRecordInfo<'company-workforce-payroll-id', '/company/workforce/payroll/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-planning': RouteRecordInfo<'company-workforce-planning', '/company/workforce/planning', Record<never, never>, Record<never, never>>,
