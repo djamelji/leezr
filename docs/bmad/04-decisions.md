@@ -24227,3 +24227,44 @@ DEV uniquement ; **aucun 2ᵉ moteur** planning/pointage, aucune fusion backend 
 `time/index.vue` (espace à onglets + Aujourd'hui/Planning) ; `planning/index.vue` (prop `embedded`) ; `WorkforcePlanningModule` (navItems vidé) ; i18n (`timeWork.*`, `nav.company.workforce-time`) ; test `WorkforceNavHrGroupTest`.
 
 ---
+
+## ADR-677 — PRODUCT-UX-2 LOT B2 : panneau « Journée collaborateur » (constatation → action)
+
+**Date** : 2026-11-01
+**Statut** : Accepté (DEV, livré + vérifié). Transforme l'espace « Temps de travail » (ADR-676) de la supervision à l'**action**, sans recréer de moteur.
+
+### P0 — Panneau « Journée collaborateur »
+Clic sur une ligne de la vue **Aujourd'hui** → panneau contextuel (`_DayDetailPanel`) :
+- **Identité** : collaborateur, date, statut du jour.
+- **Prévu vs Réel** (deux cartes) : créneau prévu + durée prévue ; pointage réel + travaillé + pauses.
+- **Analyse** (états métier PRÉCIS, jamais une « anomalie » automatique) : chip de réconciliation (`matched/ambiguous/not_clocked/no_shift`) + constats lisibles — « Programmé mais pas de pointage », « Pointage sans créneau », « Plusieurs créneaux/pointages à vérifier », « Journée non clôturée », « Écart prévu/réel de N min », « En congé approuvé », ou « Prévu et réel cohérents ».
+- **Détail du jour** : créneaux (avec statut de publication) + pointages, chargés via les endpoints de lecture existants.
+- **Actions contextuelles selon permission + état réel** : **Corriger le pointage** (uniquement si un pointage existe + `workforce.time_manage` — réutilise le **workflow TRACÉ existant** `correctTimeEntry`, **motif obligatoire**, aucun changement silencieux) ; **Planning** / **Présences** (bascule d'onglet, reste dans l'espace) ; **Ouvrir la fiche du collaborateur**.
+
+### P0 — Traiter les anomalies
+Le traitement réutilise **strictement** le workflow de correction existant (motif requis, tracé, audité, scope manager côté serveur). Aucune action factice : la correction n'apparaît que si un pointage existe et que l'utilisateur est autorisé. L'approbation des heures reste **périodique** (onglet Feuilles de temps) — non reproduite par jour (documenté).
+
+### Architecture (réutilisation, pas de 2ᵉ moteur)
+Le panneau s'appuie sur la ligne du **cockpit board** (qui porte déjà employee/planned/actual/worked/break/gap/reconciliation/time_entry_id/on_leave/incomplete) + 2 lectures ciblées (shifts du jour, pointages du jour). La correction passe par `correctTimeEntry`. La navigation inter-onglets se fait par un événement `navigate` remonté à l'espace (pas de page externe). Aucune donnée dupliquée, permissions serveur préservées.
+
+### Vérifié sur DEV réel (SHA `ffba23b`)
+- Panneau ouvert au clic (desktop) : identité + Prévu/Réalisé + Analyse (« Non pointé » + « Programmé mais pas de pointage ») + Planning (« 09:00–17:00 · Publié ») + Présences + actions ; 0 erreur JS.
+- **Mobile 390** : panneau pleine largeur, cartes empilées, actions accessibles, aucun débordement. **Dark mode** : rendu correct.
+- **Permissions serveur** : cockpit non exposé à un salarié (bob → 403, cf. ADR-676) ; la correction reste gated `time_manage` + scope manager (workflow existant).
+- **Tests** : non-régression Workforce/Time/Planning/Timesheet/Permission/Shift/Clock/Break/Nav **704 passés, 0 échec**. Les 3 `ControllerSize` préexistants inchangés ; moteur Signature non modifié.
+
+### Mesure (constatation → action)
+En B1, le manager **constatait** (board). En B2, il **comprend et agit** sans quitter l'espace : clic ligne → contexte complet du jour (prévu/réel/analyse/planning/présences) → correction tracée (si autorisée) → résultat rechargé ; navigation planning/présences/fiche depuis le panneau. Les changements de contexte du traitement courant disparaissent. Aucun temps humain inventé.
+
+### Limites / suite
+- **P1 (partiellement couvert)** : le panneau relie déjà planning↔présences (affichage + navigation) ; une édition de créneau **depuis** le panneau et une vue semaine/équipe enrichie restent à faire (onglet Planning existant utilisable entre-temps).
+- **B3** : mesures avant/après des 6 parcours, responsive complet, optimisations.
+- **Dépendance** : lieu d'exécution (Location) ≠ établissement administratif (Site, non livré) — documenté, non bloquant.
+
+### Garde-fous
+DEV uniquement ; **aucun 2ᵉ moteur**, aucune fusion backend ; **aucune modification auto/silencieuse des pointages** (correction explicite, tracée) ; TimeEntry/Break/Timesheet/Shift/work models/règles/manager-scope/tenant/permissions inchangés ; routes historiques préservées ; pas de Billing/main/PROD/reset ; moteur Signature non touché ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Fichiers
+`_DayDetailPanel.vue` (nouveau) ; `_TimeCockpit.vue` (clic ligne → panneau, emit navigate) ; `time/index.vue` (@navigate → bascule onglet) ; i18n (`dayPanel.*`).
+
+---
