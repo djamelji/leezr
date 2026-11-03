@@ -7001,7 +7001,8 @@
     "description": "Manage your company departments and job roles",
     "tabs": {
       "departments": "Departments",
-      "roles": "Job Roles"
+      "roles": "Job Roles",
+      "locations": "Locations"
     },
     "departments": {
       "name": "Name",
@@ -7047,6 +7048,31 @@
     "deleteConfirm": {
       "title": "Confirm deletion",
       "message": "Do you really want to delete:"
+    },
+    "locations": {
+      "add": "Add location",
+      "edit": "Edit location",
+      "executionNote": "Shift execution place (internal, client site, remote, mobile) — NOT an administrative establishment (registration number), a separate not-yet-built effort.",
+      "clientName": "Client name",
+      "timezone": "Timezone",
+      "created": "Location created",
+      "updated": "Location updated",
+      "deleted": "Location deleted",
+      "empty": "No work location defined.",
+      "deleteTitle": "Delete location?",
+      "deleteText": "Attached shifts will no longer be located. This cannot be undone.",
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "address": "Address",
+        "active": "Active"
+      },
+      "types": {
+        "internal": "Internal",
+        "client_site": "Client site",
+        "remote": "Remote",
+        "mobile": "Mobile"
+      }
     }
   },
   "payroll": {

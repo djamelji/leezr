@@ -908,15 +908,6 @@ watch(activeTab, tab => {
         >
           {{ $t('planning.templates.newTemplate') }}
         </VBtn>
-        <VBtn
-          v-if="activeTab === 'locations'"
-          v-can="'workforce.planning_manage'"
-          color="primary"
-          prepend-icon="tabler-plus"
-          @click="openCreateLocation"
-        >
-          {{ $t('planning.locations.newLocation') }}
-        </VBtn>
       </div>
     </div>
 
@@ -945,13 +936,6 @@ watch(activeTab, tab => {
           class="me-2"
         />
         {{ $t('planning.tabs.templates') }}
-      </VTab>
-      <VTab value="locations">
-        <VIcon
-          icon="tabler-map-pin"
-          class="me-2"
-        />
-        {{ $t('planning.tabs.locations') }}
       </VTab>
     </VTabs>
 
@@ -1657,151 +1641,6 @@ watch(activeTab, tab => {
         </VCard>
       </VWindowItem>
 
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <!-- TAB: LIEUX (Work Locations)                            -->
-      <!-- ═══════════════════════════════════════════════════════ -->
-      <VWindowItem value="locations">
-        <VCard>
-          <VDataTableServer
-            :headers="locationHeaders"
-            :items="store.allLocations"
-            :items-length="store.allLocations.length"
-            :loading="locationsLoading"
-            :items-per-page="-1"
-            class="text-no-wrap"
-            hide-default-footer
-          >
-            <!-- Name -->
-            <template #item.name="{ item }">
-              <div class="d-flex align-center gap-3 py-2">
-                <VAvatar
-                  :color="locationTypeColor(item.type)"
-                  variant="tonal"
-                  size="32"
-                  rounded
-                >
-                  <VIcon
-                    :icon="locationTypeIcon(item.type)"
-                    size="18"
-                  />
-                </VAvatar>
-                <div>
-                  <span class="font-weight-medium">{{ item.name }}</span>
-                  <div
-                    v-if="item.client_name"
-                    class="text-body-2 text-medium-emphasis"
-                  >
-                    {{ item.client_name }}
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <!-- Type -->
-            <template #item.type="{ item }">
-              <VChip
-                :color="locationTypeColor(item.type)"
-                size="small"
-                variant="tonal"
-                :prepend-icon="locationTypeIcon(item.type)"
-              >
-                {{ $t(`planning.locations.types.${item.type}`) }}
-              </VChip>
-            </template>
-
-            <!-- Address -->
-            <template #item.address="{ item }">
-              <span v-if="item.address">{{ item.address }}</span>
-              <span
-                v-else
-                class="text-medium-emphasis"
-              >-</span>
-            </template>
-
-            <!-- Timezone -->
-            <template #item.timezone="{ item }">
-              <span class="text-body-2">{{ item.timezone || '-' }}</span>
-            </template>
-
-            <!-- Active -->
-            <template #item.is_active="{ item }">
-              <VChip
-                :color="item.is_active !== false ? 'success' : 'error'"
-                size="small"
-                variant="tonal"
-              >
-                {{ item.is_active !== false ? $t('common.active') : $t('common.inactive') }}
-              </VChip>
-            </template>
-
-            <!-- Actions -->
-            <template #item.actions="{ item }">
-              <div class="d-flex gap-1">
-                <VBtn
-                  icon
-                  variant="text"
-                  size="x-small"
-                  color="primary"
-                  @click.stop="openEditLocation(item)"
-                >
-                  <VIcon
-                    icon="tabler-edit"
-                    size="18"
-                  />
-                  <VTooltip
-                    activator="parent"
-                    :text="$t('common.edit')"
-                    location="top"
-                  />
-                </VBtn>
-                <VBtn
-                  icon
-                  variant="text"
-                  size="x-small"
-                  color="error"
-                  @click.stop="openDeleteLocation(item)"
-                >
-                  <VIcon
-                    icon="tabler-trash"
-                    size="18"
-                  />
-                  <VTooltip
-                    activator="parent"
-                    :text="$t('common.delete')"
-                    location="top"
-                  />
-                </VBtn>
-              </div>
-            </template>
-
-            <!-- Empty state -->
-            <template #no-data>
-              <div class="text-center pa-8">
-                <VIcon
-                  icon="tabler-map-pin"
-                  size="48"
-                  color="secondary"
-                  class="mb-4"
-                />
-                <h6 class="text-h6 mb-2">
-                  {{ $t('planning.locations.empty') }}
-                </h6>
-                <p class="text-body-1 text-medium-emphasis mb-4">
-                  {{ $t('planning.locations.emptyDescription') }}
-                </p>
-                <VBtn
-                  v-can="'workforce.planning_manage'"
-                  color="primary"
-                  prepend-icon="tabler-plus"
-                  @click="openCreateLocation"
-                >
-                  {{ $t('planning.locations.newLocation') }}
-                </VBtn>
-              </div>
-            </template>
-          </VDataTableServer>
-        </VCard>
-      </VWindowItem>
     </VWindow>
 
     <!-- ═══════════════════════════════════════════════════════ -->

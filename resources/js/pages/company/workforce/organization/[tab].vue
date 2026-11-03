@@ -3,6 +3,7 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import OrganizationPresetCard from './_OrganizationPresetCard.vue'
+import OrganizationLocations from './_OrganizationLocations.vue'
 import AppMoneyField from '@/components/AppMoneyField.vue'
 import AppConfirmDialog from '@/components/AppConfirmDialog.vue'
 
@@ -10,7 +11,9 @@ definePage({ meta: { module: 'workforce', permission: 'workforce.admin' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
-const { can } = useCan()
+const { can, canModule } = useCan()
+// P2-C: work locations tab (moved from Planning). Visible when planning module active + viewer.
+const canLocations = computed(() => canModule('workforce_planning') && can('workforce.planning_view'))
 const route = useRoute()
 const router = useRouter()
 const store = useEmployeesStore()
@@ -276,6 +279,17 @@ onMounted(() => {
             class="me-2"
           />
           {{ $t('organization.tabs.roles') }}
+        </VTab>
+        <VTab
+          v-if="canLocations"
+          value="locations"
+        >
+          <VIcon
+            icon="tabler-map-pin"
+            size="20"
+            class="me-2"
+          />
+          {{ $t('organization.tabs.locations') }}
         </VTab>
       </VTabs>
 
@@ -758,6 +772,14 @@ onMounted(() => {
                 </div>
               </template>
             </VDataTable>
+          </VWindowItem>
+
+          <!-- Locations Tab (P2-C — moved from Planning, overlap H) -->
+          <VWindowItem
+            v-if="canLocations"
+            value="locations"
+          >
+            <OrganizationLocations />
           </VWindowItem>
         </VWindow>
       </VCardText>

@@ -7001,7 +7001,8 @@
     "description": "Gérez les départements et postes de votre entreprise",
     "tabs": {
       "departments": "Départements",
-      "roles": "Postes"
+      "roles": "Postes",
+      "locations": "Lieux"
     },
     "departments": {
       "name": "Nom",
@@ -7047,6 +7048,31 @@
     "deleteConfirm": {
       "title": "Confirmer la suppression",
       "message": "Voulez-vous vraiment supprimer :"
+    },
+    "locations": {
+      "add": "Ajouter un lieu",
+      "edit": "Modifier le lieu",
+      "executionNote": "Lieu d'exécution des shifts (interne, site client, télétravail, mobile) — ce n'est PAS un établissement administratif (SIRET), chantier distinct non encore livré.",
+      "clientName": "Nom du client",
+      "timezone": "Fuseau horaire",
+      "created": "Lieu créé",
+      "updated": "Lieu mis à jour",
+      "deleted": "Lieu supprimé",
+      "empty": "Aucun lieu de travail défini.",
+      "deleteTitle": "Supprimer le lieu ?",
+      "deleteText": "Les shifts rattachés ne seront plus localisés. Cette action est irréversible.",
+      "columns": {
+        "name": "Nom",
+        "type": "Type",
+        "address": "Adresse",
+        "active": "Actif"
+      },
+      "types": {
+        "internal": "Interne",
+        "client_site": "Site client",
+        "remote": "Télétravail",
+        "mobile": "Mobile"
+      }
     }
   },
   "payroll": {

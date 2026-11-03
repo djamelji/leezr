@@ -102,6 +102,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-leave-leave-request-detail-dialog': RouteRecordInfo<'company-workforce-leave-leave-request-detail-dialog', '/company/workforce/leave/_LeaveRequestDetailDialog', Record<never, never>, Record<never, never>>,
     'company-workforce-me': RouteRecordInfo<'company-workforce-me', '/company/workforce/me', Record<never, never>, Record<never, never>>,
     'company-workforce-onboarding': RouteRecordInfo<'company-workforce-onboarding', '/company/workforce/onboarding', Record<never, never>, Record<never, never>>,
+    'company-workforce-organization-organization-locations': RouteRecordInfo<'company-workforce-organization-organization-locations', '/company/workforce/organization/_OrganizationLocations', Record<never, never>, Record<never, never>>,
     'company-workforce-organization-organization-preset-card': RouteRecordInfo<'company-workforce-organization-organization-preset-card', '/company/workforce/organization/_OrganizationPresetCard', Record<never, never>, Record<never, never>>,
     'company-workforce-organization-tab': RouteRecordInfo<'company-workforce-organization-tab', '/company/workforce/organization/:tab', { tab: ParamValue<true> }, { tab: ParamValue<false> }>,
     'company-workforce-payroll': RouteRecordInfo<'company-workforce-payroll', '/company/workforce/payroll', Record<never, never>, Record<never, never>>,
