@@ -24445,3 +24445,40 @@ DEV uniquement ; pas de Billing/main/PROD/reset ; moteur Signature + barèmes in
 Une entreprise prépare et contrôle une période dans un espace cohérent, sait précisément ce qui est calculé (indicatif), validé (interne), exporté (marquage) ou simulé (DSN), **sans exposition non autorisée des rémunérations** (serveur) **ni promesse trompeuse de conformité**. LOT C (C1+C2+C3) clôturé.
 
 ---
+
+## ADR-682 — PRODUCT-UX-3 P2-A : accueil Company orienté actions
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-3 / P2-A. L'audit (ADR-673, chevauchement **J**) a identifié **deux tableaux de bord concurrents** : `/dashboard` (moteur de widgets configurable, accueil par défaut) et le **hub RH historique** `/company/workforce` présentant les fonctionnalités en **cartes-modules** (anti-pattern). Objectif : un accueil orienté ACTIONS (pas l'inventaire des modules), composé par permissions/modules, scopé manager, sans fuite salariale.
+
+### Décision
+**Read-model agrégateur autorisé** (`HomePrioritiesReadModel::forRequest`) plutôt qu'un composant Dashboard monolithique : l'agrégation « ce qui demande mon attention » est construite **côté serveur selon l'autorisation du viewer** (RBAC + ModuleGate + manager scope via `WorkforceAccess`), à partir des read models propriétaires des modules (congés, cockpit temps, signatures, paie), avec des **champs de sortie explicitement whitelistés (comptes + routage uniquement)** — **aucun montant salarial** n'est jamais renvoyé. Endpoint `GET /workforce/dashboard/priorities` (gated `workforce.view`). Helpers ajoutés : `WorkforceAccess::can()` + `scopeIdsOrNull()`.
+
+Priorités composées (chacune gated par sa permission + module, incluse si count>0) :
+- `leave_to_approve` (`leave_approve`, scopé), `timesheets_to_approve` (`timesheet_approve`, scopé via cockpit), `time_anomalies` (`timesheet_view`, scopé), `signatures_pending` (module signature + `signature.view`, scopé), `payroll_to_control` (module payroll + `payroll_prepare`, **counts sans montant**), `onboarding_incomplete` (`workforce.view` : actifs sans contrat actif).
+Situation (gated `workforce.view`, jamais de salaire) : collaborateurs actifs, présents aujourd'hui, non pointés. `scope` = `all` (hasViewAll employee) ou `team`.
+
+### Accueil (frontend)
+Le hub `/company/workforce` (cartes-modules) devient l'**accueil orienté actions** : hiérarchie **P1 « À traiter »** (priorités autorisées, count + bouton « Traiter » → destination ; **état vide « Rien à traiter »**) → **P2 « Situation »** (3 KPI max) → **P3 « Accès rapides »** (liens courts, permission/module gated). **Grille de cartes-modules supprimée.** Le frontend ne fait AUCUN import métier dispersé : il rend l'unique payload autorisé. Atteignable via une **nouvelle entrée de nav « Accueil »** (groupe `cockpit`, sort 2), gated `workforce.view` + module.
+
+### Confidentialité — fuite fermée
+`GET /workforce/dashboard/statistics` (gated `workforce.view`) exposait `payrollStats.by_status[*].total_gross_cents` à tout manager sans `compensation_read` — **bypass C2/C3**. Désormais les sous-objets paie/DSN sont **scrubés** (`PayrollConfidentiality::scrub`, motif `_cents`) ; les **counts (badges) sont préservés** (calculés avant scrub). Le nouvel endpoint priorities ne renvoie **que des comptes**.
+
+### Preuves (tests)
+`CompanyHomePrioritiesTest` — RBAC (non-`workforce.view` → 403), **aucun champ salarial ni montant** dans priorities, **statistics ne fuit plus `total_gross_cents`** sans `compensation_read` (owner oui), badge `draft_payrolls` préservé, `scope` team/all. 25 tests (home + nav + confidentialité) verts, 0 régression. 3 échecs ControllerSize préservés.
+
+### Recette DEV (SHA servie `106641c`, X-Build-Version vérifié)
+Accueil orienté actions : **À traiter** (Paie à contrôler: 1, Intégrations à compléter: 3 — boutons « Traiter ») → **Situation** (11 actifs, 0 présents) → **Accès rapides** (5 liens). **Aucune carte-module, aucun montant salarial.** Entrée nav « Accueil » présente. API priorities : `scope=all`, `no _cents=true`. Responsive 1920/1366/768/390 + dark.
+
+### Mesures (hub module-cards → accueil actions)
+- Avant : ~4 KPI + bannière + **6 cartes-modules** + 3 actions rapides (~13 blocs) ; trouver « ce qui demande une action » = scanner les cartes-modules.
+- Après : **P1 montre exactement les N items actionnables** avec « Traiter » → destination en **1 clic** ; situation = 2 KPI ; accès = 5 liens. Information d'action **visible immédiatement** (pas de scan de l'inventaire de modules). Ressaisies : 0.
+
+### Conservé / limites
+`/dashboard` (moteur de widgets, générique/jobdomain) **conservé** — surface distincte (dashboard configurable) ≠ accueil opérationnel RH ; la fusion complète dans le moteur de widgets (contribution de widgets Workforce) reste une **évolution P3 possible**. Portail salarié `me.vue` **inchangé** (self-service). Composants `_WorkforceModuleCard`/`_WorkforceActionCard` orphelins (route fantôme inoffensive). `TimesheetPeriodReadModel::pendingApproval` toujours sans endpoint (non requis : le cockpit fournit le compte scopé).
+
+### Fichiers
+`HomePrioritiesReadModel.php` (nouveau) ; `WorkforceDashboardController.php` (priorities + scrub statistics) ; `WorkforceAccess.php` (can/scopeIdsOrNull) ; `routes/company.php` ; `workforce-dashboard.store.js` (fetchPriorities) ; `workforce/index.vue` (refonte accueil) ; `WorkforceModule.php` (nav « Accueil ») ; i18n fr/en (`home.*`, `nav.company.workforce-home`) ; `CompanyHomePrioritiesTest.php` ; recette `tests/e2e/home-p2a-dev.spec.js`.
+
+---
