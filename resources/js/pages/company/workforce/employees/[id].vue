@@ -12,6 +12,7 @@ import EmployeeDocumentsSection from './_EmployeeDocumentsSection.vue'
 import EmployeeSignaturesSection from './_EmployeeSignaturesSection.vue'
 import GenerateContractDialog from './_GenerateContractDialog.vue'
 import EmployeeAccessDialog from './_EmployeeAccessDialog.vue'
+import EmployeeAccessCard from './_EmployeeAccessCard.vue'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
@@ -33,6 +34,7 @@ const file = ref(null)
 const currentTab = ref('overview')
 const contractDialogOpen = ref(false) // W-CONTRACT-1
 const accessDialogOpen = ref(false) // W-HR-UX-3 — accès collaborateur
+const accessReloadSignal = ref(0) // P3-A — rafraîchit la carte Accès après invite/relance
 // W-HR-UX-7 (P3) — « Modifier » mène DIRECTEMENT au formulaire : va sur l'onglet Profil ET déclenche
 // le mode édition (compteur-signal observé par _EmployeeProfile), sans 2ᵉ clic « Modifier ».
 const profileEditSignal = ref(0)
@@ -262,7 +264,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
               <VRow class="mt-2">
                 <VCol
                   cols="12"
-                  md="6"
+                  md="4"
                 >
                   <VCard
                     variant="outlined"
@@ -293,7 +295,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                 </VCol>
                 <VCol
                   cols="12"
-                  md="6"
+                  md="4"
                 >
                   <VCard
                     variant="outlined"
@@ -317,6 +319,17 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                       </div>
                     </VCardText>
                   </VCard>
+                </VCol>
+                <!-- P3-A — Accès & compte : identité unifiée (Employee ↔ compte ↔ membership) -->
+                <VCol
+                  cols="12"
+                  md="4"
+                >
+                  <EmployeeAccessCard
+                    :employee-id="empId"
+                    :reload-signal="accessReloadSignal"
+                    @manage="accessDialogOpen = true"
+                  />
                 </VCol>
               </VRow>
             </VWindowItem>
@@ -388,7 +401,7 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
         v-model="accessDialogOpen"
         :employee-id="empId"
         :employee-email="ident.email || ''"
-        @granted="load"
+        @granted="load(); accessReloadSignal++"
       />
     </template>
   </div>

@@ -34,6 +34,18 @@ class MembershipController extends Controller
         // ADR-168b: bulk completeness (5 queries, no N+1)
         $completeness = CompanyUserProfileReadModel::bulkCompleteness($company, $members);
 
+        // P3-A (ADR-686): clarify Members vs Collaborateurs — mark which accounts are
+        // also employees (salariés) vs administrative/technical accounts. Light batch
+        // read via the user_id bridge, guarded by the workforce module being active
+        // (no hard coupling: a company without Workforce simply gets no employee links).
+        $employeeByUser = [];
+        if (\App\Core\Modules\ModuleGate::isActive($company, 'workforce')) {
+            $employeeByUser = \App\Core\Workforce\Employee::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->whereNotNull('user_id')
+                ->pluck('id', 'user_id')->all();
+        }
+
         $mapped = $members->map(fn (Membership $m) => [
             'id' => $m->id,
             'user' => $m->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
@@ -41,6 +53,9 @@ class MembershipController extends Controller
             'company_role' => $m->companyRole ? $m->companyRole->only('id', 'key', 'name') : null,
             'created_at' => $m->created_at,
             'profile_completeness' => $completeness[$m->id] ?? ['filled' => 0, 'total' => 0, 'complete' => true],
+            // Person link: the account is a collaborator (salarié) if an Employee references its user.
+            'employee_id' => $employeeByUser[$m->user_id] ?? null,
+            'is_employee' => isset($employeeByUser[$m->user_id]),
         ]);
 
         return response()->json([

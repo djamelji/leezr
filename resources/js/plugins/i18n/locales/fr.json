@@ -2448,7 +2448,9 @@
     "memberLimitReached": "Limite de membres atteinte. Mettez à niveau votre abonnement pour ajouter plus de membres.",
     "noMembers": "Aucun membre",
     "noMembersDescription": "Ajoutez des membres pour constituer votre équipe.",
-    "noIncompleteProfiles": "Aucun profil incomplet"
+    "noIncompleteProfiles": "Aucun profil incomplet",
+    "employeeBadge": "Salarié",
+    "accountOnlyBadge": "Compte seul"
   },
   "credentials": {
     "title": "Identifiants",
@@ -8061,7 +8063,21 @@
     "granted": "Invitation envoyée au collaborateur.",
     "resent": "Invitation renvoyée.",
     "statesNote": "Trois états distincts : invité (e-mail envoyé) · activé (mot de passe défini) · connecté (après sa 1re connexion).",
-    "connected": "Compte activé et connecté : le collaborateur utilise son espace."
+    "connected": "Compte activé et connecté : le collaborateur utilise son espace.",
+    "states": {
+      "none": "Aucun accès",
+      "invited": "Invitation envoyée",
+      "active": "Compte activé",
+      "connected": "Connecté",
+      "account_without_membership": "Compte à ré-associer"
+    },
+    "card": {
+      "title": "Accès & compte",
+      "manage": "Gérer l'accès",
+      "invite": "Inviter",
+      "noEmail": "Aucun e-mail — renseignez-le pour inviter.",
+      "mismatch": "Le compte existe mais n'est plus rattaché à cette entreprise. Cliquez sur « Gérer l'accès » pour le ré-associer."
+    }
   },
   "timeWork": {
     "spaceTitle": "Temps de travail",

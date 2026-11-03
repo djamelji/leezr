@@ -122,6 +122,21 @@ class WorkforceSecurityWDTest extends TestCase
         $res->assertOk()->assertSee('base_salary_cents');
     }
 
+    // ── P3-A : fiche collaborateur (manager scope + comp) ──
+    public function test_manager_file_scoped_and_salary_hidden(): void
+    {
+        // Manager (workforce.view seul → PAS view-all) lié à l'employé "manager".
+        $mgr = $this->userWith(['workforce.view'], false, $this->manager);
+
+        // Son rapport direct : fiche accessible, mais salaire masqué (pas de compensation_read).
+        $own = $this->getApi($mgr, "/workforce/employees/{$this->report->id}/file");
+        $own->assertOk();
+        $this->assertStringNotContainsString('base_salary_cents', $own->getContent(), 'salaire masqué dans la fiche sans compensation_read');
+
+        // Un collaborateur HORS de son périmètre (pas son rapport) : fiche interdite.
+        $this->getApi($mgr, "/workforce/employees/{$this->stranger->id}/file")->assertForbidden();
+    }
+
     // ── Scope congés ──
     public function test_employee_cannot_read_others_leave(): void
     {

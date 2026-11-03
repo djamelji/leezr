@@ -2448,7 +2448,9 @@
     "memberLimitReached": "Member limit reached. Upgrade your plan to add more members.",
     "noMembers": "No members",
     "noMembersDescription": "Add members to build your team.",
-    "noIncompleteProfiles": "No incomplete profiles"
+    "noIncompleteProfiles": "No incomplete profiles",
+    "employeeBadge": "Employee",
+    "accountOnlyBadge": "Account only"
   },
   "credentials": {
     "title": "Credentials",
@@ -8061,7 +8063,21 @@
     "granted": "Invitation sent to the employee.",
     "resent": "Invitation resent.",
     "statesNote": "Three distinct states: invited (email sent) · active (password set) · connected (after first login).",
-    "connected": "Account active and connected: the employee is using their space."
+    "connected": "Account active and connected: the employee is using their space.",
+    "states": {
+      "none": "No access",
+      "invited": "Invitation sent",
+      "active": "Account activated",
+      "connected": "Connected",
+      "account_without_membership": "Account to re-link"
+    },
+    "card": {
+      "title": "Access & account",
+      "manage": "Manage access",
+      "invite": "Invite",
+      "noEmail": "No email — set one to invite.",
+      "mismatch": "The account exists but is no longer linked to this company. Click \"Manage access\" to re-link it."
+    }
   },
   "timeWork": {
     "spaceTitle": "Working time",

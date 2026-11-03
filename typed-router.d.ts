@@ -85,6 +85,7 @@ declare module 'vue-router/auto-routes' {
     'company-workforce-dsn': RouteRecordInfo<'company-workforce-dsn', '/company/workforce/dsn', Record<never, never>, Record<never, never>>,
     'company-workforce-dsn-id': RouteRecordInfo<'company-workforce-dsn-id', '/company/workforce/dsn/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-workforce-employees': RouteRecordInfo<'company-workforce-employees', '/company/workforce/employees', Record<never, never>, Record<never, never>>,
+    'company-workforce-employees-employee-access-card': RouteRecordInfo<'company-workforce-employees-employee-access-card', '/company/workforce/employees/_EmployeeAccessCard', Record<never, never>, Record<never, never>>,
     'company-workforce-employees-employee-access-dialog': RouteRecordInfo<'company-workforce-employees-employee-access-dialog', '/company/workforce/employees/_EmployeeAccessDialog', Record<never, never>, Record<never, never>>,
     'company-workforce-employees-employee-bulk-action-dialog': RouteRecordInfo<'company-workforce-employees-employee-bulk-action-dialog', '/company/workforce/employees/_EmployeeBulkActionDialog', Record<never, never>, Record<never, never>>,
     'company-workforce-employees-employee-contract': RouteRecordInfo<'company-workforce-employees-employee-contract', '/company/workforce/employees/_EmployeeContract', Record<never, never>, Record<never, never>>,

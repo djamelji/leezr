@@ -543,6 +543,27 @@ const typeOptions = computed(() => [
                     size="16"
                     :title="t('fields.profileIncompleteShort')"
                   />
+                  <!-- P3-A: clarify Members vs Collaborateurs -->
+                  <VChip
+                    v-if="member.is_employee"
+                    size="x-small"
+                    color="info"
+                    variant="tonal"
+                    label
+                    :to="`/company/workforce/employees/${member.employee_id}`"
+                    @click.stop
+                  >
+                    <VIcon icon="tabler-briefcase" size="12" start />{{ t('members.employeeBadge') }}
+                  </VChip>
+                  <VChip
+                    v-else
+                    size="x-small"
+                    color="secondary"
+                    variant="tonal"
+                    label
+                  >
+                    {{ t('members.accountOnlyBadge') }}
+                  </VChip>
                 </div>
               </td>
               <td>{{ member.user.email }}</td>
