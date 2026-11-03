@@ -24542,3 +24542,34 @@ Préférence **réponses explicitement autorisées** (A4 : ne pas charger le cha
 `WorkforceDocumentController.php` (index/show scrub) ; `JobRoleController.php` (index scrub) ; `EmployeeReadModel.php` (jobRole conditionnel) ; `PayrollCompensationConfidentialityTest.php`.
 
 ---
+
+## ADR-685 — PRODUCT-UX-3 P2-C : Organisation unifiée (lieux rapprochés, distinction établissement)
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-3 / P2-C. L'audit (ADR-673, chevauchement **H**) a constaté que les **lieux de travail** (WorkLocation) étaient gérés dans l'espace **Planning** (mal rangés) alors qu'ils relèvent de la structure de l'entreprise. L'espace Organisation ne proposait que Départements (= équipes, avec manager + hiérarchie `parent_id`) et Postes (JobRole).
+
+### Décision
+Rapprocher la gestion des lieux dans **Organisation** : nouvel onglet **Lieux** (`_OrganizationLocations.vue`) à côté de **Départements** (équipes/managers/hiérarchie) et **Postes**. CRUD complet **réutilisant** `planning.store` + les endpoints existants `/workforce/planning/locations` (règles métier **inchangées** ; gated module `workforce_planning` + `planning_view`/`planning_manage`). L'onglet Lieux de **Planning est retiré** (le sélecteur de lieu des shifts reste : `allLocations` est toujours chargé). Une **règle = une source de vérité** : les lieux se gèrent désormais depuis Organisation uniquement.
+
+### Distinctions préservées (exigences)
+- **Poste (JobRole) ≠ rôle RBAC** : les Postes (fonctions métier) restent distincts des rôles de permissions (`CompanyRole`). Aucun mélange.
+- **Lieu d'exécution (WorkLocation) ≠ établissement administratif** : une WorkLocation est un lieu d'exécution de shift (interne/site client/télétravail/mobile). Une **note honnête** le rappelle dans l'UI. L'entité **Établissement administratif (SIRET/multi-établissement) n'existe pas** — **chantier distinct non engagé** (pas de migration structurelle ; cadrage ci-dessous).
+- **Équipes** = Départements (manager + hiérarchie `parent_id` déjà en place) — pas de nouvelle entité Team.
+
+### Cadrage multi-établissement (cible, NON livré)
+Modèle cible proposé pour l'avenir : entité `Establishment` (SIRET propre, convention collective, paramètres DSN par établissement) rattachée à la Company ; une WorkLocation (lieu d'exécution) pourrait référencer un Establishment (rattachement administratif) sans les confondre ; l'affectation d'un collaborateur à un établissement pilotant la DSN. **À engager comme chantier dédié avec migration + tests spécifiques** (hors P2).
+
+### Preuves (recette + tests)
+98 tests (nav/settings/home/confidentialité/planning/locations/job-roles/departments) verts, 0 régression. Recette DEV : Organisation = **Départements | Postes | Lieux** ; onglet Lieux avec CRUD + note « lieu d'exécution ≠ établissement » ; Planning **sans** onglet Lieux ; responsive + dark.
+
+### Mesures
+Avant : gérer un lieu = ouvrir **Temps de travail → Planning → onglet Lieux** (lieu enfoui dans l'opérationnel planning, non trouvable par un admin cherchant la « structure »). Après : **Organisation → Lieux** (1 espace « structure » regroupant équipes/postes/lieux), aligné avec le modèle mental d'un administrateur. 0 ressaisie (mêmes entités/endpoints).
+
+### Fichiers
+`_OrganizationLocations.vue` (nouveau) ; `organization/[tab].vue` (onglet Lieux + gating) ; `planning/index.vue` (retrait onglet Lieux, sélecteur conservé) ; i18n fr/en (`organization.locations.*`, `organization.tabs.locations`) ; recette `tests/e2e/organization-p2c-dev.spec.js`.
+
+### Clôture P2
+P2-A (accueil actions) + P2-B (paramètres rationalisés) + P2-C (organisation unifiée) livrés et vérifiés séparément sur DEV. **Exigence #4** (confidentialité transversale) traitée en parallèle (ADR-684, 4 fuites fermées). P2 clôturé.
+
+---
