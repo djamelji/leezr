@@ -1,0 +1,28 @@
+<?php
+use App\Company\RBAC\CompanyPermission;
+use App\Company\RBAC\CompanyPermissionCatalog;
+use App\Company\RBAC\CompanyRole;
+use App\Core\Jobdomains\Jobdomain;
+use App\Core\Markets\Market;
+use App\Core\Models\Company; use App\Core\Models\Membership; use App\Core\Models\User;
+use App\Core\Modules\CompanyModuleActivationReason; use App\Core\Modules\CompanyModule; use App\Core\Modules\PlatformModule;
+use App\Core\Workforce\Employee;
+use Illuminate\Database\Eloquent\Model; use Illuminate\Support\Facades\Hash;
+Model::unguard();
+CompanyPermissionCatalog::sync();
+Company::where('slug','sec-recette')->delete();
+if(!PlatformModule::where('key','workforce')->exists()) PlatformModule::create(['key'=>'workforce','name'=>'W','is_enabled_globally'=>true]);
+if(!Jobdomain::where('key','logistique')->exists()) Jobdomain::create(['key'=>'logistique','label'=>'L','default_modules'=>['workforce']]);
+if(!Market::where('key','FR')->exists()) Market::create(['key'=>'FR','name'=>'France','currency'=>'EUR','locale'=>'fr-FR','timezone'=>'Europe/Paris','vat_rate_bps'=>2000,'dial_code'=>'+33','flag_code'=>'fr','flag_svg'=>'']);
+$c=Company::create(['name'=>'Sec Recette','slug'=>'sec-recette','jobdomain_key'=>'logistique','market_key'=>'FR']);
+CompanyModuleActivationReason::create(['company_id'=>$c->id,'module_key'=>'workforce','reason'=>CompanyModuleActivationReason::REASON_DIRECT]);
+CompanyModule::create(['company_id'=>$c->id,'module_key'=>'workforce','is_enabled_for_company'=>true]);
+$owner=User::updateOrCreate(['email'=>'sec-owner@test.test'],['name'=>'Owner','first_name'=>'Olivia','last_name'=>'Owner','password'=>Hash::make('password'),'password_set_at'=>now()]);
+Membership::updateOrCreate(['user_id'=>$owner->id,'company_id'=>$c->id],['role'=>'owner']);
+$role=CompanyRole::create(['company_id'=>$c->id,'key'=>'collab','name'=>'Collaborateur','is_system'=>false,'is_administrative'=>false]);
+$role->permissions()->sync(CompanyPermission::whereIn('key',['workforce.view'])->pluck('id')->toArray());
+$member=User::updateOrCreate(['email'=>'sec-member@test.test'],['name'=>'Mia','first_name'=>'Mia','last_name'=>'Member','password'=>Hash::make('password'),'password_set_at'=>now(),'last_login_at'=>now()]);
+Membership::updateOrCreate(['user_id'=>$member->id,'company_id'=>$c->id],['role'=>'user','company_role_id'=>$role->id]);
+$emp=Employee::withoutGlobalScopes()->create(['company_id'=>$c->id,'user_id'=>$member->id,'first_name'=>'Mia','last_name'=>'Member','employee_number'=>'MM','hire_date'=>'2024-01-01','status'=>Employee::STATUS_ACTIVE]);
+Model::reguard();
+echo "SECFIX OK company={$c->id} emp={$emp->id} owner=sec-owner@test.test member=sec-member@test.test pwd=password\n";

@@ -24633,3 +24633,45 @@ Avant : 2 accueils (widget générique + action Workforce), risque de statistiqu
 P3-A (personne unifiée) + P3-B (accueil unique) livrés et vérifiés séparément sur DEV. **PRODUCT-UX-3 clôturé** (P1 espaces métier = LOT A/B/C ; P2 = accueil actions/paramètres/organisation + confidentialité ; P3 = identité + accueil unique). ADR-673 → 687.
 
 ---
+
+## ADR-688 — PRODUCT-SECURITY-1 : cycle de vie des accès (suspension/révocation effectives)
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : lacune révélée par P3-A — la fin d'un contrat ne révoque aucun accès, et aucun workflow de suspension/révocation n'existait (seule `MembershipController::destroy` supprimait un membership, en laissant `employee.user_id` orphelin). Besoin : suspendre/rétablir/révoquer un accès de façon **réellement sécurisée** (blocage serveur), sans perdre les données RH ni affecter les autres comptes/Companies.
+
+### Architecture d'identité (rappel, inchangée)
+`Employee` ↔ `User` (pont `user_id`, nullable) ↔ `Membership` (user_id non-null, unique par company) ↔ `CompanyRole`. **Aucune fusion de table, pas de 2ᵉ système d'auth.** La suspension est portée par le **Membership** (accès à UNE company), pas par le User (global).
+
+### États & transitions d'accès
+`none` → `invited` → `active` → `connected` ; **`suspended`** (réversible) ; révoqué = membership retiré (→ `none`, ré-invitable). `Employee.status` (RH : active/on_leave/suspended/terminated) reste **distinct** de l'accès applicatif : fin de contrat ≠ suspension d'emploi ≠ suspension d'accès ≠ suppression de compte.
+
+### Mécanisme effectif (enforcement serveur) — LE point clé
+Colonnes `memberships.suspended_at/suspended_by/suspension_reason` (migration additive). **Gate unique dans `SetCompanyContext`** (middleware `company.context`, exécuté sur TOUTES les routes company avant tout `company.access`) : une membership suspendue → **403 `membership_suspended` sur CHAQUE endpoint company** (data, self-service, SSE au reconnect). **Effet au prochain requête** : l'auth est Sanctum **cookie SPA pur** (aucun Personal Access Token), la membership est re-query à chaque appel → les **sessions existantes sont coupées immédiatement**, les **futures connexions** aboutissent au login mais échouent sur le contexte company. **Défense en profondeur** : `hasCompanyPermission` renvoie false si suspendu. **Isolation tenant** : la suspension dans A n'affecte pas les memberships du même User dans B. Le **sélecteur de company** (`/my-companies`) masque la company suspendue.
+
+### Révocation vs suspension (intégrité RH)
+- **Suspend/Restore** : (dé)pose `suspended_at` — membership + données conservés, réversible.
+- **Revoke** : supprime le **membership** (accès company) + délie `employee.user_id`. **NE SUPPRIME PAS** Employee, User, contrats, documents signés, preuves, pointages, timesheets, congés, logs d'audit. Le User persiste (autres companies / audit) ; l'Employee reste **ré-invitable** (réembauche propre, sans retour automatique des privilèges — nouveau membership = nouveau rôle).
+
+### Sécurité des administrateurs
+Gardes serveur (dans `EmployeeAccessService`) : **jamais l'owner**, **jamais soi-même** (anti auto-lockout), **jamais le dernier administrateur actif** de la company. Endpoints `suspend/restore/revoke` gated **`members.manage`** (plus fort qu'`invite`). Owner jamais bloqué par le gate (sa membership ne peut pas être suspendue). Traçabilité complète via l'audit.
+
+### Réembauche & rattachements incohérents (mismatch)
+Réembauche : ré-invitation via `grant()` (idempotent, trouve le User par e-mail, recrée le membership, relie l'Employee) — pas de doublon User/Employee, privilèges non ré-hérités. `account_without_membership` (P3-A) : détecté et réparé par `grant()` ; l'anti-doublon de `grant` empêche de prendre possession du compte d'un autre collaborateur de la company.
+
+### Audit trail
+Nouvelles actions (registre fermé `AuditAction`) : `member.suspended`, `member.reactivated`, `member.access_revoked` — loguées via `AuditLogger::logCompany` avec acteur, sévérité et motif.
+
+### Preuves
+`MembershipSuspensionSecurityTest` — **9 tests** : suspendu → 403 sur tout endpoint + self-service ; rétablissement ; **isolation tenant** (A bloqué, B OK) ; owner non suspendable ; **auto-suspension refusée** ; admin non-owner suspendable si owner reste ; `members.manage` requis ; **révocation préserve Employee/User/données** + coupe A sans toucher B ; audit écrit. **182 tests** (sécurité + confidentialité + home + nav…) verts, 0 régression. 3 échecs ControllerSize préservés.
+
+### Recette (DEV santé + boucle live locale)
+DEV (SHA `ab3c0e9`, migration additive appliquée par `deploy_release.sh`) : `/my-companies` + `/nav` 200 (pas de crash). **Boucle live** (full-stack local, même SHA, fixture isolée — aucun user DEV partagé suspendu) : accès **200** → suspend → **403 `membership_suspended`** (immédiat, même session) → restore → **200**. UI fiche : section « Cycle de vie de l'accès » (Suspendre / Révoquer) + confirmation + motif tracé ; état `suspended` sur la carte.
+
+### Risques résiduels / limites
+Pas d'automatisation de la politique de départ (suspension/révocation à la date de fin de contrat) — action **manuelle** depuis la fiche (branchement sur `TerminateEmployeeUseCase` = chantier optionnel ultérieur, nécessite un paramètre company d'offboarding). Les droits de consultation post-départ (ex. salarié accédant à ses propres bulletins après révocation) ne sont pas offerts (le compte perd l'accès company) — à arbitrer séparément. La connexion SSE en cours n'est coupée qu'au prochain reconnect (≤5 min) ; tous les appels data sont bloqués immédiatement.
+
+### Fichiers
+migration `..._add_suspension_to_memberships` ; `Membership.php` (champs + isSuspended) ; `SetCompanyContext.php` (gate) ; `User.php` (défense hasCompanyPermission) ; `AuditAction.php` (3 actions) ; `EmployeeAccessService.php` (suspend/restore/revoke + gardes) ; `EmployeeController.php` + `routes/company.php` (3 endpoints) ; `UserCompaniesReadModel.php` (filtre sélecteur) ; `_EmployeeAccessDialog.vue` + `_EmployeeAccessCard.vue` + `employees.store.js` (UI) ; i18n fr/en ; `MembershipSuspensionSecurityTest.php` ; recette `tests/e2e/security-suspend-recette.spec.js`.
+
+---
