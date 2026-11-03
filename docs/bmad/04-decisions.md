@@ -24802,3 +24802,37 @@ DEV uniquement · aucune permission modifiée en base · aucun endpoint élargi 
 
 ### Fichiers clés
 `WorkforceModule.php` (bundles), `WorkforceSettingsController.php` (onglets gated), `dashboard.vue` (garde compliance), `Dashboard/Widgets/Compliance*.php` (manifestes), `organization/[tab].vue` + `_OrganizationPresetCard.vue` (boutons `v-can`), tests `WorkforceAccessProfilesE21Test` (nouveau) + `WorkforceSettingsHubTest` (maj) + spec captures.
+
+---
+
+## ADR-692 — WORKFORCE EXPERIENCE 2026 / E3-A : refonte ergonomique Collaborateurs & indépendance sectorielle
+
+**Date** : 2026-11-03
+**Statut** : Accepté (livré DEV — vérifié par `X-Build-Version`)
+**Contexte** : Début d'E3 (refonte visuelle). Règle architecturale NON négociable : **Workforce = famille de modules HORIZONTAUX réutilisables par plusieurs JobDomains** — jamais un module logistique ni une app RH. E3-A refond l'**annuaire** et la **fiche collaborateur** en composants **100 % génériques** (aucun `if jobdomain`), en conservant les moteurs fonctionnels existants.
+
+### Audit préalable (fondateur)
+- Les mécanismes d'adaptation multisecteur **existent déjà et sont data-driven** : `FieldDefinitionCatalog` + `FieldResolverService` (champs/labels/colonnes par market/jobdomain/module/rôle), presets `JobdomainRegistry`, `OrgProfile`/`OrganizationPreset`, `compatibleJobdomains`, `JobdomainDashboardDefault`. **Le module Workforce Employees est le seul encore 100 % hardcodé** sur cet axe (colonnes/labels statiques) — à câbler progressivement, PAS un nouveau moteur de config.
+- **Réalités** : un seul JobDomain déclaré (`logistique`), qui **n'active pas** `workforce` (addon activé séparément) ; `restaurant/hair_salon/...` annoncés « à venir », non déclarés ; la colonne `jobdomains.workforce_presets` existe mais est **inexploitée**.
+- **Aucun `if (jobdomain === 'logistics')`** dans Workforce (back ou front) : tout est clé de données. Rien à nettoyer. `EmployeeController` est générique (companyId + scope).
+
+### Décisions / livré
+1. **Annuaire refondu** (`employees/index.vue`, logique/store/API/URL-sync/bulk/import/export **inchangés**) : en-tête à **action primaire unique** (« Ajouter ») + **overflow** (export/import regroupés) + **compteur** total ; **recherche toujours visible** + **filtres avancés repliables** (compteur de filtres actifs, déployés si deep-link) ; états **skeleton** (1er chargement), **EmptyState** partagé (vide / vide-filtré distincts) et **ErrorState** avec réessai (plus seulement un toast) ; titre cohérent **« Collaborateurs »** ; couverture `data-test` étendue (search, filtres, lignes, add, export/import).
+2. **Fiche refondue** (`employees/[id].vue`) : en-tête à **action primaire** (« Modifier ») + **overflow** consolidant les actions RH dispersées (générer contrat, gérer les accès) ; **skeleton de structure** au lieu du spinner plein écran ; **ErrorState** avec réessai ; checklist d'intégration **dé-emphasée** (outlined au lieu d'un bloc plein `primary` dominant).
+3. **Correction de confidentialité (P0)** : le **salaire** était rendu **sans gating** dans la synthèse (overview) alors qu'il l'était dans l'onglet Contrat. Désormais gardé par `workforce.compensation_read` **et** rendu via `MoneyDisplay` (défense en profondeur, en plus du scrubber serveur déjà testé par `WorkforceSecurityWDTest`).
+4. **Adoption du design-system partagé existant** (`EmptyState`, `ErrorState`, `MoneyDisplay`) — jusque-là présents mais ignorés par ces écrans. Composants **génériques**, aucune logique sectorielle.
+5. **Indépendance sectorielle prouvée** : fixture JobDomain **`restauration`** (non-logistique, config valide, sans fausse prise en charge métier) + test de non-régression `WorkforceMultisectorIndependenceTest` (5 tests) prouvant : annuaire fonctionne **sans** le module Logistics ; **forme de réponse identique** entre JobDomains ; **navigation Workforce identique** ; **aucune fuite inter-tenant** ; **permissions indépendantes du secteur** (un « chef de salle » = mêmes clés RBAC qu'un « chef d'équipe »).
+
+### Preuves
+- **PHPUnit** : `WorkforceMultisectorIndependenceTest` (5/16) ; non-régression `WorkforceSecurityWDTest`/`WorkforceEmployeeListExportTest`/`WorkforceAccessProfilesE21Test` verts. Confidentialité salaire serveur inchangée.
+- **Playwright** : `workforce-e3a.spec.js` (annuaire : compteur, action primaire + overflow, filtres repliables, recherche serveur, drawer ; fiche : en-tête consolidé, overflow, salaire owner) ; captures AVANT/APRÈS `workforce-e3a-before|after.spec.js` (1920/1366/768/390 + dark).
+- **Artefact** de recette E3-A (avant/après + améliorations + fix confidentialité + indépendance multisecteur).
+
+### Garde-fous respectés
+Moteurs fonctionnels inchangés (store/API/read-models/engines) · DEV uniquement · pas de main/PROD/Billing · signature inchangée · pas de calcul légal · pas de contournement RBAC · pas de donnée réelle · SSH compromis non utilisé · **aucune logique sectorielle introduite** · pas d'offboarding (E4) ni de post-départ (E5) anticipés.
+
+### Reste à faire (E3-B → E3-E)
+E3-B Temps & planning · E3-C Congés & absences · E3-D Documents/Paie/Organisation · E3-E Portail salarié (séparation « Mon espace » ↔ « Temps »). Câblage progressif de `FieldResolverService`/presets jobdomain sur l'annuaire/fiche pour les **libellés/colonnes adaptés** (quand un 2ᵉ vertical réel sera déclaré) — sans moteur universel.
+
+### Fichiers clés
+`employees/index.vue`, `employees/[id].vue`, i18n fr/en/ar, `core/components/{EmptyState,ErrorState,MoneyDisplay}.vue` (adoptés), tests `WorkforceMultisectorIndependenceTest` + specs e2e `workforce-e3a*`.

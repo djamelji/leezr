@@ -338,5 +338,19 @@
     "editShift": "تعديل الوردية",
     "shiftImmutable": "الوردية المنشورة غير قابلة للتعديل (I9). عدّلها من التخطيط عبر سير العمل.",
     "shiftSaved": "تم تحديث الوردية"
+  },
+  "employees": {
+    "title": "الموظفون",
+    "listLoadError": "تعذّر تحميل الموظفين.",
+    "filters": {
+      "toggle": "عوامل التصفية"
+    },
+    "emptyFiltered": {
+      "title": "لا نتائج",
+      "description": "لا يوجد موظف مطابق لعوامل التصفية."
+    }
+  },
+  "employeeFile": {
+    "manageAccess": "إدارة الوصول"
   }
 }

@@ -1867,7 +1867,8 @@
     "shiftCreated": "Créneau programmé",
     "start": "Début",
     "end": "Fin",
-    "publishNow": "Publier immédiatement (visible par le salarié)"
+    "publishNow": "Publier immédiatement (visible par le salarié)",
+    "manageAccess": "Gérer les accès"
   },
   "companyBilling": {
     "title": "Facturation",
@@ -6817,7 +6818,7 @@
     "shiftPublished": "Publié"
   },
   "employees": {
-    "title": "Employés",
+    "title": "Collaborateurs",
     "subtitle": "Gérez vos employés, leurs contrats et rémunérations",
     "addEmployee": "Ajouter un employé",
     "created": "Employé créé avec succès",
@@ -6929,7 +6930,8 @@
       "jobRole": "Poste",
       "contractType": "Type de contrat",
       "manager": "Responsable",
-      "reset": "Réinitialiser"
+      "reset": "Réinitialiser",
+      "toggle": "Filtres"
     },
     "export": {
       "button": "Exporter"
@@ -6997,6 +6999,11 @@
         "set_job_role": "Nouveau poste",
         "set_manager": "Nouveau responsable"
       }
+    },
+    "listLoadError": "Impossible de charger les collaborateurs.",
+    "emptyFiltered": {
+      "title": "Aucun résultat",
+      "description": "Aucun collaborateur ne correspond à vos filtres."
     }
   },
   "organization": {

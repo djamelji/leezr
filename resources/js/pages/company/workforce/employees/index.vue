@@ -1,9 +1,15 @@
 <script setup>
 // W-G2 (ADR-642) — liste collaborateurs : filtres avancés serveur, URL sync, multi-sélection +
 // actions groupées, import guidé et export sécurisé. Gérer 100 collaborateurs comme 5.
+// E3-A (ADR-692) — refonte ergonomique : en-tête à action primaire unique (+ overflow), recherche
+// toujours visible + filtres avancés repliables (compteur), états skeleton/empty/error partagés.
+// 100 % générique : aucune logique sectorielle — réutilisable par tout JobDomain activant workforce.
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import StatusChip from '@/core/components/StatusChip.vue'
+import EmptyState from '@/core/components/EmptyState.vue'
+import ErrorState from '@/core/components/ErrorState.vue'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import EmployeeImportDrawer from './_EmployeeImportDrawer.vue'
 import EmployeeBulkActionDialog from './_EmployeeBulkActionDialog.vue'
@@ -15,6 +21,7 @@ const router = useRouter()
 const route = useRoute()
 const store = useEmployeesStore()
 const { toast } = useAppToast()
+const { can } = useCan()
 
 // ── Filtres (initialisés depuis l'URL) ───────────────────────
 const search = ref(route.query.q || '')
@@ -25,8 +32,12 @@ const managerFilter = ref(route.query.manager ? Number(route.query.manager) : nu
 const contractTypeFilter = ref(route.query.contract || null)
 const options = ref({ page: 1, itemsPerPage: 15, sortBy: [{ key: 'last_name', order: 'asc' }] })
 const loading = ref(false)
+const error = ref(false)
 
 const selected = ref([]) // ids des lignes sélectionnées (page visible)
+
+// E3-A : filtres avancés repliables ; déployés d'emblée s'ils sont déjà actifs (deep-link).
+const showFilters = ref(false)
 
 const statusOptions = [
   { title: t('workforce.statuses.employee.active'), value: 'active' },
@@ -38,6 +49,11 @@ const statusOptions = [
 const contractTypeOptions = ['cdi', 'cdd', 'stage', 'alternance', 'freelance'].map(v => ({ title: t(`employees.contractTypes.${v}`), value: v }))
 const departmentOptions = computed(() => store.departments.map(d => ({ title: d.name, value: d.id })))
 const jobRoleOptions = computed(() => store.jobRoles.map(r => ({ title: r.title, value: r.id })))
+
+// Filtres AVANCÉS (hors recherche), pour le compteur et le repli.
+const advancedFilterCount = computed(() => [
+  statusFilter.value, departmentFilter.value, jobRoleFilter.value, managerFilter.value, contractTypeFilter.value,
+].filter(v => v !== null && v !== undefined).length)
 
 const activeFilters = computed(() => ({
   search: search.value || undefined,
@@ -60,6 +76,10 @@ const headers = computed(() => [
   { title: '', key: 'actions', sortable: false, width: 60 },
 ])
 
+// Skeleton uniquement au PREMIER chargement (évite le clignotement sur filtrage).
+const firstLoad = ref(true)
+const showSkeleton = computed(() => loading.value && firstLoad.value)
+
 // ── Data fetching + URL sync ─────────────────────────────────
 const syncUrl = () => {
   router.replace({ query: {
@@ -74,6 +94,7 @@ const syncUrl = () => {
 
 const fetchData = async () => {
   loading.value = true
+  error.value = false
   try {
     const sort = options.value.sortBy?.[0]
 
@@ -84,8 +105,11 @@ const fetchData = async () => {
       sortBy: sort?.key || 'last_name',
       sortDir: sort?.order || 'asc',
     })
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
+    firstLoad.value = false
   }
 }
 
@@ -111,6 +135,7 @@ watch(options, () => { selected.value = []; fetchData() }, { deep: true })
 onMounted(() => {
   store.fetchDepartments()
   store.fetchJobRoles()
+  if (advancedFilterCount.value > 0) showFilters.value = true
   fetchData()
 })
 
@@ -177,35 +202,38 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
 
 <template>
   <div>
-    <!-- Header -->
+    <!-- Header : titre + compteur + action primaire unique (overflow pour export/import) -->
     <div class="d-flex align-center justify-space-between mb-6 flex-wrap gap-3">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('employees.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('employees.subtitle') }}
-        </p>
+      <div class="d-flex align-center gap-3">
+        <VAvatar
+          size="42"
+          variant="tonal"
+          color="primary"
+          rounded
+        >
+          <VIcon
+            icon="tabler-users-group"
+            size="22"
+          />
+        </VAvatar>
+        <div>
+          <h4 class="text-h4 font-weight-bold mb-0 d-flex align-center gap-2">
+            {{ $t('employees.title') }}
+            <VChip
+              v-if="!firstLoad && !error"
+              size="small"
+              color="primary"
+              variant="tonal"
+              data-test="emp-count"
+            >
+              {{ store.totalEmployees }}
+            </VChip>
+          </h4>
+          <span class="text-body-2 text-medium-emphasis">{{ $t('employees.subtitle') }}</span>
+        </div>
       </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <VBtn
-          v-can="'workforce.export'"
-          variant="tonal"
-          color="secondary"
-          prepend-icon="tabler-file-export"
-          :loading="exporting"
-          @click="exportCsv"
-        >
-          {{ $t('employees.export.button') }}
-        </VBtn>
-        <VBtn
-          v-can="'workforce.import'"
-          variant="tonal"
-          prepend-icon="tabler-file-import"
-          @click="importOpen = true"
-        >
-          {{ $t('employees.import.button') }}
-        </VBtn>
+
+      <div class="d-flex align-center gap-2 flex-wrap">
         <VBtn
           v-can="'workforce.manage'"
           color="primary"
@@ -215,82 +243,134 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         >
           {{ $t('employees.addEmployee') }}
         </VBtn>
+
+        <!-- Actions secondaires regroupées (évite 3 boutons concurrents) -->
+        <VBtn
+          v-if="can('workforce.export') || can('workforce.import')"
+          icon
+          variant="tonal"
+          color="secondary"
+          data-test="emp-more"
+        >
+          <VIcon icon="tabler-dots-vertical" />
+          <VMenu activator="parent" location="bottom end">
+            <VList density="compact" min-width="220">
+              <VListItem
+                v-can="'workforce.export'"
+                prepend-icon="tabler-file-export"
+                :disabled="exporting"
+                data-test="emp-export"
+                @click="exportCsv"
+              >
+                <VListItemTitle>{{ $t('employees.export.button') }}</VListItemTitle>
+              </VListItem>
+              <VListItem
+                v-can="'workforce.import'"
+                prepend-icon="tabler-file-import"
+                data-test="emp-import"
+                @click="importOpen = true"
+              >
+                <VListItemTitle>{{ $t('employees.import.button') }}</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
+        </VBtn>
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Toolbar : recherche toujours visible + bascule filtres avancés -->
     <VCard class="mb-6">
-      <VCardText>
-        <VRow>
-          <VCol cols="12" md="4">
-            <AppTextField
-              v-model="search"
-              :placeholder="$t('employees.searchPlaceholder')"
-              prepend-inner-icon="tabler-search"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol cols="12" sm="6" md="2">
-            <AppSelect
-              v-model="statusFilter"
-              :items="statusOptions"
-              :placeholder="$t('employees.filterStatus')"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol cols="12" sm="6" md="2">
-            <AppSelect
-              v-model="departmentFilter"
-              :items="departmentOptions"
-              :placeholder="$t('employees.filters.department')"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol cols="12" sm="6" md="2">
-            <AppSelect
-              v-model="jobRoleFilter"
-              :items="jobRoleOptions"
-              :placeholder="$t('employees.filters.jobRole')"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol cols="12" sm="6" md="2">
-            <AppSelect
-              v-model="contractTypeFilter"
-              :items="contractTypeOptions"
-              :placeholder="$t('employees.filters.contractType')"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol cols="12" md="4">
-            <EmployeePicker
-              v-model="managerFilter"
-              :label="$t('employees.filters.manager')"
-              clearable
-              density="compact"
-            />
-          </VCol>
-          <VCol
-            v-if="hasFilters"
-            cols="12"
-            md="2"
-            class="d-flex align-center"
+      <VCardText class="pb-2">
+        <div class="d-flex align-center gap-3 flex-wrap">
+          <AppTextField
+            v-model="search"
+            :placeholder="$t('employees.searchPlaceholder')"
+            prepend-inner-icon="tabler-search"
+            clearable
+            density="compact"
+            data-test="emp-search"
+            style="min-inline-size: 260px; flex: 1 1 260px;"
+          />
+          <VBtn
+            variant="tonal"
+            :color="showFilters || advancedFilterCount ? 'primary' : 'secondary'"
+            prepend-icon="tabler-adjustments-horizontal"
+            data-test="emp-filters-toggle"
+            @click="showFilters = !showFilters"
           >
-            <VBtn
-              variant="text"
-              size="small"
-              prepend-icon="tabler-filter-off"
-              @click="resetFilters"
+            {{ $t('employees.filters.toggle') }}
+            <VChip
+              v-if="advancedFilterCount"
+              size="x-small"
+              color="primary"
+              class="ms-2"
             >
-              {{ $t('employees.filters.reset') }}
-            </VBtn>
-          </VCol>
-        </VRow>
+              {{ advancedFilterCount }}
+            </VChip>
+          </VBtn>
+          <VBtn
+            v-if="hasFilters"
+            variant="text"
+            size="small"
+            prepend-icon="tabler-filter-off"
+            data-test="emp-filters-reset"
+            @click="resetFilters"
+          >
+            {{ $t('employees.filters.reset') }}
+          </VBtn>
+        </div>
+
+        <VExpandTransition>
+          <VRow
+            v-if="showFilters"
+            class="mt-1"
+          >
+            <VCol cols="12" sm="6" md="3">
+              <AppSelect
+                v-model="statusFilter"
+                :items="statusOptions"
+                :label="$t('employees.filterStatus')"
+                clearable
+                density="compact"
+              />
+            </VCol>
+            <VCol cols="12" sm="6" md="3">
+              <AppSelect
+                v-model="departmentFilter"
+                :items="departmentOptions"
+                :label="$t('employees.filters.department')"
+                clearable
+                density="compact"
+              />
+            </VCol>
+            <VCol cols="12" sm="6" md="3">
+              <AppSelect
+                v-model="jobRoleFilter"
+                :items="jobRoleOptions"
+                :label="$t('employees.filters.jobRole')"
+                clearable
+                density="compact"
+              />
+            </VCol>
+            <VCol cols="12" sm="6" md="3">
+              <AppSelect
+                v-model="contractTypeFilter"
+                :items="contractTypeOptions"
+                :label="$t('employees.filters.contractType')"
+                clearable
+                density="compact"
+              />
+            </VCol>
+            <VCol cols="12" md="6">
+              <EmployeePicker
+                v-model="managerFilter"
+                :label="$t('employees.filters.manager')"
+                clearable
+                density="compact"
+              />
+            </VCol>
+          </VRow>
+        </VExpandTransition>
       </VCardText>
 
       <!-- Barre d'actions groupées (apparaît à la sélection) -->
@@ -338,8 +418,23 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         </div>
       </VExpandTransition>
 
+      <VDivider />
+
+      <!-- Skeleton (1er chargement) -->
+      <VCardText v-if="showSkeleton">
+        <VSkeletonLoader type="table-row@6" />
+      </VCardText>
+
+      <!-- Erreur de chargement : état explicite + réessayer (pas seulement un toast) -->
+      <ErrorState
+        v-else-if="error"
+        :message="$t('employees.listLoadError')"
+        @retry="fetchData"
+      />
+
       <!-- Table -->
       <VDataTableServer
+        v-else
         v-model="selected"
         v-model:options="options"
         show-select
@@ -352,7 +447,10 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         @click:row="(_, { item }) => goToEmployee(item.id)"
       >
         <template #item.last_name="{ item }">
-          <div class="d-flex align-center gap-3 py-2">
+          <div
+            class="d-flex align-center gap-3 py-2"
+            :data-test="`emp-row-${item.id}`"
+          >
             <VAvatar color="primary" variant="tonal" size="38">
               <span class="text-sm font-weight-medium">{{ (item.first_name?.[0] || '') + (item.last_name?.[0] || '') }}</span>
             </VAvatar>
@@ -388,23 +486,28 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         </template>
 
         <template #no-data>
-          <div class="text-center pa-8">
-            <VIcon icon="tabler-users-group" size="48" color="secondary" class="mb-4" />
-            <h6 class="text-h6 mb-2">
-              {{ $t('employees.emptyState.title') }}
-            </h6>
-            <p class="text-body-1 text-medium-emphasis mb-4">
-              {{ $t('employees.emptyState.description') }}
-            </p>
+          <EmptyState
+            :icon="hasFilters ? 'tabler-search-off' : 'tabler-users-group'"
+            :title="hasFilters ? $t('employees.emptyFiltered.title') : $t('employees.emptyState.title')"
+            :description="hasFilters ? $t('employees.emptyFiltered.description') : $t('employees.emptyState.description')"
+          >
             <VBtn
-              v-can="'workforce.manage'"
+              v-if="hasFilters"
+              variant="tonal"
+              prepend-icon="tabler-filter-off"
+              @click="resetFilters"
+            >
+              {{ $t('employees.filters.reset') }}
+            </VBtn>
+            <VBtn
+              v-else-if="can('workforce.manage')"
               color="primary"
               prepend-icon="tabler-user-plus"
               @click="isDrawerOpen = true"
             >
               {{ $t('employees.emptyState.action') }}
             </VBtn>
-          </div>
+          </EmptyState>
         </template>
       </VDataTableServer>
     </VCard>

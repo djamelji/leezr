@@ -3,6 +3,8 @@
 // modules actifs et les permissions. Agrège via /workforce/employees/{id}/file (read-model composite) ;
 // chaque section détaillée se charge à la demande depuis les endpoints existants (scope W-D).
 import StatusChip from '@/core/components/StatusChip.vue'
+import MoneyDisplay from '@/core/components/MoneyDisplay.vue'
+import ErrorState from '@/core/components/ErrorState.vue'
 import EmployeeProfile from './_EmployeeProfile.vue'
 import EmployeeContract from './_EmployeeContract.vue'
 import EmployeeLeaveSection from './_EmployeeLeaveSection.vue'
@@ -18,7 +20,6 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import { $api } from '@/utils/api'
 import { formatDate, formatDateTime } from '@/utils/datetime'
-import { formatMoney } from '@/utils/money'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 
@@ -30,7 +31,11 @@ const { can } = useCan()
 const { toast } = useAppToast()
 
 const loading = ref(true)
+const loadError = ref(false)
 const file = ref(null)
+// E3-A : la rémunération n'est JAMAIS rendue sans la capacité de lecture (défense en profondeur,
+// en plus du scrubber serveur). Évite toute fuite de salaire dans la synthèse.
+const canReadComp = computed(() => can('workforce.compensation_read'))
 const currentTab = ref('overview')
 const contractDialogOpen = ref(false) // W-CONTRACT-1
 const accessDialogOpen = ref(false) // W-HR-UX-3 — accès collaborateur
@@ -45,6 +50,7 @@ const empId = computed(() => route.params.id)
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const [, f] = await Promise.all([
       store.fetchEmployee(empId.value),
@@ -52,7 +58,7 @@ const load = async () => {
     ])
     file.value = f
   }
-  catch { toast(t('employees.loadError'), 'error') }
+  catch { loadError.value = true }
   finally { loading.value = false }
 }
 
@@ -95,7 +101,6 @@ const onboardingSteps = computed(() => {
 })
 const onboardingDone = computed(() => onboardingSteps.value.filter(s => s.done).length)
 const onboardingComplete = computed(() => onboardingDone.value === onboardingSteps.value.length)
-const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.currency || 'EUR' })
 </script>
 
 <template>
@@ -109,13 +114,24 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
       {{ $t('employees.backToList') }}
     </VBtn>
 
-    <VCard
-      v-if="loading"
-      class="pa-8 text-center"
-    >
-      <VProgressCircular
-        indeterminate
-        color="primary"
+    <!-- E3-A : skeleton de structure (en-tête + corps) au lieu d'un spinner plein écran -->
+    <template v-if="loading">
+      <VCard class="mb-6">
+        <VCardText>
+          <VSkeletonLoader type="list-item-avatar-two-line" />
+        </VCardText>
+      </VCard>
+      <VCard>
+        <VCardText>
+          <VSkeletonLoader type="article, table-row@3" />
+        </VCardText>
+      </VCard>
+    </template>
+
+    <VCard v-else-if="loadError">
+      <ErrorState
+        :message="$t('employees.loadError')"
+        @retry="load"
       />
     </VCard>
 
@@ -148,29 +164,44 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                 <span v-if="ident.hire_date">· {{ t('employeeFile.since') }} {{ formatDate(ident.hire_date) }}</span>
               </div>
             </div>
-            <!-- Actions rapides (conditionnées par permissions / modules) -->
+            <!-- E3-A : action primaire unique (« Modifier ») + overflow regroupant les actions RH
+                 secondaires (générer contrat, gérer les accès) — évite la dispersion des actions. -->
             <div class="d-flex gap-2 flex-wrap">
               <VBtn
                 v-can="'workforce.manage'"
-                variant="outlined"
+                color="primary"
                 prepend-icon="tabler-edit"
+                data-test="emp-edit"
                 @click="editProfile"
               >
                 {{ $t('common.edit') }}
               </VBtn>
-              <!-- W-HR-UX-6 (P3) : boutons "Congés"/"Pointages" retirés de l'en-tête — ils doublonnaient
-                   les onglets de la fiche ET renvoyaient vers les pages GLOBALES (perte du contexte du
-                   collaborateur). L'accès par salarié se fait via les onglets Congés/Pointages. -->
-              <!-- W-CONTRACT-1 : générer un contrat (si module actif + permission) -->
               <VBtn
-                v-can="'workforce_contract.generate'"
-                color="primary"
+                icon
                 variant="tonal"
-                prepend-icon="tabler-file-text"
-                data-test="generate-contract"
-                @click="contractDialogOpen = true"
+                color="secondary"
+                data-test="emp-actions"
               >
-                {{ t('generateContract.action') }}
+                <VIcon icon="tabler-dots-vertical" />
+                <VMenu activator="parent" location="bottom end">
+                  <VList density="compact" min-width="230">
+                    <VListItem
+                      v-can="'workforce_contract.generate'"
+                      prepend-icon="tabler-file-text"
+                      data-test="generate-contract"
+                      @click="contractDialogOpen = true"
+                    >
+                      <VListItemTitle>{{ t('generateContract.action') }}</VListItemTitle>
+                    </VListItem>
+                    <VListItem
+                      prepend-icon="tabler-key"
+                      data-test="emp-manage-access"
+                      @click="accessDialogOpen = true"
+                    >
+                      <VListItemTitle>{{ t('employeeFile.manageAccess') }}</VListItemTitle>
+                    </VListItem>
+                  </VList>
+                </VMenu>
               </VBtn>
             </div>
           </div>
@@ -212,12 +243,12 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                 {{ t('employeeFile.alerts.' + a.key, { count: a.count || 0 }) }}
               </VAlert>
 
-              <!-- W-HR-UX-1 — Checklist d'intégration : la RH voit la prochaine étape sans deviner -->
+              <!-- W-HR-UX-1 — Checklist d'intégration : la RH voit la prochaine étape sans deviner.
+                   E3-A : variante sobre (outlined) pour ne pas écraser la synthèse. -->
               <VCard
                 v-if="!onboardingComplete"
-                variant="tonal"
-                color="primary"
-                class="mb-4"
+                variant="outlined"
+                class="mb-4 border-s-lg border-primary"
               >
                 <VCardText>
                   <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-3">
@@ -280,8 +311,18 @@ const fmtMoney = c => formatMoney(c, { currency: contract.value?.compensation?.c
                         <div v-if="contract.convention">
                           {{ contract.convention }}
                         </div>
-                        <div v-if="contract.compensation">
-                          {{ t('employeeFile.salary') }}: <strong>{{ fmtMoney(contract.compensation.base_salary_cents) }}</strong> / {{ contract.compensation.pay_frequency }}
+                        <!-- E3-A : salaire affiché UNIQUEMENT avec workforce.compensation_read (fix fuite overview) -->
+                        <div
+                          v-if="contract.compensation && canReadComp"
+                          class="d-flex align-center gap-1"
+                        >
+                          {{ t('employeeFile.salary') }}:
+                          <MoneyDisplay
+                            :amount="contract.compensation.base_salary_cents"
+                            :currency="contract.compensation.currency || 'EUR'"
+                            color="high-emphasis"
+                          />
+                          <span class="text-medium-emphasis">/ {{ contract.compensation.pay_frequency }}</span>
                         </div>
                       </template>
                       <div

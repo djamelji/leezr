@@ -1868,7 +1868,8 @@
     "shiftCreated": "Shift scheduled",
     "start": "Start",
     "end": "End",
-    "publishNow": "Publish now (visible to the employee)"
+    "publishNow": "Publish now (visible to the employee)",
+    "manageAccess": "Manage access"
   },
   "companyBilling": {
     "title": "Billing",
@@ -6929,7 +6930,8 @@
       "jobRole": "Job role",
       "contractType": "Contract type",
       "manager": "Manager",
-      "reset": "Reset"
+      "reset": "Reset",
+      "toggle": "Filters"
     },
     "export": {
       "button": "Export"
@@ -6997,6 +6999,11 @@
         "set_job_role": "New job role",
         "set_manager": "New manager"
       }
+    },
+    "listLoadError": "Could not load employees.",
+    "emptyFiltered": {
+      "title": "No results",
+      "description": "No employee matches your filters."
     }
   },
   "organization": {
