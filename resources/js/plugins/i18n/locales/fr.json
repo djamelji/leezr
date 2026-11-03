@@ -104,7 +104,8 @@
       "hr_absences": "Absences",
       "hr_payroll": "Paie & déclarations",
       "hr_documents": "Documents RH",
-      "hr_settings": "Paramètres RH"
+      "hr_settings": "Paramètres RH",
+      "workforce": "Ressources humaines"
     },
     "platform": {
       "dashboard": "Tableau de bord",
@@ -179,16 +180,16 @@
       "documents": "Documents",
       "workflows": "Workflows",
       "workforce-me": "Mon espace",
-      "workforce-employees": "Employés",
+      "workforce-employees": "Collaborateurs",
       "workforce-time": "Temps de travail",
-      "workforce-leave": "Congés",
+      "workforce-leave": "Congés & absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Paie",
+      "workforce-payroll": "Paie & déclarations",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Paramètres RH",
+      "workforce-settings": "Paramètres",
       "workforce-contract-templates": "Contrats de travail",
       "workforce-signature": "Signatures",
       "workforce-home": "Accueil"

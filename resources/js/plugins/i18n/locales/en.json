@@ -104,7 +104,8 @@
       "hr_absences": "Absences",
       "hr_payroll": "Payroll & filings",
       "hr_documents": "HR documents",
-      "hr_settings": "HR settings"
+      "hr_settings": "HR settings",
+      "workforce": "Workforce"
     },
     "platform": {
       "dashboard": "Dashboard",
@@ -181,14 +182,14 @@
       "workforce-me": "My Space",
       "workforce-employees": "Employees",
       "workforce-time": "Working time",
-      "workforce-leave": "Leave",
+      "workforce-leave": "Leave & absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Payroll",
+      "workforce-payroll": "Payroll & filings",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "HR Settings",
+      "workforce-settings": "Settings",
       "workforce-contract-templates": "Employment contracts",
       "workforce-signature": "Signatures",
       "workforce-home": "Home"

@@ -21,7 +21,7 @@ class WorkforcePayrollModule implements ModuleDefinition
                     // PRODUCT-UX-2 (LOT C3) — single "Paie & déclarations" entry : la DSN
                     // vit dans l'onglet « Déclarations » de l'espace paie (période-centré).
                     // La route workforce-dsn reste active (deep-link + onglet embarqué).
-                    ['key' => 'workforce-payroll', 'title' => 'Payroll', 'to' => ['name' => 'company-workforce-payroll'], 'icon' => 'tabler-receipt', 'permission' => 'workforce.payroll_prepare', 'surface' => 'hr', 'group' => 'hr_payroll', 'sort' => 50],
+                    ['key' => 'workforce-payroll', 'title' => 'Payroll', 'to' => ['name' => 'company-workforce-payroll'], 'icon' => 'tabler-receipt', 'anyPermission' => ['workforce.payroll_prepare', 'workforce.payroll_validate', 'workforce.payroll_export'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 50],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_payroll',

@@ -37,15 +37,13 @@ class NavGroupRegistry
             'contact' => 20,
             'dispatch' => 30,
             'driving' => 40,
-            // W-HR-UX-7 : RH regroupée par TÂCHE (sections visibles, sans sous-menus repliables →
-            // zéro clic supplémentaire). Remplace l'unique bloc « Ressources humaines » de 11 items.
-            'hr_team' => 50,       // Collaborateurs
-            'hr_time' => 51,       // Temps & planning
-            'hr_absences' => 52,   // Absences
-            'hr_payroll' => 53,    // Paie & déclarations
-            'hr_documents' => 54,  // Documents RH
-            'hr_settings' => 55,   // Paramètres RH
-            'hr' => 56,            // fallback historique (surface:'hr' sans group explicite) — élagué si vide
+            // WORKFORCE EXPERIENCE 2026 / E2 (ADR-690) : navigation par ACTIVITÉ — un seul espace
+            // « Ressources humaines » (entrées : Collaborateurs, Temps, Congés, Documents, Paie,
+            // Organisation, Paramètres), gating fin par capacité (anyPermission). Remplace les 6
+            // groupes mono-item W-HR-UX-7. Les groupes hr_* restent définis (compat/élagués si vides).
+            'workforce' => 50,
+            'hr_team' => 51, 'hr_time' => 52, 'hr_absences' => 53, 'hr_payroll' => 54,
+            'hr_documents' => 55, 'hr_settings' => 56, 'hr' => 57,
             'account' => 60,
             'operations' => 70,
             'company' => 900, // default bucket for company items without an explicit group

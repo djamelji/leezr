@@ -10,7 +10,7 @@ import TimeCockpit from './_TimeCockpit.vue'
 import PlanningPage from '@/pages/company/workforce/planning/index.vue'
 import { useCan } from '@/composables/useCan'
 
-definePage({ meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
+definePage({ meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view', 'workforce.time_manage', 'workforce.timesheet_approve', 'workforce.planning_manage'] } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
@@ -20,6 +20,10 @@ const store = useTimesheetsStore()
 const employeesStore = useEmployeesStore()
 const { can } = useCan()
 const canPlanning = computed(() => can('workforce.planning_view'))
+// E2 (ADR-690): tab-level gating so the space works for any of its capabilities
+// (e.g. a planning-only manager lands on Planning, not a 403 cockpit).
+const canTimesheet = computed(() => can('workforce.timesheet_view'))
+const tabAccess = computed(() => ({ cockpit: canTimesheet.value, planning: canPlanning.value, entries: canTimesheet.value, timesheets: canTimesheet.value }))
 
 // PRODUCT-UX-2 / LOT C2 — context preservation : when reached from the payroll
 // preparation panel (?return=…), offer a one-click way back to the SAME period.
@@ -28,7 +32,8 @@ const goBackToPayroll = () => { if (returnTo.value) router.push(returnTo.value) 
 
 // ── Tab navigation (deep-link ?tab=) ─────────────────────────
 const TABS = ['cockpit', 'planning', 'entries', 'timesheets']
-const activeTab = ref(TABS.includes(route.query.tab) ? route.query.tab : 'cockpit')
+const firstAccessibleTab = () => TABS.find(tb => tabAccess.value[tb]) || 'cockpit'
+const activeTab = ref(TABS.includes(route.query.tab) && tabAccess.value[route.query.tab] ? route.query.tab : firstAccessibleTab())
 watch(activeTab, v => {
   const q = { ...route.query }
   if (v === 'cockpit') delete q.tab
@@ -468,7 +473,7 @@ onMounted(() => {
       v-model="activeTab"
       class="v-tabs-pill mb-6"
     >
-      <VTab value="cockpit" data-test="tw-tab-today">
+      <VTab v-if="canTimesheet" value="cockpit" data-test="tw-tab-today">
         <VIcon icon="tabler-dashboard" class="me-2" />
         {{ $t('timeWork.tabs.today') }}
       </VTab>
@@ -476,11 +481,11 @@ onMounted(() => {
         <VIcon icon="tabler-calendar" class="me-2" />
         {{ $t('timeWork.tabs.planning') }}
       </VTab>
-      <VTab value="entries" data-test="tw-tab-entries">
+      <VTab v-if="canTimesheet" value="entries" data-test="tw-tab-entries">
         <VIcon icon="tabler-clock-record" class="me-2" />
         {{ $t('timeWork.tabs.presence') }}
       </VTab>
-      <VTab value="timesheets" data-test="tw-tab-timesheets">
+      <VTab v-if="canTimesheet" value="timesheets" data-test="tw-tab-timesheets">
         <VIcon icon="tabler-file-analytics" class="me-2" />
         {{ $t('timeTracking.tabs.timesheets') }}
       </VTab>

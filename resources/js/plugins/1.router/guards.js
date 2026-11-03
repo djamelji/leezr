@@ -140,6 +140,12 @@ export const setupGuards = router => {
     if (to.meta.permission && !auth.hasPermission(to.meta.permission)) {
       return { name: 'company403' }
     }
+    // E2 (ADR-690): anyPermission — accessible if the user holds AT LEAST ONE key.
+    // Lets an activity space open for any of its capabilities (e.g. Temps de travail
+    // for planning_view OR timesheet_view). Tabs inside self-gate per fine permission.
+    if (Array.isArray(to.meta.anyPermission) && !to.meta.anyPermission.some(p => auth.hasPermission(p))) {
+      return { name: 'company403' }
+    }
   })
 
   // ─── Overlay cleanup (ADR-075) ─────────────────────────

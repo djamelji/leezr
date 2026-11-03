@@ -8,7 +8,7 @@ import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import LeaveCalendar from './_LeaveCalendar.vue'
 import LeaveRequestDetailDialog from './_LeaveRequestDetailDialog.vue'
 
-definePage({ meta: { module: 'workforce_leave', permission: 'workforce.leave_request' } })
+definePage({ meta: { module: 'workforce_leave', anyPermission: ['workforce.leave_request', 'workforce.leave_approve', 'workforce.leave_view_all', 'workforce.leave_manage'] } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
