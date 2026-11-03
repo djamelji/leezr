@@ -127,6 +127,15 @@ class NavBuilder
         if ($permissions !== null) {
             $permissionSet = array_flip($permissions);
             $items = array_filter($items, function (NavItem $item) use ($permissionSet) {
+                // `permission` is a hard AND requirement (the user MUST hold it).
+                // ADR-690: when BOTH `permission` and `anyPermission` are set they compose —
+                // `permission` (AND) must pass and at least one `anyPermission` key (OR) must pass.
+                // This expresses the real usability of a space, e.g. Leave management needs
+                // leave_request (route gate) AND one of leave_view_all/leave_approve (unfiltered list).
+                if ($item->permission !== null && ! isset($permissionSet[$item->permission])) {
+                    return false;
+                }
+
                 // ADR-601: `anyPermission` — visible if the user holds AT LEAST ONE of the keys
                 // (used by multi-capability hubs like Operations so holders of view_ai OR
                 // view_usage_monitoring can reach the Usage & Consumption page).
@@ -140,11 +149,8 @@ class NavBuilder
                     return false;
                 }
 
-                if ($item->permission === null) {
-                    return true;
-                }
-
-                return isset($permissionSet[$item->permission]);
+                // Only a (satisfied) `permission` or no requirement at all.
+                return true;
             });
         }
 

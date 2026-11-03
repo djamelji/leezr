@@ -6,7 +6,7 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import PayrollDisclaimer from './_PayrollDisclaimer.vue'
 import DsnPage from '../dsn/index.vue'
 
-definePage({ meta: { module: 'workforce_payroll', anyPermission: ['workforce.payroll_prepare', 'workforce.payroll_validate', 'workforce.payroll_export'] } })
+definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()

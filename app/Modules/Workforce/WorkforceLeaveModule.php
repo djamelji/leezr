@@ -18,7 +18,11 @@ class WorkforceLeaveModule implements ModuleDefinition
             sortOrder: 220,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workforce-leave', 'title' => 'Leave', 'to' => ['name' => 'company-workforce-leave'], 'icon' => 'tabler-beach', 'anyPermission' => ['workforce.leave_request', 'workforce.leave_approve', 'workforce.leave_view_all', 'workforce.leave_manage'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 30],
+                    // E2 : « Congés & absences » est la vue de MANAGEMENT des absences. L'index
+                    // /workforce/leaves exige leave_request (garde de route) ET une capacité de vue globale
+                    // (leave_view_all OU leave_approve) pour lister sans filtre. Les salariés demandent leurs
+                    // congés depuis « Mon espace » (/workforce/me), pas ici → pas de menu management pour eux.
+                    ['key' => 'workforce-leave', 'title' => 'Leave', 'to' => ['name' => 'company-workforce-leave'], 'icon' => 'tabler-beach', 'permission' => 'workforce.leave_request', 'anyPermission' => ['workforce.leave_view_all', 'workforce.leave_approve'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 30],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_leave',

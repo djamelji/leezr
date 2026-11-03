@@ -7,7 +7,10 @@ import OrganizationLocations from './_OrganizationLocations.vue'
 import AppMoneyField from '@/components/AppMoneyField.vue'
 import AppConfirmDialog from '@/components/AppConfirmDialog.vue'
 
-definePage({ meta: { module: 'workforce', permission: 'workforce.admin' } })
+// E2 : l'espace « Organisation » se lit via /workforce/departments & /workforce/organization/*
+// (gardés par workforce.view) ; les actions de structure restent gardées par workforce.manage
+// dans la page. Aligner le guard sur la permission de LECTURE évite un menu mort.
+definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()

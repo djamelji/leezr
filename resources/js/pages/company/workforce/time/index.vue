@@ -10,7 +10,7 @@ import TimeCockpit from './_TimeCockpit.vue'
 import PlanningPage from '@/pages/company/workforce/planning/index.vue'
 import { useCan } from '@/composables/useCan'
 
-definePage({ meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view', 'workforce.time_manage', 'workforce.timesheet_approve', 'workforce.planning_manage'] } })
+definePage({ meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view'] } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()

@@ -139,29 +139,50 @@ class WorkforceNavHrGroupTest extends TestCase
     {
         $company = $this->companyWith(self::WORKFORCE_MODULES);
 
-        // (a) RH congés seulement : voit Congés + « Mon espace », PAS employés/temps/paie.
-        $g = NavBuilder::forCompany($company, ['workforce.leave_request'], 'management');
+        // (a) Gestion des absences (leave_request + leave_approve) : voit Congés + « Mon espace »,
+        // PAS employés/temps/paie. leave_request SEUL ne suffit pas (vue management = view_all/approve).
+        $g = NavBuilder::forCompany($company, ['workforce.leave_request', 'workforce.leave_approve'], 'management');
         $this->assertSame('workforce', $this->groupOf($g, 'workforce-leave'));
         $this->assertSame('account', $this->groupOf($g, 'workforce-me'), 'entrée self-service sans permission visible');
         $this->assertNull($this->groupOf($g, 'workforce-employees'), 'employés nécessite workforce.view');
         $this->assertNull($this->groupOf($g, 'workforce-time'), 'temps nécessite une capacité temps/planning');
         $this->assertNull($this->groupOf($g, 'workforce-payroll'), 'paie nécessite une capacité paie');
 
-        // (b) Responsable d'exploitation : planning/pointage seulement → voit Temps, pas Paie ni Employés.
-        $g = NavBuilder::forCompany($company, ['workforce.planning_manage', 'workforce.time_manage'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'), 'anyPermission temps satisfait par planning_manage/time_manage');
+        // (a-bis) leave_request SEUL (salarié) : pas de menu Congés management.
+        $g = NavBuilder::forCompany($company, ['workforce.leave_request'], 'management');
+        $this->assertNull($this->groupOf($g, 'workforce-leave'), 'leave_request seul → pas de menu management');
+
+        // (b) Responsable d'exploitation correctement configuré (planning_view + planning_manage) :
+        // voit Temps (lecture planning réelle), pas Paie ni Employés.
+        $g = NavBuilder::forCompany($company, ['workforce.planning_view', 'workforce.planning_manage'], 'management');
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'), 'anyPermission temps satisfait par planning_view');
         $this->assertNull($this->groupOf($g, 'workforce-payroll'));
         $this->assertNull($this->groupOf($g, 'workforce-employees'));
 
-        // (c) Gestionnaire paie sans members.manage : voit Paie, pas Employés.
+        // (b-bis) Capacité de GESTION sans capacité de LECTURE (time_manage seul) : PAS de menu Temps.
+        // L'index pointages exige timesheet_view → sans elle l'espace est vide/403 → menu masqué (honnête).
+        $g = NavBuilder::forCompany($company, ['workforce.time_manage'], 'management');
+        $this->assertNull($this->groupOf($g, 'workforce-time'), 'gestion seule sans lecture → pas de menu mort');
+
+        // (c) Gestionnaire paie sans members.manage : voit Paie, pas Employés ni Temps.
         $g = NavBuilder::forCompany($company, ['workforce.payroll_prepare'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-payroll'), 'anyPermission paie satisfait par payroll_prepare');
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-payroll'), 'paie satisfaite par payroll_prepare');
         $this->assertNull($this->groupOf($g, 'workforce-employees'));
         $this->assertNull($this->groupOf($g, 'workforce-time'));
 
-        // (d) timesheet_view seul : voit Temps (capacité pointage).
+        // (d) timesheet_view seul : voit Temps (capacité pointage lisible).
         $g = NavBuilder::forCompany($company, ['workforce.timesheet_view'], 'management');
         $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'));
+
+        // (e) workforce.view seul (profil consultation RH) : voit Collaborateurs, Organisation, Paramètres ;
+        // PAS Temps/Congés/Paie (capacités distinctes).
+        $g = NavBuilder::forCompany($company, ['workforce.view'], 'management');
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-employees'));
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-organization'));
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-settings'));
+        $this->assertNull($this->groupOf($g, 'workforce-time'));
+        $this->assertNull($this->groupOf($g, 'workforce-leave'));
+        $this->assertNull($this->groupOf($g, 'workforce-payroll'));
     }
 
     public function test_task_group_disappears_when_empty(): void

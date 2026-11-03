@@ -26,8 +26,12 @@ class WorkforceModule implements ModuleDefinition
                     // la route company-workforce redirige vers /dashboard (deep-link compat).
                     // E2 (ADR-690) : espace « Ressources humaines » (group workforce), gating fin par activité.
                     ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 10],
-                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'anyPermission' => ['workforce.timesheet_view', 'workforce.planning_view', 'workforce.time_manage', 'workforce.timesheet_approve', 'workforce.planning_manage'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
-                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.admin', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 60],
+                    // E2 : « Temps de travail » n'apparaît que si l'utilisateur peut RÉELLEMENT lire un onglet
+                    // de l'espace : timesheet_view (cockpit/pointages/feuilles) OU planning_view (planning).
+                    // Les permissions de gestion seules (time_manage, *_approve, planning_manage) ne donnent
+                    // PAS accès en lecture (l'index route exige la permission de lecture) → pas de menu mort.
+                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'anyPermission' => ['workforce.timesheet_view', 'workforce.planning_view'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
+                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 60],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).
                     ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 70],
