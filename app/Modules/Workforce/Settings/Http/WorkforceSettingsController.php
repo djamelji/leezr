@@ -21,19 +21,18 @@ class WorkforceSettingsController extends Controller
     {
         $company = Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
 
-        // Une section = {key, available} ; `available` pilote l'affichage (modules réellement actifs).
+        // PRODUCT-UX-3 (P2-B, ADR-683) : les onglets « lanceurs » (organization/leave/planning/
+        // documents) et le doublon lecture-seule « rules » sont retirés. Les paramètres sont
+        // administrés dans leur espace métier (Organisation, Congés, Temps/Planning, Documents) ;
+        // les règles de temps de travail ont une SOURCE DE VÉRITÉ UNIQUE : l'onglet « worktime ».
+        // Ne restent ici que les réglages RÉELLEMENT éditables sans espace métier dédié.
         $sections = [
             ['key' => 'general', 'available' => true],
-            ['key' => 'organization', 'available' => true],
             ['key' => 'worktime', 'available' => ModuleGate::isActive($company, 'workforce')],
-            ['key' => 'leave', 'available' => ModuleGate::isActive($company, 'workforce_leave')],
-            ['key' => 'planning', 'available' => ModuleGate::isActive($company, 'workforce_planning')],
-            ['key' => 'documents', 'available' => ModuleGate::isActive($company, 'workforce_documents')],
             // W-CONTRACT-3B : section Contrats de travail — visible UNIQUEMENT si le module Contract est actif.
             ['key' => 'contract', 'available' => ModuleGate::isActive($company, 'workforce_contract')],
             // W-SIGNATURE-1 : section Signature électronique — visible UNIQUEMENT si le module Signature est actif.
             ['key' => 'signature', 'available' => ModuleGate::isActive($company, 'workforce_signature')],
-            ['key' => 'rules', 'available' => ModuleGate::isActive($company, 'workforce')],
         ];
 
         return response()->json([

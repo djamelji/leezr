@@ -60,24 +60,32 @@ class WorkforceSettingsHubTest extends TestCase
         return array_column($json['sections'], 'key');
     }
 
-    public function test_sections_depend_on_active_modules(): void
+    public function test_sections_are_only_real_editable_settings(): void
     {
+        // PRODUCT-UX-3 (P2-B) : les onglets lanceurs (organization/leave/planning/documents)
+        // et le doublon « rules » sont retirés. Seuls restent les réglages réellement éditables.
         $full = $this->company(['workforce', 'workforce_leave', 'workforce_planning', 'workforce_documents']);
         $u = $this->user($full, ['workforce.view']);
         $res = $this->actingAs($u)->getJson('/api/workforce/settings', ['X-Company-Id' => $full->id])->assertOk()->json();
-        foreach (['general', 'organization', 'worktime', 'leave', 'planning', 'documents', 'rules'] as $k) {
-            $this->assertContains($k, $this->keys($res), "section $k présente");
+        $keys = $this->keys($res);
+        foreach (['general', 'worktime'] as $k) {
+            $this->assertContains($k, $keys, "section $k présente");
+        }
+        foreach (['organization', 'leave', 'planning', 'documents', 'rules'] as $k) {
+            $this->assertNotContains($k, $keys, "section lanceur/doublon $k retirée (P2-B)");
         }
         $this->assertSame('logistique', $res['context']['jobdomain_key']);
     }
 
-    public function test_inactive_modules_hide_their_sections(): void
+    public function test_worktime_is_single_source_of_truth(): void
     {
-        $min = $this->company(['workforce']); // ni leave, ni planning, ni documents
+        $min = $this->company(['workforce']);
         $u = $this->user($min, ['workforce.view']);
         $res = $this->actingAs($u)->getJson('/api/workforce/settings', ['X-Company-Id' => $min->id])->assertOk()->json();
         $keys = $this->keys($res);
         $this->assertContains('worktime', $keys);
+        // Plus de doublon « rules » ni d'onglets lanceurs.
+        $this->assertNotContains('rules', $keys);
         $this->assertNotContains('leave', $keys);
         $this->assertNotContains('planning', $keys);
         $this->assertNotContains('documents', $keys);

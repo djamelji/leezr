@@ -46,9 +46,18 @@ const saveWeekStart = async () => {
 }
 
 const SECTION_ICON = {
-  general: 'tabler-info-circle', organization: 'tabler-sitemap', worktime: 'tabler-clock',
-  leave: 'tabler-beach', planning: 'tabler-calendar', documents: 'tabler-file-certificate',
-  contract: 'tabler-file-text', signature: 'tabler-signature', rules: 'tabler-scale',
+  general: 'tabler-info-circle', worktime: 'tabler-clock',
+  contract: 'tabler-file-text', signature: 'tabler-signature',
+}
+
+// PRODUCT-UX-3 (P2-B) — legacy launcher tabs removed: redirect old deep-links to the
+// business space where the setting now lives (no broken links, no launcher pages).
+const LEGACY_TAB_REDIRECT = {
+  organization: '/company/workforce/organization/departments',
+  leave: '/company/workforce/leave',
+  planning: '/company/workforce/time?tab=planning',
+  documents: '/company/workforce/documents?tab=templates',
+  rules: null, // merged into "worktime" — clamp to it
 }
 
 const sections = computed(() => data.value?.sections || [])
@@ -60,7 +69,20 @@ const currentTab = computed({
 
 const load = async () => {
   loading.value = true
-  try { data.value = await $api('/workforce/settings') }
+  try {
+    data.value = await $api('/workforce/settings')
+    // Legacy deep-link handling: a removed launcher tab → its business space;
+    // any unknown tab → first available section.
+    const tab = route.params.tab
+    const keys = sections.value.map(s => s.key)
+    if (tab && !keys.includes(tab)) {
+      if (Object.prototype.hasOwnProperty.call(LEGACY_TAB_REDIRECT, tab) && LEGACY_TAB_REDIRECT[tab]) {
+        router.replace(LEGACY_TAB_REDIRECT[tab])
+      } else {
+        router.replace({ params: { tab: keys[0] || 'general' } })
+      }
+    }
+  }
   finally { loading.value = false }
 }
 
@@ -166,20 +188,6 @@ onMounted(() => { load(); loadWeekStart() })
             </VBtn>
           </VWindowItem>
 
-          <!-- Organisation -->
-          <VWindowItem value="organization">
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              {{ t('hrSettings.organizationIntro') }}
-            </p>
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-sitemap"
-              @click="go('/company/workforce/organization/departments')"
-            >
-              {{ t('hrSettings.manageOrganization') }}
-            </VBtn>
-          </VWindowItem>
-
           <!-- Temps de travail & pauses (éditable, avec provenance) -->
           <VWindowItem value="worktime">
             <p class="text-body-2 text-medium-emphasis mb-2">
@@ -195,48 +203,6 @@ onMounted(() => { load(); loadWeekStart() })
             <WorkforceRulesSection domain="breaks" />
           </VWindowItem>
 
-          <!-- Congés -->
-          <VWindowItem value="leave">
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              {{ t('hrSettings.leaveIntro') }}
-            </p>
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-beach"
-              @click="go('/company/workforce/leave')"
-            >
-              {{ t('hrSettings.manageLeave') }}
-            </VBtn>
-          </VWindowItem>
-
-          <!-- Planning -->
-          <VWindowItem value="planning">
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              {{ t('hrSettings.planningIntro') }}
-            </p>
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-calendar"
-              @click="go('/company/workforce/planning')"
-            >
-              {{ t('hrSettings.managePlanning') }}
-            </VBtn>
-          </VWindowItem>
-
-          <!-- Documents -->
-          <VWindowItem value="documents">
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              {{ t('hrSettings.documentsIntro') }}
-            </p>
-            <VBtn
-              color="primary"
-              prepend-icon="tabler-file-certificate"
-              @click="go('/company/workforce/documents')"
-            >
-              {{ t('hrSettings.manageDocuments') }}
-            </VBtn>
-          </VWindowItem>
-
           <!-- Contrats de travail (W-CONTRACT-3B) — visible si module Contract actif -->
           <VWindowItem value="contract">
             <ContractSettingsSection :employer-identity="ctx.employer_identity || {}" />
@@ -245,32 +211,6 @@ onMounted(() => { load(); loadWeekStart() })
           <!-- Signature électronique (W-SIGNATURE-1) — visible si module Signature actif -->
           <VWindowItem value="signature">
             <SignatureSettingsSection />
-          </VWindowItem>
-
-          <!-- Règles locales & conventions (provenance, lecture seule) -->
-          <VWindowItem value="rules">
-            <VAlert
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-4"
-            >
-              {{ t('hrSettings.rulesIntro') }}
-            </VAlert>
-            <h6 class="text-h6 mb-2">
-              {{ t('hrSettings.sections.worktime') }}
-            </h6>
-            <WorkforceRulesSection
-              domain="work-time"
-              read-only
-            />
-            <h6 class="text-h6 mt-6 mb-2">
-              {{ t('hrSettings.breaks') }}
-            </h6>
-            <WorkforceRulesSection
-              domain="breaks"
-              read-only
-            />
           </VWindowItem>
         </VWindow>
       </VCardText>
