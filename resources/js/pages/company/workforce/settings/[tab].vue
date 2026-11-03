@@ -52,12 +52,16 @@ const SECTION_ICON = {
 
 // PRODUCT-UX-3 (P2-B) — legacy launcher tabs removed: redirect old deep-links to the
 // business space where the setting now lives (no broken links, no launcher pages).
+// Done SYNCHRONOUSLY in setup so it wins over VTabs auto-correcting to the first tab.
 const LEGACY_TAB_REDIRECT = {
   organization: '/company/workforce/organization/departments',
   leave: '/company/workforce/leave',
   planning: '/company/workforce/time?tab=planning',
   documents: '/company/workforce/documents?tab=templates',
-  rules: null, // merged into "worktime" — clamp to it
+  rules: '/company/workforce/settings/worktime', // merged into "worktime"
+}
+if (LEGACY_TAB_REDIRECT[route.params.tab]) {
+  router.replace(LEGACY_TAB_REDIRECT[route.params.tab])
 }
 
 const sections = computed(() => data.value?.sections || [])

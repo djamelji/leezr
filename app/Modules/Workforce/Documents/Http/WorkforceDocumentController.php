@@ -42,7 +42,9 @@ class WorkforceDocumentController extends Controller
             perPage: (int) $request->input('per_page', 15),
         );
 
-        return response()->json($documents);
+        // P2 (ADR-684): the registry lists ALL subject types incl. payslips/contracts whose
+        // generation_snapshot embeds salaries → scrub for viewers without compensation_read.
+        return response()->json(PayrollConfidentiality::scrub($documents, PayrollConfidentiality::canRead($request)));
     }
 
     /**
@@ -99,7 +101,8 @@ class WorkforceDocumentController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($id);
 
-        return response()->json($document);
+        // P2 (ADR-684): generation_snapshot may embed salaries — scrub for non-comp viewers.
+        return response()->json(PayrollConfidentiality::scrub($document, PayrollConfidentiality::canRead($request)));
     }
 
     // ── Download (ADR-634) — route authentifiée + tenant + scope collaborateur ────────

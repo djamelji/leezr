@@ -4,6 +4,7 @@ namespace App\Modules\Workforce\Employees\Http;
 
 use App\Core\Workforce\JobRole;
 use App\Http\Controllers\Controller;
+use App\Modules\Workforce\Security\PayrollConfidentiality;
 use App\Modules\Workforce\UseCases\CreateJobRoleUseCase;
 use App\Modules\Workforce\UseCases\DeleteJobRoleUseCase;
 use App\Modules\Workforce\UseCases\UpdateJobRoleUseCase;
@@ -24,7 +25,9 @@ class JobRoleController extends Controller
             ->orderBy('title')
             ->get();
 
-        return response()->json($roles);
+        // P2 (ADR-684): job roles carry default_hourly_rate_cents (reference comp) →
+        // mask server-side for viewers without compensation_read (was Vue-only).
+        return response()->json(PayrollConfidentiality::scrub($roles, PayrollConfidentiality::canRead($request)));
     }
 
     public function store(Request $request): JsonResponse

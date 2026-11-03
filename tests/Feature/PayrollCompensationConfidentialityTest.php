@@ -306,6 +306,60 @@ class PayrollCompensationConfidentialityTest extends TestCase
         $res->assertJson(['real_transmission' => false, 'mode' => 'disabled']);
     }
 
+    /** P2 (ADR-684) : le registre documentaire (index) masque generation_snapshot sans compensation_read. */
+    public function test_document_registry_masks_generation_snapshot(): void
+    {
+        $this->makePayslipDoc();
+        $noComp = $this->userWith(['workforce.payroll_prepare', 'workforce_documents.view']);
+        $res = $this->apiGet($noComp, '/workforce/documents');
+        $res->assertOk();
+        $this->assertStringNotContainsString('generation_snapshot', $res->getContent());
+        $this->assertStringNotContainsString('777777', $res->getContent());
+
+        $full = $this->userWith(['workforce.compensation_read', 'workforce_documents.view']);
+        $this->apiGet($full, '/workforce/documents')->assertOk()->assertSee('generation_snapshot');
+    }
+
+    /** P2 (ADR-684) : le détail d'un document masque generation_snapshot sans compensation_read. */
+    public function test_document_detail_masks_generation_snapshot(): void
+    {
+        $doc = $this->makePayslipDoc();
+        $noComp = $this->userWith(['workforce_documents.view']);
+        $res = $this->apiGet($noComp, "/workforce/documents/{$doc->id}");
+        $res->assertOk();
+        $this->assertStringNotContainsString('777777', $res->getContent());
+    }
+
+    /** P2 (ADR-684) : les postes (job-roles) masquent le taux horaire de référence côté serveur. */
+    public function test_job_roles_mask_default_rate_without_comp(): void
+    {
+        \App\Core\Workforce\JobRole::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'title' => 'Cariste', 'default_hourly_rate_cents' => 1550, 'source' => 'company',
+        ]);
+        $noComp = $this->userWith(['workforce.view']);
+        $res = $this->apiGet($noComp, '/workforce/job-roles');
+        $res->assertOk();
+        $this->assertStringNotContainsString('default_hourly_rate_cents', $res->getContent());
+        $this->assertStringNotContainsString('1550', $res->getContent());
+
+        $this->apiGet($this->userWith(['workforce.view', 'workforce.compensation_read']), '/workforce/job-roles')
+            ->assertOk()->assertSee('default_hourly_rate_cents');
+    }
+
+    /** P2 (ADR-684) : la fiche employé ne charge pas le taux du poste sans compensation_read. */
+    public function test_employee_detail_hides_job_role_rate_without_comp(): void
+    {
+        $role = \App\Core\Workforce\JobRole::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'title' => 'Chef', 'default_hourly_rate_cents' => 2500, 'source' => 'company',
+        ]);
+        $this->employee->update(['job_role_id' => $role->id]);
+        $noComp = $this->userWith(['workforce.view']);
+        $res = $this->apiGet($noComp, "/workforce/employees/{$this->employee->id}");
+        $res->assertOk();
+        $this->assertStringNotContainsString('default_hourly_rate_cents', $res->getContent());
+        $this->assertStringNotContainsString('2500', $res->getContent());
+    }
+
     private function makePayslipDoc(): \App\Core\Documents\GeneratedDocument
     {
         Model::unguard();
