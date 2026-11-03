@@ -24573,3 +24573,35 @@ Avant : gérer un lieu = ouvrir **Temps de travail → Planning → onglet Lieux
 P2-A (accueil actions) + P2-B (paramètres rationalisés) + P2-C (organisation unifiée) livrés et vérifiés séparément sur DEV. **Exigence #4** (confidentialité transversale) traitée en parallèle (ADR-684, 4 fuites fermées). P2 clôturé.
 
 ---
+
+## ADR-686 — PRODUCT-UX-3 P3-A : expérience personne unifiée (fiche collaborateur centrale)
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-3 / P3-A (chevauchement **K** — identité éclatée). Une personne est représentée par 3 tables techniques — `Employee`, `User`, `Membership` — reliées par le **pont `user_id`** (Employee.user_id nullable ; Membership.user_id non-null, unique par company ; **aucune FK directe Employee↔Membership**). Objectif : rendre la fiche le point central unifiant ces entités **sans fusionner les tables ni créer un 2e système d'identité**.
+
+### Cas métier (états dérivés, pas de champ unique)
+`none` (Employee sans user_id) · `invited` (User sans `password_set_at`) · `active` (password défini, jamais connecté) · `connected` (`last_login_at`) · `account_without_membership` (User lié mais membership retiré) ; côté RH : `Employee.status` (active/on_leave/suspended/terminated) **distinct** de l'accès applicatif ; membre **non-salarié** = Membership sans Employee ; **admin aussi salarié** = User avec membership admin + Employee.
+
+### Décision
+Carte **« Accès & compte »** (`_EmployeeAccessCard.vue`) persistante dans l'overview de la fiche : surface l'état d'accès unifié (libellés non techniques), l'e-mail, et l'action « Gérer l'accès » — **réponse autorisée côté serveur** (réutilise `GET /employees/{id}/access` → `EmployeeAccessService::status`, aucun montant). Invite/relance **réutilisent** `EmployeeAccessService` (identique au mécanisme Members — pas de 2e système). La **suspension/révocation d'accès N'EST PAS proposée** : aucun workflow first-class backend (documenté comme limite ; seule la suppression de membership existe, et ne nettoie pas `employee.user_id`). Le cas **`account_without_membership`** est affiché explicitement et **réparable** via « Gérer l'accès » (grant recrée le membership). Hiérarchie de la fiche conservée : identité (en-tête) → actions immédiates (checklist d'intégration) → contrat/situation/**accès** → activités RH (onglets).
+
+### Clarifier Membres vs Collaborateurs
+La liste **Members** marque désormais **« Salarié »** (lien vers la fiche) vs **« Compte seul »** (compte administratif/technique non-salarié), via un **join batch gardé par module** (`ModuleGate::isActive(workforce)`) sur le pont `user_id` — pas de couplage dur Core↔Workforce (sans le module, aucun lien). Members reste l'administration des accès (comptes non-salariés préservés, non supprimés).
+
+### Confidentialité (serveur, manager scope)
+La fiche `GET /employees/{id}/file` conserve le **scope manager** (`canViewEmployeeData` → hors périmètre = 403) + le **masquage salarial** (`compensation_read`). Réponses construites autorisées côté serveur (le read-model ne charge le salaire que sous `compensation_read`). **Test négatif** : un manager hors de son équipe → 403 ; son rapport direct → 200 sans salaire.
+
+### Preuves (tests + recette)
+`WorkforceSecurityWDTest` : fiche manager-scopée + salaire masqué. 158 tests (sécurité/confidentialité/home/members/employee) verts, 0 régression. 3 échecs ControllerSize préservés. Recette DEV (SHA `7f759e2`) : carte « Accès & compte » (état **Connecté**, e-mail, Gérer l'accès) ; Members **5 badges « Salarié »** + `is_employee` dans le payload ; `access` sans `_cents` ; responsive + dark.
+
+### Mesures
+Avant : état de compte visible seulement via un dialog (clic) ou la checklist ; aucun lien explicite Employee↔compte↔membership ; Members indistinct. Après : identité unifiée **en une vue** sur la fiche (0 clic pour voir l'état d'accès), Members distingue salariés/comptes — 0 ressaisie, mêmes endpoints.
+
+### Limites / dettes
+Pas de suspension/révocation d'accès first-class (workflow absent) ; la terminaison d'un employé ne révoque pas l'accès (documenté) ; `account_without_membership` réparable par ré-invitation mais pas d'endpoint de réparation dédié. À traiter comme chantier Auth/RBAC distinct si besoin.
+
+### Fichiers
+`_EmployeeAccessCard.vue` (nouveau) ; `employees/[id].vue` (carte accès + reload signal) ; `MembershipController.php` (enrichissement is_employee/employee_id) ; `members/index.vue` (badges) ; i18n fr/en (`employeeAccess.states/card`, `members.employeeBadge/accountOnlyBadge`) ; `WorkforceSecurityWDTest.php` ; recette `tests/e2e/person-p3a-dev.spec.js`.
+
+---
