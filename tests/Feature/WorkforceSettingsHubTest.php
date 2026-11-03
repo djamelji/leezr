@@ -99,10 +99,15 @@ class WorkforceSettingsHubTest extends TestCase
         $res1 = $this->actingAs($u1)->getJson('/api/workforce/settings', ['X-Company-Id' => $without->id])->assertOk()->json();
         $this->assertNotContains('contract', $this->keys($res1));
 
-        // Avec le module Contract : section présente + identité documentaire employeur exposée (données Company).
+        // E2.1 (ADR-691) : module actif mais SANS workforce_contract.view → section absente (config admin).
         $with = $this->company(['workforce', 'workforce_contract']);
         $with->update(['siret' => '12345678900011', 'address_city' => 'Paris', 'address_postal_code' => '75001']);
-        $u2 = $this->user($with, ['workforce.view']);
+        $viewOnly = $this->user($with, ['workforce.view']);
+        $resViewOnly = $this->actingAs($viewOnly)->getJson('/api/workforce/settings', ['X-Company-Id' => $with->id])->assertOk()->json();
+        $this->assertNotContains('contract', $this->keys($resViewOnly), 'onglet contrat exige workforce_contract.view');
+
+        // Avec la capacité de lecture contrat : section présente + identité documentaire employeur exposée.
+        $u2 = $this->user($with, ['workforce.view', 'workforce_contract.view']);
         $res2 = $this->actingAs($u2)->getJson('/api/workforce/settings', ['X-Company-Id' => $with->id])->assertOk()->json();
         $this->assertContains('contract', $this->keys($res2));
         $this->assertArrayHasKey('employer_identity', $res2['context']);
@@ -117,8 +122,14 @@ class WorkforceSettingsHubTest extends TestCase
         $res1 = $this->actingAs($u1)->getJson('/api/workforce/settings', ['X-Company-Id' => $without->id])->assertOk()->json();
         $this->assertNotContains('signature', $this->keys($res1));
 
+        // E2.1 (ADR-691) : module actif mais SANS workforce_signature.admin → section absente.
         $with = $this->company(['workforce', 'workforce_signature']);
-        $u2 = $this->user($with, ['workforce.view']);
+        $viewOnly = $this->user($with, ['workforce.view']);
+        $resViewOnly = $this->actingAs($viewOnly)->getJson('/api/workforce/settings', ['X-Company-Id' => $with->id])->assertOk()->json();
+        $this->assertNotContains('signature', $this->keys($resViewOnly), 'onglet signature exige workforce_signature.admin');
+
+        // Avec l'administration signature : section présente.
+        $u2 = $this->user($with, ['workforce.view', 'workforce_signature.admin']);
         $res2 = $this->actingAs($u2)->getJson('/api/workforce/settings', ['X-Company-Id' => $with->id])->assertOk()->json();
         $this->assertContains('signature', $this->keys($res2));
     }

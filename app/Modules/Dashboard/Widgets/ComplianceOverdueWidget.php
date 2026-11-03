@@ -16,7 +16,7 @@ class ComplianceOverdueWidget implements WidgetManifest
 
     public function module(): string
     {
-        return 'core.dashboard';
+        return 'core.documents';
     }
 
     public function layout(): array
@@ -73,7 +73,7 @@ class ComplianceOverdueWidget implements WidgetManifest
 
     public function permissions(): array
     {
-        return ['members.view'];
+        return ['documents.view'];
     }
 
     public function capabilities(): array

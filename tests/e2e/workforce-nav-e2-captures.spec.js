@@ -16,6 +16,7 @@ const PROFILES = [
   'rh-nopay@leezr.test',
   'manager@leezr.test',
   'ops@leezr.test',
+  'consultation@leezr.test',
   'pay@leezr.test',
   'salarie@leezr.test',
 ]

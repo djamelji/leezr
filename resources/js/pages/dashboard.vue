@@ -28,13 +28,19 @@ const canEdit = computed(() => auth.isAdministrative)
 const companyName = computed(() => auth.currentCompany?.name || '')
 const userName = computed(() => auth.user?.first_name || auth.user?.display_name || '')
 
+// E2.1 (ADR-691): la compliance documentaire lit /company/documents/compliance (module core.documents
+// + documents.view). On NE l'émet que si le viewer détient réellement la capacité → plus de 403 inutile
+// (pas de masquage frontend d'erreur : on évite la requête interdite).
+const canCompliance = computed(() => canModule('core.documents') && can('documents.view'))
+
 onMounted(() => {
   // Fire-and-forget — grid mounts as soon as layout resolves (ADR-198)
   // Compliance widgets now come from backend catalog (ADR-327)
   dashboardStore.loadDashboard().catch(err => {
     console.error('[Dashboard] loadDashboard FAILED:', err)
   })
-  complianceStore.fetchCompliance()
+  if (canCompliance.value)
+    complianceStore.fetchCompliance()
 })
 
 // ── Dashboard Engine ──

@@ -57,24 +57,49 @@ class WorkforceModule implements ModuleDefinition
                 ['key' => 'workforce.timesheet_approve', 'label' => 'Approve Timesheets', 'is_admin' => true, 'hint' => 'Approve or reject submitted timesheets.'],
             ],
             bundles: [
+                // E2.1 (ADR-691) — profils de référence cohérents : toute capacité de gestion est
+                // empaquetée avec la capacité de LECTURE correspondante (manage ⇒ view au niveau du
+                // bundle). La nav/les guards restent gardés sur la lecture ; les endpoints restent
+                // stricts (pas d'élargissement implicite des droits).
                 [
                     'key' => 'workforce.team',
                     'label' => 'Team Management',
-                    'hint' => 'View and manage employees, manage time entries.',
-                    'permissions' => ['workforce.view', 'workforce.manage', 'workforce.time_manage', 'workforce.export'],
+                    'hint' => 'View and manage employees, correct and view time entries.',
+                    // + timesheet_view / planning_view : un chef d'équipe VOIT les pointages et le planning.
+                    'permissions' => ['workforce.view', 'workforce.manage', 'workforce.time_manage', 'workforce.timesheet_view', 'workforce.planning_view', 'workforce.export'],
                 ],
                 [
                     'key' => 'workforce.hr_management',
                     'label' => 'HR Management',
-                    'hint' => 'Full HR access: contracts, compensation, sensitive data.',
-                    'permissions' => ['workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin', 'workforce.import', 'workforce.export'],
+                    'hint' => 'Full HR access: employees, contracts, compensation, sensitive data.',
+                    // + workforce.view : une RH doit voir la liste des collaborateurs, l'organisation et les
+                    // paramètres ; + timesheet_view/planning_view pour la visibilité temps/planning.
+                    'permissions' => ['workforce.view', 'workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin', 'workforce.import', 'workforce.export', 'workforce.timesheet_view', 'workforce.planning_view'],
+                    'is_admin' => true,
+                ],
+                [
+                    'key' => 'workforce.manager',
+                    'label' => 'Team Manager (planning & approvals)',
+                    'hint' => 'See your team, build & publish planning, approve timesheets and leave — no compensation.',
+                    // Manager opérationnel : équipe + planning + validations congés/feuilles. SANS rémunération,
+                    // SANS contrats, SANS paie. VOIT Collaborateurs, Temps, Congés, Organisation.
+                    'permissions' => ['workforce.view', 'workforce.timesheet_view', 'workforce.timesheet_approve', 'workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish', 'workforce.leave_request', 'workforce.leave_view_all', 'workforce.leave_approve'],
+                    'is_admin' => true,
+                ],
+                [
+                    'key' => 'workforce.operations',
+                    'label' => 'Operations Supervisor',
+                    'hint' => 'Manage time clocking and planning day-to-day — no contracts, no payroll.',
+                    // Responsable d'exploitation : gestion pointages + planning. VOIT Collaborateurs, Temps, Organisation.
+                    'permissions' => ['workforce.view', 'workforce.timesheet_view', 'workforce.time_manage', 'workforce.timesheet_approve', 'workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish'],
                     'is_admin' => true,
                 ],
                 [
                     'key' => 'workforce.time_validation',
                     'label' => 'Time Validation',
-                    'hint' => 'Manage and approve time entries and timesheets.',
-                    'permissions' => ['workforce.time_manage', 'workforce.time_approve'],
+                    'hint' => 'View, manage and approve time entries and timesheets.',
+                    // + timesheet_view : valider/gérer implique de VOIR les pointages.
+                    'permissions' => ['workforce.timesheet_view', 'workforce.time_manage', 'workforce.time_approve'],
                     'is_admin' => true,
                 ],
                 [

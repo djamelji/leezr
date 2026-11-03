@@ -20,6 +20,14 @@ class WorkforceSettingsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $user = $request->user();
+
+        // E2.1 (ADR-691) — une section n'est listée que si l'utilisateur peut RÉELLEMENT la charger :
+        // les onglets de configuration administrative (Contrats, Signature) exigent leur capacité propre,
+        // sinon ils s'affichaient et déclenchaient un 403 au montage. general + worktime restent en
+        // lecture légitime pour workforce.view (édition gardée par workforce.manage côté endpoint/UI).
+        $canContract = $user->hasCompanyPermission($company, 'workforce_contract.view');
+        $canSignature = $user->hasCompanyPermission($company, 'workforce_signature.admin');
 
         // PRODUCT-UX-3 (P2-B, ADR-683) : les onglets « lanceurs » (organization/leave/planning/
         // documents) et le doublon lecture-seule « rules » sont retirés. Les paramètres sont
@@ -29,10 +37,10 @@ class WorkforceSettingsController extends Controller
         $sections = [
             ['key' => 'general', 'available' => true],
             ['key' => 'worktime', 'available' => ModuleGate::isActive($company, 'workforce')],
-            // W-CONTRACT-3B : section Contrats de travail — visible UNIQUEMENT si le module Contract est actif.
-            ['key' => 'contract', 'available' => ModuleGate::isActive($company, 'workforce_contract')],
-            // W-SIGNATURE-1 : section Signature électronique — visible UNIQUEMENT si le module Signature est actif.
-            ['key' => 'signature', 'available' => ModuleGate::isActive($company, 'workforce_signature')],
+            // W-CONTRACT-3B : section Contrats de travail — module actif ET capacité de lecture contrat.
+            ['key' => 'contract', 'available' => ModuleGate::isActive($company, 'workforce_contract') && $canContract],
+            // W-SIGNATURE-1 : section Signature électronique — module actif ET administration signature.
+            ['key' => 'signature', 'available' => ModuleGate::isActive($company, 'workforce_signature') && $canSignature],
         ];
 
         return response()->json([

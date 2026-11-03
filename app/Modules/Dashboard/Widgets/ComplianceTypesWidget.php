@@ -16,7 +16,7 @@ class ComplianceTypesWidget implements WidgetManifest
 
     public function module(): string
     {
-        return 'core.dashboard';
+        return 'core.documents';
     }
 
     public function layout(): array
@@ -73,7 +73,7 @@ class ComplianceTypesWidget implements WidgetManifest
 
     public function permissions(): array
     {
-        return ['members.view'];
+        return ['documents.view'];
     }
 
     public function capabilities(): array

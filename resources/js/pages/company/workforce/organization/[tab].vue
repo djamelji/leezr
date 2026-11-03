@@ -374,6 +374,7 @@ onMounted(() => {
 
             <div class="d-flex justify-end mb-4">
               <VBtn
+                v-can="'workforce.manage'"
                 color="primary"
                 prepend-icon="tabler-plus"
                 @click="openDeptCreate"
@@ -462,7 +463,10 @@ onMounted(() => {
 
               <!-- Actions -->
               <template #item.actions="{ item }">
-                <div class="d-flex gap-1">
+                <div
+                  v-can="'workforce.manage'"
+                  class="d-flex gap-1"
+                >
                   <VBtn
                     icon
                     variant="text"
@@ -516,6 +520,7 @@ onMounted(() => {
                     {{ $t('organization.departments.emptyDescription') }}
                   </p>
                   <VBtn
+                    v-can="'workforce.manage'"
                     color="primary"
                     prepend-icon="tabler-plus"
                     @click="openDeptCreate"
@@ -601,6 +606,7 @@ onMounted(() => {
 
             <div class="d-flex justify-end mb-4">
               <VBtn
+                v-can="'workforce.manage'"
                 color="primary"
                 prepend-icon="tabler-plus"
                 @click="openRoleCreate"
@@ -712,7 +718,10 @@ onMounted(() => {
 
               <!-- Actions -->
               <template #item.actions="{ item }">
-                <div class="d-flex gap-1">
+                <div
+                  v-can="'workforce.manage'"
+                  class="d-flex gap-1"
+                >
                   <VBtn
                     icon
                     variant="text"
@@ -766,6 +775,7 @@ onMounted(() => {
                     {{ $t('organization.roles.emptyDescription') }}
                   </p>
                   <VBtn
+                    v-can="'workforce.manage'"
                     color="primary"
                     prepend-icon="tabler-plus"
                     @click="openRoleCreate"

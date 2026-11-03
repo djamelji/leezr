@@ -24757,3 +24757,48 @@ DEV uniquement · pas de Billing · pas de 2ᵉ RBAC/auth · moteur de signature
 
 ### Fichiers clés
 `NavBuilder.php` (composition ET/OU), `NavGroupRegistry.php` (+`workforce`=50), manifestes `WorkforceModule/WorkforceLeaveModule/WorkforcePayrollModule/WorkforceDocumentsModule`, pages `time|leave|payroll|organization`, `guards.js` (anyPermission), i18n fr/en/ar, tests `WorkforceNavHrGroupTest` (réécrit) + `WorkforceNavE2RecetteTest` (nouveau) + specs e2e.
+
+---
+
+## ADR-691 — WORKFORCE EXPERIENCE 2026 / E2.1 : correction des contrats d'accès (bundles, onglets admin, 403) avant E3
+
+**Date** : 2026-11-03
+**Statut** : Accepté (livré DEV — vérifié par `X-Build-Version`)
+**Contexte** : Revue direction de l'artefact de recette E2 (ADR-690). Le principe de navigation par activité est validé, mais la matrice des permissions révèle des **incohérences fonctionnelles** : des profils « valides techniquement » mais pas métier (ex. « Manager » = `workforce.view` seul, sans équipe/temps/congés), des **onglets de paramètres admin** affichés sans capacité (403 au montage), des **widgets d'accueil** appelant des endpoints interdits (403 bénins), et un flou sur « gestion sans lecture ». E2.1 = **corriger les contrats d'accès** (bundles de référence, nav, guards, widgets) avant la refonte visuelle E3. **Périmètre strict** : aucun écran refondu, aucun STC/post-départ (E4/E5), **aucune permission modifiée en production**, aucun élargissement de privilèges.
+
+### Décisions
+1. **Profils métier de référence cohérents (bundles)** — les bundles sont des *presets runtime* (résolus par `PermissionCatalogBuilder`, cross-module) : édition = pur code, aucune permission en base touchée. Règle d'or : **toute capacité de gestion est empaquetée avec sa capacité de LECTURE** (`manage ⇒ view`) au niveau du bundle ; les **endpoints restent stricts** (pas d'élargissement implicite). Corrections :
+   - `workforce.team` : + `timesheet_view`, `planning_view` (un chef d'équipe VOIT pointages/planning) ;
+   - `workforce.hr_management` : + `workforce.view` (une RH voit collaborateurs/organisation/paramètres) + `timesheet_view`/`planning_view` ;
+   - `workforce.time_validation` : + `timesheet_view` ;
+   - **nouveaux** `workforce.manager` (équipe + planning_view/manage/publish + timesheet_view/approve + leave_request/view_all/approve — **sans rémunération**) et `workforce.operations` (gestion pointages + planning).
+2. **Gestion sans lecture = décision explicite** — une capacité de gestion **n'ouvre PAS** implicitement l'endpoint de lecture. La cohérence est garantie par les bundles ; un rôle custom mal configuré (ex. `time_manage` seul) voit son **menu masqué ET l'endpoint en 403** (pas de menu mort, pas d'élargissement). Vérifié pour `planning_manage`/`time_manage`/`leave_approve`/`payroll_export` seuls.
+3. **Onglets de configuration admin gated par permission (serveur)** — `WorkforceSettingsController` ne liste plus `contract` (exige `workforce_contract.view`) ni `signature` (exige `workforce_signature.admin`) pour un simple `workforce.view` → fin des 403 au montage. `general` + `worktime` restent une **consultation légitime** (lecture) pour un non-admin ; l'édition reste gardée par `workforce.manage`.
+4. **Organisation : lecture légitime conservée, écriture masquée** — la nav reste gardée sur `workforce.view` (organigramme/départements/postes/aperçu preset = consultation utile, décision assumée). Les **boutons d'écriture** (créer/éditer/supprimer département & poste, enregistrer profil, appliquer preset) sont masqués par `v-can="'workforce.manage'"` → plus de 403 au clic. Aucune page sans fonctionnalité pertinente pour le viewer.
+5. **Accueil Company : zéro 403 inutile (sans masquer d'erreur)** — `dashboard.vue` n'émet la compliance documentaire (`/company/documents/compliance`) que si `canModule('core.documents') && can('documents.view')` : la requête interdite est **évitée** (pas de toast masqué). Les manifestes des 5 widgets compliance (`Compliance{Rate,Overdue,Pending,Roles,Types}Widget`) sont corrigés — `module(): 'core.documents'`, `permissions(): ['documents.view']` — pour que le **catalogue P3-B** (`DashboardCatalogService`) les exclue des profils non autorisés. Moteur de widgets et accueil unique **préservés**.
+6. **Portail salarié** — coexistence « Mon espace » + « Temps » conservée (self-service aux heures/planning/pointages **scopés à soi** côté serveur, aucune suppression d'accès). Séparation UX plus nette **préparée pour E3** (hors E2.1).
+
+### Recette (menus + accès serveur, permissions réellement attribuées via bundles)
+`tests/Feature/WorkforceAccessProfilesE21Test` (11 tests, 199 assertions) : profils construits depuis les **bundles réels** ; pour chaque espace, assertion simultanée du **menu** et du **200/403 serveur**. Couvre : cohérence `manage ⇒ view` de **tous** les bundles ; Consultation / Manager / Exploitation / RH / Paie / Salarié / Owner ; gating des onglets admin ; gestion-sans-lecture ; owner bypass. `WorkforceSettingsHubTest` mis à jour (onglets admin gated). Suite workforce : **621 verts** (hors 2 échecs date-dépendants pré-existants `WorkforceTimesheetRulesTest` + 3 `ControllerSize`).
+
+### Matrice corrigée (menu = serveur)
+| Profil | Collab | Temps | Congés | Docs | Paie | Orga | Param |
+|---|---|---|---|---|---|---|---|
+| Owner | ✓|✓|✓|✓|✓|✓|✓ |
+| RH (sans paie) | ✓|✓|✓|✓|—|✓|✓ |
+| Manager d'équipe | ✓|✓|✓|—|—|✓|✓ |
+| Resp. exploitation | ✓|✓|—|—|—|✓|✓ |
+| Consultation (view) | ✓|—|—|—|—|✓|✓ |
+| Gestionnaire paie | —|—|—|—|✓|—|— |
+| Salarié | —|✓*|—|—|—|—|— |
+
+\* Salarié : « Temps » scopé à soi + « Mon espace » ; demande ses congés via Mon espace (pas de vue management).
+
+### Vérification navigateur
+`tests/e2e/workforce-nav-e2-captures.spec.js` : 7 profils × desktop/dark/mobile 390 sur l'application réelle. Artefact de recette E2.1 republié (captures réelles, matrice corrigée, corrections, limitations).
+
+### Garde-fous respectés
+DEV uniquement · aucune permission modifiée en base · aucun endpoint élargi · pas de 2ᵉ RBAC/auth · moteur signature inchangé · confidentialité serveur inchangée · pas de Billing · pas de refonte E3 · pas de STC/post-départ (E4/E5) · mot de passe SSH compromis non utilisé.
+
+### Fichiers clés
+`WorkforceModule.php` (bundles), `WorkforceSettingsController.php` (onglets gated), `dashboard.vue` (garde compliance), `Dashboard/Widgets/Compliance*.php` (manifestes), `organization/[tab].vue` + `_OrganizationPresetCard.vue` (boutons `v-can`), tests `WorkforceAccessProfilesE21Test` (nouveau) + `WorkforceSettingsHubTest` (maj) + spec captures.

@@ -97,6 +97,7 @@ onMounted(loadProfile)
           style="min-inline-size: 240px;"
         />
         <VBtn
+          v-can="'workforce.manage'"
           variant="tonal"
           :disabled="selectedProfile === profile?.org_profile_key"
           @click="saveProfile"
@@ -232,6 +233,7 @@ onMounted(loadProfile)
           </VBtn>
           <VBtn
             v-if="preview?.has_preset"
+            v-can="'workforce.manage'"
             color="primary"
             :loading="applying"
             prepend-icon="tabler-check"
