@@ -186,3 +186,69 @@ Moteurs métier **inchangés** : Payroll (indicatif, ADR-679/681), génération 
 4. ADR-689 (décision de cadrage).
 
 **Aucune refonte d'écran livrée en E1.** E2→E6 engagés seulement après validation de la direction UX.
+
+---
+
+# ADDENDUM E1.1 — Prototype corrigé & matrices (post-revue direction)
+
+## A. Navigation Company corrigée
+**Retirés de la sidebar** : « Fiche » (= détail, ouvert depuis l'annuaire), « Préparer le départ » (= depuis la fiche / l'onglet Départs / une tâche), « Espace post-départ » (= contexte **personnel** d'un ancien salarié, hors sidebar Company). **Ajouté** : **Documents**.
+
+**Nav Company cible (RH/admin)** : Accueil · Collaborateurs · Temps de travail · Congés & absences · **Documents** · Paie & déclarations · Organisation · Paramètres. Sous-vues = **onglets** dans l'espace (ex. Collaborateurs → Annuaire/Embauches/Départs ; Temps → Aujourd'hui/Planning/Présences/Feuilles ; Documents → Registre/Modèles/Signatures).
+
+## B. Navigation réellement différente par persona (démontré dans le prototype)
+| Persona | Entrées de nav réellement affichées |
+|---|---|
+| **Responsable RH** | Accueil · Collaborateurs · Temps · Congés · Documents · Paie · Organisation · Paramètres |
+| **Responsable exploitation** | Accueil · Temps de travail · Congés · Organisation *(ni Paie, ni Documents, ni gestion collaborateurs/contrats)* |
+| **Manager d'équipe** | Accueil · Temps de travail · Congés *(périmètre équipe, validations)* |
+| **Gestionnaire de paie** | Accueil · Paie & déclarations · Documents *(pas de gestion des utilisateurs/employés)* |
+| **Salarié** | Mon espace · Mes documents *(portail personnel)* |
+| **Ancien salarié** | Mes documents *(espace personnel post-départ, aucun accès Company)* |
+Le prototype change **réellement** le menu, l'accueil, les écrans, les données (scope) et les actions selon le profil simulé (pas qu'un libellé).
+
+## C. Matrice activités × permissions × surfaces
+| Activité | Permission (RBAC réel) | Surfaces d'accès |
+|---|---|---|
+| Voir priorités / situation | workforce.view (+ scope) | Accueil (contenu par rôle/scope) |
+| Annuaire / fiche | workforce.view (+ scope manager) | Collaborateurs → fiche |
+| Créer/éditer collaborateur | workforce.manage | Collaborateurs (RH) |
+| Préparer contrat / signature | workforce.contracts / signature.request | Fiche, Documents, Embauche |
+| Planning (voir/gérer/publier) | planning_view / _manage / _publish | Temps › Planning (RH, ops, mgr selon perm) |
+| Corriger pointage | time_manage (scopé) | Temps › Aujourd'hui/Présences (RH, ops, mgr) |
+| Valider feuille de temps | timesheet_approve (scopé) | Temps › Feuilles + Inbox |
+| Approuver congé | leave_approve (scopé) | Congés › Demandes + Inbox |
+| Demander congé | self (workforce.me) | Portail salarié |
+| Voir rémunérations | compensation_read | Fiche/Paie/Documents (RH si droit, Paie) |
+| Préparer la paie | payroll_prepare/validate/export | Paie & déclarations |
+| Gérer accès / inviter | members.invite/manage | Fiche (carte accès) |
+| Préparer le départ | workforce.manage + members.manage (cible E4) | Fiche · Départs · tâche |
+| Accès post-départ | capacité « self-document » dédiée (E5) | Espace personnel (hors Company) |
+*Aucune surface ne dépend d'un intitulé de poste ; tout est gated par permission + scope + ModuleGate + Market + JobDomain + ownership.*
+
+## D. Cartographie pages existantes → destinations futures
+| Page/écran actuel (code) | Destination cible |
+|---|---|
+| `pages/dashboard.vue` (accueil unique, P3-B) | **Accueil** — contenu composé par rôle/scope + Inbox |
+| `workforce/employees/index.vue` | **Collaborateurs** — onglets Annuaire/Embauches/Départs |
+| `workforce/employees/[id].vue` | **Fiche** (détail) — onglets Vue d'ensemble/Contrat/Documents/Cycle de vie |
+| `workforce/time/index.vue` (LOT B) | **Temps de travail** — 4 vues conçues (pas 4 onglets « posés ») |
+| `workforce/leave/index.vue` | **Congés** — Demandes(validation)/Calendrier/Soldes/Politiques |
+| `workforce/documents/index.vue` (LOT A) | **Documents** — Registre/Modèles/Signatures + **coffre-fort perso** |
+| `workforce/payroll/index.vue` (LOT C) | **Paie & déclarations** — Périodes/Déclarations (limites C1–C3 conservées) |
+| `workforce/organization/[tab].vue` (P2-C) | **Organisation** — Départements/Postes/Responsables/Lieux |
+| `workforce/settings/[tab].vue` (P2-B) | **Paramètres** — config éditable réelle |
+| `workforce/me.vue` | **Mon espace** (portail salarié 2.0) + **Mes documents** |
+| *(nouveau — E4)* | **Embaucher** (wizard) · **Préparer le départ** (wizard) |
+| *(nouveau — E5)* | **Espace personnel post-départ** (hors `SetCompanyContext`) |
+
+## E. Inventaire — actions **simulées** vs **non encore disponibles** dans Leezr
+- **Déjà disponible** (le prototype en reflète la cible UX) : annuaire/fiche, temps (cockpit/réconciliation), congés (demande/approbation), documents (registre/modèles/signatures), paie (périodes/DSN honnête), organisation, accès (invite/suspend/revoke — ADR-688), checklist d'intégration partielle.
+- **Simulé dans le prototype (interactions UX, sans effet métier)** : édition de créneau planning, approbation/validation (boutons), correction d'anomalie (modale), navigation de semaine, avancement du wizard.
+- **Non encore disponible dans Leezr (à construire E4/E5)** : workflow **« Embaucher » unifié reprenable** ; workflow **« Préparer le départ »** (états/dates/étapes assignables) ; **éléments de solde vérifiés → génération STC / certificat de travail / attestation France Travail / dernier bulletin** ; **planification de révocation à la date d'effet** ; **dépôt des documents dans l'espace personnel** ; **capacité d'accès post-départ** + e-mail personnel vérifié ; politiques de **conservation par Market/type**.
+
+## F. Captures livrées (prototype)
+Desktop RH (accueil + Inbox), Exploitation (nav/scope différents), Portail salarié, Espace post-départ, Planning semaine, Wizard de sortie, **Mobile 390px (drawer + sélecteur de profil)**, Dark mode.
+
+## G. Décision
+Prototype E1.1 = **référence UX candidate** pour E2. En attente de validation finale de la direction avant d'engager E2 (navigation). Aucun écran réel modifié. ADR-689 complété par cet addendum (pas d'ADR distinct nécessaire — même décision de cadrage, affinée).

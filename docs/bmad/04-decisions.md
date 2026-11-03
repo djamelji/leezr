@@ -24702,3 +24702,6 @@ Modules backend séparés ; pas de fusion Employee/User/Membership ; pas de 2ᵉ
 Dossier `workforce-experience-2026-e1.md` (audit/benchmark/matrices/nav/E-S/conservation/plan/critères) · **Prototype browsable** (Artifact) · captures « avant » (DEV) · ADR-689. **Aucune refonte d'écran livrée** ; E2→E6 engagés après validation direction UX.
 
 ---
+
+### ADR-689 — Complément E1.1 (prototype corrigé)
+Revue direction : nav Company corrigée (Fiche/Départ/Post **hors** sidebar ; **Documents** ajouté), prototype rendu **réellement navigable** avec **6 simulations de persona** modifiant menu/écrans/données/actions (vérifié : RH 8 espaces · Exploitation 4 sans Paie/Documents · Paie 3 · Salarié portail perso · Ancien post-départ), **navigation mobile fonctionnelle** (drawer 390px), espace Documents, vue Planning hebdo, wizard de sortie navigable, actions **simulé/non-disponible** explicitées. Matrices (activités×permissions×surfaces, pages→destinations, inventaire) + addendum dans `docs/bmad/workforce-experience-2026-e1.md`. **Aucun écran réel modifié** ; E2 engagé après validation.
