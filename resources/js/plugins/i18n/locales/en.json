@@ -8069,7 +8069,8 @@
       "invited": "Invitation sent",
       "active": "Account activated",
       "connected": "Connected",
-      "account_without_membership": "Account to re-link"
+      "account_without_membership": "Account to re-link",
+      "suspended": "Access suspended"
     },
     "card": {
       "title": "Access & account",
@@ -8077,6 +8078,20 @@
       "invite": "Invite",
       "noEmail": "No email — set one to invite.",
       "mismatch": "The account exists but is no longer linked to this company. Click \"Manage access\" to re-link it."
+    },
+    "lifecycle": {
+      "title": "Access lifecycle",
+      "suspend": "Suspend",
+      "restore": "Restore access",
+      "revoke": "Revoke rights",
+      "reason": "Reason (optional)",
+      "suspendConfirm": "Suspend access?",
+      "suspendConfirmText": "The employee can no longer access the company (immediate). HR data is preserved. Reversible.",
+      "revokeConfirm": "Revoke rights?",
+      "revokeConfirmText": "Removes company access and unlinks the account. Employee, contracts, documents and history are preserved. The account stays re-invitable.",
+      "suspendDone": "Access suspended",
+      "restoreDone": "Access restored",
+      "revokeDone": "Rights revoked"
     }
   },
   "timeWork": {

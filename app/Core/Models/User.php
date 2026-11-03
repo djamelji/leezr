@@ -123,6 +123,12 @@ class User extends Authenticatable
             return false;
         }
 
+        // PRODUCT-SECURITY-1 (ADR-688): defense in depth — a suspended membership grants
+        // no permission even if some code path bypasses SetCompanyContext (jobs, read models).
+        if ($membership->isSuspended()) {
+            return false;
+        }
+
         return $membership->companyRole->hasPermission($permissionKey);
     }
 

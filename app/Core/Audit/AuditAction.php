@@ -35,6 +35,10 @@ final class AuditAction
     public const MEMBER_PROFILE_UPDATED = 'member.profile_updated';
     public const MEMBER_ROLE_CHANGED = 'member.role_changed';
     public const MEMBER_REMOVED = 'member.removed';
+    // PRODUCT-SECURITY-1 (ADR-688): access lifecycle.
+    public const MEMBER_SUSPENDED = 'member.suspended';
+    public const MEMBER_REACTIVATED = 'member.reactivated';
+    public const MEMBER_ACCESS_REVOKED = 'member.access_revoked';
 
     // ─── User profile (self-service) ─────────────────────
     public const USER_PROFILE_UPDATED = 'user.profile_updated';

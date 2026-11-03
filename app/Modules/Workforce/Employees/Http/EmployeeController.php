@@ -261,6 +261,33 @@ class EmployeeController extends Controller
         return response()->json(app(EmployeeAccessService::class)->resendInvitation($company, $employee));
     }
 
+    // ── SECURITY-1: suspend / restore / revoke company access ──
+    public function suspendAccess(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+        $reason = $request->validate(['reason' => 'nullable|string|max:255'])['reason'] ?? null;
+
+        return response()->json(app(EmployeeAccessService::class)->suspend($company, $employee, (int) $request->user()->id, $reason));
+    }
+
+    public function restoreAccess(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+
+        return response()->json(app(EmployeeAccessService::class)->restore($company, $employee, (int) $request->user()->id));
+    }
+
+    public function revokeAccess(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
+        $reason = $request->validate(['reason' => 'nullable|string|max:255'])['reason'] ?? null;
+
+        return response()->json(app(EmployeeAccessService::class)->revoke($company, $employee, (int) $request->user()->id, $reason));
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');

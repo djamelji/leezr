@@ -37,8 +37,10 @@ class EmployeeAccessService
 
         $state = 'none';
         if ($user && $membership) {
-            // none → invited (mot de passe non défini) → active (défini) → connected (1re connexion effectuée).
-            if (! $user->password_set_at) {
+            if ($membership->isSuspended()) {
+                // SECURITY-1 : accès suspendu (membership + données conservés).
+                $state = 'suspended';
+            } elseif (! $user->password_set_at) {
                 $state = 'invited';
             } else {
                 $state = $user->last_login_at ? 'connected' : 'active';
@@ -48,18 +50,148 @@ class EmployeeAccessService
             $state = 'account_without_membership';
         }
 
+        $hasActiveAccess = $membership && ! $membership->isSuspended();
+        $isSelf = $membership && $user && $membership->user_id === request()?->user()?->id;
+        $protected = $membership && ($membership->isOwner() || $isSelf || $this->isLastAdmin($company, $membership));
+
         return [
             'state' => $state,
             'email' => $employee->email,
             'has_email' => ! empty($employee->email),
             'user_status' => $user?->status,            // 'invited' | 'active' (attribut User)
             'invited_at' => $membership?->created_at?->toIso8601String(),
+            'suspended_at' => $membership?->suspended_at?->toIso8601String(),
+            'suspension_reason' => $membership?->suspension_reason,
             'role' => $membership?->company_role_id,
+            'is_admin' => (bool) $membership?->isAdmin(),
+            'is_owner' => (bool) $membership?->isOwner(),
             'assignable_roles' => CompanyRole::where('company_id', $company->id)
                 ->where('is_administrative', false)     // jamais de privilège admin par défaut
                 ->get(['id', 'name', 'key'])->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->all(),
             'can_resend' => $state === 'invited',
+            // Actions autorisées (sécurité admin : owner/soi/dernier admin protégés).
+            'can_suspend' => $hasActiveAccess && ! $protected,
+            'can_restore' => (bool) ($membership && $membership->isSuspended()),
+            'can_revoke' => $membership && ! $protected,
         ];
+    }
+
+    /** Suspend l'accès : bloque TOUT accès company côté serveur, sans rien supprimer. */
+    public function suspend(Company $company, Employee $employee, int $actorId, ?string $reason = null): array
+    {
+        $membership = $this->membershipOrFail($company, $employee);
+        $this->assertModifiable($company, $membership, $actorId, 'suspend');
+
+        if (! $membership->isSuspended()) {
+            $membership->forceFill([
+                'suspended_at' => now(),
+                'suspended_by' => $actorId,
+                'suspension_reason' => $reason,
+            ])->save();
+
+            $this->audit($company, $employee, $actorId, \App\Core\Audit\AuditAction::MEMBER_SUSPENDED, [
+                'action' => 'suspend_access', 'user_id' => $membership->user_id, 'reason' => $reason,
+            ], 'warning');
+        }
+
+        return $this->status($company, $employee->refresh());
+    }
+
+    /** Rétablit l'accès suspendu. */
+    public function restore(Company $company, Employee $employee, int $actorId): array
+    {
+        $membership = $this->membershipOrFail($company, $employee);
+
+        if ($membership->isSuspended()) {
+            $membership->forceFill(['suspended_at' => null, 'suspended_by' => null, 'suspension_reason' => null])->save();
+            $this->audit($company, $employee, $actorId, \App\Core\Audit\AuditAction::MEMBER_REACTIVATED, [
+                'action' => 'restore_access', 'user_id' => $membership->user_id,
+            ]);
+        }
+
+        return $this->status($company, $employee->refresh());
+    }
+
+    /**
+     * Révoque les droits Company : retire le membership (accès) et délie le compte du collaborateur.
+     * NE SUPPRIME PAS l'Employee, le User, les contrats, documents, pointages, congés, logs (intégrité RH).
+     * Le User persiste (autres companies / audit) et l'Employee reste ré-invitable (réembauche propre).
+     */
+    public function revoke(Company $company, Employee $employee, int $actorId, ?string $reason = null): array
+    {
+        $membership = $this->membershipOrFail($company, $employee);
+        $this->assertModifiable($company, $membership, $actorId, 'revoke');
+
+        $userId = $membership->user_id;
+        $membership->delete(); // retire l'accès company uniquement (tenant-scopé)
+
+        // Délie l'Employee du compte (les DONNÉES RH restent intactes).
+        if ($employee->user_id === $userId) {
+            $employee->user_id = null;
+            $employee->save();
+        }
+
+        $this->audit($company, $employee, $actorId, \App\Core\Audit\AuditAction::MEMBER_ACCESS_REVOKED, [
+            'action' => 'revoke_access', 'user_id' => $userId, 'reason' => $reason,
+        ], 'warning');
+
+        return $this->status($company, $employee->refresh());
+    }
+
+    private function membershipOrFail(Company $company, Employee $employee): Membership
+    {
+        $membership = $employee->user_id
+            ? Membership::where('company_id', $company->id)->where('user_id', $employee->user_id)->first()
+            : null;
+        if (! $membership) {
+            throw ValidationException::withMessages(['access' => 'Ce collaborateur n\'a pas d\'accès à gérer.']);
+        }
+
+        return $membership;
+    }
+
+    /** Sécurité admin : jamais l'owner, jamais soi-même, jamais le dernier administrateur. */
+    private function assertModifiable(Company $company, Membership $membership, int $actorId, string $op): void
+    {
+        if ($membership->isOwner()) {
+            throw ValidationException::withMessages(['access' => "L'accès du propriétaire de l'entreprise ne peut pas être {$this->opLabel($op)}."]);
+        }
+        if ($membership->user_id === $actorId) {
+            throw ValidationException::withMessages(['access' => 'Vous ne pouvez pas modifier votre propre accès.']);
+        }
+        if ($this->isLastAdmin($company, $membership)) {
+            throw ValidationException::withMessages(['access' => "Impossible : ce serait le dernier administrateur de l'entreprise."]);
+        }
+    }
+
+    private function opLabel(string $op): string
+    {
+        return $op === 'revoke' ? 'révoqué' : 'suspendu';
+    }
+
+    /** Vrai si la membership est administrative ET la seule administrative ACTIVE de la company. */
+    private function isLastAdmin(Company $company, Membership $membership): bool
+    {
+        if (! $membership->isAdmin()) {
+            return false;
+        }
+        $otherActiveAdmins = Membership::where('company_id', $company->id)
+            ->where('id', '!=', $membership->id)
+            ->whereNull('suspended_at')
+            ->with('companyRole:id,is_administrative')
+            ->get()
+            ->filter(fn (Membership $m) => $m->isAdmin())
+            ->count();
+
+        return $otherActiveAdmins === 0;
+    }
+
+    private function audit(Company $company, Employee $employee, int $actorId, string $action, array $metadata, string $severity = 'info'): void
+    {
+        app(\App\Core\Audit\AuditLogger::class)->logCompany(
+            $company->id, $action, 'employee_access', (string) $employee->id,
+            ['actorId' => $actorId, 'actorType' => 'user', 'severity' => $severity, 'metadata' => $metadata],
+        );
     }
 
     /**

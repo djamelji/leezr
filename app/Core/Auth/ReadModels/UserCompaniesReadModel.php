@@ -16,6 +16,9 @@ class UserCompaniesReadModel
     {
         $memberships = $user->memberships()
             ->with('companyRole.permissions', 'company.market')
+            // SECURITY-1 (ADR-688): a suspended membership is hidden from the company switcher
+            // (access is blocked server-side anyway; this avoids a dead selector entry).
+            ->whereNull('suspended_at')
             ->get();
 
         return $memberships->map(function ($membership) {

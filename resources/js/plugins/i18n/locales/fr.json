@@ -8069,7 +8069,8 @@
       "invited": "Invitation envoyée",
       "active": "Compte activé",
       "connected": "Connecté",
-      "account_without_membership": "Compte à ré-associer"
+      "account_without_membership": "Compte à ré-associer",
+      "suspended": "Accès suspendu"
     },
     "card": {
       "title": "Accès & compte",
@@ -8077,6 +8078,20 @@
       "invite": "Inviter",
       "noEmail": "Aucun e-mail — renseignez-le pour inviter.",
       "mismatch": "Le compte existe mais n'est plus rattaché à cette entreprise. Cliquez sur « Gérer l'accès » pour le ré-associer."
+    },
+    "lifecycle": {
+      "title": "Cycle de vie de l’accès",
+      "suspend": "Suspendre",
+      "restore": "Rétablir l’accès",
+      "revoke": "Révoquer les droits",
+      "reason": "Motif (facultatif)",
+      "suspendConfirm": "Suspendre l'accès ?",
+      "suspendConfirmText": "Le collaborateur ne pourra plus accéder à l'entreprise (effet immédiat). Ses données RH sont conservées. Réversible.",
+      "revokeConfirm": "Révoquer les droits ?",
+      "revokeConfirmText": "Retire l'accès à l'entreprise et délie le compte. Employé, contrats, documents et historiques sont conservés. Le compte reste ré-invitable.",
+      "suspendDone": "Accès suspendu",
+      "restoreDone": "Accès rétabli",
+      "revokeDone": "Droits révoqués"
     }
   },
   "timeWork": {

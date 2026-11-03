@@ -16,11 +16,24 @@ class Membership extends Model
         'company_id',
         'role',
         'company_role_id',
+        'suspended_at',
+        'suspended_by',
+        'suspension_reason',
+    ];
+
+    protected $casts = [
+        'suspended_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** PRODUCT-SECURITY-1 (ADR-688): access is suspended (membership kept, all data preserved). */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 
     public function companyRole(): BelongsTo

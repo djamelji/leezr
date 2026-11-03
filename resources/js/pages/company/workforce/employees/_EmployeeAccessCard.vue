@@ -36,6 +36,7 @@ const STATE = {
   invited: { color: 'warning', icon: 'tabler-mail-forward' },
   active: { color: 'info', icon: 'tabler-user-check' },
   connected: { color: 'success', icon: 'tabler-user-check' },
+  suspended: { color: 'warning', icon: 'tabler-lock' },
   account_without_membership: { color: 'error', icon: 'tabler-alert-triangle' },
 }
 const meta = computed(() => STATE[state.value] ?? STATE.none)

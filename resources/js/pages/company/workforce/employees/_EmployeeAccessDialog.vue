@@ -61,6 +61,39 @@ const resend = async () => {
   } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
   finally { acting.value = false }
 }
+
+// ── SECURITY-1 — lifecycle (suspend / restore / revoke) ──
+const canSuspend = computed(() => access.value?.can_suspend === true)
+const canRestore = computed(() => access.value?.can_restore === true)
+const canRevoke = computed(() => access.value?.can_revoke === true)
+
+const confirm = ref({ open: false, type: null, reason: '' })
+const askConfirm = type => { confirm.value = { open: true, type, reason: '' } }
+
+const runConfirmed = async () => {
+  const type = confirm.value.type
+  acting.value = true
+  try {
+    if (type === 'suspend') await store.suspendEmployeeAccess(props.employeeId, confirm.value.reason || null)
+    else if (type === 'revoke') await store.revokeEmployeeAccess(props.employeeId, confirm.value.reason || null)
+    await load()
+    toast(t(`employeeAccess.lifecycle.${type}Done`), 'success')
+    emit('granted')
+    confirm.value.open = false
+  } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
+  finally { acting.value = false }
+}
+
+const restore = async () => {
+  acting.value = true
+  try {
+    await store.restoreEmployeeAccess(props.employeeId)
+    await load()
+    toast(t('employeeAccess.lifecycle.restoreDone'), 'success')
+    emit('granted')
+  } catch (e) { toast(e.response?._data?.message || t('common.error'), 'error') }
+  finally { acting.value = false }
+}
 </script>
 
 <template>
@@ -77,8 +110,29 @@ const resend = async () => {
         </div>
 
         <template v-else-if="access">
+          <!-- ACCÈS SUSPENDU -->
+          <template v-if="state === 'suspended'">
+            <VAlert type="warning" variant="tonal" density="compact" class="mb-3">
+              <VIcon icon="tabler-lock" start size="16" />
+              {{ t('employeeAccess.states.suspended') }}
+              <div v-if="access.suspension_reason" class="text-caption mt-1">{{ access.suspension_reason }}</div>
+            </VAlert>
+            <VBtn
+              v-if="canRestore"
+              color="success"
+              variant="tonal"
+              prepend-icon="tabler-lock-open"
+              :loading="acting"
+              class="mb-2"
+              block
+              @click="restore"
+            >
+              {{ t('employeeAccess.lifecycle.restore') }}
+            </VBtn>
+          </template>
+
           <!-- Compte CONNECTÉ (1re connexion effectuée) -->
-          <VAlert v-if="state === 'connected'" type="success" variant="tonal" density="compact">
+          <VAlert v-else-if="state === 'connected'" type="success" variant="tonal" density="compact">
             <VIcon icon="tabler-circle-check" start size="16" />
             {{ t('employeeAccess.connected') }}
           </VAlert>
@@ -136,6 +190,36 @@ const resend = async () => {
             </VBtn>
           </template>
 
+          <!-- Lifecycle sensible : suspendre / révoquer (owner/soi/dernier admin protégés côté serveur) -->
+          <template v-if="canSuspend || canRevoke">
+            <VDivider class="my-4" />
+            <div class="text-overline mb-2">{{ t('employeeAccess.lifecycle.title') }}</div>
+            <div class="d-flex flex-wrap gap-2">
+              <VBtn
+                v-if="canSuspend"
+                color="warning"
+                variant="tonal"
+                size="small"
+                prepend-icon="tabler-lock"
+                data-test="emp-suspend"
+                @click="askConfirm('suspend')"
+              >
+                {{ t('employeeAccess.lifecycle.suspend') }}
+              </VBtn>
+              <VBtn
+                v-if="canRevoke"
+                color="error"
+                variant="tonal"
+                size="small"
+                prepend-icon="tabler-user-off"
+                data-test="emp-revoke"
+                @click="askConfirm('revoke')"
+              >
+                {{ t('employeeAccess.lifecycle.revoke') }}
+              </VBtn>
+            </div>
+          </template>
+
           <p class="text-caption text-medium-emphasis mt-4">
             {{ t('employeeAccess.statesNote') }}
           </p>
@@ -148,5 +232,23 @@ const resend = async () => {
         </VBtn>
       </VCardText>
     </VCard>
+
+    <!-- Confirmation des actions sensibles (avec motif tracé) -->
+    <VDialog v-model="confirm.open" max-width="440">
+      <VCard>
+        <VCardTitle class="text-h6 pa-4">{{ t(`employeeAccess.lifecycle.${confirm.type}Confirm`) }}</VCardTitle>
+        <VCardText>
+          <p class="text-body-2 mb-3">{{ t(`employeeAccess.lifecycle.${confirm.type}ConfirmText`) }}</p>
+          <AppTextField v-model="confirm.reason" :label="t('employeeAccess.lifecycle.reason')" />
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="confirm.open = false">{{ t('common.cancel') }}</VBtn>
+          <VBtn :color="confirm.type === 'revoke' ? 'error' : 'warning'" :loading="acting" @click="runConfirmed">
+            {{ t('common.confirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </VDialog>
 </template>

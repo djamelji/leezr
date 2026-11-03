@@ -47,6 +47,17 @@ class SetCompanyContext
         // Runtime invariant: non-owner memberships MUST have a CompanyRole
         $membership = $user->membershipFor($company);
 
+        // PRODUCT-SECURITY-1 (ADR-688): a suspended membership blocks ALL company access
+        // SERVER-SIDE (every endpoint, SSE included) — effective on the next request, since
+        // auth is pure cookie SPA and the membership is re-queried each request. Owner cannot
+        // be suspended (guarded at the action), so this never locks the company's owner out.
+        if ($membership && $membership->isSuspended()) {
+            return response()->json([
+                'message' => 'Your access to this company has been suspended.',
+                'code' => 'membership_suspended',
+            ], 403);
+        }
+
         if ($membership && !$membership->isOwner() && $membership->company_role_id === null) {
             Log::critical('RBAC invariant violation: non-owner membership without CompanyRole', [
                 'user_id' => $user->id,

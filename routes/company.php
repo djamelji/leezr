@@ -498,6 +498,10 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware($perm('workforce.view'));
     Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
+    // SECURITY-1 (ADR-688): access lifecycle — sensitive, gated members.manage.
+    Route::post('employees/{id}/access/suspend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'suspendAccess'])->whereNumber('id')->middleware($perm('members.manage'));
+    Route::post('employees/{id}/access/restore', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'restoreAccess'])->whereNumber('id')->middleware($perm('members.manage'));
+    Route::post('employees/{id}/access/revoke', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'revokeAccess'])->whereNumber('id')->middleware($perm('members.manage'));
 
     // Contracts — view to read, contracts to create/activate
     Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware($perm('workforce.view'));

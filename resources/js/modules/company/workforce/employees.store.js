@@ -294,6 +294,16 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
     async resendEmployeeAccess(id) {
       return await $api(`/workforce/employees/${id}/access/resend`, { method: 'POST' })
     },
+    // SECURITY-1 — access lifecycle.
+    async suspendEmployeeAccess(id, reason) {
+      return await $api(`/workforce/employees/${id}/access/suspend`, { method: 'POST', body: { reason } })
+    },
+    async restoreEmployeeAccess(id) {
+      return await $api(`/workforce/employees/${id}/access/restore`, { method: 'POST' })
+    },
+    async revokeEmployeeAccess(id, reason) {
+      return await $api(`/workforce/employees/${id}/access/revoke`, { method: 'POST', body: { reason } })
+    },
 
     // ── Reset ──────────────────────────────────────────────
     clearCurrentEmployee() {
