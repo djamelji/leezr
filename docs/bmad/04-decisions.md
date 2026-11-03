@@ -24605,3 +24605,31 @@ Pas de suspension/révocation d'accès first-class (workflow absent) ; la termin
 `_EmployeeAccessCard.vue` (nouveau) ; `employees/[id].vue` (carte accès + reload signal) ; `MembershipController.php` (enrichissement is_employee/employee_id) ; `members/index.vue` (badges) ; i18n fr/en (`employeeAccess.states/card`, `members.employeeBadge/accountOnlyBadge`) ; `WorkforceSecurityWDTest.php` ; recette `tests/e2e/person-p3a-dev.spec.js`.
 
 ---
+
+## ADR-687 — PRODUCT-UX-3 P3-B : accueil Company unique
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-3 / P3-B. Après P2-A, deux accueils subsistaient : `/dashboard` (moteur de widgets configurable, générique/jobdomain) et l'accueil opérationnel Workforce `/company/workforce` (priorités « À traiter »). Objectif : **une seule destination d'accueil Company**, sans supprimer le moteur de widgets, et **sans que les tâches deviennent un widget facultatif invisible**.
+
+### Décision
+`/dashboard` devient l'**accueil canonique unique**. Les priorités Workforce y sont intégrées comme **section fixe en tête** (`HomePrioritiesSection.vue`) — « À traiter » (tâches) + situation compacte — affichée pour tout utilisateur `workforce.view` (module actif). **Ce n'est PAS un widget optionnel** : la section est toujours visible pour les utilisateurs concernés, donc les tâches ne disparaissent jamais derrière le catalogue. **Une source de vérité** : l'endpoint autorisé, scopé manager, sans salaire `/workforce/dashboard/priorities` (identique à P2-A). Le **moteur de widgets + la personnalisation + les widgets jobdomain** (ex. logistique) sont **préservés en dessous** (« Tableau de bord », « Ajouter un widget »).
+
+**Pourquoi pas un WidgetManifest server-resolved ?** `WidgetManifest::resolve()` ne reçoit que `company_id` (pas la Request) → impossible d'y appliquer le **scope manager** (qui dépend de l'utilisateur). Une section client-side appelant l'endpoint autorisé préserve RBAC + manager scope + confidentialité. Un widget Workforce dans le moteur reste une évolution possible (resolution client) mais ne garantirait pas la visibilité par défaut.
+
+### Route canonique & compatibilité
+`/company/workforce` (ancien accueil action) **redirige vers `/dashboard`** (deep-link compat). L'entrée de nav « Accueil » (ex-`workforce-home`, cockpit) est **retirée** ; « Tableau de bord » est **renommé « Accueil »** = l'unique entrée d'accueil. Deep-links, RBAC, ModuleGate, JobDomain, configuration des widgets **préservés**. Le **portail salarié** (`/home`, archetype field_worker) reste **inchangé** (contexte Employee distinct du contexte Company). Rôle-aware : même route, contenu selon permissions/modules.
+
+### Preuves (recette + tests)
+20 tests (nav/home/layout) verts, 0 régression. 3 échecs ControllerSize préservés. Recette DEV (SHA `595119e`) : `/dashboard` = « À traiter » (Paie: 1, Intégrations: 3) + situation (11 actifs) **+** widgets jobdomain (conformité, expéditions, chauffeurs) + « Ajouter un widget » ; `/company/workforce` → **redirige /dashboard** ; **1 seule** entrée nav « Accueil » ; responsive 1920/1366/768/390 + dark.
+
+### Mesures
+Avant : 2 accueils (widget générique + action Workforce), risque de statistiques contradictoires / double entrée. Après : **1 accueil canonique**, tâches toujours visibles en tête, widgets jobdomain + personnalisation conservés, 1 source de vérité pour les priorités. 0 accueil concurrent.
+
+### Fichiers
+`HomePrioritiesSection.vue` (nouveau) ; `dashboard.vue` (section + gating) ; `workforce/index.vue` (redirection) ; `WorkforceModule.php` (retrait nav accueil) ; i18n (`nav.company.dashboard` → Accueil) ; recette `tests/e2e/home-p3b-dev.spec.js`.
+
+### Clôture P3 & PRODUCT-UX-3
+P3-A (personne unifiée) + P3-B (accueil unique) livrés et vérifiés séparément sur DEV. **PRODUCT-UX-3 clôturé** (P1 espaces métier = LOT A/B/C ; P2 = accueil actions/paramètres/organisation + confidentialité ; P3 = identité + accueil unique). ADR-673 → 687.
+
+---
