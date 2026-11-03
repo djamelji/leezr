@@ -24482,3 +24482,63 @@ Accueil orienté actions : **À traiter** (Paie à contrôler: 1, Intégrations 
 `HomePrioritiesReadModel.php` (nouveau) ; `WorkforceDashboardController.php` (priorities + scrub statistics) ; `WorkforceAccess.php` (can/scopeIdsOrNull) ; `routes/company.php` ; `workforce-dashboard.store.js` (fetchPriorities) ; `workforce/index.vue` (refonte accueil) ; `WorkforceModule.php` (nav « Accueil ») ; i18n fr/en (`home.*`, `nav.company.workforce-home`) ; `CompanyHomePrioritiesTest.php` ; recette `tests/e2e/home-p2a-dev.spec.js`.
 
 ---
+
+## ADR-683 — PRODUCT-UX-3 P2-B : rationalisation des Paramètres RH
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : GO PRODUCT-UX-3 / P2-B. L'audit (ADR-673, chevauchement **I**) a constaté que le hub « Paramètres RH » (`settings/[tab].vue`, agrégateur ADR-639) mêlait des **onglets-lanceurs** (qui ne font qu'un bouton « Gérer… » vers une autre page) et un **doublon** : l'onglet `rules` (lecture seule) répliquait `worktime` (éditable).
+
+### Décision
+Supprimer les onglets-lanceurs et le doublon ; ne garder que les réglages **réellement éditables sans espace métier dédié**. Mapping ancien → définitif (source de vérité unique) :
+| Ancien onglet | Nature | Destination définitive |
+|---|---|---|
+| `organization` | lanceur → departments | **Espace Organisation** (nav propre ; P2-C) |
+| `leave` | lanceur → liste congés | **Espace Congés** |
+| `planning` | lanceur → planning | **Espace Temps de travail** (onglet Planning) |
+| `documents` | lanceur → documents | **Espace Documents** (onglet Modèles, LOT A) |
+| `rules` | **doublon** lecture seule | **fusionné** dans `worktime` (source de vérité des règles de temps) |
+| `general` | réel (société + 1er jour de semaine + assistant) | **conservé** |
+| `worktime` | réel éditable (temps + pauses) | **conservé — source de vérité unique** |
+| `contract` | réel (module Contract) | **conservé** |
+| `signature` | réel (module Signature) | **conservé** |
+
+Backend : `WorkforceSettingsController` ne déclare plus que `general/worktime/contract/signature`. Frontend : VWindowItems lanceurs/doublon retirés ; **deep-links legacy redirigés SYNCHRONEMENT dans le setup** vers l'espace métier (`/settings/organization`→`/organization/departments`, `leave`→`/leave`, `planning`→`/time?tab=planning`, `documents`→`/documents?tab=templates`, `rules`→`/settings/worktime`) — aucun lien cassé, aucune page-lanceur.
+
+### Preuves (tests + recette)
+`WorkforceSettingsHubTest` : sections = **uniquement** réglages réels (general/worktime + contract/signature si modules) ; organization/leave/planning/documents/rules **absents** ; `worktime` source unique. Recette DEV : onglets **Général / Temps de travail & Pauses / Contrats / Signature** (plus aucun lanceur), deep-links legacy redirigés.
+
+### Mesures
+Avant : 9 onglets dont **4 lanceurs** (un clic de plus pour atteindre la vraie page) + 1 doublon ambigu (deux sources pour la même règle). Après : **4 onglets réels**, chaque règle a **une source de vérité**, les réglages métier s'administrent dans leur espace (déjà dans la nav) — 0 page dont la seule fonction est d'afficher des boutons.
+
+### Fichiers
+`WorkforceSettingsController.php` (sections) ; `settings/[tab].vue` (retrait lanceurs + redirect synchrone) ; `WorkforceSettingsHubTest.php`.
+
+---
+
+## ADR-684 — PRODUCT-UX-3 P2 : fermeture de 4 fuites salariales transversales (hors Payroll)
+
+**Date** : 2026-11-03
+**Statut** : Accepté
+**Contexte** : la découverte (P2-A) de `total_gross_cents` dans l'endpoint dashboard statistics a montré qu'une protection limitée au namespace Payroll ne suffit pas. Audit transversal des surfaces exposant une rémunération/taux à un utilisateur **sans `workforce.compensation_read`**.
+
+### Fuites confirmées et correctifs
+| Réf | Surface | Champ | Correctif |
+|---|---|---|---|
+| **A1** | `GET /workforce/documents` (registre global) | `generation_snapshot` (salaires des contrats/bulletins, tous subjects) | **scrub** `PayrollConfidentiality` |
+| **A2** | `GET /workforce/documents/{id}` (détail/drawer) | `generation_snapshot` | **scrub** |
+| **A3** | `GET /workforce/job-roles` (postes) | `default_hourly_rate_cents` (masqué Vue seulement) | **scrub** (masquage serveur) |
+| **A4** | `GET /workforce/employees/{id}` (fiche) | `jobRole.default_hourly_rate_cents` (chargé inconditionnellement) | **chargement conditionnel** (`compensation_read`) dans `EmployeeReadModel::detail` |
+
+Déjà protégé (vérifié, inchangé) : contrats (`ContractController` masque les variables comp + `•••` en preview), fiche composite (`EmployeeFileReadModel` conditionnel), export CSV collaborateurs (aucune colonne salaire), documents de run (`forPayrollRun` scrubé), employee list (taux non chargé). Self-service `me` : documents de l'employé lui-même (sa propre donnée) — laissé tel quel (politique « un salarié voit son propre contrat »), à arbitrer séparément.
+
+### Doctrine
+Préférence **réponses explicitement autorisées** (A4 : ne pas charger le champ) ; **scrub défensif par motif** conservé comme filet (A1-A3, structures variées/opaques). Le scrubber `PayrollConfidentiality` est en réalité le **scrubber de compensation transverse** (motif `_cents`/`_bps`/`_snapshot`…), réutilisé au-delà de Payroll.
+
+### Preuves
+`PayrollCompensationConfidentialityTest` étendu : registre + détail documents masquent `generation_snapshot`, job-roles masquent le taux, fiche employé ne charge pas le taux — avec comptes **sans `compensation_read`** (tests négatifs) ET contrôle que les détenteurs de `compensation_read` voient. **17 tests / 230 assertions**, 58 tests (confidentialité + home + settings + nav + documents + sécurité) verts, 0 régression. 3 échecs ControllerSize préservés.
+
+### Fichiers
+`WorkforceDocumentController.php` (index/show scrub) ; `JobRoleController.php` (index scrub) ; `EmployeeReadModel.php` (jobRole conditionnel) ; `PayrollCompensationConfidentialityTest.php`.
+
+---
