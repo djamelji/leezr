@@ -6,6 +6,8 @@ import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
 import OnboardingWidget from './company/dashboard/_OnboardingWidget.vue'
 import QuickActionsBar from './company/dashboard/_QuickActionsBar.vue'
+import HomePrioritiesSection from '@/components/dashboard/HomePrioritiesSection.vue'
+import { useCan } from '@/composables/useCan'
 
 definePage({
   meta: {
@@ -17,6 +19,10 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const dashboardStore = useCompanyDashboardStore()
 const complianceStore = useCompanyComplianceStore()
+
+const { can, canModule } = useCan()
+// P3-B: Workforce "À traiter" shown as a fixed top section for the concerned users.
+const showPriorities = computed(() => canModule('workforce') && can('workforce.view'))
 
 const canEdit = computed(() => auth.isAdministrative)
 const companyName = computed(() => auth.currentCompany?.name || '')
@@ -116,6 +122,9 @@ const acceptSuggestion = suggestion => {
 
     <!-- ═══ Quick Actions (P0-1 — contextual guidance) ═══ -->
     <QuickActionsBar />
+
+    <!-- ═══ P3-B — Workforce « À traiter » (fixed, authorized, manager-scoped) ═══ -->
+    <HomePrioritiesSection v-if="showPriorities" />
 
     <!-- ═══ First Visit Cards (shown until user adds widgets) ═══ -->
     <VRow

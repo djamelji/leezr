@@ -51,6 +51,7 @@ declare module 'vue' {
     EmployeePicker: typeof import('./resources/js/components/workforce/EmployeePicker.vue')['default']
     EnableOneTimePasswordDialog: typeof import('./resources/js/components/dialogs/EnableOneTimePasswordDialog.vue')['default']
     ErrorHeader: typeof import('./resources/js/components/ErrorHeader.vue')['default']
+    HomePrioritiesSection: typeof import('./resources/js/components/dashboard/HomePrioritiesSection.vue')['default']
     I18n: typeof import('./resources/js/@core/components/I18n.vue')['default']
     MaintenancePreview: typeof import('./resources/js/components/MaintenancePreview.vue')['default']
     MoreBtn: typeof import('./resources/js/@core/components/MoreBtn.vue')['default']
