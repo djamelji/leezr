@@ -21,6 +21,9 @@ class WorkforceModule implements ModuleDefinition
                     // W-HR-UX-7 : « Mon espace » (self-service du membre connecté) rejoint le groupe
                     // personnel « Compte » — séparé du RH management (ne pas mélanger Company/Employee).
                     ['key' => 'workforce-me', 'title' => 'My Space', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-user-circle', 'surface' => 'hr', 'group' => 'account', 'sort' => 5],
+                    // PRODUCT-UX-3 (P2-A) : accueil RH orienté actions (« À traiter ») — point d'entrée
+                    // opérationnel, au-dessus des espaces métier. Remplace le hub à cartes-modules (ADR-673).
+                    ['key' => 'workforce-home', 'title' => 'Home', 'to' => ['name' => 'company-workforce'], 'icon' => 'tabler-home', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'cockpit', 'sort' => 2],
                     ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'hr_team', 'sort' => 10],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'hr_time', 'sort' => 20],
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.admin', 'surface' => 'hr', 'group' => 'hr_settings', 'sort' => 80],

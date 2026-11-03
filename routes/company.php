@@ -426,6 +426,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     // Was module-only (any employee could read it); now requires workforce.view (owner bypasses).
     Route::get('dashboard/statistics', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'statistics'])
         ->middleware('company.access:use-permission,workforce.view');
+    // P2-A (ADR-682): action-oriented home priorities (authorized, manager-scoped, no salary).
+    Route::get('dashboard/priorities', [\App\Modules\Workforce\Employees\Http\WorkforceDashboardController::class, 'priorities'])
+        ->middleware('company.access:use-permission,workforce.view');
 });
 
 // ── Workforce ──────────────────────────────────────────────────

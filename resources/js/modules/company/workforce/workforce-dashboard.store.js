@@ -4,11 +4,13 @@ import { $api } from '@/utils/api'
 export const useWorkforceDashboardStore = defineStore('workforceDashboard', {
   state: () => ({
     _statistics: null,
+    _priorities: null,
     _loading: false,
   }),
 
   getters: {
     statistics: state => state._statistics,
+    priorities: state => state._priorities,
     loading: state => state._loading,
     employees: state => state._statistics?.employees ?? { total: 0, active: 0, active_contracts: 0 },
     timesheets: state => state._statistics?.timesheets ?? {},
@@ -32,8 +34,17 @@ export const useWorkforceDashboardStore = defineStore('workforceDashboard', {
       }
     },
 
+    async fetchPriorities() {
+      try {
+        this._priorities = await $api('/workforce/dashboard/priorities')
+      } catch {
+        this._priorities = { priorities: [], all_clear: true, situation: null, scope: 'team' }
+      }
+    },
+
     clearStatistics() {
       this._statistics = null
+      this._priorities = null
     },
   },
 })

@@ -190,7 +190,8 @@
       "workforce-configuration": "Configuration",
       "workforce-settings": "Paramètres RH",
       "workforce-contract-templates": "Contrats de travail",
-      "workforce-signature": "Signatures"
+      "workforce-signature": "Signatures",
+      "workforce-home": "Accueil"
     }
   },
   "roles": {
@@ -4290,14 +4291,39 @@
     }
   },
   "home": {
-    "pageTitle": "Mon espace",
-    "widgetsTitle": "Mes widgets",
-    "addWidget": "Ajouter un widget",
-    "saveLayout": "Enregistrer la disposition",
-    "noWidgets": "Aucun widget configuré.",
-    "emptyStateHint": "Ajoutez des widgets pour personnaliser votre espace.",
-    "catalogTitle": "Widgets disponibles",
-    "allWidgetsAdded": "Tous les widgets disponibles sont sur votre espace."
+    "title": "Accueil",
+    "subtitleTeam": "Votre équipe — ce qui demande votre attention.",
+    "subtitleAll": "Votre entreprise — ce qui demande votre attention.",
+    "process": "Traiter",
+    "sections": {
+      "todo": "À traiter",
+      "situation": "Situation",
+      "quickAccess": "Accès rapides"
+    },
+    "allClear": {
+      "title": "Rien à traiter",
+      "subtitle": "Aucune action en attente pour le moment."
+    },
+    "priorities": {
+      "leave_to_approve": "Congés à approuver",
+      "timesheets_to_approve": "Feuilles de temps à valider",
+      "time_anomalies": "Anomalies de pointage",
+      "signatures_pending": "Signatures en attente",
+      "payroll_to_control": "Périodes de paie à contrôler",
+      "onboarding_incomplete": "Intégrations à compléter"
+    },
+    "situation": {
+      "activeEmployees": "Collaborateurs actifs",
+      "presentToday": "Présents aujourd'hui",
+      "notClocked": "Non pointés"
+    },
+    "quick": {
+      "employees": "Collaborateurs",
+      "time": "Temps de travail",
+      "leave": "Congés",
+      "payroll": "Paie & déclarations",
+      "documents": "Documents"
+    }
   },
   "companyDashboard": {
     "title": "Tableau de bord",

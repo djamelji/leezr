@@ -21,6 +21,18 @@ class WorkforceAccess
         return static::has($request, 'workforce.compensation_read');
     }
 
+    /** Vérif générique d'une permission company (owner bypass). Réutilisable (P2-A home). */
+    public static function can(Request $request, string $permission): bool
+    {
+        return static::has($request, $permission);
+    }
+
+    /** Scope manager d'un domaine : null = vue globale (hasViewAll), sinon soi + rapports directs. */
+    public static function scopeIdsOrNull(Request $request, string $domain): ?array
+    {
+        return static::hasViewAll($request, $domain) ? null : static::visibleEmployeeIds($request, $domain);
+    }
+
     /**
      * Peut-on lire les données RH (congés/pointages) d'un collaborateur donné ?
      * Autorisé si : capacité « voir tout » du domaine, OU c'est soi-même, OU c'est un rapport direct.

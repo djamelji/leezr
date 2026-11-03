@@ -1,383 +1,195 @@
 <script setup>
+// PRODUCT-UX-3 / P2-A (ADR-682) — action-oriented Company home.
+// Replaces the former module-cards HR hub (anti-pattern, ADR-673) with a clear
+// hierarchy: P1 "À traiter" (what needs my action) → P2 "Situation" → P3 access.
+// All data is AUTHORIZED + manager-scoped SERVER-SIDE (no salary); the frontend
+// only renders what the backend returned for this viewer.
 import { useWorkforceDashboardStore } from '@/modules/company/workforce/workforce-dashboard.store'
-import { useAppToast } from '@/composables/useAppToast'
-import WorkforceModuleCard from './_WorkforceModuleCard.vue'
-import WorkforceActionCard from './_WorkforceActionCard.vue'
+import { useCan } from '@/composables/useCan'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 
 const { t } = useI18n()
 const router = useRouter()
-const dashboardStore = useWorkforceDashboardStore()
-const { toast } = useAppToast()
+const store = useWorkforceDashboardStore()
+const { can, canModule } = useCan()
 
-// ── Load dashboard statistics ────────────────────────────────
-const loadDashboard = async () => {
-  try {
-    await dashboardStore.fetchStatistics()
-  } catch {
-    toast(t('workforceDashboard.loadError'), 'error')
-  }
+const loading = ref(true)
+const data = computed(() => store.priorities ?? { priorities: [], all_clear: true, situation: null, scope: 'team' })
+const priorities = computed(() => data.value.priorities ?? [])
+const situation = computed(() => data.value.situation)
+const isTeamScope = computed(() => data.value.scope === 'team')
+
+onMounted(async () => {
+  try { await store.fetchPriorities() } finally { loading.value = false }
+})
+
+// Priority presentation (label + action verb) keyed by the server item key.
+const label = key => t(`home.priorities.${key}`)
+const severityColor = s => ({ error: 'error', warning: 'warning', info: 'info' }[s] ?? 'primary')
+
+function goTo(to) {
+  router.push(to)
 }
 
-onMounted(() => {
-  loadDashboard()
-})
-
-const loading = computed(() => dashboardStore.loading)
-const badges = computed(() => dashboardStore.badges)
-const employees = computed(() => dashboardStore.employees)
-const timesheets = computed(() => dashboardStore.timesheets)
-const payroll = computed(() => dashboardStore.payroll)
-const leave = computed(() => dashboardStore.leave)
-
-// ── KPI cards ────────────────────────────────────────────────
-const kpiCards = computed(() => [
-  {
-    key: 'employees',
-    title: 'workforceDashboard.kpi.activeEmployees',
-    value: employees.value.active,
-    total: employees.value.total,
-    icon: 'tabler-users-group',
-    color: 'primary',
-    subtitle: 'workforceDashboard.kpi.totalEmployees',
-  },
-  {
-    key: 'contracts',
-    title: 'workforceDashboard.kpi.activeContracts',
-    value: employees.value.active_contracts,
-    icon: 'tabler-file-check',
-    color: 'info',
-  },
-  {
-    key: 'timesheetCompletion',
-    title: 'workforceDashboard.kpi.timesheetCompletion',
-    value: `${Math.round(badges.value.timesheet_completion || 0)}%`,
-    icon: 'tabler-clipboard-check',
-    color: timesheets.value.completion_rate >= 80 ? 'success' : timesheets.value.completion_rate >= 50 ? 'warning' : 'error',
-  },
-  {
-    key: 'pendingActions',
-    title: 'workforceDashboard.kpi.pendingActions',
-    value: (badges.value.pending_leaves || 0) + (badges.value.draft_payrolls || 0) + (badges.value.pending_dsn || 0),
-    icon: 'tabler-alert-circle',
-    color: 'warning',
-  },
-])
-
-// ── Pending items breakdown ──────────────────────────────────
-const pendingItems = computed(() => {
-  const items = []
-
-  if (badges.value.pending_leaves > 0) {
-    items.push({
-      key: 'leaves',
-      label: 'workforceDashboard.pending.leaves',
-      count: badges.value.pending_leaves,
-      icon: 'tabler-beach',
-      color: 'success',
-      to: { name: 'company-workforce-leave' },
-    })
-  }
-
-  if (badges.value.draft_payrolls > 0) {
-    items.push({
-      key: 'payrolls',
-      label: 'workforceDashboard.pending.payrolls',
-      count: badges.value.draft_payrolls,
-      icon: 'tabler-receipt',
-      color: 'error',
-      to: { name: 'company-workforce-payroll' },
-    })
-  }
-
-  if (badges.value.pending_dsn > 0) {
-    items.push({
-      key: 'dsn',
-      label: 'workforceDashboard.pending.dsn',
-      count: badges.value.pending_dsn,
-      icon: 'tabler-send',
-      color: 'warning',
-      to: { name: 'company-workforce-dsn' },
-    })
-  }
-
-  return items
-})
-
-// ── Module cards with live stats ─────────────────────────────
-const modules = computed(() => {
-  const payrollByStatus = payroll.value.by_status ?? {}
-  const leaveData = leave.value ?? {}
-
-  const pendingLeaveCount = leaveData.pending?.count ?? 0
-  const approvedLeaveCount = leaveData.approved?.count ?? 0
-
-  return [
-    {
-      key: 'employees',
-      title: 'workforce.modules.employees.title',
-      description: 'workforce.modules.employees.description',
-      icon: 'tabler-users-group',
-      color: 'primary',
-      to: { name: 'company-workforce-employees' },
-      permission: 'workforce.view',
-      stats: [
-        { value: employees.value.active, label: 'workforceDashboard.stats.active', color: 'success' },
-        { value: employees.value.total, label: 'workforceDashboard.stats.total', color: 'primary' },
-      ],
-    },
-    {
-      key: 'time',
-      title: 'workforce.modules.time.title',
-      description: 'workforce.modules.time.description',
-      icon: 'tabler-clock',
-      color: 'info',
-      to: { name: 'company-workforce-time' },
-      permission: 'workforce.view',
-      stats: [
-        { value: timesheets.value.total ?? 0, label: 'workforceDashboard.stats.timesheets', color: 'info' },
-        { value: `${Math.round(timesheets.value.completion_rate ?? 0)}%`, label: 'workforceDashboard.stats.completion', color: 'success' },
-      ],
-    },
-    {
-      key: 'planning',
-      title: 'workforce.modules.planning.title',
-      description: 'workforce.modules.planning.description',
-      icon: 'tabler-calendar-event',
-      color: 'warning',
-      to: { name: 'company-workforce-planning' },
-      permission: 'workforce.planning_view',
-      stats: [],
-    },
-    {
-      key: 'leave',
-      title: 'workforce.modules.leave.title',
-      description: 'workforce.modules.leave.description',
-      icon: 'tabler-beach',
-      color: 'success',
-      to: { name: 'company-workforce-leave' },
-      permission: 'workforce.leave_request',
-      stats: [
-        { value: pendingLeaveCount, label: 'workforceDashboard.stats.pending', color: 'warning' },
-        { value: approvedLeaveCount, label: 'workforceDashboard.stats.approved', color: 'success' },
-      ],
-    },
-    {
-      key: 'payroll',
-      title: 'workforce.modules.payroll.title',
-      description: 'workforce.modules.payroll.description',
-      icon: 'tabler-receipt',
-      color: 'error',
-      to: { name: 'company-workforce-payroll' },
-      permission: 'workforce.payroll_prepare',
-      stats: [
-        { value: payrollByStatus.draft?.count ?? 0, label: 'workforceDashboard.stats.draft', color: 'secondary' },
-        { value: payrollByStatus.validated?.count ?? 0, label: 'workforceDashboard.stats.validated', color: 'success' },
-      ],
-    },
-    {
-      key: 'documents',
-      title: 'workforce.modules.documents.title',
-      description: 'workforce.modules.documents.description',
-      icon: 'tabler-file-certificate',
-      color: 'secondary',
-      to: { name: 'company-workforce-documents' },
-      permission: 'workforce_documents.view',
-      stats: [],
-    },
-  ]
-})
-
-// ── Quick actions ────────────────────────────────────────────
-const quickActions = computed(() => [
-  {
-    key: 'add-employee',
-    title: 'workforce.actions.addEmployee.title',
-    description: 'workforce.actions.addEmployee.description',
-    icon: 'tabler-user-plus',
-    color: 'primary',
-    actionLabel: 'workforce.actions.addEmployee.action',
-    to: { name: 'company-workforce-employees' },
-  },
-  {
-    key: 'create-payroll',
-    title: 'workforce.actions.createPayroll.title',
-    description: 'workforce.actions.createPayroll.description',
-    icon: 'tabler-calculator',
-    color: 'error',
-    actionLabel: 'workforce.actions.createPayroll.action',
-    to: { name: 'company-workforce-payroll' },
-  },
-  {
-    key: 'view-timesheets',
-    title: 'workforce.actions.viewTimesheets.title',
-    description: 'workforce.actions.viewTimesheets.description',
-    icon: 'tabler-clipboard-check',
-    color: 'info',
-    actionLabel: 'workforce.actions.viewTimesheets.action',
-    to: { name: 'company-workforce-time' },
-  },
-])
-
+// P3 — frequent operations (short, permission/module gated). Not the full module list.
+const quickLinks = computed(() => [
+  { key: 'employees', icon: 'tabler-users', to: { name: 'company-workforce-employees' }, show: can('workforce.view') },
+  { key: 'time', icon: 'tabler-clock', to: { name: 'company-workforce-time' }, show: can('workforce.timesheet_view') },
+  { key: 'leave', icon: 'tabler-calendar', to: { name: 'company-workforce-leave' }, show: can('workforce.leave_request') || can('workforce.leave_approve') },
+  { key: 'payroll', icon: 'tabler-receipt', to: { name: 'company-workforce-payroll' }, show: canModule('workforce_payroll') && can('workforce.payroll_prepare') },
+  { key: 'documents', icon: 'tabler-file-certificate', to: { name: 'company-workforce-documents' }, show: canModule('workforce_documents') && can('workforce_documents.view') },
+].filter(l => l.show))
 </script>
 
 <template>
   <div>
-    <!-- Page Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('workforceDashboard.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('workforceDashboard.subtitle') }}
-        </p>
-      </div>
-      <VBtn
-        variant="tonal"
-        color="primary"
-        prepend-icon="tabler-refresh"
-        :loading="loading"
-        @click="loadDashboard"
-      >
-        {{ $t('workforceDashboard.refresh') }}
-      </VBtn>
+    <!-- Header -->
+    <div class="mb-6">
+      <h4 class="text-h4 font-weight-bold mb-1">
+        {{ $t('home.title') }}
+      </h4>
+      <p class="text-body-1 text-medium-emphasis mb-0">
+        {{ isTeamScope ? $t('home.subtitleTeam') : $t('home.subtitleAll') }}
+      </p>
     </div>
 
-    <!-- KPI Cards -->
-    <VRow class="card-grid card-grid-xs mb-6">
-      <VCol
-        v-for="kpi in kpiCards"
-        :key="kpi.key"
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              :color="kpi.color"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                :icon="kpi.icon"
-                size="26"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t(kpi.title) }}
-              </div>
-              <div class="d-flex align-center gap-2">
-                <span
-                  class="text-h5 font-weight-bold"
-                  :class="`text-${kpi.color}`"
-                >
-                  <VSkeletonLoader
-                    v-if="loading && !kpi.value"
-                    type="text"
-                    width="40"
-                  />
-                  <template v-else>
-                    {{ kpi.value }}
-                  </template>
-                </span>
-                <span
-                  v-if="kpi.total !== undefined"
-                  class="text-body-2 text-medium-emphasis"
-                >
-                  / {{ kpi.total }}
-                </span>
-              </div>
-              <div
-                v-if="kpi.subtitle"
-                class="text-caption text-disabled"
-              >
-                {{ $t(kpi.subtitle) }}
-              </div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
-
-    <!-- Pending Actions Banner -->
-    <VAlert
-      v-if="pendingItems.length"
-      type="warning"
-      variant="tonal"
+    <VProgressLinear
+      v-if="loading"
+      indeterminate
+      color="primary"
       class="mb-6"
-    >
-      <template #text>
-        <div class="d-flex align-center flex-wrap gap-4">
-          <span class="text-body-1 font-weight-medium">
-            {{ $t('workforceDashboard.pendingActionsTitle') }}
-          </span>
-          <div class="d-flex flex-wrap gap-2">
-            <VChip
-              v-for="item in pendingItems"
-              :key="item.key"
-              :color="item.color"
-              :prepend-icon="item.icon"
-              variant="tonal"
-              class="cursor-pointer"
-              @click="router.push(item.to)"
-            >
-              {{ item.count }} {{ $t(item.label) }}
-            </VChip>
+    />
+
+    <template v-else>
+      <!-- ── P1 — À TRAITER ─────────────────────────────────── -->
+      <div class="d-flex align-center gap-2 mb-3">
+        <VIcon icon="tabler-checklist" color="primary" />
+        <h6 class="text-h6 font-weight-bold mb-0">{{ $t('home.sections.todo') }}</h6>
+      </div>
+
+      <!-- All clear -->
+      <VCard
+        v-if="data.all_clear"
+        variant="tonal"
+        color="success"
+        class="mb-6"
+      >
+        <VCardText class="d-flex align-center gap-3 py-6">
+          <VIcon icon="tabler-circle-check" size="36" />
+          <div>
+            <div class="text-h6 font-weight-bold">{{ $t('home.allClear.title') }}</div>
+            <div class="text-body-2">{{ $t('home.allClear.subtitle') }}</div>
           </div>
+        </VCardText>
+      </VCard>
+
+      <!-- Priority cards -->
+      <VRow v-else class="mb-6">
+        <VCol
+          v-for="p in priorities"
+          :key="p.key"
+          cols="12"
+          sm="6"
+          md="4"
+        >
+          <VCard
+            class="h-100"
+            :data-test="`home-priority-${p.key}`"
+            @click="goTo(p.to)"
+          >
+            <VCardText>
+              <div class="d-flex align-center justify-space-between mb-2">
+                <VAvatar
+                  :color="severityColor(p.severity)"
+                  variant="tonal"
+                  rounded
+                  size="42"
+                >
+                  <VIcon :icon="p.icon" size="24" />
+                </VAvatar>
+                <span
+                  class="text-h4 font-weight-bold"
+                  :class="`text-${severityColor(p.severity)}`"
+                >{{ p.count }}</span>
+              </div>
+              <div class="font-weight-medium mb-3">{{ label(p.key) }}</div>
+              <VBtn
+                :color="severityColor(p.severity)"
+                variant="tonal"
+                size="small"
+                block
+                append-icon="tabler-arrow-right"
+                @click.stop="goTo(p.to)"
+              >
+                {{ $t('home.process') }}
+              </VBtn>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+
+      <!-- ── P2 — SITUATION ─────────────────────────────────── -->
+      <template v-if="situation">
+        <div class="d-flex align-center gap-2 mb-3">
+          <VIcon icon="tabler-chart-dots" color="secondary" />
+          <h6 class="text-h6 font-weight-bold mb-0">{{ $t('home.sections.situation') }}</h6>
+        </div>
+        <VRow class="card-grid card-grid-xs mb-6">
+          <VCol cols="6" sm="4">
+            <VCard>
+              <VCardText class="d-flex align-center gap-3">
+                <VAvatar color="primary" variant="tonal" rounded size="40"><VIcon icon="tabler-users" /></VAvatar>
+                <div>
+                  <div class="text-body-2 text-medium-emphasis">{{ $t('home.situation.activeEmployees') }}</div>
+                  <div class="text-h5 font-weight-bold">{{ situation.active_employees ?? 0 }}</div>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+          <VCol v-if="situation.present_today !== null" cols="6" sm="4">
+            <VCard>
+              <VCardText class="d-flex align-center gap-3">
+                <VAvatar color="success" variant="tonal" rounded size="40"><VIcon icon="tabler-user-check" /></VAvatar>
+                <div>
+                  <div class="text-body-2 text-medium-emphasis">{{ $t('home.situation.presentToday') }}</div>
+                  <div class="text-h5 font-weight-bold">{{ situation.present_today ?? 0 }}</div>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+          <VCol v-if="situation.not_clocked_today" cols="6" sm="4">
+            <VCard>
+              <VCardText class="d-flex align-center gap-3">
+                <VAvatar color="warning" variant="tonal" rounded size="40"><VIcon icon="tabler-user-x" /></VAvatar>
+                <div>
+                  <div class="text-body-2 text-medium-emphasis">{{ $t('home.situation.notClocked') }}</div>
+                  <div class="text-h5 font-weight-bold">{{ situation.not_clocked_today ?? 0 }}</div>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
+      </template>
+
+      <!-- ── P3 — ACCÈS RAPIDES ─────────────────────────────── -->
+      <template v-if="quickLinks.length">
+        <div class="d-flex align-center gap-2 mb-3">
+          <VIcon icon="tabler-bolt" color="secondary" />
+          <h6 class="text-h6 font-weight-bold mb-0">{{ $t('home.sections.quickAccess') }}</h6>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+          <VBtn
+            v-for="l in quickLinks"
+            :key="l.key"
+            variant="outlined"
+            :prepend-icon="l.icon"
+            @click="goTo(l.to)"
+          >
+            {{ $t(`home.quick.${l.key}`) }}
+          </VBtn>
         </div>
       </template>
-    </VAlert>
-
-    <!-- Module Cards with Live Stats -->
-    <h6 class="text-h6 mb-4">
-      {{ $t('workforce.hub.modulesTitle') }}
-    </h6>
-
-    <VRow class="card-grid card-grid-md mb-6">
-      <VCol
-        v-for="mod in modules"
-        :key="mod.key"
-        cols="12"
-        sm="6"
-        md="4"
-      >
-        <WorkforceModuleCard
-          :title="mod.title"
-          :description="mod.description"
-          :icon="mod.icon"
-          :color="mod.color"
-          :to="mod.to"
-          :stats="mod.stats"
-          :coming-soon="mod.comingSoon"
-        />
-      </VCol>
-    </VRow>
-
-    <!-- Quick Actions -->
-    <h6 class="text-h6 mb-4">
-      {{ $t('workforce.hub.actionsTitle') }}
-    </h6>
-
-    <VRow class="mb-6">
-      <VCol
-        v-for="action in quickActions"
-        :key="action.key"
-        cols="12"
-        md="4"
-      >
-        <WorkforceActionCard
-          :title="action.title"
-          :description="action.description"
-          :icon="action.icon"
-          :color="action.color"
-          :action-label="action.actionLabel"
-          :to="action.to"
-        />
-      </VCol>
-    </VRow>
+    </template>
   </div>
 </template>

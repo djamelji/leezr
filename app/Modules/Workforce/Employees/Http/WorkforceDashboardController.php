@@ -5,10 +5,12 @@ namespace App\Modules\Workforce\Employees\Http;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\DsnDeclarationReadModel;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
+use App\Modules\Workforce\ReadModels\HomePrioritiesReadModel;
 use App\Modules\Workforce\ReadModels\LeaveRequestReadModel;
 use App\Modules\Workforce\ReadModels\PayrollRunReadModel;
 use App\Modules\Workforce\ReadModels\ShiftReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetPeriodReadModel;
+use App\Modules\Workforce\Security\PayrollConfidentiality;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
 use Carbon\Carbon;
@@ -80,6 +82,11 @@ class WorkforceDashboardController extends Controller
             }
         }
 
+        // P2-A (ADR-682): this management endpoint must NOT leak payroll amounts to a
+        // viewer without compensation_read — close the C2/C3 bypass. Counts (draft_payrolls)
+        // are preserved; the monetary fields inside payroll/dsn stats are scrubbed by pattern.
+        $canComp = PayrollConfidentiality::canRead($request);
+
         return response()->json([
             'employees' => [
                 'total' => $totalEmployees,
@@ -89,8 +96,8 @@ class WorkforceDashboardController extends Controller
             'timesheets' => $timesheetStats,
             'shifts' => $shiftStats,
             'leave' => $leaveStats,
-            'payroll' => $payrollStats,
-            'dsn' => $dsnStats,
+            'payroll' => PayrollConfidentiality::scrub($payrollStats, $canComp),
+            'dsn' => PayrollConfidentiality::scrub($dsnStats, $canComp),
             'documents' => $documentStats,
             'badges' => [
                 'pending_leaves' => $pendingLeaves,
@@ -99,5 +106,11 @@ class WorkforceDashboardController extends Controller
                 'timesheet_completion' => $timesheetStats['completion_rate'] ?? 0,
             ],
         ]);
+    }
+
+    // ── Action-oriented home priorities (authorized, manager-scoped, no salary) ──
+    public function priorities(Request $request): JsonResponse
+    {
+        return response()->json(HomePrioritiesReadModel::forRequest($request));
     }
 }

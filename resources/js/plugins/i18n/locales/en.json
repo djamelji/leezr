@@ -190,7 +190,8 @@
       "workforce-configuration": "Configuration",
       "workforce-settings": "HR Settings",
       "workforce-contract-templates": "Employment contracts",
-      "workforce-signature": "Signatures"
+      "workforce-signature": "Signatures",
+      "workforce-home": "Home"
     }
   },
   "roles": {
@@ -4290,14 +4291,39 @@
     }
   },
   "home": {
-    "pageTitle": "My Space",
-    "widgetsTitle": "My Widgets",
-    "addWidget": "Add Widget",
-    "saveLayout": "Save Layout",
-    "noWidgets": "No widgets configured yet.",
-    "emptyStateHint": "Add widgets to customize your space.",
-    "catalogTitle": "Available Widgets",
-    "allWidgetsAdded": "All available widgets are on your space."
+    "title": "Home",
+    "subtitleTeam": "Your team — what needs your attention.",
+    "subtitleAll": "Your company — what needs your attention.",
+    "process": "Handle",
+    "sections": {
+      "todo": "To handle",
+      "situation": "Situation",
+      "quickAccess": "Quick access"
+    },
+    "allClear": {
+      "title": "All clear",
+      "subtitle": "Nothing pending right now."
+    },
+    "priorities": {
+      "leave_to_approve": "Leave to approve",
+      "timesheets_to_approve": "Timesheets to validate",
+      "time_anomalies": "Clock-in anomalies",
+      "signatures_pending": "Pending signatures",
+      "payroll_to_control": "Payroll periods to control",
+      "onboarding_incomplete": "Onboarding to complete"
+    },
+    "situation": {
+      "activeEmployees": "Active employees",
+      "presentToday": "Present today",
+      "notClocked": "Not clocked in"
+    },
+    "quick": {
+      "employees": "Employees",
+      "time": "Work time",
+      "leave": "Leave",
+      "payroll": "Payroll & filings",
+      "documents": "Documents"
+    }
   },
   "companyDashboard": {
     "title": "Dashboard",
