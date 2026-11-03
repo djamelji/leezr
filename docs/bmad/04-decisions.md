@@ -24675,3 +24675,30 @@ Pas d'automatisation de la politique de départ (suspension/révocation à la da
 migration `..._add_suspension_to_memberships` ; `Membership.php` (champs + isSuspended) ; `SetCompanyContext.php` (gate) ; `User.php` (défense hasCompanyPermission) ; `AuditAction.php` (3 actions) ; `EmployeeAccessService.php` (suspend/restore/revoke + gardes) ; `EmployeeController.php` + `routes/company.php` (3 endpoints) ; `UserCompaniesReadModel.php` (filtre sélecteur) ; `_EmployeeAccessDialog.vue` + `_EmployeeAccessCard.vue` + `employees.store.js` (UI) ; i18n fr/en ; `MembershipSuspensionSecurityTest.php` ; recette `tests/e2e/security-suspend-recette.spec.js`.
 
 ---
+
+## ADR-689 — WORKFORCE EXPERIENCE 2026 / E1 : cadrage UX, benchmark & architecture cible (entrée/sortie inclus)
+
+**Date** : 2026-11-03
+**Statut** : Accepté (cadrage — aucune refonte d'écran livrée)
+**Contexte** : GO WORKFORCE EXPERIENCE 2026. Malgré les consolidations P1→P3, l'expérience Workforce reste perçue comme « admin générique » ; le **cycle de vie entrée/sortie** est incomplet (sortie quasi absente) et l'**accès personnel post-départ** inexistant. E1 = **cadrage concret + prototypes browsables** avant d'engager E2→E6. Dossier détaillé : `docs/bmad/workforce-experience-2026-e1.md`. Prototype browsable : Artifact « Leezr Workforce 2026 — Prototype E1 ».
+
+### Constat (fondé sur le code)
+La nav Workforce est **déjà orientée activités** (9 entrées consolidées : Accueil/Collaborateurs/Temps/Congés/Paie/Documents/Organisation/Paramètres/Mon espace). Les **vrais manques** : (a) qualité visuelle (design system Workforce) ; (b) **cycle de sortie** (seul `TerminateEmployeeUseCase` existe — pas de « Préparer le départ », STC, certificat de travail, attestation France Travail, dernier bulletin, retrait d'accès à la date d'effet) ; (c) **accès personnel post-départ** (inexistant) ; (d) parcours **non-RH** (manager/paie/salarié) à rendre naturels (le RBAC le permet déjà, l'UX non).
+
+### Décisions de cadrage
+1. **Navigation cible orientée activités** (manifest-driven, profondeur réduite, sous-vues en **onglets**, permission-gating par capacité — jamais `role==='HR'`). Benchmark : Personio/Factorial/Rippling/Deel/Lucca/HiBob → patterns retenus (nav par activité, fiche-hub, **Inbox de validations**, workflows E/S, **coffre-fort salarié**, conformité par Market, self-service fort).
+2. **5 personas de conception** (dirigeant/RH/manager/paie/salarié) + **ancien salarié** — **non codés** ; autorisation = RBAC + scope + ModuleGate + Market + JobDomain + ownership.
+3. **Cycle entrée/sortie** = orchestrations métier (E4) : « Embaucher » reprenable ; « **Préparer le départ** » à états, tracé, idempotent, récupérable ; **STC = éléments vérifiés/validés par un habilité → génération documentaire fidèle** (⚠️ moteur paie indicatif — **pas** de conformité auto). Articulation avec la révocation sécurisée (ADR-688, suspension planifiée à la date d'effet).
+4. **Accès personnel post-départ** (E5) = **capacité « self-document » dédiée, hors `SetCompanyContext`**, scopée à la **propriété prouvée** du document, par **e-mail personnel vérifié** (préparé pendant la sortie car l'e-mail pro peut être désactivé). Interdits : équipes, planning, données RH des collègues, fonctions Company.
+5. **Conservation France (à valider officiellement)** : bulletins électroniques **D3243-8** (disponibilité ~50 ans / 75 ans du salarié), **certificat de travail L1234-19**, **reçu STC L1234-20**, **attestation France Travail** — durées/politiques **paramétrables par Market + type de document**, jamais codées en dur, jamais de règle juridique inventée. Billing non modifié.
+
+### Plan E2→E6 (complexité/dépendances/risques — détail dans le dossier)
+E2 Navigation (M, risque faible) → E3 Refonte écrans + design system (L, étalé écran par écran) → E4 Entrée/Sortie + STC + documents fin de contrat (**XL**, risque **juridique**) → E5 Post-départ (**XL**, risque **sécurité**) → E6 Recette globale (M). Ordre : E2→E3→E4→E5→E6.
+
+### Garde-fous (préservés)
+Modules backend séparés ; pas de fusion Employee/User/Membership ; pas de 2ᵉ paie/registre doc/RBAC/auth ; moteurs métier inchangés ; confidentialité serveur maintenue ; DEV uniquement ; pas de Billing ; mot de passe SSH compromis non utilisé (incident ouvert).
+
+### Livrables E1
+Dossier `workforce-experience-2026-e1.md` (audit/benchmark/matrices/nav/E-S/conservation/plan/critères) · **Prototype browsable** (Artifact) · captures « avant » (DEV) · ADR-689. **Aucune refonte d'écran livrée** ; E2→E6 engagés après validation direction UX.
+
+---
