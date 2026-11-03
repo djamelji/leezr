@@ -24705,3 +24705,55 @@ Dossier `workforce-experience-2026-e1.md` (audit/benchmark/matrices/nav/E-S/cons
 
 ### ADR-689 — Complément E1.1 (prototype corrigé)
 Revue direction : nav Company corrigée (Fiche/Départ/Post **hors** sidebar ; **Documents** ajouté), prototype rendu **réellement navigable** avec **6 simulations de persona** modifiant menu/écrans/données/actions (vérifié : RH 8 espaces · Exploitation 4 sans Paie/Documents · Paie 3 · Salarié portail perso · Ancien post-départ), **navigation mobile fonctionnelle** (drawer 390px), espace Documents, vue Planning hebdo, wizard de sortie navigable, actions **simulé/non-disponible** explicitées. Matrices (activités×permissions×surfaces, pages→destinations, inventaire) + addendum dans `docs/bmad/workforce-experience-2026-e1.md`. **Aucun écran réel modifié** ; E2 engagé après validation.
+
+---
+
+## ADR-690 — WORKFORCE EXPERIENCE 2026 / E2 : navigation métier par activité & multi-permissions (réelle)
+
+**Date** : 2026-11-03
+**Statut** : Accepté (livré DEV — `4d6ca31`, servi et vérifié par `X-Build-Version`)
+**Contexte** : Suite au cadrage E1/E1.1 (ADR-689). E2 = **implémenter dans l'application réelle** la navigation Workforce orientée activité validée sur le prototype, **sans perdre** les fonctionnalités P1→P3 ni la sécurité (ADR-688), **sans multiplier les menus**, et en faisant **correspondre chaque entrée aux capacités réelles** de l'utilisateur (RBAC + permissions individuelles + ModuleGate + scope manager + Market/JobDomain). Périmètre : **navigation + routing uniquement** — aucune refonte d'écran métier (réservée à E3).
+
+### Décisions
+1. **Groupe d'activité unique `workforce` (« Ressources humaines »)**, 100 % manifest-driven : remplace les anciens groupes mono-item `hr_*`. Entrées ordonnées par parcours d'activité (sort) : **Collaborateurs (10) · Temps de travail (20) · Congés & absences (30) · Documents (40) · Paie & déclarations (50) · Organisation (60) · Paramètres (70)**. Ordre/i18n dans `NavGroupRegistry` (`nav.groups.workforce`, fr/en/ar) ; `group` déclaré dans chaque manifeste de module. **« Mon espace »** reste dans le groupe personnel `account` (self-service, hors management). **Fiche collaborateur / Préparer le départ / Espace post-départ** ne sont **pas** des entrées de sidebar.
+2. **Gating par capacité réellement accessible (menu ⟺ espace utilisable)** — aucune persona codée en dur. Une entrée n'apparaît que si l'utilisateur détient une permission qui **ouvre réellement** l'endpoint de destination (vérifié côté serveur) :
+   - Collaborateurs / Organisation / Paramètres → `workforce.view` (garde de lecture de leurs landings) ;
+   - Temps de travail → `workforce.timesheet_view` **OU** `workforce.planning_view` (onglets lisibles) — les permissions de **gestion seule** (`time_manage`, `*_approve`, `planning_manage`) ne créent **pas** de menu mort ;
+   - Congés & absences = vue **management** → `workforce.leave_request` **ET** (`workforce.leave_view_all` **OU** `workforce.leave_approve`) — les salariés demandent leurs congés depuis « Mon espace », pas ici ;
+   - Paie & déclarations → `workforce.payroll_prepare` (garde de lecture de l'index paie).
+3. **Composition `permission` (ET) + `anyPermission` (OU)** ajoutée à `NavBuilder` (filtre permissions) : quand les deux sont présents, `permission` doit passer **et** au moins une clé `anyPermission`. Exprime la condition réelle d'usage (ex. Congés). Rétro-compatible : items n'ayant que `anyPermission` (ADR-601) ou que `permission` inchangés. Le **router guard** front applique déjà les deux séquentiellement (= ET).
+4. **Gating d'onglet** (`time/index.vue`) : `canTimesheet`/`canPlanning` ; un responsable planning-only atterrit sur l'onglet Planning, pas sur un cockpit refusé. **Immutabilité des créneaux publiés et confidentialité serveur des montants : inchangées.**
+5. **Alignement des guards de page** (`definePage`) sur les mêmes gates de lecture (time=anyPermission view ; leave=permission+anyPermission ; payroll=permission payroll_prepare ; organization=workforce.view) → le menu ne dépasse jamais l'accès serveur.
+6. **Routes & deep-links historiques préservés** : aucune route renommée/supprimée ; `company-workforce-{employees,time,leave,documents,payroll,organization-tab,settings-tab}` intactes ; `/company/workforce` → `/dashboard`, `/workforce/dsn` et `/workforce/configuration` toujours routables (onglets/redirections existantes).
+
+### Sécurité — « un menu masqué ne prouve pas la sécurité »
+L'**enforcement serveur est indépendant de la nav** : chaque route porte `company.access:use-module,<module>` + `company.access:use-permission,<clé>` (et scope manager/self via `WorkforceAccess`). E2 ne modifie **aucune** garde serveur. Recette prouvant **menus ET refus serveur** : `tests/Feature/WorkforceNavE2RecetteTest` — 10 utilisateurs fictifs (combos de permissions, pas de persona) ; pour chaque espace on asserte simultanément la **présence/absence du menu** et le **200 (autorisé) / 403 (interdit)** sur la route de lecture.
+
+### Résultats recette (combinaisons de permissions)
+| Utilisateur fictif | Permissions | Espaces visibles (menu = serveur) |
+|---|---|---|
+| RH sans paie | view, manage, timesheet_view, planning_view, leave_request/approve/view_all, documents.view | Collaborateurs, Temps, Congés, Documents, Organisation, Paramètres — **pas Paie** |
+| Responsable exploitation | timesheet_view, time_manage, planning_view, planning_manage | **Temps uniquement** (ni contrats ni paie) |
+| Gestionnaire paie (sans members.manage) | payroll_prepare/validate/export, compensation_read | **Paie uniquement** |
+| Salarié | timesheet_view/submit, leave_request (+ Employee) | Temps + **Mon espace** ; **pas** de Congés management (→ via Mon espace) |
+| Owner | bypass | **Tous** les espaces |
+| Admin **et** salarié | perms RH + Employee | Nav management complète **+** `/workforce/me` accessible |
+| Custom « chef d'équipe » | timesheet_view, leave_request, leave_approve | Temps + Congés |
+| Gestion sans lecture | `time_manage` seul / `leave_request` seul | **Aucun menu mort** : menu masqué **et** 403 serveur |
+
+### Vérification navigateur (DEV build servi `4d6ca31`, local `leezr.test`)
+4 utilisateurs fictifs locaux + owner : nav par activité conforme aux capacités (captures `e2-nav-*`), responsive **1920/1366/768/390**, **dark**, drawer mobile, état actif sur la route courante, deep-links historiques routables. Specs : `tests/e2e/workforce-nav-e2-recette.spec.js` + `tests/e2e/workforce-hr-nav-group.spec.js` (réécrit pour le groupe unique).
+
+### Garde-fous respectés
+DEV uniquement · pas de Billing · pas de 2ᵉ RBAC/auth · moteur de signature inchangé · confidentialité serveur des montants inchangée · aucune refonte d'écran métier · mot de passe SSH compromis non utilisé (incident ouvert). Les 3 échecs `ControllerSize` et les échecs **date-dépendants** `WorkforceTimesheetRulesTest` sont **pré-existants** (hors E2).
+
+### Fonctions inchangées (non régressées)
+Écrans métier P1→P3 (Accueil unique, fiche personne unifiée, espaces Temps/Congés/Paie/Documents/Organisation/Paramètres), confidentialité paie, suspension/révocation (ADR-688), self-service salarié, imports/exports, planning/pointage.
+
+### Dette reportée à E3+
+- **Dashboard P3-B** : certains widgets Core (`documents.view`…) émettent des 403 bénins pour un profil RH minimal (toast) — à scoper proprement (non bloquant, hors nav).
+- **Portail salarié vs vues management** : un salarié voit l'espace « Temps » (données scopées à soi) ; séparer plus nettement portail/ management relève du design E3.
+- E3 (refonte écrans + design system Workforce), E4 (entrée/sortie + STC), E5 (post-départ), E6 (recette globale) : inchangés.
+
+### Fichiers clés
+`NavBuilder.php` (composition ET/OU), `NavGroupRegistry.php` (+`workforce`=50), manifestes `WorkforceModule/WorkforceLeaveModule/WorkforcePayrollModule/WorkforceDocumentsModule`, pages `time|leave|payroll|organization`, `guards.js` (anyPermission), i18n fr/en/ar, tests `WorkforceNavHrGroupTest` (réécrit) + `WorkforceNavE2RecetteTest` (nouveau) + specs e2e.

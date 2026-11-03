@@ -1,13 +1,14 @@
 // @ts-check
-// ADR-635 → W-HR-UX-7 — the company sidebar groups Workforce entries by TASK (visible section
-// headings, manifest-driven): "Collaborateurs", "Temps & planning", "Absences", "Documents RH",
-// "Paramètres RH". Entries route correctly and render in dark mode without overflow.
+// ADR-690 (WORKFORCE EXPERIENCE 2026 / E2) — the company sidebar organises Workforce around a single
+// activity group « Ressources humaines », whose entries follow the activity order (Collaborateurs,
+// Temps de travail, Congés & absences, Documents, Paie & déclarations, Organisation, Paramètres).
+// Entries route to their real workforce pages and render in dark mode without horizontal overflow.
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers'
 
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
 
-test('HR nav task groups render with workforce entries and route correctly', async ({ page }) => {
+test('Workforce activity nav renders a single group and routes correctly', async ({ page }) => {
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
 
@@ -16,24 +17,28 @@ test('HR nav task groups render with workforce entries and route correctly', asy
 
   const nav = page.locator('.layout-vertical-nav')
 
-  // Task-based section headings are present (no more single "Ressources humaines" wall).
-  for (const heading of ['Collaborateurs', 'Temps & planning', 'Absences']) {
-    await expect(nav.getByText(heading, { exact: false }).first(), `heading "${heading}"`).toBeVisible({ timeout: 10000 })
+  // The single activity group heading « Ressources humaines » is present.
+  await expect(nav.getByText('Ressources humaines', { exact: false }).first(), 'group heading').toBeVisible({ timeout: 10000 })
+
+  // Owner (sees all) → every activity entry is present in the sidebar.
+  for (const label of ['Collaborateurs', 'Temps de travail', 'Congés & absences', 'Documents', 'Paie & déclarations', 'Organisation', 'Paramètres']) {
+    await expect(nav.getByText(label, { exact: false }).first(), `entry "${label}"`).toBeVisible({ timeout: 10000 })
   }
 
-  // A Workforce entry lives in the sidebar and routes to its workforce page.
+  // A Workforce entry routes to its real workforce page.
   const employeesLink = nav.locator('a[href*="/company/workforce/employees"]').first()
   await expect(employeesLink).toBeVisible()
   await employeesLink.click()
   await expect(page).toHaveURL(/\/company\/workforce\/employees/, { timeout: 8000 })
 
-  await page.screenshot({ path: `${SCRATCH}/hr-nav.png`, fullPage: false })
+  await page.screenshot({ path: `${SCRATCH}/e2-nav-light.png`, fullPage: false })
 
-  // Dark mode: headings still render, no horizontal overflow.
+  // Dark mode: group + entries still render, no horizontal overflow.
   await page.evaluate(() => document.documentElement.classList.add('v-theme--dark'))
-  await expect(nav.getByText('Collaborateurs', { exact: false }).first()).toBeVisible()
+  await expect(nav.getByText('Ressources humaines', { exact: false }).first()).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
   expect(overflow, 'no horizontal overflow').toBeFalsy()
+  await page.screenshot({ path: `${SCRATCH}/e2-nav-dark.png`, fullPage: false })
 
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
