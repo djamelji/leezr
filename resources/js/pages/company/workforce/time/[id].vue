@@ -1,575 +1,409 @@
 <script setup>
+// E3-B / B3 (ADR-699) — détail & validation d'une feuille de temps. Aligné STRICTEMENT sur les contrats
+// serveur (champs réels : anomaly_count, daily_overtime_minutes, leave_type_code, anomalies[].details).
+// Prévu / constaté / validé distingués ; totaux lus du read model (jamais reconstitués) ; transitions via
+// SmartActionBar selon le moteur réel ; historique scopé (workflow + corrections tracées). Aucun moteur modifié.
 import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
+import { useDisplay } from 'vuetify'
 import StatusChip from '@/core/components/StatusChip.vue'
+import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
 
 const store = useTimesheetsStore()
 const route = useRoute()
-const router = useRouter()
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
+const { can } = useCan()
+const { xs } = useDisplay()
 
-// ── Data fetching ────────────────────────────────────────────
 const loading = ref(true)
+const history = ref([])
+const historyLoading = ref(false)
+
+const loadHistory = async () => {
+  historyLoading.value = true
+  try { history.value = await store.fetchTimesheetHistory(route.params.id) } catch { history.value = [] } finally { historyLoading.value = false }
+}
+const reload = async () => { await store.fetchTimesheet(route.params.id); loadHistory() }
 
 onMounted(async () => {
-  try {
-    await store.fetchTimesheet(route.params.id)
-  } finally {
-    loading.value = false
-  }
+  try { await store.fetchTimesheet(route.params.id); loadHistory() } finally { loading.value = false }
 })
-
 onBeforeUnmount(() => store.clearCurrentPeriod())
 
-// ── Reactive state ───────────────────────────────────────────
 const period = computed(() => store.currentPeriod)
 
-// ── Format helpers ───────────────────────────────────────────
-const formatHours = minutes => {
-  if (minutes == null) return '0.0h'
+// ── Helpers ──
+const fmtMin = m => {
+  if (m == null) return '—'
+  const h = Math.floor(Math.abs(m) / 60); const mn = Math.abs(m) % 60
 
-  return `${(minutes / 60).toFixed(1)}h`
+  return `${m < 0 ? '-' : ''}${h}h${String(mn).padStart(2, '0')}`
+}
+const fmtDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
+const fmtDateTime = d => d ? new Date(d).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : '—'
+const dayName = d => d ? new Date(d).toLocaleDateString(locale.value, { weekday: 'short' }) : ''
+
+// ── Lignes (par jour) : réel depuis source_snapshot ; écart = constaté − planifié ──
+const lines = computed(() => (period.value?.lines || []).map(l => {
+  const entries = l.source_snapshot?.time_entries || []
+
+  return {
+    ...l,
+    clock_in: entries[0]?.clock_in || null,
+    clock_out: entries[entries.length - 1]?.clock_out || null,
+    gap: (!l.is_leave_day && !l.is_rest_day && l.planned_minutes > 0) ? (l.worked_minutes - l.planned_minutes) : null,
+  }
+}))
+
+// ── Anomalies : groupées {type: [{date, severity, details}]} (TimesheetAnomalyReadModel) ──
+const anomalyGroups = computed(() => period.value?.anomalies || {})
+const hasAnomalies = computed(() => Object.keys(anomalyGroups.value).length > 0)
+const flatAnomalies = computed(() => Object.entries(anomalyGroups.value).flatMap(([type, items]) => (items || []).map(a => ({ ...a, type }))))
+// Approbation : seules les anomalies de sévérité « error » (p.ex. leave_conflict) exigent une note (moteur réel).
+const hasErrorAnomaly = computed(() => flatAnomalies.value.some(a => a.severity === 'error'))
+
+const sevColor = s => ({ error: 'error', warning: 'warning', info: 'info' }[s] || 'secondary')
+const anomalyIcon = type => ({
+  missing_clock_out: 'tabler-clock-off', missing_time_entry: 'tabler-clock-x', overtime_daily: 'tabler-clock-plus',
+  overtime_weekly: 'tabler-clock-plus', insufficient_break: 'tabler-coffee-off', unplanned_work: 'tabler-calendar-plus',
+  leave_conflict: 'tabler-calendar-x', late_arrival: 'tabler-login', early_departure: 'tabler-logout',
+}[type] || 'tabler-alert-circle')
+const anomalyLabel = type => t(`timesheets.anomalies.types.${type}`, type)
+// Détail d'anomalie HUMANISÉ (jamais de dump technique brut §6) : chaîne telle quelle, ou dépassement lisible.
+const anomalyDetail = a => {
+  const d = a?.details
+  if (!d) return ''
+  if (typeof d === 'string') return d
+  if (typeof d === 'object' && d.excess != null) return `+${fmtMin(d.excess)}`
+
+  return ''
 }
 
-const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '-'
+const lineAnomSeverity = l => {
+  const a = l.anomalies || []
+  if (a.some(x => x.severity === 'error')) return 'error'
+  if (a.some(x => x.severity === 'warning')) return 'warning'
 
-const getDayName = dateStr => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-
-  return date.toLocaleDateString(locale.value, { weekday: 'short' })
+  return a.length ? 'info' : null
 }
 
-// ── Grid headers ─────────────────────────────────────────────
-const gridHeaders = computed(() => [
-  { title: t('timesheets.grid.date'), key: 'date', width: 120 },
-  { title: t('timesheets.grid.day'), key: 'day_name', width: 80 },
-  { title: t('timesheets.grid.clockIn'), key: 'clock_in', width: 80 },
-  { title: t('timesheets.grid.clockOut'), key: 'clock_out', width: 80 },
-  { title: t('timesheets.grid.worked'), key: 'worked_minutes', width: 90 },
-  { title: t('timesheets.grid.break'), key: 'break_minutes', width: 90 },
-  { title: t('timesheets.grid.overtime'), key: 'overtime_minutes', width: 90 },
-  { title: t('timesheets.grid.leave'), key: 'leave_type', width: 120 },
-  { title: t('timesheets.grid.anomalies'), key: 'anomalies', width: 100 },
-])
+// ── Totaux distincts (lus du read model — jamais reconstitués) ──
+const totals = computed(() => {
+  const p = period.value || {}
 
-// ── Grid lines ───────────────────────────────────────────────
-const formatTime = isoString => {
-  if (!isoString) return '-'
-  const d = new Date(isoString)
-
-  return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
-}
-
-const gridLines = computed(() => {
-  if (!period.value?.lines) return []
-
-  return period.value.lines.map(line => {
-    const entries = line.source_snapshot?.time_entries || []
-    const firstEntry = entries[0]
-    const lastEntry = entries[entries.length - 1]
-
-    return {
-      ...line,
-      day_name: getDayName(line.date),
-      clock_in: firstEntry?.clock_in || null,
-      clock_out: lastEntry?.clock_out || null,
-    }
-  })
+  return [
+    { key: 'planned', icon: 'tabler-calendar', color: 'primary', value: fmtMin(p.total_planned_minutes) },
+    { key: 'worked', icon: 'tabler-clock-check', color: 'success', value: fmtMin(p.total_worked_minutes) },
+    { key: 'overtime', icon: 'tabler-clock-plus', color: p.total_overtime_minutes > 0 ? 'warning' : 'secondary', value: fmtMin(p.total_overtime_minutes) },
+    { key: 'breaks', icon: 'tabler-coffee', color: 'info', value: fmtMin(p.total_break_minutes) },
+  ]
 })
 
-const isLeaveDay = line => !!line.leave_type
-
-// ── Action dialogs ───────────────────────────────────────────
-const showApproveDialog = ref(false)
-const showRejectDialog = ref(false)
+// ── Transitions (SmartActionBar) — strictement selon le moteur réel ──
+const actionLoading = ref(false)
+const showApprove = ref(false)
+const showReject = ref(false)
 const approvalNote = ref('')
 const rejectionReason = ref('')
-const actionLoading = ref(false)
 
-const handleSubmit = async () => {
+const run = async (fn, okMsg) => {
   actionLoading.value = true
   try {
-    await store.submitTimesheet(period.value.id)
-    toast(t('timesheets.submitted'), 'success')
-  } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  } finally {
-    actionLoading.value = false
-  }
+    await fn()
+    toast(okMsg, 'success')
+    await reload()
+
+    return true
+  } catch (e) {
+    // Une transition refusée par le serveur (422) ne doit JAMAIS apparaître comme réussie.
+    toast(e.response?.data?.message || t('common.error'), 'error')
+    await reload() // rafraîchissement contrôlé : l'état a peut-être changé entre-temps
+    if (showApprove.value || showReject.value) { showApprove.value = false; showReject.value = false }
+
+    return false
+  } finally { actionLoading.value = false }
 }
 
-const handleApprove = async () => {
-  actionLoading.value = true
-  try {
-    await store.approveTimesheet(period.value.id, {
-      approvalNote: approvalNote.value || undefined,
-    })
-    toast(t('timesheets.approved'), 'success')
-    showApproveDialog.value = false
-    approvalNote.value = ''
-  } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  } finally {
-    actionLoading.value = false
-  }
+const doSubmit = () => run(() => store.submitTimesheet(period.value.id), t('timesheets.submitted'))
+const doApprove = async () => {
+  if (hasErrorAnomaly.value && !approvalNote.value) return // note requise si anomalie erreur (garde-fou aligné serveur)
+  const ok = await run(() => store.approveTimesheet(period.value.id, { approvalNote: approvalNote.value || undefined }), t('timesheets.approved'))
+  if (ok) { showApprove.value = false; approvalNote.value = '' }
 }
-
-const handleReject = async () => {
-  actionLoading.value = true
-  try {
-    await store.rejectTimesheet(period.value.id, {
-      rejectionReason: rejectionReason.value,
-    })
-    toast(t('timesheets.rejected'), 'success')
-    showRejectDialog.value = false
-    rejectionReason.value = ''
-  } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  } finally {
-    actionLoading.value = false
-  }
+const doReject = async () => {
+  if (!rejectionReason.value) return
+  const ok = await run(() => store.rejectTimesheet(period.value.id, { rejectionReason: rejectionReason.value }), t('timesheets.rejected'))
+  if (ok) { showReject.value = false; rejectionReason.value = '' }
 }
+const doLock = () => run(() => store.lockTimesheet(period.value.id), t('timesheets.locked'))
+// Réouverture : le serveur remet en brouillon SANS régénérer → on régénère ensuite (orchestration front, pas de nouvel état).
+const doReopen = () => run(async () => {
+  await store.reopenTimesheet(period.value.id)
+  await store.generateTimesheet({ employeeId: period.value.employee_id, periodStart: period.value.period_start, periodEnd: period.value.period_end })
+}, t('timesheets.reopened'))
 
-const handleLock = async () => {
-  actionLoading.value = true
-  try {
-    await store.lockTimesheet(period.value.id)
-    toast(t('timesheets.locked'), 'success')
-  } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  } finally {
-    actionLoading.value = false
+const actions = computed(() => {
+  const s = period.value?.status
+  const list = []
+  if (s === 'draft') list.push({ id: 'submit', label: t('timesheets.actions.submit'), icon: 'tabler-send', permission: 'workforce.timesheet_submit', primary: true, color: 'primary', dataTest: 'ts-submit', handler: doSubmit })
+  if (s === 'submitted') {
+    list.push({ id: 'approve', label: t('timesheets.actions.approve'), icon: 'tabler-check', permission: 'workforce.timesheet_approve', primary: true, color: 'success', dataTest: 'ts-approve', handler: () => { approvalNote.value = ''; showApprove.value = true } })
+    list.push({ id: 'reject', label: t('timesheets.actions.reject'), icon: 'tabler-x', permission: 'workforce.timesheet_approve', danger: true, dataTest: 'ts-reject', handler: () => { rejectionReason.value = ''; showReject.value = true } })
   }
-}
+  if (s === 'approved') list.push({ id: 'lock', label: t('timesheets.actions.lock'), icon: 'tabler-lock', permission: 'workforce.time_approve', primary: true, color: 'primary', dataTest: 'ts-lock', handler: doLock })
+  if (s === 'rejected') list.push({ id: 'reopen', label: t('timesheets.actions.reopen'), icon: 'tabler-refresh', permission: 'workforce.time_manage', primary: true, color: 'warning', dataTest: 'ts-reopen', handler: doReopen })
 
-const handleReopen = async () => {
-  actionLoading.value = true
-  try {
-    await store.reopenTimesheet(period.value.id)
-    toast(t('timesheets.reopened'), 'success')
-  } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
-  } finally {
-    actionLoading.value = false
-  }
-}
-
-// ── Anomalies grouping ───────────────────────────────────────
-const anomaliesByType = computed(() => {
-  if (!period.value?.lines) return {}
-
-  const grouped = {}
-
-  for (const line of period.value.lines) {
-    if (!line.anomalies?.length) continue
-    for (const anomaly of line.anomalies) {
-      const type = anomaly.type || 'unknown'
-      if (!grouped[type]) grouped[type] = []
-      grouped[type].push({ ...anomaly, date: line.date })
-    }
-  }
-
-  return grouped
+  return list
 })
 
-const hasAnomalies = computed(() => Object.keys(anomaliesByType.value).length > 0)
+// Explication quand une feuille ne peut pas être validée / état terminal.
+const stateHint = computed(() => {
+  const s = period.value?.status
+  if (s === 'locked') return t('timesheets.hints.locked')
+  if (s === 'approved') return t('timesheets.hints.approved')
+  if (s === 'submitted' && hasErrorAnomaly.value) return t('timesheets.hints.errorAnomaly')
 
-const anomalyIcon = type => {
-  const icons = {
-    missing_clock_out: 'tabler-clock-off',
-    excessive_hours: 'tabler-alert-triangle',
-    missing_break: 'tabler-coffee-off',
-    overlap: 'tabler-arrows-cross',
-    unknown: 'tabler-help',
-  }
+  return null
+})
 
-  return icons[type] || icons.unknown
-}
-
-const anomalyColor = type => {
-  const colors = {
-    missing_clock_out: 'error',
-    excessive_hours: 'warning',
-    missing_break: 'warning',
-    overlap: 'error',
-    unknown: 'secondary',
-  }
-
-  return colors[type] || colors.unknown
-}
+const actionLabel = a => t(`timesheets.history.${a}`, a)
 </script>
 
 <template>
   <div>
-    <!-- Back button -->
-    <VBtn
-      variant="text"
-      :to="{ name: 'company-workforce-time' }"
-      prepend-icon="tabler-arrow-left"
-      class="mb-4"
-    >
+    <VBtn variant="text" :to="{ name: 'company-workforce-time', query: { tab: 'timesheets' } }" prepend-icon="tabler-arrow-left" class="mb-4">
       {{ $t('timesheets.backToList') }}
     </VBtn>
 
-    <!-- Loading state -->
-    <VCard
-      v-if="loading"
-      class="pa-8 text-center"
-    >
-      <VProgressCircular
-        indeterminate
-        color="primary"
-      />
+    <VCard v-if="loading" class="pa-8 text-center">
+      <VProgressCircular indeterminate color="primary" />
     </VCard>
 
     <template v-else-if="period">
-      <!-- Header Card -->
-      <VCard class="mb-6">
+      <!-- En-tête : collaborateur + statut + période + actions -->
+      <VCard class="mb-5">
         <VCardText>
           <div class="d-flex align-center gap-4 flex-wrap">
-            <!-- Avatar -->
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              size="64"
-            >
-              <span class="text-h5 font-weight-medium">
-                {{ (period.employee?.first_name?.[0] || '') + (period.employee?.last_name?.[0] || '') }}
-              </span>
+            <VAvatar color="primary" variant="tonal" size="56">
+              <span class="text-h6 font-weight-medium">{{ (period.employee?.first_name?.[0] || '') + (period.employee?.last_name?.[0] || '') }}</span>
             </VAvatar>
-
-            <!-- Info -->
-            <div class="flex-grow-1">
-              <h4 class="text-h4 font-weight-bold">
-                {{ period.employee?.first_name }} {{ period.employee?.last_name }}
-              </h4>
-              <div class="d-flex align-center gap-3 mt-1 flex-wrap">
-                <StatusChip
-                  :status="period.status"
-                  domain="timesheet"
-                >
+            <div class="flex-grow-1" style="min-inline-size: 180px;">
+              <h4 class="text-h5 font-weight-bold">{{ period.employee?.first_name }} {{ period.employee?.last_name }}</h4>
+              <div class="d-flex align-center gap-2 mt-1 flex-wrap">
+                <StatusChip :status="period.status" domain="timesheet">
                   {{ $t(`workforce.statuses.timesheet.${period.status}`) }}
                 </StatusChip>
-                <span class="text-body-2 text-medium-emphasis">
-                  {{ formatDate(period.period_start) }} — {{ formatDate(period.period_end) }}
-                </span>
-              </div>
-              <div class="d-flex align-center gap-4 mt-2 flex-wrap">
-                <span class="text-body-2">
-                  <VIcon
-                    icon="tabler-clock"
-                    size="16"
-                    class="me-1"
-                  />
-                  {{ $t('timesheets.summary.worked') }}: {{ formatHours(period.total_worked_minutes) }}
-                </span>
-                <span class="text-body-2">
-                  <VIcon
-                    icon="tabler-clock-plus"
-                    size="16"
-                    class="me-1"
-                  />
-                  {{ $t('timesheets.summary.overtime') }}: {{ formatHours(period.total_overtime_minutes) }}
-                </span>
-                <VChip
-                  v-if="period.anomalies_count > 0"
-                  size="small"
-                  color="error"
-                  variant="tonal"
-                  prepend-icon="tabler-alert-triangle"
-                >
-                  {{ period.anomalies_count }} {{ $t('timesheets.summary.anomalies') }}
+                <span class="text-body-2 text-medium-emphasis">{{ fmtDate(period.period_start) }} — {{ fmtDate(period.period_end) }}</span>
+                <VChip v-if="period.anomaly_count > 0" size="small" color="error" variant="tonal" prepend-icon="tabler-alert-triangle">
+                  {{ period.anomaly_count }} {{ $t('timesheets.summary.anomalies') }}
                 </VChip>
               </div>
             </div>
-
-            <!-- Action buttons -->
+            <!-- Transitions : boutons libellés gated par la permission EXACTE du moteur (lecture ≠ validation). -->
             <div class="d-flex gap-2 flex-wrap">
-              <!-- Draft → Submit -->
               <VBtn
-                v-if="period.status === 'draft'"
-                v-can="'workforce.timesheet_submit'"
-                color="primary"
-                data-test="ts-submit"
-                prepend-icon="tabler-send"
+                v-for="a in actions"
+                v-show="can(a.permission)"
+                :key="a.id"
+                :color="a.color || (a.danger ? 'error' : 'primary')"
+                :variant="a.danger ? 'outlined' : 'elevated'"
+                :prepend-icon="a.icon"
                 :loading="actionLoading"
-                @click="handleSubmit"
+                :data-test="a.dataTest"
+                @click="a.handler()"
               >
-                {{ $t('timesheets.actions.submit') }}
+                {{ a.label }}
               </VBtn>
+            </div>
+          </div>
+          <VAlert v-if="stateHint" :type="period.status === 'locked' ? 'secondary' : (hasErrorAnomaly ? 'warning' : 'info')" variant="tonal" density="comfortable" class="mt-4 mb-0">
+            {{ stateHint }}
+          </VAlert>
+        </VCardText>
+      </VCard>
 
-              <!-- Submitted → Approve / Reject -->
-              <VBtn
-                v-if="period.status === 'submitted'"
-                v-can="'workforce.timesheet_approve'"
-                color="success"
-                data-test="ts-approve"
-                prepend-icon="tabler-check"
-                :loading="actionLoading"
-                @click="showApproveDialog = true"
-              >
-                {{ $t('timesheets.actions.approve') }}
-              </VBtn>
-              <VBtn
-                v-if="period.status === 'submitted'"
-                v-can="'workforce.timesheet_approve'"
-                color="error"
-                variant="outlined"
-                prepend-icon="tabler-x"
-                :loading="actionLoading"
-                @click="showRejectDialog = true"
-              >
-                {{ $t('timesheets.actions.reject') }}
-              </VBtn>
+      <!-- Totaux distincts : planifié / constaté / heures sup. / pauses (lus du read model) -->
+      <VRow class="card-grid card-grid-xs mb-5">
+        <VCol v-for="tt in totals" :key="tt.key" cols="6" sm="3">
+          <VCard>
+            <VCardText class="d-flex align-center gap-3">
+              <VAvatar :color="tt.color" variant="tonal" rounded><VIcon :icon="tt.icon" /></VAvatar>
+              <div>
+                <div class="text-h6 font-weight-bold">{{ tt.value }}</div>
+                <div class="text-caption text-medium-emphasis">{{ $t(`timesheets.totals.${tt.key}`) }}</div>
+              </div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
 
-              <!-- Approved → Lock -->
-              <VBtn
-                v-if="period.status === 'approved'"
-                v-can="'workforce.time_approve'"
-                color="primary"
-                data-test="ts-lock"
-                prepend-icon="tabler-lock"
-                :loading="actionLoading"
-                @click="handleLock"
-              >
-                {{ $t('timesheets.actions.lock') }}
-              </VBtn>
+      <!-- Grille par jour : prévu / réel / pauses / travaillé / écart / anomalies -->
+      <VCard class="mb-5">
+        <VCardTitle class="pa-4 text-body-1 font-weight-medium">{{ $t('timesheets.grid.title') }}</VCardTitle>
+        <VDivider />
+        <!-- Desktop / tablette -->
+        <VTable v-if="!xs" class="text-no-wrap" density="comfortable">
+          <thead>
+            <tr>
+              <th>{{ $t('timesheets.grid.date') }}</th>
+              <th>{{ $t('timesheets.totals.planned') }}</th>
+              <th>{{ $t('timesheets.grid.clockIn') }}</th>
+              <th>{{ $t('timesheets.grid.clockOut') }}</th>
+              <th>{{ $t('timesheets.grid.break') }}</th>
+              <th>{{ $t('timesheets.grid.worked') }}</th>
+              <th>{{ $t('timeCockpit.col.gap') }}</th>
+              <th>{{ $t('timesheets.grid.overtime') }}</th>
+              <th>{{ $t('timesheets.grid.anomalies') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="l in lines" :key="l.id" :class="{ 'bg-light-info': l.is_leave_day }">
+              <td><span class="font-weight-medium">{{ fmtDate(l.date) }}</span> <span class="text-caption text-medium-emphasis text-capitalize">{{ dayName(l.date) }}</span></td>
+              <td>
+                <VChip v-if="l.is_leave_day" size="x-small" color="info" variant="tonal">{{ $t(`timesheets.leaveTypes.${l.leave_type_code}`, l.leave_type_code) }}</VChip>
+                <span v-else-if="l.is_rest_day" class="text-disabled">{{ $t('timesheets.grid.restDay') }}</span>
+                <span v-else>{{ fmtMin(l.planned_minutes) }}</span>
+              </td>
+              <td>{{ fmtTime(l.clock_in) }}</td>
+              <td>{{ fmtTime(l.clock_out) }}</td>
+              <td :class="{ 'text-disabled': l.is_leave_day }">{{ fmtMin(l.break_minutes) }}</td>
+              <td :class="{ 'text-disabled': l.is_leave_day }">{{ fmtMin(l.worked_minutes) }}</td>
+              <td>
+                <span v-if="l.gap !== null" :class="l.gap < 0 ? 'text-error' : (l.gap > 0 ? 'text-success' : '')">{{ l.gap > 0 ? '+' : '' }}{{ fmtMin(l.gap) }}</span>
+                <span v-else class="text-disabled">—</span>
+              </td>
+              <td><span :class="l.daily_overtime_minutes > 0 ? 'text-warning' : 'text-disabled'">{{ fmtMin(l.daily_overtime_minutes) }}</span></td>
+              <td>
+                <template v-if="l.anomalies?.length">
+                  <VIcon v-for="(a, i) in l.anomalies" :key="i" :icon="anomalyIcon(a.type)" :color="sevColor(a.severity)" size="20" class="me-1">
+                    <VTooltip activator="parent" location="top">{{ anomalyLabel(a.type) }}<template v-if="anomalyDetail(a)"> · {{ anomalyDetail(a) }}</template></VTooltip>
+                  </VIcon>
+                </template>
+                <span v-else class="text-disabled">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </VTable>
+        <!-- Mobile : liste par journée -->
+        <VList v-else class="py-0">
+          <template v-for="(l, idx) in lines" :key="l.id">
+            <VListItem class="px-3 py-2" :class="{ 'bg-light-info': l.is_leave_day }">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium"><span class="text-capitalize">{{ dayName(l.date) }}</span> {{ fmtDate(l.date) }}</span>
+                <VChip v-if="l.is_leave_day" size="x-small" color="info" variant="tonal">{{ $t(`timesheets.leaveTypes.${l.leave_type_code}`, l.leave_type_code) }}</VChip>
+                <span v-else-if="l.gap !== null" class="text-caption font-weight-medium" :class="l.gap < 0 ? 'text-error' : (l.gap > 0 ? 'text-success' : '')">{{ l.gap > 0 ? '+' : '' }}{{ fmtMin(l.gap) }}</span>
+              </div>
+              <div class="d-flex align-center flex-wrap gap-x-3 text-caption text-medium-emphasis mt-1">
+                <span><VIcon icon="tabler-calendar" size="13" class="me-1" />{{ l.is_rest_day ? $t('timesheets.grid.restDay') : fmtMin(l.planned_minutes) }}</span>
+                <span v-if="!l.is_leave_day"><VIcon icon="tabler-clock-record" size="13" class="me-1" />{{ fmtTime(l.clock_in) }}–{{ fmtTime(l.clock_out) }}</span>
+                <span v-if="!l.is_leave_day" class="font-weight-medium">{{ fmtMin(l.worked_minutes) }}</span>
+                <VIcon v-if="lineAnomSeverity(l)" icon="tabler-alert-triangle" :color="sevColor(lineAnomSeverity(l))" size="16" />
+              </div>
+            </VListItem>
+            <VDivider v-if="idx < lines.length - 1" />
+          </template>
+        </VList>
+      </VCard>
 
-              <!-- Rejected → Reopen -->
-              <VBtn
-                v-if="period.status === 'rejected'"
-                color="warning"
-                prepend-icon="tabler-refresh"
-                :loading="actionLoading"
-                @click="handleReopen"
-              >
-                {{ $t('timesheets.actions.reopen') }}
-              </VBtn>
+      <!-- Anomalies (types/sévérité/détails réels) -->
+      <VCard v-if="hasAnomalies" class="mb-5">
+        <VCardTitle class="pa-4 text-body-1 font-weight-medium">
+          <VIcon icon="tabler-alert-triangle" size="20" color="warning" class="me-2" />{{ $t('timesheets.anomalies.title') }}
+        </VCardTitle>
+        <VDivider />
+        <VCardText>
+          <div v-for="(items, type) in anomalyGroups" :key="type" class="mb-3">
+            <div class="d-flex align-center gap-2 mb-1">
+              <VIcon :icon="anomalyIcon(type)" :color="sevColor(items[0]?.severity)" size="20" />
+              <span class="font-weight-medium">{{ anomalyLabel(type) }}</span>
+              <VChip size="x-small" :color="sevColor(items[0]?.severity)" variant="tonal">{{ items.length }}</VChip>
+            </div>
+            <div v-for="(a, i) in items" :key="i" class="text-body-2 text-medium-emphasis ms-7">
+              {{ fmtDate(a.date) }}<span v-if="anomalyDetail(a)"> · {{ anomalyDetail(a) }}</span>
             </div>
           </div>
         </VCardText>
       </VCard>
 
-      <!-- Timesheet Grid -->
-      <VCard class="mb-6">
-        <VCardTitle class="pa-4">
-          {{ $t('timesheets.grid.title') }}
-        </VCardTitle>
-        <VDataTable
-          :headers="gridHeaders"
-          :items="gridLines"
-          :items-per-page="-1"
-          density="compact"
-          class="text-no-wrap"
-          hide-default-footer
-        >
-          <!-- Custom row rendering for leave-day highlighting -->
-          <template #item="{ item, props: rowProps }">
-            <tr
-              v-bind="rowProps"
-              :class="{ 'bg-light-info': isLeaveDay(item) }"
-            >
-              <td>{{ formatDate(item.date) }}</td>
-              <td><span class="text-capitalize">{{ item.day_name }}</span></td>
-              <td>
-                <span class="font-weight-medium">{{ formatTime(item.clock_in) }}</span>
-              </td>
-              <td>
-                <span class="font-weight-medium">{{ formatTime(item.clock_out) }}</span>
-              </td>
-              <td>
-                <span :class="{ 'text-disabled': isLeaveDay(item) }">
-                  {{ formatHours(item.worked_minutes) }}
-                </span>
-              </td>
-              <td>
-                <span :class="{ 'text-disabled': isLeaveDay(item) }">
-                  {{ formatHours(item.break_minutes) }}
-                </span>
-              </td>
-              <td>
-                <span :class="[
-                  { 'text-disabled': isLeaveDay(item) },
-                  item.overtime_minutes > 0 ? 'text-warning' : '',
-                ]">
-                  {{ formatHours(item.overtime_minutes) }}
-                </span>
-              </td>
-              <td>
-                <VChip
-                  v-if="item.leave_type"
-                  size="small"
-                  color="info"
-                  variant="tonal"
-                >
-                  {{ $t(`timesheets.leaveTypes.${item.leave_type}`, item.leave_type) }}
-                </VChip>
-                <span
-                  v-else
-                  class="text-medium-emphasis"
-                >-</span>
-              </td>
-              <td>
-                <template v-if="item.anomalies?.length">
-                  <VIcon
-                    v-for="(anomaly, i) in item.anomalies"
-                    :key="i"
-                    :icon="anomalyIcon(anomaly.type)"
-                    :color="anomalyColor(anomaly.type)"
-                    size="20"
-                    class="me-1"
-                  />
-                </template>
-                <span
-                  v-else
-                  class="text-medium-emphasis"
-                >-</span>
-              </td>
-            </tr>
-          </template>
-        </VDataTable>
-      </VCard>
-
-      <!-- Anomalies Summary -->
-      <VCard v-if="hasAnomalies">
-        <VCardTitle class="pa-4">
-          <VIcon
-            icon="tabler-alert-triangle"
-            size="20"
-            color="error"
-            class="me-2"
-          />
-          {{ $t('timesheets.anomalies.title') }}
+      <!-- Historique (workflow + corrections tracées) — projection scopée, lecture seule -->
+      <VCard>
+        <VCardTitle class="pa-4 text-body-1 font-weight-medium d-flex align-center">
+          <VIcon icon="tabler-history" size="20" class="me-2" />{{ $t('timesheets.history.title') }}
+          <VProgressCircular v-if="historyLoading" indeterminate size="16" width="2" class="ms-2" />
         </VCardTitle>
         <VDivider />
         <VCardText>
-          <div
-            v-for="(items, type) in anomaliesByType"
-            :key="type"
-            class="mb-4"
-          >
-            <div class="d-flex align-center gap-2 mb-2">
-              <VIcon
-                :icon="anomalyIcon(type)"
-                :color="anomalyColor(type)"
-                size="20"
-              />
-              <span class="font-weight-medium">
-                {{ $t(`timesheets.anomalies.types.${type}`, type) }}
-              </span>
-              <VChip
-                size="x-small"
-                :color="anomalyColor(type)"
-                variant="tonal"
-              >
-                {{ items.length }}
-              </VChip>
-            </div>
-            <VList
-              density="compact"
-              class="py-0"
+          <div v-if="!history.length" class="text-disabled text-body-2">{{ $t('timesheets.history.empty') }}</div>
+          <VTimeline v-else side="end" density="compact" truncate-line="both" class="ms-1">
+            <VTimelineItem
+              v-for="(e, i) in history"
+              :key="i"
+              :dot-color="e.kind === 'correction' ? 'warning' : 'primary'"
+              size="x-small"
             >
-              <VListItem
-                v-for="(anomaly, i) in items"
-                :key="i"
-                class="px-0"
-              >
-                <template #prepend>
-                  <span class="text-body-2 text-medium-emphasis me-2">
-                    {{ formatDate(anomaly.date) }}
-                  </span>
+              <div class="d-flex justify-space-between flex-wrap gap-x-3">
+                <span class="font-weight-medium">{{ actionLabel(e.action) }}</span>
+                <span class="text-caption text-medium-emphasis">{{ fmtDateTime(e.at) }}</span>
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                <span v-if="e.actor">{{ e.actor }}</span>
+                <template v-if="e.kind === 'correction' && e.change">
+                  · {{ fmtDate(e.entry_date) }} : {{ fmtTime(e.change.old.clock_out) }} → {{ fmtTime(e.change.new.clock_out) }}
                 </template>
-                <VListItemTitle class="text-body-2">
-                  {{ anomaly.message || $t(`timesheets.anomalies.types.${type}`, type) }}
-                </VListItemTitle>
-              </VListItem>
-            </VList>
-          </div>
+              </div>
+              <div v-if="e.reason" class="text-body-2 mt-1"><VIcon icon="tabler-message" size="14" class="me-1" />{{ e.reason }}</div>
+            </VTimelineItem>
+          </VTimeline>
         </VCardText>
       </VCard>
     </template>
 
-    <!-- Approve Dialog -->
-    <VDialog
-      v-model="showApproveDialog"
-      max-width="500"
-    >
-      <VCard>
-        <VCardTitle class="text-h5 pa-4">
-          {{ $t('timesheets.dialogs.approve.title') }}
-        </VCardTitle>
-        <VDivider />
-        <VCardText>
-          <p class="text-body-1 mb-4">
-            {{ $t('timesheets.dialogs.approve.message') }}
-          </p>
-          <AppTextField
-            v-model="approvalNote"
-            :label="$t('timesheets.dialogs.approve.noteLabel')"
-            :placeholder="$t('timesheets.dialogs.approve.notePlaceholder')"
-          />
-        </VCardText>
-        <VCardActions class="justify-end pa-4">
-          <VBtn
-            variant="outlined"
-            @click="showApproveDialog = false"
-          >
-            {{ $t('common.cancel') }}
-          </VBtn>
-          <VBtn
-            color="success"
-            data-test="ts-approve-confirm"
-            :loading="actionLoading"
-            @click="handleApprove"
-          >
-            {{ $t('timesheets.actions.approve') }}
-          </VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
+    <!-- Dialogue d'approbation (note requise si anomalie erreur) -->
+    <AppAdaptiveDialog v-model="showApprove" :title="$t('timesheets.dialogs.approve.title')" :max-width="500">
+      <p class="text-body-2 mb-3">{{ $t('timesheets.dialogs.approve.message') }}</p>
+      <VAlert v-if="hasErrorAnomaly" type="warning" variant="tonal" density="comfortable" class="mb-3">
+        {{ $t('timesheets.dialogs.approve.errorAnomalyNote') }}
+      </VAlert>
+      <VTextarea
+        v-model="approvalNote"
+        :label="$t('timesheets.dialogs.approve.noteLabel') + (hasErrorAnomaly ? ' *' : '')"
+        :rules="hasErrorAnomaly ? [v => !!v || $t('validation.required')] : []"
+        rows="2"
+        auto-grow
+        data-test="ts-approve-note"
+      />
+      <template #actions="{ close }">
+        <VSpacer />
+        <VBtn variant="outlined" @click="close">{{ $t('common.cancel') }}</VBtn>
+        <VBtn color="success" data-test="ts-approve-confirm" :loading="actionLoading" :disabled="hasErrorAnomaly && !approvalNote" @click="doApprove">
+          {{ $t('timesheets.actions.approve') }}
+        </VBtn>
+      </template>
+    </AppAdaptiveDialog>
 
-    <!-- Reject Dialog -->
-    <VDialog
-      v-model="showRejectDialog"
-      max-width="500"
-    >
-      <VCard>
-        <VCardTitle class="text-h5 pa-4">
-          {{ $t('timesheets.dialogs.reject.title') }}
-        </VCardTitle>
-        <VDivider />
-        <VCardText>
-          <p class="text-body-1 mb-4">
-            {{ $t('timesheets.dialogs.reject.message') }}
-          </p>
-          <AppTextField
-            v-model="rejectionReason"
-            :label="$t('timesheets.dialogs.reject.reasonLabel')"
-            :placeholder="$t('timesheets.dialogs.reject.reasonPlaceholder')"
-            :rules="[v => !!v || $t('validation.required')]"
-          />
-        </VCardText>
-        <VCardActions class="justify-end pa-4">
-          <VBtn
-            variant="outlined"
-            @click="showRejectDialog = false"
-          >
-            {{ $t('common.cancel') }}
-          </VBtn>
-          <VBtn
-            color="error"
-            :loading="actionLoading"
-            :disabled="!rejectionReason"
-            @click="handleReject"
-          >
-            {{ $t('timesheets.actions.reject') }}
-          </VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
+    <!-- Dialogue de refus (motif requis) -->
+    <AppAdaptiveDialog v-model="showReject" :title="$t('timesheets.dialogs.reject.title')" :max-width="500">
+      <p class="text-body-2 mb-3">{{ $t('timesheets.dialogs.reject.message') }}</p>
+      <VTextarea
+        v-model="rejectionReason"
+        :label="$t('timesheets.dialogs.reject.reasonLabel') + ' *'"
+        :rules="[v => !!v || $t('validation.required')]"
+        rows="2"
+        auto-grow
+        data-test="ts-reject-reason"
+      />
+      <template #actions="{ close }">
+        <VSpacer />
+        <VBtn variant="outlined" @click="close">{{ $t('common.cancel') }}</VBtn>
+        <VBtn color="error" :loading="actionLoading" :disabled="!rejectionReason" data-test="ts-reject-confirm" @click="doReject">
+          {{ $t('timesheets.actions.reject') }}
+        </VBtn>
+      </template>
+    </AppAdaptiveDialog>
   </div>
 </template>

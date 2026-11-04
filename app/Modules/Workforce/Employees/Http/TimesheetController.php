@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\Employees\Http;
 use App\Core\Workforce\TimesheetPeriod;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\TimesheetAnomalyReadModel;
+use App\Modules\Workforce\ReadModels\TimesheetHistoryReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetLineReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetPeriodReadModel;
 use App\Modules\Workforce\UseCases\ApproveTimesheetUseCase;
@@ -50,6 +51,25 @@ class TimesheetController extends Controller
             'period' => $period,
             'lines' => $lines,
             'anomalies' => $anomalies,
+        ]);
+    }
+
+    /**
+     * E3-B/B3 — historique métier scopé (lecture seule) : événements de workflow de la période
+     * (soumission/approbation/refus/réouverture/verrouillage) + corrections de pointage tracées
+     * (qui/quand/quoi/pourquoi). Projection assainie des événements d'audit DÉJÀ écrits — aucun moteur
+     * d'audit supplémentaire. Scopé par la période (company + salarié), gated `workforce.timesheet_view`.
+     */
+    public function history(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+
+        $period = TimesheetPeriod::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->findOrFail($id);
+
+        return response()->json([
+            'events' => TimesheetHistoryReadModel::forPeriod($companyId, $period),
         ]);
     }
 

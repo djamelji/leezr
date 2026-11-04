@@ -25082,3 +25082,43 @@ DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature/
 
 ### Fichiers clés
 `time/_TimeCockpit.vue` · `time/_DayDetailPanel.vue` · `time/index.vue` · `planning/index.vue` · `Planning/Http/ShiftController.php` (week-start serveur) · `tests/Feature/WorkforceCockpitB2Test.php` · `tests/Feature/WorkforceTimesheetRulesTest.php` (stabilisation) · `database/seeders/WorkforceCockpitDemoSeeder.php` · `tests/e2e/workforce-eb2-cockpit.spec.js`.
+
+## ADR-699 — WORKFORCE EXPERIENCE 2026 / E3-B : Feuilles de temps, contrôles & validations (B3)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (B3 livré DEV — vérifié par `X-Build-Version`). B4 (recette opérationnelle complète) à suivre.
+**Contexte** : Suite d'ADR-698 (B2). Refondre les feuilles de temps et les parcours de validation pour un vrai processus de contrôle des heures, **strictement aligné sur les contrats serveur** (ne rien inventer : ni état, ni total, ni transition). Cartographie préalable exhaustive du backend Timesheet (états/transitions/UseCases/gardes/erreurs/permissions/verrous/read models/totaux/audit).
+
+### Workflow réel (cartographié — aucune transition inventée)
+`draft → submitted → (approved | rejected)` ; `rejected → draft` ; `approved → locked` ; `locked` terminal. **Pas d'état « vérification ».** Guards → `422`. Permissions par route : generate `time_manage`, submit `timesheet_submit`, approve/reject `timesheet_approve`, reopen `time_manage`, lock `time_approve`. **Pas de verrou optimiste** (concurrence garantie par la machine à états : 2ᵉ action → 422) ; **pas d'endpoint bulk** (approbation feuille par feuille).
+
+### Bugs réels corrigés (UI désalignée du serveur)
+- Détail : `anomalies_count`→**`anomaly_count`** (le chip ne s'affichait jamais) ; `overtime_minutes`→**`daily_overtime_minutes`** (toujours 0) ; `leave_type`→**`leave_type_code`** ; `anomaly.message`→**`details`**. Liste : `anomalies_count`→`anomaly_count`.
+
+### Vue de validation (liste) & détail
+- **Liste** (`time/index.vue`, onglet Feuilles) : `VDataTableServer` → **`AppResponsiveDataView`** (table riche desktop / liste tactile mobile). KPI **décisionnels** (Brouillon · Soumis · Approuvé · Verrouillé), **cliquables** → filtrent par statut (prioriser sans ouvrir chaque feuille). Tap mobile → détail.
+- **Détail** (`time/[id].vue`) : **totaux DISTINCTS lus du read model** — Planifié (`total_planned_minutes`) · Constaté (`total_worked_minutes`) · Heures sup. (`total_overtime_minutes`) · Pauses (`total_break_minutes`) — **jamais reconstitués** (il n'existe PAS de « total soumis/approuvé » distinct côté serveur : un seul jeu gelé au submit). Grille par jour responsive (date, planifié, arrivée/sortie depuis `source_snapshot`, pauses, travaillé, **écart** = constaté−planifié sur les jours travaillés, heures sup., anomalies). Transitions via boutons libellés gated par la permission exacte. Dialogues → `AppAdaptiveDialog`. Détails d'anomalie **humanisés** (jamais de dump technique brut, §6).
+
+### Validation intelligente mais jamais aveugle
+- Approbation **non bloquée** par les anomalies en général ; **note requise seulement** si anomalie de niveau `error` (seul `leave_conflict`) — garde-fou UX aligné sur `ApproveTimesheetUseCase`, sans modifier la politique. Une transition refusée (422) n'apparaît **jamais** comme réussie ; rafraîchissement contrôlé après chaque action. **Pas de validation en masse** (le backend n'en offre pas → on ne simule pas une boucle front). Réouverture : le serveur remet en brouillon **sans régénérer** → régénération orchestrée côté front (pas de nouvel état). Hints d'état (verrouillée/approuvée/anomalie bloquante).
+
+### Historique & traçabilité (projection scopée, pas de 2ᵉ moteur d'audit)
+- Nouveau **read model `TimesheetHistoryReadModel`** + endpoint `GET /workforce/timesheets/{id}/history` (gated `timesheet_view`, scopé company/période/salarié). Projette les événements d'audit DÉJÀ écrits : workflow (`timesheet.generated/submitted/approved/rejected/reopened/locked`) + corrections de pointage (`time_entry.updated` : QUI/QUAND/QUOI/POURQUOI, ancien→nouveau). Assaini (aucun journal technique brut).
+
+### Limite documentée (décision produit requise)
+- **La validation des feuilles est gated par PERMISSION mais N'EST PAS scopée au périmètre manager** côté serveur (company-wide), contrairement aux pointages (`WorkforceAccess`). Non « corrigé » silencieusement (changement de politique d'autorisation). Encodé par `test_timesheet_approval_is_company_wide_not_manager_scoped` pour détecter toute évolution. À arbitrer.
+
+### Multisectoriel & règles temporelles
+- Composants génériques, aucune spécificité secteur. Seeder sur période **traversant une frontière de mois** (26 oct → 1 nov), poste de nuit traversant minuit, premier jour de semaine Company respecté (B2). Tests avec **horloge figée** (leçon B2 — pas de dépendance à la date).
+
+### Preuves B3
+- Build clean ; **405 tests Workforce verts** (1542 assertions) dont `WorkforceTimesheetB3Test` (6) + workflow existant (24) ; régressions B1/B2 nulles.
+- **Recette Playwright** (`workforce-eb3-timesheets.spec.js`) : vue de contrôle, détail (totaux distincts + historique), **soumission PUT 200 puis approbation POST 200 réellement persistées** (états reflétés : Soumettre→Approuver→Verrouiller).
+- **Seeders** : `WorkforceTimesheetDemoSeeder` (8 feuilles états variés + corrections tracées, DEV, idempotent). Historique vérifié (workflow + correction 17:00→17:30 avec motif).
+- **Captures** 320/390/768/1366 + dark : liste (KPI décisionnels, liste tactile), détail (totaux, grille, anomalies humanisées, historique), dialogue d'approbation.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing/Signature · moteur Timesheet/règles réglementaires inchangés · RBAC/ModuleGate conservés (aucun bundle élargi) · isolation tenant stricte · pas de dépendance Logistics · SSH compromis non utilisé · primitives E3-R réutilisées.
+
+### Fichiers clés
+`time/[id].vue` · `time/index.vue` (onglet Feuilles) · `timesheets.store.js` (`fetchTimesheetHistory`) · `ReadModels/TimesheetHistoryReadModel.php` · `Employees/Http/TimesheetController.php` (`history`) · `routes/company.php` · `database/seeders/WorkforceTimesheetDemoSeeder.php` · `tests/Feature/WorkforceTimesheetB3Test.php` · `tests/e2e/workforce-eb3-timesheets.spec.js`.

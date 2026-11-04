@@ -7414,7 +7414,8 @@
       "break": "Pause",
       "overtime": "Heures sup.",
       "leave": "Congé",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "restDay": "Repos"
     },
     "summary": {
       "worked": "Travaillé",
@@ -7434,7 +7435,16 @@
         "missing_entry": "Entrée manquante",
         "overtime_exceeded": "Heures sup. dépassées",
         "break_missing": "Pause manquante",
-        "inconsistent_hours": "Heures incohérentes"
+        "inconsistent_hours": "Heures incohérentes",
+        "missing_clock_out": "Sortie non pointée",
+        "missing_time_entry": "Pointage manquant",
+        "overtime_daily": "Heures sup. (jour)",
+        "overtime_weekly": "Heures sup. (semaine)",
+        "insufficient_break": "Pause insuffisante",
+        "unplanned_work": "Travail non planifié",
+        "leave_conflict": "Conflit avec un congé",
+        "late_arrival": "Arrivée tardive",
+        "early_departure": "Départ anticipé"
       }
     },
     "dialogs": {
@@ -7442,7 +7452,8 @@
         "title": "Approuver la feuille de temps",
         "message": "Êtes-vous sûr de vouloir approuver cette feuille de temps ?",
         "noteLabel": "Note (optionnel)",
-        "notePlaceholder": "Ajouter une note..."
+        "notePlaceholder": "Ajouter une note...",
+        "errorAnomalyNote": "Cette feuille présente une anomalie de niveau erreur. Une note d'approbation est obligatoire pour la valider en connaissance de cause."
       },
       "reject": {
         "title": "Rejeter la feuille de temps",
@@ -7456,7 +7467,33 @@
     "approved": "Feuille de temps approuvée",
     "rejected": "Feuille de temps rejetée",
     "locked": "Feuille de temps verrouillée",
-    "reopened": "Feuille de temps réouverte"
+    "reopened": "Feuille de temps réouverte",
+    "totals": {
+      "planned": "Planifié",
+      "worked": "Constaté",
+      "overtime": "Heures sup.",
+      "breaks": "Pauses"
+    },
+    "history": {
+      "title": "Historique",
+      "empty": "Aucun événement enregistré.",
+      "timesheet": {
+        "generated": "Feuille générée",
+        "submitted": "Feuille soumise",
+        "approved": "Feuille approuvée",
+        "rejected": "Feuille refusée",
+        "reopened": "Feuille rouverte",
+        "locked": "Feuille verrouillée"
+      },
+      "time_entry": {
+        "updated": "Correction de pointage"
+      }
+    },
+    "hints": {
+      "locked": "Feuille verrouillée : les heures sont figées et ne peuvent plus être modifiées.",
+      "approved": "Feuille approuvée : elle peut être verrouillée pour figer les heures.",
+      "errorAnomaly": "Cette feuille contient une anomalie bloquante : une note d'approbation est requise pour la valider."
+    }
   },
   "planning": {
     "title": "Planning",

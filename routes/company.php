@@ -515,6 +515,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'index'])->middleware($perm('workforce.timesheet_view'));
     Route::post('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'generate'])->middleware($perm('workforce.time_manage'));
     Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('timesheets/{id}/history', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'history'])->middleware($perm('workforce.timesheet_view'));
     Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit'])->middleware($perm('workforce.timesheet_submit'));
     Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve'])->middleware($perm('workforce.timesheet_approve'));
     Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject'])->middleware($perm('workforce.timesheet_approve'));

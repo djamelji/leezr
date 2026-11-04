@@ -192,6 +192,12 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       return await $api(`/workforce/time-entries/cockpit/board${qs ? `?${qs}` : ''}`)
     },
+    // E3-B/B3 — historique métier scopé d'une feuille (workflow + corrections tracées). Lecture seule.
+    async fetchTimesheetHistory(id) {
+      const data = await $api(`/workforce/timesheets/${id}/history`)
+
+      return data.events ?? []
+    },
     // Correction guidée d'un pointage (motif obligatoire, traçabilité serveur).
     async correctTimeEntry(id, { date, clockIn, clockOut, reason }) {
       return await $api(`/workforce/time-entries/${id}`, {

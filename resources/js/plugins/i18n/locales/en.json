@@ -7414,7 +7414,8 @@
       "break": "Break",
       "overtime": "Overtime",
       "leave": "Leave",
-      "anomalies": "Anomalies"
+      "anomalies": "Anomalies",
+      "restDay": "Rest"
     },
     "summary": {
       "worked": "Worked",
@@ -7434,7 +7435,16 @@
         "missing_entry": "Missing entry",
         "overtime_exceeded": "Overtime exceeded",
         "break_missing": "Missing break",
-        "inconsistent_hours": "Inconsistent hours"
+        "inconsistent_hours": "Inconsistent hours",
+        "missing_clock_out": "Missing clock-out",
+        "missing_time_entry": "Missing entry",
+        "overtime_daily": "Overtime (daily)",
+        "overtime_weekly": "Overtime (weekly)",
+        "insufficient_break": "Insufficient break",
+        "unplanned_work": "Unplanned work",
+        "leave_conflict": "Leave conflict",
+        "late_arrival": "Late arrival",
+        "early_departure": "Early departure"
       }
     },
     "dialogs": {
@@ -7442,7 +7452,8 @@
         "title": "Approve Timesheet",
         "message": "Are you sure you want to approve this timesheet?",
         "noteLabel": "Note (optional)",
-        "notePlaceholder": "Add a note..."
+        "notePlaceholder": "Add a note...",
+        "errorAnomalyNote": "This timesheet has an error-level anomaly. An approval note is required to knowingly approve it."
       },
       "reject": {
         "title": "Reject Timesheet",
@@ -7456,7 +7467,33 @@
     "approved": "Timesheet approved",
     "rejected": "Timesheet rejected",
     "locked": "Timesheet locked",
-    "reopened": "Timesheet reopened"
+    "reopened": "Timesheet reopened",
+    "totals": {
+      "planned": "Planned",
+      "worked": "Actual",
+      "overtime": "Overtime",
+      "breaks": "Breaks"
+    },
+    "history": {
+      "title": "History",
+      "empty": "No recorded events.",
+      "timesheet": {
+        "generated": "Timesheet generated",
+        "submitted": "Timesheet submitted",
+        "approved": "Timesheet approved",
+        "rejected": "Timesheet rejected",
+        "reopened": "Timesheet reopened",
+        "locked": "Timesheet locked"
+      },
+      "time_entry": {
+        "updated": "Time entry corrected"
+      }
+    },
+    "hints": {
+      "locked": "Locked timesheet: hours are frozen and can no longer be changed.",
+      "approved": "Approved timesheet: it can be locked to freeze the hours.",
+      "errorAnomaly": "This timesheet has a blocking anomaly: an approval note is required to validate it."
+    }
   },
   "planning": {
     "title": "Planning",

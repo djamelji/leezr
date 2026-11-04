@@ -267,12 +267,13 @@ const tsStatusOptions = [
 ]
 
 const tsHeaders = computed(() => [
-  { title: t('timesheets.columns.employee'), key: 'employee', sortable: false },
-  { title: t('timesheets.columns.period'), key: 'period', sortable: false },
-  { title: t('timesheets.columns.status'), key: 'status', sortable: false, width: 120 },
-  { title: t('timesheets.columns.worked'), key: 'total_worked_minutes', sortable: false, width: 120 },
-  { title: t('timesheets.columns.overtime'), key: 'total_overtime_minutes', sortable: false, width: 120 },
-  { title: t('timesheets.columns.anomalies'), key: 'anomalies_count', sortable: false, width: 120 },
+  { title: t('timesheets.columns.employee'), key: 'employee', sortable: false, priority: 'essential' },
+  { title: t('timesheets.columns.period'), key: 'period', sortable: false, priority: 'important' },
+  { title: t('timesheets.columns.status'), key: 'status', sortable: false, width: 120, priority: 'essential' },
+  { title: t('timesheets.columns.worked'), key: 'total_worked_minutes', sortable: false, width: 120, priority: 'important' },
+  { title: t('timesheets.columns.overtime'), key: 'total_overtime_minutes', sortable: false, width: 120, priority: 'secondary' },
+  // Champ serveur réel : `anomaly_count` (et non `anomalies_count`).
+  { title: t('timesheets.columns.anomalies'), key: 'anomaly_count', sortable: false, width: 120, priority: 'important' },
   { title: '', key: 'actions', sortable: false, width: 140 },
 ])
 
@@ -454,6 +455,20 @@ const employeeItems = computed(() => {
 })
 
 const stats = computed(() => store.statistics)
+
+// E3-B/B3 — KPI DÉCISIONNELS (pas décoratifs) : combien à contrôler / à approuver / approuvées /
+// verrouillées. Cliquables → filtrent la liste par statut (aide à prioriser sans ouvrir chaque feuille).
+const tsKpis = computed(() => {
+  const by = stats.value?.by_status || {}
+
+  return [
+    { key: 'draft', icon: 'tabler-pencil', color: 'secondary', value: by.draft ?? 0, status: 'draft' },
+    { key: 'submitted', icon: 'tabler-clock-pause', color: 'warning', value: by.submitted ?? 0, status: 'submitted' },
+    { key: 'approved', icon: 'tabler-check', color: 'success', value: by.approved ?? 0, status: 'approved' },
+    { key: 'locked', icon: 'tabler-lock', color: 'primary', value: by.locked ?? 0, status: 'locked' },
+  ]
+})
+const applyTsStatus = status => { tsStatusFilter.value = tsStatusFilter.value === status ? null : status }
 
 // ── Init ─────────────────────────────────────────────────────
 onMounted(() => {
@@ -813,102 +828,37 @@ onMounted(() => {
           </VBtn>
         </div>
 
-        <!-- Stats Cards -->
+        <!-- KPI décisionnels cliquables (filtrent par statut) -->
         <VRow
           v-if="stats"
           class="card-grid card-grid-xs mb-6"
         >
           <VCol
+            v-for="k in tsKpis"
+            :key="k.key"
             cols="6"
             sm="3"
           >
-            <VCard>
+            <VCard
+              :class="{ 'border-primary': tsStatusFilter === k.status }"
+              class="cursor-pointer"
+              :data-test="`ts-kpi-${k.key}`"
+              @click="applyTsStatus(k.status)"
+            >
               <VCardText class="d-flex align-center gap-3">
                 <VAvatar
-                  color="primary"
+                  :color="k.color"
                   variant="tonal"
                   rounded
                 >
-                  <VIcon icon="tabler-file-analytics" />
+                  <VIcon :icon="k.icon" />
                 </VAvatar>
                 <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('timesheets.stats.totalPeriods') }}
-                  </div>
                   <div class="text-h5 font-weight-bold">
-                    {{ stats.total ?? 0 }}
+                    {{ k.value }}
                   </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="warning"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-clock-pause" />
-                </VAvatar>
-                <div>
                   <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('timesheets.stats.pending') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ (stats.by_status?.draft ?? 0) + (stats.by_status?.submitted ?? 0) }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="success"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-check" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('timesheets.stats.approved') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ (stats.by_status?.approved ?? 0) + (stats.by_status?.locked ?? 0) }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="info"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-percentage" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('timesheets.stats.completionRate') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ stats.completion_rate != null ? `${stats.completion_rate}%` : '-' }}
+                    {{ $t(`workforce.statuses.timesheet.${k.key}`) }}
                   </div>
                 </div>
               </VCardText>
@@ -959,16 +909,30 @@ onMounted(() => {
             </VRow>
           </VCardText>
 
-          <!-- Table -->
-          <VDataTableServer
+          <!-- Table (desktop/tablette) + liste tactile (mobile) -->
+          <AppResponsiveDataView
             v-model:options="tsOptions"
             :headers="tsHeaders"
             :items="store.periods"
             :items-length="store.totalPeriods"
             :loading="tsLoading"
-            class="text-no-wrap"
-            @click:row="(_, { item }) => goToTimesheet(item.id)"
+            @row-click="item => goToTimesheet(item.id)"
           >
+            <!-- Mobile : collaborateur + statut, période, heures, anomalies -->
+            <template #mobile-item="{ item }">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium text-truncate">{{ item.employee?.first_name }} {{ item.employee?.last_name }}</span>
+                <StatusChip :status="item.status" domain="timesheet">
+                  {{ $t(`workforce.statuses.timesheet.${item.status}`) }}
+                </StatusChip>
+              </div>
+              <div class="d-flex align-center flex-wrap gap-x-3 text-caption text-medium-emphasis mt-1">
+                <span>{{ formatDate(item.period_start) }} — {{ formatDate(item.period_end) }}</span>
+                <span class="font-weight-medium">{{ formatHours(item.total_worked_minutes) }}</span>
+                <span v-if="item.anomaly_count > 0" class="text-error"><VIcon icon="tabler-alert-triangle" size="14" class="me-1" />{{ item.anomaly_count }}</span>
+              </div>
+            </template>
+
             <!-- Employee -->
             <template #item.employee="{ item }">
               <div class="d-flex align-center gap-3 py-2">
@@ -1014,15 +978,15 @@ onMounted(() => {
               </span>
             </template>
 
-            <!-- Anomalies -->
-            <template #item.anomalies_count="{ item }">
+            <!-- Anomalies (champ serveur réel : anomaly_count) -->
+            <template #item.anomaly_count="{ item }">
               <VChip
-                v-if="item.anomalies_count > 0"
+                v-if="item.anomaly_count > 0"
                 size="small"
                 color="error"
                 variant="tonal"
               >
-                {{ item.anomalies_count }}
+                {{ item.anomaly_count }}
               </VChip>
               <span
                 v-else
@@ -1163,7 +1127,7 @@ onMounted(() => {
                 </VBtn>
               </div>
             </template>
-          </VDataTableServer>
+          </AppResponsiveDataView>
         </VCard>
       </VWindowItem>
     </VWindow>
