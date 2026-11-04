@@ -25538,3 +25538,38 @@ DEV · origin/dev. Pas de main/PROD, Payroll/Billing/Signature, migration destru
 
 ### Fichiers de référence (audit, non modifiés)
 `Shift.php` (scope `overlapping`, `plannedWorkMinutes`) · `TimeEntry.php`/`TimeEntryBreak` · `PlanningComparisonReadModel.php` · `FieldValue.php` (morph) · `AppServiceProvider.php:86/103` (enforceMorphMap + registre) · `AiModuleContractRegistry.php` · `ModuleManifest.php`/`WorkforcePlanningModule.php` · `Shipment.php` (vertical, non référencé).
+
+---
+
+## ADR-706 — WORKFORCE / SMART PLANNING SP1a (LIVRÉ) : couverture personnel + modèles de shifts enrichis + grille pro
+
+**Date** : 2026-11-04
+**Statut** : LIVRÉ sur DEV (builds e05faf9 → 1c20a4e). GO explicite SP1a (ADR-705 v2 validé). **Arrêt au checkpoint avant SP1b.**
+**Garde-fous** : DEV · origin/dev. Aucun moteur Payroll/Billing/Signature. Immutabilité/publication/verrou optimiste des shifts INCHANGÉS. Zéro régression (178 tests liés verts + 9 SP1a). Pas de couplage vertical.
+
+### Périmètre livré (le delta, pas une re-construction)
+La grille + modèles + affectation manuelle persistée existaient déjà ; SP1a ajoute la couche demande + enrichissement.
+
+**Backend (testé — `WorkforceCoverageSP1aTest`, 9 verts) :**
+- **Besoins de personnel (coverage)** : table `workforce_coverage_requirements` (récurrent `day_of_week` OU ponctuel `date` ; fenêtre horaire optionnelle ; portée Department/lieu/activité ; `headcount`, `priority`, `source`, `enabled`). Modèle `CoverageRequirement` + `CreateCoverageRequirementUseCase`/`UpdateCoverageRequirementUseCase` (valident la portée côté serveur) + `CoverageRequirementController` (index/summary/store/update/destroy). Routes sous `workforce/planning/coverage` ; lecture = `planning_view`, écriture = nouvelle permission **`workforce.coverage_manage`** (ajoutée au manifeste + bundle management).
+- **Calcul de couverture** `CoverageReadModel::forRange` : présence par intervalle depuis les shifts éligibles non annulés ; **DISTINCT employee_id (jamais de double-compte)** ; **présence partielle ≠ complète** (le shift doit couvrir intégralement la fenêtre ; sans fenêtre = tout shift du jour) ; statuts `covered/under/over` + écart ; sous-effectifs ET sureffectifs exposés ; distinct de la demande d'activité (workload, SP2).
+- **Modèles enrichis** : `ScheduleTemplate` + colonnes `code`, `icon`, `activity_type`, `department_id` (nullable = Company-wide). Pas de catalogue parallèle. `toSnapshot()` embarque code/activity_type/icon/department_id. UseCases + contrôleur étendus. `activity_type` du snapshot consommé par le filtre couverture.
+- Migrations additives SQLite-safe (pas de FK en ALTER : `department_id` = référence souple validée serveur).
+
+**Frontend :**
+- Grille : **ligne de synthèse couverture** (affecté/requis + écart coloré) en tête ; **filtres de grille** (département, lieu, activité, statut) ; `filteredGridRows`.
+- **Drawer de gestion des besoins de personnel** (CRUD réellement persisté) ; drawer de modèle enrichi (code/activité/département).
+- Store : méthodes coverage (`fetchCoverage`/`fetchCoverageSummary`/create/update/delete) ; i18n fr+en.
+- Mobile : s'appuie sur l'agenda calendrier existant (pas de grille desktop écrasée) — inchangé.
+
+### Recette
+`WorkforceCoverageSP1aTest` (9) : all-day couvert, présence partielle ≠ complète, jamais de double-compte, sureffectif, portée Department, récurrent par jour de semaine, enrichissement+snapshot, permissions endpoints (serveur), date-ou-jour requis. `pnpm build` clean. Recette Playwright `workforce-sp1a-smart-planning.spec.js` (2 verts, écritures 201 persistées) : création d'un besoin + modèle enrichi persisté. SHA DEV servi vérifié (header `x-build-version`).
+
+### NON livré en SP1a (volontairement — relève de SP1b/SP2+)
+`ScheduledActivity` (multi-activités intra-shift), timeline détail journalier, validation intra-shift, demande d'activité (workload), compétences persistées, disponibilité déclarée, réserve, génération, IA. Duplication/copier-semaine et drag-depuis-palette = polish différé (l'affectation rapide par clic sur cellule vide + la création en masse existent déjà).
+
+### Arbitrages SP1b (validés ADR-705 v2, à implémenter après checkpoint)
+Nom `ScheduledActivity` ; `shift_id` obligatoire ; multi-activités enfants d'un shift ; morph nullable dormant ; héritage immutabilité du shift publié + workflow de révision contrôlé (ADR-705 v2 §5) ; validation intra-shift.
+
+### Fichiers clés SP1a
+`CoverageRequirement.php` · `CoverageReadModel.php` · `Create/UpdateCoverageRequirementUseCase.php` · `CoverageRequirementController.php` · `ScheduleTemplate.php` (+ migrations `2026_11_04_100001/100002`) · `WorkforcePlanningModule.php` · `routes/company.php` · `planning/index.vue` + `planning.store.js` · i18n · `WorkforceCoverageSP1aTest.php` · `workforce-sp1a-smart-planning.spec.js`.
