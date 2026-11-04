@@ -311,19 +311,10 @@ class GenerateTimesheetUseCase
                     ];
                 }
 
-                // Daily overtime
+                // Heures supplémentaires journalières — P0 (ADR-701) : la QUANTITÉ constatée est conservée
+                // dans la colonne `daily_overtime_minutes` (ci-dessous) ; elle N'EST PLUS écrite comme une
+                // anomalie technique. Une heure sup est un CONSTAT à qualifier, pas une anomalie de pointage.
                 $dailyOvertimeMinutes = max(0, $workedMinutes - $dailyThreshold);
-                if ($dailyOvertimeMinutes > 0) {
-                    $anomalies[] = [
-                        'type' => TimesheetLine::ANOMALY_OVERTIME_DAILY,
-                        'severity' => TimesheetLine::SEVERITY_WARNING,
-                        'details' => [
-                            'worked' => $workedMinutes,
-                            'threshold' => $dailyThreshold,
-                            'excess' => $dailyOvertimeMinutes,
-                        ],
-                    ];
-                }
 
                 // Insufficient break
                 if ($workedMinutes > 360 && $breakMinutes < $minimumBreak) {
@@ -410,6 +401,7 @@ class GenerateTimesheetUseCase
                     'metadata' => [
                         'night_minutes' => $nightMinutes,
                         'sunday_minutes' => $sundayMinutes,
+                        'weekly_overtime_minutes' => 0, // renseigné après la boucle (dernier jour de semaine)
                         'paid_break_minutes' => $paidBreakMinutes,
                         'break_included_in_worktime' => $breakIncludedInWorktime,
                         'break_paid' => $breakPaid,
@@ -439,19 +431,17 @@ class GenerateTimesheetUseCase
                         ->first();
 
                     if ($lastDayOfWeek) {
-                        $currentAnomalies = $lastDayOfWeek->anomalies ?? [];
-                        $currentAnomalies[] = [
-                            'type' => TimesheetLine::ANOMALY_OVERTIME_WEEKLY,
-                            'severity' => TimesheetLine::SEVERITY_WARNING,
-                            'details' => [
-                                'actual_weekly' => $total,
-                                'threshold' => $weeklyThreshold,
-                                'excess' => $total - $weeklyThreshold,
-                                'week_number' => $weekNum,
-                            ],
+                        // P0 (ADR-701) : heures sup HEBDOMADAIRES conservées comme QUANTITÉ en metadata
+                        // (dernier jour de la semaine), N'EST PLUS une anomalie. Distincte des HS journalières
+                        // (pas de somme automatique → pas de double comptage jour/semaine à l'affichage).
+                        $meta = $lastDayOfWeek->metadata ?? [];
+                        $meta['weekly_overtime_minutes'] = $total - $weeklyThreshold;
+                        $meta['weekly_overtime_details'] = [
+                            'actual_weekly' => $total,
+                            'threshold' => $weeklyThreshold,
+                            'week_number' => $weekNum,
                         ];
-                        // Direct update since period is draft
-                        $lastDayOfWeek->anomalies = $currentAnomalies;
+                        $lastDayOfWeek->metadata = $meta;
                         $lastDayOfWeek->save();
                     }
                 }

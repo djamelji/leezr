@@ -7495,7 +7495,13 @@
       "approved": "Approved timesheet: it can be locked to freeze the hours.",
       "errorAnomaly": "This timesheet has a blocking anomaly: an approval note is required to validate it."
     },
-    "regenerated": "Timesheet regenerated"
+    "regenerated": "Timesheet regenerated",
+    "overtime": {
+      "title": "Overtime — to qualify",
+      "daily": "Daily (observed)",
+      "weekly": "Weekly (observed)",
+      "hint": "Hours actually worked, fully preserved. They are NOT automatically authorized or compensated at a given rate: authorization (manager) and premium (per legal/collective framework) are separate, upcoming decisions."
+    }
   },
   "planning": {
     "title": "Planning",

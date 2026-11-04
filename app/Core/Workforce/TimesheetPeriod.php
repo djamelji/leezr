@@ -176,8 +176,9 @@ class TimesheetPeriod extends Model
 
             return collect($leaves)->sum('days_hundredths');
         });
+        // P0 (ADR-701) : anomaly_count = anomalies TECHNIQUES uniquement (heures sup exclues).
         $this->anomaly_count = $lines->sum(function ($line) {
-            return count($line->anomalies ?? []);
+            return count($line->technicalAnomalies());
         });
     }
 }

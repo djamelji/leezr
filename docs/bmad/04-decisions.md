@@ -25208,3 +25208,33 @@ DEV only · origin/dev · pas de main/PROD/Billing/Signature · moteurs/règles 
 
 ### Fichiers clés
 `tests/Feature/WorkforceE2EJourneyB4Test.php` · `tests/e2e/workforce-eb4-lifecycle.spec.js` · (réutilise tout E3-B). **E3-B clos.**
+
+## ADR-701 — WORKFORCE : P0 — qualification des heures supplémentaires (hors compteur d'anomalies)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (P0 livré DEV, `X-Build-Version` vérifié). Suite de l'audit HS/majorations (artefact). Phases P1→P6 validées sur le principe, NON développées (contrat métier par phase à présenter avant tout code structurel).
+**Contexte** : audit → une heure supplémentaire NE doit JAMAIS être assimilée à une anomalie. Diagnostic : erreur de QUALIFICATION au niveau moteur (`GenerateTimesheetUseCase` écrivait `overtime_daily`/`overtime_weekly` dans `TimesheetLine.anomalies[]` ; `anomaly_count` les comptait), alors que la quantité est déjà en colonne (`daily_overtime_minutes`, `total_overtime_minutes`). **P0 = correction de qualification + présentation, PAS un nouveau moteur de paie.** Aucun calcul (minutes) modifié.
+
+### Décisions (constat ≠ anomalie)
+1. **Moteur** : les HS journalières ne sont plus écrites dans `anomalies` (quantité conservée en colonne). Les HS **hebdomadaires** passent d'une anomalie à une **quantité en `metadata.weekly_overtime_minutes`** (dernier jour de semaine, + `weekly_overtime_details`). Journalières ≠ hebdomadaires → **pas de somme automatique** (pas de double comptage à l'affichage).
+2. **`anomaly_count`** (`TimesheetPeriod::recomputeTotals`) = anomalies **techniques uniquement** (via `TimesheetLine::technicalAnomalies()` qui exclut `OVERTIME_ANOMALY_TYPES`).
+3. **Read model** (`TimesheetAnomalyReadModel::forPeriod`/`dashboard`) : exclut les types HS du groupement — y compris pour les **feuilles historiques** générées avant P0, **sans muter** leurs données.
+4. **UI** (`time/[id].vue`) : les indicateurs d'anomalie par ligne excluent les HS ; **nouvelle rubrique « Heures supplémentaires — à qualifier »** (journalières + hebdomadaires constatées) avec note explicite : heures **conservées intégralement**, **PAS** automatiquement autorisées ni compensées à un taux déterminé — autorisation (manager) et majoration (cadre légal/conventionnel) = décisions **distinctes, à venir**.
+
+### Règle absolue respectée
+Les minutes réellement effectuées sont **conservées intégralement**. Rien n'est marqué autorisé/approuvé/compensable. Les vraies anomalies de pointage demeurent et sont comptées.
+
+### Traitement historique
+Les feuilles **approuvées/verrouillées** existantes **ne sont pas recalculées** (pas de mutation silencieuse : `recomputeTotals` n'est pas appelé dessus) → leur `anomaly_count` historique reste figé ; l'**affichage** les reclasse quand même (read model). Les feuilles brouillon régénérées repartent propres. Vérifié par test.
+
+### Preuves P0
+Build clean ; **423 tests Workforce verts** (1657 assertions) dont `WorkforceOvertimeQualificationP0Test` (3 : HS conservées hors anomalies ; anomalie technique toujours comptée ; feuille verrouillée non mutée). `WorkforceTimesheetRulesTest` (asserte via colonnes/metadata) inchangé. Capture : HS en rubrique « à qualifier », colonne Anomalies « — », carte « Anomalies détectées » absente. SHA servi vérifié.
+
+### Limites restantes (hors P0 — à venir, par phase)
+Pas encore : détection des **violations** légales (durées max/repos) ; taux de **majoration** 125/150 différenciés ; nuit/dimanche/fériés valorisés (+ calendrier férié) ; **paramétrage par Company/Department/Employee** ; **workflow d'autorisation** (préalable + a posteriori) ; **découchés & indemnités**. Ces phases nécessitent vérification légale par Market et un contrat métier validé avant implémentation.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD · **moteur de calcul (minutes) inchangé** · Payroll/Signature/Billing non modifiés · RBAC/isolation tenant conservés · aucune migration · pas de modification des feuilles verrouillées historiques.
+
+### Fichiers clés
+`GenerateTimesheetUseCase.php` · `TimesheetLine.php` (`OVERTIME_ANOMALY_TYPES`, `technicalAnomalies`) · `TimesheetPeriod.php` (`recomputeTotals`) · `TimesheetAnomalyReadModel.php` · `time/[id].vue` · i18n · `tests/Feature/WorkforceOvertimeQualificationP0Test.php`.

@@ -84,13 +84,22 @@ const anomalyDetail = a => {
   return ''
 }
 
+// P0 (ADR-701) — les heures sup NE SONT PLUS des anomalies : on exclut leurs types de l'affichage
+// des anomalies par ligne (y compris feuilles historiques générées avant P0).
+const OVERTIME_TYPES = ['overtime_daily', 'overtime_weekly']
+const lineTechAnomalies = l => (l.anomalies || []).filter(a => !OVERTIME_TYPES.includes(a.type))
+
 const lineAnomSeverity = l => {
-  const a = l.anomalies || []
+  const a = lineTechAnomalies(l)
   if (a.some(x => x.severity === 'error')) return 'error'
   if (a.some(x => x.severity === 'warning')) return 'warning'
 
   return a.length ? 'info' : null
 }
+
+// Heures sup. HEBDOMADAIRES constatées (metadata, dernier jour de semaine) — distinctes des journalières.
+const weeklyOvertimeMinutes = computed(() => (period.value?.lines || []).reduce((s, l) => s + (l.metadata?.weekly_overtime_minutes || 0), 0))
+const hasOvertime = computed(() => (period.value?.total_overtime_minutes || 0) > 0 || weeklyOvertimeMinutes.value > 0)
 
 // ── Totaux distincts (lus du read model — jamais reconstitués) ──
 const totals = computed(() => {
@@ -285,8 +294,8 @@ const actionLabel = a => t(`timesheets.history.${a}`, a)
               </td>
               <td><span :class="l.daily_overtime_minutes > 0 ? 'text-warning' : 'text-disabled'">{{ fmtMin(l.daily_overtime_minutes) }}</span></td>
               <td>
-                <template v-if="l.anomalies?.length">
-                  <VIcon v-for="(a, i) in l.anomalies" :key="i" :icon="anomalyIcon(a.type)" :color="sevColor(a.severity)" size="20" class="me-1">
+                <template v-if="lineTechAnomalies(l).length">
+                  <VIcon v-for="(a, i) in lineTechAnomalies(l)" :key="i" :icon="anomalyIcon(a.type)" :color="sevColor(a.severity)" size="20" class="me-1">
                     <VTooltip activator="parent" location="top">{{ anomalyLabel(a.type) }}<template v-if="anomalyDetail(a)"> · {{ anomalyDetail(a) }}</template></VTooltip>
                   </VIcon>
                 </template>
@@ -314,6 +323,29 @@ const actionLabel = a => t(`timesheets.history.${a}`, a)
             <VDivider v-if="idx < lines.length - 1" />
           </template>
         </VList>
+      </VCard>
+
+      <!-- P0 (ADR-701) — Heures supplémentaires CONSTATÉES, à QUALIFIER (≠ anomalie technique). -->
+      <VCard v-if="hasOvertime" class="mb-5">
+        <VCardTitle class="pa-4 text-body-1 font-weight-medium">
+          <VIcon icon="tabler-clock-plus" size="20" color="warning" class="me-2" />{{ $t('timesheets.overtime.title') }}
+        </VCardTitle>
+        <VDivider />
+        <VCardText>
+          <div class="d-flex flex-wrap gap-6 mb-3">
+            <div>
+              <div class="text-h6 font-weight-bold text-warning">{{ fmtMin(period.total_overtime_minutes) }}</div>
+              <div class="text-caption text-medium-emphasis">{{ $t('timesheets.overtime.daily') }}</div>
+            </div>
+            <div v-if="weeklyOvertimeMinutes > 0">
+              <div class="text-h6 font-weight-bold text-warning">{{ fmtMin(weeklyOvertimeMinutes) }}</div>
+              <div class="text-caption text-medium-emphasis">{{ $t('timesheets.overtime.weekly') }}</div>
+            </div>
+          </div>
+          <VAlert type="info" variant="tonal" density="comfortable" class="mb-0">
+            {{ $t('timesheets.overtime.hint') }}
+          </VAlert>
+        </VCardText>
       </VCard>
 
       <!-- Anomalies (types/sévérité/détails réels) -->

@@ -23,6 +23,11 @@ class TimesheetAnomalyReadModel
         foreach ($lines as $line) {
             foreach ($line->anomalies ?? [] as $anomaly) {
                 $type = $anomaly['type'] ?? 'unknown';
+                // P0 (ADR-701) : les heures sup ne sont pas des anomalies techniques — exclues du groupement
+                // (y compris pour les feuilles historiques générées avant P0, sans muter leurs données).
+                if (in_array($type, TimesheetLine::OVERTIME_ANOMALY_TYPES, true)) {
+                    continue;
+                }
                 $byType[$type][] = [
                     'date' => $line->date->toDateString(),
                     'severity' => $anomaly['severity'] ?? null,
@@ -55,8 +60,12 @@ class TimesheetAnomalyReadModel
 
         foreach ($lines as $line) {
             foreach ($line->anomalies ?? [] as $anomaly) {
-                $totalAnomalies++;
                 $type = $anomaly['type'] ?? 'unknown';
+                // P0 (ADR-701) : heures sup exclues du compte d'anomalies techniques du dashboard.
+                if (in_array($type, TimesheetLine::OVERTIME_ANOMALY_TYPES, true)) {
+                    continue;
+                }
+                $totalAnomalies++;
                 $byType[$type] = ($byType[$type] ?? 0) + 1;
                 $employeesWithAnomalies[$line->employee_id] = true;
             }

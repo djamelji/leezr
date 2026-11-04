@@ -7495,7 +7495,13 @@
       "approved": "Feuille approuvée : elle peut être verrouillée pour figer les heures.",
       "errorAnomaly": "Cette feuille contient une anomalie bloquante : une note d'approbation est requise pour la valider."
     },
-    "regenerated": "Feuille régénérée"
+    "regenerated": "Feuille régénérée",
+    "overtime": {
+      "title": "Heures supplémentaires — à qualifier",
+      "daily": "Journalières (constatées)",
+      "weekly": "Hebdomadaires (constatées)",
+      "hint": "Heures réellement effectuées, conservées intégralement. Elles ne sont PAS automatiquement autorisées ni compensées à un taux déterminé : l'autorisation (manager) et la majoration (selon le cadre légal/conventionnel) sont des décisions distinctes, à venir."
+    }
   },
   "planning": {
     "title": "Planning",

@@ -41,6 +41,26 @@ class TimesheetLine extends Model
         self::ANOMALY_EARLY_DEPARTURE => self::SEVERITY_INFO,
     ];
 
+    /**
+     * P0 (ADR-701) — types d'« heures supplémentaires » : ce sont des CONSTATS à qualifier, PAS des
+     * anomalies techniques. Ils ne sont plus écrits en génération et ne comptent plus dans anomaly_count ;
+     * la liste sert à EXCLURE au besoin les lignes historiques (feuilles déjà générées avant P0) de
+     * l'affichage/compte des anomalies techniques, sans muter les données verrouillées.
+     */
+    const OVERTIME_ANOMALY_TYPES = [
+        self::ANOMALY_OVERTIME_DAILY,
+        self::ANOMALY_OVERTIME_WEEKLY,
+    ];
+
+    /** Anomalies TECHNIQUES/réglementaires de cette ligne (heures sup exclues). */
+    public function technicalAnomalies(): array
+    {
+        return array_values(array_filter(
+            $this->anomalies ?? [],
+            fn ($a) => ! in_array($a['type'] ?? null, self::OVERTIME_ANOMALY_TYPES, true),
+        ));
+    }
+
     protected $fillable = [
         'company_id',
         'timesheet_period_id',
