@@ -25045,3 +25045,40 @@ DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature/
 
 ### Fichiers clés
 `time/index.vue` · `planning/index.vue` · `planning/_PlanningCalendar.vue`.
+
+## ADR-698 — WORKFORCE EXPERIENCE 2026 / E3-B : Pointages, écarts & anomalies (B2)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (B2 livré DEV — vérifié par `X-Build-Version`). B3 (feuilles/validations), B4 (recette) à suivre.
+**Contexte** : Suite d'ADR-697 (B1). Concentrer l'effort sur les PARCOURS OPÉRATIONNELS du pointage : un responsable doit savoir en quelques secondes qui travaille, ce qui était prévu, ce qui s'est réellement passé et quelles situations demandent une action — sur ordinateur comme sur téléphone, quel que soit le secteur. Réutilise les primitives E3-R et les services/read models existants (cockpit `TimeCockpitReadModel`, `UpdateTimeEntryUseCase`, `WeekStartResolver`). **Aucun moteur de calcul réglementaire modifié.**
+
+### Réserves B1 corrigées
+1. **Premier jour de semaine configurable — « au bon niveau ».** La grille hebdo custom (`planning/index.vue`) utilisait le **lundi en dur** (`getMonday`) ; généralisée en `getWeekStart(date, firstDay)` + libellés de jours pivotés, alimentés par la préférence Company déjà récupérée (`week_start_day` 0=dim..6=sam). **Correction aussi côté serveur** : `ShiftController@week` faisait `startOfWeek()` (lundi Carbon en dur) → remplacé par `startOfWeek(WeekStartResolver::resolve($company))`. Une seule source de vérité, pas de 2ᵉ configuration de calendrier. Cohérent grille desktop ↔ agenda mobile ↔ serveur.
+2. **Double barre d'icônes mobile.** La sous-navigation planning (2ᵉ `AppSectionNavigation` sous les 4 activités) est remplacée par un **sélecteur de présentation compact et LIBELLÉ** (segmented control `VBtn` dans un conteneur bordé : Calendrier · Planning · Modèles). Libellés visibles → aucune ambiguïté d'icône ; visuellement distinct de la navigation supérieure. (Un `VBtnToggle` chevauchait ses libellés → remplacé par un segmented manuel robuste.)
+
+### Cockpit de pointage & présentation adaptative
+3. **Board prévu/réel/écart** (`_TimeCockpit.vue`) : desktop = table réconciliée ; **mobile = liste tactile compacte** (nom + statut, prévu vs réel, écart, indicateur, détail au toucher via le panneau Journée). KPI **réduits sur mobile** aux indicateurs d'action (en poste · non pointés · anomalies · feuilles à valider). Plus de table compressée.
+4. **Espace Présences** (`time/index.vue`) : table → **`AppResponsiveDataView`** (colonnes à priorité : table riche desktop, réduite tablette, **liste tactile mobile** + overflow d'actions). Correction → **`AppAdaptiveDialog`** (plein écran mobile, actions sticky).
+5. **Trois notions distinctes** (prévu `Shift` / réel `TimeEntry` / validé `Timesheet`). L'écart (`gap_minutes`) **n'est affiché que sur un pointage TERMINÉ** : tant que la personne est « en poste »/« en pause », le réalisé est partiel → afficher un écart serait un faux négatif trompeur (décision de PRÉSENTATION, le read model n'est pas touché). Le panneau Journée distingue fait constaté, réconciliation (`matched`/`ambiguous`/`not_clocked`/`no_shift`), état (`incomplete`) et anomalie technique — **jamais** « anomalie »/faute automatique. Aucun avertissement réglementaire inventé.
+
+### Correction fiabilisée (workflow tracé, aucune modification silencieuse)
+6. **Bug corrigé** : l'onglet Présences corrigeait via `store.updateTimeEntry({date,clockIn,clockOut})` **sans `reason`** → le serveur (qui exige `reason`) renvoyait **422**. La correction passe désormais par `correctTimeEntry` (motif obligatoire, bouton d'envoi désactivé sans motif).
+7. **Garde honnête** : le serveur n'autorise la correction que sur un pointage `completed`/`idle` et refuse si la feuille couvrante est `approved`/`locked` (`UpdateTimeEntryUseCase`). L'UI reflète ces règles (bouton de correction masqué hors `completed`/`idle`) au lieu de simuler une correction. **Traçabilité** : la correction est journalisée (`company_audit_logs`, action `time_entry.updated`, `old_data`/`new_data`/`reason`) — vérifié en recette.
+
+### Multisectoriel (horizontal, sans Logistics)
+8. Aucune spécificité secteur dans les composants génériques. Preuve au niveau API : `WorkforceCockpitB2Test::test_cockpit_board_is_sector_independent` (dataProvider restauration/nettoyage/salon/logistique, mêmes interfaces, même code). Une Company = un seul jobdomain. Seeder DEV (`WorkforceCockpitDemoSeeder`) ne dépend pas de Logistics.
+
+### Données représentatives (DEV) & stabilisation de tests
+9. **`WorkforceCockpitDemoSeeder`** (DEV only, idempotent, préfixe `B2DEMO-`, n'altère aucun enregistrement existant) : 20 collaborateurs isolés sur `leezr-logistics`, arbre manager, 2 lieux, données du JOUR couvrant tous les états (en poste, en pause, terminé avec écart ±, non pointé, présence imprévue, anomalies pause-manquante/heures-excessives/zéro-travaillé, poste de nuit traversant minuit) + un pointage INCOMPLET la veille. Respecte les contraintes modèles (timezone requis, `template_snapshot.break_duration_minutes`, `clock_in < clock_out`, statuts/sources valides).
+10. **Tests date-dépendants RÉSOLUS (hors règles métier, §9)** : `WorkforceTimesheetRulesTest` échouait (2→3) car il écrivait des règles effective-datées à `effective_from = now()` puis générait sur des dates FIXES passées (`2026-11-02/03`) → dès que l'horloge réelle dépasse chaque fixture, la règle est **correctement** exclue (`scopeActiveAt : effective_from <= date`) → repli sur défauts. Le moteur est **correct by design** (deltas = replis propres, pas des miscalculs). Correctif : **gel d'horloge** (`Carbon::setTestNow('2026-11-01')`) en `setUp` + libération en `tearDown`. Aucune assertion ni règle modifiée. → 4/4 verts.
+
+### Preuves B2
+- **Build** clean ; **399 tests Workforce verts** (1522 assertions) dont `WorkforceCockpitB2Test` (5) + `WorkforceTimesheetRulesTest` (4/4). Planning 29/29. Multisecteur/sécurité/scope 31/31.
+- **Recette Playwright** (`workforce-eb2-cockpit.spec.js`) : cockpit chargé, **motif obligatoire bloquant** (envoi désactivé sans motif), **correction PUT → 200 persistée** + entrée d'audit `time_entry.updated` (motif + `clock_out` 14:00→17:45) vérifiée en base.
+- **Captures** (leezr.test = code DEV ; viewports simulés, pas d'appareil physique) 320/390/768/1366 + dark : cockpit mobile (liste tactile, KPI réduits, écart masqué en cours), Présences mobile (liste + overflow), grille planning (colonnes semaine), agenda mobile (nuit visible), sélecteur de présentation, dialogue de correction.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature/règles réglementaires inchangés · RBAC/ModuleGate conservés · isolation tenant · pas de dépendance Logistics · SSH compromis non utilisé · pas de nouvelle bibliothèque UI (primitives E3-R réutilisées).
+
+### Fichiers clés
+`time/_TimeCockpit.vue` · `time/_DayDetailPanel.vue` · `time/index.vue` · `planning/index.vue` · `Planning/Http/ShiftController.php` (week-start serveur) · `tests/Feature/WorkforceCockpitB2Test.php` · `tests/Feature/WorkforceTimesheetRulesTest.php` (stabilisation) · `database/seeders/WorkforceCockpitDemoSeeder.php` · `tests/e2e/workforce-eb2-cockpit.spec.js`.

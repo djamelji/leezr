@@ -5,7 +5,6 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
-import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import PlanningCalendar from './_PlanningCalendar.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
@@ -57,7 +56,11 @@ const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { ho
 const fmtDateTime = iso => iso ? new Date(iso).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 
 // ── W-G4B : premier jour de semaine (préférence Company) ──
+// Convention serveur `week_start_day` = 0 (dimanche) … 6 (samedi) ; NULL = pas de préférence → lundi (ISO).
+// E3-B/B2 (réserve B1 #1) : la GRILLE hebdo utilisait le lundi en dur ; elle respecte désormais cette
+// même préférence (une seule source de vérité, pas de 2ᵉ configuration de calendrier).
 const weekStartDay = ref(null)
+const effectiveFirstDay = computed(() => weekStartDay.value ?? 1)
 const canEditShifts = computed(() => can('workforce.planning_manage'))
 onMounted(async () => {
   try { weekStartDay.value = (await store.fetchWeekStart()).week_start_day } catch { /* repli locale */ }
@@ -147,29 +150,20 @@ const templateItems = computed(() =>
   })),
 )
 
-const dayNames = computed(() => {
+// Libellés de jours pivotés pour COMMENCER au premier jour de semaine effectif (préférence Company).
+const weekdayLabels = format => {
   const days = []
-  const base = new Date(2024, 0, 1) // Monday 2024-01-01
+  const sunday = new Date(2024, 0, 7) // 7 janvier 2024 = dimanche (getDay() === 0)
   for (let i = 0; i < 7; i++) {
-    const d = new Date(base)
-    d.setDate(d.getDate() + i)
-    days.push(d.toLocaleDateString(locale.value, { weekday: 'short' }))
+    const d = new Date(sunday)
+    d.setDate(d.getDate() + effectiveFirstDay.value + i)
+    days.push(d.toLocaleDateString(locale.value, { weekday: format }))
   }
 
   return days
-})
-
-const dayNamesLong = computed(() => {
-  const days = []
-  const base = new Date(2024, 0, 1)
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(base)
-    d.setDate(d.getDate() + i)
-    days.push(d.toLocaleDateString(locale.value, { weekday: 'long' }))
-  }
-
-  return days
-})
+}
+const dayNames = computed(() => weekdayLabels('short'))
+const dayNamesLong = computed(() => weekdayLabels('long'))
 
 const formatTime = timeStr => {
   if (!timeStr) return ''
@@ -189,17 +183,20 @@ const formatShiftRange = shift => {
 // ══════════════════════════════════════════════════════════════
 
 // ── Week navigation ────────────────────────────────────────
-const currentWeekStart = ref(getMonday(new Date()))
-
-function getMonday(d) {
+// Début de semaine générique : ramène `d` au premier jour de semaine effectif (lun/dim/autre).
+function getWeekStart(d, firstDay = 1) {
   const date = new Date(d)
-  const day = date.getDay()
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1)
-  date.setDate(diff)
   date.setHours(0, 0, 0, 0)
+  const diff = (date.getDay() - firstDay + 7) % 7
+  date.setDate(date.getDate() - diff)
 
   return date
 }
+
+const currentWeekStart = ref(getWeekStart(new Date(), 1))
+
+// Quand la préférence Company est résolue (ou change), on recale la semaine affichée sur ce premier jour.
+watch(effectiveFirstDay, fd => { currentWeekStart.value = getWeekStart(currentWeekStart.value, fd) })
 
 const weekEnd = computed(() => {
   const d = new Date(currentWeekStart.value)
@@ -241,7 +238,7 @@ const nextWeek = () => {
 }
 
 const goToToday = () => {
-  currentWeekStart.value = getMonday(new Date())
+  currentWeekStart.value = getWeekStart(new Date(), effectiveFirstDay.value)
 }
 
 // ── Data loading ────────────────────────────────────────────
@@ -923,12 +920,23 @@ watch(activeTab, tab => {
       </div>
     </div>
 
-    <!-- Tabs -->
-    <AppSectionNavigation
-      v-model="activeTab"
-      :sections="planningSections"
-      class="mb-5"
-    />
+    <!-- E3-B/B2 (réserve B1 #2) — sélecteur de PRÉSENTATION compact et LIBELLÉ (segmented control, pas
+         une 2ᵉ barre de navigation à icônes sous les 4 activités). Les libellés lèvent toute ambiguïté. -->
+    <div class="d-inline-flex rounded-lg border pa-1 mb-5 planning-view-switch">
+      <VBtn
+        v-for="s in planningSections"
+        :key="s.value"
+        :variant="activeTab === s.value ? 'flat' : 'text'"
+        :color="activeTab === s.value ? 'primary' : 'medium-emphasis'"
+        size="small"
+        class="text-none"
+        :prepend-icon="s.icon"
+        :data-test="`plan-view-${s.value}`"
+        @click="activeTab = s.value"
+      >
+        {{ s.label }}
+      </VBtn>
+    </div>
 
     <VWindow v-model="activeTab">
       <!-- ═══════════════════════════════════════════════════════ -->

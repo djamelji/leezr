@@ -4,6 +4,8 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
 import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
+import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
+import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 import TimeCockpit from './_TimeCockpit.vue'
 // PRODUCT-UX-2 (LOT B1) — espace « Temps de travail » UNIFIÉ : Aujourd'hui (cockpit prévu/réel) +
 // Planning + Présences + Feuilles de temps, montés en onglets. Le planning réutilise sa page
@@ -69,15 +71,16 @@ const entryStatusOptions = [
   { title: t('timeTracking.statuses.completed'), value: 'completed' },
 ]
 
+// Priorité de colonne (AppResponsiveDataView) : tablette = essential+important ; mobile = liste tactile.
 const entriesHeaders = computed(() => [
-  { title: t('timeTracking.columns.date'), key: 'date', sortable: false, width: 110 },
-  { title: t('timeTracking.columns.employee'), key: 'employee', sortable: false },
-  { title: t('timeTracking.columns.clockIn'), key: 'clock_in_formatted', sortable: false, width: 90 },
-  { title: t('timeTracking.columns.clockOut'), key: 'clock_out_formatted', sortable: false, width: 90 },
-  { title: t('timeTracking.columns.breaks'), key: 'break_count', sortable: false, width: 80 },
-  { title: t('timeTracking.columns.total'), key: 'total_worked_display', sortable: false, width: 90 },
-  { title: t('timeTracking.columns.status'), key: 'status', sortable: false, width: 110 },
-  { title: t('timeTracking.columns.anomalies'), key: 'anomalies', sortable: false, width: 100 },
+  { title: t('timeTracking.columns.date'), key: 'date', sortable: false, width: 110, priority: 'essential' },
+  { title: t('timeTracking.columns.employee'), key: 'employee', sortable: false, priority: 'essential' },
+  { title: t('timeTracking.columns.clockIn'), key: 'clock_in_formatted', sortable: false, width: 90, priority: 'important' },
+  { title: t('timeTracking.columns.clockOut'), key: 'clock_out_formatted', sortable: false, width: 90, priority: 'important' },
+  { title: t('timeTracking.columns.breaks'), key: 'break_count', sortable: false, width: 80, priority: 'secondary' },
+  { title: t('timeTracking.columns.total'), key: 'total_worked_display', sortable: false, width: 90, priority: 'important' },
+  { title: t('timeTracking.columns.status'), key: 'status', sortable: false, width: 110, priority: 'essential' },
+  { title: t('timeTracking.columns.anomalies'), key: 'anomalies', sortable: false, width: 100, priority: 'secondary' },
   { title: '', key: 'actions', sortable: false, width: 80 },
 ])
 
@@ -146,30 +149,43 @@ const statusColor = status => {
   return colors[status] || 'default'
 }
 
-// ── Correction drawer ────────────────────────────────────────
+// ── Correction (workflow TRACÉ : motif obligatoire, pas de modification silencieuse) ──
+// B2 (ADR-698) — la correction passe par correctTimeEntry (envoie `reason`, requis côté serveur) ;
+// updateTimeEntry sans motif renvoyait un 422. Le serveur n'autorise que les pointages completed/idle
+// et refuse si la feuille couvrante est approuvée/verrouillée.
+const CORRECTABLE_STATUSES = ['completed', 'idle']
+const canCorrectEntry = entry => can('workforce.time_manage') && CORRECTABLE_STATUSES.includes(entry.status)
+
 const isCorrectionOpen = ref(false)
 const correctionEntry = ref(null)
 const correctionLoading = ref(false)
 const correctionData = ref({
-  date: '',
   clockIn: '',
   clockOut: '',
+  reason: '',
 })
+
+const toLocalInput = v => (v ? String(v).slice(0, 16) : '')
 
 const openCorrection = entry => {
   correctionEntry.value = entry
   correctionData.value = {
-    date: entry.date?.split('T')[0] || '',
-    clockIn: entry.clock_in || '',
-    clockOut: entry.clock_out || '',
+    clockIn: toLocalInput(entry.clock_in),
+    clockOut: toLocalInput(entry.clock_out),
+    reason: '',
   }
   isCorrectionOpen.value = true
 }
 
 const submitCorrection = async () => {
+  if (!correctionData.value.reason) return
   correctionLoading.value = true
   try {
-    await store.updateTimeEntry(correctionEntry.value.id, correctionData.value)
+    await store.correctTimeEntry(correctionEntry.value.id, {
+      clockIn: correctionData.value.clockIn ? correctionData.value.clockIn + ':00' : undefined,
+      clockOut: correctionData.value.clockOut ? correctionData.value.clockOut + ':00' : undefined,
+      reason: correctionData.value.reason,
+    })
     toast(t('timeTracking.corrected'), 'success')
     isCorrectionOpen.value = false
     fetchEntries()
@@ -570,15 +586,54 @@ onMounted(() => {
             </VRow>
           </VCardText>
 
-          <!-- Table -->
-          <VDataTableServer
+          <!-- Table (desktop/tablette) + liste tactile (mobile) — présentation adaptative, logique partagée -->
+          <AppResponsiveDataView
             v-model:options="entriesOptions"
             :headers="entriesHeaders"
             :items="store.companyEntries"
             :items-length="store.totalCompanyEntries"
             :loading="entriesLoading"
-            class="text-no-wrap"
           >
+            <!-- Mobile : nom + statut, date, pointage, total, indicateur anomalie -->
+            <template #mobile-item="{ item }">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium text-truncate">{{ item.employee?.first_name }} {{ item.employee?.last_name }}</span>
+                <VChip :color="statusColor(item.status)" size="x-small" variant="tonal">
+                  {{ $t(`timeTracking.statuses.${item.status}`) }}
+                </VChip>
+              </div>
+              <div class="d-flex align-center flex-wrap gap-x-3 text-caption text-medium-emphasis mt-1">
+                <span>{{ formatDate(item.date) }}</span>
+                <span>
+                  <VIcon icon="tabler-clock-record" size="13" class="me-1" />
+                  {{ item.clock_in_formatted || '—' }}–{{ item.clock_out_formatted || '…' }}
+                </span>
+                <span class="font-weight-medium">{{ item.total_worked_display }}</span>
+                <VIcon v-if="item.anomalies?.length" icon="tabler-alert-circle" color="warning" size="16" />
+              </div>
+            </template>
+            <template #mobile-append="{ item }">
+              <VMenu v-if="can('workforce.time_manage') && ['completed', 'idle'].includes(item.status)" location="bottom end">
+                <template #activator="{ props: menuProps }">
+                  <VBtn v-bind="menuProps" icon="tabler-dots-vertical" variant="text" size="small" @click.stop />
+                </template>
+                <VList density="compact">
+                  <VListItem
+                    v-if="canCorrectEntry(item)"
+                    prepend-icon="tabler-edit"
+                    :title="$t('timeTracking.correct')"
+                    @click="openCorrection(item)"
+                  />
+                  <VListItem
+                    prepend-icon="tabler-trash"
+                    :title="$t('common.delete')"
+                    class="text-error"
+                    @click="openDelete(item)"
+                  />
+                </VList>
+              </VMenu>
+            </template>
+
             <!-- Date -->
             <template #item.date="{ item }">
               {{ formatDate(item.date) }}
@@ -680,12 +735,12 @@ onMounted(() => {
             <template #item.actions="{ item }">
               <div class="d-flex gap-1">
                 <VBtn
-                  v-if="item.status === 'completed'"
-                  v-can="'workforce.time_manage'"
+                  v-if="canCorrectEntry(item)"
                   icon
                   variant="text"
                   size="x-small"
                   color="primary"
+                  data-test="entry-correct"
                   @click.stop="openCorrection(item)"
                 >
                   <VIcon
@@ -737,7 +792,7 @@ onMounted(() => {
                 </p>
               </div>
             </template>
-          </VDataTableServer>
+          </AppResponsiveDataView>
         </VCard>
       </VWindowItem>
 
@@ -1195,79 +1250,67 @@ onMounted(() => {
       </div>
     </VNavigationDrawer>
 
-    <!-- Correction Drawer -->
-    <VNavigationDrawer
+    <!-- Correction (dialogue adaptatif : plein écran mobile, motif OBLIGATOIRE, workflow tracé) -->
+    <AppAdaptiveDialog
       v-model="isCorrectionOpen"
-      temporary
-      location="end"
-      width="400"
+      :title="$t('timeTracking.correctEntry')"
+      :max-width="460"
     >
-      <div class="d-flex align-center pa-4">
-        <h5 class="text-h5 flex-grow-1">
-          {{ $t('timeTracking.correctEntry') }}
-        </h5>
-        <VBtn
-          icon
-          variant="text"
-          size="small"
-          @click="isCorrectionOpen = false"
-        >
-          <VIcon icon="tabler-x" />
+      <VAlert
+        type="info"
+        variant="tonal"
+        density="comfortable"
+        class="mb-4"
+      >
+        {{ $t('timeTracking.correctionHint') }}
+      </VAlert>
+      <div
+        v-if="correctionEntry"
+        class="text-body-2 mb-4"
+      >
+        <span class="font-weight-medium">{{ correctionEntry.employee?.first_name }} {{ correctionEntry.employee?.last_name }}</span>
+        <span class="text-medium-emphasis"> · {{ formatDate(correctionEntry.date) }}</span>
+      </div>
+      <VForm @submit.prevent="submitCorrection">
+        <AppTextField
+          v-model="correctionData.clockIn"
+          :label="$t('timeTracking.fields.clockIn')"
+          type="datetime-local"
+          data-test="entry-correct-in"
+          class="mb-3"
+        />
+        <AppTextField
+          v-model="correctionData.clockOut"
+          :label="$t('timeTracking.fields.clockOut')"
+          type="datetime-local"
+          data-test="entry-correct-out"
+          class="mb-3"
+        />
+        <VTextarea
+          v-model="correctionData.reason"
+          :label="$t('timeCockpit.reason') + ' *'"
+          :rules="[v => !!v || $t('validation.required')]"
+          rows="2"
+          auto-grow
+          data-test="entry-correct-reason"
+        />
+      </VForm>
+      <template #actions="{ close }">
+        <VSpacer />
+        <VBtn variant="outlined" @click="close">
+          {{ $t('common.cancel') }}
         </VBtn>
-      </div>
-      <VDivider />
-      <div class="pa-4">
-        <VAlert
-          type="info"
-          variant="tonal"
-          class="mb-4"
+        <VBtn
+          color="primary"
+          :loading="correctionLoading"
+          :disabled="!correctionData.reason"
+          data-test="entry-correct-submit"
+          @click="submitCorrection"
         >
-          {{ $t('timeTracking.correctionHint') }}
-        </VAlert>
-        <VForm @submit.prevent="submitCorrection">
-          <VRow>
-            <VCol cols="12">
-              <AppDateTimePicker
-                v-model="correctionData.date"
-                :label="$t('timeTracking.fields.date')"
-                :config="{ dateFormat: 'Y-m-d' }"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppDateTimePicker
-                v-model="correctionData.clockIn"
-                :label="$t('timeTracking.fields.clockIn')"
-                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppDateTimePicker
-                v-model="correctionData.clockOut"
-                :label="$t('timeTracking.fields.clockOut')"
-                :config="{ dateFormat: 'Y-m-d H:i', enableTime: true }"
-              />
-            </VCol>
-            <VCol cols="12">
-              <div class="d-flex gap-3 justify-end">
-                <VBtn
-                  variant="outlined"
-                  @click="isCorrectionOpen = false"
-                >
-                  {{ $t('common.cancel') }}
-                </VBtn>
-                <VBtn
-                  type="submit"
-                  color="primary"
-                  :loading="correctionLoading"
-                >
-                  {{ $t('timeTracking.applyCorrection') }}
-                </VBtn>
-              </div>
-            </VCol>
-          </VRow>
-        </VForm>
-      </div>
-    </VNavigationDrawer>
+          {{ $t('timeTracking.applyCorrection') }}
+        </VBtn>
+      </template>
+    </AppAdaptiveDialog>
 
     <!-- Generate Timesheet Drawer -->
     <VNavigationDrawer

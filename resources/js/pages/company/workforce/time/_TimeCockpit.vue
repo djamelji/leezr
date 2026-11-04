@@ -5,12 +5,14 @@ import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
+import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 // PRODUCT-UX-2 (LOT B2) — panneau « Journée collaborateur » (constatation → action, dans le contexte).
 import DayDetailPanel from './_DayDetailPanel.vue'
 
 const emit = defineEmits(['navigate']) // { tab, employeeId } — demande à l'espace de basculer d'onglet
 const { t, locale } = useI18n()
+const { xs } = useDisplay()
 const { toast } = useAppToast()
 const { can } = useCan()
 const router = useRouter()
@@ -41,19 +43,32 @@ const statusOptions = [
 ]
 
 // KPI cliquables → appliquent le filtre de statut correspondant.
+// `mobile:true` = indicateur réellement utile en synthèse réduite (qui travaille + ce qui demande une action).
 const kpis = computed(() => {
   const s = summary.value || {}
 
   return [
-    { key: 'working', icon: 'tabler-player-play', color: 'success', value: s.working, status: 'working' },
+    { key: 'working', icon: 'tabler-player-play', color: 'success', value: s.working, status: 'working', mobile: true },
     { key: 'on_break', icon: 'tabler-coffee', color: 'warning', value: s.on_break, status: 'on_break' },
     { key: 'completed', icon: 'tabler-circle-check', color: 'info', value: s.completed, status: 'completed' },
-    { key: 'not_clocked', icon: 'tabler-user-off', color: 'secondary', value: s.not_clocked, status: null },
+    { key: 'not_clocked', icon: 'tabler-user-off', color: 'secondary', value: s.not_clocked, status: null, mobile: true },
     { key: 'incomplete', icon: 'tabler-alert-triangle', color: 'warning', value: s.incomplete, status: null },
-    { key: 'anomalies', icon: 'tabler-exclamation-circle', color: 'error', value: s.anomalies, status: null },
-    { key: 'pending_timesheets', icon: 'tabler-file-time', color: 'primary', value: s.pending_timesheets, status: null },
+    { key: 'anomalies', icon: 'tabler-exclamation-circle', color: 'error', value: s.anomalies, status: null, mobile: true },
+    { key: 'pending_timesheets', icon: 'tabler-file-time', color: 'primary', value: s.pending_timesheets, status: null, mobile: true },
   ]
 })
+// Mobile : synthèse réduite aux indicateurs d'action (§3) ; desktop/tablette : tous.
+const visibleKpis = computed(() => xs.value ? kpis.value.filter(k => k.mobile) : kpis.value)
+
+// Garde de correctibilité HONNÊTE (§5) : le serveur n'autorise la correction que sur un pointage
+// `completed` ou `idle` (un pointage en cours `working`/`on_break` n'est pas corrigeable via ce workflow).
+const CORRECTABLE_STATUSES = ['completed', 'idle']
+const isCorrectable = row => canCorrect.value && !!row.time_entry_id && CORRECTABLE_STATUSES.includes(row.status)
+
+// L'écart (réalisé − prévu) n'a de sens qu'une fois le pointage TERMINÉ : tant que la personne est
+// « en poste »/« en pause », on n'affiche pas d'écart (le réalisé est partiel → faux négatif trompeur).
+const IN_PROGRESS = ['working', 'on_break']
+const gapVisible = row => row.gap_minutes !== null && row.gap_minutes !== undefined && !IN_PROGRESS.includes(row.status)
 
 const reconLabel = r => t('timeCockpit.recon.' + r, r)
 const reconColor = r => ({ matched: 'success', ambiguous: 'warning', not_clocked: 'secondary', no_shift: 'info' }[r] || 'secondary')
@@ -158,7 +173,7 @@ const submitCorrect = async () => {
     <!-- KPIs -->
     <VRow class="card-grid card-grid-xs mb-4">
       <VCol
-        v-for="k in kpis"
+        v-for="k in visibleKpis"
         :key="k.key"
         cols="6"
         sm="4"
@@ -191,7 +206,8 @@ const submitCorrect = async () => {
         <VProgressCircular indeterminate color="primary" />
       </VCardText>
       <template v-else>
-        <VTable class="text-no-wrap" density="comfortable">
+        <!-- Desktop / tablette : table réconciliée prévu/réel/écart (pas de compression mobile). -->
+        <VTable v-if="!xs" class="text-no-wrap" density="comfortable">
           <thead>
             <tr>
               <th>{{ t('leaves.columns.employee') }}</th>
@@ -221,22 +237,33 @@ const submitCorrect = async () => {
               </td>
               <td>{{ orNa(fmtMinutes(r.worked_minutes)) }}</td>
               <td>
-                <span v-if="r.gap_minutes !== null" :class="r.gap_minutes < 0 ? 'text-error' : 'text-success'">
+                <span v-if="gapVisible(r)" :class="r.gap_minutes < 0 ? 'text-error' : 'text-success'">
                   {{ r.gap_minutes > 0 ? '+' : '' }}{{ fmtMinutes(Math.abs(r.gap_minutes)) }}
                 </span>
                 <span v-else class="text-disabled">—</span>
               </td>
               <td>
-                <VChip :color="reconColor(r.reconciliation)" size="x-small" variant="tonal">
-                  {{ reconLabel(r.reconciliation) }}
-                </VChip>
+                <div class="d-flex align-center gap-1">
+                  <VChip :color="reconColor(r.reconciliation)" size="x-small" variant="tonal">
+                    {{ reconLabel(r.reconciliation) }}
+                  </VChip>
+                  <VIcon
+                    v-if="r.incomplete"
+                    icon="tabler-alert-triangle"
+                    color="warning"
+                    size="16"
+                  >
+                    <VTooltip activator="parent" location="top">{{ t('dayPanel.findings.incomplete') }}</VTooltip>
+                  </VIcon>
+                </div>
               </td>
               <td>
                 <VBtn
-                  v-if="canCorrect && r.time_entry_id"
+                  v-if="isCorrectable(r)"
                   size="x-small"
                   variant="tonal"
                   prepend-icon="tabler-edit"
+                  data-test="cockpit-correct"
                   @click.stop="openCorrect(r)"
                 >
                   {{ t('timeCockpit.correct') }}
@@ -245,6 +272,46 @@ const submitCorrect = async () => {
             </tr>
           </tbody>
         </VTable>
+
+        <!-- Mobile : liste tactile compacte — nom + statut, prévu vs réel, écart, indicateur, détail au toucher. -->
+        <VList v-else class="py-0">
+          <template v-for="(r, idx) in board" :key="r.employee_id">
+            <VListItem class="cockpit-row px-3" :data-test="`cockpit-row-${r.employee_id}`" @click="openDay(r)">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium text-truncate">{{ r.employee_name }}</span>
+                <VChip :color="statusColor(r.status)" size="x-small" variant="tonal">
+                  {{ t('timeCockpit.status.' + r.status, r.status) }}
+                </VChip>
+              </div>
+              <div class="d-flex align-center gap-3 text-caption text-medium-emphasis mt-1">
+                <span>
+                  <VIcon icon="tabler-calendar" size="13" class="me-1" />
+                  {{ fmtTime(r.planned_start) ? `${fmtTime(r.planned_start)}–${fmtTime(r.planned_end)}` : '—' }}
+                </span>
+                <span :class="r.actual_start ? '' : 'text-disabled'">
+                  <VIcon icon="tabler-clock-record" size="13" class="me-1" />
+                  <template v-if="r.actual_start">{{ fmtTime(r.actual_start) }}–{{ fmtTime(r.actual_end) || '…' }}</template>
+                  <template v-else>{{ t('timeCockpit.notClocked') }}</template>
+                </span>
+              </div>
+              <template #append>
+                <div class="d-flex align-center gap-2">
+                  <span
+                    v-if="gapVisible(r)"
+                    class="text-caption font-weight-medium"
+                    :class="r.gap_minutes < 0 ? 'text-error' : 'text-success'"
+                  >
+                    {{ r.gap_minutes > 0 ? '+' : '' }}{{ fmtMinutes(Math.abs(r.gap_minutes)) }}
+                  </span>
+                  <VIcon v-if="r.incomplete" icon="tabler-alert-triangle" color="warning" size="18" />
+                  <VIcon icon="tabler-chevron-right" size="18" class="text-disabled" />
+                </div>
+              </template>
+            </VListItem>
+            <VDivider v-if="idx < board.length - 1" />
+          </template>
+        </VList>
+
         <div v-if="!board.length" class="text-center text-disabled py-8">
           {{ t('timeCockpit.empty') }}
         </div>
@@ -329,3 +396,10 @@ const submitCorrect = async () => {
     />
   </div>
 </template>
+
+<style lang="scss">
+.cockpit-row {
+  cursor: pointer;
+  min-block-size: 56px; // cible tactile confortable (liste mobile)
+}
+</style>

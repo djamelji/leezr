@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\PlanningBoardReadModel;
 use App\Modules\Workforce\ReadModels\ShiftReadModel;
 use App\Modules\Workforce\Security\WorkforceAccess;
+use App\Modules\Workforce\Support\WeekStartResolver;
 use App\Modules\Workforce\UseCases\BulkCreateShiftsUseCase;
 use App\Modules\Workforce\UseCases\CancelShiftUseCase;
 use App\Modules\Workforce\UseCases\CreateShiftUseCase;
@@ -43,9 +44,14 @@ class ShiftController extends Controller
     {
         $request->validate(['date' => 'required|date']);
 
+        // E3-B/B2 — début de semaine = préférence Company (0=dim..6=sam) résolue par WeekStartResolver,
+        // et NON le lundi codé en dur de startOfWeek(). Cohérent avec la grille desktop et l'agenda mobile.
+        $company = $request->attributes->get('company');
+        $firstDay = $company ? WeekStartResolver::resolve($company) : Carbon::MONDAY;
+
         return response()->json(ShiftReadModel::forWeek(
             companyId: $request->attributes->get('company_id'),
-            weekStart: Carbon::parse($request->query('date'))->startOfWeek(),
+            weekStart: Carbon::parse($request->query('date'))->startOfWeek($firstDay),
         ));
     }
 

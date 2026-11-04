@@ -13,6 +13,7 @@ use App\Modules\Workforce\UseCases\GenerateTimesheetUseCase;
 use App\Modules\Workforce\UseCases\LockTimesheetUseCase;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -30,6 +31,14 @@ class WorkforceTimesheetRulesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // STABILISATION (E3-B / B2, hors règles métier) — ces tests écrivent des règles effective-datées
+        // via WorkforceRuleResolver::setRule (effective_from = now() par défaut) puis génèrent des
+        // bulletins sur des dates FIXES (2026-11-02/03). Sans horloge figée, dès que la date réelle
+        // dépasse chaque fixture, la règle (correctement) n'est plus active à cette date (scopeActiveAt :
+        // effective_from <= date) → repli sur les défauts → échecs qui « apparaissent » avec le calendrier.
+        // On fige l'horloge AVANT les fixtures (date <= fixtures) pour ancrer effective_from. AUCUNE règle
+        // de calcul n'est modifiée — seule la déterministe du test est rétablie.
+        Carbon::setTestNow('2026-11-01 08:00:00');
         $this->seed(\Database\Seeders\PlatformSeeder::class);
         \App\Core\Markets\MarketRegistry::sync();
         $this->seed(\Database\Seeders\MarketRuleSetSeeder::class);
@@ -39,6 +48,12 @@ class WorkforceTimesheetRulesTest extends TestCase
         $this->employee = Employee::create(['company_id' => $this->company->id, 'first_name' => 'T', 'last_name' => 'S', 'status' => Employee::STATUS_ACTIVE, 'hire_date' => '2024-01-01']);
         EmploymentContract::create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id, 'contract_type' => 'cdi', 'work_model_key' => 'horaire', 'status' => 'active', 'is_current' => true, 'start_date' => '2024-01-01', 'weekly_hours' => 35]);
         Model::reguard();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow(); // libère l'horloge figée
+        parent::tearDown();
     }
 
     private function entry(string $date, string $in, string $out, int $worked, int $break = 0): TimeEntry

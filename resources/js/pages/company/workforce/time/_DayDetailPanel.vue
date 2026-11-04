@@ -64,7 +64,8 @@ const findings = computed(() => {
   if (x.reconciliation === 'no_shift') f.push({ icon: 'tabler-calendar-off', color: 'info', text: t('dayPanel.findings.noShift') })
   if (x.reconciliation === 'ambiguous') f.push({ icon: 'tabler-help-circle', color: 'warning', text: t('dayPanel.findings.ambiguous') })
   if (x.incomplete) f.push({ icon: 'tabler-alert-triangle', color: 'warning', text: t('dayPanel.findings.incomplete') })
-  if (x.gap_minutes !== null && x.gap_minutes !== undefined && Math.abs(x.gap_minutes) >= 15)
+  // Écart analysé seulement sur un pointage TERMINÉ (actual_end présent) : en cours ⇒ réalisé partiel.
+  if (x.gap_minutes !== null && x.gap_minutes !== undefined && x.actual_end && Math.abs(x.gap_minutes) >= 15)
     f.push({ icon: 'tabler-arrows-diff', color: x.gap_minutes < 0 ? 'error' : 'success', text: t('dayPanel.findings.gap', { min: Math.abs(x.gap_minutes) }) })
   if (!f.length) f.push({ icon: 'tabler-circle-check', color: 'success', text: t('dayPanel.findings.ok') })
 
