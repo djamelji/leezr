@@ -25483,3 +25483,58 @@ Aucune modification moteur/base/règle/interface. DEV · origin/dev. Pas de main
 ### Fichiers de référence (audit, non modifiés)
 `planning/index.vue` · `_PlanningCalendar.vue` · `planning.store.js` · `ScheduleTemplate.php` · `Shift.php` · `WorkLocation.php` · `BulkCreateShiftsUseCase/PublishShiftsUseCase/CreateShiftUseCase/UpdateShiftUseCase` · `ShiftController.php` · `PlanningBoardReadModel.php` · `AiGatewayManager.php` + `app/Core/Ai/*` · `ConventionCollective(Rule).php` · `WorkforceRuleResolver.php` · `Jobdomain.php` + `jobdomains.workforce_presets` (dormant).
 Artefact d'audit : voir mémoire `workforce-smart-planning-audit`.
+
+---
+
+## ADR-705 (révision v2) — SMART PLANNING : multi-activités par shift (correction architecturale)
+
+**Date** : 2026-11-04
+**Statut** : CADRAGE (révision). Aucun code. Corrige/complète ADR-705 ci-dessus. En attente d'arbitrage.
+
+### Besoin manquant
+Un collaborateur réalise **plusieurs activités / missions / prestations / rendez-vous dans une même journée ET un même shift** (tous JobDomains : salon 5-10 RDV, chauffeur tournée+formation, agent multi-sites, serveur mise en place→service→fermeture). **Une tâche ≠ un nouveau Shift.**
+
+### Audit préalable (2 sous-agents read-only)
+- **Aucun objet métier à référencer** : grep exhaustif `app/`+migrations → seuls `Shift` (conteneur) et `Shipment` (vertical Logistics, référence **interdite**). Pas de tâche/mission/RDV/réservation/client/prestation. Les **6 modules horizontaux** ADR-563 (contacts/invoicing/catalog/scheduling/inventory/projects) = **planifiés, 0 code** (0/6). → la référence objet métier **doit être nullable/optionnelle**, jamais une dépendance dure vers un vertical.
+- **Pattern polymorphe disponible & idiomatique** : `morphTo` + `morphs()`/`nullableMorphs()` + `Relation::enforceMorphMap` (`AppServiceProvider.php:86`). Précédent `FieldValue.php:30`. Aucune `nullableMorphs` encore (ce serait la 1ʳᵉ).
+- **Contrat cross-module** : interface `Core/{Domain}/Contracts/` + registre statique keyed par module key, booté dans `AppServiceProvider::boot()` — pattern `AiModuleContractRegistry`. → seam pour un `WorkAssignableContract` (resolveLabel/window/url d'un subject_type) ; 0 couplage vertical.
+- **Shift = période plate** (pas de sous-entité ; pauses = scalaire `template_snapshot.break_duration_minutes`). `TimeEntryBreak` (hasMany sur TimeEntry) = **précédent child-rows**.
+- **`TimeEntry` = seule source du temps travaillé**, indépendante des shifts/activités (pas de FK, pas de chemin de code). Les activités planifiées **ne deviennent jamais** des heures travaillées par construction.
+- **Overlap = niveau shift** sur `(employé, start_at, end_at)` (scope `overlapping` + index `shifts_overlap_check`). → activités = **enfants d'un seul shift** (sinon shifts-frères → blocage à tort). **Aucune validation intra-shift** n'existe → nouvelle couche à créer.
+
+### Architecture cible — 3 couches distinctes
+1. **Shift** (inchangé) : présence planifiée, unité réglementaire, overlap shift-level, immutabilité publié, réf. contrôle P1a/P1b.
+2. **ScheduledActivity** (net-new, enfant d'un shift) : `workforce_scheduled_activities` { company_id, **shift_id** (FK cascade), employee_id (dénormalisé), activity_type, start_at/end_at/duration_minutes, work_location_id?, required_skill_id?, status, priority, source, **subject_type?/subject_id?** (nullableMorphs), notes, metadata }. `activity_type` devient une propriété de `ScheduleTemplate` étendu.
+3. **Business object** (NON possédé par Workforce Core) : RDV/mission/prestation d'un module métier futur, référencé via morph nullable + `WorkAssignableContract`/registre ; repli gracieux si aucun provider. **Dormant aujourd'hui** (aucun module ne l'implémente).
+
+### Règles multi-activités
+0/1/plusieurs activités successives, séparées par plages libres, pauses, multi-lieux si règles+trajets le permettent. **Plage non affectée ≠ pause ni absence.** Pas de faux conflits entre activités non exclusives ; bloquer les doubles affectations incompatibles. Activité **dans les bornes du shift** (hors-shift = arbitrage), fenêtres de pause respectées, minuit géré. **Durées d'activité jamais comptées comme heures travaillées (pointage = source).** Jamais de contournement des protections Shift.
+
+### Couverture personnel ≠ charge de travail (corrige §05 v1)
+- **Demande personnel** `workforce_coverage_requirements` : headcount/jour/créneau/lieu/activité/compétence ; un employé compté **une seule fois**.
+- **Demande d'activité** `workforce_activity_demands` (net-new, distinct) : nb prestations · durée · compétence · ressources · fenêtre · priorité ; capacité = minutes dispo − pauses − créneaux occupés.
+- Un même shift **satisfait un besoin personnel ET couvre plusieurs missions**. Ne jamais assimiler nb de RDV = nb de salariés.
+
+### Génération (corrige §06) — 2 problèmes distincts
+(1) affecter employés↔shifts (présence) ; (2) distribuer activités↔employés (plages autorisées). Co-optimisables plus tard, **données/contraintes distinctes**. Déterministe d'abord, reproductible, explicable ; IA assistant par-dessus. Aucun solveur spécifique vertical.
+
+### Contraintes (§06 brief) — statut
+Double-booking shift (existe) · chevauchement activités (net-new, intra-shift) · collision pause (net-new) · hors-shift (borné, arbitrage) · compétences/dispo (SP2) · durée/capacité (net-new) · déplacements inter-sites (net-new) · minuit (drapeau) · annulation/réaffectation (UseCase) · modif shift publié avec activités (cascade/garde, arbitrage) · immutabilité (activités héritent) · RBAC/scope (réutilisé) · concurrence 2 planificateurs (verrou optimiste 409 + transaction).
+
+### Plan révisé SP1a → SP5 (SP1 découpé)
+Motif : livrer un shift plat puis greffer le multi-activités = impasse (refonte UI/read-models/overlap) → l'entité générique **naît tôt**.
+- **SP1a** : grille pro + couverture personnel + modèles enrichis (code/icône/activity_type/durée/`department_id`) + affectation rapide/duplication/copier-semaine + filtres + virtualisation + mobile. Zéro IA, shift-level.
+- **SP1b** : `ScheduledActivity` (enfant de shift) + morph dormant + `WorkAssignableContract`/registre (sans provider externe) + vue détail journalier (timeline) + multi-activités/cellule + **validation intra-shift** (chevauchement/bornes/pause).
+- **SP2** : activités persistées matures + compétences + dispo déclarée + réserve + demande workload (`workforce_activity_demands`).
+- **SP3** : génération déterministe à **2 volets** (staffing + distribution d'activités, contraintes distinctes).
+- **SP4** : assistant IA (gateway existant, gated+quota).
+- **SP5** : astreinte + compensations + CC temps de travail + presets JobDomain.
+
+### Arbitrages (reco)
+1. Nom entité (reco `ScheduledActivity`). 2. Activité hors-shift en V1 (reco non, `shift_id` obligatoire). 3. Modif shift publié avec activités : granularité (reco héritage immutabilité ; décider ajout sans re-publier). 4. SP1b dès 1er incrément (reco oui). 5. Compétences SP1 (reco JobRole proxy). 6. Granularité couverture V1 (reco headcount jour ; workload distinct SP2). 7. Génération déterministe 2-volets (reco oui). 8. `department_id` nullable dès SP1a (reco oui). 9. Astreinte SP5 (reco oui).
+
+### Garde-fous
+DEV · origin/dev. Pas de main/PROD, Payroll/Billing/Signature, migration destructive, contournement RBAC, couplage vertical (Core→vertical interdit ; morph nullable via contrat). Zéro régression pointage/feuilles. Règles réglementaires non dupliquées. **Arrêt après cadrage pour arbitrage.**
+
+### Fichiers de référence (audit, non modifiés)
+`Shift.php` (scope `overlapping`, `plannedWorkMinutes`) · `TimeEntry.php`/`TimeEntryBreak` · `PlanningComparisonReadModel.php` · `FieldValue.php` (morph) · `AppServiceProvider.php:86/103` (enforceMorphMap + registre) · `AiModuleContractRegistry.php` · `ModuleManifest.php`/`WorkforcePlanningModule.php` · `Shipment.php` (vertical, non référencé).
