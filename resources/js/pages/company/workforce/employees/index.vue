@@ -67,13 +67,14 @@ const activeFilters = computed(() => ({
 
 const hasFilters = computed(() => Object.values(activeFilters.value).some(v => v !== undefined))
 
+// E3-R/R3-UX : priorité de colonnes — tablette n'affiche que essential+important ; mobile = liste.
 const headers = computed(() => [
-  { title: t('employees.columns.name'), key: 'last_name', sortable: true },
-  { title: t('employees.columns.email'), key: 'email', sortable: true },
-  { title: t('employees.columns.employeeNumber'), key: 'employee_number', sortable: true },
-  { title: t('employees.columns.status'), key: 'status', sortable: true, width: 120 },
-  { title: t('employees.columns.contract'), key: 'current_contract', sortable: false, width: 180 },
-  { title: t('employees.columns.hireDate'), key: 'hire_date', sortable: true, width: 120 },
+  { title: t('employees.columns.name'), key: 'last_name', sortable: true, priority: 'essential' },
+  { title: t('employees.columns.status'), key: 'status', sortable: true, width: 120, priority: 'important' },
+  { title: t('employees.columns.employeeNumber'), key: 'employee_number', sortable: true, priority: 'secondary' },
+  { title: t('employees.columns.contract'), key: 'current_contract', sortable: false, width: 180, priority: 'secondary' },
+  { title: t('employees.columns.email'), key: 'email', sortable: true, priority: 'detail' },
+  { title: t('employees.columns.hireDate'), key: 'hire_date', sortable: true, width: 120, priority: 'detail' },
   { title: '', key: 'actions', sortable: false, width: 60 },
 ])
 
@@ -446,18 +447,18 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         :loading="loading"
         @row-click="goToEmployee($event.id)"
       >
-        <!-- MOBILE : carte tactile compacte (nom + repère + statut), détail au toucher -->
+        <!-- MOBILE : ligne compacte — nom + fonction/équipe + statut (sobre). Email/tél → fiche. -->
         <template #mobile-item="{ item }">
           <div class="d-flex align-center gap-3" style="min-inline-size: 0;" :data-test="`emp-row-${item.id}`">
-            <VAvatar color="primary" variant="tonal" size="40">
-              <span class="text-sm font-weight-medium">{{ (item.first_name?.[0] || '') + (item.last_name?.[0] || '') }}</span>
+            <VAvatar color="primary" variant="tonal" size="36">
+              <span class="text-xs font-weight-medium">{{ (item.first_name?.[0] || '') + (item.last_name?.[0] || '') }}</span>
             </VAvatar>
             <div class="flex-grow-1" style="min-inline-size: 0;">
               <div class="font-weight-medium text-truncate">
                 {{ item.first_name }} {{ item.last_name }}
               </div>
               <div class="text-caption text-medium-emphasis text-truncate">
-                {{ item.employee_number || item.email || '—' }}
+                {{ item.job_role?.title || item.department?.name || '—' }}
               </div>
             </div>
             <StatusChip :status="item.status" domain="employee" size="small">

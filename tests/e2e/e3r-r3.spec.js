@@ -34,21 +34,29 @@ test('SmartActionBar : adaptatif sur la fiche (mobile = principale + overflow ; 
   expect(wideCount, `desktop ${wideCount} ≥ mobile ${narrowCount} actions directes`).toBeGreaterThanOrEqual(narrowCount)
 })
 
-test('AppSectionNavigation : sélecteur sur mobile, onglets sur desktop', async ({ page }) => {
+test('AppSectionNavigation : icônes seules sans scroll sur mobile, onglets icône+libellé sur desktop', async ({ page }) => {
   await loginCompany(page, 'owner@leezr.test')
 
+  // Mobile : onglets ICÔNES SEULES répartis, pas de scroll horizontal, actif clair.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/company/workforce/employees/1', { waitUntil: 'domcontentloaded' })
   await page.getByText('Djamel', { exact: false }).first().waitFor({ timeout: 15000 })
   await page.waitForTimeout(1200)
-  await expect(page.locator('[data-test="asn-select"]')).toBeVisible()
+  await expect(page.locator('[data-test="asn-mtab-overview"]')).toBeVisible()
+  // La barre d'onglets ne provoque pas de débordement.
+  const o = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth))
+  expect(o, `overflow ${o}px`).toBeLessThanOrEqual(2)
+  // Bascule de section par icône.
+  await page.locator('[data-test="asn-mtab-profile"]').click()
+  await page.waitForTimeout(400)
 
+  // Desktop : onglets Vuexy icône + libellé (au-dessus du contenu).
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/company/workforce/employees/1', { waitUntil: 'domcontentloaded' })
   await page.getByText('Djamel', { exact: false }).first().waitFor({ timeout: 15000 })
   await page.waitForTimeout(1200)
   await expect(page.locator('[data-test="asn-tab-overview"]')).toBeVisible()
-  await expect(page.locator('[data-test="asn-select"]')).toHaveCount(0)
+  await expect(page.locator('[data-test="asn-mtab-overview"]')).toHaveCount(0)
 })
 
 test('AppResponsiveDataView : table desktop / liste mobile + état préservé au changement de largeur', async ({ page }) => {

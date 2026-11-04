@@ -24933,3 +24933,48 @@ Captures en **local `leezr.test`** (code identique à DEV). Viewport simulé ≠
 
 ### Fichiers clés
 `composables/useContainerWidth.js` · `core/components/{SmartActionBar,AppResponsiveDataView,AppSectionNavigation}.vue` · `pages/company/dev-lab.vue` · `employees/{index,[id]}.vue` · `tests/e2e/e3r-r3.spec.js`.
+
+---
+
+## ADR-695 — SMART RESPONSIVE UX / R3-UX REWORK : décisions d'ERGONOMIE (pas d'implémentation)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (livré DEV). Rework de la PRÉSENTATION des primitives R3 (conservées) + fiche/annuaire + lab. Pas de nouvel audit, pas de nouveau composant (ni AppFilterPanel ni AppAdaptiveDialog), E3-B non démarré.
+**Contexte** : La direction juge R3 encore « logique de développeur » (mesurer/overflow/choisir un composant) et non « product design ». Objectif reformulé : **sur mobile, voir MOINS d'éléments mais comprendre et agir plus facilement**. Esthétique premium sobre, cohérente Vuexy.
+
+### Décisions de design (2 alternatives comparées par cas — artefact dédié)
+| Cas | Alt. A | Alt. B | **Choix & raison** |
+|---|---|---|---|
+| En-tête fiche (actions) | rangée de boutons full | **primaire + icônes compactes + « ··· »** | **B** : sobre, ne mange pas le 1ᵉʳ écran mobile ; sensibles gardent leur libellé |
+| Annuaire mobile | grandes cartes | **ligne compacte (nom + fonction + statut)** | **B** : densité de lecture, scan rapide ; e-mail/tél → fiche |
+| Nav secondaire fiche | onglets scrollables / select | **onglets Vuexy au-dessus ; mobile icônes seules réparties + « Plus »** | **B** : zéro scroll/troncature, hiérarchie Vuexy |
+
+### Primitives reworkées (présentation uniquement ; génériques, natif Vuetify)
+1. **SmartActionBar** — 3 modes par action selon la largeur RÉELLE du conteneur : **COMPLET** (icône+libellé), **COMPACT** (icône seule + tooltip desktop + aria-label, uniquement si icône non ambiguë ET non sensible), **OVERFLOW** (menu « Plus », icône+libellé). Action principale explicite toujours visible ; en conteneur étroit → primaire compacte + tout le reste en « Plus ». **Danger/sensitive : jamais icône seule** (libellé conservé, confirmation = handler). Remplit l'espace disponible (flex) pour mesurer la vraie largeur.
+2. **AppResponsiveDataView** — **priorité de colonnes** `essential|important|secondary|detail` : desktop = tout ; tablette (600-959) = essential+important ; mobile (<600) = **liste tactile compacte** (2-3 infos). Distingue DISPONIBILITÉ et PRÉSENCE à l'écran (e-mail/tél hors liste mobile, présents en fiche). **Confidentialité serveur inchangée** (rien d'exposé au front).
+3. **AppSectionNavigation** — respecte la hiérarchie Vuexy : barre d'onglets = **navigation SUPÉRIEURE au-dessus du contenu**, distincte du panneau. Desktop = onglets icône+libellé ; mobile = **icônes seules réparties, SANS scroll ni troncature** ; si trop nombreux → regroupement explicite « Plus » (jamais compression/scroll). aria-label + tooltip.
+
+### Application réelle
+- **Fiche** : en-tête minimal sur mobile (**icône Modifier + « ··· »**) / sobre desktop (**Modifier + 2 actions compactes + ···**) ; onglets **au-dessus** du contenu (icônes seules sur mobile) ; contenu en dessous. Confidentialité salaire inchangée.
+- **Annuaire** : liste mobile **compacte** (avatar S + nom + fonction/équipe + statut), e-mail/tél retirés de la liste ; table desktop/tablette avec colonnes priorisées. Store/API/filtres inchangés.
+- **Laboratoire** (`/company/dev-lab`) : démontre action bar compacte/complète/overflow, masquage de colonnes secondaires, nav sans scroll — transitions de largeur sans perte d'état.
+
+### Esthétique
+Surfaces sobres, typographie hiérarchisée, espacements maîtrisés, icônes cohérentes, actions légères, moins de pilules/bordures/badges. « Moderne » ≠ « plus d'éléments graphiques ».
+
+### Vision UX Leezr 2027 — Web · iOS · Android (orientation, pas un chantier)
+- **À conserver** : design system Leezr par-dessus Vuexy (primitives App*) ; séparation stricte logique métier / présentation (API, permissions, modules, règles, états côté serveur — le front n'en est qu'un consommateur) ; contrat d'action déclaratif (réutilisable par un futur renderer natif) ; data-driven par JobDomain.
+- **À améliorer (web)** : densité de lecture, gestes tactiles (swipe listes), bottom-sheets pour filtres/dialogues (R3 suite), feedback de chargement.
+- **À réserver au natif (ne pas développer maintenant)** : bottom-navigation contextuelle, gestes système, sheets natives, notifications push, caméra (justificatifs/pointage photo), hors-ligne ciblé. Les apps iOS/Android pourront avoir des **interfaces différentes** mais la **même identité produit** et les **mêmes API/permissions/règles**.
+- **Décisions actuelles qui facilitent l'évolution** : contrat d'action et de colonnes déclaratifs (portables) ; composants de présentation découplés du métier ; aucune règle métier dans un composant Vuexy.
+- **Risques de verrouillage** : coupler trop fortement l'UX aux composants Vuexy (mitigé en gardant le métier côté serveur/stores) ; réimplémenter la logique en natif (mitigé par des API/contrats stables).
+- **Proposition (Lead Product Designer)** : pour les usages mobiles RÉELS (salarié : pointer/planning/congé ; manager : valider/corriger ; exploitation : présences/équipes ; RH : dossier/signature), privilégier des **parcours de tâches courts** plutôt que l'administration complète ; sur mobile web, une **bottom-bar contextuelle PAR ESPACE** (pas globale) serait souvent plus ergonomique qu'un drawer — à prototyper avant généralisation, non imposée. Fondé sur les pratiques actuelles, sans prétendre à des standards 2027 établis.
+
+### Recette & preuves
+`tests/e2e/e3r-r3.spec.js` (nav icônes sans scroll, SmartActionBar 3 modes adaptatifs, data view table/liste + état préservé, permissions) + `workforce-e3a.spec.js` (maj). **6/6 verts**, 0 débordement, 0 erreur JS. Captures 320/390/768/1366 light+dark + artefact avant/après + comparaison d'alternatives.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature inchangés · pas de nouveau RBAC · pas de migration · pas de règle métier changée · pas de dépendance Logistics · SSH compromis non utilisé · ResizeObserver+rAF (pas de mesure coûteuse par rendu). Les 2 échecs date-dépendants `WorkforceTimesheetRulesTest` restent des échecs (backend non touché).
+
+### Fichiers clés
+`core/components/{SmartActionBar,AppResponsiveDataView,AppSectionNavigation}.vue` · `composables/useContainerWidth.js` · `pages/company/dev-lab.vue` · `employees/{index,[id]}.vue` · `tests/e2e/e3r-r3.spec.js`.

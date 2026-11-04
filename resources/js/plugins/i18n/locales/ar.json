@@ -362,6 +362,7 @@
   "common": {
     "actions": "إجراءات",
     "noData": "لا توجد بيانات",
-    "pageOf": "صفحة {page} / {total}"
+    "pageOf": "صفحة {page} / {total}",
+    "more": "المزيد"
   }
 }

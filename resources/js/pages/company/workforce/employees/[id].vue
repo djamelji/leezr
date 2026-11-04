@@ -187,15 +187,16 @@ const onboardingComplete = computed(() => onboardingDone.value === onboardingSte
         </VCardText>
       </VCard>
 
+      <!-- SMART RESPONSIVE UX (ADR-695) : navigation secondaire = NAVIGATION SUPÉRIEURE de la page,
+           placée AU-DESSUS du contenu (hiérarchie Vuexy), distincte du panneau. Desktop = onglets
+           icône+libellé ; mobile = icônes seules réparties + « Plus ». Contenu en dessous. -->
+      <AppSectionNavigation
+        v-model="currentTab"
+        :sections="tabSections"
+        class="mb-5"
+      />
+
       <VCard>
-        <!-- SMART RESPONSIVE UX : navigation secondaire adaptative (onglets desktop / sélecteur mobile) -->
-        <div class="pa-3 pb-0">
-          <AppSectionNavigation
-            v-model="currentTab"
-            :sections="tabSections"
-          />
-        </div>
-        <VDivider class="mt-3" />
         <VCardText>
           <VWindow v-model="currentTab">
             <!-- Vue d'ensemble (synthèse RH) -->

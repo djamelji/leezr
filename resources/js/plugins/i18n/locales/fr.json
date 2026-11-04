@@ -402,7 +402,8 @@
     "deleteSuccess": "Supprimé avec succès.",
     "operationCancelled": "Opération annulée.",
     "helpCenter": "Centre d'aide",
-    "pageOf": "Page {page} / {total}"
+    "pageOf": "Page {page} / {total}",
+    "more": "Plus"
   },
   "platformAccount": {
     "myAccount": "Mon compte",

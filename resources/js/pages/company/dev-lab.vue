@@ -51,21 +51,28 @@ const actions = computed(() => {
 const countPresets = [1, 3, 5, 10]
 
 // ── AppResponsiveDataView (données factices) ─────────────────
+// Priorité de colonnes : tablette (600-959) n'affiche que essential + important.
 const dvHeaders = [
-  { title: 'Nom', key: 'name' },
-  { title: 'Fonction', key: 'role' },
-  { title: 'Statut', key: 'status', width: 120 },
+  { title: 'Nom', key: 'name', priority: 'essential' },
+  { title: 'Statut', key: 'status', width: 120, priority: 'important' },
+  { title: 'Fonction', key: 'role', priority: 'secondary' },
+  { title: 'E-mail', key: 'email', priority: 'detail' },
   { title: '', key: 'actions', width: 60 },
 ]
 const dvOptions = ref({ page: 1, itemsPerPage: 8, sortBy: [] })
 const dvSelected = ref([])
 const STATUSES = ['active', 'on_leave', 'suspended']
-const dvItems = computed(() => Array.from({ length: 8 }, (_, i) => ({
-  id: i + 1,
-  name: ['Alex Martin', 'Camille Roux', 'Sofia Nkem', 'Lucas Bianchi', 'Yuki Tanaka', 'Omar Haddad', 'Lena Weber', 'Noa Silva'][i],
-  role: ['Chauffeur', 'Serveuse', 'Coiffeur', 'Agent', 'Préparateur', 'Manager', 'Esthéticienne', 'Livreur'][i],
-  status: STATUSES[i % 3],
-})))
+const dvItems = computed(() => Array.from({ length: 8 }, (_, i) => {
+  const name = ['Alex Martin', 'Camille Roux', 'Sofia Nkem', 'Lucas Bianchi', 'Yuki Tanaka', 'Omar Haddad', 'Lena Weber', 'Noa Silva'][i]
+
+  return {
+    id: i + 1,
+    name,
+    role: ['Chauffeur', 'Serveuse', 'Coiffeur', 'Agent', 'Préparateur', 'Manager', 'Esthéticienne', 'Livreur'][i],
+    email: name.toLowerCase().replace(' ', '.') + '@demo.leezr',
+    status: STATUSES[i % 3],
+  }
+}))
 
 // ── AppSectionNavigation ─────────────────────────────────────
 const sectionCount = ref(6)
