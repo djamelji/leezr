@@ -25145,3 +25145,25 @@ Submit/Approve/Reject/Lock n'avaient **ni transaction ni verrou** ; la garde d'�
 **Preuves addendum** : build clean ; **409 tests Workforce verts** (1553 assertions) dont `WorkforceTimesheetB3Test` (10 : scope lecture/écriture/liste/historique hors périmètre, approbateur Company, re-check concurrence sans double audit) ; recette Playwright inchangée verte. SHA servi à confirmer après redéploiement de l'addendum.
 
 **Fichiers** : `TimesheetController.php` (gardes scope) · `TimesheetPeriodReadModel.php` (visibleIds) · `{Submit,Approve,Reject,Lock,Reopen,Generate}TimesheetUseCase.php` (transaction+verrou) · `time/[id].vue` (action Régénérer) · `tests/Feature/WorkforceTimesheetB3Test.php`.
+
+### ADR-699 — Addendum RBAC (décision produit : approbation d'équipe) & unicité de concurrence
+
+**Date** : 2026-11-04
+**Décision produit (validée)** : introduire une capacité d'approbation **limitée au périmètre managérial**.
+
+**1. Nouvelle permission `workforce.timesheet_approve_team`.**
+- `timesheet_approve_team` → approuver/refuser les feuilles de ses **rapports directs** (`manager_id`, 1 niveau), **jamais la sienne** (pas d'auto-approbation via cette seule clé).
+- `timesheet_approve` (renommé « Approve Timesheets (Company) ») → périmètre **Company** (inchangé, à attribuer explicitement, inclut soi — comportement existant **préservé**, risque documenté).
+- **Union sans duplication** : droit d'ACTION = l'une OU l'autre ; le PÉRIMÈTRE de données est contrôlé séparément.
+- Aucune des deux → aucune approbation. Owner → bypass. **Aucun rôle hardcodé, aucun ABAC, pas de hiérarchie transitive, pas de département = équipe.**
+- **Implémentation (réutilise l'existant)** : `WorkforceAccess::canApproveTimesheet()` (Company via `has('timesheet_approve')`, sinon équipe = rapport direct ≠ soi) ; routes `approve`/`reject` gated par un nouvel ability **générique** `company.access:use-any-permission,a|b` (ajouté à `CompanyAccess`/`EnsureCompanyAccess`) ; `TimesheetController::guardApprove()`.
+- **Catalogue** : clé déclarée dans `WorkforceModule` + **bundle DÉDIÉ** `workforce.timesheet_team_approver` (= timesheet_view + timesheet_approve_team) pour satisfaire ADR-133 **sans élargir** les bundles existants. Pas d'attribution automatique à un manager ; aucune attribution globale existante retirée.
+- **Lecture/soumission/réouverture/verrouillage** conservent leurs permissions et leur scope (`canViewEmployeeData('time')`).
+
+**2. Unicité de concurrence (garde-fou DB).** Identité métier d'une feuille = `(company_id, employee_id, period_start, period_end)`. Migration **additive non destructive** `wf_ts_period_identity_unique` (0 doublon existant vérifié). Couvre la **création concurrente d'une période inédite** (insertion fantôme non bloquée par le verrou de ligne). `GenerateTimesheetUseCase` convertit la violation d'unicité en `DomainException` → **422** cohérent. Les périodes **chevauchantes** (bornes différentes) restent gardées **applicativement** (`overlapping()`) — non exprimables en index.
+
+**Conséquences par profil** : salarié-manager avec seulement `timesheet_approve_team` → approuve ses rapports, **pas sa propre feuille** ; RH/exploitant avec `timesheet_approve` → Company (incl. soi) ; titulaire des deux → Company ; lecteur seul → ni lecture hors périmètre ni action (403) ; permissions personnalisées supportées ; inter-tenant 404.
+
+**Preuves** : **683 tests verts** (0 échec, filtre Workforce+RBAC+manifest+pages) dont `WorkforceTimesheetB3Test` (**17** : équipe/Company/auto-approbation/double permission/lecture seule/ID direct/historique/état/concurrence/unicité) ; recette owner inchangée verte ; 2 tests pré-existants rendus verts (ADR-418 accepte désormais `anyPermission` — garde-fou valide depuis B1 ; ADR-133 via bundle dédié). Migration DONE (MySQL + SQLite tests). SHA servi à confirmer après redéploiement.
+
+**Fichiers** : `WorkforceModule.php` (permission + bundle) · `WorkforceAccess.php` (`canApproveTimesheet`) · `CompanyAccess.php` + `EnsureCompanyAccess.php` (`use-any-permission`) · `TimesheetController.php` (`guardApprove`) · `routes/company.php` · migration `..._add_identity_unique_...` · `GenerateTimesheetUseCase.php` · tests `WorkforceTimesheetB3Test`, `PageLayoutMetaTest`.

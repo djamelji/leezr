@@ -188,9 +188,12 @@ class PageLayoutMetaTest extends TestCase
                 continue;
             }
 
-            // Page has a module and is not exempt → must have meta.permission
-            if (! preg_match("/permission:\s*['\"][^'\"]+['\"]/", $content)) {
-                $violations[] = $this->relPath($file) . " — module '{$module}' but no meta.permission (ADR-418)";
+            // Page has a module and is not exempt → must have a permission GATE.
+            // Accepté : meta.permission:'key' OU meta.anyPermission:[...] (espaces multi-capacités, ex. E2/B1).
+            $hasPermission = preg_match("/\bpermission:\s*['\"][^'\"]+['\"]/", $content);
+            $hasAnyPermission = preg_match("/\banyPermission:\s*\[/", $content);
+            if (! $hasPermission && ! $hasAnyPermission) {
+                $violations[] = $this->relPath($file) . " — module '{$module}' but no meta.permission/anyPermission (ADR-418)";
             }
         }
 

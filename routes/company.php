@@ -517,8 +517,10 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show'])->middleware($perm('workforce.timesheet_view'));
     Route::get('timesheets/{id}/history', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'history'])->middleware($perm('workforce.timesheet_view'));
     Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit'])->middleware($perm('workforce.timesheet_submit'));
-    Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve'])->middleware($perm('workforce.timesheet_approve'));
-    Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject'])->middleware($perm('workforce.timesheet_approve'));
+    // B3-checkpoint (ADR-699) — approuver/refuser : droit d'action = timesheet_approve (Company) OU
+    // timesheet_approve_team (équipe) ; le PÉRIMÈTRE de données est contrôlé dans le contrôleur.
+    Route::post('timesheets/{id}/approve', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'approve'])->middleware('company.access:use-any-permission,workforce.timesheet_approve|workforce.timesheet_approve_team');
+    Route::post('timesheets/{id}/reject', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reject'])->middleware('company.access:use-any-permission,workforce.timesheet_approve|workforce.timesheet_approve_team');
     Route::post('timesheets/{id}/reopen', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'reopen'])->middleware($perm('workforce.time_manage'));
     Route::post('timesheets/{id}/lock', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'lock'])->middleware($perm('workforce.time_approve'));
 

@@ -247,6 +247,67 @@ class WorkforceTimesheetB3Test extends TestCase
         $this->actingAs($u)->postJson("/api/workforce/timesheets/{$period->id}/approve", ['approval_note' => 'Anomalie acquittée'], $this->h($u))->assertOk();
     }
 
+    // ── ARBITRAGE RBAC : timesheet_approve_team (équipe) vs timesheet_approve (Company) ──
+
+    private function submittedFor(Employee $e): TimesheetPeriod
+    {
+        return TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $e->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'submitted']);
+    }
+
+    private function approve(User $u, int $pid)
+    {
+        return $this->actingAs($u)->postJson("/api/workforce/timesheets/{$pid}/approve", ['approval_note' => 'ok'], $this->h($u));
+    }
+
+    public function test_team_approver_can_approve_direct_report(): void
+    {
+        $mgr = $this->user(['workforce.timesheet_approve_team'], $this->manager);
+        $this->approve($mgr, $this->submittedFor($this->report)->id)->assertOk();
+    }
+
+    public function test_team_approver_cannot_approve_outside_perimeter(): void
+    {
+        $mgr = $this->user(['workforce.timesheet_approve_team'], $this->manager);
+        $this->approve($mgr, $this->submittedFor($this->stranger)->id)->assertForbidden();
+    }
+
+    public function test_team_approver_cannot_self_approve(): void
+    {
+        // Interdiction d'auto-approbation via la SEULE permission d'équipe (§2 décision produit).
+        $mgr = $this->user(['workforce.timesheet_approve_team'], $this->manager);
+        $own = $this->submittedFor($this->manager);
+        $this->approve($mgr, $own->id)->assertForbidden();
+        $this->actingAs($mgr)->postJson("/api/workforce/timesheets/{$own->id}/reject", ['rejection_reason' => 'x'], $this->h($mgr))->assertForbidden();
+    }
+
+    public function test_company_approver_can_approve_anyone(): void
+    {
+        $rh = $this->user(['workforce.timesheet_approve'], $this->manager);
+        $this->approve($rh, $this->submittedFor($this->stranger)->id)->assertOk();
+    }
+
+    public function test_both_permissions_company_scope_includes_self(): void
+    {
+        // Titulaire des DEUX : périmètre Company (incl. soi) — comportement existant préservé (risque documenté).
+        $u = $this->user(['workforce.timesheet_approve', 'workforce.timesheet_approve_team'], $this->manager);
+        $this->approve($u, $this->submittedFor($this->manager)->id)->assertOk();
+    }
+
+    public function test_view_only_cannot_reach_approve_route(): void
+    {
+        // Droit d'action absent (ni approve ni approve_team) → 403 au middleware use-any-permission.
+        $viewer = $this->user(['workforce.timesheet_view'], $this->manager);
+        $this->approve($viewer, $this->submittedFor($this->report)->id)->assertForbidden();
+    }
+
+    public function test_unique_identity_constraint_blocks_duplicate_period(): void
+    {
+        // Garde-fou concurrence DB : deux feuilles de MÊME identité métier sont refusées par la contrainte.
+        TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'draft']);
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'draft']);
+    }
+
     // ── Périmètre des approbateurs = Company (comportement INTENTIONnel du modèle existant) ──
 
     public function test_approver_with_timesheet_approve_has_company_scope(): void

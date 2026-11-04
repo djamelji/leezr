@@ -62,6 +62,38 @@ class WorkforceAccess
             ->exists();
     }
 
+    /**
+     * B3-checkpoint (ADR-699) — PÉRIMÈTRE d'APPROBATION/REFUS d'une feuille de temps.
+     * Distingue le DROIT d'action (vérifié aussi en amont par le middleware) et le PÉRIMÈTRE de données :
+     *  - `timesheet_approve` → Company (tout collaborateur, y compris soi — comportement existant préservé) ;
+     *  - `timesheet_approve_team` (sans Company) → RAPPORTS DIRECTS UNIQUEMENT, JAMAIS soi-même
+     *    (pas d'auto-approbation via la seule permission d'équipe).
+     *  - aucune des deux → refusé. Owner bypass (via has()). Réutilise manager_id (1 niveau), pas d'ABAC.
+     */
+    public static function canApproveTimesheet(Request $request, int $employeeId): bool
+    {
+        // Périmètre Company : permission d'approbation Company explicite (ou owner).
+        if (static::has($request, 'workforce.timesheet_approve')) {
+            return true;
+        }
+
+        // Périmètre équipe : rapports directs seulement, et PAS soi-même.
+        if (static::has($request, 'workforce.timesheet_approve_team')) {
+            $self = static::requesterEmployee($request);
+            if (! $self || $self->id === $employeeId) {
+                return false;
+            }
+
+            return Employee::withoutCompanyScope()
+                ->where('company_id', $self->company_id)
+                ->where('id', $employeeId)
+                ->where('manager_id', $self->id)
+                ->exists();
+        }
+
+        return false;
+    }
+
     /** Capacité « voir tout » pour un domaine donné (réutilise les permissions existantes). */
     public static function hasViewAll(Request $request, string $domain): bool
     {

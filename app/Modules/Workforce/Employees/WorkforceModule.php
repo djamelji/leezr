@@ -54,7 +54,10 @@ class WorkforceModule implements ModuleDefinition
                 ['key' => 'workforce.admin', 'label' => 'Workforce Administration', 'is_admin' => true, 'hint' => 'Full workforce administration access.'],
                 ['key' => 'workforce.timesheet_view', 'label' => 'View Timesheets', 'hint' => 'View own timesheets.'],
                 ['key' => 'workforce.timesheet_submit', 'label' => 'Submit Timesheets', 'hint' => 'Submit timesheets for approval.'],
-                ['key' => 'workforce.timesheet_approve', 'label' => 'Approve Timesheets', 'is_admin' => true, 'hint' => 'Approve or reject submitted timesheets.'],
+                ['key' => 'workforce.timesheet_approve', 'label' => 'Approve Timesheets (Company)', 'is_admin' => true, 'hint' => 'Approve or reject any employee\'s submitted timesheets (company-wide).'],
+                // B3-checkpoint (ADR-699) — approbation limitée au PÉRIMÈTRE MANAGÉRIAL (rapports directs),
+                // à attribuer explicitement (hors bundles par défaut). Jamais d'auto-approbation par cette seule clé.
+                ['key' => 'workforce.timesheet_approve_team', 'label' => 'Approve Timesheets (Team)', 'hint' => 'Approve or reject timesheets of your direct reports only (not your own).'],
             ],
             bundles: [
                 // E2.1 (ADR-691) — profils de référence cohérents : toute capacité de gestion est
@@ -113,6 +116,14 @@ class WorkforceModule implements ModuleDefinition
                     'label' => 'Timesheet Management',
                     'hint' => 'Approve and manage timesheets.',
                     'permissions' => ['workforce.timesheet_view', 'workforce.timesheet_submit', 'workforce.timesheet_approve', 'workforce.time_approve'],
+                ],
+                // B3-checkpoint (ADR-699) — profil « validateur d'équipe » : valide les feuilles de ses
+                // RAPPORTS DIRECTS seulement (pas Company). Bundle DÉDIÉ (ne modifie aucun bundle existant).
+                [
+                    'key' => 'workforce.timesheet_team_approver',
+                    'label' => 'Timesheet Team Approver',
+                    'hint' => 'Approve/reject timesheets of direct reports only (team perimeter).',
+                    'permissions' => ['workforce.timesheet_view', 'workforce.timesheet_approve_team'],
                 ],
             ],
             scope: 'company',

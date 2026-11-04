@@ -37,9 +37,31 @@ class CompanyAccess
         return match ($ability) {
             'access-surface' => static::checkSurface($user, $company, $context['surface'] ?? null),
             'use-permission' => static::checkPermission($user, $company, $context['permission'] ?? null),
+            'use-any-permission' => static::checkAnyPermission($user, $company, $context['permissions'] ?? null),
             'manage-structure' => static::checkAdministrative($user, $company),
             default => false,
         };
+    }
+
+    /**
+     * Any-permission check (B3-checkpoint, ADR-699) : le droit d'ACTION est accordé si l'utilisateur
+     * détient AU MOINS UNE des permissions listées (séparées par « | »). Le PÉRIMÈTRE de données est
+     * contrôlé séparément (WorkforceAccess). Ex. approuver une feuille = timesheet_approve (Company) OU
+     * timesheet_approve_team (équipe).
+     */
+    private static function checkAnyPermission(User $user, Company $company, ?string $permissions): bool
+    {
+        if (! $permissions) {
+            return false;
+        }
+
+        foreach (explode('|', $permissions) as $permission) {
+            if ($permission !== '' && $user->hasCompanyPermission($company, $permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

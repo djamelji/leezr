@@ -31,10 +31,16 @@ class TimesheetController extends Controller
         return WorkforceAccess::scopeIdsOrNull($request, 'time');
     }
 
-    /** Garde de périmètre par collaborateur (lecture ET écriture d'une feuille) → 403 si hors périmètre. */
+    /** Garde de périmètre par collaborateur (lecture/soumission/réouverture/verrouillage) → 403 si hors périmètre. */
     private function guardEmployee(Request $request, int $employeeId): void
     {
         abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'time'), 403, 'Feuille de temps hors de votre périmètre.');
+    }
+
+    /** Garde d'APPROBATION/REFUS : Company (timesheet_approve) OU équipe (timesheet_approve_team, rapports directs, pas soi). */
+    private function guardApprove(Request $request, int $employeeId): void
+    {
+        abort_unless(WorkforceAccess::canApproveTimesheet($request, $employeeId), 403, 'Approbation hors de votre périmètre.');
     }
 
     public function index(Request $request): JsonResponse
@@ -151,7 +157,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
-        $this->guardEmployee($request, $period->employee_id);
+        $this->guardApprove($request, $period->employee_id);
 
         try {
             $period = app(ApproveTimesheetUseCase::class)->execute(
@@ -177,7 +183,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
-        $this->guardEmployee($request, $period->employee_id);
+        $this->guardApprove($request, $period->employee_id);
 
         try {
             $period = app(RejectTimesheetUseCase::class)->execute(

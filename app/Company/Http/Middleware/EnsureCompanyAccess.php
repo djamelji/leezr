@@ -24,6 +24,7 @@ class EnsureCompanyAccess
         'access-surface' => 'surface',
         'use-module' => 'module',
         'use-permission' => 'permission',
+        'use-any-permission' => 'permissions', // liste « a|b » : au moins une requise
         'manage-structure' => null,
     ];
 
@@ -53,6 +54,7 @@ class EnsureCompanyAccess
                 'access-surface' => 'Access restricted to management roles.',
                 'use-module' => "Module '{$key}' is not active for this company.",
                 'use-permission' => "Permission required: {$key}",
+                'use-any-permission' => "One of these permissions is required: {$key}",
                 'manage-structure' => 'Administrative role required.',
                 default => 'Access denied.',
             };

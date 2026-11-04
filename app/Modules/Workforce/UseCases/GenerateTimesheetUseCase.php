@@ -78,13 +78,19 @@ class GenerateTimesheetUseCase
                     throw new \DomainException('An overlapping timesheet period already exists for this employee.');
                 }
 
-                $period = TimesheetPeriod::create([
-                    'company_id' => $companyId,
-                    'employee_id' => $employeeId,
-                    'period_start' => $start->toDateString(),
-                    'period_end' => $end->toDateString(),
-                    'status' => TimesheetPeriod::STATUS_DRAFT,
-                ]);
+                try {
+                    $period = TimesheetPeriod::create([
+                        'company_id' => $companyId,
+                        'employee_id' => $employeeId,
+                        'period_start' => $start->toDateString(),
+                        'period_end' => $end->toDateString(),
+                        'status' => TimesheetPeriod::STATUS_DRAFT,
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                    // Course concurrente : une autre requête a créé la même période (identité métier) entre-temps.
+                    // La contrainte d'unicité DB (ADR-699) ferme la fenêtre → réponse 422 cohérente, pas de doublon.
+                    throw new \DomainException('A timesheet for this period already exists for this employee.');
+                }
             }
 
             // Resolve policies for overtime/anomaly thresholds.
