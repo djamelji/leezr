@@ -25167,3 +25167,44 @@ Submit/Approve/Reject/Lock n'avaient **ni transaction ni verrou** ; la garde d'�
 **Preuves** : **683 tests verts** (0 échec, filtre Workforce+RBAC+manifest+pages) dont `WorkforceTimesheetB3Test` (**17** : équipe/Company/auto-approbation/double permission/lecture seule/ID direct/historique/état/concurrence/unicité) ; recette owner inchangée verte ; 2 tests pré-existants rendus verts (ADR-418 accepte désormais `anyPermission` — garde-fou valide depuis B1 ; ADR-133 via bundle dédié). Migration DONE (MySQL + SQLite tests). SHA servi à confirmer après redéploiement.
 
 **Fichiers** : `WorkforceModule.php` (permission + bundle) · `WorkforceAccess.php` (`canApproveTimesheet`) · `CompanyAccess.php` + `EnsureCompanyAccess.php` (`use-any-permission`) · `TimesheetController.php` (`guardApprove`) · `routes/company.php` · migration `..._add_identity_unique_...` · `GenerateTimesheetUseCase.php` · tests `WorkforceTimesheetB3Test`, `PageLayoutMetaTest`.
+
+## ADR-700 — WORKFORCE EXPERIENCE 2026 / E3-B : clôture (B4 — recette finale Temps & Planning)
+
+**Date** : 2026-11-04
+**Statut** : Accepté — **E3-B clos** (B1→B4 + checkpoint sécurité + arbitrage RBAC livrés DEV, `X-Build-Version` vérifié). Reprise des autres phases Workforce ensuite.
+**Contexte** : B4 = RECETTE FINALE. Éprouver un parcours métier COMPLET, réellement persisté, multisectoriel, sans relancer de chantier UX. Réutilise les composants stabilisés (E3-R primitives, B1-B3). **Aucune refonte moteur.**
+
+### Parcours bout en bout (réellement persisté)
+Créneau → **Publication** → Pointage (arrivée) → **Pause** → Reprise → Pointage (sortie) → **Correction tracée** (motif) → **Génération** de feuille → **Soumission** → **Approbation** → **Verrouillage**, puis vérification de la chaîne d'audit (`timesheet.generated/submitted/approved/locked` + `time_entry.updated`). Prouvé à deux niveaux :
+- **API (PHPUnit `WorkforceE2EJourneyB4Test`)** : parcours complet sur **4 secteurs** (restauration/nettoyage/salon/logistique), horaires fractionnés/matinal/**nuit traversant minuit**, horloge figée & avancée par étape → états persistés + historique (80 assertions).
+- **UI (Playwright `workforce-eb4-lifecycle`)** : cycle de vie d'une feuille via l'interface — soumission/approbation/**verrouillage** = POST 200 persistés ; état terminal reflété (plus d'action de transition, hint de verrouillage, historique rempli avec acteur + note).
+
+### Concurrence — preuves DISTINGUÉES par environnement
+- **SQLite (unit, `WorkforceTimesheetB3Test`)** : re-check d'état sous verrou → 2ᵉ approbation 422, **un seul** audit ; contrainte d'unicité d'identité bloque un doublon.
+- **MySQL (environnement local réel)** : (a) la contrainte `wf_ts_period_identity_unique` **rejette** un doublon d'identité (SQLSTATE 23000) ; (b) **course parallèle réelle** — 2 processus `fork` approuvant la même feuille → **exactement 1 approuvé, 1 rejeté, 1 seul audit** (verrou `lockForUpdate` InnoDB). Preuves exécutées hors suite (scripts), nettoyées, **distinctes** des tests SQLite.
+
+### Multisectoriel & règles temporelles
+Composants génériques, aucune spécificité secteur. Premier jour de semaine Company (B2), fuseaux, passage de minuit, période traversant un mois (seeder B3), horaires fractionnés/nuit/matinal (B4). Une Company = un seul jobdomain. **Aucune dépendance Logistics.**
+
+### Matrice finale — fonctionnalités & limites
+| Capacité | État | Limite / note |
+|---|---|---|
+| Planning (grille desktop / agenda mobile, week-start, nuit) | ✅ | grille custom lundi→dim pivotée (B2) |
+| Pointage cockpit (prévu/réel/écart, correction tracée) | ✅ | écart affiché sur pointage terminé seulement |
+| Feuilles : totaux distincts, grille/jour, historique scopé | ✅ | pas de total « soumis/approuvé » distinct (jeu gelé au submit) |
+| Workflow draft→submit→approve→lock (+reject/reopen) | ✅ atomique | reopen ne régénère pas (orchestration front + action Régénérer) |
+| RBAC : lecture/validation/verrouillage scopés | ✅ | validation **équipe** (`timesheet_approve_team`) OU **Company** (`timesheet_approve`) |
+| Concurrence (verrou + unicité) | ✅ | périodes chevauchantes = garde applicatif (non indexable) |
+| Multisectoriel (4 secteurs) | ✅ API | captures UI = secteur logistique (données seedées) |
+
+### NON couvert / NON prétendu
+Pas de certification de **conformité réglementaire** ni de **préparation de paie** : la validation d'une feuille **n'est pas** un bulletin légal. Pas de nouveau moteur paie/signature/STC. Périmètre manager = `manager_id` **1 niveau** (pas de hiérarchie transitive/département). Captures = **viewports simulés** (pas d'appareil physique), sur `leezr.test` (= code DEV).
+
+### Preuves B4
+Build clean ; **420 tests Workforce verts** (1641 assertions) incl. `WorkforceE2EJourneyB4Test` (4 secteurs) ; non-régression B1/B2/B3 nulle. Recette UI verte (cycle jusqu'au verrouillage). Concurrence MySQL (unicité + course parallèle). Captures desktop/mobile/dark. SHA servi vérifié. Artefact final B4.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing/Signature · moteurs/règles réglementaires inchangés · RBAC/ModuleGate conservés · isolation tenant · pas de dépendance Logistics · SSH compromis non utilisé · migration additive non destructive.
+
+### Fichiers clés
+`tests/Feature/WorkforceE2EJourneyB4Test.php` · `tests/e2e/workforce-eb4-lifecycle.spec.js` · (réutilise tout E3-B). **E3-B clos.**
