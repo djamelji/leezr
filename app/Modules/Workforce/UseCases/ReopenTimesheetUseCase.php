@@ -13,13 +13,17 @@ class ReopenTimesheetUseCase
      * CORR #2: Deletes existing lines and regenerates from live sources.
      * The caller should invoke GenerateTimesheetUseCase after this.
      */
+    // B3-checkpoint (ADR-699) — atomicité : la garde d'état est désormais re-vérifiée DANS la transaction
+    // sous verrou de ligne (auparavant hors transaction → fenêtre de course reopen vs autre transition).
     public function execute(TimesheetPeriod $period): TimesheetPeriod
     {
-        if ($period->status !== TimesheetPeriod::STATUS_REJECTED) {
-            throw new \DomainException("Cannot reopen timesheet: status is '{$period->status}', expected 'rejected'.");
-        }
-
         return DB::transaction(function () use ($period) {
+            $period = TimesheetPeriod::withoutGlobalScopes()->whereKey($period->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($period->status !== TimesheetPeriod::STATUS_REJECTED) {
+                throw new \DomainException("Cannot reopen timesheet: status is '{$period->status}', expected 'rejected'.");
+            }
+
             // Capture summary of old snapshot for audit
             $oldSummary = [
                 'total_worked_minutes' => $period->total_worked_minutes,

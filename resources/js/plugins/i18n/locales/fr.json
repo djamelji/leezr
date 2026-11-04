@@ -7427,7 +7427,8 @@
       "approve": "Approuver",
       "reject": "Rejeter",
       "lock": "Verrouiller",
-      "reopen": "Rouvrir"
+      "reopen": "Rouvrir",
+      "regenerate": "Régénérer"
     },
     "anomalies": {
       "title": "Anomalies détectées",
@@ -7493,7 +7494,8 @@
       "locked": "Feuille verrouillée : les heures sont figées et ne peuvent plus être modifiées.",
       "approved": "Feuille approuvée : elle peut être verrouillée pour figer les heures.",
       "errorAnomaly": "Cette feuille contient une anomalie bloquante : une note d'approbation est requise pour la valider."
-    }
+    },
+    "regenerated": "Feuille régénérée"
   },
   "planning": {
     "title": "Planning",

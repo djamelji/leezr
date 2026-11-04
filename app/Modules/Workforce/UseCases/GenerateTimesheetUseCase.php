@@ -45,11 +45,15 @@ class GenerateTimesheetUseCase
         }
 
         return DB::transaction(function () use ($companyId, $employeeId, $start, $end, $employee) {
-            // Check for existing period (regenerate if draft, fail if other status)
+            // Check for existing period (regenerate if draft, fail if other status).
+            // B3-checkpoint (ADR-699) — verrou de ligne : sérialise une régénération concurrente du même
+            // brouillon (double-clic). NB : deux générations d'une période INÉDITE restent théoriquement
+            // concurrentes (pas d'index unique DB) — limite documentée ; le front garde déjà via loading.
             $existing = TimesheetPeriod::withoutGlobalScopes()
                 ->where('company_id', $companyId)
                 ->where('employee_id', $employeeId)
                 ->forPeriod($start->toDateString(), $end->toDateString())
+                ->lockForUpdate()
                 ->first();
 
             if ($existing) {

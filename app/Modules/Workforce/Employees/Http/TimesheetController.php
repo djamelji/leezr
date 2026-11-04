@@ -8,6 +8,7 @@ use App\Modules\Workforce\ReadModels\TimesheetAnomalyReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetHistoryReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetLineReadModel;
 use App\Modules\Workforce\ReadModels\TimesheetPeriodReadModel;
+use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ApproveTimesheetUseCase;
 use App\Modules\Workforce\UseCases\GenerateTimesheetUseCase;
 use App\Modules\Workforce\UseCases\LockTimesheetUseCase;
@@ -20,6 +21,22 @@ use Illuminate\Http\Request;
 
 class TimesheetController extends Controller
 {
+    /**
+     * B3-checkpoint (ADR-699) — PÉRIMÈTRE (domaine 'time'), réutilise WorkforceAccess (comme les pointages).
+     * null = vue globale si l'utilisateur a view-all ('time' ⇐ timesheet_approve OU time_manage) ; sinon
+     * restreint à soi + rapports directs. Permission ≠ périmètre ≠ état : les trois sont contrôlés serveur.
+     */
+    private function timeScope(Request $request): ?array
+    {
+        return WorkforceAccess::scopeIdsOrNull($request, 'time');
+    }
+
+    /** Garde de périmètre par collaborateur (lecture ET écriture d'une feuille) → 403 si hors périmètre. */
+    private function guardEmployee(Request $request, int $employeeId): void
+    {
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'time'), 403, 'Feuille de temps hors de votre périmètre.');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -30,6 +47,7 @@ class TimesheetController extends Controller
             periodEnd: $request->input('period_end'),
             status: $request->input('status'),
             perPage: (int) $request->input('per_page', 15),
+            visibleIds: $this->timeScope($request),
         );
 
         return response()->json($timesheets);
@@ -43,6 +61,7 @@ class TimesheetController extends Controller
             ->where('company_id', $companyId)
             ->with('employee:id,first_name,last_name')
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         $lines = TimesheetLineReadModel::forPeriod($period->id);
         $anomalies = TimesheetAnomalyReadModel::forPeriod($period->id);
@@ -67,6 +86,8 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        // L'historique de correction est une donnée RH soumise au périmètre d'accès.
+        $this->guardEmployee($request, $period->employee_id);
 
         return response()->json([
             'events' => TimesheetHistoryReadModel::forPeriod($companyId, $period),
@@ -82,6 +103,7 @@ class TimesheetController extends Controller
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
         ]);
+        $this->guardEmployee($request, (int) $validated['employee_id']);
 
         try {
             $period = app(GenerateTimesheetUseCase::class)->execute(
@@ -104,6 +126,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         try {
             $period = app(SubmitTimesheetUseCase::class)->execute(
@@ -128,6 +151,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         try {
             $period = app(ApproveTimesheetUseCase::class)->execute(
@@ -153,6 +177,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         try {
             $period = app(RejectTimesheetUseCase::class)->execute(
@@ -174,6 +199,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         try {
             $period = app(ReopenTimesheetUseCase::class)->execute(
@@ -193,6 +219,7 @@ class TimesheetController extends Controller
         $period = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
 
         try {
             $period = app(LockTimesheetUseCase::class)->execute(
@@ -225,6 +252,7 @@ class TimesheetController extends Controller
             companyId: $companyId,
             periodStart: $periodStart,
             periodEnd: $periodEnd,
+            visibleIds: $this->timeScope($request),
         );
 
         return response()->json($stats);

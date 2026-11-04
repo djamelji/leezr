@@ -7427,7 +7427,8 @@
       "approve": "Approve",
       "reject": "Reject",
       "lock": "Lock",
-      "reopen": "Reopen"
+      "reopen": "Reopen",
+      "regenerate": "Regenerate"
     },
     "anomalies": {
       "title": "Detected Anomalies",
@@ -7493,7 +7494,8 @@
       "locked": "Locked timesheet: hours are frozen and can no longer be changed.",
       "approved": "Approved timesheet: it can be locked to freeze the hours.",
       "errorAnomaly": "This timesheet has a blocking anomaly: an approval note is required to validate it."
-    }
+    },
+    "regenerated": "Timesheet regenerated"
   },
   "planning": {
     "title": "Planning",

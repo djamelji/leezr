@@ -141,6 +141,8 @@ const doReject = async () => {
   if (ok) { showReject.value = false; rejectionReason.value = '' }
 }
 const doLock = () => run(() => store.lockTimesheet(period.value.id), t('timesheets.locked'))
+// Régénère un brouillon (récupération d'une feuille rouverte restée vide, ou après corrections).
+const doRegenerate = () => run(() => store.generateTimesheet({ employeeId: period.value.employee_id, periodStart: period.value.period_start, periodEnd: period.value.period_end }), t('timesheets.regenerated'))
 // Réouverture : le serveur remet en brouillon SANS régénérer → on régénère ensuite (orchestration front, pas de nouvel état).
 const doReopen = () => run(async () => {
   await store.reopenTimesheet(period.value.id)
@@ -150,7 +152,11 @@ const doReopen = () => run(async () => {
 const actions = computed(() => {
   const s = period.value?.status
   const list = []
-  if (s === 'draft') list.push({ id: 'submit', label: t('timesheets.actions.submit'), icon: 'tabler-send', permission: 'workforce.timesheet_submit', primary: true, color: 'primary', dataTest: 'ts-submit', handler: doSubmit })
+  if (s === 'draft') {
+    list.push({ id: 'submit', label: t('timesheets.actions.submit'), icon: 'tabler-send', permission: 'workforce.timesheet_submit', primary: true, color: 'primary', dataTest: 'ts-submit', handler: doSubmit })
+    // Récupération : régénérer un brouillon (notamment après une réouverture dont la régénération a échoué).
+    list.push({ id: 'regenerate', label: t('timesheets.actions.regenerate'), icon: 'tabler-refresh', permission: 'workforce.time_manage', variant: 'outlined', dataTest: 'ts-regenerate', handler: doRegenerate })
+  }
   if (s === 'submitted') {
     list.push({ id: 'approve', label: t('timesheets.actions.approve'), icon: 'tabler-check', permission: 'workforce.timesheet_approve', primary: true, color: 'success', dataTest: 'ts-approve', handler: () => { approvalNote.value = ''; showApprove.value = true } })
     list.push({ id: 'reject', label: t('timesheets.actions.reject'), icon: 'tabler-x', permission: 'workforce.timesheet_approve', danger: true, dataTest: 'ts-reject', handler: () => { rejectionReason.value = ''; showReject.value = true } })
@@ -211,7 +217,7 @@ const actionLabel = a => t(`timesheets.history.${a}`, a)
                 v-show="can(a.permission)"
                 :key="a.id"
                 :color="a.color || (a.danger ? 'error' : 'primary')"
-                :variant="a.danger ? 'outlined' : 'elevated'"
+                :variant="a.variant || (a.danger ? 'outlined' : 'elevated')"
                 :prepend-icon="a.icon"
                 :loading="actionLoading"
                 :data-test="a.dataTest"

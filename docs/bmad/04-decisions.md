@@ -25122,3 +25122,26 @@ DEV only · origin/dev · pas de main/PROD/Billing/Signature · moteur Timesheet
 
 ### Fichiers clés
 `time/[id].vue` · `time/index.vue` (onglet Feuilles) · `timesheets.store.js` (`fetchTimesheetHistory`) · `ReadModels/TimesheetHistoryReadModel.php` · `Employees/Http/TimesheetController.php` (`history`) · `routes/company.php` · `database/seeders/WorkforceTimesheetDemoSeeder.php` · `tests/Feature/WorkforceTimesheetB3Test.php` · `tests/e2e/workforce-eb3-timesheets.spec.js`.
+
+### ADR-699 — Addendum B3-checkpoint (sécurité des périmètres & concurrence)
+
+**Date** : 2026-11-04
+**Déclencheur** : revue de sécurité après livraison B3 (commit a679ab7). Trois points durcis avant clôture.
+
+**1. Déploiement prouvé.** `a679ab7` **réellement servi** sur `dev.leezr.com` (header `X-Build-Version` vérifié ; login 200 ; smoke UI : la vue Feuilles B3 — KPI décisionnels, `AppResponsiveDataView`, état vide — rend sans erreur JS fatale). Note : l'API `gh run` est restée affichée « queued » alors que le déploiement était effectif (le SHA servi fait foi). Affirmation « SHA servi » désormais **vérifiée** (elle était prématurée au premier artefact).
+
+**2. Périmètre appliqué à TOUTES les opérations Timesheet (correctif ciblé, primitives existantes).**
+`TimesheetController` n'appliquait AUCUN périmètre (company_id + permission de route seulement). Correctif : réutilisation de `WorkforceAccess` (domaine `'time'`, comme les pointages/planning) sur **toutes** les opérations :
+- Lecture `show`/`history` + écritures `generate`/`submit`/`approve`/`reject`/`reopen`/`lock` → `canViewEmployeeData($employeeId,'time')` sinon **403**.
+- `index`/`statistics` → `scopeIdsOrNull('time')` (filtre `whereIn(employee_id, visibles)`).
+Permission ≠ périmètre ≠ état sont désormais contrôlés serveur. **Conséquences par profil** : salarié/lecteur (`timesheet_view` [+`submit`], sans view-all) → **soi + rapports directs** (fuite de lecture par ID corrigée) ; approbateur/gestionnaire (`timesheet_approve`/`time_manage` → view-all `'time'`) → **Company inchangé** (voulu) ; owner → bypass ; inter-tenant → 404. L'historique de correction est traité comme donnée RH soumise au périmètre.
+**Arbitrage OUVERT (non implémenté) :** le modèle lie *company-wide approve* à `timesheet_approve` ; une permission « approuver uniquement mon équipe » serait une **nouvelle clé RBAC** → décision produit. Le périmètre manager actuel = `manager_id` **1 niveau** (pas de hiérarchie transitive ni de département) — limite du modèle existant.
+
+**3. Concurrence rendue atomique (défaut réel corrigé, moteur non réécrit).**
+Submit/Approve/Reject/Lock n'avaient **ni transaction ni verrou** ; la garde d'état lisait le modèle chargé hors verrou → deux requêtes concurrentes (double-approve, approve vs reject) passaient toutes deux la garde → double transition + **double audit**. Reopen/Generate avaient une transaction **sans** `lockForUpdate`. Correctif minimal : chaque UseCase ré-ouvre la période `lockForUpdate` **dans** une `DB::transaction` et **re-vérifie l'état sous verrou** (Reopen : garde déplacée dans la transaction ; Generate : verrou sur la lecture de la feuille existante). Aucune règle métier modifiée. Prouvé : 2ᵉ approbation → 422, **un seul** événement `timesheet.approved`. **Limite restante :** deux générations d'une période *inédite* (jamais créée) restent théoriquement concurrentes faute d'index unique DB — documentée ; le front garde déjà via `:loading`.
+
+**4. Réouverture → régénération (robustesse front).** `reopen` serveur remet en brouillon **sans** régénérer (confirmé). Le handler front n'émet le succès qu'après `reopen` **et** `generate` réussis (régénération échouée → toast d'**erreur**, pas de fausse réussite) ; double-clic bloqué par `:loading`. **Ajout** : action « Régénérer » (brouillon, `time_manage`) pour récupérer une feuille rouverte restée vide.
+
+**Preuves addendum** : build clean ; **409 tests Workforce verts** (1553 assertions) dont `WorkforceTimesheetB3Test` (10 : scope lecture/écriture/liste/historique hors périmètre, approbateur Company, re-check concurrence sans double audit) ; recette Playwright inchangée verte. SHA servi à confirmer après redéploiement de l'addendum.
+
+**Fichiers** : `TimesheetController.php` (gardes scope) · `TimesheetPeriodReadModel.php` (visibleIds) · `{Submit,Approve,Reject,Lock,Reopen,Generate}TimesheetUseCase.php` (transaction+verrou) · `time/[id].vue` (action Régénérer) · `tests/Feature/WorkforceTimesheetB3Test.php`.

@@ -166,12 +166,67 @@ class WorkforceTimesheetB3Test extends TestCase
 
     public function test_view_permission_cannot_approve(): void
     {
+        // Lecteur dans son périmètre (manager du collaborateur) : peut LIRE mais pas VALIDER.
         $period = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'submitted']);
-        $viewer = $this->user(['workforce.timesheet_view']); // lecture seule
+        $viewer = $this->user(['workforce.timesheet_view'], $this->manager); // lecture seule, périmètre = soi + rapports
 
         $this->actingAs($viewer)->getJson("/api/workforce/timesheets/{$period->id}", $this->h($viewer))->assertOk();
         $this->actingAs($viewer)->postJson("/api/workforce/timesheets/{$period->id}/approve", ['approval_note' => 'x'], $this->h($viewer))->assertForbidden();
         $this->actingAs($viewer)->postJson("/api/workforce/timesheets/{$period->id}/submit", [], $this->h($viewer))->assertForbidden();
+    }
+
+    // ── Périmètre (scope) appliqué à TOUTES les opérations (pas que approve), domaine 'time' ──
+
+    public function test_read_and_history_scoped_for_non_view_all(): void
+    {
+        // Manager lecteur (timesheet_view, PAS view-all) : périmètre = soi + rapports directs.
+        $viewer = $this->user(['workforce.timesheet_view'], $this->manager);
+        $reportP = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'approved']);
+        $strangerP = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->stranger->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'approved']);
+
+        // Dans le périmètre → 200 ; hors périmètre → 403 (lecture ET historique).
+        $this->actingAs($viewer)->getJson("/api/workforce/timesheets/{$reportP->id}", $this->h($viewer))->assertOk();
+        $this->actingAs($viewer)->getJson("/api/workforce/timesheets/{$reportP->id}/history", $this->h($viewer))->assertOk();
+        $this->actingAs($viewer)->getJson("/api/workforce/timesheets/{$strangerP->id}", $this->h($viewer))->assertForbidden();
+        $this->actingAs($viewer)->getJson("/api/workforce/timesheets/{$strangerP->id}/history", $this->h($viewer))->assertForbidden();
+    }
+
+    public function test_list_scoped_for_non_view_all(): void
+    {
+        $viewer = $this->user(['workforce.timesheet_view'], $this->manager);
+        $reportP = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'approved']);
+        TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->stranger->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'approved']);
+
+        $ids = collect($this->actingAs($viewer)->getJson('/api/workforce/timesheets', $this->h($viewer))->assertOk()->json('data'))->pluck('id')->all();
+        $this->assertContains($reportP->id, $ids);
+        $this->assertCount(1, $ids, 'La liste ne doit contenir que les feuilles du périmètre (rapports directs).');
+    }
+
+    public function test_write_scoped_for_non_view_all(): void
+    {
+        // Un utilisateur pouvant soumettre mais SANS view-all ne peut agir que dans son périmètre.
+        $submitter = $this->user(['workforce.timesheet_view', 'workforce.timesheet_submit'], $this->manager);
+        $strangerP = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->stranger->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'draft']);
+
+        // Hors périmètre → 403 (la garde de périmètre précède toute logique métier).
+        $this->actingAs($submitter)->postJson("/api/workforce/timesheets/{$strangerP->id}/submit", [], $this->h($submitter))->assertForbidden();
+    }
+
+    // ── Concurrence : re-check d'état sous verrou, pas de double audit ──
+
+    public function test_transition_rechecks_state_no_double_audit(): void
+    {
+        $u = $this->fullUser();
+        $period = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->report->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'submitted']);
+        TimesheetLine::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'timesheet_period_id' => $period->id, 'employee_id' => $this->report->id, 'date' => '2026-11-03', 'worked_minutes' => 420, 'break_minutes' => 60, 'planned_minutes' => 420, 'anomalies' => [], 'source_snapshot' => []]);
+
+        // 1ʳᵉ approbation OK ; 2ᵉ (état re-lu sous verrou = déjà approved) → 422. Un seul événement d'audit.
+        $this->actingAs($u)->postJson("/api/workforce/timesheets/{$period->id}/approve", ['approval_note' => 'ok'], $this->h($u))->assertOk();
+        $this->actingAs($u)->postJson("/api/workforce/timesheets/{$period->id}/approve", ['approval_note' => 'ok'], $this->h($u))->assertStatus(422);
+
+        $count = \App\Core\Audit\CompanyAuditLog::withoutGlobalScopes()
+            ->where('action', 'timesheet.approved')->where('target_id', (string) $period->id)->count();
+        $this->assertSame(1, $count, 'Une seule transition approuvée doit être journalisée (pas de double audit).');
     }
 
     // ── Note d'approbation requise seulement si anomalie de niveau erreur (aligné moteur) ──
@@ -192,14 +247,17 @@ class WorkforceTimesheetB3Test extends TestCase
         $this->actingAs($u)->postJson("/api/workforce/timesheets/{$period->id}/approve", ['approval_note' => 'Anomalie acquittée'], $this->h($u))->assertOk();
     }
 
-    // ── LIMITE DOCUMENTÉE : validation company-wide (non scopée au manager) ──
+    // ── Périmètre des approbateurs = Company (comportement INTENTIONnel du modèle existant) ──
 
-    public function test_timesheet_approval_is_company_wide_not_manager_scoped(): void
+    public function test_approver_with_timesheet_approve_has_company_scope(): void
     {
-        // Un manager avec timesheet_approve peut approuver la feuille d'un collaborateur HORS de son
-        // périmètre (le « stranger »). C'est le comportement SERVEUR actuel : les timesheets sont gated
-        // par permission mais PAS scopés au manager (contrairement aux pointages). Ce test encode cette
-        // limite connue ; toute évolution de politique (scoper) le fera échouer volontairement. (ADR-699)
+        // Comportement VOULU (pas une permissivité résiduelle) : `timesheet_approve` accorde
+        // `hasViewAll('time')` → périmètre Company. Un approbateur peut donc approuver toute feuille de
+        // la société (y compris hors de ses rapports directs). C'est explicitement souhaité (« ne pas
+        // limiter arbitrairement les titulaires de timesheet_approve à leur équipe »). Permission ET
+        // périmètre ET état sont vérifiés serveur (ici le périmètre = Company via view-all).
+        // ARBITRAGE OUVERT (non implémenté) : une permission « approuver uniquement mon équipe » serait
+        // une nouvelle clé RBAC → décision produit. (ADR-699 / B3-checkpoint)
         $mgr = $this->user(['workforce.timesheet_approve'], $this->manager);
         $period = TimesheetPeriod::withoutGlobalScopes()->create(['company_id' => $this->company->id, 'employee_id' => $this->stranger->id, 'period_start' => self::START, 'period_end' => self::END, 'status' => 'submitted']);
 

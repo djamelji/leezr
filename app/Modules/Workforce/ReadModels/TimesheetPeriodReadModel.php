@@ -37,10 +37,17 @@ class TimesheetPeriodReadModel
         ?string $periodEnd = null,
         ?string $status = null,
         int $perPage = 15,
+        ?array $visibleIds = null,
     ): LengthAwarePaginator {
         $query = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->with('employee');
+
+        // B3-checkpoint (ADR-699) — périmètre : null = vue globale (view-all 'time') ; sinon restreint
+        // aux collaborateurs visibles (soi + rapports directs). Aligné sur l'idiome TimeEntry/Shift.
+        if ($visibleIds !== null) {
+            $query->whereIn('employee_id', $visibleIds);
+        }
 
         if ($periodStart && $periodEnd) {
             $query->overlapping($periodStart, $periodEnd);
@@ -63,10 +70,11 @@ class TimesheetPeriodReadModel
             ->paginate($perPage);
     }
 
-    public static function statistics(int $companyId, string $periodStart, string $periodEnd): array
+    public static function statistics(int $companyId, string $periodStart, string $periodEnd, ?array $visibleIds = null): array
     {
         $timesheets = TimesheetPeriod::withoutGlobalScopes()
             ->where('company_id', $companyId)
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('employee_id', $visibleIds))
             ->overlapping($periodStart, $periodEnd)
             ->get();
 

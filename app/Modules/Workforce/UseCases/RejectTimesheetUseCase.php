@@ -4,44 +4,49 @@ namespace App\Modules\Workforce\UseCases;
 
 use App\Core\Audit\AuditLogger;
 use App\Core\Workforce\TimesheetPeriod;
+use Illuminate\Support\Facades\DB;
 
 class RejectTimesheetUseCase
 {
+    // B3-checkpoint (ADR-699) — atomicité : transaction + verrou + re-check d'état dans le verrou.
     public function execute(
         TimesheetPeriod $period,
         int $rejectedBy,
         string $rejectionReason,
     ): TimesheetPeriod {
-        // Must be submitted
-        if ($period->status !== TimesheetPeriod::STATUS_SUBMITTED) {
-            throw new \DomainException("Cannot reject timesheet: status is '{$period->status}', expected 'submitted'.");
-        }
-
         if (empty(trim($rejectionReason))) {
             throw new \DomainException('A rejection reason is required.');
         }
 
-        $period->transitionTo(TimesheetPeriod::STATUS_REJECTED);
-        $period->rejected_by = $rejectedBy;
-        $period->rejected_at = now();
-        $period->rejection_reason = $rejectionReason;
-        $period->save();
+        return DB::transaction(function () use ($period, $rejectedBy, $rejectionReason) {
+            $locked = TimesheetPeriod::withoutGlobalScopes()->whereKey($period->getKey())->lockForUpdate()->firstOrFail();
 
-        app(AuditLogger::class)->logCompany(
-            companyId: $period->company_id,
-            action: 'timesheet.rejected',
-            targetType: 'timesheet_period',
-            targetId: (string) $period->id,
-            options: [
-                'metadata' => [
-                    'category' => 'workforce.timesheet',
-                    'employee_id' => $period->employee_id,
-                    'rejected_by' => $rejectedBy,
-                    'rejection_reason' => $rejectionReason,
+            if ($locked->status !== TimesheetPeriod::STATUS_SUBMITTED) {
+                throw new \DomainException("Cannot reject timesheet: status is '{$locked->status}', expected 'submitted'.");
+            }
+
+            $locked->transitionTo(TimesheetPeriod::STATUS_REJECTED);
+            $locked->rejected_by = $rejectedBy;
+            $locked->rejected_at = now();
+            $locked->rejection_reason = $rejectionReason;
+            $locked->save();
+
+            app(AuditLogger::class)->logCompany(
+                companyId: $locked->company_id,
+                action: 'timesheet.rejected',
+                targetType: 'timesheet_period',
+                targetId: (string) $locked->id,
+                options: [
+                    'metadata' => [
+                        'category' => 'workforce.timesheet',
+                        'employee_id' => $locked->employee_id,
+                        'rejected_by' => $rejectedBy,
+                        'rejection_reason' => $rejectionReason,
+                    ],
                 ],
-            ],
-        );
+            );
 
-        return $period;
+            return $locked;
+        });
     }
 }
