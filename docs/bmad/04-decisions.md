@@ -25573,3 +25573,57 @@ Nom `ScheduledActivity` ; `shift_id` obligatoire ; multi-activités enfants d'un
 
 ### Fichiers clés SP1a
 `CoverageRequirement.php` · `CoverageReadModel.php` · `Create/UpdateCoverageRequirementUseCase.php` · `CoverageRequirementController.php` · `ScheduleTemplate.php` (+ migrations `2026_11_04_100001/100002`) · `WorkforcePlanningModule.php` · `routes/company.php` · `planning/index.vue` + `planning.store.js` · i18n · `WorkforceCoverageSP1aTest.php` · `workforce-sp1a-smart-planning.spec.js`.
+
+---
+
+## ADR-707 — WORKFORCE / SMART PLANNING SP1b (LIVRÉ) : ScheduledActivity, multi-activités par shift, révision contrôlée
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 5113479). GO explicite SP1b (ADR-705 v2 validé). **Arrêt après SP1b pour validation. SP2–SP5 NON engagés.**
+**Garde-fous** : DEV · origin/dev. Aucun moteur Payroll/Billing/Signature. Immutabilité/publication/verrou optimiste des Shifts INCHANGÉS. Pas de couplage vertical. Zéro régression (189 tests liés verts : 178 + 11 SP1b).
+
+### Objectif atteint
+Un employé peut avoir **plusieurs activités dans un même Shift** (coiffeuse coupe→coloration→pause→balayage ; chauffeur tournée+formation ; agent multi-sites ; serveur mise en place→service→fermeture) — **un RDV/une tâche ne crée pas un nouveau Shift**.
+
+### Modèle (ADR-705 v2 appliqué)
+`workforce_scheduled_activities` : `shift_id` (FK cascade — child-rows possédées ; cycle de vie analysé : seul un Shift brouillon est supprimable → cascade correcte ; Shift publié jamais supprimé ; précédent `TimeEntryBreak`), `employee_id` **strictement dérivé du Shift** (jamais saisi → cohérence), `activity_type`, `label`, `start_at`/`end_at`, `status` (planned|cancelled), `priority`, `source`, `notes`, **`subject` (nullableMorphs) dormant** (allow-list `ScheduledActivity::ALLOWED_SUBJECT_TYPES = []` → aucune référence externe acceptée tant qu'aucun provider ; pas d'infra disproportionnée), `metadata`. **`duration_minutes` NON stockée** (dérivée — pas de dénormalisation inutile).
+
+### Validation intra-shift (`ScheduledActivityValidator`) — ne réimplémente PAS WorkforceRuleResolver
+Durs (422) : fin>début · **dans les bornes du Shift** (minuit géré par les datetimes) · **chevauchement incompatible** (sauf `non_exclusive` explicite, jamais par défaut) · **capacité** = Σ durées ≤ temps travaillable du shift (durée − pause) → **respecte la pause** même sans position connue. Souples (warnings non bloquants) : changement de lieu sans intervalle → `travel_time_unknown` (on **signale**, on ne déclare pas réalisable).
+
+### API & cycle de vie
+CRUD complet + `cancel` + `duplicate`, transactionnel, verrou sur le Shift (concurrence planificateurs), verrou optimiste `expected_updated_at`→409. **Réaffectation** = changement de `shift_id` → `employee_id` re-dérivé du Shift cible. **Suppression dure réservée aux activités d'un Shift brouillon** ; sinon **annulation** (soft). Routes `workforce/planning/activities` : lecture `planning_view`, écriture `planning_manage`.
+
+### Shift publié : révision contrôlée (ADR-705 v2 §5)
+Ajouter/modifier une activité sur un Shift **publié** est autorisé (ex. prestation 15:00–16:00 sur shift publié 09:00–18:00) **sans jamais** : muter les horaires/état/pauses du Shift, ni toucher le `TimeEntry`. Opération **tracée** (`scheduled_activity.revised_add`/`revised` via AuditLogger diff), permissions + scope, contrôle de cohérence serveur, concurrence. L'immutabilité des Shifts publiés (UpdateShiftUseCase draft-only) reste **inchangée** — l'évolution est strictement limitée au workflow d'activité, les Shifts publiés ne deviennent PAS éditables directement.
+
+### Invariant temps de travail
+`TimeEntry` reste la **seule source** des heures travaillées. Les durées d'activités sont du prévisionnel, **jamais additionnées** aux heures pointées (vérifié par test : révision d'un shift publié ne change ni le shift ni `total_worked_minutes`).
+
+### Frontend
+`_ActivityDay.vue` : détail journalier (timeline des activités, durées, plages libres, ajout rapide, modification de durée/heures, duplication, annulation, suppression, alertes de conflit + warning trajet). Ouvert depuis le menu du shift dans la grille (`data-test=open-day-detail`). Store : méthodes activités. i18n fr/en. Desktop + dialog responsive ; mobile via actions tactiles du dialog (pas de dépendance drag).
+
+### Matrice RBAC (planning)
+| Capacité | Permission | Scope |
+|---|---|---|
+| Voir activités (index) | `workforce.planning_view` | company + scope manager en écriture |
+| Créer / modifier / réaffecter / dupliquer | `workforce.planning_manage` | scope manager (source ET cible) |
+| Annuler / supprimer (brouillon) | `workforce.planning_manage` | scope manager |
+| Réaffectation cross-salarié | `workforce.planning_manage` (+ bypass scope si `planning_publish`/view-all) | cible doit être visible |
+| Révision d'un shift publié | `workforce.planning_manage` | scope manager, tracée |
+| Gérer couverture (SP1a) | `workforce.coverage_manage` | company |
+
+### Recette
+`WorkforceScheduledActivitySP1bTest` (11 verts) : dérivation employee, bornes, chevauchement + non-exclusif, capacité/pause, minuit, **révision shift publié sans muter shift/TimeEntry**, réaffectation, permissions endpoints, suppression-vs-annulation, verrou optimiste 409, isolation tenant. Non-régression 189. `pnpm build` clean. Playwright `workforce-sp1b-activities.spec.js` : **flux multi-activités persisté sur HTTP réel** (création 201, chevauchement 422, activité successive 201, relecture 2 activités).
+
+### Limitations honnêtes
+- Déplacement d'activité = édition des heures (formulaire) persistée ; **drag-and-drop pixel** dans la timeline = différé (dette SP1a.1).
+- Recette Playwright de l'**ouverture UI du détail depuis la grille** non incluse : dépend du rendu d'un chip de shift dans la semaine locale (instable selon données) ; UI vérifiée par build + wiring + manuel ; le flux persisté est couvert par PHPUnit + recette HTTP.
+- `ShiftReadModel::forWeek` partage le caveat `whereBetween('date')` sur colonne datetime (sans effet MySQL DEV ; pertinent SQLite tests) — à corriger dans SP1a.1.
+- Déplacements multi-lieux : seulement signalés (temps de trajet non modélisé) — relève de SP2+.
+
+### Dette SP1a conservée (NON livrée — obligatoire ultérieurement, cf. §9 du GO)
+Drag-and-drop depuis la palette · copier la semaine · duplication rapide de shifts · affectation multi-cellules · couverture par sous-intervalles · vérification approfondie des pauses dans la couverture · recette complète grille mobile. → regroupées en **correctif SP1a.1** distinct.
+
+### Fichiers clés SP1b
+`ScheduledActivity.php` · `ScheduledActivityValidator.php` · `Create/UpdateScheduledActivityUseCase.php` · `ScheduledActivityController.php` · migration `2026_11_04_200001` · `_ActivityDay.vue` · `planning/index.vue` + `planning.store.js` · i18n · `WorkforceScheduledActivitySP1bTest.php` · `workforce-sp1b-activities.spec.js`.
