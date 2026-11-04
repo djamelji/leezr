@@ -25361,3 +25361,70 @@ DEV only · origin/dev · lecture seule (aucune mutation, aucune migration) · a
 
 ### Fichiers clés
 `Services/WorkTimeComplianceChecker.php` (nouveau) · `Employees/Http/TimesheetController.php` (`compliance`) · `routes/company.php` · `timesheets.store.js` · `time/[id].vue` · i18n · `tests/Feature/WorkforceComplianceP1aTest.php` · `tests/e2e/workforce-p1a-compliance.spec.js`.
+
+## ADR-704 — WORKFORCE / P1b (CADRAGE) : unification des contrôles prévisionnels & constatés
+
+**Date** : 2026-11-04
+**Statut** : **Cadrage uniquement — NON implémenté.** Attend validation. Suite P1a (ADR-703). GO cadrage P1b seul ; **ne pas construire P1c**.
+**Objectif** : une source COHÉRENTE de contrôle du temps — les MÊMES règles applicables produisent des résultats **structurés et comparables** côté planning (prévu) et côté pointage (constaté), tout en conservant des **comportements différents selon le contexte**. Pas de 2ᵉ moteur ; `WorkforceRuleResolver` reste la source.
+
+### 1. Résultat ≠ décision d'enforcement (deux dimensions)
+- **Résultat** (conclusion structurée) : `pass | warning | violation | not_verifiable | not_applicable` (contrat P1a).
+- **Action** (dimension DISTINCTE) : autoriser · signaler · **bloquer une opération PRÉVISIONNELLE** quand justifié · exiger une décision managériale (quand ce mécanisme existera, P1c).
+- **Règles** : un statut `violation` **n'implique pas** le blocage de toute opération. **Ne JAMAIS bloquer l'enregistrement du temps réellement effectué.** Le framework générique allow/warn/block/manager_approval **n'est pas** construit en P1b (c'est P1c).
+
+### 2. Protections prévisionnelles EXISTANTES (à préserver — migration progressive)
+`ShiftRuleValidator` (création/màj/publication de shift) — **blocage DUR** (`DomainException`→422), sans statut ni sévérité :
+| Contrôle | Source (résolveur) | Conditions | Comportement actuel | Écart avec P1a (constaté) |
+|---|---|---|---|---|
+| Durée max quotidienne | `daily_hours_max` (10h FR) | somme des shifts non annulés du jour | **bloque** | P1a = `violation` signalée (pas de blocage) |
+| Durée max hebdomadaire | `weekly_hours_max` (48h) | semaine **ISO lundi en dur** | **bloque** | P1a = semaine civile qualifiée + `not_verifiable` si non couverte |
+| Repos quotidien | `daily_rest_min_hours` (11h) | shift le plus proche jour ±1 ; **ignoré si null** ; pas entre splits | **bloque** | P1a = écart réel fin-poste→prise suivante (pointages) |
+| Chevauchement | — (use cases) | double réservation | **bloque** | non contrôlé côté constaté |
+| Travail de nuit | `night_work_*` | overlap fenêtre | **flag** (jamais bloquant) | quantité `night_minutes` (informatif) |
+| Repos hebdo 35h | `weekly_rest_min_hours` | — | **absent** | P1a = `pass`/`not_verifiable` (conservateur) |
+**Impératif** : ne supprimer AUCUN blocage existant pendant la refonte ; ne jamais rendre silencieusement possible une opération aujourd'hui interdite.
+
+### 3. Matrice de correspondance (divergences à réconcilier)
+- **Forme de résultat** : ShiftRuleValidator = throw/rien (pas de contrat) ; P1a = contrat structuré. → unifier sur le **contrat P1a**.
+- **Semaine** : ShiftRuleValidator = **ISO lundi inconditionnel** ; P1a = **semaine réglementaire qualifiée** (FR civile lun-dim) + `not_verifiable` si non couverte / Market non FR. → DIVERGENCE à aligner.
+- **Repos** : ShiftRuleValidator = heuristique « shift le plus proche jour ±1 » ; P1a = **écart réel entre périodes de travail** (pointages). → unifier l'algorithme (période de travail, pas jour civil).
+- **Forfait** : ShiftRuleValidator **n'exempte PAS** (applique les maxima horaires → risque légal) ; P1a = `not_verifiable`. → DIVERGENCE (arbitrage §7).
+- **Données** : prévu = `plannedWorkMinutes()` des shifts ; constaté = `worked_minutes` + pointages. → extracteurs distincts, même contrat.
+
+### 4. Contrat de résultat COMMUN (étendu)
+Réutiliser le contrat P1a, + deux champs : `context` (`planning` | `actual`) et `advised_action` (conseil non contraignant : `allow`/`warn`/`block` — l'enforcement effectif reste décidé par le consommateur, pas imposé par le contrat ; le framework P1c viendra plus tard). Champs : `rule_key, check_type, context, market, source, reference, effective_date, threshold, observed, period, status, advised_action, message, trigger`.
+
+### 5. Dates & fenêtres réglementaires
+Distinguer **semaine d'affichage** (`week_start_day`, préférence Company) · **période de référence du contrôle normatif** · **périodes particulières Market/convention** éventuelles. **Ne jamais appliquer `week_start_day` à une règle réglementaire** simplement parce qu'il existe. Déterminer la période réglementaire via un **résolveur de période partagé** (FR → semaine civile lun-dim ; sinon/non qualifié → `not_verifiable`). Documenter : shifts traversant minuit (période de travail ≠ jour civil), semaines incomplètes (→ `not_verifiable` côté constaté), semaines voisines (repos hebdo pouvant s'y étendre → `not_verifiable`). Côté planning, la semaine du shift est « complète par construction » (on évalue un candidat contre la semaine) — nuance à documenter.
+
+### 6. Contrats & modèles de travail (cohérence des deux côtés)
+Temps complet · temps partiel · forfait heures · forfait jours · horaires fractionnés · nuit. **Ne pas appliquer les mêmes contrôles à tous les modèles sans vérification.** Si le régime n'est pas suffisamment connu → `not_verifiable`/`not_applicable`, **jamais** une violation artificielle. Objectif P1b : traitement **identique** du régime des deux côtés (aujourd'hui divergent pour le forfait).
+
+### 7. Mutualisation technique (architecture minimale)
+Extraire une couche partagée `WorkTimeRuleEvaluator` réutilisant : **résolution effective-datée** (résolveur), **calcul des périodes pertinentes** (résolveur de période réglementaire), **contrat de résultat**, **qualification** du contrôle (forfait/régime), **références normatives**. `ShiftRuleValidator` et `WorkTimeComplianceChecker` deviennent des **consommateurs** différant seulement par (a) l'**extracteur de données** (shifts prévus vs lignes/pointages) et (b) la **politique d'action** (planning : bloque les impératives comme aujourd'hui ; constaté : signale). Une règle = **une seule implémentation**. Pas de framework d'enforcement générique (P1c).
+
+### 8. Risques de régression & mitigations
+- Changer la semaine planning (ISO→qualifiée) pourrait rendre un shift auparavant bloqué… acceptable ? → conserver le comportement planning par défaut, aligner progressivement, **tests de parité** prévu/constaté.
+- Cesser de bloquer les maxima horaires pour le **forfait** côté planning = changement de comportement (actuellement bloquant à tort) → **arbitrage** avant application ; par défaut, préserver jusqu'à décision.
+- Algorithme de repos unifié (minuit/splits) : risque de faux positif → fixtures déterministes, horloge figée.
+- Non-régression B1–B4, P0, P1a ; RBAC & isolation tenant préservés.
+
+### 9. Plan d'implémentation minimal (P1b, à valider — non développé)
+- **P1b.1** : extraire le **contrat de résultat commun** + helpers (résolution, période, qualification, références) **sans changer aucun comportement** (ShiftRuleValidator continue de bloquer à l'identique).
+- **P1b.2** : faire produire à `ShiftRuleValidator` un **résultat structuré** (observabilité) **en plus** de son throw actuel — aucune régression.
+- **P1b.3** : **résolveur de période réglementaire partagé** + qualification **forfait cohérente** des deux côtés (**arbitrage requis** avant de modifier le blocage planning).
+- **P1b.4** : **algorithme de repos unifié** (période de travail) côté prévu et constaté.
+Chaque étape non-régressive, testée en parité.
+
+### 10. Arbitrages encore nécessaires
+1. **Forfait côté planning** : cesser de bloquer les maxima horaires (cohérent avec P1a `not_verifiable`) ? ou conserver jusqu'à qualification du régime ?
+2. **Semaine réglementaire planning** : garder ISO lundi (statu quo) vs qualifier (`not_verifiable` si non FR) — impact sur les blocages actuels.
+3. **Warnings non bloquants côté planning** : le planning doit-il aussi SIGNALER (sans bloquer) certains contrôles (ex. repos hebdo) en plus de ses blocages ?
+4. **Lien avec P1c** : `advised_action` est un conseil ; l'enforcement effectif (allow/warn/block/manager_approval) reste P1c.
+
+### Garde-fous (cadrage)
+Aucune modification de moteur, base, règle ou interface. Préserve E3-B, P0, P1a, RBAC, isolation tenant, calculs. origin/dev · DEV only · pas de main/PROD/Billing/Signature/Payroll.
+
+### Fichiers de référence (audit, non modifiés)
+`ShiftRuleValidator.php` · `WorkTimeComplianceChecker.php` · `WorkforceRuleResolver.php` · `CreateShiftUseCase/UpdateShiftUseCase/BulkCreateShiftsUseCase/PublishShiftsUseCase`.
