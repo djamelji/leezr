@@ -24894,3 +24894,42 @@ Pas de mise à jour majeure aveugle de Vuexy/Vuetley ; DEV only ; pas de main/PR
 **Reste pour R3** : onglets tronqués (fiche/time/leave/payroll/organization → `AppSectionNavigation`), tables = desktop compressé (→ `AppResponsiveDataView`), dialogues/drawers largeur fixe (→ `AppAdaptiveDialog`), filtres (→ `AppFilterPanel`), cibles tactiles < 44px.
 
 **Limite honnête** : viewport simulé Playwright ≠ vrai appareil — vérification iOS Safari / Android Chrome recommandée (non effectuée). Captures produites en **local `leezr.test`**.
+
+---
+
+## ADR-694 — SMART RESPONSIVE UX 2026 (E3-R / R3) : primitives adaptatives intelligentes
+
+**Date** : 2026-11-04
+**Statut** : Accepté (1ʳᵉ tranche livrée DEV — SmartActionBar + ResponsiveDataView + SectionNavigation). R3 se poursuit (filtres, dialogs) après validation.
+**Contexte** : Après les fondations techniques R1/R2 (débordements, safe areas, app bar), la direction relève R3 au rang de **SMART RESPONSIVE UX** : ne plus « réduire le desktop jusqu'à ce que ça rentre » mais **composer automatiquement l'interface la plus adaptée au contexte, à la largeur disponible, aux actions et aux permissions**. La complexité est absorbée par des **composants partagés** du design system Leezr, pas reportée sur chaque module. Natif Vue 3 / Vuetify 3 d'abord, **aucun 2ᵉ framework UI**, identité Leezr conservée.
+
+### Principe
+Responsive intelligent **≠ uniquement des breakpoints** : un composant peut être étroit même sur desktop (drawer, dialog, panneau). On choisit la solution la plus simple et robuste **selon le composant** : `ResizeObserver` (largeur du CONTENEUR) pour les barres d'actions ; `useDisplay` (viewport) pour une vue de données pleine page.
+
+### Primitives livrées (génériques — aucune dépendance Employee/Shift/JobDomain)
+1. **`useContainerWidth`** (`composables/`) — observe la largeur réelle d'un conteneur (ResizeObserver + rAF anti-thrash). Base du « container-query-like ».
+2. **`SmartActionBar`** (`core/components/`) — command bar à overflow pilotée par la largeur RÉELLE du conteneur. Contrat d'action déclaratif : `{ id, label, icon, priority, group, permission|anyPermission, visible, disabled, variant, color, danger, to|handler, primary }`. Filtre par permission (useCan, owner bypass) ; **action principale EXPLICITE** (`primary:true`, cohérente avec l'activité, pas l'ordre d'insertion) toujours visible ; mesure via rangée cachée ; menu overflow accessible clavier/lecteur d'écran ; fonctionne aussi dans un conteneur étroit sur desktop. Inspirations : Fluent 2 (overflow toolbar), Material 3 (priorisation), Atlassian (button groups) — sans copier l'esthétique.
+3. **`AppResponsiveDataView`** (`core/components/`) — MÊME dataset : desktop → `VDataTableServer` (colonnes/tri/pagination/sélection/actions, slots transmis) ; mobile → **liste tactile** compacte (slot `#mobile-item`), détail au toucher, pagination serveur partagée. Les RÈGLES métier (données/filtres/permissions) restent partagées ; seule la PRÉSENTATION varie. **Exclut les grilles complexes (planning)**.
+4. **`AppSectionNavigation`** (`core/components/`) — navigation secondaire adaptative, choisit le meilleur pattern : desktop → onglets ; mobile ≤3 → segmented ; 4-5 → onglets scrollables ; >5 → sélecteur. Sync état (routes/deep-links préservés). **Fin des onglets tronqués.**
+
+### Laboratoire (DEV, hors navigation)
+`pages/company/dev-lab.vue` (`/company/dev-lab`, non référencé dans la nav manifest-driven) : terrain d'essai **interactif** — SmartActionBar (slider de largeur du conteneur, 1/3/5/10 actions, permissions, traductions longues, action dangereuse), ResponsiveDataView (table↔liste), SectionNavigation (2/3/5/8 sections). Transitions de largeur **sans perte d'état**. Données factices uniquement.
+
+### Application réelle (Collaborateurs)
+- **Fiche** (`employees/[id].vue`) : en-tête → `SmartActionBar` (Modifier primaire + Générer contrat/Gérer accès adaptatifs) ; onglets → `AppSectionNavigation` (sélecteur sur mobile, **plus de troncature**). Confidentialité salaire (compensation_read) et moteurs **inchangés**.
+- **Annuaire** (`employees/index.vue`) : table → `AppResponsiveDataView` (desktop table / **mobile liste tactile** : avatar + nom + matricule + statut + détail au toucher). Store/API/filtres/URL-sync/sélection **inchangés**.
+
+### Recette (vraies interactions, pas que des screenshots)
+`tests/e2e/e3r-r3.spec.js` (4) : SmartActionBar adaptatif (overflow selon largeur conteneur) ; SectionNavigation (sélecteur mobile / onglets desktop) ; ResponsiveDataView (table↔liste + **recherche préservée au changement de largeur**, 0 débordement mobile) ; filtrage par permission (lab). `workforce-e3a.spec.js` mis à jour. Build clean ; aucune erreur JS.
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature inchangés · pas de nouveau RBAC · pas de migration · pas de règle métier changée · **pas de dépendance Logistics** (composants génériques, réutilisables Platform/Company/Employee/Workforce/Documents/Finance/verticaux) · SSH compromis non utilisé · **aucune mesure coûteuse par rendu** (ResizeObserver + rAF, mesure sur changement d'actions).
+
+### Reste pour la suite de R3 (avant R4)
+`AppFilterPanel` (recherche + filtres avancés en bottom-sheet mobile, valeurs préservées) · `AppAdaptiveDialog` (dialogues plein écran mobile, formulaires longs, actions non masquées par le clavier) · application de ces 2 patterns aux filtres/dialogues de Collaborateurs · métriques UX (actions visibles/accessibles, clics par tâche). **Puis R4 recette complète. E3-B reste bloqué.**
+
+### Honnêteté
+Captures en **local `leezr.test`** (code identique à DEV). Viewport simulé ≠ vrai appareil (vérif iOS/Android recommandée, non effectuée). « Zéro débordement » ≠ « UX validée » : la validation visuelle est demandée. Les 2 échecs date-dépendants `WorkforceTimesheetRulesTest` restent des échecs (backend non touché par R3).
+
+### Fichiers clés
+`composables/useContainerWidth.js` · `core/components/{SmartActionBar,AppResponsiveDataView,AppSectionNavigation}.vue` · `pages/company/dev-lab.vue` · `employees/{index,[id]}.vue` · `tests/e2e/e3r-r3.spec.js`.

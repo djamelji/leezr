@@ -48,14 +48,18 @@ test('fiche refondue : en-tête consolidé, overflow, salaire visible pour owner
   await page.goto('/company/workforce/employees/1', { waitUntil: 'domcontentloaded' })
   await page.waitForResponse(r => r.url().includes('/file') && r.request().method() === 'GET', { timeout: 15000 }).catch(() => {})
 
-  // Action primaire « Modifier » + overflow consolidant les actions RH.
+  // Action primaire « Modifier » (SmartActionBar). « Gérer les accès » est accessible soit en bouton
+  // direct, soit via l'overflow selon la largeur réelle du conteneur header (comportement adaptatif).
   await expect(page.locator('[data-test="emp-edit"]')).toBeVisible({ timeout: 10000 })
-  await page.locator('[data-test="emp-actions"]').click()
-  await page.waitForTimeout(400)
+  const overflow = page.locator('[data-test="sab-overflow"]')
+  if (await overflow.count()) {
+    await overflow.click()
+    await page.waitForTimeout(400)
+  }
   await expect(page.locator('[data-test="emp-manage-access"]')).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Owner a workforce.compensation_read → le salaire (MoneyDisplay) est présent dans la synthèse.
-  await page.keyboard.press('Escape')
   await expect(page.getByText(/\d[\d\s.,]*\s?€/).first()).toBeVisible({ timeout: 8000 })
 
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)

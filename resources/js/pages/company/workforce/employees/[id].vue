@@ -5,6 +5,8 @@
 import StatusChip from '@/core/components/StatusChip.vue'
 import MoneyDisplay from '@/core/components/MoneyDisplay.vue'
 import ErrorState from '@/core/components/ErrorState.vue'
+import SmartActionBar from '@/core/components/SmartActionBar.vue'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import EmployeeProfile from './_EmployeeProfile.vue'
 import EmployeeContract from './_EmployeeContract.vue'
 import EmployeeLeaveSection from './_EmployeeLeaveSection.vue'
@@ -45,6 +47,15 @@ const accessReloadSignal = ref(0) // P3-A — rafraîchit la carte Accès après
 const profileEditSignal = ref(0)
 const editProfile = () => { currentTab.value = 'profile'; profileEditSignal.value++ }
 
+// SMART RESPONSIVE UX (ADR-694) — actions d'en-tête DÉCLARATIVES pour SmartActionBar : action
+// principale explicite (Modifier), secondaires regroupées intelligemment, filtrées par permission.
+// L'espace « Préparer le départ » (E5) n'est PAS exposé ici (non livré).
+const headerActions = computed(() => [
+  { id: 'edit', label: t('common.edit'), icon: 'tabler-edit', priority: 100, primary: true, permission: 'workforce.manage', handler: editProfile, dataTest: 'emp-edit' },
+  { id: 'contract', label: t('generateContract.action'), icon: 'tabler-file-text', priority: 80, permission: 'workforce_contract.generate', handler: () => { contractDialogOpen.value = true }, dataTest: 'generate-contract' },
+  { id: 'access', label: t('employeeFile.manageAccess'), icon: 'tabler-key', priority: 70, handler: () => { accessDialogOpen.value = true }, dataTest: 'emp-manage-access' },
+])
+
 const employee = computed(() => store.currentEmployee)
 const empId = computed(() => route.params.id)
 
@@ -76,6 +87,9 @@ const visibleTabs = computed(() => {
 
   return TAB_ORDER.filter(k => ['overview', 'profile', 'contract', 'history'].includes(k) || avail.includes(k))
 })
+
+// SMART RESPONSIVE UX : sections pour AppSectionNavigation (onglets desktop / sélecteur mobile).
+const tabSections = computed(() => visibleTabs.value.map(k => ({ value: k, label: t('employeeFile.tabs.' + k), icon: TAB_META[k] })))
 
 const ident = computed(() => file.value?.identity || {})
 const pos = computed(() => file.value?.position || {})
@@ -164,70 +178,24 @@ const onboardingComplete = computed(() => onboardingDone.value === onboardingSte
                 <span v-if="ident.hire_date">· {{ t('employeeFile.since') }} {{ formatDate(ident.hire_date) }}</span>
               </div>
             </div>
-            <!-- E3-A : action primaire unique (« Modifier ») + overflow regroupant les actions RH
-                 secondaires (générer contrat, gérer les accès) — évite la dispersion des actions. -->
-            <div class="d-flex gap-2 flex-wrap">
-              <VBtn
-                v-can="'workforce.manage'"
-                color="primary"
-                prepend-icon="tabler-edit"
-                data-test="emp-edit"
-                @click="editProfile"
-              >
-                {{ $t('common.edit') }}
-              </VBtn>
-              <VBtn
-                icon
-                variant="tonal"
-                color="secondary"
-                data-test="emp-actions"
-              >
-                <VIcon icon="tabler-dots-vertical" />
-                <VMenu activator="parent" location="bottom end">
-                  <VList density="compact" min-width="230">
-                    <VListItem
-                      v-can="'workforce_contract.generate'"
-                      prepend-icon="tabler-file-text"
-                      data-test="generate-contract"
-                      @click="contractDialogOpen = true"
-                    >
-                      <VListItemTitle>{{ t('generateContract.action') }}</VListItemTitle>
-                    </VListItem>
-                    <VListItem
-                      prepend-icon="tabler-key"
-                      data-test="emp-manage-access"
-                      @click="accessDialogOpen = true"
-                    >
-                      <VListItemTitle>{{ t('employeeFile.manageAccess') }}</VListItemTitle>
-                    </VListItem>
-                  </VList>
-                </VMenu>
-              </VBtn>
-            </div>
+            <!-- SMART RESPONSIVE UX : command bar adaptative (overflow piloté par la largeur réelle) -->
+            <SmartActionBar
+              :actions="headerActions"
+              class="smart-action-bar--header"
+            />
           </div>
         </VCardText>
       </VCard>
 
       <VCard>
-        <VTabs
-          v-model="currentTab"
-          class="v-tabs-pill"
-          show-arrows
-        >
-          <VTab
-            v-for="k in visibleTabs"
-            :key="k"
-            :value="k"
-          >
-            <VIcon
-              :icon="TAB_META[k]"
-              size="20"
-              class="me-2"
-            />
-            {{ t('employeeFile.tabs.' + k) }}
-          </VTab>
-        </VTabs>
-        <VDivider />
+        <!-- SMART RESPONSIVE UX : navigation secondaire adaptative (onglets desktop / sélecteur mobile) -->
+        <div class="pa-3 pb-0">
+          <AppSectionNavigation
+            v-model="currentTab"
+            :sections="tabSections"
+          />
+        </div>
+        <VDivider class="mt-3" />
         <VCardText>
           <VWindow v-model="currentTab">
             <!-- Vue d'ensemble (synthèse RH) -->

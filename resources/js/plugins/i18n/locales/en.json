@@ -401,7 +401,8 @@
     "updateSuccess": "Updated successfully.",
     "deleteSuccess": "Deleted successfully.",
     "operationCancelled": "Operation cancelled.",
-    "helpCenter": "Help center"
+    "helpCenter": "Help center",
+    "pageOf": "Page {page} / {total}"
   },
   "platformAccount": {
     "myAccount": "My Account",

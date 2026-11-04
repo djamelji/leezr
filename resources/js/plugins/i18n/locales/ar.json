@@ -358,5 +358,10 @@
     "theme": "السمة",
     "shortcuts": "الاختصارات",
     "help": "المساعدة"
+  },
+  "common": {
+    "actions": "إجراءات",
+    "noData": "لا توجد بيانات",
+    "pageOf": "صفحة {page} / {total}"
   }
 }

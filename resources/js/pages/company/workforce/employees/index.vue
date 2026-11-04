@@ -10,6 +10,7 @@ import { useCan } from '@/composables/useCan'
 import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import ErrorState from '@/core/components/ErrorState.vue'
+import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import EmployeeImportDrawer from './_EmployeeImportDrawer.vue'
 import EmployeeBulkActionDialog from './_EmployeeBulkActionDialog.vue'
@@ -433,7 +434,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
       />
 
       <!-- Table -->
-      <VDataTableServer
+      <AppResponsiveDataView
         v-else
         v-model="selected"
         v-model:options="options"
@@ -443,9 +444,28 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         :items="store.employees"
         :items-length="store.totalEmployees"
         :loading="loading"
-        class="text-no-wrap cursor-pointer"
-        @click:row="(_, { item }) => goToEmployee(item.id)"
+        @row-click="goToEmployee($event.id)"
       >
+        <!-- MOBILE : carte tactile compacte (nom + repère + statut), détail au toucher -->
+        <template #mobile-item="{ item }">
+          <div class="d-flex align-center gap-3" style="min-inline-size: 0;" :data-test="`emp-row-${item.id}`">
+            <VAvatar color="primary" variant="tonal" size="40">
+              <span class="text-sm font-weight-medium">{{ (item.first_name?.[0] || '') + (item.last_name?.[0] || '') }}</span>
+            </VAvatar>
+            <div class="flex-grow-1" style="min-inline-size: 0;">
+              <div class="font-weight-medium text-truncate">
+                {{ item.first_name }} {{ item.last_name }}
+              </div>
+              <div class="text-caption text-medium-emphasis text-truncate">
+                {{ item.employee_number || item.email || '—' }}
+              </div>
+            </div>
+            <StatusChip :status="item.status" domain="employee" size="small">
+              {{ $t(`workforce.statuses.employee.${item.status}`) }}
+            </StatusChip>
+          </div>
+        </template>
+
         <template #item.last_name="{ item }">
           <div
             class="d-flex align-center gap-3 py-2"
@@ -509,7 +529,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
             </VBtn>
           </EmptyState>
         </template>
-      </VDataTableServer>
+      </AppResponsiveDataView>
     </VCard>
 
     <!-- Create Employee Drawer -->
