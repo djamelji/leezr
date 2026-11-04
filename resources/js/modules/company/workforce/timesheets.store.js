@@ -198,6 +198,10 @@ export const useTimesheetsStore = defineStore('workforceTimesheets', {
 
       return data.events ?? []
     },
+    // P1a — contrôle réglementaire sur le constaté (projection de consultation). Lecture seule.
+    async fetchTimesheetCompliance(id) {
+      return await $api(`/workforce/timesheets/${id}/compliance`)
+    },
     // Correction guidée d'un pointage (motif obligatoire, traçabilité serveur).
     async correctTimeEntry(id, { date, clockIn, clockOut, reason }) {
       return await $api(`/workforce/time-entries/${id}`, {

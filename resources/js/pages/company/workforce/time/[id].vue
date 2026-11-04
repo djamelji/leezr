@@ -27,10 +27,19 @@ const loadHistory = async () => {
   historyLoading.value = true
   try { history.value = await store.fetchTimesheetHistory(route.params.id) } catch { history.value = [] } finally { historyLoading.value = false }
 }
-const reload = async () => { await store.fetchTimesheet(route.params.id); loadHistory() }
+
+// P1a — contrôle réglementaire (constaté). Projection de consultation, lecture seule, SÉPARÉE des
+// anomalies techniques (P0) et des heures sup (« à qualifier »). Le statut vient du SERVEUR (autorité).
+const compliance = ref(null)
+const complianceLoading = ref(false)
+const loadCompliance = async () => {
+  complianceLoading.value = true
+  try { compliance.value = await store.fetchTimesheetCompliance(route.params.id) } catch { compliance.value = null } finally { complianceLoading.value = false }
+}
+const reload = async () => { await store.fetchTimesheet(route.params.id); loadHistory(); loadCompliance() }
 
 onMounted(async () => {
-  try { await store.fetchTimesheet(route.params.id); loadHistory() } finally { loading.value = false }
+  try { await store.fetchTimesheet(route.params.id); loadHistory(); loadCompliance() } finally { loading.value = false }
 })
 onBeforeUnmount(() => store.clearCurrentPeriod())
 
@@ -100,6 +109,23 @@ const lineAnomSeverity = l => {
 // Heures sup. HEBDOMADAIRES constatées (metadata, dernier jour de semaine) — distinctes des journalières.
 const weeklyOvertimeMinutes = computed(() => (period.value?.lines || []).reduce((s, l) => s + (l.metadata?.weekly_overtime_minutes || 0), 0))
 const hasOvertime = computed(() => (period.value?.total_overtime_minutes || 0) > 0 || weeklyOvertimeMinutes.value > 0)
+
+// ── P1a — contrôles réglementaires (statut SERVEUR) ──
+const COMPLIANCE_META = {
+  violation: { color: 'error', icon: 'tabler-alert-octagon' },
+  warning: { color: 'warning', icon: 'tabler-alert-triangle' },
+  not_verifiable: { color: 'secondary', icon: 'tabler-help-circle' },
+  not_applicable: { color: 'disabled', icon: 'tabler-minus' },
+  pass: { color: 'success', icon: 'tabler-check' },
+}
+const complianceSummary = computed(() => compliance.value?.summary || {})
+// On surface les contrôles ACTIONNABLES (violations, avertissements, non vérifiables) ; pass masqués.
+const complianceSignals = computed(() => (compliance.value?.results || []).filter(r => ['violation', 'warning', 'not_verifiable'].includes(r.status)))
+const hasComplianceSignals = computed(() => complianceSignals.value.length > 0)
+const complianceColor = s => COMPLIANCE_META[s]?.color || 'secondary'
+const complianceIcon = s => COMPLIANCE_META[s]?.icon || 'tabler-point'
+const complianceRuleLabel = r => t(`timesheets.compliance.rules.${r.rule_key}`, r.rule_key)
+const complianceStatusLabel = s => t(`timesheets.compliance.status.${s}`, s)
 
 // ── Totaux distincts (lus du read model — jamais reconstitués) ──
 const totals = computed(() => {
@@ -344,6 +370,44 @@ const actionLabel = a => t(`timesheets.history.${a}`, a)
           </div>
           <VAlert type="info" variant="tonal" density="comfortable" class="mb-0">
             {{ $t('timesheets.overtime.hint') }}
+          </VAlert>
+        </VCardText>
+      </VCard>
+
+      <!-- P1a — Contrôles réglementaires (constaté). Projection de consultation, SÉPARÉE des anomalies
+           techniques et des heures sup. Ne bloque rien ; les heures constatées sont inchangées. -->
+      <VCard v-if="hasComplianceSignals || complianceLoading" class="mb-5">
+        <VCardTitle class="pa-4 text-body-1 font-weight-medium d-flex align-center flex-wrap gap-2">
+          <span><VIcon icon="tabler-scale" size="20" class="me-2" />{{ $t('timesheets.compliance.title') }}</span>
+          <VProgressCircular v-if="complianceLoading" indeterminate size="16" width="2" />
+          <VSpacer />
+          <VChip v-if="complianceSummary.violation" size="small" color="error" variant="tonal">{{ complianceSummary.violation }} {{ $t('timesheets.compliance.status.violation') }}</VChip>
+          <VChip v-if="complianceSummary.warning" size="small" color="warning" variant="tonal">{{ complianceSummary.warning }} {{ $t('timesheets.compliance.status.warning') }}</VChip>
+          <VChip v-if="complianceSummary.not_verifiable" size="small" color="secondary" variant="tonal">{{ complianceSummary.not_verifiable }} {{ $t('timesheets.compliance.status.not_verifiable') }}</VChip>
+        </VCardTitle>
+        <VDivider />
+        <VCardText>
+          <VList v-if="hasComplianceSignals" density="comfortable" class="py-0">
+            <VListItem v-for="(r, i) in complianceSignals" :key="i" class="px-0">
+              <template #prepend>
+                <VIcon :icon="complianceIcon(r.status)" :color="complianceColor(r.status)" class="me-3" />
+              </template>
+              <VListItemTitle class="d-flex align-center flex-wrap gap-2">
+                <span class="font-weight-medium">{{ complianceRuleLabel(r) }}</span>
+                <VChip :color="complianceColor(r.status)" size="x-small" variant="tonal">{{ complianceStatusLabel(r.status) }}</VChip>
+                <span v-if="r.period" class="text-caption text-medium-emphasis">· {{ r.period }}</span>
+              </VListItemTitle>
+              <VListItemSubtitle class="text-wrap mt-1">
+                {{ r.message }}
+                <span v-if="r.threshold_minutes != null && r.observed_minutes != null" class="text-medium-emphasis">
+                  ({{ $t('timesheets.compliance.observed') }} {{ fmtMin(r.observed_minutes) }} / {{ $t('timesheets.compliance.threshold') }} {{ fmtMin(r.threshold_minutes) }})
+                </span>
+                <span v-if="r.reference" class="text-caption text-disabled"> · {{ r.reference }}</span>
+              </VListItemSubtitle>
+            </VListItem>
+          </VList>
+          <VAlert type="info" variant="tonal" density="comfortable" class="mt-3 mb-0">
+            {{ $t('timesheets.compliance.hint') }}
           </VAlert>
         </VCardText>
       </VCard>

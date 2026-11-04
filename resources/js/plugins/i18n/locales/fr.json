@@ -7501,6 +7501,25 @@
       "daily": "Journalières (constatées)",
       "weekly": "Hebdomadaires (constatées)",
       "hint": "Heures réellement effectuées, conservées intégralement. Elles ne sont PAS automatiquement autorisées ni compensées à un taux déterminé : l'autorisation (manager) et la majoration (selon le cadre légal/conventionnel) sont des décisions distinctes, à venir."
+    },
+    "compliance": {
+      "title": "Contrôles réglementaires (constaté)",
+      "observed": "constaté",
+      "threshold": "seuil",
+      "hint": "Contrôle de consultation sur le temps réellement constaté — n'altère pas les heures et ne bloque pas la validation. « Non vérifiable » = règle non configurée ou données insuffisantes (ni conformité, ni infraction). Les heures supplémentaires figurent dans « À qualifier », pas ici.",
+      "rules": {
+        "daily_hours_max": "Durée quotidienne maximale",
+        "weekly_hours_max": "Durée hebdomadaire maximale",
+        "daily_rest_min_hours": "Repos quotidien minimal",
+        "weekly_rest_min_hours": "Repos hebdomadaire minimal"
+      },
+      "status": {
+        "pass": "Conforme",
+        "warning": "Avertissement",
+        "violation": "Dépassement à examiner",
+        "not_verifiable": "Non vérifiable",
+        "not_applicable": "Non applicable"
+      }
     }
   },
   "planning": {

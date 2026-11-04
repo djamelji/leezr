@@ -516,6 +516,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('timesheets', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'generate'])->middleware($perm('workforce.time_manage'));
     Route::get('timesheets/{id}', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'show'])->middleware($perm('workforce.timesheet_view'));
     Route::get('timesheets/{id}/history', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'history'])->middleware($perm('workforce.timesheet_view'));
+    Route::get('timesheets/{id}/compliance', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'compliance'])->middleware($perm('workforce.timesheet_view'));
     Route::post('timesheets/{id}/submit', [\App\Modules\Workforce\Employees\Http\TimesheetController::class, 'submit'])->middleware($perm('workforce.timesheet_submit'));
     // B3-checkpoint (ADR-699) — approuver/refuser : droit d'action = timesheet_approve (Company) OU
     // timesheet_approve_team (équipe) ; le PÉRIMÈTRE de données est contrôlé dans le contrôleur.

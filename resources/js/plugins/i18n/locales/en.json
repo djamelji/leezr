@@ -7501,6 +7501,25 @@
       "daily": "Daily (observed)",
       "weekly": "Weekly (observed)",
       "hint": "Hours actually worked, fully preserved. They are NOT automatically authorized or compensated at a given rate: authorization (manager) and premium (per legal/collective framework) are separate, upcoming decisions."
+    },
+    "compliance": {
+      "title": "Regulatory checks (actuals)",
+      "observed": "observed",
+      "threshold": "threshold",
+      "hint": "Consultation check on actually-recorded time — does not alter hours nor block validation. “Not verifiable” = rule not configured or insufficient data (neither compliant nor a breach). Overtime appears under “To qualify”, not here.",
+      "rules": {
+        "daily_hours_max": "Daily maximum",
+        "weekly_hours_max": "Weekly maximum",
+        "daily_rest_min_hours": "Minimum daily rest",
+        "weekly_rest_min_hours": "Minimum weekly rest"
+      },
+      "status": {
+        "pass": "Compliant",
+        "warning": "Warning",
+        "violation": "Overage to review",
+        "not_verifiable": "Not verifiable",
+        "not_applicable": "Not applicable"
+      }
     }
   },
   "planning": {

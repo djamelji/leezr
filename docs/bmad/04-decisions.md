@@ -25320,3 +25320,44 @@ Aucun développement. Préserve E3-B, P0, RBAC, isolation tenant, **calculs exis
 
 ### Fichiers de référence (audit, non modifiés)
 `ShiftRuleValidator.php` · `WorkforceRuleResolver.php` · `GenerateTimesheetUseCase.php` · `TimesheetLine.php` · `EmploymentContract.php` · `MarketRuleSetSeeder.php` · `EmployeeSelfController.php` (early-resume).
+
+## ADR-703 — WORKFORCE / P1a : contrôle réglementaire du temps CONSTATÉ (détection, lecture seule)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (P1a livré DEV, `X-Build-Version` vérifié). Cadrage ADR-702. **GO P1a uniquement** — P1b/P1c/P1d non engagés.
+**Objectif** : détecter les risques réglementaires sur le temps RÉELLEMENT CONSTATÉ (feuille), **sans altérer les heures**, **sans créer de fausse conformité**, **sans confondre violation et heures supplémentaires**. Consomme UNIQUEMENT `WorkforceRuleResolver` (pas de 2ᵉ moteur).
+
+### Nature : projection de CONSULTATION (lecture seule)
+P1a produit un **contrôle courant sur les données disponibles**, calculé à la demande (`computed_at`), **PAS une décision réglementaire historisée**. **Aucune mutation** : ne touche ni les lignes, ni `anomaly_count` (P0 préservé), ni les feuilles approuvées/verrouillées. **Aucun blocage**, aucune approbation simulée, aucune correction automatique des heures. Le pointage reste toujours enregistrable.
+
+### Service `WorkTimeComplianceChecker` + endpoint
+- `check(TimesheetPeriod): array` — résout les règles effective-datées au `period_end` + contrat, parcourt les lignes/pointages (clock in/out du `source_snapshot`).
+- Contrôles pris en charge (bornes déjà seedées, conditions établies) : **durée quotidienne max** (par jour travaillé), **durée hebdomadaire max**, **repos quotidien** (écart fin-de-poste N → prise N+1, PAS entre splits du même jour), **repos hebdomadaire** (conservateur). Pause obligatoire = contrôle EXISTANT préservé (non dupliqué).
+- Endpoint `GET /workforce/timesheets/{id}/compliance` (gated `timesheet_view`, scopé périmètre comme B3) → `{results, summary, computed_at}`.
+
+### Contrat de résultat (statut AUTORITÉ SERVEUR — jamais déduit d'une couleur/UI)
+Par contrôle : `rule_key, check_type, market, source, reference, effective_date, threshold_minutes, observed_minutes, period, status, message, trigger`. Statuts : **`pass` / `warning` / `violation` / `not_verifiable` / `not_applicable`**. **`not_verifiable` n'est JAMAIS compté comme conforme.**
+
+### Semaine réglementaire ≠ semaine d'affichage (décision clé)
+Les contrôles hebdomadaires utilisent la **semaine civile FR (lundi→dimanche, L3121)**, DISTINCTE de `week_start_day` (préférence d'affichage) — on ne remplace PAS aveuglément ISO par la préférence UI. Si la période **ne couvre pas intégralement** la semaine réglementaire → **`not_verifiable`** (pas de faux positif). Market non FR → `not_verifiable` (période de référence non qualifiée). Changer la préférence d'affichage ne modifie donc PAS un résultat réglementaire.
+
+### Honnêteté (pas de faux positif ni fausse conformité)
+- Règle non configurée pour le Market (`value` null) → `not_verifiable`.
+- **Repos hebdomadaire** : `pass` si un repos continu ≥ seuil est OBSERVÉ dans la semaine ; sinon **`not_verifiable`** (le repos peut s'étendre sur la semaine adjacente, non disponible) — jamais de violation présumée.
+- **Forfait-jours/heures** : maxima horaires **non appliqués naïvement** → `not_verifiable` (régime non encore qualifié) ; ni exemption universelle non vérifiée, ni violation fausse. Les contrôles de **repos** s'appliquent (non exemptés).
+- Pointages incomplets pour une transition → `not_verifiable` ciblé.
+
+### Interface Company
+Section **« Contrôles réglementaires (constaté) »** dans le détail de la feuille, **SÉPARÉE** des anomalies techniques (compteur P0) ET des heures sup. (« À qualifier »). Synthèse actionnable (X dépassements · Y avertissements · Z non vérifiables) + détail (règle, statut, période, seuil/constaté, référence légale). Note : contrôle de consultation, ne bloque pas, n'altère pas les heures ; « non vérifiable » expliqué. L'UI de paramétrage HS par Department (P3) **n'est PAS** développée.
+
+### Preuves
+Build clean ; **431 tests Workforce verts** (1677 assertions) dont `WorkforceComplianceP1aTest` (8 : conforme/violation jour/violation repos/violation semaine/non vérifiable période désalignée/forfait non vérifiable/aucune mutation/scope+permission). Recette Playwright (`workforce-p1a-compliance`) : endpoint 200, statut serveur, section séparée. Capture : violation « durée quotidienne max » (13h/10h, L3121-18) + « repos hebdo non vérifiable », distincte des HS et des anomalies.
+
+### Limites restantes (hors P1a — phases ultérieures, à valider)
+P1b (refonte `ShiftRuleValidator` structuré + alignement week-start prévu) · P1c (framework d'enforcement allow/warn/block/manager_approval) · P1d (régimes forfait qualifiés, restrictions nuit, ajouts de règles Market — vérification légale). Détection sur le **prévisionnel** inchangée (reste en blocage dur). Moyenne 12 semaines, amplitude, heures complémentaires temps partiel : absents.
+
+### Garde-fous
+DEV only · origin/dev · lecture seule (aucune mutation, aucune migration) · aucun blocage nouveau · Payroll/Signature/Billing/règles de calcul inchangés · RBAC/isolation tenant conservés · feuilles verrouillées intactes · P0/E3-B préservés.
+
+### Fichiers clés
+`Services/WorkTimeComplianceChecker.php` (nouveau) · `Employees/Http/TimesheetController.php` (`compliance`) · `routes/company.php` · `timesheets.store.js` · `time/[id].vue` · i18n · `tests/Feature/WorkforceComplianceP1aTest.php` · `tests/e2e/workforce-p1a-compliance.spec.js`.

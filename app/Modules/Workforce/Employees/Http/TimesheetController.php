@@ -100,6 +100,35 @@ class TimesheetController extends Controller
         ]);
     }
 
+    /**
+     * P1a (ADR-703) — CONTRÔLE RÉGLEMENTAIRE sur le temps constaté (projection de CONSULTATION).
+     * Lecture seule : ne mute PAS la feuille, ne bloque rien, ne modifie pas anomaly_count (P0 préservé).
+     * Résultats pass/warning/violation/not_verifiable/not_applicable — statut autorité serveur.
+     * Scopé (company + périmètre), gated `workforce.timesheet_view`.
+     */
+    public function compliance(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $period = TimesheetPeriod::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
+        $this->guardEmployee($request, $period->employee_id);
+
+        $results = app(\App\Modules\Workforce\Services\WorkTimeComplianceChecker::class)->check($period);
+        $counts = collect($results)->countBy('status');
+
+        return response()->json([
+            'results' => $results,
+            'summary' => [
+                'violation' => $counts['violation'] ?? 0,
+                'warning' => $counts['warning'] ?? 0,
+                'not_verifiable' => $counts['not_verifiable'] ?? 0,
+                'not_applicable' => $counts['not_applicable'] ?? 0,
+                'pass' => $counts['pass'] ?? 0,
+            ],
+            // Projection de consultation calculée MAINTENANT — pas une décision réglementaire historisée.
+            'computed_at' => now()->toIso8601String(),
+        ]);
+    }
+
     public function generate(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');

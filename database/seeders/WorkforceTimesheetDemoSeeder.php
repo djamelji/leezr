@@ -78,15 +78,15 @@ class WorkforceTimesheetDemoSeeder extends Seeder
             // 1) Pointages de la semaine (un poste de nuit le 1er jour pour le collaborateur 3).
             foreach (self::WORKDAYS as $d => $day) {
                 $night = ($i === 3 && $d === 0);
-                $this->entry($company->id, $emp->id, $day,
-                    $night ? '22:00' : '09:00',
-                    $night ? '06:00' : '17:00',
-                    $night ? '2026-10-27' : $day,
-                    $night ? 480 : 420);
-                $this->shift($company->id, $emp->id, $day,
-                    $night ? '22:00' : '09:00',
-                    $night ? '06:00' : '17:00',
-                    $night ? '2026-10-27' : $day);
+                // Collaborateur 0, 1er jour : journée longue 06:00–19:00 (12h) → déclenche un contrôle
+                // réglementaire « durée quotidienne maximale » (démo P1a — contrôle du constaté).
+                $long = ($i === 0 && $d === 0);
+                $in = $night ? '22:00' : ($long ? '06:00' : '09:00');
+                $out = $night ? '06:00' : ($long ? '19:00' : '17:00');
+                $endDate = $night ? '2026-10-27' : $day;
+                $worked = $night ? 480 : ($long ? 720 : 420);
+                $this->entry($company->id, $emp->id, $day, $in, $out, $endDate, $worked);
+                $this->shift($company->id, $emp->id, $day, $in, $out, $endDate);
             }
 
             // 2) Correction tracée (motif) pour les collaborateurs 2 et 6 — alimente l'historique.
