@@ -25428,3 +25428,58 @@ Aucune modification de moteur, base, règle ou interface. Préserve E3-B, P0, P1
 
 ### Fichiers de référence (audit, non modifiés)
 `ShiftRuleValidator.php` · `WorkTimeComplianceChecker.php` · `WorkforceRuleResolver.php` · `CreateShiftUseCase/UpdateShiftUseCase/BulkCreateShiftsUseCase/PublishShiftsUseCase`.
+
+---
+
+## ADR-705 — WORKFORCE / SMART PLANNING (CADRAGE) : grille visuelle, modèles de shifts, couverture & génération assistée
+
+**Date** : 2026-11-04
+**Statut** : CADRAGE (audit + plan). Aucun moteur/base/règle/interface modifié. En attente d'arbitrage avant tout développement.
+**Contexte doctrine** : stabilisation horizontale (ADR-561) ; réutilisation P1a/P1b, pas de 2ᵉ architecture Workforce ; largeur avant profondeur (ADR-566) ; PP1-PP6 (ADR-567).
+
+### 1. Objectif
+Concevoir un véritable Smart Planning (tous JobDomains) : grille employés×jours, modèles réutilisables, affectation drag/duplication/multi, besoins de couverture, génération assistée contrôlée et publiable — sans créer chaque shift à la main. Chantier **distinct de P1b**, ne doit pas effacer les travaux réglementaires.
+
+### 2. Diagnostic (3 sous-agents read-only sur build courant)
+- **Socle d'affectation = solide & réutilisable** : grille desktop (`planning/index.vue:1302-1491`), bibliothèque `ScheduleTemplate` (CRUD), `BulkCreateShiftsUseCase` (transactionnel), `PublishShiftsUseCase` (atomique `lockForUpdate` + re-validation), verrou optimiste `expected_updated_at`→409, immutabilité publié (`UpdateShiftUseCase:19-22`), board + absences + conflits (`PlanningBoardReadModel`).
+- **Faiblesses UX/échelle** : aucune couverture ; pas de duplication/copier-semaine ; multi-affectation = 1 seul drawer ; table non virtualisée (200 lignes, refetch complet par navigation) ; grille sans filtres ; mobile = grille masquée (agenda seul).
+- **Grands manques net-new (grep exhaustif = 0)** : couverture/besoin, compétences, disponibilité DÉCLARÉE (seule la calculée existe), réserve opérationnelle, astreinte, **moteur d'optimisation/solveur**.
+- **Infra IA EXISTANTE & réutilisable** : `AiGatewayManager` + `AiProviderAdapter.complete()` (dispo, jamais appelé) + file `ai` + `AiModuleContract` (seul Documents implémente ; **0 module IA Workforce**) + gating **settings-driven (PAS plan-driven)** + quota mensuel (`AiQuotaManager`, défaut 100/mois).
+- **CC** : `contract.convention_collective_id ?? company.default_convention_collective_id`, Market-scopée, effective-datée, moteur de surcharge replace/supplement/minimum. **Partiel** : pas de CC établissement (`WorkLocation` sans FK CC) ; catalogue = 1 stub démo (Métallurgie) ; **0 règle `domain='workforce'`** (temps de travail) seedée. JobDomain ≠ CC confirmé (couches orthogonales). `jobdomains.workforce_presets` = colonne **dormante** (non mappée/lue).
+
+### 3. Modèles proposés (net-new, à valider)
+- **Couverture** `workforce_coverage_requirements` : company/department?/location? · date|day_of_week? · time_window? · activity_type? · required_skill_id? · **headcount** · priority · source. Écart = Σ shifts couvrants − headcount (couvert/sous-effectif/sureffectif). Ne jamais confondre demande et nb de shifts.
+- **Templates enrichis** (étendre `ScheduleTemplate`, pas de concurrent) : code, icône (metadata), activity_type, durée stockée, drapeau minuit, compétences requises, conditions dispo, `department_id` nullable (null=Company-wide), preset JobDomain via `workforce_presets`. Modèle ≠ Shift. Pas de template Amazon hardcodé Core.
+- **Disponibilité & réserve** : 5 notions à ne jamais confondre — dispo déclarée / réserve planifiée / astreinte qualifiée / intervention / temps effectif. Interdit : assimiler dispo = travail effectif, ou = forcément gratuit. Rémunération paramétrable (lien plan HS/indemnités P2→P6).
+
+### 4. Contrat de génération (10 étapes) & architecture contraintes
+Moteur **déterministe d'abord** (graine reproductible, explicable, éditable, contrôlé serveur). 3 niveaux ordonnés : contraintes DURES (`WorkforceRuleResolver`+`ShiftRuleValidator` = oracle, jamais violées) → SOUPLES/préférences (`CompanyPolicy`) → optimisation (glouton+recherche locale) → assistant IA optionnel par-dessus (gateway existant, gated+quota). **L'IA n'est pas l'autorité réglementaire, ne décide pas, ne publie pas.** Toute proposition repasse par les contraintes dures avant d'exister en brouillon. Jamais de publication automatique.
+
+### 5. Paramètres Company/Department
+Foyer = `CompanyPolicy` étendu (`subject_type/subject_id`, P0), domaine `planning`, résolution Company→Department→Employé. 4 natures à ne jamais mélanger : obligation légale/CC (impérative, clamp) · contractuelle · politique Company · préférence d'optimisation. Une politique Company n'assouplit jamais une impérative. Pas de valeur légale universelle inventée.
+
+### 6. RBAC
+Existant : `planning_view`, `planning_manage`, `planning_publish` + scope manager (réaffectation). Net-new : `planning_generate`, `planning_manage_templates` (aujourd'hui noyé dans `planning_manage`), `planning_manage_rules`, `coverage_manage`. Jamais d'accès Company-wide déduit du seul titre de manager.
+
+### 7. Plan incrémental (largeur avant profondeur)
+Constat clé : grille+modèles+affectation manuelle persistée **EXISTENT DÉJÀ** → le 1er incrément est le DELTA, pas une re-construction.
+- **SP1** (valeur immédiate, zéro IA) : modèle couverture + ligne besoin/affecté/écart · modèles enrichis (code/icône/activité/durée/`department_id`) · affectation rapide palette · duplication & copier-semaine · filtres grille · virtualisation 200 lignes · liste mobile.
+- **SP2** : compétences (catalogue + Employé↔skill + exigence) · disponibilité déclarée · réserve simple.
+- **SP3** : moteur de génération déterministe (sans IA) — brouillon reproductible + explication conflits/non-couvertures.
+- **SP4** : couche IA (nouveau `AiModuleContract` Workforce, gated+quota) — explication/arbitrages/« et si ». Jamais autorité/auto-publication.
+- **SP5** : astreinte qualifiée + rémunération réserve (lien P2→P6) · règles CC `domain='workforce'` + CC établissement si requis · materializer `workforce_presets`.
+
+### 8. Arbitrages à trancher (reco entre parenthèses)
+1. Compétences SP1 (reco : JobRole proxy en SP1, vrai catalogue SP2).
+2. Granularité couverture V1 (reco : headcount jour en SP1, colonnes créneau/site/activité/skill nullable activables).
+3. Génération déterministe d'abord (reco : oui, IA en SP4).
+4. Portée modèles V1 (reco : `department_id` nullable dès SP1, null=Company-wide).
+5. Astreinte/réserve (reco : dispo déclarée + réserve simple SP2 ; astreinte qualifiée + rémunération SP5).
+6. Confirmer SP1 comme « premier incrément rapidement exploitable » (reco : oui — pas de re-construction).
+
+### Garde-fous (cadrage)
+Aucune modification moteur/base/règle/interface. DEV · origin/dev. Pas de main/PROD, Billing, Signature, Payroll, migration destructive, contournement RBAC, couplage Logistics. Règles réglementaires non dupliquées (réutilisation P1a/P1b). Préserve E3-B, P0, P1a, zéro régression pointage/feuilles. **Arrêt après diagnostic+plan pour arbitrage.**
+
+### Fichiers de référence (audit, non modifiés)
+`planning/index.vue` · `_PlanningCalendar.vue` · `planning.store.js` · `ScheduleTemplate.php` · `Shift.php` · `WorkLocation.php` · `BulkCreateShiftsUseCase/PublishShiftsUseCase/CreateShiftUseCase/UpdateShiftUseCase` · `ShiftController.php` · `PlanningBoardReadModel.php` · `AiGatewayManager.php` + `app/Core/Ai/*` · `ConventionCollective(Rule).php` · `WorkforceRuleResolver.php` · `Jobdomain.php` + `jobdomains.workforce_presets` (dormant).
+Artefact d'audit : voir mémoire `workforce-smart-planning-audit`.
