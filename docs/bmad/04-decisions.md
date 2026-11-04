@@ -24836,3 +24836,30 @@ E3-B Temps & planning · E3-C Congés & absences · E3-D Documents/Paie/Organisa
 
 ### Fichiers clés
 `employees/index.vue`, `employees/[id].vue`, i18n fr/en/ar, `core/components/{EmptyState,ErrorState,MoneyDisplay}.vue` (adoptés), tests `WorkforceMultisectorIndependenceTest` + specs e2e `workforce-e3a*`.
+
+---
+
+## ADR-693 — E3-R : contrat responsive transversal & mobile-first (cadrage, R1)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (R1 = audit livré ; R2→R4 à venir, points de contrôle entre incréments)
+**Contexte** : E3-A a amélioré le desktop mais les captures mobiles restent insuffisantes. Décision : corriger le problème **à la source** — l'architecture responsive globale (Vuexy/Vuetley) — comme **prérequis transversal avant E3-B**. Pas un site desktop réduit à 390px : une vraie expérience de gestion mobile, réutilisable par tous les modules et JobDomains. Dossier détaillé : `docs/bmad/e3r-responsive-r1.md`.
+
+### Constat (audité, build `fed47bb`)
+- **Responsabilités** : le layout (drawer/navbar/overlay) est réimplémenté par Vuexy en HTML/CSS natif dans `@core`/`@layouts` — **à ne pas forker**. Le responsive se corrige dans la **couche Leezr** (`layouts/`, `components/`, `core/components/`, `styles/styles.scss`, `variables/_template.scss`, `application.blade.php`, `themeConfig.js`) + de **nouveaux composants App***. Le mécanisme d'override officiel `_template.scss` (`@forward … with`) est présent mais **inexploité**.
+- **Anomalies MESURÉES** (`tests/e2e/e3r-anomaly-audit.spec.js`) : débordement horizontal du **portail salarié** (+139px@375 — rangée d'actions non wrappée), **leave/payroll** @320 (+10/+55px), **onglets tronqués** sur fiche/time/leave/payroll/organization, **tables = desktop compressé** (`text-no-wrap` + largeurs fixes, mode carte natif Vuetify jamais activé), **app bar surchargée** (6-7 widgets jamais condensés), **safe areas absentes** (`viewport-fit=cover` manquant, 0 `env(safe-area-inset-*)`), padding figé 24px, drawer custom sans focus-trap (scrim fragile), dialogues/drawers largeur fixe + `touchless` qui tue le swipe.
+
+### Décisions
+1. **Contrat responsive par largeur** (320–359 / 360–430 / 431–599 / 600–959 / 960–1279 / ≥1280) intégré aux breakpoints **par défaut** de Vuetify (xs<600 … lg 1280), bascule nav à 1279/1280 conservée. Comportements de référence : tables→cartes en xs, onglets adaptatifs, dialogues plein écran mobile, cibles ≥44px, safe areas, clavier virtuel, zoom 200%, RTL. Détail : dossier §3.
+2. **Approche natif-Vuetley d'abord, zéro fork Vuexy** : primitives Leezr P1 `AppResponsiveDataView`, P2 `AppFilterPanel`, P3 `AppAdaptiveDialog`, P4 `AppSectionNavigation`, P5 `AppPageHeader`/tokens tactiles ; + quick wins (text-no-wrap conditionnel, safe areas, garde overflow-x, flex-wrap des actions, largeurs drawer réactives, touchless conditionnel, padding responsive).
+3. **Pas de bottom-navigation permanente par défaut** : pertinence étudiée par contexte ; si utilisée, contextuelle, sans multiplier les destinations ni exposer des fonctions non autorisées.
+4. **Transversalité** : les primitives servent tous les modules/JobDomains ; recette de non-régression Company/Platform/Employee/non-Workforce + Workforce sans Logistics.
+
+### Incréments (livrés et vérifiés séparément, SHA + recette DEV)
+R1 audit (**ce cadrage**) → R2 fondations (app bar, nav, safe areas, padding, overflow) → R3 composants adaptatifs + correction réelle E3-A (annuaire cartes, onglets fiche, dialogues, portail) → R4 tests transverses + artefact avant/après. **E3-B bloqué tant que R4 n'est pas validé.**
+
+### Garde-fous
+Pas de mise à jour majeure aveugle de Vuexy/Vuetley ; DEV only ; pas de main/PROD/Billing ; moteurs Payroll/Signature inchangés ; pas de contournement RBAC ; pas de donnée réelle ; SSH compromis non utilisé ; les 2 échecs date-dépendants `WorkforceTimesheetRulesTest` comptés comme échecs (jamais présentés verts).
+
+### Fichiers clés (R1)
+`docs/bmad/e3r-responsive-r1.md` (dossier), `tests/e2e/e3r-anomaly-audit.spec.js` (détecteur mesuré), captures `scratchpad/e3r-audit/`.
