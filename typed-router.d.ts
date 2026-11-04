@@ -43,6 +43,7 @@ declare module 'vue-router/auto-routes' {
     'company-dashboard-onboarding-widget': RouteRecordInfo<'company-dashboard-onboarding-widget', '/company/dashboard/_OnboardingWidget', Record<never, never>, Record<never, never>>,
     'company-dashboard-plan-badge-widget': RouteRecordInfo<'company-dashboard-plan-badge-widget', '/company/dashboard/_PlanBadgeWidget', Record<never, never>, Record<never, never>>,
     'company-dashboard-quick-actions-bar': RouteRecordInfo<'company-dashboard-quick-actions-bar', '/company/dashboard/_QuickActionsBar', Record<never, never>, Record<never, never>>,
+    'company-dev-lab': RouteRecordInfo<'company-dev-lab', '/company/dev-lab', Record<never, never>, Record<never, never>>,
     'company-documents-documents-activity-timeline': RouteRecordInfo<'company-documents-documents-activity-timeline', '/company/documents/_DocumentsActivityTimeline', Record<never, never>, Record<never, never>>,
     'company-documents-documents-compliance': RouteRecordInfo<'company-documents-documents-compliance', '/company/documents/_DocumentsCompliance', Record<never, never>, Record<never, never>>,
     'company-documents-documents-overview': RouteRecordInfo<'company-documents-documents-overview', '/company/documents/_DocumentsOverview', Record<never, never>, Record<never, never>>,

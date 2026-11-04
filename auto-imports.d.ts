@@ -70,22 +70,16 @@ declare global {
   const getXsrfToken: typeof import('./resources/js/utils/csrf.js')['getXsrfToken']
   const h: typeof import('vue')['h']
   const hasKey: typeof import('./resources/js/utils/webcryptoSigner.js')['hasKey']
-  const hexToRgb: typeof import('./resources/js/@core/utils/colorConverter.js')['hexToRgb']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const integerValidator: typeof import('@core/utils/validators')['integerValidator']
   const invoiceStatusColor: typeof import('./resources/js/utils/billing.js')['invoiceStatusColor']
   const isDefined: typeof import('@vueuse/core')['isDefined']
-  const isEmpty: typeof import('./resources/js/@core/utils/helpers.js')['isEmpty']
-  const isEmptyArray: typeof import('./resources/js/@core/utils/helpers.js')['isEmptyArray']
-  const isNullOrUndefined: typeof import('./resources/js/@core/utils/helpers.js')['isNullOrUndefined']
-  const isObject: typeof import('./resources/js/@core/utils/helpers.js')['isObject']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
-  const isToday: typeof import('./resources/js/@core/utils/helpers.js')['isToday']
   const kFormatter: typeof import('@core/utils/formatters')['kFormatter']
   const lengthValidator: typeof import('@core/utils/validators')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
@@ -142,7 +136,6 @@ declare global {
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
   const refreshCsrf: typeof import('./resources/js/utils/csrf.js')['refreshCsrf']
   const regexValidator: typeof import('@core/utils/validators')['regexValidator']
-  const registerPlugins: typeof import('./resources/js/@core/utils/plugins.js')['registerPlugins']
   const requiredValidator: typeof import('@core/utils/validators')['requiredValidator']
   const resetTypography: typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']
   const resolveComponent: typeof import('vue')['resolveComponent']
@@ -151,7 +144,6 @@ declare global {
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('@core/utils/vuetify')['resolveVuetifyTheme']
   const revokeObjectUrl: typeof import('./resources/js/utils/pdf.js')['revokeObjectUrl']
-  const rgbaToHex: typeof import('./resources/js/@core/utils/colorConverter.js')['rgbaToHex']
   const safeRedirect: typeof import('./resources/js/utils/safeRedirect.js')['safeRedirect']
   const sameBuild: typeof import('./resources/js/utils/versionCheck.js')['sameBuild']
   const setActivePinia: typeof import('pinia')['setActivePinia']
@@ -226,6 +218,7 @@ declare global {
   const useCompanyPermissionContext: typeof import('./resources/js/composables/useCompanyPermissionContext.js')['useCompanyPermissionContext']
   const useConfirm: typeof import('./resources/js/composables/useConfirm.js')['useConfirm']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
+  const useContainerWidth: typeof import('./resources/js/composables/useContainerWidth.js')['useContainerWidth']
   const useCookie: typeof import('./resources/js/composables/useCookie.js')['useCookie']
   const useCounter: typeof import('@vueuse/core')['useCounter']
   const useCssModule: typeof import('vue')['useCssModule']
@@ -636,6 +629,7 @@ declare module 'vue' {
     readonly useCompanyPermissionContext: UnwrapRef<typeof import('./resources/js/composables/useCompanyPermissionContext.js')['useCompanyPermissionContext']>
     readonly useConfirm: UnwrapRef<typeof import('./resources/js/composables/useConfirm.js')['useConfirm']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
+    readonly useContainerWidth: UnwrapRef<typeof import('./resources/js/composables/useContainerWidth.js')['useContainerWidth']>
     readonly useCookie: UnwrapRef<typeof import('./resources/js/composables/useCookie.js')['useCookie']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
