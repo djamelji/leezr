@@ -8134,5 +8134,11 @@
     "editShift": "Modifier le créneau",
     "shiftImmutable": "Un créneau publié est immuable (I9). Modifiez-le depuis le Planning via le workflow de dépublication.",
     "shiftSaved": "Créneau mis à jour"
+  },
+  "navbar": {
+    "language": "Langue",
+    "theme": "Thème",
+    "shortcuts": "Raccourcis",
+    "help": "Aide"
   }
 }

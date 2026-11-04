@@ -8134,5 +8134,11 @@
     "editShift": "Edit the shift",
     "shiftImmutable": "A published shift is immutable (I9). Edit it from Planning via the unpublish workflow.",
     "shiftSaved": "Shift updated"
+  },
+  "navbar": {
+    "language": "Language",
+    "theme": "Theme",
+    "shortcuts": "Shortcuts",
+    "help": "Help"
   }
 }

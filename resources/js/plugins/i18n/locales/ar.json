@@ -352,5 +352,11 @@
   },
   "employeeFile": {
     "manageAccess": "إدارة الوصول"
+  },
+  "navbar": {
+    "language": "اللغة",
+    "theme": "السمة",
+    "shortcuts": "الاختصارات",
+    "help": "المساعدة"
   }
 }

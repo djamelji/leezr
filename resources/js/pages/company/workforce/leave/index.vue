@@ -462,7 +462,7 @@ watch(activeTab, tab => {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
       <div>
         <h4 class="text-h4 font-weight-bold">
           {{ $t('leaves.title') }}

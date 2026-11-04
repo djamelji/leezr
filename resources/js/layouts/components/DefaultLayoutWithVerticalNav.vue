@@ -44,6 +44,34 @@ function startOverlayWatch() {
 
 onMounted(startOverlayWatch)
 onUnmounted(() => clearInterval(overlayStuckTimer))
+
+// ─── E3-R / R2 : accessibilité clavier du drawer mobile (couche Leezr) ─────────
+// Le drawer Vuexy custom n'a pas de focus-trap natif. Dans la limite de cette couche :
+// Escape ferme, le focus entre dans le drawer à l'ouverture et revient au hamburger à la fermeture.
+let lastFocused = null
+
+const openDrawerA11y = toggle => {
+  lastFocused = document.activeElement
+  toggle(true)
+  nextTick(() => {
+    setTimeout(() => {
+      document.querySelector('.layout-vertical-nav .nav-items a, .layout-vertical-nav a')?.focus()
+    }, 120)
+  })
+}
+
+const onKeydown = e => {
+  if (e.key !== 'Escape') return
+  const overlay = document.querySelector('.layout-overlay.visible')
+  if (overlay) {
+    overlay.click() // ferme le drawer (même mécanisme que le scrim)
+    ;(lastFocused || document.getElementById('vertical-nav-toggle-btn'))?.focus?.()
+    lastFocused = null
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
@@ -54,7 +82,8 @@ onUnmounted(() => clearInterval(overlayStuckTimer))
         <IconBtn
           id="vertical-nav-toggle-btn"
           class="ms-n3 d-lg-none"
-          @click="toggleVerticalOverlayNavActive(true)"
+          aria-label="Ouvrir la navigation"
+          @click="openDrawerA11y(toggleVerticalOverlayNavActive)"
         >
           <VIcon
             size="26"

@@ -221,8 +221,8 @@ function signatureChipProps(status) {
 
 <template>
   <div>
-    <!-- Page Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
+    <!-- Page Header — E3-R/R2 : flex-wrap pour éviter le débordement horizontal sur mobile (A1) -->
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
       <div>
         <h4 class="text-h4 font-weight-bold">
           {{ t('workforceMe.title') }}
@@ -234,7 +234,7 @@ function signatureChipProps(status) {
           {{ t('workforceMe.welcome', { name: employeeName }) }}
         </p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 flex-wrap">
         <!-- Clock actions -->
         <VBtn
           v-if="clockStore.clockStatus === 'not_started'"

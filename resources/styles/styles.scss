@@ -72,3 +72,43 @@
 @media (prefers-reduced-motion: reduce) {
   .layout-vertical-nav .nav-item-badge { animation: none; }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E3-R / R2 — Fondations responsive transversales (couche Leezr, AUCUN fork Vuexy).
+// Cible des sélecteurs globaux Vuexy (.layout-*) par surcharge CSS, jamais @core/@layouts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 1) Espacement de contenu ADAPTATIF — remplace le 1.5rem figé en petites largeurs
+//    (Vuexy: .layout-page-content padding 1.5rem à tous les breakpoints). Intègre aussi
+//    la safe-area horizontale (encoche iPhone en paysage) via max() — pas de double padding.
+@media (max-width: 599.98px) {
+  .layout-page-content {
+    padding-inline: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)) !important;
+    padding-block: 1rem !important;
+  }
+}
+@media (min-width: 600px) and (max-width: 959.98px) {
+  .layout-page-content {
+    padding-inline: 1.25rem;
+    padding-block: 1.25rem;
+  }
+}
+
+// 2) Safe areas iOS/Android (viewport-fit=cover activé dans application.blade.php).
+//    Appliquées de façon ADDITIVE uniquement là où c'est pertinent, via @supports.
+@supports (padding: max(0px)) {
+  // App bar : encoche en paysage (gauche/droite). Base Vuexy conservée via max().
+  .layout-navbar .navbar-content-container {
+    padding-inline-start: max(0px, env(safe-area-inset-left));
+    padding-inline-end: max(0px, env(safe-area-inset-right));
+  }
+  // Drawer de navigation : encoche haute + barre home basse + bord gauche.
+  .layout-vertical-nav {
+    padding-block-end: env(safe-area-inset-bottom);
+    padding-inline-start: env(safe-area-inset-left);
+  }
+  // Footer éventuel : barre home indicator.
+  .layout-footer {
+    padding-block-end: max(0px, env(safe-area-inset-bottom));
+  }
+}

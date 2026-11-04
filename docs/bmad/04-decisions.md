@@ -24863,3 +24863,34 @@ Pas de mise à jour majeure aveugle de Vuexy/Vuetley ; DEV only ; pas de main/PR
 
 ### Fichiers clés (R1)
 `docs/bmad/e3r-responsive-r1.md` (dossier), `tests/e2e/e3r-anomaly-audit.spec.js` (détecteur mesuré), captures `scratchpad/e3r-audit/`.
+
+---
+
+### ADR-693 — Complément R2 (fondations responsive implémentées)
+
+**Date** : 2026-11-04 · **Statut** : Accepté (livré DEV). R2 = fondations transversales dans la **couche Leezr**, **aucun fork** `@core`/`@layouts`, aucune MAJ de dépendance.
+
+**Modifié (couche Leezr uniquement)** :
+- `resources/views/application.blade.php` : `viewport-fit=cover` (active les safe areas).
+- `resources/styles/styles.scss` : **padding de contenu adaptatif** (`.layout-page-content` → 1rem en xs, 1.25rem en sm/md, 1.5rem conservé desktop) + **safe areas** iOS/Android additives (`env(safe-area-inset-*)` sur navbar/drawer/footer via `@supports` + `max()`, sans double compensation). Aucune réduction globale des espacements desktop.
+- `resources/js/layouts/components/NavbarGlobalWidgets.vue` : **app bar mobile** — sous `md` (`useDisplay`), les outils secondaires (langue, thème, apps, aide) passent dans un **menu « plus »** (`data-test="navbar-more"`) ; **pointeuse + notifications restent visibles** ; desktop inchangé. Rien supprimé.
+- `resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue` : **a11y drawer mobile** — Escape ferme, focus entre dans le drawer à l'ouverture et revient au hamburger à la fermeture (`aria-label`), dans la limite de la couche Leezr (le drawer Vuexy custom n'a pas de focus-trap natif — limite documentée).
+- `me.vue` / `payroll/index.vue` / `leave/index.vue` : **`flex-wrap` sur les rangées d'actions** d'en-tête (correction à la SOURCE des débordements, pas de masquage).
+- i18n `navbar.{language,theme,shortcuts,help}` (fr/en/ar).
+
+**Résultats mesurés (détecteur R1, avant → après)** :
+| Anomalie | Avant | Après |
+|---|---|---|
+| Débordements horizontaux (>2px) | **5 cas** (portail +139/+124/+84, paie +55, congés +10) | **0 cas** |
+| Onglets tronqués | 5 pages | 5 pages (**→ R3**, AppSectionNavigation) |
+| App bar mobile | 6-7 widgets | pointeuse + notifications + 1 menu « plus » |
+| Safe areas | absentes | viewport-fit=cover + `env(safe-area-inset-*)` |
+| Padding xs | 24px figé | 16px adaptatif |
+
+**Décision anti-triche** : `overflow-x: hidden/clip` global **écarté** (il masquerait les causes au détecteur) — les débordements sont corrigés **à la source** (flex-wrap). Les tables gardent leur défilement horizontal interne intentionnel.
+
+**Recette** : `tests/e2e/e3r-r2.spec.js` (4 tests, interactions réelles) — app bar mobile (menu + notifications), débordements portail/paie/congés @320-430 ≤2px + non-régression desktop, drawer (ouverture/Escape/fermeture après nav), non-Workforce (Membres) sans débordement. Détecteur : 0 débordement.
+
+**Reste pour R3** : onglets tronqués (fiche/time/leave/payroll/organization → `AppSectionNavigation`), tables = desktop compressé (→ `AppResponsiveDataView`), dialogues/drawers largeur fixe (→ `AppAdaptiveDialog`), filtres (→ `AppFilterPanel`), cibles tactiles < 44px.
+
+**Limite honnête** : viewport simulé Playwright ≠ vrai appareil — vérification iOS Safari / Android Chrome recommandée (non effectuée). Captures produites en **local `leezr.test`**.
