@@ -2200,6 +2200,7 @@ watch(activeTab, tab => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="template-submit"
                   :loading="templateFormLoading"
                 >
                   {{ isTemplateEditMode ? $t('common.save') : $t('common.create') }}
@@ -2352,6 +2353,7 @@ watch(activeTab, tab => {
                 <VBtn
                   type="submit"
                   color="primary"
+                  data-test="coverage-submit"
                   :loading="coverageFormLoading"
                 >
                   {{ editingCoverage ? $t('common.save') : $t('common.add') }}
