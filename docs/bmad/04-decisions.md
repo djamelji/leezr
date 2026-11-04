@@ -25238,3 +25238,85 @@ DEV only · origin/dev · pas de main/PROD · **moteur de calcul (minutes) incha
 
 ### Fichiers clés
 `GenerateTimesheetUseCase.php` · `TimesheetLine.php` (`OVERTIME_ANOMALY_TYPES`, `technicalAnomalies`) · `TimesheetPeriod.php` (`recomputeTotals`) · `TimesheetAnomalyReadModel.php` · `time/[id].vue` · i18n · `tests/Feature/WorkforceOvertimeQualificationP0Test.php`.
+
+## ADR-702 — WORKFORCE / P1 (CADRAGE) : détection des violations de temps de travail
+
+**Date** : 2026-11-04
+**Statut** : **Cadrage uniquement — NON implémenté.** Attend validation avant toute modification des moteurs. Suite P0 (ADR-701) + audit HS/majorations.
+**Objectif** : détecter les situations potentiellement contraires aux règles applicables (durées max, repos min, pauses, nuit, contrat), **sans inventer de règle légale universelle** et **sans créer un 2ᵉ moteur de règles** (réutilise `WorkforceRuleResolver`).
+
+### 1. État des lieux (audit) — ce qui existe / manque
+- **Prévisionnel (`ShiftRuleValidator`, à la création/màj/publication de shift)** : contrôle `daily_hours_max`, `weekly_hours_max`, `daily_rest_min_hours` (11h), chevauchement — **en BLOCAGE DUR** (`DomainException`→422), sans sévérité ni mode ni avertissement. Nuit = drapeau informatif (jamais bloquant).
+- **Constaté (timesheet depuis TimeEntry)** : enregistre des anomalies (pause insuffisante=warning, leave_conflict=error, late/early=info) + quantités HS/nuit (HS démotées des anomalies en P0). **AUCUN contrôle de limite légale sur le constaté.**
+- **ABSENTS** : repos **hebdomadaire 35h** (défini, consommé par rien) ; **toute vérification sur le constaté** (faille : clock-in/out ≠ plan non contrôlé) ; **restrictions travail de nuit** (cap/médical/consentement) ; **exemptions forfait-jours/heures** (work_model inerte → forfait-jours soumis à tort aux maxima horaires) ; aucune règle vérifiée sur les **deux** côtés.
+- **Framework allow/warn/block/manager_approval** : **ABSENT** (seul `break_early_resume_policy` l'utilise ; `manager_approval` n'existe pas). À concevoir.
+- **Bug de cohérence** : l'agrégation hebdo de `ShiftRuleValidator` utilise la semaine **ISO lundi→dimanche en dur**, incohérent avec le **week-start configurable Company** (corrigé en B2 côté planning/feuilles) → risque de faux positif/négatif.
+
+### 2. Taxonomie des catégories (étend les 4 états de P0)
+`écart planning/réel (informatif)` · `HS constatée (à qualifier, P0)` · `HS non autorisée administrativement (en attente — P4)` · **`avertissement réglementaire`** (approche/dépassement non bloquant, ou règle en mode warn) · **`violation réglementaire établie`** (règle vérifiée dépassée) · `anomalie technique`.
+**Principes** : une HS **autorisée reste soumise** aux contrôles réglementaires ; une HS **non autorisée ≠ violation** légale automatique ; si la règle est **inconnue/absente/non configurée** pour le Market → état **`non vérifiable`** (JAMAIS un faux positif ni un faux « conforme »).
+
+### 3. Contrat du moteur de détection (par règle)
+Un service de conformité (`WorkTimeComplianceChecker`, nouveau, **consomme uniquement `WorkforceRuleResolver`**) appliqué **au prévisionnel ET au constaté** (ferme la faille). Pour chaque règle : **source normative** (Market/CC/Company) · **Market** · **date d'effet** · **conditions d'application** · **seuil** · **données nécessaires** · **mode de détection** (prévisionnel/constaté) · **sévérité** (error/warning/info) · **comportement** `allow/warn/block/approval` (si juridiquement pertinent) · **message utilisateur** · **traçabilité** (règle + version + date d'effet + données ayant déclenché) · **comportement si règle inconnue** (→ `non vérifiable`).
+**Garde-fou impératif** : une Company **ne peut jamais désactiver** une obligation impérative (`nature ∈ legal_min|legal_max|fixed_legal`). `warn`/`manager_approval` **ne sont jamais** présentés comme une dérogation légale (message explicite).
+
+### 4. Matrice des règles (défauts FR à VÉRIFIER par Market/CC — non inventés)
+| Règle | Clé résolveur / source | Défaut FR seedé | Prévisionnel | Constaté | Sévérité (proposée) | Statut |
+|---|---|---|---|---|---|---|
+| Durée max quotidienne | `daily_hours_max` (legal_max) | 10h | existe (block) | **absent** | violation (error) | partiel |
+| Durée max hebdomadaire | `weekly_hours_max` (legal_max) | 48h | existe (block) | **absent** | violation (error) | partiel |
+| Moyenne hebdo (12 sem.) | — | **absent** (44h à vérifier) | absent | absent | violation | absent |
+| Repos quotidien min | `daily_rest_min_hours` (legal_min) | 11h | existe (block) | **absent** | violation (error) | partiel |
+| Repos hebdomadaire min | `weekly_rest_min_hours` (legal_min) | 35h | **absent** | **absent** | violation (error) | absent |
+| Pause obligatoire | `break_after_hours`/`min_duration` | 6h→20min | absent | existe (warning) | avertissement | partiel |
+| Travail de nuit (restrictions) | `night_work_start/end` + limites | détection seule | flag | quantité | à définir | absent |
+| Amplitude journalière | — | à vérifier | absent | absent | avertissement/violation | absent |
+| Heures complémentaires (temps partiel) | — | à vérifier | absent | absent | avertissement | absent |
+| Exemption forfait-jours | `work_model_key=forfait_jours` | — | **non exempté (bug)** | — | n/a | absent |
+
+### 5. Modèles & API impactés (réutilisation maximale)
+- `WorkforceRuleResolver` : ajouter un attribut `enforcement` (config, borné par la nature légale) ; éventuelles clés (consommer `weekly_rest`, restrictions nuit, exemptions forfait) — **à vérifier légalement**.
+- `ShiftRuleValidator` : refondre pour RETOURNER des violations structurées `{rule, severity, mode}` (pas seulement throw) → permet `warn`/`approval` ; conserver `block` pour les impératives ; **aligner l'agrégation hebdo sur le week-start Company**.
+- **Nouveau** contrôle sur le **constaté** (génération de feuille) réutilisant le même service → ferme la faille.
+- `TimesheetLine` : représenter les violations comme une catégorie DISTINCTE (sévérité `error` = bloquante) — **séparée** des HS (P0) et des anomalies techniques ; `anomaly_count` ne mélange pas violation/technique/HS.
+- Read models + UI : surfacer **avertissements** vs **violations** vs **non vérifiable** distinctement.
+- Audit : événement `work_time.violation_detected` (règle, version, données, sévérité).
+
+### 6. Framework d'enforcement (DÉCISION PRODUIT À ARBITRER)
+Concevoir un mécanisme générique `allow/warn/block/manager_approval` **par règle**, avec : un **plancher** défini par Market/Platform (quelles règles impératives + enforcement minimal) ; Company/Department peuvent **durcir**, jamais **assouplir** sous le légal ; `manager_approval` = **nouveau workflow** (se raccorde à P4 — autorisations). Aujourd'hui inexistant → à construire et arbitrer avant implémentation.
+
+### 7. Données & dates (pièges)
+Jour civil **≠** période de travail (repos entre journées = écart fin-de-poste → prise suivante, **pas minuit**) ; shift traversant minuit (ne pas double-compter) ; shifts multiples/jour (max journalier = somme ; repos **non** appliqué entre les splits) ; pauses multiples ; lieux multiples ; **week-start configurable** (agrégation hebdo) ; fuseaux ; frontières de période ; temps partiel ; forfait-jours (exempt maxima horaires, repos applicable).
+
+### 8. Multisectoriel
+Modèle unique pour restauration/nettoyage/beauté/logistique ; JobDomain **propose** des défauts, ne **remplace pas** les règles Market/CC/contrat ; aucune dépendance Logistics.
+
+### 9. Stratégie de tests & recette (conforme / non conforme / indéterminable)
+- **Conforme** : 8h/j, repos 11h, <48h/sem → aucun signalement.
+- **Non conforme (violation)** : 12h/j (>10h) ; repos 9h (<11h) ; 50h/sem (>48h) ; semaine sans repos 35h.
+- **Indéterminable** : Market sans `daily_hours_max` configuré → `non vérifiable` (ni violation, ni « conforme »).
+- **Pièges** : nuit minuit (pas de double compte) ; splits (repos non entre eux) ; forfait-jours (maxima horaires exemptés) ; **constaté dépassant le plan** (détecté côté constaté) ; variantes de week-start ; fuseaux. Horloge figée (leçon B2).
+
+### 10. Risques faux positifs / faux négatifs
+- **FP** : minuit compté comme 2 jours ; repos entre splits ; ISO-week vs week-start Company ; forfait-jours signalé sur maxima horaires ; constaté vs plan.
+- **FN** : repos hebdo jamais vérifié ; constaté jamais vérifié (faille actuelle) ; règle absente traitée comme « conforme » (doit être `non vérifiable`).
+
+### 11. Plan d'implémentation minimal (sous-phases, à valider)
+- **P1a** (min, bas risque) : détecter sur le **constaté** les 4 bornes déjà seedées (max jour/sem, repos 11h, **+ repos hebdo 35h**) via le résolveur, en mode **warn** par défaut (signaler, ne pas bloquer) → ferme la faille sans nouveau moteur ni règle inventée.
+- **P1b** : refonte `ShiftRuleValidator` en résultats structurés + alignement week-start.
+- **P1c** : framework d'enforcement allow/warn/block/approval (**arbitrage requis**).
+- **P1d** : exemptions forfait, restrictions nuit, ajouts de règles Market (**vérification légale requise**).
+
+### 12. Décisions produit nécessitant un arbitrage
+1. **Framework d'enforcement** (générique, plancher Platform/Market, durcissement Company/Department, `manager_approval`→P4).
+2. **Exemptions forfait-jours/heures** (exempter maxima horaires, conserver repos).
+3. **Restrictions travail de nuit** (besoin légal à vérifier par Market/CC).
+4. **Blocage côté constaté ?** — une violation sur le constaté **bloque-t-elle** une action (submit/approve) ou **warn + acquittement manager** seulement ? (recommandation : ne jamais effacer une obligation ; warn + acquittement tracé, blocage réservé aux cas impératifs explicitement validés).
+5. **Alignement week-start** de l'agrégation hebdo (corriger ISO→Company).
+6. **Comportement `non vérifiable`** + exposer aux admins les règles non configurées.
+
+### Garde-fous (cadrage)
+Aucun développement. Préserve E3-B, P0, RBAC, isolation tenant, **calculs existants**, DEV/origin/dev. Après validation, contrat détaillé de la sous-phase retenue avant toute modification des moteurs.
+
+### Fichiers de référence (audit, non modifiés)
+`ShiftRuleValidator.php` · `WorkforceRuleResolver.php` · `GenerateTimesheetUseCase.php` · `TimesheetLine.php` · `EmploymentContract.php` · `MarketRuleSetSeeder.php` · `EmployeeSelfController.php` (early-resume).
