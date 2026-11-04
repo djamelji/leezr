@@ -54,7 +54,10 @@ class ShiftReadModel
 
         return Shift::withoutGlobalScopes()
             ->where('company_id', $companyId)
-            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            // SP1a.1 §7 — whereDate (et non whereBetween) : la colonne `date` peut porter une composante
+            // horaire selon le driver (SQLite) ; whereDate compare la partie date, robuste SQLite/MySQL.
+            ->whereDate('date', '>=', $weekStart->toDateString())
+            ->whereDate('date', '<=', $weekEnd->toDateString())
             ->notCancelled()
             ->with(['employee', 'workLocation'])
             ->orderBy('date')
@@ -69,7 +72,8 @@ class ShiftReadModel
     {
         return Shift::withoutGlobalScopes()
             ->where('company_id', $companyId)
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
             ->notCancelled()
             ->with(['employee', 'workLocation'])
             ->orderBy('start_at')

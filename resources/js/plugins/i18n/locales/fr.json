@@ -7554,6 +7554,19 @@
       "status": "Statut",
       "clear": "Effacer les filtres"
     },
+    "copyWeek": {
+      "button": "Copier la semaine précédente",
+      "done": "{created} shift(s) copié(s) en brouillon · {skipped} ignoré(s)"
+    },
+    "duplicateShift": {
+      "menu": "Dupliquer (lendemain)",
+      "done": "Shift dupliqué en brouillon"
+    },
+    "quickAssign": {
+      "arm": "Affecter un modèle",
+      "hint": "Choisissez un modèle puis cliquez une cellule vide",
+      "done": "Shift affecté depuis le modèle"
+    },
     "activities": {
       "dayDetail": "Détail de la journée",
       "addActivity": "Ajouter une activité",

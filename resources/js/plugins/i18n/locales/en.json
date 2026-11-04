@@ -7554,6 +7554,19 @@
       "status": "Status",
       "clear": "Clear filters"
     },
+    "copyWeek": {
+      "button": "Copy previous week",
+      "done": "{created} shift(s) copied as draft · {skipped} skipped"
+    },
+    "duplicateShift": {
+      "menu": "Duplicate (next day)",
+      "done": "Shift duplicated as draft"
+    },
+    "quickAssign": {
+      "arm": "Assign a template",
+      "hint": "Pick a template then click an empty cell",
+      "done": "Shift assigned from template"
+    },
     "activities": {
       "dayDetail": "Day detail",
       "addActivity": "Add an activity",

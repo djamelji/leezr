@@ -258,6 +258,57 @@ class ShiftController extends Controller
         return response()->json(['message' => 'Shift deleted.']);
     }
 
+    /** SP1a.1 §3 — copie d'une semaine vers une autre (nouveaux brouillons, sans activités ni statut publié). */
+    public function copyWeek(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'from_week_start' => 'required|date',
+            'to_week_start' => 'required|date',
+        ]);
+
+        try {
+            $result = app(\App\Modules\Workforce\UseCases\CopyWeekUseCase::class)->execute(
+                $request->attributes->get('company_id'),
+                $validated['from_week_start'],
+                $validated['to_week_start'],
+            );
+
+            return response()->json($result);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** SP1a.1 §3 — duplique un shift en nouveau brouillon (date/employé cible). Scope manager sur la cible. */
+    public function duplicate(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'target_date' => 'nullable|date',
+            'target_employee_id' => 'nullable|integer',
+        ]);
+
+        $shift = Shift::withoutCompanyScope()
+            ->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
+
+        $targetEmployee = $validated['target_employee_id'] ?? $shift->employee_id;
+        $visible = $this->planningScope($request);
+        if ($visible !== null && ! in_array((int) $targetEmployee, $visible, true)) {
+            return response()->json(['message' => 'Collaborateur hors de votre périmètre de gestion.'], 403);
+        }
+
+        try {
+            $new = app(\App\Modules\Workforce\UseCases\DuplicateShiftUseCase::class)->execute(
+                $shift,
+                $validated['target_date'] ?? null,
+                $validated['target_employee_id'] ?? null,
+            );
+
+            return response()->json($new, 201);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
     public function publish(Request $request): JsonResponse
     {
         $validated = $request->validate(['shift_ids' => 'required|array|min:1', 'shift_ids.*' => 'integer']);

@@ -275,31 +275,48 @@ const gridHeaders = computed(() => {
   return cols
 })
 
-// Transform weekShifts (grouped by employee) into table rows
+// SP1a.1 §4 — le endpoint /shifts/week renvoie une liste PLATE de shifts (et non des entrées groupées par
+// employé). On groupe donc par employé, en semant une ligne pour CHAQUE collaborateur (même sans shift) afin
+// de permettre l'affectation sur cellule vide. Supporte aussi un éventuel format déjà groupé (rétro-compat).
+const pushShiftToRow = (row, shift) => {
+  const shiftDate = shift.date?.split('T')[0] || shift.date
+  const dayIdx = weekDates.value.indexOf(shiftDate)
+  if (dayIdx !== -1) {
+    if (!row.shifts[dayIdx]) row.shifts[dayIdx] = []
+    row.shifts[dayIdx].push(shift)
+  }
+}
+
 const gridRows = computed(() => {
   const data = store.weekShifts
-  if (!data || !Array.isArray(data)) return []
+  if (!Array.isArray(data)) return []
 
-  return data.map(entry => {
-    const row = {
-      employee: entry.employee,
-      employee_id: entry.employee?.id || entry.employee_id,
-      shifts: {},
-    }
+  const rows = new Map()
+  const ensure = (employee, employeeId) => {
+    if (!employeeId) return null
+    if (!rows.has(employeeId)) rows.set(employeeId, { employee: employee || { id: employeeId }, employee_id: employeeId, shifts: {} })
+    else if (employee && !rows.get(employeeId).employee?.first_name) rows.get(employeeId).employee = employee
 
-    // Map shifts to day slots
-    const shifts = entry.shifts || []
-    shifts.forEach(shift => {
-      const shiftDate = shift.date?.split('T')[0] || shift.date
-      const dayIdx = weekDates.value.indexOf(shiftDate)
-      if (dayIdx !== -1) {
-        if (!row.shifts[dayIdx]) row.shifts[dayIdx] = []
-        row.shifts[dayIdx].push(shift)
-      }
+    return rows.get(employeeId)
+  }
+
+  // Semences : tous les collaborateurs chargés (lignes assignables même vides).
+  ;(employeesStore.employees || []).forEach(e => ensure(e, e.id))
+
+  const grouped = data.length > 0 && data[0] && data[0].shifts !== undefined && data[0].start_at === undefined
+  if (grouped) {
+    data.forEach(entry => {
+      const row = ensure(entry.employee, entry.employee?.id || entry.employee_id)
+      if (row) (entry.shifts || []).forEach(s => pushShiftToRow(row, s))
     })
+  } else {
+    data.forEach(shift => {
+      const row = ensure(shift.employee, shift.employee?.id || shift.employee_id)
+      if (row) pushShiftToRow(row, shift)
+    })
+  }
 
-    return row
-  })
+  return [...rows.values()]
 })
 
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
@@ -356,6 +373,55 @@ const covColor = cov => {
   if (cov.gap < 0) return 'warning'
 
   return 'success'
+}
+
+// ── SP1a.1 — copie de semaine, duplication, affectation rapide par modèle ──
+const armedTemplateId = ref(null)
+const armedTemplateItems = computed(() => store.allTemplates.filter(t => t.enabled !== false).map(t => ({ title: t.name, value: t.id })))
+
+const copyPreviousWeek = async () => {
+  const prev = new Date(currentWeekStart.value)
+  prev.setDate(prev.getDate() - 7)
+  const fromIso = prev.toISOString().slice(0, 10)
+  try {
+    const r = await store.copyWeek({ fromWeekStart: fromIso, toWeekStart: weekDateIso.value })
+    toast(t('planning.copyWeek.done', { created: r.created, skipped: r.skipped }), r.created ? 'success' : 'warning')
+    fetchWeekData()
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
+}
+
+const duplicateShiftAction = async shift => {
+  try {
+    await store.duplicateShift(shift.id, {})
+    toast(t('planning.duplicateShift.done'), 'success')
+    fetchWeekData()
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
+}
+
+// Clic sur cellule vide : si un modèle est « armé », affecte directement ; sinon ouvre le drawer.
+const onEmptyCell = (employeeId, date) => {
+  if (armedTemplateId.value) return quickAssign(employeeId, date)
+
+  return openCreateShift(employeeId, date)
+}
+const quickAssign = async (employeeId, date) => {
+  const tpl = store.allTemplates.find(t => t.id === armedTemplateId.value)
+  if (!tpl) return openCreateShift(employeeId, date)
+  try {
+    await store.createShift({
+      employee_id: employeeId, date,
+      start_at: `${date} ${tpl.start_time}`, end_at: `${date} ${tpl.end_time}`,
+      timezone: 'Europe/Paris', schedule_template_id: tpl.id, work_location_id: tpl.work_location_id,
+    })
+    toast(t('planning.quickAssign.done'), 'success')
+    fetchWeekData()
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
 }
 
 // ── Day detail (multi-activités) — Smart Planning SP1b ───────
@@ -1420,6 +1486,16 @@ watch(activeTab, tab => {
               </div>
               <div class="d-flex align-center gap-2">
                 <VBtn
+                  v-can="'workforce.planning_manage'"
+                  variant="text"
+                  size="small"
+                  prepend-icon="tabler-copy"
+                  data-test="copy-prev-week"
+                  @click="copyPreviousWeek"
+                >
+                  {{ $t('planning.copyWeek.button') }}
+                </VBtn>
+                <VBtn
                   v-can="'workforce.coverage_manage'"
                   variant="text"
                   size="small"
@@ -1495,6 +1571,18 @@ watch(activeTab, tab => {
               >
                 {{ $t('planning.filters.clear') }}
               </VBtn>
+              <VSpacer />
+              <AppSelect
+                v-model="armedTemplateId"
+                :items="armedTemplateItems"
+                :label="$t('planning.quickAssign.arm')"
+                :hint="$t('planning.quickAssign.hint')"
+                persistent-hint
+                density="compact"
+                clearable
+                prepend-inner-icon="tabler-click"
+                style="min-inline-size: 220px;"
+              />
             </div>
           </VCardText>
 
@@ -1625,7 +1713,7 @@ watch(activeTab, tab => {
                   :key="date"
                   class="text-center planning-cell"
                   :class="{ 'bg-light': date === new Date().toISOString().slice(0, 10) }"
-                  @click="!row.shifts[dayIdx]?.length ? openCreateShift(row.employee_id, date) : null"
+                  @click="!row.shifts[dayIdx]?.length ? onEmptyCell(row.employee_id, date) : null"
                 >
                   <template v-if="row.shifts[dayIdx]?.length">
                     <div
@@ -1684,6 +1772,11 @@ watch(activeTab, tab => {
                             @click="openEditShift(shift)"
                           />
                           <VListItem
+                            prepend-icon="tabler-copy"
+                            :title="$t('planning.duplicateShift.menu')"
+                            @click="duplicateShiftAction(shift)"
+                          />
+                          <VListItem
                             v-if="shift.status === 'draft'"
                             prepend-icon="tabler-send"
                             :title="$t('planning.publish')"
@@ -1714,7 +1807,7 @@ watch(activeTab, tab => {
                       size="x-small"
                       color="secondary"
                       class="planning-add-btn"
-                      @click.stop="openCreateShift(row.employee_id, date)"
+                      @click.stop="onEmptyCell(row.employee_id, date)"
                     >
                       <VIcon
                         icon="tabler-plus"

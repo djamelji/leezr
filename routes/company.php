@@ -601,6 +601,8 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish'])->middleware($perm('workforce.planning_publish'));
     Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/copy-week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyWeek'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/{id}/duplicate', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'duplicate'])->middleware($perm('workforce.planning_manage'));
     Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));

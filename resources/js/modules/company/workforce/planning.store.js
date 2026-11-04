@@ -151,6 +151,22 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       return data
     },
 
+    // SP1a.1 — copie de semaine (nouveaux brouillons) et duplication d'un shift.
+    async copyWeek({ fromWeekStart, toWeekStart }) {
+      const data = await $api('/workforce/planning/shifts/copy-week', {
+        method: 'POST',
+        body: { from_week_start: fromWeekStart, to_week_start: toWeekStart },
+      })
+      this._weekShifts = []
+      return data
+    },
+
+    async duplicateShift(id, payload = {}) {
+      const data = await $api(`/workforce/planning/shifts/${id}/duplicate`, { method: 'POST', body: payload })
+      this._weekShifts = []
+      return data
+    },
+
     // ── Templates ─────────────────────────────────────────────
     async fetchTemplates({ all = false, force = false } = {}) {
       const target = all ? '_allTemplates' : '_templates'

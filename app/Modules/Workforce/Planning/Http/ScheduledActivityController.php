@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  */
 class ScheduledActivityController extends Controller
 {
-    /** Liste par shift (?shift_id=) ou par salarié+jour (?employee_id=&date=). */
+    /** Liste par shift (?shift_id=) ou par salarié+jour (?employee_id=&date=). Scope manager sur la lecture. */
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -34,7 +34,23 @@ class ScheduledActivityController extends Controller
             $q->whereDate('start_at', $request->query('date'));
         }
 
+        // SP1a.1 §1C — périmètre de lecture : un manager ne voit que les activités des collaborateurs visibles
+        // (ne pas confondre droit de publication et consultation Company-wide).
+        $visible = $this->readScope($request);
+        if ($visible !== null) {
+            $q->whereIn('employee_id', $visible);
+        }
+
         return response()->json($q->orderBy('start_at')->get());
+    }
+
+    /** @return array<int>|null  null = vue globale (view-all ou publish). */
+    private function readScope(Request $request): ?array
+    {
+        $viewAll = WorkforceAccess::hasViewAll($request, 'employee')
+            || ($request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish') ?? false);
+
+        return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
     }
 
     public function store(Request $request): JsonResponse
