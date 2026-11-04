@@ -25012,3 +25012,36 @@ DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature 
 
 ### Fichiers clés
 `core/components/{AppFilterPanel,AppAdaptiveDialog}.vue` (nouveaux) · `employees/{index,[id]}.vue` · `_GenerateContractDialog.vue` / `_EmployeeAccessDialog.vue` (fullscreen mobile) · `docs/ui/smart-responsive-primitives.md` · `tests/e2e/e3r-r4.spec.js`.
+
+---
+
+## ADR-697 — WORKFORCE EXPERIENCE 2026 / E3-B : refonte opérationnelle Temps & Planning (B1)
+
+**Date** : 2026-11-04
+**Statut** : Accepté (B1 livré DEV — vérifié par `X-Build-Version`). Sous-incréments B2 (pointages/écarts), B3 (feuilles/validations), B4 (recette) à suivre.
+**Contexte** : E3-R clos (ADR-696). Reprise de Workforce : refondre la PRÉSENTATION des écrans Temps de travail & Planning en **réutilisant les primitives E3-R**, **sans toucher aux moteurs** (shifts, pointage, feuilles, règles légales). Cartographie préalable de l'existant (pages/services/endpoints/permissions/immutabilité) — pas de nouvel audit responsive.
+
+### Décisions B1 — « Aujourd'hui & vue Planning »
+1. **Espace « Temps de travail »** (`time/index.vue`) : les 4 activités (Aujourd'hui · Planning · Pointages · Feuilles) passent de `VTabs`/`VWindow` à **`AppSectionNavigation`** (navigation supérieure au-dessus du contenu ; desktop icône+libellé ; **mobile icônes seules**, sans troncature ni scroll). `tabAccess` (gating par capacité réelle) et le deep-link `?tab=` **conservés**.
+2. **Planning mobile = AGENDA, pas une grille compressée** (`_PlanningCalendar.vue`) : vue initiale **responsive** — `listWeek` (agenda liste par jour) sur mobile, `timeGridWeek` (grille semaine) sur desktop ; bascule au changement de breakpoint (`changeView`, sans recharger) ; barre d'outils compacte mobile (`listWeek,timeGridDay`). **Heures de nuit non masquées** (`slotMinTime 00:00`, scroll à 06:00) — shifts traversant minuit visibles.
+3. **Grille hebdo réservée au desktop** (`planning/index.vue`) : la grille custom (lignes=collaborateurs × 7 jours, ~1110px) **n'est pas lisible < 1110px** → son sous-onglet est **masqué sur mobile** ; le mobile utilise l'agenda. Sous-onglets planning également via `AppSectionNavigation`. Si l'utilisateur est sur la grille et passe en mobile → bascule auto sur l'agenda.
+
+### Moteur INCHANGÉ (présentation seule)
+Stores (planning/timesheets), endpoints, UseCases, règles (`ShiftRuleValidator`), **immutabilité des shifts publiés** (édition/D&D réservés aux brouillons), publication atomique, verrou optimiste, scope manager, **confidentialité** — tout est préservé. Aucun calcul réglementaire modifié.
+
+### Preuves B1
+0 débordement @390 (espace Temps + planning), 0 erreur JS. Planning mobile rendu en **liste agenda** (vérifié visuellement). Aucun test ne référençait les anciens data-test `tw-tab-*`. Captures avant/après.
+
+### Vigilance documentée (pour B2+)
+- La grille hebdo custom utilisait un **lundi codé en dur** (vs week-start configurable utilisé par FullCalendar) — incohérence à traiter lors d'une refonte de la grille (desktop) en B-ultérieur.
+- Permissions UI liste (`time_manage`) plus larges que le moteur (`timesheet_submit/approve`, `time_approve`) — l'UI reste permissive, le **backend fait autorité** (déjà le cas).
+- Shifts de nuit : formulaire ne facilite pas un `end_at` daté au lendemain (invariant `end_at > start_at`) — à améliorer en B2.
+
+### Régressions / tests connus
+Les échecs `WorkforceTimesheetRulesTest` sont **date-dépendants** (fixtures à dates fixes vs date du jour) : leur nombre est passé de **2 à 3** (ajout de « paid break is classified ») par **dérive de date** (2026-11-04), **pas par B1** (frontend uniquement, backend non touché). À corriger séparément (fixtures de dates relatives).
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature/règles inchangés · RBAC/ModuleGate conservés · isolation tenant · pas de dépendance Logistics · SSH compromis non utilisé · pas de nouvelle bibliothèque UI (primitives E3-R réutilisées).
+
+### Fichiers clés
+`time/index.vue` · `planning/index.vue` · `planning/_PlanningCalendar.vue`.

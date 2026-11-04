@@ -3,7 +3,9 @@ import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
+import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import PlanningCalendar from './_PlanningCalendar.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
@@ -20,6 +22,16 @@ const { can } = useCan()
 
 // ── Tab navigation ───────────────────────────────────────────
 const activeTab = ref('calendar')
+const { smAndDown } = useDisplay()
+
+// E3-B (ADR-697) — sous-navigation planning. La GRILLE hebdo (lignes=collaborateurs × 7 jours, ~1110px)
+// n'est pas lisible sur mobile : on la réserve au desktop ; le mobile utilise l'AGENDA (onglet Calendrier).
+const planningSections = computed(() => [
+  { value: 'calendar', label: t('planning.tabs.calendar'), icon: 'tabler-calendar-week' },
+  ...(smAndDown.value ? [] : [{ value: 'planning', label: t('planning.tabs.planning'), icon: 'tabler-layout-grid' }]),
+  { value: 'templates', label: t('planning.tabs.templates'), icon: 'tabler-template' },
+])
+watch(smAndDown, m => { if (m && activeTab.value === 'planning') activeTab.value = 'calendar' })
 
 // ── Calendrier Planning (W-G4A : scope + filtres serveur, absences + conflits) ──
 const calRef = ref()
@@ -912,32 +924,11 @@ watch(activeTab, tab => {
     </div>
 
     <!-- Tabs -->
-    <VTabs
+    <AppSectionNavigation
       v-model="activeTab"
-      class="v-tabs-pill mb-6"
-    >
-      <VTab value="calendar">
-        <VIcon
-          icon="tabler-calendar-week"
-          class="me-2"
-        />
-        {{ $t('planning.tabs.calendar') }}
-      </VTab>
-      <VTab value="planning">
-        <VIcon
-          icon="tabler-layout-grid"
-          class="me-2"
-        />
-        {{ $t('planning.tabs.planning') }}
-      </VTab>
-      <VTab value="templates">
-        <VIcon
-          icon="tabler-template"
-          class="me-2"
-        />
-        {{ $t('planning.tabs.templates') }}
-      </VTab>
-    </VTabs>
+      :sections="planningSections"
+      class="mb-5"
+    />
 
     <VWindow v-model="activeTab">
       <!-- ═══════════════════════════════════════════════════════ -->

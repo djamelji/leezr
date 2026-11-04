@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
+import { useDisplay } from 'vuetify'
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useWorldStore } from '@/core/stores/world'
 
@@ -18,10 +19,17 @@ const props = defineProps({
 const emit = defineEmits(['select', 'conflicts', 'move'])
 
 const { locale } = useI18n()
+const { smAndDown } = useDisplay()
 const store = usePlanningStore()
 const world = useWorldStore()
 const refCalendar = ref()
 const loading = ref(false)
+
+// E3-B (ADR-697) — Planning mobile = AGENDA (liste par jour), pas une grille hebdo compressée.
+// Desktop = grille semaine. Bascule la vue au changement de breakpoint (sans recharger).
+watch(smAndDown, isMobile => {
+  refCalendar.value?.getApi()?.changeView(isMobile ? 'listWeek' : 'timeGridWeek')
+})
 
 const SHIFT_COLOR = { draft: '#a8aaae', published: '#7367f0', completed: '#28c76f' }
 const CONFLICT = '#ea5455'
@@ -89,7 +97,7 @@ const onEventChange = info => {
 
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-  initialView: 'timeGridWeek',
+  initialView: smAndDown.value ? 'listWeek' : 'timeGridWeek',
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
   timeZone: world.timezone || 'local',
   // Premier jour de semaine : préférence Company (W-G4B) si fournie, sinon déduit de la locale par
@@ -99,14 +107,18 @@ const calendarOptions = computed(() => ({
   nowIndicator: true,
   editable: props.editable,
   eventDurationEditable: props.editable,
-  headerToolbar: { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' },
-  buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Liste' },
+  headerToolbar: smAndDown.value
+    ? { start: 'prev,next', center: 'title', end: 'listWeek,timeGridDay' }
+    : { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' },
+  buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Agenda' },
   events: fetchEvents,
   eventClick({ event }) { emit('select', event.extendedProps) },
   eventDrop: onEventChange,
   eventResize: onEventChange,
-  slotMinTime: '05:00:00',
+  // E3-B : ne pas masquer les heures de nuit (shifts traversant minuit visibles sur la journée).
+  slotMinTime: '00:00:00',
   slotMaxTime: '24:00:00',
+  scrollTime: '06:00:00',
   expandRows: true,
 }))
 

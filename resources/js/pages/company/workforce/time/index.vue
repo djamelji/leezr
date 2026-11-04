@@ -3,6 +3,7 @@ import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import TimeCockpit from './_TimeCockpit.vue'
 // PRODUCT-UX-2 (LOT B1) — espace « Temps de travail » UNIFIÉ : Aujourd'hui (cockpit prévu/réel) +
 // Planning + Présences + Feuilles de temps, montés en onglets. Le planning réutilise sa page
@@ -32,6 +33,16 @@ const goBackToPayroll = () => { if (returnTo.value) router.push(returnTo.value) 
 
 // ── Tab navigation (deep-link ?tab=) ─────────────────────────
 const TABS = ['cockpit', 'planning', 'entries', 'timesheets']
+
+// E3-B (ADR-697) — 4 activités via AppSectionNavigation (au-dessus du contenu, icônes seules mobile),
+// filtrées par les capacités réellement accessibles (tabAccess). Deep-link ?tab= conservé.
+const timeSections = computed(() => [
+  { value: 'cockpit', label: t('timeWork.tabs.today'), icon: 'tabler-dashboard', show: tabAccess.value.cockpit },
+  { value: 'planning', label: t('timeWork.tabs.planning'), icon: 'tabler-calendar', show: tabAccess.value.planning },
+  { value: 'entries', label: t('timeWork.tabs.presence'), icon: 'tabler-clock-record', show: tabAccess.value.entries },
+  { value: 'timesheets', label: t('timeTracking.tabs.timesheets'), icon: 'tabler-file-analytics', show: tabAccess.value.timesheets },
+].filter(s => s.show))
+
 const firstAccessibleTab = () => TABS.find(tb => tabAccess.value[tb]) || 'cockpit'
 const activeTab = ref(TABS.includes(route.query.tab) && tabAccess.value[route.query.tab] ? route.query.tab : firstAccessibleTab())
 watch(activeTab, v => {
@@ -468,28 +479,12 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Tabs : Aujourd'hui (prévu/réel) · Planning · Présences · Feuilles de temps -->
-    <VTabs
+    <!-- 4 activités : Aujourd'hui · Planning · Présences · Feuilles de temps (navigation supérieure) -->
+    <AppSectionNavigation
       v-model="activeTab"
-      class="v-tabs-pill mb-6"
-    >
-      <VTab v-if="canTimesheet" value="cockpit" data-test="tw-tab-today">
-        <VIcon icon="tabler-dashboard" class="me-2" />
-        {{ $t('timeWork.tabs.today') }}
-      </VTab>
-      <VTab v-if="canPlanning" value="planning" data-test="tw-tab-planning">
-        <VIcon icon="tabler-calendar" class="me-2" />
-        {{ $t('timeWork.tabs.planning') }}
-      </VTab>
-      <VTab v-if="canTimesheet" value="entries" data-test="tw-tab-entries">
-        <VIcon icon="tabler-clock-record" class="me-2" />
-        {{ $t('timeWork.tabs.presence') }}
-      </VTab>
-      <VTab v-if="canTimesheet" value="timesheets" data-test="tw-tab-timesheets">
-        <VIcon icon="tabler-file-analytics" class="me-2" />
-        {{ $t('timeTracking.tabs.timesheets') }}
-      </VTab>
-    </VTabs>
+      :sections="timeSections"
+      class="mb-5"
+    />
 
     <VWindow v-model="activeTab" :touch="false">
       <!-- ═══════════════════════════════════════════════════════ -->
