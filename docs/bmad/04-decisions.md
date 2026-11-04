@@ -25627,3 +25627,41 @@ Drag-and-drop depuis la palette · copier la semaine · duplication rapide de sh
 
 ### Fichiers clés SP1b
 `ScheduledActivity.php` · `ScheduledActivityValidator.php` · `Create/UpdateScheduledActivityUseCase.php` · `ScheduledActivityController.php` · migration `2026_11_04_200001` · `_ActivityDay.vue` · `planning/index.vue` + `planning.store.js` · i18n · `WorkforceScheduledActivitySP1bTest.php` · `workforce-sp1b-activities.spec.js`.
+
+---
+
+## ADR-708 — WORKFORCE / SMART PLANNING SP1a.1 (LIVRÉ) : correction de dette (invariants, couverture, UX, bug grille)
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 9eda73b). GO SP1a.1 (checkpoint avant SP2). **Arrêt après SP1a.1 pour validation. SP2–SP5 NON engagés.**
+**Garde-fous** : DEV · origin/dev. Aucun moteur Payroll/Billing/Signature. Immutabilité/publication/verrou optimiste des Shifts INCHANGÉS. Pas de couplage vertical. Zéro régression (198 tests liés verts).
+
+### Défauts réels constatés & corrigés
+1. **Capacité = somme (SP1b)** : deux activités simultanées pouvaient s'additionner. → `ScheduledActivityValidator` recalcule l'occupation en **UNION d'intervalles** (fusion des recouvrements) ≤ temps travaillable. Jamais de double-compte de simultanées.
+2. **Pause non protégée (SP1b)** : la somme des durées ne bloquait pas une activité occupant la pause. → **fenêtres de pause réelles** (`template_snapshot['break_windows']`, multi-pauses, minuit) : une activité exclusive chevauchant une pause est refusée (422). Fallback capacité quand seule la durée scalaire est connue (limite documentée).
+3. **Lecture activités Company-wide (SP1b)** : `index` non scopé → fuite potentielle. → **scope manager** sur `index` (collaborateurs visibles ; publish/view-all = global). Ne confond plus publication et consultation.
+4. **Couverture binaire (SP1a)** : couverture évaluée sur la fenêtre entière. → `CoverageReadModel` réécrit en **sous-intervalles** (découpe aux bornes des shifts, employés distincts par segment, sous/sur-effectif PAR intervalle, statut = pire segment, `assigned` = minimum garanti, `peak_assigned` exposé, pause-aware). Ex. 09–18 besoin 2 avec A/B 09–13 + C/D 13–18 → couvert ; A/B seuls → 13–18 en sous-effectif.
+5. **BUG GRILLE (§4, cause de l'instabilité Playwright)** : `/shifts/week` renvoie une liste **plate** de shifts mais `gridRows` attendait des entrées **groupées par employé** (`entry.shifts`) → **les chips ne s'affichaient jamais** (seule la couverture voyait les shifts). → `gridRows` groupe désormais la liste plate par employé + sème une ligne par collaborateur (cellules assignables). Débloque grille → timeline. **Défaut pré-existant E3-B, non couvert par les recettes antérieures.**
+6. **`whereBetween('date')` (§7)** : `ShiftReadModel::forWeek`/`calendar` → **`whereDate`** (robuste SQLite/MySQL), test de régression.
+
+### UX livrée (serveur-backed, aucun contournement)
+- **Copier la semaine précédente** (`CopyWeekUseCase`) : recrée chaque shift source en **NOUVEAU BROUILLON** décalé — jamais le statut publié, ni les activités, ni l'historique ; conflits ignorés (comptés) via `CreateShiftUseCase` (tous invariants). Bouton `copy-prev-week`.
+- **Dupliquer un shift** (`DuplicateShiftUseCase`) : nouveau brouillon (lendemain par défaut), scope manager sur la cible.
+- **Affectation rapide par modèle** (clic, **sans drag**) : modèle « armé » → clic sur cellule vide crée le shift (via `CreateShiftUseCase`).
+- Toutes via UseCases serveur : RBAC, contrôles shift, immutabilité, verrou optimiste, publication atomique préservés.
+
+### Recette
+`WorkforceSmartPlanningSP1a1Test` (9) : pause refusée/ hors-pause acceptée · union capacité non-exclusif · couverture sous-intervalles couvert + gap partiel · scope lecture (pas de fuite Company-wide) · copie semaine brouillons + source intacte · duplication brouillon · forWeek retourne le shift. **Non-régression 198** (E3-B, P0, P1a, SP1a, SP1b, immutabilité/publication). `pnpm build` clean. **Playwright E2E** `workforce-sp1a1-grid-timeline.spec.js` : **grille → ouverture timeline → ajout d'activité persistée → persistance après rechargement** + **copie de semaine** (boutons réels, 200/201). Recettes SP1a/SP1b conservées vertes.
+
+### Performance (§6) — mesure honnête
+Grille rendue avec les données locales ; **virtualisation des lignes NON implémentée** — avec 200 collaborateurs × 7 jours la table reste non fenêtrée. Sticky header + filtres présents. **Mesure synthétique 200 pers. + virtualisation = reste à faire** (non déclaré comme livré).
+
+### Limitations restantes (non présentées comme livrées)
+- **Drag-and-drop pixel** (palette→cellule, déplacement d'activité à la souris) et **multi-sélection marquee** : NON livrés (affectation par clic + édition d'heures livrées à la place).
+- **Virtualisation 200** et **mesure de perf chiffrée** : à faire.
+- **Refonte mobile dédiée** : le dialog détail journalier est responsive/tactile ; parcours mobile complet (sélection jour → shifts → activités en pleine page) non refait.
+- **Pauses dans la couverture** : exploitées si `break_windows` déclarées ; sinon non plaçables (seul le scalaire existe).
+- Déplacements multi-lieux : signalés, non optimisés (SP2+).
+
+### Fichiers clés SP1a.1
+`ScheduledActivityValidator.php` (union + pauses) · `CoverageReadModel.php` (sous-intervalles) · `ScheduledActivityController.php` (scope index) · `ShiftReadModel.php` (whereDate) · `CopyWeekUseCase.php` · `DuplicateShiftUseCase.php` · `ShiftController.php` (copyWeek/duplicate) · `planning/index.vue` (gridRows groupé + copie/duplication/quick-assign) · `planning.store.js` · i18n · `WorkforceSmartPlanningSP1a1Test.php` · `workforce-sp1a1-grid-timeline.spec.js`.
