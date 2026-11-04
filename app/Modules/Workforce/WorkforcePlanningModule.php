@@ -27,6 +27,7 @@ class WorkforcePlanningModule implements ModuleDefinition
                 ['key' => 'workforce.planning_view', 'label' => 'View Planning', 'hint' => 'View schedules and assigned shifts.'],
                 ['key' => 'workforce.planning_manage', 'label' => 'Manage Planning', 'is_admin' => true, 'hint' => 'Create, edit, and cancel shifts and templates.'],
                 ['key' => 'workforce.planning_publish', 'label' => 'Publish Planning', 'is_admin' => true, 'hint' => 'Publish schedules to make shifts visible to employees.'],
+                ['key' => 'workforce.coverage_manage', 'label' => 'Manage Coverage', 'is_admin' => true, 'hint' => 'Create and edit staffing coverage requirements.'],
             ],
             bundles: [
                 [
@@ -39,7 +40,7 @@ class WorkforcePlanningModule implements ModuleDefinition
                     'key' => 'workforce.planning_management',
                     'label' => 'Planning Management',
                     'hint' => 'Create, manage, and publish shifts.',
-                    'permissions' => ['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish'],
+                    'permissions' => ['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish', 'workforce.coverage_manage'],
                 ],
             ],
             scope: 'company',

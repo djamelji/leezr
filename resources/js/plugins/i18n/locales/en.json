@@ -7547,6 +7547,47 @@
       "locations": "Locations",
       "calendar": "Calendar"
     },
+    "filters": {
+      "department": "Department",
+      "location": "Location",
+      "activity": "Activity",
+      "status": "Status",
+      "clear": "Clear filters"
+    },
+    "coverage": {
+      "title": "Coverage",
+      "tooltip": "{assigned} of {needed} required assigned",
+      "manage": "Staffing needs",
+      "hint": "Define how many people are expected per day. Coverage compares the need to assigned shifts (never counts the same employee twice).",
+      "allDay": "All day",
+      "created": "Requirement created",
+      "updated": "Requirement updated",
+      "deleted": "Requirement deleted",
+      "weekdays": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "priorities": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "fields": {
+        "label": "Label",
+        "weekday": "Day",
+        "headcount": "Required headcount",
+        "startTime": "Start",
+        "endTime": "End",
+        "department": "Department",
+        "priority": "Priority"
+      }
+    },
     "stats": {
       "totalShifts": "Total shifts",
       "hoursPlanned": "Hours planned",
@@ -7605,12 +7646,16 @@
       },
       "fields": {
         "name": "Template name",
+        "code": "Code",
+        "activityType": "Activity type",
         "color": "Color",
         "startTime": "Start time",
         "endTime": "End time",
         "breakDuration": "Break duration (min)",
         "breakDurationHint": "Break duration in minutes (deducted from worked time).",
-        "location": "Default location"
+        "location": "Default location",
+        "department": "Department",
+        "departmentHint": "Leave empty for a company-wide template."
       }
     },
     "locations": {

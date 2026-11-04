@@ -3,6 +3,7 @@
 namespace App\Modules\Workforce\UseCases;
 
 use App\Core\Audit\AuditLogger;
+use App\Core\Workforce\Department;
 use App\Core\Workforce\ScheduleTemplate;
 use App\Core\Workforce\WorkLocation;
 
@@ -16,6 +17,10 @@ class CreateScheduleTemplateUseCase
         int $breakDurationMinutes = 0,
         ?string $color = null,
         ?int $workLocationId = null,
+        ?string $code = null,
+        ?string $icon = null,
+        ?string $activityType = null,
+        ?int $departmentId = null,
     ): ScheduleTemplate {
         $exists = ScheduleTemplate::withoutGlobalScopes()
             ->where('company_id', $companyId)
@@ -37,14 +42,29 @@ class CreateScheduleTemplateUseCase
             }
         }
 
+        if ($departmentId) {
+            $dept = Department::withoutGlobalScopes()
+                ->where('id', $departmentId)
+                ->where('company_id', $companyId)
+                ->exists();
+
+            if (! $dept) {
+                throw new \DomainException('Department does not belong to this company.');
+            }
+        }
+
         $template = ScheduleTemplate::create([
             'company_id' => $companyId,
             'name' => $name,
+            'code' => $code,
             'start_time' => $startTime,
             'end_time' => $endTime,
             'break_duration_minutes' => $breakDurationMinutes,
             'color' => $color,
+            'icon' => $icon,
+            'activity_type' => $activityType,
             'work_location_id' => $workLocationId,
+            'department_id' => $departmentId,
         ]);
 
         app(AuditLogger::class)->logCompany(

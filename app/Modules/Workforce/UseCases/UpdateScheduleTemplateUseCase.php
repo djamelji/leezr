@@ -3,6 +3,7 @@
 namespace App\Modules\Workforce\UseCases;
 
 use App\Core\Audit\AuditLogger;
+use App\Core\Workforce\Department;
 use App\Core\Workforce\ScheduleTemplate;
 use App\Core\Workforce\WorkLocation;
 
@@ -33,11 +34,23 @@ class UpdateScheduleTemplateUseCase
             }
         }
 
+        if (isset($data['department_id']) && $data['department_id'] !== null) {
+            $dept = Department::withoutGlobalScopes()
+                ->where('id', $data['department_id'])
+                ->where('company_id', $template->company_id)
+                ->exists();
+
+            if (! $dept) {
+                throw new \DomainException('Department does not belong to this company.');
+            }
+        }
+
         $before = $template->only(['name', 'start_time', 'end_time', 'break_duration_minutes', 'enabled']);
 
         $template->fill(collect($data)->only([
-            'name', 'start_time', 'end_time', 'break_duration_minutes',
-            'color', 'work_location_id', 'enabled', 'sort_order', 'metadata',
+            'name', 'code', 'start_time', 'end_time', 'break_duration_minutes',
+            'color', 'icon', 'activity_type', 'work_location_id', 'department_id',
+            'enabled', 'sort_order', 'metadata',
         ])->toArray());
 
         $template->save();

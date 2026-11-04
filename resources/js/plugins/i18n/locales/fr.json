@@ -7547,6 +7547,47 @@
       "locations": "Lieux",
       "calendar": "Calendrier"
     },
+    "filters": {
+      "department": "Département",
+      "location": "Lieu",
+      "activity": "Activité",
+      "status": "Statut",
+      "clear": "Effacer les filtres"
+    },
+    "coverage": {
+      "title": "Couverture",
+      "tooltip": "Affecté {assigned} sur {needed} requis",
+      "manage": "Besoins de personnel",
+      "hint": "Définissez le nombre de collaborateurs attendus par jour. La couverture compare le besoin aux shifts affectés (jamais le même employé deux fois).",
+      "allDay": "Journée entière",
+      "created": "Besoin créé",
+      "updated": "Besoin mis à jour",
+      "deleted": "Besoin supprimé",
+      "weekdays": {
+        "0": "Dimanche",
+        "1": "Lundi",
+        "2": "Mardi",
+        "3": "Mercredi",
+        "4": "Jeudi",
+        "5": "Vendredi",
+        "6": "Samedi"
+      },
+      "priorities": {
+        "low": "Basse",
+        "normal": "Normale",
+        "high": "Haute",
+        "critical": "Critique"
+      },
+      "fields": {
+        "label": "Libellé",
+        "weekday": "Jour",
+        "headcount": "Effectif requis",
+        "startTime": "Début",
+        "endTime": "Fin",
+        "department": "Département",
+        "priority": "Priorité"
+      }
+    },
     "stats": {
       "totalShifts": "Shifts au total",
       "hoursPlanned": "Heures planifiées",
@@ -7605,12 +7646,16 @@
       },
       "fields": {
         "name": "Nom du modèle",
+        "code": "Code",
+        "activityType": "Type d'activité",
         "color": "Couleur",
         "startTime": "Heure de début",
         "endTime": "Heure de fin",
         "breakDuration": "Durée de pause (min)",
         "breakDurationHint": "Durée de pause en minutes (déduite du temps travaillé).",
-        "location": "Lieu par défaut"
+        "location": "Lieu par défaut",
+        "department": "Département",
+        "departmentHint": "Laisser vide pour un modèle disponible dans toute l'entreprise."
       }
     },
     "locations": {

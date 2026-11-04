@@ -14,11 +14,15 @@ class ScheduleTemplate extends Model
     protected $fillable = [
         'company_id',
         'name',
+        'code',
         'start_time',
         'end_time',
         'break_duration_minutes',
         'color',
+        'icon',
+        'activity_type',
         'work_location_id',
+        'department_id',
         'enabled',
         'sort_order',
         'metadata',
@@ -26,6 +30,7 @@ class ScheduleTemplate extends Model
 
     protected $casts = [
         'break_duration_minutes' => 'integer',
+        'department_id' => 'integer',
         'enabled' => 'boolean',
         'sort_order' => 'integer',
         'metadata' => 'array',
@@ -45,6 +50,11 @@ class ScheduleTemplate extends Model
         return $this->belongsTo(WorkLocation::class, 'work_location_id');
     }
 
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
     public function shifts()
     {
         return $this->hasMany(Shift::class, 'schedule_template_id');
@@ -57,10 +67,14 @@ class ScheduleTemplate extends Model
         return [
             'template_id' => $this->id,
             'template_name' => $this->name,
+            'code' => $this->code,
             'start_time' => $this->start_time,
             'end_time' => $this->end_time,
             'break_duration_minutes' => $this->break_duration_minutes,
             'work_location_id' => $this->work_location_id,
+            'department_id' => $this->department_id,
+            'activity_type' => $this->activity_type,
+            'icon' => $this->icon,
             'color' => $this->color,
         ];
     }

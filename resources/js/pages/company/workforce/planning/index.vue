@@ -250,6 +250,7 @@ const fetchWeekData = async () => {
     await Promise.all([
       store.fetchWeekShifts(weekDateIso.value),
       store.fetchStatistics({ from: weekDates.value[0], to: weekDates.value[6] }),
+      loadCoverage(),
     ])
   } finally {
     gridLoading.value = false
@@ -299,6 +300,126 @@ const gridRows = computed(() => {
     return row
   })
 })
+
+// ── Grid filters (Smart Planning SP1a) ──────────────────────
+const gridDepartment = ref(null)
+const gridLocation = ref(null)
+const gridActivity = ref(null)
+const gridStatus = ref(null)
+
+const departmentItems = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
+const activityTypeItems = computed(() => {
+  const set = new Set()
+  store.allTemplates.forEach(t => { if (t.activity_type) set.add(t.activity_type) })
+
+  return [...set].map(a => ({ title: a, value: a }))
+})
+
+const hasGridFilters = computed(() => !!(gridDepartment.value || gridLocation.value || gridActivity.value || gridStatus.value))
+const clearGridFilters = () => { gridDepartment.value = null; gridLocation.value = null; gridActivity.value = null; gridStatus.value = null }
+
+// Filtre les lignes par département (employé) et les shifts de chaque cellule par statut/lieu/activité.
+const filteredGridRows = computed(() => {
+  return gridRows.value
+    .filter(row => !gridDepartment.value || row.employee?.department_id === gridDepartment.value)
+    .map(row => {
+      if (!gridLocation.value && !gridActivity.value && !gridStatus.value) return row
+      const shifts = {}
+      Object.entries(row.shifts).forEach(([dayIdx, list]) => {
+        const kept = list.filter(s =>
+          (!gridLocation.value || s.work_location_id === gridLocation.value)
+          && (!gridStatus.value || s.status === gridStatus.value)
+          && (!gridActivity.value || (s.template_snapshot?.activity_type ?? s.activity_type) === gridActivity.value))
+        if (kept.length) shifts[dayIdx] = kept
+      })
+
+      return { ...row, shifts }
+    })
+})
+
+// ── Coverage (besoins de personnel) — ligne de synthèse ──────
+const coverageDaily = ref({})
+const loadCoverage = async () => {
+  try {
+    const resp = await store.fetchCoverageSummary({ from: weekDates.value[0], to: weekDates.value[6] })
+    coverageDaily.value = resp.daily ?? {}
+  } catch {
+    coverageDaily.value = {}
+  }
+}
+const covFor = dateIso => coverageDaily.value[dateIso] || null
+const hasCoverage = computed(() => Object.values(coverageDaily.value).some(d => d && d.requirements > 0))
+const covColor = cov => {
+  if (!cov || cov.requirements === 0) return 'default'
+  if (cov.gap > 0) return 'error'
+  if (cov.gap < 0) return 'warning'
+
+  return 'success'
+}
+
+// ── Coverage management drawer (besoins de personnel) ────────
+const isCoverageDrawerOpen = ref(false)
+const coverageFormLoading = ref(false)
+const editingCoverage = ref(null)
+const coverageForm = ref({ label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, headcount: 1, priority: 'normal' })
+const weekdayItems = computed(() => [
+  { title: t('planning.coverage.weekdays.1'), value: 1 },
+  { title: t('planning.coverage.weekdays.2'), value: 2 },
+  { title: t('planning.coverage.weekdays.3'), value: 3 },
+  { title: t('planning.coverage.weekdays.4'), value: 4 },
+  { title: t('planning.coverage.weekdays.5'), value: 5 },
+  { title: t('planning.coverage.weekdays.6'), value: 6 },
+  { title: t('planning.coverage.weekdays.0'), value: 0 },
+])
+const priorityItems = computed(() => ['low', 'normal', 'high', 'critical'].map(p => ({ title: t(`planning.coverage.priorities.${p}`), value: p })))
+const weekdayLabel = v => weekdayItems.value.find(w => w.value === v)?.title ?? '—'
+
+const resetCoverageForm = () => {
+  editingCoverage.value = null
+  coverageForm.value = { label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, headcount: 1, priority: 'normal' }
+}
+const openCoverageManager = async () => {
+  resetCoverageForm()
+  isCoverageDrawerOpen.value = true
+  await store.fetchCoverage()
+}
+const editCoverage = c => {
+  editingCoverage.value = c
+  coverageForm.value = {
+    label: c.label || '', day_of_week: c.day_of_week, start_time: c.start_time || '', end_time: c.end_time || '',
+    department_id: c.department_id || null, headcount: c.headcount || 1, priority: c.priority || 'normal',
+  }
+}
+const submitCoverage = async () => {
+  coverageFormLoading.value = true
+  try {
+    const payload = { ...coverageForm.value }
+    if (!payload.start_time) delete payload.start_time
+    if (!payload.end_time) delete payload.end_time
+    if (editingCoverage.value) {
+      await store.updateCoverage(editingCoverage.value.id, payload)
+      toast(t('planning.coverage.updated'), 'success')
+    } else {
+      await store.createCoverage(payload)
+      toast(t('planning.coverage.created'), 'success')
+    }
+    resetCoverageForm()
+    await Promise.all([store.fetchCoverage(), loadCoverage()])
+  } catch (error) {
+    toast(error.response?.data?.message || t('common.error'), 'error')
+  } finally {
+    coverageFormLoading.value = false
+  }
+}
+const removeCoverage = async c => {
+  try {
+    await store.deleteCoverage(c.id)
+    toast(t('planning.coverage.deleted'), 'success')
+    await loadCoverage()
+  } catch (error) {
+    toast(error.response?.data?.message || t('common.error'), 'error')
+  }
+}
 
 // ── Stats ───────────────────────────────────────────────────
 const stats = computed(() => store.statistics || {})
@@ -610,11 +731,15 @@ const editingTemplate = ref(null)
 const templateFormLoading = ref(false)
 const templateFormData = ref({
   name: '',
+  code: '',
+  activity_type: '',
   start_time: '',
   end_time: '',
   break_duration_minutes: 0,
   color: '#1976D2',
+  icon: '',
   work_location_id: null,
+  department_id: null,
 })
 
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
@@ -629,11 +754,15 @@ const resetTemplateForm = () => {
   editingTemplate.value = null
   templateFormData.value = {
     name: '',
+    code: '',
+    activity_type: '',
     start_time: '',
     end_time: '',
     break_duration_minutes: 0,
     color: '#1976D2',
+    icon: '',
     work_location_id: null,
+    department_id: null,
   }
 }
 
@@ -646,11 +775,15 @@ const openEditTemplate = tpl => {
   editingTemplate.value = tpl
   templateFormData.value = {
     name: tpl.name || '',
+    code: tpl.code || '',
+    activity_type: tpl.activity_type || '',
     start_time: tpl.start_time || '',
     end_time: tpl.end_time || '',
     break_duration_minutes: tpl.break_duration_minutes ?? 0,
     color: tpl.color || '#1976D2',
+    icon: tpl.icon || '',
     work_location_id: tpl.work_location_id || null,
+    department_id: tpl.department_id || null,
   }
   isTemplateDrawerOpen.value = true
 }
@@ -1276,6 +1409,15 @@ watch(activeTab, tab => {
               </div>
               <div class="d-flex align-center gap-2">
                 <VBtn
+                  v-can="'workforce.coverage_manage'"
+                  variant="text"
+                  size="small"
+                  prepend-icon="tabler-users-group"
+                  @click="openCoverageManager"
+                >
+                  {{ $t('planning.coverage.manage') }}
+                </VBtn>
+                <VBtn
                   variant="tonal"
                   size="small"
                   @click="goToToday"
@@ -1293,6 +1435,55 @@ watch(activeTab, tab => {
                   {{ $t('planning.selectAll') }}
                 </VBtn>
               </div>
+            </div>
+
+            <!-- Grid filters (Smart Planning SP1a) -->
+            <div class="d-flex flex-wrap align-center gap-3 mt-4">
+              <AppSelect
+                v-model="gridDepartment"
+                :items="departmentItems"
+                :label="$t('planning.filters.department')"
+                density="compact"
+                clearable
+                hide-details
+                style="min-inline-size: 160px;"
+              />
+              <AppSelect
+                v-model="gridLocation"
+                :items="locationItems"
+                :label="$t('planning.filters.location')"
+                density="compact"
+                clearable
+                hide-details
+                style="min-inline-size: 160px;"
+              />
+              <AppSelect
+                v-model="gridActivity"
+                :items="activityTypeItems"
+                :label="$t('planning.filters.activity')"
+                density="compact"
+                clearable
+                hide-details
+                style="min-inline-size: 160px;"
+              />
+              <AppSelect
+                v-model="gridStatus"
+                :items="calStatusOptions"
+                :label="$t('planning.filters.status')"
+                density="compact"
+                clearable
+                hide-details
+                style="min-inline-size: 150px;"
+              />
+              <VBtn
+                v-if="hasGridFilters"
+                variant="text"
+                size="small"
+                prepend-icon="tabler-filter-off"
+                @click="clearGridFilters"
+              >
+                {{ $t('planning.filters.clear') }}
+              </VBtn>
             </div>
           </VCardText>
 
@@ -1325,6 +1516,34 @@ watch(activeTab, tab => {
                   <div class="text-body-2 text-medium-emphasis">
                     {{ new Date(date + 'T00:00:00').getDate() }}
                   </div>
+                </th>
+              </tr>
+              <!-- Coverage summary row (besoin / affecté / écart) -->
+              <tr
+                v-if="hasCoverage"
+                class="coverage-row"
+              >
+                <th class="text-start text-caption text-medium-emphasis">
+                  {{ $t('planning.coverage.title') }}
+                </th>
+                <th
+                  v-for="date in weekDates"
+                  :key="`cov-${date}`"
+                  class="text-center"
+                >
+                  <VChip
+                    v-if="covFor(date) && covFor(date).requirements > 0"
+                    :color="covColor(covFor(date))"
+                    size="x-small"
+                    variant="tonal"
+                    :title="$t('planning.coverage.tooltip', { needed: covFor(date).needed, assigned: covFor(date).assigned })"
+                  >
+                    {{ covFor(date).assigned }}/{{ covFor(date).needed }}
+                  </VChip>
+                  <span
+                    v-else
+                    class="text-disabled text-caption"
+                  >—</span>
                 </th>
               </tr>
             </thead>
@@ -1368,7 +1587,7 @@ watch(activeTab, tab => {
                 </td>
               </tr>
               <tr
-                v-for="row in gridRows"
+                v-for="row in filteredGridRows"
                 :key="row.employee_id"
               >
                 <!-- Employee column -->
@@ -1891,6 +2110,18 @@ watch(activeTab, tab => {
             </VCol>
             <VCol cols="6">
               <AppTextField
+                v-model="templateFormData.code"
+                :label="$t('planning.templates.fields.code')"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model="templateFormData.activity_type"
+                :label="$t('planning.templates.fields.activityType')"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
                 v-model="templateFormData.start_time"
                 :label="$t('planning.templates.fields.startTime')"
                 type="time"
@@ -1949,6 +2180,16 @@ watch(activeTab, tab => {
               />
             </VCol>
             <VCol cols="12">
+              <AppSelect
+                v-model="templateFormData.department_id"
+                :items="departmentItems"
+                :label="$t('planning.templates.fields.department')"
+                :hint="$t('planning.templates.fields.departmentHint')"
+                persistent-hint
+                clearable
+              />
+            </VCol>
+            <VCol cols="12">
               <div class="d-flex gap-3 justify-end">
                 <VBtn
                   variant="outlined"
@@ -1962,6 +2203,158 @@ watch(activeTab, tab => {
                   :loading="templateFormLoading"
                 >
                   {{ isTemplateEditMode ? $t('common.save') : $t('common.create') }}
+                </VBtn>
+              </div>
+            </VCol>
+          </VRow>
+        </VForm>
+      </div>
+    </VNavigationDrawer>
+
+    <!-- Coverage Management Drawer (besoins de personnel) — Smart Planning SP1a -->
+    <VNavigationDrawer
+      v-model="isCoverageDrawerOpen"
+      temporary
+      location="end"
+      width="440"
+    >
+      <div class="d-flex align-center pa-4">
+        <h5 class="text-h5 flex-grow-1">
+          {{ $t('planning.coverage.manage') }}
+        </h5>
+        <VBtn
+          icon
+          variant="text"
+          size="small"
+          @click="isCoverageDrawerOpen = false"
+        >
+          <VIcon icon="tabler-x" />
+        </VBtn>
+      </div>
+      <VDivider />
+      <div class="pa-4">
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          {{ $t('planning.coverage.hint') }}
+        </p>
+
+        <!-- Existing requirements -->
+        <VList
+          v-if="store.coverage.length"
+          class="mb-4"
+          density="compact"
+        >
+          <VListItem
+            v-for="c in store.coverage"
+            :key="c.id"
+            :title="c.label || weekdayLabel(c.day_of_week)"
+            :subtitle="`${weekdayLabel(c.day_of_week)} · ${c.start_time ? c.start_time.slice(0,5) + '–' + (c.end_time||'').slice(0,5) : $t('planning.coverage.allDay')} · ${c.headcount}p`"
+          >
+            <template #append>
+              <VChip
+                size="x-small"
+                variant="tonal"
+                class="me-2"
+              >
+                {{ $t(`planning.coverage.priorities.${c.priority}`) }}
+              </VChip>
+              <VBtn
+                icon
+                variant="text"
+                size="x-small"
+                @click="editCoverage(c)"
+              >
+                <VIcon
+                  icon="tabler-edit"
+                  size="16"
+                />
+              </VBtn>
+              <VBtn
+                icon
+                variant="text"
+                size="x-small"
+                color="error"
+                @click="removeCoverage(c)"
+              >
+                <VIcon
+                  icon="tabler-trash"
+                  size="16"
+                />
+              </VBtn>
+            </template>
+          </VListItem>
+        </VList>
+
+        <VDivider class="mb-4" />
+
+        <!-- Create / edit form -->
+        <VForm @submit.prevent="submitCoverage">
+          <VRow>
+            <VCol cols="12">
+              <AppTextField
+                v-model="coverageForm.label"
+                :label="$t('planning.coverage.fields.label')"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppSelect
+                v-model="coverageForm.day_of_week"
+                :items="weekdayItems"
+                :label="$t('planning.coverage.fields.weekday')"
+                :rules="[v => v !== null || $t('validation.required')]"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model.number="coverageForm.headcount"
+                :label="$t('planning.coverage.fields.headcount')"
+                type="number"
+                min="1"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model="coverageForm.start_time"
+                :label="$t('planning.coverage.fields.startTime')"
+                type="time"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model="coverageForm.end_time"
+                :label="$t('planning.coverage.fields.endTime')"
+                type="time"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppSelect
+                v-model="coverageForm.department_id"
+                :items="departmentItems"
+                :label="$t('planning.coverage.fields.department')"
+                clearable
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppSelect
+                v-model="coverageForm.priority"
+                :items="priorityItems"
+                :label="$t('planning.coverage.fields.priority')"
+              />
+            </VCol>
+            <VCol cols="12">
+              <div class="d-flex gap-3 justify-end">
+                <VBtn
+                  v-if="editingCoverage"
+                  variant="outlined"
+                  @click="resetCoverageForm"
+                >
+                  {{ $t('common.cancel') }}
+                </VBtn>
+                <VBtn
+                  type="submit"
+                  color="primary"
+                  :loading="coverageFormLoading"
+                >
+                  {{ editingCoverage ? $t('common.save') : $t('common.add') }}
                 </VBtn>
               </div>
             </VCol>

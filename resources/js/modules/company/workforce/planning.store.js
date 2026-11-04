@@ -9,6 +9,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     _allTemplates: [],
     _locations: [],
     _allLocations: [],
+    _coverage: [],
     _statistics: null,
     _loading: false,
   }),
@@ -20,6 +21,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     allTemplates: state => state._allTemplates,
     locations: state => state._locations,
     allLocations: state => state._allLocations,
+    coverage: state => state._coverage,
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -177,6 +179,36 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       await $api(`/workforce/planning/templates/${id}`, { method: 'DELETE' })
       this._allTemplates = this._allTemplates.filter(t => t.id !== id)
       this._templates = []
+    },
+
+    // ── Coverage (besoins de personnel) — Smart Planning SP1a ──
+    async fetchCoverage() {
+      const data = await $api('/workforce/planning/coverage')
+      this._coverage = data.data ?? data
+      return this._coverage
+    },
+
+    async fetchCoverageSummary({ from, to } = {}) {
+      const params = new URLSearchParams({ from, to })
+      return await $api(`/workforce/planning/coverage/summary?${params.toString()}`)
+    },
+
+    async createCoverage(payload) {
+      const data = await $api('/workforce/planning/coverage', { method: 'POST', body: payload })
+      this._coverage.push(data)
+      return data
+    },
+
+    async updateCoverage(id, payload) {
+      const data = await $api(`/workforce/planning/coverage/${id}`, { method: 'PUT', body: payload })
+      const idx = this._coverage.findIndex(c => c.id === id)
+      if (idx !== -1) this._coverage[idx] = data
+      return data
+    },
+
+    async deleteCoverage(id) {
+      await $api(`/workforce/planning/coverage/${id}`, { method: 'DELETE' })
+      this._coverage = this._coverage.filter(c => c.id !== id)
     },
 
     // ── Locations ─────────────────────────────────────────────

@@ -568,6 +568,13 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::put('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
+    // Coverage requirements (besoins de personnel) — Smart Planning SP1a
+    Route::get('coverage', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::get('coverage/summary', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'summary'])->middleware($perm('workforce.planning_view'));
+    Route::post('coverage', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'store'])->middleware($perm('workforce.coverage_manage'));
+    Route::put('coverage/{id}', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'update'])->middleware($perm('workforce.coverage_manage'));
+    Route::delete('coverage/{id}', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'destroy'])->middleware($perm('workforce.coverage_manage'));
+
     // Schedule Templates
     Route::get('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('templates', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'store'])->middleware($perm('workforce.planning_manage'));

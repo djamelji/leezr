@@ -27,11 +27,15 @@ class ScheduleTemplateController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
+            'code' => 'nullable|string|max:30',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
             'break_duration_minutes' => 'nullable|integer|min:0|max:480',
             'color' => 'nullable|string|max:7',
+            'icon' => 'nullable|string|max:64',
+            'activity_type' => 'nullable|string|max:60',
             'work_location_id' => 'nullable|integer',
+            'department_id' => 'nullable|integer',
         ]);
 
         try {
@@ -43,6 +47,10 @@ class ScheduleTemplateController extends Controller
                 breakDurationMinutes: $validated['break_duration_minutes'] ?? 0,
                 color: $validated['color'] ?? null,
                 workLocationId: $validated['work_location_id'] ?? null,
+                code: $validated['code'] ?? null,
+                icon: $validated['icon'] ?? null,
+                activityType: $validated['activity_type'] ?? null,
+                departmentId: $validated['department_id'] ?? null,
             );
 
             return response()->json($template, 201);
@@ -59,11 +67,15 @@ class ScheduleTemplateController extends Controller
 
         $validated = $request->validate([
             'name' => 'nullable|string|max:100',
+            'code' => 'nullable|string|max:30',
             'start_time' => 'nullable|date_format:H:i',
             'end_time' => 'nullable|date_format:H:i',
             'break_duration_minutes' => 'nullable|integer|min:0|max:480',
             'color' => 'nullable|string|max:7',
+            'icon' => 'nullable|string|max:64',
+            'activity_type' => 'nullable|string|max:60',
             'work_location_id' => 'nullable|integer',
+            'department_id' => 'nullable|integer',
             'enabled' => 'nullable|boolean',
         ]);
 
