@@ -19,17 +19,17 @@ test('annuaire refondu : en-tête, compteur, recherche, filtres repliables', asy
   await expect(page.locator('[data-test="emp-add"]')).toBeVisible()
   await expect(page.locator('[data-test="emp-more"]')).toBeVisible()
 
-  // Filtres avancés repliés par défaut, révélés au clic (« Département » n'existe que dans les filtres).
-  await expect(page.locator('[data-test="emp-filters-toggle"]')).toBeVisible()
+  // Filtres avancés (AppFilterPanel) repliés par défaut, révélés au clic (« Département » = filtres).
+  await expect(page.locator('[data-test="fp-toggle"]')).toBeVisible()
   await expect(page.getByText('Département', { exact: true })).toHaveCount(0)
-  await page.locator('[data-test="emp-filters-toggle"]').click()
+  await page.locator('[data-test="fp-toggle"]').click()
   await page.waitForTimeout(700)
   await expect(page.getByText('Département', { exact: true }).first()).toBeVisible()
 
   // Recherche fonctionnelle (déclenche un fetch).
   const [resp] = await Promise.all([
     page.waitForResponse(r => r.url().includes('/workforce/employees') && r.url().includes('search='), { timeout: 10000 }).catch(() => null),
-    page.locator('[data-test="emp-search"] input').fill('Thomas'),
+    page.locator('[data-test="fp-search"] input').fill('Thomas'),
   ])
   expect(resp, 'la recherche déclenche un appel serveur').not.toBeNull()
 

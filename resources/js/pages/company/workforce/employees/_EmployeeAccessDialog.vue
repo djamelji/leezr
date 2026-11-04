@@ -97,7 +97,7 @@ const restore = async () => {
 </script>
 
 <template>
-  <VDialog v-model="isOpen" max-width="520">
+  <VDialog v-model="isOpen" :fullscreen="$vuetify.display.smAndDown" max-width="520" scrollable>
     <VCard>
       <VCardItem>
         <VCardTitle>{{ t('employeeAccess.title') }}</VCardTitle>

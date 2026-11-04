@@ -403,7 +403,8 @@
     "operationCancelled": "Operation cancelled.",
     "helpCenter": "Help center",
     "pageOf": "Page {page} / {total}",
-    "more": "More"
+    "more": "More",
+    "apply": "Apply"
   },
   "platformAccount": {
     "myAccount": "My Account",

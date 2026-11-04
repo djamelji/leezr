@@ -24978,3 +24978,37 @@ DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature 
 
 ### Fichiers clés
 `core/components/{SmartActionBar,AppResponsiveDataView,AppSectionNavigation}.vue` · `composables/useContainerWidth.js` · `pages/company/dev-lab.vue` · `employees/{index,[id]}.vue` · `tests/e2e/e3r-r3.spec.js`.
+
+---
+
+## ADR-696 — E3-R FINALISATION (R3 + R4) : fondations responsive stabilisées · clôture E3-R
+
+**Date** : 2026-11-04
+**Statut** : Accepté (livré DEV — vérifié par `X-Build-Version`). **Clôt E3-R.** Reprise de E3-B ensuite.
+**Contexte** : Après R3-UX validé (ADR-695), finaliser les 2 primitives manquantes, les appliquer à Collaborateurs, vérifier sécurité/permissions, et passer la recette mobile R4 complète. Pas de nouvel audit/prototype.
+
+### Décisions / livré
+1. **`AppFilterPanel`** (natif Vuetify) — recherche directe toujours visible + filtres avancés : panneau repliable desktop, **bottom-sheet mobile** ; valeurs possédées par le parent (**préservées** au changement de présentation/rotation) ; compteur + reset. Appliqué à l'**annuaire** (remplace la toolbar + filtres inline).
+2. **`AppAdaptiveDialog`** (natif Vuetify) — dialogue centré desktop / **plein écran mobile** ; en-tête + actions STICKY (non masquées par le clavier) ; conserve focus/état/erreurs. Appliqué au **dialogue de création** (ex-drawer 400px). Dialogues complexes existants (contrat, accès) rendus **plein écran mobile** via `:fullscreen` (alternative minimale, sans refactor risqué).
+3. **Ajustements ciblés** : bloc d'identité de la fiche plus compact sur mobile (avatar/titre responsives, nom tronqué) ; annuaire — sous-ligne mobile = **fonction · matricule** (identifie les noms longs/similaires) ; e-mail/tél restent au détail.
+
+### Sécurité & permissions (vérifié API, pas seulement le front)
+`WorkforceSecurityWDTest` + `WorkforceAccessProfilesE21Test` + `WorkforceMultisectorIndependenceTest` : **28 tests verts** — salaire **jamais** sans `workforce.compensation_read` + scope (masquage serveur `/file`), scope manager/self congés/pointages, isolation tenant, profils RH/Manager/Exploitation/Paie/Salarié/Owner/custom/admin-salarié. Les actions déplacées dans l'overflow (SmartActionBar) **conservent leurs permissions** (filtrage `useCan` + endpoints gardés) ; confirmations sensibles inchangées (dans le handler).
+
+### Recette mobile R4 (interactions réelles)
+`tests/e2e/e3r-r4.spec.js` : **sweep anti-débordement** 320/375/390/430/768/1024/1366 sur annuaire + fiche + portail + **module non-Workforce** (Membres) ; **dark** ; dialogue plein écran mobile + **clavier** (champ + action atteignable) ; **filtres bottom-sheet** + valeurs préservées ; owner voit le salaire (comp_read) ; **Platform** sans débordement. + `e3r-r3.spec.js` / `workforce-e3a.spec.js` (6/6). **Indépendance JobDomain** préservée (composants génériques).
+
+### Contrats d'utilisation documentés
+`docs/ui/smart-responsive-primitives.md` : SmartActionBar, AppResponsiveDataView, AppSectionNavigation, AppFilterPanel, AppAdaptiveDialog, useContainerWidth — contrats, règles d'adoption (conteneur vs viewport ; natif Vuetify ; métier côté serveur ; a11y).
+
+### Clôture E3-R
+Fondations responsive **stabilisées & réutilisables**. Mécanismes Vuexy/Vuetify conservés. **E3-R fermé.** Prochaine étape : **WORKFORCE EXPERIENCE 2026 / E3-B — Temps de travail & Planning**, qui réutilisera ces fondations (vue jour/agenda mobile vs grille semaine desktop via `useDisplay`), **sans réinventer de bibliothèque UI**. Applications iOS/Android : orientation (ADR-695), **non développées** ; indépendance API/métier préservée.
+
+### Honnêteté
+Captures **local `leezr.test`** (code = DEV). **Viewport simulé ≠ vrai appareil** — vérif iOS Safari / Android Chrome recommandée, **non effectuée**. Les 2 échecs date-dépendants `WorkforceTimesheetRulesTest` restent des **échecs** (backend non touché par R3/R4).
+
+### Garde-fous
+DEV only · origin/dev · pas de main/PROD/Billing · moteurs Payroll/Signature inchangés · pas de nouveau RBAC · pas de migration · pas de règle métier changée · pas de dépendance Logistics · SSH compromis non utilisé.
+
+### Fichiers clés
+`core/components/{AppFilterPanel,AppAdaptiveDialog}.vue` (nouveaux) · `employees/{index,[id]}.vue` · `_GenerateContractDialog.vue` / `_EmployeeAccessDialog.vue` (fullscreen mobile) · `docs/ui/smart-responsive-primitives.md` · `tests/e2e/e3r-r4.spec.js`.

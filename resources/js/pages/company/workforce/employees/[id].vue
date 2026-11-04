@@ -150,19 +150,19 @@ const onboardingComplete = computed(() => onboardingDone.value === onboardingSte
     </VCard>
 
     <template v-else-if="file">
-      <!-- En-tête permanent -->
-      <VCard class="mb-6">
-        <VCardText>
-          <div class="d-flex align-center gap-4 flex-wrap">
+      <!-- En-tête permanent — R4 : bloc d'identité plus compact sur mobile (avatar + titre réduits) -->
+      <VCard class="mb-5">
+        <VCardText class="py-4">
+          <div class="d-flex align-center gap-3 flex-wrap">
             <VAvatar
               color="primary"
               variant="tonal"
-              size="64"
+              :size="$vuetify.display.smAndDown ? 48 : 64"
             >
-              <span class="text-h5 font-weight-medium">{{ (ident.first_name?.[0] || '') + (ident.last_name?.[0] || '') }}</span>
+              <span class="font-weight-medium">{{ (ident.first_name?.[0] || '') + (ident.last_name?.[0] || '') }}</span>
             </VAvatar>
-            <div class="flex-grow-1">
-              <h4 class="text-h4 font-weight-bold">
+            <div class="flex-grow-1" style="min-inline-size: 0;">
+              <h4 class="text-h5 text-sm-h4 font-weight-bold text-truncate">
                 {{ ident.first_name }} {{ ident.last_name }}
               </h4>
               <div class="d-flex align-center gap-3 mt-1 flex-wrap text-body-2 text-medium-emphasis">

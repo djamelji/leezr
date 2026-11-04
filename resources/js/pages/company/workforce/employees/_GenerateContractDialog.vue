@@ -77,6 +77,7 @@ const runGenerate = async () => {
 <template>
   <VDialog
     v-model="isOpen"
+    :fullscreen="$vuetify.display.smAndDown"
     max-width="720"
     scrollable
   >

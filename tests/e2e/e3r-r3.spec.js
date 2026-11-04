@@ -71,11 +71,11 @@ test('AppResponsiveDataView : table desktop / liste mobile + état préservé au
   await expect(page.locator('.v-data-table tbody tr').first()).toBeVisible()
 
   // Saisir une recherche puis passer en mobile : la recherche NE DOIT PAS être perdue.
-  await page.locator('[data-test="emp-search"] input').fill('Thomas')
+  await page.locator('[data-test="fp-search"] input').fill('Thomas')
   await page.waitForTimeout(800)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForTimeout(1000)
-  await expect(page.locator('[data-test="emp-search"] input')).toHaveValue('Thomas')
+  await expect(page.locator('[data-test="fp-search"] input')).toHaveValue('Thomas')
   // Mobile : liste de cartes (pas la table).
   await expect(page.locator('.arv-mobile .arv-row').first()).toBeVisible()
   const o = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth))

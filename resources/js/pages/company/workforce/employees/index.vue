@@ -11,6 +11,8 @@ import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import ErrorState from '@/core/components/ErrorState.vue'
 import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
+import AppFilterPanel from '@/core/components/AppFilterPanel.vue'
+import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import EmployeeImportDrawer from './_EmployeeImportDrawer.vue'
 import EmployeeBulkActionDialog from './_EmployeeBulkActionDialog.vue'
@@ -36,9 +38,6 @@ const loading = ref(false)
 const error = ref(false)
 
 const selected = ref([]) // ids des lignes sélectionnées (page visible)
-
-// E3-A : filtres avancés repliables ; déployés d'emblée s'ils sont déjà actifs (deep-link).
-const showFilters = ref(false)
 
 const statusOptions = [
   { title: t('workforce.statuses.employee.active'), value: 'active' },
@@ -137,7 +136,6 @@ watch(options, () => { selected.value = []; fetchData() }, { deep: true })
 onMounted(() => {
   store.fetchDepartments()
   store.fetchJobRoles()
-  if (advancedFilterCount.value > 0) showFilters.value = true
   fetchData()
 })
 
@@ -172,8 +170,16 @@ const onBulkDone = () => { selected.value = []; fetchData() }
 
 // ── Create drawer ────────────────────────────────────────────
 const isDrawerOpen = ref(false)
+const createFormRef = ref(null)
 const formData = ref({ first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: new Date().toISOString().slice(0, 10) })
 const formLoading = ref(false)
+
+// Validation du formulaire avant soumission (bouton hors du VForm en mode dialogue adaptatif).
+const onCreateSubmit = async () => {
+  const res = await createFormRef.value?.validate?.()
+  if (res && res.valid === false) return
+  submitEmployee()
+}
 const resetForm = () => { formData.value = { first_name: '', last_name: '', email: '', phone: '', employee_number: '', hire_date: new Date().toISOString().slice(0, 10) } }
 
 const submitEmployee = async () => {
@@ -283,96 +289,61 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
     <!-- Toolbar : recherche toujours visible + bascule filtres avancés -->
     <VCard class="mb-6">
       <VCardText class="pb-2">
-        <div class="d-flex align-center gap-3 flex-wrap">
-          <AppTextField
-            v-model="search"
-            :placeholder="$t('employees.searchPlaceholder')"
-            prepend-inner-icon="tabler-search"
-            clearable
-            density="compact"
-            data-test="emp-search"
-            style="min-inline-size: 260px; flex: 1 1 260px;"
-          />
-          <VBtn
-            variant="tonal"
-            :color="showFilters || advancedFilterCount ? 'primary' : 'secondary'"
-            prepend-icon="tabler-adjustments-horizontal"
-            data-test="emp-filters-toggle"
-            @click="showFilters = !showFilters"
-          >
-            {{ $t('employees.filters.toggle') }}
-            <VChip
-              v-if="advancedFilterCount"
-              size="x-small"
-              color="primary"
-              class="ms-2"
-            >
-              {{ advancedFilterCount }}
-            </VChip>
-          </VBtn>
-          <VBtn
-            v-if="hasFilters"
-            variant="text"
-            size="small"
-            prepend-icon="tabler-filter-off"
-            data-test="emp-filters-reset"
-            @click="resetFilters"
-          >
-            {{ $t('employees.filters.reset') }}
-          </VBtn>
-        </div>
-
-        <VExpandTransition>
-          <VRow
-            v-if="showFilters"
-            class="mt-1"
-          >
-            <VCol cols="12" sm="6" md="3">
-              <AppSelect
-                v-model="statusFilter"
-                :items="statusOptions"
-                :label="$t('employees.filterStatus')"
-                clearable
-                density="compact"
-              />
-            </VCol>
-            <VCol cols="12" sm="6" md="3">
-              <AppSelect
-                v-model="departmentFilter"
-                :items="departmentOptions"
-                :label="$t('employees.filters.department')"
-                clearable
-                density="compact"
-              />
-            </VCol>
-            <VCol cols="12" sm="6" md="3">
-              <AppSelect
-                v-model="jobRoleFilter"
-                :items="jobRoleOptions"
-                :label="$t('employees.filters.jobRole')"
-                clearable
-                density="compact"
-              />
-            </VCol>
-            <VCol cols="12" sm="6" md="3">
-              <AppSelect
-                v-model="contractTypeFilter"
-                :items="contractTypeOptions"
-                :label="$t('employees.filters.contractType')"
-                clearable
-                density="compact"
-              />
-            </VCol>
-            <VCol cols="12" md="6">
-              <EmployeePicker
-                v-model="managerFilter"
-                :label="$t('employees.filters.manager')"
-                clearable
-                density="compact"
-              />
-            </VCol>
-          </VRow>
-        </VExpandTransition>
+        <AppFilterPanel
+          v-model:search="search"
+          :placeholder="$t('employees.searchPlaceholder')"
+          :active-count="advancedFilterCount"
+          @reset="resetFilters"
+        >
+          <template #filters>
+            <VRow>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="statusFilter"
+                  :items="statusOptions"
+                  :label="$t('employees.filterStatus')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="departmentFilter"
+                  :items="departmentOptions"
+                  :label="$t('employees.filters.department')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="jobRoleFilter"
+                  :items="jobRoleOptions"
+                  :label="$t('employees.filters.jobRole')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" sm="6" md="3">
+                <AppSelect
+                  v-model="contractTypeFilter"
+                  :items="contractTypeOptions"
+                  :label="$t('employees.filters.contractType')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" md="6">
+                <EmployeePicker
+                  v-model="managerFilter"
+                  :label="$t('employees.filters.manager')"
+                  clearable
+                  density="compact"
+                />
+              </VCol>
+            </VRow>
+          </template>
+        </AppFilterPanel>
       </VCardText>
 
       <!-- Barre d'actions groupées (apparaît à la sélection) -->
@@ -457,8 +428,12 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
               <div class="font-weight-medium text-truncate">
                 {{ item.first_name }} {{ item.last_name }}
               </div>
+              <!-- Fonction + matricule : identifie même les noms longs/similaires -->
               <div class="text-caption text-medium-emphasis text-truncate">
-                {{ item.job_role?.title || item.department?.name || '—' }}
+                <template v-if="item.job_role?.title || item.department?.name">
+                  {{ item.job_role?.title || item.department?.name }}<template v-if="item.employee_number"> · {{ item.employee_number }}</template>
+                </template>
+                <template v-else>{{ item.employee_number || '—' }}</template>
               </div>
             </div>
             <StatusChip :status="item.status" domain="employee" size="small">
@@ -533,57 +508,44 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
       </AppResponsiveDataView>
     </VCard>
 
-    <!-- Create Employee Drawer -->
-    <VNavigationDrawer
+    <!-- Create Employee — dialogue adaptatif (plein écran mobile) -->
+    <AppAdaptiveDialog
       v-model="isDrawerOpen"
-      temporary
-      location="end"
-      width="400"
+      :title="$t('employees.addEmployee')"
+      :max-width="480"
     >
-      <div class="d-flex align-center pa-4">
-        <h5 class="text-h5 flex-grow-1">
-          {{ $t('employees.addEmployee') }}
-        </h5>
-        <VBtn icon variant="text" size="small" @click="isDrawerOpen = false">
-          <VIcon icon="tabler-x" />
+      <VForm ref="createFormRef" @submit.prevent="onCreateSubmit">
+        <VRow>
+          <VCol cols="12">
+            <AppTextField v-model="formData.first_name" data-test="emp-first-name" :label="$t('employees.fields.firstName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
+          </VCol>
+          <VCol cols="12">
+            <AppTextField v-model="formData.last_name" data-test="emp-last-name" :label="$t('employees.fields.lastName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
+          </VCol>
+          <VCol cols="12">
+            <AppTextField v-model="formData.email" :label="$t('employees.fields.email')" type="email" />
+          </VCol>
+          <VCol cols="12">
+            <AppTextField v-model="formData.phone" :label="$t('employees.fields.phone')" />
+          </VCol>
+          <VCol cols="12">
+            <AppTextField v-model="formData.employee_number" :label="$t('employees.fields.employeeNumber')" />
+          </VCol>
+          <VCol cols="12">
+            <AppDateTimePicker v-model="formData.hire_date" data-test="emp-hire-date" :label="$t('employees.fields.hireDate') + ' *'" :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y' }" :rules="[v => !!v || $t('validation.required')]" />
+          </VCol>
+        </VRow>
+      </VForm>
+      <template #actions="{ close }">
+        <VSpacer />
+        <VBtn variant="outlined" @click="close">
+          {{ $t('common.cancel') }}
         </VBtn>
-      </div>
-      <VDivider />
-      <div class="pa-4">
-        <VForm @submit.prevent="submitEmployee">
-          <VRow>
-            <VCol cols="12">
-              <AppTextField v-model="formData.first_name" data-test="emp-first-name" :label="$t('employees.fields.firstName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField v-model="formData.last_name" data-test="emp-last-name" :label="$t('employees.fields.lastName') + ' *'" :rules="[v => !!v || $t('validation.required')]" />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField v-model="formData.email" :label="$t('employees.fields.email')" type="email" />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField v-model="formData.phone" :label="$t('employees.fields.phone')" />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField v-model="formData.employee_number" :label="$t('employees.fields.employeeNumber')" />
-            </VCol>
-            <VCol cols="12">
-              <AppDateTimePicker v-model="formData.hire_date" data-test="emp-hire-date" :label="$t('employees.fields.hireDate') + ' *'" :config="{ dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y' }" :rules="[v => !!v || $t('validation.required')]" />
-            </VCol>
-            <VCol cols="12">
-              <div class="d-flex gap-3 justify-end">
-                <VBtn variant="outlined" @click="isDrawerOpen = false">
-                  {{ $t('common.cancel') }}
-                </VBtn>
-                <VBtn type="submit" color="primary" data-test="emp-submit" :loading="formLoading">
-                  {{ $t('common.create') }}
-                </VBtn>
-              </div>
-            </VCol>
-          </VRow>
-        </VForm>
-      </div>
-    </VNavigationDrawer>
+        <VBtn color="primary" data-test="emp-submit" :loading="formLoading" @click="onCreateSubmit">
+          {{ $t('common.create') }}
+        </VBtn>
+      </template>
+    </AppAdaptiveDialog>
 
     <!-- Import wizard + Bulk action dialog -->
     <EmployeeImportDrawer
