@@ -211,6 +211,46 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       this._coverage = this._coverage.filter(c => c.id !== id)
     },
 
+    // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──
+    async fetchActivities({ shiftId, employeeId, date } = {}) {
+      const params = new URLSearchParams()
+      if (shiftId) params.set('shift_id', shiftId)
+      if (employeeId) params.set('employee_id', employeeId)
+      if (date) params.set('date', date)
+      const qs = params.toString()
+
+      return await $api(`/workforce/planning/activities${qs ? `?${qs}` : ''}`)
+    },
+
+    async createActivity(payload) {
+      this._weekShifts = []
+
+      return await $api('/workforce/planning/activities', { method: 'POST', body: payload })
+    },
+
+    async updateActivity(id, payload) {
+      this._weekShifts = []
+
+      return await $api(`/workforce/planning/activities/${id}`, { method: 'PUT', body: payload })
+    },
+
+    async cancelActivity(id) {
+      this._weekShifts = []
+
+      return await $api(`/workforce/planning/activities/${id}/cancel`, { method: 'POST' })
+    },
+
+    async duplicateActivity(id, payload = {}) {
+      this._weekShifts = []
+
+      return await $api(`/workforce/planning/activities/${id}/duplicate`, { method: 'POST', body: payload })
+    },
+
+    async deleteActivity(id) {
+      this._weekShifts = []
+      await $api(`/workforce/planning/activities/${id}`, { method: 'DELETE' })
+    },
+
     // ── Locations ─────────────────────────────────────────────
     async fetchLocations({ all = false, force = false } = {}) {
       const target = all ? '_allLocations' : '_locations'

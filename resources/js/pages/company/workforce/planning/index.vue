@@ -6,6 +6,7 @@ import { useCan } from '@/composables/useCan'
 import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import PlanningCalendar from './_PlanningCalendar.vue'
+import ActivityDay from './_ActivityDay.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
 
@@ -355,6 +356,16 @@ const covColor = cov => {
   if (cov.gap < 0) return 'warning'
 
   return 'success'
+}
+
+// ── Day detail (multi-activités) — Smart Planning SP1b ───────
+const activityDayOpen = ref(false)
+const activityDayShift = ref(null)
+const activityDayEmployee = ref('')
+const openActivityDay = (shift, row) => {
+  activityDayShift.value = shift
+  activityDayEmployee.value = row?.employee ? `${row.employee.first_name ?? ''} ${row.employee.last_name ?? ''}`.trim() : ''
+  activityDayOpen.value = true
 }
 
 // ── Coverage management drawer (besoins de personnel) ────────
@@ -1651,6 +1662,7 @@ watch(activeTab, tab => {
                             variant="text"
                             size="x-small"
                             class="ms-1"
+                            data-test="shift-menu"
                             @click.stop
                           >
                             <VIcon
@@ -1660,6 +1672,12 @@ watch(activeTab, tab => {
                           </VBtn>
                         </template>
                         <VList density="compact">
+                          <VListItem
+                            prepend-icon="tabler-timeline"
+                            :title="$t('planning.activities.dayDetail')"
+                            data-test="open-day-detail"
+                            @click="openActivityDay(shift, row)"
+                          />
                           <VListItem
                             prepend-icon="tabler-edit"
                             :title="$t('common.edit')"
@@ -2211,6 +2229,14 @@ watch(activeTab, tab => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <!-- Day detail — multi-activités (Smart Planning SP1b) -->
+    <ActivityDay
+      v-model:is-dialog-visible="activityDayOpen"
+      :shift="activityDayShift"
+      :employee-name="activityDayEmployee"
+      @changed="fetchWeekData"
+    />
 
     <!-- Coverage Management Drawer (besoins de personnel) — Smart Planning SP1a -->
     <VNavigationDrawer

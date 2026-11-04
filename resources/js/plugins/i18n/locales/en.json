@@ -7554,6 +7554,30 @@
       "status": "Status",
       "clear": "Clear filters"
     },
+    "activities": {
+      "dayDetail": "Day detail",
+      "addActivity": "Add an activity",
+      "editActivity": "Edit activity",
+      "empty": "No activity planned in this shift.",
+      "untitled": "Activity",
+      "duplicate": "Duplicate",
+      "created": "Activity added",
+      "updated": "Activity updated",
+      "duplicated": "Activity duplicated",
+      "cancelled": "Activity cancelled",
+      "deleted": "Activity deleted",
+      "conflict": "Conflict: the activity is outside shift bounds, overlaps another activity, or exceeds workable time.",
+      "deleteBlocked": "Only activities of a draft shift can be deleted — cancel instead.",
+      "publishedHint": "Published shift: activity changes are tracked and never alter the shift hours nor clocked time.",
+      "warnings": {
+        "travel": "Activity saved — note: travel time between locations is unknown."
+      },
+      "fields": {
+        "label": "Label",
+        "start": "Start",
+        "end": "End"
+      }
+    },
     "coverage": {
       "title": "Coverage",
       "tooltip": "{assigned} of {needed} required assigned",

@@ -7554,6 +7554,30 @@
       "status": "Statut",
       "clear": "Effacer les filtres"
     },
+    "activities": {
+      "dayDetail": "Détail de la journée",
+      "addActivity": "Ajouter une activité",
+      "editActivity": "Modifier l'activité",
+      "empty": "Aucune activité planifiée dans ce shift.",
+      "untitled": "Activité",
+      "duplicate": "Dupliquer",
+      "created": "Activité ajoutée",
+      "updated": "Activité modifiée",
+      "duplicated": "Activité dupliquée",
+      "cancelled": "Activité annulée",
+      "deleted": "Activité supprimée",
+      "conflict": "Conflit : l'activité dépasse les bornes du shift, chevauche une autre activité ou excède le temps travaillable.",
+      "deleteBlocked": "Seules les activités d'un shift brouillon peuvent être supprimées — annulez plutôt.",
+      "publishedHint": "Shift publié : les ajouts/modifications d'activités sont tracés et ne modifient ni les horaires du shift ni le temps pointé.",
+      "warnings": {
+        "travel": "Activité enregistrée — attention : temps de déplacement entre lieux inconnu."
+      },
+      "fields": {
+        "label": "Libellé",
+        "start": "Début",
+        "end": "Fin"
+      }
+    },
     "coverage": {
       "title": "Couverture",
       "tooltip": "Affecté {assigned} sur {needed} requis",

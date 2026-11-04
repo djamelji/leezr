@@ -581,6 +581,14 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::put('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('templates/{id}', [\App\Modules\Workforce\Planning\Http\ScheduleTemplateController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
+    // Scheduled activities (multi-activités dans un shift) — Smart Planning SP1b
+    Route::get('activities', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('activities', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'store'])->middleware($perm('workforce.planning_manage'));
+    Route::put('activities/{id}', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'update'])->middleware($perm('workforce.planning_manage'));
+    Route::post('activities/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));
+    Route::post('activities/{id}/duplicate', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'duplicate'])->middleware($perm('workforce.planning_manage'));
+    Route::delete('activities/{id}', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
+
     // Shifts
     Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar'])->middleware($perm('workforce.planning_view'));
