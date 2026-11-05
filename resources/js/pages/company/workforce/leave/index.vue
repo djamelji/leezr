@@ -110,25 +110,42 @@ const rejectedCount = computed(() => store.statistics?.rejected?.count ?? 0)
 
 // ── Drawer (create request) ─────────────────────────────────
 const isDrawerOpen = ref(false)
-const formData = ref({
+const emptyForm = () => ({
   employee_id: null,
   leave_type_id: null,
   date_from: '',
   date_to: '',
   days_count_hundredths: null,
   reason: '',
+  // ADR-717 — absence partielle (heures) sur une seule journée.
+  partial: false,
+  start_time: '',
+  end_time: '',
 })
+const formData = ref(emptyForm())
 const formLoading = ref(false)
+const deductionHint = ref(null)
 
 const resetForm = () => {
-  formData.value = {
-    employee_id: null,
-    leave_type_id: null,
-    date_from: '',
-    date_to: '',
-    days_count_hundredths: null,
-    reason: '',
-  }
+  formData.value = emptyForm()
+  deductionHint.value = null
+}
+
+// Suggestion de décompte (jours/heures) selon le contrat — ne force rien, pré-remplit seulement.
+const computeDeduction = async () => {
+  if (!formData.value.employee_id || !formData.value.date_from || !formData.value.date_to) return
+  if (formData.value.partial && (!formData.value.start_time || !formData.value.end_time)) return
+  try {
+    const res = await store.deductionPreview({
+      employeeId: formData.value.employee_id,
+      dateFrom: formData.value.date_from,
+      dateTo: formData.value.date_to,
+      startTime: formData.value.partial ? formData.value.start_time : null,
+      endTime: formData.value.partial ? formData.value.end_time : null,
+    })
+    formData.value.days_count_hundredths = res.days_count_hundredths
+    deductionHint.value = res
+  } catch { /* suggestion indisponible → saisie manuelle */ }
 }
 
 const submitLeaveRequest = async () => {
@@ -141,6 +158,9 @@ const submitLeaveRequest = async () => {
       dateTo: formData.value.date_to,
       daysCountHundredths: formData.value.days_count_hundredths,
       reason: formData.value.reason,
+      startTime: formData.value.partial ? formData.value.start_time : null,
+      endTime: formData.value.partial ? formData.value.end_time : null,
+      hoursCountHundredths: formData.value.partial ? deductionHint.value?.hours_count_hundredths : null,
     })
     toast(t('leaves.created'), 'success')
     isDrawerOpen.value = false
@@ -1167,6 +1187,7 @@ watch(activeTab, tab => {
                 :items="employeeItems"
                 :label="$t('leaves.fields.employee')"
                 :rules="[v => !!v || $t('validation.required')]"
+                @update:model-value="computeDeduction"
               />
             </VCol>
             <VCol cols="12">
@@ -1183,6 +1204,7 @@ watch(activeTab, tab => {
                 :label="$t('leaves.fields.dateFrom')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
+                @update:model-value="computeDeduction"
               />
             </VCol>
             <VCol cols="12">
@@ -1191,13 +1213,43 @@ watch(activeTab, tab => {
                 :label="$t('leaves.fields.dateTo')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
+                @update:model-value="computeDeduction"
               />
             </VCol>
+            <!-- ADR-717 — absence partielle (quelques heures / demi-journée) sur une seule journée -->
+            <VCol cols="12">
+              <VSwitch
+                v-model="formData.partial"
+                :label="$t('leaves.fields.partial')"
+                color="primary"
+                density="compact"
+                hide-details
+                @update:model-value="computeDeduction"
+              />
+            </VCol>
+            <template v-if="formData.partial">
+              <VCol cols="6">
+                <AppTextField
+                  v-model="formData.start_time"
+                  :label="$t('leaves.fields.startTime')"
+                  type="time"
+                  @update:model-value="computeDeduction"
+                />
+              </VCol>
+              <VCol cols="6">
+                <AppTextField
+                  v-model="formData.end_time"
+                  :label="$t('leaves.fields.endTime')"
+                  type="time"
+                  @update:model-value="computeDeduction"
+                />
+              </VCol>
+            </template>
             <VCol cols="12">
               <AppTextField
                 v-model.number="formData.days_count_hundredths"
                 :label="$t('leaves.fields.duration')"
-                :hint="$t('leaves.fields.durationHint')"
+                :hint="deductionHint ? $t('leaves.fields.deductionSuggested', { days: (deductionHint.days_count_hundredths / 100).toFixed(2), hours: (deductionHint.hours_count_hundredths / 100).toFixed(2) }) : $t('leaves.fields.durationHint')"
                 persistent-hint
                 type="number"
                 :rules="[v => (v !== null && v > 0) || $t('validation.required')]"

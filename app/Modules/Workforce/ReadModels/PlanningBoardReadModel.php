@@ -113,6 +113,10 @@ class PlanningBoardReadModel
                 'employee_name' => $l->employee?->full_name,
                 'leave_type' => $l->leaveType?->name,
                 'status' => $l->status,                        // pending | approved | consumed
+                // ADR-717 — fenêtre partielle (NULL = jour entier) pour l'affichage par intervalle.
+                'start_time' => $l->start_time ? substr((string) $l->start_time, 0, 5) : null,
+                'end_time' => $l->end_time ? substr((string) $l->end_time, 0, 5) : null,
+                'is_partial' => $l->isPartial(),
             ])->values(),
             'conflicts' => $conflicts,
         ];
@@ -139,12 +143,22 @@ class PlanningBoardReadModel
             ->limit(200)
             ->get();
 
-        // Congés approuvés couvrant la date (une requête).
-        $onLeave = LeaveRequest::withoutGlobalScopes()
+        // Congés confirmés couvrant la date. ADR-717 : indisponible seulement si la FENÊTRE d'absence
+        // chevauche réellement le créneau de remplacement (une absence 09:00-13:00 ne bloque pas 14:00-17:00).
+        $leaves = LeaveRequest::withoutGlobalScopes()
             ->where('company_id', $companyId)
-            ->where('status', LeaveRequest::STATUS_APPROVED)
+            ->whereIn('status', [LeaveRequest::STATUS_APPROVED, LeaveRequest::STATUS_CONSUMED])
             ->whereDate('date_from', '<=', $date)->whereDate('date_to', '>=', $date)
-            ->pluck('employee_id')->flip();
+            ->get();
+        $onLeave = collect();
+        foreach ($leaves as $l) {
+            if ($w = $l->absentWindowOn($start->copy()->startOfDay())) {
+                [$aStart, $aEnd] = $w;
+                if ($aStart->lt($end) && $aEnd->gt($start)) {
+                    $onLeave->put($l->employee_id, true);
+                }
+            }
+        }
 
         // Shifts chevauchant la plage (hors shift en cours d'édition) — une requête.
         $busy = Shift::withoutGlobalScopes()

@@ -63,13 +63,21 @@ class WorkforceCoverageAbsenceLot3Test extends TestCase
         ]);
     }
 
-    private function leave(Employee $e, string $status): LeaveRequest
+    private function leave(Employee $e, string $status, ?string $start = null, ?string $end = null): LeaveRequest
     {
         return LeaveRequest::withoutGlobalScopes()->create([
             'company_id' => $this->company->id, 'employee_id' => $e->id, 'leave_type_id' => $this->type->id,
             'date_from' => '2026-11-02', 'date_to' => '2026-11-02', 'status' => $status,
+            'start_time' => $start, 'end_time' => $end,
             'days_count_hundredths' => 100,
         ]);
+    }
+
+    private function intervalsFor(int $reqId): array
+    {
+        $r = CoverageReadModel::forRange($this->company->id, '2026-11-02', '2026-11-02');
+
+        return collect($r['requirements'])->firstWhere('requirement_id', $reqId)['intervals'];
     }
 
     private function assignedFor(int $reqId): int
@@ -103,6 +111,30 @@ class WorkforceCoverageAbsenceLot3Test extends TestCase
         $this->leave($e, LeaveRequest::STATUS_PENDING);
 
         $this->assertSame(1, $this->assignedFor($req->id), 'Une demande en attente ne retire PAS la couverture.');
+    }
+
+    public function test_partial_absence_splits_coverage_by_interval(): void
+    {
+        // §5/ADR-717 — Route 09:00-17:00, besoin 12, 12 affectés, 1 absent 09:00-13:00.
+        // Attendu : 09:00-13:00 = 11/12 ; 13:00-17:00 = 12/12.
+        $req = CoverageRequirement::create(['company_id' => $this->company->id, 'date' => '2026-11-02', 'start_time' => '09:00', 'end_time' => '17:00', 'headcount' => 12, 'enabled' => true]);
+        $emps = [];
+        for ($i = 0; $i < 12; $i++) {
+            $e = $this->employee();
+            $emps[] = $e;
+            $this->shift($e);
+        }
+        // e[0] absent uniquement sur la matinée.
+        $this->leave($emps[0], LeaveRequest::STATUS_APPROVED, '09:00', '13:00');
+
+        $intervals = $this->intervalsFor($req->id);
+        $morning = collect($intervals)->firstWhere('start', '09:00');
+        $afternoon = collect($intervals)->firstWhere('start', '13:00');
+
+        $this->assertSame(11, $morning['assigned'], 'Matin : l\'absent partiel ne compte pas → 11/12.');
+        $this->assertSame('under', $morning['status']);
+        $this->assertSame(12, $afternoon['assigned'], 'Après-midi : présent → 12/12.');
+        $this->assertSame('covered', $afternoon['status']);
     }
 
     public function test_absent_and_replacement_not_double_counted(): void

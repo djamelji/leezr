@@ -31,6 +31,9 @@ class RequestLeaveUseCase
         int $daysCountHundredths,
         ?string $reason = null,
         bool $allowNegative = false,
+        ?string $startTime = null,
+        ?string $endTime = null,
+        ?int $hoursCountHundredths = null,
     ): LeaveRequest {
         // Guard: employee must be active
         if ($employee->status !== Employee::STATUS_ACTIVE) {
@@ -83,6 +86,7 @@ class RequestLeaveUseCase
 
         return DB::transaction(function () use (
             $employee, $leaveTypeId, $dateFrom, $dateTo, $daysCountHundredths, $reason, $leaveType,
+            $startTime, $endTime, $hoursCountHundredths,
         ) {
             $request = LeaveRequest::create([
                 'company_id' => $employee->company_id,
@@ -90,7 +94,10 @@ class RequestLeaveUseCase
                 'leave_type_id' => $leaveTypeId,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'days_count_hundredths' => $daysCountHundredths,
+                'hours_count_hundredths' => $hoursCountHundredths,
                 'status' => LeaveRequest::STATUS_PENDING,
                 'reason' => $reason,
             ]);

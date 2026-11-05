@@ -28,6 +28,7 @@ class Shift extends Model
     protected $fillable = [
         'company_id',
         'employee_id',
+        'replaces_shift_id',
         'schedule_template_id',
         'work_location_id',
         'template_snapshot',
@@ -125,6 +126,18 @@ class Shift extends Model
     public function scheduledActivities()
     {
         return $this->hasMany(ScheduledActivity::class, 'shift_id');
+    }
+
+    /** Shift initial que ce shift remplace (ADR-717). */
+    public function replacesShift()
+    {
+        return $this->belongsTo(self::class, 'replaces_shift_id');
+    }
+
+    /** Shifts de remplacement créés pour ce shift (ADR-717). */
+    public function replacements()
+    {
+        return $this->hasMany(self::class, 'replaces_shift_id');
     }
 
     // --- Helpers ---

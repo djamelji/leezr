@@ -16,6 +16,11 @@ Artisan::command('inspire', function () {
 // (no ScheduledTaskRun bloat), always-on (no enable/disable).
 Schedule::command('scheduler:heartbeat')->everyMinute()->withoutOverlapping();
 
+// ── Workforce Smart Planning (ADR-717) ───────────────────
+// Filet de durabilité de l'outbox de notifications : rattrape les intentions non envoyées
+// (crash post-commit, échec transitoire). Always-on, non piloté par le cockpit (cf. REGISTRY_EXCLUSIONS).
+Schedule::command('workforce:flush-planning-notifications')->everyMinute()->withoutOverlapping();
+
 // ── FX ───────────────────────────────────────────────────
 // FX rate refresh every 6 hours (ADR-104)
 Schedule::command('fx:rates-sync')->cron('0 */6 * * *')->withoutOverlapping()

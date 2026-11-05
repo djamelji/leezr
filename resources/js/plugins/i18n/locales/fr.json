@@ -7794,6 +7794,15 @@
       "pending": "en attente",
       "conflict": "Chevauchement avec une affectation"
     },
+    "replacement": {
+      "action": "Trouver un remplaçant",
+      "title": "Trouver un remplaçant",
+      "gapHint": "Créneau non assuré à couvrir :",
+      "pickHint": "Sélectionnez un collaborateur disponible sur ce créneau (aucune sélection automatique).",
+      "noCandidate": "Aucun collaborateur disponible dans votre périmètre sur ce créneau.",
+      "confirm": "Créer le remplacement",
+      "done": "Remplacement créé et publié"
+    },
     "posts": {
       "uncategorized": "Non catégorisé",
       "empty": "Aucune affectation cette semaine."
@@ -7848,6 +7857,10 @@
       "dateTo": "Date de fin",
       "duration": "Durée (centièmes de jour)",
       "durationHint": "Ex : 100 = 1 jour, 50 = 0,5 jour",
+      "partial": "Absence partielle (quelques heures / demi-journée)",
+      "startTime": "Heure de début",
+      "endTime": "Heure de fin",
+      "deductionSuggested": "Suggestion : {days} j ({hours} h) — ajustable",
       "reason": "Motif",
       "reviewNote": "Motif / commentaire"
     },

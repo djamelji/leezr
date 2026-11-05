@@ -26003,3 +26003,72 @@ Playwright employé-connecté (cloche → notif → planning) : **non rejoué** 
 
 ### Fichiers clés
 `CoverageReadModel.php` (exclusion absences confirmées) · `PlanningNotifier.php` + `ScheduledActivityController.php` (eventRef idempotence) · `LeaveController.php` (`impactedShifts`) + `routes/company.php` · `planning/index.vue` (overlay indisponibilité grille + mobile) · `leave/index.vue` + `leaves.store.js` (§7 shifts impactés) · `planning.store.js` (réutilisation `fetchBoard`) · `lang fr/en` (`planning.absence.*`, `leaves.impacted.*`) · `WorkforceCoverageAbsenceLot3Test.php` + ajouts `WorkforceLeaveCalendarTest.php`/`WorkforcePlanningNotificationsLot2Test.php`.
+
+---
+
+## ADR-717 — WORKFORCE / SMART PLANNING Lot 3 (CLÔTURE) : absences partielles · remplacement guidé · notifications fiables
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** Clôture fonctionnelle du Lot 3 (complète ADR-716). GO complément validé. **Checkpoint atteint** : la reprise (drag-and-drop, multi-sélection, planification hebdomadaire rapide) est la prochaine étape.
+**Garde-fous respectés** : DEV · origin/dev. Aucune migration destructive (3 migrations ADDITIVES nullables), aucune 2ᵉ base de congés, aucun 2ᵉ moteur de planning/notification (l'outbox réutilise PlanningNotifier), Payroll/Billing/Signature inchangés, soldes de congés historiques inchangés. RBAC, scopes manager, isolation tenant, immutabilité des shifts publiés, publication atomique, verrou optimiste, `WorkTimeComplianceChecker`, `TimeEntry` : **inchangés**.
+
+### §1 — Extension du modèle d'absence (partielles)
+Migration additive `add_partial_window_to_leave_requests` : `start_time` / `end_time` (TIME nullable, heure murale) + `hours_count_hundredths` (INT nullable, informatif). **Rétro-compatible** : times NULL = jour entier (comportement hérité inchangé). Sémantique via `LeaveRequest::absentWindowOn(Carbon $date)` :
+| Cas | Fenêtre d'indisponibilité le jour J |
+|---|---|
+| Jour entier (times NULL) | 00:00 → 24:00 |
+| Plusieurs jours entiers | chaque jour 00:00 → 24:00 |
+| Quelques heures (même jour) | start_time → end_time |
+| Demi-journée (preset ~ daily/2) | start_time → end_time |
+| Période multi-jours + bornes | 1er jour: start→24:00 ; milieu: plein ; dernier: 00:00→end |
+Fuseaux/nuit : fenêtres bornées au jour civil (aligné sur le datage des Shifts). **Limite assumée** : une absence ne traverse pas minuit en une seule fenêtre intra-jour (découpée par jour civil) — suffisant pour les cas métier visés.
+
+### Matrice de décompte (`LeaveDeductionCalculator`, fonction pure — SUGGESTION non contraignante)
+`daily = weekly_hours / 5` (défaut). **Ne convertit JAMAIS 4 h en 0,5 jour arbitrairement** : décompte horaire **proportionnel non arrondi**.
+| Entrée | days_count_hundredths | hours_count_hundredths |
+|---|---|---|
+| Jour entier | 100 | daily×100 |
+| N jours entiers | N×100 | N×daily×100 |
+| 4 h (daily 7 h) | 57 (= 4/7, **pas** 50) | 400 |
+| Demi-journée (3,5 h sur daily 7 h) | 50 | 350 |
+Endpoint lecture `POST leaves/deduction-preview` (scopé, non contraignant) → le formulaire pré-remplit `days_count_hundredths`, le décideur peut surcharger ; **c'est la valeur transmise qui fait foi**. Le solde (`LeaveLedger`) décrémente `days_count_hundredths` **comme avant** — aucun calcul Payroll ni solde historique modifié.
+
+### §5 — Couverture recalculée PAR INTERVALLE
+`CoverageReadModel` : les segments sont désormais découpés **aussi** aux bornes des absences confirmées ; un salarié n'est exclu que des segments **entièrement** couverts par sa fenêtre d'absence CONFIRMÉE (approved/consumed). Pending n'exclut jamais. Exemple prouvé : Route 09:00-17:00, besoin 12, 12 affectés, 1 absent 09:00-13:00 → **09:00-13:00 = 11/12 (under)**, **13:00-17:00 = 12/12 (covered)**. Tout le moteur Lot A conservé (catégories qualifiées, DISTINCT, multi-site/Department, pauses).
+
+### §2/§4/§6 — Remplacement guidé (LIVRÉ, backend + front)
+Migration additive `replaces_shift_id` sur `workforce_shifts` (lien d'audit, nullable). 
+- Lecture `GET shifts/{id}/replacement-candidates` : calcule le(s) **créneau(x) NON ASSURÉ(s)** = intersection(shift × fenêtre d'absence confirmée du titulaire), la catégorie de couverture, puis réutilise `PlanningBoardReadModel::availability` (scopé manager ; absents **exclus par fenêtre horaire** — une absence 09-13 ne bloque pas un candidat libre 14-17 ; occupés marqués `busy` ; contrat requis → `to_verify`). Jobrole = **indice**, jamais filtre dur ni auto-sélection.
+- Écriture `POST shifts/{id}/replace` (perm `planning_publish`, double scope source+cible) → `CreateReplacementShiftUseCase` : crée un **NOUVEAU** shift pour le remplaçant en **réutilisant `CreateShiftUseCase` + `PublishShiftsUseCase`** (tous les invariants re-validés : actif, contrat, pas de congé, pas de double-booking, règles au publish), hérite modèle/lieu (même catégorie), pose `replaces_shift_id`, publie, trace l'audit `shift.replacement_created`. **Le Shift initial publié n'est NI supprimé NI réaffecté.** Fenêtre partielle supportée (on remplace seulement [start,end] ⊂ shift). **Pas de double-comptage** : l'absent est exclu de la couverture sur sa fenêtre (§5), le remplaçant compte une fois.
+- Front : action **« Trouver un remplaçant »** dans le menu d'un shift publié impacté par une absence confirmée → drawer `wf-scroll-drawer` (mobile-friendly) listant la fenêtre non assurée + les candidats (chip disponibilité), sélection explicite → publication + `fetchWeekData`. Pas de navigation multi-pages.
+
+### §3 — Affichage de l'indisponibilité par intervalle
+La projection `PlanningBoardReadModel.absences` expose désormais `start_time`/`end_time`/`is_partial` (NULL = jour entier). La grille affiche la fenêtre dans le chip (ex. « Congés 09:00–13:00 »), distingue confirmé/en attente, indique le conflit. **Confidentialité** : type seul, jamais le motif (`reason`).
+
+### §1b/§3 — Notifications fiables : OUTBOX transactionnel durable (LIVRÉ)
+Mécanisme réutilisable recherché : les **queues Laravel (connexion `database`)** existent ; pour la durabilité de l'intention in-app on ajoute une **outbox minimale** (pas un 2ᵉ moteur). Table additive `workforce_planning_notification_outbox` (company, topic, is_change, event_ref, groups JSON, status pending/sent/failed, attempts, last_error, processed_at).
+- **Intention écrite DANS la transaction** du changement (atomique) : `PublishShiftsUseCase` et `Create/UpdateScheduledActivityUseCase` appellent `PlanningOutbox::enqueue*()` avant commit.
+- **Envoi après commit** : flush immédiat (contrôleur) + **commande planifiée `workforce:flush-planning-notifications` chaque minute** (filet crash). Le flush réutilise `PlanningNotifier::sendGroups()` → `NotificationDispatcher` (in-app) + mailable (email).
+- **Survit au crash post-commit** : si le process meurt avant l'envoi, la ligne pending demeure et part au flush suivant (prouvé en test).
+- **Idempotent** : l'`entity_key` existant empêche tout doublon même si plusieurs flush rejouent. Chaque ligne traitée sous verrou (`lockForUpdate`) → pas de double-traitement concurrent.
+- **Statuts** : `pending` → `sent` (processed_at) / `failed` (attempts + last_error, retenté < 5). Email conserve queued/sent/failed via `EmailLog`. **Toujours pas de « delivered »** (aucun webhook provider) — limite honnête inchangée.
+
+### §7 — Décision de congé (rappel, inchangé) 
+`GET leaves/{id}/impacted-shifts` (ADR-716) + `VAlert` avant approbation ; aucun bannissement automatique ; soldes inchangés.
+
+### Recette (PHPUnit + Playwright réel)
+- PHPUnit : `WorkforceCoverageAbsenceLot3Test` (partiel 11/12 par intervalle), `LeaveDeductionCalculatorTest` (4 h ≠ 0,5 jour), `WorkforceReplacementLot3Test` (candidats/fenêtre, création+publication, original préservé, **pas de double-compte**, fenêtre hors-shift rejetée), `WorkforcePlanningOutboxLot3Test` (intention intra-transaction, flush, **survie crash**, idempotence), + `WorkforceLeaveCalendarTest` §7. **Suite planning/leave/outbox/replacement : 239 verts** ; **leave étendu : 60 verts** ; `ScheduledTaskRegistryConsistencyTest` vert (exclusion documentée).
+- Playwright réel (`workforce-lot3-complement.spec.js`, 3 verts sur leezr.test) : **A** décompte proportionnel via endpoint réel (4 h → 400 centièmes d'heure, < 1 jour) + champs heures rendus ; **B** endpoint candidats (fenêtre + liste scopée) ; **D** projection board **sans `reason`** + accès direct non authentifié refusé (≠ 200). Captures : `lot3-partial-leave-desktop.png`, `lot3-planning-mobile.png`.
+- `pnpm build` clean.
+
+### Scénarios A→E
+A (congé partiel avant planning), B (absence après publication → remplacement), couverture par intervalle, D (sécurité/confidentialité) : **couverts PHPUnit + Playlwright**. **C (salarié connecté : cloche → planning, isolation)** : **non rejoué en Playwright** (la base E2E partagée n'a pas de compte salarié dédié déterministe) — mécanisme prouvé par PHPUnit (catégorie universelle + résolution `employee->user` + scope auth, ADR-715/716) ; à scénariser quand un fixture salarié-connecté sera semé.
+
+### Limitations restantes (honnêtes)
+- **Absence traversant minuit** : fenêtres bornées au jour civil (pas de fenêtre unique à cheval sur 2 jours).
+- **« delivered »** : non disponible (aucun webhook provider) — queued/sent/failed seulement.
+- **Playwright scénario C** (salarié connecté) non rejoué (fixture manquant) ; logique prouvée en PHPUnit.
+- **Chevauchement de 2 absences le même jour** : le garde `overlapping` (RequestLeaveUseCase) reste au niveau date (conservateur) — deux fenêtres horaires disjointes le même jour ne sont pas encore autorisées ensemble.
+
+### Fichiers clés
+`LeaveRequest.php` (absentWindowOn/isPartial) · `LeaveDeductionCalculator.php` · `CoverageReadModel.php` (segments+absences par intervalle) · `PlanningBoardReadModel.php` (availability fenêtre-aware + absences times) · `CreateReplacementShiftUseCase.php` · `ShiftController.php` (replacementCandidates/replace) · `PlanningOutbox.php` + `PlanningNotificationOutbox.php` + `FlushPlanningNotificationsCommand.php` + `PlanningNotifier::sendGroups` · `PublishShiftsUseCase.php` / `Create|UpdateScheduledActivityUseCase.php` (enqueue intra-transaction) · `RequestLeaveUseCase.php` + `LeaveController.php` (partiel + deduction-preview) · migrations `add_partial_window_to_leave_requests` / `add_replaces_shift_id_to_shifts` / `create_planning_notification_outbox` · `routes/company.php` + `routes/console.php` · front `planning/index.vue` (drawer remplacement, chip fenêtre) + `leave/index.vue` (toggle partiel + preview) + stores + lang · tests PHPUnit Lot 3 + `workforce-lot3-complement.spec.js`.

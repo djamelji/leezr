@@ -201,13 +201,11 @@ class ScheduledActivityController extends Controller
     /** Notifie les salariés concernés après modification d'un planning publié (post-commit). */
     private function notifyChange(int $companyId, array $result): void
     {
+        // ADR-717 — l'intention a été enregistrée dans la transaction du UseCase (outbox, idempotente via
+        // event_ref). Ici on se contente de FLUSH en post-commit (la commande planifiée rattrape tout
+        // crash). Pas d'appel direct au notifier → plus de fenêtre de perte entre commit et notification.
         if (! empty($result['notify_employee_ids'])) {
-            // eventRef = identifiant stable de l'événement métier (activité + horodatage de la modification)
-            // → deux modifications distinctes le même jour produisent deux notifications ; un rejeu exact, une seule.
-            $a = $result['activity'] ?? null;
-            $eventRef = $a ? 'activity:'.$a->id.':'.optional($a->updated_at)->timestamp : null;
-            app(\App\Modules\Workforce\Services\PlanningNotifier::class)
-                ->notifyChanged($companyId, $result['notify_employee_ids'], $result['notify_date'] ?? null, $eventRef);
+            app(\App\Modules\Workforce\Services\PlanningOutbox::class)->flush();
         }
     }
 

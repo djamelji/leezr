@@ -96,6 +96,13 @@ class UpdateScheduledActivityUseCase
                 ],
             );
 
+            // ADR-717 — intention durable (outbox) si planning publié ; notifie ancien ET nouveau titulaire.
+            if ($onPublished) {
+                $eventRef = 'activity:'.$activity->id.':'.optional($activity->updated_at)->timestamp;
+                app(\App\Modules\Workforce\Services\PlanningOutbox::class)
+                    ->enqueueChanged($activity->company_id, [$oldEmployeeId, $shift->employee_id], \Illuminate\Support\Carbon::parse($startAt), $eventRef);
+            }
+
             return [
                 'activity' => $activity->fresh(),
                 'warnings' => $warnings,

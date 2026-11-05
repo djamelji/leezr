@@ -51,20 +51,34 @@ class CoverageReadModel
         $deptByEmployee = Employee::withoutGlobalScopes()
             ->where('company_id', $companyId)->pluck('department_id', 'id');
 
-        // Lot 3 (ADR-716) — indisponibilités CONFIRMÉES : un salarié en congé approuvé/consommé ne contribue
-        // PAS à la couverture ce jour-là. Une demande EN ATTENTE (pending) ne retire JAMAIS la couverture.
-        // (LeaveRequest est jour-granulaire : absence = jour entier ; le partiel horaire exige une extension.)
+        // Lot 3 (ADR-716/717) — indisponibilités CONFIRMÉES : un salarié en congé approuvé/consommé ne
+        // contribue PAS à la couverture pendant sa FENÊTRE d'absence. Une demande EN ATTENTE (pending) ne
+        // retire JAMAIS la couverture. Les absences PARTIELLES (ADR-717) sont gérées par intervalle : un
+        // salarié absent 09:00-13:00 ne compte pas sur 09:00-13:00 mais compte sur 13:00-17:00.
         $absences = \App\Core\Workforce\LeaveRequest::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->whereIn('status', [\App\Core\Workforce\LeaveRequest::STATUS_APPROVED, \App\Core\Workforce\LeaveRequest::STATUS_CONSUMED])
             ->whereDate('date_from', '<=', $toDate->toDateString())
             ->whereDate('date_to', '>=', $fromDate->toDateString())
-            ->get(['employee_id', 'date_from', 'date_to']);
-        $isAbsent = function (int $employeeId, string $dateString) use ($absences): bool {
-            foreach ($absences as $a) {
-                if ((int) $a->employee_id === $employeeId
-                    && $dateString >= $a->date_from->toDateString()
-                    && $dateString <= $a->date_to->toDateString()) {
+            ->get();
+        $absencesByEmployee = $absences->groupBy('employee_id');
+
+        // Fenêtres d'absence confirmée d'un salarié un jour donné (plusieurs demandes possibles).
+        $absentWindows = function (int $employeeId, Carbon $day) use ($absencesByEmployee): array {
+            $windows = [];
+            foreach ($absencesByEmployee->get($employeeId, []) as $a) {
+                if ($w = $a->absentWindowOn($day)) {
+                    $windows[] = $w;
+                }
+            }
+
+            return $windows;
+        };
+        // Le salarié est-il absent pendant TOUT l'intervalle [segStart,segEnd] ? (segments découpés aux
+        // bornes d'absence → un segment est soit entièrement dans une fenêtre d'absence, soit dehors.)
+        $isAbsentDuring = function (int $employeeId, Carbon $segStart, Carbon $segEnd) use ($absentWindows): bool {
+            foreach ($absentWindows($employeeId, $segStart->copy()->startOfDay()) as [$aStart, $aEnd]) {
+                if ($aStart->lte($segStart) && $aEnd->gte($segEnd)) {
                     return true;
                 }
             }
@@ -111,7 +125,16 @@ class CoverageReadModel
                 $maxAssigned = 0;
 
                 if ($winStart && $winEnd && $winStart->lt($winEnd)) {
-                    $segments = self::segments($winStart, $winEnd, $eligible, $activitiesByShift);
+                    // Bornes d'absence confirmée des salariés éligibles ce jour → segments supplémentaires
+                    // pour isoler les plages partielles (ADR-717).
+                    $absenceBreaks = [];
+                    foreach ($eligible as $s) {
+                        foreach ($absentWindows((int) $s->employee_id, $d) as [$aStart, $aEnd]) {
+                            $absenceBreaks[] = $aStart;
+                            $absenceBreaks[] = $aEnd;
+                        }
+                    }
+                    $segments = self::segments($winStart, $winEnd, $eligible, $activitiesByShift, $absenceBreaks);
                     $minAssigned = PHP_INT_MAX;
                     foreach ($segments as [$segStart, $segEnd]) {
                         $emp = [];
@@ -119,9 +142,10 @@ class CoverageReadModel
                             if (! ($s->start_at->lte($segStart) && $s->end_at->gte($segEnd))) {
                                 continue;
                             }
-                            // Indisponibilité confirmée ce jour → ne compte pas (évite d'inclure un absent
-                            // ET de double-compter absent + remplaçant sur le même poste).
-                            if ($isAbsent((int) $s->employee_id, $dayKey)) {
+                            // Indisponibilité confirmée pendant CET intervalle → ne compte pas (évite
+                            // d'inclure un absent ET de double-compter absent + remplaçant). Partiel géré
+                            // par intervalle : présent avant/après la fenêtre d'absence.
+                            if ($isAbsentDuring((int) $s->employee_id, $segStart, $segEnd)) {
                                 continue;
                             }
                             if (self::onBreak($s, $segStart, $segEnd)) {
@@ -234,8 +258,8 @@ class CoverageReadModel
         return [Carbon::parse($eligible->pluck('start_at')->min()), Carbon::parse($eligible->pluck('end_at')->max())];
     }
 
-    /** Découpe aux bornes des shifts ET des activités (changements de catégorie effective). */
-    private static function segments(Carbon $winStart, Carbon $winEnd, $eligible, $activitiesByShift): array
+    /** Découpe aux bornes des shifts, des activités (catégorie effective) ET des absences partielles. */
+    private static function segments(Carbon $winStart, Carbon $winEnd, $eligible, $activitiesByShift, array $absenceBreaks = []): array
     {
         $points = [$winStart->getTimestamp(), $winEnd->getTimestamp()];
         $add = function ($ts) use (&$points, $winStart, $winEnd) {
@@ -250,6 +274,9 @@ class CoverageReadModel
                 $add($a->start_at->getTimestamp());
                 $add($a->end_at->getTimestamp());
             }
+        }
+        foreach ($absenceBreaks as $brk) {
+            $add($brk->getTimestamp());
         }
         $points = array_values(array_unique($points));
         sort($points);

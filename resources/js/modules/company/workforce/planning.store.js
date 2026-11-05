@@ -60,6 +60,18 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       return await $api(`/workforce/planning/shifts/board?${params.toString()}`)
     },
 
+    // ADR-717 — candidats au remplacement d'un shift impacté par une absence (fenêtre non assurée incluse).
+    async fetchReplacementCandidates(shiftId) {
+      return await $api(`/workforce/planning/shifts/${shiftId}/replacement-candidates`)
+    },
+    // ADR-717 — crée + publie le shift de remplacement sur la fenêtre choisie.
+    async replaceShift(shiftId, { employeeId, startAt, endAt }) {
+      return await $api(`/workforce/planning/shifts/${shiftId}/replace`, {
+        method: 'POST',
+        body: { employee_id: employeeId, start_at: startAt, end_at: endAt },
+      })
+    },
+
     // W-G4B : suggestions de collaborateurs disponibles pour une (ré)affectation.
     async fetchAvailability({ start, end, excludeShiftId, jobRoleId } = {}) {
       const params = new URLSearchParams({ start, end })

@@ -7794,6 +7794,15 @@
       "pending": "pending",
       "conflict": "Overlaps an assignment"
     },
+    "replacement": {
+      "action": "Find a replacement",
+      "title": "Find a replacement",
+      "gapHint": "Unassured window to cover:",
+      "pickHint": "Select an available colleague for this window (no automatic selection).",
+      "noCandidate": "No available colleague in your scope for this window.",
+      "confirm": "Create replacement",
+      "done": "Replacement created and published"
+    },
     "posts": {
       "uncategorized": "Uncategorized",
       "empty": "No assignment this week."
@@ -7848,6 +7857,10 @@
       "dateTo": "End Date",
       "duration": "Duration (hundredths of day)",
       "durationHint": "E.g. 100 = 1 day, 50 = 0.5 day",
+      "partial": "Partial absence (a few hours / half-day)",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "deductionSuggested": "Suggested: {days}d ({hours}h) — adjustable",
       "reason": "Reason",
       "reviewNote": "Reason / note"
     },

@@ -55,6 +55,25 @@ class PlanningNotifier
     }
 
     /**
+     * Envoi depuis des GROUPES normalisés [{employee_id, from, to, count}] — utilisé par l'outbox (ADR-717).
+     * Réutilise exactement la même logique idempotente (entity_key) que les chemins directs.
+     *
+     * @param  array<int, array{employee_id:int, from:string, to:string, count:int}>  $groups
+     */
+    public function sendGroups(Company $company, array $groups, string $topicKey, bool $isChange, ?string $eventRef = null): void
+    {
+        foreach ($groups as $g) {
+            $this->dispatchOne($company, [
+                'employee_id' => (int) $g['employee_id'],
+                'from' => $g['from'],
+                'to' => $g['to'],
+                'count' => (int) ($g['count'] ?? 1),
+                'event_ref' => $eventRef,
+            ], $topicKey, $isChange);
+        }
+    }
+
+    /**
      * Les notifications sont TOUJOURS déclenchées par les contrôleurs APRÈS le commit des UseCases
      * (publication / révision) → dispatch immédiat, pas de notif pour une opération échouée (qui lève
      * une exception avant d'arriver ici).

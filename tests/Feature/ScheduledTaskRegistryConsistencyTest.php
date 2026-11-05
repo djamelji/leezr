@@ -19,8 +19,10 @@ class ScheduledTaskRegistryConsistencyTest extends TestCase
      * Infra tasks intentionally scheduled but NOT exposed as cockpit business tasks
      * (documented convention). scheduler:heartbeat is the liveness probe that powers
      * globalHealth — it is always-on, non-disableable, and not instrumented.
+     * workforce:flush-planning-notifications (ADR-717) is the durability net of the planning
+     * notification outbox — always-on, non-disableable (disabling it would risk losing notifications).
      */
-    private const REGISTRY_EXCLUSIONS = ['scheduler:heartbeat'];
+    private const REGISTRY_EXCLUSIONS = ['scheduler:heartbeat', 'workforce:flush-planning-notifications'];
 
     private function scheduledCommands(): array
     {

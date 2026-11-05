@@ -339,8 +339,64 @@ const absencesByEmployeeDay = computed(() => {
 const absencesFor = (employeeId, dayIdx) => absencesByEmployeeDay.value[employeeId]?.[dayIdx] ?? []
 const isConfirmedAbsence = a => a.status === 'approved' || a.status === 'consumed'
 const absenceChipColor = a => (isConfirmedAbsence(a) ? 'error' : 'warning')
-const absenceChipLabel = a => (a.leave_type || t('planning.absence.generic'))
-  + (isConfirmedAbsence(a) ? '' : ' · ' + t('planning.absence.pending'))
+const absenceChipLabel = a => {
+  const win = (a.start_time || a.end_time) ? ` ${a.start_time || ''}–${a.end_time || ''}` : ''
+
+  return (a.leave_type || t('planning.absence.generic')) + win
+    + (isConfirmedAbsence(a) ? '' : ' · ' + t('planning.absence.pending'))
+}
+// Un shift publié est-il impacté par une absence CONFIRMÉE du collaborateur ce jour-là ?
+const shiftHasConfirmedAbsence = (employeeId, dayIdx) =>
+  absencesFor(employeeId, dayIdx).some(isConfirmedAbsence)
+
+// ── Remplacement guidé (Lot 3 §2, ADR-717) ──────────────────
+const replacementOpen = ref(false)
+const replacementLoading = ref(false)
+const replacementFetching = ref(false)
+const replacementShift = ref(null)
+const replacementData = ref({ candidates: [], window: null, unassured: [], coverage_category_id: null })
+const replacementTarget = ref(null)
+const replacementWindow = ref({ start: '', end: '' })
+const replacementAvailColor = s => ({ available: 'success', to_verify: 'warning', busy: 'secondary', unavailable: 'error' }[s] || 'secondary')
+
+const openReplacement = async shift => {
+  replacementShift.value = shift
+  replacementTarget.value = null
+  replacementOpen.value = true
+  replacementFetching.value = true
+  try {
+    const data = await store.fetchReplacementCandidates(shift.id)
+    replacementData.value = data
+    replacementWindow.value = { start: data.window?.start || shift.start_at, end: data.window?.end || shift.end_at }
+  } catch (e) {
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
+    replacementOpen.value = false
+  } finally {
+    replacementFetching.value = false
+  }
+}
+const confirmReplacement = async () => {
+  if (!replacementTarget.value) return
+  replacementLoading.value = true
+  try {
+    await store.replaceShift(replacementShift.value.id, {
+      employeeId: replacementTarget.value,
+      startAt: timeOfDay(replacementWindow.value.start)
+        ? `${replacementShift.value.date?.split('T')[0] || replacementShift.value.date} ${timeOfDay(replacementWindow.value.start)}`
+        : replacementWindow.value.start,
+      endAt: timeOfDay(replacementWindow.value.end)
+        ? `${replacementShift.value.date?.split('T')[0] || replacementShift.value.date} ${timeOfDay(replacementWindow.value.end)}`
+        : replacementWindow.value.end,
+    })
+    toast(t('planning.replacement.done'), 'success')
+    replacementOpen.value = false
+    fetchWeekData()
+  } catch (e) {
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
+  } finally {
+    replacementLoading.value = false
+  }
+}
 
 watch(currentWeekStart, () => fetchWeekData())
 
@@ -2267,6 +2323,14 @@ watch(activeTab, tab => {
                             @click="openPublish([shift.id])"
                           />
                           <VListItem
+                            v-if="shift.status === 'published' && shiftHasConfirmedAbsence(row.employee_id, dayIdx)"
+                            prepend-icon="tabler-user-plus"
+                            :title="$t('planning.replacement.action')"
+                            data-test="find-replacement"
+                            class="text-warning"
+                            @click="openReplacement(shift)"
+                          />
+                          <VListItem
                             v-if="shift.status === 'published'"
                             prepend-icon="tabler-ban"
                             :title="$t('common.cancel')"
@@ -2875,6 +2939,89 @@ watch(activeTab, tab => {
             </VCol>
           </VRow>
         </VForm>
+      </div>
+    </VNavigationDrawer>
+
+    <!-- Remplacement guidé (Lot 3 §2, ADR-717) : fenêtre non assurée + candidats scopés -->
+    <VNavigationDrawer
+      v-model="replacementOpen"
+      class="wf-scroll-drawer"
+      temporary
+      location="end"
+      :width="420"
+    >
+      <div class="pa-5">
+        <div class="d-flex align-center justify-space-between mb-4">
+          <h5 class="text-h5">
+            {{ $t('planning.replacement.title') }}
+          </h5>
+          <VBtn icon variant="text" size="small" @click="replacementOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </div>
+
+        <VAlert type="warning" variant="tonal" density="compact" class="mb-4">
+          {{ $t('planning.replacement.gapHint') }}
+          <span v-if="replacementWindow.start" class="font-weight-medium d-block mt-1">
+            {{ timeOfDay(replacementWindow.start) }}–{{ timeOfDay(replacementWindow.end) }}
+          </span>
+        </VAlert>
+
+        <div v-if="replacementFetching" class="text-center py-6">
+          <VProgressCircular indeterminate color="primary" />
+        </div>
+
+        <template v-else>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            {{ $t('planning.replacement.pickHint') }}
+          </p>
+          <VList v-if="replacementData.candidates.length" density="compact" class="mb-4" max-height="340" style="overflow-y:auto;">
+            <VListItem
+              v-for="c in replacementData.candidates"
+              :key="c.employee_id"
+              :active="replacementTarget === c.employee_id"
+              :disabled="c.availability === 'unavailable' || c.availability === 'busy'"
+              data-test="replacement-candidate"
+              @click="replacementTarget = c.employee_id"
+            >
+              <template #prepend>
+                <VIcon
+                  :icon="replacementTarget === c.employee_id ? 'tabler-circle-check-filled' : 'tabler-circle'"
+                  :color="replacementTarget === c.employee_id ? 'primary' : 'disabled'"
+                  class="me-2"
+                />
+              </template>
+              <VListItemTitle>{{ c.employee_name }}</VListItemTitle>
+              <VListItemSubtitle v-if="c.job_role">
+                {{ c.job_role }}
+              </VListItemSubtitle>
+              <template #append>
+                <VChip :color="replacementAvailColor(c.availability)" size="x-small" label>
+                  {{ $t('planning.availability.' + c.availability) }}
+                </VChip>
+              </template>
+            </VListItem>
+          </VList>
+          <VAlert v-else type="info" variant="tonal" density="compact" class="mb-4">
+            {{ $t('planning.replacement.noCandidate') }}
+          </VAlert>
+
+          <div class="d-flex gap-2">
+            <VBtn variant="outlined" @click="replacementOpen = false">
+              {{ $t('common.cancel') }}
+            </VBtn>
+            <VSpacer />
+            <VBtn
+              color="primary"
+              :loading="replacementLoading"
+              :disabled="!replacementTarget"
+              data-test="confirm-replacement"
+              @click="confirmReplacement"
+            >
+              {{ $t('planning.replacement.confirm') }}
+            </VBtn>
+          </div>
+        </template>
       </div>
     </VNavigationDrawer>
 

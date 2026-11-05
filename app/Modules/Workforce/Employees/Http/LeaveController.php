@@ -132,6 +132,9 @@ class LeaveController extends Controller
             'date_from' => 'required|date',
             'date_to' => 'required|date|after_or_equal:date_from',
             'days_count_hundredths' => 'required|integer|min:1',
+            'hours_count_hundredths' => 'nullable|integer|min:1',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
             'reason' => 'nullable|string|max:1000',
         ]);
 
@@ -147,10 +150,46 @@ class LeaveController extends Controller
                 dateTo: $validated['date_to'],
                 daysCountHundredths: $validated['days_count_hundredths'],
                 reason: $validated['reason'] ?? null,
+                startTime: $validated['start_time'] ?? null,
+                endTime: $validated['end_time'] ?? null,
+                hoursCountHundredths: $validated['hours_count_hundredths'] ?? null,
             ), 201);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Lot 3 (ADR-717) — suggestion de décompte (jours/heures) pour une fenêtre d'absence, selon le contrat.
+     * Lecture seule, non contraignante : le formulaire pré-remplit, le décideur peut surcharger.
+     */
+    public function deductionPreview(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $validated = $request->validate([
+            'employee_id' => 'required|integer',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
+        ]);
+
+        $employee = Employee::withoutGlobalScopes()
+            ->where('company_id', $companyId)->findOrFail($validated['employee_id']);
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employee->id, 'leave'), 403);
+
+        $contract = $employee->currentContract;
+        if (! $contract) {
+            return response()->json(['message' => 'Employee has no active contract.'], 422);
+        }
+
+        return response()->json(app(\App\Modules\Workforce\Services\LeaveDeductionCalculator::class)->suggest(
+            $contract,
+            $validated['date_from'],
+            $validated['date_to'],
+            $validated['start_time'] ?? null,
+            $validated['end_time'] ?? null,
+        ));
     }
 
     public function approve(Request $request, int $id): JsonResponse

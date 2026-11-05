@@ -70,7 +70,15 @@ export const useLeavesStore = defineStore('workforceLeaves', {
       return await $api(`/workforce/leaves/${id}/impacted-shifts`)
     },
 
-    async createLeaveRequest({ employeeId, leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason }) {
+    // ADR-717 — suggestion de décompte (jours/heures) selon le contrat, pour une fenêtre d'absence.
+    async deductionPreview({ employeeId, dateFrom, dateTo, startTime, endTime }) {
+      return await $api('/workforce/leaves/deduction-preview', {
+        method: 'POST',
+        body: { employee_id: employeeId, date_from: dateFrom, date_to: dateTo, start_time: startTime, end_time: endTime },
+      })
+    },
+
+    async createLeaveRequest({ employeeId, leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason, startTime, endTime, hoursCountHundredths }) {
       const data = await $api('/workforce/leaves', {
         method: 'POST',
         body: {
@@ -80,6 +88,9 @@ export const useLeavesStore = defineStore('workforceLeaves', {
           date_to: dateTo,
           days_count_hundredths: daysCountHundredths,
           reason,
+          start_time: startTime || null,
+          end_time: endTime || null,
+          hours_count_hundredths: hoursCountHundredths || null,
         },
       })
 

@@ -80,6 +80,14 @@ class CreateScheduledActivityUseCase
                 ]],
             );
 
+            // ADR-717 — intention de notification enregistrée DANS la transaction (durable) si le shift
+            // est publié. Le contrôleur flush en post-commit (la commande planifiée rattrape).
+            if ($onPublished) {
+                $eventRef = 'activity:'.$activity->id.':'.optional($activity->updated_at)->timestamp;
+                app(\App\Modules\Workforce\Services\PlanningOutbox::class)
+                    ->enqueueChanged($companyId, [$shift->employee_id], \Illuminate\Support\Carbon::parse($startAt), $eventRef);
+            }
+
             return [
                 'activity' => $activity->fresh(),
                 'warnings' => $warnings,

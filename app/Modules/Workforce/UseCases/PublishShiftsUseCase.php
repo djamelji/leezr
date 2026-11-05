@@ -142,6 +142,10 @@ class PublishShiftsUseCase
                 ],
             );
 
+            // ADR-717 — intention de notification enregistrée DANS la transaction (durable, atomique avec
+            // la publication). Le flush post-commit (+ commande planifiée) l'enverra via PlanningNotifier.
+            app(\App\Modules\Workforce\Services\PlanningOutbox::class)->enqueuePublished($companyId, $shifts);
+
             return $shifts;
         });
     }

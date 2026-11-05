@@ -550,6 +550,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics'])->middleware($perm('workforce.leave_request'));
     Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index'])->middleware($perm('workforce.leave_request'));
     Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store'])->middleware($perm('workforce.leave_request'));
+    Route::post('leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'deductionPreview'])->middleware($perm('workforce.leave_request'));
     Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show'])->middleware($perm('workforce.leave_request'));
     Route::get('leaves/{id}/impacted-shifts', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'impactedShifts'])->middleware($perm('workforce.leave_approve'));
     Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve'])->middleware($perm('workforce.leave_approve'));
@@ -611,6 +612,9 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/copy-week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyWeek'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/{id}/duplicate', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'duplicate'])->middleware($perm('workforce.planning_manage'));
+    // ADR-717 — remplacement guidé (candidats en lecture ; création+publication du remplacement).
+    Route::get('shifts/{id}/replacement-candidates', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replacementCandidates'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/{id}/replace', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replace'])->middleware($perm('workforce.planning_publish'));
     Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));
