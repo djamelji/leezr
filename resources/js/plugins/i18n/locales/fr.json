@@ -7803,6 +7803,23 @@
       "confirm": "Créer le remplacement",
       "done": "Remplacement créé et publié"
     },
+    "palette": {
+      "title": "Modèles",
+      "search": "Rechercher un modèle…",
+      "armed": "Modèle armé — cliquez une cellule",
+      "dragHint": "Glisser vers une cellule, ou cliquer pour armer",
+      "empty": "Aucun modèle correspondant.",
+      "favorite": "Favori"
+    },
+    "dnd": {
+      "created": "Shift créé",
+      "moved": "Shift déplacé",
+      "sameCell": "Même cellule",
+      "absent": "Collaborateur absent ce jour",
+      "stale": "Modifié entre-temps — rechargez puis réessayez",
+      "dragShiftHint": "Glisser pour déplacer (brouillon)",
+      "publishedLocked": "Shift publié — non déplaçable (utilisez la révision)"
+    },
     "posts": {
       "uncategorized": "Non catégorisé",
       "empty": "Aucune affectation cette semaine."

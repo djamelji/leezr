@@ -682,21 +682,189 @@ const onEmptyCell = (employeeId, date) => {
 
   return openCreateShift(employeeId, date)
 }
-const quickAssign = async (employeeId, date) => {
+const quickAssign = (employeeId, date) => {
   const tpl = store.allTemplates.find(t => t.id === armedTemplateId.value)
   if (!tpl) return openCreateShift(employeeId, date)
+
+  return applyTemplateToCell(tpl, employeeId, date)
+}
+
+// Applique un modèle à une cellule (salarié+jour) → crée un Shift via le UseCase serveur (règles revalidées).
+// Aucune écriture optimiste : la grille n'est rafraîchie qu'après confirmation serveur.
+const applyTemplateToCell = async (tpl, employeeId, date) => {
+  await store.createShift({
+    employee_id: employeeId, date,
+    start_at: `${date} ${tpl.start_time}`, end_at: `${date} ${tpl.end_time}`,
+    timezone: 'Europe/Paris', schedule_template_id: tpl.id, work_location_id: tpl.work_location_id,
+  })
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOT 4A — DRAG & DROP RÉEL (palette + modèle→cellule + déplacement brouillon) — ADR-718
+// Interactions POINTEUR (mousedown/move/up) : ghost, cible, zones autorisée/interdite, auto-scroll bords.
+// Appelle les MÊMES UseCases que les formulaires (createShift / updateShift). Shift publié = non déplaçable.
+// ══════════════════════════════════════════════════════════════
+
+// ── Palette de modèles ──
+const paletteOpen = useCookie('planningPaletteOpen', { default: () => true })
+const paletteSearch = ref('')
+const favoriteTemplates = useCookie('planningTemplateFavorites', { default: () => [] })
+const isFavorite = id => (favoriteTemplates.value || []).includes(id)
+const toggleFavorite = id => {
+  const list = [...(favoriteTemplates.value || [])]
+  const i = list.indexOf(id)
+  if (i === -1) list.push(id); else list.splice(i, 1)
+  favoriteTemplates.value = list
+}
+const templateDuration = tpl => {
+  if (!tpl?.start_time || !tpl?.end_time) return ''
+  const [sh, sm] = tpl.start_time.split(':').map(Number)
+  const [eh, em] = tpl.end_time.split(':').map(Number)
+  let mins = (eh * 60 + em) - (sh * 60 + sm)
+  if (mins < 0) mins += 1440 // shift de nuit
+  mins -= (tpl.break_duration_minutes || 0)
+
+  return `${Math.floor(mins / 60)}h${mins % 60 ? String(mins % 60).padStart(2, '0') : ''}`
+}
+const paletteTemplates = computed(() => {
+  const q = paletteSearch.value.trim().toLowerCase()
+  let list = store.allTemplates.filter(tpl => tpl.enabled !== false)
+  if (gridLocation.value) list = list.filter(tpl => tpl.work_location_id === gridLocation.value)
+  if (q) list = list.filter(tpl => (tpl.name || '').toLowerCase().includes(q) || (tpl.activity_type || '').toLowerCase().includes(q))
+
+  return [...list].sort((a, b) => (isFavorite(b.id) ? 1 : 0) - (isFavorite(a.id) ? 1 : 0))
+})
+const templateHex = tpl => tpl?.color || '#8691a8'
+const locationName = id => store.allLocations.find(l => l.id === id)?.name
+
+// ── État du drag ──
+const drag = ref(null)              // { kind:'template'|'shift', label, color, tpl?, shift?, row? }
+const dragGhost = reactive({ x: 0, y: 0 })
+const dragTarget = ref(null)        // { employeeId, date, dayIdx }
+const dragValid = ref(false)
+const dragReason = ref('')
+const dragBusy = ref(false)
+let pending = null                  // seuil de démarrage (distingue clic vs drag)
+
+const cellIsAbsentConfirmed = (employeeId, dayIdx) => shiftHasConfirmedAbsence(employeeId, dayIdx)
+
+const beginTemplateDrag = (tpl, e) => {
+  pending = { kind: 'template', tpl, label: tpl.name, color: templateHex(tpl), x: e.clientX, y: e.clientY }
+  attachDragListeners()
+}
+const beginShiftDrag = (shift, row, e) => {
+  if (shift.status !== 'draft') return // publié = non déplaçable (immutabilité)
+  pending = { kind: 'shift', shift, row, label: shiftPoste(shift), color: shiftHex(shift), x: e.clientX, y: e.clientY }
+  attachDragListeners()
+}
+const attachDragListeners = () => {
+  window.addEventListener('mousemove', onPointerMove, { passive: false })
+  window.addEventListener('mouseup', onPointerUp, { passive: false })
+}
+const detachDragListeners = () => {
+  window.removeEventListener('mousemove', onPointerMove)
+  window.removeEventListener('mouseup', onPointerUp)
+}
+
+const onPointerMove = e => {
+  // Démarrage réel au-delà d'un seuil (sinon on laisse le clic se produire).
+  if (!drag.value) {
+    if (!pending) return
+    if (Math.abs(e.clientX - pending.x) < 5 && Math.abs(e.clientY - pending.y) < 5) return
+    drag.value = { kind: pending.kind, label: pending.label, color: pending.color, tpl: pending.tpl, shift: pending.shift, row: pending.row }
+    document.body.classList.add('plan-dragging')
+  }
+  e.preventDefault()
+  dragGhost.x = e.clientX
+  dragGhost.y = e.clientY
+  autoScrollEdges(e)
+
+  const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-droppable="1"]')
+  if (!cell) { dragTarget.value = null; dragValid.value = false; dragReason.value = ''; return }
+  const employeeId = Number(cell.dataset.emp)
+  const date = cell.dataset.date
+  const dayIdx = Number(cell.dataset.dayidx)
+  dragTarget.value = { employeeId, date, dayIdx }
+
+  // Validité côté client (indicative ; le serveur reste l'autorité).
+  if (drag.value.kind === 'shift') {
+    const s = drag.value.shift
+    const sameCell = s.employee_id === employeeId && (s.date?.split('T')[0] || s.date) === date
+    if (sameCell) { dragValid.value = false; dragReason.value = t('planning.dnd.sameCell'); return }
+  }
+  if (cellIsAbsentConfirmed(employeeId, dayIdx)) {
+    dragValid.value = false; dragReason.value = t('planning.dnd.absent'); return
+  }
+  dragValid.value = true; dragReason.value = ''
+}
+
+const autoScrollEdges = e => {
+  const sc = document.querySelector('.planning-scroll')
+  if (!sc) return
+  const r = sc.getBoundingClientRect()
+  const m = 48
+  if (e.clientX > r.right - m) sc.scrollLeft += 18
+  else if (e.clientX < r.left + m) sc.scrollLeft -= 18
+  if (e.clientY > r.bottom - m) sc.scrollTop += 18
+  else if (e.clientY < r.top + m) sc.scrollTop -= 18
+}
+
+const onPointerUp = async () => {
+  detachDragListeners()
+  const active = drag.value
+  const target = dragTarget.value
+  const valid = dragValid.value
+  pending = null
+  if (!active) return // simple clic : rien à faire (les handlers click natifs s'exécutent)
+
+  if (!target || !valid) { clearDrag(); return }
+
+  dragBusy.value = true
   try {
-    await store.createShift({
-      employee_id: employeeId, date,
-      start_at: `${date} ${tpl.start_time}`, end_at: `${date} ${tpl.end_time}`,
-      timezone: 'Europe/Paris', schedule_template_id: tpl.id, work_location_id: tpl.work_location_id,
-    })
-    toast(t('planning.quickAssign.done'), 'success')
-    fetchWeekData()
-  } catch (e) {
-    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
+    if (active.kind === 'template') {
+      await applyTemplateToCell(active.tpl, target.employeeId, target.date)
+      toast(t('planning.dnd.created'), 'success')
+    } else {
+      await moveShift(active.shift, target.employeeId, target.date)
+      toast(t('planning.dnd.moved'), 'success')
+    }
+    await fetchWeekData() // couverture + grille recalculées APRÈS confirmation serveur
+  } catch (err) {
+    const code = err?.data?.code || err?.response?._data?.code
+    const msg = (err?.data?.message || err?.response?._data?.message)
+      || (code === 'stale_version' ? t('planning.dnd.stale') : t('common.error'))
+    toast(msg, 'error') // aucune écriture optimiste → la grille reste dans son état d'origine
+  } finally {
+    dragBusy.value = false
+    clearDrag()
   }
 }
+
+const clearDrag = () => {
+  drag.value = null
+  dragTarget.value = null
+  dragValid.value = false
+  dragReason.value = ''
+  document.body.classList.remove('plan-dragging')
+}
+
+// Déplace un Shift BROUILLON vers (salarié, jour) en conservant l'heure murale ; verrou optimiste.
+const moveShift = (shift, employeeId, date) => {
+  return store.updateShift(shift.id, {
+    employee_id: employeeId,
+    date,
+    start_at: `${date} ${timeOfDay(shift.start_at)}`,
+    end_at: `${date} ${timeOfDay(shift.end_at)}`,
+    timezone: shift.timezone || 'Europe/Paris',
+    expected_updated_at: shift.updated_at,
+  })
+}
+
+// La cellule (emp,jour) est-elle la cible courante du drag ?
+const isDragTargetCell = (employeeId, dayIdx) =>
+  !!drag.value && dragTarget.value?.employeeId === employeeId && dragTarget.value?.dayIdx === dayIdx
+
+onBeforeUnmount(() => detachDragListeners())
 
 // ── Day detail (multi-activités) — Smart Planning SP1b ───────
 const activityDayOpen = ref(false)
@@ -2009,8 +2177,79 @@ watch(activeTab, tab => {
 
           <VDivider />
 
+          <!-- LOT 4A — Palette de modèles (glisser vers une cellule OU clic pour « armer ») -->
+          <div
+            v-if="store.allTemplates.length"
+            class="plan-palette px-4 py-3"
+            data-test="template-palette"
+          >
+            <div class="d-flex align-center gap-2 mb-2">
+              <VBtn
+                icon
+                variant="text"
+                size="x-small"
+                @click="paletteOpen = !paletteOpen"
+              >
+                <VIcon :icon="paletteOpen ? 'tabler-chevron-down' : 'tabler-chevron-right'" size="18" />
+              </VBtn>
+              <VIcon icon="tabler-layout-grid-add" size="18" class="text-medium-emphasis" />
+              <span class="font-weight-medium">{{ $t('planning.palette.title') }}</span>
+              <VChip v-if="armedTemplateId" size="x-small" color="primary" label class="ms-1">
+                {{ $t('planning.palette.armed') }}
+              </VChip>
+              <VSpacer />
+              <AppTextField
+                v-if="paletteOpen"
+                v-model="paletteSearch"
+                :placeholder="$t('planning.palette.search')"
+                density="compact"
+                hide-details
+                prepend-inner-icon="tabler-search"
+                clearable
+                style="max-inline-size: 220px;"
+              />
+            </div>
+            <div v-if="paletteOpen" class="plan-palette__strip">
+              <div
+                v-for="tpl in paletteTemplates"
+                :key="tpl.id"
+                class="plan-palette__card"
+                :class="{ 'plan-palette__card--armed': armedTemplateId === tpl.id }"
+                :style="{ '--tc': templateHex(tpl) }"
+                data-test="palette-template"
+                :data-template-id="tpl.id"
+                :title="$t('planning.palette.dragHint')"
+                @mousedown.prevent="beginTemplateDrag(tpl, $event)"
+                @click="armedTemplateId = armedTemplateId === tpl.id ? null : tpl.id"
+              >
+                <div class="d-flex align-center justify-space-between">
+                  <span class="plan-palette__name">{{ tpl.name }}</span>
+                  <VIcon
+                    :icon="isFavorite(tpl.id) ? 'tabler-star-filled' : 'tabler-star'"
+                    :color="isFavorite(tpl.id) ? 'warning' : undefined"
+                    size="15"
+                    class="plan-palette__fav"
+                    @click.stop="toggleFavorite(tpl.id)"
+                  />
+                </div>
+                <div class="plan-palette__meta">
+                  <span>{{ (tpl.start_time || '').slice(0, 5) }}–{{ (tpl.end_time || '').slice(0, 5) }}</span>
+                  <span v-if="templateDuration(tpl)" class="text-medium-emphasis"> · {{ templateDuration(tpl) }}</span>
+                </div>
+                <div v-if="tpl.work_location_id" class="plan-palette__loc text-caption text-medium-emphasis">
+                  <VIcon icon="tabler-map-pin" size="11" /> {{ locationName(tpl.work_location_id) }}
+                </div>
+              </div>
+              <div v-if="!paletteTemplates.length" class="text-caption text-medium-emphasis py-2">
+                {{ $t('planning.palette.empty') }}
+              </div>
+            </div>
+          </div>
+
+          <VDivider v-if="store.allTemplates.length" />
+
           <!-- Weekly Grid Table -->
-          <div class="planning-grid-wrap">
+          <div class="planning-grid-wrap planning-scroll">
             <VTable
               density="compact"
               :loading="gridLoading"
@@ -2227,7 +2466,15 @@ watch(activeTab, tab => {
                   v-for="(date, dayIdx) in weekDates"
                   :key="date"
                   class="text-center planning-cell"
-                  :class="{ 'bg-light': date === new Date().toISOString().slice(0, 10) }"
+                  :class="{
+                    'bg-light': date === new Date().toISOString().slice(0, 10),
+                    'plan-cell--drop-ok': isDragTargetCell(row.employee_id, dayIdx) && dragValid,
+                    'plan-cell--drop-no': isDragTargetCell(row.employee_id, dayIdx) && !dragValid,
+                  }"
+                  data-droppable="1"
+                  :data-emp="row.employee_id"
+                  :data-date="date"
+                  :data-dayidx="dayIdx"
                   @click="!row.shifts[dayIdx]?.length && !absencesFor(row.employee_id, dayIdx).length ? onEmptyCell(row.employee_id, date) : null"
                 >
                   <!-- Indisponibilité (congé/absence) — projection RH, type seul, confirmé vs en attente -->
@@ -2253,7 +2500,7 @@ watch(activeTab, tab => {
                       v-for="shift in row.shifts[dayIdx]"
                       :key="shift.id"
                       class="plan-shift"
-                      :class="`plan-shift--${shift.status}`"
+                      :class="[`plan-shift--${shift.status}`, { 'plan-shift--dragging': drag?.shift?.id === shift.id, 'plan-shift--draggable': shift.status === 'draft' }]"
                     >
                       <VCheckbox
                         v-if="shift.status === 'draft'"
@@ -2268,9 +2515,18 @@ watch(activeTab, tab => {
                         type="button"
                         class="plan-shift__body plan-shift__body--block"
                         :style="{ '--sc': shiftHex(shift) }"
-                        :title="shiftPoste(shift) + ' · ' + formatShiftRange(shift)"
+                        :title="(shift.status === 'draft' ? $t('planning.dnd.dragShiftHint') : $t('planning.dnd.publishedLocked')) + ' · ' + shiftPoste(shift) + ' · ' + formatShiftRange(shift)"
+                        :data-test="shift.status === 'draft' ? 'draggable-shift' : 'locked-shift'"
+                        @mousedown="shift.status === 'draft' ? beginShiftDrag(shift, row, $event) : null"
                         @click.stop="openActivityDay(shift, row)"
                       >
+                        <VIcon
+                          v-if="shift.status !== 'draft'"
+                          icon="tabler-lock"
+                          size="11"
+                          class="plan-shift__lock"
+                          :title="$t('planning.dnd.publishedLocked')"
+                        />
                         <span class="plan-shift__poste">
                           {{ shiftPoste(shift) }}
                           <span
@@ -2941,6 +3197,22 @@ watch(activeTab, tab => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <!-- LOT 4A — Ghost de drag (suit le curseur) + indicateur de validité/raison -->
+    <Teleport to="body">
+      <div
+        v-if="drag"
+        class="plan-drag-ghost"
+        :class="dragValid ? 'plan-drag-ghost--ok' : 'plan-drag-ghost--no'"
+        :style="{ top: dragGhost.y + 'px', left: dragGhost.x + 'px', '--gc': drag.color }"
+        data-test="drag-ghost"
+      >
+        <VIcon v-if="dragBusy" icon="tabler-loader-2" size="14" class="plan-drag-ghost__spin" />
+        <VIcon v-else :icon="dragValid ? 'tabler-check' : 'tabler-ban'" size="14" />
+        <span class="plan-drag-ghost__label">{{ drag.label }}</span>
+        <span v-if="dragReason" class="plan-drag-ghost__reason">{{ dragReason }}</span>
+      </div>
+    </Teleport>
 
     <!-- Remplacement guidé (Lot 3 §2, ADR-717) : fenêtre non assurée + candidats scopés -->
     <VNavigationDrawer
@@ -3781,4 +4053,74 @@ watch(activeTab, tab => {
 .planning-grid .coverage-row th:hover .cov-add-btn,
 .planning-grid .cov-add-btn:hover,
 .planning-grid .cov-add-btn:focus-visible { opacity: 1; }
+
+// ── LOT 4A — Palette de modèles ──
+// Épinglée en haut (§2 « immédiatement accessible ») : reste atteignable pour glisser vers n'importe
+// quelle ligne, même quand la grille défile.
+.plan-palette {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 6;
+  background: rgb(var(--v-theme-surface));
+}
+.plan-palette__strip {
+  max-block-size: 132px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.plan-palette__card {
+  position: relative;
+  inline-size: 150px;
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-inline-start: 3px solid var(--tc);
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+  background: rgb(var(--v-theme-surface));
+  transition: box-shadow 0.12s ease, transform 0.06s ease;
+}
+.plan-palette__card:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+.plan-palette__card:active { cursor: grabbing; }
+.plan-palette__card--armed { box-shadow: 0 0 0 2px rgb(var(--v-theme-primary)); }
+.plan-palette__name { font-weight: 600; font-size: 0.82rem; }
+.plan-palette__meta { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.plan-palette__fav { cursor: pointer; }
+
+// ── Cellules cibles pendant le drag ──
+.plan-cell--drop-ok { outline: 2px dashed rgb(var(--v-theme-success)); outline-offset: -2px; background: rgba(var(--v-theme-success), 0.08) !important; }
+.plan-cell--drop-no { outline: 2px dashed rgb(var(--v-theme-error)); outline-offset: -2px; background: rgba(var(--v-theme-error), 0.07) !important; }
+
+// ── Blocs shift : brouillon déplaçable / publié verrouillé ──
+.plan-shift--draggable .plan-shift__body { cursor: grab; }
+.plan-shift--dragging { opacity: 0.4; }
+.plan-shift__lock { margin-inline-end: 2px; opacity: 0.6; }
+
+// Pendant un drag global : curseur + pas de sélection de texte.
+:global(body.plan-dragging) { cursor: grabbing !important; user-select: none !important; }
+
+// ── Ghost suivant le curseur ──
+:global(.plan-drag-ghost) {
+  position: fixed;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  pointer-events: none;
+  transform: translate(10px, 10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  border-inline-start: 4px solid var(--gc);
+}
+:global(.plan-drag-ghost--ok) { background: rgb(var(--v-theme-success)); }
+:global(.plan-drag-ghost--no) { background: rgb(var(--v-theme-error)); }
+:global(.plan-drag-ghost__reason) { font-weight: 400; opacity: 0.9; }
+:global(.plan-drag-ghost__spin) { animation: plan-spin 0.8s linear infinite; }
+@keyframes plan-spin { to { transform: rotate(360deg); } }
 </style>

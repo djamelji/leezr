@@ -7803,6 +7803,23 @@
       "confirm": "Create replacement",
       "done": "Replacement created and published"
     },
+    "palette": {
+      "title": "Templates",
+      "search": "Search a template…",
+      "armed": "Template armed — click a cell",
+      "dragHint": "Drag onto a cell, or click to arm",
+      "empty": "No matching template.",
+      "favorite": "Favorite"
+    },
+    "dnd": {
+      "created": "Shift created",
+      "moved": "Shift moved",
+      "sameCell": "Same cell",
+      "absent": "Employee is absent that day",
+      "stale": "Changed meanwhile — reload and retry",
+      "dragShiftHint": "Drag to move (draft)",
+      "publishedLocked": "Published shift — not movable (use revision)"
+    },
     "posts": {
       "uncategorized": "Uncategorized",
       "empty": "No assignment this week."

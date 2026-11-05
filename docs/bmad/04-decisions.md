@@ -26072,3 +26072,42 @@ A (congé partiel avant planning), B (absence après publication → remplacemen
 
 ### Fichiers clés
 `LeaveRequest.php` (absentWindowOn/isPartial) · `LeaveDeductionCalculator.php` · `CoverageReadModel.php` (segments+absences par intervalle) · `PlanningBoardReadModel.php` (availability fenêtre-aware + absences times) · `CreateReplacementShiftUseCase.php` · `ShiftController.php` (replacementCandidates/replace) · `PlanningOutbox.php` + `PlanningNotificationOutbox.php` + `FlushPlanningNotificationsCommand.php` + `PlanningNotifier::sendGroups` · `PublishShiftsUseCase.php` / `Create|UpdateScheduledActivityUseCase.php` (enqueue intra-transaction) · `RequestLeaveUseCase.php` + `LeaveController.php` (partiel + deduction-preview) · migrations `add_partial_window_to_leave_requests` / `add_replaces_shift_id_to_shifts` / `create_planning_notification_outbox` · `routes/company.php` + `routes/console.php` · front `planning/index.vue` (drawer remplacement, chip fenêtre) + `leave/index.vue` (toggle partiel + preview) + stores + lang · tests PHPUnit Lot 3 + `workforce-lot3-complement.spec.js`.
+
+---
+
+## ADR-718 — WORKFORCE / SMART PLANNING Lot 4A : drag-and-drop réel (palette · modèle→cellule · déplacement brouillon · duplication)
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO Lot 4A. **Checkpoint obligatoire** : 4B (actions de masse) et 4C (mobile/perf) NON engagés — attendent leur GO spécifique.
+**Garde-fous** : DEV · origin/dev. **Aucun changement backend** (réutilisation pure des UseCases existants) ; aucune migration ; aucun 2ᵉ moteur de planning ; Payroll/Billing/Signature inchangés. RBAC, scope manager, isolation tenant, publication atomique, verrou optimiste, absences, remplacements, TimeEntry : **inchangés** (appliqués par les mêmes endpoints que les formulaires).
+
+### Principe
+Lot 4A est une **couche d'interaction pointeur pure côté front** par-dessus les écritures existantes : `createShift` (modèle→cellule), `updateShift` (déplacement brouillon, verrou optimiste `expected_updated_at`→409), `duplicateShift`. **Le serveur reste l'unique autorité** : chaque drop appelle le UseCase qui revalide tout (actif, contrat, congé, double-booking, règles temps de travail, scope, immutabilité du publié). **Aucune écriture optimiste** : la grille n'est jamais modifiée avant confirmation serveur ; en cas d'erreur (409/422/403) la grille reste dans son état initial + message explicite.
+
+### Palette de modèles (§2)
+Bandeau `data-test="template-palette"` au-dessus de la grille (rétractable, cookie `planningPaletteOpen`) : cartes modèle avec nom, couleur, horaire, durée (pauses déduites, shift de nuit géré), lieu ; recherche ; favoris (cookie `planningTemplateFavorites`) ; filtrage par lieu (réutilise `gridLocation`). **Les modèles proviennent de la config Company** (`store.allTemplates`) — aucun « Route » codé en dur. Double accès : **glisser** vers une cellule OU **clic pour armer** (puis clic cellule = `quickAssign`, alternative accessible existante).
+
+### Drag-and-drop pointeur (§3) — mousedown/move/up
+- **Seuil anti-clic** : le drag ne démarre qu'au-delà de 5 px → les clics existants (ouvrir le détail jour, cocher) restent intacts.
+- **A — Modèle → salarié/jour** : drop sur une cellule `[data-droppable][data-emp][data-date]` → `applyTemplateToCell` → `createShift` → refetch couverture+grille après succès.
+- **B — Déplacer un brouillon** : bloc `plan-shift--draggable` (brouillon uniquement) → `moveShift` = `updateShift` avec nouvel `employee_id`/`date` et **heure murale conservée** ; les activités (lignes enfant `shift_id`) et pauses (`template_snapshot`) sont **préservées** ; verrou optimiste (`expected_updated_at`).
+- **C — Duplication** : action explicite inchangée (`duplicateShift`) ; ne modifie jamais l'original.
+- **D — Shift publié** : **non déplaçable** (pas de `@mousedown` de drag, cadenas `tabler-lock`, `data-test="locked-shift"`, titre explicite) ; le backend refuse de toute façon (`Only draft shifts can be modified`). La révision passe par le workflow explicite existant (menu → remplacement/annulation). **Immutabilité jamais contournée.**
+
+### Feedback visuel (§4)
+Ghost flottant (`Teleport` body, suit le curseur, couleur du modèle/shift) avec état **valide (vert ✓)** / **interdit (rouge ⛔ + raison)** ; cellule cible surlignée `plan-cell--drop-ok` / `plan-cell--drop-no` ; bloc source estompé pendant le drag ; spinner pendant l'appel serveur ; **auto-scroll** horizontal/vertical quand le curseur approche des bords du conteneur `.planning-scroll`. Raisons client indicatives (« même cellule », « collaborateur absent ce jour ») — l'autorité reste serveur. Aucun bloc marqué « enregistré » avant la réponse ; sur 409 → message « modifié entre-temps, rechargez ».
+
+### Couverture temps réel (§8)
+Après chaque drop confirmé, `fetchWeekData()` rafraîchit shifts + `CoverageReadModel` (catégories, affectés/requis, sous/sur-effectif, absences partielles par intervalle — ADR-717). Boutons `+` des besoins vides et bandeau rétractable conservés. **Note (prérequis §8)** : le contrat sur-effectif « warn + confirm + vérification serveur avant affectation excédentaire » N'EST PAS encore implémenté — porté comme **réserve explicite** (voir Limitations) ; 4A crée/déplace mais n'ajoute pas de garde-fou sur-effectif dédié.
+
+### Recette
+- Playwright **événements pointeur réels** (`workforce-lot4a-dnd.spec.js`, leezr.test) : modèle glissé → cellule (POST réel + persistance après reload) ; brouillon déplacé (PUT réel) ; shift publié **verrouillé** (pas de PUT au drag) ; refetch couverture ; captures **light + dark**. Permissions/scope/TimeEntry : inchangés (mêmes endpoints, couverts PHPUnit).
+- `pnpm build` clean. Aucun test PHPUnit modifié (0 changement backend).
+
+### Limitations restantes (honnêtes, réserves ADR-717 conservées)
+- **Contrat sur-effectif (warn+confirm serveur)** : non implémenté → prérequis explicite avant les opérations de masse qui pourraient sur-affecter (4B).
+- Plusieurs absences horaires distinctes le même jour ; shifts nocturnes/périodes traversant minuit ; scénario salarié connecté/cloche ; décompte congés indicatif (Market/Company) : **réserves ADR-717 maintenues**, non résolues par approximation.
+- Drag **tactile/mobile** : hors 4A (prévu 4C — le drag souris n'est pas imposé comme seule voie : clic-pour-armer reste l'alternative accessible).
+
+### Fichiers clés
+`resources/js/pages/company/workforce/planning/index.vue` (palette, moteur drag pointeur, ghost, cibles, auto-scroll, blocs brouillon draggables / publiés verrouillés, styles) · `lang fr/en` (`planning.palette.*`, `planning.dnd.*`) · `tests/e2e/workforce-lot4a-dnd.spec.js`. Backend : **inchangé** (réutilise `createShift`/`updateShift`/`duplicateShift`).
