@@ -25893,3 +25893,57 @@ Blocs occupent **toute la largeur utile** de la cellule (`inline-size: 100%`), n
 
 ### Fichiers clés
 `resources/styles/styles.scss` (fix scroll) · 17 fichiers Workforce (+classe) · `planning/index.vue` (publication : `openPublish`/`confirmPublish`/`publishWeek`/dialog, blocs width) · i18n · `workforce-lot1-drawers-publish.spec.js`.
+
+---
+
+## ADR-715 — WORKFORCE / SMART PLANNING Lot 2 : notifications de publication & modification (in-app + email)
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 4b5e48d). GO Lot 2. **Lot 3 (congés/absences/couverture recalculée/remplacement) NON engagé — checkpoint requis.** SP2–SP5 suspendus.
+**Garde-fous** : DEV · origin/dev. Pas de main/PROD, Billing/Payroll/Signature, migration destructive, 2ᵉ moteur. RBAC, scopes, isolation tenant, publication atomique, verrou optimiste, immutabilité shifts publiés, `WorkTimeComplianceChecker`, `TimeEntry` : inchangés.
+
+### Composants existants RÉUTILISÉS (aucun 2ᵉ moteur)
+`App\Core\Notifications\NotificationDispatcher::send()` (in-app `NotificationEvent` + SSE temps réel) ; `NotificationTopicRegistry` (catalogue déclaratif + `sync()`) ; `NotificationPreference` (canaux par user/topic) ; filtre catégorie→permission (ADR-382) ; `EmailService` (+ `EmailLog`) pour le mail via une Laravel `Notification` (`ShouldQueue`, `via=['mail']`). Frontend : cloche + store notifications déjà en place (rien à ajouter).
+
+### Ajouté
+- **Catégorie `workforce` UNIVERSELLE** (`CATEGORY_PERMISSIONS['workforce']=null`) → les salariés (sans permission `*.manage`) reçoivent leurs notifications. + `BUNDLE_META`.
+- **Topics** `workforce.planning_published` & `workforce.planning_changed` (default_channels `['in_app','email']`) + clés i18n serveur `lang/{fr,en}/notifications.php` (`:period`, `:count`). **Seedés via `SystemSeeder`** (idempotent, rejoué à chaque déploiement) — sinon le dispatcher retombe en email-only.
+- **Mailable** `PlanningPublishedNotification` (`ShouldQueue`, `via=['mail']`, `toMail`), lien vers l'espace salarié.
+- **Service `PlanningNotifier`** : résout `employee->user` (ignore si null), **idempotent** via `entity_key` stable (`workforce_planning_published:{userId}:{from}`) → pas de doublon (retry/re-publication), **dispatché par les CONTRÔLEURS après le commit** des UseCases (jamais pour une opération échouée, qui lève une exception avant), **résilient** (un échec d'envoi n'interrompt jamais la publication, `report()`).
+
+### Catalogue des événements déclencheurs
+| Événement | Topic | Déclencheur | Destinataires |
+|---|---|---|---|
+| Première publication | `workforce.planning_published` | `ShiftController@publish` après `PublishShiftsUseCase` OK | salariés des shifts publiés (avec user) |
+| Ajout d'activité sur shift **publié** | `workforce.planning_changed` | `CreateScheduledActivityUseCase` (onPublished) | salarié du shift |
+| Révision/réaffectation d'activité sur shift **publié** | `workforce.planning_changed` | `UpdateScheduledActivityUseCase` (onPublished) | **ancien ET nouveau** titulaire |
+| Changement de BROUILLON | — | — | **aucune notif** |
+| Publication **échouée** (conflit, atomique) | — | exception avant notifier | **aucune notif** |
+
+### Matrice des destinataires
+Salarié **avec compte user** → in-app (NotificationEvent) + email (selon `NotificationPreference`/topic). Salarié **sans compte** → ignoré (in-app impossible ; email direct non activé dans ce lot — limitation). Catégorie universelle → aucun filtre de permission ne masque un salarié. Isolation tenant : `NotificationEvent.company_id` + recipient = user de la Company.
+
+### Fiabilité & statuts (honnête — §5)
+Déclenché **après commit** (contrôleur) → jamais de notif sur publication échouée. Idempotent (entity_key). Email **mis en queue** (`ShouldQueue`, connexion `database`) via `EmailService` qui crée un `EmailLog` (`queued`→`sent`/`failed`). **Statuts réellement disponibles** : in-app `created`/`read` ; email `queued` / `sent (= accepté par le transport SMTP)` / `failed`. **PAS de « delivered »** : aucun webhook provider ; `email_logs.delivery_status`/`delivered_at` existent mais ne sont pas renseignés. Gère : queue indisponible/retry (ShouldQueue), échec SMTP (try/catch + report + EmailLog `failed`), salarié sans email/user (ignoré), préférences désactivées (canaux via `NotificationPreference`).
+
+### Paramètres Company (§6)
+S'appuie sur le système EXISTANT : préférences par user (`notification_preferences.channels` par topic) + `default_channels` du topic + activation du topic (plateforme). **Pas de nouvelle table Company settings** (ne pas inventer un 2ᵉ mécanisme). Une politique Company contraignante au-dessus des préférences user = extension distincte à décider (non livrée).
+
+### Espace salarié (§7)
+Lien = `/company/workforce/me` (espace « Mon espace »). **Pas d'IDOR** : page du salarié connecté (aucun identifiant dans l'URL), scope auth/tenant. (Parcours visuel employé-connecté non rejoué en Playwright — voir limitations.)
+
+### Réserve ADR-714 §9 — drawers (complétée)
+24 drawers, 17 fichiers, classe `wf-scroll-drawer` appliquée partout (règle partagée). **Testé E2E** : (Lot 1) scroll besoins multi-résolution 1920/1366/1280 + sauvegarde depuis le bas + page non bloquée après fermeture ; (Lot 2, `workforce-lot2-drawer-reserve.spec.js`) **drawer avec erreur de validation (hauteur accrue) → scroll + action du bas accessibles** + **drawer de modèle scrollable sur mobile 390** (overflow auto). Les autres drawers héritent de la même correction ; leurs parcours de sauvegarde seront vérifiés au fil des usages (pas de défaut constaté).
+
+### Recette
+`WorkforcePlanningNotificationsLot2Test` (5 verts) : publish → in-app pour salariés avec user + email (`Notification::fake`), aucun pour salarié sans user ; idempotence (pas de doublon au retry) ; aucune notif sur changement de brouillon ; révision sur shift publié notifie uniquement l'affecté ; `TimeEntry` intact. **Non-régression 169.** Playwright réserve §9 (2 verts). `pnpm build` non requis (changements serveur/lang). SHA DEV servi vérifié.
+
+### Limitations restantes (honnêtes)
+- **Pas de « delivered »** (aucune preuve provider) — seulement queued/sent/failed.
+- **Salarié sans compte user** : aucune notification (ni in-app ni email direct dans ce lot).
+- **Paramètres Company contraignants** au-dessus des préférences user : non livrés (extension à décider).
+- **Playwright employé-connecté** (cloche in-app côté salarié) non rejoué ; mécanisme prouvé par PHPUnit + réutilisation de l'UI notifications déjà en production.
+- Regroupement avancé multi-changements : un entity_key par salarié+jour regroupe par jour ; un regroupement « 10 changements → 1 résumé » plus fin est possible mais non implémenté.
+
+### Fichiers clés
+`NotificationTopicRegistry.php` (catégorie+topics) · `PlanningPublishedNotification.php` · `PlanningNotifier.php` · `ShiftController.php` (publish hook) · `Create/UpdateScheduledActivityUseCase.php` (+ `ScheduledActivityController.php` hooks) · `SystemSeeder.php` · `lang/{fr,en}/notifications.php` · `WorkforcePlanningNotificationsLot2Test.php` · `workforce-lot2-drawer-reserve.spec.js`.
