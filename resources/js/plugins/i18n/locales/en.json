@@ -7629,7 +7629,8 @@
         "category": "Coverage category",
         "categoryHint": "Which operational need this targets",
         "catName": "Category name",
-        "catCode": "Code"
+        "catCode": "Code",
+        "date": "Date"
       },
       "anyPresence": "Presence (all categories)",
       "replicateWeekdays": "Replicate Mon→Fri",
@@ -7639,7 +7640,11 @@
       "categories": "Coverage categories",
       "noCategory": "No category — add one to qualify coverage.",
       "categoryCreated": "Category created",
-      "categoryDeleted": "Category deleted"
+      "categoryDeleted": "Category deleted",
+      "modeRecurrent": "Recurring",
+      "modePonctuel": "One-off",
+      "needWeekday": "Select a weekday.",
+      "needDate": "Select a date."
     },
     "stats": {
       "totalShifts": "Total shifts",

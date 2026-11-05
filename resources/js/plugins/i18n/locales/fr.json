@@ -7629,7 +7629,8 @@
         "category": "Catégorie de couverture",
         "categoryHint": "Qualifie à quel besoin ce besoin correspond",
         "catName": "Nom de catégorie",
-        "catCode": "Code"
+        "catCode": "Code",
+        "date": "Date"
       },
       "anyPresence": "Présence (toutes catégories)",
       "replicateWeekdays": "Répliquer lun→ven",
@@ -7639,7 +7640,11 @@
       "categories": "Catégories de couverture",
       "noCategory": "Aucune catégorie — ajoutez-en une pour qualifier la couverture.",
       "categoryCreated": "Catégorie créée",
-      "categoryDeleted": "Catégorie supprimée"
+      "categoryDeleted": "Catégorie supprimée",
+      "modeRecurrent": "Récurrent",
+      "modePonctuel": "Ponctuel",
+      "needWeekday": "Sélectionnez un jour de semaine.",
+      "needDate": "Sélectionnez une date."
     },
     "stats": {
       "totalShifts": "Shifts au total",

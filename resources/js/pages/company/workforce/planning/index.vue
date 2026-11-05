@@ -521,7 +521,12 @@ const openActivityDay = (shift, row) => {
 const isCoverageDrawerOpen = ref(false)
 const coverageFormLoading = ref(false)
 const editingCoverage = ref(null)
-const coverageForm = ref({ label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' })
+const coverageMode = ref('recurrent') // 'recurrent' (jour de semaine) | 'ponctuel' (date)
+const coverageModeItems = computed(() => [
+  { title: t('planning.coverage.modeRecurrent'), value: 'recurrent' },
+  { title: t('planning.coverage.modePonctuel'), value: 'ponctuel' },
+])
+const coverageForm = ref({ label: '', day_of_week: null, date: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' })
 const weekdayItems = computed(() => [
   { title: t('planning.coverage.weekdays.1'), value: 1 },
   { title: t('planning.coverage.weekdays.2'), value: 2 },
@@ -533,10 +538,21 @@ const weekdayItems = computed(() => [
 ])
 const priorityItems = computed(() => ['low', 'normal', 'high', 'critical'].map(p => ({ title: t(`planning.coverage.priorities.${p}`), value: p })))
 const weekdayLabel = v => weekdayItems.value.find(w => w.value === v)?.title ?? '—'
+const categoryName = id => store.coverageCategories.find(c => c.id === id)?.name
+const coverageTitle = c => categoryName(c.coverage_category_id) || c.label || t('planning.coverage.anyPresence')
+const coverageWhen = c => {
+  const w = c.date
+    ? new Date(c.date + 'T00:00:00').toLocaleDateString(locale.value, { weekday: 'short', day: 'numeric', month: 'short' })
+    : weekdayLabel(c.day_of_week)
+  const slot = c.start_time ? `${c.start_time.slice(0, 5)}–${(c.end_time || '').slice(0, 5)}` : t('planning.coverage.allDay')
+
+  return `${w} · ${slot} · ${c.headcount}p`
+}
 
 const resetCoverageForm = () => {
   editingCoverage.value = null
-  coverageForm.value = { label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' }
+  coverageMode.value = 'recurrent'
+  coverageForm.value = { label: '', day_of_week: null, date: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' }
 }
 const openCoverageManager = async () => {
   resetCoverageForm()
@@ -561,15 +577,26 @@ const removeCategory = async c => {
 }
 const editCoverage = c => {
   editingCoverage.value = c
+  coverageMode.value = c.date ? 'ponctuel' : 'recurrent'
   coverageForm.value = {
-    label: c.label || '', day_of_week: c.day_of_week, start_time: c.start_time || '', end_time: c.end_time || '',
+    label: c.label || '', day_of_week: c.day_of_week, date: c.date ? c.date.slice(0, 10) : null,
+    start_time: c.start_time ? c.start_time.slice(0, 5) : '', end_time: c.end_time ? c.end_time.slice(0, 5) : '',
     department_id: c.department_id || null, coverage_category_id: c.coverage_category_id || null, headcount: c.headcount || 1, priority: c.priority || 'normal',
   }
 }
 const submitCoverage = async () => {
+  // Validation front : récurrent → jour requis ; ponctuel → date requise.
+  if (coverageMode.value === 'recurrent' && (coverageForm.value.day_of_week === null || coverageForm.value.day_of_week === undefined)) {
+    toast(t('planning.coverage.needWeekday'), 'error'); return
+  }
+  if (coverageMode.value === 'ponctuel' && !coverageForm.value.date) {
+    toast(t('planning.coverage.needDate'), 'error'); return
+  }
   coverageFormLoading.value = true
   try {
     const payload = { ...coverageForm.value }
+    // Exclusivité date / jour selon le mode.
+    if (coverageMode.value === 'ponctuel') { payload.day_of_week = null } else { payload.date = null }
     if (!payload.start_time) delete payload.start_time
     if (!payload.end_time) delete payload.end_time
     if (editingCoverage.value) {
@@ -2458,7 +2485,7 @@ watch(activeTab, tab => {
       v-model="isCoverageDrawerOpen"
       temporary
       location="end"
-      width="440"
+      :width="smAndDown ? 340 : 440"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -2544,8 +2571,9 @@ watch(activeTab, tab => {
           <VListItem
             v-for="c in store.coverage"
             :key="c.id"
-            :title="c.label || weekdayLabel(c.day_of_week)"
-            :subtitle="`${weekdayLabel(c.day_of_week)} · ${c.start_time ? c.start_time.slice(0,5) + '–' + (c.end_time||'').slice(0,5) : $t('planning.coverage.allDay')} · ${c.headcount}p`"
+            :title="coverageTitle(c)"
+            :subtitle="coverageWhen(c)"
+            data-test="cov-req-item"
           >
             <template #append>
               <VChip
@@ -2588,6 +2616,23 @@ watch(activeTab, tab => {
         <VForm @submit.prevent="submitCoverage">
           <VRow>
             <VCol cols="12">
+              <VBtnToggle
+                v-model="coverageMode"
+                mandatory
+                density="compact"
+                variant="outlined"
+                divided
+                class="mb-1"
+              >
+                <VBtn value="recurrent" size="small" data-test="cov-mode-recurrent">
+                  {{ $t('planning.coverage.modeRecurrent') }}
+                </VBtn>
+                <VBtn value="ponctuel" size="small" data-test="cov-mode-ponctuel">
+                  {{ $t('planning.coverage.modePonctuel') }}
+                </VBtn>
+              </VBtnToggle>
+            </VCol>
+            <VCol cols="12">
               <AppTextField
                 v-model="coverageForm.label"
                 :label="$t('planning.coverage.fields.label')"
@@ -2595,10 +2640,18 @@ watch(activeTab, tab => {
             </VCol>
             <VCol cols="6">
               <AppSelect
+                v-if="coverageMode === 'recurrent'"
                 v-model="coverageForm.day_of_week"
                 :items="weekdayItems"
                 :label="$t('planning.coverage.fields.weekday')"
-                :rules="[v => v !== null || $t('validation.required')]"
+                data-test="cov-weekday"
+              />
+              <AppTextField
+                v-else
+                v-model="coverageForm.date"
+                :label="$t('planning.coverage.fields.date')"
+                type="date"
+                data-test="cov-date"
               />
             </VCol>
             <VCol cols="6">
