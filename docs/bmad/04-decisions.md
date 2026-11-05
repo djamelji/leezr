@@ -25665,3 +25665,39 @@ Grille rendue avec les données locales ; **virtualisation des lignes NON implé
 
 ### Fichiers clés SP1a.1
 `ScheduledActivityValidator.php` (union + pauses) · `CoverageReadModel.php` (sous-intervalles) · `ScheduledActivityController.php` (scope index) · `ShiftReadModel.php` (whereDate) · `CopyWeekUseCase.php` · `DuplicateShiftUseCase.php` · `ShiftController.php` (copyWeek/duplicate) · `planning/index.vue` (gridRows groupé + copie/duplication/quick-assign) · `planning.store.js` · i18n · `WorkforceSmartPlanningSP1a1Test.php` · `workforce-sp1a1-grid-timeline.spec.js`.
+
+---
+
+## ADR-709 — WORKFORCE / SMART PLANNING : REFONTE UX/UI de la page Planning (LIVRÉ)
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 98d8503). GO refonte UX/UI (SP2–SP5 suspendus). **Arrêt pour validation.**
+**Garde-fous** : DEV · origin/dev. Aucune nouvelle fonctionnalité métier, aucun nouveau modèle/architecture (seul ajout : `withCount` en lecture). RBAC, scopes manager, isolation tenant, verrou optimiste, immutabilité des shifts publiés, workflow de révision, `CoverageReadModel`, `TimeEntry`, contrôles réglementaires : **inchangés**. Zéro régression (103 tests liés verts).
+
+### Méthode (audit visuel réel, pas lecture de code)
+Captures Playwright AVANT/APRÈS (mêmes dimensions, données représentatives : ~14 collaborateurs, 79 shifts colorés, activités, besoins de couverture) relues visuellement.
+
+### Défauts visuels CONSTATÉS (avant) et corrigés
+1. **BUG CRITIQUE** : les chips affichaient « 2026h-2026h ». Cause : `formatTime` recevait un **datetime** (`start_at`) et faisait `split(':')` → `parseInt("2026-11-02T08")=2026`. → `timeOfDay()` extrait l'heure murale HH:MM par regex → **« 08:45–17:30 »** lisible.
+2. **Couleurs de modèles non appliquées** (chips gris) → pill teintée par la couleur du modèle (liseré gauche + fond `color-mix`), états clairs : brouillon = contour, publié = plein, annulé = barré.
+3. **Stats fausses & encombrantes** : 4 grandes cartes dont « Publiés 0 / Brouillons 0 » alors que 79 shifts (endpoint `statistics` agrégé incohérent). → **bande compacte** calculée depuis les shifts RÉELS (`weekSummary` : total/publiés/brouillons/heures) ; valeurs désormais justes (20/59/586h). Grille remontée au-dessus de la ligne de flottaison.
+4. **Détail journalier = formulaire CRUD générique** → **vraie TIMELINE visuelle** (`_ActivityDay.vue` réécrit : axe horaire, blocs d'activités proportionnels colorés, fenêtres de pause hachurées, plages libres, graduations) ; formulaire d'ajout **replié** derrière « Ajouter une activité ».
+5. **Hiérarchie/densité** : en-tête de grille **figé** + **colonne collaborateur figée** (sticky) + lignes compactes (46px) + checkbox et menu **au survol** (anti-clutter) + badge « N activités » sur les chips (`ShiftReadModel::withCount(scheduledActivities)`).
+
+### Qualité & thème
+Composants/tokens Vuexy/Vuetify uniquement ; styles via `rgb(var(--v-theme-*))`, `color-mix` sur `surface`, `var(--v-border-color)` → **theme-aware** (clair/sombre) par construction. (La bascule dark automatisée par cookie n'a pas pris dans la capture ; le rendu reste piloté par les tokens.)
+
+### Performance (mesurée, non déclarée)
+Playwright : **50 lignes / 81 chips → rendu ~190 ms, changement de semaine ~546 ms**. Fluide à cette échelle. **Non testé à 200** (données locales ~50 lignes) et **virtualisation des lignes NON implémentée** → au-delà de ~150-200 lignes, dégradation attendue (en-têtes/colonne figés déjà en place). Reste à faire.
+
+### Recette
+`pnpm build` clean. PHPUnit **103 verts** (withCount/relation/forWeek sans régression). Playwright `workforce-sp1a1-grid-timeline.spec.js` (parcours refondu) : **grille → clic shift → timeline → ajout d'activité persisté → persistance après rechargement** + copie de semaine. Captures AVANT/APRÈS : desktop light (+ day-detail timeline, mobile) relues.
+
+### Limitations restantes (honnêtes)
+- **Virtualisation 200** + mesure chiffrée à 100/200 : à faire.
+- **Drag-and-drop pixel** (palette→cellule, déplacement souris) et **multi-sélection marquee** : toujours non livrés (affectation au clic + édition d'heures en place).
+- **Refonte mobile dédiée pleine page** : le mobile reste l'agenda calendrier (fonctionnel) + dialog détail responsive ; parcours mobile spécifique non refait.
+- Capture dark automatisée non confirmée (tokens theme-aware, à valider à l'œil sur DEV).
+
+### Fichiers clés
+`planning/index.vue` (`timeOfDay`/`formatShiftRange`/`shiftHex`/`shiftColor`, `weekSummary`, bande compacte, grille sticky, pill `.plan-shift`, styles) · `_ActivityDay.vue` (timeline) · `ShiftReadModel.php` (withCount) · `Shift.php` (relation `scheduledActivities`) · i18n.
