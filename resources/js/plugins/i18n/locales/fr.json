@@ -7820,6 +7820,14 @@
       "dragShiftHint": "Glisser pour déplacer (brouillon)",
       "publishedLocked": "Shift publié — non déplaçable (utilisez la révision)"
     },
+    "overstaffing": {
+      "title": "Dépassement du besoin",
+      "intro": "Cette affectation dépasse l'effectif requis sur les créneaux suivants :",
+      "counts": "{projected} affectés pour {required} requis",
+      "reason": "Motif (obligatoire)",
+      "confirm": "Confirmer malgré le dépassement",
+      "changed": "La situation a changé — vérifiez le nouvel impact puis reconfirmez"
+    },
     "posts": {
       "uncategorized": "Non catégorisé",
       "empty": "Aucune affectation cette semaine."

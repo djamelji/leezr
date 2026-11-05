@@ -26,7 +26,12 @@ use Illuminate\Support\Carbon;
  */
 class CoverageReadModel
 {
-    public static function forRange(int $companyId, string $from, string $to): array
+    /**
+     * @param  array<\App\Core\Workforce\Shift>  $extraShifts  Shifts PROSPECTIFS (non persistés) injectés dans
+     *   le balayage — utilisé par l'évaluation de sureffectif (ADR-719) pour comparer « avec » vs « sans »
+     *   une affectation envisagée, en RÉUTILISANT exactement les mêmes règles de contribution qualifiée.
+     */
+    public static function forRange(int $companyId, string $from, string $to, array $extraShifts = [], array $ignoreShiftIds = []): array
     {
         $fromDate = Carbon::parse($from)->startOfDay();
         $toDate = Carbon::parse($to)->startOfDay();
@@ -37,9 +42,14 @@ class CoverageReadModel
 
         $shifts = Shift::withoutGlobalScopes()
             ->where('company_id', $companyId)->notCancelled()
+            ->when($ignoreShiftIds, fn ($q) => $q->whereNotIn('id', $ignoreShiftIds))
             ->whereDate('date', '>=', $fromDate->toDateString())
             ->whereDate('date', '<=', $toDate->toDateString())
             ->get();
+
+        if ($extraShifts) {
+            $shifts = $shifts->concat($extraShifts)->values();
+        }
 
         // Activités planifiées des shifts chargés (pour qualifier les sous-intervalles).
         $activitiesByShift = ScheduledActivity::withoutGlobalScopes()

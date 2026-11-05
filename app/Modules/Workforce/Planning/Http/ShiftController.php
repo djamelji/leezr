@@ -177,6 +177,8 @@ class ShiftController extends Controller
             'schedule_template_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:500',
+            'overstaffing_ack' => 'nullable|string',               // ADR-719 : confirmation serveur
+            'overstaffing_reason' => 'nullable|string|max:500',
         ]);
 
         try {
@@ -190,10 +192,57 @@ class ShiftController extends Controller
                 scheduleTemplateId: $validated['schedule_template_id'] ?? null,
                 workLocationId: $validated['work_location_id'] ?? null,
                 notes: $validated['notes'] ?? null,
+                overstaffingAck: $validated['overstaffing_ack'] ?? null,
+                overstaffingReason: $validated['overstaffing_reason'] ?? null,
+                actorId: $request->user()?->id,
             ), 201);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /** ADR-719 — prévisualisation lecture seule du sureffectif d'une affectation envisagée (+ signature). */
+    public function overstaffingPreview(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $validated = $request->validate([
+            'employee_id' => 'required|integer',
+            'date' => 'required|date',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after:start_at',
+            'work_location_id' => 'nullable|integer',
+            'schedule_template_id' => 'nullable|integer',
+            'ignore_shift_id' => 'nullable|integer',
+        ]);
+
+        if ($deny = $this->guardShiftScope($request, (int) $validated['employee_id'])) {
+            return $deny;
+        }
+
+        $snapshot = [];
+        if (! empty($validated['schedule_template_id'])) {
+            $tpl = \App\Core\Workforce\ScheduleTemplate::withoutGlobalScopes()
+                ->where('company_id', $companyId)->find($validated['schedule_template_id']);
+            $snapshot = $tpl ? $tpl->toSnapshot() : [];
+        } elseif (! empty($validated['ignore_shift_id'])) {
+            $src = Shift::withoutGlobalScopes()->where('company_id', $companyId)->find($validated['ignore_shift_id']);
+            $snapshot = $src?->template_snapshot ?? [];
+        }
+
+        $eval = app(\App\Modules\Workforce\Services\OverstaffingEvaluator::class)->evaluate($companyId, [
+            'employee_id' => (int) $validated['employee_id'],
+            'date' => $validated['date'],
+            'start_at' => $validated['start_at'],
+            'end_at' => $validated['end_at'],
+            'work_location_id' => $validated['work_location_id'] ?? null,
+            'template_snapshot' => $snapshot,
+            'ignore_shift_id' => $validated['ignore_shift_id'] ?? null,
+        ]);
+        $mode = app(\App\Modules\Workforce\Services\OverstaffingPolicy::class)->mode($companyId);
+
+        return response()->json($eval + ['mode' => $mode]);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -212,7 +261,12 @@ class ShiftController extends Controller
             'notes' => 'nullable|string|max:500',
             'employee_id' => 'nullable|integer',                 // W-G4B : réaffectation (brouillon)
             'expected_updated_at' => 'nullable|date',            // W-G4B : verrou optimiste (concurrence)
+            'overstaffing_ack' => 'nullable|string',             // ADR-719
+            'overstaffing_reason' => 'nullable|string|max:500',
         ]);
+        $ovAck = $validated['overstaffing_ack'] ?? null;
+        $ovReason = $validated['overstaffing_reason'] ?? null;
+        unset($validated['overstaffing_ack'], $validated['overstaffing_reason']);
 
         // W-G4B — VERROU OPTIMISTE : si le client fournit l'horodatage lu et qu'il ne correspond plus,
         // une autre modification concurrente est intervenue → 409 (pas d'écrasement silencieux).
@@ -237,7 +291,9 @@ class ShiftController extends Controller
         unset($validated['expected_updated_at']);
 
         try {
-            return response()->json(app(UpdateShiftUseCase::class)->execute($shift, $validated));
+            return response()->json(app(UpdateShiftUseCase::class)->execute($shift, $validated, $ovAck, $ovReason, $request->user()?->id));
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

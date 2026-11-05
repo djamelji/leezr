@@ -14,14 +14,14 @@ use Illuminate\Support\Facades\DB;
 
 class UpdateShiftUseCase
 {
-    public function execute(Shift $shift, array $data): Shift
+    public function execute(Shift $shift, array $data, ?string $overstaffingAck = null, ?string $overstaffingReason = null, ?int $actorId = null): Shift
     {
         // I9: Immutabilité published
         if ($shift->status !== Shift::STATUS_DRAFT) {
             throw new \DomainException('Only draft shifts can be modified.');
         }
 
-        return DB::transaction(function () use ($shift, $data) {
+        return DB::transaction(function () use ($shift, $data, $overstaffingAck, $overstaffingReason, $actorId) {
             $startAt = isset($data['start_at']) ? Carbon::parse($data['start_at']) : $shift->start_at;
             $endAt = isset($data['end_at']) ? Carbon::parse($data['end_at']) : $shift->end_at;
             $date = $data['date'] ?? $shift->date->toDateString();
@@ -99,6 +99,14 @@ class UpdateShiftUseCase
                 breakMinutes: $breakMinutes,
                 excludeShiftId: $shift->id,
             );
+
+            // ADR-719 — SUREFFECTIF à la NOUVELLE position (exclut l'ancienne via ignore_shift_id).
+            app(\App\Modules\Workforce\Services\OverstaffingGuard::class)->enforce($shift->company_id, [
+                'employee_id' => $employeeId, 'date' => $date,
+                'start_at' => $startAt->toDateTimeString(), 'end_at' => $endAt->toDateTimeString(),
+                'work_location_id' => $data['work_location_id'] ?? $shift->work_location_id,
+                'template_snapshot' => $shift->template_snapshot ?? [], 'ignore_shift_id' => $shift->id,
+            ], $overstaffingAck, $overstaffingReason, $actorId);
 
             $before = $shift->only(['employee_id', 'date', 'start_at', 'end_at', 'work_location_id', 'notes']);
 

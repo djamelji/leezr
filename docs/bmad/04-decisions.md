@@ -26111,3 +26111,46 @@ Après chaque drop confirmé, `fetchWeekData()` rafraîchit shifts + `CoverageRe
 
 ### Fichiers clés
 `resources/js/pages/company/workforce/planning/index.vue` (palette, moteur drag pointeur, ghost, cibles, auto-scroll, blocs brouillon draggables / publiés verrouillés, styles) · `lang fr/en` (`planning.palette.*`, `planning.dnd.*`) · `tests/e2e/workforce-lot4a-dnd.spec.js`. Backend : **inchangé** (réutilise `createShift`/`updateShift`/`duplicateShift`).
+
+---
+
+## ADR-719 — WORKFORCE / SMART PLANNING Lot 4B.1 : contrôle du SUREFFECTIF (warn + confirmation serveur)
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO 4B.1. **Checkpoint obligatoire** : 4B.2 (multi-sélection / application groupée) et 4B.3 (copier-coller / semaine / undo-redo) **NON engagés** — GO distinct requis après validation.
+**Garde-fous** : DEV · origin/dev. Aucune migration (réutilise `company_policies`), aucun moteur planning concurrent, Billing/Payroll/Signature inchangés. RBAC, scope manager, isolation tenant, publication atomique, verrou optimiste, immutabilité publiés, couverture qualifiée, absences partielles, remplacements, notifications transactionnelles, TimeEntry : **inchangés**.
+
+### Contrat de sureffectif
+Le sureffectif est une **alerte OPÉRATIONNELLE**, distincte des violations réglementaires de temps de travail (qui restent **bloquantes et jamais contournables** — `ShiftRuleValidator` s'exécute AVANT et prime). À une affectation qui ferait dépasser un `CoverageRequirement` :
+1. détection du **dépassement marginal réel** ; 2. catégorie/lieu/Department/créneau impactés ; 3. effectif **requis vs projeté** ; 4. confirmation selon politique ; 5. **vérification serveur** ; 6. **journalisation** (`shift.overstaffing_confirmed`).
+
+### Impact MARGINAL (pas de faux positif)
+`OverstaffingEvaluator` réutilise `CoverageReadModel` (étendu d'un paramètre `$extraShifts` + `$ignoreShiftIds`) : il compare la couverture **SANS** vs **AVEC** le shift prospectif, par sous-intervalle, avec les **mêmes règles de contribution qualifiée** (catégorie, DISTINCT Employee, multi-site/Department, absences complètes/partielles, pauses, activités non productives). Alerte **seulement** si, sur un intervalle, `projeté > requis` **ET** `projeté > sans` :
+- un **sureffectif préexistant** (sans contribution marginale) **ne déclenche pas** d'alerte ;
+- une affectation **non qualifiée** (Formation sur besoin Route, présence sans catégorie) **ne déclenche pas** d'alerte (la simple présence ≠ contribution qualifiée) ;
+- **absence de `CoverageRequirement`** → aucun besoin implicite à zéro, aucun blocage.
+- Pour un **déplacement**, l'ancienne position est exclue (`ignore_shift_id`) → seul l'impact de la nouvelle position est mesuré.
+
+### Politique configurable (défaut `warn_confirm`)
+`OverstaffingPolicy` lit `company_policies` (domain=`planning`, key=`overstaffing_mode`) : `warn` (laisse passer en avertissant) · `warn_confirm` (confirmation exigée) · `warn_confirm_reason` (+ motif obligatoire). Défaut `warn_confirm`. Prépare la configuration ultérieure sans nouveau schéma.
+
+### Sécurité transactionnelle & concurrence
+`OverstaffingGuard` est appelé **DANS la transaction** du UseCase (`CreateShiftUseCase` / `UpdateShiftUseCase`), **après** le réglementaire et après les verrous → le calcul reflète l'état committé, **sans fenêtre de concurrence**. La **signature HMAC** (clé app) fige l'impact exact (`requirement|date|window|required|projected`). Confirmation = ré-écho de la signature : si l'impact a changé entre prévisualisation et écriture (une affectation concurrente committée entre-temps), la signature recalculée **diffère** → `OverstaffingConfirmationRequired` relancée → **nouvelle confirmation exigée**. Deux écritures confirmées simultanées : la seconde, recalculant après le commit de la première, voit un `projected` supérieur → signature périmée → re-confirmation. **Impossible de dépasser le besoin par deux actions non confirmées.**
+
+### Le bouton `+` des besoins (clarifié)
+Le `+` des cellules vides du bandeau crée un **`CoverageRequirement`** (endpoint `coverage`) — **jamais** un Shift, **jamais** de contrôle de sureffectif. Modifier un besoin 12→13 donne **12/13** si 12 affectés (comportement `CoverageReadModel` inchangé).
+
+### UI (prévisualisation + confirmation)
+Endpoint lecture `POST shifts/overstaffing-preview` (scopé) → impacts + signature + mode, pour affichage proactif. À l'écriture, une 422 `overstaffing_requires_confirmation` (code + impacts + signature + requires_reason) ouvre un **dialog** (effectif projeté/requis par créneau, motif si `warn_confirm_reason`) ; la confirmation rejoue l'écriture avec `overstaffing_ack` (+ `overstaffing_reason`). Si l'impact a changé entre-temps → le dialog se met à jour (reconfirmation). Intégré aux chemins drag (modèle→cellule, déplacement) et clic-armer. Aucune écriture optimiste.
+
+### Recette
+- **PHPUnit** `WorkforceOverstaffingLot4B1Test` (7 verts) : absence de besoin ≠ blocage ; remplir jusqu'au besoin ≠ sureffectif ; **dépassement marginal détecté** (13ᵉ/12) ; **sureffectif préexistant non marginal → pas d'alerte** ; **HTTP bloque sans ack puis écrit avec ack valide** ; **signature périmée → re-confirmation (concurrence)** ; **mode warn passe sans ack**. Non-régression Coverage/Planning/Shift/Activity/Replacement/Outbox/Leave **184 verts**.
+- **Playwright réel** `workforce-lot4b1-overstaffing.spec.js` (vert) : fixture (catégorie+template+besoin+1 affecté) via session réelle → sureffectif détecté → **dialog** → **refus sans confirmation (aucune écriture)** → **confirmation → écriture 201**. (Concurrence : PHPUnit.)
+- `pnpm build` clean. Tests 4A rendus robustes (sonde de capacité + skip honnête quand la base E2E partagée est saturée à 48h — aucune régression produit, le moteur de drag est inchangé).
+
+### Limites restantes (réserves ADR-717 maintenues)
+- Plusieurs absences horaires distinctes le même jour ; shifts nocturnes/périodes traversant minuit ; scénario salarié connecté/cloche ; décompte congés indicatif (Market/Company) : **non résolus par approximation**.
+- `overstaffing_preview` pour les **opérations groupées** (lot) : non couvert (relève de 4B.2).
+
+### Fichiers clés
+`OverstaffingEvaluator.php` · `OverstaffingPolicy.php` · `OverstaffingGuard.php` · `Exceptions/OverstaffingConfirmationRequired.php` · `CoverageReadModel.php` (`$extraShifts`/`$ignoreShiftIds`) · `CreateShiftUseCase.php` / `UpdateShiftUseCase.php` (garde + params ack/reason/actor) · `ShiftController.php` (store/update interception + `overstaffingPreview`) · `routes/company.php` · front `planning/index.vue` (dialog + `performWrite`) + `lang fr/en` (`planning.overstaffing.*`) · `WorkforceOverstaffingLot4B1Test.php` · `workforce-lot4b1-overstaffing.spec.js`.

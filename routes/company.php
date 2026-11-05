@@ -606,6 +606,8 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::get('shifts/comparison', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'comparison'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts/availability', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'availability'])->middleware($perm('workforce.planning_manage')); // W-G4B
     Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
+    // ADR-719 — prévisualisation sureffectif (lecture) avant affectation.
+    Route::post('shifts/overstaffing-preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'overstaffingPreview'])->middleware($perm('workforce.planning_view'));
     Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish'])->middleware($perm('workforce.planning_publish'));

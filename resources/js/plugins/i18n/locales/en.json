@@ -7820,6 +7820,14 @@
       "dragShiftHint": "Drag to move (draft)",
       "publishedLocked": "Published shift — not movable (use revision)"
     },
+    "overstaffing": {
+      "title": "Over the required headcount",
+      "intro": "This assignment exceeds the required headcount on the following windows:",
+      "counts": "{projected} assigned for {required} required",
+      "reason": "Reason (required)",
+      "confirm": "Confirm despite over-staffing",
+      "changed": "Situation changed — review the new impact then reconfirm"
+    },
     "posts": {
       "uncategorized": "Uncategorized",
       "empty": "No assignment this week."

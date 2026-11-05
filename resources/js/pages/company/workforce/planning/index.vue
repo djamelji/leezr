@@ -686,17 +686,75 @@ const quickAssign = (employeeId, date) => {
   const tpl = store.allTemplates.find(t => t.id === armedTemplateId.value)
   if (!tpl) return openCreateShift(employeeId, date)
 
-  return applyTemplateToCell(tpl, employeeId, date)
+  return performWrite((ack, reason) => applyTemplateToCell(tpl, employeeId, date, ack, reason), t('planning.quickAssign.done'))
 }
 
 // Applique un modèle à une cellule (salarié+jour) → crée un Shift via le UseCase serveur (règles revalidées).
 // Aucune écriture optimiste : la grille n'est rafraîchie qu'après confirmation serveur.
-const applyTemplateToCell = async (tpl, employeeId, date) => {
-  await store.createShift({
+const applyTemplateToCell = (tpl, employeeId, date, ack = null, reason = null) =>
+  store.createShift({
     employee_id: employeeId, date,
     start_at: `${date} ${tpl.start_time}`, end_at: `${date} ${tpl.end_time}`,
     timezone: 'Europe/Paris', schedule_template_id: tpl.id, work_location_id: tpl.work_location_id,
+    overstaffing_ack: ack, overstaffing_reason: reason,
   })
+
+// ── Contrat SUREFFECTIF (Lot 4B.1, ADR-719) : 422 overstaffing → dialog → retry avec ack serveur ──
+const overstaffingDialog = ref(false)
+const overstaffingInfo = ref(null)         // { impacts, mode, requires_reason, signature }
+const overstaffingReason = ref('')
+const overstaffingBusy = ref(false)
+let overstaffingRetry = null               // (ack, reason) => Promise
+
+const isOverstaffingError = e => (e?.data?.code || e?.response?._data?.code) === 'overstaffing_requires_confirmation'
+const overstaffingPayload = e => e?.data || e?.response?._data || {}
+
+// Exécute une écriture ; si le serveur exige une confirmation de sureffactif, ouvre le dialog et
+// attend la décision du responsable (puis rejoue AVEC la signature serveur). Renvoie true si succès.
+const performWrite = async (writeFn, successMsg) => {
+  try {
+    await writeFn(null, null)
+    toast(successMsg, 'success')
+    await fetchWeekData()
+
+    return true
+  } catch (e) {
+    if (isOverstaffingError(e)) {
+      const p = overstaffingPayload(e)
+      overstaffingInfo.value = p
+      overstaffingReason.value = ''
+      overstaffingRetry = async (ack, reason) => {
+        await writeFn(ack, reason)
+        toast(successMsg, 'success')
+        await fetchWeekData()
+      }
+      overstaffingDialog.value = true
+
+      return false
+    }
+    toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+
+    return false
+  }
+}
+const confirmOverstaffing = async () => {
+  if (!overstaffingRetry) return
+  overstaffingBusy.value = true
+  try {
+    await overstaffingRetry(overstaffingInfo.value.signature, overstaffingReason.value || null)
+    overstaffingDialog.value = false
+  } catch (e) {
+    // Impact changé entre-temps (concurrence) → nouvelle signature → on ré-ouvre avec le nouvel impact.
+    if (isOverstaffingError(e)) {
+      overstaffingInfo.value = overstaffingPayload(e)
+      toast(t('planning.overstaffing.changed'), 'warning')
+    } else {
+      toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+      overstaffingDialog.value = false
+    }
+  } finally {
+    overstaffingBusy.value = false
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -822,18 +880,10 @@ const onPointerUp = async () => {
   dragBusy.value = true
   try {
     if (active.kind === 'template') {
-      await applyTemplateToCell(active.tpl, target.employeeId, target.date)
-      toast(t('planning.dnd.created'), 'success')
+      await performWrite((ack, reason) => applyTemplateToCell(active.tpl, target.employeeId, target.date, ack, reason), t('planning.dnd.created'))
     } else {
-      await moveShift(active.shift, target.employeeId, target.date)
-      toast(t('planning.dnd.moved'), 'success')
+      await performWrite((ack, reason) => moveShift(active.shift, target.employeeId, target.date, ack, reason), t('planning.dnd.moved'))
     }
-    await fetchWeekData() // couverture + grille recalculées APRÈS confirmation serveur
-  } catch (err) {
-    const code = err?.data?.code || err?.response?._data?.code
-    const msg = (err?.data?.message || err?.response?._data?.message)
-      || (code === 'stale_version' ? t('planning.dnd.stale') : t('common.error'))
-    toast(msg, 'error') // aucune écriture optimiste → la grille reste dans son état d'origine
   } finally {
     dragBusy.value = false
     clearDrag()
@@ -849,7 +899,7 @@ const clearDrag = () => {
 }
 
 // Déplace un Shift BROUILLON vers (salarié, jour) en conservant l'heure murale ; verrou optimiste.
-const moveShift = (shift, employeeId, date) => {
+const moveShift = (shift, employeeId, date, ack = null, reason = null) => {
   return store.updateShift(shift.id, {
     employee_id: employeeId,
     date,
@@ -857,6 +907,7 @@ const moveShift = (shift, employeeId, date) => {
     end_at: `${date} ${timeOfDay(shift.end_at)}`,
     timezone: shift.timezone || 'Europe/Paris',
     expected_updated_at: shift.updated_at,
+    overstaffing_ack: ack, overstaffing_reason: reason,
   })
 }
 
@@ -3213,6 +3264,67 @@ watch(activeTab, tab => {
         <span v-if="dragReason" class="plan-drag-ghost__reason">{{ dragReason }}</span>
       </div>
     </Teleport>
+
+    <!-- Contrôle de sureffectif (Lot 4B.1, ADR-719) : warn + confirmation serveur -->
+    <VDialog
+      v-model="overstaffingDialog"
+      max-width="520"
+    >
+      <VCard v-if="overstaffingInfo">
+        <VCardTitle class="d-flex align-center gap-2 pa-4">
+          <VIcon icon="tabler-alert-triangle" color="warning" />
+          {{ $t('planning.overstaffing.title') }}
+        </VCardTitle>
+        <VCardText>
+          <p class="mb-3">
+            {{ $t('planning.overstaffing.intro') }}
+          </p>
+          <VAlert
+            v-for="imp in overstaffingInfo.impacts"
+            :key="imp.requirement_id"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-2"
+          >
+            <div class="font-weight-medium">
+              {{ imp.category_name || imp.label || $t('planning.coverage.anyPresence') }}
+              · {{ imp.window.start }}–{{ imp.window.end }}
+            </div>
+            <div class="text-body-2">
+              {{ $t('planning.overstaffing.counts', { projected: imp.projected, required: imp.required }) }}
+            </div>
+          </VAlert>
+          <AppTextField
+            v-if="overstaffingInfo.requires_reason"
+            v-model="overstaffingReason"
+            :label="$t('planning.overstaffing.reason')"
+            type="textarea"
+            rows="2"
+            class="mt-2"
+            data-test="overstaffing-reason"
+          />
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn
+            variant="outlined"
+            @click="overstaffingDialog = false"
+          >
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="warning"
+            :loading="overstaffingBusy"
+            :disabled="overstaffingInfo.requires_reason && !overstaffingReason.trim()"
+            data-test="overstaffing-confirm"
+            @click="confirmOverstaffing"
+          >
+            {{ $t('planning.overstaffing.confirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <!-- Remplacement guidé (Lot 3 §2, ADR-717) : fenêtre non assurée + candidats scopés -->
     <VNavigationDrawer
