@@ -25830,3 +25830,33 @@ L'alerte de sureffectif à l'**ajout d'une affectation** (≠ modification du be
 
 ### Fichiers clés
 `_ActivityDay.vue` (préremplissage créneau libre + messages d'erreur) · `planning/index.vue` (bandeau rétractable, sticky day-header, boutons `+` visibles, alignement) · `WorkforcePlanningModule.php` (navItem) · `WorkforceNavHrGroupTest.php` · i18n · `workforce-phaseA-planning-ux.spec.js`.
+
+---
+
+## ADR-713 — WORKFORCE / SMART PLANNING : refonte de la grille hebdomadaire (blocs métier, vue par postes, mobile)
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build de13edb). GO refonte grille (référence Skello). **Checkpoint après livraison. SP2–SP5 suspendus.**
+**Garde-fous** : DEV · origin/dev. Moteur et UseCases existants **conservés** (aucune 2ᵉ archi). RBAC, scopes, isolation tenant, publication atomique, verrou optimiste, immutabilité shifts publiés, workflow ScheduledActivity, `WorkTimeComplianceChecker`, `TimeEntry` : inchangés. Pas de main/PROD, Billing/Payroll/Signature, migration destructive, couplage vertical.
+
+### Livré (prouvé Playwright + captures desktop light/dark, par salariés, par postes, mobile)
+1. **Blocs métier (§2)** : la pastille de shift affiche le **nom du POSTE/mission d'abord** (catégorie de couverture du snapshot > nom de modèle > type d'activité), puis les horaires, un badge **+N activités**, la couleur de catégorie, l'état brouillon/publié, les conflits. (Ex. `ROUTE 08:45–17:30`, `FORMATION 09:00–13:00`.) Distinction Shift / ScheduleTemplate / ScheduledActivity préservée.
+2. **Résumé par collaborateur (§1)** : colonne employé (figée) affiche **heures planifiées + jours travaillés** (`42h · 5 j`).
+3. **Vue par postes (§4)** : 2ᵉ organisation de la **même grille/moteur** (toggle Par salariés / Par postes, état cookie). Ligne = **catégorie de couverture** ; cellule/jour = collaborateurs affectés (chips nominatifs). **Mapping explicite** : un « poste » = une catégorie de couverture du shift ; shifts sans catégorie → bucket « Non catégorisé » (une catégorie n'est pas présumée être un poste RH). Agrégation read-only.
+4. **Vue jour mobile (§8)** : la page Planning est **désormais accessible sur mobile** (onglet plus masqué <md) via une **vraie vue jour** (navigation par date + synthèse couverture, liste collaborateurs, blocs métier + statut, tap → détail journalier) — **pas une table desktop compressée**.
+5. **Bandeau de couverture (§5)** : correctifs ADR-712 conservés (rétractable, aligné, boutons `+`, édition inline).
+
+### Recette
+`workforce-grid-refonte.spec.js` (2 verts, parcours UI) : noms de poste visibles · résumé heures · bascule salariés↔postes · vue jour mobile. **243 PHPUnit verts** (nav + planning + coverage). `pnpm build` clean. Captures avant (ADR-712) / après (blocs métier, par postes, mobile) relues à l'œil.
+
+### Différé — explicitement NON livré (ne pas déclarer livré)
+- **Drag-and-drop (§7)** : non implémenté ; la grille (table + cellules) ne rend pas son ajout difficile, mais aucune interaction pointeur n'est livrée. À prouver par événements pointeur Playwright au prochain lot.
+- **Création rapide — éditeur contextuel compact (§3)** : l'affectation rapide par **modèle armé** (clic cellule vide) + le drawer de création existent ; le **popover contextuel compact** (choix modèle + heures + pause en un geste) n'est pas livré.
+- **Sureffectif warn+confirm (§6)** : décision produit validée ; **contrat d'implémentation fourni (ADR-712 §4)** — contrôle serveur atomique à l'affectation (via logique `CoverageReadModel` scopée intervalles+catégorie), `{overfill,…}`, confirmation vérifiée serveur + anti-concurrence, trace, `CompanyPolicy.overfill_policy` (warn / confirm / reason) ; **incrément métier distinct à implémenter sous GO** (pas de popup sans enforcement serveur).
+- **Interactions mobiles avancées** (édition/DnD tactile) : lot suivant.
+
+### Limitations cosmétiques connues
+Toggle « Par salariés / Par postes » un peu serré visuellement à côté du libellé de semaine (fonctionnel). Libellés de poste longs tronqués (ellipsis + title).
+
+### Fichiers clés
+`planning/index.vue` (`shiftPoste`/`rowSummary`, bloc `.plan-shift__body--block`, vue `postRows`/`.plan-post-chip`, vue jour mobile, toggle `gridView`) · i18n · `workforce-grid-refonte.spec.js`.
