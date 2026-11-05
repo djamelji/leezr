@@ -197,7 +197,7 @@ const submitEmployee = async () => {
   } catch (error) {
     // 422 = erreur de validation : les messages inline par champ suffisent, pas de toast générique anxiogène.
     if (error.response?.status !== 422)
-      toast(error.response?.data?.message || t('common.error'), 'error')
+      toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     formLoading.value = false
   }

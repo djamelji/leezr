@@ -89,7 +89,7 @@ const confirmMove = async () => {
   } catch (e) {
     // Échec (conflit concurrence 409, règle 422…) → revert visuel + message.
     pendingMove.value?.revert()
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
     moveDialog.value = false
     pendingMove.value = null
   } finally { moveLoading.value = false }
@@ -125,7 +125,7 @@ const confirmReassign = async () => {
     calDetailOpen.value = false
     calRef.value?.refetch()
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally { reassignLoading.value = false }
 }
 
@@ -578,7 +578,7 @@ const saveCovEdit = async () => {
     await loadCoverage()
     toast(t('planning.coverage.updated'), 'success')
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 const replicateCovLine = async line => {
@@ -589,7 +589,7 @@ const replicateCovLine = async line => {
     toast(t('planning.coverage.replicated', { n: r.created }), 'success')
     await Promise.all([store.fetchCoverage(), loadCoverage()])
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 
@@ -606,7 +606,7 @@ const copyPreviousWeek = async () => {
     toast(t('planning.copyWeek.done', { created: r.created, skipped: r.skipped }), r.created ? 'success' : 'warning')
     fetchWeekData()
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 
@@ -616,7 +616,7 @@ const duplicateShiftAction = async shift => {
     toast(t('planning.duplicateShift.done'), 'success')
     fetchWeekData()
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 
@@ -638,7 +638,7 @@ const quickAssign = async (employeeId, date) => {
     toast(t('planning.quickAssign.done'), 'success')
     fetchWeekData()
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 
@@ -704,11 +704,11 @@ const addCategory = async () => {
     toast(t('planning.coverage.categoryCreated'), 'success')
     newCategory.value = { name: '', code: '', color: '#4b4bd6' }
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   }
 }
 const removeCategory = async c => {
-  try { await store.deleteCoverageCategory(c.id); toast(t('planning.coverage.categoryDeleted'), 'success') } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  try { await store.deleteCoverageCategory(c.id); toast(t('planning.coverage.categoryDeleted'), 'success') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
 }
 const editCoverage = c => {
   editingCoverage.value = c
@@ -744,7 +744,7 @@ const submitCoverage = async () => {
     resetCoverageForm()
     await Promise.all([store.fetchCoverage(), loadCoverage()])
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     coverageFormLoading.value = false
   }
@@ -755,7 +755,7 @@ const removeCoverage = async c => {
     toast(t('planning.coverage.deleted'), 'success')
     await loadCoverage()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   }
 }
 
@@ -860,7 +860,7 @@ const confirmPublish = async () => {
     fetchWeekData()
   } catch (error) {
     // Publication atomique : un conflit annule tout → message serveur explicite.
-    toast(error.response?.data?.message || t('planning.publishConflict'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('planning.publishConflict'), 'error')
   } finally {
     publishLoading.value = false
   }
@@ -978,7 +978,7 @@ const submitShift = async () => {
     resetShiftForm()
     fetchWeekData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     shiftFormLoading.value = false
   }
@@ -1001,7 +1001,7 @@ const confirmDeleteShift = async () => {
     deleteShiftTarget.value = null
     fetchWeekData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     deleteShiftDialog.value = false
   }
 }
@@ -1026,7 +1026,7 @@ const confirmCancelShift = async () => {
     cancelReason.value = ''
     fetchWeekData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     cancelShiftDialog.value = false
   }
 }
@@ -1067,7 +1067,7 @@ const submitBulk = async () => {
     resetBulkForm()
     fetchWeekData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     bulkFormLoading.value = false
   }
@@ -1179,7 +1179,7 @@ const submitTemplate = async () => {
     resetTemplateForm()
     fetchAllTemplates()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     templateFormLoading.value = false
   }
@@ -1202,7 +1202,7 @@ const confirmDeleteTemplate = async () => {
     deleteTemplateTarget.value = null
     fetchAllTemplates()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     deleteTemplateDialog.value = false
   }
 }
@@ -1319,7 +1319,7 @@ const submitLocation = async () => {
     resetLocationForm()
     fetchAllLocations()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     locationFormLoading.value = false
   }
@@ -1342,7 +1342,7 @@ const confirmDeleteLocation = async () => {
     deleteLocationTarget.value = null
     fetchAllLocations()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     deleteLocationDialog.value = false
   }
 }

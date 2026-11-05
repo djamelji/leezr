@@ -35,7 +35,7 @@ const busyId = ref(null)
 const act = async (fn, id, okMsg) => {
   busyId.value = id
   try { await fn(); toast(okMsg, 'success'); await load() }
-  catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { busyId.value = null }
 }
 const onDuplicate = tpl => act(() => store.duplicate(tpl.id), tpl.id, t('contractTpl.duplicated'))
@@ -80,7 +80,7 @@ const previewPdf = async () => {
 
     window.open(url, '_blank')
     setTimeout(() => URL.revokeObjectURL(url), 20000)
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { previewing.value = false }
 }
 const saveEdit = async () => {
@@ -90,7 +90,7 @@ const saveEdit = async () => {
     toast(t('common.saved'), 'success')
     editOpen.value = false
     await load()
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { editSaving.value = false }
 }
 </script>

@@ -87,7 +87,7 @@ async function handleSubmit() {
     toast(realTransmission.value ? t('dsn.submitted') : t('dsn.submittedSimulated'), realTransmission.value ? 'success' : 'warning')
     await reload()
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   }
 }
 
@@ -98,7 +98,7 @@ async function handlePoll() {
     toast(t('dsn.polled'), 'success')
     await reload()
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   }
 }
 

@@ -126,7 +126,7 @@ const submitCorrect = async () => {
     correctOpen.value = false
     load()
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally { correcting.value = false }
 }
 </script>

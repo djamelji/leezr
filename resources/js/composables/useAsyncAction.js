@@ -53,7 +53,7 @@ export function useAsyncAction(asyncFn, options = {}) {
       data.value = await asyncFn(...args)
     }
     catch (e) {
-      error.value = e?.response?.data?.message || e?.data?.message || e?.message || String(e)
+      error.value = e?.data?.message || e?.response?._data?.message || e?.message || String(e)
       if (onError) onError(e)
     }
     finally {

@@ -22,7 +22,7 @@ const submitDraftGeneration = async () => {
     draftRunId.value = ''
     emit('drafts-generated')
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   } finally {
     draftLoading.value = false
   }
@@ -46,7 +46,7 @@ const executeOfficialGeneration = async () => {
     officialRunId.value = ''
     emit('official-generated')
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   } finally {
     officialLoading.value = false
   }

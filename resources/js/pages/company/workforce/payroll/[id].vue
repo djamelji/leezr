@@ -124,7 +124,7 @@ function onLineOptionsUpdate(options) {
 // ── Action handlers ──────────────────────────────────────────────
 async function withToast(fn, successKey) {
   try { await fn(); toast(t(successKey), 'success'); await reload() }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
 }
 const handleCompute = () => withToast(() => store.computeRun(run.value.id), 'payroll.computed')
 const handleComputeCalculations = () => withToast(() => store.computeCalculations(run.value.id), 'payroll.calculationsComputed')
@@ -139,7 +139,7 @@ async function handleValidate() {
     validationNote.value = ''
     await reload()
   }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
 }
 async function handleDelete() {
   try {
@@ -147,7 +147,7 @@ async function handleDelete() {
     toast(t('payroll.deleted'), 'success')
     router.push({ name: 'company-workforce-payroll' })
   }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
 }
 async function handleGenerateDrafts() {
   try {
@@ -155,7 +155,7 @@ async function handleGenerateDrafts() {
     toast(t('payroll.payslips.draftsGenerated'), 'success')
     await store.fetchRunDocuments(route.params.id)
   }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
 }
 async function handleGenerateOfficial() {
   try {
@@ -163,7 +163,7 @@ async function handleGenerateOfficial() {
     toast(t('payroll.payslips.officialGenerated'), 'success')
     await store.fetchRunDocuments(route.params.id)
   }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
 }
 
 // ── Employee preparation panel ───────────────────────────────────
@@ -178,7 +178,7 @@ async function openLineDetail(item) {
   // Deep-link the opened collaborator so the panel survives back-navigation.
   if (route.query.line !== String(item.id)) router.replace({ query: { ...route.query, line: item.id } })
   try { await store.fetchLineDetail(route.params.id, item.id) }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error'); showLineDetailDialog.value = false }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error'); showLineDetailDialog.value = false }
   finally { lineDetailLoading.value = false }
 }
 function closeLineDetail() {

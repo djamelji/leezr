@@ -49,7 +49,7 @@ const runPreview = async () => {
   try {
     preview.value = await store.bulkPreview({ action: props.action, employeeIds: props.employeeIds, targetId: targetId.value })
   } catch (err) {
-    toast(err.response?.data?.message || t('common.error'), 'error')
+    toast((err.data?.message || err.response?._data?.message) || t('common.error'), 'error')
     preview.value = null
   } finally {
     loading.value = false
@@ -69,7 +69,7 @@ const apply = async () => {
     emit('done')
     isOpen.value = false
   } catch (err) {
-    toast(err.response?.data?.message || t('common.error'), 'error')
+    toast((err.data?.message || err.response?._data?.message) || t('common.error'), 'error')
   } finally {
     applying.value = false
   }

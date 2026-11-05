@@ -145,7 +145,7 @@ const submitCreateRun = async () => {
     resetForm()
     router.push({ name: 'company-workforce-payroll-id', params: { id: run.id } })
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   } finally {
     formLoading.value = false
   }
@@ -168,7 +168,7 @@ const executeDelete = async () => {
     fetchData()
     fetchStats()
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
     confirmDialog.value = false
   }
 }

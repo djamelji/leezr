@@ -96,7 +96,7 @@ const saveShift = async () => {
     await loadDetail()
     emit('corrected') // rafraîchit aussi le board prévu/réel
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally { savingShift.value = false }
 }
 
@@ -126,7 +126,7 @@ const submitCorrect = async () => {
     correctOpen.value = false
     emit('corrected')
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally {
     correcting.value = false
   }

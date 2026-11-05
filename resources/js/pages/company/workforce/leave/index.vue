@@ -148,7 +148,7 @@ const submitLeaveRequest = async () => {
     fetchData()
     store.fetchStatistics()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     formLoading.value = false
   }
@@ -199,7 +199,7 @@ const executeConfirmAction = async () => {
     fetchData()
     store.fetchStatistics()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     confirmDialog.value = false
   } finally {
     confirmLoading.value = false
@@ -399,7 +399,7 @@ const submitLeaveType = async () => {
     resetTypeForm()
     fetchAllLeaveTypes()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     typeFormLoading.value = false
   }
@@ -422,7 +422,7 @@ const confirmDeleteType = async () => {
     deleteTypeTarget.value = null
     fetchAllLeaveTypes()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
     deleteTypeDialog.value = false
   }
 }

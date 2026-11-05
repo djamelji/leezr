@@ -89,7 +89,7 @@ const runPreview = async () => {
     preview.value = await store.importPreview({ content: content.value, mapping: mapping.value })
     step.value = 3
   } catch (err) {
-    toast(err.response?.data?.message || t('common.error'), 'error')
+    toast((err.data?.message || err.response?._data?.message) || t('common.error'), 'error')
   } finally {
     loading.value = false
   }
@@ -104,7 +104,7 @@ const runApply = async () => {
     step.value = 4
     emit('imported')
   } catch (err) {
-    toast(err.response?.data?.message || t('common.error'), 'error')
+    toast((err.data?.message || err.response?._data?.message) || t('common.error'), 'error')
   } finally {
     loading.value = false
   }

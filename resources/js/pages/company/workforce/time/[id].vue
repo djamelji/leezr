@@ -156,7 +156,7 @@ const run = async (fn, okMsg) => {
     return true
   } catch (e) {
     // Une transition refusée par le serveur (422) ne doit JAMAIS apparaître comme réussie.
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
     await reload() // rafraîchissement contrôlé : l'état a peut-être changé entre-temps
     if (showApprove.value || showReject.value) { showApprove.value = false; showReject.value = false }
 

@@ -54,7 +54,7 @@ const busyId = ref(null)
 const act = async (fn, id, msg) => {
   busyId.value = id
   try { await fn(); toast(msg, 'success'); await load() }
-  catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { busyId.value = null }
 }
 const onPublish = tpl => act(() => $platformApi(`/contract-templates/${tpl.id}/publish`, { method: 'POST' }), tpl.id, t('contractTpl.published'))
@@ -74,7 +74,7 @@ const createTpl = async () => {
     createForm.value = { name: '', contract_type: '', market_key: '', jurisdiction: '' }
     await load()
     openEdit(t2)
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { creating.value = false }
 }
 
@@ -106,7 +106,7 @@ const previewPdf = async () => {
 
     window.open(url, '_blank')
     setTimeout(() => URL.revokeObjectURL(url), 20000)
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { previewing.value = false }
 }
 const saveEdit = async () => {
@@ -116,7 +116,7 @@ const saveEdit = async () => {
     toast(t('common.saved'), 'success')
     editOpen.value = false
     await load()
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { editSaving.value = false }
 }
 </script>

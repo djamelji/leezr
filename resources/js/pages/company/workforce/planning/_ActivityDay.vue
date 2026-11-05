@@ -166,7 +166,7 @@ const submit = async () => {
 
 // Messages d'erreur explicites (plutôt qu'un « Conflit » générique).
 const activityError = error => {
-  const msg = error.response?.data?.message || ''
+  const msg = (error.data?.message || error.response?._data?.message) || ''
   if (/within the shift boundaries/i.test(msg)) return t('planning.activities.errors.bounds')
   if (/overlaps a planned break/i.test(msg)) return t('planning.activities.errors.break')
   if (/overlaps another activity/i.test(msg)) return t('planning.activities.errors.overlap')
@@ -184,9 +184,9 @@ const edit = a => {
     start: fmt(a.start_at), end: fmt(a.end_at), work_location_id: a.work_location_id || null, priority: a.priority || 'normal',
   }
 }
-const duplicate = async a => { try { await store.duplicateActivity(a.id); toast(t('planning.activities.duplicated'), 'success'); await load(); emit('changed') } catch (e) { toast(e.response?.data?.message || t('planning.activities.conflict'), 'error') } }
-const cancelActivity = async a => { try { await store.cancelActivity(a.id); toast(t('planning.activities.cancelled'), 'success'); await load(); emit('changed') } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') } }
-const removeActivity = async a => { try { await store.deleteActivity(a.id); toast(t('planning.activities.deleted'), 'success'); await load(); emit('changed') } catch (e) { toast(e.response?.data?.message || t('planning.activities.deleteBlocked'), 'error') } }
+const duplicate = async a => { try { await store.duplicateActivity(a.id); toast(t('planning.activities.duplicated'), 'success'); await load(); emit('changed') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('planning.activities.conflict'), 'error') } }
+const cancelActivity = async a => { try { await store.cancelActivity(a.id); toast(t('planning.activities.cancelled'), 'success'); await load(); emit('changed') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } }
+const removeActivity = async a => { try { await store.deleteActivity(a.id); toast(t('planning.activities.deleted'), 'success'); await load(); emit('changed') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('planning.activities.deleteBlocked'), 'error') } }
 </script>
 
 <template>

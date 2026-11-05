@@ -66,7 +66,7 @@ const submit = async () => {
     toast(t(editingId.value ? 'organization.locations.updated' : 'organization.locations.created'), 'success')
     drawer.value = false
     await load()
-  } catch (e) { toast(e?.response?.data?.message || e.message, 'error') }
+  } catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error') }
   finally { saving.value = false }
 }
 
@@ -75,7 +75,7 @@ const targetId = ref(null)
 const askDelete = item => { targetId.value = item.id; confirmDialog.value = true }
 const doDelete = async () => {
   try { await store.deleteLocation(targetId.value); toast(t('organization.locations.deleted'), 'success'); confirmDialog.value = false; await load() }
-  catch (e) { toast(e?.response?.data?.message || e.message, 'error'); confirmDialog.value = false }
+  catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error'); confirmDialog.value = false }
 }
 </script>
 

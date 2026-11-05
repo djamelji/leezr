@@ -191,7 +191,7 @@ async function handleClockAction(actionFn) {
     toast(t('workforceMe.clockActionSuccess'), 'success')
   }
   catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   }
   finally {
     clockActionLoading.value = false

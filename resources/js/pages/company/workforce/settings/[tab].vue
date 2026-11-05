@@ -41,7 +41,7 @@ const saveWeekStart = async () => {
     await $api('/workforce/config/week-start', { method: 'PUT', body: { week_start_day: weekStart.value } })
     toast(t('workforceSettings.weekStart.saved'), 'success')
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally { weekStartSaving.value = false }
 }
 

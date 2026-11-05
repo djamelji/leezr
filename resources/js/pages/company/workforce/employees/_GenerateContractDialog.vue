@@ -57,7 +57,7 @@ const runPreview = async () => {
 
     revokePreview()
     previewUrl.value = URL.createObjectURL(blob)
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { previewing.value = false }
 }
 
@@ -69,7 +69,7 @@ const runGenerate = async () => {
     toast(t('generateContract.generated'), 'success')
     emit('generated')
     isOpen.value = false
-  } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
   finally { generating.value = false }
 }
 </script>

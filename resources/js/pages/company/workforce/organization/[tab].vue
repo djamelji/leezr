@@ -57,7 +57,7 @@ const confirmDelete = async () => {
     deleteDialog.value = false
   } catch (error) {
     // Garde-fou backend (422) : on affiche le message métier dans le dialogue, sans fermer.
-    deleteError.value = error.response?.data?.message || t('common.error')
+    deleteError.value = (error.data?.message || error.response?._data?.message) || t('common.error')
   } finally {
     deleteLoading.value = false
   }
@@ -117,7 +117,7 @@ const submitDept = async () => {
     fetchDepartments()
   }
   catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   }
   finally {
     deptFormLoading.value = false
@@ -190,7 +190,7 @@ const submitRole = async () => {
     fetchRoles()
   }
   catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   }
   finally {
     roleFormLoading.value = false

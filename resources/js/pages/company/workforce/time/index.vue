@@ -190,7 +190,7 @@ const submitCorrection = async () => {
     isCorrectionOpen.value = false
     fetchEntries()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     correctionLoading.value = false
   }
@@ -214,7 +214,7 @@ const confirmDelete = async () => {
     isDeleteOpen.value = false
     fetchEntries()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     deleteLoading.value = false
   }
@@ -243,7 +243,7 @@ const submitManual = async () => {
     resetManual()
     fetchEntries()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     manualLoading.value = false
   }
@@ -331,7 +331,7 @@ const handleTsSubmit = async id => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     tsActionLoading.value = false
   }
@@ -355,7 +355,7 @@ const confirmTsApprove = async () => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     tsActionLoading.value = false
   }
@@ -379,7 +379,7 @@ const confirmTsReject = async () => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     tsActionLoading.value = false
   }
@@ -393,7 +393,7 @@ const handleTsLock = async id => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     tsActionLoading.value = false
   }
@@ -407,7 +407,7 @@ const handleTsReopen = async id => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     tsActionLoading.value = false
   }
@@ -440,7 +440,7 @@ const submitGenerate = async () => {
     fetchTimesheets()
     fetchStats()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
     generateLoading.value = false
   }

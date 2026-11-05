@@ -71,7 +71,7 @@ const approve = async () => {
     emit('updated')
     isOpen.value = false
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally {
     actionLoading.value = false
   }
@@ -85,7 +85,7 @@ const reject = async () => {
     emit('updated')
     isOpen.value = false
   } catch (e) {
-    toast(e.response?.data?.message || t('common.error'), 'error')
+    toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error')
   } finally {
     actionLoading.value = false
   }

@@ -85,7 +85,7 @@ const submitGenerate = async () => {
     resetForm()
     emit('generated')
   } catch (e) {
-    toast(e?.response?.data?.message || e.message, 'error')
+    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
   } finally {
     formLoading.value = false
   }
