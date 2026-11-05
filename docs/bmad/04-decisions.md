@@ -25740,3 +25740,47 @@ Lecture `planning_view` ; gestion besoins & catégories `coverage_manage` ; shif
 
 ### Fichiers clés Lot A
 `CoverageCategory.php` · `CoverageCategoryController.php` · `CoverageReadModel.php` (qualifié) · migrations `2026_11_05_100001/100002` · `CoverageRequirementController.php` (replicate + category) · `ScheduleTemplate.php`/`ScheduledActivity.php` (+ UseCases) · `planning/index.vue` (lignes par catégorie, édition inline, catalogue) · `planning.store.js` · i18n · `WorkforceQualifiedCoverageLotATest.php` · `workforce-lotA-qualified-coverage.spec.js`.
+
+---
+
+## ADR-711 — WORKFORCE / SMART PLANNING : Étape 1 (correctif drawer Besoins, LIVRÉ) + cadrage Étape 2 (grille semaine type Skello)
+
+**Date** : 2026-11-05
+**Statut** : Étape 1 **LIVRÉE** sur DEV (build 6aded3f). Étape 2 = **CADRAGE** (non implémenté). Étape 3 (interactions avancées) non engagée. **Checkpoint après Étape 1. SP2–SP5 suspendus.**
+**Référence ergonomique** : Skello (vues par employé/par poste, glisser-déposer semaine/jour/mois, détail pauses/collègues, app mobile) — sans copier code, assets ni identité.
+**Garde-fous** : DEV · origin/dev. Pas de main/PROD, Billing, Payroll, Signature. RBAC, scopes, isolation tenant, publication atomique, verrou optimiste, `WorkTimeComplianceChecker`, `TimeEntry` : inchangés.
+
+### Étape 1 — correctif du drawer « Besoins de personnel » (LIVRÉ)
+Défauts **constatés dans le navigateur** (Playwright, pas supposés) puis corrigés :
+1. **Besoin ponctuel impossible** : le formulaire n'offrait que « jour de semaine » (récurrent). → **toggle Récurrent / Ponctuel** + champ **date** ; exclusivité date/jour ; validation front (jour OU date requis).
+2. **Affichage « —/— »** pour les besoins sans catégorie/libellé. → titre propre (nom de catégorie > libellé > « Présence (toutes catégories) ») + sous-titre lisible (date|jour · créneau|journée entière · Np).
+3. **Édition** peuple désormais date vs jour correctement.
+4. **Responsive** : largeur du drawer réduite sur petit écran.
+Recette E2E complète `workforce-step1-coverage-drawer.spec.js` (parcours UI réels) : créer catégorie · créer besoin **ponctuel** · créer besoin **récurrent** · éditer effectif · supprimer · fermer/rouvrir · **persistance après rechargement**. 106 PHPUnit verts (zéro régression). `pnpm build` clean.
+**Reste Étape 1 (honnête)** : accès à la gestion couverture **inatteignable sur mobile** (onglet Planning masqué < md) → relève de l'expérience mobile (Étape 3) ; toggle Récurrent/Ponctuel un peu serré visuellement (cosmétique).
+
+### Étape 2 — CADRAGE concret (grille semaine professionnelle, à implémenter après GO)
+Même source de données (Shift, ScheduledActivity, ScheduleTemplate, CoverageRequirement, Employee, Department, Location) ; mêmes validations serveur ; **pas de 2ᵉ moteur**.
+
+**A. Blocs métier lisibles (remplacent les mini-chips)** — une cellule = un bloc : **nom de mission/poste d'abord**, horaires ensuite, (durée), **couleur = catégorie**, état brouillon/publié, lieu/conflit éventuel, aperçu activités ou **+N activités**. Ex. `ROUTE — 08:45–17:30`. Trois densités : **compacte / standard / détaillée** (préférence Company).
+
+**B. Deux vues hebdo, même moteur, bascule sans rechargement** :
+- **Par salariés** (existant) : ligne = employé, ses shifts + totaux.
+- **Par postes/catégories** (net-new UI) : ligne = catégorie de couverture ; cellule/jour = collaborateurs affectés à cette catégorie ce jour (dérivé de la contribution qualifiée Lot A). Agrégation read-only, pas de nouvelle table.
+
+**C. Éditeur contextuel rapide** : clic sur cellule vide → popover (modèle, heures préremplies, catégorie/poste, activités, pause, enregistrer, **répliquer** jours/salariés). Édition d'un bloc existant rapide. Sans ouvrir le formulaire complet par shift.
+
+**D. Couverture mieux intégrée** : lignes compactes par catégorie (déjà Lot A : édition inline au clic) + en **vue jour**, un **graphique temporel par catégorie** (requis vs affecté par intervalle, dérivé de `CoverageReadModel.intervals`). Conserver la distinction présence RH / couverture opérationnelle / charge ; **statut non vérifié** exposé pour compétences/conditions non évaluées ; **catégorie absente ≠ contribution valide**.
+
+**E. Simplification de l'écran** : toolbar unique (semaine + actions principales + filtres), palette de modèles accessible, couverture compacte, **grille dominante**. Supprimer les contrôles redondants ; pas d'empilement de cartes/drawers.
+
+**Vues paramétrables (Company)** : vue par défaut, vues disponibles, granularité horaire, week-ends, 1er jour, filtres par défaut, densité, palette, catégories affichées — stockées en `CompanyPolicy` (domaine `planning`, sans nouvelle archi). **Presets JobDomain configurables** (pas de branchement métier dans le Core).
+
+### Étape 3 (cadrée, non engagée)
+Drag-and-drop réel (modèle→cellule, shift→jour, shift→salarié, déplacement/redimensionnement en vue jour), multi-sélection, copier-coller, annuler/rétablir (contrats d'opération explicites), **expérience mobile dédiée** (vue jour, liste chronologique, sélection collaborateur, affectation par modèle, accès couverture, actions tactiles) — chacun testé Playwright sur les parcours UI.
+
+### Critères d'acceptation (cible, à démontrer en fin d'Étape 2/3)
+Configurer besoins Route/Formation/Accompagnement → planning 20 salariés → lire instantanément ce que fait chacun → affecter un modèle à plusieurs → sous-effectifs par catégorie → changer de semaine sans perdre les filtres → basculer en vue par postes → ouvrir un shift (multi-activités) → modifier une affectation autorisée → persistance après rechargement. Playwright couvre les **parcours UI**, pas seulement HTTP.
+
+### Fichiers clés Étape 1
+`planning/index.vue` (drawer : toggle mode + date, helpers `coverageTitle`/`coverageWhen`, validation, responsive) · i18n · `workforce-step1-coverage-drawer.spec.js`.
