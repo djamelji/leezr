@@ -25784,3 +25784,49 @@ Configurer besoins Route/Formation/Accompagnement → planning 20 salariés → 
 
 ### Fichiers clés Étape 1
 `planning/index.vue` (drawer : toggle mode + date, helpers `coverageTitle`/`coverageWhen`, validation, responsive) · i18n · `workforce-step1-coverage-drawer.spec.js`.
+
+---
+
+## ADR-712 — WORKFORCE / SMART PLANNING : Phase A (UX fixes), Phase B (nav Planning), Phase C (audit transversal doublons)
+
+**Date** : 2026-11-05
+**Statut** : Phases A+B **LIVRÉES** sur DEV (build ec488e7). Phase C = **AUDIT** (read-only, aucune suppression). Phase D = présentation + arrêt. SP2–SP5 suspendus.
+**Garde-fous** : DEV · origin/dev. Pas de main/PROD, Billing, Payroll, Signature, migration destructive, couplage vertical. RBAC, scopes, isolation tenant, publication atomique, verrou optimiste, `WorkforceRuleResolver`, `WorkTimeComplianceChecker`, `ShiftRuleValidator`, immutabilité shifts publiés, `TimeEntry` : inchangés.
+
+### Phase A — correctifs UX (constatés au navigateur Playwright, pas supposés)
+1. **Bug bloquant « ajout de tâche »** : reproduit → `POST /planning/activities` **422**. Cause racine : le formulaire d'ajout d'activité (détail journalier) **ne préremplissait pas** les heures → hors bornes du shift ou chevauchement d'une activité existante. Correction : préremplissage du **premier créneau LIBRE** (après la dernière activité, dans les bornes du shift) → le submit par défaut réussit ; **messages d'erreur explicites** (bornes / pause / chevauchement / capacité) au lieu d'un « Conflit » générique. Vérifié : 2 ajouts successifs → 201/201.
+2. **Chevauchement du bandeau de couverture** (§1) : cause racine = toutes les lignes de couverture étaient `position:sticky` au même offset → superposition. Correction : seule la **ligne d'en-tête des jours** est figée ; les lignes de couverture ne se chevauchent plus. (Pas de masquage par `overflow:hidden`/hauteur fixe.)
+3. **Bandeau rétractable** (§2) : chevron + **synthèse compacte** (« N à couvrir · M sureffectifs · Couverture OK »), état conservé en cookie. Lignes par catégorie masquées en mode rétracté.
+4. **Boutons « + » des cellules vides de couverture** (§3) : **toujours visibles** (opacité 0.5, sans survol obligatoire), infobulle, focus. Ajoutent un **BESOIN** (distinct de l'affectation d'un salarié / création de shift / activité). Libellés longs tronqués (ellipsis + title).
+5. **Alignement** : les colonnes de couverture partagent la **même grille de table** que les jours → strictement alignées (pas deux systèmes de largeur).
+
+### Phase B — navigation (manifest-driven, non hardcodé)
+Audit : nav 100 % pilotée par `NavBuilder` + manifests. « Temps de travail » (`workforce-time`, Employees module) existe déjà, gated `anyPermission: timesheet_view|planning_view` ; Planning était un onglet `?tab=planning` **sans item dédié** (`WorkforcePlanningModule.navItems: []`, décision ADR-690). Correction demandée : ajout d'un navItem **`workforce-planning`** dans le manifeste de `WorkforcePlanningModule` → `company-workforce-time?tab=planning`, groupe `workforce`, `sort` 25, `permission` `workforce.planning_view` ; i18n `nav.company.workforce-planning` (« Planning ») déjà présent. Gating : server (`NavBuilder`) + front (`useCompanyNav`) + `definePage` → un salarié sans `planning_view` ne voit pas l'item ; les actions d'admin restent gated `planning_manage`/`publish`/`coverage_manage`. Test `WorkforceNavHrGroupTest` mis à jour (ordre du groupe).
+
+### Phase C — audit transversal des pages Company hors Workforce (read-only, AUCUNE suppression)
+**Verdict : aucun vrai doublon fonctionnel de Workforce côté Company.** « Calendrier » = **onglet FullCalendar de Workforce** (`planning/_PlanningCalendar.vue` dans `/workforce/time`) + calendrier des congés (`leave/_LeaveCalendar.vue`) ; **pas de page calendrier Company séparée** (aucun `pages/company/calendar*`). Pas de pages tasks/events/bookings/availability.
+
+| Page / route | Module | Fonction | Recouvrement Workforce | Décision |
+|---|---|---|---|---|
+| `company-members` (+[id]) | core.members | Comptes utilisateurs (login, rôles, credentials) | Partiel (« personnes ») — mais compte/accès ≠ dossier RH | **KEEP** (couche complémentaire ; améliorer le cross-link vers l'employé) |
+| `company-documents-tab` | core.documents | Coffre documentaire / conformité | Collision de **nom** seulement (vs Workforce Documents = modèles RH) | **KEEP** |
+| `company-roles` | core.roles | Catalogue rôles/permissions (affiche les perms Workforce) | Affichage, ne possède pas les données | **KEEP** |
+| `company-workflows` (+[id]) | core.workflows | Automatisations (triggers/actions) | Aucun | **KEEP** |
+| `company-shipments` / `my-deliveries` | logistics_shipments | Livraisons (`scheduled_at`) | Aucun (planification colis ≠ shifts) | **KEEP** |
+| `company-audit` | core.audit | Journal d'audit | Aucun | **KEEP** |
+| `company-dev-lab` | workforce (hors nav) | Sandbox design-system (données factices) | Cosmétique uniquement | **KEEP** (dev-only ; vérifier exclusion prod) |
+| Workforce Employees / Time(+Planning) / Leave / Organization | workforce* | **propriétaires** du domaine RH/planning | — (ce sont les owners) | — |
+
+**Décisions** : aucune MERGE/REDIRECT/DEPRECATE/REWORK requise ; tout **KEEP**. Calendrier : **source unique dans Workforce**, rien à fusionner/rediriger/déprécier. 2 flags doux (KEEP) : cross-link Members↔Employees ; confirmer exclusion prod de `dev-lab.vue`. **Aucune suppression** (conforme §10) ; aucun plan de dépréciation nécessaire.
+
+### §4 — sureffectif : contrat minimal requis (NON implémenté — décision attendue)
+L'alerte de sureffectif à l'**ajout d'une affectation** (≠ modification du besoin, qui ne doit PAS alerter) est une **extension métier non triviale** : elle exige un contrôle **serveur atomique** au moment de l'affectation. Contrat proposé : dans `CreateShiftUseCase`/`BulkCreateShiftsUseCase`/`CreateScheduledActivityUseCase`, après validation, calculer (via la logique `CoverageReadModel` scopée aux intervalles affectés + catégorie contributive) si `assigned > required` sur un intervalle où un besoin pertinent existe ET où le collaborateur contribue à la catégorie ; si oui → retour structuré `{overfill:true, category, interval, assigned, required}` (avertissement **opérationnel**, jamais une violation réglementaire). **Décision requise** : (a) warn-only, warn+confirm (permission), ou warn+reason selon politique Company (`CompanyPolicy` domaine `planning`, clé `overfill_policy`) ; (b) ne jamais afficher si aucun besoin pertinent ou si le salarié ne contribue pas à la catégorie. → à implémenter sous GO (pas de popup frontend sans enforcement serveur).
+
+### Limitations restantes (honnêtes)
+- §4 sureffectif : contrat fourni, **non implémenté** (décision produit requise).
+- Gestion couverture **inatteignable sur mobile** (onglet Planning masqué <md) → Étape mobile dédiée.
+- Vraie grille « blocs métier » + vue par postes + éditeur contextuel + drag-drop : **cadrées (ADR-711 Étape 2/3), non livrées**.
+- Toggle Récurrent/Ponctuel du drawer un peu serré (cosmétique).
+
+### Fichiers clés
+`_ActivityDay.vue` (préremplissage créneau libre + messages d'erreur) · `planning/index.vue` (bandeau rétractable, sticky day-header, boutons `+` visibles, alignement) · `WorkforcePlanningModule.php` (navItem) · `WorkforceNavHrGroupTest.php` · i18n · `workforce-phaseA-planning-ux.spec.js`.
