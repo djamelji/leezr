@@ -319,6 +319,10 @@ class ShiftController extends Controller
                 shiftIds: $validated['shift_ids'],
             );
 
+            // ADR-715 — notifications APRÈS publication réussie (jamais sur échec, qui lève une exception).
+            app(\App\Modules\Workforce\Services\PlanningNotifier::class)
+                ->notifyPublished($request->attributes->get('company_id'), $shifts);
+
             return response()->json($shifts);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

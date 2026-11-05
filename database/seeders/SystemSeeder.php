@@ -34,6 +34,9 @@ class SystemSeeder extends Seeder
         // ─── Module catalog ──────────────────────────────────────
         ModuleRegistry::sync();
 
+        // ─── Notification topics (ADR-715) — référentiel idempotent, requis pour l'in-app ──
+        $this->call(NotificationTopicSeeder::class);
+
         // ─── Module commercial config (sellable add-ons + pricing) ──────
         // Audit 13: product reference data — MUST run in prod too (was dev-only,
         // which left Workforce/logistics add-ons unsellable/unactivatable on PROD).

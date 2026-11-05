@@ -77,6 +77,7 @@ class ScheduledActivityController extends Controller
 
         try {
             $result = app(CreateScheduledActivityUseCase::class)->execute($companyId, (int) $validated['shift_id'], $validated);
+            $this->notifyChange($companyId, $result);
 
             return response()->json(['activity' => $result['activity'], 'warnings' => $result['warnings']], 201);
         } catch (\DomainException $e) {
@@ -127,6 +128,7 @@ class ScheduledActivityController extends Controller
 
         try {
             $result = app(UpdateScheduledActivityUseCase::class)->execute($activity, $validated);
+            $this->notifyChange($activity->company_id, $result);
 
             return response()->json(['activity' => $result['activity'], 'warnings' => $result['warnings']]);
         } catch (\DomainException $e) {
@@ -188,9 +190,20 @@ class ScheduledActivityController extends Controller
                 'notes' => $activity->notes, 'source' => 'manual',
             ]);
 
+            $this->notifyChange($activity->company_id, $result);
+
             return response()->json(['activity' => $result['activity'], 'warnings' => $result['warnings']], 201);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** Notifie les salariés concernés après modification d'un planning publié (post-commit). */
+    private function notifyChange(int $companyId, array $result): void
+    {
+        if (! empty($result['notify_employee_ids'])) {
+            app(\App\Modules\Workforce\Services\PlanningNotifier::class)
+                ->notifyChanged($companyId, $result['notify_employee_ids'], $result['notify_date'] ?? null);
         }
     }
 

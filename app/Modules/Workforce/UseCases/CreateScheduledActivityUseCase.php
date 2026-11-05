@@ -80,7 +80,13 @@ class CreateScheduledActivityUseCase
                 ]],
             );
 
-            return ['activity' => $activity->fresh(), 'warnings' => $warnings];
+            return [
+                'activity' => $activity->fresh(),
+                'warnings' => $warnings,
+                // Pour notification post-commit (contrôleur) si modification d'un planning publié.
+                'notify_employee_ids' => $onPublished ? [$shift->employee_id] : [],
+                'notify_date' => $startAt,
+            ];
         });
     }
 }

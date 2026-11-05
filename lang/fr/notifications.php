@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'workforce_planning_published' => [
+        'title' => 'Planning publié',
+        'body' => 'Votre planning (:period) est disponible — :count créneau(x).',
+    ],
+    'workforce_planning_changed' => [
+        'title' => 'Planning modifié',
+        'body' => 'Votre planning (:period) a été modifié.',
+    ],
     'billing_payment_failed' => [
         'title' => 'Paiement échoué',
         'body' => 'Une tentative de paiement pour la facture #:invoice_id a échoué.',

@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'workforce_planning_published' => [
+        'title' => 'Schedule published',
+        'body' => 'Your schedule (:period) is available — :count shift(s).',
+    ],
+    'workforce_planning_changed' => [
+        'title' => 'Schedule changed',
+        'body' => 'Your schedule (:period) has changed.',
+    ],
     'billing_payment_failed' => [
         'title' => 'Payment Failed',
         'body' => 'A payment attempt for invoice #:invoice_id has failed.',

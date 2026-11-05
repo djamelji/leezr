@@ -28,6 +28,9 @@ class NotificationTopicRegistry
         'security' => null,
         'support' => 'support.view',
         'system' => null,
+        // ADR-715 — catégorie Workforce UNIVERSELLE : les salariés (sans permission *.manage) doivent
+        // recevoir leurs notifications de planning. null = aucun filtre de permission.
+        'workforce' => null,
     ];
 
     /**
@@ -52,6 +55,7 @@ class NotificationTopicRegistry
         'modules' => ['icon' => 'tabler-puzzle', 'color' => 'primary'],
         'security' => ['icon' => 'tabler-shield-lock', 'color' => 'error'],
         'support' => ['icon' => 'tabler-headset', 'color' => 'success'],
+        'workforce' => ['icon' => 'tabler-calendar', 'color' => 'primary'],
     ];
 
     /** Bundle metadata per category (platform). */
@@ -152,6 +156,27 @@ class NotificationTopicRegistry
     public static function boot(): void
     {
         static::register([
+            // ─── Workforce planning topics (ADR-715) ─────────────────
+            'workforce.planning_published' => [
+                'label' => 'Planning published',
+                'category' => 'workforce',
+                'scope' => 'company',
+                'icon' => 'tabler-calendar-check',
+                'severity' => 'info',
+                'default_channels' => ['in_app', 'email'],
+                'sort_order' => 1,
+                'description' => 'Your work schedule has been published.',
+            ],
+            'workforce.planning_changed' => [
+                'label' => 'Planning changed',
+                'category' => 'workforce',
+                'scope' => 'company',
+                'icon' => 'tabler-calendar-cog',
+                'severity' => 'info',
+                'default_channels' => ['in_app', 'email'],
+                'sort_order' => 2,
+                'description' => 'Your published schedule has changed.',
+            ],
             // ─── Billing topics ──────────────────────────────────────
             'billing.payment_failed' => [
                 'label' => 'Payment Failed',

@@ -67,6 +67,7 @@ class UpdateScheduledActivityUseCase
                 }
             }
 
+            $oldEmployeeId = $activity->employee_id; // pour notifier l'ancien titulaire en cas de réaffectation
             $activity->fill([
                 'shift_id' => $shift->id,
                 'employee_id' => $shift->employee_id, // re-dérivé du shift cible
@@ -95,7 +96,13 @@ class UpdateScheduledActivityUseCase
                 ],
             );
 
-            return ['activity' => $activity->fresh(), 'warnings' => $warnings];
+            return [
+                'activity' => $activity->fresh(),
+                'warnings' => $warnings,
+                // Révision/réaffectation sur planning publié : notifier ancien ET nouveau titulaire (post-commit).
+                'notify_employee_ids' => $onPublished ? [$oldEmployeeId, $shift->employee_id] : [],
+                'notify_date' => $startAt,
+            ];
         });
     }
 }
