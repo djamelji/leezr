@@ -25860,3 +25860,36 @@ Toggle « Par salariés / Par postes » un peu serré visuellement à côté du 
 
 ### Fichiers clés
 `planning/index.vue` (`shiftPoste`/`rowSummary`, bloc `.plan-shift__body--block`, vue `postRows`/`.plan-post-chip`, vue jour mobile, toggle `gridView`) · i18n · `workforce-grid-refonte.spec.js`.
+
+---
+
+## ADR-714 — WORKFORCE / SMART PLANNING Lot 1 : scroll des drawers (fix réutilisable) + publication + blocs pleine largeur
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 59e981f). GO Lot 1. **Lots 2 (notifications) & 3 (absences) validés comme objectifs — checkpoint requis avant implémentation.** SP2–SP5 suspendus.
+**Garde-fous** : DEV · origin/dev. Pas de main/PROD, Billing/Payroll/Signature, migration destructive, couplage vertical. RBAC, scopes, isolation tenant, publication atomique, verrou optimiste, immutabilité shifts publiés, `WorkforceRuleResolver`, `WorkTimeComplianceChecker`, `TimeEntry` : inchangés.
+
+### Bug bloquant — scroll des drawers : CAUSE RACINE + fix réutilisable
+**Constaté au navigateur** : dans les drawers de contenu, `.v-navigation-drawer__content` a `scrollHeight` (2362px) > hauteur viewport mais **`overflow-y: hidden`** → les champs/actions sous la ligne de flottaison sont **inaccessibles** (le scroll programmatique marchait, l'utilisateur non). **Cause** : Vuexy définit `$navigation-drawer-content-overflow-y: hidden` (variable SASS dans `@core/base/libs/vuetify/_variables.scss`, **non modifiable**) — pensé pour la sidebar de nav (PerfectScrollbar), pas pour nos drawers.
+**Fix réutilisable & SCOPÉ** (pas de `overflow:auto` global qui dégraderait d'autres pages) : règle dans le **stylesheet projet** `resources/styles/styles.scss` : `.v-navigation-drawer.wf-scroll-drawer { max-block-size: 100dvh; .v-navigation-drawer__content { overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; } }` + classe **`wf-scroll-drawer`** ajoutée à **tous les 24 `VNavigationDrawer` de Workforce (17 fichiers)**. Spécificité (2 classes) + `100dvh` gère le clavier mobile.
+
+### Matrice des drawers inspectés (24 drawers / 17 fichiers — tous corrigés par la classe)
+Tous présentaient le même défaut racine (overflow:hidden hérité) → tous corrigés par `wf-scroll-drawer`.
+`planning/index.vue` (5 : besoins/catégories, modèle, lieu, shift, …) · `leave/index.vue` (2) · `time/index.vue` (2) · `organization/[tab].vue` (2) · `employees/_EmployeeContract.vue` · `employees/_EmployeeImportDrawer.vue` · `documents/_DocumentDetailDrawer.vue` · `documents/_GenerateDocumentDrawer.vue` · `payroll/index.vue` · `payroll/_EmployeePreparationPanel.vue` · `time/_TimeCockpit.vue` · `time/_DayDetailPanel.vue` · `signature/_SignatureDetailDrawer.vue` · `contract/templates.vue` · `organization/_OrganizationLocations.vue` · `me.vue` · `dsn/index.vue`.
+**Défaut** : scroll bloqué (`overflow-y:hidden`), actions du bas inaccessibles. **Correction** : classe partagée → `overflow-y:auto`. **Résultat E2E** : overflow-y=auto, bouton du bas atteint par scroll, scroll page non bloqué après fermeture, à **1920/1366/1280** (+ mobile via 100dvh). *(VDialog utilisés comme drawers — ex. détail journalier — scrollent déjà nativement ; hors périmètre de ce fix.)*
+
+### Publication du planning (§3)
+Réutilise `PublishShiftsUseCase` (atomique, `lockForUpdate`, re-validation des conflits, all-or-nothing). UI : boutons **« Publier la semaine »** (tous les brouillons) et **« Publier la sélection (N) »** → **dialog de confirmation avec aperçu** (nombre de shifts + collaborateurs concernés) → publication → **état publié immédiat** (synthèse recalculée). Conflit → message serveur, rien publié. Permission `workforce.planning_publish`. Correction du « Publier » par shift (ordre bogué).
+
+### Blocs (§2)
+Blocs occupent **toute la largeur utile** de la cellule (`inline-size: 100%`), nom de poste prioritaire (ADR-713), empilables, sans chevauchement.
+
+### Recette
+`workforce-lot1-drawers-publish.spec.js` (2 verts) : scroll drawers multi-résolution (overflow auto + action du bas atteinte + page non bloquée) ; publication (aperçu → confirmation → shift publié persisté après rechargement). **239 PHPUnit verts**. `pnpm build` clean.
+
+### Lots suivants (validés, checkpoint requis)
+- **Lot 2 — Notifications** : à la publication/au changement → notification applicative + email (réutiliser Notifications/Mail/Queue), lien sécurisé, après commit, traçabilité, pas de doublon ; distinguer mise en queue vs délivré.
+- **Lot 3 — Congés/absences** : affichage absences/congés/repos/fériés dans la grille (consomme les données RH, pas de duplication, confidentialité motif maladie) ; conflits après publication, couverture recalculée (retirer les indisponibles, distinguer demande en attente ≠ absence confirmée), remplacement via workflow.
+
+### Fichiers clés
+`resources/styles/styles.scss` (fix scroll) · 17 fichiers Workforce (+classe) · `planning/index.vue` (publication : `openPublish`/`confirmPublish`/`publishWeek`/dialog, blocs width) · i18n · `workforce-lot1-drawers-publish.spec.js`.
