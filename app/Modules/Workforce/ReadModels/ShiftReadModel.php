@@ -60,6 +60,7 @@ class ShiftReadModel
             ->whereDate('date', '<=', $weekEnd->toDateString())
             ->notCancelled()
             ->with(['employee', 'workLocation'])
+            ->withCount(['scheduledActivities as scheduled_activities_count' => fn ($q) => $q->where('status', 'planned')])
             ->orderBy('date')
             ->orderBy('start_at')
             ->get();

@@ -53,13 +53,16 @@ test('grille → timeline → activité persistée (parcours UI)', async ({ page
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
 
-  // Le shift est visible dans la grille (fix forWeek) → ouvrir le détail journalier.
-  await expect(page.locator('[data-test="shift-menu"]').first()).toBeVisible({ timeout: 10000 })
-  await page.locator('[data-test="shift-menu"]').first().click()
-  await page.locator('[data-test="open-day-detail"]').first().click()
+  // Le shift est visible dans la grille (fix forWeek) → ouvrir le détail journalier (clic sur le shift).
+  await expect(page.locator('.plan-shift__body').first()).toBeVisible({ timeout: 10000 })
+  await page.locator('.plan-shift__body').first().click({ force: true })
   await page.waitForTimeout(500)
 
-  const dialog = page.locator('.v-dialog').filter({ hasText: /Détail|activité|min/i })
+  const dialog = page.locator('.v-dialog').filter({ hasText: /Timeline|activité/i })
+
+  // Révèle le formulaire d'ajout (replié par défaut dans la timeline refondue).
+  await dialog.locator('[data-test="activity-add"]').click()
+  await page.waitForTimeout(300)
 
   // Ajoute une activité via l'UI → POST 201 persisté.
   await dialog.getByLabel('Libellé').fill('Coupe')
@@ -71,15 +74,16 @@ test('grille → timeline → activité persistée (parcours UI)', async ({ page
   ])
   expect(resp.status()).toBe(201)
   await expect(dialog.getByText('Coupe', { exact: false }).first()).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
 
   // Persistance après rechargement : l'activité est toujours là.
   await page.reload({ waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
-  await page.locator('[data-test="shift-menu"]').first().click()
-  await page.locator('[data-test="open-day-detail"]').first().click()
-  await page.waitForTimeout(500)
-  await expect(page.locator('.v-dialog').filter({ hasText: /min/i }).getByText('Coupe', { exact: false }).first()).toBeVisible()
+  await page.locator('.plan-shift__body').first().click({ force: true })
+  await page.waitForTimeout(600)
+  await expect(page.locator('.v-dialog').filter({ hasText: /Timeline|activité/i }).getByText('Coupe', { exact: false }).first()).toBeVisible()
 })
 
 test('copie de la semaine précédente (brouillons)', async ({ page }) => {

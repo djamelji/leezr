@@ -173,11 +173,31 @@ const formatTime = timeStr => {
   return `${parseInt(parts[0])}h${parts[1] !== '00' ? parts[1] : ''}`
 }
 
+// Extrait l'heure locale HH:MM d'un datetime ISO/SQL sans conversion de fuseau (heure murale stockée).
+const timeOfDay = dt => {
+  if (!dt) return ''
+  const m = String(dt).match(/[T ](\d{2}):(\d{2})/)
+
+  return m ? `${m[1]}:${m[2]}` : ''
+}
+
 const formatShiftRange = shift => {
   if (!shift) return ''
 
-  return `${formatTime(shift.start_at)}-${formatTime(shift.end_at)}`
+  return `${timeOfDay(shift.start_at)}–${timeOfDay(shift.end_at)}`
 }
+
+// Couleur/état d'un chip de shift : couleur du modèle (snapshot) ; brouillon = contour, publié = plein.
+const shiftColor = shift => shift?.template_snapshot?.color || shift?.template_color || (shift?.status === 'published' ? 'success' : 'secondary')
+const shiftVariant = shift => {
+  if (shift?.status === 'cancelled') return 'tonal'
+  if (shift?.status === 'draft') return 'outlined'
+
+  return 'flat'
+}
+const shiftActivityCount = shift => shift?.scheduled_activities_count ?? shift?.activities_count ?? 0
+const shiftHex = shift => shift?.template_snapshot?.color || shift?.template_color
+  || (shift?.status === 'published' ? '#1f8a54' : shift?.status === 'cancelled' ? '#c23b3b' : '#8691a8')
 
 // ══════════════════════════════════════════════════════════════
 // TAB 1 — PLANNING (Weekly Grid)
@@ -500,13 +520,23 @@ const removeCoverage = async c => {
 
 // ── Stats ───────────────────────────────────────────────────
 const stats = computed(() => store.statistics || {})
-const statTotal = computed(() => stats.value.total ?? 0)
-const statPublished = computed(() => stats.value.published ?? 0)
-const statDraft = computed(() => stats.value.draft ?? 0)
-const statHours = computed(() => {
-  const mins = stats.value.total_minutes ?? stats.value.hours_planned ?? 0
 
-  return typeof mins === 'number' && mins > 0 ? `${(mins / 60).toFixed(1)}h` : `${stats.value.hours_planned ?? 0}h`
+// Synthèse de la semaine affichée, calculée depuis les shifts RÉELS (fiable, contrairement à l'endpoint
+// statistics agrégé) : total / brouillons / publiés / heures planifiées.
+const weekSummary = computed(() => {
+  const list = Array.isArray(store.weekShifts) ? store.weekShifts.filter(s => s && s.status !== 'cancelled') : []
+  let draft = 0
+  let published = 0
+  let mins = 0
+  list.forEach(s => {
+    if (s.status === 'draft') draft++
+    else if (s.status === 'published') published++
+    const d = (new Date(s.end_at) - new Date(s.start_at)) / 60000
+    const brk = s.template_snapshot?.break_duration_minutes || 0
+    if (d > 0) mins += Math.max(0, d - brk)
+  })
+
+  return { total: list.length, draft, published, hours: (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1) }
 })
 
 // ── Shift status helpers ─────────────────────────────────────
@@ -1360,104 +1390,31 @@ watch(activeTab, tab => {
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="planning">
         <!-- Stats Row -->
-        <VRow class="card-grid card-grid-xs mb-6">
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="primary"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-calendar-stats" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('planning.stats.totalShifts') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ statTotal }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="success"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-check" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('planning.stats.published') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ statPublished }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="warning"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-pencil" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('planning.stats.draft') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ statDraft }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="6"
-            sm="3"
-          >
-            <VCard>
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  color="info"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon icon="tabler-clock-hour-4" />
-                </VAvatar>
-                <div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('planning.stats.hoursPlanned') }}
-                  </div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ statHours }}
-                  </div>
-                </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-        </VRow>
+        <!-- Synthèse compacte de la semaine (remplace les 4 grandes cartes) -->
+        <div class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mb-4 px-1">
+          <div class="d-flex align-center gap-2">
+            <VIcon icon="tabler-calendar-stats" size="18" class="text-medium-emphasis" />
+            <span class="text-h6 mb-0">{{ weekSummary.total }}</span>
+            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.totalShifts') }}</span>
+          </div>
+          <VDivider vertical class="my-1" />
+          <div class="d-flex align-center gap-2">
+            <span class="legend-dot" style="background: rgb(var(--v-theme-success));" />
+            <span class="text-body-1 font-weight-medium">{{ weekSummary.published }}</span>
+            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.published') }}</span>
+          </div>
+          <div class="d-flex align-center gap-2">
+            <span class="legend-dot" style="background: rgb(var(--v-theme-warning));" />
+            <span class="text-body-1 font-weight-medium">{{ weekSummary.draft }}</span>
+            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.draft') }}</span>
+          </div>
+          <VDivider vertical class="my-1" />
+          <div class="d-flex align-center gap-2">
+            <VIcon icon="tabler-clock" size="18" class="text-medium-emphasis" />
+            <span class="text-body-1 font-weight-medium">{{ weekSummary.hours }}h</span>
+            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.hoursPlanned') }}</span>
+          </div>
+        </div>
 
         <!-- Week Navigation + Grid -->
         <VCard>
@@ -1589,12 +1546,13 @@ watch(activeTab, tab => {
           <VDivider />
 
           <!-- Weekly Grid Table -->
-          <VTable
-            density="comfortable"
-            :loading="gridLoading"
-            class="planning-grid"
-          >
-            <thead>
+          <div class="planning-grid-wrap">
+            <VTable
+              density="compact"
+              :loading="gridLoading"
+              class="planning-grid"
+            >
+              <thead>
               <tr>
                 <th
                   class="text-start"
@@ -1719,28 +1677,32 @@ watch(activeTab, tab => {
                     <div
                       v-for="shift in row.shifts[dayIdx]"
                       :key="shift.id"
-                      class="d-inline-flex align-center mb-1"
+                      class="plan-shift"
+                      :class="`plan-shift--${shift.status}`"
                     >
-                      <!-- Selection checkbox for drafts -->
                       <VCheckbox
                         v-if="shift.status === 'draft'"
                         :model-value="selectedDraftIds.includes(shift.id)"
                         density="compact"
                         hide-details
-                        class="me-1 flex-shrink-0"
+                        class="plan-shift__check"
                         @update:model-value="toggleShiftSelection(shift.id)"
                         @click.stop
                       />
-                      <VChip
-                        :color="shift.template_color || shiftChipColor(shift.status)"
-                        :variant="shiftChipVariant(shift.status)"
-                        size="small"
-                        :class="{ 'text-decoration-line-through': shift.status === 'cancelled' }"
-                        class="cursor-pointer"
-                        @click.stop="openEditShift(shift)"
+                      <button
+                        type="button"
+                        class="plan-shift__body"
+                        :style="{ '--sc': shiftHex(shift) }"
+                        :title="formatShiftRange(shift) + (shift.template_snapshot?.template_name ? ' · ' + shift.template_snapshot.template_name : '')"
+                        @click.stop="openActivityDay(shift, row)"
                       >
-                        {{ formatShiftRange(shift) }}
-                      </VChip>
+                        <span class="plan-shift__time">{{ formatShiftRange(shift) }}</span>
+                        <span
+                          v-if="shiftActivityCount(shift)"
+                          class="plan-shift__badge"
+                          :title="$t('planning.activities.count', { n: shiftActivityCount(shift) })"
+                        >{{ shiftActivityCount(shift) }}</span>
+                      </button>
                       <!-- Quick actions menu -->
                       <VMenu location="bottom end">
                         <template #activator="{ props: menuProps }">
@@ -1749,7 +1711,7 @@ watch(activeTab, tab => {
                             icon
                             variant="text"
                             size="x-small"
-                            class="ms-1"
+                            class="plan-shift__menu"
                             data-test="shift-menu"
                             @click.stop
                           >
@@ -1818,7 +1780,8 @@ watch(activeTab, tab => {
                 </td>
               </tr>
             </tbody>
-          </VTable>
+            </VTable>
+          </div>
         </VCard>
       </VWindowItem>
 
@@ -2719,29 +2682,134 @@ watch(activeTab, tab => {
   border-radius: 50%;
 }
 
+// ── Grille Planning (refonte UX) : en-tête + colonne employé figés, densité maîtrisée ──
+.planning-grid-wrap {
+  overflow: auto;
+  max-block-size: calc(100vh - 340px);
+  border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
 .planning-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+
+  thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 3;
+    background: rgb(var(--v-theme-surface));
+    box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+
+  // Colonne collaborateur figée (en-tête + cellules).
+  thead th:first-child { z-index: 4; inset-inline-start: 0; }
+
+  tbody td:first-child,
+  .plan-emp-col {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: rgb(var(--v-theme-surface));
+    box-shadow: inset -1px 0 0 rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+
+  tbody tr:hover td { background-color: rgba(var(--v-theme-on-surface), 0.025); }
+
   .planning-cell {
     cursor: pointer;
-    vertical-align: middle;
-    padding: 4px 8px !important;
-    min-height: 60px;
+    vertical-align: top;
+    padding: 3px 5px !important;
+    min-inline-size: 118px;
+    block-size: 46px;
+    border-inline-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.6));
 
-    &:hover {
-      background-color: rgba(var(--v-theme-on-surface), 0.04);
-    }
+    &:hover { background-color: rgba(var(--v-theme-on-surface), 0.04); }
   }
 
-  .planning-add-btn {
+  .coverage-row th {
+    inset-block-start: 57px; // sous l'en-tête des jours
+    z-index: 2;
+    padding-block: 2px;
+    background: rgb(var(--v-theme-surface));
+    box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+
+  tbody tr:first-child td { scroll-margin-block-start: 96px; }
+
+  .planning-add-btn { opacity: 0; transition: opacity 0.15s ease; }
+  .planning-cell:hover .planning-add-btn { opacity: 1; }
+
+  .bg-light { background-color: rgba(var(--v-theme-primary), 0.05); }
+}
+
+// ── Pill de shift : couleur du modèle en liseré + fond teinté, lisible, états clairs ──
+.plan-shift {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-block-end: 3px;
+
+  &__check {
+    flex: 0 0 auto;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    margin: 0 !important;
+    transform: scale(0.8);
+    transition: opacity 0.12s ease;
+    :deep(.v-selection-control) { min-block-size: 0; }
   }
 
-  .planning-cell:hover .planning-add-btn {
-    opacity: 1;
+  &:hover &__check,
+  .v-selection-control--dirty &__check { opacity: 1; }
+
+  &__body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-inline-size: 0;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border-inline-start: 3px solid var(--sc);
+    background: color-mix(in srgb, var(--sc) 14%, transparent);
+    color: rgb(var(--v-theme-on-surface));
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: start;
+    transition: background 0.12s ease;
+
+    &:hover { background: color-mix(in srgb, var(--sc) 24%, transparent); }
   }
 
-  .bg-light {
-    background-color: rgba(var(--v-theme-primary), 0.04);
+  &__time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  &__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 16px;
+    block-size: 16px;
+    padding-inline: 4px;
+    border-radius: 8px;
+    background: var(--sc);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
   }
+
+  &__menu {
+    flex: 0 0 auto;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  &:hover &__menu { opacity: 0.85; }
+
+  &--published &__body { font-weight: 700; }
+  &--cancelled &__body { text-decoration: line-through; opacity: 0.55; }
 }
 </style>

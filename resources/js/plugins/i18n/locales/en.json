@@ -7568,6 +7568,9 @@
       "done": "Shift assigned from template"
     },
     "activities": {
+      "count": "{n} activity/ies",
+      "timeline": "Day timeline",
+      "formHint": "Click \"Add an activity\", or a timeline activity to edit it.",
       "dayDetail": "Day detail",
       "addActivity": "Add an activity",
       "editActivity": "Edit activity",

@@ -7568,6 +7568,9 @@
       "done": "Shift affecté depuis le modèle"
     },
     "activities": {
+      "count": "{n} activité(s)",
+      "timeline": "Timeline de la journée",
+      "formHint": "Cliquez « Ajouter une activité » ou une activité de la timeline pour la modifier.",
       "dayDetail": "Détail de la journée",
       "addActivity": "Ajouter une activité",
       "editActivity": "Modifier l'activité",

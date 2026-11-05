@@ -122,6 +122,11 @@ class Shift extends Model
         return $this->belongsTo(WorkLocation::class, 'work_location_id');
     }
 
+    public function scheduledActivities()
+    {
+        return $this->hasMany(ScheduledActivity::class, 'shift_id');
+    }
+
     // --- Helpers ---
 
     public function plannedDurationMinutes(): int
