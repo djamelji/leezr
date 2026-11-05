@@ -7828,6 +7828,15 @@
       "confirm": "Confirmer malgré le dépassement",
       "changed": "La situation a changé — vérifiez le nouvel impact puis reconfirmez"
     },
+    "undo": {
+      "undoLabel": "Annuler : {op}",
+      "redoLabel": "Rétablir",
+      "nothing": "Rien à annuler",
+      "done": "Opération annulée",
+      "redone": "Opération rétablie",
+      "concurrent": "Impossible d'annuler : ce shift a été modifié par une autre personne.",
+      "failed": "Annulation impossible"
+    },
     "copy": {
       "copyShift": "Copier ce shift",
       "copyDay": "Copier la journée",

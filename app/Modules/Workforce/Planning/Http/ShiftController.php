@@ -182,8 +182,9 @@ class ShiftController extends Controller
         ]);
 
         try {
-            return response()->json(app(CreateShiftUseCase::class)->execute(
-                companyId: $request->attributes->get('company_id'),
+            $companyId = $request->attributes->get('company_id');
+            $shift = app(CreateShiftUseCase::class)->execute(
+                companyId: $companyId,
                 employeeId: $validated['employee_id'],
                 date: $validated['date'],
                 startAt: $validated['start_at'],
@@ -195,11 +196,55 @@ class ShiftController extends Controller
                 overstaffingAck: $validated['overstaffing_ack'] ?? null,
                 overstaffingReason: $validated['overstaffing_reason'] ?? null,
                 actorId: $request->user()?->id,
-            ), 201);
+            );
+            // ADR-722 — opération réversible.
+            $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
+                $companyId, $request->user()?->id, 'create_shift', [$shift->id],
+                collect($validated)->only(['employee_id', 'date', 'start_at', 'end_at', 'timezone', 'schedule_template_id', 'work_location_id', 'notes'])->all(),
+            );
+
+            return response()->json($shift->toArray() + ['operation_id' => $op->id], 201);
         } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
             return response()->json($e->toPayload(), 422);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** ADR-722 — ANNULER une opération réversible (commande inverse serveur). */
+    public function undoOperation(Request $request, int $id): JsonResponse
+    {
+        return $this->runUndoRedo($request, $id, 'undo');
+    }
+
+    /** ADR-722 — RÉTABLIR une opération (réexécution de l'intention métier avec contrôles actuels). */
+    public function redoOperation(Request $request, int $id): JsonResponse
+    {
+        return $this->runUndoRedo($request, $id, 'redo');
+    }
+
+    private function runUndoRedo(Request $request, int $id, string $mode): JsonResponse
+    {
+        $validated = $request->validate([
+            'overstaffing_ack' => 'nullable|string', 'overstaffing_reason' => 'nullable|string|max:500',
+        ]);
+        $op = \App\Core\Workforce\PlanningOperation::withoutGlobalScopes()
+            ->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
+        $uc = app(\App\Modules\Workforce\UseCases\PlanningUndoRedoUseCase::class);
+
+        try {
+            $res = $mode === 'undo'
+                ? $uc->undo($op, (int) $request->user()->id, $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null)
+                : $uc->redo($op, (int) $request->user()->id, $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null);
+
+            return response()->json($res);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
+        } catch (\DomainException $e) {
+            // Changement concurrent → 409 (pas d'écrasement) ; sinon 422.
+            $code = str_starts_with($e->getMessage(), 'CONCURRENT_CHANGE') ? 409 : 422;
+
+            return response()->json(['message' => $e->getMessage(), 'code' => $code === 409 ? 'concurrent_change' : 'undo_failed'], $code);
         }
     }
 
@@ -218,7 +263,7 @@ class ShiftController extends Controller
     {
         $validated = $this->validateCopyOps($request, withAck: true);
 
-        return $this->runCopy($request, $validated['operations'], $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null);
+        return $this->runCopy($request, $validated['operations'], $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, 'copy', ['operations' => $validated['operations']]);
     }
 
     /** ADR-721 — copie de SEMAINE : construit les opérations (décalage jour respectant le 1er jour Company). */
@@ -240,8 +285,9 @@ class ShiftController extends Controller
             'overstaffing_ack' => 'nullable|string', 'overstaffing_reason' => 'nullable|string|max:500',
         ]);
         [$ops] = $this->buildWeekOps($request);
+        $intent = collect($v)->only(['from_week_start', 'to_week_start', 'employee_ids', 'department_id', 'work_location_id'])->all();
 
-        return $this->runCopy($request, $ops, $v['overstaffing_ack'] ?? null, $v['overstaffing_reason'] ?? null);
+        return $this->runCopy($request, $ops, $v['overstaffing_ack'] ?? null, $v['overstaffing_reason'] ?? null, 'copy_week', $intent);
     }
 
     private function validateCopyOps(Request $request, bool $withAck = false): array
@@ -260,12 +306,22 @@ class ShiftController extends Controller
         return $request->validate($rules);
     }
 
-    private function runCopy(Request $request, array $ops, ?string $ack, ?string $reason): JsonResponse
+    private function runCopy(Request $request, array $ops, ?string $ack, ?string $reason, string $type = 'copy', array $intent = []): JsonResponse
     {
         try {
-            return response()->json(app(\App\Modules\Workforce\UseCases\CopyShiftsUseCase::class)->commit(
-                $request->attributes->get('company_id'), $ops, $this->planningScope($request), $ack, $reason, $request->user()?->id,
-            ), 201);
+            $companyId = $request->attributes->get('company_id');
+            $res = app(\App\Modules\Workforce\UseCases\CopyShiftsUseCase::class)->commit(
+                $companyId, $ops, $this->planningScope($request), $ack, $reason, $request->user()?->id,
+            );
+            // ADR-722 — opération réversible (intention = requête d'origine pour le rétablissement).
+            if (! empty($res['created'])) {
+                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
+                    $companyId, $request->user()?->id, $type, $res['created'], $intent ?: ['operations' => $ops],
+                );
+                $res['operation_id'] = $op->id;
+            }
+
+            return response()->json($res, 201);
         } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
             return response()->json($e->toPayload(), 422);
         } catch (\DomainException $e) {
@@ -346,8 +402,9 @@ class ShiftController extends Controller
         ]);
 
         try {
+            $companyId = $request->attributes->get('company_id');
             $result = app(\App\Modules\Workforce\UseCases\BulkApplyTemplateUseCase::class)->commit(
-                $request->attributes->get('company_id'),
+                $companyId,
                 (int) $validated['schedule_template_id'],
                 $validated['cells'],
                 $this->planningScope($request),
@@ -355,6 +412,13 @@ class ShiftController extends Controller
                 $validated['overstaffing_reason'] ?? null,
                 $request->user()?->id,
             );
+            if (! empty($result['created'])) {
+                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
+                    $companyId, $request->user()?->id, 'bulk_template', $result['created'],
+                    ['schedule_template_id' => (int) $validated['schedule_template_id'], 'cells' => $validated['cells']],
+                );
+                $result['operation_id'] = $op->id;
+            }
 
             return response()->json($result, 201);
         } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
@@ -452,7 +516,22 @@ class ShiftController extends Controller
         unset($validated['expected_updated_at']);
 
         try {
-            return response()->json(app(UpdateShiftUseCase::class)->execute($shift, $validated, $ovAck, $ovReason, $request->user()?->id));
+            // ADR-722 — snapshot AVANT (pour l'annulation d'un déplacement).
+            $before = \App\Modules\Workforce\Services\PlanningOperationRecorder::snapshot($shift);
+            $updated = app(UpdateShiftUseCase::class)->execute($shift, $validated, $ovAck, $ovReason, $request->user()?->id);
+
+            $payload = $updated->toArray();
+            // Opération réversible seulement si jour/salarié/horaires ont réellement changé (vrai déplacement).
+            $moved = $before['date'] !== $updated->date->toDateString()
+                || (int) $before['employee_id'] !== (int) $updated->employee_id
+                || $before['start_at'] !== $updated->start_at->toDateTimeString();
+            if ($moved) {
+                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)
+                    ->recordMove($shift->company_id, $request->user()?->id, $before, $updated->fresh());
+                $payload['operation_id'] = $op->id;
+            }
+
+            return response()->json($payload);
         } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
             return response()->json($e->toPayload(), 422);
         } catch (\DomainException $e) {
@@ -519,8 +598,12 @@ class ShiftController extends Controller
                 $validated['target_date'] ?? null,
                 $validated['target_employee_id'] ?? null,
             );
+            $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
+                $shift->company_id, $request->user()?->id, 'duplicate', [$new->id],
+                ['source_shift_id' => $shift->id, 'target_date' => $validated['target_date'] ?? null, 'target_employee_id' => $validated['target_employee_id'] ?? null],
+            );
 
-            return response()->json($new, 201);
+            return response()->json($new->toArray() + ['operation_id' => $op->id], 201);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

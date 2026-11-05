@@ -26246,3 +26246,48 @@ Nettoyage par test généralisé à tous les specs planning (plus d'accumulation
 
 ### Fichiers clés
 `CopyShiftsUseCase.php` · `CreateShiftUseCase.php` (`snapshotOverride`) · `OverstaffingEvaluator.php` (`evaluateMany`) · `ShiftController.php` (`copy`/`copyPreview`/`copyWeekPreview`/`copyWeekApply`/`buildWeekOps`) · `routes/company.php` · front `planning/index.vue` (presse-papiers, coller, drawer copie-semaine, raccourcis) + `planning.store.js` + `lang fr/en` (`planning.copy.*`) · `WorkforceCopyShiftsLot4B3Test.php` · `workforce-lot4b3-copy.spec.js`.
+
+---
+
+## ADR-722 — WORKFORCE / SMART PLANNING Lot 4B.3-B : ANNULER / RÉTABLIR (commandes inverses persistées)
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO 4B.3-B. **Clôture du Lot 4B.** **4C NON engagé** (GO explicite requis).
+**Garde-fous** : DEV · origin/dev. Aucune migration destructive (1 table additive), aucun second moteur Planning, Billing/Payroll/Signature inchangés. RBAC, scope manager, isolation tenant, publication atomique, verrou optimiste, immutabilité publiés, absences partielles, couverture par intervalle, remplacements, sureffactif, outbox notifications, TimeEntry : **inchangés**.
+
+### Principe : commandes inverses, pas de restauration aveugle
+Table additive `workforce_planning_operations` (historique des commandes réversibles, **distinct** de l'audit permanent `company_audit_logs` et de la pile d'interface session). Chaque écriture réversible y est enregistrée (`PlanningOperationRecorder`) après succès : type, company, **user initiateur**, shifts créés, before/after (déplacement, avec `updated_at`), **intention** (requête d'origine pour le rétablissement), statut (active/undone). La pile undo/redo est **de session côté client** (ordre), mais l'état réversible fait **autorité serveur**.
+
+### Annuler
+- Types « création » (create/duplicate/copy/copy_week/bulk_template) → **suppression ATOMIQUE** des brouillons créés : si **un seul** est devenu publié/non-brouillon → **refus total** (jamais 29/30 en silence) ; les activités clonées sont supprimées avec. 
+- Déplacement → retour aux coordonnées **before** via `UpdateShiftUseCase` (revalide conflits/absences/réglementaire/**sureffactif**) sous **verrou optimiste** (`after.updated_at` ≠ courant → `CONCURRENT_CHANGE` → 409, **aucun écrasement** de la modif d'autrui). 
+- **Jamais** de modification d'un shift publié par undo ; annuler un brouillon ne produit **aucune notification**.
+
+### Rétablir
+Réexécute l'**intention métier** via les UseCases existants avec les **contrôles actuels** (contrat, scope, absences, conflits, réglementaire, couverture, **sureffactif**, concurrence) — **jamais** la recréation d'un ancien ID (un redo de création produit un **nouveau** brouillon). Une **nouvelle action** vide la branche redo (comportement standard).
+
+### Concurrence, idempotence, sécurité
+Vérifs + écriture inverse = **une transaction**. Verrou optimiste `updated_at` (précision seconde). **Idempotence** : statut `active`/`undone` → double-undo refusé (anti double-clic/retry). **Scope strict** : une opération n'est annulable/rétablissable que par **son initiateur** (`user_id`) dans **sa company** — jamais rejouable dans un autre tenant/contexte. **Sureffactif** réutilisé (une opération inverse excédentaire respecte la politique ; réglementaire prioritaire). **TimeEntry** intact.
+
+### UI
+Boutons **Annuler / Rétablir** dans la barre (désactivés si pile vide, libellé de la dernière opération, anti-double-clic, états de chargement). Raccourcis **Ctrl/Cmd+Z** / **Ctrl/Cmd+Shift+Z** (ignorés dans les champs de saisie). Sur 409 concurrent → message explicite + **resynchronisation** de la grille ; sur sureffactif → dialog de confirmation réutilisé. La pile est vidée au **changement de semaine** (opérations ciblant des shifts précis) ; sa perte n'altère **jamais** les données persistées.
+
+### Contrat API
+`POST planning/operations/{id}/undo` et `/redo` (perm `planning_manage`) → 200 `{status, operation_id, type}` ; 422 `overstaffing_requires_confirmation` (ack) ; 409 `concurrent_change` ; 422 `undo_failed`. Chaque écriture réversible renvoie désormais `operation_id`.
+
+### Recette & matrice de non-régression
+- **PHPUnit** `WorkforceUndoRedoLot4B3Test` (10 verts) : undo création (+ activités clonées), undo déplacement (retour coords), **refus concurrence**, **refus si publié (shift préservé)**, **undo copie-semaine atomique (refus si 1 publié, 0 suppression partielle)**, redo création (**nouvel ID**), double-undo idempotent, **cross-user interdit**, TimeEntry intact. **Non-régression backend Coverage/Planning/Shift/Replacement/Overstaffing/Outbox/BulkTemplate/CopyShifts/UndoRedo : 158 verts.**
+- **Playwright réel** `workforce-lot4b3b-undo.spec.js` (3 verts) : **A** créer→Annuler (disparition serveur)→Rétablir (persistance) ; **C** copie de semaine→Annuler global (brouillons retirés, **source intacte**) ; **D** modification concurrente→**Annuler refusé 409** (modif d'autrui préservée). Fixtures isolées + **nettoyées**.
+- **Matrice E2E planning (exécutée, workers=1)** : 4A — A *skipped* (base saturée, cf. §9), B ✓, D ✓, Visuel ✓ ; 4B.1 ✓ ; 4B.2 ✓✓ ; 4B.3-A ✓✓ ; 4B.3-B ✓✓✓ → **10 réussis, 1 ignoré, 0 échec**. `pnpm build` clean.
+
+### Scénarios du GO non rejoués en Playwright (prouvés ailleurs, honnête)
+- **B (undo d'un déplacement par drag)** : le mécanisme undo-move est prouvé par PHPUnit (`test_undo_move_restores_previous_coords`) + le scénario D (move+undo via opération enregistrée) ; le bouton undo est identique quelle que soit l'origine du déplacement.
+- **E (raccourcis/mobile)** : Ctrl/Cmd+Z/Shift+Z câblés (hors champs) ; undo prouvé en A. Parcours tactile mobile dédié → relève de 4C.
+
+### Limites restantes
+- Verrou optimiste en **précision seconde** (hérité) : deux changements dans la même seconde peuvent ne pas être distingués — acceptable pour des actions humaines, à renforcer (version counter) si besoin.
+- Pile undo **de session** (perdue au reload/changement de semaine/company/logout) — par conception ; les données persistées ne sont jamais perdues.
+- Réserves ADR-717 inchangées ; **4C non engagé**.
+
+### Fichiers clés
+`migration create_planning_operations` · `PlanningOperation.php` · `PlanningOperationRecorder.php` · `PlanningUndoRedoUseCase.php` · `ShiftController.php` (undo/redo + enregistrement sur store/update/duplicate/copy/copy-week/bulk) · `routes/company.php` · front `planning/index.vue` (pile undo/redo, boutons, raccourcis, resync concurrent) + `planning.store.js` + `lang fr/en` (`planning.undo.*`) · `WorkforceUndoRedoLot4B3Test.php` · `workforce-lot4b3b-undo.spec.js`.

@@ -75,6 +75,14 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       })
     },
 
+    // ADR-722 — annuler / rétablir une opération (commande inverse serveur).
+    async undoOperation(id, { ack = null, reason = null } = {}) {
+      return await $api(`/workforce/planning/operations/${id}/undo`, { method: 'POST', body: { overstaffing_ack: ack, overstaffing_reason: reason } })
+    },
+    async redoOperation(id, { ack = null, reason = null } = {}) {
+      return await $api(`/workforce/planning/operations/${id}/redo`, { method: 'POST', body: { overstaffing_ack: ack, overstaffing_reason: reason } })
+    },
+
     // ADR-721 — copie de shifts (opérations explicites source→cible) : prévisualisation + commit.
     async copyShiftsPreview(operations) {
       return await $api('/workforce/planning/shifts/copy/preview', { method: 'POST', body: { operations } })

@@ -7828,6 +7828,15 @@
       "confirm": "Confirm despite over-staffing",
       "changed": "Situation changed — review the new impact then reconfirm"
     },
+    "undo": {
+      "undoLabel": "Undo: {op}",
+      "redoLabel": "Redo",
+      "nothing": "Nothing to undo",
+      "done": "Operation undone",
+      "redone": "Operation redone",
+      "concurrent": "Cannot undo: this shift was modified by someone else.",
+      "failed": "Undo failed"
+    },
     "copy": {
       "copyShift": "Copy this shift",
       "copyDay": "Copy the day",

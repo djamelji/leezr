@@ -668,7 +668,8 @@ const copyPreviousWeek = async () => {
 
 const duplicateShiftAction = async shift => {
   try {
-    await store.duplicateShift(shift.id, {})
+    const res = await store.duplicateShift(shift.id, {})
+    pushUndo(res, t('planning.duplicateShift.menu'))
     toast(t('planning.duplicateShift.done'), 'success')
     fetchWeekData()
   } catch (e) {
@@ -711,9 +712,10 @@ const overstaffingPayload = e => e?.data || e?.response?._data || {}
 
 // Exécute une écriture ; si le serveur exige une confirmation de sureffactif, ouvre le dialog et
 // attend la décision du responsable (puis rejoue AVEC la signature serveur). Renvoie true si succès.
-const performWrite = async (writeFn, successMsg) => {
+const performWrite = async (writeFn, successMsg, label = null) => {
   try {
-    await writeFn(null, null)
+    const res = await writeFn(null, null)
+    pushUndo(res, label || successMsg)
     toast(successMsg, 'success')
     await fetchWeekData()
 
@@ -724,7 +726,8 @@ const performWrite = async (writeFn, successMsg) => {
       overstaffingInfo.value = p
       overstaffingReason.value = ''
       overstaffingRetry = async (ack, reason) => {
-        await writeFn(ack, reason)
+        const res = await writeFn(ack, reason)
+        pushUndo(res, label || successMsg)
         toast(successMsg, 'success')
         await fetchWeekData()
       }
@@ -1040,6 +1043,7 @@ const confirmBulkApply = async () => {
       ack: os?.overstaffed ? os.signature : null,
       reason: bulkNeedsReason.value ? (bulkReason.value || null) : null,
     })
+    pushUndo(res, t('planning.bulk.apply'))
     toast(t('planning.bulk.created', { n: res.created_count, blocked: res.blocked.length }), 'success')
     bulkDialog.value = false
     clearSelection()
@@ -1109,6 +1113,7 @@ const runCopy = async operations => {
       overstaffingReason.value = ''
       overstaffingRetry = async (a, r) => {
         const res = await doCommit(a, r)
+        pushUndo(res, t('planning.copy.copyShift'))
         toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
         await fetchWeekData()
       }
@@ -1117,6 +1122,7 @@ const runCopy = async operations => {
       return
     }
     const res = await doCommit(null, null)
+    pushUndo(res, t('planning.copy.copyShift'))
     toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
     await fetchWeekData()
   } catch (e) {
@@ -1188,6 +1194,7 @@ const confirmCopyWeek = async () => {
       employee_ids: copyWeekForm.value.employeeIds.length ? copyWeekForm.value.employeeIds : undefined,
     }
     const res = await store.copyWeekApply({ ...base, overstaffing_ack: os?.overstaffed ? os.signature : null })
+    pushUndo(res, t('planning.copy.copyWeek'))
     toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
     copyWeekOpen.value = false
     fetchWeekData()
@@ -1202,6 +1209,76 @@ const confirmCopyWeek = async () => {
     copyWeekBusy.value = false
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// LOT 4B.3-B — ANNULER / RÉTABLIR (pile de SESSION ; commandes inverses validées SERVEUR) — ADR-722
+// La pile UI n'est qu'un ordre ; l'état réversible fait autorité côté serveur (statut de l'opération).
+// ══════════════════════════════════════════════════════════════
+const undoStack = ref([])   // [{ id, label }]
+const redoStack = ref([])
+const undoBusy = ref(false)
+const UNDO_LIMIT = 50
+const canUndo = computed(() => undoStack.value.length > 0)
+const canRedo = computed(() => redoStack.value.length > 0)
+const lastUndoLabel = computed(() => undoStack.value.at(-1)?.label || '')
+
+// Empile une opération réversible renvoyée par le serveur (operation_id). Une nouvelle action vide le redo.
+const pushUndo = (res, label) => {
+  const id = res?.operation_id
+  if (!id) return
+  undoStack.value.push({ id, label })
+  if (undoStack.value.length > UNDO_LIMIT) undoStack.value.shift()
+  redoStack.value = []
+}
+
+const runUndoRedo = async (mode, entry, ack = null, reason = null) => {
+  undoBusy.value = true
+  try {
+    const res = mode === 'undo'
+      ? await store.undoOperation(entry.id, { ack, reason })
+      : await store.redoOperation(entry.id, { ack, reason })
+    if (mode === 'undo') { undoStack.value.pop(); redoStack.value.push(entry) } else { redoStack.value.pop(); undoStack.value.push(entry) }
+    toast(t(mode === 'undo' ? 'planning.undo.done' : 'planning.undo.redone'), 'success')
+    await fetchWeekData()
+
+    return res
+  } catch (e) {
+    const code = e?.data?.code || e?.response?._data?.code
+    if (code === 'overstaffing_requires_confirmation') {
+      const p = e?.data || e?.response?._data
+      overstaffingInfo.value = p
+      overstaffingReason.value = ''
+      overstaffingRetry = async (a, r) => { await runUndoRedo(mode, entry, a, r) }
+      overstaffingDialog.value = true
+    } else if (code === 'concurrent_change') {
+      // Modification concurrente d'un autre utilisateur → refus, pas d'écrasement ; on resynchronise.
+      toast(t('planning.undo.concurrent'), 'error')
+      if (mode === 'undo') undoStack.value.pop() // l'opération n'est plus annulable fiablement
+      await fetchWeekData()
+    } else {
+      toast((e?.data?.message || e?.response?._data?.message) || t('planning.undo.failed'), 'error')
+      if (mode === 'undo') undoStack.value.pop()
+      await fetchWeekData()
+    }
+  } finally {
+    undoBusy.value = false
+  }
+}
+const doUndo = () => { if (canUndo.value && !undoBusy.value) runUndoRedo('undo', undoStack.value.at(-1)) }
+const doRedo = () => { if (canRedo.value && !undoBusy.value) runUndoRedo('redo', redoStack.value.at(-1)) }
+
+// Raccourcis Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z (hors champs de saisie).
+const onUndoKeydown = e => {
+  const tag = (e.target?.tagName || '').toLowerCase()
+  if (['input', 'textarea', 'select'].includes(tag) || e.target?.isContentEditable) return
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
+  e.preventDefault()
+  e.shiftKey ? doRedo() : doUndo()
+}
+onMounted(() => window.addEventListener('keydown', onUndoKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onUndoKeydown))
+// La pile ne survit pas au changement de semaine (les opérations ciblent des shifts précis ; données déjà persistées).
+watch(currentWeekStart, () => { undoStack.value = []; redoStack.value = [] })
 
 // ── Day detail (multi-activités) — Smart Planning SP1b ───────
 const activityDayOpen = ref(false)
@@ -2418,6 +2495,30 @@ watch(activeTab, tab => {
                   @click="openCopyWeek"
                 >
                   {{ $t('planning.copy.copyWeek') }}
+                </VBtn>
+                <VBtn
+                  v-can="'workforce.planning_manage'"
+                  icon
+                  variant="text"
+                  size="small"
+                  :disabled="!canUndo || undoBusy"
+                  :title="canUndo ? $t('planning.undo.undoLabel', { op: lastUndoLabel }) : $t('planning.undo.nothing')"
+                  data-test="undo-btn"
+                  @click="doUndo"
+                >
+                  <VIcon icon="tabler-arrow-back-up" />
+                </VBtn>
+                <VBtn
+                  v-can="'workforce.planning_manage'"
+                  icon
+                  variant="text"
+                  size="small"
+                  :disabled="!canRedo || undoBusy"
+                  :title="$t('planning.undo.redoLabel')"
+                  data-test="redo-btn"
+                  @click="doRedo"
+                >
+                  <VIcon icon="tabler-arrow-forward-up" />
                 </VBtn>
                 <VChip
                   v-if="clipboard"

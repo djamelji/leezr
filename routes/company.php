@@ -611,6 +611,9 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     // ADR-720 — application groupée de modèle : prévisualisation (view) + commit atomique (manage).
     Route::post('shifts/bulk-template/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplatePreview'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts/bulk-template', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplate'])->middleware($perm('workforce.planning_manage'));
+    // ADR-722 — annuler / rétablir (commandes inverses persistées, validées serveur).
+    Route::post('operations/{id}/undo', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'undoOperation'])->middleware($perm('workforce.planning_manage'));
+    Route::post('operations/{id}/redo', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'redoOperation'])->middleware($perm('workforce.planning_manage'));
     // ADR-721 — copie de shifts (menu/journée) + copie de semaine : prévisualisation (view) + commit (manage).
     Route::post('shifts/copy/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyPreview'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts/copy', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copy'])->middleware($perm('workforce.planning_manage'));
