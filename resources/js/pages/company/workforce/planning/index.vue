@@ -517,6 +517,48 @@ const mobileDayAbsences = computed(() => weekAbsences.value.filter(a => {
   return date && date >= a.start && date < a.end
 }))
 
+// ══════════════════════════════════════════════════════════════
+// LOT 4C.1 — MOBILE & TACTILE : actions par shift (réutilise les UseCases), « Déplacer vers », collage.
+// Pas de drag qui bloque le scroll : l'alternative explicite « Déplacer vers » est TOUJOURS disponible.
+// ══════════════════════════════════════════════════════════════
+const mobileEmployeeOptions = computed(() => (employeesStore.employees || []).map(e => ({ title: `${e.first_name} ${e.last_name}`, value: e.id })))
+const mobileDayItems = computed(() => weekDates.value.map((d, i) => ({ title: `${dayNamesLong.value[i]} ${new Date(d + 'T00:00:00').getDate()}`, value: d })))
+
+// « Déplacer vers » — dialog tactile (jour + salarié cible) → updateShift (undo + sureffactif réutilisés).
+const moveToOpen = ref(false)
+const moveToShift = ref(null)
+const moveToTarget = ref({ date: null, employeeId: null })
+const openMoveTo = shift => {
+  if (shift.status !== 'draft') { toast(t('planning.dnd.publishedLocked'), 'warning'); return }
+  moveToShift.value = shift
+  moveToTarget.value = { date: mobileDayDate.value, employeeId: shift.employee_id }
+  moveToOpen.value = true
+}
+const confirmMoveTo = async () => {
+  const shift = moveToShift.value
+  const { date, employeeId } = moveToTarget.value
+  if (!date || !employeeId) return
+  moveToOpen.value = false
+  await performWrite((ack, reason) => moveShift(shift, employeeId, date, ack, reason), t('planning.dnd.moved'))
+}
+
+// Collage mobile : choisir le salarié cible sur le jour affiché.
+const mobilePasteOpen = ref(false)
+const mobilePasteEmp = ref(null)
+const openMobilePaste = () => { mobilePasteEmp.value = null; mobilePasteOpen.value = true }
+const confirmMobilePaste = async () => {
+  if (!mobilePasteEmp.value) return
+  mobilePasteOpen.value = false
+  await pasteOnCell(mobilePasteEmp.value, mobileDayDate.value)
+}
+
+// Création rapide mobile : ouvre le drawer existant pré-rempli sur le jour affiché.
+const mobileCreate = () => openCreateShift(null, mobileDayDate.value)
+
+// Besoins NON couverts du jour (mobile) : lignes de couverture avec gap > 0.
+const mobileUncovered = computed(() => coverageReqs.value.filter(r => r.date === mobileDayDate.value && r.gap > 0)
+  .map(r => ({ label: r.category_name || r.label || t('planning.coverage.anyPresence'), window: `${(r.start_time || '').slice(0, 5)}–${(r.end_time || '').slice(0, 5)}`, assigned: r.assigned, headcount: r.headcount })))
+
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
 const gridDepartment = ref(null)
 const gridLocation = ref(null)
@@ -2332,6 +2374,74 @@ watch(activeTab, tab => {
               </VBtn>
             </VCardText>
             <VDivider />
+            <!-- LOT 4C.1 — barre d'actions tactile (cibles larges, pas de dépendance au survol) -->
+            <VCardText class="d-flex flex-wrap gap-2 py-2">
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                color="primary"
+                variant="tonal"
+                size="small"
+                prepend-icon="tabler-calendar-plus"
+                data-test="mobile-new-shift"
+                @click="mobileCreate"
+              >
+                {{ $t('planning.newShift') }}
+              </VBtn>
+              <VBtn
+                v-if="clipboard"
+                v-can="'workforce.planning_manage'"
+                color="primary"
+                variant="outlined"
+                size="small"
+                prepend-icon="tabler-clipboard-check"
+                data-test="mobile-paste"
+                @click="openMobilePaste"
+              >
+                {{ $t('planning.copy.clipboard', { n: clipboard.shiftIds.length }) }}
+              </VBtn>
+              <VSpacer />
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                :disabled="!canUndo || undoBusy"
+                data-test="mobile-undo"
+                @click="doUndo"
+              >
+                <VIcon icon="tabler-arrow-back-up" />
+              </VBtn>
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                :disabled="!canRedo || undoBusy"
+                data-test="mobile-redo"
+                @click="doRedo"
+              >
+                <VIcon icon="tabler-arrow-forward-up" />
+              </VBtn>
+            </VCardText>
+            <VDivider />
+            <!-- Besoins non couverts du jour -->
+            <VCardText v-if="mobileUncovered.length" class="py-2">
+              <div class="text-caption text-medium-emphasis mb-1">
+                {{ $t('planning.mobile.uncovered') }}
+              </div>
+              <VChip
+                v-for="(u, i) in mobileUncovered"
+                :key="i"
+                color="error"
+                variant="tonal"
+                size="small"
+                label
+                class="me-1 mb-1"
+              >
+                {{ u.label }} {{ u.window }} · {{ u.assigned }}/{{ u.headcount }}
+              </VChip>
+            </VCardText>
+            <VDivider v-if="mobileUncovered.length" />
             <VCardText>
               <div
                 v-if="!mobileDayRows.length && !mobileDayAbsences.length"
@@ -2371,23 +2481,53 @@ watch(activeTab, tab => {
                   </VAvatar>
                   <span class="font-weight-medium">{{ row.employee?.first_name }} {{ row.employee?.last_name }}</span>
                 </div>
-                <button
+                <div
                   v-for="shift in row.shifts"
                   :key="shift.id"
-                  type="button"
-                  class="plan-shift__body plan-shift__body--block mb-1"
-                  :style="{ '--sc': shiftHex(shift) }"
-                  @click="openActivityDay(shift, row)"
+                  class="d-flex align-center gap-1 mb-1"
                 >
-                  <span class="plan-shift__poste">
-                    {{ shiftPoste(shift) }}
-                    <span
-                      v-if="shiftActivityCount(shift)"
-                      class="plan-shift__badge"
-                    >+{{ shiftActivityCount(shift) }}</span>
-                  </span>
-                  <span class="plan-shift__time">{{ formatShiftRange(shift) }} · {{ shift.status === 'published' ? $t('workforce.statuses.shift.published', 'Publié') : $t('workforce.statuses.shift.draft', 'Brouillon') }}</span>
-                </button>
+                  <button
+                    type="button"
+                    class="plan-shift__body plan-shift__body--block flex-grow-1"
+                    :style="{ '--sc': shiftHex(shift) }"
+                    @click="openActivityDay(shift, row)"
+                  >
+                    <span class="plan-shift__poste">
+                      {{ shiftPoste(shift) }}
+                      <span
+                        v-if="shiftActivityCount(shift)"
+                        class="plan-shift__badge"
+                      >+{{ shiftActivityCount(shift) }}</span>
+                    </span>
+                    <span class="plan-shift__time">{{ formatShiftRange(shift) }} · {{ shift.status === 'published' ? $t('workforce.statuses.shift.published', 'Publié') : $t('workforce.statuses.shift.draft', 'Brouillon') }}</span>
+                  </button>
+                  <!-- Action sheet tactile (tap) — cible ≥ 40px -->
+                  <VMenu location="bottom end">
+                    <template #activator="{ props: mp }">
+                      <VBtn
+                        v-bind="mp"
+                        icon
+                        variant="tonal"
+                        size="small"
+                        class="plan-mobile-actions"
+                        :data-test="`mobile-shift-menu-${shift.status}`"
+                      >
+                        <VIcon icon="tabler-dots-vertical" size="18" />
+                      </VBtn>
+                    </template>
+                    <VList density="comfortable" min-width="220">
+                      <VListItem prepend-icon="tabler-timeline" :title="$t('planning.activities.dayDetail')" @click="openActivityDay(shift, row)" />
+                      <VListItem v-if="shift.status === 'draft'" prepend-icon="tabler-edit" :title="$t('common.edit')" @click="openEditShift(shift)" />
+                      <VListItem v-if="shift.status === 'draft'" prepend-icon="tabler-arrows-move" :title="$t('planning.mobile.moveTo')" data-test="mobile-move-to" @click="openMoveTo(shift)" />
+                      <VListItem prepend-icon="tabler-copy" :title="$t('planning.duplicateShift.menu')" @click="duplicateShiftAction(shift)" />
+                      <VListItem prepend-icon="tabler-clipboard-plus" :title="$t('planning.copy.copyShift')" @click="copyShiftToClipboard(shift)" />
+                      <VListItem v-if="shift.status === 'published' && shiftHasConfirmedAbsence(row.employee_id, mobileDayIdx)" prepend-icon="tabler-user-plus" :title="$t('planning.replacement.action')" class="text-warning" @click="openReplacement(shift)" />
+                      <VListItem v-if="shift.status === 'draft'" prepend-icon="tabler-send" :title="$t('planning.publish')" @click="openPublish([shift.id])" />
+                      <VListItem v-if="shift.status === 'draft'" prepend-icon="tabler-trash" :title="$t('common.delete')" class="text-error" @click="openDeleteShift(shift)" />
+                      <VListItem v-if="shift.status !== 'draft'" prepend-icon="tabler-lock" :title="$t('planning.dnd.publishedLocked')" disabled />
+                    </VList>
+                  </VMenu>
+                </div>
               </div>
             </VCardText>
           </VCard>
@@ -3759,6 +3899,68 @@ watch(activeTab, tab => {
       </div>
     </Teleport>
 
+    <!-- LOT 4C.1 — « Déplacer vers » (alternative tactile au drag, toujours disponible sur mobile) -->
+    <VDialog
+      v-model="moveToOpen"
+      max-width="420"
+    >
+      <VCard v-if="moveToShift">
+        <VCardTitle class="pa-4">
+          {{ $t('planning.mobile.moveTo') }}
+        </VCardTitle>
+        <VCardText>
+          <AppSelect
+            v-model="moveToTarget.date"
+            :items="mobileDayItems"
+            :label="$t('planning.mobile.targetDay')"
+            class="mb-3"
+          />
+          <AppSelect
+            v-model="moveToTarget.employeeId"
+            :items="mobileEmployeeOptions"
+            :label="$t('planning.mobile.targetEmployee')"
+          />
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="moveToOpen = false">
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn color="primary" data-test="mobile-move-confirm" @click="confirmMoveTo">
+            {{ $t('planning.mobile.move') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- LOT 4C.1 — collage mobile : choix du salarié cible sur le jour affiché -->
+    <VDialog
+      v-model="mobilePasteOpen"
+      max-width="420"
+    >
+      <VCard>
+        <VCardTitle class="pa-4">
+          {{ $t('planning.copy.pasteHere') }}
+        </VCardTitle>
+        <VCardText>
+          <AppSelect
+            v-model="mobilePasteEmp"
+            :items="mobileEmployeeOptions"
+            :label="$t('planning.mobile.targetEmployee')"
+          />
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="mobilePasteOpen = false">
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn color="primary" :disabled="!mobilePasteEmp" data-test="mobile-paste-confirm" @click="confirmMobilePaste">
+            {{ $t('planning.copy.pasteHere') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
     <!-- Copie de semaine (Lot 4B.3-A, ADR-721) : source → semaine courante, salariés, preview, confirmation -->
     <VNavigationDrawer
       v-model="copyWeekOpen"
@@ -4877,6 +5079,9 @@ watch(activeTab, tab => {
 // ── Cellules cibles pendant le drag ──
 .plan-cell--drop-ok { outline: 2px dashed rgb(var(--v-theme-success)); outline-offset: -2px; background: rgba(var(--v-theme-success), 0.08) !important; }
 .plan-cell--drop-no { outline: 2px dashed rgb(var(--v-theme-error)); outline-offset: -2px; background: rgba(var(--v-theme-error), 0.07) !important; }
+
+// ── LOT 4C.1 — cibles tactiles confortables (menu d'action par shift mobile) ──
+.plan-mobile-actions { min-inline-size: 40px; min-block-size: 40px; }
 
 // ── Cellules sélectionnées (multi-sélection 4B.2) ──
 .plan-cell--selected { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: -2px; background: rgba(var(--v-theme-primary), 0.10) !important; }

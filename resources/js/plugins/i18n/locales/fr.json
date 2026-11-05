@@ -7886,7 +7886,12 @@
       "untitled": "Shift"
     },
     "mobile": {
-      "noShift": "Aucun shift ce jour."
+      "noShift": "Aucun shift ce jour.",
+      "uncovered": "Besoins non couverts",
+      "moveTo": "Déplacer vers…",
+      "targetDay": "Jour cible",
+      "targetEmployee": "Collaborateur cible",
+      "move": "Déplacer"
     },
     "publishWeek": "Publier la semaine",
     "publishSelection": "Publier ({n})",

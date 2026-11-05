@@ -26291,3 +26291,43 @@ Boutons **Annuler / Rétablir** dans la barre (désactivés si pile vide, libell
 
 ### Fichiers clés
 `migration create_planning_operations` · `PlanningOperation.php` · `PlanningOperationRecorder.php` · `PlanningUndoRedoUseCase.php` · `ShiftController.php` (undo/redo + enregistrement sur store/update/duplicate/copy/copy-week/bulk) · `routes/company.php` · front `planning/index.vue` (pile undo/redo, boutons, raccourcis, resync concurrent) + `planning.store.js` + `lang fr/en` (`planning.undo.*`) · `WorkforceUndoRedoLot4B3Test.php` · `workforce-lot4b3b-undo.spec.js`.
+
+---
+
+## ADR-723 — WORKFORCE / SMART PLANNING Lot 4C.1 : mobile & tactile (vue jour actionnable)
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO 4C.1. **Checkpoint 4C.1 obligatoire** : **4C.2 (performance) et 4C.3 (accessibilité/stabilisation) NON engagés** — GO distinct requis. Dette verrou optimiste (§4) et hygiène Playwright 4A-A/salarié-connecté (§5) : relèvent de 4C.3 (cadrées, non traitées ici).
+**Garde-fous** : DEV · origin/dev. **Aucun changement backend**, aucune migration, aucun second moteur. RBAC/scope/tenant/publication atomique/immutabilité publiés/réglementaire/couverture/sureffactif/absences/remplacements/outbox/undo-redo/TimeEntry : **inchangés** (mêmes endpoints que desktop).
+
+### Principe
+4C.1 est une **couche d'interaction mobile pure** par-dessus la vue jour existante (`smAndDown`) — pas de refonte. Toutes les actions réutilisent les fonctions/endpoints déjà livrés (create, update-move, duplicate, copy/paste, replacement, publish, undo/redo). **Aucun drag qui bloque le défilement** : l'alternative explicite **« Déplacer vers »** est toujours disponible (pas de dépendance au survol, interactions au **tap**).
+
+### Livré (vue jour mobile)
+- **Barre d'actions tactile** (cibles ≥ 40 px) : **Nouveau shift** (ouvre le drawer pré-rempli sur le jour affiché), **Coller** (si presse-papiers actif → choix du salarié cible), **Annuler / Rétablir**.
+- **Besoins NON couverts** du jour (chips `assigné/requis`, gap > 0) + synthèse couverture dans l'en-tête ; **absences** du jour (type + salarié).
+- **Menu d'action par shift** (action sheet au tap, ⋮) : détail/activités, **Modifier**, **Déplacer vers…**, **Dupliquer**, **Copier**, **Trouver un remplaçant** (si absence confirmée), **Publier**, **Supprimer** (brouillon). Shift **publié** → entrée verrouillée (cadenas, non déplaçable) ; la révision passe par les workflows dédiés.
+- **« Déplacer vers »** (dialog tactile) : jour cible + salarié cible → `UpdateShiftUseCase` via `performWrite` → **sureffactif + undo réutilisés**, verrou optimiste. C'est l'alternative fiable au drag tactile (non implémenté par choix : fiabilité > gadget, conforme au GO « alternative explicite toujours disponible »).
+- Navigation jour précédent/suivant (déborde sur la semaine voisine).
+
+### Drawers mobile
+`wf-scroll-drawer` reconfirmé (le drawer de remplacement/création est en `width:340` sur `smAndDown`) ; scroll + actions du bas accessibles — **vérifié par un vrai test de défilement** (pas seulement `100dvh`).
+
+### Recette (Playwright RÉEL, viewport mobile 390×844)
+- **A** : vue jour mobile (grille desktop **masquée**), navigation, **« Déplacer vers » un brouillon → PUT serveur → Annuler (undo persisté)**, **défilement vertical vérifié fonctionnel** (non bloqué). 
+- **B** : barre d'actions présente (Nouveau, Annuler, Rétablir), navigation jour, absences visibles. 
+2 verts. `pnpm build` clean. Fixtures isolées + nettoyées (sonde capacité au desktop puis bascule mobile).
+
+### Scénarios du GO — état honnête
+- Livrés + prouvés UI : vue jour, navigation, **Déplacer vers**, Annuler/Rétablir, barre d'actions, absences, besoins non couverts, scroll fonctionnel, persistance (undo serveur).
+- **Appliquer modèle / Copier-coller / Publier / Remplacement sur mobile** : câblés (réutilisent les flux desktop via la barre/menu), **non chacun rejoués** en Playwright mobile dédié dans ce checkpoint — les mécanismes sont prouvés par les lots 4B (desktop) + les endpoints identiques ; parcours mobiles additionnels possibles en 4C.3.
+- **Drag tactile** : délibérément **non implémenté** (le GO l'autorise « uniquement si robuste » ; « Déplacer vers » couvre le besoin sans bloquer le scroll).
+- Tailles 360/430/tablette : la vue jour est responsive (flex, cibles larges) ; captures multi-tailles à compléter en 4C.3.
+
+### Limites restantes
+- Verrou optimiste **précision seconde** (dette §4) → 4C.3.
+- Hygiène Playwright 4A-A (base saturée) + parcours salarié-connecté/cloche (§5) → 4C.3.
+- Mesures de performance (§2) → 4C.2.
+
+### Fichiers clés
+`resources/js/pages/company/workforce/planning/index.vue` (barre d'actions mobile, menu par shift, dialogs « Déplacer vers » + collage, besoins non couverts, style cibles tactiles) · `lang fr/en` (`planning.mobile.*`) · `workforce-lot4c1-mobile.spec.js`. Backend : **inchangé**.
