@@ -75,6 +75,21 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       })
     },
 
+    // ADR-721 — copie de shifts (opérations explicites source→cible) : prévisualisation + commit.
+    async copyShiftsPreview(operations) {
+      return await $api('/workforce/planning/shifts/copy/preview', { method: 'POST', body: { operations } })
+    },
+    async copyShifts({ operations, ack = null, reason = null }) {
+      return await $api('/workforce/planning/shifts/copy', { method: 'POST', body: { operations, overstaffing_ack: ack, overstaffing_reason: reason } })
+    },
+    // ADR-721 — copie de SEMAINE (décalage jour, 1er jour Company) : prévisualisation + commit.
+    async copyWeekPreview(payload) {
+      return await $api('/workforce/planning/shifts/copy-week/preview', { method: 'POST', body: payload })
+    },
+    async copyWeekApply(payload) {
+      return await $api('/workforce/planning/shifts/copy-week/apply', { method: 'POST', body: payload })
+    },
+
     // ADR-717 — candidats au remplacement d'un shift impacté par une absence (fenêtre non assurée incluse).
     async fetchReplacementCandidates(shiftId) {
       return await $api(`/workforce/planning/shifts/${shiftId}/replacement-candidates`)

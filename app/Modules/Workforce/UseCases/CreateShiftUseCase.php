@@ -29,10 +29,11 @@ class CreateShiftUseCase
         ?string $overstaffingReason = null,
         ?int $actorId = null,
         bool $skipOverstaffing = false,
+        ?array $snapshotOverride = null,
     ): Shift {
         return DB::transaction(function () use (
             $companyId, $employeeId, $date, $startAt, $endAt, $timezone,
-            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing
+            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing, $snapshotOverride
         ) {
             $startAtCarbon = Carbon::parse($startAt);
             $endAtCarbon = Carbon::parse($endAt);
@@ -95,6 +96,12 @@ class CreateShiftUseCase
                 }
 
                 $templateSnapshot = $template->toSnapshot();
+            }
+
+            // ADR-721 — COPIE fidèle : on emporte le snapshot SOURCE (horaires/pauses/catégorie figés),
+            // indépendamment d'un éventuel changement/suppression du modèle depuis la création d'origine.
+            if ($snapshotOverride !== null) {
+                $templateSnapshot = $snapshotOverride;
             }
 
             if ($workLocationId) {

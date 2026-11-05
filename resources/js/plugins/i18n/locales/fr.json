@@ -7828,6 +7828,23 @@
       "confirm": "Confirmer malgré le dépassement",
       "changed": "La situation a changé — vérifiez le nouvel impact puis reconfirmez"
     },
+    "copy": {
+      "copyShift": "Copier ce shift",
+      "copyDay": "Copier la journée",
+      "copyWeek": "Copier la semaine",
+      "copied": "{n} shift(s) copié(s)",
+      "clipboard": "{n} copié(s)",
+      "dayLabel": "Journée ({n} shifts)",
+      "pasteHere": "Coller ici",
+      "done": "{n} brouillon(s) créé(s) · {blocked} ignoré(s)",
+      "noneApplicable": "Aucune cellule applicable (conflits/absences).",
+      "sourceWeek": "Semaine source",
+      "prevWeek": "Semaine précédente",
+      "weekBefore2": "Il y a 2 semaines",
+      "employeesOptional": "Collaborateurs (tous si vide)",
+      "previewBtn": "Prévisualiser",
+      "confirmWeek": "Copier {n} shift(s)"
+    },
     "bulk": {
       "selected": "{n} cellule(s) sélectionnée(s)",
       "pickTemplate": "Choisir un modèle…",

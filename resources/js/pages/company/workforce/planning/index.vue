@@ -1060,6 +1060,149 @@ const publishSelectedCells = () => {
   if (selectedDraftShiftIds.value.length) openPublish(selectedDraftShiftIds.value)
 }
 
+// ══════════════════════════════════════════════════════════════
+// LOT 4B.3-A — COPIER-COLLER + COPIE DE SEMAINE — ADR-721
+// Le presse-papiers ne contient que des IDENTIFIANTS source ; la copie serveur fige le snapshot + clone
+// les activités (brouillons indépendants). Jamais d'écriture optimiste ; confirmation sureffactif réutilisée.
+// ══════════════════════════════════════════════════════════════
+const clipboard = ref(null)   // { kind:'shift'|'day', shiftIds:[], label }
+
+const shiftsOfCell = (employeeId, dayIdx) => {
+  const r = filteredGridRows.value.find(x => x.employee_id === employeeId)
+
+  return (r?.shifts[dayIdx] || []).filter(s => s.status !== 'cancelled')
+}
+const copyShiftToClipboard = shift => {
+  clipboard.value = { kind: 'shift', shiftIds: [shift.id], label: shiftPoste(shift) }
+  toast(t('planning.copy.copied', { n: 1 }), 'info')
+}
+const copyDayToClipboard = (row, dayIdx) => {
+  const ids = (row.shifts[dayIdx] || []).filter(s => s.status !== 'cancelled').map(s => s.id)
+  if (!ids.length) return
+  clipboard.value = { kind: 'day', shiftIds: ids, label: t('planning.copy.dayLabel', { n: ids.length }) }
+  toast(t('planning.copy.copied', { n: ids.length }), 'info')
+}
+const clearClipboard = () => { clipboard.value = null }
+
+// Collage : construit les opérations (chaque shift copié → salarié/jour cible) → preview → commit (dialog si sureffactif).
+const pasteOnCell = async (employeeId, date) => {
+  if (!clipboard.value) return
+  const operations = clipboard.value.shiftIds.map(id => ({ source_shift_id: id, target_employee_id: employeeId, target_date: date }))
+  await runCopy(operations)
+}
+const copyBusy = ref(false)
+const runCopy = async operations => {
+  copyBusy.value = true
+  try {
+    // Prévisualisation serveur (conflits + sureffactif cumulatif).
+    const preview = await store.copyShiftsPreview(operations)
+    if (preview.applicable_count === 0) {
+      toast(t('planning.copy.noneApplicable'), 'warning')
+
+      return
+    }
+    const os = preview.overstaffing
+    const doCommit = (ack, reason) => store.copyShifts({ operations, ack, reason })
+    if (os?.overstaffed) {
+      // Réutilise le dialog de sureffactif : confirmation serveur avec signature.
+      overstaffingInfo.value = { impacts: os.impacts, mode: preview.mode, requires_reason: preview.mode === 'warn_confirm_reason', signature: os.signature }
+      overstaffingReason.value = ''
+      overstaffingRetry = async (a, r) => {
+        const res = await doCommit(a, r)
+        toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
+        await fetchWeekData()
+      }
+      overstaffingDialog.value = true
+
+      return
+    }
+    const res = await doCommit(null, null)
+    toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
+    await fetchWeekData()
+  } catch (e) {
+    toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+  } finally {
+    copyBusy.value = false
+  }
+}
+
+// Raccourcis clavier Ctrl/Cmd + C / V (hors champs de saisie).
+const onCopyPasteKeydown = e => {
+  const tag = (e.target?.tagName || '').toLowerCase()
+  if (['input', 'textarea', 'select'].includes(tag) || e.target?.isContentEditable) return
+  if (!(e.ctrlKey || e.metaKey)) return
+  if (e.key === 'c' && selectedCells.value.size) {
+    // Copie les shifts des cellules sélectionnées.
+    const ids = []
+    filteredGridRows.value.forEach((row, rowIdx) => {
+      weekDates.value.forEach((date, dayIdx) => {
+        if (isCellSelected(row.employee_id, date)) (row.shifts[dayIdx] || []).filter(s => s.status !== 'cancelled').forEach(s => ids.push(s.id))
+      })
+    })
+    if (ids.length) { clipboard.value = { kind: 'day', shiftIds: ids, label: t('planning.copy.dayLabel', { n: ids.length }) }; toast(t('planning.copy.copied', { n: ids.length }), 'info') }
+  } else if (e.key === 'v' && clipboard.value && selectionAnchor.value) {
+    e.preventDefault()
+    pasteOnCell(selectionAnchor.value.empId, selectionAnchor.value.date)
+  }
+}
+onMounted(() => window.addEventListener('keydown', onCopyPasteKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onCopyPasteKeydown))
+
+// ── Copie de semaine (drawer dédié) ──
+const copyWeekOpen = ref(false)
+const copyWeekForm = ref({ fromOffset: -1, employeeIds: [], repeatWeeks: 1 })
+const copyWeekPreviewData = ref(null)
+const copyWeekBusy = ref(false)
+const weekStartIso = offset => {
+  const d = new Date(currentWeekStart.value)
+  d.setDate(d.getDate() + offset * 7)
+
+  return d.toISOString().slice(0, 10)
+}
+const openCopyWeek = () => {
+  copyWeekForm.value = { fromOffset: -1, employeeIds: [], repeatWeeks: 1 }
+  copyWeekPreviewData.value = null
+  copyWeekOpen.value = true
+}
+const runCopyWeekPreview = async () => {
+  copyWeekBusy.value = true
+  try {
+    copyWeekPreviewData.value = await store.copyWeekPreview({
+      from_week_start: weekStartIso(copyWeekForm.value.fromOffset),
+      to_week_start: weekDateIso.value,
+      employee_ids: copyWeekForm.value.employeeIds.length ? copyWeekForm.value.employeeIds : undefined,
+    })
+  } catch (e) {
+    toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+  } finally {
+    copyWeekBusy.value = false
+  }
+}
+const confirmCopyWeek = async () => {
+  copyWeekBusy.value = true
+  try {
+    const os = copyWeekPreviewData.value?.overstaffing
+    const base = {
+      from_week_start: weekStartIso(copyWeekForm.value.fromOffset),
+      to_week_start: weekDateIso.value,
+      employee_ids: copyWeekForm.value.employeeIds.length ? copyWeekForm.value.employeeIds : undefined,
+    }
+    const res = await store.copyWeekApply({ ...base, overstaffing_ack: os?.overstaffed ? os.signature : null })
+    toast(t('planning.copy.done', { n: res.created_count, blocked: res.blocked.length }), 'success')
+    copyWeekOpen.value = false
+    fetchWeekData()
+  } catch (e) {
+    if ((e?.data?.code || e?.response?._data?.code) === 'overstaffing_requires_confirmation') {
+      await runCopyWeekPreview()
+      toast(t('planning.overstaffing.changed'), 'warning')
+    } else {
+      toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+    }
+  } finally {
+    copyWeekBusy.value = false
+  }
+}
+
 // ── Day detail (multi-activités) — Smart Planning SP1b ───────
 const activityDayOpen = ref(false)
 const activityDayShift = ref(null)
@@ -2267,6 +2410,27 @@ watch(activeTab, tab => {
                   {{ $t('planning.copyWeek.button') }}
                 </VBtn>
                 <VBtn
+                  v-can="'workforce.planning_manage'"
+                  variant="text"
+                  size="small"
+                  prepend-icon="tabler-calendar-share"
+                  data-test="copy-week"
+                  @click="openCopyWeek"
+                >
+                  {{ $t('planning.copy.copyWeek') }}
+                </VBtn>
+                <VChip
+                  v-if="clipboard"
+                  color="primary"
+                  size="small"
+                  closable
+                  data-test="clipboard-chip"
+                  @click:close="clearClipboard"
+                >
+                  <VIcon icon="tabler-clipboard" size="14" start />
+                  {{ $t('planning.copy.clipboard', { n: clipboard.shiftIds.length }) }}
+                </VChip>
+                <VBtn
                   v-can="'workforce.coverage_manage'"
                   variant="text"
                   size="small"
@@ -2825,6 +2989,18 @@ watch(activeTab, tab => {
                             @click="duplicateShiftAction(shift)"
                           />
                           <VListItem
+                            prepend-icon="tabler-clipboard-plus"
+                            :title="$t('planning.copy.copyShift')"
+                            data-test="copy-shift"
+                            @click="copyShiftToClipboard(shift)"
+                          />
+                          <VListItem
+                            v-if="row.shifts[dayIdx]?.length > 1"
+                            prepend-icon="tabler-clipboard-list"
+                            :title="$t('planning.copy.copyDay')"
+                            @click="copyDayToClipboard(row, dayIdx)"
+                          />
+                          <VListItem
                             v-if="shift.status === 'draft'"
                             prepend-icon="tabler-send"
                             :title="$t('planning.publish')"
@@ -2857,6 +3033,22 @@ watch(activeTab, tab => {
                   </template>
                   <template v-else>
                     <VBtn
+                      v-if="clipboard"
+                      v-can="'workforce.planning_manage'"
+                      icon
+                      variant="tonal"
+                      size="x-small"
+                      color="primary"
+                      class="planning-add-btn"
+                      :loading="copyBusy"
+                      :title="$t('planning.copy.pasteHere')"
+                      data-test="paste-cell"
+                      @click.stop="pasteOnCell(row.employee_id, date)"
+                    >
+                      <VIcon icon="tabler-clipboard-check" size="16" />
+                    </VBtn>
+                    <VBtn
+                      v-else
                       v-can="'workforce.planning_manage'"
                       icon
                       variant="text"
@@ -3465,6 +3657,85 @@ watch(activeTab, tab => {
         <span v-if="dragReason" class="plan-drag-ghost__reason">{{ dragReason }}</span>
       </div>
     </Teleport>
+
+    <!-- Copie de semaine (Lot 4B.3-A, ADR-721) : source → semaine courante, salariés, preview, confirmation -->
+    <VNavigationDrawer
+      v-model="copyWeekOpen"
+      class="wf-scroll-drawer"
+      temporary
+      location="end"
+      :width="460"
+    >
+      <div class="pa-5">
+        <div class="d-flex align-center justify-space-between mb-4">
+          <h5 class="text-h5">
+            {{ $t('planning.copy.copyWeek') }}
+          </h5>
+          <VBtn icon variant="text" size="small" @click="copyWeekOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </div>
+
+        <AppSelect
+          v-model="copyWeekForm.fromOffset"
+          :items="[{ title: $t('planning.copy.prevWeek'), value: -1 }, { title: $t('planning.copy.weekBefore2'), value: -2 }]"
+          :label="$t('planning.copy.sourceWeek')"
+          class="mb-3"
+        />
+        <AppSelect
+          v-model="copyWeekForm.employeeIds"
+          :items="employeeItems"
+          :label="$t('planning.copy.employeesOptional')"
+          multiple
+          chips
+          closable-chips
+          clearable
+          class="mb-3"
+        />
+        <VBtn
+          color="secondary"
+          variant="tonal"
+          block
+          class="mb-4"
+          :loading="copyWeekBusy"
+          data-test="copy-week-preview"
+          @click="runCopyWeekPreview"
+        >
+          {{ $t('planning.copy.previewBtn') }}
+        </VBtn>
+
+        <template v-if="copyWeekPreviewData">
+          <div class="d-flex gap-3 mb-3">
+            <VChip color="success" variant="tonal" size="small">
+              {{ $t('planning.bulk.applicable', { n: copyWeekPreviewData.applicable_count }) }}
+            </VChip>
+            <VChip v-if="copyWeekPreviewData.blocked_count" color="error" variant="tonal" size="small">
+              {{ $t('planning.bulk.blocked', { n: copyWeekPreviewData.blocked_count }) }}
+            </VChip>
+          </div>
+          <VAlert
+            v-if="copyWeekPreviewData.overstaffing?.overstaffed"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-3"
+          >
+            {{ $t('planning.overstaffing.title') }} —
+            {{ copyWeekPreviewData.overstaffing.impacts.length }}
+          </VAlert>
+          <VBtn
+            color="primary"
+            block
+            :loading="copyWeekBusy"
+            :disabled="!copyWeekPreviewData.applicable_count"
+            data-test="copy-week-confirm"
+            @click="confirmCopyWeek"
+          >
+            {{ $t('planning.copy.confirmWeek', { n: copyWeekPreviewData.applicable_count }) }}
+          </VBtn>
+        </template>
+      </div>
+    </VNavigationDrawer>
 
     <!-- Application groupée de modèle (Lot 4B.2, ADR-720) : écran UNIQUE de prévisualisation + confirmation -->
     <VDialog

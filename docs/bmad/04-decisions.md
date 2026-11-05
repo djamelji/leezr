@@ -26198,3 +26198,51 @@ Helpers `trackCreatedShifts`/`cleanupShifts` : **chaque test supprime les shifts
 
 ### Fichiers clés
 `BulkApplyTemplateUseCase.php` · `OverstaffingEvaluator.php` (`evaluateMany`) · `CreateShiftUseCase.php` (`skipOverstaffing`) · `ShiftController.php` (`bulkApplyTemplatePreview`/`bulkApplyTemplate`) · `routes/company.php` · front `planning/index.vue` (multi-sélection, barre d'actions, dialog preview unique) + `planning.store.js` + `lang fr/en` (`planning.bulk.*`) · `WorkforceBulkTemplateLot4B2Test.php` · `workforce-lot4b2-bulk.spec.js` · `helpers.js` (`trackCreatedShifts`/`cleanupShifts`).
+
+---
+
+## ADR-721 — WORKFORCE / SMART PLANNING Lot 4B.3-A : copier-coller · copie de journée · copie de semaine · répétition
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO 4B.3-A. **Checkpoint** : **4B.3-B (annuler/rétablir) NON engagé** — GO distinct requis. 4C non engagé.
+**Garde-fous** : DEV · origin/dev. Aucune migration, aucun second moteur Planning, Billing/Payroll/Signature inchangés. RBAC, scope manager, isolation tenant, publication atomique, verrou optimiste, immutabilité publiés, absences partielles, remplacements, sureffactif, outbox notifications, TimeEntry : **inchangés**.
+
+### Moteur de copie
+`CopyShiftsUseCase` (preview + commit) copie des **shifts complets** via des opérations explicites `{source_shift_id, target_employee_id?, target_date}` :
+- **Copie fidèle** : le **snapshot SOURCE** est figé (via `CreateShiftUseCase(snapshotOverride)`) → horaires, **pauses**, catégorie conservés même si le modèle a changé/disparu. Les **ScheduledActivities** planifiées sont clonées avec le **même décalage de jours** (positions relatives + **nuit** préservées). Site/Department conservés.
+- **Jamais recopié** : id source, statut publié, `published_at`, verrou, `replaces_shift_id`, notifications, pointages. Les créations sont des **brouillons indépendants** (`source='copy'`).
+- **Réutilise** `CreateShiftUseCase` (autorité par cellule : actif, contrat, congé, chevauchement, règles **cumulées dans la transaction**). Pas de moteur concurrent.
+- **Copie de journée** = plusieurs opérations même jour (un salarié peut avoir **plusieurs shifts/jour**). **Copie de semaine** = `copyWeekApply` construit les opérations (tous les shifts non annulés des salariés choisis sur la semaine source → même salarié, date **+ delta jours**) ; le delta préserve les **positions relatives quel que soit le 1er jour de semaine Company** (jamais lundi-dimanche codé en dur). **Répétition** = copie de semaine (précédente/−2) ; répétition de modèle = 4B.2.
+
+### Classification & stratégie des cellules occupées
+Par opération : `applicable` ou `blocked` + motif — `invalid_source`, `inactive`, `no_contract`, `out_of_scope`, `absent` (motif jamais exposé), `overlap` (collision avec un **brouillon**), **`published_collision`** (collision avec un **publié** → **jamais écrasé**), `regulatory`. Une cellule occupée par un créneau **disjoint** reste applicable (ajout réel). Aucun écrasement silencieux ; les bloquées sont **listées avec motif**, jamais créées.
+
+### Atomicité
+**Tout-ou-rien sur l'ensemble applicable** dans **une transaction** : toute exception (création de shift OU d'activité, invalidation concurrente) **annule l'intégralité** — **jamais de shift "copié" incomplet** (prouvé : rollback laisse 0 shift ET 0 activité clonée). La liste applicable est **revalidée au commit** ; si elle change (concurrence), `CreateShiftUseCase` lève et annule tout.
+
+### Sureffactif cumulatif (réutilise ADR-719/720)
+`OverstaffingEvaluator::evaluateMany` sur **tous** les prospects (snapshot source → catégories/contributions qualifiées incluses) → projeté global, signature HMAC. Confirmation serveur (ack) selon politique ; signature périmée → re-confirmation. Réglementaire jamais contournable. (Dans l'UI, la confirmation réutilise le dialog sureffactif de 4B.1/4B.2.)
+
+### UX (barre 4B.2 réutilisée)
+- **Menu du shift** : « Copier ce shift » / « Copier la journée » → **presse-papiers** (identifiants source seulement) + chip toolbar (« N copié(s) », fermable).
+- **Coller** : bouton **« Coller ici »** sur cellule libre (remplace le `+` quand le presse-papiers est actif) → preview serveur (conflits + sureffactif) → commit (ou dialog). Raccourcis **Ctrl/Cmd+C / +V** (ignorés dans les champs de saisie).
+- **« Copier la semaine »** (toolbar) → drawer : semaine source (précédente / −2), collaborateurs (tous si vide), **Prévisualiser** (applicables / bloquées / sureffactif) → **Confirmer**. Un seul écran, pas vingt drawers.
+- Aucune écriture optimiste ; bilan « N créés · M ignorés ».
+
+### Contrats API
+`POST shifts/copy/preview` + `shifts/copy` (operations[]) ; `POST shifts/copy-week/preview` + `shifts/copy-week/apply` (from/to_week_start, employee_ids?, department_id?, work_location_id?). Preview : `{operations/applicable_count/blocked_count, overstaffing{overstaffed,impacts,signature}, mode}`. Commit : 201 `{created:[ids], created_count, blocked:[...]}` ou 422 `overstaffing_requires_confirmation`. (L'ancien `shifts/copy-week` SP1a.1 « copier semaine précédente » rectangulaire est conservé, inchangé.)
+
+### Recette
+- **PHPUnit** `WorkforceCopyShiftsLot4B3Test` (9 verts) : copie avec **activités+pauses+catégorie**, **nuit** (fin lendemain préservée), **semaine (delta jour, agnostique 1er jour)**, **collision publiée bloquée/non écrasée**, **absence cible**, **sureffactif cumulatif (block→ack)**, **rollback atomique (0 shift, 0 activité)**, **scope**, **TimeEntry intact**. Non-régression Coverage/Planning/Shift/Replacement/Overstaffing/Outbox/BulkTemplate/CopyShifts **144 verts**.
+- **Playwright réel** `workforce-lot4b3-copy.spec.js` (2 verts) : **copier un shift (menu) → coller → persistance** ; **copier la semaine → preview → commit → persistance**. Fixtures **isolées + nettoyées** (`trackCreatedShifts`/`cleanupShifts`), fenêtres distinctes. **Non-régression 4A/4B.2** rejouée (5 verts ensemble). `pnpm build` clean.
+
+### §9 Hygiène E2E (poursuivie)
+Nettoyage par test généralisé à tous les specs planning (plus d'accumulation). **Limite honnête maintenue** : la base E2E partagée reste **historiquement saturée** (48 h) ; certains scénarios 4A **skippent** faute de capacité ≥2 jours — ils tournent et passent sur une base disposant de capacité ; le mécanisme est prouvé robustement par 4B.2/4B.3. **Annuler/rétablir N'EST PAS simulé côté front** — reporté à 4B.3-B (vraies commandes inverses persistées).
+
+### Limites restantes (réserves ADR-717 maintenues)
+- Annuler/rétablir : **4B.3-B** (non engagé).
+- Absences horaires multiples le même jour ; nuit/minuit ; salarié connecté/cloche ; décompte congés indicatif — inchangés.
+- Stratégie « remplacer des brouillons » au collage : non implémentée (défaut = bloquer les chevauchements) ; l'ajout sur créneau disjoint est supporté.
+
+### Fichiers clés
+`CopyShiftsUseCase.php` · `CreateShiftUseCase.php` (`snapshotOverride`) · `OverstaffingEvaluator.php` (`evaluateMany`) · `ShiftController.php` (`copy`/`copyPreview`/`copyWeekPreview`/`copyWeekApply`/`buildWeekOps`) · `routes/company.php` · front `planning/index.vue` (presse-papiers, coller, drawer copie-semaine, raccourcis) + `planning.store.js` + `lang fr/en` (`planning.copy.*`) · `WorkforceCopyShiftsLot4B3Test.php` · `workforce-lot4b3-copy.spec.js`.

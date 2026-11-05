@@ -7828,6 +7828,23 @@
       "confirm": "Confirm despite over-staffing",
       "changed": "Situation changed — review the new impact then reconfirm"
     },
+    "copy": {
+      "copyShift": "Copy this shift",
+      "copyDay": "Copy the day",
+      "copyWeek": "Copy the week",
+      "copied": "{n} shift(s) copied",
+      "clipboard": "{n} copied",
+      "dayLabel": "Day ({n} shifts)",
+      "pasteHere": "Paste here",
+      "done": "{n} draft(s) created · {blocked} skipped",
+      "noneApplicable": "No applicable cell (conflicts/absences).",
+      "sourceWeek": "Source week",
+      "prevWeek": "Previous week",
+      "weekBefore2": "2 weeks ago",
+      "employeesOptional": "Employees (all if empty)",
+      "previewBtn": "Preview",
+      "confirmWeek": "Copy {n} shift(s)"
+    },
     "bulk": {
       "selected": "{n} cell(s) selected",
       "pickTemplate": "Pick a template…",

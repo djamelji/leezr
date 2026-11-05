@@ -203,6 +203,118 @@ class ShiftController extends Controller
         }
     }
 
+    /** ADR-721 — prévisualisation d'une copie de shifts (menu/journée) : opérations explicites source→cible. */
+    public function copyPreview(Request $request): JsonResponse
+    {
+        $validated = $this->validateCopyOps($request);
+
+        return response()->json(app(\App\Modules\Workforce\UseCases\CopyShiftsUseCase::class)->preview(
+            $request->attributes->get('company_id'), $validated['operations'], $this->planningScope($request),
+        ));
+    }
+
+    /** ADR-721 — commit atomique d'une copie de shifts (brouillons) ; sureffactif cumulatif confirmé. */
+    public function copy(Request $request): JsonResponse
+    {
+        $validated = $this->validateCopyOps($request, withAck: true);
+
+        return $this->runCopy($request, $validated['operations'], $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null);
+    }
+
+    /** ADR-721 — copie de SEMAINE : construit les opérations (décalage jour respectant le 1er jour Company). */
+    public function copyWeekPreview(Request $request): JsonResponse
+    {
+        [$ops] = $this->buildWeekOps($request);
+
+        return response()->json(app(\App\Modules\Workforce\UseCases\CopyShiftsUseCase::class)->preview(
+            $request->attributes->get('company_id'), $ops, $this->planningScope($request),
+        ));
+    }
+
+    public function copyWeekApply(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'from_week_start' => 'required|date', 'to_week_start' => 'required|date',
+            'employee_ids' => 'nullable|array', 'employee_ids.*' => 'integer',
+            'department_id' => 'nullable|integer', 'work_location_id' => 'nullable|integer',
+            'overstaffing_ack' => 'nullable|string', 'overstaffing_reason' => 'nullable|string|max:500',
+        ]);
+        [$ops] = $this->buildWeekOps($request);
+
+        return $this->runCopy($request, $ops, $v['overstaffing_ack'] ?? null, $v['overstaffing_reason'] ?? null);
+    }
+
+    private function validateCopyOps(Request $request, bool $withAck = false): array
+    {
+        $rules = [
+            'operations' => 'required|array|min:1|max:500',
+            'operations.*.source_shift_id' => 'required|integer',
+            'operations.*.target_employee_id' => 'nullable|integer',
+            'operations.*.target_date' => 'required|date',
+        ];
+        if ($withAck) {
+            $rules['overstaffing_ack'] = 'nullable|string';
+            $rules['overstaffing_reason'] = 'nullable|string|max:500';
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function runCopy(Request $request, array $ops, ?string $ack, ?string $reason): JsonResponse
+    {
+        try {
+            return response()->json(app(\App\Modules\Workforce\UseCases\CopyShiftsUseCase::class)->commit(
+                $request->attributes->get('company_id'), $ops, $this->planningScope($request), $ack, $reason, $request->user()?->id,
+            ), 201);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Construit les opérations de copie de semaine : chaque shift (notCancelled) des salariés choisis dans
+     * la semaine source → même salarié, date + delta (jours) vers la semaine cible. Respecte le 1er jour de
+     * semaine Company (positions relatives conservées). Ne copie pas les publiés de la cible (jamais d'écrasement).
+     *
+     * @return array{0: array<int,array<string,mixed>>}
+     */
+    private function buildWeekOps(Request $request): array
+    {
+        $request->validate([
+            'from_week_start' => 'required|date', 'to_week_start' => 'required|date',
+            'employee_ids' => 'nullable|array', 'employee_ids.*' => 'integer',
+            'department_id' => 'nullable|integer', 'work_location_id' => 'nullable|integer',
+        ]);
+        $companyId = $request->attributes->get('company_id');
+        $from = Carbon::parse($request->input('from_week_start'))->startOfDay();
+        $to = Carbon::parse($request->input('to_week_start'))->startOfDay();
+        $delta = $from->diffInDays($to, false); // positions relatives conservées quel que soit le 1er jour
+
+        $q = Shift::withoutGlobalScopes()->where('company_id', $companyId)->notCancelled()
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $from->copy()->addDays(6)->toDateString());
+        if ($request->filled('employee_ids')) {
+            $q->whereIn('employee_id', $request->input('employee_ids'));
+        }
+        if ($request->filled('work_location_id')) {
+            $q->where('work_location_id', (int) $request->input('work_location_id'));
+        }
+        if ($request->filled('department_id')) {
+            $deptEmp = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('department_id', (int) $request->input('department_id'))->pluck('id');
+            $q->whereIn('employee_id', $deptEmp);
+        }
+
+        $ops = $q->get()->map(fn (Shift $s) => [
+            'source_shift_id' => $s->id,
+            'target_employee_id' => $s->employee_id,
+            'target_date' => Carbon::parse($s->date->toDateString())->addDays($delta)->toDateString(),
+        ])->all();
+
+        return [$ops];
+    }
+
     /** ADR-720 — prévisualisation d'une application groupée de modèle (classification + sureffectif cumulatif). */
     public function bulkApplyTemplatePreview(Request $request): JsonResponse
     {
