@@ -93,7 +93,7 @@ const submitGenerate = async () => {
 </script>
 
 <template>
-  <VNavigationDrawer
+  <VNavigationDrawer class="wf-scroll-drawer"
     v-model="isOpen"
     temporary
     location="end"

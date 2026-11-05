@@ -37,7 +37,7 @@ const hasSignatureRequest = computed(() => ['pending', 'signed', 'declined'].inc
 </script>
 
 <template>
-  <VNavigationDrawer v-model="isOpen" temporary location="end" width="440" :scrim="true">
+  <VNavigationDrawer class="wf-scroll-drawer" v-model="isOpen" temporary location="end" width="440" :scrim="true">
     <div v-if="document" class="d-flex flex-column h-100">
       <!-- En-tête -->
       <div class="d-flex align-center justify-space-between pa-4 border-b">

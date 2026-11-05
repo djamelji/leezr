@@ -1137,7 +1137,7 @@ onMounted(() => {
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- Manual Entry Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isManualOpen"
       temporary
       location="end"
@@ -1277,7 +1277,7 @@ onMounted(() => {
     </AppAdaptiveDialog>
 
     <!-- Generate Timesheet Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isGenerateOpen"
       temporary
       location="end"

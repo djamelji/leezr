@@ -319,7 +319,7 @@ const submitCorrect = async () => {
     </VCard>
 
     <!-- Drawer de correction guidée -->
-    <VNavigationDrawer v-model="correctOpen" temporary location="end" width="420">
+    <VNavigationDrawer class="wf-scroll-drawer" v-model="correctOpen" temporary location="end" width="420">
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
           {{ t('timeCockpit.correctTitle') }}

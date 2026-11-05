@@ -303,7 +303,7 @@ const formatSalary = (cents, currency) => {
     </VCard>
 
     <!-- Create Contract Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isDrawerOpen"
       temporary
       location="end"

@@ -112,3 +112,19 @@
     padding-block-end: max(0px, env(safe-area-inset-bottom));
   }
 }
+
+// ── Fix bloquant : scroll des drawers Workforce (ADR-714) ──────────────────────────────
+// Vuexy force `.v-navigation-drawer__content { overflow-y: hidden }` (SASS var @core, non modifiable),
+// ce qui rend inaccessibles les champs/actions situés sous la ligne de flottaison dans nos drawers de
+// contenu. On restaure un scroll indépendant UNIQUEMENT pour les drawers portant `.wf-scroll-drawer`
+// (scopé → n'affecte pas la sidebar de navigation ni les autres pages). Header/footer restent en place,
+// la zone centrale défile (souris/trackpad/tactile/clavier), y compris avec le clavier mobile (100dvh).
+.v-navigation-drawer.wf-scroll-drawer {
+  max-block-size: 100dvh;
+
+  .v-navigation-drawer__content {
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}

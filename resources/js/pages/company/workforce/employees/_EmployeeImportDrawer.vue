@@ -125,7 +125,7 @@ const actionColor = a => ({ create: 'success', skip_duplicate: 'secondary', conf
 </script>
 
 <template>
-  <VNavigationDrawer
+  <VNavigationDrawer class="wf-scroll-drawer"
     v-model="isOpen"
     temporary
     location="end"

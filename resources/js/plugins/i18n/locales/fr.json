@@ -7799,7 +7799,14 @@
     },
     "mobile": {
       "noShift": "Aucun shift ce jour."
-    }
+    },
+    "publishWeek": "Publier la semaine",
+    "publishSelection": "Publier ({n})",
+    "publishNoDraft": "Aucun brouillon à publier.",
+    "publishConflict": "Publication impossible : conflit détecté (aucun shift publié).",
+    "publishConfirmTitle": "Publier le planning ?",
+    "publishConfirmText": "{shifts} shift(s) brouillon pour {employees} collaborateur(s) vont être publiés.",
+    "publishAtomicHint": "Publication atomique : en cas de conflit, rien n'est publié. Les collaborateurs concernés seront notifiés (lot suivant)."
   },
   "leaves": {
     "dateFrom": "Du",

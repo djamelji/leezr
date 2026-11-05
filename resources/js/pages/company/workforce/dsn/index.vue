@@ -442,7 +442,7 @@ function goToDeclaration(id) {
     </VCard>
 
     <!-- Export DSN Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isDrawerOpen"
       temporary
       location="end"

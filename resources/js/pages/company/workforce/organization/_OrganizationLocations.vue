@@ -137,7 +137,7 @@ const doDelete = async () => {
     </VCard>
 
     <!-- Drawer -->
-    <VNavigationDrawer v-model="drawer" temporary location="end" width="420">
+    <VNavigationDrawer class="wf-scroll-drawer" v-model="drawer" temporary location="end" width="420">
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">{{ editingId ? $t('organization.locations.edit') : $t('organization.locations.add') }}</h5>
         <VBtn icon variant="text" size="small" @click="drawer = false"><VIcon icon="tabler-x" /></VBtn>

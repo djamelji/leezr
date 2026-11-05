@@ -240,7 +240,7 @@ const saveEdit = async () => {
     </VCard>
 
     <!-- Édition brouillon -->
-    <VNavigationDrawer v-model="editOpen" temporary location="end" width="640">
+    <VNavigationDrawer class="wf-scroll-drawer" v-model="editOpen" temporary location="end" width="640">
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
           {{ t('contractTpl.editTitle') }}

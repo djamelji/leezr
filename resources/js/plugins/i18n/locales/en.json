@@ -7799,7 +7799,14 @@
     },
     "mobile": {
       "noShift": "No shift on this day."
-    }
+    },
+    "publishWeek": "Publish week",
+    "publishSelection": "Publish ({n})",
+    "publishNoDraft": "No draft to publish.",
+    "publishConflict": "Cannot publish: conflict detected (nothing published).",
+    "publishConfirmTitle": "Publish schedule?",
+    "publishConfirmText": "{shifts} draft shift(s) for {employees} employee(s) will be published.",
+    "publishAtomicHint": "Atomic publish: if any conflict, nothing is published. Affected employees will be notified (next lot)."
   },
   "leaves": {
     "dateFrom": "From",

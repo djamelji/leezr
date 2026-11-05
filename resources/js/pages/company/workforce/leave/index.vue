@@ -1132,7 +1132,7 @@ watch(activeTab, tab => {
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- Create Leave Request Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isDrawerOpen"
       temporary
       location="end"
@@ -1230,7 +1230,7 @@ watch(activeTab, tab => {
     </VNavigationDrawer>
 
     <!-- Leave Type Create/Edit Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isTypeDrawerOpen"
       temporary
       location="end"

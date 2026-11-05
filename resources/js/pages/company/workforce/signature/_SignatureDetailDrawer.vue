@@ -119,7 +119,7 @@ const doRemind = async () => {
 </script>
 
 <template>
-  <VNavigationDrawer
+  <VNavigationDrawer class="wf-scroll-drawer"
     temporary
     location="end"
     :model-value="isDrawerOpen"

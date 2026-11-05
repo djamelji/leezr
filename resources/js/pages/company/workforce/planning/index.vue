@@ -787,17 +787,41 @@ const toggleShiftSelection = id => {
   }
 }
 
-const publishSelected = async () => {
-  if (!selectedDraftIds.value.length) return
+// ── Publication avec aperçu + confirmation (§3) ──────────────
+const publishDialog = ref(false)
+const publishTargetIds = ref([])
+const publishLoading = ref(false)
+const publishPreview = computed(() => {
+  const ids = new Set(publishTargetIds.value)
+  const emp = new Set()
+  gridRows.value.forEach(row => {
+    Object.values(row.shifts).forEach(list => list.forEach(s => { if (ids.has(s.id)) emp.add(row.employee_id) }))
+  })
+
+  return { shifts: publishTargetIds.value.length, employees: emp.size }
+})
+const openPublish = ids => {
+  publishTargetIds.value = [...new Set(ids)].filter(Boolean)
+  if (!publishTargetIds.value.length) { toast(t('planning.publishNoDraft'), 'warning'); return }
+  publishDialog.value = true
+}
+const confirmPublish = async () => {
+  publishLoading.value = true
   try {
-    await store.publishShifts(selectedDraftIds.value)
+    await store.publishShifts(publishTargetIds.value)
     toast(t('planning.published'), 'success')
     selectedDraftIds.value = []
+    publishDialog.value = false
     fetchWeekData()
   } catch (error) {
-    toast(error.response?.data?.message || t('common.error'), 'error')
+    // Publication atomique : un conflit annule tout → message serveur explicite.
+    toast(error.response?.data?.message || t('planning.publishConflict'), 'error')
+  } finally {
+    publishLoading.value = false
   }
 }
+const publishSelected = () => openPublish(selectedDraftIds.value)
+const publishWeek = () => openPublish(allDraftShiftIds.value)
 
 // ── Shift create/edit dialog ────────────────────────────────
 const isShiftDrawerOpen = ref(false)
@@ -1741,6 +1765,18 @@ watch(activeTab, tab => {
                   </VBtn>
                 </VBtnToggle>
                 <VBtn
+                  v-if="allDraftShiftIds.length"
+                  v-can="'workforce.planning_publish'"
+                  variant="tonal"
+                  color="success"
+                  size="small"
+                  prepend-icon="tabler-send"
+                  data-test="publish-week"
+                  @click="publishWeek"
+                >
+                  {{ $t('planning.publishWeek') }}
+                </VBtn>
+                <VBtn
                   v-can="'workforce.planning_manage'"
                   variant="text"
                   size="small"
@@ -1775,6 +1811,18 @@ watch(activeTab, tab => {
                   @click="toggleSelectAll"
                 >
                   {{ $t('planning.selectAll') }}
+                </VBtn>
+                <VBtn
+                  v-if="selectedDraftIds.length > 0"
+                  v-can="'workforce.planning_publish'"
+                  color="success"
+                  variant="flat"
+                  size="small"
+                  prepend-icon="tabler-send"
+                  data-test="publish-selection"
+                  @click="publishSelected"
+                >
+                  {{ $t('planning.publishSelection', { n: selectedDraftIds.length }) }}
                 </VBtn>
               </div>
             </div>
@@ -2136,7 +2184,7 @@ watch(activeTab, tab => {
                             v-if="shift.status === 'draft'"
                             prepend-icon="tabler-send"
                             :title="$t('planning.publish')"
-                            @click="publishSelected(); selectedDraftIds = [shift.id]"
+                            @click="openPublish([shift.id])"
                           />
                           <VListItem
                             v-if="shift.status === 'published'"
@@ -2394,7 +2442,7 @@ watch(activeTab, tab => {
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- Shift Create/Edit Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isShiftDrawerOpen"
       temporary
       location="end"
@@ -2506,7 +2554,7 @@ watch(activeTab, tab => {
     </VNavigationDrawer>
 
     <!-- Bulk Create Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isBulkDrawerOpen"
       temporary
       location="end"
@@ -2604,7 +2652,7 @@ watch(activeTab, tab => {
     </VNavigationDrawer>
 
     <!-- Template Create/Edit Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isTemplateDrawerOpen"
       temporary
       location="end"
@@ -2750,6 +2798,48 @@ watch(activeTab, tab => {
       </div>
     </VNavigationDrawer>
 
+    <!-- Confirmation de publication (§3) : aperçu + publication atomique -->
+    <VDialog
+      v-model="publishDialog"
+      max-width="420"
+    >
+      <VCard>
+        <VCardItem>
+          <VCardTitle>{{ $t('planning.publishConfirmTitle') }}</VCardTitle>
+        </VCardItem>
+        <VCardText>
+          <p class="mb-3">
+            {{ $t('planning.publishConfirmText', { shifts: publishPreview.shifts, employees: publishPreview.employees }) }}
+          </p>
+          <VAlert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="text-caption"
+          >
+            {{ $t('planning.publishAtomicHint') }}
+          </VAlert>
+        </VCardText>
+        <VCardText class="d-flex justify-end gap-2 pt-0">
+          <VBtn
+            variant="outlined"
+            :disabled="publishLoading"
+            @click="publishDialog = false"
+          >
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="success"
+            :loading="publishLoading"
+            data-test="publish-confirm"
+            @click="confirmPublish"
+          >
+            {{ $t('planning.publish') }}
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
     <!-- Édition inline d'un besoin de couverture (Lot A) -->
     <VDialog
       v-model="covEdit.open"
@@ -2789,7 +2879,7 @@ watch(activeTab, tab => {
     />
 
     <!-- Coverage Management Drawer (besoins de personnel) — Smart Planning SP1a -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isCoverageDrawerOpen"
       temporary
       location="end"
@@ -3034,7 +3124,7 @@ watch(activeTab, tab => {
     </VNavigationDrawer>
 
     <!-- Location Create/Edit Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isLocationDrawerOpen"
       temporary
       location="end"
@@ -3342,6 +3432,7 @@ watch(activeTab, tab => {
   display: flex;
   align-items: center;
   gap: 2px;
+  inline-size: 100%; // §2 : le bloc occupe toute la largeur utile de la cellule
   margin-block-end: 3px;
 
   &__check {

@@ -49,7 +49,7 @@ const close = () => emit('update:modelValue', false)
 </script>
 
 <template>
-  <VNavigationDrawer
+  <VNavigationDrawer class="wf-scroll-drawer"
     :model-value="modelValue"
     temporary
     location="end"

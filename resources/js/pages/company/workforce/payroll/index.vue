@@ -532,7 +532,7 @@ const goToRun = id => {
 
 
     <!-- Create Payroll Run Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isDrawerOpen"
       temporary
       location="end"

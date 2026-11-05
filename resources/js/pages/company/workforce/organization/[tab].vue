@@ -799,7 +799,7 @@ onMounted(() => {
     </VCard>
 
     <!-- Department Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="deptDrawerOpen"
       temporary
       location="end"
@@ -875,7 +875,7 @@ onMounted(() => {
     </VNavigationDrawer>
 
     <!-- Job Role Drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="roleDrawerOpen"
       temporary
       location="end"

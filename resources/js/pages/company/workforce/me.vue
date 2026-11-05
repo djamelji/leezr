@@ -957,7 +957,7 @@ function signatureChipProps(status) {
     </template>
 
     <!-- ANO-007: self-service leave request drawer -->
-    <VNavigationDrawer
+    <VNavigationDrawer class="wf-scroll-drawer"
       v-model="isLeaveDrawerOpen"
       temporary
       location="end"

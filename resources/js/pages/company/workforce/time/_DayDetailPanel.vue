@@ -134,7 +134,7 @@ const submitCorrect = async () => {
 </script>
 
 <template>
-  <VNavigationDrawer v-model="isOpen" temporary location="end" width="460" :scrim="true">
+  <VNavigationDrawer class="wf-scroll-drawer" v-model="isOpen" temporary location="end" width="460" :scrim="true">
     <div v-if="row" class="d-flex flex-column h-100">
       <!-- En-tête : collaborateur + date -->
       <div class="d-flex align-center justify-space-between pa-4 border-b">
