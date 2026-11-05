@@ -25701,3 +25701,42 @@ Playwright : **50 lignes / 81 chips → rendu ~190 ms, changement de semaine ~54
 
 ### Fichiers clés
 `planning/index.vue` (`timeOfDay`/`formatShiftRange`/`shiftHex`/`shiftColor`, `weekSummary`, bande compacte, grille sticky, pill `.plan-shift`, styles) · `_ActivityDay.vue` (timeline) · `ShiftReadModel.php` (withCount) · `Shift.php` (relation `scheduledActivities`) · i18n.
+
+---
+
+## ADR-710 — WORKFORCE / SMART PLANNING LOT A (LIVRÉ) : couverture qualifiée par catégorie + édition directe
+
+**Date** : 2026-11-05
+**Statut** : LIVRÉ sur DEV (build 6a1c18f). GO Lot A (couverture qualifiée). **Lots B (drag-and-drop) & C (vues paramétrables + mobile) validés comme cibles mais en attente de GO distinct. Arrêt pour validation.**
+**Garde-fous** : DEV · origin/dev. Pas de main/PROD, Billing, Payroll, Signature. RBAC, scopes manager, isolation tenant, verrou optimiste, immutabilité shifts publiés, workflow de révision, `TimeEntry`, paie : **inchangés**. Pas de 2ᵉ architecture (extension de l'existant). Zéro régression (133 tests liés verts).
+
+### Problème corrigé
+La présence RH ≠ couverture opérationnelle : une formation pouvait être comptée comme ressource pour un besoin de production. Trois indicateurs désormais distincts : **présence planifiée** (a un shift) · **couverture opérationnelle** (affecté à la bonne catégorie) · **charge** (prestations/missions — distincte, relève de SP2).
+
+### Catalogue de catégories (Lot A §3)
+`workforce_coverage_categories` (company) : `code, name, color, resource_type, enabled, department_id?, conditions(json)`. Modèle `CoverageCategory` + `CoverageCategoryController` (index/store/update/destroy, écriture `coverage_manage`). **Non codé en dur par JobDomain** (la Company crée/adapte ; presets JobDomain = ultérieur). `coverage_category_id` ajouté à `ScheduleTemplate` (+ snapshot), `CoverageRequirement`, `ScheduledActivity` (migrations additives SQLite-safe).
+
+### Contribution qualifiée (Lot A §4) — `CoverageReadModel` réécrit
+Un besoin cible une **catégorie**. Par sous-intervalle (bornes shifts ET activités), on compte les employés DISTINCTS dont la **catégorie effective** contribue :
+- l'**activité** planifiée couvrant l'intervalle (si catégorie) **PRIME** (shift polyvalent) ; une activité sans catégorie neutralise la catégorie du shift sur son créneau ;
+- sinon la **catégorie du shift** (snapshot du modèle) ;
+- une plage sans activité ni catégorie de shift n'est **jamais** comptée comme production.
+→ formation 09-12 puis route 13-17 ≠ route toute la journée ; 3 formations ne gonflent pas Route. **Aucune pondération inventée.** Rétro-compatible (besoin sans catégorie = toute présence compte). Balayage O(shifts·segments) borné.
+
+### Édition directe dans le planning (Lot A §5)
+Lignes de couverture **par catégorie** (affecté/requis + écart coloré/jour) ; **clic sur une cellule → édition inline du headcount** (PUT) ; **+** sur une cellule vide → crée le besoin du jour ; **répliquer lun→ven** (endpoint `coverage/replicate`) ; recalcul immédiat après affectation. Catalogue de catégories géré dans le drawer (ajout nom/code/couleur, suppression). Sélecteurs de catégorie sur les formulaires besoin et modèle.
+
+### Recette
+`WorkforceQualifiedCoverageLotATest` (3) : logistique 16 Route + 3 Formation + 2 sans catégorie → Route **16/20** (formation exclue) ; activité qualifiée prime par créneau (formation matin, route après-midi) ; rétro-compat sans catégorie. **Non-régression 133**. `pnpm build` clean. Playwright `workforce-lotA-qualified-coverage.spec.js` : couverture qualifiée persistée (Route = shifts Route seulement, < total) + **édition inline d'un besoin** (PUT 200). Capture grille : lignes par catégorie (Route 0/20, Formation 0/3, besoin 10/2) + répliquer + édition au clic vérifiées.
+
+### Matrice RBAC (inchangée + catégories)
+Lecture `planning_view` ; gestion besoins & catégories `coverage_manage` ; shifts/activités `planning_manage` ; publication `planning_publish`. Scopes manager préservés.
+
+### Limitations / reste (honnête)
+- **Conditions de compétence/rôle** sur catégories & contribution conditionnelle (ex. ride along) : champ `conditions` présent mais **non encore évalué** dans le calcul.
+- **Presets JobDomain** de catégories : non livrés (la Company crée manuellement).
+- **Charge de travail (workload)** comme 3ᵉ indicateur chiffré : distinguée conceptuellement, pas encore un moteur (SP2).
+- Lots **B (drag-and-drop réel)** et **C (vues agenda/timeline paramétrables + mobile repensé)** : non engagés.
+
+### Fichiers clés Lot A
+`CoverageCategory.php` · `CoverageCategoryController.php` · `CoverageReadModel.php` (qualifié) · migrations `2026_11_05_100001/100002` · `CoverageRequirementController.php` (replicate + category) · `ScheduleTemplate.php`/`ScheduledActivity.php` (+ UseCases) · `planning/index.vue` (lignes par catégorie, édition inline, catalogue) · `planning.store.js` · i18n · `WorkforceQualifiedCoverageLotATest.php` · `workforce-lotA-qualified-coverage.spec.js`.
