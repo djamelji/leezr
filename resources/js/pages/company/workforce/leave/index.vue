@@ -162,12 +162,16 @@ const confirmTitle = ref('')
 const confirmText = ref('')
 const confirmLoading = ref(false)
 
-const openConfirm = (action, item) => {
+const impactedShifts = ref([])
+const openConfirm = async (action, item) => {
   confirmAction.value = action
   confirmTargetId.value = item.id
+  impactedShifts.value = []
   if (action === 'approve') {
     confirmTitle.value = t('leaves.confirm.approveTitle')
     confirmText.value = t('leaves.confirm.approveText', { name: item.employee?.first_name })
+    // §7 — montrer au décideur les shifts publiés impactés AVANT d'approuver (aucun bannissement auto).
+    try { impactedShifts.value = (await store.fetchImpactedShifts(item.id)).shifts ?? [] } catch { impactedShifts.value = [] }
   } else if (action === 'reject') {
     confirmTitle.value = t('leaves.confirm.rejectTitle')
     confirmText.value = t('leaves.confirm.rejectText', { name: item.employee?.first_name })
@@ -1372,6 +1376,30 @@ watch(activeTab, tab => {
         </VCardTitle>
         <VCardText>
           {{ confirmText }}
+          <!-- §7 — shifts publiés impactés (avertissement, pas un blocage) -->
+          <VAlert
+            v-if="confirmAction === 'approve' && impactedShifts.length"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="font-weight-medium mb-1">
+              {{ $t('leaves.impacted.title', { n: impactedShifts.length }) }}
+            </div>
+            <ul class="ps-4 mb-0">
+              <li
+                v-for="s in impactedShifts"
+                :key="s.id"
+                class="text-caption"
+              >
+                {{ new Date(s.date + 'T00:00:00').toLocaleDateString(locale.value) }}
+              </li>
+            </ul>
+            <div class="text-caption mt-1">
+              {{ $t('leaves.impacted.hint') }}
+            </div>
+          </VAlert>
         </VCardText>
         <VCardActions class="pa-4">
           <VSpacer />

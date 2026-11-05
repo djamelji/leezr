@@ -82,6 +82,47 @@ class LeaveController extends Controller
         return optional(WorkforceAccess::requesterEmployee($request))->id === $employeeId;
     }
 
+    /**
+     * Lot 3 §7 (ADR-716) — shifts PUBLIÉS impactés par une demande de congé, présentés au décideur
+     * AVANT approbation. Lecture seule : ne modifie ni les shifts ni le solde ; aucun bannissement
+     * automatique. Réutilise le modèle Shift (pas de projection parallèle). Aucun motif médical ici.
+     */
+    public function impactedShifts(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $leave = LeaveRequest::withoutGlobalScopes()
+            ->where('company_id', $companyId)->findOrFail($id);
+
+        abort_unless(
+            WorkforceAccess::canViewEmployeeData($request, $leave->employee_id, 'leave'),
+            403,
+            'Not authorized to view this leave request.'
+        );
+
+        $shifts = \App\Core\Workforce\Shift::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('employee_id', $leave->employee_id)
+            ->where('status', \App\Core\Workforce\Shift::STATUS_PUBLISHED)
+            ->whereDate('date', '>=', $leave->date_from->toDateString())
+            ->whereDate('date', '<=', $leave->date_to->toDateString())
+            ->orderBy('start_at')
+            ->get(['id', 'date', 'start_at', 'end_at', 'work_location_id', 'status']);
+
+        return response()->json([
+            'leave_id' => $leave->id,
+            'employee_id' => $leave->employee_id,
+            'status' => $leave->status,
+            'impacted_count' => $shifts->count(),
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'date' => $s->date->toDateString(),
+                'start' => $s->start_at?->toIso8601String(),
+                'end' => $s->end_at?->toIso8601String(),
+                'work_location_id' => $s->work_location_id,
+            ])->values(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');

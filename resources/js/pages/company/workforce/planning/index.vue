@@ -297,11 +297,50 @@ const fetchWeekData = async () => {
       store.fetchWeekShifts(weekDateIso.value),
       store.fetchStatistics({ from: weekDates.value[0], to: weekDates.value[6] }),
       loadCoverage(),
+      loadAbsences(),
     ])
   } finally {
     gridLoading.value = false
   }
 }
+
+// ── Indisponibilités (Lot 3 §3, ADR-716) ────────────────────
+// RÉUTILISE le tableau Planning (W-G4A) comme PROJECTION autorisée des congés/absences du module RH
+// (LeaveRequest) — pas de 2ᵉ table de congés dans Planning. On n'affiche QUE le TYPE (jamais le motif
+// médical détaillé : le board n'expose pas le champ `reason`). On distingue CONFIRMÉ (approved/consumed,
+// opposable) de EN ATTENTE (pending, non opposable → n'altère pas la couverture confirmée).
+const weekAbsences = ref([])
+const loadAbsences = async () => {
+  try {
+    const resp = await store.fetchBoard({ from: weekDates.value[0], to: weekDates.value[6] })
+    weekAbsences.value = resp.absences ?? []
+  } catch {
+    weekAbsences.value = []
+  }
+}
+
+// Map employeeId → dayIdx → [absences] (une absence jour-granulaire peut couvrir plusieurs jours).
+const absencesByEmployeeDay = computed(() => {
+  const map = {}
+  weekAbsences.value.forEach(a => {
+    weekDates.value.forEach((date, dayIdx) => {
+      // board renvoie `end` exclusif (FullCalendar) → borne haute = end - 1 jour, donc date < end.
+      if (date >= a.start && date < a.end) {
+        const empId = a.employee_id
+        if (!map[empId]) map[empId] = {}
+        if (!map[empId][dayIdx]) map[empId][dayIdx] = []
+        map[empId][dayIdx].push(a)
+      }
+    })
+  })
+
+  return map
+})
+const absencesFor = (employeeId, dayIdx) => absencesByEmployeeDay.value[employeeId]?.[dayIdx] ?? []
+const isConfirmedAbsence = a => a.status === 'approved' || a.status === 'consumed'
+const absenceChipColor = a => (isConfirmedAbsence(a) ? 'error' : 'warning')
+const absenceChipLabel = a => (a.leave_type || t('planning.absence.generic'))
+  + (isConfirmedAbsence(a) ? '' : ' · ' + t('planning.absence.pending'))
 
 watch(currentWeekStart, () => fetchWeekData())
 
@@ -415,6 +454,12 @@ const mobileNextDay = () => {
 const mobileDayRows = computed(() => filteredGridRows.value
   .filter(r => r.shifts[mobileDayIdx.value]?.length)
   .map(r => ({ employee: r.employee, employee_id: r.employee_id, shifts: r.shifts[mobileDayIdx.value] })))
+// §3/§8 — indisponibilités du jour affiché (mobile), avec nom du collaborateur.
+const mobileDayAbsences = computed(() => weekAbsences.value.filter(a => {
+  const date = mobileDayDate.value
+
+  return date && date >= a.start && date < a.end
+}))
 
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
 const gridDepartment = ref(null)
@@ -1651,10 +1696,27 @@ watch(activeTab, tab => {
             <VDivider />
             <VCardText>
               <div
-                v-if="!mobileDayRows.length"
+                v-if="!mobileDayRows.length && !mobileDayAbsences.length"
                 class="text-center text-medium-emphasis py-6"
               >
                 {{ $t('planning.mobile.noShift') }}
+              </div>
+              <!-- Indisponibilités du jour (projection RH) -->
+              <div
+                v-if="mobileDayAbsences.length"
+                class="mb-3 d-flex flex-wrap gap-2"
+              >
+                <VChip
+                  v-for="abs in mobileDayAbsences"
+                  :key="abs.id"
+                  :color="absenceChipColor(abs)"
+                  size="small"
+                  label
+                  :variant="isConfirmedAbsence(abs) ? 'flat' : 'tonal'"
+                >
+                  <VIcon icon="tabler-plane-departure" size="13" start />
+                  {{ abs.employee_name }} · {{ absenceChipLabel(abs) }}
+                </VChip>
               </div>
               <div
                 v-for="row in mobileDayRows"
@@ -2110,8 +2172,26 @@ watch(activeTab, tab => {
                   :key="date"
                   class="text-center planning-cell"
                   :class="{ 'bg-light': date === new Date().toISOString().slice(0, 10) }"
-                  @click="!row.shifts[dayIdx]?.length ? onEmptyCell(row.employee_id, date) : null"
+                  @click="!row.shifts[dayIdx]?.length && !absencesFor(row.employee_id, dayIdx).length ? onEmptyCell(row.employee_id, date) : null"
                 >
+                  <!-- Indisponibilité (congé/absence) — projection RH, type seul, confirmé vs en attente -->
+                  <VChip
+                    v-for="abs in absencesFor(row.employee_id, dayIdx)"
+                    :key="abs.id"
+                    :color="absenceChipColor(abs)"
+                    size="x-small"
+                    label
+                    :variant="isConfirmedAbsence(abs) ? 'flat' : 'tonal'"
+                    class="mb-1 plan-absence"
+                    :title="absenceChipLabel(abs) + (row.shifts[dayIdx]?.length ? ' · ' + $t('planning.absence.conflict') : '')"
+                  >
+                    <VIcon
+                      :icon="row.shifts[dayIdx]?.length ? 'tabler-alert-triangle' : 'tabler-plane-departure'"
+                      size="12"
+                      start
+                    />
+                    {{ absenceChipLabel(abs) }}
+                  </VChip>
                   <template v-if="row.shifts[dayIdx]?.length">
                     <div
                       v-for="shift in row.shifts[dayIdx]"

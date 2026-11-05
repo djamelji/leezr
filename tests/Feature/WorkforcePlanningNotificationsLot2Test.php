@@ -113,6 +113,21 @@ class WorkforcePlanningNotificationsLot2Test extends TestCase
         $this->assertSame(1, $this->published('workforce.planning_published', $emp->user_id), 'Pas de doublon (entity_key non lu).');
     }
 
+    public function test_two_distinct_changes_same_day_are_both_notifiable(): void
+    {
+        // Réserve ADR-715 — l'event_ref sépare deux modifications distinctes le même jour (2 events),
+        // tandis qu'un rejeu EXACT du même event_ref ne duplique pas.
+        $emp = $this->employee(true);
+        $notifier = app(PlanningNotifier::class);
+        $date = Carbon::parse('2026-11-03');
+
+        $notifier->notifyChanged($this->company->id, [$emp->id], $date, 'activity:10:1000'); // change A
+        $notifier->notifyChanged($this->company->id, [$emp->id], $date, 'activity:10:1000'); // rejeu A → dédup
+        $notifier->notifyChanged($this->company->id, [$emp->id], $date, 'activity:11:2000'); // change B
+
+        $this->assertSame(2, $this->published('workforce.planning_changed', $emp->user_id), 'Deux changements distincts le même jour = 2 events ; rejeu exact = pas de doublon.');
+    }
+
     public function test_no_notification_on_draft_shift_activity(): void
     {
         $emp = $this->employee(true);

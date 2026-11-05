@@ -202,8 +202,12 @@ class ScheduledActivityController extends Controller
     private function notifyChange(int $companyId, array $result): void
     {
         if (! empty($result['notify_employee_ids'])) {
+            // eventRef = identifiant stable de l'événement métier (activité + horodatage de la modification)
+            // → deux modifications distinctes le même jour produisent deux notifications ; un rejeu exact, une seule.
+            $a = $result['activity'] ?? null;
+            $eventRef = $a ? 'activity:'.$a->id.':'.optional($a->updated_at)->timestamp : null;
             app(\App\Modules\Workforce\Services\PlanningNotifier::class)
-                ->notifyChanged($companyId, $result['notify_employee_ids'], $result['notify_date'] ?? null);
+                ->notifyChanged($companyId, $result['notify_employee_ids'], $result['notify_date'] ?? null, $eventRef);
         }
     }
 

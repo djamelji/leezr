@@ -25947,3 +25947,59 @@ Lien = `/company/workforce/me` (espace « Mon espace »). **Pas d'IDOR** : page 
 
 ### Fichiers clés
 `NotificationTopicRegistry.php` (catégorie+topics) · `PlanningPublishedNotification.php` · `PlanningNotifier.php` · `ShiftController.php` (publish hook) · `Create/UpdateScheduledActivityUseCase.php` (+ `ScheduledActivityController.php` hooks) · `SystemSeeder.php` · `lang/{fr,en}/notifications.php` · `WorkforcePlanningNotificationsLot2Test.php` · `workforce-lot2-drawer-reserve.spec.js`.
+
+---
+
+## ADR-716 — WORKFORCE / SMART PLANNING Lot 3 : congés, absences, couverture recalculée & remplacement
+
+**Date** : 2026-11-05
+**Statut** : **Raccordement LIVRÉ sur DEV** (§1 idempotence, §2 source de vérité, §3 affichage grille, §5 couverture recalculée, §7 interaction congé↔planning). **§6 remplacement guidé & §1-fiabilité : CADRÉ (contrats ci-dessous), implémentation complète REPORTÉE** (doctrine ADR-561 : stabiliser avant d'étendre ; arrêt au checkpoint). SP2–SP5 suspendus.
+**Garde-fous respectés** : DEV · origin/dev. Aucune 2ᵉ table de congés, aucun 2ᵉ moteur de planning/notification, aucune migration destructive, Payroll/Billing/Signature inchangés. RBAC, scopes manager, isolation tenant, immutabilité des shifts publiés, publication atomique, verrou optimiste, `WorkTimeComplianceChecker`, `TimeEntry` : **inchangés**.
+
+### §2 — Source de vérité unique (RÉUTILISÉE, pas de 2ᵉ base)
+Le module RH possède les demandes/décisions/motifs : `LeaveRequest` (jour-granulaire : `date_from`/`date_to`, statuts DRAFT/PENDING/APPROVED/CONSUMED/REJECTED/CANCELLED), `LeaveType`, `LeaveLedger`/`LeaveBalance`. **Planning ne consomme qu'une PROJECTION autorisée** via `PlanningBoardReadModel` (shifts + `absences` + `conflicts`) et le endpoint lecture `leaves/{id}/impacted-shifts`. **Aucune table de congés dans Planning.**
+
+### §1a — Idempotence (réserve ADR-715 levée)
+`PlanningNotifier` sépare désormais trois identifiants distincts : **(1) id de l'événement métier** = `eventRef` (`activity:{id}:{updated_at.timestamp}`, calculé par `ScheduledActivityController@notifyChange`) ; **(2) id de regroupement** = `entity_key` = `topic:{userId}:{eventRef|période}` (dédup au REJEU exact) ; **(3) id de tentative** = la requête HTTP. Conséquence prouvée : **deux modifications légitimes le même jour → deux `NotificationEvent` distincts** ; un **rejeu exact** (même `eventRef`) → un seul. Publication conserve la clé par période (dédup/jour). Test : `test_two_distinct_changes_same_day_are_both_notifiable`.
+
+### §1b — Fiabilité après commit (réserve ADR-715 — CADRÉE, honnête)
+Mécanisme actuel : les notifications sont déclenchées par le **contrôleur APRÈS le commit** du UseCase. Fenêtre résiduelle identifiée : si le process meurt **entre le commit DB et la création du `NotificationEvent`**, la notification est perdue (le changement de planning, lui, est bien persisté et visible à la prochaine ouverture de la grille). **Aucune garantie d'acheminement de bout en bout n'est inventée.** Extension minimale PROPOSÉE (non construite) : réutiliser le mécanisme transactionnel durable existant (jobs `database`) en enregistrant, DANS la transaction du UseCase, une intention `planning_notification_pending` (outbox léger : company_id, employee_ids, topic, event_ref) qu'un job post-commit consomme pour appeler `PlanningNotifier` — l'outbox garantit l'« au moins une fois », l'`entity_key` garantit l'idempotence. Décision : à implémenter dans un lot dédié si le besoin de garantie est confirmé ; aujourd'hui l'in-app est immédiat et la perte suppose un crash process très étroit.
+
+### §3 — Affichage de l'indisponibilité dans la grille (LIVRÉ)
+Grille hebdo (`planning/index.vue`) : overlay d'un **chip d'indisponibilité** par cellule salarié×jour (+ vue JOUR mobile), alimenté par `fetchBoard` (projection RH). Distinction **CONFIRMÉ** (approved/consumed, `variant=flat` rouge, opposable) vs **EN ATTENTE** (pending, `variant=tonal` orange, libellé « en attente », non opposable). **Indicateur de conflit** quand une affectation coexiste avec une absence le même jour (icône `alert-triangle` + titre). **Confidentialité (§8)** : seul le **TYPE** de congé est affiché ; le **motif** (`reason`) n'est JAMAIS exposé par la projection (ni `board`, ni `impacted-shifts`), conformément au gating `WorkforceAccess` existant.
+
+### §5 — Couverture recalculée (LIVRÉ + testé)
+`CoverageReadModel` exclut désormais, par jour, tout salarié en **indisponibilité CONFIRMÉE** (APPROVED/CONSUMED) : son shift ne contribue plus à la couverture ce jour-là. Une **demande EN ATTENTE ne retire JAMAIS** la couverture confirmée. Conserve l'intégralité du moteur Lot A : catégories qualifiées, sous-intervalles, employés DISTINCTS, multi-site/Department, ponctuel+récurrent, pauses. **Pas de double-compte** : l'absent étant exclu, un remplaçant réellement affecté (nouveau shift) compte une seule fois. Tests : `test_confirmed_absence_removes_employee_from_coverage`, `test_pending_leave_does_not_remove_confirmed_coverage`, `test_absent_and_replacement_not_double_counted`.
+**Limitation assumée** : `LeaveRequest` est **jour-granulaire** → une absence = jour entier. Le cas « absent 09:00-13:00, présent 13:00-17:00 » (couverture partielle intra-journée) **n'est pas représentable** sans extension du modèle RH (champs heures/demi-journée) — hors périmètre de ce lot (ne pas modifier le calcul des soldes si non indispensable).
+
+### §4 — Absence sur shift déjà publié (LIVRÉ pour couverture/affichage)
+L'absence est enregistrée **dans le module RH** (LeaveRequest), **jamais** en modifiant silencieusement les heures/statut du shift publié (préservés). La grille **marque le conflit** (indicateur §3), la **couverture se recalcule** (§5, portion non assurée visible via le gap), aucune création de `TimeEntry`. La proposition de remplacement = §6.
+
+### §6 — Remplacement guidé (CADRÉ ; primitive existante disponible)
+Primitive EXISTANTE réutilisable : endpoint `shifts/availability` (W-G4B, `PlanningBoardReadModel::availability`) → candidats marqués disponible/occupé/indisponible(congé)/à vérifier, **sans auto-sélection** ni présomption d'interchangeabilité (jobrole = simple indice). Flux cible depuis une affectation non assurée : « Trouver un remplaçant » → liste `availability` (scope manager) → choix explicite → **création d'un NOUVEAU shift** pour le remplaçant via `ShiftController@store` + `publish` (UseCases existants), **le shift initial publié n'est pas supprimé** ; l'absent étant déjà exclu de la couverture (§5), aucun double-compte. **Décision** : on NE réaffecte PAS le shift publié (cela effacerait la trace historique de l'affectation initiale) — on crée une affectation de remplacement distincte. **Statut** : contrat arrêté, assistant guidé (wizard depuis la cellule en conflit) **non construit** dans ce lot (feature d'extension vs stabilisation ; arrêt au checkpoint).
+
+### §7 — Interaction congé ↔ planning lors de la décision (LIVRÉ + testé)
+Nouveau endpoint lecture `GET leaves/{id}/impacted-shifts` (perm `workforce.leave_approve`, scope `canViewEmployeeData`, **aucun motif exposé**) : liste les shifts **PUBLIÉS** du salarié recouvrant la demande. UI congés : à l'ouverture de la confirmation d'**approbation**, un `VAlert` d'avertissement liste les shifts impactés + rappelle que **l'approbation ne bannit/ne modifie PAS automatiquement le planning** (pas de règle Company/légale de bannissement auto). Après décision, le planning reflète l'absence (§3) et la couverture (§5) sans mutation de shift. Soldes de congés : calcul **inchangé**. Test : `test_impacted_shifts_listed_before_approval_lot3` (shift publié signalé, brouillon ignoré, aucun `reason`).
+
+### §8-9 — Notifications / confidentialité / accès direct (RÉUTILISÉS Lot 2)
+Notifications = `PlanningNotifier`/`NotificationDispatcher`/`EmailService` (ADR-715), uniquement sur changements effectifs. **Confidentialité** : aucune donnée médicale dans les projections Planning (type seul). **Accès direct testé côté serveur** (pas seulement masquage de bouton) : `impacted-shifts` gatée par permission + scope (route middleware + `abort_unless`), couverture/board scopés tenant+manager — cf. tests RBAC/scope existants.
+
+### §10 — Scénarios E2E A→E (couverts en PHPUnit)
+- **A. Congé avant planning** → `test_confirmed_absence_removes_employee_from_coverage` (approuvé exclu de la couverture).
+- **B. Absence après publication** → `test_absent_and_replacement_not_double_counted` + conflit affiché (§3) ; shift publié préservé.
+- **C. Absence partielle** → **limitation documentée** (modèle jour-granulaire) ; non simulable sans extension RH.
+- **D. Demande en attente** → `test_pending_leave_does_not_remove_confirmed_coverage` (couverture inchangée).
+- **E. Sécurité** → `test_impacted_shifts_listed_before_approval_lot3` (perm+scope, aucun motif) + tests confidentialité motif Lot G3.
+Playwright employé-connecté (cloche → notif → planning) : **non rejoué** dans ce lot (réutilise l'UI notifications éprouvée) — voir limitations.
+
+### Recette
+`WorkforceCoverageAbsenceLot3Test` (3) + `WorkforcePlanningNotificationsLot2Test` (6, dont idempotence §1a) + `WorkforceLeaveCalendarTest` (11, dont §7) = **20 verts (50 assertions)**. **Non-régression Coverage/Planning/Shift/ScheduledActivity : 116 verts.** `pnpm build` clean.
+
+### Limitations restantes (honnêtes)
+- **Absence partielle intra-journée** non représentable (modèle `LeaveRequest` jour-granulaire).
+- **§6 remplacement guidé** : primitive `availability` + création de shift disponibles, mais **wizard depuis la cellule en conflit non construit** (reporté, doctrine stabilisation).
+- **§1b garantie d'acheminement** : fenêtre crash commit→notifier non fermée (outbox proposé, non implémenté).
+- **Playwright employé-connecté** non rejoué (mécanisme prouvé en PHPUnit).
+
+### Fichiers clés
+`CoverageReadModel.php` (exclusion absences confirmées) · `PlanningNotifier.php` + `ScheduledActivityController.php` (eventRef idempotence) · `LeaveController.php` (`impactedShifts`) + `routes/company.php` · `planning/index.vue` (overlay indisponibilité grille + mobile) · `leave/index.vue` + `leaves.store.js` (§7 shifts impactés) · `planning.store.js` (réutilisation `fetchBoard`) · `lang fr/en` (`planning.absence.*`, `leaves.impacted.*`) · `WorkforceCoverageAbsenceLot3Test.php` + ajouts `WorkforceLeaveCalendarTest.php`/`WorkforcePlanningNotificationsLot2Test.php`.

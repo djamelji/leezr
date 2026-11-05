@@ -65,6 +65,11 @@ export const useLeavesStore = defineStore('workforceLeaves', {
       }
     },
 
+    // Lot 3 §7 — shifts publiés impactés par une demande (présentés au décideur avant approbation).
+    async fetchImpactedShifts(id) {
+      return await $api(`/workforce/leaves/${id}/impacted-shifts`)
+    },
+
     async createLeaveRequest({ employeeId, leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason }) {
       const data = await $api('/workforce/leaves', {
         method: 'POST',

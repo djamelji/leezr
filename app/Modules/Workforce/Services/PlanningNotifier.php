@@ -32,8 +32,15 @@ class PlanningNotifier
         $this->dispatch($company, $byEmployee, 'workforce.planning_published', false);
     }
 
-    /** Modification d'un planning publié : notifie uniquement les salariés réellement concernés. */
-    public function notifyChanged(int $companyId, array $employeeIds, ?Carbon $date = null): void
+    /**
+     * Modification d'un planning publié : notifie uniquement les salariés réellement concernés.
+     *
+     * $eventRef = IDENTIFIANT STABLE de l'ÉVÉNEMENT métier (ex. "activity:{id}:{updatedAtEpoch}"). Il sépare :
+     *  - l'id d'événement métier ($eventRef) → deux modifications distinctes le même jour = deux events ;
+     *  - l'id de regroupement (salarié+événement) via entity_key → dédup au REJEU exact ;
+     *  - l'id de tentative = la requête HTTP (une par appel). Sans $eventRef, on retombe sur la date (dédup/jour).
+     */
+    public function notifyChanged(int $companyId, array $employeeIds, ?Carbon $date = null, ?string $eventRef = null): void
     {
         $company = Company::find($companyId);
         if (! $company) {
@@ -43,9 +50,8 @@ class PlanningNotifier
         if (! $ids) {
             return;
         }
-        // Regroupe par salarié avec la date impactée (période = jour).
         $byEmployee = collect($ids)->mapWithKeys(fn ($id) => [$id => collect([(object) ['date' => $date ?? now()]])]);
-        $this->dispatch($company, $byEmployee, 'workforce.planning_changed', true);
+        $this->dispatch($company, $byEmployee, 'workforce.planning_changed', true, $eventRef);
     }
 
     /**
@@ -53,7 +59,7 @@ class PlanningNotifier
      * (publication / révision) → dispatch immédiat, pas de notif pour une opération échouée (qui lève
      * une exception avant d'arriver ici).
      */
-    private function dispatch(Company $company, Collection $byEmployee, string $topicKey, bool $isChange): void
+    private function dispatch(Company $company, Collection $byEmployee, string $topicKey, bool $isChange, ?string $eventRef = null): void
     {
         foreach ($byEmployee as $employeeId => $list) {
             $dates = collect($list)->map(fn ($s) => Carbon::parse($s->date)->toDateString())->sort()->values();
@@ -62,6 +68,7 @@ class PlanningNotifier
                 'from' => $dates->first(),
                 'to' => $dates->last(),
                 'count' => $list->count(),
+                'event_ref' => $eventRef,
             ], $topicKey, $isChange);
         }
     }
@@ -78,7 +85,10 @@ class PlanningNotifier
         }
 
         $periodLabel = $p['from'] === $p['to'] ? $p['from'] : "{$p['from']} → {$p['to']}";
-        $entityKey = str_replace('.', '_', $topicKey).":{$user->id}:{$p['from']}";
+        // entity_key = topic:user:(événement métier | période). L'event_ref discrimine deux changements
+        // distincts le même jour ; absent → clé par période (dédup/jour, cas publication).
+        $discriminator = $p['event_ref'] ?? $p['from'];
+        $entityKey = str_replace('.', '_', $topicKey).":{$user->id}:{$discriminator}";
 
         // Idempotence : si une notif non lue identique existe déjà, on ne duplique pas.
         $exists = NotificationEvent::where('topic_key', $topicKey)

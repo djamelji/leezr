@@ -51,6 +51,27 @@ class CoverageReadModel
         $deptByEmployee = Employee::withoutGlobalScopes()
             ->where('company_id', $companyId)->pluck('department_id', 'id');
 
+        // Lot 3 (ADR-716) — indisponibilités CONFIRMÉES : un salarié en congé approuvé/consommé ne contribue
+        // PAS à la couverture ce jour-là. Une demande EN ATTENTE (pending) ne retire JAMAIS la couverture.
+        // (LeaveRequest est jour-granulaire : absence = jour entier ; le partiel horaire exige une extension.)
+        $absences = \App\Core\Workforce\LeaveRequest::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereIn('status', [\App\Core\Workforce\LeaveRequest::STATUS_APPROVED, \App\Core\Workforce\LeaveRequest::STATUS_CONSUMED])
+            ->whereDate('date_from', '<=', $toDate->toDateString())
+            ->whereDate('date_to', '>=', $fromDate->toDateString())
+            ->get(['employee_id', 'date_from', 'date_to']);
+        $isAbsent = function (int $employeeId, string $dateString) use ($absences): bool {
+            foreach ($absences as $a) {
+                if ((int) $a->employee_id === $employeeId
+                    && $dateString >= $a->date_from->toDateString()
+                    && $dateString <= $a->date_to->toDateString()) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         $categories = CoverageCategory::withoutGlobalScopes()
             ->where('company_id', $companyId)->get()->keyBy('id');
 
@@ -96,6 +117,11 @@ class CoverageReadModel
                         $emp = [];
                         foreach ($eligible as $s) {
                             if (! ($s->start_at->lte($segStart) && $s->end_at->gte($segEnd))) {
+                                continue;
+                            }
+                            // Indisponibilité confirmée ce jour → ne compte pas (évite d'inclure un absent
+                            // ET de double-compter absent + remplaçant sur le même poste).
+                            if ($isAbsent((int) $s->employee_id, $dayKey)) {
                                 continue;
                             }
                             if (self::onBreak($s, $segStart, $segEnd)) {

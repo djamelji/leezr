@@ -551,6 +551,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index'])->middleware($perm('workforce.leave_request'));
     Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store'])->middleware($perm('workforce.leave_request'));
     Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show'])->middleware($perm('workforce.leave_request'));
+    Route::get('leaves/{id}/impacted-shifts', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'impactedShifts'])->middleware($perm('workforce.leave_approve'));
     Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve'])->middleware($perm('workforce.leave_approve'));
     Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject'])->middleware($perm('workforce.leave_approve'));
     Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel'])->middleware($perm('workforce.leave_approve'));

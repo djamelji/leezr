@@ -173,6 +173,32 @@ class WorkforceLeaveCalendarTest extends TestCase
         $this->actingAs($self)->getJson("/api/workforce/leaves/{$lr->id}", ['X-Company-Id' => $this->company->id])->assertOk()->assertJsonFragment(['reason' => 'Raison perso']);
     }
 
+    public function test_impacted_shifts_listed_before_approval_lot3(): void
+    {
+        // §7 — un shift PUBLIÉ dans la plage de l'absence est signalé au décideur ; un brouillon, non.
+        $lr = $this->leave($this->report, 'pending', '2026-06-02', '2026-06-03');
+        \App\Core\Workforce\Shift::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->report->id, 'date' => '2026-06-02',
+            'start_at' => '2026-06-02 09:00:00', 'end_at' => '2026-06-02 17:00:00', 'timezone' => 'Europe/Paris',
+            'status' => \App\Core\Workforce\Shift::STATUS_PUBLISHED, 'published_at' => now(), 'template_snapshot' => [],
+        ]);
+        \App\Core\Workforce\Shift::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->report->id, 'date' => '2026-06-03',
+            'start_at' => '2026-06-03 09:00:00', 'end_at' => '2026-06-03 17:00:00', 'timezone' => 'Europe/Paris',
+            'status' => \App\Core\Workforce\Shift::STATUS_DRAFT, 'template_snapshot' => [],
+        ]);
+
+        $approver = $this->userWith(['workforce.leave_request', 'workforce.leave_approve']);
+        $res = $this->actingAs($approver)
+            ->getJson("/api/workforce/leaves/{$lr->id}/impacted-shifts", ['X-Company-Id' => $this->company->id])
+            ->assertOk();
+
+        $this->assertSame(1, $res->json('impacted_count'), 'Seul le shift PUBLIÉ est signalé (pas le brouillon).');
+        $this->assertSame('2026-06-02', $res->json('shifts.0.date'));
+        // Confidentialité : aucun motif exposé dans cette projection.
+        $this->assertStringNotContainsString('reason', $res->getContent());
+    }
+
     public function test_approve_inline_then_double_approve_fails(): void
     {
         $lr = $this->leave($this->report, 'pending');

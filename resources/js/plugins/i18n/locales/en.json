@@ -7789,6 +7789,11 @@
       "byEmployee": "By employee",
       "byPost": "By post"
     },
+    "absence": {
+      "generic": "Absence",
+      "pending": "pending",
+      "conflict": "Overlaps an assignment"
+    },
     "posts": {
       "uncategorized": "Uncategorized",
       "empty": "No assignment this week."
@@ -7859,6 +7864,10 @@
       "rejectText": "Do you want to reject this leave request from {name}?",
       "cancelTitle": "Cancel Request",
       "cancelText": "Do you want to cancel this leave request?"
+    },
+    "impacted": {
+      "title": "{n} published shift(s) impacted by this absence",
+      "hint": "Approval does not automatically change the schedule. Plan a replacement if needed."
     },
     "calendar": {
       "from": "From",

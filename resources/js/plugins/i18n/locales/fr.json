@@ -7789,6 +7789,11 @@
       "byEmployee": "Par salariés",
       "byPost": "Par postes"
     },
+    "absence": {
+      "generic": "Absence",
+      "pending": "en attente",
+      "conflict": "Chevauchement avec une affectation"
+    },
     "posts": {
       "uncategorized": "Non catégorisé",
       "empty": "Aucune affectation cette semaine."
@@ -7859,6 +7864,10 @@
       "rejectText": "Voulez-vous refuser cette demande de congé de {name} ?",
       "cancelTitle": "Annuler la demande",
       "cancelText": "Voulez-vous annuler cette demande de congé ?"
+    },
+    "impacted": {
+      "title": "{n} shift(s) publié(s) impacté(s) par cette absence",
+      "hint": "L'approbation ne modifie pas automatiquement le planning. Pensez à prévoir un remplacement si nécessaire."
     },
     "calendar": {
       "from": "Du",
