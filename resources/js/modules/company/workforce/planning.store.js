@@ -60,6 +60,21 @@ export const usePlanningStore = defineStore('workforcePlanning', {
       return await $api(`/workforce/planning/shifts/board?${params.toString()}`)
     },
 
+    // ADR-720 — application groupée de modèle : prévisualisation (classification + sureffactif cumulatif).
+    async bulkApplyTemplatePreview({ templateId, cells }) {
+      return await $api('/workforce/planning/shifts/bulk-template/preview', {
+        method: 'POST',
+        body: { schedule_template_id: templateId, cells },
+      })
+    },
+    // ADR-720 — commit atomique (brouillons) ; confirmation sureffectif via ack serveur.
+    async bulkApplyTemplate({ templateId, cells, ack = null, reason = null }) {
+      return await $api('/workforce/planning/shifts/bulk-template', {
+        method: 'POST',
+        body: { schedule_template_id: templateId, cells, overstaffing_ack: ack, overstaffing_reason: reason },
+      })
+    },
+
     // ADR-717 — candidats au remplacement d'un shift impacté par une absence (fenêtre non assurée incluse).
     async fetchReplacementCandidates(shiftId) {
       return await $api(`/workforce/planning/shifts/${shiftId}/replacement-candidates`)

@@ -27,60 +27,81 @@ class OverstaffingEvaluator
      */
     public function evaluate(int $companyId, array $prospect): array
     {
-        $date = substr($prospect['date'], 0, 10);
+        return $this->evaluateMany($companyId, [$prospect]);
+    }
 
-        // Shift prospectif (non persisté) injecté dans le balayage.
-        $extra = new Shift;
-        $extra->forceFill([
-            'id' => null,
-            'company_id' => $companyId,
-            'employee_id' => $prospect['employee_id'],
-            'date' => $date,
-            'start_at' => $prospect['start_at'],
-            'end_at' => $prospect['end_at'],
-            'work_location_id' => $prospect['work_location_id'] ?? null,
-            'template_snapshot' => $prospect['template_snapshot'] ?? [],
-            'status' => Shift::STATUS_DRAFT,
-        ]);
+    /**
+     * Évaluation CUMULATIVE d'un LOT d'affectations envisagées (Smart Planning Lot 4B.2, ADR-720).
+     * Injecte TOUS les prospects simultanément (groupés par jour) → le dépassement est calculé sur le
+     * résultat global projeté (ex. 10 affectés + 5 ajoutés = 15/12), pas affectation par affectation.
+     *
+     * @param  array<int, array<string,mixed>>  $prospects
+     * @return array{overstaffed:bool, impacts:array<int,array<string,mixed>>, signature:string}
+     */
+    public function evaluateMany(int $companyId, array $prospects): array
+    {
+        if (! $prospects) {
+            return ['overstaffed' => false, 'impacts' => [], 'signature' => $this->sign($companyId, [])];
+        }
 
-        // Pour un DÉPLACEMENT : on exclut l'ancienne position du shift des DEUX calculs (sans/avec),
-        // afin de ne mesurer que l'impact marginal de la NOUVELLE position.
-        $ignore = ! empty($prospect['ignore_shift_id']) ? [(int) $prospect['ignore_shift_id']] : [];
-
-        $without = CoverageReadModel::forRange($companyId, $date, $date, [], $ignore);
-        $with = CoverageReadModel::forRange($companyId, $date, $date, [$extra], $ignore);
+        // Groupe par jour + agrège les shifts à ignorer (déplacements).
+        $byDate = [];
+        $ignoreByDate = [];
+        foreach ($prospects as $p) {
+            $date = substr($p['date'], 0, 10);
+            $extra = new Shift;
+            $extra->forceFill([
+                'id' => null,
+                'company_id' => $companyId,
+                'employee_id' => $p['employee_id'],
+                'date' => $date,
+                'start_at' => $p['start_at'],
+                'end_at' => $p['end_at'],
+                'work_location_id' => $p['work_location_id'] ?? null,
+                'template_snapshot' => $p['template_snapshot'] ?? [],
+                'status' => Shift::STATUS_DRAFT,
+            ]);
+            $byDate[$date][] = $extra;
+            if (! empty($p['ignore_shift_id'])) {
+                $ignoreByDate[$date][] = (int) $p['ignore_shift_id'];
+            }
+        }
 
         $impacts = [];
-        foreach ($with['requirements'] as $wReq) {
-            // Un déplacement remplace l'ancien shift : on compare au « sans » qui l'exclut déjà (géré en amont).
-            $woReq = collect($without['requirements'])->first(fn ($r) => $r['requirement_id'] === $wReq['requirement_id'] && $r['date'] === $wReq['date']);
-            if (! $woReq) {
-                continue;
-            }
-            $headcount = (int) $wReq['headcount'];
+        foreach ($byDate as $date => $extras) {
+            $ignore = $ignoreByDate[$date] ?? [];
+            $without = CoverageReadModel::forRange($companyId, $date, $date, [], $ignore);
+            $with = CoverageReadModel::forRange($companyId, $date, $date, $extras, $ignore);
 
-            foreach ($wReq['intervals'] as $iv) {
-                $assignedWith = (int) $iv['assigned'];
-                if ($assignedWith <= $headcount) {
-                    continue; // pas de dépassement sur cet intervalle
+            foreach ($with['requirements'] as $wReq) {
+                $woReq = collect($without['requirements'])->first(fn ($r) => $r['requirement_id'] === $wReq['requirement_id'] && $r['date'] === $wReq['date']);
+                if (! $woReq) {
+                    continue;
                 }
-                $assignedWithout = $this->assignedAt($woReq['intervals'], $iv['start']);
-                if ($assignedWith <= $assignedWithout) {
-                    continue; // sureffectif PRÉEXISTANT, aucune contribution marginale → pas d'alerte
+                $headcount = (int) $wReq['headcount'];
+                foreach ($wReq['intervals'] as $iv) {
+                    $assignedWith = (int) $iv['assigned'];
+                    if ($assignedWith <= $headcount) {
+                        continue;
+                    }
+                    $assignedWithout = $this->assignedAt($woReq['intervals'], $iv['start']);
+                    if ($assignedWith <= $assignedWithout) {
+                        continue; // sureffectif préexistant, pas de contribution marginale du lot
+                    }
+                    $key = $wReq['requirement_id'].'@'.$iv['start'];
+                    $impacts[$key] = [
+                        'requirement_id' => $wReq['requirement_id'],
+                        'label' => $wReq['label'],
+                        'category_name' => $wReq['category_name'],
+                        'coverage_category_id' => $wReq['coverage_category_id'],
+                        'department_id' => $wReq['department_id'],
+                        'work_location_id' => $wReq['work_location_id'],
+                        'date' => $wReq['date'],
+                        'window' => ['start' => $iv['start'], 'end' => $iv['end']],
+                        'required' => $headcount,
+                        'projected' => $assignedWith,
+                    ];
                 }
-                // Dépassement marginal réel sur [start,end].
-                $impacts[$wReq['requirement_id']] = [
-                    'requirement_id' => $wReq['requirement_id'],
-                    'label' => $wReq['label'],
-                    'category_name' => $wReq['category_name'],
-                    'coverage_category_id' => $wReq['coverage_category_id'],
-                    'department_id' => $wReq['department_id'],
-                    'work_location_id' => $wReq['work_location_id'],
-                    'date' => $wReq['date'],
-                    'window' => ['start' => $iv['start'], 'end' => $iv['end']],
-                    'required' => $headcount,
-                    'projected' => $assignedWith,
-                ];
             }
         }
 

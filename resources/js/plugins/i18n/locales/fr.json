@@ -7828,6 +7828,29 @@
       "confirm": "Confirmer malgré le dépassement",
       "changed": "La situation a changé — vérifiez le nouvel impact puis reconfirmez"
     },
+    "bulk": {
+      "selected": "{n} cellule(s) sélectionnée(s)",
+      "pickTemplate": "Choisir un modèle…",
+      "apply": "Appliquer le modèle",
+      "publishSelected": "Publier ({n})",
+      "deselect": "Désélectionner",
+      "previewTitle": "Appliquer « {name} » — prévisualisation",
+      "applicable": "{n} à créer",
+      "blocked": "{n} bloquée(s)",
+      "willCreate": "Sera créé",
+      "confirm": "Créer {n} brouillon(s)",
+      "created": "{n} brouillon(s) créé(s) · {blocked} ignorée(s)",
+      "reasons": {
+        "invalid_template": "Modèle indisponible",
+        "inactive": "Collaborateur inactif",
+        "no_contract": "Pas de contrat actif",
+        "out_of_scope": "Hors de votre périmètre",
+        "absent": "Collaborateur absent",
+        "overlap": "Chevauchement avec un shift",
+        "regulatory": "Règle de temps de travail",
+        "unknown": "Non applicable"
+      }
+    },
     "posts": {
       "uncategorized": "Non catégorisé",
       "empty": "Aucune affectation cette semaine."

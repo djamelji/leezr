@@ -26154,3 +26154,47 @@ Endpoint lecture `POST shifts/overstaffing-preview` (scopé) → impacts + signa
 
 ### Fichiers clés
 `OverstaffingEvaluator.php` · `OverstaffingPolicy.php` · `OverstaffingGuard.php` · `Exceptions/OverstaffingConfirmationRequired.php` · `CoverageReadModel.php` (`$extraShifts`/`$ignoreShiftIds`) · `CreateShiftUseCase.php` / `UpdateShiftUseCase.php` (garde + params ack/reason/actor) · `ShiftController.php` (store/update interception + `overstaffingPreview`) · `routes/company.php` · front `planning/index.vue` (dialog + `performWrite`) + `lang fr/en` (`planning.overstaffing.*`) · `WorkforceOverstaffingLot4B1Test.php` · `workforce-lot4b1-overstaffing.spec.js`.
+
+---
+
+## ADR-720 — WORKFORCE / SMART PLANNING Lot 4B.2 : multi-sélection & application GROUPÉE de modèle
+
+**Date** : 2026-11-05
+**Statut** : **LIVRÉ sur DEV.** GO 4B.2. **Checkpoint** : 4B.3 (copier-coller / copie de semaine / undo-redo) **NON engagé** — GO distinct requis. 4C non engagé.
+**Garde-fous** : DEV · origin/dev. Aucune migration, aucun moteur planning parallèle, Billing/Payroll/Signature inchangés. RBAC, scope manager, isolation tenant, `ShiftRuleValidator`, publication atomique, verrou optimiste, immutabilité publiés, absences partielles, remplacements, couverture qualifiée, notifications, TimeEntry : **inchangés**.
+
+### Orchestration groupée (une seule commande serveur, PAS N appels front)
+`BulkApplyTemplateUseCase` applique un modèle à des cellules arbitraires (salarié×jour) :
+- **Classification par cellule** (lecture) : `applicable` ou `blocked` + motif précis — `invalid_template`, `inactive`, `no_contract`, `out_of_scope` (scope manager), `absent` (congé confirmé, **motif jamais exposé**), `overlap` (une cellule occupée par un créneau DISJOINT reste applicable), `regulatory` (best-effort en preview). 
+- **Réutilise les UseCases existants** : chaque cellule applicable est créée via `CreateShiftUseCase` — autorité par cellule (actif, contrat, congé, chevauchement, règles **cumulées dans la transaction** : la 2ᵉ création voit la 1ʳᵉ). Aucun moteur parallèle.
+- **Brouillons** : les créations restent en `draft` → **aucune notification de planning publié** (la publication reste une action explicite).
+
+### Sureffectif CUMULATIF (réutilise ADR-719)
+`OverstaffingEvaluator::evaluateMany()` injecte **tous** les prospects simultanément (groupés par jour) dans `CoverageReadModel` → le dépassement est calculé sur le **résultat global projeté** (ex. 10 affectés + 5 ajoutés = **15/12**), pas affectation par affectation. Même logique marginale (pas de faux positif sur préexistant/non-qualifié). Signature HMAC sur l'ensemble des impacts du lot.
+
+### Atomicité
+**Tout-ou-rien sur l'ensemble APPLICABLE** : les créations se font dans **une transaction** ; toute exception d'une cellule (invalidation concurrente, chevauchement intra-lot) **remonte et annule l'intégralité** du lot (prouvé : 2 cellules même salarié/jour → rollback total, 0 créé). Les cellules **bloquées** (motif) sont **rapportées, jamais créées silencieusement** — présentées en prévisualisation (§4) + bilan exact après commit (`created_count` / `blocked`). **Concurrence** : sureffactif ré-évalué **dans la transaction** ; signature périmée (couverture changée entre preview et commit) → `OverstaffingConfirmationRequired` → re-confirmation. Réglementaire jamais contournable. Aucune confiance aux seules validations front.
+
+### UX (un seul écran)
+- **Multi-sélection** dans la grille existante : **Ctrl/Cmd+clic** (toggle), **Shift+clic** (plage rectangulaire salariés×jours), **Échap** (désélection), clavier. Le clic SIMPLE conserve le comportement existant (créer / armer) → drag, éditeur, clic-pour-armer **préservés** (le drag ne se déclenche pas pendant une sélection modificateur). Cellules sélectionnées vs shifts distingués.
+- **Barre d'actions contextuelle** (« N cellule(s) sélectionnée(s) ») : choisir un modèle · **Appliquer** · **Publier la sélection** (brouillons) · Désélectionner. Boutons gated par permission. Points d'extension copier/coller/supprimer **préparés mais non affichés** (4B.3).
+- **Prévisualisation unique** (pas un drawer par salarié) : tableau salarié/date/statut (à créer vs motif de blocage) + alerte sureffactif cumulatif (+ motif si `warn_confirm_reason`) → **Confirmer** → commit atomique → toast « N créés · M ignorées » → rafraîchissement serveur + couverture + désélection. Anti-double-soumission (bouton `loading`).
+
+### Contrat API
+`POST shifts/bulk-template/preview` (planning_view) → `{cells:[{employee_id,date,status,reason}], applicable_count, blocked_count, overstaffing:{overstaffed,impacts,signature}, mode}`. `POST shifts/bulk-template` (planning_manage) → commit atomique ; 422 `overstaffing_requires_confirmation` (impacts+signature) si confirmation requise ; `{created:[ids], created_count, blocked:[...]}` sinon. Scope manager appliqué (cellules hors périmètre → `out_of_scope`).
+
+### Recette
+- **PHPUnit** `WorkforceBulkTemplateLot4B2Test` (6 verts) : classification (absent/overlap/scope/inactive), **sureffactif cumulatif 15/12**, **blocage sans ack → création avec ack (brouillons)**, **atomicité (rollback total sur conflit intra-lot)**, scope, sans-besoin. Non-régression Coverage/Planning/Shift/Activity/Replacement/Overstaffing/Outbox/Leave **190 verts**.
+- **Playwright réel** `workforce-lot4b2-bulk.spec.js` (2 verts leezr.test) : Ctrl/Cmd+clic, Shift+clic (plage), Échap, barre d'actions ; application groupée → prévisualisation unique (3 à créer) → **commit atomique 201** → **persistance après reload**. 
+- **Non-régression drag 4A** rejouée ; **captures light/dark** (4A Visuel). `pnpm build` clean.
+
+### §9 — Hygiène E2E (abordée)
+Helpers `trackCreatedShifts`/`cleanupShifts` : **chaque test supprime les shifts qu'il crée** (annule les publiés) → **plus d'accumulation entre runs**, sans purge aveugle de données tierces. Fenêtres de sonde réduites (30 min) + **sonde de capacité** (create+delete) pour des fixtures reproductibles. **Limite honnête** : la base E2E partagée est **historiquement saturée à ~48 h/semaine** (runs antérieurs non nettoyés, non purgeables sans risque) ; certains scénarios 4A (déplacement/palette) y **skippent faute de capacité sur ≥2 jours** — ils **tournent et passent sur une base disposant de capacité** (le nettoyage évite toute ré-accumulation). Le mécanisme pointeur est par ailleurs prouvé de façon robuste par 4B.2 et le scénario B.
+
+### Limites restantes (réserves ADR-717 maintenues)
+- Absences horaires multiples le même jour ; shifts nocturnes/minuit ; salarié connecté/cloche ; décompte congés indicatif — non résolus par approximation.
+- 4A palette→cellule lointaine : fiabilité du drag dépendante de la position (auto-scroll) sur une grille très remplie ; sans impact sur l'usage courant (cellules visibles).
+- Copier-coller / copie de semaine / undo-redo : **4B.3** (non engagé).
+
+### Fichiers clés
+`BulkApplyTemplateUseCase.php` · `OverstaffingEvaluator.php` (`evaluateMany`) · `CreateShiftUseCase.php` (`skipOverstaffing`) · `ShiftController.php` (`bulkApplyTemplatePreview`/`bulkApplyTemplate`) · `routes/company.php` · front `planning/index.vue` (multi-sélection, barre d'actions, dialog preview unique) + `planning.store.js` + `lang fr/en` (`planning.bulk.*`) · `WorkforceBulkTemplateLot4B2Test.php` · `workforce-lot4b2-bulk.spec.js` · `helpers.js` (`trackCreatedShifts`/`cleanupShifts`).

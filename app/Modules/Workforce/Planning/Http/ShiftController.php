@@ -203,6 +203,55 @@ class ShiftController extends Controller
         }
     }
 
+    /** ADR-720 — prévisualisation d'une application groupée de modèle (classification + sureffectif cumulatif). */
+    public function bulkApplyTemplatePreview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'schedule_template_id' => 'required|integer',
+            'cells' => 'required|array|min:1|max:500',
+            'cells.*.employee_id' => 'required|integer',
+            'cells.*.date' => 'required|date',
+        ]);
+
+        return response()->json(app(\App\Modules\Workforce\UseCases\BulkApplyTemplateUseCase::class)->preview(
+            $request->attributes->get('company_id'),
+            (int) $validated['schedule_template_id'],
+            $validated['cells'],
+            $this->planningScope($request),
+        ));
+    }
+
+    /** ADR-720 — application groupée atomique d'un modèle (brouillons) ; sureffactif cumulatif confirmé. */
+    public function bulkApplyTemplate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'schedule_template_id' => 'required|integer',
+            'cells' => 'required|array|min:1|max:500',
+            'cells.*.employee_id' => 'required|integer',
+            'cells.*.date' => 'required|date',
+            'overstaffing_ack' => 'nullable|string',
+            'overstaffing_reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $result = app(\App\Modules\Workforce\UseCases\BulkApplyTemplateUseCase::class)->commit(
+                $request->attributes->get('company_id'),
+                (int) $validated['schedule_template_id'],
+                $validated['cells'],
+                $this->planningScope($request),
+                $validated['overstaffing_ack'] ?? null,
+                $validated['overstaffing_reason'] ?? null,
+                $request->user()?->id,
+            );
+
+            return response()->json($result, 201);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
     /** ADR-719 — prévisualisation lecture seule du sureffectif d'une affectation envisagée (+ signature). */
     public function overstaffingPreview(Request $request): JsonResponse
     {

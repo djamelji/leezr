@@ -608,6 +608,9 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
     // ADR-719 — prévisualisation sureffectif (lecture) avant affectation.
     Route::post('shifts/overstaffing-preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'overstaffingPreview'])->middleware($perm('workforce.planning_view'));
+    // ADR-720 — application groupée de modèle : prévisualisation (view) + commit atomique (manage).
+    Route::post('shifts/bulk-template/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplatePreview'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/bulk-template', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplate'])->middleware($perm('workforce.planning_manage'));
     Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish'])->middleware($perm('workforce.planning_publish'));

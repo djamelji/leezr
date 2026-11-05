@@ -2,9 +2,14 @@
 // Prouve : détection d'un dépassement du besoin → dialog de confirmation → refus sans confirmation
 // (aucune écriture) → confirmation autorisée → écriture. (Concurrence/signature périmée : PHPUnit.)
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest } from './helpers.js'
+import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
+
+// ADR-720 §9 — hygiène : nettoyage des shifts créés par le test.
+let created
+test.beforeEach(({ page }) => { created = trackCreatedShifts(page) })
+test.afterEach(async ({ page }) => { await cleanupShifts(page, created) })
 
 async function gotoGrid(page) {
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })

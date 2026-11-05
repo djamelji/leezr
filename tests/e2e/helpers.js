@@ -101,6 +101,38 @@ export async function apiRequest(page, { method = 'GET', path, body = null }) {
   return out
 }
 
+// ── Hygiène E2E (ADR-720 §9) — isolation : capturer puis NETTOYER les shifts créés par un test, afin
+// d'éviter toute accumulation entre runs (ne purge QUE ce que le test a créé, jamais les données tierces).
+export function trackCreatedShifts(page) {
+  const ids = new Set()
+  page.on('response', async r => {
+    try {
+      const u = r.url(); const m = r.request().method()
+      if (/\/planning\/shifts$/.test(u) && m === 'POST' && r.status() === 201) {
+        const b = await r.json(); if (b?.id) ids.add(b.id)
+      } else if (/\/planning\/shifts\/bulk-template$/.test(u) && m === 'POST' && r.status() === 201) {
+        const b = await r.json(); (b?.created || []).forEach(id => ids.add(id))
+      } else if (/\/planning\/shifts\/\d+\/replace$/.test(u) && m === 'POST' && r.status() === 201) {
+        const b = await r.json(); if (b?.replacement?.id) ids.add(b.replacement.id)
+      }
+    } catch { /* corps non-JSON */ }
+  })
+
+  return ids
+}
+
+// Supprime les brouillons créés (et annule les publiés) — appelé en afterEach pour laisser la base propre.
+export async function cleanupShifts(page, ids) {
+  for (const id of ids) {
+    const del = await apiRequest(page, { method: 'DELETE', path: `/api/workforce/planning/shifts/${id}` })
+    if (del.status >= 400) {
+      // Publié → non supprimable : on annule (exclu de la couverture et du cumul 48h).
+      await apiRequest(page, { method: 'POST', path: `/api/workforce/planning/shifts/${id}/cancel`, body: { reason: 'e2e cleanup' } })
+    }
+  }
+  ids.clear()
+}
+
 // Pick an option in a Vuetify VSelect identified by its label.
 export async function selectVuetifyOption(page, selectLabel, optionIndex = 0) {
   await page.getByLabel(selectLabel, { exact: false }).first().click()

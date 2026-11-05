@@ -7828,6 +7828,29 @@
       "confirm": "Confirm despite over-staffing",
       "changed": "Situation changed — review the new impact then reconfirm"
     },
+    "bulk": {
+      "selected": "{n} cell(s) selected",
+      "pickTemplate": "Pick a template…",
+      "apply": "Apply template",
+      "publishSelected": "Publish ({n})",
+      "deselect": "Deselect",
+      "previewTitle": "Apply \"{name}\" — preview",
+      "applicable": "{n} to create",
+      "blocked": "{n} blocked",
+      "willCreate": "Will create",
+      "confirm": "Create {n} draft(s)",
+      "created": "{n} draft(s) created · {blocked} skipped",
+      "reasons": {
+        "invalid_template": "Template unavailable",
+        "inactive": "Inactive employee",
+        "no_contract": "No active contract",
+        "out_of_scope": "Outside your scope",
+        "absent": "Employee absent",
+        "overlap": "Overlaps a shift",
+        "regulatory": "Work-time rule",
+        "unknown": "Not applicable"
+      }
+    },
     "posts": {
       "uncategorized": "Uncategorized",
       "empty": "No assignment this week."

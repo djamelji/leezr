@@ -28,10 +28,11 @@ class CreateShiftUseCase
         ?string $overstaffingAck = null,
         ?string $overstaffingReason = null,
         ?int $actorId = null,
+        bool $skipOverstaffing = false,
     ): Shift {
         return DB::transaction(function () use (
             $companyId, $employeeId, $date, $startAt, $endAt, $timezone,
-            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId
+            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing
         ) {
             $startAtCarbon = Carbon::parse($startAt);
             $endAtCarbon = Carbon::parse($endAt);
@@ -121,7 +122,8 @@ class CreateShiftUseCase
 
             // ADR-719 — contrôle de SUREFFECTIF (après le réglementaire, dans la transaction = pas de
             // fenêtre de concurrence). Peut lever OverstaffingConfirmationRequired si confirmation absente/périmée.
-            app(\App\Modules\Workforce\Services\OverstaffingGuard::class)->enforce($companyId, [
+            // ADR-720 — ignoré dans une opération groupée : le lot évalue le sureffectif CUMULÉ en amont.
+            $skipOverstaffing || app(\App\Modules\Workforce\Services\OverstaffingGuard::class)->enforce($companyId, [
                 'employee_id' => $employeeId, 'date' => $date,
                 'start_at' => $startAtCarbon->toDateTimeString(), 'end_at' => $endAtCarbon->toDateTimeString(),
                 'work_location_id' => $workLocationId, 'template_snapshot' => $templateSnapshot, 'ignore_shift_id' => null,

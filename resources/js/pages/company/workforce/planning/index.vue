@@ -917,6 +917,149 @@ const isDragTargetCell = (employeeId, dayIdx) =>
 
 onBeforeUnmount(() => detachDragListeners())
 
+// ══════════════════════════════════════════════════════════════
+// LOT 4B.2 — MULTI-SÉLECTION + ACTIONS GROUPÉES (application de modèle) — ADR-720
+// Sélection par modificateurs (le clic simple garde le comportement existant : créer / armer).
+// ══════════════════════════════════════════════════════════════
+const selectedCells = ref(new Set())           // clés `${empId}:${date}`
+const selectionAnchor = ref(null)              // { empId, date, rowIdx, dayIdx }
+const cellKey = (empId, date) => `${empId}:${date}`
+const isCellSelected = (empId, date) => selectedCells.value.has(cellKey(empId, date))
+const clearSelection = () => { selectedCells.value = new Set(); selectionAnchor.value = null }
+
+// Clic sur cellule : Ctrl/Cmd = toggle ; Shift = plage rectangulaire ; sinon comportement existant.
+const onCellClick = (employeeId, date, dayIdx, rowIdx, event) => {
+  if (event && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault()
+    const k = cellKey(employeeId, date)
+    const next = new Set(selectedCells.value)
+    next.has(k) ? next.delete(k) : next.add(k)
+    selectedCells.value = next
+    selectionAnchor.value = { empId: employeeId, date, rowIdx, dayIdx }
+
+    return
+  }
+  if (event && event.shiftKey && selectionAnchor.value) {
+    event.preventDefault()
+    selectRange(selectionAnchor.value, { rowIdx, dayIdx })
+
+    return
+  }
+  // Comportement existant (création / affectation rapide) uniquement sur cellule libre sans sélection active.
+  if (!selectedCells.value.size && !row_hasShiftOrAbsence(employeeId, dayIdx)) {
+    return onEmptyCell(employeeId, date)
+  }
+  // Clic simple avec sélection active → démarre une nouvelle sélection d'une cellule.
+  selectedCells.value = new Set([cellKey(employeeId, date)])
+  selectionAnchor.value = { empId: employeeId, date, rowIdx, dayIdx }
+}
+const row_hasShiftOrAbsence = (employeeId, dayIdx) => {
+  const r = filteredGridRows.value.find(x => x.employee_id === employeeId)
+
+  return !!(r?.shifts[dayIdx]?.length) || absencesFor(employeeId, dayIdx).length > 0
+}
+
+// Plage rectangulaire entre deux cellules (salariés visibles × jours).
+const selectRange = (a, b) => {
+  const rows = filteredGridRows.value
+  const r0 = Math.min(a.rowIdx, b.rowIdx)
+  const r1 = Math.max(a.rowIdx, b.rowIdx)
+  const d0 = Math.min(a.dayIdx, b.dayIdx)
+  const d1 = Math.max(a.dayIdx, b.dayIdx)
+  const next = new Set(selectedCells.value)
+  for (let r = r0; r <= r1; r++) {
+    const row = rows[r]
+    if (!row) continue
+    for (let d = d0; d <= d1; d++) {
+      next.add(cellKey(row.employee_id, weekDates.value[d]))
+    }
+  }
+  selectedCells.value = next
+}
+
+// Esc pour tout désélectionner (clavier).
+const onSelectionKeydown = e => { if (e.key === 'Escape' && selectedCells.value.size) clearSelection() }
+onMounted(() => window.addEventListener('keydown', onSelectionKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onSelectionKeydown))
+
+// Shifts brouillons dans la sélection (pour « Publier la sélection »).
+const selectedDraftShiftIds = computed(() => {
+  const ids = []
+  filteredGridRows.value.forEach((row, rowIdx) => {
+    weekDates.value.forEach((date, dayIdx) => {
+      if (!isCellSelected(row.employee_id, date)) return
+      ;(row.shifts[dayIdx] || []).forEach(s => { if (s.status === 'draft') ids.push(s.id) })
+    })
+  })
+
+  return ids
+})
+
+// ── Application groupée d'un modèle (preview + commit) ──
+const bulkTemplateId = ref(null)
+const bulkDialog = ref(false)
+const bulkPreview = ref(null)                  // réponse serveur preview
+const bulkLoading = ref(false)
+const bulkReason = ref('')
+const bulkEmpName = empId => {
+  const e = (employeesStore.employees || []).find(x => x.id === empId)
+
+  return e ? `${e.first_name} ${e.last_name}` : `#${empId}`
+}
+const selectedCellsPayload = () => [...selectedCells.value].map(k => {
+  const [employee_id, date] = k.split(':')
+
+  return { employee_id: Number(employee_id), date }
+})
+const bulkBlockedLabel = reason => t('planning.bulk.reasons.' + (reason || 'unknown'))
+
+const openBulkApply = async () => {
+  if (!bulkTemplateId.value || !selectedCells.value.size) return
+  bulkLoading.value = true
+  try {
+    bulkPreview.value = await store.bulkApplyTemplatePreview({ templateId: bulkTemplateId.value, cells: selectedCellsPayload() })
+    bulkReason.value = ''
+    bulkDialog.value = true
+  } catch (e) {
+    toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+  } finally {
+    bulkLoading.value = false
+  }
+}
+const bulkApplicableCount = computed(() => bulkPreview.value?.applicable_count ?? 0)
+const bulkNeedsReason = computed(() => bulkPreview.value?.overstaffing?.overstaffed
+  && bulkPreview.value?.mode === 'warn_confirm_reason')
+const confirmBulkApply = async () => {
+  if (!bulkApplicableCount.value) { bulkDialog.value = false; return }
+  bulkLoading.value = true
+  try {
+    const os = bulkPreview.value.overstaffing
+    const res = await store.bulkApplyTemplate({
+      templateId: bulkTemplateId.value,
+      cells: selectedCellsPayload(),
+      ack: os?.overstaffed ? os.signature : null,
+      reason: bulkNeedsReason.value ? (bulkReason.value || null) : null,
+    })
+    toast(t('planning.bulk.created', { n: res.created_count, blocked: res.blocked.length }), 'success')
+    bulkDialog.value = false
+    clearSelection()
+    await fetchWeekData()
+  } catch (e) {
+    // Sureffactif : impact changé entre preview et commit → rafraîchir et redemander confirmation.
+    if ((e?.data?.code || e?.response?._data?.code) === 'overstaffing_requires_confirmation') {
+      bulkPreview.value = await store.bulkApplyTemplatePreview({ templateId: bulkTemplateId.value, cells: selectedCellsPayload() })
+      toast(t('planning.overstaffing.changed'), 'warning')
+    } else {
+      toast((e?.data?.message || e?.response?._data?.message) || t('common.error'), 'error')
+    }
+  } finally {
+    bulkLoading.value = false
+  }
+}
+const publishSelectedCells = () => {
+  if (selectedDraftShiftIds.value.length) openPublish(selectedDraftShiftIds.value)
+}
+
 // ── Day detail (multi-activités) — Smart Planning SP1b ───────
 const activityDayOpen = ref(false)
 const activityDayShift = ref(null)
@@ -2299,6 +2442,62 @@ watch(activeTab, tab => {
 
           <VDivider v-if="store.allTemplates.length" />
 
+          <!-- LOT 4B.2 — Barre d'actions contextuelle de multi-sélection -->
+          <div
+            v-if="selectedCells.size"
+            class="plan-selbar px-4 py-2 d-flex align-center flex-wrap gap-3"
+            data-test="selection-bar"
+          >
+            <VIcon icon="tabler-checkbox" size="18" color="primary" />
+            <span class="font-weight-medium" data-test="selection-count">
+              {{ $t('planning.bulk.selected', { n: selectedCells.size }) }}
+            </span>
+            <VDivider vertical class="mx-1" />
+            <AppSelect
+              v-model="bulkTemplateId"
+              :items="armedTemplateItems"
+              :placeholder="$t('planning.bulk.pickTemplate')"
+              density="compact"
+              hide-details
+              clearable
+              style="min-inline-size: 200px;"
+            />
+            <VBtn
+              v-can="'workforce.planning_manage'"
+              color="primary"
+              size="small"
+              prepend-icon="tabler-layers-subtract"
+              :disabled="!bulkTemplateId"
+              :loading="bulkLoading"
+              data-test="bulk-apply"
+              @click="openBulkApply"
+            >
+              {{ $t('planning.bulk.apply') }}
+            </VBtn>
+            <VBtn
+              v-if="selectedDraftShiftIds.length"
+              v-can="'workforce.planning_publish'"
+              color="success"
+              variant="tonal"
+              size="small"
+              prepend-icon="tabler-send"
+              data-test="bulk-publish"
+              @click="publishSelectedCells"
+            >
+              {{ $t('planning.bulk.publishSelected', { n: selectedDraftShiftIds.length }) }}
+            </VBtn>
+            <VSpacer />
+            <VBtn
+              variant="text"
+              size="small"
+              prepend-icon="tabler-x"
+              data-test="bulk-deselect"
+              @click="clearSelection"
+            >
+              {{ $t('planning.bulk.deselect') }}
+            </VBtn>
+          </div>
+
           <!-- Weekly Grid Table -->
           <div class="planning-grid-wrap planning-scroll">
             <VTable
@@ -2485,7 +2684,7 @@ watch(activeTab, tab => {
                 </td>
               </tr>
               <tr
-                v-for="row in filteredGridRows"
+                v-for="(row, rowIdx) in filteredGridRows"
                 :key="row.employee_id"
               >
                 <!-- Employee column -->
@@ -2521,12 +2720,14 @@ watch(activeTab, tab => {
                     'bg-light': date === new Date().toISOString().slice(0, 10),
                     'plan-cell--drop-ok': isDragTargetCell(row.employee_id, dayIdx) && dragValid,
                     'plan-cell--drop-no': isDragTargetCell(row.employee_id, dayIdx) && !dragValid,
+                    'plan-cell--selected': isCellSelected(row.employee_id, date),
                   }"
                   data-droppable="1"
                   :data-emp="row.employee_id"
                   :data-date="date"
                   :data-dayidx="dayIdx"
-                  @click="!row.shifts[dayIdx]?.length && !absencesFor(row.employee_id, dayIdx).length ? onEmptyCell(row.employee_id, date) : null"
+                  :data-test="isCellSelected(row.employee_id, date) ? 'cell-selected' : 'cell'"
+                  @click="onCellClick(row.employee_id, date, dayIdx, rowIdx, $event)"
                 >
                   <!-- Indisponibilité (congé/absence) — projection RH, type seul, confirmé vs en attente -->
                   <VChip
@@ -3264,6 +3465,106 @@ watch(activeTab, tab => {
         <span v-if="dragReason" class="plan-drag-ghost__reason">{{ dragReason }}</span>
       </div>
     </Teleport>
+
+    <!-- Application groupée de modèle (Lot 4B.2, ADR-720) : écran UNIQUE de prévisualisation + confirmation -->
+    <VDialog
+      v-model="bulkDialog"
+      max-width="720"
+      scrollable
+    >
+      <VCard v-if="bulkPreview">
+        <VCardTitle class="d-flex align-center gap-2 pa-4">
+          <VIcon icon="tabler-layers-subtract" color="primary" />
+          {{ $t('planning.bulk.previewTitle', { name: bulkPreview.template_name }) }}
+        </VCardTitle>
+        <VCardText style="max-block-size: 60vh;">
+          <div class="d-flex gap-4 mb-3">
+            <VChip color="success" variant="tonal" size="small">
+              {{ $t('planning.bulk.applicable', { n: bulkPreview.applicable_count }) }}
+            </VChip>
+            <VChip v-if="bulkPreview.blocked_count" color="error" variant="tonal" size="small">
+              {{ $t('planning.bulk.blocked', { n: bulkPreview.blocked_count }) }}
+            </VChip>
+          </div>
+
+          <!-- Sureffectif cumulatif projeté sur l'ensemble du lot -->
+          <VAlert
+            v-if="bulkPreview.overstaffing?.overstaffed"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-3"
+            data-test="bulk-overstaffing"
+          >
+            <div class="font-weight-medium mb-1">
+              {{ $t('planning.overstaffing.title') }}
+            </div>
+            <div
+              v-for="imp in bulkPreview.overstaffing.impacts"
+              :key="imp.requirement_id + imp.window.start"
+              class="text-body-2"
+            >
+              {{ imp.category_name || imp.label }} · {{ imp.window.start }}–{{ imp.window.end }} :
+              {{ $t('planning.overstaffing.counts', { projected: imp.projected, required: imp.required }) }}
+            </div>
+            <AppTextField
+              v-if="bulkNeedsReason"
+              v-model="bulkReason"
+              :label="$t('planning.overstaffing.reason')"
+              type="textarea"
+              rows="2"
+              class="mt-2"
+            />
+          </VAlert>
+
+          <VTable density="compact" class="plan-bulk-table">
+            <thead>
+              <tr>
+                <th>{{ $t('planning.columns.employee') }}</th>
+                <th>{{ $t('leaves.columns.dates') }}</th>
+                <th>{{ $t('planning.filters.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(c, i) in bulkPreview.cells"
+                :key="i"
+              >
+                <td>{{ bulkEmpName(c.employee_id) }}</td>
+                <td>{{ new Date(c.date + 'T00:00:00').toLocaleDateString(locale) }}</td>
+                <td>
+                  <VChip
+                    :color="c.status === 'applicable' ? 'success' : 'error'"
+                    size="x-small"
+                    label
+                  >
+                    {{ c.status === 'applicable' ? $t('planning.bulk.willCreate') : bulkBlockedLabel(c.reason) }}
+                  </VChip>
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+        </VCardText>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn
+            variant="outlined"
+            @click="bulkDialog = false"
+          >
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="bulkLoading"
+            :disabled="!bulkApplicableCount || (bulkNeedsReason && !bulkReason.trim())"
+            data-test="bulk-confirm"
+            @click="confirmBulkApply"
+          >
+            {{ $t('planning.bulk.confirm', { n: bulkApplicableCount }) }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <!-- Contrôle de sureffectif (Lot 4B.1, ADR-719) : warn + confirmation serveur -->
     <VDialog
@@ -4204,6 +4505,16 @@ watch(activeTab, tab => {
 // ── Cellules cibles pendant le drag ──
 .plan-cell--drop-ok { outline: 2px dashed rgb(var(--v-theme-success)); outline-offset: -2px; background: rgba(var(--v-theme-success), 0.08) !important; }
 .plan-cell--drop-no { outline: 2px dashed rgb(var(--v-theme-error)); outline-offset: -2px; background: rgba(var(--v-theme-error), 0.07) !important; }
+
+// ── Cellules sélectionnées (multi-sélection 4B.2) ──
+.plan-cell--selected { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: -2px; background: rgba(var(--v-theme-primary), 0.10) !important; }
+.plan-selbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 7;
+  background: rgba(var(--v-theme-primary), 0.06);
+  border-block-end: 1px solid rgba(var(--v-theme-primary), 0.25);
+}
 
 // ── Blocs shift : brouillon déplaçable / publié verrouillé ──
 .plan-shift--draggable .plan-shift__body { cursor: grab; }
