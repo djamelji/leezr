@@ -26,12 +26,13 @@ const { smAndDown } = useDisplay()
 
 // E3-B (ADR-697) — sous-navigation planning. La GRILLE hebdo (lignes=collaborateurs × 7 jours, ~1110px)
 // n'est pas lisible sur mobile : on la réserve au desktop ; le mobile utilise l'AGENDA (onglet Calendrier).
+// §8 — l'onglet Planning est désormais TOUJOURS disponible ; sur mobile il affiche une vue JOUR dédiée
+// (pas de grille desktop compressée).
 const planningSections = computed(() => [
   { value: 'calendar', label: t('planning.tabs.calendar'), icon: 'tabler-calendar-week' },
-  ...(smAndDown.value ? [] : [{ value: 'planning', label: t('planning.tabs.planning'), icon: 'tabler-layout-grid' }]),
+  { value: 'planning', label: t('planning.tabs.planning'), icon: 'tabler-layout-grid' },
   { value: 'templates', label: t('planning.tabs.templates'), icon: 'tabler-template' },
 ])
-watch(smAndDown, m => { if (m && activeTab.value === 'planning') activeTab.value = 'calendar' })
 
 // ── Calendrier Planning (W-G4A : scope + filtres serveur, absences + conflits) ──
 const calRef = ref()
@@ -196,6 +197,30 @@ const shiftVariant = shift => {
   return 'flat'
 }
 const shiftActivityCount = shift => shift?.scheduled_activities_count ?? shift?.activities_count ?? 0
+
+// Nom du POSTE/mission d'un shift (bloc métier) : catégorie de couverture > modèle > type d'activité.
+const categoryNameById = id => store.coverageCategories.find(c => c.id === id)?.name
+const shiftPoste = shift => categoryNameById(shift?.template_snapshot?.coverage_category_id)
+  || shift?.template_snapshot?.template_name
+  || shift?.template_snapshot?.activity_type
+  || t('planning.shift.untitled')
+
+// Résumé par collaborateur : heures planifiées + jours travaillés (depuis les shifts de la ligne).
+const rowSummary = row => {
+  let mins = 0
+  let days = 0
+  Object.values(row.shifts || {}).forEach(list => {
+    const active = list.filter(s => s.status !== 'cancelled')
+    if (active.length) days++
+    active.forEach(s => {
+      const d = (new Date(s.end_at) - new Date(s.start_at)) / 60000
+      const brk = s.template_snapshot?.break_duration_minutes || 0
+      if (d > 0) mins += Math.max(0, d - brk)
+    })
+  })
+
+  return { hours: (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1), days }
+}
 const shiftHex = shift => shift?.template_snapshot?.color || shift?.template_color
   || (shift?.status === 'published' ? '#1f8a54' : shift?.status === 'cancelled' ? '#c23b3b' : '#8691a8')
 
@@ -338,6 +363,58 @@ const gridRows = computed(() => {
 
   return [...rows.values()]
 })
+
+// ── Vue par collaborateurs / par postes (Skello-like, même moteur) ──
+// Mapping explicite : un « poste » = une CATÉGORIE de couverture du shift (snapshot). Les shifts sans
+// catégorie sont regroupés sous « Non catégorisé » (une catégorie n'est pas présumée être un poste RH).
+const gridView = useCookie('planningGridView', { default: () => 'employees' })
+const postRows = computed(() => {
+  const groups = new Map()
+  const data = Array.isArray(store.weekShifts) ? store.weekShifts : []
+  data.filter(s => s && s.status !== 'cancelled').forEach(s => {
+    const catId = s.template_snapshot?.coverage_category_id || null
+    if (gridActivity.value && (s.template_snapshot?.activity_type ?? null) !== gridActivity.value) return
+    if (gridLocation.value && s.work_location_id !== gridLocation.value) return
+    if (gridStatus.value && s.status !== gridStatus.value) return
+    const key = catId ?? 'none'
+    if (!groups.has(key)) {
+      groups.set(key, { key, label: categoryNameById(catId) || t('planning.posts.uncategorized'), color: shiftHex(s), days: {} })
+    }
+    const g = groups.get(key)
+    const d = s.date?.split('T')[0] || s.date
+    const idx = weekDates.value.indexOf(d)
+    if (idx !== -1) {
+      if (!g.days[idx]) g.days[idx] = []
+      g.days[idx].push(s)
+    }
+  })
+
+  return [...groups.values()]
+})
+const empInitials = s => (s.employee?.first_name?.[0] || '') + (s.employee?.last_name?.[0] || '')
+const empName = s => `${s.employee?.first_name ?? ''} ${s.employee?.last_name ?? ''}`.trim()
+
+// ── Vue JOUR mobile (§8) : navigation par jour + lignes collaborateurs avec blocs métier ──
+const mobileDayIdx = ref(0)
+const mobileDayDate = computed(() => weekDates.value[mobileDayIdx.value])
+const mobileDayLabel = computed(() => {
+  const d = mobileDayDate.value
+  if (!d) return ''
+
+  return new Date(d + 'T00:00:00').toLocaleDateString(locale.value, { weekday: 'long', day: 'numeric', month: 'long' })
+})
+const mobilePrevDay = () => {
+  if (mobileDayIdx.value > 0) mobileDayIdx.value--
+  else { prevWeek(); mobileDayIdx.value = 6 }
+}
+const mobileNextDay = () => {
+  if (mobileDayIdx.value < 6) mobileDayIdx.value++
+  else { nextWeek(); mobileDayIdx.value = 0 }
+}
+// Collaborateurs ayant un shift ce jour-là (pour la vue jour mobile).
+const mobileDayRows = computed(() => filteredGridRows.value
+  .filter(r => r.shifts[mobileDayIdx.value]?.length)
+  .map(r => ({ employee: r.employee, employee_id: r.employee_id, shifts: r.shifts[mobileDayIdx.value] })))
 
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
 const gridDepartment = ref(null)
@@ -1513,9 +1590,91 @@ watch(activeTab, tab => {
       <!-- TAB: PLANNING (Weekly Grid)                            -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="planning">
+        <!-- §8 — VUE JOUR MOBILE (pas de grille desktop compressée) -->
+        <div v-if="smAndDown">
+          <VCard>
+            <VCardText class="d-flex align-center justify-space-between py-3">
+              <VBtn
+                icon
+                variant="text"
+                size="small"
+                @click="mobilePrevDay"
+              >
+                <VIcon icon="tabler-chevron-left" />
+              </VBtn>
+              <div class="text-center">
+                <div class="text-body-1 font-weight-medium text-capitalize">
+                  {{ mobileDayLabel }}
+                </div>
+                <div
+                  v-if="hasCoverage"
+                  class="text-caption"
+                >
+                  <span :class="coverageSummary.under ? 'text-error' : 'text-success'">
+                    {{ coverageSummary.under ? $t('planning.coverage.summaryUnder', { n: coverageSummary.under }) : $t('planning.coverage.summaryOk') }}
+                  </span>
+                </div>
+              </div>
+              <VBtn
+                icon
+                variant="text"
+                size="small"
+                @click="mobileNextDay"
+              >
+                <VIcon icon="tabler-chevron-right" />
+              </VBtn>
+            </VCardText>
+            <VDivider />
+            <VCardText>
+              <div
+                v-if="!mobileDayRows.length"
+                class="text-center text-medium-emphasis py-6"
+              >
+                {{ $t('planning.mobile.noShift') }}
+              </div>
+              <div
+                v-for="row in mobileDayRows"
+                :key="row.employee_id"
+                class="mb-3"
+              >
+                <div class="d-flex align-center gap-2 mb-1">
+                  <VAvatar
+                    color="primary"
+                    variant="tonal"
+                    size="28"
+                  >
+                    <span class="text-xs">{{ (row.employee?.first_name?.[0] || '') + (row.employee?.last_name?.[0] || '') }}</span>
+                  </VAvatar>
+                  <span class="font-weight-medium">{{ row.employee?.first_name }} {{ row.employee?.last_name }}</span>
+                </div>
+                <button
+                  v-for="shift in row.shifts"
+                  :key="shift.id"
+                  type="button"
+                  class="plan-shift__body plan-shift__body--block mb-1"
+                  :style="{ '--sc': shiftHex(shift) }"
+                  @click="openActivityDay(shift, row)"
+                >
+                  <span class="plan-shift__poste">
+                    {{ shiftPoste(shift) }}
+                    <span
+                      v-if="shiftActivityCount(shift)"
+                      class="plan-shift__badge"
+                    >+{{ shiftActivityCount(shift) }}</span>
+                  </span>
+                  <span class="plan-shift__time">{{ formatShiftRange(shift) }} · {{ shift.status === 'published' ? $t('workforce.statuses.shift.published', 'Publié') : $t('workforce.statuses.shift.draft', 'Brouillon') }}</span>
+                </button>
+              </div>
+            </VCardText>
+          </VCard>
+        </div>
+
         <!-- Stats Row -->
         <!-- Synthèse compacte de la semaine (remplace les 4 grandes cartes) -->
-        <div class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mb-4 px-1">
+        <div
+          v-if="!smAndDown"
+          class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mb-4 px-1"
+        >
           <div class="d-flex align-center gap-2">
             <VIcon icon="tabler-calendar-stats" size="18" class="text-medium-emphasis" />
             <span class="text-h6 mb-0">{{ weekSummary.total }}</span>
@@ -1540,8 +1699,8 @@ watch(activeTab, tab => {
           </div>
         </div>
 
-        <!-- Week Navigation + Grid -->
-        <VCard>
+        <!-- Week Navigation + Grid (desktop) -->
+        <VCard v-if="!smAndDown">
           <VCardText>
             <div class="d-flex align-center justify-space-between">
               <div class="d-flex align-center gap-2">
@@ -1566,6 +1725,21 @@ watch(activeTab, tab => {
                 </VBtn>
               </div>
               <div class="d-flex align-center gap-2">
+                <VBtnToggle
+                  v-model="gridView"
+                  mandatory
+                  density="compact"
+                  variant="outlined"
+                  divided
+                  class="me-1"
+                >
+                  <VBtn value="employees" size="small" data-test="view-employees">
+                    <VIcon icon="tabler-users" size="16" class="me-1" /> {{ $t('planning.views.byEmployee') }}
+                  </VBtn>
+                  <VBtn value="posts" size="small" data-test="view-posts">
+                    <VIcon icon="tabler-briefcase" size="16" class="me-1" /> {{ $t('planning.views.byPost') }}
+                  </VBtn>
+                </VBtnToggle>
                 <VBtn
                   v-can="'workforce.planning_manage'"
                   variant="text"
@@ -1815,7 +1989,7 @@ watch(activeTab, tab => {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody v-if="gridView === 'employees'">
               <tr v-if="gridLoading && gridRows.length === 0">
                 <td
                   :colspan="8"
@@ -1870,9 +2044,15 @@ watch(activeTab, tab => {
                         {{ (row.employee?.first_name?.[0] || '') + (row.employee?.last_name?.[0] || '') }}
                       </span>
                     </VAvatar>
-                    <span class="font-weight-medium">
-                      {{ row.employee?.first_name }} {{ row.employee?.last_name }}
-                    </span>
+                    <div class="d-flex flex-column" style="min-inline-size: 0;">
+                      <span class="font-weight-medium text-truncate">
+                        {{ row.employee?.first_name }} {{ row.employee?.last_name }}
+                      </span>
+                      <span
+                        v-if="rowSummary(row).days"
+                        class="text-caption text-medium-emphasis"
+                      >{{ $t('planning.rowSummary', { hours: rowSummary(row).hours, days: rowSummary(row).days }) }}</span>
+                    </div>
                   </div>
                 </td>
 
@@ -1902,17 +2082,20 @@ watch(activeTab, tab => {
                       />
                       <button
                         type="button"
-                        class="plan-shift__body"
+                        class="plan-shift__body plan-shift__body--block"
                         :style="{ '--sc': shiftHex(shift) }"
-                        :title="formatShiftRange(shift) + (shift.template_snapshot?.template_name ? ' · ' + shift.template_snapshot.template_name : '')"
+                        :title="shiftPoste(shift) + ' · ' + formatShiftRange(shift)"
                         @click.stop="openActivityDay(shift, row)"
                       >
+                        <span class="plan-shift__poste">
+                          {{ shiftPoste(shift) }}
+                          <span
+                            v-if="shiftActivityCount(shift)"
+                            class="plan-shift__badge"
+                            :title="$t('planning.activities.count', { n: shiftActivityCount(shift) })"
+                          >+{{ shiftActivityCount(shift) }}</span>
+                        </span>
                         <span class="plan-shift__time">{{ formatShiftRange(shift) }}</span>
-                        <span
-                          v-if="shiftActivityCount(shift)"
-                          class="plan-shift__badge"
-                          :title="$t('planning.activities.count', { n: shiftActivityCount(shift) })"
-                        >{{ shiftActivityCount(shift) }}</span>
                       </button>
                       <!-- Quick actions menu -->
                       <VMenu location="bottom end">
@@ -1988,6 +2171,66 @@ watch(activeTab, tab => {
                       />
                     </VBtn>
                   </template>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Vue PAR POSTES : une ligne par catégorie, collaborateurs affectés par jour -->
+            <tbody v-else>
+              <tr v-if="!postRows.length">
+                <td
+                  :colspan="8"
+                  class="text-center pa-8 text-medium-emphasis"
+                >
+                  {{ $t('planning.posts.empty') }}
+                </td>
+              </tr>
+              <tr
+                v-for="pr in postRows"
+                :key="`post-${pr.key}`"
+              >
+                <td>
+                  <div class="d-flex align-center gap-2 py-2">
+                    <span
+                      class="legend-dot"
+                      :style="{ background: pr.color }"
+                    />
+                    <span class="font-weight-medium text-truncate">{{ pr.label }}</span>
+                  </div>
+                </td>
+                <td
+                  v-for="(date, dayIdx) in weekDates"
+                  :key="`post-${pr.key}-${date}`"
+                  class="text-center planning-cell"
+                  :class="{ 'bg-light': date === new Date().toISOString().slice(0, 10) }"
+                >
+                  <div
+                    v-if="pr.days[dayIdx]?.length"
+                    class="d-flex flex-column gap-1 py-1"
+                  >
+                    <button
+                      v-for="s in pr.days[dayIdx]"
+                      :key="s.id"
+                      type="button"
+                      class="plan-post-chip"
+                      :style="{ '--sc': shiftHex(s) }"
+                      :title="empName(s) + ' · ' + formatShiftRange(s)"
+                      @click="openActivityDay(s, { employee: s.employee })"
+                    >
+                      <VAvatar
+                        size="18"
+                        color="primary"
+                        variant="tonal"
+                      >
+                        <span style="font-size: 9px;">{{ empInitials(s) }}</span>
+                      </VAvatar>
+                      <span class="plan-post-chip__name">{{ empName(s) }}</span>
+                    </button>
+                  </div>
+                  <span
+                    v-else
+                    class="text-disabled text-caption"
+                  >—</span>
                 </td>
               </tr>
             </tbody>
@@ -3137,6 +3380,29 @@ watch(activeTab, tab => {
 
   &__time { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+  // Bloc métier (Skello-like) : nom de poste d'abord, horaires ensuite.
+  &__body--block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1px;
+    padding: 3px 7px;
+  }
+  &__poste {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+  &__body--block &__time { font-size: 0.68rem; font-weight: 500; opacity: 0.85; }
+
   &__badge {
     flex: 0 0 auto;
     display: inline-flex;
@@ -3162,6 +3428,25 @@ watch(activeTab, tab => {
 
   &--published &__body { font-weight: 700; }
   &--cancelled &__body { text-decoration: line-through; opacity: 0.55; }
+}
+
+// Chip « par postes » : collaborateur affecté à une catégorie un jour donné.
+.plan-post-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  inline-size: 100%;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border-inline-start: 3px solid var(--sc);
+  background: color-mix(in srgb, var(--sc) 12%, transparent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: start;
+
+  &:hover { background: color-mix(in srgb, var(--sc) 22%, transparent); }
+  &__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 .cov-color-input {

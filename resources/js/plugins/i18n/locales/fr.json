@@ -7784,6 +7784,21 @@
       "to_verify": "À vérifier",
       "busy": "Occupé",
       "unavailable": "En congé"
+    },
+    "views": {
+      "byEmployee": "Par salariés",
+      "byPost": "Par postes"
+    },
+    "posts": {
+      "uncategorized": "Non catégorisé",
+      "empty": "Aucune affectation cette semaine."
+    },
+    "rowSummary": "{hours}h · {days} j",
+    "shift": {
+      "untitled": "Shift"
+    },
+    "mobile": {
+      "noShift": "Aucun shift ce jour."
     }
   },
   "leaves": {

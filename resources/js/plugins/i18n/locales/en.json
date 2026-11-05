@@ -7784,6 +7784,21 @@
       "to_verify": "To verify",
       "busy": "Busy",
       "unavailable": "On leave"
+    },
+    "views": {
+      "byEmployee": "By employee",
+      "byPost": "By post"
+    },
+    "posts": {
+      "uncategorized": "Uncategorized",
+      "empty": "No assignment this week."
+    },
+    "rowSummary": "{hours}h · {days}d",
+    "shift": {
+      "untitled": "Shift"
+    },
+    "mobile": {
+      "noShift": "No shift on this day."
     }
   },
   "leaves": {
