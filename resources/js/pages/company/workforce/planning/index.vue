@@ -419,6 +419,19 @@ const covCellColor = cell => {
   return 'success'
 }
 
+// Bandeau de couverture rétractable + synthèse compacte (état conservé en cookie).
+const coverageCollapsed = useCookie('planningCoverageCollapsed', { default: () => false })
+const coverageSummary = computed(() => {
+  let under = 0
+  let over = 0
+  coverageReqs.value.forEach(r => {
+    if (r.status === 'under') under++
+    else if (r.status === 'over') over++
+  })
+
+  return { under, over }
+})
+
 // Édition inline d'un besoin (headcount) depuis la grille.
 const covEdit = ref({ open: false, requirementId: null, headcount: 1, date: null, line: null })
 const openCovEdit = (cell, line, date) => {
@@ -1664,7 +1677,7 @@ watch(activeTab, tab => {
               class="planning-grid"
             >
               <thead>
-              <tr>
+              <tr class="day-header">
                 <th
                   class="text-start"
                   style="min-width: 200px;"
@@ -1686,9 +1699,57 @@ watch(activeTab, tab => {
                   </div>
                 </th>
               </tr>
+              <!-- Bandeau couverture : bascule rétractable + synthèse compacte -->
+              <tr
+                v-if="hasCoverage"
+                class="coverage-row coverage-toggle"
+              >
+                <th
+                  :colspan="8"
+                  class="text-start"
+                >
+                  <div class="d-flex align-center gap-2">
+                    <VBtn
+                      icon
+                      variant="text"
+                      size="x-small"
+                      data-test="cov-collapse"
+                      @click="coverageCollapsed = !coverageCollapsed"
+                    >
+                      <VIcon :icon="coverageCollapsed ? 'tabler-chevron-right' : 'tabler-chevron-down'" size="16" />
+                    </VBtn>
+                    <span class="text-caption font-weight-medium text-uppercase">{{ $t('planning.coverage.title') }}</span>
+                    <VChip
+                      v-if="coverageSummary.under"
+                      size="x-small"
+                      color="error"
+                      variant="tonal"
+                    >
+                      {{ $t('planning.coverage.summaryUnder', { n: coverageSummary.under }) }}
+                    </VChip>
+                    <VChip
+                      v-if="coverageSummary.over"
+                      size="x-small"
+                      color="warning"
+                      variant="tonal"
+                    >
+                      {{ $t('planning.coverage.summaryOver', { n: coverageSummary.over }) }}
+                    </VChip>
+                    <VChip
+                      v-if="!coverageSummary.under && !coverageSummary.over"
+                      size="x-small"
+                      color="success"
+                      variant="tonal"
+                    >
+                      {{ $t('planning.coverage.summaryOk') }}
+                    </VChip>
+                  </div>
+                </th>
+              </tr>
               <!-- Couverture QUALIFIÉE : une ligne par catégorie (affecté/requis, écart, édition inline) -->
               <tr
                 v-for="line in coverageLines"
+                v-show="!coverageCollapsed"
                 :key="`cov-${line.key}`"
                 class="coverage-row"
               >
@@ -1699,7 +1760,11 @@ watch(activeTab, tab => {
                       class="legend-dot"
                       :style="{ background: line.color }"
                     />
-                    <span class="text-caption font-weight-medium">{{ line.label }}</span>
+                    <span
+                      class="text-caption font-weight-medium text-truncate"
+                      style="max-inline-size: 110px;"
+                      :title="line.label"
+                    >{{ line.label }}</span>
                     <span
                       v-if="line.window"
                       class="text-caption text-disabled"
@@ -2971,17 +3036,17 @@ watch(activeTab, tab => {
   border-collapse: separate;
   border-spacing: 0;
 
-  thead th {
+  // Seule la ligne d'en-tête des jours est figée en haut (évite le chevauchement des lignes de couverture).
+  thead tr.day-header th {
     position: sticky;
     inset-block-start: 0;
     z-index: 3;
     background: rgb(var(--v-theme-surface));
     box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
   }
+  thead tr.day-header th:first-child { z-index: 4; inset-inline-start: 0; }
 
-  // Colonne collaborateur figée (en-tête + cellules).
-  thead th:first-child { z-index: 4; inset-inline-start: 0; }
-
+  // Colonne collaborateur figée (cellules du corps).
   tbody td:first-child,
   .plan-emp-col {
     position: sticky;
@@ -2989,6 +3054,13 @@ watch(activeTab, tab => {
     z-index: 2;
     background: rgb(var(--v-theme-surface));
     box-shadow: inset -1px 0 0 rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+  // Colonne libellé de couverture figée horizontalement (alignée avec la colonne employé).
+  .coverage-row th:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: rgb(var(--v-theme-surface));
   }
 
   tbody tr:hover td { background-color: rgba(var(--v-theme-on-surface), 0.025); }
@@ -3005,14 +3077,15 @@ watch(activeTab, tab => {
   }
 
   .coverage-row th {
-    inset-block-start: 57px; // sous l'en-tête des jours
-    z-index: 2;
-    padding-block: 2px;
-    background: rgb(var(--v-theme-surface));
-    box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+    padding-block: 3px;
+    border-block-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.5));
+    white-space: nowrap;
+  }
+  .coverage-row.coverage-toggle th {
+    background: rgba(var(--v-theme-on-surface), 0.02);
   }
 
-  tbody tr:first-child td { scroll-margin-block-start: 96px; }
+  tbody tr:first-child td { scroll-margin-block-start: 60px; }
 
   .planning-add-btn { opacity: 0; transition: opacity 0.15s ease; }
   .planning-cell:hover .planning-add-btn { opacity: 1; }
@@ -3100,6 +3173,9 @@ watch(activeTab, tab => {
   background: transparent;
   cursor: pointer;
 }
-.planning-grid .cov-add-btn { opacity: 0; transition: opacity 0.12s ease; }
-.planning-grid .coverage-row th:hover .cov-add-btn { opacity: 1; }
+// Bouton « + » des cellules de couverture : TOUJOURS visible (identifiable sans survol, §3).
+.planning-grid .cov-add-btn { opacity: 0.5; transition: opacity 0.12s ease; }
+.planning-grid .coverage-row th:hover .cov-add-btn,
+.planning-grid .cov-add-btn:hover,
+.planning-grid .cov-add-btn:focus-visible { opacity: 1; }
 </style>

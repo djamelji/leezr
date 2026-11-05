@@ -7592,6 +7592,13 @@
         "label": "Libellé",
         "start": "Début",
         "end": "Fin"
+      },
+      "errors": {
+        "bounds": "L'activité doit rester dans les bornes du shift.",
+        "break": "L'activité chevauche une pause planifiée.",
+        "overlap": "L'activité en chevauche une autre dans ce shift.",
+        "capacity": "Les activités dépassent le temps travaillable du shift (pause préservée).",
+        "order": "La fin doit être après le début."
       }
     },
     "coverage": {
@@ -7644,7 +7651,10 @@
       "modeRecurrent": "Récurrent",
       "modePonctuel": "Ponctuel",
       "needWeekday": "Sélectionnez un jour de semaine.",
-      "needDate": "Sélectionnez une date."
+      "needDate": "Sélectionnez une date.",
+      "summaryUnder": "{n} à couvrir",
+      "summaryOver": "{n} sureffectif(s)",
+      "summaryOk": "Couverture OK"
     },
     "stats": {
       "totalShifts": "Shifts au total",

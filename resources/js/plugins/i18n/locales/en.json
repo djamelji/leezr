@@ -7592,6 +7592,13 @@
         "label": "Label",
         "start": "Start",
         "end": "End"
+      },
+      "errors": {
+        "bounds": "The activity must stay within the shift boundaries.",
+        "break": "The activity overlaps a planned break.",
+        "overlap": "The activity overlaps another one in this shift.",
+        "capacity": "Activities exceed the shift workable time (break preserved).",
+        "order": "End must be after start."
       }
     },
     "coverage": {
@@ -7644,7 +7651,10 @@
       "modeRecurrent": "Recurring",
       "modePonctuel": "One-off",
       "needWeekday": "Select a weekday.",
-      "needDate": "Select a date."
+      "needDate": "Select a date.",
+      "summaryUnder": "{n} to cover",
+      "summaryOver": "{n} overstaffed",
+      "summaryOk": "Coverage OK"
     },
     "stats": {
       "totalShifts": "Total shifts",

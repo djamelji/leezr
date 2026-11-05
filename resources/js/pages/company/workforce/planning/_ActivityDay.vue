@@ -113,7 +113,33 @@ const timeToIso = (hhmm, afterIso = null) => {
   return iso
 }
 
-const openAdd = () => { resetForm(); showForm.value = true }
+// Préremplit les heures DANS les bornes du shift (évite les 422 « hors bornes » au clic d'ajout).
+const addMinutes = (hhmm, mins) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = h * 60 + m + mins
+  const hh = String(Math.floor((d % 1440) / 60)).padStart(2, '0')
+  const mm = String(d % 60).padStart(2, '0')
+
+  return `${hh}:${mm}`
+}
+const openAdd = () => {
+  resetForm()
+  showForm.value = true
+  const shiftStart = timeOfDay(props.shift?.start_at)
+  const shiftEnd = timeOfDay(props.shift?.end_at)
+  if (!shiftStart) return
+  // Premier créneau LIBRE : après la dernière activité planifiée (évite un chevauchement au clic d'ajout).
+  let start = shiftStart
+  const ends = activities.value.filter(a => a.status === 'planned').map(a => timeOfDay(a.end_at)).filter(Boolean)
+  if (ends.length) {
+    const lastEnd = ends.sort().at(-1)
+    if (lastEnd > start) start = lastEnd
+  }
+  if (shiftEnd && start >= shiftEnd) start = shiftStart // shift plein → laisser l'utilisateur ajuster
+  form.value.start = start
+  form.value.end = addMinutes(start, 60)
+  if (shiftEnd && form.value.end > shiftEnd) form.value.end = shiftEnd
+}
 
 const submit = async () => {
   if (!form.value.start || !form.value.end) { toast(t('validation.required'), 'error'); return }
@@ -134,8 +160,20 @@ const submit = async () => {
     await load()
     emit('changed')
   } catch (error) {
-    toast(error.response?.data?.message || t('planning.activities.conflict'), 'error')
+    toast(activityError(error), 'error')
   }
+}
+
+// Messages d'erreur explicites (plutôt qu'un « Conflit » générique).
+const activityError = error => {
+  const msg = error.response?.data?.message || ''
+  if (/within the shift boundaries/i.test(msg)) return t('planning.activities.errors.bounds')
+  if (/overlaps a planned break/i.test(msg)) return t('planning.activities.errors.break')
+  if (/overlaps another activity/i.test(msg)) return t('planning.activities.errors.overlap')
+  if (/exceed the shift workable time/i.test(msg)) return t('planning.activities.errors.capacity')
+  if (/end must be after/i.test(msg)) return t('planning.activities.errors.order')
+
+  return msg || t('planning.activities.conflict')
 }
 
 const edit = a => {

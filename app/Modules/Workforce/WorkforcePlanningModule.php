@@ -17,9 +17,21 @@ class WorkforcePlanningModule implements ModuleDefinition
             surface: 'hr',
             sortOrder: 210,
             capabilities: new Capabilities(
-                // PRODUCT-UX-2 (LOT B1) — entrée de nav retirée : le planning vit dans l'espace
-                // « Temps de travail » unifié (onglet Planning). Route active (deep-link + onglet).
-                navItems: [],
+                // ADR-712 — item de nav dédié « Planning » (accessibilité Company demandée), pointant vers
+                // l'espace unifié « Temps de travail » onglet Planning (deep-link), gated par planning_view.
+                // i18n auto via nav.company.workforce-planning. Respecte le mécanisme manifest (non hardcodé).
+                navItems: [
+                    [
+                        'key' => 'workforce-planning',
+                        'title' => 'Planning',
+                        'to' => ['name' => 'company-workforce-time', 'query' => ['tab' => 'planning']],
+                        'icon' => 'tabler-calendar-week',
+                        'permission' => 'workforce.planning_view',
+                        'surface' => 'hr',
+                        'group' => 'workforce',
+                        'sort' => 25,
+                    ],
+                ],
                 routeNames: [],
                 middlewareKey: 'workforce_planning',
             ),

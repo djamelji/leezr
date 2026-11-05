@@ -105,9 +105,10 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        // L'ordre reflète le parcours d'activité : Collaborateurs → Temps → Congés → Documents → Paie → Organisation → Paramètres.
+        // L'ordre reflète le parcours d'activité : Collaborateurs → Temps → Planning → Congés → Documents → Paie → Organisation → Paramètres.
+        // ADR-712 : item « Planning » dédié (sort 25) intercalé après « Temps de travail ».
         $this->assertSame(
-            ['workforce-employees', 'workforce-time', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
+            ['workforce-employees', 'workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
             $this->itemKeys($groups, 'workforce'),
         );
     }
