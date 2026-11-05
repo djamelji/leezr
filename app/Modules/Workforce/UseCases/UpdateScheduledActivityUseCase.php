@@ -74,6 +74,7 @@ class UpdateScheduledActivityUseCase
                 'end_at' => $endAt,
                 'work_location_id' => $locationId,
                 'activity_type' => $data['activity_type'] ?? $activity->activity_type,
+                'coverage_category_id' => array_key_exists('coverage_category_id', $data) ? $data['coverage_category_id'] : $activity->coverage_category_id,
                 'label' => $data['label'] ?? $activity->label,
                 'priority' => $data['priority'] ?? $activity->priority,
                 'notes' => array_key_exists('notes', $data) ? $data['notes'] : $activity->notes,

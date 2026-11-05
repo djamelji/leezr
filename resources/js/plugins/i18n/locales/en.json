@@ -7625,8 +7625,21 @@
         "startTime": "Start",
         "endTime": "End",
         "department": "Department",
-        "priority": "Priority"
-      }
+        "priority": "Priority",
+        "category": "Coverage category",
+        "categoryHint": "Which operational need this targets",
+        "catName": "Category name",
+        "catCode": "Code"
+      },
+      "anyPresence": "Presence (all categories)",
+      "replicateWeekdays": "Replicate Mon→Fri",
+      "editHint": "Click to edit the need",
+      "addHere": "Add a need here",
+      "replicated": "{n} need(s) replicated",
+      "categories": "Coverage categories",
+      "noCategory": "No category — add one to qualify coverage.",
+      "categoryCreated": "Category created",
+      "categoryDeleted": "Category deleted"
     },
     "stats": {
       "totalShifts": "Total shifts",
@@ -7695,7 +7708,8 @@
         "breakDurationHint": "Break duration in minutes (deducted from worked time).",
         "location": "Default location",
         "department": "Department",
-        "departmentHint": "Leave empty for a company-wide template."
+        "departmentHint": "Leave empty for a company-wide template.",
+        "categoryHint": "Coverage category this template contributes to"
       }
     },
     "locations": {

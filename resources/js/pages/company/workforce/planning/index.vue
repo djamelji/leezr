@@ -346,6 +346,7 @@ const gridActivity = ref(null)
 const gridStatus = ref(null)
 
 const departmentItems = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
+const coverageCategoryItems = computed(() => store.coverageCategories.filter(c => c.enabled !== false).map(c => ({ title: c.name, value: c.id })))
 const activityTypeItems = computed(() => {
   const set = new Set()
   store.allTemplates.forEach(t => { if (t.activity_type) set.add(t.activity_type) })
@@ -375,24 +376,86 @@ const filteredGridRows = computed(() => {
     })
 })
 
-// ── Coverage (besoins de personnel) — ligne de synthèse ──────
+// ── Coverage QUALIFIÉE (Lot A) — lignes par catégorie + édition inline ──────
 const coverageDaily = ref({})
+const coverageReqs = ref([])
 const loadCoverage = async () => {
   try {
     const resp = await store.fetchCoverageSummary({ from: weekDates.value[0], to: weekDates.value[6] })
     coverageDaily.value = resp.daily ?? {}
+    coverageReqs.value = resp.requirements ?? []
   } catch {
     coverageDaily.value = {}
+    coverageReqs.value = []
   }
 }
-const covFor = dateIso => coverageDaily.value[dateIso] || null
-const hasCoverage = computed(() => Object.values(coverageDaily.value).some(d => d && d.requirements > 0))
-const covColor = cov => {
-  if (!cov || cov.requirements === 0) return 'default'
-  if (cov.gap > 0) return 'error'
-  if (cov.gap < 0) return 'warning'
+const hasCoverage = computed(() => coverageReqs.value.length > 0)
+
+// Regroupe les besoins en LIGNES (par catégorie + fenêtre), chaque ligne portant une cellule par jour.
+const coverageLines = computed(() => {
+  const lines = new Map()
+  coverageReqs.value.forEach(r => {
+    const key = `${r.coverage_category_id ?? 'none'}|${r.start_time ?? ''}|${r.end_time ?? ''}`
+    if (!lines.has(key)) {
+      lines.set(key, {
+        key,
+        categoryId: r.coverage_category_id,
+        label: r.category_name || r.label || t('planning.coverage.anyPresence'),
+        color: r.category_color || null,
+        window: r.start_time ? `${r.start_time.slice(0, 5)}–${(r.end_time || '').slice(0, 5)}` : null,
+        byDate: {},
+      })
+    }
+    lines.get(key).byDate[r.date] = r
+  })
+
+  return [...lines.values()]
+})
+const covCellColor = cell => {
+  if (!cell) return 'default'
+  if (cell.gap > 0) return 'error'
+  if (cell.status === 'over') return 'warning'
 
   return 'success'
+}
+
+// Édition inline d'un besoin (headcount) depuis la grille.
+const covEdit = ref({ open: false, requirementId: null, headcount: 1, date: null, line: null })
+const openCovEdit = (cell, line, date) => {
+  covEdit.value = { open: true, requirementId: cell?.requirement_id ?? null, headcount: cell?.headcount ?? 1, date, line }
+}
+const saveCovEdit = async () => {
+  try {
+    if (covEdit.value.requirementId) {
+      await store.updateCoverage(covEdit.value.requirementId, { headcount: Number(covEdit.value.headcount) })
+    } else if (covEdit.value.line) {
+      // Pas de besoin ce jour-là → en créer un pour ce jour de semaine, même catégorie/fenêtre.
+      const dow = new Date(covEdit.value.date + 'T00:00:00').getDay()
+      const sample = Object.values(covEdit.value.line.byDate)[0]
+      await store.createCoverage({
+        day_of_week: dow, headcount: Number(covEdit.value.headcount),
+        coverage_category_id: covEdit.value.line.categoryId,
+        start_time: sample?.start_time || undefined, end_time: sample?.end_time || undefined,
+        priority: 'normal',
+      })
+    }
+    covEdit.value.open = false
+    await loadCoverage()
+    toast(t('planning.coverage.updated'), 'success')
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
+}
+const replicateCovLine = async line => {
+  const sample = Object.values(line.byDate).find(r => r.requirement_id)
+  if (!sample) return
+  try {
+    const r = await store.replicateCoverage(sample.requirement_id, [1, 2, 3, 4, 5])
+    toast(t('planning.coverage.replicated', { n: r.created }), 'success')
+    await Promise.all([store.fetchCoverage(), loadCoverage()])
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
 }
 
 // ── SP1a.1 — copie de semaine, duplication, affectation rapide par modèle ──
@@ -458,7 +521,7 @@ const openActivityDay = (shift, row) => {
 const isCoverageDrawerOpen = ref(false)
 const coverageFormLoading = ref(false)
 const editingCoverage = ref(null)
-const coverageForm = ref({ label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, headcount: 1, priority: 'normal' })
+const coverageForm = ref({ label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' })
 const weekdayItems = computed(() => [
   { title: t('planning.coverage.weekdays.1'), value: 1 },
   { title: t('planning.coverage.weekdays.2'), value: 2 },
@@ -473,18 +536,34 @@ const weekdayLabel = v => weekdayItems.value.find(w => w.value === v)?.title ?? 
 
 const resetCoverageForm = () => {
   editingCoverage.value = null
-  coverageForm.value = { label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, headcount: 1, priority: 'normal' }
+  coverageForm.value = { label: '', day_of_week: null, start_time: '', end_time: '', department_id: null, coverage_category_id: null, headcount: 1, priority: 'normal' }
 }
 const openCoverageManager = async () => {
   resetCoverageForm()
   isCoverageDrawerOpen.value = true
-  await store.fetchCoverage()
+  await Promise.all([store.fetchCoverage(), store.fetchCoverageCategories()])
+}
+
+// Catalogue de catégories de couverture (Lot A).
+const newCategory = ref({ name: '', code: '', color: '#4b4bd6' })
+const addCategory = async () => {
+  if (!newCategory.value.name || !newCategory.value.code) { toast(t('validation.required'), 'error'); return }
+  try {
+    await store.createCoverageCategory({ ...newCategory.value })
+    toast(t('planning.coverage.categoryCreated'), 'success')
+    newCategory.value = { name: '', code: '', color: '#4b4bd6' }
+  } catch (e) {
+    toast(e.response?.data?.message || t('common.error'), 'error')
+  }
+}
+const removeCategory = async c => {
+  try { await store.deleteCoverageCategory(c.id); toast(t('planning.coverage.categoryDeleted'), 'success') } catch (e) { toast(e.response?.data?.message || t('common.error'), 'error') }
 }
 const editCoverage = c => {
   editingCoverage.value = c
   coverageForm.value = {
     label: c.label || '', day_of_week: c.day_of_week, start_time: c.start_time || '', end_time: c.end_time || '',
-    department_id: c.department_id || null, headcount: c.headcount || 1, priority: c.priority || 'normal',
+    department_id: c.department_id || null, coverage_category_id: c.coverage_category_id || null, headcount: c.headcount || 1, priority: c.priority || 'normal',
   }
 }
 const submitCoverage = async () => {
@@ -840,6 +919,7 @@ const templateFormData = ref({
   name: '',
   code: '',
   activity_type: '',
+  coverage_category_id: null,
   start_time: '',
   end_time: '',
   break_duration_minutes: 0,
@@ -863,6 +943,8 @@ const resetTemplateForm = () => {
     name: '',
     code: '',
     activity_type: '',
+    coverage_category_id: null,
+  coverage_category_id: null,
     start_time: '',
     end_time: '',
     break_duration_minutes: 0,
@@ -884,6 +966,7 @@ const openEditTemplate = tpl => {
     name: tpl.name || '',
     code: tpl.code || '',
     activity_type: tpl.activity_type || '',
+    coverage_category_id: tpl.coverage_category_id || null,
     start_time: tpl.start_time || '',
     end_time: tpl.end_time || '',
     break_duration_minutes: tpl.break_duration_minutes ?? 0,
@@ -1087,6 +1170,7 @@ onMounted(async () => {
     fetchWeekData(),
     store.fetchTemplates({ all: true }),
     store.fetchLocations({ all: true }),
+    store.fetchCoverageCategories(),
     employeesStore.fetchEmployees({ perPage: 200 }),
   ])
 })
@@ -1575,28 +1659,63 @@ watch(activeTab, tab => {
                   </div>
                 </th>
               </tr>
-              <!-- Coverage summary row (besoin / affecté / écart) -->
+              <!-- Couverture QUALIFIÉE : une ligne par catégorie (affecté/requis, écart, édition inline) -->
               <tr
-                v-if="hasCoverage"
+                v-for="line in coverageLines"
+                :key="`cov-${line.key}`"
                 class="coverage-row"
               >
-                <th class="text-start text-caption text-medium-emphasis">
-                  {{ $t('planning.coverage.title') }}
+                <th class="text-start">
+                  <div class="d-flex align-center gap-2">
+                    <span
+                      v-if="line.color"
+                      class="legend-dot"
+                      :style="{ background: line.color }"
+                    />
+                    <span class="text-caption font-weight-medium">{{ line.label }}</span>
+                    <span
+                      v-if="line.window"
+                      class="text-caption text-disabled"
+                    >{{ line.window }}</span>
+                    <VBtn
+                      v-can="'workforce.coverage_manage'"
+                      icon
+                      variant="text"
+                      size="x-small"
+                      :title="$t('planning.coverage.replicateWeekdays')"
+                      @click="replicateCovLine(line)"
+                    >
+                      <VIcon icon="tabler-repeat" size="13" />
+                    </VBtn>
+                  </div>
                 </th>
                 <th
                   v-for="date in weekDates"
-                  :key="`cov-${date}`"
+                  :key="`cov-${line.key}-${date}`"
                   class="text-center"
                 >
                   <VChip
-                    v-if="covFor(date) && covFor(date).requirements > 0"
-                    :color="covColor(covFor(date))"
+                    v-if="line.byDate[date]"
+                    :color="covCellColor(line.byDate[date])"
                     size="x-small"
                     variant="tonal"
-                    :title="$t('planning.coverage.tooltip', { needed: covFor(date).needed, assigned: covFor(date).assigned })"
+                    class="cursor-pointer"
+                    :title="$t('planning.coverage.editHint')"
+                    @click="openCovEdit(line.byDate[date], line, date)"
                   >
-                    {{ covFor(date).assigned }}/{{ covFor(date).needed }}
+                    {{ line.byDate[date].assigned }}/{{ line.byDate[date].headcount }}
                   </VChip>
+                  <VBtn
+                    v-else-if="can('workforce.coverage_manage')"
+                    icon
+                    variant="text"
+                    size="x-small"
+                    class="cov-add-btn"
+                    :title="$t('planning.coverage.addHere')"
+                    @click="openCovEdit(null, line, date)"
+                  >
+                    <VIcon icon="tabler-plus" size="13" />
+                  </VBtn>
                   <span
                     v-else
                     class="text-disabled text-caption"
@@ -2194,6 +2313,16 @@ watch(activeTab, tab => {
                 :label="$t('planning.templates.fields.activityType')"
               />
             </VCol>
+            <VCol cols="12">
+              <AppSelect
+                v-model="templateFormData.coverage_category_id"
+                :items="coverageCategoryItems"
+                :label="$t('planning.coverage.fields.category')"
+                :hint="$t('planning.templates.fields.categoryHint')"
+                persistent-hint
+                clearable
+              />
+            </VCol>
             <VCol cols="6">
               <AppTextField
                 v-model="templateFormData.start_time"
@@ -2286,6 +2415,36 @@ watch(activeTab, tab => {
       </div>
     </VNavigationDrawer>
 
+    <!-- Édition inline d'un besoin de couverture (Lot A) -->
+    <VDialog
+      v-model="covEdit.open"
+      max-width="340"
+    >
+      <VCard>
+        <VCardText>
+          <div class="text-body-2 font-weight-medium mb-3">
+            {{ covEdit.line?.label }} <span v-if="covEdit.line?.window" class="text-disabled">· {{ covEdit.line.window }}</span>
+          </div>
+          <AppTextField
+            v-model.number="covEdit.headcount"
+            :label="$t('planning.coverage.fields.headcount')"
+            type="number"
+            min="1"
+            autofocus
+            @keyup.enter="saveCovEdit"
+          />
+          <div class="d-flex justify-end gap-2 mt-3">
+            <VBtn variant="outlined" size="small" @click="covEdit.open = false">
+              {{ $t('common.cancel') }}
+            </VBtn>
+            <VBtn color="primary" size="small" data-test="cov-save" @click="saveCovEdit">
+              {{ $t('common.save') }}
+            </VBtn>
+          </div>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
     <!-- Day detail — multi-activités (Smart Planning SP1b) -->
     <ActivityDay
       v-model:is-dialog-visible="activityDayOpen"
@@ -2319,6 +2478,62 @@ watch(activeTab, tab => {
         <p class="text-body-2 text-medium-emphasis mb-4">
           {{ $t('planning.coverage.hint') }}
         </p>
+
+        <!-- Catalogue de catégories de couverture (Lot A) -->
+        <div class="text-body-2 font-weight-medium mb-2">
+          {{ $t('planning.coverage.categories') }}
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <VChip
+            v-for="c in store.coverageCategories"
+            :key="c.id"
+            size="small"
+            closable
+            variant="tonal"
+            @click:close="removeCategory(c)"
+          >
+            <span
+              class="legend-dot me-2"
+              :style="{ background: c.color || '#8691a8' }"
+            />
+            {{ c.name }} <span class="text-disabled ms-1">({{ c.code }})</span>
+          </VChip>
+          <span
+            v-if="!store.coverageCategories.length"
+            class="text-caption text-disabled"
+          >{{ $t('planning.coverage.noCategory') }}</span>
+        </div>
+        <div class="d-flex gap-2 mb-4">
+          <AppTextField
+            v-model="newCategory.name"
+            :placeholder="$t('planning.coverage.fields.catName')"
+            density="compact"
+            hide-details
+          />
+          <AppTextField
+            v-model="newCategory.code"
+            :placeholder="$t('planning.coverage.fields.catCode')"
+            density="compact"
+            hide-details
+            style="max-inline-size: 110px;"
+          />
+          <input
+            v-model="newCategory.color"
+            type="color"
+            class="cov-color-input"
+            :title="$t('planning.templates.fields.color')"
+          >
+          <VBtn
+            color="primary"
+            variant="tonal"
+            size="small"
+            data-test="cat-add"
+            @click="addCategory"
+          >
+            {{ $t('common.add') }}
+          </VBtn>
+        </div>
+        <VDivider class="mb-4" />
 
         <!-- Existing requirements -->
         <VList
@@ -2406,6 +2621,16 @@ watch(activeTab, tab => {
                 v-model="coverageForm.end_time"
                 :label="$t('planning.coverage.fields.endTime')"
                 type="time"
+              />
+            </VCol>
+            <VCol cols="12">
+              <AppSelect
+                v-model="coverageForm.coverage_category_id"
+                :items="coverageCategoryItems"
+                :label="$t('planning.coverage.fields.category')"
+                :hint="$t('planning.coverage.fields.categoryHint')"
+                persistent-hint
+                clearable
               />
             </VCol>
             <VCol cols="6">
@@ -2812,4 +3037,16 @@ watch(activeTab, tab => {
   &--published &__body { font-weight: 700; }
   &--cancelled &__body { text-decoration: line-through; opacity: 0.55; }
 }
+
+.cov-color-input {
+  inline-size: 38px;
+  block-size: 38px;
+  padding: 2px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.planning-grid .cov-add-btn { opacity: 0; transition: opacity 0.12s ease; }
+.planning-grid .coverage-row th:hover .cov-add-btn { opacity: 1; }
 </style>

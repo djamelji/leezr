@@ -29,7 +29,7 @@ class UpdateCoverageRequirementUseCase
 
         $req->fill(collect($data)->only([
             'label', 'date', 'day_of_week', 'start_time', 'end_time',
-            'department_id', 'work_location_id', 'activity_type',
+            'department_id', 'work_location_id', 'activity_type', 'coverage_category_id',
             'headcount', 'priority', 'enabled', 'metadata',
         ])->toArray());
         $req->save();

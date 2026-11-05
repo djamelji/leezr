@@ -29,6 +29,7 @@ class CoverageRequirement extends Model
         'department_id',
         'work_location_id',
         'activity_type',
+        'coverage_category_id',
         'headcount',
         'priority',
         'source',

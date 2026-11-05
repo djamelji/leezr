@@ -21,6 +21,7 @@ class ScheduleTemplate extends Model
         'color',
         'icon',
         'activity_type',
+        'coverage_category_id',
         'work_location_id',
         'department_id',
         'enabled',
@@ -74,6 +75,7 @@ class ScheduleTemplate extends Model
             'work_location_id' => $this->work_location_id,
             'department_id' => $this->department_id,
             'activity_type' => $this->activity_type,
+            'coverage_category_id' => $this->coverage_category_id,
             'icon' => $this->icon,
             'color' => $this->color,
         ];

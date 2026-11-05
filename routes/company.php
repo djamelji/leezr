@@ -568,8 +568,15 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::put('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('locations/{id}', [\App\Modules\Workforce\Planning\Http\WorkLocationController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
+    // Coverage categories (catalogue) — Smart Planning Lot A
+    Route::get('coverage-categories', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('coverage-categories', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'store'])->middleware($perm('workforce.coverage_manage'));
+    Route::put('coverage-categories/{id}', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'update'])->middleware($perm('workforce.coverage_manage'));
+    Route::delete('coverage-categories/{id}', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'destroy'])->middleware($perm('workforce.coverage_manage'));
+
     // Coverage requirements (besoins de personnel) — Smart Planning SP1a
     Route::get('coverage', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('coverage/replicate', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'replicate'])->middleware($perm('workforce.coverage_manage'));
     Route::get('coverage/summary', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'summary'])->middleware($perm('workforce.planning_view'));
     Route::post('coverage', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'store'])->middleware($perm('workforce.coverage_manage'));
     Route::put('coverage/{id}', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'update'])->middleware($perm('workforce.coverage_manage'));

@@ -42,6 +42,35 @@ class CoverageRequirementController extends Controller
         );
     }
 
+    /** Réplique un besoin sur plusieurs jours de semaine (édition groupée depuis le planning). */
+    public function replicate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'requirement_id' => 'required|integer',
+            'days' => 'required|array|min:1',
+            'days.*' => 'integer|min:0|max:6',
+        ]);
+        $companyId = $request->attributes->get('company_id');
+        $src = CoverageRequirement::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($validated['requirement_id']);
+
+        $created = 0;
+        foreach (array_unique($validated['days']) as $dow) {
+            if ((int) $dow === (int) $src->day_of_week) {
+                continue;
+            }
+            CoverageRequirement::create([
+                'company_id' => $companyId, 'label' => $src->label, 'day_of_week' => $dow,
+                'start_time' => $src->start_time, 'end_time' => $src->end_time,
+                'department_id' => $src->department_id, 'work_location_id' => $src->work_location_id,
+                'activity_type' => $src->activity_type, 'coverage_category_id' => $src->coverage_category_id,
+                'headcount' => $src->headcount, 'priority' => $src->priority, 'source' => 'manual',
+            ]);
+            $created++;
+        }
+
+        return response()->json(['created' => $created]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $this->validatePayload($request);
@@ -92,6 +121,7 @@ class CoverageRequirementController extends Controller
             'department_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'activity_type' => 'nullable|string|max:60',
+            'coverage_category_id' => 'nullable|integer',
             'headcount' => ($creating ? 'required' : 'nullable').'|integer|min:1|max:999',
             'priority' => 'nullable|in:low,normal,high,critical',
             'enabled' => 'nullable|boolean',

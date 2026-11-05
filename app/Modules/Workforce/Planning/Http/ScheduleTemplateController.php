@@ -34,6 +34,7 @@ class ScheduleTemplateController extends Controller
             'color' => 'nullable|string|max:7',
             'icon' => 'nullable|string|max:64',
             'activity_type' => 'nullable|string|max:60',
+            'coverage_category_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'department_id' => 'nullable|integer',
         ]);
@@ -51,6 +52,7 @@ class ScheduleTemplateController extends Controller
                 icon: $validated['icon'] ?? null,
                 activityType: $validated['activity_type'] ?? null,
                 departmentId: $validated['department_id'] ?? null,
+                coverageCategoryId: $validated['coverage_category_id'] ?? null,
             );
 
             return response()->json($template, 201);
@@ -74,6 +76,7 @@ class ScheduleTemplateController extends Controller
             'color' => 'nullable|string|max:7',
             'icon' => 'nullable|string|max:64',
             'activity_type' => 'nullable|string|max:60',
+            'coverage_category_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'department_id' => 'nullable|integer',
             'enabled' => 'nullable|boolean',

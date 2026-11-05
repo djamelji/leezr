@@ -2,22 +2,27 @@
 
 namespace App\Modules\Workforce\ReadModels;
 
+use App\Core\Workforce\CoverageCategory;
 use App\Core\Workforce\CoverageRequirement;
 use App\Core\Workforce\Employee;
+use App\Core\Workforce\ScheduledActivity;
 use App\Core\Workforce\Shift;
 use Illuminate\Support\Carbon;
 
 /**
- * Couverture PERSONNEL par SOUS-INTERVALLES (Smart Planning SP1a.1, ADR-708 ; remplace le binaire SP1a).
+ * Couverture PERSONNEL QUALIFIÉE par sous-intervalles (Smart Planning Lot A, ADR-710).
  *
- * Pour chaque besoin applicable à chaque jour, la fenêtre est découpée en sous-intervalles aux bornes des
- * shifts éligibles. À chaque sous-intervalle, on compte les EMPLOYÉS DISTINCTS réellement présents (shift
- * couvrant intégralement le segment, hors fenêtre de pause de l'employé). On expose sous-effectif ET
- * sureffectif PAR intervalle ; le statut du besoin = pire sous-intervalle ; l'« affecté » agrégé = minimum
- * garanti (jamais une approximation présentée comme garantie).
+ * Distingue la présence RH de la COUVERTURE OPÉRATIONNELLE : un besoin cible une CATÉGORIE (Route, Formation…).
+ * À chaque sous-intervalle, on compte les employés DISTINCTS dont la catégorie EFFECTIVE contribue à celle
+ * du besoin :
+ *   - l'ACTIVITÉ planifiée couvrant l'intervalle (si elle a une catégorie) PRIME (shift polyvalent) ;
+ *   - sinon la catégorie du SHIFT (snapshot du modèle) ;
+ *   - une plage sans activité et sans catégorie de shift n'est JAMAIS comptée comme production.
+ * → une formation 09-12 puis route 13-17 ne compte PAS comme route toute la journée ; 3 formations ne
+ *   gonflent pas la couverture Route. Aucune pondération inventée. Rétro-compatible : un besoin sans
+ *   catégorie retombe sur l'ancien comportement (toute présence éligible compte).
  *
- * Gère : présence partielle, pauses, plusieurs shifts, nuit (minuit), multi-lieux, filtres Department,
- * besoins récurrents, distinct employees. Lecture seule. Balayage O(shifts·segments) — borné pour 200 pers.
+ * Lecture seule. Balayage O(shifts·segments) borné.
  */
 class CoverageReadModel
 {
@@ -36,8 +41,18 @@ class CoverageReadModel
             ->whereDate('date', '<=', $toDate->toDateString())
             ->get();
 
+        // Activités planifiées des shifts chargés (pour qualifier les sous-intervalles).
+        $activitiesByShift = ScheduledActivity::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereIn('shift_id', $shifts->pluck('id'))
+            ->where('status', ScheduledActivity::STATUS_PLANNED)
+            ->get()->groupBy('shift_id');
+
         $deptByEmployee = Employee::withoutGlobalScopes()
             ->where('company_id', $companyId)->pluck('department_id', 'id');
+
+        $categories = CoverageCategory::withoutGlobalScopes()
+            ->where('company_id', $companyId)->get()->keyBy('id');
 
         $reqRows = [];
         $daily = [];
@@ -46,6 +61,7 @@ class CoverageReadModel
         }
 
         foreach ($requirements as $req) {
+            $catId = $req->coverage_category_id;
             for ($d = $fromDate->copy(); $d->lte($toDate); $d->addDay()) {
                 if (! $req->appliesToDate($d)) {
                     continue;
@@ -63,9 +79,6 @@ class CoverageReadModel
                     if ($req->work_location_id !== null && (int) $s->work_location_id !== (int) $req->work_location_id) {
                         return false;
                     }
-                    if ($req->activity_type !== null && ($s->template_snapshot['activity_type'] ?? null) !== $req->activity_type) {
-                        return false;
-                    }
 
                     return true;
                 })->values();
@@ -73,19 +86,25 @@ class CoverageReadModel
                 [$winStart, $winEnd] = self::window($req, $d, $eligible);
 
                 $intervals = [];
-                $minAssigned = $headcount; // si aucune couverture requise sur fenêtre vide
+                $minAssigned = 0;
                 $maxAssigned = 0;
 
                 if ($winStart && $winEnd && $winStart->lt($winEnd)) {
-                    $segments = self::segments($winStart, $winEnd, $eligible);
+                    $segments = self::segments($winStart, $winEnd, $eligible, $activitiesByShift);
                     $minAssigned = PHP_INT_MAX;
                     foreach ($segments as [$segStart, $segEnd]) {
                         $emp = [];
                         foreach ($eligible as $s) {
-                            if ($s->start_at->lte($segStart) && $s->end_at->gte($segEnd)
-                                && ! self::onBreak($s, $segStart, $segEnd)) {
-                                $emp[$s->employee_id] = true;
+                            if (! ($s->start_at->lte($segStart) && $s->end_at->gte($segEnd))) {
+                                continue;
                             }
+                            if (self::onBreak($s, $segStart, $segEnd)) {
+                                continue;
+                            }
+                            if ($catId !== null && ! self::contributes($s, $activitiesByShift->get($s->id), $segStart, $segEnd, $catId)) {
+                                continue;
+                            }
+                            $emp[$s->employee_id] = true;
                         }
                         $assigned = count($emp);
                         $minAssigned = min($minAssigned, $assigned);
@@ -100,13 +119,13 @@ class CoverageReadModel
                     if ($minAssigned === PHP_INT_MAX) {
                         $minAssigned = 0;
                     }
-                } else {
-                    $minAssigned = 0; // fenêtre non déterminable (aucun shift) → non couvert
                 }
 
                 $status = $minAssigned >= $headcount
                     ? ($maxAssigned > $headcount ? 'over' : 'covered')
                     : 'under';
+
+                $cat = $catId ? $categories->get($catId) : null;
 
                 $reqRows[] = [
                     'requirement_id' => $req->id,
@@ -117,10 +136,13 @@ class CoverageReadModel
                     'end_time' => $req->end_time,
                     'department_id' => $req->department_id,
                     'work_location_id' => $req->work_location_id,
-                    'activity_type' => $req->activity_type,
+                    'coverage_category_id' => $catId,
+                    'category_code' => $cat?->code,
+                    'category_name' => $cat?->name,
+                    'category_color' => $cat?->color,
                     'priority' => $req->priority,
                     'headcount' => $headcount,
-                    'assigned' => $minAssigned,            // minimum garanti sur la fenêtre
+                    'assigned' => $minAssigned,
                     'peak_assigned' => $maxAssigned,
                     'gap' => $headcount - $minAssigned,
                     'status' => $status,
@@ -142,11 +164,32 @@ class CoverageReadModel
     }
 
     /**
-     * Fenêtre du besoin. Si start/end déclarés → cette fenêtre (minuit géré). Sinon (journée entière) →
-     * de la première prise de poste à la dernière fin parmi les shifts éligibles (journée opérationnelle).
-     *
-     * @return array{0: ?Carbon, 1: ?Carbon}
+     * L'employé contribue-t-il à la catégorie $catId sur [segStart,segEnd] ?
+     * Activité couvrante qualifiée PRIME ; sinon catégorie du shift ; sinon non (pas de production par défaut).
      */
+    private static function contributes(Shift $s, $activities, Carbon $segStart, Carbon $segEnd, int $catId): bool
+    {
+        $effective = null;
+        if ($activities) {
+            foreach ($activities as $a) {
+                if ($a->start_at->lte($segStart) && $a->end_at->gte($segEnd)) {
+                    if ($a->coverage_category_id !== null) {
+                        $effective = (int) $a->coverage_category_id;
+                        break;
+                    }
+                    // Activité sans catégorie : neutralise la catégorie du shift sur ce créneau (travail qualifié autre).
+                    $effective = 0;
+                }
+            }
+        }
+        if ($effective === null) {
+            $effective = $s->template_snapshot['coverage_category_id'] ?? null;
+            $effective = $effective !== null ? (int) $effective : null;
+        }
+
+        return $effective === $catId;
+    }
+
     private static function window(CoverageRequirement $req, Carbon $date, $eligible): array
     {
         if (! empty($req->start_time) && ! empty($req->end_time)) {
@@ -158,31 +201,28 @@ class CoverageReadModel
 
             return [$start, $end];
         }
-
         if ($eligible->isEmpty()) {
             return [null, null];
         }
 
-        return [
-            $eligible->min(fn (Shift $s) => $s->start_at) ? Carbon::parse($eligible->pluck('start_at')->min()) : null,
-            $eligible->max(fn (Shift $s) => $s->end_at) ? Carbon::parse($eligible->pluck('end_at')->max()) : null,
-        ];
+        return [Carbon::parse($eligible->pluck('start_at')->min()), Carbon::parse($eligible->pluck('end_at')->max())];
     }
 
-    /**
-     * Découpe [winStart,winEnd] aux bornes des shifts (clampées à la fenêtre).
-     *
-     * @return list<array{0: Carbon, 1: Carbon}>
-     */
-    private static function segments(Carbon $winStart, Carbon $winEnd, $eligible): array
+    /** Découpe aux bornes des shifts ET des activités (changements de catégorie effective). */
+    private static function segments(Carbon $winStart, Carbon $winEnd, $eligible, $activitiesByShift): array
     {
         $points = [$winStart->getTimestamp(), $winEnd->getTimestamp()];
+        $add = function ($ts) use (&$points, $winStart, $winEnd) {
+            if ($ts > $winStart->getTimestamp() && $ts < $winEnd->getTimestamp()) {
+                $points[] = $ts;
+            }
+        };
         foreach ($eligible as $s) {
-            foreach ([$s->start_at, $s->end_at] as $p) {
-                $ts = $p->getTimestamp();
-                if ($ts > $winStart->getTimestamp() && $ts < $winEnd->getTimestamp()) {
-                    $points[] = $ts;
-                }
+            $add($s->start_at->getTimestamp());
+            $add($s->end_at->getTimestamp());
+            foreach (($activitiesByShift->get($s->id) ?? []) as $a) {
+                $add($a->start_at->getTimestamp());
+                $add($a->end_at->getTimestamp());
             }
         }
         $points = array_values(array_unique($points));
@@ -196,7 +236,6 @@ class CoverageReadModel
         return $segments;
     }
 
-    /** L'employé est-il en pause (fenêtre déclarée du shift) pendant ce segment ? */
     private static function onBreak(Shift $s, Carbon $segStart, Carbon $segEnd): bool
     {
         $windows = $s->template_snapshot['break_windows'] ?? null;
@@ -212,7 +251,6 @@ class CoverageReadModel
             if ($bEnd->lte($bStart)) {
                 $bEnd->addDay();
             }
-            // segment entièrement dans la pause → non présent
             if ($segStart->gte($bStart) && $segEnd->lte($bEnd)) {
                 return true;
             }

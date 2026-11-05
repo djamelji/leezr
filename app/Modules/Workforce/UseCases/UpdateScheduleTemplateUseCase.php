@@ -49,7 +49,7 @@ class UpdateScheduleTemplateUseCase
 
         $template->fill(collect($data)->only([
             'name', 'code', 'start_time', 'end_time', 'break_duration_minutes',
-            'color', 'icon', 'activity_type', 'work_location_id', 'department_id',
+            'color', 'icon', 'activity_type', 'coverage_category_id', 'work_location_id', 'department_id',
             'enabled', 'sort_order', 'metadata',
         ])->toArray());
 

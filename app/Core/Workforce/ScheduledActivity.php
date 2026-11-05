@@ -38,6 +38,7 @@ class ScheduledActivity extends Model
         'schedule_template_id',
         'work_location_id',
         'activity_type',
+        'coverage_category_id',
         'label',
         'start_at',
         'end_at',

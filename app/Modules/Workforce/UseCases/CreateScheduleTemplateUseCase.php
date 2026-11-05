@@ -21,6 +21,7 @@ class CreateScheduleTemplateUseCase
         ?string $icon = null,
         ?string $activityType = null,
         ?int $departmentId = null,
+        ?int $coverageCategoryId = null,
     ): ScheduleTemplate {
         $exists = ScheduleTemplate::withoutGlobalScopes()
             ->where('company_id', $companyId)
@@ -63,6 +64,7 @@ class CreateScheduleTemplateUseCase
             'color' => $color,
             'icon' => $icon,
             'activity_type' => $activityType,
+            'coverage_category_id' => $coverageCategoryId,
             'work_location_id' => $workLocationId,
             'department_id' => $departmentId,
         ]);

@@ -10,6 +10,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     _locations: [],
     _allLocations: [],
     _coverage: [],
+    _coverageCategories: [],
     _statistics: null,
     _loading: false,
   }),
@@ -22,6 +23,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     locations: state => state._locations,
     allLocations: state => state._allLocations,
     coverage: state => state._coverage,
+    coverageCategories: state => state._coverageCategories,
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -225,6 +227,32 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     async deleteCoverage(id) {
       await $api(`/workforce/planning/coverage/${id}`, { method: 'DELETE' })
       this._coverage = this._coverage.filter(c => c.id !== id)
+    },
+
+    async replicateCoverage(requirementId, days) {
+      return await $api('/workforce/planning/coverage/replicate', { method: 'POST', body: { requirement_id: requirementId, days } })
+    },
+
+    // ── Coverage categories (catalogue) — Lot A ──
+    async fetchCoverageCategories() {
+      const data = await $api('/workforce/planning/coverage-categories')
+      this._coverageCategories = data.data ?? data
+      return this._coverageCategories
+    },
+    async createCoverageCategory(payload) {
+      const data = await $api('/workforce/planning/coverage-categories', { method: 'POST', body: payload })
+      this._coverageCategories.push(data)
+      return data
+    },
+    async updateCoverageCategory(id, payload) {
+      const data = await $api(`/workforce/planning/coverage-categories/${id}`, { method: 'PUT', body: payload })
+      const idx = this._coverageCategories.findIndex(c => c.id === id)
+      if (idx !== -1) this._coverageCategories[idx] = data
+      return data
+    },
+    async deleteCoverageCategory(id) {
+      await $api(`/workforce/planning/coverage-categories/${id}`, { method: 'DELETE' })
+      this._coverageCategories = this._coverageCategories.filter(c => c.id !== id)
     },
 
     // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──

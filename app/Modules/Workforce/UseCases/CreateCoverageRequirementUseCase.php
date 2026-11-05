@@ -30,6 +30,7 @@ class CreateCoverageRequirementUseCase
             'department_id' => $data['department_id'] ?? null,
             'work_location_id' => $data['work_location_id'] ?? null,
             'activity_type' => $data['activity_type'] ?? null,
+            'coverage_category_id' => $data['coverage_category_id'] ?? null,
             'headcount' => $data['headcount'] ?? 1,
             'priority' => $data['priority'] ?? 'normal',
             'source' => $data['source'] ?? 'manual',

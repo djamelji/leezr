@@ -56,6 +56,7 @@ class CreateScheduledActivityUseCase
                 'schedule_template_id' => $data['schedule_template_id'] ?? null,
                 'work_location_id' => $locationId,
                 'activity_type' => $data['activity_type'] ?? null,
+                'coverage_category_id' => $data['coverage_category_id'] ?? null,
                 'label' => $data['label'] ?? null,
                 'start_at' => $startAt,
                 'end_at' => $endAt,

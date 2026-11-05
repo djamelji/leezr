@@ -7625,8 +7625,21 @@
         "startTime": "Début",
         "endTime": "Fin",
         "department": "Département",
-        "priority": "Priorité"
-      }
+        "priority": "Priorité",
+        "category": "Catégorie de couverture",
+        "categoryHint": "Qualifie à quel besoin ce besoin correspond",
+        "catName": "Nom de catégorie",
+        "catCode": "Code"
+      },
+      "anyPresence": "Présence (toutes catégories)",
+      "replicateWeekdays": "Répliquer lun→ven",
+      "editHint": "Cliquer pour modifier le besoin",
+      "addHere": "Ajouter un besoin ici",
+      "replicated": "{n} besoin(s) répliqué(s)",
+      "categories": "Catégories de couverture",
+      "noCategory": "Aucune catégorie — ajoutez-en une pour qualifier la couverture.",
+      "categoryCreated": "Catégorie créée",
+      "categoryDeleted": "Catégorie supprimée"
     },
     "stats": {
       "totalShifts": "Shifts au total",
@@ -7695,7 +7708,8 @@
         "breakDurationHint": "Durée de pause en minutes (déduite du temps travaillé).",
         "location": "Lieu par défaut",
         "department": "Département",
-        "departmentHint": "Laisser vide pour un modèle disponible dans toute l'entreprise."
+        "departmentHint": "Laisser vide pour un modèle disponible dans toute l'entreprise.",
+        "categoryHint": "Catégorie de couverture à laquelle ce modèle contribue"
       }
     },
     "locations": {
