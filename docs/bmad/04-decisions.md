@@ -26468,5 +26468,5 @@ Boutons **Annuler / Rétablir** dans la barre (désactivés si pile vide, libell
   - **Critère atteint** : une nouvelle Company ouvre Workforce, **importe des modèles adaptés à son activité**, les personnalise et démarre son premier planning **sans configuration technique complexe**.
   - **Limitations restantes** : favoris = modèles/tâches/semaines (pas les shifts individuels) ; import côté Platform configurable via le registry (`workforcePresetsFor`), un 2e JobDomain riche reste à peupler ; e2e UI = A/C/D/F (B/E = PHPUnit) ; **dette M4 ci-dessus non résolue** (hors périmètre §14).
   - **M6 NON engagé.**
-- **Build DEV** : `2b222ff`.
+- **Build DEV** : `69d84ae`.
 - **Portée** : DEV + `origin/dev`. Migration **non destructive** (nouvelle table `workforce_favorites`). Aucun changement `main`/PROD, Billing, Payroll, Signature. `RepeatWeekTemplateUseCase` **inchangé** (§14).
