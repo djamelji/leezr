@@ -141,6 +141,64 @@ class WeekTemplateController extends Controller
         }
     }
 
+    /** M4 (ADR-727) — prévisualisation d'une RÉPÉTITION multi-semaines (cumulative, dry-run). */
+    public function repeatPreview(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'first_week_date' => 'required|date',
+            'horizon' => 'required|in:'.implode(',', \App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::HORIZONS),
+            'assignments' => 'nullable|array',
+            'assignments.*.week_index' => 'required|integer|min:0',
+            'assignments.*.line_id' => 'required|integer',
+            'assignments.*.employee_id' => 'required|integer',
+        ]);
+        try {
+            return response()->json(app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->preview(
+                $request->attributes->get('company_id'), $id, $validated['first_week_date'], $validated['horizon'],
+                $validated['assignments'] ?? [], $this->planningScope($request), $request->user()?->id,
+            ));
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** M4 (ADR-727) — application ATOMIQUE GLOBALE d'une répétition ; UNE opération réversible. */
+    public function repeatApply(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'first_week_date' => 'required|date',
+            'horizon' => 'required|in:'.implode(',', \App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::HORIZONS),
+            'assignments' => 'nullable|array',
+            'assignments.*.week_index' => 'required|integer|min:0',
+            'assignments.*.line_id' => 'required|integer',
+            'assignments.*.employee_id' => 'required|integer',
+            'overstaffing_ack' => 'nullable|string',
+            'overstaffing_reason' => 'nullable|string|max:500',
+        ]);
+        try {
+            $companyId = $request->attributes->get('company_id');
+            $result = app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->commit(
+                $companyId, $id, $validated['first_week_date'], $validated['horizon'],
+                $validated['assignments'] ?? [], $this->planningScope($request),
+                $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, $request->user()?->id,
+            );
+            // UNE intention utilisateur = UNE opération réversible (même si exécutée en plusieurs semaines).
+            if (! empty($result['created'])) {
+                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
+                    $companyId, $request->user()?->id, 'repeat_week_template', $result['created'],
+                    ['week_template_id' => $id, 'first_week_date' => $validated['first_week_date'], 'horizon' => $validated['horizon'], 'assignments' => $validated['assignments'] ?? []],
+                );
+                $result['operation_id'] = $op->id;
+            }
+
+            return response()->json($result, 201);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
     /** Capture une semaine existante en semaine type NOMINATIVE (références figées : jour, modèle, salarié). */
     public function capture(Request $request): JsonResponse
     {

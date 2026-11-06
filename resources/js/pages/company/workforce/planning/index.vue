@@ -1993,6 +1993,7 @@ const applyResult = ref(null)
 const applyLoading = ref(false)
 const openWeekApply = async w => {
   weekApplyTarget.value = w; applyTargetDate.value = weekDateIso.value; applyPreview.value = null; applyAssignments.value = {}; applyResult.value = null
+  repeatMode.value = false; repeatPreviewData.value = null; repeatResult.value = null; repeatAssignMap.value = {}; repeatHorizon.value = '4'
   weekApplyOpen.value = true
   await Promise.all([store.fetchTemplates({ all: true }), employeesStore.fetchEmployees?.()])
 }
@@ -2013,6 +2014,44 @@ const runWeekApply = async () => {
   } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
 }
 const weekStatusColor = s => ({ applicable: 'success', blocked: 'error', to_confirm: 'warning', unfilled: 'warning' }[s] || 'default')
+
+// M4 (ADR-727) — Répétition multi-semaines
+const repeatMode = ref(false)
+const repeatHorizon = ref('4')
+const repeatPreviewData = ref(null)
+const repeatResult = ref(null)
+const repeatAssignMap = ref({}) // `${weekIndex}:${lineId}` -> [employee_id]
+const horizonItems = computed(() => [
+  { title: '1 ' + t('planning.week.weeksN'), value: '1' },
+  { title: '2 ' + t('planning.week.weeksN'), value: '2' },
+  { title: '4 ' + t('planning.week.weeksN'), value: '4' },
+  { title: '8 ' + t('planning.week.weeksN'), value: '8' },
+  { title: t('planning.week.eom'), value: 'eom' },
+])
+const repeatAssignments = () => {
+  const out = []
+  Object.entries(repeatAssignMap.value).forEach(([k, emps]) => {
+    const [wi, lid] = k.split(':')
+    ;(emps || []).filter(Boolean).forEach(eid => out.push({ week_index: Number(wi), line_id: Number(lid), employee_id: eid }))
+  })
+
+  return out
+}
+const runRepeatPreview = async () => {
+  applyLoading.value = true
+  try {
+    repeatPreviewData.value = await store.repeatPreviewWeekTemplate(weekApplyTarget.value.id, { first_week_date: applyTargetDate.value, horizon: repeatHorizon.value, assignments: repeatAssignments() })
+    repeatResult.value = null
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
+}
+const runRepeatApply = async () => {
+  applyLoading.value = true
+  try {
+    repeatResult.value = await store.repeatApplyWeekTemplate(weekApplyTarget.value.id, { first_week_date: applyTargetDate.value, horizon: repeatHorizon.value, assignments: repeatAssignments() })
+    toast(t('planning.week.applied', { n: repeatResult.value.created_count }), 'success')
+    await fetchWeekData()
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
+}
 
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
 
@@ -4611,14 +4650,109 @@ watch(activeTab, tab => {
           </VBtn>
         </VCardTitle>
         <VCardText>
-          <div class="d-flex gap-2 align-end mb-3">
-            <AppTextField v-model="applyTargetDate" :label="$t('planning.week.targetWeek')" type="date" density="compact" hide-details data-test="week-target-date" style="max-inline-size: 200px;" />
-            <VBtn color="primary" :loading="applyLoading" data-test="week-preview-btn" @click="runWeekPreview">
+          <div class="d-flex gap-2 align-end flex-wrap mb-2">
+            <AppTextField v-model="applyTargetDate" :label="$t('planning.week.targetWeek')" type="date" density="compact" hide-details data-test="week-target-date" style="max-inline-size: 190px;" />
+            <AppSelect v-if="repeatMode" v-model="repeatHorizon" :items="horizonItems" :label="$t('planning.week.horizon')" density="compact" hide-details data-test="week-repeat-horizon" style="max-inline-size: 190px;" />
+            <VBtn v-if="!repeatMode" color="primary" :loading="applyLoading" data-test="week-preview-btn" @click="runWeekPreview">
+              {{ $t('planning.week.preview') }}
+            </VBtn>
+            <VBtn v-else color="primary" :loading="applyLoading" data-test="week-repeat-preview-btn" @click="runRepeatPreview">
               {{ $t('planning.week.preview') }}
             </VBtn>
           </div>
+          <VBtn
+            :variant="repeatMode ? 'flat' : 'outlined'"
+            :color="repeatMode ? 'primary' : undefined"
+            size="small"
+            prepend-icon="tabler-calendar-repeat"
+            class="mb-3"
+            data-test="week-repeat-toggle"
+            @click="repeatMode = !repeatMode"
+          >
+            {{ $t('planning.week.repeat') }}
+          </VBtn>
+          <p v-if="repeatMode" class="text-caption text-disabled mb-3">
+            {{ $t('planning.week.eomHint') }}
+          </p>
 
-          <template v-if="applyPreview">
+          <!-- M4 — Répétition multi-semaines -->
+          <template v-if="repeatMode && repeatPreviewData">
+            <div class="d-flex gap-2 flex-wrap mb-3" data-test="week-repeat-summary">
+              <VChip size="small" color="primary" variant="tonal">
+                {{ repeatPreviewData.global.weeks }} {{ $t('planning.week.weeksN') }}
+              </VChip>
+              <VChip size="small" color="success" variant="tonal">
+                {{ repeatPreviewData.global.applicable }} {{ $t('planning.week.st.applicable') }}
+              </VChip>
+              <VChip v-if="repeatPreviewData.global.to_confirm" size="small" color="warning" variant="tonal">
+                {{ repeatPreviewData.global.to_confirm }} {{ $t('planning.week.st.toConfirm') }}
+              </VChip>
+              <VChip v-if="repeatPreviewData.global.blocked" size="small" color="error" variant="tonal">
+                {{ repeatPreviewData.global.blocked }} {{ $t('planning.week.st.blocked') }}
+              </VChip>
+            </div>
+            <VExpansionPanels variant="accordion" class="mb-3">
+              <VExpansionPanel
+                v-for="(wk, wi) in repeatPreviewData.weeks"
+                :key="'rw' + wi"
+                data-test="week-repeat-week"
+              >
+                <VExpansionPanelTitle>
+                  {{ $t('planning.week.weekN', { n: wi + 1 }) }} · {{ wk.week_start }}
+                  <VSpacer />
+                  <VChip size="x-small" color="success" variant="tonal" class="me-1">
+                    {{ wk.summary.applicable }}
+                  </VChip>
+                  <VChip v-if="wk.summary.blocked" size="x-small" color="error" variant="tonal">
+                    {{ wk.summary.blocked }}
+                  </VChip>
+                </VExpansionPanelTitle>
+                <VExpansionPanelText>
+                  <div
+                    v-for="(n, ni) in wk.nominative"
+                    :key="'rn' + ni"
+                    class="d-flex align-center gap-2 py-1 text-caption border-b"
+                  >
+                    <span style="min-inline-size: 90px;">{{ n.date }}</span>
+                    <span class="flex-grow-1">{{ (employeesStore.employees.find(e => e.id === n.employee_id) || {}).first_name || '—' }} · {{ n.template_name }}</span>
+                    <VChip size="x-small" :color="weekStatusColor(n.status)" variant="tonal">
+                      {{ n.status === 'applicable' ? (n.warning === 'pending_leave' ? $t('planning.week.pending') : $t('planning.week.st.applicable')) : $t('planning.week.reason.' + (n.reason || 'blocked')) }}
+                    </VChip>
+                  </div>
+                  <div
+                    v-for="(nd, ndi) in wk.needs"
+                    :key="'rnd' + ndi"
+                    class="py-2 border-b"
+                  >
+                    <div class="text-caption mb-1">
+                      {{ nd.date }} · {{ nd.template_name }} · {{ $t('planning.week.toFill', { n: nd.headcount }) }}
+                    </div>
+                    <AppSelect
+                      v-model="repeatAssignMap[wi + ':' + nd.line_id]"
+                      :items="nd.candidates.map(c => ({ title: c.name, value: c.employee_id }))"
+                      :label="$t('planning.week.assign')"
+                      :placeholder="nd.candidates.length ? '' : $t('planning.week.noCandidate')"
+                      multiple
+                      chips
+                      density="compact"
+                      hide-details
+                      :data-test="`week-repeat-assign-${wi}-${nd.line_id}`"
+                    />
+                  </div>
+                </VExpansionPanelText>
+              </VExpansionPanel>
+            </VExpansionPanels>
+            <div class="d-flex justify-end">
+              <VBtn color="primary" :loading="applyLoading" data-test="week-repeat-apply-btn" @click="runRepeatApply">
+                {{ $t('planning.week.applyDrafts') }}
+              </VBtn>
+            </div>
+            <VAlert v-if="repeatResult" type="success" variant="tonal" class="mt-4" data-test="week-repeat-result">
+              {{ $t('planning.week.result', { created: repeatResult.created_count, unfilled: repeatResult.unfilled, blocked: (repeatResult.blocked || []).length }) }}
+            </VAlert>
+          </template>
+
+          <template v-if="!repeatMode && applyPreview">
             <div class="d-flex gap-2 flex-wrap mb-3" data-test="week-preview-summary">
               <VChip size="small" color="success" variant="tonal">
                 {{ applyPreview.summary.applicable }} {{ $t('planning.week.st.applicable') }}

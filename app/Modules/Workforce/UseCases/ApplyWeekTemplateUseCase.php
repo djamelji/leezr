@@ -44,6 +44,7 @@ class ApplyWeekTemplateUseCase
     public const BLOCK_ABSENT = 'absent';
     public const BLOCK_OVERLAP = 'overlap';
     public const BLOCK_REGULATORY = 'regulatory';
+    public const BLOCK_CONTRACT_EXPIRED = 'contract_expired';
 
     /** Premier jour de la semaine CONTENANT $anyDate, selon le premier jour de semaine Company (jamais lundi en dur). */
     public function resolveWeekStart(Company $company, string $anyDate): Carbon
@@ -120,11 +121,13 @@ class ApplyWeekTemplateUseCase
      * Commit atomique. $assignments = [['line_id'=>int,'employee_id'=>int], ...] pour les lignes « besoins »
      * confirmées par le manager (plusieurs par ligne, dans la limite du headcount). Nominatif = auto.
      */
-    public function commit(int $companyId, int $weekTemplateId, string $targetDate, array $assignments, ?array $visibleIds, ?string $ack, ?string $reason, ?int $actorId): array
+    public function commit(int $companyId, int $weekTemplateId, string $targetDate, array $assignments, ?array $visibleIds, ?string $ack, ?string $reason, ?int $actorId, bool $skipOverstaffing = false, bool $materialize = true, bool $detailed = false): array
     {
         [$company, $wt, $weekStart, $lines] = $this->context($companyId, $weekTemplateId, $targetDate);
 
-        return DB::transaction(function () use ($companyId, $wt, $weekStart, $lines, $assignments, $visibleIds, $ack, $reason, $actorId, $weekTemplateId, $targetDate) {
+        return DB::transaction(function () use ($companyId, $wt, $weekStart, $lines, $assignments, $visibleIds, $ack, $reason, $actorId, $weekTemplateId, $targetDate, $skipOverstaffing, $materialize, $detailed) {
+            $detNom = [];
+            $detNeeds = [];
             // Map assignments par ligne (ordre préservé, limité au headcount).
             $byLine = [];
             foreach ($assignments as $a) {
@@ -147,10 +150,23 @@ class ApplyWeekTemplateUseCase
                 if (! $tpl) {
                     $blocked[] = ['line_id' => $ln->id, 'date' => $date, 'reason' => self::BLOCK_INVALID_TEMPLATE];
                     $unfilled += $ln->kind === 'needs' ? (int) $ln->headcount : 1;
+                    if ($detailed) {
+                        $base = ['line_id' => $ln->id, 'day_index' => $ln->day_index, 'date' => $date, 'status' => 'blocked', 'reason' => self::BLOCK_INVALID_TEMPLATE, 'warning' => null];
+                        $ln->kind === 'needs' ? $detNeeds[] = $base + ['kind' => 'needs', 'headcount' => (int) $ln->headcount, 'candidates' => []] : $detNom[] = $base + ['kind' => 'nominative', 'employee_id' => $ln->employee_id];
+                    }
 
                     continue;
                 }
                 [$s, $e] = $this->hours($tpl, $date);
+
+                if ($detailed && $ln->kind === 'needs') {
+                    $detNeeds[] = [
+                        'line_id' => $ln->id, 'kind' => 'needs', 'day_index' => $ln->day_index, 'date' => $date,
+                        'headcount' => (int) $ln->headcount, 'template_name' => $tpl->name,
+                        'coverage_category_id' => $tpl->coverage_category_id,
+                        'candidates' => $this->candidates($companyId, $date, $s, $e, $tpl, $ln, $visibleIds, $busy),
+                    ];
+                }
 
                 $targets = $ln->kind === 'nominative'
                     ? [(int) $ln->employee_id]
@@ -159,6 +175,13 @@ class ApplyWeekTemplateUseCase
                 $placed = 0;
                 foreach ($targets as $empId) {
                     $c = $this->classify($companyId, $empId, $date, $s, $e, $tpl, $visibleIds, $busy);
+                    if ($detailed && $ln->kind === 'nominative') {
+                        $detNom[] = [
+                            'line_id' => $ln->id, 'kind' => 'nominative', 'day_index' => $ln->day_index, 'date' => $date,
+                            'employee_id' => $empId, 'template_name' => $tpl->name,
+                            'status' => $c['status'], 'reason' => $c['reason'], 'warning' => $c['warning'],
+                        ];
+                    }
                     if ($c['status'] !== 'applicable') {
                         $blocked[] = ['line_id' => $ln->id, 'date' => $date, 'employee_id' => $empId, 'reason' => $c['reason']];
 
@@ -179,26 +202,30 @@ class ApplyWeekTemplateUseCase
             }
 
             // SUREFFECTIF CUMULATIF (revalidé au commit) — confirmation serveur selon politique.
-            $eval = app(OverstaffingEvaluator::class)->evaluateMany($companyId, $prospects);
-            if ($eval['overstaffed']) {
-                $policy = app(OverstaffingPolicy::class);
-                $mode = $policy->mode($companyId);
-                if ($policy->requiresConfirmation($mode)) {
-                    $needsReason = $policy->requiresReason($mode);
-                    if (! ($ack !== null && hash_equals($eval['signature'], $ack)) || ($needsReason && trim((string) $reason) === '')) {
-                        throw new OverstaffingConfirmationRequired($eval['impacts'], $eval['signature'], $mode, $needsReason);
+            // $skipOverstaffing : délégué à l'appelant (M4 évalue le sureffectif CUMULÉ sur toutes les semaines).
+            if (! $skipOverstaffing) {
+                $eval = app(OverstaffingEvaluator::class)->evaluateMany($companyId, $prospects);
+                if ($eval['overstaffed']) {
+                    $policy = app(OverstaffingPolicy::class);
+                    $mode = $policy->mode($companyId);
+                    if ($policy->requiresConfirmation($mode)) {
+                        $needsReason = $policy->requiresReason($mode);
+                        if (! ($ack !== null && hash_equals($eval['signature'], $ack)) || ($needsReason && trim((string) $reason) === '')) {
+                            throw new OverstaffingConfirmationRequired($eval['impacts'], $eval['signature'], $mode, $needsReason);
+                        }
                     }
                 }
             }
 
-            // Création TOUT-OU-RIEN (toute exception annule tout le lot). Matérialise activités+pauses (M1).
+            // Création TOUT-OU-RIEN (toute exception annule tout le lot). Matérialise activités+pauses (M1)
+            // sauf en dry-run de prévisualisation ($materialize=false) où les activités ne changent aucun contrôle.
             $created = [];
             foreach ($toCreate as [$empId, $date, $s, $e, $tpl]) {
                 $created[] = app(CreateShiftUseCase::class)->execute(
                     companyId: $companyId, employeeId: $empId, date: $date,
                     startAt: $s->toDateTimeString(), endAt: $e->toDateTimeString(), timezone: 'Europe/Paris',
                     scheduleTemplateId: $tpl->id, workLocationId: $tpl->work_location_id,
-                    skipOverstaffing: true, materializeComposition: true,
+                    skipOverstaffing: true, materializeComposition: $materialize,
                 )->id;
             }
 
@@ -206,7 +233,8 @@ class ApplyWeekTemplateUseCase
             // commit (comme bulk_template) — pas ici, afin que le REDO (qui rappelle commit) ne double pas l'op.
             return [
                 'created' => $created, 'created_count' => count($created),
-                'unfilled' => $unfilled, 'blocked' => $blocked,
+                'unfilled' => $unfilled, 'blocked' => $blocked, 'prospects' => $prospects,
+                'nominative' => $detNom, 'needs' => $detNeeds,
             ];
         });
     }
@@ -263,6 +291,12 @@ class ApplyWeekTemplateUseCase
         $contract = $employee->currentContract;
         if (! $contract || $contract->status !== EmploymentContract::STATUS_ACTIVE) {
             return ['status' => 'blocked', 'reason' => self::BLOCK_NO_CONTRACT, 'warning' => null];
+        }
+        // M4 (ADR-727) — validité du contrat À LA DATE du shift (contrat expirant entre deux semaines).
+        $d = Carbon::parse($date);
+        if (($contract->start_date && Carbon::parse($contract->start_date)->gt($d))
+            || ($contract->end_date && Carbon::parse($contract->end_date)->lt($d))) {
+            return ['status' => 'blocked', 'reason' => self::BLOCK_CONTRACT_EXPIRED, 'warning' => null];
         }
         $absent = LeaveRequest::withoutGlobalScopes()
             ->where('company_id', $companyId)->where('employee_id', $employeeId)

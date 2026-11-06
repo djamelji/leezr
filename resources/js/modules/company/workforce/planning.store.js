@@ -363,6 +363,12 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     async applyWeekTemplate(id, payload) {
       return await $api(`/workforce/planning/week-templates/${id}/apply`, { method: 'POST', body: payload })
     },
+    async repeatPreviewWeekTemplate(id, payload) {
+      return await $api(`/workforce/planning/week-templates/${id}/repeat-preview`, { method: 'POST', body: payload })
+    },
+    async repeatApplyWeekTemplate(id, payload) {
+      return await $api(`/workforce/planning/week-templates/${id}/repeat-apply`, { method: 'POST', body: payload })
+    },
 
     // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──
     async fetchActivities({ shiftId, employeeId, date } = {}) {

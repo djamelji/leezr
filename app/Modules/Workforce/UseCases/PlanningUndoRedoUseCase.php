@@ -167,6 +167,8 @@ class PlanningUndoRedoUseCase
             'bulk_template' => app(BulkApplyTemplateUseCase::class)->commit($companyId, $i['schedule_template_id'], $i['cells'], null, $ack, $reason, $op->user_id)['created'],
             // M3 (ADR-726) — réexécute l'application de la semaine type avec les contrôles actuels.
             'apply_week_template' => app(ApplyWeekTemplateUseCase::class)->commit($companyId, $i['week_template_id'], $i['target_date'], $i['assignments'] ?? [], null, $ack, $reason, $op->user_id)['created'],
+            // M4 (ADR-727) — réexécute la répétition multi-semaines (contrôles actuels, idempotent).
+            'repeat_week_template' => app(RepeatWeekTemplateUseCase::class)->commit($companyId, $i['week_template_id'], $i['first_week_date'], $i['horizon'], $i['assignments'] ?? [], null, $ack, $reason, $op->user_id)['created'],
             default => throw new \DomainException('Redo not supported for type '.$op->type),
         };
     }

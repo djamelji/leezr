@@ -588,6 +588,8 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::post('week-templates/capture', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'capture'])->middleware($perm('workforce.planning_manage'));
     Route::post('week-templates/{id}/preview', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'preview'])->middleware($perm('workforce.planning_view'));
     Route::post('week-templates/{id}/apply', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'apply'])->middleware($perm('workforce.planning_manage'));
+    Route::post('week-templates/{id}/repeat-preview', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'repeatPreview'])->middleware($perm('workforce.planning_view')); // M4 (ADR-727)
+    Route::post('week-templates/{id}/repeat-apply', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'repeatApply'])->middleware($perm('workforce.planning_manage'));
     Route::put('week-templates/{id}', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('week-templates/{id}', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
