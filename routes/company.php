@@ -576,6 +576,12 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::put('coverage-categories/{id}', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'update'])->middleware($perm('workforce.coverage_manage'));
     Route::delete('coverage-categories/{id}', [\App\Modules\Workforce\Planning\Http\CoverageCategoryController::class, 'destroy'])->middleware($perm('workforce.coverage_manage'));
 
+    // Activity presets (catalogue de tâches types) — Smart Planning M2 (ADR-725). Lecture planning_view, écriture planning_manage.
+    Route::get('activity-presets', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('activity-presets', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'store'])->middleware($perm('workforce.planning_manage'));
+    Route::put('activity-presets/{id}', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'update'])->middleware($perm('workforce.planning_manage'));
+    Route::delete('activity-presets/{id}', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
+
     // Coverage requirements (besoins de personnel) — Smart Planning SP1a
     Route::get('coverage', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('coverage/replicate', [\App\Modules\Workforce\Planning\Http\CoverageRequirementController::class, 'replicate'])->middleware($perm('workforce.coverage_manage'));

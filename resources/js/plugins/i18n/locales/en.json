@@ -7743,6 +7743,24 @@
         "issueBreakBounds": "A break exceeds the shift hours."
       }
     },
+    "presets": {
+      "title": "Task presets",
+      "use": "Use a task preset",
+      "new": "New task preset",
+      "edit": "Edit task preset",
+      "list": "Library",
+      "empty": "No task preset",
+      "enabled": "Active",
+      "search": "Search a task preset",
+      "created": "Task preset created",
+      "updated": "Task preset updated",
+      "deleted": "Task preset deleted",
+      "fields": {
+        "name": "Name",
+        "type": "Activity type",
+        "duration": "Duration (min)"
+      }
+    },
     "locations": {
       "newLocation": "New location",
       "editLocation": "Edit location",

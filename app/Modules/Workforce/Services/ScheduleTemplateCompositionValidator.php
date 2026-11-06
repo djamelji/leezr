@@ -68,6 +68,9 @@ class ScheduleTemplateCompositionValidator
             }
             $activities[] = [
                 'id' => isset($a['id']) && $a['id'] !== '' ? (string) $a['id'] : 'a'.(++$i),
+                // M2 (ADR-725) — provenance FACULTATIVE vers un ActivityPreset. Les valeurs métier ci-dessous
+                // sont COPIÉES par valeur (autonomes) : modifier/supprimer le preset n'altère jamais la composition.
+                'preset_id' => isset($a['preset_id']) && $a['preset_id'] !== null ? (int) $a['preset_id'] : null,
                 'label' => isset($a['label']) ? (string) $a['label'] : null,
                 'activity_type' => isset($a['activity_type']) ? (string) $a['activity_type'] : null,
                 'coverage_category_id' => isset($a['coverage_category_id']) && $a['coverage_category_id'] !== null ? (int) $a['coverage_category_id'] : null,

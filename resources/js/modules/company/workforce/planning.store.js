@@ -11,6 +11,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     _allLocations: [],
     _coverage: [],
     _coverageCategories: [],
+    _activityPresets: [],
     _statistics: null,
     _loading: false,
   }),
@@ -24,6 +25,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     allLocations: state => state._allLocations,
     coverage: state => state._coverage,
     coverageCategories: state => state._coverageCategories,
+    activityPresets: state => state._activityPresets,
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -303,6 +305,28 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     async deleteCoverageCategory(id) {
       await $api(`/workforce/planning/coverage-categories/${id}`, { method: 'DELETE' })
       this._coverageCategories = this._coverageCategories.filter(c => c.id !== id)
+    },
+
+    // ── Activity presets (catalogue de tâches types) — M2 (ADR-725) ──
+    async fetchActivityPresets() {
+      const data = await $api('/workforce/planning/activity-presets')
+      this._activityPresets = data.data ?? data
+      return this._activityPresets
+    },
+    async createActivityPreset(payload) {
+      const data = await $api('/workforce/planning/activity-presets', { method: 'POST', body: payload })
+      this._activityPresets.push(data)
+      return data
+    },
+    async updateActivityPreset(id, payload) {
+      const data = await $api(`/workforce/planning/activity-presets/${id}`, { method: 'PUT', body: payload })
+      const idx = this._activityPresets.findIndex(p => p.id === id)
+      if (idx !== -1) this._activityPresets[idx] = data
+      return data
+    },
+    async deleteActivityPreset(id) {
+      await $api(`/workforce/planning/activity-presets/${id}`, { method: 'DELETE' })
+      this._activityPresets = this._activityPresets.filter(p => p.id !== id)
     },
 
     // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──

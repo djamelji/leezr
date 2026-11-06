@@ -1838,7 +1838,7 @@ const compositionIssues = computed(() => {
   for (const a of acts) for (const b of brks) if (ov(a, b)) issues.push(t('planning.templates.composition.issueBreakOverlap', { label: a.label || '—' }))
   return [...new Set(issues)]
 })
-const addCompositionActivity = () => compositionActivities.value.push({ label: '', activity_type: '', start: _hhmm(templateFormData.value.start_time), end: '' })
+const addCompositionActivity = () => compositionActivities.value.push({ label: '', activity_type: '', coverage_category_id: null, preset_id: null, color: null, start: _hhmm(templateFormData.value.start_time), end: '' })
 const removeCompositionActivity = i => compositionActivities.value.splice(i, 1)
 const addCompositionBreak = () => compositionBreaks.value.push({ start: '', end: '' })
 const removeCompositionBreak = i => compositionBreaks.value.splice(i, 1)
@@ -1849,7 +1849,7 @@ const buildComposition = () => {
   const s0 = _toMin(templateFormData.value.start_time)
   return {
     schema_version: 1,
-    activities: acts.map(a => ({ label: a.label || null, activity_type: a.activity_type || null, offset_minutes: _offset(s0, a.start), duration_minutes: _dur(a.start, a.end) })),
+    activities: acts.map(a => ({ preset_id: a.preset_id ?? null, label: a.label || null, activity_type: a.activity_type || null, coverage_category_id: a.coverage_category_id ?? null, offset_minutes: _offset(s0, a.start), duration_minutes: _dur(a.start, a.end) })),
     breaks: brks.map(b => ({ offset_minutes: _offset(s0, b.start), duration_minutes: _dur(b.start, b.end) })),
   }
 }
@@ -1862,12 +1862,60 @@ const loadComposition = tpl => {
   const s0 = _toMin(tpl.start_time)
   compositionActivities.value = (comp.activities || []).map(a => ({
     label: a.label || '', activity_type: a.activity_type || '',
+    coverage_category_id: a.coverage_category_id ?? null, preset_id: a.preset_id ?? null, color: null,
     start: _fromMin(s0 + (a.offset_minutes || 0)), end: _fromMin(s0 + (a.offset_minutes || 0) + (a.duration_minutes || 0)),
   }))
   compositionBreaks.value = (comp.breaks || []).map(b => ({
     start: _fromMin(s0 + (b.offset_minutes || 0)), end: _fromMin(s0 + (b.offset_minutes || 0) + (b.duration_minutes || 0)),
   }))
   if (compositionActivities.value.length || compositionBreaks.value.length) showComposition.value = true
+}
+
+// ── M2 (ADR-725) — Catalogue de tâches types (ActivityPreset) ──
+const emptyPreset = () => ({ id: null, name: '', activity_type: '', default_duration_minutes: null, coverage_category_id: null, color: '#4b4bd6', enabled: true })
+const presetLibraryOpen = ref(false)
+const presetForm = ref(emptyPreset())
+const presetFormLoading = ref(false)
+const openPresetLibrary = async () => { presetForm.value = emptyPreset(); presetLibraryOpen.value = true; await store.fetchActivityPresets() }
+const editPreset = p => { presetForm.value = { id: p.id, name: p.name || '', activity_type: p.activity_type || '', default_duration_minutes: p.default_duration_minutes ?? null, coverage_category_id: p.coverage_category_id ?? null, color: p.color || '#4b4bd6', enabled: p.enabled !== false } }
+const savePreset = async () => {
+  if (!presetForm.value.name) { toast(t('validation.required'), 'error'); return }
+  presetFormLoading.value = true
+  try {
+    const body = {
+      name: presetForm.value.name,
+      activity_type: presetForm.value.activity_type || null,
+      default_duration_minutes: presetForm.value.default_duration_minutes || null,
+      coverage_category_id: presetForm.value.coverage_category_id || null,
+      color: presetForm.value.color || null,
+      enabled: presetForm.value.enabled,
+    }
+    if (presetForm.value.id) { await store.updateActivityPreset(presetForm.value.id, body); toast(t('planning.presets.updated'), 'success') }
+    else { await store.createActivityPreset(body); toast(t('planning.presets.created'), 'success') }
+    presetForm.value = emptyPreset()
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { presetFormLoading.value = false }
+}
+const togglePreset = async p => { try { await store.updateActivityPreset(p.id, { enabled: !p.enabled }) } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } }
+const removePreset = async p => { try { await store.deleteActivityPreset(p.id); toast(t('planning.presets.deleted'), 'success') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } }
+
+// Sélecteur « Utiliser une tâche type » (chargement à la demande — perf).
+const presetPickerOpen = ref(false)
+const presetSearch = ref('')
+const openPresetPicker = async () => { presetSearch.value = ''; presetPickerOpen.value = true; await store.fetchActivityPresets() }
+const filteredPresets = computed(() => {
+  const q = presetSearch.value.toLowerCase()
+  return store.activityPresets.filter(p => p.enabled !== false && (!q || (p.name || '').toLowerCase().includes(q) || (p.activity_type || '').toLowerCase().includes(q)))
+})
+const insertPreset = p => {
+  const s0 = _toMin(templateFormData.value.start_time)
+  const end = p.default_duration_minutes ? _fromMin(s0 + Number(p.default_duration_minutes)) : ''
+  // COPIE PAR VALEUR des propriétés métier + provenance (preset_id). L'occurrence reste éditable.
+  compositionActivities.value.push({
+    label: p.name || '', activity_type: p.activity_type || '', coverage_category_id: p.coverage_category_id ?? null,
+    preset_id: p.id, color: p.color || null, start: _hhmm(templateFormData.value.start_time), end,
+  })
+  presetPickerOpen.value = false
+  showComposition.value = true
 }
 
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
@@ -2177,6 +2225,18 @@ watch(activeTab, tab => {
           @click="openCreateShift()"
         >
           {{ $t('planning.newShift') }}
+        </VBtn>
+        <VBtn
+          v-if="activeTab === 'templates'"
+          v-can="'workforce.planning_view'"
+          variant="tonal"
+          color="primary"
+          prepend-icon="tabler-bookmarks"
+          data-test="preset-library-open"
+          class="me-2"
+          @click="openPresetLibrary"
+        >
+          {{ $t('planning.presets.title') }}
         </VBtn>
         <VBtn
           v-if="activeTab === 'templates'"
@@ -3968,15 +4028,27 @@ watch(activeTab, tab => {
                     <VIcon icon="tabler-trash" size="16" />
                   </VBtn>
                 </div>
-                <VBtn
-                  variant="text"
-                  size="small"
-                  prepend-icon="tabler-plus"
-                  data-test="template-add-activity"
-                  @click="addCompositionActivity"
-                >
-                  {{ $t('planning.templates.composition.addActivity') }}
-                </VBtn>
+                <div class="d-flex flex-wrap gap-1">
+                  <VBtn
+                    variant="text"
+                    size="small"
+                    prepend-icon="tabler-plus"
+                    data-test="template-add-activity"
+                    @click="addCompositionActivity"
+                  >
+                    {{ $t('planning.templates.composition.addActivity') }}
+                  </VBtn>
+                  <VBtn
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    prepend-icon="tabler-bookmarks"
+                    data-test="template-use-preset"
+                    @click="openPresetPicker"
+                  >
+                    {{ $t('planning.presets.use') }}
+                  </VBtn>
+                </div>
               </VCol>
               <VCol cols="12">
                 <div class="text-caption text-medium-emphasis mb-1">
@@ -4126,6 +4198,183 @@ watch(activeTab, tab => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <!-- M2 (ADR-725) — Bibliothèque de tâches types (ActivityPreset) -->
+    <VNavigationDrawer
+      v-model="presetLibraryOpen"
+      class="wf-scroll-drawer"
+      temporary
+      location="end"
+      width="420"
+    >
+      <div class="d-flex align-center pa-4">
+        <h5 class="text-h5 flex-grow-1">
+          {{ $t('planning.presets.title') }}
+        </h5>
+        <VBtn icon variant="text" size="small" @click="presetLibraryOpen = false">
+          <VIcon icon="tabler-x" />
+        </VBtn>
+      </div>
+      <VDivider />
+      <div class="pa-4">
+        <div v-can="'workforce.planning_manage'">
+          <div class="text-body-2 font-weight-medium mb-2">
+            {{ presetForm.id ? $t('planning.presets.edit') : $t('planning.presets.new') }}
+          </div>
+          <AppTextField
+            v-model="presetForm.name"
+            :label="$t('planning.presets.fields.name')"
+            data-test="preset-name"
+            class="mb-2"
+          />
+          <div class="d-flex gap-2 mb-2">
+            <AppTextField
+              v-model="presetForm.activity_type"
+              :label="$t('planning.presets.fields.type')"
+              data-test="preset-type"
+            />
+            <AppTextField
+              v-model.number="presetForm.default_duration_minutes"
+              :label="$t('planning.presets.fields.duration')"
+              type="number"
+              min="1"
+              data-test="preset-duration"
+              style="max-inline-size: 130px;"
+            />
+          </div>
+          <AppSelect
+            v-model="presetForm.coverage_category_id"
+            :items="coverageCategoryItems"
+            :label="$t('planning.coverage.fields.category')"
+            clearable
+            class="mb-2"
+          />
+          <div class="d-flex align-center gap-3 mb-3">
+            <input v-model="presetForm.color" type="color" class="cov-color-input">
+            <VSwitch
+              v-model="presetForm.enabled"
+              :label="$t('planning.presets.enabled')"
+              density="compact"
+              hide-details
+              inset
+            />
+            <VSpacer />
+            <VBtn v-if="presetForm.id" variant="text" size="small" @click="presetForm = emptyPreset()">
+              {{ $t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              color="primary"
+              size="small"
+              :loading="presetFormLoading"
+              data-test="preset-save"
+              @click="savePreset"
+            >
+              {{ presetForm.id ? $t('common.save') : $t('common.add') }}
+            </VBtn>
+          </div>
+          <VDivider class="mb-3" />
+        </div>
+        <div class="text-body-2 font-weight-medium mb-2">
+          {{ $t('planning.presets.list') }}
+        </div>
+        <div
+          v-for="p in store.activityPresets"
+          :key="p.id"
+          class="d-flex align-center gap-2 py-2 border-b"
+          data-test="preset-row"
+          :style="{ opacity: p.enabled === false ? 0.5 : 1 }"
+        >
+          <span class="legend-dot" :style="{ background: p.color || '#8691a8' }" />
+          <div class="flex-grow-1">
+            <div class="text-body-2">
+              {{ p.name }}
+            </div>
+            <div class="text-caption text-disabled">
+              {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ p.default_duration_minutes }} min</span>
+            </div>
+          </div>
+          <VSwitch
+            :model-value="p.enabled !== false"
+            density="compact"
+            hide-details
+            inset
+            :data-test="`preset-enabled-${p.id}`"
+            @update:model-value="togglePreset(p)"
+          />
+          <VBtn
+            v-can="'workforce.planning_manage'"
+            icon
+            variant="text"
+            size="x-small"
+            color="primary"
+            :data-test="`preset-edit-${p.id}`"
+            @click="editPreset(p)"
+          >
+            <VIcon icon="tabler-edit" size="18" />
+          </VBtn>
+          <VBtn
+            v-can="'workforce.planning_manage'"
+            icon
+            variant="text"
+            size="x-small"
+            color="error"
+            :data-test="`preset-delete-${p.id}`"
+            @click="removePreset(p)"
+          >
+            <VIcon icon="tabler-trash" size="18" />
+          </VBtn>
+        </div>
+        <div v-if="!store.activityPresets.length" class="text-caption text-disabled">
+          {{ $t('planning.presets.empty') }}
+        </div>
+      </div>
+    </VNavigationDrawer>
+
+    <!-- M2 — Sélecteur « Utiliser une tâche type » (chargé à la demande) -->
+    <VDialog v-model="presetPickerOpen" max-width="440">
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          {{ $t('planning.presets.use') }}
+          <VSpacer />
+          <VBtn icon variant="text" size="small" @click="presetPickerOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+        <VCardText>
+          <AppTextField
+            v-model="presetSearch"
+            :placeholder="$t('planning.presets.search')"
+            prepend-inner-icon="tabler-search"
+            density="compact"
+            data-test="preset-search"
+            class="mb-3"
+          />
+          <div style="max-block-size: 320px; overflow: auto;">
+            <div
+              v-for="p in filteredPresets"
+              :key="p.id"
+              class="d-flex align-center gap-2 py-2 border-b cursor-pointer"
+              :data-test="`preset-option-${p.id}`"
+              @click="insertPreset(p)"
+            >
+              <span class="legend-dot" :style="{ background: p.color || '#8691a8' }" />
+              <div class="flex-grow-1">
+                <div class="text-body-2">
+                  {{ p.name }}
+                </div>
+                <div class="text-caption text-disabled">
+                  {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ p.default_duration_minutes }} min</span>
+                </div>
+              </div>
+              <VIcon icon="tabler-plus" size="16" />
+            </div>
+            <div v-if="!filteredPresets.length" class="text-caption text-disabled py-4 text-center">
+              {{ $t('planning.presets.empty') }}
+            </div>
+          </div>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <!-- LOT 4A — Ghost de drag (suit le curseur) + indicateur de validité/raison -->
     <Teleport to="body">

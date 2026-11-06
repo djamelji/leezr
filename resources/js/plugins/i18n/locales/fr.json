@@ -7743,6 +7743,24 @@
         "issueBreakBounds": "Une pause dépasse les horaires du shift."
       }
     },
+    "presets": {
+      "title": "Tâches types",
+      "use": "Utiliser une tâche type",
+      "new": "Nouvelle tâche type",
+      "edit": "Modifier la tâche type",
+      "list": "Bibliothèque",
+      "empty": "Aucune tâche type",
+      "enabled": "Active",
+      "search": "Rechercher une tâche type",
+      "created": "Tâche type créée",
+      "updated": "Tâche type mise à jour",
+      "deleted": "Tâche type supprimée",
+      "fields": {
+        "name": "Nom",
+        "type": "Type d'activité",
+        "duration": "Durée (min)"
+      }
+    },
     "locations": {
       "newLocation": "Nouveau lieu",
       "editLocation": "Modifier le lieu",
